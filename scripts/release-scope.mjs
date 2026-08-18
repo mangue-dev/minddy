@@ -33,6 +33,23 @@ export function classifyReleaseFiles(coreFiles, webFiles, desktopChanged) {
   };
 }
 
+export function selectReleaseScopes(mode, detected, custom = {}) {
+  let selected;
+  if (mode === "auto") {
+    selected = { core: detected.core, web: detected.web, desktop: detected.desktop };
+  } else if (mode === "all") {
+    selected = { core: true, web: true, desktop: true };
+  } else if (mode === "custom") {
+    selected = { core: Boolean(custom.core), web: Boolean(custom.web), desktop: Boolean(custom.desktop) };
+  } else {
+    throw new Error(`mode de déploiement inconnu : ${mode}`);
+  }
+  // Un tag public doit viser le SHA de production. Publier le cœur implique
+  // donc la promotion Cloud du commit, même si aucun fichier web n'a changé.
+  if (selected.core) selected.web = true;
+  return selected;
+}
+
 function git(args) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 }

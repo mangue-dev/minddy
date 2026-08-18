@@ -7,6 +7,10 @@ on:
         description: "SemVer déjà préparée dans package.json et CHANGELOG.md (sans préfixe v)"
         required: true
         type: string
+      sha:
+        description: "SHA exact de production à taguer"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -14,7 +18,7 @@ permissions:
   attestations: write
 
 concurrency:
-  group: public-core-release
+  group: production-publication
   cancel-in-progress: false
 
 jobs:
@@ -26,14 +30,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Validate release request
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_SHA: ${{ inputs.sha }}
         run: |
-          test "$GITHUB_REF" = "refs/heads/main"
+          git fetch origin production --tags
+          node scripts/release-policy.mjs "$RELEASE_SHA"
           test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"
           test "$(node -p "require('./desktop/package.json').version")" = "$RELEASE_VERSION"
           test -z "$(git tag --list "v$RELEASE_VERSION")"
@@ -83,15 +90,18 @@ jobs:
           subject-path: .release/*
 
       # Le tag n'existe qu'après tous les contrôles et tous les builds. Un échec
-      # avant cette étape laisse donc main intact et peut être rejoué.
+      # avant cette étape laisse donc production intact et peut être rejoué.
       - name: Create annotated tag
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_SHA: ${{ inputs.sha }}
         run: |
+          git fetch origin production --tags
+          node scripts/release-policy.mjs "$RELEASE_SHA"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$RELEASE_VERSION" -m "minddy v$RELEASE_VERSION" "$GITHUB_SHA"
+          git tag -a "v$RELEASE_VERSION" -m "minddy v$RELEASE_VERSION" "${{ inputs.sha }}"
           git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git push origin "v$RELEASE_VERSION"
 

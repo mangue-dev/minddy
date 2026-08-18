@@ -42,8 +42,8 @@ if [ -z "$CURRENT" ]; then
   echo "Error: detached HEAD. Checkout main first."
   exit 1
 fi
-if [ "$CURRENT" = "production" ]; then
-  echo "Error: run deploy from main, not production."
+if [ "$CURRENT" != "main" ]; then
+  echo "Error: run deploy from main (current: $CURRENT)."
   exit 1
 fi
 if [ -n "$(git status --porcelain)" ]; then
@@ -126,22 +126,24 @@ yes_no() {
 }
 
 case "$MODE" in
-  auto)
-    [ "$AUTO_CORE" = "true" ] && CORE=1
-    [ "$AUTO_WEB" = "true" ] && WEB=1
-    [ "$AUTO_DESKTOP" = "true" ] && DESKTOP=1
-    ;;
-  all)
-    CORE=1
-    WEB=1
-    DESKTOP=1
-    ;;
+  auto|all) ;;
   custom)
     if yes_no "Publier une nouvelle version du cœur public ?" "$([ "$AUTO_CORE" = "true" ] && echo yes || echo no)"; then CORE=1; fi
     if yes_no "Déployer le web Minddy Cloud (marketing inclus) ?" "$([ "$AUTO_WEB" = "true" ] && echo yes || echo no)"; then WEB=1; fi
     if yes_no "Construire et publier l'app macOS ?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
     ;;
 esac
+
+SELECTION=$(node -e '
+  import("./scripts/release-scope.mjs").then(({ selectReleaseScopes }) => {
+    const detected = JSON.parse(process.argv[1]);
+    const custom = { core: process.argv[3] === "1", web: process.argv[4] === "1", desktop: process.argv[5] === "1" };
+    process.stdout.write(JSON.stringify(selectReleaseScopes(process.argv[2], detected, custom)));
+  });
+' "$SCOPE" "$MODE" "$CORE" "$WEB" "$DESKTOP")
+CORE=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).core ? "1" : "0")' "$SELECTION")
+WEB=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).web ? "1" : "0")' "$SELECTION")
+DESKTOP=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).desktop ? "1" : "0")' "$SELECTION")
 
 if [ "$CORE" -eq 0 ] && [ "$WEB" -eq 0 ] && [ "$DESKTOP" -eq 0 ]; then
   echo "Rien à publier d'après ce choix."
@@ -166,19 +168,41 @@ wait_for_run() {
   local workflow="$1"
   local sha="$2"
   local event="${3:-}"
+  local branch="${4:-}"
   local run_id=""
   local attempt
   for attempt in $(seq 1 60); do
-    if [ -n "$event" ]; then
-      run_id=$(gh run list --workflow "$workflow" --commit "$sha" --event "$event" --limit 1 --json databaseId --jq '.[0].databaseId // empty')
-    else
-      run_id=$(gh run list --workflow "$workflow" --commit "$sha" --limit 1 --json databaseId --jq '.[0].databaseId // empty')
-    fi
+    local args=(run list --workflow "$workflow" --commit "$sha" --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+    [ -n "$event" ] && args+=(--event "$event")
+    [ -n "$branch" ] && args+=(--branch "$branch")
+    run_id=$(gh "${args[@]}")
     [ -n "$run_id" ] && break
     sleep 5
   done
   if [ -z "$run_id" ]; then
     echo "Error: workflow $workflow did not start for $sha."
+    exit 1
+  fi
+  gh run watch "$run_id" --exit-status
+}
+
+dispatch_and_wait() {
+  local workflow="$1"
+  local ref="$2"
+  local sha="$3"
+  shift 3
+  local previous_run
+  local run_id=""
+  local attempt
+  previous_run=$(gh run list --workflow "$workflow" --commit "$sha" --event workflow_dispatch --branch "$ref" --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+  gh workflow run "$workflow" --ref "$ref" "$@"
+  for attempt in $(seq 1 60); do
+    run_id=$(gh run list --workflow "$workflow" --commit "$sha" --event workflow_dispatch --branch "$ref" --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+    [ -n "$run_id" ] && [ "$run_id" != "$previous_run" ] && break
+    sleep 5
+  done
+  if [ -z "$run_id" ] || [ "$run_id" = "$previous_run" ]; then
+    echo "Error: the new $workflow run did not start for $sha."
     exit 1
   fi
   gh run watch "$run_id" --exit-status
@@ -224,18 +248,10 @@ if [ "$DESKTOP" -eq 1 ]; then
   require_gh
 fi
 
-# Dernier filet local. Le workflow public rejoue ces contrôles dans un runner
-# vierge avant de créer le tag ; deploy les exécute ici avant toute mutation.
-echo "→ Running lint..."
-npm run lint
-echo "→ Running typecheck..."
-npm run typecheck
-echo "→ Running tests..."
-npm run test
-echo "→ Running release tooling tests..."
+# Contrôle rapide du mécanisme local qui prépare la demande. Les gates de
+# confiance tournent dans CI sur le SHA poussé ; ce poste n'en est pas la source.
+echo "→ Checking release tooling..."
 npm run test:release
-echo "→ Running dependency audit..."
-node scripts/audit.mjs
 
 if [ "$CORE" -eq 1 ]; then
   if [ "$REUSE_PREPARED" -eq 0 ]; then
@@ -244,37 +260,28 @@ if [ "$CORE" -eq 1 ]; then
     git add package.json package-lock.json desktop/package.json desktop/package-lock.json CHANGELOG.md
     git commit -s -m "chore: prepare release $TARGET_VERSION"
   fi
-  git push origin main
-
-  RELEASE_SHA=$(git rev-parse HEAD)
-  echo "→ Waiting for CI on $(git rev-parse --short HEAD)..."
-  wait_for_run ci.yml "$RELEASE_SHA"
-
-  echo "→ Publishing public core v$TARGET_VERSION..."
-  gh workflow run release.yml --ref main -f version="$TARGET_VERSION"
-  wait_for_run release.yml "$RELEASE_SHA" workflow_dispatch
 fi
 
-if [ "$WEB" -eq 1 ]; then
-  echo "→ Pushing $CURRENT and deploying the Minddy Cloud web app..."
-  git push origin "$CURRENT"
+DEPLOYED_SHA=""
+if [ "$CORE" -eq 1 ] || [ "$WEB" -eq 1 ]; then
+  require_gh
+  git push origin main
+  DEPLOYED_SHA=$(git rev-parse HEAD)
+  echo "→ Waiting for main CI on $(git rev-parse --short HEAD)..."
+  wait_for_run ci.yml "$DEPLOYED_SHA" push main
+
+  echo "→ Requesting protected promotion and Cloud deployment..."
+  dispatch_and_wait promote-production.yml main "$DEPLOYED_SHA" -f sha="$DEPLOYED_SHA"
   git fetch origin production
-  git checkout production
-  git pull --ff-only origin production
-  if ! git merge "$CURRENT" --no-edit; then
-    git merge --abort
-    git checkout "$CURRENT"
-    echo "Error: merge conflict between $CURRENT and production."
+  if [ "$(git rev-parse origin/production)" != "$DEPLOYED_SHA" ]; then
+    echo "Error: production does not point to the verified SHA $DEPLOYED_SHA."
     exit 1
   fi
-  if ! git push origin production; then
-    git checkout "$CURRENT"
-    echo "Error: production push failed; Vercel was not triggered by this run."
-    exit 1
-  fi
-  git checkout "$CURRENT"
-  echo "→ Pinging IndexNow..."
-  node scripts/indexnow.mjs || true
+fi
+
+if [ "$CORE" -eq 1 ]; then
+  echo "→ Publishing public core v$TARGET_VERSION from production..."
+  dispatch_and_wait release.yml production "$DEPLOYED_SHA" -f version="$TARGET_VERSION" -f sha="$DEPLOYED_SHA"
 fi
 
 if [ "$DESKTOP" -eq 1 ]; then
@@ -283,12 +290,14 @@ if [ "$DESKTOP" -eq 1 ]; then
     echo "Error: the macOS app needs an existing public core release v$DESKTOP_VERSION."
     exit 1
   fi
-  DESKTOP_RUN_SHA=$(git rev-parse origin/main)
+  git fetch origin production
+  DESKTOP_RUN_SHA=$(git rev-parse origin/production)
   echo "→ Publishing signed macOS app for v$DESKTOP_VERSION..."
-  gh workflow run desktop-release.yml --ref main -f version="$DESKTOP_VERSION"
-  wait_for_run desktop-release.yml "$DESKTOP_RUN_SHA" workflow_dispatch
+  dispatch_and_wait desktop-release.yml production "$DESKTOP_RUN_SHA" -f version="$DESKTOP_VERSION"
   git pull --ff-only origin main
 fi
 
 echo ""
 echo "✓ Publication terminée : cœur=$CORE · web=$WEB · macOS=$DESKTOP"
+[ -n "$DEPLOYED_SHA" ] && echo "  production : $DEPLOYED_SHA"
+[ -n "$TARGET_VERSION" ] && echo "  tag        : v$TARGET_VERSION → $DEPLOYED_SHA"

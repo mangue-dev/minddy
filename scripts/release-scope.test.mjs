@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyReleaseFiles } from "./release-scope.mjs";
+import { classifyReleaseFiles, selectReleaseScopes } from "./release-scope.mjs";
 
 test("un changement marketing seul déploie le web sans versionner le cœur", () => {
   assert.deepEqual(
@@ -36,4 +36,29 @@ test("le relevé post-release desktop ne déclenche pas une nouvelle release", (
   assert.equal(result.core, false);
   assert.equal(result.web, false);
   assert.deepEqual(result.coreFiles, []);
+});
+
+test("le mode auto reprend les périmètres détectés et promeut le cœur", () => {
+  assert.deepEqual(
+    selectReleaseScopes("auto", { core: true, web: false, desktop: false }),
+    { core: true, web: true, desktop: false },
+  );
+});
+
+test("le mode all active tous les périmètres", () => {
+  assert.deepEqual(
+    selectReleaseScopes("all", { core: false, web: false, desktop: false }),
+    { core: true, web: true, desktop: true },
+  );
+});
+
+test("le mode custom respecte le choix manuel", () => {
+  assert.deepEqual(
+    selectReleaseScopes(
+      "custom",
+      { core: true, web: true, desktop: true },
+      { core: false, web: true, desktop: false },
+    ),
+    { core: false, web: true, desktop: false },
+  );
 });

@@ -15,7 +15,7 @@
     "desktop:release": "npm --prefix desktop run dist && node scripts/publish-desktop.mjs",
     "release:prepare": "node scripts/prepare-release.mjs",
     "release:artifacts": "node scripts/build-release-artifacts.mjs",
-    "test:release": "node --test scripts/release-lib.test.mjs scripts/release-scope.test.mjs",
+    "test:release": "node --test scripts/release-lib.test.mjs scripts/release-policy.test.mjs scripts/release-scope.test.mjs",
     "check:public-repo": "node scripts/check-public-repo.mjs",
     "start": "next start",
     "lint": "oxlint --deny-warnings",

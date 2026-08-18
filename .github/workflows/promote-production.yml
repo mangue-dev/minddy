@@ -1,0 +1,117 @@
+name: Promote production
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "SHA vert de main à promouvoir sans merge ni réécriture"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+
+concurrency:
+  # Partagé avec la release du cœur : production ne peut pas avancer pendant
+  # qu'un workflow est en train de construire puis taguer son SHA.
+  group: production-publication
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote and verify ${{ inputs.sha }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: cloud-production
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate tested main SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.sha }}
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git fetch origin main production
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          git merge-base --is-ancestor origin/production "$TARGET_SHA"
+
+          CI_RUN=$(gh run list \
+            --workflow ci.yml \
+            --branch main \
+            --commit "$TARGET_SHA" \
+            --event push \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+          test -n "$CI_RUN"
+          echo "Validated successful main CI run $CI_RUN for $TARGET_SHA"
+
+          {
+            echo "### Promotion demandée"
+            echo "- De: \`$(git rev-parse origin/production)\`"
+            echo "- Vers: \`$TARGET_SHA\` (CI run $CI_RUN)"
+            echo ""
+            echo "#### Changements Cloud"
+            git log --format='- `%h` %s' "origin/production..$TARGET_SHA"
+            echo ""
+            echo "#### Marketing"
+            marketing=$(git diff --name-only "origin/production..$TARGET_SHA" -- | grep -E '^app/\(marketing\)/|^components/marketing/|^public/(captures|marketing)/|^app/(sitemap\.ts|robots\.txt|llms(-full)?\.txt)' || true)
+            if [ -n "$marketing" ]; then printf '%s\n' "$marketing" | sed 's/^/- `/' | sed 's/$/`/'; else echo "- Aucun changement marketing."; fi
+            echo ""
+            echo "#### Migrations"
+            migrations=$(git diff --name-only "origin/production..$TARGET_SHA" -- supabase/migrations || true)
+            if [ -n "$migrations" ]; then printf '%s\n' "$migrations" | sed 's/^/- `/' | sed 's/$/`/'; else echo "- Aucune migration SQL."; fi
+            echo ""
+            echo "Mise à jour et rollback : \`docs/releases.md\` et \`docs/self-hosting-operations.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fast-forward production
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.sha }}
+        run: |
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
+          git push origin "$TARGET_SHA:refs/heads/production"
+          test "$(git ls-remote origin refs/heads/production | cut -f1)" = "$TARGET_SHA"
+
+      # L'intégration Git Vercel crée un GitHub Deployment nommé Production.
+      # Attendre son statut rend le verdict Cloud traçable sans token Vercel sur
+      # le poste du mainteneur ni dans ce workflow.
+      - name: Verify Vercel production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.sha }}
+        run: |
+          deployment_id=""
+          deployment_url=""
+          for attempt in $(seq 1 120); do
+            if [ -z "$deployment_id" ]; then
+              deployment_id=$(gh api \
+                "repos/$GITHUB_REPOSITORY/deployments?sha=$TARGET_SHA&environment=Production&per_page=10" \
+                --jq '.[0].id // empty')
+            fi
+            if [ -n "$deployment_id" ]; then
+              state=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$deployment_id/statuses" --jq '.[0].state // empty')
+              deployment_url=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$deployment_id/statuses" --jq '.[0].environment_url // .[0].target_url // empty')
+              case "$state" in
+                success) break ;;
+                error|failure|inactive) echo "Vercel deployment ended with $state"; exit 1 ;;
+              esac
+            fi
+            sleep 10
+          done
+          test "${state:-}" = "success"
+          {
+            echo "### Minddy Cloud deployed"
+            echo "- SHA: \`$TARGET_SHA\`"
+            echo "- Vercel deployment: ${deployment_url:-GitHub Deployment $deployment_id}"
+          } >> "$GITHUB_STEP_SUMMARY"

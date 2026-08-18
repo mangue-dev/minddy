@@ -59,8 +59,11 @@ pnpm desktop:dev  # run the optional macOS shell
   code agent.
 - **Deployment:** `pnpm deploy` is the interactive maintainer entry point. It
   detects whether to release the public core, deploy the Minddy Cloud web app,
-  and publish macOS, with automatic, all, and custom modes. Self-hosters should
-  adapt its `production`/Vercel conventions to their own hosting.
+  and publish macOS, with automatic, all, and custom modes. It waits for CI,
+  requests an approved fast-forward from `main` to `production`, verifies the
+  Vercel deployment, and only tags that deployed SHA. Builds and production
+  secrets never come from the maintainer's machine. Self-hosters should adapt
+  its `production`/Vercel conventions to their own hosting.
 
 Public releases are distinct from deployments. Their SemVer/tag policy,
 artifacts, checksums, migrations, CI provenance, macOS path, and rollback

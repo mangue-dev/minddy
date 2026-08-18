@@ -119,9 +119,10 @@ la déclenche et attend son résultat.
    rend la détection suivante exacte ; il n'est jamais écrit avant que les
    binaires et leur manifeste soient réellement publiés.
 
-`npm run desktop:release` reste une commande de récupération pour diagnostiquer
-la chaîne manuellement. Ce n'est plus le flux normal et elle exige alors de
-charger soi-même les secrets appropriés.
+`npm run desktop:release` reste une commande de diagnostic local qui ne doit ni
+publier le flux public ni servir de preuve de release. Le flux public passe
+exclusivement par `Public macOS release`, checkout le tag du cœur, puis obtient
+ses identifiants de signature et de publication depuis `public-release`.
 
 ### Combien de temps, et faut-il rester devant
 
@@ -197,15 +198,17 @@ dit — un plafond silencieux est un mensonge.
 
 | Variable | Rôle | Qui la lit |
 | --- | --- | --- |
-| `MINDDY_DESKTOP_FEED_URL` | le dossier public du flux | electron-builder **au build** (elle entre dans le bundle) *et* `/api/desktop/download` |
-| `BLOB_READ_WRITE_TOKEN` | écrire dans le store | `publish-desktop.mjs` seulement |
-| `APPLE_KEYCHAIN_PROFILE` | le profil trousseau de notarisation | electron-builder au build |
+| `PUBLIC_DESKTOP_FEED_URL` | le dossier public du flux | workflow au build ; même valeur configurée pour `/api/desktop/download` |
+| `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | notarisation Apple | environnement GitHub `public-release` |
+| `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD` | signature Developer ID | environnement GitHub `public-release` |
+| `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` | écrire le flux public | workflow GitHub uniquement |
 
-Les trois sont dans `.env`, et les deux premières aussi sur le projet Vercel. La
-troisième n'est pas un secret : c'est un nom de profil, le mot de passe ne quitte
-jamais le trousseau.
+La valeur publique du flux est aussi configurée sur Vercel pour la route de
+téléchargement. Les secrets de signature, notarisation et écriture ne vivent ni
+dans `.env` ni dans le trousseau d'un mainteneur : ils appartiennent à
+l'organisation et ne sont exposés qu'au runner approuvé.
 
-**Le piège à connaître** : `MINDDY_DESKTOP_FEED_URL` doit être présente **au
+**Le piège à connaître** : l'URL de flux doit être présente **au
 moment du build**, pas seulement sur Vercel. C'est à l'empaquetage qu'elle entre
-dans l'`app-update.yml` du bundle — d'où le `source .env` avant le `dist`, et le
-troisième refus ci-dessus.
+dans l'`app-update.yml` du bundle ; le workflow la fournit depuis
+`PUBLIC_DESKTOP_FEED_URL`, sans `source .env`.

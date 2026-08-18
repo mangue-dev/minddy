@@ -86,8 +86,10 @@ ne doit pas exécuter du code de PR.
 [`deploy.sh`](deploy.sh) est l'assistant unique du mainteneur. Il détecte les
 périmètres modifiés, propose automatiquement cœur public, web Cloud et macOS,
 ou permet « tout » et un choix manuel. Il orchestre les workflows reproductibles
-décrits dans [docs/releases.md](docs/releases.md) et attend leurs résultats ; la
-CI ci-dessus reste le pipeline versionné commun.
+décrits dans [docs/releases.md](docs/releases.md), attend l'approbation de la
+promotion et le verdict de chaque périmètre. Seul le workflow protégé avance
+`production` ; seul son SHA peut recevoir un tag public. La commande ne lit
+jamais `.env`, et la CI ci-dessus reste le pipeline versionné commun.
 
 ## Préparer une pull request
 
