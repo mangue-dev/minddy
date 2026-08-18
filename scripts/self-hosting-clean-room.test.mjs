@@ -101,6 +101,7 @@ test("a passing candidate report pins ref, tag-object, and promotion commit iden
       ref: "preflight/v1.0.0",
       tagObject: "1".repeat(40),
       commit: "a".repeat(40),
+      packageVersion: "1.0.0",
       annotated: true,
       missingPaths: [],
     },
@@ -109,6 +110,7 @@ test("a passing candidate report pins ref, tag-object, and promotion commit iden
       ref: "preflight/v1.0.1",
       tagObject: "2".repeat(40),
       commit: "b".repeat(40),
+      packageVersion: "1.0.1",
       annotated: true,
       missingPaths: [],
     },
@@ -120,6 +122,8 @@ test("a passing candidate report pins ref, tag-object, and promotion commit iden
   assert.match(report, /Result: \*\*PASS\*\*/);
   assert.match(report, /Validation mode: prepublication candidates/);
   assert.match(report, /preflight\/v1\.0\.0/);
+  assert.match(report, /Source package version: `1\.0\.0`/);
+  assert.match(report, /Target package version: `1\.0\.1`/);
   assert.match(report, new RegExp("1{40}"));
   assert.match(report, new RegExp("a{40}"));
   assert.match(report, /publish `v1\.0\.0` and `v1\.0\.1` only/);

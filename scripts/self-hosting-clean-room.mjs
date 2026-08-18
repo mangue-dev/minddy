@@ -181,9 +181,11 @@ export function buildReport({ from, to, ancestor, environmentFindings, generated
 - Result: **${passed ? "PASS" : "BLOCKED"}**
 - Validation mode: ${mode === "prepublication" ? "prepublication candidates" : "published releases"}
 - Source ref: \`${from.ref ?? from.tag}\`
+- Source package version: \`${from.packageVersion ?? from.tag.slice(1)}\`
 - Source tag object: \`${from.tagObject ?? "not recorded"}\`
 - Source commit: \`${from.commit}\`
 - Target ref: \`${to.ref ?? to.tag}\`
+- Target package version: \`${to.packageVersion ?? to.tag.slice(1)}\`
 - Target tag object: \`${to.tagObject ?? "not recorded"}\`
 - Target commit: \`${to.commit}\`
 

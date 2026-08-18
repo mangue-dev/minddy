@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Changed
+
+- Clean-room preflight reports now record both package manifest versions next
+  to their immutable candidate refs and Git object identities.
+
 ## [0.10.0] - 2026-08-18
 
 ### Added
