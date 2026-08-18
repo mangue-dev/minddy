@@ -26,6 +26,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         shell: bash
         run: |
           set -euo pipefail
@@ -42,10 +43,14 @@ jobs:
             author_email="$(git show -s --format=%ae "${commit}")"
             expected="Signed-off-by: ${author_name} <${author_email}>"
             expected="$(printf '%s' "${expected}" | tr '[:upper:]' '[:lower:]')"
+            dependabot_expected="signed-off-by: dependabot[bot] <support@github.com>"
             valid=0
             while IFS= read -r line; do
               normalized="$(printf '%s' "${line}" | tr '[:upper:]' '[:lower:]')"
               if [[ "${normalized}" == "${expected}" ]]; then
+                valid=1
+              fi
+              if [[ "${PR_AUTHOR}" == "dependabot[bot]" && "${author_name}" == "dependabot[bot]" && "${author_email}" == "49699333+dependabot[bot]@users.noreply.github.com" && "${normalized}" == "${dependabot_expected}" ]]; then
                 valid=1
               fi
             done < <(git show -s --format=%B "${commit}")
