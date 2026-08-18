@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-08-18
+
 ### Fixed
 
 - Clean-room validation now starts through symlinked temporary paths and uses
@@ -37,9 +39,11 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.2...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
 
 [0.10.1]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.1
+
+[0.10.2]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.2
