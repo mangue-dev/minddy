@@ -82,7 +82,11 @@ export BACKUP_ROOT="$CLEAN_ROOT/backups"
 export REPORT_DIR="$CLEAN_ROOT/report"
 export CANDIDATE_BUNDLE="$CLEAN_ROOT/minddy-preflight.bundle"
 cd "$CLEAN_ROOT"
-sha256sum --check SHA256SUMS
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum --check SHA256SUMS
+else
+  shasum -a 256 --check SHA256SUMS
+fi
 git init "$SOURCE_DIR"
 git -C "$SOURCE_DIR" fetch "$CANDIDATE_BUNDLE" \
   "refs/tags/$FROM_REF:refs/tags/$FROM_REF" \
@@ -287,8 +291,13 @@ if rg -n -i 'authorization:|bearer |service_role|postgres(ql)?://[^ ]+:[^@ ]+@' 
   echo "Potential secret in evidence; redact it before continuing." >&2
   exit 1
 fi
-find "$REPORT_DIR" -type f -print0 | sort -z | xargs -0 sha256sum \
-  > "$REPORT_DIR/SHA256SUMS"
+if command -v sha256sum >/dev/null 2>&1; then
+  find "$REPORT_DIR" -type f -print0 | sort -z | xargs -0 sha256sum \
+    > "$REPORT_DIR/SHA256SUMS"
+else
+  find "$REPORT_DIR" -type f -print0 | sort -z | xargs -0 shasum -a 256 \
+    > "$REPORT_DIR/SHA256SUMS"
+fi
 ```
 
 Record every deviation as a blocking issue before accepting the release. A run

@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- Clean-room validation now starts through symlinked temporary paths and uses
+  the native SHA-256 utility available on either Linux or macOS.
+
 ## [0.10.1] - 2026-08-18
 
 ### Changed

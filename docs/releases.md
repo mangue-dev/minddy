@@ -277,7 +277,11 @@ SemVer commits and validate their exact Git objects before publication:
    git bundle create minddy-preflight.bundle \
      "refs/tags/preflight/v$SOURCE_VERSION" \
      "refs/tags/preflight/v$TARGET_VERSION"
-   sha256sum minddy-preflight.bundle > SHA256SUMS
+   if command -v sha256sum >/dev/null 2>&1; then
+     sha256sum minddy-preflight.bundle > SHA256SUMS
+   else
+     shasum -a 256 minddy-preflight.bundle > SHA256SUMS
+   fi
    ```
 
    Replace each placeholder with two different consecutive versions. Record
