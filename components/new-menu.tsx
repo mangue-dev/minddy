@@ -79,7 +79,7 @@ export function NewMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" className="group gap-1.5">
+        <Button size="sm" className="group gap-1.5 shadow-none">
           {t("new")}
           <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
         </Button>

@@ -104,7 +104,7 @@ export function UsageIndicator() {
           size="sm"
           aria-label={t("usageAria")}
           className={cn(
-            "h-8 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium tabular-nums shadow-xs hover:bg-card",
+            "h-8 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium tabular-nums shadow-none hover:bg-card",
             stateClass
           )}
         >
