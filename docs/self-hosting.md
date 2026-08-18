@@ -94,6 +94,25 @@ Les expéditeurs, hôtes PostHog, sujet VAPID et bundle APNs n'ont volontairemen
 aucune valeur par défaut sur une instance auto-hébergée : ils doivent décrire
 l'infrastructure de l'opérateur, jamais celle de minddy.
 
+### PostHog
+
+PostHog reste dans le cœur public comme provider d'analytics facultatif. Il ne
+sert pas à distinguer une édition et ne contacte jamais le projet de Minddy
+Cloud depuis une instance auto-hébergée.
+
+| Mode | Configuration | Comportement |
+| --- | --- | --- |
+| Désactivé (défaut) | Aucune paire PostHog | Aucun client navigateur ou serveur n'est construit, le chunk `posthog-js` n'est pas téléchargé et les appels de tracking sont des no-op. |
+| PostHog de l'opérateur | `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST`, et/ou `POSTHOG_API_KEY` + `POSTHOG_HOST` | Seules les surfaces dont la paire est complète émettent vers le PostHog Cloud ou l'endpoint auto-hébergé choisi par l'opérateur. Les demi-configurations ne sont jamais mélangées. |
+| Minddy Cloud | Clés du projet Minddy Cloud ; l'hôte d'ingestion UE historique est conservé par le profil officiel | Même code public, configuration d'exploitation distincte. Aucun secret de lecture ou d'administration PostHog n'est requis par l'application. |
+
+Le chemin navigateur respecte le choix de cookies : avant choix il fonctionne
+en mémoire, un accord autorise la persistance et un refus coupe toute capture
+du navigateur. Le chemin serveur couvre les faits métier qui existent aussi
+sans navigateur (MCP, webhooks, crons) ; il n'écrit aucun cookie, passe par un
+catalogue fermé et n'accepte que des métadonnées sanitisées. L'opérateur est
+responsable de documenter sa destination, sa base légale et sa rétention.
+
 Le `vercel.json` versionne les horaires utilisés par le produit hébergé afin
 qu'un déploiement de production ne perde pas ses jobs. Sans `CRON_SECRET`, les
 routes répondent 401 avant d'ouvrir la base ou un service externe. Un opérateur

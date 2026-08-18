@@ -128,11 +128,15 @@ ces appels ne porte l'identité de l'auteur.
 *PostHog, Inc. — instance européenne `eu.posthog.com` (hébergement Allemagne).*
 
 - **Transfert hors UE** : aucun, l'instance européenne est utilisée.
-- **Base légale** : consentement, recueilli par le bandeau. Un refus déclenche
-  `opt_out_capturing()` — plus rien n'est envoyé ni écrit sur l'appareil.
-- **Minimisation** : les propriétés d'événement sont assainies avant envoi
-  (`lib/analytics-sanitize.ts`) ; aucune donnée personnelle en texte libre, pas
-  d'adresse IP conservée.
+- **Mesure navigateur** : avant le choix, elle est anonyme, sans cookie et
+  conservée uniquement en mémoire ; le consentement autorise la persistance.
+  Un refus déclenche `opt_out_capturing()` et coupe toute émission du navigateur.
+- **Événements serveur** : des faits techniques nécessaires à la mesure du
+  service (création via MCP, webhook, cron) peuvent être émis sans dépendre du
+  bandeau, au titre de l'intérêt légitime. Ils ne lisent ni n'écrivent le terminal.
+- **Minimisation** : client et serveur passent par un catalogue fermé et par
+  `lib/analytics-sanitize.ts` ; aucune donnée personnelle en texte libre, pas
+  d'adresse IP conservée, autocapture et enregistrement de session désactivés.
 
 ### Resend
 

@@ -17,6 +17,7 @@ import {
   type StripeSubscription,
 } from "@/lib/server/stripe";
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
+import type { ServerAnalyticsEventName } from "@/lib/analytics-events";
 
 /**
  * POST /api/stripe/webhook (MIN-72) — signature vérifiée (HMAC, tolérance
@@ -153,7 +154,7 @@ function trackBilling(
 function billingEventName(
   stripeType: string,
   status: string | null | undefined
-): string | null {
+): ServerAnalyticsEventName | null {
   switch (stripeType) {
     case "checkout.session.completed":
       return "subscription_activated";

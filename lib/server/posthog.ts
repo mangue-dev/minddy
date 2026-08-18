@@ -1,7 +1,15 @@
 import "server-only";
 import { after } from "next/server";
 import { PostHog } from "posthog-node";
+import {
+  ALLOWED_SERVER_ANALYTICS_EVENTS,
+  type ServerAnalyticsEventName,
+} from "@/lib/analytics-events";
 import { getAppEnv } from "@/lib/env";
+import {
+  sanitizeAnalyticsEventName,
+  sanitizeAnalyticsProps,
+} from "@/lib/analytics-sanitize";
 import { shouldSendServerAnalytics } from "@/lib/analytics-localhost";
 import { isOfficialMinddyCloud } from "@/lib/deployment-profile";
 
@@ -21,6 +29,21 @@ import { isOfficialMinddyCloud } from "@/lib/deployment-profile";
  */
 
 let client: PostHog | null = null;
+
+/**
+ * Les propriétés `$` sont rejetées par défaut. Cette unique option PostHog est
+ * toutefois nécessaire aux téléchargements publics anonymes : elle empêche le
+ * SDK serveur de créer un profil de personne pour un UUID jetable.
+ */
+function sanitizeServerProperties(
+  properties: Record<string, unknown> | undefined,
+): Record<string, string | number | boolean | null> {
+  const sanitized = sanitizeAnalyticsProps(properties);
+  if (properties?.$process_person_profile === false) {
+    sanitized.$process_person_profile = false;
+  }
+  return sanitized;
+}
 
 /**
  * Client partagé, ou null si les analytics serveur ne doivent pas émettre :
@@ -72,7 +95,7 @@ export function getServerPostHog(): PostHog | null {
 export interface ServerEvent {
   /** Id du compte concerné, ou un id anonyme stable pour les flux publics. */
   distinctId: string;
-  event: string;
+  event: ServerAnalyticsEventName;
   properties?: Record<string, unknown>;
   /** Rattache l'événement à un projet (même type de groupe que côté client). */
   groups?: Record<string, string>;
@@ -98,10 +121,23 @@ export function captureServerEvent({
   properties,
   groups,
 }: ServerEvent): void {
+  const safeEvent = sanitizeAnalyticsEventName(event);
+  if (!ALLOWED_SERVER_ANALYTICS_EVENTS.has(safeEvent as ServerAnalyticsEventName)) return;
+  const safeProperties = sanitizeServerProperties(properties);
+  const safeGroups = sanitizeAnalyticsProps(groups);
   const posthog = getServerPostHog();
   if (!posthog) return;
   try {
-    posthog.capture({ distinctId, event, properties, groups });
+    posthog.capture({
+      distinctId,
+      event: safeEvent,
+      properties: safeProperties,
+      groups: Object.fromEntries(
+        Object.entries(safeGroups).filter((entry): entry is [string, string] =>
+          typeof entry[1] === "string"
+        ),
+      ),
+    });
     after(async () => {
       try {
         await posthog.flush();
@@ -125,7 +161,7 @@ export function identifyServerUser(
   const posthog = getServerPostHog();
   if (!posthog) return;
   try {
-    posthog.identify({ distinctId, properties });
+    posthog.identify({ distinctId, properties: sanitizeAnalyticsProps(properties) });
     after(async () => {
       try {
         await posthog.flush();

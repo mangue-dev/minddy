@@ -18,17 +18,51 @@
  * `durationBucket` / `sizeBucket`). Les props sont sanitisées à l'envoi
  * (primitives, ≤24 clés, strings ≤512 caractères).
  *
- * Les événements SERVEUR (émis par `captureServerEvent()` dans les routes API,
- * qui ne passent pas par cette allowlist) ne sont PAS listés ici. À ce jour :
- *   user_signed_up, user_signed_in, signup_email_confirmed (app/auth/callback),
- *   issue_created_server, issue_updated_server (source web/mcp/api/agent),
- *   subscription_activated/updated/cancelled/payment_failed (webhook Stripe),
- *   agent_run_started/completed/failed, agent_pr_opened,
- *   automation_chain_started, automation_chain_finished (MIN-147),
- *   mcp_tool_called, mcp_session_started, oauth_grant_created,
- *   public_feedback_created, public_feedback_voted, import_completed,
- *   desktop_download_started (MIN-292 — le `.dmg` qui part vraiment).
+ * Les événements SERVEUR ont leur propre catalogue fermé plus bas. Ils passent
+ * par la même sanitisation à l'envoi, même si leurs propriétés restent plus
+ * souples parce qu'elles proviennent de webhooks, crons et intégrations.
  */
+
+/**
+ * Catalogue exhaustif des événements émis par `lib/server/posthog.ts`.
+ *
+ * Garder cette liste distincte du catalogue client évite de confondre un geste
+ * navigateur (soumis au choix de cookies) avec le fait métier serveur qui fait
+ * autorité. Le type ferme les call sites à la compilation ; le Set protège les
+ * valeurs qui traverseraient malgré tout une frontière JavaScript non typée.
+ */
+export const SERVER_ANALYTICS_EVENT_NAMES = [
+  "account_data_exported",
+  "account_deleted",
+  "agent_run_completed",
+  "agent_run_failed",
+  "agent_run_started",
+  "automation_chain_finished",
+  "automation_chain_started",
+  "desktop_download_started",
+  "issue_created_server",
+  "issue_updated_server",
+  "mcp_tool_called",
+  "mfa_disabled",
+  "mfa_enabled",
+  "oauth_grant_created",
+  "public_feedback_created",
+  "public_feedback_voted",
+  "signup_email_confirmed",
+  "subscription_activated",
+  "subscription_cancelled",
+  "subscription_paused",
+  "subscription_payment_failed",
+  "subscription_resumed",
+  "subscription_updated",
+  "user_signed_in",
+  "user_signed_up",
+] as const;
+
+export type ServerAnalyticsEventName = typeof SERVER_ANALYTICS_EVENT_NAMES[number];
+
+export const ALLOWED_SERVER_ANALYTICS_EVENTS: ReadonlySet<ServerAnalyticsEventName> =
+  new Set(SERVER_ANALYTICS_EVENT_NAMES);
 
 /** Valeurs primitives acceptées après sanitisation (optionnelles par confort). */
 type PropValue = string | number | boolean | null | undefined;

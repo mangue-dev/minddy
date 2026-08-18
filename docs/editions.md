@@ -39,8 +39,14 @@ les active pas à elle seule.
 - `EMAIL_PROVIDER=resend` est requis avant tout appel à l'API Resend. Les
   expéditeurs sont obligatoires et propres à l'instance ; aucun domaine minddy
   n'est choisi par défaut.
-- PostHog exige une clé et un hôte explicites. Web Push exige aussi un
-  `VAPID_SUBJECT`, et APNs un `APNS_BUNDLE_ID` explicites.
+- PostHog est un provider facultatif du cœur public, pas une capacité réservée
+  au Cloud. Chaque surface exige sa paire atomique :
+  `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST` pour le navigateur,
+  `POSTHOG_API_KEY` + `POSTHOG_HOST` pour le serveur. Une paire serveur absente
+  peut réutiliser la paire publique complète ; deux demi-paires ne sont jamais
+  assemblées. L'opérateur choisit ainsi sa destination PostHog, tandis que
+  Minddy Cloud fournit sa propre configuration d'exploitation.
+- Web Push exige un `VAPID_SUBJECT`, et APNs un `APNS_BUNDLE_ID` explicites.
 - Vercel Analytics et Speed Insights ne sont montés sur les pages publiques
   qu'avec `NEXT_PUBLIC_VERCEL_ANALYTICS=1`.
 - Les providers Git intégrés ciblent `github.com` et `gitlab.com`. Les forges
