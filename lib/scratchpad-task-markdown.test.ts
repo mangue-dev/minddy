@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import MarkdownIt from "markdown-it";
+import type { MarkdownIt as MarkdownItInstance } from "markdown-it";
 import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown";
 
 /** Render markdown through only our task-marker rule (the parse half of the
@@ -7,7 +8,7 @@ import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown"
 function render(md: string): string {
   const it = new MarkdownIt();
   // Our plugin's minimal MarkdownIt shape is a structural subset of the real one.
-  it.use(scratchpadTaskMarkdownIt as unknown as (md: MarkdownIt) => void);
+  it.use(scratchpadTaskMarkdownIt as unknown as (md: MarkdownItInstance) => void);
   return it.render(md);
 }
 
