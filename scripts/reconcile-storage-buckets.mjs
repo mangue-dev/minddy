@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /** MIN-379 — Storage buckets: they are not included in a SQL schema dump. */
+import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -15,7 +16,24 @@ function fail(message) {
   throw new Error(`Storage configuration failed: ${message}`);
 }
 
-export function parseArgs(argv) {
+function readLocalStatus() {
+  const result = spawnSync("supabase", ["status", "--output", "env"], {
+    cwd: ROOT_DIR,
+    encoding: "utf8",
+  });
+  if (result.error?.code === "ENOENT") fail("supabase is missing. Install it to verify the local instance.");
+  if (result.status !== 0) fail(`supabase status failed: ${(result.stderr || result.stdout).trim()}`);
+  const values = Object.fromEntries(
+    result.stdout
+      .split(/\r?\n/)
+      .map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line))
+      .filter(Boolean)
+      .map((match) => [match[1], match[2].replace(/^"|"$/g, "")])
+  );
+  return { supabaseUrl: values.API_URL, serviceRoleKey: values.SERVICE_ROLE_KEY };
+}
+
+export function parseArgs(argv, statusReader = readLocalStatus) {
   const options = {};
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
@@ -36,6 +54,11 @@ export function parseArgs(argv) {
     options.dbUrl ??= process.env.MDY_BOOTSTRAP_DB_URL;
     options.supabaseUrl ??= process.env.MDY_BOOTSTRAP_SUPABASE_URL;
     options.serviceRoleKey ??= process.env.MDY_BOOTSTRAP_SERVICE_ROLE_KEY;
+  }
+  if (options.local && (!options.supabaseUrl || !options.serviceRoleKey)) {
+    const localStatus = statusReader();
+    options.supabaseUrl ??= localStatus.supabaseUrl;
+    options.serviceRoleKey ??= localStatus.serviceRoleKey;
   }
   for (const key of ["supabaseUrl", "serviceRoleKey"]) {
     if (!options[key]) fail(`${key} is required.`);

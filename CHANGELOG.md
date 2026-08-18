@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- `verify:supabase --local` now derives its Storage endpoint and service role
+  from the running local stack, matching the documented clean-room command.
+
 ## [0.10.3] - 2026-08-18
 
 ### Added

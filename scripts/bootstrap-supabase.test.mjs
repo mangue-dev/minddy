@@ -10,6 +10,7 @@ import {
   parseArgs,
   parseEnv,
 } from "./bootstrap-supabase.mjs";
+import { parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
 import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
 import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
@@ -56,4 +57,14 @@ test("remote mode requires a database URL and the verifier covers invariants", (
   assert.match(sql, /attachments insert/);
   assert.match(sql, /supabase_realtime/);
   assert.match(sql, /members_receive_page_presence/);
+});
+
+test("local verification derives Storage credentials from Supabase status", () => {
+  const options = parseStorageArgs(["--local"], () => ({
+    supabaseUrl: "http://127.0.0.1:54321",
+    serviceRoleKey: "local-service-role",
+  }));
+  assert.equal(options.local, true);
+  assert.equal(options.supabaseUrl, "http://127.0.0.1:54321");
+  assert.equal(options.serviceRoleKey, "local-service-role");
 });
