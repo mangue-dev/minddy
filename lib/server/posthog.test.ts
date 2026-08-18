@@ -25,6 +25,7 @@ vi.mock("posthog-node", () => ({
 
 describe("PostHog serveur", () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     vi.stubEnv("NODE_ENV", "production");
@@ -38,6 +39,38 @@ describe("PostHog serveur", () => {
 
     expect(getServerPostHog()).toBeNull();
     expect(posthogMock.constructor).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { serverKey: "server-key", serverHost: "" },
+    { serverKey: "", serverHost: "https://server.example.test" },
+  ])(
+    "ne masque pas une demi-configuration serveur avec la paire publique",
+    async ({ serverKey, serverHost }) => {
+      vi.stubEnv("POSTHOG_API_KEY", serverKey);
+      vi.stubEnv("POSTHOG_HOST", serverHost);
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "public-key");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://public.example.test");
+      const { getServerPostHog } = await import("./posthog");
+
+      expect(getServerPostHog()).toBeNull();
+      expect(posthogMock.constructor).not.toHaveBeenCalled();
+    },
+  );
+
+  it("réutilise la paire publique quand la paire serveur est entièrement absente", async () => {
+    vi.stubEnv("POSTHOG_API_KEY", "");
+    vi.stubEnv("POSTHOG_HOST", "");
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "public-key");
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://public.example.test");
+    const { getServerPostHog } = await import("./posthog");
+
+    expect(getServerPostHog()).not.toBeNull();
+    expect(posthogMock.constructor).toHaveBeenCalledWith("public-key", {
+      host: "https://public.example.test",
+      flushAt: 5,
+      flushInterval: 10_000,
+    });
   });
 
   it("rejette les événements hors catalogue et sanitise ceux autorisés", async () => {

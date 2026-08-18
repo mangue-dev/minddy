@@ -66,12 +66,16 @@ export function getServerPostHog(): PostHog | null {
   // Une paire reste atomique : mélanger une clé serveur avec l'hôte public (ou
   // l'inverse) activerait un client que le registre de capacités diagnostique
   // comme incomplet. La paire serveur explicite garde la priorité.
-  const config =
-    serverKey && serverHost
+  const hasExplicitServerConfig = Boolean(
+    process.env.POSTHOG_API_KEY?.trim() || process.env.POSTHOG_HOST?.trim(),
+  );
+  const config = hasExplicitServerConfig
+    ? serverKey && serverHost
       ? { key: serverKey, host: serverHost }
-      : publicKey && publicHost
-        ? { key: publicKey, host: publicHost }
-        : null;
+      : null
+    : publicKey && publicHost
+      ? { key: publicKey, host: publicHost }
+      : null;
   if (
     !config ||
     !shouldSendServerAnalytics({
