@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Added
+
+- Regression coverage executes the clean-room CLI through a filesystem symlink
+  before a candidate can pass CI.
+
 ## [0.10.2] - 2026-08-18
 
 ### Fixed

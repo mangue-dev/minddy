@@ -1,4 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import {
@@ -53,6 +58,19 @@ test("requires namespaced annotated refs for prepublication candidates", () => {
     () => parseArgs(["--prepublication", "--from-tag", "v1.2.3", "--to-tag", "v1.2.4"]),
     /candidate refs/
   );
+});
+
+test("runs when the CLI entry path contains a filesystem symlink", () => {
+  const directory = mkdtempSync(join(tmpdir(), "minddy-clean-room-link-"));
+  const link = join(directory, "validate-self-hosted.mjs");
+  try {
+    symlinkSync(fileURLToPath(new URL("./self-hosting-clean-room.mjs", import.meta.url)), link);
+    const result = spawnSync(process.execPath, [link, "--help"], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Usage:/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("rejects enabled proprietary services but accepts explicit local opt-outs", () => {
