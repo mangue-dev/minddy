@@ -80,7 +80,7 @@ describe("resolveCapabilities", () => {
     expect(capabilities.transactionalEmail.configured).toBe(false);
   });
 
-  it("préserve la configuration historique du cloud officiel sans l'étendre aux autres Vercel", () => {
+  it("ne déduit jamais les services managés du hostname officiel", () => {
     const official = resolveCapabilities({
       ...core,
       VERCEL: "1",
@@ -102,8 +102,6 @@ describe("resolveCapabilities", () => {
     });
 
     for (const id of [
-      "managedAi",
-      "managedBilling",
       "vercelSandbox",
       "vercelWebAnalytics",
       "analytics",
@@ -113,6 +111,9 @@ describe("resolveCapabilities", () => {
     ] as const) {
       expect(official[id].configured, `${id}: ${official[id].diagnostic}`).toBe(true);
     }
+
+    expect(official.managedAi.configured).toBe(false);
+    expect(official.managedBilling.configured).toBe(false);
 
     const anotherVercel = resolveCapabilities({
       ...core,

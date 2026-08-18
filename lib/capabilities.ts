@@ -77,11 +77,10 @@ function optIn(
     flag: string;
     keys: string[];
     ready: string;
-    legacyEnabled?: boolean;
   },
 ): CapabilityStatus {
   const explicit = env[params.flag]?.trim();
-  if (explicit !== "1" && !(params.legacyEnabled && !explicit)) {
+  if (explicit !== "1") {
     return status({
       ...params,
       state: "disabled",
@@ -131,7 +130,6 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       "STRIPE_PRICE_ID_PRO_YEARLY",
     ],
     ready: "Managed Stripe billing is enabled.",
-    legacyEnabled: officialCloud,
   });
   const managedAi = optIn(env, {
     id: "managedAi",
@@ -139,7 +137,6 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     flag: "MINDDY_MANAGED_AI",
     keys: ["OPENROUTER_API_KEY"],
     ready: "Managed OpenRouter quota is enabled; BYOK remains an alternative.",
-    legacyEnabled: officialCloud,
   });
 
   const sandboxBackend = env.AGENT_EXECUTION_BACKEND?.trim() || (officialCloud ? "vercel" : "");

@@ -32,19 +32,11 @@ describe("resolveManagedServices", () => {
     ).toEqual({ billing: false, ai: false });
   });
 
-  it("keeps legacy managed services enabled only on the official Vercel deployment", () => {
+  it("never infers an edition from the hostname or hosting provider", () => {
     expect(
       resolveManagedServices({
         VERCEL: "1",
         NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
-        ...stripe,
-        OPENROUTER_API_KEY: "or-key",
-      }),
-    ).toEqual({ billing: true, ai: true });
-    expect(
-      resolveManagedServices({
-        VERCEL: "1",
-        NEXT_PUBLIC_APP_URL: "https://tickets.example.com",
         ...stripe,
         OPENROUTER_API_KEY: "or-key",
       }),

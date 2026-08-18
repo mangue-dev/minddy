@@ -96,6 +96,78 @@ jobs:
       - name: Release tooling tests
         run: pnpm run test:release
 
+  editions:
+    name: Édition / ${{ matrix.edition }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: self-hosted-minimal
+            smoke: true
+          - edition: self-hosted-byok
+            smoke: false
+          - edition: minddy-cloud
+            smoke: true
+          - edition: partial-billing
+            smoke: false
+          - edition: partial-ai
+            smoke: false
+          - edition: implicit-identifiers
+            smoke: false
+    env:
+      EDITION_FIXTURE: test/fixtures/editions/${{ matrix.edition }}.env
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Chaque scénario est un processus neuf et ne reçoit que des valeurs
+      # factices versionnées. `source` exporte aussi les valeurs vides : une
+      # variable absente et un opt-out vide suivent donc le contrat de prod.
+      - name: Vérifier le contrat d'édition
+        shell: bash
+        run: |
+          set -a
+          source "$EDITION_FIXTURE"
+          set +a
+          pnpm exec vitest run lib/server/editions.integration.test.ts
+
+      # Les deux éditions déployables doivent aussi compiler et ouvrir un port
+      # HTTP avec exactement la fixture testée. Les variantes partielles sont
+      # volontairement indisponibles et restent couvertes par le diagnostic.
+      - name: Build et démarrage éphémère
+        if: matrix.smoke
+        shell: bash
+        run: |
+          set -a
+          source "$EDITION_FIXTURE"
+          set +a
+          pnpm run build
+          pnpm exec next start -p 3100 > "$RUNNER_TEMP/minddy-start.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --silent --show-error --output /dev/null http://127.0.0.1:3100/; then
+              exit 0
+            fi
+            sleep 1
+          done
+          sed -n '1,240p' "$RUNNER_TEMP/minddy-start.log"
+          exit 1
+
   audit:
     name: Audit des dépendances
     runs-on: ubuntu-latest

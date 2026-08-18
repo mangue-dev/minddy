@@ -24,6 +24,9 @@ les active pas à elle seule.
 - `MINDDY_MANAGED_AI=1` autorise la clé plateforme OpenRouter. Sans cet opt-in,
   minddy ne choisit jamais `OPENROUTER_API_KEY` comme repli : un appel IA exige
   une clé BYOK ou un endpoint local configuré par l'opérateur.
+- Ces deux drapeaux sont l'unique sélection d'édition. Le hostname, Vercel, le
+  nom de branche et un identifiant de client ne peuvent activer ni billing ni
+  quota managé, y compris sur `minddy.app` et sur la branche `production`.
 - L'interface cloud n'affiche achats, portail Stripe, budget ni limites que
   lorsque les capacités correspondantes sont actives. L'API expose ces
   capacités pour que les clients ne déduisent jamais un droit d'une clé ou d'un
@@ -44,11 +47,9 @@ les active pas à elle seule.
   auto-hébergées sont explicitement non supportées tant qu'un provider
   configurable n'existe pas.
 
-Le déploiement historique du service officiel conserve ses anciens choix sans
-exiger toutes ces nouvelles variables au même déploiement. Cette compatibilité
-est bornée à Vercel avec une origine canonique `*.minddy.app`; elle ne s'applique
-ni à Vercel seul, ni aux autres domaines. Une valeur explicite reste prioritaire
-et permet notamment de désactiver une capacité sur le cloud officiel.
+Les anciennes déductions fondées sur le déploiement Vercel ou une origine
+`*.minddy.app` ne sélectionnent plus les services managés. Le déploiement Cloud
+doit fournir les mêmes drapeaux explicites que n'importe quel opérateur.
 
 Le catalogue exécutable de ces décisions vit dans `lib/capabilities.ts`. Il
 classe chaque capacité (`required`, `replaceable`, `optional`), énumère les
@@ -67,6 +68,36 @@ Ainsi, une installation auto-hébergée peut volontairement utiliser OpenRouter
 avec sa propre clé en BYOK ; cela ne transforme pas cette instance en client du
 quota minddy. À l'inverse, une instance cloud qui propose la clé plateforme
 continue de mesurer ses appels et son compute avant de les servir.
+
+## Matrice CI des éditions
+
+Le job `Édition / …` de `.github/workflows/ci.yml` exécute chaque scénario dans
+un job GitHub Actions jetable, sans `secrets.*`. Les valeurs sous
+`test/fixtures/editions/` sont des marqueurs factices qui ne donnent accès à
+aucun fournisseur. Les deux éditions déployables (`self-hosted-minimal` et
+`minddy-cloud`) passent en plus par `next build`, puis un démarrage HTTP réel ;
+les configurations partielles sont testées comme capacités indisponibles.
+
+| Fixture | Attendu |
+| --- | --- |
+| `self-hosted-minimal.env` | Le cœur démarre sans Stripe ni IA managée ; aucune garde commerciale ne lit le plan. |
+| `self-hosted-byok.env` | La clé opérateur est le payeur ; aucun quota, ledger ni compte fournisseur minddy n'est consulté. |
+| `minddy-cloud.env` | Billing et IA managés sont prêts ; gardes de plan, webhook Stripe, payeur plateforme et quota sont actifs. |
+| `partial-billing.env` | Billing est annoncé `incomplete`, les variables absentes sont listées et le webhook répond `503`. |
+| `partial-ai.env` | IA managée est annoncée `incomplete` et le runtime refuse tout repli plateforme. |
+| `implicit-identifiers.env` | Domaine `minddy.app`, Vercel, branche `production`, identifiant client et clés présentes restent self-hosted sans opt-in. |
+
+Le test d'intégration couvre ensemble `lib/managed-services.ts`, le catalogue de
+capacités, `lib/server/entitlements.ts`, l'adaptateur et le webhook Stripe,
+`lib/server/ai-runtime.ts` et `lib/server/agent/quota.ts`. Pour rejouer une
+fixture localement depuis la racine du dépôt :
+
+```bash
+set -a
+source test/fixtures/editions/self-hosted-minimal.env
+set +a
+pnpm exec vitest run lib/server/editions.integration.test.ts
+```
 
 ## Frontière de dépôt
 
