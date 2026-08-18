@@ -134,7 +134,7 @@ function scanText(path, text, failures, prefix = "") {
  * (e.g. `refs/codex/*`) are not part of a standard push and should not cause the post to fail. Inaccessible objects are not pushed by Git: the purge procedure is documented in the audit.
  */
 function scanReachableHistory(failures) {
-  const entries = git(["rev-list", "--objects", "--branches", "--tags", "--remotes=origin"])
+  const entries = git(["rev-list", "--objects", "HEAD", "--branches", "--tags", "--remotes=origin"])
     .split("\n")
     .filter(Boolean)
     .map((line) => {
@@ -156,6 +156,7 @@ function scanReachableHistory(failures) {
     .map((line) => line.split(" "))
     .filter(([, type]) => type === "blob")
     .map(([id]) => id);
+  if (blobIds.length === 0) return { objects: objectIds.length, blobs: 0 };
   const batch = checkedGit(["cat-file", "--batch"], `${blobIds.join("\n")}\n`);
   let offset = 0;
 
