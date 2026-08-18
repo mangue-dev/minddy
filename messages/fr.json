@@ -1220,6 +1220,7 @@
       "pagesComment": "Sélectionnez du texte dans une page pour commenter précisément ce passage.",
       "pagesHistory": "Consultez les anciennes versions d'une page et restaurez-en une en un clic.",
       "pagesBacklinks": "Voyez tout ce qui pointe vers une page.",
+      "pageCopyForAgent": "Copiez la page ouverte pour votre agent de code, avec une consigne facultative.",
       "cycles": "Planifiez une semaine ou une quinzaine dans tous vos projets avec un cycle.",
       "objectives": "Regroupez dans un objectif les tickets qui contribuent à un même but.",
       "stats": "Voyez combien de temps prennent réellement les tickets, par effort.",

@@ -1220,6 +1220,7 @@
       "pagesComment": "Select text in a page to comment on that exact passage.",
       "pagesHistory": "View a page's previous versions and restore one in a click.",
       "pagesBacklinks": "See everything that links to a page.",
+      "pageCopyForAgent": "Copy the open page for your coding agent, with an optional instruction.",
       "cycles": "Plan a week or fortnight across all your projects with a cycle.",
       "objectives": "Group the issues that contribute to one goal with an objective.",
       "stats": "See how long issues actually take, broken down by effort.",
