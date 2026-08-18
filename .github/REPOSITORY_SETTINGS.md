@@ -43,7 +43,10 @@ annoncée avant que les réglages ci-dessous aient été activés et testés.
 5. Créer deux environnements GitHub :
    - `cloud-production`, avec approbateurs requis, autorisé uniquement depuis
      `main`, et le workflow `Promote production` comme seul chemin d'écriture
-     vers `production` ;
+     vers `production`. L'approbateur ouvre la référence de revue produite avec
+     [`docs/security-release-checklist.md`](../docs/security-release-checklist.md),
+     vérifie les exceptions/risques résiduels et la décision de pentest avant
+     d'autoriser le job ;
    - `public-release`, avec approbateurs requis, autorisé uniquement depuis
      `production` et les tags protégés `v*`, contenant les secrets Apple et du
      flux desktop décrits dans `docs/releases.md`.

@@ -153,6 +153,11 @@ fi
 echo ""
 echo "Publication retenue : cœur=$CORE · web=$WEB · macOS=$DESKTOP"
 
+SECURITY_CHECKLIST_VERSION="1.0"
+SECURITY_REVIEW_REF="${MINDDY_SECURITY_REVIEW_REF:-}"
+RESIDUAL_RISKS="${MINDDY_RESIDUAL_RISKS:-}"
+PENTEST_STATUS="${MINDDY_PENTEST_STATUS:-}"
+
 require_gh() {
   if ! command -v gh >/dev/null 2>&1; then
     echo "Error: GitHub CLI (gh) is required for public core or macOS releases."
@@ -262,6 +267,46 @@ if [ "$CORE" -eq 1 ]; then
   fi
 fi
 
+# `release:prepare` crée le commit qui sera réellement promu. La revue doit donc
+# intervenir après cette préparation, mais toujours avant le push et la CI du
+# candidat, afin que son compte rendu puisse nommer le SHA exact.
+if [ "$WEB" -eq 1 ]; then
+  SECURITY_CANDIDATE_SHA=$(git rev-parse HEAD)
+  echo ""
+  echo "Revue sécurité obligatoire pour $SECURITY_CANDIDATE_SHA : docs/security-release-checklist.md (v$SECURITY_CHECKLIST_VERSION)"
+  if [ -t 0 ]; then
+    if [ -z "$SECURITY_REVIEW_REF" ]; then
+      read -r -p "Référence stable du compte rendu (URL ou issue, sans espace) : " SECURITY_REVIEW_REF
+    fi
+    if [ -z "$RESIDUAL_RISKS" ]; then
+      if yes_no "Des risques résiduels sont-ils consignés dans ce compte rendu ?" no; then
+        RESIDUAL_RISKS="documented"
+      else
+        RESIDUAL_RISKS="none"
+      fi
+    fi
+    if [ -z "$PENTEST_STATUS" ]; then
+      echo "Décision de pentest :"
+      echo "  1) non requis selon les critères de la checklist"
+      echo "  2) requis, terminé et constats bloquants retestés"
+      echo "  3) requis mais non terminé (la promotion sera refusée)"
+      read -r -p "Choix [1-3] : " PENTEST_CHOICE
+      case "$PENTEST_CHOICE" in
+        1) PENTEST_STATUS="not-required" ;;
+        2) PENTEST_STATUS="completed" ;;
+        3) PENTEST_STATUS="required-not-completed" ;;
+        *) echo "Choix invalide."; exit 1 ;;
+      esac
+    fi
+  fi
+
+  node scripts/release-security-policy.mjs \
+    "$SECURITY_CHECKLIST_VERSION" \
+    "$SECURITY_REVIEW_REF" \
+    "$RESIDUAL_RISKS" \
+    "$PENTEST_STATUS" >/dev/null
+fi
+
 DEPLOYED_SHA=""
 if [ "$CORE" -eq 1 ] || [ "$WEB" -eq 1 ]; then
   require_gh
@@ -271,7 +316,12 @@ if [ "$CORE" -eq 1 ] || [ "$WEB" -eq 1 ]; then
   wait_for_run ci.yml "$DEPLOYED_SHA" push main
 
   echo "→ Requesting protected promotion and Cloud deployment..."
-  dispatch_and_wait promote-production.yml main "$DEPLOYED_SHA" -f sha="$DEPLOYED_SHA"
+  dispatch_and_wait promote-production.yml main "$DEPLOYED_SHA" \
+    -f sha="$DEPLOYED_SHA" \
+    -f checklist_version="$SECURITY_CHECKLIST_VERSION" \
+    -f security_review_ref="$SECURITY_REVIEW_REF" \
+    -f residual_risks="$RESIDUAL_RISKS" \
+    -f pentest_status="$PENTEST_STATUS"
   git fetch origin production
   if [ "$(git rev-parse origin/production)" != "$DEPLOYED_SHA" ]; then
     echo "Error: production does not point to the verified SHA $DEPLOYED_SHA."

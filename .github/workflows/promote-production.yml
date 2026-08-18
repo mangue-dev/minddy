@@ -7,6 +7,30 @@ on:
         description: "SHA vert de main à promouvoir sans merge ni réécriture"
         required: true
         type: string
+      checklist_version:
+        description: "Version de docs/security-release-checklist.md utilisée"
+        required: true
+        default: "1.0"
+        type: string
+      security_review_ref:
+        description: "Référence stable du compte rendu de revue (sans donnée sensible)"
+        required: true
+        type: string
+      residual_risks:
+        description: "Risques résiduels dans le compte rendu"
+        required: true
+        type: choice
+        options:
+          - none
+          - documented
+      pentest_status:
+        description: "Décision de pentest selon la checklist"
+        required: true
+        type: choice
+        options:
+          - not-required
+          - completed
+          - required-not-completed
 
 permissions:
   actions: read
@@ -20,8 +44,44 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  security-review:
+    name: Validate security release review
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      # Cette validation vit dans le workflow lui-même : elle ne peut donc pas
+      # être affaiblie par le SHA candidat avant l'approbation de production.
+      - name: Enforce current checklist and pentest decision
+        env:
+          CHECKLIST_VERSION: ${{ inputs.checklist_version }}
+          SECURITY_REVIEW_REF: ${{ inputs.security_review_ref }}
+          RESIDUAL_RISKS: ${{ inputs.residual_risks }}
+          PENTEST_STATUS: ${{ inputs.pentest_status }}
+        run: |
+          test "$CHECKLIST_VERSION" = "1.0"
+          test -n "$SECURITY_REVIEW_REF"
+          test "${#SECURITY_REVIEW_REF}" -le 200
+          review_ref_pattern='^[A-Za-z0-9._:/#?=&%+-]+$'
+          [[ "$SECURITY_REVIEW_REF" =~ $review_ref_pattern ]] || { echo "Invalid security review reference"; exit 1; }
+          case "$RESIDUAL_RISKS" in none|documented) ;; *) echo "Invalid residual risk status"; exit 1 ;; esac
+          case "$PENTEST_STATUS" in
+            not-required|completed) ;;
+            required-not-completed) echo "Required pentest is not complete"; exit 1 ;;
+            *) echo "Invalid pentest status"; exit 1 ;;
+          esac
+
+          {
+            echo "### Revue sécurité de release"
+            echo "- Checklist: \`$CHECKLIST_VERSION\`"
+            echo "- Compte rendu: \`$SECURITY_REVIEW_REF\`"
+            echo "- Risques résiduels: \`$RESIDUAL_RISKS\`"
+            echo "- Pentest: \`$PENTEST_STATUS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   promote:
     name: Promote and verify ${{ inputs.sha }}
+    needs: security-review
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: cloud-production
@@ -36,6 +96,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ inputs.sha }}
+          SECURITY_REVIEW_REF: ${{ inputs.security_review_ref }}
+          RESIDUAL_RISKS: ${{ inputs.residual_risks }}
+          PENTEST_STATUS: ${{ inputs.pentest_status }}
         run: |
           test "$GITHUB_REF" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
@@ -59,6 +122,9 @@ jobs:
             echo "### Promotion demandée"
             echo "- De: \`$(git rev-parse origin/production)\`"
             echo "- Vers: \`$TARGET_SHA\` (CI run $CI_RUN)"
+            echo "- Revue sécurité: \`$SECURITY_REVIEW_REF\`"
+            echo "- Risques résiduels: \`$RESIDUAL_RISKS\`"
+            echo "- Pentest: \`$PENTEST_STATUS\`"
             echo ""
             echo "#### Changements Cloud"
             git log --format='- `%h` %s' "origin/production..$TARGET_SHA"

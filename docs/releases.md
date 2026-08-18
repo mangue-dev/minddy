@@ -21,6 +21,12 @@ Les pages marketing vivent dans le même build web : les publier est donc un
 déploiement Cloud, mais un changement marketing seul ne mérite pas une nouvelle
 version du produit.
 
+Toute promotion Cloud est précédée de la
+[`checklist de sécurité`](security-release-checklist.md). Le compte rendu
+complété, ses risques résiduels et la décision de pentest sont revus avant
+l'approbation de l'environnement de production ; leur référence est conservée
+dans le run GitHub du SHA promu.
+
 ## Les trois cadences
 
 | Périmètre | Identifiant | Déclencheur | Artefact ou preuve |
@@ -95,6 +101,14 @@ sans tag après un échec est détectée et proposée à nouveau, sans second bu
 Les variantes scriptables sont `npm run deploy -- auto`, `-- all` et
 `-- custom`. Même « all » conserve les contrôles et la question de version :
 « direct » signifie un seul parcours, pas un contournement de la CI.
+
+Pour chaque parcours qui inclut le web, la commande demande la référence stable
+du compte rendu de sécurité, si des risques résiduels y sont consignés et le
+statut du pentest. En non-interactif, utiliser
+`MINDDY_SECURITY_REVIEW_REF`, `MINDDY_RESIDUAL_RISKS` et
+`MINDDY_PENTEST_STATUS` comme décrit par la checklist. Le workflow
+`Promote production` refuse une checklist périmée, une preuve absente ou un
+pentest requis mais non terminé avant d'ouvrir la barrière d'approbation.
 
 Le poste ne charge jamais `.env` et ne fabrique aucun artefact de confiance. Il
 ne fait qu'un test rapide des scripts de release avant de préparer la demande ;
