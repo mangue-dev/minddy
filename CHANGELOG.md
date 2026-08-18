@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.3] - 2026-08-18
+
 ### Added
 
 - Regression coverage executes the clean-room CLI through a filesystem symlink
@@ -44,7 +46,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.3...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -52,3 +54,5 @@ they create neither a version nor a tag of the public core.
 [0.10.1]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.1
 
 [0.10.2]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.2
+
+[0.10.3]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.3
