@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-18
+
 ### Added
 
 - Reproducible public release chain: source artifacts and migrations,
@@ -23,5 +25,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.9.5...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.0...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
+
+[0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
