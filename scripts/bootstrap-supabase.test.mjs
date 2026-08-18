@@ -49,7 +49,7 @@ test("remote mode requires a database URL and the verifier covers invariants", (
   assert.equal(parseArgs([]).local, true);
   assert.equal(parseArgs(["--", "--local"]).local, true);
   assert.equal(parseArgs(["--db-url", "postgresql://example"]).local, false);
-  assert.throws(() => parseArgs(["--unknown"]), /option inconnue/);
+  assert.throws(() => parseArgs(["--unknown"]), /unknown option/);
   assert.doesNotThrow(() => checkLocalConfig());
   const sql = verificationSql();
   assert.match(sql, /vector_extension/);

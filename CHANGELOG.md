@@ -4,16 +4,18 @@ Changes in minddy's public heart are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/lang/fr/).
 
-Minddy Cloud and Marketing Site deployments have their own log
-exploitation: they create neither version nor tag of the public core.
+Minddy Cloud and marketing-site deployments have their own operational log:
+they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
 ### Added
 
 - Reproducible public release chain: source artifacts and migrations,
-SHA-256 checksums, CI provenance, release notes and macOS release
-  optional release without personal secrets.
+  SHA-256 checksums, CI provenance, release notes, and optional macOS releases
+  without personal secrets.
+- Clean-room self-hosting acceptance procedure and release-pair preflight for
+  installation, optional-service isolation, upgrades, backups, and restoration.
 
 ## [0.9.5] - 2026-08-15
 

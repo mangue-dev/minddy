@@ -26,6 +26,8 @@
     "bootstrap:supabase": "node scripts/bootstrap-supabase.mjs",
     "verify:supabase": "node scripts/verify-supabase-bootstrap.mjs",
     "test:bootstrap:supabase": "node --test scripts/bootstrap-supabase.test.mjs",
+    "validate:self-hosted": "node scripts/self-hosting-clean-room.mjs",
+    "test:self-hosted": "node --test scripts/self-hosting-clean-room.test.mjs",
     "repair:squashed-migrations": "node scripts/repair-squashed-migration-history.mjs",
     "test:squashed-migrations": "node --test scripts/repair-squashed-migration-history.test.mjs",
     "clean": "node scripts/clean.mjs",

@@ -253,6 +253,58 @@ Explicit approval is done in the GitHub interface while
 Vercel verdict. Reproducible settings are listed in
 `.github/REPOSITORY_SETTINGS.md`.
 
+## Prepublication validation for the first self-hosted release pair
+
+The historical `v0.9.4` and `v0.9.5` tags are lightweight and predate the
+self-hosting contract. They must never be moved or replaced. When clean-room
+acceptance blocks the first public release, prepare two consecutive final
+SemVer commits and validate their exact Git objects before publication:
+
+1. Prepare a clean source commit whose manifests declare the first version and
+   which contains the complete self-hosting contract. Prepare its direct
+   descendant for the next patch version. Neither commit may rely on an
+   uncommitted file or a patch applied by the validator.
+2. Create annotated, temporary candidate refs. Their namespace distinguishes
+   lifecycle evidence from a published release:
+
+   ```bash
+   export SOURCE_VERSION=0.10.0
+   export TARGET_VERSION=0.10.1
+   git tag -a "preflight/v$SOURCE_VERSION" "$SOURCE_SHA" \
+     -m "minddy v$SOURCE_VERSION preflight"
+   git tag -a "preflight/v$TARGET_VERSION" "$TARGET_SHA" \
+     -m "minddy v$TARGET_VERSION preflight"
+   git bundle create minddy-preflight.bundle \
+     "refs/tags/preflight/v$SOURCE_VERSION" \
+     "refs/tags/preflight/v$TARGET_VERSION"
+   sha256sum minddy-preflight.bundle > SHA256SUMS
+   ```
+
+   Replace each placeholder with two different consecutive versions. Record
+   the bundle checksum, both annotated-tag object IDs, and both commit IDs.
+3. Transfer only the bundle and checksum to the disposable host. Run the
+   prepublication path in
+   [`self-hosting-clean-room.md`](self-hosting-clean-room.md), including the
+   complete install, update, backup, blank restore, and evidence seal. A passing
+   preflight alone is not lifecycle acceptance.
+4. If any code, documentation, manifest, migration, lockfile, or candidate ref
+   changes, discard the evidence and repeat the complete run. Fixes always
+   produce new commits; candidate refs are never moved for an accepted report.
+5. Promote and publish the source version, then the target version, through the
+   normal release workflow. For each workflow input, use the exact commit from
+   the accepted report. After publication, verify both mappings:
+
+   ```bash
+   test "$(git rev-parse "v$SOURCE_VERSION^{commit}")" = "$SOURCE_SHA"
+   test "$(git rev-parse "v$TARGET_VERSION^{commit}")" = "$TARGET_SHA"
+   test "$(git cat-file -t "v$SOURCE_VERSION")" = tag
+   test "$(git cat-file -t "v$TARGET_VERSION")" = tag
+   ```
+
+   The public tags are immutable. Delete the temporary candidate refs only
+   after these checks; retain the accepted report and bundle checksum with the
+   release evidence.
+
 ## Failure and recovery
 
 - Before creating the tag: correct the commit or configuration, then restart.
