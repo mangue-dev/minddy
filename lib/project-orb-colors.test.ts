@@ -8,8 +8,9 @@ import {
 } from "./project-orb-colors";
 
 /**
- * The seed of the orb. What matters here is in one sentence: a project that has never restarted its draw keeps the color it had — the column is nullable for that, and a regression would repaint all the projects from day to day.
- * the next day, including orbs, mention pills and invitation emails.
+ * The orb seed preserves a project's color between rerolls. The nullable column
+ * prevents a regression from repainting existing orbs, mention pills, and invitation emails.
+ */
 describe("projectOrbSeed", () => {
   const id = "11111111-1111-4111-8111-111111111111";
   const seed = "22222222-2222-4222-8222-222222222222";

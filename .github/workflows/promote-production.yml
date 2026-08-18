@@ -4,27 +4,27 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: "Green hand SHA to promote without merge or rewrite""
+        description: "Green hand SHA to promote without merge or rewrite"
         required: true
         type: string
       checklist_version:
-        description: "Docs/security-release-checklist.md version used""
+        description: "Docs/security-release-checklist.md version used"
         required: true
         default: "1.0"
         type: string
       security_review_ref:
-        description: "Stable reference of the review report (without sensitive data)""
+        description: "Stable reference of the review report (without sensitive data)"
         required: true
         type: string
       residual_risks:
-        description: "Residual risks in the report""
+        description: "Residual risks in the report"
         required: true
         type: choice
         options:
           - none
           - documented
       pentest_status:
-        description: "Pentest decision according to the checklist""
+        description: "Pentest decision according to the checklist"
         required: true
         type: choice
         options:

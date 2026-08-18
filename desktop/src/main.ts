@@ -150,7 +150,8 @@ async function setChannel(next: DesktopChannel): Promise<void> {
  * What the menu and bridge call it: the toggle, without its promise.
  *
  * Neither has anything to wait for — a `click` of `MenuItem` and a
- * `ipcMain.on` return __keep
+ * `ipcMain.on` return immediately.
+ */
 function onChannelChange(next: DesktopChannel): void {
   void setChannel(next).catch((error) => {
     console.error("[channel] bascule impossible", error);

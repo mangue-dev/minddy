@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "SemVer already prepared in package.json and CHANGELOG.md (without v prefix)""
+        description: "SemVer already prepared in package.json and CHANGELOG.md (without v prefix)"
         required: true
         type: string
       sha:
-        description: "Exact production SHA to tag""
+        description: "Exact production SHA to tag"
         required: true
         type: string
 

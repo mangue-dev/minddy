@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Core version already released (without v prefix)""
+        description: "Core version already released (without v prefix)"
         required: true
         type: string
 
