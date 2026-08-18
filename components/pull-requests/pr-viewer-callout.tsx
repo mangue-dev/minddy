@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Spinner, toast } from "mangue-ui";
-import { Github, Gitlab } from "lucide-react";
+import { Github, Gitlab } from "@/components/git/provider-icons";
 import { startGitIdentityConnectApi } from "@/lib/git-integration-api";
 import { getRepoProvider } from "@/lib/repo-providers";
 import type { PrViewer } from "@/lib/agent-api";

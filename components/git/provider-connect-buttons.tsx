@@ -1,13 +1,12 @@
 "use client";
 
+import type { ComponentType, SVGProps } from "react";
 import {
   ArrowRight,
   ChevronDown,
-  Github,
-  Gitlab,
   Loader2,
-  type LucideIcon,
 } from "lucide-react";
+import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -28,7 +27,7 @@ import {
  * “Connect {provider}” by provider ACTIF. Read the catalog since
  * `@/lib/repo-providers` — a new provider appears automatically.
  */
-const ICONS: Record<RepoProviderIconName, LucideIcon> = {
+const ICONS: Record<RepoProviderIconName, ComponentType<SVGProps<SVGSVGElement>>> = {
   github: Github,
   gitlab: Gitlab,
 };

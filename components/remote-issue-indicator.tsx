@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { Github, Gitlab } from "lucide-react";
+import { Github, Gitlab } from "@/components/git/provider-icons";
 import { getRepoProvider } from "@/lib/repo-providers";
 import type { IssueCardIssue } from "@/lib/types";
 import {

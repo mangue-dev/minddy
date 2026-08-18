@@ -15,14 +15,13 @@ import {
 } from "mangue-ui";
 import {
   FileUp,
-  Github,
-  Gitlab,
   Info,
   Layers,
   RefreshCw,
   Sparkles,
   UserPlus,
 } from "lucide-react";
+import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import {

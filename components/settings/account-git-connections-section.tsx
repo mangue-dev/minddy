@@ -5,7 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
-import { GitBranch, Github, Gitlab } from "lucide-react";
+import { GitBranch } from "lucide-react";
+import { Github, Gitlab } from "@/components/git/provider-icons";
 import {
   disconnectGitConnectionApi,
   disconnectGitIdentityApi,

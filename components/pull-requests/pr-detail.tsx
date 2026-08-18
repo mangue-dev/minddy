@@ -32,8 +32,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  Github,
-  Gitlab,
   MessageSquare,
   MoreHorizontal,
   Reply,
@@ -41,6 +39,7 @@ import {
   Send,
   X,
 } from "lucide-react";
+import { Github, Gitlab } from "@/components/git/provider-icons";
 import Link from "next/link";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";

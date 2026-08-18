@@ -17,8 +17,6 @@ import {
   ChevronDown,
   ChevronRight,
   Ellipsis,
-  Github,
-  Gitlab,
   Globe,
   Lock,
   MessagesSquare,
@@ -26,6 +24,7 @@ import {
   Plug,
   Trash2,
 } from "lucide-react";
+import { Github, Gitlab } from "@/components/git/provider-icons";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import {
   AutomationAvatar,
