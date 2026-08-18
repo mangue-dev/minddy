@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.5] - 2026-08-18
+
 ### Changed
 
 - The prepublication runbook now gives the exact `deploy.sh` sequence that
@@ -58,7 +60,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.4...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.5...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -70,3 +72,5 @@ they create neither a version nor a tag of the public core.
 [0.10.3]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.3
 
 [0.10.4]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.4
+
+[0.10.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.5
