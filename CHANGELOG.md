@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.10] - 2026-08-19
+
 ### Fixed
 
 - The self-hosted backup runbook now states the exact six-file SQL contract and
@@ -93,7 +95,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.9...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.10...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -115,3 +117,5 @@ they create neither a version nor a tag of the public core.
 [0.10.8]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.8
 
 [0.10.9]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.9
+
+[0.10.10]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.10
