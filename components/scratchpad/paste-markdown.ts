@@ -1,48 +1,46 @@
 import { Extension, type Editor } from "@tiptap/core";
 import { DOMParser as PMDOMParser, Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { containsMarkdownTaskLine } from "@/lib/scratchpad";
+import {
+  containsScratchpadMarkdown,
+  containsScratchpadMarkdownBlock,
+} from "@/lib/scratchpad";
 
 /**
- * Pasting a markdown task list into the notebook gives TASKS — even
- * when the clipboard also has an HTML version.
+ * Pasting Markdown into the notebook creates rendered editor nodes, even when
+ * the clipboard also has an HTML representation.
  *
- * tiptap-markdown only rereads text pasted as markdown by
- * `clipboardTextParser`, and ProseMirror ONLY consults this parser if the
- * clipboard has nothing but text:
+ * tiptap-markdown only re-parses text through `clipboardTextParser` when
+ * ProseMirror receives no HTML:
  *
  * asText = !!text && (plainText || inCode || !html) // parseFromClipboard
  *
- * But almost any rich source — an editor, a web page, a chat that renders the
- * markdown — also drops a `text/html`, and it is he who wins. The `- [ ]` y
- * are already rendered (in simple bullet points, when the source does not know the lists
- * of tasks), and the notebook contains these bullet points as they are: the check boxes
- * are lost along the way, without anything indicating this.
+ * Most rich sources — editors, web pages, and chats that render Markdown —
+ * provide `text/html`, which normally wins. That would leave Markdown such as
+ * `## Heading` or `**strong text**` raw, and turn task markers into ordinary
+ * bullets when the source does not support task lists.
  *
- * We therefore regain control when the RAW TEXT carries task markers: the
- * clipboard is then markdown, whatever its HTML says, and we reread it
- * by the same path that tiptap-markdown uses for a collage without HTML
- * (same parser, same `parseSlice`) — the note is a markdown document, and its
- * tasks are its raw material.
+ * When the plain text clearly carries Markdown, the notebook therefore uses it
+ * in preference to the companion HTML and parses it through the same path used
+ * for a text-only clipboard. Ordinary rich-text pastes are left untouched.
  *
- * Outside of this case, nothing changes: pasting a web page remains a rich collage.
  */
 
-/** The `<body>` envelope is that of tiptap-markdown: without it, the
- * browser parser moves the head nodes and eats the edge blanks. */
+/** Mirrors tiptap-markdown's `<body>` envelope so the browser parser keeps
+ * top-level nodes and leading/trailing whitespace intact. */
 function elementFromString(value: string): HTMLElement {
   return new window.DOMParser().parseFromString(`<body>${value}</body>`, "text/html")
     .body;
 }
 
-/** tiptap-markdown adds its parser to storage without increasing TipTap types. */
+/** tiptap-markdown adds its parser to storage without augmenting TipTap types. */
 interface MarkdownStorage {
   markdown: {
     parser: { parse(content: string, options?: { inline?: boolean }): string };
   };
 }
 
-/** Is the cursor IN a list item (task or bullet)? */
+/** Whether the cursor is inside a task or bullet list item. */
 function inListItem(editor: Editor): boolean {
   const $from = editor.state.selection.$from;
   for (let depth = $from.depth; depth > 0; depth--) {
@@ -53,28 +51,25 @@ function inListItem(editor: Editor): boolean {
 }
 
 /**
- * Reads `text` in markdown and inserts it into the selection. Returns `false` — without anything
- * touch — when this text does not carry a task, or when it gives nothing.
+ * Parses Markdown `text` and inserts it into the selection. Returns `false`
+ * unchanged when the text has no Markdown signals or parses to an empty slice.
  *
- * **What decides the shape of the paste is where the cursor is**, and that is
- * all the difference between an imported subtask and a lost subtask:
+ * **The cursor position decides the shape of a block paste**, which preserves
+ * both imported subtasks and normal prose around the paste:
  *
- * - IN a list, the slice remains "open": its first task merges
- * into the one we are currently writing (or replaces the empty task where we
- * just pressed Enter), and the rest clings to the list in place.
- * - ELSEWHERE — in a paragraph of prose, on an empty line, in a title —
- * this opening FLATTENED the tree: the first task merged with the
- * paragraph, and its subtasks, having lost the parent which carried them,
- * went back to the first level. The list therefore arrives in BLOCK
- * (`openStart`/`openEnd` to 0), entire, with its levels.
+ * - Inside a list, the slice remains open: its first task merges into the
+ *   active item (or replaces a new empty task), and its siblings attach in
+ *   place.
+ * - Elsewhere, a block arrives complete (`openStart`/`openEnd` are zero), so
+ *   its nested tasks do not flatten into the surrounding paragraph.
  */
 export function pasteScratchpadMarkdown(editor: Editor, text: string): boolean {
-  if (!containsMarkdownTaskLine(text)) return false;
+  if (!containsScratchpadMarkdown(text)) return false;
   const parser = (editor.storage as unknown as MarkdownStorage).markdown?.parser;
   if (!parser) return false;
 
   const view = editor.view;
-  const asBlock = !inListItem(editor);
+  const asBlock = containsScratchpadMarkdownBlock(text) && !inListItem(editor);
   const slice = PMDOMParser.fromSchema(view.state.schema).parseSlice(
     elementFromString(
       asBlock ? parser.parse(text) : parser.parse(text, { inline: true })
@@ -108,7 +103,7 @@ export const PasteMarkdownTasks = Extension.create({
             const data = event.clipboardData;
             if (!data) return false;
             const text = data.getData("text/plain");
-            // Without concurrent HTML, tiptap-markdown has already done the job.
+            // Without companion HTML, tiptap-markdown already parses the text.
             if (!text || !data.getData("text/html")) return false;
             return pasteScratchpadMarkdown(editor, text);
           },

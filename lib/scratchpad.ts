@@ -63,16 +63,28 @@ export const TASK_MARKER_BY_STATE: Record<PlanTaskState, string> = {
 /** A markdown task line: a bullet (`-`, `*`, `+`) then one of the four
  * markers in the notebook. The `m` causes `^`/`$` to be carried on each line. */
 const MARKDOWN_TASK_LINE = /^[ \t]*[-*+][ \t]+\[[ xX~-]\](?=[ \t]|$)/m;
+const MARKDOWN_BLOCK = /(?:^|\n)[ \t]{0,3}(?:#{1,6}(?:[ \t]+|$)|[-*+][ \t]+|\d{1,9}[.)][ \t]+|>[ \t]?|`{3,}|~{3,}|(?:-{3,}|\*{3,}|_{3,})[ \t]*$)/m;
+const MARKDOWN_INLINE = /(?:`[^`\n]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|\[[^\]\n]+\]\([^\s)\n]+(?:\s+['"][^'"\n]+['"])?\))/;
 
-/**
- * Does the text have at least one line of markdown task?
- *
- * Used for PASTE in the notebook (components/scratchpad/paste-markdown.ts): a
- * clipboard which carries these markers carries markdown, whatever it says sa
- * HTML version — and you have to reread it in markdown.
- */
+/** Whether the text contains at least one Markdown task line. */
 export function containsMarkdownTaskLine(text: string): boolean {
   return MARKDOWN_TASK_LINE.test(text);
+}
+
+/** Whether the text contains a block-level Markdown construct. */
+export function containsScratchpadMarkdownBlock(text: string): boolean {
+  return MARKDOWN_BLOCK.test(text);
+}
+
+/**
+ * Whether a rich clipboard's plain-text representation is deliberately
+ * Markdown. This lets the notebook prefer that source over companion HTML
+ * while preserving ordinary rich-text pastes.
+ */
+export function containsScratchpadMarkdown(text: string): boolean {
+  return (
+    containsScratchpadMarkdownBlock(text) || MARKDOWN_INLINE.test(text)
+  );
 }
 
 /** How a deliberate empty line (spacer) is stored. Markdown collapses runs of

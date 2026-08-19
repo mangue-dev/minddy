@@ -2,8 +2,8 @@
 
 import {
   forwardRef,
-  useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useState,
   type ComponentType,
 } from "react";
@@ -33,7 +33,13 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   ref
 ) {
   const [selected, setSelected] = useState(0);
-  useEffect(() => setSelected(0), [props.items]);
+  // Suggestion creates a fresh `items` array for every editor transaction,
+  // including selection-only updates. Resetting from that array made a hovered
+  // entry jump back to the first row while the pointer was still over the
+  // menu. The query is the actual new search, so reset only when it changes.
+  // Use a layout effect so the former highlighted row is never painted for a
+  // newly filtered list.
+  useLayoutEffect(() => setSelected(0), [props.query]);
 
   const choose = (index: number) => {
     const item = props.items[index];

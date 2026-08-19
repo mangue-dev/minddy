@@ -23,6 +23,7 @@ import { Arrows } from "@/components/editor-arrows";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
 import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
 import { PasteMarkdownTasks } from "@/components/scratchpad/paste-markdown";
+import { HeadingFromListInput } from "@/components/scratchpad/heading-from-list-input";
 import {
   ScratchpadTaskItem,
   ScratchpadTaskList,
@@ -395,6 +396,7 @@ export function ScratchpadEditor({
         ScratchpadParagraph,
         ScratchpadTaskList,
         ScratchpadTaskItem,
+        HeadingFromListInput,
         Arrows,
         Markdown.configure({
           html: false,
