@@ -137,13 +137,23 @@ async function networkFindings(values) {
   return findings;
 }
 
-function compatibilityFinding(values) {
+export function compatibilityFinding(values) {
   const path = resolve(ROOT_DIR, "deploy/self-hosted/compatibility.json");
   const compatibility = JSON.parse(readFileSync(path, "utf8"));
   const entry = compatibility.entries.find((candidate) => candidate.minddyRelease === values.MINDDY_RELEASE);
   if (!entry) return { name: "Version compatibility", state: "fail", detail: "MINDDY_RELEASE has no compatibility entry." };
-  if (entry.referenceCompose.minddyImage !== values.MINDDY_IMAGE) return { name: "Version compatibility", state: "fail", detail: "MINDDY_IMAGE does not match the selected release compatibility row." };
-  return { name: "Version compatibility", state: "pass", detail: `release ${values.MINDDY_RELEASE} matches its compatibility row.` };
+  const image = values.MINDDY_IMAGE;
+  const immutableReleaseImage = /^ghcr\.io\/mangue-dev\/minddy@sha256:[a-f0-9]{64}$/.test(image ?? "");
+  if (entry.referenceCompose.minddyImage !== image && !immutableReleaseImage) {
+    return { name: "Version compatibility", state: "fail", detail: "MINDDY_IMAGE does not match the selected release compatibility row or a verified immutable minddy digest." };
+  }
+  return {
+    name: "Version compatibility",
+    state: "pass",
+    detail: immutableReleaseImage
+      ? `release ${values.MINDDY_RELEASE} uses an immutable image digest; verify its release-manifest.json before deployment.`
+      : `release ${values.MINDDY_RELEASE} matches its compatibility row.`,
+  };
 }
 
 function diskFinding(directory) {

@@ -36,6 +36,25 @@ the report. Any change to either candidate commit invalidates the run.
 Use unique, non-production values throughout. The examples reserve `.test`
 domains and local ports deliberately.
 
+## Product acceptance criteria
+
+This acceptance validates the distribution as a product, not merely a build.
+Use the table as a release gate. A row passes only with the stated sanitized
+evidence; an exception requires a separately tracked blocking issue.
+
+| Outcome | Measurable criterion | Required evidence |
+| --- | --- | --- |
+| Choose a deployment mode | A first-time operator selects `managed` or `full` in the guided installer, states why the other mode is unsuitable, and supplies only the inputs requested for the selected mode. | Selected mode, input checklist with values redacted, and the operator's one-sentence rationale. |
+| Trust immutable artifacts | Before any code or image runs, the operator verifies the GitHub Release `SHA256SUMS`, source tag object and commit, release manifest, and OCI signature for the `image@sha256` reference. | Command exit codes; tag object, commit, and digest only. |
+| Reach a healthy instance | Starting after the selected Supabase endpoint or pinned upstream checkout is ready, the installer reaches a passing `self-host:doctor` health report within 45 minutes. | UTC start/end timestamps, elapsed minutes, and redacted doctor report. |
+| Recover from one injected fault | Stop the minddy service after first health, rerun the installer without changing the environment file, and regain health with the same image digest and data identifiers. | Fault command, checkpoint file, environment-file checksum before/after, and doctor report. |
+| Discover operations unaided | Starting from the published self-hosting guide, a human and a documentation-constrained AI each find the update, backup, restore, and rollback procedures within 10 minutes and identify the required backup components. | Start/end timestamps, links followed, commands identified, and any ambiguity or missing instruction. |
+
+Do not count prerequisite provisioning time such as DNS propagation or a managed
+Supabase provider outage toward the 45-minute target, but record it separately.
+Do not waive an exceeded target, an unverified digest, or an undocumented
+instruction by editing the release checkout.
+
 ## 1. Prepare the disposable host
 
 Install Node.js 24, pnpm 10.28.0, Docker, the Supabase CLI, PostgreSQL client
@@ -67,6 +86,32 @@ git clone https://github.com/mangue-dev/minddy.git "$SOURCE_DIR"
 cd "$SOURCE_DIR"
 git fetch --tags --force
 ```
+
+In release mode, download the matching public GitHub Release assets into a separate directory
+before installing dependencies. Verify their checksums, verify that the
+manifest matches the source tag, and extract the image reference. Never derive
+the digest from a mutable image tag.
+
+```bash
+export RELEASE_ASSETS="$CLEAN_ROOT/release-assets"
+install -d -m 0700 "$RELEASE_ASSETS"
+# Download SHA256SUMS, release-manifest.json, and minddy-vX.Y.Z-container.txt
+# from the public GitHub Release for "$FROM_REF" into "$RELEASE_ASSETS".
+cd "$RELEASE_ASSETS"
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum --check SHA256SUMS
+else
+  shasum -a 256 --check SHA256SUMS
+fi
+export IMAGE="$(sed -n 's/^reference=//p' "minddy-${FROM_REF}-container.txt")"
+test -n "$IMAGE"
+test "$(node -p 'require("./release-manifest.json").release.tag')" = "$FROM_REF"
+cd "$SOURCE_DIR"
+```
+
+Run the image signature check from [container-image.md](container-image.md)
+with `$IMAGE` before proceeding. Record only its digest-bearing image reference,
+not release credentials or command output that contains a token.
 
 For prepublication validation, receive only the candidate Git bundle and its
 `SHA256SUMS` file from the release preparer. Do not receive a working tree or a
@@ -115,20 +160,46 @@ fi
 Stop if it reports `BLOCKED`. Do not substitute a branch or add missing files to
 the checkout: that would test unpublished local state.
 
-## 2. Install the source release
+## 2. Install the source release and reference profile
 
 ```bash
 git switch --detach "$FROM_REF"
 test "$(git describe --tags --exact-match)" = "$FROM_REF"
 test -z "$(git status --porcelain)"
 pnpm install --frozen-lockfile
-pnpm bootstrap:supabase
-pnpm bootstrap:supabase
 ```
 
-The second bootstrap must succeed without replacing generated secrets or
-reapplying migrations. Keep `.env.local` out of the report. Add only these
-non-secret instance values:
+Choose the guided installer mode without maintainer advice. `managed` uses an
+already-provisioned compatible Supabase service; `full` operates the pinned
+official Supabase stack. Record why the other mode is unsuitable. Start the
+measurement after the selected service or checkout is ready, and provide the
+verified immutable image reference from the release assets:
+
+```bash
+export INSTALL_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+export MINDDY_ENV_FILE="$SOURCE_DIR/deploy/self-hosted/.env"
+pnpm self-host:install -- --non-interactive --mode managed \
+  --domain tickets.example.test --admin-email admin@example.test \
+  --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
+  --anon-key "$MINDDY_PUBLIC_SUPABASE_ANON_KEY" \
+  --service-role-key "$SUPABASE_SERVICE_ROLE_KEY" --db-url "$SUPABASE_DB_URL" \
+  --image "$IMAGE" --env-file "$MINDDY_ENV_FILE"
+pnpm self-host:doctor -- --mode managed --env-file "$MINDDY_ENV_FILE" --db-url "$SUPABASE_DB_URL" --json \
+  > "$REPORT_DIR/first-doctor.json"
+export INSTALL_HEALTHY_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+```
+
+The same `--image` value must be used for the `full` mode. It replaces only the
+release image from the versioned environment template; Caddy, scheduler, and
+the official Supabase files stay on their matrix pins. The installer must create
+the environment file with mode `0600`, reach health, and leave optional
+capabilities disabled. Keep the environment file and all credentials out of the
+report.
+
+After this reference-profile check, the local source-only lifecycle path below
+tests the versioned source migration sequence. The second bootstrap must succeed
+without replacing generated secrets or reapplying migrations. Keep `.env.local`
+out of the report. Add only these non-secret instance values:
 
 ```dotenv
 MINDDY_PUBLIC_APP_URL=http://127.0.0.1:3000
@@ -242,7 +313,34 @@ Run the provider scenario separately and declare only its host with
 `--profile provider --allow-host api.resend.com`. The resulting CI artifacts
 make a required Supabase access distinguishable from a prohibited vendor leak.
 
-## 5. Back up and update
+## 5. Recover from one injected error
+
+After the project, tickets, attachment, and integration record have been
+created, inject one reversible application failure into the reference profile.
+Do not edit the environment file, its checkpoint, or any container image.
+
+```bash
+sha256sum "$MINDDY_ENV_FILE" > "$REPORT_DIR/environment-before.sha256"
+docker compose --env-file "$MINDDY_ENV_FILE" \
+  -f "$SOURCE_DIR/deploy/self-hosted/compose.managed.yml" stop minddy
+pnpm self-host:install -- --non-interactive --mode managed \
+  --domain tickets.example.test --admin-email admin@example.test \
+  --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
+  --anon-key "$MINDDY_PUBLIC_SUPABASE_ANON_KEY" \
+  --service-role-key "$SUPABASE_SERVICE_ROLE_KEY" --db-url "$SUPABASE_DB_URL" \
+  --image "$IMAGE" --env-file "$MINDDY_ENV_FILE"
+sha256sum "$MINDDY_ENV_FILE" > "$REPORT_DIR/environment-after.sha256"
+diff -u "$REPORT_DIR/environment-before.sha256" "$REPORT_DIR/environment-after.sha256"
+pnpm self-host:doctor -- --mode managed --env-file "$MINDDY_ENV_FILE" \
+  --db-url "$SUPABASE_DB_URL" --json > "$REPORT_DIR/recovery-doctor.json"
+```
+
+Confirm the exact image digest remains in the protected environment file and
+that the prior project, tickets, attachment, and revoked integration retain
+their recorded identifiers. For `full` mode, use the same command with both
+Compose files specified by the installer; record the equivalent stop command.
+
+## 6. Back up and update
 
 Follow **Before any maintenance** and **Complete and consistent backup** in
 [`self-hosting-operations.md`](self-hosting-operations.md) without shortening
@@ -275,7 +373,7 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -Atc \
   > "$REPORT_DIR/target-migrations.txt"
 ```
 
-## 6. Restore onto a blank stack
+## 7. Restore onto a blank stack
 
 Stop the target application and follow **Restore to a pristine environment** in
 the operations runbook. The restore target must use a new Supabase directory,
@@ -297,7 +395,23 @@ integration attribution and revocation, attachment metadata, and downloaded
 attachment bytes. The restored application must still use the restore origin for
 links, OAuth, MCP, and callbacks.
 
-## 7. Seal the evidence
+## 8. Replay published documentation with an AI agent
+
+Start a separate AI session that has no repository checkout, shell history,
+issue context, or chat transcript from this validation. Give it only the public
+site and the published documentation URLs. Do not give it credentials, a
+release bundle, or unpublished files. Ask it to choose a deployment mode, list
+the required inputs, install from a tag and image digest, create the first
+project and issue, recover from the documented injected failure, and locate the
+update, backup, restore, and rollback procedures.
+
+Record the exact prompt, documentation URLs opened, elapsed time, proposed
+commands, and every question or ambiguous instruction. Redact any generated
+credential-like string. A maintainer may answer only by pointing to an already
+published document; a missing answer, a required hidden assumption, or a
+recommendation to use a branch or mutable image tag is a release blocker.
+
+## 9. Seal the evidence
 
 Create `report.md` with this table. Every row needs a command, observation, or
 sanitized artifact; a bare assertion is not evidence.
@@ -305,15 +419,20 @@ sanitized artifact; a bare assertion is not evidence.
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Immutable consecutive tags |  | `preflight.md` |
+| Public release assets and OCI digest |  | checksum result, tag object, commit, and digest |
+| Guided mode choice and required inputs |  | mode rationale and redacted input checklist |
+| First healthy reference profile within 45 minutes |  | UTC timestamps and `first-doctor.json` |
 | Clean bootstrap and idempotent second run |  | timestamps and exit codes |
 | Account and first administrator |  | redacted account ID and role |
 | Project, ticket, and Storage object |  | IDs and `source-counts.json` |
 | One integration enabled and revoked |  | redacted integration ID and HTTP statuses |
 | Other optional services isolated |  | sanitized host/request audit |
+| Recovery from injected application failure |  | environment checksums, checkpoint, and `recovery-doctor.json` |
 | Coordinated backup sealed and copied |  | backup ID and checksum result |
 | Update completed in required order |  | tag, migration list, downtime |
 | Blank restore completed |  | target identity and verifier output |
 | Restored data and bytes match |  | count diff and attachment hash |
+| Documentation-only AI replay |  | sanitized prompt, links, timings, and ambiguities |
 
 Remove secrets from logs, then seal the evidence directory:
 

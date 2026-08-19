@@ -50,6 +50,7 @@ export function parseArgs(argv) {
     else if (arg === "--anon-key") options.anonKey = value();
     else if (arg === "--service-role-key") options.serviceRoleKey = value();
     else if (arg === "--db-url") options.dbUrl = value();
+    else if (arg === "--image") options.image = normalizeImageReference(value());
     else if (arg === "--supabase-dir") options.supabaseDir = resolve(value());
     else if (arg === "--deploy-dir") options.deployDir = resolve(value());
     else if (arg === "--env-file") options.envFile = resolve(value());
@@ -83,6 +84,7 @@ Options:
   --supabase-dir <path>     Pinned upstream Supabase checkout for full mode.
   --supabase-host <hostname> Public API hostname for full mode.
   --db-url <postgres-url>   Migration connection used only by bootstrap.
+  --image <oci-reference>   Verified immutable minddy OCI digest to deploy.
   --enable scheduler         Start the opt-in scheduler after bootstrap.
   --env-file <path>         Environment file to create (default: deploy/self-hosted/.env).
   --deploy-dir <path>       Versioned self-hosted asset directory.
@@ -94,6 +96,14 @@ Options:
 
 All optional integrations are disabled. The operator remains responsible for DNS,
 firewall ports 80/443, a backup policy, and the selected Supabase service.`;
+}
+
+export function normalizeImageReference(value) {
+  const reference = value.trim();
+  if (!/^ghcr\.io\/mangue-dev\/minddy@sha256:[a-f0-9]{64}$/.test(reference)) {
+    fail("--image must be the verified immutable minddy OCI digest reference ghcr.io/mangue-dev/minddy@sha256:<64 lowercase hex characters> from the release assets.");
+  }
+  return reference;
 }
 
 export function normalizeHostname(value) {
@@ -222,6 +232,7 @@ export function environmentValues(options, generated = generatedValues()) {
     ...generated,
     MINDDY_DEPLOY_DIR: options.deployDir,
     MINDDY_ENV_FILE: options.envFile,
+    ...(options.image ? { MINDDY_IMAGE: options.image } : {}),
     MINDDY_HOST: domain,
     SUPABASE_HOST: supabaseHost || `supabase.${domain}`,
     CADDY_EMAIL: caddyEmail,
@@ -321,6 +332,12 @@ function checkConfigFile(options) {
   return readFileSync(template, "utf8");
 }
 
+function assertRequestedImage(options, values) {
+  if (options.image && values.MINDDY_IMAGE !== options.image) {
+    fail("--image does not match the existing environment file. Use the documented update procedure; the installer never changes a deployed image pin.");
+  }
+}
+
 export async function main(argv = process.argv.slice(2)) {
   let options = parseArgs(argv);
   if (options.help) return console.log(help());
@@ -330,6 +347,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (hasExistingEnvironment) {
     values = parseEnvironment(readFileSync(options.envFile, "utf8"));
     assertCompleteEnvironment(values);
+    assertRequestedImage(options, values);
     options.domain ||= values.MINDDY_HOST;
     options.adminEmail ||= values.ADMIN_EMAILS?.split(",")[0];
     options.caddyEmail ||= values.CADDY_EMAIL;

@@ -133,12 +133,16 @@ the host running the bootstrap.
 pnpm self-host:install -- --non-interactive --mode managed \
   --domain tickets.example.com --admin-email ops@example.com \
   --supabase-url https://supabase.example.com --anon-key '...' \
-  --service-role-key '...' --db-url 'postgresql://postgres:...@db.example.com:5432/postgres'
+  --service-role-key '...' --db-url 'postgresql://postgres:...@db.example.com:5432/postgres' \
+  --image 'ghcr.io/mangue-dev/minddy@sha256:replace-with-the-release-digest'
 ```
 
-The installer never replaces an existing `.env`. A later invocation reuses that
-file and safely repeats Compose pulls, `up`, migrations, and bucket
-reconciliation; it does not rotate data-encryption or cron secrets. DNS,
+Before supplying `--image`, download the matching GitHub Release assets, verify
+`SHA256SUMS`, and copy the `reference` value from `release-manifest.json`. The
+option accepts only the immutable official GHCR digest, never a moving tag. The
+installer never replaces an existing `.env` or changes its image pin. A later
+invocation reuses that file and safely repeats Compose pulls, `up`, migrations,
+and bucket reconciliation; it does not rotate data-encryption or cron secrets. DNS,
 firewall ports 80 and 443, upstream Supabase provisioning, and a restorable
 backup policy remain operator responsibilities. Scheduler, AI, billing,
 analytics, email, Git hosting, and every other optional integration remain off
