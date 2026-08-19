@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "SemVer already prepared in package.json and CHANGELOG.md (without v prefix)"
+        description: "SemVer already prepared in package.json (without v prefix)"
         required: true
         type: string
       sha:
@@ -46,7 +46,7 @@ jobs:
           test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"
           test "$(node -p "require('./desktop/package.json').version")" = "$RELEASE_VERSION"
           test -z "$(git tag --list "v$RELEASE_VERSION")"
-          node -e "import('./scripts/release-lib.mjs').then(({ assertVersion, changelogSection }) => { const fs = require('node:fs'); assertVersion(process.env.RELEASE_VERSION); changelogSection(fs.readFileSync('CHANGELOG.md', 'utf8'), process.env.RELEASE_VERSION); })"
+          node -e "import('./scripts/release-lib.mjs').then(({ assertVersion }) => assertVersion(process.env.RELEASE_VERSION))"
 
       # This barrier deliberately precedes the installation: the code of a
       # dependency or a script in the repository has not executed anything yet.

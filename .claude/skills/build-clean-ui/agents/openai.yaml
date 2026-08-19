@@ -1,4 +1,0 @@
-interface:
-  display_name: "Build Clean UI"
-  short_description: "Craft polished, accessible UI systems"
-  default_prompt: "Use $build-clean-ui to design and implement a polished, accessible interface."

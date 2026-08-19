@@ -41,7 +41,7 @@ serves Minddy Cloud. There is no long-running release branch. A
 patch of an old major part exceptionally from a branch
 `release/X.x`, then receives a normal SemVer tag.
 
-## Versioning and changelog
+## Versioning and release notes
 
 The heart follows SemVer:
 
@@ -52,11 +52,10 @@ The heart follows SemVer:
 - **major**: API/configuration breakage, announced deletion or migration of
   data incompatible with the old application.
 
-`CHANGELOG.md` only describes the core and its public desktop shell. Each PR
-visible to users adds an entry under `Unreleased` in
-`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` or `Security`. The details
-of Cloud operations and purely marketing changes remain in their
-respective newspapers.
+The public [changelog](https://minddy.app/changelog) documents user-visible
+deliveries. Add a product entry through `scripts/changelog-add.mjs`; it updates
+the app's localized release notes. Cloud operations and purely marketing
+changes remain in their respective journals.
 
 ## The single order
 
@@ -83,8 +82,8 @@ In automatic mode:
 - macOS is only suggested if the actual shell footprint differs from the
   last publication.
 
-If core is selected, the wizard asks for patch/minor/major or a version
-explicit. It updates the four manifests/lockfiles and the changelog, creates the
+If core is selected, the wizard asks for patch/minor/major or an explicit
+version. It updates the four manifests/lockfiles, creates the
 commit signed DCO, pushes `main` and waits for its remote CI. It then triggers
 `Promote production`, which is waiting for environment approval
 `cloud-production`, rechecks successful CI of exact SHA, rejects any discrepancies
@@ -116,8 +115,8 @@ lint, typecheck, tests, audit, web build, artifacts, signature and notarization
 spin in disposable runners. Production secrets remain in the
 GitHub environments or in the organization's Vercel integration.
 
-Internally, `scripts/prepare-release.mjs` refuses a non-SemVer version, a tag
-existing or an empty `Unreleased`. The public workflow redoes the deposit barrier,
+Internally, `scripts/prepare-release.mjs` refuses a non-SemVer version or an
+existing tag. The public workflow repeats the repository barrier,
 frozen installation, lint, typecheck, desktop bundle, tests, audit and a real
 `next build` without secrets. It generates the artifacts before creating the
 tag and attests them when the repository visibility supports GitHub artifact
@@ -133,7 +132,7 @@ leave a half-release.
   installation or update;
 - `release-manifest.json`, which links version, tag, SHA, previous release,
   added migrations and archive hashes;
-- `UPDATE.md` and notes extracted from the changelog;
+- `UPDATE.md` and a link to the public changelog;
 - `SHA256SUMS`.
 
 GitHub also provides its automatic tag archives. For a public repository, the

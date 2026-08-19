@@ -1,6 +1,6 @@
 import { CircleDashed, CircleDot, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
 
-// Objective status is FIXED (plan.md §6). The value list itself lives in
+// Objective status is fixed. The value list itself lives in
 // lib/objective-validation.ts, which imports nothing — server code (route
 // handlers, Numo's tool schemas) reads it there rather than dragging lucide in.
 export { OBJECTIVE_STATUS_VALUES, isObjectiveStatus } from "./objective-validation";

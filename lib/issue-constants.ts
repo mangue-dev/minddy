@@ -15,7 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-// All three axes are FIXED (plan.md §4) — not customizable per project.
+// All three axes are fixed and not customizable per project.
 
 export type IssueStatus =
   | "triage"
@@ -45,7 +45,7 @@ export interface StatusMeta {
   color: string;
 }
 
-// Order = kanban column order (plan.md §4). Board columns ONLY — triage and
+// Order = kanban column order. Board columns only — triage and
 // duplicate issues are deliberately absent from the kanban.
 export const STATUSES: StatusMeta[] = [
   { value: "backlog", icon: CircleDashed, color: "text-muted-foreground" },

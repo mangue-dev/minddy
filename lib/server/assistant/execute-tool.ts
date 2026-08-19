@@ -908,7 +908,7 @@ export async function executeTool(
       case "create_issue": {
         // Without an explicit status the issue lands in the user's configured
         // Numo default (triage unless changed in Account → Preferences) — the
-        // human validation gate for assistant-created issues (plan.md §10).
+        // human validation gate for assistant-created issues.
         const status = isStatus(args.status)
           ? args.status
           : (ctx.numoDefaultStatus ?? "triage");

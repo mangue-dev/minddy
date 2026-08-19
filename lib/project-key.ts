@@ -1,5 +1,5 @@
 // Project key = 2–5 uppercase letters, unique per owner. Auto-suggested from the
-// name, editable by the user. (Matches plan.md §14.)
+// name and editable by the user.
 
 export const PROJECT_KEY_MAX = 5;
 export const PROJECT_KEY_MIN = 2;

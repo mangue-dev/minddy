@@ -25,6 +25,9 @@ next-env.d.ts
 /tsconfig.tsbuildinfo
 /copy-audit*.json
 /copy-audit*.md
+/copy-fix-*.md
+/plan.md
+/test.txt
 /*-plan.md
 /.claude/settings.json
 /captures/world/world.md

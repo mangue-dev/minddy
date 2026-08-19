@@ -223,7 +223,7 @@ if [ "$CORE" -eq 1 ]; then
   fi
   CURRENT_VERSION=$(node -p "require('./package.json').version")
   PREPARED=0
-  if [ -z "$(git tag --list "v$CURRENT_VERSION")" ] && node -e 'import("./scripts/release-lib.mjs").then(({changelogSection}) => changelogSection(require("node:fs").readFileSync("CHANGELOG.md", "utf8"), process.argv[1]))' "$CURRENT_VERSION" >/dev/null 2>&1; then
+  if [ -z "$(git tag --list "v$CURRENT_VERSION")" ]; then
     PREPARED=1
   fi
   if [ "$PREPARED" -eq 1 ] && yes_no "The $CURRENT_VERSION version is prepared but not published. Take it back?" yes; then
@@ -262,7 +262,7 @@ if [ "$CORE" -eq 1 ]; then
   if [ "$REUSE_PREPARED" -eq 0 ]; then
     echo "→ Preparing public core v$TARGET_VERSION..."
     npm run release:prepare -- "$TARGET_VERSION"
-    git add package.json package-lock.json desktop/package.json desktop/package-lock.json CHANGELOG.md
+    git add package.json package-lock.json desktop/package.json desktop/package-lock.json
     git commit -s -m "chore: prepare release $TARGET_VERSION"
   fi
 fi

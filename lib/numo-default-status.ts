@@ -17,7 +17,7 @@ export const NUMO_DEFAULT_STATUS_OPTIONS = [
 export type NumoDefaultStatus = (typeof NUMO_DEFAULT_STATUS_OPTIONS)[number];
 
 /** Historical default: where assistant-created issues land when the user hasn't
- *  chosen otherwise — the triage validation gate (plan.md §10). */
+ *  chosen otherwise. Triage remains the validation gate. */
 export const DEFAULT_NUMO_STATUS: NumoDefaultStatus = "triage";
 
 export const isNumoDefaultStatus = (v: unknown): v is NumoDefaultStatus =>

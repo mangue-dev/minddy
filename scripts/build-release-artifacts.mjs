@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertVersion, changelogSection, sha256 } from "./release-lib.mjs";
+import { assertVersion, sha256 } from "./release-lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const output = path.resolve(process.argv[2] ?? path.join(root, ".release"));
@@ -31,9 +31,6 @@ const migrationArgs = previousTag
   : ["ls-tree", "-r", "--name-only", "HEAD", "supabase/migrations"];
 const migrations = git(migrationArgs)
   .trim().split("\n").filter((file) => file.endsWith(".sql"));
-const changelog = await readFile(path.join(root, "CHANGELOG.md"), "utf8");
-const notes = changelogSection(changelog, version);
-
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
@@ -64,7 +61,10 @@ const update = `# Update to minddy ${tag}\n\n` +
   "then run the runbook smoke tests. Migrations are forward-only: after an incompatible migration, " +
   "rollback requires restoring the complete backup.\n";
 await writeFile(path.join(output, "UPDATE.md"), update);
-await writeFile(path.join(output, "RELEASE_NOTES.md"), `# minddy ${tag}\n\n${notes}\n`);
+await writeFile(
+  path.join(output, "RELEASE_NOTES.md"),
+  `# minddy ${tag}\n\nProduct release notes: https://minddy.app/changelog\n`,
+);
 
 const archives = {};
 for (const name of [sourceName, migrationsName]) archives[name] = await sha256(path.join(output, name));
