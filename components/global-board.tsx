@@ -358,6 +358,13 @@ function GlobalBoardInner() {
         : [],
     [scopedIssues, selectedCycle]
   );
+  const currentCycleCompletionPercent = useMemo(() => {
+    const currentCycleId = cycles?.current?.id;
+    if (!currentCycleId) return null;
+    return (
+      cycleCompletionPercent(issues.filter((i) => i.cycle_id === currentCycleId)) ?? 0
+    );
+  }, [cycles?.current?.id, issues]);
   // Reco ordering: blockers may live outside the cycle, so the status map
   // covers the whole board.
   const cycleComparator = useMemo(() => {
@@ -545,6 +552,7 @@ function GlobalBoardInner() {
             onAskNumo={handleAskNumo}
             cycleTab={{
               active: cycleMode,
+              completionPercent: currentCycleCompletionPercent,
               onSelect: () => switchCycleMode(true),
             }}
             rightControls={

@@ -28,6 +28,7 @@ import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
+import { cycleCompletionPercent } from "@/lib/cycle";
 import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
@@ -124,6 +125,11 @@ function ProjectBoard() {
     nextCycle?.id ?? null,
     onSetIssueCycle
   );
+  const currentCycleCompletionPercent = useMemo(() => {
+    const currentCycleId = currentCycle?.id;
+    if (!currentCycleId) return null;
+    return cycleCompletionPercent(issues.filter((issue) => issue.cycle_id === currentCycleId)) ?? 0;
+  }, [currentCycle?.id, issues]);
 
   // Strip the one-shot ?view= instruction once applied, keeping other params
   // (?issue= deep links survive the /my redirect).
@@ -594,6 +600,7 @@ function ProjectBoard() {
                 cycleTab={{
                   active: false,
                   external: true,
+                  completionPercent: currentCycleCompletionPercent,
                   onSelect: () => router.push("/all?view=cycle"),
                 }}
               />

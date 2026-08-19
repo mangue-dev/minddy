@@ -70,6 +70,7 @@ import {
 } from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
+import { ProgressRing } from "@/components/progress-ring";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ShareViewDialog } from "@/components/share-view-dialog";
 import { FormDialog } from "@/components/form-dialog";
@@ -669,8 +670,14 @@ export function BoardToolbar({
   withShare?: boolean;
   onAskNumo: () => void;
   /** The "Cycle" pill (MIN-32), after the view pills. `external` renders the ↗
-      icon — a project board's pill that navigates to /all in cycle mode. */
-  cycleTab?: { active: boolean; external?: boolean; onSelect: () => void };
+      icon — a project board's pill that navigates to /all in cycle mode.
+      `completionPercent` replaces its cycle glyph while a current cycle exists. */
+  cycleTab?: {
+    active: boolean;
+    external?: boolean;
+    completionPercent?: number | null;
+    onSelect: () => void;
+  };
   /** Cycle mode: replaces the whole right cluster (save/sort/filters/options)
       — the special view has no use for them. */
   rightControls?: React.ReactNode;
@@ -818,6 +825,7 @@ export function BoardToolbar({
                       key={key}
                       active={cycleTab.active}
                       external={cycleTab.external}
+                      completionPercent={cycleTab.completionPercent}
                       onSelect={cycleTab.onSelect}
                       onContextMenu={(e) => openViewMenu(null, e)}
                     />
@@ -842,7 +850,16 @@ export function BoardToolbar({
             <DragOverlay dropAnimation={null}>
               {activeTabId === CYCLE_TAB_KEY && cycleTab ? (
                 <div className={cn(PILL_CLASS, pillTone(cycleTab.active))}>
-                  <IterationCw className="size-3 shrink-0" aria-hidden />
+                  {cycleTab.completionPercent === null ||
+                  cycleTab.completionPercent === undefined ? (
+                    <IterationCw className="size-3 shrink-0" aria-hidden />
+                  ) : (
+                    <ProgressRing
+                      percent={cycleTab.completionPercent}
+                      colorClass="text-emerald-500"
+                      className="size-3"
+                    />
+                  )}
                   {t("cycleTab")}
                   {cycleTab.external && (
                     <ArrowUpRight className="size-3 shrink-0" aria-hidden />
@@ -1152,11 +1169,14 @@ function ViewChip({
 function CycleTab({
   active,
   external,
+  completionPercent,
   onSelect,
   onContextMenu,
 }: {
   active: boolean;
   external?: boolean;
+  /** Null when no current cycle exists; 0 is a valid empty current cycle. */
+  completionPercent?: number | null;
   onSelect: () => void;
   /** Right click: the same menu as the views, entirely grayed out (MIN-135). */
   onContextMenu: (e: React.MouseEvent) => void;
@@ -1175,7 +1195,15 @@ function CycleTab({
       onContextMenu={onContextMenu}
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
-      <IterationCw className="size-3 shrink-0" aria-hidden />
+      {completionPercent === null || completionPercent === undefined ? (
+        <IterationCw className="size-3 shrink-0" aria-hidden />
+      ) : (
+        <ProgressRing
+          percent={completionPercent}
+          colorClass="text-emerald-500"
+          className="size-3"
+        />
+      )}
       {t("cycleTab")}
       {external && <ArrowUpRight className="size-3 shrink-0" aria-hidden />}
     </button>
