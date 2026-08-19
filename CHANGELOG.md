@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.16] - 2026-08-19
+
 ### Fixed
 
 - Gate GitHub artifact attestations on repository visibility while retaining
@@ -129,7 +131,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.14...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.16...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -161,3 +163,5 @@ they create neither a version nor a tag of the public core.
 [0.10.13]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.13
 
 [0.10.14]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.14
+
+[0.10.16]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.16
