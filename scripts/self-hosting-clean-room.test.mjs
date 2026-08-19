@@ -28,6 +28,12 @@ test("the two reference Compose profiles are part of every clean-room candidate"
   assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/validate-self-hosted-compose.mjs"));
 });
 
+test("the guided installation tools are part of every clean-room candidate", () => {
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/self-hosting-install.mjs"));
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/self-hosting-doctor.mjs"));
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/self-hosting-maintenance.mjs"));
+});
+
 test("requires an explicit consecutive release pair", () => {
   assert.deepEqual(parseArgs(["--", "--from-tag", "v1.2.3", "--to-tag", "v1.2.4"]), {
     fromTag: "v1.2.3",

@@ -112,6 +112,59 @@ procedure for a running instance.
 
 ## Installation: managed or self-hosted remote Supabase
 
+### Guided reference-profile installation
+
+For either versioned Compose profile, use the guided installer from the release
+directory. It asks for the deployment mode, public domain, administrator, and
+only the optional capabilities that should be enabled. It generates distinct
+secrets, creates `deploy/self-hosted/.env` with mode `0600`, pulls and starts
+the selected stack, and runs the existing idempotent Supabase bootstrap.
+
+```bash
+pnpm self-host:install
+```
+
+For non-interactive automation, pass every required input explicitly. Managed
+mode requires credentials for an existing Supabase project; full mode requires
+the pinned upstream checkout and a PostgreSQL connection that is reachable by
+the host running the bootstrap.
+
+```bash
+pnpm self-host:install -- --non-interactive --mode managed \
+  --domain tickets.example.com --admin-email ops@example.com \
+  --supabase-url https://supabase.example.com --anon-key '...' \
+  --service-role-key '...' --db-url 'postgresql://postgres:...@db.example.com:5432/postgres'
+```
+
+The installer never replaces an existing `.env`. A later invocation reuses that
+file and safely repeats Compose pulls, `up`, migrations, and bucket
+reconciliation; it does not rotate data-encryption or cron secrets. DNS,
+firewall ports 80 and 443, upstream Supabase provisioning, and a restorable
+backup policy remain operator responsibilities. Scheduler, AI, billing,
+analytics, email, Git hosting, and every other optional integration remain off
+unless configured deliberately.
+
+Run the read-only diagnostic after installation and after maintenance. It
+redacts credentials while checking configuration, compatibility, containers,
+DNS/TLS, app health, optional scheduler state, disk space, and—when a database
+URL is supplied—migrations and Storage.
+
+```bash
+pnpm self-host:doctor -- --mode managed --db-url 'postgresql://postgres:...@db.example.com:5432/postgres'
+```
+
+The update, backup, and restore entry points are safety gates for the operation
+runbook. They verify the inputs they can safely verify but never guess a Storage
+backend or overwrite configuration or a restore target.
+
+```bash
+pnpm self-host:backup -- --backup-dir /mnt/backup/minddy/20260819T120000Z-v0.10.19
+pnpm self-host:update -- --from-release v0.10.19 --to-release v0.10.20 \
+  --backup-dir /mnt/backup/minddy/verified-v0.10.19
+pnpm self-host:restore -- --backup-dir /mnt/backup/minddy/verified-v0.10.19 \
+  --confirm-blank-target
+```
+
 First provision the Supabase project or self-hosted stack. Its API/Auth,
 Storage, Realtime, and PostgreSQL endpoint must be reachable from the
 application host. Use a database URL for a role allowed to apply migrations.

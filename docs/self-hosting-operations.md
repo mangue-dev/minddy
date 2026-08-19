@@ -8,6 +8,24 @@ The commands use the official Docker Supabase layout as an example. A managed
 Supabase project or another orchestrator is supported when its equivalent backup
 captures the same database, Storage bytes, configuration, and immutable release.
 
+## Command safety gates
+
+`pnpm self-host:update`, `pnpm self-host:backup`, and
+`pnpm self-host:restore` are read-only preflight wrappers for this runbook.
+They validate the protected configuration and, where applicable, an existing
+`SHA256SUMS` backup manifest. They deliberately do not infer an object-Storage
+backend, write outage, target database, or restore destination. Use them to
+make the responsibility boundary explicit, then execute the reviewed procedure
+below.
+
+```bash
+pnpm self-host:backup -- --backup-dir /mnt/backup/minddy/20260819T120000Z-v0.10.19
+pnpm self-host:update -- --from-release v0.10.19 --to-release v0.10.20 \
+  --backup-dir /mnt/backup/minddy/verified-v0.10.19
+pnpm self-host:restore -- --backup-dir /mnt/backup/minddy/verified-v0.10.19 \
+  --confirm-blank-target
+```
+
 ## Operating invariants
 
 A complete minddy backup contains all of the following from one write-consistent

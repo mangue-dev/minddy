@@ -13,6 +13,12 @@ file deliberately contains only deployment settings; use the root
 [`../../.env.example`](../../.env.example) for an exhaustive list of optional
 application integrations.
 
+For the normal first installation, prefer `pnpm self-host:install`. It makes
+the same configuration explicit, refuses to replace an existing environment
+file, and then starts the profile and bootstrap. Run `pnpm self-host:doctor`
+afterward for a redacted health and configuration report. The manual commands
+below remain the advanced/operator-controlled path.
+
 ### Managed Supabase
 
 Use `compose.managed.yml` when the operator already has a compatible managed or
