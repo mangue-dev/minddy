@@ -8,6 +8,9 @@ The supported result lets users sign up, create projects and issues, use
 attachments, and receive realtime updates. For operations after installation,
 read [the operations runbook](self-hosting-operations.md). For release
 acceptance on an isolated host, use [the clean-room scenario](self-hosting-clean-room.md).
+Before choosing a topology, read the binding
+[self-hosted distribution contract](self-hosting-distribution.md), including
+its release compatibility matrix and responsibility split.
 
 ## Supported topology
 
@@ -41,7 +44,9 @@ integration stays disabled; it does not fall back to Minddy infrastructure.
 - Git and the [Supabase CLI](https://supabase.com/docs/guides/local-development);
 - `psql` for remote-stack verification;
 - Docker for the local Supabase topology, or an already-running managed or
-  self-hosted Supabase project for the remote topology.
+  self-hosted Supabase project for the remote topology. A complete production
+  deployment must meet the Docker Engine and Docker Compose plugin minimums in
+  the [compatibility matrix](../deploy/self-hosted/compatibility.json).
 
 Keep secrets in a host secrets manager or a mode-`0600` environment file. Never
 commit `.env.local`, a service-role key, database URL, private key, or backup.

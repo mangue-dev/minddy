@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "minddyRelease": "0.10.19",
+      "tag": "v0.10.19",
+      "schemaBaseline": "20270106090000_baseline.sql",
+      "supportedTopologies": [
+        "simple-managed-supabase",
+        "complete-official-supabase"
+      ],
+      "application": {
+        "node": "24",
+        "pnpm": "10.28.0",
+        "architectures": [
+          "linux/amd64",
+          "linux/arm64"
+        ]
+      },
+      "containerRuntime": {
+        "dockerEngineMinimum": "27.0.0",
+        "dockerComposePluginMinimum": "2.29.0"
+      },
+      "supabase": {
+        "simpleManaged": {
+          "requirement": "Postgres, Auth, Storage, and Realtime are reachable and pnpm verify:supabase passes."
+        },
+        "completeOfficial": {
+          "distribution": "https://github.com/supabase/supabase/tree/self-hosted/v0.7.2/docker",
+          "release": "self-hosted/v0.7.2",
+          "upgradePolicy": "Use the complete upstream Compose release as a tested image set; do not upgrade individual services."
+        }
+      },
+      "migrationPolicy": "forward-only; bootstrap from the schema baseline and upgrade one published minddy release at a time"
+    }
+  ]
+}

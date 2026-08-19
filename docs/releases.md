@@ -342,6 +342,16 @@ SemVer commits and validate their exact Git objects before publication:
    after these checks; retain the accepted report and bundle checksum with the
    release evidence.
 
+## Self-hosted distribution support
+
+The public core release is the only minddy self-hosting distribution. Its
+canonical tagged source, migrations, compatibility record, and future
+deployment assets all live in this repository. The full release guarantee and
+the distinction between the managed-Supabase and official-Supabase-stack paths
+are defined in [the self-hosted distribution contract](self-hosting-distribution.md).
+Operators must use the matrix recorded for the release they deploy; Minddy
+Cloud deployment state is not a self-hosting artifact or a fallback service.
+
 ## Failure and recovery
 
 - Before creating the tag: correct the commit or configuration, then restart.
