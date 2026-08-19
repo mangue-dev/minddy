@@ -31,6 +31,11 @@ they create neither a version nor a tag of the public core.
   checksummed release artifacts and an explicit notice for unsupported private
   repositories.
 
+### Changed
+
+- Prepared the consecutive target candidate after validating authentication for
+  protected public-release fetches.
+
 ## [0.10.14] - 2026-08-19
 
 ### Fixed
