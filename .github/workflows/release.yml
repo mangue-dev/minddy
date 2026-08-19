@@ -87,9 +87,17 @@ jobs:
         run: pnpm run release:artifacts
 
       - name: Attest release artifacts
+        if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: .release/*
+
+      - name: Document unavailable GitHub attestation
+        if: github.event.repository.visibility != 'public'
+        run: >-
+          echo '::notice::GitHub artifact attestations are unavailable for a
+          user-owned private repository; verify the published SHA256SUMS until
+          the repository is public.'
 
       #The tag only exists after all checks and builds. A failure
       #before this step therefore leaves production intact and can be replayed.

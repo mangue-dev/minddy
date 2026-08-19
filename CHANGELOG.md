@@ -9,6 +9,12 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- Gate GitHub artifact attestations on repository visibility while retaining
+  checksummed release artifacts and an explicit notice for unsupported private
+  repositories.
+
 ## [0.10.14] - 2026-08-19
 
 ### Fixed

@@ -126,3 +126,17 @@ test("the public release authenticates every protected fetch", () => {
     );
   }
 });
+
+test("the public release only requests GitHub attestations when supported", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/release.yml", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    workflow,
+    /name: Attest release artifacts\n\s+if: github\.event\.repository\.visibility == 'public'/,
+  );
+  assert.match(workflow, /name: Document unavailable GitHub attestation/);
+  assert.match(workflow, /verify the published SHA256SUMS/);
+});

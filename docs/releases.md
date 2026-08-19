@@ -31,7 +31,7 @@ in the GitHub run of the promoted SHA.
 
 | Perimeter | Identifier | Trigger | Artifact or evidence |
 | --- | --- | --- | --- |
-| Public Heart | SemVer `X.Y.Z`, annotated tag `vX.Y.Z` | workflow `Public core release`, on the SHA of `production` | source, migrations, manifest, notes, checksums and attestations GitHub |
+| Public Heart | SemVer `X.Y.Z`, annotated tag `vX.Y.Z` | workflow `Public core release`, on the SHA of `production` | source, migrations, manifest, notes and checksums; GitHub attestations once the repository is public |
 | Minddy Cloud | SHA Git + immutable identifier of the Vercel deployment | workflow `Promote production`, after green CI and approval | Same SHA on `main` and `production`, URL and status of GitHub Deployment Vercel |
 | Marketing website | SHA Git + deployment identifier | site hosting pipeline | deployment ; no bump or tag from the heart if only the marketing content changes |
 
@@ -119,8 +119,10 @@ GitHub environments or in the organization's Vercel integration.
 Internally, `scripts/prepare-release.mjs` refuses a non-SemVer version, a tag
 existing or an empty `Unreleased`. The public workflow redoes the deposit barrier,
 frozen installation, lint, typecheck, desktop bundle, tests, audit and a real
-`next build` without secrets. It generates and attests the artifacts before creating the
-tag: an error therefore does not leave a half-release.
+`next build` without secrets. It generates the artifacts before creating the
+tag and attests them when the repository visibility supports GitHub artifact
+attestations. Any required step failing before tag creation therefore does not
+leave a half-release.
 
 ## Artifacts of the heart
 
@@ -134,12 +136,16 @@ tag: an error therefore does not leave a half-release.
 - `UPDATE.md` and notes extracted from the changelog;
 - `SHA256SUMS`.
 
-GitHub also provides its automatic tag archives. The workflow adds a
-long-term keyless certificate of provenance thanks to the OIDC identity of the
-runner. After downloading:
+GitHub also provides its automatic tag archives. For a public repository, the
+workflow adds a long-term keyless certificate of provenance thanks to the OIDC
+identity of the runner. User-owned private repositories do not support that
+GitHub API, so earlier releases rely on the published checksums and emit an
+explicit workflow notice. After downloading:
 
 ```bash
+# Always available:
 shasum -a 256 -c SHA256SUMS
+# Available for releases created after the repository becomes public:
 gh attestation verify minddy-v0.10.0-source.tar.gz --repo mangue-dev/minddy-issues
 ```
 
