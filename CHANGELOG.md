@@ -9,6 +9,13 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.12] - 2026-08-19
+
+### Fixed
+
+- Protected production promotion now authenticates its private-ref fetch with
+  the workflow's ephemeral GitHub token.
+
 ## [0.10.11] - 2026-08-19
 
 ### Changed
@@ -102,7 +109,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.11...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.12...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -128,3 +135,5 @@ they create neither a version nor a tag of the public core.
 [0.10.10]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.10
 
 [0.10.11]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.11
+
+[0.10.12]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.12

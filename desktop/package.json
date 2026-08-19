@@ -1,6 +1,6 @@
 {
   "name": "minddy-desktop",
-  "version": "0.10.11",
+  "version": "0.10.12",
   "private": true,
   "license": "AGPL-3.0-only",
   "description": "The minddy macOS shell — a window into www.minddy.app",
