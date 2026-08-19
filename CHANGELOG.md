@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.7] - 2026-08-19
+
 ### Added
 
 - Clean-room entry-point coverage now exercises the documented package-manager
@@ -72,7 +74,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.6...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.7...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -88,3 +90,5 @@ they create neither a version nor a tag of the public core.
 [0.10.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.5
 
 [0.10.6]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.6
+
+[0.10.7]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.7
