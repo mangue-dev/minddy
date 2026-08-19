@@ -156,6 +156,18 @@ test("blocks disabled Minddy Cloud and vendor destinations with source-level evi
   assert.match(report, /browser → `minddy\.app`: Minddy Cloud is forbidden/);
 });
 
+test("does not turn a deployment URL into an implicit provider opt-in", () => {
+  const policy = createEgressPolicy({
+    env: { MINDDY_PUBLIC_SUPABASE_URL: "https://api.stripe.com" },
+  });
+  const result = assessEgress(policy, {
+    sources: ["browser", "server", "scheduler", "container"],
+    requests: [{ source: "browser", url: "https://api.stripe.com/rest/v1/projects" }],
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.requests[0].reason, "stripe is not enabled");
+});
+
 test("allows exactly one explicitly declared provider without widening the policy", () => {
   const policy = createEgressPolicy({
     profile: "provider",

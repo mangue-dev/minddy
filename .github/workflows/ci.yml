@@ -112,6 +112,10 @@ jobs:
           MINDDY_PUBLIC_APP_URL: http://minddy:3000
           MINDDY_PUBLIC_SUPABASE_URL: https://project.supabase.co
           MINDDY_SCHEDULER_URL: http://minddy:3000
+          EMAIL_PROVIDER: resend
+          RESEND_API_KEY: test-resend-key
+          FEEDBACK_EMAIL_FROM: feedback@example.test
+          INVITATION_EMAIL_FROM: invitations@example.test
         run: pnpm run verify:self-hosted-egress -- --egress-log test/fixtures/self-hosted-egress/provider.json --profile provider --allow-host api.resend.com --report "$RUNNER_TEMP/self-hosted-egress-provider.md"
 
       - name: Self-hosted blocked-vendor egress diagnostic

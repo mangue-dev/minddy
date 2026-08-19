@@ -259,14 +259,18 @@ export function assessEgress(policy, observation) {
     }
     const provider = providerForHost(host);
     if (provider === "minddy") return { index, source, host, decision: "blocked", reason: "Minddy Cloud is forbidden" };
-    if (policy.requiredHosts.includes(host)) return { index, source, host, decision: "allowed", reason: "deployment dependency" };
+    // Configuration URLs describe the deployment, not an implicit opt-in to a
+    // vendor. A disabled provider must remain blocked even if a malformed
+    // application or Supabase URL happens to use one of its hostnames.
     if (policy.operatorHosts.includes(host)) return { index, source, host, decision: "allowed", reason: "operator-declared provider" };
+    if (provider) return { index, source, host, decision: "blocked", reason: `${provider} is not enabled` };
+    if (policy.requiredHosts.includes(host)) return { index, source, host, decision: "allowed", reason: "deployment dependency" };
     return {
       index,
       source,
       host,
       decision: "blocked",
-      reason: provider ? `${provider} is not enabled` : "undeclared destination",
+      reason: "undeclared destination",
     };
   });
   return { policy, missingSources, requests, passed: missingSources.length === 0 && requests.every((request) => request.decision === "allowed") };
