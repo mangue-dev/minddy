@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { getDesktopBridge } from "./desktop/bridge";
 import { notificationActor, notificationTitle } from "./notification-line";
-import { NOTIFICATION_LINE_KEYS, notificationTargetPath } from "./notification-target";
+import { notificationLineKey, notificationTargetPath } from "./notification-target";
 import { useNotifications } from "./use-notifications";
 import type { MyNotification } from "./types";
 
@@ -83,7 +83,7 @@ export function useDesktopNotifications(): void {
       };
       for (const n of fresh.reverse()) {
         const path = notificationTargetPath(n);
-        const sentence = t(NOTIFICATION_LINE_KEYS[n.type], {
+        const sentence = t(notificationLineKey(n.type, n.from_numo), {
           actor: notificationActor(n, labels),
         });
         const native = new Notification(notificationTitle(n, labels), {

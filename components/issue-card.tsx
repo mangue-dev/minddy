@@ -122,6 +122,7 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
+import { plainMarkdown } from "@/lib/plain-markdown";
 import {
   Tooltip,
   TooltipContent,
@@ -136,19 +137,6 @@ import {
  * (```` ```[\s\S]*?``` ````) on a body of several kilobytes, each
  * rendering of each card — for a preview rendered in `line-clamp-3`.
  */
-function plainPreview(md: string): string {
-  return md
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/[*_~>]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 /* ── Inline indicator pickers ────────────────────────────────────────────
    Each indicator on the card is a dropdown trigger: clicking it edits the
    field in place. `stop` keeps the click/drag from bubbling to the card (which
@@ -739,7 +727,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
 
   const description = useMemo(
-    () => (issue.description ? plainPreview(issue.description.slice(0, 400)) : ""),
+    () => (issue.description ? plainMarkdown(issue.description.slice(0, 400)) : ""),
     [issue.description]
   );
 

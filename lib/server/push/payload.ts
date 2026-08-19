@@ -9,7 +9,7 @@ import { displayName } from "@/lib/display-name";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import {
   notificationTargetPath,
-  NOTIFICATION_LINE_KEYS,
+  notificationLineKey,
 } from "@/lib/notification-target";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { resolveApiKeyActors, type ApiKeyActor } from "@/lib/server/api-key-actors";
@@ -287,7 +287,7 @@ export function buildPushPayload(
 
   return {
     title,
-    body: t(NOTIFICATION_LINE_KEYS[row.type], { actor }),
+    body: t(notificationLineKey(row.type, !!row.via_assistant), { actor }),
     url,
     tag: url,
   };

@@ -120,3 +120,12 @@ export const NOTIFICATION_LINE_KEYS: Record<
   page_agent_edit: "linePageAgentEdit",
   page_comment: "linePageComment",
 };
+
+/** Numo answers use a reply-specific sentence instead of the generic comment line. */
+export function notificationLineKey(
+  type: NotificationType,
+  fromNumo: boolean
+): MessageKey<"Inbox"> {
+  if (fromNumo && type === "comment") return "lineNumoReply";
+  return NOTIFICATION_LINE_KEYS[type];
+}

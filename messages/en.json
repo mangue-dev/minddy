@@ -1259,6 +1259,7 @@
     "lineAssigned": "{actor} assigned this to you",
     "lineMention": "{actor} mentioned you",
     "lineComment": "{actor} commented",
+    "lineNumoReply": "Numo replied",
     "lineAgentDone": "The Numo agent finished working",
     "lineAgentQuestion": "The Numo agent is waiting for your answer",
     "lineAgentFailed": "The Numo agent stopped on an error",

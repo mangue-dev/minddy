@@ -34,7 +34,7 @@ import { useNotifications } from "@/lib/use-notifications";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 import {
   notificationTargetPath,
-  NOTIFICATION_LINE_KEYS,
+  notificationLineKey,
 } from "@/lib/notification-target";
 import type { MyInvitation, MyNotification, NotificationType } from "@/lib/types";
 
@@ -260,7 +260,7 @@ export default function InboxPage() {
 
   /** Line 2: who did what — supplemented by the excerpt from the comment. */
   const sentenceOf = (n: MyNotification): string => {
-    const sentence = t(NOTIFICATION_LINE_KEYS[n.type], {
+    const sentence = t(notificationLineKey(n.type, n.from_numo), {
       actor: notificationActor(n, labels),
     });
     return n.comment_excerpt ? `${sentence} : ${n.comment_excerpt}` : sentence;

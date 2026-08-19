@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { notificationActor, notificationTitle } from "./notification-line";
+import { notificationLineKey } from "./notification-target";
 import type { MyNotification } from "./types";
 
 const LABELS = {
@@ -56,6 +57,13 @@ describe("notificationActor", () => {
       notificationActor(notification({ actor_name: "Léa" }), LABELS)
     ).toBe("Léa");
     expect(notificationActor(notification({}), LABELS)).toBe("Quelqu'un");
+  });
+});
+
+describe("notificationLineKey", () => {
+  it("uses the reply wording for Numo comments", () => {
+    expect(notificationLineKey("comment", true)).toBe("lineNumoReply");
+    expect(notificationLineKey("comment", false)).toBe("lineComment");
   });
 });
 

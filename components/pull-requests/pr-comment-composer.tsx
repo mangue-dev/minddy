@@ -37,7 +37,7 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
-import { Markdown } from "@/components/markdown";
+import { plainMarkdown } from "@/lib/plain-markdown";
 import { TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
@@ -166,7 +166,7 @@ export function PrCommentComposer({
         </div>
         {tab === "preview" ? (
           <div className={cn(line ? "px-3 py-2" : "px-3.5 py-2.5")}>
-            <Markdown className="text-foreground">{value}</Markdown>
+            <p className="whitespace-pre-wrap text-foreground">{plainMarkdown(value)}</p>
           </div>
         ) : null}
 
