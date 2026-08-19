@@ -1,0 +1,9 @@
+{
+  "sources": ["browser", "server", "scheduler", "container"],
+  "requests": [
+    { "source": "browser", "url": "https://project.supabase.co/auth/v1/signup" },
+    { "source": "server", "url": "https://api.stripe.com/v1/customers" },
+    { "source": "scheduler", "url": "http://minddy:3000/api/cron/routines" },
+    { "source": "container", "url": "http://minddy:3000/api/health" }
+  ]
+}

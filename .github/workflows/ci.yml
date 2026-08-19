@@ -97,6 +97,46 @@ jobs:
       - name: Release tooling tests
         run: pnpm run test:release
 
+      - name: Self-hosted egress policy tests
+        run: pnpm run test:self-hosted
+
+      - name: Self-hosted minimal egress contract
+        env:
+          MINDDY_PUBLIC_APP_URL: http://minddy:3000
+          MINDDY_PUBLIC_SUPABASE_URL: https://project.supabase.co
+          MINDDY_SCHEDULER_URL: http://minddy:3000
+        run: pnpm run verify:self-hosted-egress -- --egress-log test/fixtures/self-hosted-egress/minimal.json --profile minimal --report "$RUNNER_TEMP/self-hosted-egress-minimal.md"
+
+      - name: Self-hosted provider egress contract
+        env:
+          MINDDY_PUBLIC_APP_URL: http://minddy:3000
+          MINDDY_PUBLIC_SUPABASE_URL: https://project.supabase.co
+          MINDDY_SCHEDULER_URL: http://minddy:3000
+        run: pnpm run verify:self-hosted-egress -- --egress-log test/fixtures/self-hosted-egress/provider.json --profile provider --allow-host api.resend.com --report "$RUNNER_TEMP/self-hosted-egress-provider.md"
+
+      - name: Self-hosted blocked-vendor egress diagnostic
+        env:
+          MINDDY_PUBLIC_APP_URL: http://minddy:3000
+          MINDDY_PUBLIC_SUPABASE_URL: https://project.supabase.co
+          MINDDY_SCHEDULER_URL: http://minddy:3000
+        shell: bash
+        run: |
+          set +e
+          pnpm run verify:self-hosted-egress -- --egress-log test/fixtures/self-hosted-egress/blocked-vendor.json --profile minimal --report "$RUNNER_TEMP/self-hosted-egress-blocked.md"
+          status=$?
+          set -e
+          test "$status" -ne 0
+          rg 'server → `api\.stripe\.com`: stripe is not enabled' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
+          ! rg '/v1/customers' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
+
+      - name: Upload self-hosted egress reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-hosted-egress-reports
+          path: ${{ runner.temp }}/self-hosted-egress-*.md
+          if-no-files-found: error
+
   editions:
     name: Edition / ${{ matrix.edition }}
     runs-on: ubuntu-latest

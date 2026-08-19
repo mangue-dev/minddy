@@ -35,6 +35,7 @@
     "test:bootstrap:supabase": "node --test scripts/bootstrap-supabase.test.mjs",
     "validate:self-hosted": "node scripts/self-hosting-clean-room.mjs",
     "test:self-hosted": "node --test scripts/self-hosting-clean-room.test.mjs",
+    "verify:self-hosted-egress": "node scripts/self-hosting-clean-room.mjs",
     "validate:self-hosted-compose": "node scripts/validate-self-hosted-compose.mjs",
     "smoke:self-hosted-compose": "node scripts/smoke-self-hosted-compose.mjs",
     "test:self-hosted-compose": "node --test scripts/validate-self-hosted-compose.test.mjs",

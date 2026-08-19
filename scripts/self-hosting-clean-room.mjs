@@ -7,7 +7,7 @@
  * are immutable releases containing that contract before an operator creates a
  * disposable stack. It never reads .env files and redacts command diagnostics.
  */
-import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -51,8 +51,31 @@ const CLOUD_OPT_INS = [
   "RESEND_API_KEY",
 ];
 
+export const EGRESS_SOURCES = ["browser", "server", "scheduler", "container"];
+
+// A self-hosted deployment never has an implicit vendor destination. Keep this
+// catalog host-based so reports cannot expose request paths, query strings, or
+// credentials. An operator may opt into a provider with --allow-host, except
+// for Minddy Cloud, which is never a self-hosted dependency.
+export const EGRESS_PROVIDER_HOSTS = {
+  minddy: ["minddy.app", ".minddy.app"],
+  stripe: ["stripe.com", ".stripe.com"],
+  posthog: ["posthog.com", ".posthog.com"],
+  vercel: ["vercel.com", ".vercel.com"],
+  openrouter: ["openrouter.ai", ".openrouter.ai"],
+  resend: ["resend.com", ".resend.com"],
+  telemetry: ["telemetry.nextjs.org", "vitals.vercel-insights.com", ".sentry.io"],
+};
+
 export function parseArgs(argv) {
-  const options = { report: null, checkEnvironment: true, mode: "release" };
+  const options = {
+    report: null,
+    checkEnvironment: true,
+    mode: "release",
+    egressLog: null,
+    profile: null,
+    allowedHosts: [],
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     const value = () => {
@@ -66,6 +89,12 @@ export function parseArgs(argv) {
     else if (arg === "--from-ref") options.fromRef = value();
     else if (arg === "--to-ref") options.toRef = value();
     else if (arg === "--prepublication") options.mode = "prepublication";
+    else if (arg === "--egress-log") {
+      options.mode = "egress";
+      options.egressLog = resolve(value());
+    }
+    else if (arg === "--profile") options.profile = value();
+    else if (arg === "--allow-host") options.allowedHosts.push(value());
     else if (arg === "--report") options.report = resolve(value());
     else if (arg === "--skip-environment-check") options.checkEnvironment = false;
     else if (arg === "--help" || arg === "-h") options.help = true;
@@ -77,11 +106,21 @@ export function parseArgs(argv) {
   if (!options.help && options.mode === "prepublication" && (options.fromTag || options.toTag)) {
     throw new Error("use candidate refs, not release tags, with --prepublication.");
   }
+  if (!options.help && options.mode !== "egress" && (options.profile || options.allowedHosts.length > 0)) {
+    throw new Error("--profile and --allow-host require --egress-log.");
+  }
   if (!options.help && options.mode === "release" && (!options.fromTag || !options.toTag)) {
     throw new Error("--from-tag and --to-tag are required for release validation.");
   }
   if (!options.help && options.mode === "prepublication" && (!options.fromRef || !options.toRef)) {
     throw new Error("--from-ref and --to-ref are required for prepublication validation.");
+  }
+  if (!options.help && options.mode === "egress") {
+    if (!options.egressLog) throw new Error("--egress-log is required for egress validation.");
+    if (!new Set(["minimal", "provider"]).has(options.profile ?? "minimal")) {
+      throw new Error("--profile must be minimal or provider for egress validation.");
+    }
+    options.profile ??= "minimal";
   }
   return options;
 }
@@ -97,11 +136,173 @@ Options:
   --from-ref <ref>            Source candidate ref named preflight/vMAJOR.MINOR.PATCH.
   --to-ref <ref>              Target candidate ref named preflight/vMAJOR.MINOR.PATCH.
   --report <path>             Write a sanitized Markdown preflight report.
+  --egress-log <path>         Validate a JSON egress observation log instead of release refs.
+  --profile <minimal|provider> Egress scenario; provider requires declared provider hosts.
+  --allow-host <hostname>     Explicit operator-selected provider destination (repeatable).
   --skip-environment-check    Do not reject optional/cloud variables in the shell.
   -h, --help                  Show this help.
 
 Run this command from a clone containing the two fetched annotated refs.
 After it passes, execute docs/self-hosting-clean-room.md in a disposable host.`;
+}
+
+function normalizeHost(value) {
+  const input = String(value ?? "").trim().toLowerCase().replace(/\.$/, "");
+  if (!input) throw new Error("An egress destination host is required.");
+  if (input.includes("://")) return new URL(input).hostname.toLowerCase();
+  if (/^\[[0-9a-f:]+\]$/.test(input)) return input;
+  if (!/^[a-z0-9.-]+$/.test(input) || input.startsWith(".") || input.endsWith(".")) {
+    throw new Error(`${value} is not a valid destination hostname.`);
+  }
+  return input;
+}
+
+function hostFromEnvironment(env, name) {
+  const value = env[name]?.trim();
+  if (!value) return null;
+  try {
+    return normalizeHost(value);
+  } catch {
+    return null;
+  }
+}
+
+function matchesHost(host, rule) {
+  return rule.startsWith(".") ? host.endsWith(rule) : host === rule;
+}
+
+export function providerForHost(host) {
+  const normalized = normalizeHost(host);
+  return Object.entries(EGRESS_PROVIDER_HOSTS).find(([, hosts]) => hosts.some((rule) => matchesHost(normalized, rule)))?.[0] ?? null;
+}
+
+export function createEgressPolicy({ profile = "minimal", allowedHosts = [], env = process.env } = {}) {
+  if (!new Set(["minimal", "provider"]).has(profile)) throw new Error("Egress profile must be minimal or provider.");
+  const requiredHosts = [
+    hostFromEnvironment(env, "MINDDY_PUBLIC_APP_URL"),
+    hostFromEnvironment(env, "MINDDY_PUBLIC_SUPABASE_URL"),
+    hostFromEnvironment(env, "MINDDY_SCHEDULER_URL"),
+    "minddy",
+    "localhost",
+    "127.0.0.1",
+    "[::1]",
+  ].filter(Boolean);
+  const operatorHosts = [...new Set(allowedHosts.map(normalizeHost))];
+  const minddyCloudHosts = EGRESS_PROVIDER_HOSTS.minddy;
+  if (operatorHosts.some((host) => minddyCloudHosts.some((rule) => matchesHost(host, rule)))) {
+    throw new Error("Minddy Cloud cannot be an allowed self-hosted egress destination.");
+  }
+  if (profile === "minimal" && operatorHosts.length > 0) {
+    throw new Error("The minimal egress profile cannot declare an optional provider host.");
+  }
+
+  const configuredHosts = [];
+  if (
+    env.EMAIL_PROVIDER?.trim() === "resend" &&
+    env.RESEND_API_KEY?.trim() &&
+    env.FEEDBACK_EMAIL_FROM?.trim() &&
+    env.INVITATION_EMAIL_FROM?.trim()
+  ) configuredHosts.push("api.resend.com");
+  if (env.MINDDY_PUBLIC_POSTHOG_KEY?.trim()) {
+    const host = hostFromEnvironment(env, "MINDDY_PUBLIC_POSTHOG_HOST");
+    if (host) configuredHosts.push(host);
+  }
+  if (env.POSTHOG_API_KEY?.trim()) {
+    const host = hostFromEnvironment(env, "POSTHOG_HOST");
+    if (host) configuredHosts.push(host);
+  }
+  if (env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1") configuredHosts.push("vitals.vercel-insights.com");
+  if (profile === "minimal" && configuredHosts.length > 0) {
+    throw new Error("The minimal egress profile has an optional provider configured.");
+  }
+  return {
+    profile,
+    requiredHosts: [...new Set(requiredHosts)],
+    operatorHosts: [...new Set([...operatorHosts, ...configuredHosts])],
+    deniedProviders: Object.keys(EGRESS_PROVIDER_HOSTS).filter((provider) => provider !== "minddy" && ![...operatorHosts, ...configuredHosts].some((host) => providerForHost(host) === provider)),
+  };
+}
+
+export function parseEgressLog(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("The egress observation log must be valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("The egress observation log must be a JSON object.");
+  }
+  if (!Array.isArray(parsed.sources) || !Array.isArray(parsed.requests)) {
+    throw new Error("The egress observation log must contain sources and requests arrays.");
+  }
+  const sources = [...new Set(parsed.sources)];
+  if (sources.some((source) => !EGRESS_SOURCES.includes(source))) {
+    throw new Error(`Unknown egress observation source: ${sources.find((source) => !EGRESS_SOURCES.includes(source))}.`);
+  }
+  return { sources, requests: parsed.requests };
+}
+
+export function assessEgress(policy, observation) {
+  const observedSources = new Set(observation.sources);
+  const missingSources = EGRESS_SOURCES.filter((source) => !observedSources.has(source));
+  const requests = observation.requests.map((request, index) => {
+    const source = request?.source;
+    let host;
+    try {
+      host = normalizeHost(request?.url ?? request?.host);
+    } catch {
+      return { index, source, host: null, decision: "blocked", reason: "invalid destination" };
+    }
+    if (!EGRESS_SOURCES.includes(source)) {
+      return { index, source, host, decision: "blocked", reason: "unknown source" };
+    }
+    const provider = providerForHost(host);
+    if (provider === "minddy") return { index, source, host, decision: "blocked", reason: "Minddy Cloud is forbidden" };
+    if (policy.requiredHosts.includes(host)) return { index, source, host, decision: "allowed", reason: "deployment dependency" };
+    if (policy.operatorHosts.includes(host)) return { index, source, host, decision: "allowed", reason: "operator-declared provider" };
+    return {
+      index,
+      source,
+      host,
+      decision: "blocked",
+      reason: provider ? `${provider} is not enabled` : "undeclared destination",
+    };
+  });
+  return { policy, missingSources, requests, passed: missingSources.length === 0 && requests.every((request) => request.decision === "allowed") };
+}
+
+export function buildEgressReport(assessment, generatedAt) {
+  const allowed = assessment.requests.filter((request) => request.decision === "allowed");
+  const blocked = assessment.requests.filter((request) => request.decision === "blocked");
+  const rows = (requests) => requests.length === 0
+    ? "- None."
+    : requests.map((request) => `- ${request.source ?? "unknown"} → \`${request.host ?? "invalid"}\`: ${request.reason}.`).join("\n");
+  return `# Self-hosted egress contract — ${assessment.policy.profile}
+
+- Generated: ${generatedAt}
+- Result: **${assessment.passed ? "PASS" : "BLOCKED"}**
+- Capture sources: ${assessment.missingSources.length === 0 ? "browser, server, scheduler, and container" : `missing ${assessment.missingSources.join(", ")}`}
+- Deployment dependencies: ${assessment.policy.requiredHosts.map((host) => `\`${host}\``).join(", ")}
+- Operator-declared providers: ${assessment.policy.operatorHosts.length === 0 ? "None." : assessment.policy.operatorHosts.map((host) => `\`${host}\``).join(", ")}
+- Disabled providers: ${assessment.policy.deniedProviders.join(", ") || "None."}
+
+## Allowed destinations
+
+${rows(allowed)}
+
+## Blocked destinations
+
+${rows(blocked)}
+
+The report intentionally records only source, host, and decision. It never records request paths, query strings, headers, bodies, or credentials.
+`;
+}
+
+export function runEgressContract({ logPath, profile = "minimal", allowedHosts = [], env = process.env }) {
+  const observation = parseEgressLog(readFileSync(logPath, "utf8"));
+  const assessment = assessEgress(createEgressPolicy({ profile, allowedHosts, env }), observation);
+  return { ...assessment, report: buildEgressReport(assessment, new Date().toISOString()) };
 }
 
 export function redactSecrets(text, env = process.env) {
@@ -240,11 +441,17 @@ export function main(argv = process.argv.slice(2)) {
     console.log(help());
     return;
   }
-  const result = runPreflight(options);
+  const result = options.mode === "egress"
+    ? runEgressContract({
+      logPath: options.egressLog,
+      profile: options.profile,
+      allowedHosts: options.allowedHosts,
+    })
+    : runPreflight(options);
   if (options.report) {
     mkdirSync(dirname(options.report), { recursive: true });
     writeFileSync(options.report, result.report, { mode: 0o644 });
-    console.log(`Clean-room preflight report: ${options.report}`);
+    console.log(`${options.mode === "egress" ? "Self-hosted egress contract" : "Clean-room preflight"} report: ${options.report}`);
   } else {
     console.log(result.report);
   }

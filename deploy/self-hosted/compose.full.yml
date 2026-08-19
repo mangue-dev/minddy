@@ -86,6 +86,11 @@ volumes:
   caddy_config:
 
 networks:
+  # The complete profile keeps the application and the local Supabase stack off
+  # the Internet. Caddy is the only service also attached to `edge`, which is
+  # the sole externally routable network for ingress and ACME certificates.
+  default:
+    internal: true
   edge:
   private:
     internal: true

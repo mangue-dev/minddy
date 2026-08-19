@@ -211,6 +211,37 @@ the disabled surfaces before continuing:
 Any silent external request or `minddy.app` URL is a release blocker. Save only
 the request host, path, status, and timestamp; remove headers and bodies.
 
+### CI egress contract
+
+The CI contract records only the capture source, destination host, and its
+policy decision. The four capture sources are `browser`, `server`,
+`scheduler`, and `container`. A missing source blocks the report, so a quiet
+source cannot be mistaken for an unobserved one.
+
+For the minimal scenario, only the application, selected Supabase hostname,
+and internal scheduler target are allowed. The full Compose profile additionally
+makes its default network internal: Caddy is the only service on an external
+edge network. Stripe, PostHog, Vercel, OpenRouter, Resend, telemetry, feedback,
+and Minddy Cloud remain denied unless an operator explicitly declares the one
+selected provider; Minddy Cloud is never allowed.
+
+The report input is JSON produced by the capture layer and contains no request
+body, path, query string, header, or credential. For example:
+
+```bash
+MINDDY_PUBLIC_APP_URL=http://minddy:3000 \
+MINDDY_PUBLIC_SUPABASE_URL=https://project.supabase.co \
+MINDDY_SCHEDULER_URL=http://minddy:3000 \
+pnpm verify:self-hosted-egress -- \
+  --egress-log test/fixtures/self-hosted-egress/minimal.json \
+  --profile minimal \
+  --report "$REPORT_DIR/egress-minimal.md"
+```
+
+Run the provider scenario separately and declare only its host with
+`--profile provider --allow-host api.resend.com`. The resulting CI artifacts
+make a required Supabase access distinguishable from a prohibited vendor leak.
+
 ## 5. Back up and update
 
 Follow **Before any maintenance** and **Complete and consistent backup** in

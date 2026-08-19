@@ -1,0 +1,12 @@
+{
+  "sources": ["browser", "server", "scheduler", "container"],
+  "requests": [
+    { "source": "browser", "url": "https://project.supabase.co/auth/v1/signup" },
+    { "source": "browser", "url": "https://project.supabase.co/rest/v1/projects" },
+    { "source": "browser", "url": "https://project.supabase.co/storage/v1/object/attachments" },
+    { "source": "server", "url": "https://project.supabase.co/rest/v1/issues" },
+    { "source": "server", "url": "https://api.resend.com/emails" },
+    { "source": "scheduler", "url": "http://minddy:3000/api/cron/routines" },
+    { "source": "container", "url": "http://minddy:3000/api/health" }
+  ]
+}

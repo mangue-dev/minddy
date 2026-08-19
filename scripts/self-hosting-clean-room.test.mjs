@@ -7,11 +7,16 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import {
+  assessEgress,
   assertConsecutiveVersions,
+  buildEgressReport,
   buildReport,
   candidateVersion,
   cloudEnvironmentFindings,
+  createEgressPolicy,
   parseArgs,
+  parseEgressLog,
+  providerForHost,
   redactSecrets,
   releaseVersion,
   REQUIRED_RELEASE_PATHS,
@@ -41,6 +46,9 @@ test("requires an explicit consecutive release pair", () => {
     report: null,
     checkEnvironment: true,
     mode: "release",
+    egressLog: null,
+    profile: null,
+    allowedHosts: [],
   });
   assert.throws(() => parseArgs([]), /required/);
   assert.throws(() => assertConsecutiveVersions("v1.2.3", "v1.2.5"), /not consecutive/);
@@ -64,6 +72,9 @@ test("requires namespaced annotated refs for prepublication candidates", () => {
       report: null,
       checkEnvironment: true,
       mode: "prepublication",
+      egressLog: null,
+      profile: null,
+      allowedHosts: [],
     }
   );
   assert.equal(candidateVersion("preflight/v1.2.3"), "v1.2.3");
@@ -76,6 +87,111 @@ test("requires namespaced annotated refs for prepublication candidates", () => {
     () => parseArgs(["--prepublication", "--from-tag", "v1.2.3", "--to-tag", "v1.2.4"]),
     /candidate refs/
   );
+});
+
+test("requires observations from each deployed egress source", () => {
+  const egressOptions = parseArgs([
+    "--egress-log", "test/fixtures/self-hosted-egress/minimal.json",
+    "--profile", "minimal",
+  ]);
+  assert.equal(egressOptions.mode, "egress");
+  assert.equal(egressOptions.profile, "minimal");
+  assert.match(egressOptions.egressLog, /test\/fixtures\/self-hosted-egress\/minimal\.json$/);
+  assert.throws(() => parseArgs(["--profile", "minimal"]), /require --egress-log/);
+  const policy = createEgressPolicy({
+    env: {
+      MINDDY_PUBLIC_APP_URL: "http://tickets.example.test",
+      MINDDY_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+      MINDDY_SCHEDULER_URL: "http://minddy:3000",
+    },
+  });
+  const incomplete = assessEgress(policy, parseEgressLog(JSON.stringify({
+    sources: ["browser", "server", "scheduler"],
+    requests: [],
+  })));
+  assert.equal(incomplete.passed, false);
+  assert.deepEqual(incomplete.missingSources, ["container"]);
+
+  const complete = assessEgress(policy, parseEgressLog(JSON.stringify({
+    sources: ["browser", "server", "scheduler", "container"],
+    requests: [
+      { source: "browser", url: "https://project.supabase.co/auth/v1/signup" },
+      { source: "server", url: "https://project.supabase.co/rest/v1/projects" },
+      { source: "scheduler", url: "http://minddy:3000/api/cron/routines" },
+      { source: "container", host: "tickets.example.test" },
+    ],
+  })));
+  assert.equal(complete.passed, true);
+  assert.match(buildEgressReport(complete, "2026-08-19T00:00:00.000Z"), /Result: \*\*PASS\*\*/);
+});
+
+test("blocks disabled Minddy Cloud and vendor destinations with source-level evidence", () => {
+  const policy = createEgressPolicy({ env: { MINDDY_PUBLIC_SUPABASE_URL: "https://project.supabase.co" } });
+  const result = assessEgress(policy, {
+    sources: ["browser", "server", "scheduler", "container"],
+    requests: [
+      { source: "browser", url: "https://minddy.app/api" },
+      { source: "server", url: "https://api.stripe.com/v1/customers" },
+      { source: "scheduler", url: "https://eu.posthog.com/capture" },
+      { source: "container", url: "https://api.vercel.com/v1" },
+      { source: "server", url: "https://openrouter.ai/api/v1/models" },
+      { source: "server", url: "https://api.resend.com/emails" },
+      { source: "browser", url: "https://telemetry.nextjs.org/api" },
+      { source: "browser", url: "https://feedback.example.test/board" },
+    ],
+  });
+  assert.equal(result.passed, false);
+  assert.deepEqual(result.requests.map((request) => request.reason), [
+    "Minddy Cloud is forbidden",
+    "stripe is not enabled",
+    "posthog is not enabled",
+    "vercel is not enabled",
+    "openrouter is not enabled",
+    "resend is not enabled",
+    "telemetry is not enabled",
+    "undeclared destination",
+  ]);
+  const report = buildEgressReport(result, "2026-08-19T00:00:00.000Z");
+  assert.doesNotMatch(report, /\/api|customers|capture|emails|board/);
+  assert.match(report, /browser → `minddy\.app`: Minddy Cloud is forbidden/);
+});
+
+test("allows exactly one explicitly declared provider without widening the policy", () => {
+  const policy = createEgressPolicy({
+    profile: "provider",
+    allowedHosts: ["api.resend.com"],
+    env: { MINDDY_PUBLIC_SUPABASE_URL: "https://project.supabase.co" },
+  });
+  assert.equal(providerForHost("api.resend.com"), "resend");
+  assert.deepEqual(policy.operatorHosts, ["api.resend.com"]);
+  const result = assessEgress(policy, {
+    sources: ["browser", "server", "scheduler", "container"],
+    requests: [
+      { source: "server", url: "https://api.resend.com/emails" },
+      { source: "browser", url: "https://project.supabase.co/auth/v1/token" },
+      { source: "scheduler", url: "http://minddy:3000/api/cron/routines" },
+      { source: "container", host: "localhost" },
+      { source: "server", url: "https://api.stripe.com/v1/customers" },
+    ],
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.requests[0].decision, "allowed");
+  assert.equal(result.requests.at(-1).reason, "stripe is not enabled");
+  assert.throws(() => createEgressPolicy({ allowedHosts: ["api.resend.com"] }), /minimal egress profile/);
+  assert.throws(() => createEgressPolicy({ profile: "provider", allowedHosts: ["minddy.app"] }), /Minddy Cloud/);
+});
+
+test("does not allow an incompletely configured provider", () => {
+  const policy = createEgressPolicy({
+    profile: "provider",
+    env: {
+      EMAIL_PROVIDER: "resend",
+      RESEND_API_KEY: "resend-key",
+      MINDDY_PUBLIC_POSTHOG_HOST: "https://eu.posthog.com",
+    },
+  });
+  assert.deepEqual(policy.operatorHosts, []);
+  assert.deepEqual(policy.deniedProviders, ["stripe", "posthog", "vercel", "openrouter", "resend", "telemetry"]);
 });
 
 test("runs when the CLI entry path contains a filesystem symlink", () => {

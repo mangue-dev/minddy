@@ -24,6 +24,13 @@ test("the release profile inventory includes both Compose paths and their runtim
   ]);
 });
 
+test("the full profile keeps application and Supabase traffic on internal networks", () => {
+  const profile = readFileSync(resolve(root, "deploy/self-hosted/compose.full.yml"), "utf8");
+  assert.match(profile, /networks:\n[\s\S]*?default:\n\s+internal: true/);
+  assert.match(profile, /minddy:[\s\S]*?networks:\n\s+- default\n\s+- private/);
+  assert.match(profile, /caddy:[\s\S]*?networks:\n\s+- default\n\s+- edge\n\s+- private/);
+});
+
 test("the disposable environment uses the compatibility-pinned images", () => {
   const environment = createDisposableEnvironment(entry, "/tmp/minddy-compose-test");
   assert.doesNotThrow(() => assertReleaseReferences(entry, environment));
