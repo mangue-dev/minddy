@@ -9,6 +9,13 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.11] - 2026-08-19
+
+### Changed
+
+- Prepared the consecutive target candidate used to validate the complete
+  self-hosted update and restoration contract.
+
 ## [0.10.10] - 2026-08-19
 
 ### Fixed
@@ -95,7 +102,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.10...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.11...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -119,3 +126,5 @@ they create neither a version nor a tag of the public core.
 [0.10.9]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.9
 
 [0.10.10]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.10
+
+[0.10.11]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.11
