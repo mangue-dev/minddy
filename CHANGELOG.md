@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Added
+
+- Candidate regression coverage requires the managed Supabase policy exporter
+  in every release used by clean-room validation.
+
 ## [0.10.8] - 2026-08-19
 
 ### Fixed

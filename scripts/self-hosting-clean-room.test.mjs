@@ -14,7 +14,12 @@ import {
   parseArgs,
   redactSecrets,
   releaseVersion,
+  REQUIRED_RELEASE_PATHS,
 } from "./self-hosting-clean-room.mjs";
+
+test("the managed-policy exporter is part of every clean-room candidate", () => {
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/export-managed-policies.sql"));
+});
 
 test("requires an explicit consecutive release pair", () => {
   assert.deepEqual(parseArgs(["--", "--from-tag", "v1.2.3", "--to-tag", "v1.2.4"]), {
