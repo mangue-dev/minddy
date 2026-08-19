@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Documentation
+
+- Record the final MIN-392 consecutive candidate pair after exercising every
+  release gate discovered by the clean-room publication run.
+
 ## [0.10.18] - 2026-08-19
 
 ### Fixed
