@@ -9,6 +9,8 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+## [0.10.14] - 2026-08-19
+
 ### Fixed
 
 - Public release validation and tag creation now authenticate every protected
@@ -121,7 +123,7 @@ they create neither a version nor a tag of the public core.
 
 - Last version released before the introduction of this structured changelog.
 
-[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.13...HEAD
+[Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.10.14...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5
 
 [0.10.0]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.0
@@ -151,3 +153,5 @@ they create neither a version nor a tag of the public core.
 [0.10.12]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.12
 
 [0.10.13]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.13
+
+[0.10.14]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.14
