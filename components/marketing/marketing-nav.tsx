@@ -25,6 +25,7 @@ import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { NumoFace } from "@/components/numo-face";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
+import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
@@ -105,7 +106,7 @@ const MOBILE_ICON =
 function NavLogo() {
   return (
     <span className="flex items-center gap-2">
-      <MinddyLogo className="h-7 w-auto text-foreground" />
+      <MinddyLogo className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
       <span className="font-display text-lg font-semibold tracking-tight">minddy</span>
     </span>
   );

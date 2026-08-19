@@ -1,34 +1,27 @@
 import { cn } from "mangue-ui/lib/utils";
-import { getAppEnv } from "@/lib/env";
+import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
 
 /**
- * The minddy brandmark. Production has one asset for each ambient background:
- * the light logo is shown in dark mode and the dark logo in light mode. Preview
- * and development use their environment colors. CSS selects the production
- * variant so the logo follows the pre-paint theme without a hydration flash.
+ * The minddy brandmark. The path is filled with `currentColor`, so the logo
+ * inherits the surrounding text color — it renders dark on light themes and
+ * light on dark themes without any extra wiring. Control the size/color via
+ * `className` (e.g. `text-sidebar-foreground h-6`).
  */
 export function MinddyLogo({ className }: { className?: string }) {
-  const env = getAppEnv();
-  const imageClass = cn("h-6 w-auto", className);
-  const logoSources = {
-    production: { light: "/logo/dark.png", dark: "/logo/light.png" },
-    preview: { light: "/logo/preview_dark.png", dark: "/logo/preview_light.png" },
-    development: { light: "/logo/dev_dark.png", dark: "/logo/dev_light.png" },
-  }[env];
-
   return (
-    <>
-      <img
-        src={logoSources.light}
-        alt="minddy"
-        className={cn(imageClass, "dark:hidden")}
+    <svg
+      viewBox={MINDDY_LOGO_VIEWBOX}
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="minddy"
+      className={cn("h-6 w-auto", className)}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d={MINDDY_LOGO_PATH}
       />
-      <img
-        src={logoSources.dark}
-        alt="minddy"
-        aria-hidden="true"
-        className={cn(imageClass, "hidden dark:block")}
-      />
-    </>
+    </svg>
   );
 }

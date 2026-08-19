@@ -65,7 +65,7 @@ export async function PublicPageShell({
               href={SITE_URL}
               className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              <MinddyLogo className="h-3.5 w-auto" />
+              <MinddyLogo className="size-3.5" />
               {/* On mobile, the logo is enough — the wording would take the place of the title. */}
               <span className="hidden sm:inline">
                 {t("madeWith")} <span className="font-semibold">{SITE_NAME}</span>

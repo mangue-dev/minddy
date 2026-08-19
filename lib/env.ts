@@ -42,3 +42,15 @@ export const FAVICON_COLORS: Record<AppEnv, { light: string; dark: string }> = {
   preview: { light: "#2563eb", dark: "#60a5fa" }, // blue-600 / blue-400
   development: { light: "#db2777", dark: "#f472b6" }, // pink-600 / pink-400
 };
+
+/**
+ * Tailwind text-color classes that tint the brand logo mark to match the
+ * current environment (the mark is `fill="currentColor"`). Empty in production
+ * so the logo keeps its inherited color; blue in preview, pink locally — same
+ * hues as FAVICON_COLORS, with the lighter shade for dark mode.
+ */
+export const ENV_LOGO_TINT: Record<AppEnv, string> = {
+  production: "",
+  preview: "text-blue-600 dark:text-blue-400",
+  development: "text-pink-600 dark:text-pink-400",
+};

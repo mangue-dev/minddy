@@ -70,6 +70,7 @@ import { MinddyLogo } from "@/components/minddy-logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { WhatsNewDialog } from "@/components/whats-new-dialog";
 import { hasRecentChangelog } from "@/lib/changelog";
+import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
@@ -104,8 +105,9 @@ const COLLAPSED_WIDTH = 56;
  *
  * What counts is the CENTER at 28, not the edge at 19: the edge is only enough
  * for 18 px glyphs. Two exceptions, therefore, both based on
- * the center — the account avatar (22 px, indented by 7) and the logo (34 px at
- * `h-6`), which we CENTER in the 36 px box instead.
+ * the center — the account avatar (22 px, indented by 7) and the logo (26 px of
+ * large, viewBox 104×96 at `h-6`), which we CENTER in the 36 px box instead
+ * to align it from the left: placed at 19, it extended 4 px to the right.
  */
 /** Nav, foot and brand line gutter. Both states. */
 const GUTTER = "px-2.5";
@@ -161,13 +163,13 @@ const MotionLink = motion.create(Link);
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
 /**
- * The brand: the logo, and nothing else. Production follows the current theme;
- * preview and development use their environment colors. The name of the environment
- * written next to it was one more word to read at every glance, for information that
- * we already know when we are on it.
+ * The brand: the logo, and nothing else. Out of production it changes SHADE
+ * (`ENV_LOGO_TINT`) — this is the only signal, and it is enough. The name of
+ * the environment written next to it was one more word to read at every glance,
+ * for information that we already know when we are on it.
  *
  * CENTERED in the one-line box, not aligned from the left like the
- * icons: it is wider than them (34 px compared to 18), and it is its center which
+ * icons: it is wider than them (26 px compared to 18), and it is its center which
  * must fall on theirs. The box being the same in both states, it does not
  * does not move a pixel when the bar opens or closes.
  */
@@ -184,7 +186,7 @@ function SidebarBrand() {
         ROW_BOX,
       )}
     >
-      <MinddyLogo className="h-6 w-auto" />
+      <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
     </Link>
   );
 }
