@@ -16,11 +16,15 @@ import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
 test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {
   const migrations = listMigrations();
-  assert.equal(migrations.length, 3);
+  assert.equal(migrations.length, 4);
   assert.deepEqual([...migrations].sort(), migrations);
   assert.equal(migrations[0], "20270106090000_baseline.sql");
   assert.equal(migrations[1], "20270106091000_initial_data.sql");
   assert.equal(migrations[2], "20270106092000_reapply_realtime_policies.sql");
+  assert.equal(
+    migrations[3],
+    "20270106094000_page_broadcast_and_pull_request_notification_deduplication.sql",
+  );
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 

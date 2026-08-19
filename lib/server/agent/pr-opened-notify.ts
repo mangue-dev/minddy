@@ -47,15 +47,6 @@ export async function notifyPullRequestOpened(
   try {
     const service = getServiceClient();
 
-    // Already announced? We stop before any further reading.
-    const { data: already } = await service
-      .from("notifications")
-      .select("id")
-      .eq("pull_request_id", pr.id)
-      .eq("type", "pr_opened")
-      .limit(1);
-    if (already?.length) return;
-
     const projectIds = await projectsForPr(pr);
     if (projectIds.length === 0) return;
 
@@ -92,7 +83,7 @@ export async function notifyPullRequestOpened(
     }
     if (rows.length === 0) return;
 
-    await insertNotifications(service, rows);
+    await insertNotifications(service, rows, { deduplicatePullRequestOpened: true });
   } catch (e) {
     console.error("[pr-opened-notify] notify failed:", (e as Error).message);
   }

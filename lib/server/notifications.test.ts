@@ -54,9 +54,11 @@ const BOB = "22222222-2222-2222-2222-222222222222";
  * preferences come out of the table below. */
 function stubService(opts: {
   insertError?: string;
+  upsertedRows?: unknown[];
   prefs?: Record<string, Record<string, unknown>>;
 }) {
   const inserted: unknown[] = [];
+  const upserted: unknown[] = [];
   const service = {
     from: () => ({
       insert: (rows: unknown[]) => {
@@ -64,6 +66,16 @@ function stubService(opts: {
         return Promise.resolve({
           error: opts.insertError ? { message: opts.insertError } : null,
         });
+      },
+      upsert: (rows: unknown[], options: unknown) => {
+        upserted.push({ rows, options });
+        return {
+          select: () =>
+            Promise.resolve({
+              data: opts.upsertedRows ?? rows,
+              error: opts.insertError ? { message: opts.insertError } : null,
+            }),
+        };
       },
     }),
     auth: {
@@ -76,7 +88,7 @@ function stubService(opts: {
       },
     },
   } as unknown as SupabaseClient;
-  return { service, inserted };
+  return { service, inserted, upserted };
 }
 
 const pageMentionRow = (userId: string) => ({
@@ -95,6 +107,15 @@ const commentRow = (userId: string) => ({
   type: "comment" as const,
   issue_id: "i1",
   actor_id: "someone",
+});
+
+const pullRequestOpenedRow = (userId: string) => ({
+  user_id: userId,
+  project_id: "p1",
+  type: "pr_opened" as const,
+  issue_id: null,
+  pull_request_id: "pr-1",
+  actor_id: null,
 });
 
 /** Executes what `afterOrNow` has queued. */
@@ -181,5 +202,27 @@ describe("insertNotifications — volet push (MIN-183)", () => {
     // The inbox still works: it's the whole contract of extinction.
     expect(inserted).toHaveLength(1);
     expect(H.after).not.toHaveBeenCalled();
+  });
+
+  it("does not push an opening that the database already recorded", async () => {
+    const { service, inserted, upserted } = stubService({ upsertedRows: [] });
+
+    await insertNotifications(service, [pullRequestOpenedRow(ALICE)], {
+      deduplicatePullRequestOpened: true,
+    });
+    await runScheduledWork();
+
+    expect(inserted).toEqual([]);
+    expect(upserted).toEqual([
+      {
+        rows: [pullRequestOpenedRow(ALICE)],
+        options: {
+          onConflict: "user_id,type,pull_request_id",
+          ignoreDuplicates: true,
+        },
+      },
+    ]);
+    expect(H.after).not.toHaveBeenCalled();
+    expect(H.sendPushToUser).not.toHaveBeenCalled();
   });
 });

@@ -74,7 +74,11 @@ const siblingTypes = (type: NotificationType): readonly NotificationType[] =>
 export async function insertNotifications(
   service: SupabaseClient,
   rows: NotificationRow[],
-  opts: { replaceUnread?: boolean } = {}
+  opts: {
+    replaceUnread?: boolean;
+    /** Atomically retain one opening announcement per recipient and pull request. */
+    deduplicatePullRequestOpened?: boolean;
+  } = {}
 ): Promise<void> {
   if (rows.length === 0) return;
 
@@ -139,7 +143,27 @@ export async function insertNotifications(
     );
   }
 
-  const { error } = await service.from("notifications").insert(kept);
+  let inserted = kept;
+  let error: { message: string } | null = null;
+  if (opts.deduplicatePullRequestOpened) {
+    // `ignoreDuplicates` relies on the matching database unique index. Unlike a
+    // read-then-insert guard, it remains correct when the agent and a forge
+    // webhook announce the same opening at the same time. PostgREST returns
+    // only rows inserted by `ON CONFLICT DO NOTHING`, so duplicate attempts do
+    // not also trigger a second system push.
+    const result = await service
+      .from("notifications")
+      .upsert(kept, {
+        onConflict: "user_id,type,pull_request_id",
+        ignoreDuplicates: true,
+      })
+      .select();
+    error = result.error;
+    inserted = (result.data ?? []) as NotificationRow[];
+  } else {
+    const result = await service.from("notifications").insert(kept);
+    error = result.error;
+  }
   if (error) {
     console.error("[notifications] insert failed:", error.message);
     return;
@@ -162,7 +186,7 @@ export async function insertNotifications(
   // request (automation cascades, end of agent run, crons). A `void`
   // detached would die with the response, in “TypeError: fetch failed” (cf.
   // lib/server/after-safe.ts).
-  pushNotifications(service, kept);
+  if (inserted.length > 0) pushNotifications(service, inserted);
 }
 
 /** The push pane of `insertNotifications`, isolated to read alone. Best-effort
