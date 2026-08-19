@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
+import { getProjectAccess } from "@/lib/server/project-access";
+import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -12,7 +14,25 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
+  // `issue_events` is polymorphic and its RLS predicate follows the issue
+  // relationship. Resolve the ticket and project membership explicitly before
+  // using the service client, matching the internal feedback activity routes.
+  const service = getServiceClient();
+  const { data: issue, error: issueError } = await service
+    .from("issues")
+    .select("project_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (issueError) {
+    console.error("[api/events] issue lookup failed:", issueError.message);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
+  if (!issue || !(await getProjectAccess(auth.user.id, issue.project_id as string))) {
+    return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
+  }
+
+  const { data, error } = await service
     .from("issue_events")
     .select("*, integration:integrations(name)")
     .eq("issue_id", id)
