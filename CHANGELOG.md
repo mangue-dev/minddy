@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- Bound the public-history audit's Git object batches so repository growth no
+  longer exhausts the scanner's output buffer.
+
 ## [0.10.16] - 2026-08-19
 
 ### Fixed

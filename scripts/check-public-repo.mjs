@@ -152,29 +152,50 @@ function scanReachableHistory(failures) {
     .toString("utf8")
     .trim()
     .split("\n");
-  const blobIds = metadata
+  const blobs = metadata
     .map((line) => line.split(" "))
     .filter(([, type]) => type === "blob")
-    .map(([id]) => id);
-  if (blobIds.length === 0) return { objects: objectIds.length, blobs: 0 };
-  const batch = checkedGit(["cat-file", "--batch"], `${blobIds.join("\n")}\n`);
-  let offset = 0;
+    .map(([id, , rawSize]) => ({ id, size: Number(rawSize) }));
+  if (blobs.length === 0) return { objects: objectIds.length, blobs: 0 };
 
-  while (offset < batch.length) {
-    const lineEnd = batch.indexOf(0x0a, offset);
-    if (lineEnd === -1) throw new Error("incomplete response from git cat-file --batch");
-    const [id, type, rawSize] = batch.subarray(offset, lineEnd).toString("utf8").split(" ");
-    const size = Number(rawSize);
-    offset = lineEnd + 1;
-    if (type !== "blob" || !Number.isSafeInteger(size) || offset + size > batch.length) {
-      throw new Error(`invalid response from git cat-file for ${id}`);
+  const batches = [];
+  let current = [];
+  let currentSize = 0;
+  for (const blob of blobs) {
+    if (current.length > 0 && currentSize + blob.size > 64 * 1024 * 1024) {
+      batches.push(current);
+      current = [];
+      currentSize = 0;
     }
-    const body = batch.subarray(offset, offset + size);
-    offset += size + 1; // git adds a newline after each blob.
-    if (body.includes(0x00) || size > 5 * 1024 * 1024) continue;
-    scanText(pathByObject.get(id) ?? "<unknown historical path>", body.toString("utf8"), failures, "history ");
+    current.push(blob.id);
+    currentSize += blob.size;
   }
-  return { objects: objectIds.length, blobs: blobIds.length };
+  if (current.length > 0) batches.push(current);
+
+  for (const ids of batches) {
+    const batch = checkedGit(["cat-file", "--batch"], `${ids.join("\n")}\n`);
+    let offset = 0;
+    while (offset < batch.length) {
+      const lineEnd = batch.indexOf(0x0a, offset);
+      if (lineEnd === -1) throw new Error("incomplete response from git cat-file --batch");
+      const [id, type, rawSize] = batch.subarray(offset, lineEnd).toString("utf8").split(" ");
+      const size = Number(rawSize);
+      offset = lineEnd + 1;
+      if (type !== "blob" || !Number.isSafeInteger(size) || offset + size > batch.length) {
+        throw new Error(`invalid response from git cat-file for ${id}`);
+      }
+      const body = batch.subarray(offset, offset + size);
+      offset += size + 1; // git adds a newline after each blob.
+      if (body.includes(0x00) || size > 5 * 1024 * 1024) continue;
+      scanText(
+        pathByObject.get(id) ?? "<unknown historical path>",
+        body.toString("utf8"),
+        failures,
+        "history ",
+      );
+    }
+  }
+  return { objects: objectIds.length, blobs: blobs.length };
 }
 
 const rawPaths = staged
