@@ -11,7 +11,7 @@ import { localizedHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { CONTACT_EMAIL } from "@/lib/site";
+import { CONTACT_EMAIL, MINDDY_REPOSITORY_URL } from "@/lib/site";
 
 /**
  * Public site footer (MIN-73). Takes the AutoKap footer grid:
@@ -21,7 +21,7 @@ import { CONTACT_EMAIL } from "@/lib/site";
 
 type FooterColumn = {
   titleKey: MessageKey<"Landing">;
-  links: ReadonlyArray<{ href: string; labelKey: MessageKey<"Landing"> }>;
+  links: ReadonlyArray<{ href: string; labelKey: MessageKey<"Landing">; external?: boolean }>;
 };
 
 const COLUMNS: ReadonlyArray<FooterColumn> = [
@@ -53,6 +53,8 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       // site resource which is really one, and the internal link which must
       // be seen from all pages — a crawler counts incoming links.
       { href: "/mcp", labelKey: "navMenu_mcp_title" },
+      { href: "/self-hosting", labelKey: "navMenu_selfHosting_title" },
+      { href: MINDDY_REPOSITORY_URL, labelKey: "footerRepository", external: true },
       { href: "/changelog", labelKey: "footerChangelog" },
       // Comparisons (MIN-93). They are NOWHERE else in the
       // navigation: without these three links, each page would only have the sitemap
@@ -183,12 +185,23 @@ export function MarketingFooter() {
               <ul className="flex flex-col gap-2.5">
                 {column.links.map((link) => (
                   <li key={link.href}>
-                    <Link
-                      href={localizedHref(link.href, locale)}
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {t(link.labelKey)}
-                    </Link>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {t(link.labelKey)}
+                      </a>
+                    ) : (
+                      <Link
+                        href={localizedHref(link.href, locale)}
+                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {t(link.labelKey)}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -100,6 +100,9 @@ export const MCP_ENDPOINT = `${SITE_URL}/api/mcp`;
 
 export const CONTACT_EMAIL = publicSite.contactEmail;
 
+/** Canonical public source repository for the minddy project. */
+export const MINDDY_REPOSITORY_URL = "https://github.com/mangue-dev/minddy";
+
 /** Board where the operator wants to collect feedback on the product. */
 export const PRODUCT_FEEDBACK_URL = publicSite.productFeedbackUrl;
 

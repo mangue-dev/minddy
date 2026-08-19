@@ -14,6 +14,7 @@ import {
   MessagesSquare,
   Plug,
   Route,
+  Server,
   Tag,
   Terminal,
   Zap,
@@ -68,6 +69,7 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   // plan of the landing, and its description says “documentation” without the word:
   // this is what distinguishes it from the “Agents & MCP” entry just above.
   { key: "mcp", href: "/mcp", icon: Terminal },
+  { key: "selfHosting", href: "/self-hosting", icon: Server },
   // The Mac app (MIN-292), last: it's the only entry that doesn't talk about
   // what minddy does but from where we use it. She belongs here
   // because it is indexable and an internal link is worth more than a line of

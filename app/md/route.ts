@@ -11,7 +11,7 @@ import {
 } from "@/lib/comparisons";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
-import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
+import { MCP_ENDPOINT, MINDDY_REPOSITORY_URL, SITE_URL } from "@/lib/site";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
   FAQ_KEYS,
@@ -87,6 +87,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   if (key === "home") body = await renderLanding(locale, canonical);
   else if (key === "pricing") body = await renderPricing(locale, canonical);
   else if (key === "mcp") body = await renderMcp(locale, canonical);
+  else if (key === "selfHosting") body = await renderSelfHosting(locale, canonical);
   else if (key === "changelog") body = await renderChangelog(locale, canonical);
   else if (COMPARISON_BY_ROUTE.has(key))
     body = await renderComparison(COMPARISON_BY_ROUTE.get(key)!, locale, canonical);
@@ -278,6 +279,55 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
   ].join("\n\n") + "\n";
 }
 
+async function renderSelfHosting(locale: Locale, canonical: string): Promise<string> {
+  const t = await getTranslations({ locale, namespace: "SelfHosting" });
+  const topology = ["app", "database", "storage", "realtime"] as const;
+  const steps = ["prerequisites", "clone", "local", "remote", "verify"] as const;
+  const optional = ["ai", "git", "email", "scheduler", "analytics", "billing"] as const;
+  const operations = ["update", "backup", "restore", "diagnose"] as const;
+
+  return [
+    header(t("metaTitle"), t("metaDescription"), canonical),
+    `## ${t("heroTitle")}`,
+    t("heroSubtitle"),
+    t("heroNote"),
+    `## ${t("topologyTitle")}`,
+    t("topologySubtitle"),
+    topology
+      .map((key) => `- **${t(`topology_${key}_title`)}**: ${t(`topology_${key}_body`)}`)
+      .join("\n"),
+    `> ${t("topologyWarning")}`,
+    `## ${t("stepsTitle")}`,
+    t("stepsSubtitle"),
+    steps
+      .map((key, index) => {
+        const command = `\`\`\`bash\n${t(`step_${key}_command`)}\n\`\`\``;
+        return [
+          `### ${index + 1}. ${t(`step_${key}_title`)}`,
+          t(`step_${key}_body`),
+          command,
+        ].join("\n\n");
+      })
+      .join("\n\n"),
+    `## ${t("optionalTitle")}`,
+    t("optionalSubtitle"),
+    optional
+      .map((key) => `- **${t(`optional_${key}_title`)}**: ${t(`optional_${key}_body`)}`)
+      .join("\n"),
+    `### ${t("unsupportedTitle")}`,
+    t("unsupportedBody"),
+    `## ${t("operationsTitle")}`,
+    t("operationsSubtitle"),
+    operations
+      .map((key) => `- **${t(`operation_${key}_title`)}**: ${t(`operation_${key}_body`)}`)
+      .join("\n"),
+    t("runbookNote"),
+    `## ${t("finishTitle")}`,
+    t("finishBody"),
+    links(locale),
+  ].join("\n\n") + "\n";
+}
+
 /**
  * The changelog in Markdown (MIN-93) — the simplest text version of the site,
  * and probably the most useful: "what changed in minddy" is
@@ -376,6 +426,8 @@ function links(locale: Locale): string {
     `- Home: ${path("home")}`,
     `- Pricing: ${path("pricing")}`,
     `- MCP server: ${path("mcp")}`,
+    `- Self-hosting guide: ${path("selfHosting")}`,
+    `- Repository: ${MINDDY_REPOSITORY_URL}`,
     `- Changelog: ${path("changelog")}`,
     `- MCP integration guide: ${SITE_URL}/llms.txt`,
     `- Terms: ${path("terms")}`,

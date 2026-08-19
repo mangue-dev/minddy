@@ -49,6 +49,7 @@ export type ProductEntryKey =
   | "feedback"
   | "more"
   | "mcp"
+  | "selfHosting"
   | "download";
 
 export type ProductEntry = {

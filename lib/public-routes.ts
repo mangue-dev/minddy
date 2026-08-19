@@ -78,6 +78,14 @@ export const PUBLIC_ROUTES = [
     lastModified: "2026-08-10",
     priority: 0.9,
   },
+  {
+    key: "selfHosting",
+    en: "/self-hosting",
+    fr: "/fr/auto-hebergement",
+    namespace: "SelfHosting",
+    lastModified: "2026-08-19",
+    priority: 0.7,
+  },
   // The desktop app (MIN-292). It has its own page and not a button on the landing:
   // what to say here — macOS only, and the notifications that
   // stop when the app is exited — does not fit under a button, and the
