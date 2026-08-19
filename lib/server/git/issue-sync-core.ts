@@ -134,6 +134,39 @@ export interface RemoteIssue {
   /** Logins of the assigned, in the order of the forge (both accept
  * several, minddy only one — cf. `matchForgeAssignee`). */
   assigneeLogins: string[];
+  /** GitHub-only data without an equivalent portable issue column. */
+  githubMetadata?: GithubIssueMetadata | null;
+  /** A GitHub milestone deadline, when one exists. */
+  dueDate?: string | null;
+  /** Upstream modification timestamp used to reject stale deliveries. */
+  updatedAt?: string | null;
+}
+
+export interface GithubIssueMetadata {
+  nodeId: string | null;
+  authorLogin: string | null;
+  authorAssociation: string | null;
+  stateReason: string | null;
+  locked: boolean;
+  activeLockReason: string | null;
+  milestone: Record<string, unknown> | null;
+  createdAt: string | null;
+  closedAt: string | null;
+  closedByLogin: string | null;
+  issueType: Record<string, unknown> | null;
+}
+
+export interface GithubIssueComment {
+  repoId: string;
+  number: number;
+  remoteCommentId: string;
+  action: "created" | "edited" | "deleted";
+  body: string;
+  authorLogin: string | null;
+  authorAssociation: string | null;
+  htmlUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 /**
@@ -174,15 +207,53 @@ interface GithubIssuesEvent {
     title?: string;
     body?: string | null;
     html_url?: string | null;
+    node_id?: string;
     state?: string;
+    state_reason?: string | null;
+    locked?: boolean;
+    active_lock_reason?: string | null;
     labels?: unknown;
     assignees?: unknown;
     assignee?: unknown;
+    user?: { login?: string } | null;
+    author_association?: string | null;
+    milestone?: unknown;
+    created_at?: string | null;
+    updated_at?: string | null;
+    closed_at?: string | null;
+    closed_by?: { login?: string } | null;
+    type?: unknown;
     /** Present = this is a pull request disguised as an issue → to be ignored. */
     pull_request?: unknown;
   };
   repository?: { id?: number; full_name?: string };
   sender?: { login?: string };
+}
+
+function timestampOrNull(value: unknown): string | null {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return null;
+  return value;
+}
+
+function objectOrNull(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function githubMilestone(value: unknown): Record<string, unknown> | null {
+  const milestone = objectOrNull(value);
+  if (!milestone) return null;
+  return {
+    id: typeof milestone.id === "number" ? milestone.id : null,
+    number: typeof milestone.number === "number" ? milestone.number : null,
+    title: typeof milestone.title === "string" ? milestone.title : null,
+    description: typeof milestone.description === "string" ? milestone.description : null,
+    state: typeof milestone.state === "string" ? milestone.state : null,
+    html_url: typeof milestone.html_url === "string" ? milestone.html_url : null,
+    due_on: timestampOrNull(milestone.due_on),
+    closed_at: timestampOrNull(milestone.closed_at),
+  };
 }
 
 /**
@@ -203,6 +274,7 @@ export function normalizeGithubIssueEvent(payload: unknown): RemoteIssue | null 
   // only uses it in default, never counting the same person twice.
   const assignees = readLogins(issue.assignees, "login");
   const legacy = readLogins([issue.assignee], "login");
+  const milestone = githubMilestone(issue.milestone);
   return {
     provider: "github",
     repoFullName,
@@ -216,6 +288,61 @@ export function normalizeGithubIssueEvent(payload: unknown): RemoteIssue | null 
     state: issue.state === "open" || issue.state === "closed" ? issue.state : null,
     labels: readLabels(issue.labels),
     assigneeLogins: assignees.length > 0 ? assignees : legacy,
+    dueDate: timestampOrNull(milestone?.due_on),
+    updatedAt: timestampOrNull(issue.updated_at),
+    githubMetadata: {
+      nodeId: typeof issue.node_id === "string" ? issue.node_id : null,
+      authorLogin: issue.user?.login ?? null,
+      authorAssociation: issue.author_association ?? null,
+      stateReason: issue.state_reason ?? null,
+      locked: issue.locked === true,
+      activeLockReason: issue.active_lock_reason ?? null,
+      milestone,
+      createdAt: timestampOrNull(issue.created_at),
+      closedAt: timestampOrNull(issue.closed_at),
+      closedByLogin: issue.closed_by?.login ?? null,
+      issueType: objectOrNull(issue.type),
+    },
+  };
+}
+
+/** Normalizes a non-PR GitHub `issue_comment` event for idempotent import. */
+export function normalizeGithubIssueCommentEvent(payload: unknown): GithubIssueComment | null {
+  const event = (payload ?? {}) as {
+    action?: string;
+    issue?: { number?: number; pull_request?: unknown } | null;
+    comment?: {
+      id?: number;
+      body?: string | null;
+      html_url?: string | null;
+      user?: { login?: string } | null;
+      author_association?: string | null;
+      created_at?: string | null;
+      updated_at?: string | null;
+    } | null;
+    repository?: { id?: number } | null;
+  };
+  if (event.issue?.pull_request) return null;
+  const number = event.issue?.number;
+  const comment = event.comment;
+  const repoId = event.repository?.id;
+  if (typeof number !== "number" || typeof comment?.id !== "number" || repoId == null) {
+    return null;
+  }
+  if (event.action !== "created" && event.action !== "edited" && event.action !== "deleted") {
+    return null;
+  }
+  return {
+    repoId: String(repoId),
+    number,
+    remoteCommentId: String(comment.id),
+    action: event.action,
+    body: comment.body ?? "",
+    authorLogin: comment.user?.login ?? null,
+    authorAssociation: comment.author_association ?? null,
+    htmlUrl: comment.html_url ?? null,
+    createdAt: timestampOrNull(comment.created_at),
+    updatedAt: timestampOrNull(comment.updated_at),
   };
 }
 
@@ -273,5 +400,6 @@ export function normalizeGitlabIssueEvent(payload: unknown): RemoteIssue | null 
     state,
     labels: labels.length > 0 ? labels : readLabels(attrs?.labels),
     assigneeLogins: readLogins(event.assignees, "username"),
+    githubMetadata: null,
   };
 }

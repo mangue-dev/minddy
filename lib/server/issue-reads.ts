@@ -322,6 +322,8 @@ export interface IssueDetail {
  * decide to go see; `get_feedback` opens the return and its conversation.
  */
   linked_feedback?: IssueLinkedFeedback[];
+  /** Provider-specific fields preserved by the GitHub issue synchronization. */
+  github_metadata?: Record<string, unknown>;
 }
 
 export async function getIssue(
@@ -344,7 +346,13 @@ export async function getIssue(
   if (error) return { error: error.message };
   if (!issue) return { error: "Issue not found in this project." };
 
-  const [{ data: comments }, { data: subIssues }, { data: attachmentRows }] =
+  const [
+    { data: comments },
+    { data: subIssues },
+    { data: attachmentRows },
+    { data: githubMetadata },
+    { data: githubCommentSyncs },
+  ] =
     await Promise.all([
       ctx.db
         .from("comments")
@@ -370,6 +378,17 @@ export async function getIssue(
         )
         .eq("issue_id", issue.id)
         .order("created_at", { ascending: true }),
+      ctx.db
+        .from("github_issue_sync_metadata")
+        .select(
+          "github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at"
+        )
+        .eq("issue_id", issue.id)
+        .maybeSingle(),
+      ctx.db
+        .from("github_issue_comment_syncs")
+        .select("comment_id, author_login, author_association, html_url, created_at_remote, updated_at_remote, deleted_at_remote")
+        .eq("issue_id", issue.id),
     ]);
 
   const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
@@ -387,9 +406,15 @@ export async function getIssue(
     fetchAuthUsersById(ctx.service, authorIds),
     resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
   ]);
+  const githubCommentById = new Map(
+    (githubCommentSyncs ?? []).map((row) => [row.comment_id as string, row]),
+  );
   const commentRows = (comments ?? []).map((c) => {
+    const githubComment = githubCommentById.get(c.id as string);
     const named = toNamed(users.get(c.author_id as string));
-    const author = c.via_assistant
+    const author = githubComment?.author_login
+      ? `GitHub @${githubComment.author_login}`
+      : c.via_assistant
       ? "Numo"
       : c.via_mcp
         ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
@@ -401,6 +426,17 @@ export async function getIssue(
       body: c.body,
       parent_id: c.parent_id,
       created_at: c.created_at,
+      ...(githubComment
+        ? {
+            github: {
+              author_association: githubComment.author_association,
+              url: githubComment.html_url,
+              created_at: githubComment.created_at_remote,
+              updated_at: githubComment.updated_at_remote,
+              deleted_at: githubComment.deleted_at_remote,
+            },
+          }
+        : {}),
       ...(commentResources ? { resources: commentResources } : {}),
     };
   });
@@ -496,6 +532,7 @@ export async function getIssue(
     relations,
     ...(duplicateOf ? { duplicate_of: duplicateOf } : {}),
     ...(linkedFeedback.length > 0 ? { linked_feedback: linkedFeedback } : {}),
+    ...(githubMetadata ? { github_metadata: githubMetadata } : {}),
   };
 }
 

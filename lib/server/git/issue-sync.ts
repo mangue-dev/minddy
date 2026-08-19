@@ -23,6 +23,7 @@ import { forgeIssueResource } from "./forge-resource";
 import {
   REMOTE_LANDING_STATUS,
   statusForRemoteReconcile,
+  type GithubIssueComment,
   type RemoteIssue,
 } from "./issue-sync-core";
 
@@ -180,7 +181,7 @@ export async function applyRemoteIssue(
   const service = getServiceClient();
   const { data: existing, error } = await service
     .from("issues")
-    .select("id, status, title, description, assignee_id, priority, effort")
+    .select("id, status, title, description, assignee_id, priority, effort, due_date, updated_at")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", remote.provider)
@@ -227,6 +228,7 @@ export async function applyRemoteIssue(
         priority,
         effort,
         assignee_id: assigneeId,
+        ...(remote.dueDate !== undefined ? { due_date: remote.dueDate } : {}),
         resources: resource ? [resource] : undefined,
       },
       remote: {
@@ -246,6 +248,7 @@ export async function applyRemoteIssue(
       }
       return;
     }
+    await syncGithubMetadata(result.issue.id as string, remote);
     await applyRemoteLabels(target, result.issue.id as string, labels);
     return;
   }
@@ -261,28 +264,40 @@ export async function applyRemoteIssue(
   // to take in minddy, without anything asking for it.
   const issueId = existing.id as string;
   const patch: Record<string, unknown> = {};
+  const githubSyncState = await readGithubIssueSyncState(issueId, remote);
+  const remoteIsStale = isStaleRemoteUpdate({
+    remoteUpdatedAt: remote.updatedAt,
+    localUpdatedAt: existing.updated_at,
+    previousRemoteUpdatedAt: githubSyncState?.updated_at_remote,
+    previousSyncedAt: githubSyncState?.synced_at,
+  });
 
-  const title = remote.title || `#${remote.number}`;
-  if (title !== existing.title) patch.title = title;
-  const body = remote.body ?? null;
-  if (body !== (existing.description ?? null)) patch.description = body;
+  if (!remoteIsStale) {
+    const title = remote.title || `#${remote.number}`;
+    if (title !== existing.title) patch.title = title;
+    const body = remote.body ?? null;
+    if (body !== (existing.description ?? null)) patch.description = body;
   // The assignee follows when the forge NAMES someone we recognize. An assigned
   // that we do not recognize (account not connected) does not empty the box either:
   // we don't know who it is, so we don't know anything more than before.
-  if (assigneeId && assigneeId !== (existing.assignee_id ?? null)) {
-    patch.assignee_id = assigneeId;
-  }
-  if (priority !== "none" && priority !== existing.priority) patch.priority = priority;
-  if (effort && effort !== existing.effort) patch.effort = effort;
+    if (assigneeId && assigneeId !== (existing.assignee_id ?? null)) {
+      patch.assignee_id = assigneeId;
+    }
+    if (priority !== "none" && priority !== existing.priority) patch.priority = priority;
+    if (effort && effort !== existing.effort) patch.effort = effort;
+    if (remote.dueDate !== undefined && remote.dueDate !== (existing.due_date ?? null)) {
+      patch.due_date = remote.dueDate;
+    }
 
   // The status follows the remote STATUS, compared to the state as the current status
   // represents — not the status itself: `canceled` and `done` are both
   // “closed”, and a closed exit that remains closed should not reclassify anything.
-  const mappedStatus = statusForRemoteReconcile(
-    remote,
-    existing.status as IssueStatusValue,
-  );
-  if (mappedStatus) patch.status = mappedStatus;
+    const mappedStatus = statusForRemoteReconcile(
+      remote,
+      existing.status as IssueStatusValue,
+    );
+    if (mappedStatus) patch.status = mappedStatus;
+  }
 
   if (Object.keys(patch).length > 0) {
     const updated = await updateIssueFields({
@@ -301,7 +316,112 @@ export async function applyRemoteIssue(
     }
   }
 
-  await applyRemoteLabels(target, issueId, labels);
+  await syncGithubMetadata(issueId, remote);
+  if (!remoteIsStale) await applyRemoteLabels(target, issueId, labels);
+}
+
+/** Returns true only when a fully timestamped GitHub payload predates a local change. */
+function isOlderThanLocal(remoteUpdatedAt: string | null | undefined, localUpdatedAt: unknown): boolean {
+  if (typeof remoteUpdatedAt !== "string" || typeof localUpdatedAt !== "string") return false;
+  const remote = Date.parse(remoteUpdatedAt);
+  const local = Date.parse(localUpdatedAt);
+  return !Number.isNaN(remote) && !Number.isNaN(local) && remote < local;
+}
+
+type GithubSyncState = {
+  updated_at_remote: string | null;
+  synced_at: string | null;
+};
+
+/**
+ * Loads the timestamp pair which distinguishes a local edit from the issue
+ * update caused by the preceding GitHub synchronization.
+ */
+async function readGithubIssueSyncState(
+  issueId: string,
+  remote: RemoteIssue,
+): Promise<GithubSyncState | null> {
+  if (remote.provider !== "github") return null;
+  const { data, error } = await getServiceClient()
+    .from("github_issue_sync_metadata")
+    .select("updated_at_remote, synced_at")
+    .eq("issue_id", issueId)
+    .maybeSingle();
+  if (error) {
+    console.error(`[issue-sync] GitHub sync state lookup failed for issue ${issueId}:`, error.message);
+    return null;
+  }
+  return data as GithubSyncState | null;
+}
+
+/**
+ * A minddy `updated_at` produced by the preceding GitHub sync must not make
+ * every later GitHub delivery look stale. Once the sidecar was written after
+ * that update, only a subsequent local issue update participates in LWW.
+ */
+function isStaleRemoteUpdate(params: {
+  remoteUpdatedAt: string | null | undefined;
+  localUpdatedAt: unknown;
+  previousRemoteUpdatedAt: unknown;
+  previousSyncedAt: unknown;
+}): boolean {
+  if (isOlderThanLocal(params.remoteUpdatedAt, params.previousRemoteUpdatedAt)) return true;
+
+  const localUpdatedAt = typeof params.localUpdatedAt === "string" ? params.localUpdatedAt : null;
+  const previousSyncedAt =
+    typeof params.previousSyncedAt === "string" ? params.previousSyncedAt : null;
+  if (
+    localUpdatedAt &&
+    previousSyncedAt &&
+    !Number.isNaN(Date.parse(localUpdatedAt)) &&
+    !Number.isNaN(Date.parse(previousSyncedAt)) &&
+    Date.parse(localUpdatedAt) <= Date.parse(previousSyncedAt)
+  ) {
+    return false;
+  }
+  return isOlderThanLocal(params.remoteUpdatedAt, params.localUpdatedAt);
+}
+
+/**
+ * Persists GitHub fields that do not map to a minddy issue column. A newer
+ * webhook always wins; an older delivery can never roll back the sidecar.
+ */
+async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise<void> {
+  if (remote.provider !== "github" || !remote.githubMetadata) return;
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("github_issue_sync_metadata")
+    .select("updated_at_remote")
+    .eq("issue_id", issueId)
+    .maybeSingle();
+  if (error) {
+    console.error(`[issue-sync] GitHub metadata lookup failed for issue ${issueId}:`, error.message);
+    return;
+  }
+  if (isOlderThanLocal(remote.updatedAt, data?.updated_at_remote)) return;
+  const metadata = remote.githubMetadata;
+  const { error: writeError } = await service.from("github_issue_sync_metadata").upsert(
+    {
+      issue_id: issueId,
+      github_node_id: metadata.nodeId,
+      author_login: metadata.authorLogin,
+      author_association: metadata.authorAssociation,
+      state_reason: metadata.stateReason,
+      locked: metadata.locked,
+      active_lock_reason: metadata.activeLockReason,
+      milestone: metadata.milestone,
+      created_at_remote: metadata.createdAt,
+      updated_at_remote: remote.updatedAt,
+      closed_at_remote: metadata.closedAt,
+      closed_by_login: metadata.closedByLogin,
+      metadata: { issue_type: metadata.issueType },
+      synced_at: new Date().toISOString(),
+    },
+    { onConflict: "issue_id" },
+  );
+  if (writeError) {
+    console.error(`[issue-sync] GitHub metadata write failed for issue ${issueId}:`, writeError.message);
+  }
 }
 
 /**
@@ -387,6 +507,116 @@ export async function syncRemoteIssueEvent(remote: RemoteIssue): Promise<void> {
 }
 
 /**
+ * Mirrors a GitHub issue comment to each linked project that already imported
+ * the parent issue. The remote comment id is the deduplication key; edits and
+ * deletions update the existing minddy comment instead of creating a new one.
+ */
+export async function syncGithubIssueComment(comment: GithubIssueComment): Promise<void> {
+  const targets = await listIssueSyncTargets({ provider: "github", repoId: comment.repoId });
+  for (const target of targets) {
+    if (!target.createdBy) continue;
+    try {
+      await applyGithubIssueComment(target, comment);
+    } catch (error) {
+      console.error(
+        `[issue-sync] GitHub comment ${comment.remoteCommentId} for target ${target.linkId} failed:`,
+        (error as Error).message,
+      );
+    }
+  }
+}
+
+async function applyGithubIssueComment(
+  target: IssueSyncTarget,
+  remote: GithubIssueComment,
+): Promise<void> {
+  const service = getServiceClient();
+  const { data: issue, error: issueError } = await service
+    .from("issues")
+    .select("id")
+    .is("deleted_at", null)
+    .eq("project_id", target.projectId)
+    .eq("remote_provider", "github")
+    .eq("remote_repo_id", remote.repoId)
+    .eq("remote_number", remote.number)
+    .maybeSingle();
+  if (issueError || !issue) return;
+
+  const issueId = issue.id as string;
+  const { data: synced, error: syncedError } = await service
+    .from("github_issue_comment_syncs")
+    .select("comment_id, updated_at_remote, synced_at")
+    .eq("remote_comment_id", remote.remoteCommentId)
+    .eq("issue_id", issueId)
+    .maybeSingle();
+  if (syncedError) throw new Error(syncedError.message);
+
+  let commentUpdatedAt: string | null = null;
+  if (synced?.comment_id) {
+    const { data: localComment, error: commentError } = await service
+      .from("comments")
+      .select("updated_at")
+      .eq("id", synced.comment_id as string)
+      .eq("issue_id", issueId)
+      .maybeSingle();
+    if (commentError) throw new Error(commentError.message);
+    commentUpdatedAt = (localComment?.updated_at as string | null | undefined) ?? null;
+  }
+  if (
+    synced &&
+    isStaleRemoteUpdate({
+      remoteUpdatedAt: remote.updatedAt,
+      localUpdatedAt: commentUpdatedAt,
+      previousRemoteUpdatedAt: synced.updated_at_remote,
+      previousSyncedAt: synced.synced_at,
+    })
+  ) {
+    return;
+  }
+
+  const body = remote.action === "deleted" ? "[Deleted on GitHub]" : remote.body;
+  let commentId = synced?.comment_id as string | undefined;
+  if (commentId) {
+    const { error } = await service
+      .from("comments")
+      .update({ body })
+      .eq("id", commentId)
+      .eq("issue_id", issueId);
+    if (error) throw new Error(error.message);
+  } else {
+    const { data, error } = await service
+      .from("comments")
+      .insert({
+        issue_id: issueId,
+        author_id: target.createdBy,
+        body,
+        created_at: remote.createdAt ?? new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "comment insert returned no id");
+    commentId = data.id as string;
+  }
+
+  const { error: writeError } = await service.from("github_issue_comment_syncs").upsert(
+    {
+      remote_comment_id: remote.remoteCommentId,
+      issue_id: issueId,
+      comment_id: commentId,
+      author_login: remote.authorLogin,
+      author_association: remote.authorAssociation,
+      html_url: remote.htmlUrl,
+      created_at_remote: remote.createdAt,
+      updated_at_remote: remote.updatedAt,
+      deleted_at_remote: remote.action === "deleted" ? remote.updatedAt ?? new Date().toISOString() : null,
+      synced_at: new Date().toISOString(),
+    },
+    { onConflict: "remote_comment_id,issue_id" },
+  );
+  if (writeError) throw new Error(writeError.message);
+}
+
+/**
  * The name of the stored repository follows the one that the forge has just announced.
  *
  * Since MIN-333 the name no longer ROUTES anything — it's the id that does it. It only serves
@@ -463,6 +693,9 @@ interface BackfilledIssue {
   url: string | null;
   labels: string[];
   assigneeLogins: string[];
+  dueDate: string | null;
+  createdAt: string | null;
+  closedAt: string | null;
 }
 
 /** A remote output, brought back to the expected form by the bulk import. */
@@ -490,9 +723,9 @@ function toImportedIssue(
     // The forge account becomes a member of the project again when this person has
     // connected his (MIN-144) — otherwise `null`, and nothing is guessed.
     assigneeId: matchForgeAssignee(issue.assigneeLogins, assignees),
-    dueDate: null,
-    createdAt: null,
-    completedAt: null,
+    dueDate: issue.dueDate,
+    createdAt: issue.createdAt,
+    completedAt: issue.closedAt,
     externalKeys: [],
     parentExternalKey: null,
     remote: {
@@ -548,6 +781,9 @@ export async function backfillRemoteIssues(
       url: i.htmlUrl,
       labels: i.labels,
       assigneeLogins: i.assigneeLogins,
+      dueDate: i.dueDate ?? null,
+      createdAt: i.createdAt ?? null,
+      closedAt: i.closedAt ?? null,
     }));
   } else {
     const token = await getGitlabAccessToken(target.connectionId);
@@ -563,6 +799,9 @@ export async function backfillRemoteIssues(
       url: i.webUrl,
       labels: i.labels,
       assigneeLogins: i.assigneeLogins,
+      dueDate: null,
+      createdAt: null,
+      closedAt: null,
     }));
   }
 

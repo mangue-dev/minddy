@@ -91,6 +91,7 @@ export interface ThreadMessage {
   via_mcp?: boolean;
   api_key_name?: string | null;
   api_key_agent?: string | null;
+  github?: Comment["github"];
   assistant_status?: "working" | "done" | "error" | null;
   assistant_tool?: string | null;
   visibility?: CommentVisibility;
@@ -452,6 +453,7 @@ export function CommentBlock({
   const tToolCall = useTranslations("ToolCall");
   const viaNumo = !!comment.via_assistant;
   const viaMcp = !viaNumo && !!comment.via_mcp;
+  const github = comment.github ?? null;
   const author = actorName(ctx.members, comment.author_id, t);
   // Public thread of a return (MIN-196). Two new features in this block, and one
   // only rule: here, in the TEAM view, we NAME the visitor. It is
@@ -466,6 +468,8 @@ export function CommentBlock({
     ? "Numo"
     : viaMcp
       ? mcpActorName(comment.api_key_agent, comment.api_key_name, t)
+      : github?.author_login
+        ? `GitHub @${github.author_login}`
       : visitor
         ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
         : author;
@@ -507,8 +511,8 @@ export function CommentBlock({
    * moderation; and those of a VISITOR are never rewritten. To correct
    * a typo in one's own published response, however, remains permitted.
    */
-  const canDelete = isPublic || (mine && !viaNumo);
-  const canEdit = mine && !viaNumo && !visitor;
+  const canDelete = isPublic || (mine && !viaNumo && !github);
+  const canEdit = mine && !viaNumo && !visitor && !github;
 
   const saveEdit = async () => {
     const body = draft.trim();
@@ -534,6 +538,8 @@ export function CommentBlock({
           <NumoAvatar />
         ) : viaMcp ? (
           <McpAvatar agent={comment.api_key_agent} />
+        ) : github ? (
+          <UserAvatar seed={github.author_login ?? "GitHub"} className="size-5" />
         ) : visitor ? (
           <UserAvatar seed={visitor.pseudonym} className="size-5" />
         ) : (

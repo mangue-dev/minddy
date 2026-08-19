@@ -17,8 +17,14 @@ import {
   prActionForPullRequest,
   prActionForReview,
 } from "@/lib/server/agent/pr-webhook-core";
-import { normalizeGithubIssueEvent } from "@/lib/server/git/issue-sync-core";
-import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
+import {
+  normalizeGithubIssueCommentEvent,
+  normalizeGithubIssueEvent,
+} from "@/lib/server/git/issue-sync-core";
+import {
+  syncGithubIssueComment,
+  syncRemoteIssueEvent,
+} from "@/lib/server/git/issue-sync";
 import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
 import {
   findPullRequestByNumber,
@@ -433,6 +439,11 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
 }
 
 async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
+  const issueComment = normalizeGithubIssueCommentEvent(payload);
+  if (issueComment) {
+    await syncGithubIssueComment(issueComment);
+    return;
+  }
   if (!isPullRequestComment(payload)) return;
   const actor = payload.comment?.user ?? payload.sender;
   const number = payload.issue?.number;
@@ -612,6 +623,11 @@ const SYNCED_ISSUE_ACTIONS = new Set([
   "unlabeled",
   "assigned",
   "unassigned",
+  "milestoned",
+  "demilestoned",
+  "locked",
+  "unlocked",
+  "typed",
 ]);
 
 async function handleIssues(payload: unknown): Promise<void> {

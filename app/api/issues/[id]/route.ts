@@ -28,7 +28,20 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
-  return NextResponse.json(mapIssueRow(data));
+  const { data: githubMetadata, error: githubMetadataError } = await auth.supabase
+    .from("github_issue_sync_metadata")
+    .select(
+      "github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at"
+    )
+    .eq("issue_id", id)
+    .maybeSingle();
+  if (githubMetadataError) {
+    console.error("[api/issues/:id] GitHub metadata get failed:", githubMetadataError.message);
+  }
+  return NextResponse.json({
+    ...mapIssueRow(data),
+    github_metadata: githubMetadata ?? null,
+  });
 }
 
 /** PATCH /api/issues/[id] — update fields (access enforced in updateIssueFields). */

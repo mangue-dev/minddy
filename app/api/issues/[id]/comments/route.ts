@@ -44,11 +44,39 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const keyActors = await resolveApiKeyActors(
     (data ?? []).map((c) => c.api_key_id as string | null)
   );
+  const commentIds = (data ?? []).map((comment) => comment.id as string);
+  const { data: githubRows, error: githubError } = commentIds.length
+    ? await auth.supabase
+        .from("github_issue_comment_syncs")
+        .select(
+          "comment_id, author_login, author_association, html_url, created_at_remote, updated_at_remote, deleted_at_remote"
+        )
+        .in("comment_id", commentIds)
+    : { data: [], error: null };
+  if (githubError) {
+    console.error("[api/comments] GitHub metadata list failed:", githubError.message);
+  }
+  const githubByComment = new Map(
+    (githubRows ?? []).map((row) => [row.comment_id as string, row]),
+  );
   return NextResponse.json(
     (data ?? []).map((comment) => ({
       ...comment,
       api_key_name: keyActors.get(comment.api_key_id as string)?.name ?? null,
       api_key_agent: keyActors.get(comment.api_key_id as string)?.agent ?? null,
+      ...(githubByComment.has(comment.id as string)
+        ? {
+            github: {
+              author_login: githubByComment.get(comment.id as string)?.author_login ?? null,
+              author_association:
+                githubByComment.get(comment.id as string)?.author_association ?? null,
+              url: githubByComment.get(comment.id as string)?.html_url ?? null,
+              created_at: githubByComment.get(comment.id as string)?.created_at_remote ?? null,
+              updated_at: githubByComment.get(comment.id as string)?.updated_at_remote ?? null,
+              deleted_at: githubByComment.get(comment.id as string)?.deleted_at_remote ?? null,
+            },
+          }
+        : {}),
     }))
   );
 }

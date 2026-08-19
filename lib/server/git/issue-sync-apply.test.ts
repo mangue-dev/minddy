@@ -31,12 +31,14 @@ let issueCategoryRows: Row[] = [];
 let creates: Record<string, unknown>[] = [];
 let updates: Record<string, unknown>[] = [];
 let categorySets: Record<string, unknown>[] = [];
+let metadataWrites: Record<string, unknown>[] = [];
+let githubMetadataRows: Row[] = [];
 /** How many times the assignee index was built (two queries each). */
 let indexBuilds = 0;
 /** Does `createIssueForProject` fail, and on which key? */
 let createError: string | null = null;
 
-function table(rows: () => Row[]) {
+function table(rows: () => Row[], isGithubMetadata = false) {
   const filters: ((row: Row) => boolean)[] = [];
   const query: Record<string, unknown> = {};
   query.select = () => query;
@@ -50,6 +52,10 @@ function table(rows: () => Row[]) {
   };
   // The end of backfill timestamp on `project_git_links` — written, never read.
   query.update = () => ({ eq: async () => ({ error: null }) });
+  query.upsert = async (values: Record<string, unknown>) => {
+    if (isGithubMetadata) metadataWrites.push(values);
+    return { error: null };
+  };
   const matching = () => rows().filter((row) => filters.every((f) => f(row)));
   query.maybeSingle = async () => ({ data: matching()[0] ?? null, error: null });
   query.then = (onFulfilled: (value: unknown) => unknown) =>
@@ -60,11 +66,13 @@ function table(rows: () => Row[]) {
 const TABLES: Record<string, () => Row[]> = {
   issues: () => issueRows,
   issue_categories: () => issueCategoryRows,
+  github_issue_sync_metadata: () => githubMetadataRows,
 };
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: (name: string) => table(TABLES[name] ?? (() => [])),
+    from: (name: string) =>
+      table(TABLES[name] ?? (() => []), name === "github_issue_sync_metadata"),
   }),
 }));
 
@@ -217,6 +225,8 @@ beforeEach(() => {
   creates = [];
   updates = [];
   categorySets = [];
+  metadataWrites = [];
+  githubMetadataRows = [];
   imports = [];
   openIssues = [];
   indexBuilds = 0;
@@ -358,6 +368,65 @@ describe("applyRemoteIssue — le ticket existe : le silence n'écrase rien", ()
     await applyRemoteIssue(TARGET, remote({ labels: ["priority: urgent", "size: XL"] }));
 
     expect(patch()).toEqual({ priority: "urgent", effort: "xl" });
+  });
+
+  it("maps a GitHub milestone deadline and preserves provider-only metadata", async () => {
+    imported({ due_date: null, updated_at: "2026-08-19T12:00:00Z" });
+    await applyRemoteIssue(
+      TARGET,
+      remote({
+        dueDate: "2026-08-30T00:00:00Z",
+        updatedAt: "2026-08-19T13:00:00Z",
+        githubMetadata: {
+          nodeId: "I_kwDOA",
+          authorLogin: "octocat",
+          authorAssociation: "MEMBER",
+          stateReason: null,
+          locked: false,
+          activeLockReason: null,
+          milestone: { title: "Release 1.0" },
+          createdAt: "2026-08-19T11:00:00Z",
+          closedAt: null,
+          closedByLogin: null,
+          issueType: { name: "Bug" },
+        },
+      }),
+    );
+
+    expect(patch()).toEqual({ due_date: "2026-08-30T00:00:00Z" });
+    expect(metadataWrites).toHaveLength(1);
+    expect(metadataWrites[0]).toMatchObject({
+      issue_id: "issue-1",
+      author_login: "octocat",
+      milestone: { title: "Release 1.0" },
+      metadata: { issue_type: { name: "Bug" } },
+    });
+  });
+
+  it("does not overwrite a later minddy edit with an older GitHub delivery", async () => {
+    imported({ title: "Edited in minddy", updated_at: "2026-08-19T14:00:00Z" });
+    await applyRemoteIssue(
+      TARGET,
+      remote({ title: "Stale GitHub title", updatedAt: "2026-08-19T13:00:00Z" }),
+    );
+
+    expect(updates).toHaveLength(0);
+  });
+
+  it("accepts a newer GitHub delivery after a prior GitHub synchronization", async () => {
+    imported({ title: "Earlier GitHub title", updated_at: "2026-08-19T14:00:00Z" });
+    githubMetadataRows.push({
+      issue_id: "issue-1",
+      updated_at_remote: "2026-08-19T13:00:00Z",
+      synced_at: "2026-08-19T14:01:00Z",
+    });
+
+    await applyRemoteIssue(
+      TARGET,
+      remote({ title: "Newer GitHub title", updatedAt: "2026-08-19T13:30:00Z" }),
+    );
+
+    expect(patch()).toEqual({ title: "Newer GitHub title" });
   });
 
   it("estampille l'écriture `forgeSync` — c'est L'ANTI-BOUCLE", async () => {

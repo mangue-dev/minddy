@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   REMOTE_LANDING_STATUS,
+  normalizeGithubIssueCommentEvent,
   normalizeGithubIssueEvent,
   normalizeGitlabIssueEvent,
   remoteStateForStatus,
@@ -185,6 +186,21 @@ describe("normalizeGithubIssueEvent", () => {
       state: "open",
       labels: ["bug", "P1"],
       assigneeLogins: ["octocat", "hubot"],
+      dueDate: null,
+      updatedAt: null,
+      githubMetadata: {
+        nodeId: null,
+        authorLogin: null,
+        authorAssociation: null,
+        stateReason: null,
+        locked: false,
+        activeLockReason: null,
+        milestone: null,
+        createdAt: null,
+        closedAt: null,
+        closedByLogin: null,
+        issueType: null,
+      },
     });
   });
 
@@ -194,6 +210,44 @@ describe("normalizeGithubIssueEvent", () => {
       issue: { ...opened.issue, assignees: [], assignee: { login: "hubot" } },
     };
     expect(normalizeGithubIssueEvent(legacy)?.assigneeLogins).toEqual(["hubot"]);
+  });
+
+  it("preserves milestone, timestamps, and GitHub-only metadata", () => {
+    const remote = normalizeGithubIssueEvent({
+      ...opened,
+      issue: {
+        ...opened.issue,
+        node_id: "I_kwDOA",
+        user: { login: "creator" },
+        author_association: "MEMBER",
+        state_reason: "completed",
+        locked: true,
+        active_lock_reason: "resolved",
+        created_at: "2026-08-19T12:00:00Z",
+        updated_at: "2026-08-19T13:00:00Z",
+        closed_at: "2026-08-19T13:00:00Z",
+        closed_by: { login: "closer" },
+        type: { id: 4, name: "Bug" },
+        milestone: {
+          id: 2,
+          number: 3,
+          title: "Release 1.0",
+          due_on: "2026-08-30T00:00:00Z",
+          html_url: "https://github.com/acme/app/milestone/3",
+        },
+      },
+    });
+
+    expect(remote?.dueDate).toBe("2026-08-30T00:00:00Z");
+    expect(remote?.updatedAt).toBe("2026-08-19T13:00:00Z");
+    expect(remote?.githubMetadata).toMatchObject({
+      nodeId: "I_kwDOA",
+      authorLogin: "creator",
+      stateReason: "completed",
+      locked: true,
+      milestone: { title: "Release 1.0", due_on: "2026-08-30T00:00:00Z" },
+      issueType: { id: 4, name: "Bug" },
+    });
   });
 
   it("survives an issue without labels or assignees", () => {
@@ -221,6 +275,57 @@ describe("normalizeGithubIssueEvent", () => {
       normalizeGithubIssueEvent({ ...opened, repository: { full_name: "acme/app" } }),
     ).toBeNull();
     expect(normalizeGithubIssueEvent(null)).toBeNull();
+  });
+});
+
+describe("normalizeGithubIssueCommentEvent", () => {
+  it("keeps the remote identity and edit timestamp of a regular issue comment", () => {
+    expect(
+      normalizeGithubIssueCommentEvent({
+        action: "edited",
+        repository: { id: 987654 },
+        issue: { number: 42 },
+        comment: {
+          id: 99,
+          body: "Updated context",
+          html_url: "https://github.com/acme/app/issues/42#issuecomment-99",
+          user: { login: "octocat" },
+          author_association: "CONTRIBUTOR",
+          created_at: "2026-08-19T12:00:00Z",
+          updated_at: "2026-08-19T13:00:00Z",
+        },
+      }),
+    ).toEqual({
+      repoId: "987654",
+      number: 42,
+      remoteCommentId: "99",
+      action: "edited",
+      body: "Updated context",
+      authorLogin: "octocat",
+      authorAssociation: "CONTRIBUTOR",
+      htmlUrl: "https://github.com/acme/app/issues/42#issuecomment-99",
+      createdAt: "2026-08-19T12:00:00Z",
+      updatedAt: "2026-08-19T13:00:00Z",
+    });
+  });
+
+  it("rejects pull request comments and unsupported actions", () => {
+    expect(
+      normalizeGithubIssueCommentEvent({
+        action: "created",
+        repository: { id: 1 },
+        issue: { number: 2, pull_request: {} },
+        comment: { id: 3 },
+      }),
+    ).toBeNull();
+    expect(
+      normalizeGithubIssueCommentEvent({
+        action: "pinned",
+        repository: { id: 1 },
+        issue: { number: 2 },
+        comment: { id: 3 },
+      }),
+    ).toBeNull();
   });
 });
 
@@ -259,6 +364,7 @@ describe("normalizeGitlabIssueEvent", () => {
       state: "closed",
       labels: ["bug", "severity::2"],
       assigneeLogins: ["tanuki"],
+      githubMetadata: null,
     });
   });
 

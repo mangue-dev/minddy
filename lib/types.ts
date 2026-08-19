@@ -142,6 +142,15 @@ export interface Comment {
   api_key_id?: string | null;
   api_key_name?: string | null;
   api_key_agent?: string | null;
+  /** GitHub provenance for a comment synchronized from a linked issue. */
+  github?: {
+    author_login: string | null;
+    author_association: string | null;
+    url: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    deleted_at: string | null;
+  } | null;
   /** Lifecycle of an @Numo comment reply: 'working' while generating (body and
       assistant_tool update live), then 'done' or 'error'. Null = normal comment. */
   assistant_status?: "working" | "done" | "error" | null;

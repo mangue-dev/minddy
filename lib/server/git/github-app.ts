@@ -339,6 +339,10 @@ export interface RemoteRepoIssue {
   labels: string[];
   /** Logins of assignees, in GitHub order. */
   assigneeLogins: string[];
+  /** The due date carried by the assigned milestone, if any. */
+  dueDate: string | null;
+  createdAt: string | null;
+  closedAt: string | null;
 }
 
 const REPO_ISSUES_PER_PAGE = 100;
@@ -373,6 +377,9 @@ export async function listRepoOpenIssues(
       html_url?: string | null;
       labels?: Array<{ name?: string } | string> | null;
       assignees?: Array<{ login?: string }> | null;
+      milestone?: { due_on?: string | null } | null;
+      created_at?: string | null;
+      closed_at?: string | null;
       pull_request?: unknown;
     }>;
     for (const row of rows) {
@@ -388,6 +395,9 @@ export async function listRepoOpenIssues(
         assigneeLogins: (row.assignees ?? [])
           .map((a) => a?.login?.trim() ?? "")
           .filter(Boolean),
+        dueDate: row.milestone?.due_on ?? null,
+        createdAt: row.created_at ?? null,
+        closedAt: row.closed_at ?? null,
       });
       if (issues.length >= limit) break;
     }

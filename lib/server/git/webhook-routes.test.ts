@@ -70,8 +70,10 @@ vi.mock("@/lib/supabase-service", () => ({
 
 /** The real work of the receiver, reduced to a probe: has it been done? */
 const syncRemoteIssueEvent = vi.fn(async () => {});
+const syncGithubIssueComment = vi.fn(async () => {});
 vi.mock("@/lib/server/git/issue-sync", () => ({
   syncRemoteIssueEvent: (...a: unknown[]) => syncRemoteIssueEvent(...(a as [])),
+  syncGithubIssueComment: (...a: unknown[]) => syncGithubIssueComment(...(a as [])),
 }));
 
 const rotateGitlabWebhookSecret = vi.fn(async () => {});
@@ -154,16 +156,18 @@ function gitlabRequest(
   }) as unknown as Parameters<typeof gitlabPOST>[0];
 }
 
-function githubRequest(opts: { deliveryId?: string } = {}) {
+function githubRequest(
+  opts: { deliveryId?: string; event?: string; body?: unknown } = {},
+) {
   return new Request("https://minddy.app/api/webhooks/github", {
     method: "POST",
     headers: new Headers({
       "content-type": "application/json",
-      "x-github-event": "issues",
+      "x-github-event": opts.event ?? "issues",
       "x-hub-signature-256": "sha256=whatever",
       "x-github-delivery": opts.deliveryId ?? crypto.randomUUID(),
     }),
-    body: JSON.stringify(GITHUB_ISSUE),
+    body: JSON.stringify(opts.body ?? GITHUB_ISSUE),
   }) as unknown as Parameters<typeof githubPOST>[0];
 }
 
@@ -290,5 +294,29 @@ describe("POST /api/webhooks/github", () => {
     const replay = await githubPOST(githubRequest({ deliveryId }));
     expect(await replay.json()).toEqual({ ok: true, duplicate: true });
     expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("synchronizes a regular issue comment without treating it as a PR comment", async () => {
+    const response = await githubPOST(
+      githubRequest({
+        event: "issue_comment",
+        body: {
+          action: "created",
+          repository: { id: 9001, full_name: "acme/app" },
+          issue: { number: 7 },
+          comment: {
+            id: 22,
+            body: "I can reproduce this.",
+            user: { login: "octocat" },
+            created_at: "2026-08-19T12:00:00Z",
+          },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(syncGithubIssueComment).toHaveBeenCalledWith(
+      expect.objectContaining({ remoteCommentId: "22", number: 7 }),
+    );
   });
 });
