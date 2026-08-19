@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Added
+
+- Clean-room entry-point coverage now exercises the documented package-manager
+  argument separator through a filesystem symlink.
+
 ## [0.10.6] - 2026-08-19
 
 ### Fixed
