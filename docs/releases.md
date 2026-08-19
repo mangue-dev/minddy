@@ -125,6 +125,17 @@ leave a half-release.
 
 ## Artifacts of the heart
 
+### Official OCI image
+
+The release workflow publishes `ghcr.io/mangue-dev/minddy:vX.Y.Z` from the
+same release SHA as the source artifacts. The exact SemVer tag is append-only;
+stable releases also advance the convenience aliases `vX.Y` and `vX`. Operators
+must deploy the manifest digest recorded in the GitHub Release, not either
+moving alias. The release assets include the digest identity and checksums;
+the registry image carries its SPDX SBOM, SLSA provenance, and keyless Sigstore
+signature. Run and verification instructions are in
+[`container-image.md`](container-image.md).
+
 `scripts/build-release-artifacts.mjs` makes in `.release/`:
 
 - `minddy-vX.Y.Z-source.tar.gz`, deterministic commit archive;

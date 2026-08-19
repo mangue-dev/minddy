@@ -87,6 +87,9 @@ const isVercelNonProduction =
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Emit Next's traced production server. The official OCI image copies this
+  // output into a minimal runtime stage, without installing a package manager.
+  output: "standalone",
   // Pin the workspace root to this app so Turbopack doesn't walk up into the
   // sibling mangue-ui monorepo (mangue-ui is a `file:` dependency).
   turbopack: { root: dir },

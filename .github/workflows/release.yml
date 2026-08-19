@@ -16,6 +16,8 @@ permissions:
   contents: write
   id-token: write
   attestations: write
+  artifact-metadata: write
+  packages: write
 
 concurrency:
   group: production-publication
@@ -86,6 +88,100 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
         run: pnpm run release:artifacts
 
+      - name: Define official image name
+        id: image
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          IFS=. read -r major minor patch <<< "$VERSION"
+          {
+            echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/minddy"
+            echo "release_tag=v$VERSION"
+            echo "minor_tag=v$major.$minor"
+            echo "major_tag=v$major"
+            echo "tags<<EOF"
+            echo "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/minddy:v$VERSION"
+            if [[ "$VERSION" != *-* ]]; then
+              echo "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/minddy:v$major.$minor"
+              echo "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/minddy:v$major"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # Publishing the same release tag twice would make an apparently pinned
+      # operator reference mutable. The preflight keeps the workflow itself
+      # append-only even if a registry setting is accidentally loosened.
+      - name: Reject an existing OCI release tag
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if docker buildx imagetools inspect "$IMAGE:v$VERSION" >/dev/null 2>&1; then
+            echo "::error::OCI tag $IMAGE:v$VERSION already exists and must not be overwritten."
+            exit 1
+          fi
+
+      - name: Publish signed-release candidate image
+        id: container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.image.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ inputs.sha }}
+            org.opencontainers.image.version=${{ inputs.version }}
+            org.opencontainers.image.licenses=AGPL-3.0-only
+          provenance: mode=max
+          sbom: true
+
+      - name: Enforce fixed high and critical vulnerability threshold
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.image.outputs.name }}@${{ steps.container.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Attest OCI image provenance
+        if: github.event.repository.visibility == 'public'
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.container.outputs.digest }}
+          push-to-registry: true
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Keylessly sign the OCI manifest
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.container.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
+
+      - name: Add immutable container identity to release assets
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.container.outputs.digest }}
+        run: pnpm run release:container-artifact -- "$IMAGE" "$DIGEST"
+
       - name: Attest release artifacts
         if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v3
@@ -96,8 +192,8 @@ jobs:
         if: github.event.repository.visibility != 'public'
         run: >-
           echo '::notice::GitHub artifact attestations are unavailable for a
-          user-owned private repository; verify the published SHA256SUMS until
-          the repository is public.'
+          user-owned private repository; verify the published SHA256SUMS and
+          the keyless OCI signature until the repository is public.'
 
       #The tag only exists after all checks and builds. A failure
       #before this step therefore leaves production intact and can be replayed.
@@ -126,6 +222,7 @@ jobs:
           .release/release-manifest.json
           .release/RELEASE_NOTES.md
           .release/UPDATE.md
+          .release/minddy-v${{ inputs.version }}-container.txt
           .release/SHA256SUMS
           --verify-tag
           --title "minddy v$RELEASE_VERSION"

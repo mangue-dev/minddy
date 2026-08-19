@@ -21,6 +21,13 @@ test("the managed-policy exporter is part of every clean-room candidate", () => 
   assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/export-managed-policies.sql"));
 });
 
+test("the two reference Compose profiles are part of every clean-room candidate", () => {
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("deploy/self-hosted/compose.managed.yml"));
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("deploy/self-hosted/compose.full.yml"));
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/smoke-self-hosted-compose.mjs"));
+  assert.ok(REQUIRED_RELEASE_PATHS.includes("scripts/validate-self-hosted-compose.mjs"));
+});
+
 test("requires an explicit consecutive release pair", () => {
   assert.deepEqual(parseArgs(["--", "--from-tag", "v1.2.3", "--to-tag", "v1.2.4"]), {
     fromTag: "v1.2.3",

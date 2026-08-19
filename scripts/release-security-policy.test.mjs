@@ -140,3 +140,22 @@ test("the public release only requests GitHub attestations when supported", () =
   assert.match(workflow, /name: Document unavailable GitHub attestation/);
   assert.match(workflow, /verify the published SHA256SUMS/);
 });
+
+test("the public release publishes a signed multi-platform OCI image", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+
+  assert.match(workflow, /packages: write/);
+  assert.match(workflow, /platforms: linux\/amd64,linux\/arm64/);
+  assert.match(workflow, /release_tag=v\$VERSION/);
+  assert.match(workflow, /minor_tag=v\$major\.\$minor/);
+  assert.match(workflow, /major_tag=v\$major/);
+  assert.match(workflow, /provenance: mode=max/);
+  assert.match(workflow, /sbom: true/);
+  assert.match(workflow, /aquasecurity\/trivy-action@v0\.36\.0/);
+  assert.match(workflow, /severity: CRITICAL,HIGH/);
+  assert.match(workflow, /uses: actions\/attest@v4/);
+  assert.match(workflow, /push-to-registry: true/);
+  assert.match(workflow, /cosign sign --yes/);
+  assert.match(workflow, /Reject an existing OCI release tag/);
+  assert.match(workflow, /minddy-v\$\{\{ inputs\.version \}\}-container\.txt/);
+});

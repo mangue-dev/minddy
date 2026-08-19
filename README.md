@@ -43,6 +43,8 @@ applying SQL in the Supabase dashboard. After installation, follow the
 coordinated Postgres and Storage backups, disaster recovery, and rollback.
 Release acceptance is recorded with the isolated
 [clean-room self-hosting scenario](docs/self-hosting-clean-room.md).
+The official multi-architecture OCI image, its tag policy, and verification
+commands are documented in [docs/container-image.md](docs/container-image.md).
 
 ## Common commands
 

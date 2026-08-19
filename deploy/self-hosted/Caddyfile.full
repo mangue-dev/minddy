@@ -1,0 +1,13 @@
+{
+  email {$CADDY_EMAIL}
+}
+
+{$MINDDY_HOST} {
+  encode zstd gzip
+  reverse_proxy minddy:3000
+}
+
+{$SUPABASE_HOST} {
+  encode zstd gzip
+  reverse_proxy kong:8000
+}

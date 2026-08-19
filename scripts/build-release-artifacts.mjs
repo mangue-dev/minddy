@@ -7,7 +7,9 @@ import { fileURLToPath } from "node:url";
 import { assertVersion, sha256 } from "./release-lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const output = path.resolve(process.argv[2] ?? path.join(root, ".release"));
+const args = process.argv.slice(2);
+if (args[0] === "--") args.shift();
+const output = path.resolve(args[0] ?? path.join(root, ".release"));
 const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const desktopPkg = JSON.parse(await readFile(path.join(root, "desktop/package.json"), "utf8"));
 const version = assertVersion(process.env.RELEASE_VERSION ?? pkg.version);
@@ -18,7 +20,7 @@ if (pkg.version !== version || desktopPkg.version !== version) {
 }
 
 function git(args, options = {}) {
-  return execFileSync("git", args, { cwd: root, encoding: options.encoding ?? "utf8", maxBuffer: 64 * 1024 * 1024 });
+  return execFileSync("git", args, { cwd: root, encoding: options.encoding ?? "utf8", maxBuffer: 512 * 1024 * 1024 });
 }
 
 const commit = git(["rev-parse", "HEAD"]).trim();

@@ -14,20 +14,23 @@ deployment assets belong there and are released together from an immutable tag.
 There is no separate minddy self-hosting repository, private deployment
 repository, or unversioned installer that an operator must trust.
 
-The canonical artifact today is the tagged source release and its GitHub
-release artifacts, as described in [the release contract](releases.md). A
-container image, Helm chart, or installer is not an additional supported
-distribution until it is versioned under `deploy/self-hosted/`, listed in the
-release manifest, and documented here. The upstream Supabase Docker
-configuration remains an external dependency; minddy does not fork or republish
-it.
+The canonical artifacts are the tagged source release and its GitHub release
+assets, plus the official image at `ghcr.io/mangue-dev/minddy:vX.Y.Z`. The image
+digest, platform list, SBOM/provenance locations, and signature identity are
+recorded in the release manifest and documented in
+[container-image.md](container-image.md). A Helm chart or installer is not an
+additional supported distribution until it is versioned under
+`deploy/self-hosted/`, listed in the release manifest, and documented here. The
+upstream Supabase Docker configuration remains an external dependency; minddy
+does not fork or republish it.
 
 Each public release guarantees all of the following:
 
 - a complete source tree, migration history, bootstrap and verification scripts;
 - a compatibility entry in
   [`deploy/self-hosted/compatibility.json`](../deploy/self-hosted/compatibility.json);
-- release notes, checksums, migration diff, and an immutable source tag; and
+- release notes, checksums, migration diff, immutable source tag, and a
+  signed multi-platform OCI image with attached SBOM and provenance; and
 - documentation for installation, maintenance, backup, restoration, and
   rollback.
 
@@ -48,6 +51,12 @@ PostgreSQL by itself is not a supported substitute.
 The Supabase CLI local stack is for development and release acceptance only. It
 must not be exposed as a production service and is not the complete deployment
 path.
+
+The versioned reference Compose profiles live in
+[`deploy/self-hosted/`](../deploy/self-hosted/). The managed profile consumes an
+operator-provided Supabase endpoint. The complete profile is an overlay applied
+to a checksum-verified, commit-pinned checkout of the official Supabase Docker
+directory; this repository never carries a maintained copy of that stack.
 
 ## Compatibility matrix
 

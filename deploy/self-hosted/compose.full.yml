@@ -1,0 +1,91 @@
+name: minddy-full
+
+services:
+  # The upstream distribution remains the first Compose file. This overlay adds
+  # minddy services and removes all upstream host port publications.
+  kong:
+    ports: !reset []
+
+  supavisor:
+    ports: !reset []
+
+  minddy:
+    image: ${MINDDY_IMAGE:?Set MINDDY_IMAGE from the matching compatibility row.}
+    restart: unless-stopped
+    env_file:
+      - ${MINDDY_ENV_FILE:?Set MINDDY_ENV_FILE to the protected deployment environment file.}
+    expose:
+      - "3000"
+    depends_on:
+      kong:
+        condition: service_healthy
+    networks:
+      - default
+      - private
+    labels:
+      org.opencontainers.image.version: ${MINDDY_RELEASE:?Set MINDDY_RELEASE from the matching compatibility row.}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: ${CADDY_IMAGE:?Set CADDY_IMAGE from the matching compatibility row.}
+    restart: unless-stopped
+    depends_on:
+      minddy:
+        condition: service_healthy
+      kong:
+        condition: service_healthy
+    ports:
+      - ${MINDDY_HTTP_BIND_ADDRESS:-0.0.0.0}:80:80
+      - ${MINDDY_HTTP_BIND_ADDRESS:-0.0.0.0}:443:443
+    environment:
+      MINDDY_HOST: ${MINDDY_HOST:?Set MINDDY_HOST to the public hostname.}
+      SUPABASE_HOST: ${SUPABASE_HOST:?Set SUPABASE_HOST to the public Supabase API hostname.}
+      CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL for certificate notices.}
+    volumes:
+      - ${MINDDY_DEPLOY_DIR:?Set MINDDY_DEPLOY_DIR to this release directory.}/Caddyfile.full:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - default
+      - edge
+      - private
+    healthcheck:
+      test: ["CMD", "caddy", "adapt", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  scheduler:
+    image: ${SCHEDULER_IMAGE:?Set SCHEDULER_IMAGE from the matching compatibility row.}
+    restart: unless-stopped
+    profiles: ["scheduled-jobs"]
+    depends_on:
+      minddy:
+        condition: service_healthy
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?Set CRON_SECRET before enabling scheduled jobs.}
+      MINDDY_SCHEDULER_URL: ${MINDDY_SCHEDULER_URL:-http://minddy:3000}
+    command: ["node", "/scheduler/scheduler.mjs"]
+    volumes:
+      - ${MINDDY_DEPLOY_DIR:?Set MINDDY_DEPLOY_DIR to this release directory.}/scheduler.mjs:/scheduler/scheduler.mjs:ro
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.kill(1, 0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+  private:
+    internal: true

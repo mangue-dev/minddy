@@ -134,15 +134,36 @@ through the Storage API because a PostgreSQL schema dump does not create their
 object-store backing data.
 
 Install the produced `.env.local` values into the application host's secrets
-manager, add `MINDDY_PUBLIC_APP_URL` and identity values, then start the already-built image:
+manager, add `MINDDY_PUBLIC_APP_URL` and identity values, then start the
+official release image documented in [container-image.md](container-image.md):
 
 ```bash
-pnpm build
-pnpm start
+docker run --env-file /etc/minddy/minddy.env \
+  --publish 127.0.0.1:3000:3000 \
+  ghcr.io/mangue-dev/minddy:vX.Y.Z
 ```
 
 Build the image without operator-specific public settings. Changing a
 `MINDDY_PUBLIC_*` value requires a restart, not a rebuild.
+
+## Reference Docker Compose profiles
+
+The versioned profiles in
+[`deploy/self-hosted/`](../deploy/self-hosted/) turn the official release image
+into two supported deployment paths:
+
+- `compose.managed.yml` runs minddy behind Caddy with an operator-provided
+  Supabase project; and
+- `compose.full.yml` overlays minddy, Caddy, and opt-in scheduled jobs on the
+  exact official Supabase Docker revision recorded in the compatibility matrix.
+
+The full profile does not copy Supabase into this repository. Fetch its pinned
+upstream Docker directory with `scripts/fetch-official-supabase.mjs`, combine it
+with the profile as shown in that directory's README, and keep every upstream
+service image unchanged. Both paths expose only Caddy ports 80 and 443, use
+health checks, and leave scheduled jobs disabled until the `scheduled-jobs`
+profile is selected. The README also documents automatic Caddy TLS and the
+loopback option for an existing TLS load balancer.
 
 ## Production configuration outside the repository
 
@@ -210,8 +231,8 @@ For local verification, run `pnpm verify:supabase --local`. Common failures:
 - Bucket verification error: preserve the error, check the Storage service and
   service-role key, then rerun bootstrap. Do not delete a non-empty `avatars`
   bucket merely to clear the warning.
-- Application starts with the wrong public URL: rebuild with the final
-  `NEXT_PUBLIC_*` values.
+- Application starts with the wrong public URL: correct
+  `MINDDY_PUBLIC_APP_URL`, then restart the container.
 
 For updates, backups, restores, rollback decisions, and the wider diagnostic
 table, continue with [the operations runbook](self-hosting-operations.md).
