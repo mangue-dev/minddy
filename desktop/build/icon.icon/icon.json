@@ -17,13 +17,13 @@
       "layers" : [
         {
           "hidden" : false,
-          "image-name" : "dark.png",
-          "name" : "dark",
+          "image-name" : "dark 2.png",
+          "name" : "dark 2",
           "position" : {
-            "scale" : 1.2,
+            "scale" : 1.7,
             "translation-in-points" : [
-              0,
-              0
+              -60.412501839683955,
+              -20.233865604257176
             ]
           }
         }

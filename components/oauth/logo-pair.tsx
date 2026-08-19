@@ -23,7 +23,7 @@ export function OAuthLogoPair({
 }) {
   return (
     <div className={cn("flex items-center justify-center gap-5", className)}>
-      <MinddyLogo className="h-11 w-11 shrink-0 text-foreground" />
+      <MinddyLogo className="h-11 w-auto shrink-0 text-foreground" />
 
       {state === "success" ? (
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-500">

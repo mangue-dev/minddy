@@ -4,11 +4,9 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { localizedHref } from "@/lib/locale-href";
-import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { CONTACT_EMAIL } from "@/lib/site";
@@ -149,9 +147,7 @@ export function MarketingFooter() {
               aria-label="minddy"
               className="flex w-fit items-center gap-2"
             >
-              <MinddyLogo
-                className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])}
-              />
+              <MinddyLogo className="h-7 w-auto text-foreground" />
               <span className="font-display text-lg font-semibold tracking-tight">minddy</span>
             </Link>
             <p className="max-w-[18rem] text-sm leading-relaxed text-muted-foreground">

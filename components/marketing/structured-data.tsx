@@ -128,7 +128,7 @@ export async function StructuredData({
     "@id": `${SITE_URL}/#organization`,
     name: "minddy",
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.svg`,
+    logo: `${SITE_URL}/logo/dark.png`,
     email: CONTACT_EMAIL,
   };
 

@@ -10,7 +10,6 @@ import { MinddyLogo } from "@/components/minddy-logo";
 import { IsoIcon } from "@/components/illustrations/iso-icon";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
-import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/password-policy";
 import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
 
@@ -67,9 +66,7 @@ export function useInDesktopApp(): boolean {
 export function LogoMark({ asLink }: { asLink: boolean }) {
   const mark = (
     <>
-      <MinddyLogo
-        className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])}
-      />
+      <MinddyLogo className="h-7 w-auto text-foreground" />
       <span className="font-display text-lg font-semibold tracking-tight">
         minddy
       </span>

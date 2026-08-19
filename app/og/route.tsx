@@ -2,7 +2,6 @@ import { ImageResponse } from "next/og";
 import { NextResponse, type NextRequest } from "next/server";
 import { getClientIp } from "@/lib/server/request-ip";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
-import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -83,6 +82,7 @@ export async function GET(request: NextRequest) {
   const title = namespace.metaTitle ?? SITE_NAME;
   const description = namespace.metaDescription ?? "";
   const siteHost = new URL(SITE_URL).host;
+  const logoUrl = new URL("/logo/light.png", request.url).toString();
 
   return new ImageResponse(
     (
@@ -99,9 +99,7 @@ export async function GET(request: NextRequest) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <svg width={72} height={72} viewBox={MINDDY_LOGO_VIEWBOX} fill="#fafafa">
-            <path fillRule="evenodd" clipRule="evenodd" d={MINDDY_LOGO_PATH} />
-          </svg>
+          <img src={logoUrl} width={102} height={72} alt="minddy" />
           <span style={{ fontSize: 52, fontWeight: 600, color: "#fafafa", letterSpacing: -1.5 }}>
             {SITE_NAME}
           </span>
