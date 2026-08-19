@@ -157,16 +157,15 @@ docker compose images > "$BACKUP_DIR/supabase-images.txt"
 docker compose ps > "$BACKUP_DIR/supabase-services.txt"
 ```
 
-The suffix `-dirty` is an abort reason: check in and version the files first.
-changes deployed. Also keep in the operating log the time at
-which the writes were blocked.
+The suffix `-dirty` is an abort reason: commit and version the deployed files
+first. Also record when writes were blocked in the operating log.
 
-### 2. Sauvegarder PostgreSQL
+### 2. Back up PostgreSQL
 
 The Supabase CLI applies the necessary filters to managed roles and schemas.
-The two `history_*` files are separated because the normal schema dump does not include
-not the `supabase_migrations` register. Do not remove `auth` data or
-`storage`: they carry the accounts and metadata of the objects.
+The two `history_*` files are separate because the normal schema dump does not
+include the `supabase_migrations` registry. Do not remove `auth` or `storage`
+data: they contain the accounts and object metadata.
 
 ```bash
 cd "$MINDDY_REPO"
@@ -197,7 +196,7 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 " > "$BACKUP_DIR/database/counts.json"
 ```
 
-Immediately verify that all seven SQL files are non-empty and that `data.sql`
+Immediately verify that all six SQL files are non-empty and that `data.sql`
 contains in particular `COPY` sections for `auth.users`, `storage.objects` and
 minddy's `public` tables. An absence means that the URL or version of
 CLI did not produce a full backup; do not continue with the update.
@@ -214,9 +213,9 @@ Copy to `config/`, retaining permissions:
 - `MINDDY_ENV_FILE` and configuration of the application service;
 - `.env`, `docker-compose.yml`, stack overrides and `run.sh` scripts
   Supabase;
-- configuration of the reverse proxy, DNS/TLS and scheduler;
-- the image manifest, Storage backend parameters and templates
-  Unversioned Auth/SMTP;
+- reverse proxy, DNS/TLS and scheduler configuration;
+- the image manifest, Storage backend parameters and unversioned Auth/SMTP
+  templates;
 - the root key `pgsodium`, if the stack has one. With distribution
   Docker Supabase, control
   `/etc/postgresql-custom/pgsodium_root.key` in the `db` service and archive it
@@ -242,12 +241,12 @@ Archive service, proxy and scheduler definitions in the same way
 specific to your host. The `--exclude='./volumes'` is important: Storage is
 saved separately, after stopping it, in the next step.
 
-Do not leave this directory unencrypted after the window. Encrypt it with the tool
-backup of the organization, send it off-host, verify its recovery,
-then apply the expected retention time. A hash does not replace or
-encryption or off-site copying.
+Do not leave this directory unencrypted after the window. Encrypt it with the
+organization's backup tool, send it off-host, verify its recovery, then apply
+the expected retention period. A hash does not replace encryption or off-site
+copying.
 
-### 4. Sauvegarder Storage
+### 4. Back up Storage
 
 Stop the `storage` service **after** the base dump and before copying. The
 writes are already blocked: the dump metadata and the bytes therefore have the
@@ -255,8 +254,8 @@ same logical point.
 
 #### Backend file of the Docker distribution
 
-The official edit is `volumes/storage`. Confirm the path in Compose
-real; real; never use a guess for an archive command.
+The official layout uses `volumes/storage`. Confirm the actual path in Compose;
+never guess an archive path.
 
 ```bash
 cd "$SUPABASE_COMPOSE_DIR"
@@ -268,7 +267,7 @@ tar --numeric-owner --acls --xattrs \
 tar -tzf "$BACKUP_DIR/storage-files.tar.gz" > "$BACKUP_DIR/storage-files.list"
 ```
 
-#### Backend S3 ou compatible S3
+#### S3 or S3-compatible backend
 
 Also stop `storage`, then create an immutable snapshot/version with the
 supplier. Failing that, copy **the raw backend bucket** to a bucket of
@@ -299,14 +298,14 @@ reverse of their closure. For an update, continue below.
 
 ## Update to the next version
 
-### Ordre obligatoire
+### Required order
 
 The safe order is: **block writes → save → migrate the database with the
 target code → deploy target application → verify → reopen**.
 
-Never start the new application before its migrations. Don't let
-no longer will the old application write during or after a migration whose
-Backward compatibility is not explicitly announced.
+Never start the new application before its migrations. Do not let the old
+application write during or after a migration whose backward compatibility is
+not explicitly documented.
 
 ### 1. Confirm the release prepared before the window
 

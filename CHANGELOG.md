@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- The self-hosted backup runbook now states the exact six-file SQL contract and
+  uses consistent English operational instructions.
+
 ## [0.10.9] - 2026-08-19
 
 ### Added
