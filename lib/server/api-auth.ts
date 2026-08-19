@@ -23,8 +23,8 @@ export { createCookieSink, type CookieSink };
  */
 export function createSupabaseFromRequest(request: NextRequest): SupabaseClient {
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.MINDDY_PUBLIC_SUPABASE_URL!,
+    process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
@@ -78,8 +78,8 @@ export function createSupabaseWithCookieSink(
 ): CookieSink & { supabase: SupabaseClient } {
   const sink = createCookieSink();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.MINDDY_PUBLIC_SUPABASE_URL!,
+    process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {

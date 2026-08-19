@@ -113,8 +113,8 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.MINDDY_PUBLIC_SUPABASE_URL!,
+    process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
       // `Secure` on session cookies: the package does not set it
       // (MIN-351, lib/session-cookies.ts). Here as in `cookieOptions` —

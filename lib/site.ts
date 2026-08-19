@@ -1,3 +1,7 @@
+import "server-only";
+
+import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
+
 interface PublicSiteEnvironment {
   appUrl?: string;
   siteName?: string;
@@ -31,7 +35,7 @@ export function resolvePublicSite(env: PublicSiteEnvironment) {
     parsed = new URL(rawUrl);
   } catch {
     throw new Error(
-      "Invalid NEXT_PUBLIC_APP_URL: expected an absolute http(s) origin, for example https://minddy.example.com",
+      "Invalid MINDDY_PUBLIC_APP_URL: expected an absolute http(s) origin, for example https://minddy.example.com",
     );
   }
   if (
@@ -43,29 +47,32 @@ export function resolvePublicSite(env: PublicSiteEnvironment) {
     parsed.hash
   ) {
     throw new Error(
-      "Invalid NEXT_PUBLIC_APP_URL: expected an absolute http(s) origin without path, query or credentials",
+      "Invalid MINDDY_PUBLIC_APP_URL: expected an absolute http(s) origin without path, query or credentials",
     );
   }
   return {
     url: parsed.origin,
     name: env.siteName?.trim() || "minddy",
     // The derived address stays specific to this instance; an operator can
-    // replace it explicitly with NEXT_PUBLIC_CONTACT_EMAIL.
+    // replace it explicitly with MINDDY_PUBLIC_CONTACT_EMAIL.
     contactEmail:
       env.contactEmail?.trim() ||
       `contact@${parsed.hostname}`,
     productFeedbackUrl: optionalPublicUrl(
       env.productFeedbackUrl,
-      "NEXT_PUBLIC_PRODUCT_FEEDBACK_URL",
+      "MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL",
     ),
   };
 }
 
 const publicSite = resolvePublicSite({
-  appUrl: process.env.NEXT_PUBLIC_APP_URL,
-  siteName: process.env.NEXT_PUBLIC_SITE_NAME,
-  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
-  productFeedbackUrl: process.env.NEXT_PUBLIC_PRODUCT_FEEDBACK_URL,
+  // Startup validation in lib/runtime-config.ts makes these three mandatory
+  // for a running process. The local fallback keeps pure metadata helpers
+  // importable during a configuration-free production build.
+  appUrl: process.env.MINDDY_PUBLIC_APP_URL,
+  siteName: process.env.MINDDY_PUBLIC_SITE_NAME,
+  contactEmail: process.env.MINDDY_PUBLIC_CONTACT_EMAIL,
+  productFeedbackUrl: process.env.MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL,
 });
 
 /** Canonical origin of this instance, never that of the default minddy infrastructure. */
@@ -84,8 +91,7 @@ export const MCP_ENDPOINT = `${SITE_URL}/api/mcp`;
 
 export const CONTACT_EMAIL = publicSite.contactEmail;
 
-/** Canonical public source repository for the minddy project. */
-export const MINDDY_REPOSITORY_URL = "https://github.com/mangue-dev/minddy";
+export { MINDDY_REPOSITORY_URL };
 
 /** Board where the operator wants to collect feedback on the product. */
 export const PRODUCT_FEEDBACK_URL = publicSite.productFeedbackUrl;

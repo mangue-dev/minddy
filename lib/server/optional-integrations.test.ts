@@ -31,7 +31,7 @@ beforeEach(() => {
 describe("missing integrations", () => {
   it("uses Resend only with an explicit provider and senders", async () => {
     vi.stubEnv("VERCEL", "1");
-    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://www.minddy.app");
+    vi.stubEnv("MINDDY_PUBLIC_APP_URL", "https://www.minddy.app");
     vi.stubEnv("MINDDY_EDITION", "cloud");
     vi.stubEnv("EMAIL_PROVIDER", "resend");
     vi.stubEnv("RESEND_API_KEY", "resend-key");
@@ -99,7 +99,7 @@ describe("missing integrations", () => {
     vi.stubEnv("RESEND_API_KEY", "resend-key");
     vi.stubEnv("INVITATION_EMAIL_FROM", "invites@example.test");
     vi.stubEnv("POSTHOG_API_KEY", "server-key");
-    vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://analytics.example.test");
+    vi.stubEnv("MINDDY_PUBLIC_POSTHOG_HOST", "https://analytics.example.test");
 
     expect(
       await sendInvitationEmail({

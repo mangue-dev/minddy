@@ -79,7 +79,7 @@ const ONE_DEVICE = [
 
 beforeEach(() => {
   vi.unstubAllEnvs();
-  vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "public");
+  vi.stubEnv("MINDDY_PUBLIC_VAPID_PUBLIC_KEY", "public");
   vi.stubEnv("VAPID_PRIVATE_KEY", "private");
   vi.stubEnv("VAPID_SUBJECT", "mailto:push@example.test");
   H.send.mockReset();

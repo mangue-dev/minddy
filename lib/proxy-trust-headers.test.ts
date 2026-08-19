@@ -67,8 +67,8 @@ function forwardedHeaders(response: { headers: Headers }): Record<string, string
 }
 
 beforeEach(() => {
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
+  vi.stubEnv("MINDDY_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+  vi.stubEnv("MINDDY_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
   refreshed = [];
   session = null;
 });

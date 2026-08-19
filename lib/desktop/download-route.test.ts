@@ -71,7 +71,7 @@ async function GET(req: NextRequest) {
 beforeEach(() => {
   captureServerEvent.mockClear();
   vi.stubEnv("MINDDY_DESKTOP_FEED_URL", BASE);
-  vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", POSTHOG_KEY);
+  vi.stubEnv("MINDDY_PUBLIC_POSTHOG_KEY", POSTHOG_KEY);
 });
 
 afterEach(() => {

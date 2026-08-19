@@ -58,9 +58,9 @@ This table is the short operational classification.
 
 | Class | Variables | How to obtain them |
 | --- | --- | --- |
-| Required to run a deployed instance | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the canonical HTTPS origin yourself. Copy the Supabase API URL, anon key, and service-role key from the selected Supabase project or stack. Never expose the service-role key to a browser. |
+| Required to run a deployed instance | `MINDDY_PUBLIC_APP_URL`, `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the canonical HTTPS origin yourself. Copy the Supabase API URL, anon key, and service-role key from the selected Supabase project or stack. Never expose the service-role key to a browser. |
 | Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET` | `pnpm bootstrap:supabase` writes missing values to `.env.local`. It never replaces existing values. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
-| Recommended instance identity | `NEXT_PUBLIC_SITE_NAME`, `NEXT_PUBLIC_CONTACT_EMAIL`, `ADMIN_EMAILS`, `OAUTH_ISSUER` | Choose operator-owned public values. `OAUTH_ISSUER` is normally empty and is only needed when OAuth/MCP is intentionally published at an origin different from the app origin. |
+| Recommended instance identity | `MINDDY_PUBLIC_SITE_NAME`, `MINDDY_PUBLIC_CONTACT_EMAIL`, `ADMIN_EMAILS`, `OAUTH_ISSUER` | Choose operator-owned public values. `OAUTH_ISSUER` is normally empty and is only needed when OAuth/MCP is intentionally published at an origin different from the app origin. |
 | Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, Vercel domain variables, PostHog pairs, VAPID/APNs variables, `OPENROUTER_API_KEY`, `AGENT_EXECUTION_BACKEND`, `CRON_SECRET`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. |
 | Cloud-reserved settings | `MINDDY_MANAGED_AI`, `MINDDY_MANAGED_BILLING`, Stripe price/key variables, `MINDDY_DESKTOP_FEED_URL`, `BLOB_READ_WRITE_TOKEN`, `APPLE_KEYCHAIN_PROFILE` | Leave absent or set the two managed flags to `0` when self-hosting. They are for Minddy-operated managed services, release distribution, or build infrastructure—not prerequisites for the open-source core. |
 
@@ -69,7 +69,7 @@ bootstrap also creates the five generated secrets for a local install so that
 enabling an associated feature later does not require storing a weak placeholder.
 Secrets must be at least 32 characters where the application validates them.
 
-For a public service, set `NEXT_PUBLIC_APP_URL` to one absolute HTTPS origin with
+For a public service, set `MINDDY_PUBLIC_APP_URL` to one absolute HTTPS origin with
 no path or trailing slash. It is used for invitation links, OAuth/MCP metadata,
 and webhook callbacks. Locally it may be omitted, which means
 `http://localhost:3000`.
@@ -119,9 +119,9 @@ application host. Use a database URL for a role allowed to apply migrations.
 Export the transient inputs in a protected shell, then run the same bootstrap:
 
 ```bash
-export NEXT_PUBLIC_APP_URL='https://tickets.example.test'
-export NEXT_PUBLIC_SUPABASE_URL='https://supabase.example.test'
-export NEXT_PUBLIC_SUPABASE_ANON_KEY='...'
+export MINDDY_PUBLIC_APP_URL='https://tickets.example.test'
+export MINDDY_PUBLIC_SUPABASE_URL='https://supabase.example.test'
+export MINDDY_PUBLIC_SUPABASE_ANON_KEY='...'
 export SUPABASE_SERVICE_ROLE_KEY='...'
 export SUPABASE_DB_URL='postgresql://postgres:...@db.example.test:5432/postgres'
 pnpm bootstrap:supabase -- --db-url "$SUPABASE_DB_URL"
@@ -134,22 +134,22 @@ through the Storage API because a PostgreSQL schema dump does not create their
 object-store backing data.
 
 Install the produced `.env.local` values into the application host's secrets
-manager, add `NEXT_PUBLIC_APP_URL` and identity values, then build and start:
+manager, add `MINDDY_PUBLIC_APP_URL` and identity values, then start the already-built image:
 
 ```bash
 pnpm build
 pnpm start
 ```
 
-Build with the final `NEXT_PUBLIC_*` values: these values are embedded in the
-Next.js client build. Changing them requires a new build, not just a restart.
+Build the image without operator-specific public settings. Changing a
+`MINDDY_PUBLIC_*` value requires a restart, not a rebuild.
 
 ## Production configuration outside the repository
 
 The following Supabase settings are not controlled by SQL migrations and must
 be recorded in your platform configuration:
 
-- Auth Site URL: the same value as `NEXT_PUBLIC_APP_URL`.
+- Auth Site URL: the same value as `MINDDY_PUBLIC_APP_URL`.
 - Auth redirect URLs: `<app-origin>/auth/callback` plus any intentional preview
   callback origins.
 - Auth SMTP and templates: copy the versioned templates in
@@ -197,7 +197,7 @@ Verify a remote instance without changing its schema:
 
 ```bash
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
-  --supabase-url "$NEXT_PUBLIC_SUPABASE_URL" \
+  --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
   --service-role-key "$SUPABASE_SERVICE_ROLE_KEY"
 ```
 

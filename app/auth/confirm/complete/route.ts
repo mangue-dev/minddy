@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.MINDDY_PUBLIC_SUPABASE_URL!,
+    process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
       // `Secure` on session cookies (MIN-351, lib/session-cookies.ts):
       // this is where the session opens after an e-mail link.

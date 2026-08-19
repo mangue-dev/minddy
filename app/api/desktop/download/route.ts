@@ -95,7 +95,7 @@ function captureDownload(
   request: NextRequest,
   properties: { arch: string; version: string }
 ): void {
-  const cookieName = posthogCookieName(process.env.NEXT_PUBLIC_POSTHOG_KEY);
+  const cookieName = posthogCookieName(process.env.MINDDY_PUBLIC_POSTHOG_KEY);
   const known = cookieName
     ? readPosthogDistinctId(request.cookies.get(cookieName)?.value)
     : null;

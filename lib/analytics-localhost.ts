@@ -2,7 +2,7 @@
  * Hosts considered "development": PostHog is never initialized
  * on them, so that a `next dev` (or a custom domain test) does not pollute the
  * production statistics. See `components/posthog-init.tsx`, which leaves
- * an exit gate (`NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`) to check for
+ * an exit gate (`MINDDY_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`) to check for
  * event wiring locally with a disposable key.
  *
  * `*.minddy.test` covers hosts pointed at 127.0.0.1 in /etc/hosts for

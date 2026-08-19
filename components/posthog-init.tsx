@@ -8,6 +8,7 @@ import {
   setAnalyticsClient,
 } from "@/lib/analytics";
 import { CONSENT_CHANGED_EVENT, readConsent } from "@/lib/cookie-consent";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 
 /**
  * PostHog initialization (MIN-78).
@@ -65,22 +66,23 @@ type IdleWindow = typeof window & {
 };
 
 export function PostHogInit() {
+  const { posthog } = useRuntimeConfig();
   useEffect(() => {
     // Analytics disabled (no key, or local traffic): we “unblock”
     // still the queue, otherwise each pending identify/group goes there
     // would accumulate without ever being emptied. The released callbacks do not find
     // no clients, therefore do nothing — this is the desired effect.
-    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+    const key = posthog.key;
+    const host = posthog.host;
     if (!key || !host) {
       markAnalyticsReady();
       return;
     }
 
     // Local traffic is ignored by default so as not to pollute the stats.
-    // `NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1` (with a disposable key) allows you to
+    // `MINDDY_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1` (with a disposable key) allows you to
     // check the wiring in dev. Leave disabled everywhere else.
-    const allowLocalhost = process.env.NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST === "1";
+    const allowLocalhost = posthog.allowLocalhost;
     if (!allowLocalhost && isLocalAnalyticsHostname(window.location.hostname)) {
       markAnalyticsReady();
       return;
@@ -170,7 +172,7 @@ export function PostHogInit() {
       }
       if (timeoutHandle !== null) window.clearTimeout(timeoutHandle);
     };
-  }, []);
+  }, [posthog]);
 
   return null;
 }

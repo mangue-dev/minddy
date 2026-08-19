@@ -51,7 +51,7 @@ export interface NumoCommentLive {
 }
 
 async function broadcast(commentId: string, payload: NumoCommentLive): Promise<void> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return;
   try {

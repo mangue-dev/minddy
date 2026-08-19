@@ -45,8 +45,8 @@ export MINDDY_ENV_FILE=/etc/minddy/minddy.env
 export SUPABASE_COMPOSE_DIR=/srv/supabase/docker
 export BACKUP_ROOT=/mnt/backup/minddy
 export SUPABASE_DB_URL='postgresql://postgres:...@127.0.0.1:5432/postgres'
-export NEXT_PUBLIC_SUPABASE_URL='https://supabase.example.test'
-export NEXT_PUBLIC_SUPABASE_ANON_KEY='...'
+export MINDDY_PUBLIC_SUPABASE_URL='https://supabase.example.test'
+export MINDDY_PUBLIC_SUPABASE_ANON_KEY='...'
 export SUPABASE_SERVICE_ROLE_KEY='...'
 ```
 
@@ -65,7 +65,7 @@ Before the outage:
    off-host backup destination.
 3. Read release notes and inspect changed dependencies, `.env.example`, and
    migrations.
-4. Prepare and build the target release with its final `NEXT_PUBLIC_*` values.
+4. Prepare the target release once; `MINDDY_PUBLIC_*` values are read when the container starts.
 5. Keep the current release and configuration restartable.
 
 ```bash
@@ -90,7 +90,7 @@ pnpm build
 
 Do not blindly copy `.env.example` during an upgrade. Preserve encryption
 secrets, coordinate external callers before rotating webhook or cron secrets,
-and rebuild after changing a `NEXT_PUBLIC_*` variable.
+and restart after changing a `MINDDY_PUBLIC_*` variable; rebuilding is unnecessary.
 
 ## Create a complete backup
 
@@ -205,9 +205,9 @@ docker compose up -d storage imgproxy
 cd "$TARGET_RELEASE_DIR"
 pnpm bootstrap:supabase -- --db-url "$SUPABASE_DB_URL" --env-file .env.local
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
-  --supabase-url "$NEXT_PUBLIC_SUPABASE_URL" \
+  --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
   --service-role-key "$SUPABASE_SERVICE_ROLE_KEY"
-curl --fail --silent --show-error "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health"
+curl --fail --silent --show-error "$MINDDY_PUBLIC_SUPABASE_URL/auth/v1/health"
 ```
 
 The bootstrap applies only missing migrations, reconciles Storage buckets, and
@@ -293,14 +293,14 @@ git -C "$MINDDY_REPO" worktree add --detach "$RESTORE_RELEASE_DIR" \
   "$(cat "$BACKUP_DIR/minddy-commit.txt")"
 cd "$RESTORE_RELEASE_DIR"
 install -m 0600 "$BACKUP_DIR/config/minddy.env" .env.local
-export NEXT_PUBLIC_SUPABASE_URL="$RESTORE_SUPABASE_URL"
-export NEXT_PUBLIC_SUPABASE_ANON_KEY="$RESTORE_ANON_KEY"
+export MINDDY_PUBLIC_SUPABASE_URL="$RESTORE_SUPABASE_URL"
+export MINDDY_PUBLIC_SUPABASE_ANON_KEY="$RESTORE_ANON_KEY"
 export SUPABASE_SERVICE_ROLE_KEY="$RESTORE_SERVICE_ROLE_KEY"
-export NEXT_PUBLIC_APP_URL="$RESTORE_APP_URL"
+export MINDDY_PUBLIC_APP_URL="$RESTORE_APP_URL"
 pnpm install --frozen-lockfile
 pnpm build
 pnpm verify:supabase --db-url "$RESTORE_DB_URL" \
-  --supabase-url "$NEXT_PUBLIC_SUPABASE_URL" \
+  --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
   --service-role-key "$SUPABASE_SERVICE_ROLE_KEY"
 ```
 

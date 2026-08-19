@@ -131,15 +131,15 @@ reapplying migrations. Keep `.env.local` out of the report. Add only these
 non-secret instance values:
 
 ```dotenv
-NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
-NEXT_PUBLIC_SITE_NAME=minddy clean room
-NEXT_PUBLIC_CONTACT_EMAIL=operator@example.test
+MINDDY_PUBLIC_APP_URL=http://127.0.0.1:3000
+MINDDY_PUBLIC_SITE_NAME=minddy clean room
+MINDDY_PUBLIC_CONTACT_EMAIL=operator@example.test
 ADMIN_EMAILS=admin@example.test
 EMAIL_PROVIDER=console
 AGENT_EXECUTION_BACKEND=local
 MINDDY_MANAGED_AI=0
 MINDDY_MANAGED_BILLING=0
-NEXT_PUBLIC_VERCEL_ANALYTICS=0
+MINDDY_PUBLIC_VERCEL_ANALYTICS=0
 ```
 
 Leave all Stripe, PostHog, Resend, Vercel, push, GitHub, GitLab, and managed AI

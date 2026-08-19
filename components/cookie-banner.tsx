@@ -7,7 +7,7 @@ import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-cons
 import { isDesktop } from "@/lib/desktop/bridge";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
-import { SITE_URL } from "@/lib/site";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { Locale } from "@/i18n/config";
 
 /**
@@ -38,6 +38,7 @@ export function CookieBanner() {
   const t = useTranslations("CookieBanner");
   const locale = useLocale() as Locale;
   const { track } = useAnalytics();
+  const { appUrl } = useRuntimeConfig();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -84,7 +85,7 @@ export function CookieBanner() {
  was sent to 404, and consent was collected without the person being able to read what they were consenting to. Same fix as the
  board information mention (app/f/[token]/feedback-auth.tsx). */}
           <a
-            href={`${SITE_URL}${localizedHref("/cookies", locale)}`}
+            href={`${appUrl}${localizedHref("/cookies", locale)}`}
             target="_blank"
             rel="noreferrer"
             className="underline underline-offset-4 hover:text-foreground"

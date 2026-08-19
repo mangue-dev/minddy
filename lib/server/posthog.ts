@@ -46,7 +46,7 @@ function sanitizeServerProperties(
 /**
  * Shared client, or null if the server analytics must not emit:
  * no key (self-host, CI), or local execution without
- * `NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`.
+ * `MINDDY_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`.
  *
  * Local guarding is the exact counterpart of that of the browser
  * (`isLocalAnalyticsHostname`): without it, cutting the flag would only silence
@@ -56,8 +56,8 @@ function sanitizeServerProperties(
 export function getServerPostHog(): PostHog | null {
   const serverKey = process.env.POSTHOG_API_KEY?.trim();
   const serverHost = process.env.POSTHOG_HOST?.trim();
-  const publicKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
-  const publicHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim();
+  const publicKey = process.env.MINDDY_PUBLIC_POSTHOG_KEY?.trim();
+  const publicHost = process.env.MINDDY_PUBLIC_POSTHOG_HOST?.trim();
   // A pair remains atomic: mix a server key with the public host (or
   // the reverse) would enable a client that the diagnostic capabilities register
   // as incomplete. The explicit server pair keeps priority.
@@ -76,7 +76,7 @@ export function getServerPostHog(): PostHog | null {
     !shouldSendServerAnalytics({
       hasKey: true,
       appEnv: getAppEnv(),
-      allowLocalhost: process.env.NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST === "1",
+      allowLocalhost: process.env.MINDDY_PUBLIC_POSTHOG_ALLOW_LOCALHOST === "1",
     })
   ) {
     return null;

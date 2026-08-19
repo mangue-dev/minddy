@@ -53,13 +53,13 @@ describe("resolvePublicSite", () => {
 
   it("rejects an ambiguous public URL", () => {
     expect(() => resolvePublicSite({ appUrl: "https://example.com/app" })).toThrow(
-      /NEXT_PUBLIC_APP_URL/,
+      /MINDDY_PUBLIC_APP_URL/,
     );
   });
 
   it("rejects a feedback URL that is non-HTTP or contains credentials", () => {
     expect(() =>
       resolvePublicSite({ productFeedbackUrl: "https://user:secret@example.com" }),
-    ).toThrow(/NEXT_PUBLIC_PRODUCT_FEEDBACK_URL/);
+    ).toThrow(/MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL/);
   });
 });

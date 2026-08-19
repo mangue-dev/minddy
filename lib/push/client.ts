@@ -23,6 +23,7 @@
 
 import { saveNativePushDeviceApi, savePushDeviceApi } from "@/lib/push-devices-api";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { browserRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { PushDevice } from "@/lib/types";
 
 /** Does the browser know how to push? (Private Firefox, old Safari, no.) */
@@ -215,7 +216,7 @@ export async function subscribeThisDevice(locale: string): Promise<SubscribeResu
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return { ok: false, reason: "denied" };
 
-  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const key = browserRuntimeConfig().vapidPublicKey;
   if (!key) return { ok: false, reason: "not-configured" };
 
   try {
@@ -254,7 +255,7 @@ export async function refreshThisDeviceSubscription(
     });
   }
   if (!isPushSupported() || Notification.permission !== "granted") return null;
-  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const key = browserRuntimeConfig().vapidPublicKey;
   if (!key) return null;
 
   const registration = await registerPushServiceWorker();

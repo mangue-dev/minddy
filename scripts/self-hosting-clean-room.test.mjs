@@ -88,7 +88,7 @@ test("rejects enabled proprietary services but accepts explicit local opt-outs",
       MINDDY_MANAGED_BILLING: "false",
       MINDDY_EDITION: "self-hosted",
       AGENT_EXECUTION_BACKEND: "local",
-      NEXT_PUBLIC_POSTHOG_KEY: "",
+      MINDDY_PUBLIC_POSTHOG_KEY: "",
     }),
     []
   );

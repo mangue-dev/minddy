@@ -70,7 +70,7 @@ export async function broadcastToTopic(
   event: "stream" | "event" | "changed" | "diff",
   payload: Record<string, unknown>,
 ): Promise<void> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return;
   try {

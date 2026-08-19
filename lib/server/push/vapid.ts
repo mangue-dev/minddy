@@ -35,7 +35,7 @@ function vapidSubject(): string | null {
  * depends: false → silent no-op, never an exception. */
 export function isPushConfigured(): boolean {
   return (
-    !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() &&
+    !!process.env.MINDDY_PUBLIC_VAPID_PUBLIC_KEY?.trim() &&
     !!process.env.VAPID_PRIVATE_KEY?.trim() &&
     !!vapidSubject()
   );
@@ -58,7 +58,7 @@ export function configureWebPush(): boolean {
   try {
     webpush.setVapidDetails(
       vapidSubject()!,
-      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!.trim(),
+      process.env.MINDDY_PUBLIC_VAPID_PUBLIC_KEY!.trim(),
       process.env.VAPID_PRIVATE_KEY!.trim()
     );
     configured = true;

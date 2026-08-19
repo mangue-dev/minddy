@@ -36,16 +36,16 @@ test("the environment file is completed without replacing existing values", () =
     const values = {
       CRON_SECRET: "must-not-replace",
       GIT_STATE_SECRET: "new-secret",
-      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      MINDDY_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
     };
 
-    assert.deepEqual(appendMissingEnv(file, values), ["GIT_STATE_SECRET", "NEXT_PUBLIC_SUPABASE_URL"]);
+    assert.deepEqual(appendMissingEnv(file, values), ["GIT_STATE_SECRET", "MINDDY_PUBLIC_SUPABASE_URL"]);
     assert.deepEqual(appendMissingEnv(file, values), []);
 
     const parsed = parseEnv(readFileSync(file, "utf8"));
     assert.equal(parsed.get("CRON_SECRET"), "existing-secret");
     assert.equal(parsed.get("GIT_STATE_SECRET"), "new-secret");
-    assert.equal(parsed.get("NEXT_PUBLIC_SUPABASE_URL"), "http://127.0.0.1:54321");
+    assert.equal(parsed.get("MINDDY_PUBLIC_SUPABASE_URL"), "http://127.0.0.1:54321");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

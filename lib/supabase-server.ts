@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 /**
  * Server Supabase client (anon key, RLS-enforced) for RSC / server components.
@@ -11,9 +12,10 @@ import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
  */
 export async function createServerSupabase() {
   const cookieStore = await cookies();
+  const { supabaseUrl, supabaseAnonKey } = getRuntimeConfig().public;
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {

@@ -75,7 +75,7 @@ import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
-import { PRODUCT_FEEDBACK_URL } from "@/lib/site";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import {
   Tooltip,
   TooltipContent,
@@ -698,7 +698,7 @@ function SidebarFooter({
   const t = useTranslations("Nav");
   const router = useRouter();
   const pathname = usePathname();
-  const productFeedbackUrl = PRODUCT_FEEDBACK_URL;
+  const { productFeedbackUrl } = useRuntimeConfig();
   return (
     <div className="flex flex-col gap-0.5">
       {/* Above its neighbors: it is the only one of the four things on the foot which

@@ -23,8 +23,8 @@ pnpm dev
 ```
 
 `.env.example` documents every optional integration and the Supabase dashboard
-settings. At minimum, set `NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` for a local
+settings. At minimum, set `MINDDY_PUBLIC_SUPABASE_URL`,
+`MINDDY_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` for a local
 application that can access its data. Never commit `.env` or production
 credentials.
 

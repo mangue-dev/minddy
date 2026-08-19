@@ -113,8 +113,8 @@ function cloudOptIn(
 export function resolveCapabilities(env: CapabilityEnvironment): Record<CapabilityId, CapabilityStatus> {
   const edition = resolveDeploymentEdition(env);
   const supabaseMissing = missing(env, [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "MINDDY_PUBLIC_SUPABASE_URL",
+    "MINDDY_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
   ]);
   const supabase = status({
@@ -157,7 +157,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
         "VERCEL_TOKEN",
         "VERCEL_TEAM_ID",
         "VERCEL_PROJECT_ID",
-        "NEXT_PUBLIC_APP_URL",
+        "MINDDY_PUBLIC_APP_URL",
       ]);
   const vercelSandbox =
     sandboxBackend !== "vercel"
@@ -195,12 +195,12 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
         : `Custom domains are hidden; missing: ${domainMissing.join(", ")}.`,
   });
 
-  const clientAnalytics = present(env, "NEXT_PUBLIC_POSTHOG_KEY") &&
-    present(env, "NEXT_PUBLIC_POSTHOG_HOST");
+  const clientAnalytics = present(env, "MINDDY_PUBLIC_POSTHOG_KEY") &&
+    present(env, "MINDDY_PUBLIC_POSTHOG_HOST");
   const serverAnalytics = present(env, "POSTHOG_API_KEY") && present(env, "POSTHOG_HOST");
   const analyticsMissing = clientAnalytics || serverAnalytics
     ? []
-    : ["NEXT_PUBLIC_POSTHOG_KEY + NEXT_PUBLIC_POSTHOG_HOST or POSTHOG_API_KEY + POSTHOG_HOST"];
+    : ["MINDDY_PUBLIC_POSTHOG_KEY + MINDDY_PUBLIC_POSTHOG_HOST or POSTHOG_API_KEY + POSTHOG_HOST"];
   const analytics = status({
     id: "analytics",
     requirement: "optional",
@@ -241,7 +241,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
           });
 
   const webPushMissing = missing(env, [
-    "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+    "MINDDY_PUBLIC_VAPID_PUBLIC_KEY",
     "VAPID_PRIVATE_KEY",
   ]);
   const vapidSubject = env.VAPID_SUBJECT;
@@ -301,11 +301,11 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     vercelWebAnalytics: status({
       id: "vercelWebAnalytics",
       requirement: "optional",
-      state: env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? "ready" : "disabled",
-      missing: env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? [] : ["NEXT_PUBLIC_VERCEL_ANALYTICS=1"],
-      diagnostic: env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
+      state: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? "ready" : "disabled",
+      missing: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? [] : ["MINDDY_PUBLIC_VERCEL_ANALYTICS=1"],
+      diagnostic: env.MINDDY_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
         ? "Vercel Analytics and Speed Insights are enabled on public pages."
-        : "Vercel Analytics and Speed Insights are disabled; set NEXT_PUBLIC_VERCEL_ANALYTICS=1 to enable them.",
+        : "Vercel Analytics and Speed Insights are disabled; set MINDDY_PUBLIC_VERCEL_ANALYTICS=1 to enable them.",
     }),
     scheduler:
       !present(env, "CRON_SECRET")

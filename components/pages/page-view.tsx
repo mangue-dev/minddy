@@ -55,7 +55,7 @@ import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
-import { SITE_NAME } from "@/lib/site";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageEditor } from "@/components/pages/page-editor";
 import { usePageUploads } from "@/components/pages/page-uploads";
@@ -257,6 +257,7 @@ function PageSurface({
   onRestored: () => void;
 }) {
   const t = useTranslations("Pages");
+  const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
   const {
     pages,
@@ -611,7 +612,7 @@ function PageSurface({
   const lastEditName = useMemo(() => {
     // An agent entry carries the id of the account that authorized it; we don't
     // don't show — that's Minddy's whole identity rule.
-    if (lastWriterKind === "agent") return SITE_NAME;
+    if (lastWriterKind === "agent") return siteName;
     if (!lastWriterId) return null;
     // We wait for the members rather than writing “Someone” for a second then
     // the real name: a name that changes before the eyes reads like an error.
@@ -620,7 +621,7 @@ function PageSurface({
     // Leaving the project, or account deleted: the DATE remains the useful half of the
     // line, and “Someone” doesn’t claim anything false.
     return (member && displayName(member, "")) || t("someone");
-  }, [members, membersLoading, lastWriterId, lastWriterKind, t]);
+  }, [members, membersLoading, lastWriterId, lastWriterKind, siteName, t]);
   const lastEditAt =
     autosave.savedAt ?? summary?.updated_at ?? page?.updated_at ?? null;
 

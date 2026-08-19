@@ -26,12 +26,12 @@ describe("legacyCloudProfileDiagnostic", () => {
   it("warns about a legacy Cloud-shaped deployment without selecting its edition", () => {
     expect(legacyCloudProfileDiagnostic({
       VERCEL: "1",
-      NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+      MINDDY_PUBLIC_APP_URL: "https://www.minddy.app",
     })).toMatch(/MINDDY_EDITION=cloud/);
     expect(legacyCloudProfileDiagnostic({
       MINDDY_EDITION: "self-hosted",
       VERCEL: "1",
-      NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+      MINDDY_PUBLIC_APP_URL: "https://www.minddy.app",
     })).toBeNull();
   });
 });

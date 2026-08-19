@@ -93,7 +93,7 @@ The operator terminates TLS at an operator-controlled reverse proxy such as
 Caddy or Nginx. Public HTTP must redirect to HTTPS. The proxy exposes the app
 and, where needed, the Supabase API at their configured public origins; it must
 not expose PostgreSQL, Studio, or internal service ports to the Internet.
-`NEXT_PUBLIC_APP_URL`, Supabase Auth URLs, OAuth callbacks, and any proxy
+`MINDDY_PUBLIC_APP_URL`, Supabase Auth URLs, OAuth callbacks, and any proxy
 headers must agree on that canonical origin.
 
 Scheduled work is opt-in. minddy guarantees the documented authenticated HTTP

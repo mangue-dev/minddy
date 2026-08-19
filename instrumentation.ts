@@ -12,16 +12,18 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const [{ assertSecretsAreStrong }, { getDeploymentEdition, legacyCloudProfileDiagnostic }] = await Promise.all([
+  const [{ assertSecretsAreStrong }, { assertRuntimeConfig }, { getDeploymentEdition, legacyCloudProfileDiagnostic }] = await Promise.all([
     import("@/lib/server/env-secrets"),
+    import("@/lib/runtime-config"),
     import("@/lib/env"),
   ]);
   const legacyProfileDiagnostic = legacyCloudProfileDiagnostic({
     MINDDY_EDITION: process.env.MINDDY_EDITION,
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    MINDDY_PUBLIC_APP_URL: process.env.MINDDY_PUBLIC_APP_URL,
     VERCEL: process.env.VERCEL,
   });
   if (legacyProfileDiagnostic) console.warn(`[deployment] ${legacyProfileDiagnostic}`);
   getDeploymentEdition();
+  assertRuntimeConfig();
   assertSecretsAreStrong();
 }

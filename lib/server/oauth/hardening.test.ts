@@ -300,7 +300,7 @@ describe("issuer dérivé de l'environnement", () => {
   it("en production, le domaine canonique — quel que soit l'alias emprunté", async () => {
     vi.resetModules();
     process.env.OAUTH_ISSUER = "";
-    process.env.NEXT_PUBLIC_APP_URL = "https://tickets.example.test";
+    process.env.MINDDY_PUBLIC_APP_URL = "https://tickets.example.test";
     process.env.VERCEL_ENV = "production";
     process.env.VERCEL_URL = "minddy-abc123.vercel.app";
     expect(await load()).toBe("https://tickets.example.test");

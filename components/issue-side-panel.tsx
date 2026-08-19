@@ -101,7 +101,7 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
-import { SITE_NAME } from "@/lib/site";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type {
   Category,
   CreateIssueInput,
@@ -162,6 +162,7 @@ export function IssueSidePanel({
   /** Tab to show when the panel (re)opens on a new issue. */
   initialTab?: "description" | "plan";
 }) {
+  const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
   const router = useRouter();
   const t = useTranslations("IssueUI");
@@ -762,7 +763,7 @@ export function IssueSidePanel({
           search parameter, not in a route. */}
       {open && (
         <DocumentTitle
-          title={`${issueIdentifier(projectKey, issue.number)} · ${issue.title} · ${SITE_NAME}`}
+          title={`${issueIdentifier(projectKey, issue.number)} · ${issue.title} · ${siteName}`}
         />
       )}
       <SidePanel open={open} onOpenChange={handleOpenChange}>

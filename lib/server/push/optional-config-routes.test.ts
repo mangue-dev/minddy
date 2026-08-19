@@ -27,13 +27,13 @@ beforeEach(() => {
 
 describe("routes de configuration push optionnelle", () => {
   it("ne publie pas une clé issue d'une configuration Web Push partielle", async () => {
-    vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "public-key");
+    vi.stubEnv("MINDDY_PUBLIC_VAPID_PUBLIC_KEY", "public-key");
 
     expect(await getVapidKey().json()).toEqual({ key: null });
   });
 
   it("publie la clé quand le transport complet est configuré", async () => {
-    vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "public-key");
+    vi.stubEnv("MINDDY_PUBLIC_VAPID_PUBLIC_KEY", "public-key");
     vi.stubEnv("VAPID_PRIVATE_KEY", "private-key");
     vi.stubEnv("VAPID_SUBJECT", "mailto:push@example.test");
 

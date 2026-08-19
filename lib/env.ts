@@ -27,7 +27,7 @@ export interface DeploymentEditionEnvironment {
 }
 
 export interface LegacyCloudDiagnosticEnvironment extends DeploymentEditionEnvironment {
-  NEXT_PUBLIC_APP_URL?: string;
+  MINDDY_PUBLIC_APP_URL?: string;
   VERCEL?: string;
 }
 
@@ -62,7 +62,7 @@ export function legacyCloudProfileDiagnostic(
 ): string | null {
   if (env.MINDDY_EDITION?.trim() || env.VERCEL?.trim() !== "1") return null;
   try {
-    const host = new URL(env.NEXT_PUBLIC_APP_URL ?? "").hostname.toLowerCase();
+    const host = new URL(env.MINDDY_PUBLIC_APP_URL ?? "").hostname.toLowerCase();
     if (host === "minddy.app" || host.endsWith(".minddy.app")) {
       return "MINDDY_EDITION is unset on a legacy Minddy Cloud-shaped deployment; set MINDDY_EDITION=cloud explicitly.";
     }

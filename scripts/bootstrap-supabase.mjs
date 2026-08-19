@@ -86,8 +86,8 @@ Options:
   --dry-run            Checks prerequisites without writing or applying changes.
   -h, --help           Shows this help.
 
-Remote mode: also provide NEXT_PUBLIC_SUPABASE_URL,
-NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY in the shell. The
+Remote mode: also provide MINDDY_PUBLIC_SUPABASE_URL,
+MINDDY_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY in the shell. The
 five missing application secrets are generated in .env.local.`;
 }
 
@@ -208,8 +208,9 @@ export function readLocalStatus({ dryRun = false } = {}) {
 
 function remoteAppValues() {
   const required = [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "MINDDY_PUBLIC_SUPABASE_URL",
+    "MINDDY_PUBLIC_SUPABASE_ANON_KEY",
+    "MINDDY_PUBLIC_APP_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
   ];
   const missing = required.filter((key) => !process.env[key]?.trim());
@@ -228,7 +229,7 @@ async function reconcileAndVerify({ dbUrl, appValues, dryRun, local }) {
   // URLs and the service key stay in the subprocess environment, never in the
   // command line (which is visible to other processes on some systems).
   const env = {
-    MDY_BOOTSTRAP_SUPABASE_URL: appValues.NEXT_PUBLIC_SUPABASE_URL,
+    MDY_BOOTSTRAP_SUPABASE_URL: appValues.MINDDY_PUBLIC_SUPABASE_URL,
     MDY_BOOTSTRAP_SERVICE_ROLE_KEY: appValues.SUPABASE_SERVICE_ROLE_KEY,
   };
   if (!local) env.MDY_BOOTSTRAP_DB_URL = dbUrl;
@@ -257,8 +258,9 @@ export async function main(argv = process.argv.slice(2)) {
     const status = readLocalStatus({ dryRun: options.dryRun });
     dbUrl = status.DB_URL;
     appValues = {
-      NEXT_PUBLIC_SUPABASE_URL: status.API_URL,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: status.ANON_KEY,
+      MINDDY_PUBLIC_SUPABASE_URL: status.API_URL,
+      MINDDY_PUBLIC_SUPABASE_ANON_KEY: status.ANON_KEY,
+      MINDDY_PUBLIC_APP_URL: "http://localhost:3000",
       SUPABASE_SERVICE_ROLE_KEY: status.SERVICE_ROLE_KEY,
     };
   } else {

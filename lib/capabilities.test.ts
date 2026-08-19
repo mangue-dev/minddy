@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { resolveCapabilities } from "@/lib/capabilities";
 
 const core = {
-  NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+  MINDDY_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+  MINDDY_PUBLIC_SUPABASE_ANON_KEY: "anon",
   SUPABASE_SERVICE_ROLE_KEY: "service-role",
 };
 
@@ -35,7 +35,7 @@ describe("resolveCapabilities", () => {
     expect(
       resolveCapabilities({
         ...core,
-        NEXT_PUBLIC_VERCEL_ANALYTICS: "1",
+        MINDDY_PUBLIC_VERCEL_ANALYTICS: "1",
       }).vercelWebAnalytics.configured,
     ).toBe(true);
   });
@@ -50,7 +50,7 @@ describe("resolveCapabilities", () => {
       EMAIL_PROVIDER: "resend",
       GITHUB_APP_ID: "1",
       GITLAB_OAUTH_CLIENT_ID: "1",
-      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "public",
+      MINDDY_PUBLIC_VAPID_PUBLIC_KEY: "public",
       APNS_TEAM_ID: "team",
     });
 
@@ -85,7 +85,7 @@ describe("resolveCapabilities", () => {
     const implicit = resolveCapabilities({
       ...core,
       VERCEL: "1",
-      NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+      MINDDY_PUBLIC_APP_URL: "https://www.minddy.app",
       VERCEL_PROJECT_PRODUCTION_URL: "minddy.app",
       GITHUB_REF_NAME: "production",
       OPENROUTER_API_KEY: "managed-key",
@@ -96,12 +96,12 @@ describe("resolveCapabilities", () => {
       STRIPE_PRICE_ID_PRO: "pro",
       STRIPE_PRICE_ID_GO_YEARLY: "go-year",
       STRIPE_PRICE_ID_PRO_YEARLY: "pro-year",
-      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "public",
+      MINDDY_PUBLIC_VAPID_PUBLIC_KEY: "public",
       VAPID_PRIVATE_KEY: "private",
       APNS_TEAM_ID: "team",
       APNS_KEY_ID: "key",
       APNS_PRIVATE_KEY: "private",
-      NEXT_PUBLIC_POSTHOG_KEY: "posthog-key",
+      MINDDY_PUBLIC_POSTHOG_KEY: "posthog-key",
     });
 
     for (const id of [
@@ -151,7 +151,7 @@ describe("resolveCapabilities", () => {
     const capabilities = resolveCapabilities({
       ...core,
       POSTHOG_API_KEY: "server-key",
-      NEXT_PUBLIC_POSTHOG_HOST: "https://analytics.example.test",
+      MINDDY_PUBLIC_POSTHOG_HOST: "https://analytics.example.test",
     });
 
     expect(capabilities.analytics.state).toBe("disabled");
@@ -168,13 +168,13 @@ describe("resolveCapabilities", () => {
     });
 
     expect(capabilities.vercelSandbox.state).toBe("incomplete");
-    expect(capabilities.vercelSandbox.missing).toContain("NEXT_PUBLIC_APP_URL");
+    expect(capabilities.vercelSandbox.missing).toContain("MINDDY_PUBLIC_APP_URL");
   });
 
   it("does not declare Web Push ready with an unusable VAPID subject", () => {
     const capabilities = resolveCapabilities({
       ...core,
-      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "public",
+      MINDDY_PUBLIC_VAPID_PUBLIC_KEY: "public",
       VAPID_PRIVATE_KEY: "private",
       VAPID_SUBJECT: "push@example.test",
     });

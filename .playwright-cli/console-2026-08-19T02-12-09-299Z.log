@@ -6039,3 +6039,965 @@
 [58638326ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
 [58638562ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
 [58639565ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58647374ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58647374ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58647577ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58647577ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58647980ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58647980ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58648327ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58648785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58648785ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58650388ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58650388ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58653591ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58653591ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58654568ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58655570ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58658331ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58659994ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58659994ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58668335ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58670572ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58671573ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58672796ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58672796ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58678343ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58686578ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58687581ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58688357ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58698372ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58702586ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58703592ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58708401ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58718452ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58718594ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58719601ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58728543ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58734606ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58735608ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58737381ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58737381ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58737584ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58737584ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58737988ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58737988ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58738790ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58738790ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58738790ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58740394ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58740394ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58743599ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58743599ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58748793ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58750002ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58750002ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58750613ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58751617ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58758797ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58762805ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58762806ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58766621ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58767625ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58768800ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58778803ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58782629ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58783632ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58788809ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58798636ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58798815ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58799639ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58808827ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58814645ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58815648ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58818838ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58827377ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58827377ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58827581ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58827581ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58827984ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58827984ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58828788ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58828788ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58828882ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58830392ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58830393ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58830651ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58831652ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58833596ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58833596ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58838923ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58840001ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58840001ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58846657ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58847660ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58849039ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58852805ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58852806ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58859148ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58862665ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58863667ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58869151ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58878672ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58879154ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58879673ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58889157ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58894678ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58895680ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58899162ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58909168ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58910683ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58911685ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58917378ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58917378ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58917581ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58917581ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58917985ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58917985ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58918788ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58918788ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58919172ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58920393ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58920393ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58923597ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58923597ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58926689ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58927692ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58929179ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58930002ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58930002ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58939191ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58942697ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58942804ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[58942805ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[58943701ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58949224ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58958705ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58959286ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58959707ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58969428ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58974711ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58975713ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58979550ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58989552ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[58990716ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58991719ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[58999556ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59006723ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59007378ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59007378ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59007582ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59007582ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59007726ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59007985ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59007985ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59008788ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59008788ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59009560ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59010392ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59010392ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59013596ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59013596ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59019564ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59020000ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59020000ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59022729ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59023732ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59029568ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59032805ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59032805ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59038736ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59039575ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59039737ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59049582ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59054743ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59055745ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59059611ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59069642ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59070749ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59071751ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59079683ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59086759ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59087760ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59089750ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59097377ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59097377ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59097579ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59097579ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59097982ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59097982ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59098786ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59098786ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59099862ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59100390ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59100390ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59102765ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59103595ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59103595ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59103767ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59109865ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59110000ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59110000ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59118770ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59119773ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59119870ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59122805ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59122805ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59129874ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59134778ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59135782ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59139879ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59149886ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59150786ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59151789ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59159890ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59166792ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59167795ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59169902ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59179922ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59182800ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59183803ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59187381ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59187381ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59187585ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59187585ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59187989ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59187989ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59188792ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59188792ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59189935ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59190397ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59190397ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59193600ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59193600ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59198806ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59199809ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59199975ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59200001ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59200001ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59210022ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59212806ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59212806ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59214812ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59215814ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59220202ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59230206ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59230818ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59231820ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59240210ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59246824ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59247828ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59250215ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59260219ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59262833ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59263836ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59270226ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59277382ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59277382ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59277584ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59277584ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59277987ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59277987ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59278789ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59278789ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59278838ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59279840ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59280233ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59280392ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59280392ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59283594ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59283594ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59289997ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59289997ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59290242ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59294842ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59295844ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59300261ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59302801ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59302801ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59310274ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59310849ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59311852ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59320313ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59326855ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59327857ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59330381ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59340547ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59342862ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59343864ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59350551ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59358869ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59359871ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59360555ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59367384ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59367384ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59367588ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59367589ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59367993ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59367993ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59368797ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59368797ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59370400ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59370400ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59370559ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59373604ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59373604ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59374874ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59375877ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59380008ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59380008ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59380562ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59390567ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59390882ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59391884ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59392811ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59392811ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59400575ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59406889ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59407891ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59410588ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59420600ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59422896ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59423898ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59430632ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59438904ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59439906ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59440670ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59450799ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59454909ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59455910ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59457382ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59457382ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59457585ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59457585ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59457989ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59457989ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59458793ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59458794ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59460398ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59460398ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59461020ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59463603ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59463603ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59470006ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59470006ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59470913ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59471022ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59471914ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59481042ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59482853ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59482854ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59486929ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59487931ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59491046ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59501049ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59502934ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59503936ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59511053ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59518942ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59519945ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59521058ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59531065ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59534950ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59535953ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59541078ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59547385ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59547385ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59547589ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59547589ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59547994ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59547994ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59548798ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59548798ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59550403ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59550403ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59550958ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59551103ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59551961ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59553609ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59553609ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59560013ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59560013ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59561180ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59566968ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59567972ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59571325ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59572817ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59572818ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59581505ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59582979ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59583983ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59591509ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59598989ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59599993ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59601514ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59611518ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59614998ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59616003ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59621523ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59631008ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59631530ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59632012ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59637384ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59637384ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26208
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26283
+    at new Promise (<anonymous>)
+    at rQ._refreshAccessToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26139)
+    at rQ._callRefreshToken (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:29134)
+    at async rQ.__loadSession (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:14573) @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59637589ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59637589ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59637991ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59637991ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59638795ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59638795ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59640399ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59640399ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59641536ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59643603ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59643603ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59647017ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59648020ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59650008ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59650008ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59651552ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59661575ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:56321/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0&vsn=2.0.0' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:5
+[59662812ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:56321/auth/v1/token?grant_type=refresh_token:0
+[59662812ms] [ERROR] TypeError: Failed to fetch
+    at http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:40642
+    at ra (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:46057)
+    at rn (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:11:45585)
+    at r (http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:25945)
+    at async http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:24:26202 @ http://127.0.0.1:34000/_next/static/chunks/2h1t-qy0i0j_2.js:10
+[59663025ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0
+[59664026ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:34000/api/projects/8a45d3f6-d767-4403-a711-1cc2dbe982d9/agent-runs:0

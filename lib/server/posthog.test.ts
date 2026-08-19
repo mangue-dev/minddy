@@ -49,8 +49,8 @@ describe("PostHog serveur", () => {
     async ({ serverKey, serverHost }) => {
       vi.stubEnv("POSTHOG_API_KEY", serverKey);
       vi.stubEnv("POSTHOG_HOST", serverHost);
-      vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "public-key");
-      vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://public.example.test");
+      vi.stubEnv("MINDDY_PUBLIC_POSTHOG_KEY", "public-key");
+      vi.stubEnv("MINDDY_PUBLIC_POSTHOG_HOST", "https://public.example.test");
       const { getServerPostHog } = await import("./posthog");
 
       expect(getServerPostHog()).toBeNull();
@@ -61,8 +61,8 @@ describe("PostHog serveur", () => {
   it("réutilise la paire publique quand la paire serveur est entièrement absente", async () => {
     vi.stubEnv("POSTHOG_API_KEY", "");
     vi.stubEnv("POSTHOG_HOST", "");
-    vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "public-key");
-    vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://public.example.test");
+    vi.stubEnv("MINDDY_PUBLIC_POSTHOG_KEY", "public-key");
+    vi.stubEnv("MINDDY_PUBLIC_POSTHOG_HOST", "https://public.example.test");
     const { getServerPostHog } = await import("./posthog");
 
     expect(getServerPostHog()).not.toBeNull();

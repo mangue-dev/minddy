@@ -2,6 +2,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { browserRuntimeConfig } from "@/lib/runtime-config-provider";
 
 let _supabase: SupabaseClient | null = null;
 
@@ -12,13 +13,7 @@ let _supabase: SupabaseClient | null = null;
  */
 export function getSupabase(): SupabaseClient {
   if (!_supabase) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) {
-      throw new Error(
-        "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
-      );
-    }
+    const { supabaseUrl: url, supabaseAnonKey: key } = browserRuntimeConfig();
     // `cookieOptions`: THIS client writes session cookies to
     // time of connection, and the packet does not put `Secure` (MIN-351).
     _supabase = createBrowserClient(url, key, {

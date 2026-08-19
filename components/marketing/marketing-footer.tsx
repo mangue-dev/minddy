@@ -11,7 +11,8 @@ import { localizedHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { CONTACT_EMAIL, MINDDY_REPOSITORY_URL } from "@/lib/site";
+import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 
 /**
  * Public site footer (MIN-73). Takes the AutoKap footer grid:
@@ -109,6 +110,7 @@ const FooterHint = dynamic(() => import("./footer-hint").then((m) => m.FooterHin
 export function MarketingFooter() {
   const t = useTranslations("Landing");
   const locale = useLocale() as Locale;
+  const { contactEmail } = useRuntimeConfig();
   const [reached, setReached] = useState(false);
   const slot = useRef<HTMLDivElement | null>(null);
 
@@ -238,7 +240,7 @@ export function MarketingFooter() {
               {withHint(
                 t("footerCopyEmail"),
                 <CopyButton
-                  text={CONTACT_EMAIL}
+                  text={contactEmail}
                   label={t("footerCopyEmail")}
                   copiedLabel={t("footerEmailCopied")}
                   iconOnly
@@ -249,10 +251,10 @@ export function MarketingFooter() {
             {withHint(
               t("footerSendEmail"),
               <a
-                href={`mailto:${CONTACT_EMAIL}`}
+                href={`mailto:${contactEmail}`}
                 className="transition-colors hover:text-foreground"
               >
-                {CONTACT_EMAIL}
+                {contactEmail}
               </a>,
             )}
           </span>

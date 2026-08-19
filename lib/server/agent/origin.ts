@@ -11,7 +11,7 @@ import { currentDeploymentScope } from "./deployment";
  * cron route does not provide its own request origin.
  */
 export function getAgentDrainOrigin(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const explicit = process.env.MINDDY_PUBLIC_APP_URL?.trim();
   if (explicit) return explicit.replace(/\/+$/, "");
   const vercelUrl = process.env.VERCEL_URL?.trim();
   if (vercelUrl) return `https://${vercelUrl}`;
@@ -22,7 +22,7 @@ export function getAgentDrainOrigin(): string {
  * Origin that the microVM calls to join the CONTROL PLAN (MIN-223) —
  * events, ledger, checkpoint, platform tools.
  *
- * It is not `getAgentDrainOrigin`: this one favors `NEXT_PUBLIC_APP_URL`,
+ * It is not `getAgentDrainOrigin`: this one favors `MINDDY_PUBLIC_APP_URL`,
  * which is worth the PROD domain up to a preview. A microVM launched by a
  * preview must speak to ITS deployment, not to prod — same rule as
  * drain affinity (`deploymentScopeFromEnv`, MIN-165): a run continues with
@@ -37,9 +37,9 @@ export function getAgentDrainOrigin(): string {
 export function agentControlOrigin(): string {
   const scope = currentDeploymentScope();
   if (scope) return `https://${scope}`;
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const explicit = process.env.MINDDY_PUBLIC_APP_URL?.trim();
   if (explicit) return new URL(explicit).origin;
   throw new Error(
-    "Vercel Sandbox requires NEXT_PUBLIC_APP_URL outside Vercel so the sandbox can reach this instance",
+    "Vercel Sandbox requires MINDDY_PUBLIC_APP_URL outside Vercel so the sandbox can reach this instance",
   );
 }

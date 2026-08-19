@@ -15,7 +15,7 @@ import {
 } from "mangue-ui";
 import { MailCheck } from "lucide-react";
 import { requestOtpAction, verifyOtpAction } from "./actions";
-import { SITE_URL } from "@/lib/site";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
@@ -36,6 +36,7 @@ export function FeedbackAuthDialog({
   onAuthed?: () => void;
 }) {
   const t = useTranslations("PublicFeedback");
+  const { appUrl } = useRuntimeConfig();
   const router = useRouter();
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
@@ -127,7 +128,7 @@ export function FeedbackAuthDialog({
                 {t.rich("authLegalNotice", {
                   privacy: (chunks) => (
                     <a
-                      href={`${SITE_URL}/privacy`}
+                      href={`${appUrl}/privacy`}
                       target="_blank"
                       rel="noreferrer"
                       className="underline underline-offset-4 hover:text-foreground"

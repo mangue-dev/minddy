@@ -70,7 +70,7 @@ const PUBLIC_ROUTES = new Set([
  * `/og` = the sharing tile (app/og/route.tsx): without it, Slack, `/p/` = wiki pages published for reading (MIN-283) — the route validates its
  * token itself, just like `/share/`.
  */
-const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/", "/p/", "/og", "/md"];
+const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/", "/p/", "/og", "/md", "/api/runtime-config"];
 
 /** Public but not indexed: the URL IS the secret, or there is nothing to index.
  `/p/` is (MIN-283): publishing a page does not make it findable on
@@ -396,8 +396,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const pathname = request.nextUrl.pathname;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY;
 
   // Supabase not configured (empty .env) → don't block navigation.
   if (!supabaseUrl || !supabaseKey) {

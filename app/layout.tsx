@@ -10,8 +10,14 @@ import { LazyToaster } from "@/components/lazy-toaster";
 import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
 import { publicClientMessages } from "@/lib/public-client-messages";
+import { RuntimeConfigProvider } from "@/lib/runtime-config-provider";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { SITE_NAME, SITE_URL, SITE_VERIFICATION } from "@/lib/site";
 import "./globals.css";
+
+// Operator-controlled metadata and client boot settings must be read when the
+// container starts, never while the image is built.
+export const dynamic = "force-dynamic";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const instrumentSerif = Instrument_Serif({
@@ -108,6 +114,7 @@ export default async function RootLayout({
     getMessages(),
     headers(),
   ]);
+  const runtimeConfig = getRuntimeConfig().public;
 
   // Anonymous public pages (feedback board, shared views): the proxy poses
   // this header so that they follow the system preference instead of being forced
@@ -144,6 +151,7 @@ export default async function RootLayout({
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
         <ThemeProvider defaultTheme={defaultTheme}>
+          <RuntimeConfigProvider config={runtimeConfig}>
           <NextIntlClientProvider messages={clientMessages}>
             {/* The strip by which you move the desktop app window
                 (MIN-292). Here, and not in a shell: this is the only position of
@@ -179,6 +187,7 @@ export default async function RootLayout({
                 headband has not been sliced ​​— see component. */}
             <PostHogInit />
           </NextIntlClientProvider>
+          </RuntimeConfigProvider>
         </ThemeProvider>
       </body>
     </html>

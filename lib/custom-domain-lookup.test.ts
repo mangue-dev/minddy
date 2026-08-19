@@ -20,7 +20,7 @@ import {
  */
 
 const ENV = {
-  NEXT_PUBLIC_SUPABASE_URL: "https://db.example.com",
+  MINDDY_PUBLIC_SUPABASE_URL: "https://db.example.com",
   SUPABASE_SERVICE_ROLE_KEY: "service-key",
 };
 

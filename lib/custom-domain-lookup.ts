@@ -84,7 +84,7 @@ export function invalidateCustomDomainCache(host?: string): void {
 
 /** PostgREST in service key, JSON or `null` on any error (never throw). */
 async function restRows<T>(query: string, what: string): Promise<T[] | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) return null;
 

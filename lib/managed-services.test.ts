@@ -42,7 +42,7 @@ describe("resolveManagedServices", () => {
       resolveManagedServices({
         MINDDY_EDITION: "self-hosted",
         VERCEL: "1",
-        NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+        MINDDY_PUBLIC_APP_URL: "https://www.minddy.app",
         MINDDY_MANAGED_BILLING: "1",
         MINDDY_MANAGED_AI: "1",
         ...stripe,

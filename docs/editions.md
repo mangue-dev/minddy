@@ -33,21 +33,21 @@ minddy are explicit opt-ins: an environment key alone does not activate them.
 - `AGENT_EXECUTION_BACKEND=vercel` is the only choice that authorizes the creation or
   the awakening of a Vercel Sandbox. Vercel identifiers present for domains
   therefore never trigger compute. Outside Vercel,
-  `NEXT_PUBLIC_APP_URL` is also required so that the sandbox remembers this
+  `MINDDY_PUBLIC_APP_URL` is also required so that the sandbox remembers this
   instance rather than an implicit proprietary origin.
 - `EMAIL_PROVIDER=resend` is required before any call to the Resend API. The
   senders are mandatory and instance-specific; no minddy domain is chosen by
   default.
 - PostHog is an optional public core provider, not a reserved capacity
   for the Cloud. Each surface requires its own pair:
-  `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST` for the browser,
+  `MINDDY_PUBLIC_POSTHOG_KEY` + `MINDDY_PUBLIC_POSTHOG_HOST` for the browser,
   `POSTHOG_API_KEY` + `POSTHOG_HOST` for the server. A missing server pair
   can reuse the full public pair; two half pairs are never
   assembled. The operator therefore chooses the PostHog destination, while
   Minddy Cloud provides its own operating configuration.
 - Web Push requires an explicit `VAPID_SUBJECT`, and APNs require an explicit `APNS_BUNDLE_ID`.
 - Vercel Analytics and Speed Insights are displayed on public pages only
-  with `NEXT_PUBLIC_VERCEL_ANALYTICS=1`.
+  with `MINDDY_PUBLIC_VERCEL_ANALYTICS=1`.
 - Built-in Git providers target `github.com` and `gitlab.com`. Self-hosted
   forges are not supported until a configurable provider exists.
 

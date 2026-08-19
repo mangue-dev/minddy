@@ -27,7 +27,7 @@ export const DESKTOP_ORIGIN_OVERRIDE: string | null =
  * The channel is chosen at runtime: see lib/desktop/channel.ts.
  */
 export const DESKTOP_STABLE_ORIGIN: string =
-  process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "") ||
+  process.env.MINDDY_PUBLIC_APP_URL?.trim().replace(/\/+$/, "") ||
   "https://www.minddy.app";
 
 /**
