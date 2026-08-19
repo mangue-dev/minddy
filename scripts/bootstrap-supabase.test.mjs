@@ -14,12 +14,13 @@ import { parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
 import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
 import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
-test("the baseline is compact, sorted, and includes the vector extension", () => {
+test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {
   const migrations = listMigrations();
-  assert.equal(migrations.length, 2);
+  assert.equal(migrations.length, 3);
   assert.deepEqual([...migrations].sort(), migrations);
   assert.equal(migrations[0], "20270106090000_baseline.sql");
   assert.equal(migrations[1], "20270106091000_initial_data.sql");
+  assert.equal(migrations[2], "20270106092000_reapply_realtime_policies.sql");
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 
