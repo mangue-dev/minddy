@@ -275,12 +275,16 @@ export function keysForProjectEvent(
     // indexed query, without body. The relationship is not the same as for
     // `/api/me/board`, which is what justified the adoption on the ticket side.
     //
-    // The trigger ONLY broadcasts the visible columns (see the migration): one
-    // typing in the document does not go through here, it would not move anything in
-    // this list which does not have the bodies.
+    // The signal contains no body: its only job is to make the page currently
+    // open elsewhere refetch its document. The project list still receives the
+    // same event because it owns the visible fields.
     case "pages":
+      {
+        const pageId = (change.record ?? change.old_record)?.id;
+        const openPage = typeof pageId === "string" ? [active(["page", pageId])] : [];
       return [
         active(["pages", projectId]),
+        ...openPage,
         // The title of a page is in the palette index
         // (app/api/me/search-index/route.ts): stale, not reloaded — it's a
         // snapshot that revalidates itself when opened.
@@ -291,6 +295,7 @@ export function keysForProjectEvent(
         // recycle bin is open at this time.
         active(["me", "trash"]),
       ];
+      }
     case "categories": // renames/deletes also affect chips on cached issues
       return [
         active(["categories", projectId]),

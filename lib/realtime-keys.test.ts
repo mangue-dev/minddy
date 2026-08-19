@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalSql, readBaseline } from "@/test/sql-migrations";
+import { canonicalSql, readBaseline, readMigration } from "@/test/sql-migrations";
 
 import {
   keysForProjectEvent,
@@ -78,6 +78,18 @@ describe("keysForProjectEvent — pages", () => {
       );
       expect(hasKey(keys, ["pages", PROJECT])).toBe(true);
     }
+  });
+
+  it("refetches the body of the affected open page", () => {
+    const keys = keysForProjectEvent(
+      change("pages", { operation: "UPDATE", record: pageRow() }),
+      PROJECT
+    );
+    expect(hasKey(keys, ["page", PAGE])).toBe(true);
+    expect(
+      keys.find((key) => JSON.stringify(key.key) === JSON.stringify(["page", PAGE]))
+        ?.refetch
+    ).toBe("active");
   });
 
   it("bouge la corbeille et l'index de la palette, pas le board cross-projet", () => {
@@ -192,5 +204,16 @@ describe("le trigger des pages", () => {
     for (const column of ["title", "icon", "parent_id", "position", "favorite", "deleted_at"]) {
       expect(when).toContain(column);
     }
+  });
+});
+
+describe("page body Realtime migration", () => {
+  it("broadcasts body updates without adding the body to the payload", () => {
+    const sql = canonicalSql(
+      readMigration("20270106093000_broadcast_page_content_updates.sql")
+    );
+    expect(sql).toContain("drop trigger if exists pages_broadcast_update on public.pages");
+    expect(sql).toContain("old.content is distinct from new.content");
+    expect(sql).toContain("execute function public.broadcast_page_row()");
   });
 });

@@ -5,7 +5,7 @@ import {
   sectionHeadingChain,
   splitTaskSection,
 } from "@/lib/scratchpad-prompt";
-import { SPACER_LINE } from "@/lib/scratchpad";
+import { scratchpadSectionSubtree, SPACER_LINE } from "@/lib/scratchpad";
 
 describe("sectionHeadingChain", () => {
   it("carries the sections that CONTAIN the task, widest first", () => {
@@ -189,6 +189,24 @@ describe("buildScratchpadPrompt", () => {
     expect(buildScratchpadPrompt("- [ ] a\n- [ ] b")).toContain(
       "Work through my working notes below."
     );
+  });
+
+  it("keeps every Pages task when a whole section is copied", () => {
+    const note = [
+      "# Pages",
+      "",
+      "- [~] Keep the cursor aligned with the empty-page placeholder",
+      "- [~] Show Numo page edits without navigating away",
+      "- [~] Replace an existing outline with publishable page content",
+    ].join("\n");
+    const section = scratchpadSectionSubtree(note, 0);
+    const prompt = buildScratchpadPrompt(section?.markdown ?? "", {
+      section: true,
+    });
+
+    expect(prompt).toContain("Keep the cursor aligned");
+    expect(prompt).toContain("Show Numo page edits");
+    expect(prompt).toContain("Replace an existing outline");
   });
 
   // The notebook composer is pre-filled with the FULL prompt, and the server

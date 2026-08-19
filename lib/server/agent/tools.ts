@@ -526,7 +526,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "append_to_page",
       description:
-        "Add a block at the END of a wiki page without touching a byte of what is already there, and without re-sending the document. This is how a page GROWS — a new section, a decision that just landed. Refused if someone wrote the page between your read and this call, so nothing of theirs is lost.",
+        "Add a DISTINCT new block at the END of a wiki page without touching a byte of what is already there, and without re-sending the document. This is how a page GROWS — a new section, a decision that just landed. Do not use it to fill an existing outline or placeholder: replace that exact passage with edit_page_text, using finished reader-ready prose rather than a 'to add' list. Refused if someone wrote the page between your read and this call, so nothing of theirs is lost.",
       parameters: {
         type: "object",
         properties: {

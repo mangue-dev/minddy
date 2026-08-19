@@ -1532,11 +1532,15 @@ nav[aria-label="Navigation"]
    l'autre. */
 .page-editor .is-empty::before {
   content: attr(data-placeholder);
-  float: left;
-  height: 0;
+  position: absolute;
+  inset: 0 auto auto 0;
   pointer-events: none;
   color: var(--muted-foreground);
   opacity: 0.5;
+}
+
+.page-editor .is-empty {
+  position: relative;
 }
 
 /* ─── The blink of a block (MIN-270) ───────────────────────────────────

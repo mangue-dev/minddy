@@ -632,7 +632,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "append_to_page",
       description:
-        "Add a block at the END of a page WITHOUT touching what is already there, and without re-sending the document — a new section, a decision that just landed, a note. Prefer it to update_page, which rewrites the whole body. Send ONLY what is new. Refused if someone wrote the page between your read and this call, so nothing of theirs is lost.",
+        "Add a DISTINCT new block at the END of a page WITHOUT touching what is already there, and without re-sending the document — a new section, a decision that just landed, a note. Prefer it to update_page, which rewrites the whole body. Do not use it to fill an existing outline or placeholder: replace that exact passage with edit_page_text, using finished reader-ready prose rather than a 'to add' list. Send ONLY what is new. Refused if someone wrote the page between your read and this call, so nothing of theirs is lost.",
       parameters: {
         type: "object",
         properties: {

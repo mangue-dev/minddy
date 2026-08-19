@@ -21,11 +21,10 @@
 // merge — a block that both wrote — is not decided in
 // silence: it comes out in `conflicts`, and the screen says it.
 //
-// What is NOT here: real time. A page does not update at all
-// alone before the eyes of its reader; we only learn each other's writing
-// time to record yours. This is the framing of MIN-271, and the door
-// left open is `prosemirror-collab`, which would land on exactly this
-// compteur de version.
+// Realtime arrives here as a content-free signal: PageView refetches the page,
+// then this hook merges the newer document into the screen. It is not
+// character-level collaboration; `prosemirror-collab` remains the path for
+// concurrent edits inside the same block.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Editor, JSONContent } from "@tiptap/react";
@@ -69,8 +68,10 @@ export interface PageAutosave {
   takePending: () => UpdatePageInput | null;
   /** Submits my version of a contested block, and saves it. */
   restore: (conflict: PageBlockConflict) => void;
-  /** “I saw” — the blindfold closes, the document does not move. */
+  /** "I saw" — the blindfold closes, the document does not move. */
   dismiss: () => void;
+  /** Reconciles a newer server document received through Realtime. */
+  reconcileRemote: (page: Page) => void;
 }
 
 export function usePageAutosave({
@@ -191,10 +192,14 @@ export function usePageAutosave({
           try {
             const saved = await save(pageId, attempt);
             if (attempt.content !== undefined) {
-              base.current = {
-                content: attempt.content as PageDocJSON,
-                version: saved.version,
-              };
+              // A Realtime refetch can arrive before this response. Never
+              // move the local base backwards to the older acknowledgement.
+              if (saved.version >= base.current.version) {
+                base.current = {
+                  content: attempt.content as PageDocJSON,
+                  version: saved.version,
+                };
+              }
             }
             setSavedAt(saved.updated_at);
             sent = null;
@@ -265,6 +270,42 @@ export function usePageAutosave({
     [delayMs]
   );
 
+  const reconcileRemote = useCallback(
+    (remote: Page) => {
+      if (remote.id !== pageId || remote.version <= base.current.version) return;
+
+      const theirs = (remote.content as PageDocJSON | null) ?? null;
+      const merged = mergeDocs(base.current.content, screen.current, theirs);
+      base.current = { content: merged.doc, version: remote.version };
+      adopt(merged.doc);
+      if (merged.conflicts.length > 0) {
+        setConflicts((current) => [...current, ...merged.conflicts]);
+      }
+      setSavedAt(remote.updated_at);
+
+      // Keep local changes queued on the freshly received version. A later
+      // autosave can then commit a non-conflicting merge without overwriting
+      // the remote document.
+      if (merged.changed) {
+        pending.current = {
+          ...pending.current,
+          content: merged.doc,
+          version: remote.version,
+        };
+        if (!inFlight.current && !timer.current) {
+          timer.current = setTimeout(() => void writeRef.current(), delayMs);
+        }
+      } else if (pending.current?.content !== undefined) {
+        // The remote document already contains the local body, or it won a
+        // conflict. Keep any queued title or icon change, but do not resend a
+        // stale body that would merely create another conflict.
+        const { content: _content, version: _version, ...rest } = pending.current;
+        pending.current = Object.keys(rest).length > 0 ? rest : null;
+      }
+    },
+    [pageId, adopt, delayMs]
+  );
+
   const restore = useCallback(
     (conflict: PageBlockConflict) => {
       const doc = applyRestore(
@@ -308,7 +349,18 @@ export function usePageAutosave({
       takePending,
       restore,
       dismiss,
+      reconcileRemote,
     }),
-    [state, savedAt, conflicts, schedule, flush, takePending, restore, dismiss]
+    [
+      state,
+      savedAt,
+      conflicts,
+      schedule,
+      flush,
+      takePending,
+      restore,
+      dismiss,
+      reconcileRemote,
+    ]
   );
 }

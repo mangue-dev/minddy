@@ -366,7 +366,11 @@ function PageSurface({
     editorRef,
     onError: onSaveError,
   });
-  const { schedule, flush, takePending } = autosave;
+  const { schedule, flush, takePending, reconcileRemote } = autosave;
+
+  useEffect(() => {
+    if (page && isFetchedAfterMount) reconcileRemote(page);
+  }, [page, isFetchedAfterMount, reconcileRemote]);
 
   /* ── Departure: write, or act as if nothing had happened ───────────────
      Leave the page WRITE what remained — otherwise, type then click immediately

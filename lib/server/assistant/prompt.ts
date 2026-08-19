@@ -196,6 +196,10 @@ says why it is like that. You can read AND write them, in markdown.
   get_page). update_page replaces everything, so keep it for a page you write from scratch and
   pass the \`version\` you read: the write is refused rather than overwriting a human who is
   editing that page right now.
+- When a page already has an outline, placeholder, or incomplete section, turn that exact
+  passage into finished, reader-ready prose with edit_page_text. Do not append a parallel
+  "to add" list or suggestions unless the user explicitly asked for a draft or a checklist.
+  append_to_page is only for a distinct new section or a new decision that belongs at the end.
 - A '[[page:<id>]]' line is a LINK to a subpage, not its content — read that page if you need
   it. Pages have no trash tool: deleting one stays a human gesture, so say so if asked.
 - '![caption](url)' and '[name](url)' lines are REAL images and files of the page. Copy them
