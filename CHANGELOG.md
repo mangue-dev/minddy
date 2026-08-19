@@ -30,6 +30,7 @@ they create neither a version nor a tag of the public core.
 - Gate GitHub artifact attestations on repository visibility while retaining
   checksummed release artifacts and an explicit notice for unsupported private
   repositories.
+## [0.10.15] - 2026-08-19
 
 ### Changed
 
@@ -188,3 +189,5 @@ they create neither a version nor a tag of the public core.
 [0.10.18]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.18
 
 [0.10.19]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.19
+
+[0.10.15]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.10.15
