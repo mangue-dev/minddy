@@ -157,6 +157,7 @@ function MobileBreadcrumb({
   isAllGlobal,
   isPullRequests,
   isAgents,
+  isRoutines,
 }: {
   project: Project | null;
   section: string | null;
@@ -170,6 +171,7 @@ function MobileBreadcrumb({
   isAllGlobal: boolean;
   isPullRequests: boolean;
   isAgents: boolean;
+  isRoutines: boolean;
 }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Common");
@@ -217,6 +219,10 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("agents")}</CurrentLabel>;
+  } else if (isRoutines) {
+    backHref = "/home";
+    backIcon = homeIcon;
+    current = <CurrentLabel>{t("routines")}</CurrentLabel>;
   } else if (project) {
     // The board root ("tickets") is the project root — show the switcher and
     // go back up to Home. Nested sections go back to the project root.
@@ -299,6 +305,7 @@ export function AppBreadcrumb() {
   const isAllGlobal = pathname === "/all";
   const isPullRequests = pathname.startsWith("/pull-requests");
   const isAgents = pathname.startsWith("/agents");
+  const isRoutines = pathname.startsWith("/routines");
 
   return (
     <>
@@ -366,6 +373,12 @@ export function AppBreadcrumb() {
           </span>
         </BreadcrumbLevel>
 
+        <BreadcrumbLevel show={isRoutines} levelKey="routines">
+          <span className="text-sm font-medium text-foreground">
+            {t("routines")}
+          </span>
+        </BreadcrumbLevel>
+
         <BreadcrumbLevel show={!!project} levelKey={`project-${project?.id ?? ""}`}>
           {project && <ProjectSwitcher project={project} />}
         </BreadcrumbLevel>
@@ -399,6 +412,7 @@ export function AppBreadcrumb() {
         isAllGlobal={isAllGlobal}
         isPullRequests={isPullRequests}
         isAgents={isAgents}
+        isRoutines={isRoutines}
       />
     </>
   );

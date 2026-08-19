@@ -2,8 +2,8 @@ import { sq, type RepoHost } from "./repo-host";
 
 /**
  * Type-check of the repository (MIN-110). Since MIN-263 it no longer runs at the end of the turn:
- * it is requested by the delivery door (`delivery-gate.ts`), at the first
- * `create_pr` of a round that edited files. The rest of the reasoning below — a check
+ * it is requested explicitly through `validate_changes` and kept separate from PR
+ * publication. The rest of the reasoning below — a check
  * by ROUND and not by edit — remains unchanged.
  *
  * OpenCode closes the loop IN the editing tool: each `edit` touches the
@@ -18,9 +18,9 @@ import { sq, type RepoHost } from "./repo-host";
  * edits would erase the errors found by the next edit.
  *
  * Hence: ONE check per round, and only if the round touched files. It runs
- * at DELIVERY time (the first `create_pr`, MIN-263), not after the model's response:
- * the errors then go into the tool's `followUp`, the model corrects them,
- * then calls `create_pr` — and nothing has reopened an already completed round.
+ * when `validate_changes` is called, not as a hidden side effect of publishing:
+ * the errors go into the tool's `followUp`, the model corrects them, and can
+ * call validation again before publishing.
  *
  * EVERYTHING here is best-effort and SILENT in case of doubt: no `tsconfig.json`,
  * no `node_modules/.bin/tsc` (our most common production failure:

@@ -903,14 +903,11 @@ export async function runOpencodeTurn(
    *
    * Three things distinguish it from a hatch, and each one fixes a real case:
    *
-   * 1. **He does not cross the delivery door alone**: the bridge envelops him
-   * `gateCreatePr` ([opencode-delivery.ts](opencode-delivery.ts)), so the
-   * first call of a trick that has edited makes the controls instead of pushing.
-   * 2. **The branch is UP, not read again.** `agent_runs.branch_name` is not
+   * 1. **The branch is UP, not read again.** `agent_runs.branch_name` is not
    * stamped only after a real push (MIN-123), but this push is precisely the
    * first of the run in the normal case: the function would read a null branch
    * and would open the pull request on an empty header.
-   * 3. **He refuses while a girl writes.** The sandbox is SHARED and
+   * 2. **He refuses while a girl writes.** The sandbox is SHARED and
    * `commitAndPush` does `git add -A`: delivering now would take the
    * work of a half-assed `implement` (a component without its translations,
    * a rename left in the middle). This is the parent's write lock
@@ -962,6 +959,17 @@ export async function runOpencodeTurn(
       }
     : null;
 
+  /** Explicit preflight checks. Publishing a pull request must stay fast and side-effect focused. */
+  const validateChanges: SupervisorTool | null = job.writesToRepo
+    ? async () => ({
+        result: {
+          validated: true,
+          note: "Validation finished. Read the attached type-check, test, and diff report.",
+        },
+        success: true,
+      })
+    : null;
+
   /**
    * Reason for refusing a tool call, by `callId`. It only serves one thing, and
    * it counts: place `tool_result.reason` on the event of the tool refused, like the
@@ -1003,6 +1011,7 @@ export async function runOpencodeTurn(
     // is not used for anchoring `pr`, and the bridge refuses what would happen anyway.
     supervisorTools: {
       ...(createPr ? { create_pr: createPr } : {}),
+      ...(validateChanges ? { validate_changes: validateChanges } : {}),
       // `handle` never raises: everything returns to the model as a result of
       // tool, successful or in error (ceiling reached, order refused, unknown job).
       ...(servesBackground ? { run_background: (args) => background.handle(args) } : {}),

@@ -18,7 +18,7 @@ import type { PlatformToolHandler } from "../agent-contract";
 /**
  * DELIVERY RULES, HELD ABOVE OPENCODE (MIN-286, lot 2, task 14).
  *
- * What the harness checks has not changed one line: the delivery door
+ * What the harness checks has not changed one line: the validation gate
  * ([delivery-gate.ts](../delivery-gate.ts)), l'auto-relecture du diff
  * ([self-review.ts](../self-review.ts)), the closing of the plan
  * ([plan-closure.ts](../plan-closure.ts)) and diagnostics
@@ -40,7 +40,8 @@ import type { PlatformToolHandler } from "../agent-contract";
  * made it useless, and expensive:
  *
  * - **the tools that trigger the rules ALREADY go through us.**
- * `write_issue_plan` and `create_pr` are domain tools: they arrive at
+ * `write_issue_plan` is a domain tool, while `validate_changes` is the explicit
+ * supervisor preflight and `create_pr` is the publishing operation: they arrive at
  * bridge ([tool-bridge.ts](tool-bridge.ts)), which is exactly the
  *   `tool.execute.after` qu'un plugin aurait offert, sans second processus ni
  *   second vocabulaire ;
@@ -120,9 +121,10 @@ export interface OpencodeDelivery {
    * (`gateWritePlan`).
    */
   wrapDomainTool(handler: PlatformToolHandler): PlatformToolHandler;
-  /** `create_pr`, wrapped in its door: the first call of a tour that edited
-   * renders controls instead of pushing (`gateCreatePr`). */
+  /** Legacy compatibility wrapper for callers that still request delivery checks. */
   wrapCreatePr(handler: DeliveryTool): DeliveryTool;
+  /** Explicit repository validation, separate from publishing a pull request. */
+  wrapValidateChanges(handler: DeliveryTool): DeliveryTool;
   /** A write has just been AUTHORIZED — absolute or relative path to the repository. */
   noteEdit(filepath: string): void;
   /** A model command has completed, with its exit code. */
@@ -245,6 +247,21 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
         await probeRepoTouched();
         return await gated(args);
       };
+    },
+
+    wrapValidateChanges: (handler) => async (args) => {
+      await probeRepoTouched();
+      const checks = await gate.checkChanges(deps.remainingMs()).catch(() => null);
+      const out = await handler(args);
+      return checks
+        ? { ...out, followUp: checks }
+        : {
+            ...out,
+            result: {
+              ...(typeof out.result === "object" && out.result !== null ? out.result : {}),
+              note: "No automated validation output was produced for the current worktree.",
+            },
+          };
     },
 
     probeRepoTouched,

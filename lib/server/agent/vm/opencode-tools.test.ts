@@ -267,6 +267,7 @@ describe("où les fichiers sont posés", () => {
       expect(localToolsFor(job({ anchor })).map((t) => t.function.name)).toEqual([
         "run_background",
         "update_plan",
+        "validate_changes",
       ]);
       expect(opencodeToolFiles(job({ anchor })).map((f) => f.path)).toContain(
         `${TOOL_DIR}/run_background.ts`,
@@ -298,6 +299,7 @@ describe("où les fichiers sont posés", () => {
     expect(localToolsFor(local).map((t) => t.function.name)).toEqual([
       "run_background",
       "update_plan",
+      "validate_changes",
       "list_projects",
     ]);
     expect(localToolsFor(local).map((t) => t.function.name)).toContain("run_background");

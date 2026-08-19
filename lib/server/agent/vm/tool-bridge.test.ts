@@ -269,13 +269,10 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     });
   });
 
-  it("pose la porte de livraison sur le `create_pr` du superviseur", async () => {
-    // The gate is what makes the controls return on the first call of a turn
-    // who edited (MIN-247). Placed elsewhere than here, it would let the
-    // seul chemin par lequel du code part vraiment chez un humain.
+  it("keeps `create_pr` focused on publishing", async () => {
     const delivery = {
       wrapDomainTool: (h: unknown) => h,
-      wrapCreatePr: () => async () => ({ result: { opened: false }, success: true }),
+      wrapValidateChanges: (h: unknown) => h,
     } as unknown as OpencodeDelivery;
     let pushed = false;
 
@@ -291,9 +288,33 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
       },
       async (bridge) => {
         const res = await call(bridge, "create_pr", { title: "t" });
-        expect(JSON.parse(res.body)).toEqual({ opened: false });
-        // Nothing was pushed: the door picked up the call before the handler.
-        expect(pushed).toBe(false);
+        expect(JSON.parse(res.body)).toEqual({ url: "https://pr" });
+        expect(pushed).toBe(true);
+      },
+    );
+  });
+
+  it("routes explicit validation through the delivery checks", async () => {
+    const delivery = {
+      wrapDomainTool: (h: unknown) => h,
+      wrapValidateChanges: (h: unknown) =>
+        async () => ({
+          result: (await (h as () => Promise<{ result: unknown }>)()).result,
+          success: true,
+          followUp: "VALIDATION",
+        }),
+    } as unknown as OpencodeDelivery;
+
+    await withBridge(
+      {
+        delivery,
+        supervisorTools: {
+          validate_changes: (async () => ({ result: { validated: true }, success: true })) as never,
+        },
+      },
+      async (bridge) => {
+        const res = await call(bridge, "validate_changes");
+        expect(res.body).toContain("VALIDATION");
       },
     );
   });

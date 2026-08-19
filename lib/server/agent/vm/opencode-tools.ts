@@ -61,6 +61,8 @@ import { isLocalJob, type VmJob } from "./protocol";
  *   demande ;
  * - **`create_pr`**, which is cut in two by construction: the VM PUSHES, the
  * OPEN function. Only the supervisor has the deposit;
+ * - **`validate_changes`**, which runs repository checks where the supervisor
+ * can see the repository and returns their report to the model;
  * - **delivery rules** (gate, self-review, plan closure), which must
  * see making calls.
  *
@@ -148,6 +150,7 @@ export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
 export const LOCAL_TOOL_NAMES: ReadonlySet<string> = new Set([
   "run_background",
   "update_plan",
+  "validate_changes",
   // The project catalog carries paths, so it can only be resolved
   // in the local harness where the desktop app built it.
   "list_projects",

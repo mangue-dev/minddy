@@ -101,6 +101,22 @@ function forwarder(success = true) {
   return async () => ({ result: { ok: success }, success });
 }
 
+describe("explicit repository validation", () => {
+  it("runs checks through validate_changes without coupling them to publication", async () => {
+    const { delivery } = deliveryFor();
+    delivery.noteEdit(`${REPO_DIR}/lib/x.ts`);
+    const handler = vi.fn(async () => ({ result: { validated: true }, success: true }));
+
+    const out = await delivery.wrapValidateChanges(handler)({});
+
+    expect(handler).toHaveBeenCalledOnce();
+    expect(out.result).toEqual({ validated: true });
+    expect(out.followUp).toContain("TYPES");
+    expect(out.followUp).toContain("TESTS");
+    expect(out.followUp).toContain("DIFF");
+  });
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
 });

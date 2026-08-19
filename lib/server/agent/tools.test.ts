@@ -71,9 +71,10 @@ const MINDDY_TOOLS = [
 
 describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
   for (const anchor of ["issue", "notebook"] as const) {
-    it(`sert les douze tools minddy + create_pr (ancrage ${anchor})`, () => {
+    it(`serves the repository validation and pull request tools (anchor ${anchor})`, () => {
       const served = names({ anchor, webSearch: true, model: "openai/gpt-5.6-luna" });
       for (const tool of MINDDY_TOOLS) expect(served).toContain(tool);
+      expect(served).toContain("validate_changes");
       expect(served).toContain("create_pr");
       // The same name used twice is an ambiguous tool-call.
       expect(new Set(served).size).toBe(served.length);
@@ -284,6 +285,7 @@ const _SUBAGENT_READERS = ["read_file", "list_dir", "glob", "grep"];
 const _MINDDY_AND_CONTROL = [
   ...MINDDY_TOOLS,
   "create_pr",
+  "validate_changes",
   "ask_user",
   "update_plan",
   "run_background",
@@ -307,6 +309,7 @@ describe("agentToolsFor — ancrage pull request", () => {
       "apply_patch",
       "move_file",
       "delete_file",
+      "validate_changes",
       "create_pr",
     ]) {
       expect(served).not.toContain(tool);

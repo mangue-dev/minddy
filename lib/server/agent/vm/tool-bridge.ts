@@ -58,7 +58,7 @@ import type { VmJob } from "./protocol";
  * AND THE VOICE OF HARNESS (MIN-286, lot 2, task 14)
  *
  * Two tools carry a delivery rule: `write_issue_plan` (the plan reviewed
- * and its closure) and `create_pr` (type-check, tests, diff). Both make it
+ * and its closure) and `validate_changes` (type-check, tests, diff). Both make it
  * in `followUp` — what the home loop served in message `user` after the
  * round, for lack of being able to magnify a tool result that it elided by the
  * medium. **At opencode, a result of tool IS the text that the tool renders**,
@@ -157,6 +157,7 @@ export interface ToolBridgeOptions {
  */
 const SUPERVISOR_ONLY = new Set([
   "create_pr",
+  "validate_changes",
   "run_background",
   "update_plan",
   "list_projects",
@@ -244,14 +245,14 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
   const forward = opts.delivery ? opts.delivery.wrapDomainTool(forwardRaw) : forwardRaw;
 
   /**
-   * `create_pr`, under his door: the first call of a tour which has edited makes the
-   * controls instead of pushing. The door is only installed if there is a handler —
-   * without it the tool is REFUSED, and make checks to refuse just after
-   * would tell the model that he delivered when he did nothing.
+   * `create_pr` is a supervisor-only publishing operation. `validate_changes` is
+   * wrapped separately so the explicit preflight cannot be mistaken for publication.
    */
   const supervisorTools: Record<string, SupervisorTool> = { ...opts.supervisorTools };
-  if (opts.delivery && supervisorTools.create_pr) {
-    supervisorTools.create_pr = opts.delivery.wrapCreatePr(supervisorTools.create_pr);
+  if (opts.delivery && supervisorTools.validate_changes) {
+    supervisorTools.validate_changes = opts.delivery.wrapValidateChanges(
+      supervisorTools.validate_changes,
+    );
   }
 
   async function dispatch(

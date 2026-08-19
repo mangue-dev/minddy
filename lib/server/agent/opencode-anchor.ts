@@ -192,8 +192,10 @@ export function buildOpencodeAnchor(input: OpencodeAnchorInput): string {
   const notebook = input.anchor === "notebook";
   const replyLanguage = input.locale === "fr" ? "French" : "English";
   const anchorTools = notebook
-    ? `- \`create_pr\` — open this session's pull request when there is none yet (see Git below).`
-    : `- \`create_pr\` — open the ticket's pull request when there is none yet (see Git below).`;
+    ? `- \`validate_changes\` — run an explicit preflight of the current worktree (type-check, tests, diff review).
+- \`create_pr\` — publish this session's pull request when there is none yet (see Git below).`
+    : `- \`validate_changes\` — run an explicit preflight of the current worktree (type-check, tests, diff review).
+- \`create_pr\` — publish the ticket's pull request when there is none yet (see Git below).`;
   const chainTool = input.chain
     ? `
 - \`report_verdict\` — close this run with its VERDICT, because it is a step of an automated chain (see below).`

@@ -21,6 +21,7 @@ import type { AgentAnchor } from "./prompt";
  * cf. `usesApplyPatch` in patch.ts)
  * - check: run_command (install/lint/build/tests, git, etc.), run_background
  * (dev server / watcher: start, probe, stop — MIN-114)
+ * - validation: validate_changes (explicit type-check, tests, and diff review)
  * - delivery: create_pr (opens THE ticket pull request when there is none)
  * - tickets: search_issues, read_issue (ALIVE state of a ticket: fields,
  *                  plan, commentaires, ressources), read_resource,
@@ -1128,7 +1129,7 @@ const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
   type: "function",
   function: {
     name: "create_pr",
-    description: `Open the pull request for ${anchor === "issue" ? "this ticket's" : "this session's"} working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. The system commits and pushes your changes first, then opens the PR. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.`,
+    description: `Open the pull request for ${anchor === "issue" ? "this ticket's" : "this session's"} working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. This tool only commits, pushes, and opens or updates the PR; it does not run type-checks or tests. Use validate_changes for an explicit local preflight. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.`,
     parameters: {
       type: "object",
       properties: {
@@ -1146,6 +1147,17 @@ const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
     },
   },
 });
+
+/** Validation is explicit; publishing a pull request does not run it implicitly. */
+const VALIDATE_CHANGES_TOOL: AgentToolDef = {
+  type: "function",
+  function: {
+    name: "validate_changes",
+    description:
+      "Run the repository's type-check, relevant tests, and a review of the current diff. This is an explicit preflight: it does not create, push, or update a pull request. Use it when verification is requested or before publishing work that needs a local preflight; fix reported issues and call it again after making changes.",
+    parameters: { type: "object", properties: {} },
+  },
+};
 
 /**
  * The catalog belongs to the machine: the server does not see or store the
@@ -1167,6 +1179,7 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS,
   ...MINDDY_TOOLS,
   ...PROJECT_PR_TOOLS,
+  VALIDATE_CHANGES_TOOL,
   CREATE_PR_TOOL("issue"),
 ];
 
@@ -1175,6 +1188,7 @@ export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS,
   ...MINDDY_TOOLS,
   ...PROJECT_PR_TOOLS,
+  VALIDATE_CHANGES_TOOL,
   CREATE_PR_TOOL("notebook"),
 ];
 
@@ -1491,6 +1505,7 @@ export const SUBAGENT_CONTROL_TOOLS: ReadonlySet<string> = new Set([
 const _SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
   ...SUBAGENT_CONTROL_TOOLS,
   "create_pr",
+  "validate_changes",
   "ask_user",
   "update_plan",
   "run_background",

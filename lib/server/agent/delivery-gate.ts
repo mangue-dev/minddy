@@ -44,11 +44,9 @@ import type { EmitAgentEvent } from "./agent-contract";
  * - **During work, the harness does NOTHING.** No type-check, no
  * tests, no proofreading. The model iterates without taxes, and the doctrine of
  * verification lives in the prompt (“from the most specific to the broadest”).
- * - **On delivery, it executes everything at once.** The first `create_pr` of a turn
- * who edited does not push anything: it returns typing errors, test failures
- * and the diff, in the `followUp` of a tool result. Zero response again, zero
- * declassified message — it is the OpenCode form applied to the gesture that counts at
- * us, and the moment that Codex itself designates.
+ * - **Validation is explicit.** `validate_changes` runs type-checks, relevant tests,
+ *   and the diff review when the model asks for a preflight. `create_pr` stays focused
+ *   on committing, pushing, and opening or updating the pull request.
  * - **The plan keeps its door** (`gateWritePlan`), for the same reason: a return
  * attached to the gesture costs nothing.
  *
@@ -77,6 +75,11 @@ import type { EmitAgentEvent } from "./agent-contract";
  */
 export const SMALL_TURN_MAX_FILES = 3;
 export const SMALL_TURN_MAX_LINES = 40;
+
+interface DeliveryCheckResult {
+  block: string | null;
+  status: Record<string, unknown> | null;
+}
 
 export interface DeliveryGateDeps {
   host: RepoHost;
@@ -118,6 +121,8 @@ export interface DeliveryGate {
    * round — the second `create_pr` opens for good. `null` = nothing to say, or already said.
    */
   checkBeforeSubmit: (budgetMs: number) => Promise<string | null>;
+  /** Run the same checks on explicit request, independently of PR publication. */
+  checkChanges: (budgetMs: number) => Promise<string | null>;
   /**
    * Control of the plan CLAIMED ON THE GESTURE, for `write_issue_plan` (cf.
    * `gateWritePlan`). Only one passage, so the question is never asked twice
@@ -185,8 +190,13 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * wall budget to absorb a cold check (measured 22 s). Best-end effort
    * in the end: a checker failure never prevents a round from ending.
    */
-  const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
-    if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
+  const typeCheckBlock = async (
+    budgetMs: number,
+    publishStatus = true,
+  ): Promise<DeliveryCheckResult> => {
+    if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) {
+      return { block: null, status: null };
+    }
     const touched = [...editedPaths];
     editedPaths.clear();
     const startedAt = Date.now();
@@ -198,13 +208,14 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     // which answers "how many rounds end with typing errors
     // introduced by the agent? ". `errorsShown` counts SERVIES errors (the block
     // is capped): what the model read, not what tsc found.
-    await emit("status", {
+    const status = {
       phase: "type_check",
       durationMs: Date.now() - startedAt,
       files: touched.length,
       errorsShown: block ? block.split("\n").filter((l) => /error TS\d+/.test(l)).length : 0,
-    });
-    return block;
+    };
+    if (publishStatus) await emit("status", status);
+    return { block, status };
   };
 
   /**
@@ -232,24 +243,28 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * big diff, of a turn whose size we were unable to measure: doubt pays
    *    plein tarif, il ne se solde pas en silence.
    */
-  const testBlock = async (budgetMs: number): Promise<string | null> => {
-    if (!repoTouched) return null;
+  const testBlock = async (
+    budgetMs: number,
+    publishStatus = true,
+  ): Promise<DeliveryCheckResult> => {
+    if (!repoTouched) return { block: null, status: null };
 
     // (1) The gesture of the model is authentic. No budget required: we don't launch anything.
     if (verification.greenCommand) {
-      await emit("status", {
+      const status = {
         phase: "tests",
         scope: "model",
         durationMs: 0,
         command: verification.greenCommand,
         failuresShown: 0,
-      });
-      return null;
+      };
+      if (publishStatus) await emit("status", status);
+      return { block: null, status };
     }
 
-    if (budgetMs < TEST_RELATED_MIN_BUDGET_MS) return null;
+    if (budgetMs < TEST_RELATED_MIN_BUDGET_MS) return { block: null, status: null };
     const scope = await testScopeForTurn(budgetMs);
-    if (!scope) return null;
+    if (!scope) return { block: null, status: null };
     const startedAt = Date.now();
     const out = await testFailuresForTurn(host, scope).catch((err) => {
       console.error(`${logPrefix} turn-end tests failed:`, (err as Error).message);
@@ -260,13 +275,14 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     // who will answer “how many rounds end in red?” », and since MIN-262
     // to “who paid the entire suite”. `failuresShown` counts failures
     // SERVIS (the block is capped): what the model read, not what the runner found.
-    await emit("status", {
+    const status = {
       phase: "tests",
       scope: out?.scope ?? "none",
       durationMs: Date.now() - startedAt,
       failuresShown: block ? block.split("\n").filter((l) => l.startsWith("FAIL ")).length : 0,
-    });
-    return block;
+    };
+    if (publishStatus) await emit("status", status);
+    return { block, status };
   };
 
   /**
@@ -396,15 +412,21 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * attempt is a door that can refuse to open, and an agent that cannot
    * over delivering is worse than an agent who delivers red by saying so.
    */
-  const submitChecks = async (budgetMs: number): Promise<string | null> => {
+  const submitChecks = async (budgetMs: number, explicit = false): Promise<string | null> => {
     noteEdits();
-    if (submitChecked || !repoTouched) return null;
-    submitChecked = true;
-    const blocks = [
-      await typeCheckBlock(budgetMs),
-      await testBlock(budgetMs),
-      await selfReviewBlock(budgetMs),
-    ].filter(Boolean);
+    if ((!explicit && submitChecked) || !repoTouched) return null;
+    if (!explicit) submitChecked = true;
+    // Type-checking and testing only read the worktree, so run them together. Their
+    // status events and follow-up blocks are still published in the deliberate order
+    // below, keeping the model-facing output stable while removing their idle time.
+    const [typeCheck, tests] = await Promise.all([
+      typeCheckBlock(budgetMs, false),
+      testBlock(budgetMs, false),
+    ]);
+    for (const result of [typeCheck, tests]) {
+      if (result.status) await emit("status", result.status);
+    }
+    const blocks = [typeCheck.block, tests.block, await selfReviewBlock(budgetMs)].filter(Boolean);
     return blocks.length > 0 ? blocks.join("\n\n---\n\n") : null;
   };
 
@@ -415,6 +437,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
       repoTouched = true;
     },
     checkBeforeSubmit: submitChecks,
+    checkChanges: async (budgetMs: number) => await submitChecks(budgetMs, true),
     checkPlanAfterWrite: async (budgetMs: number) => await planBlock(budgetMs),
   };
 }

@@ -127,6 +127,28 @@ describe("la porte de livraison", () => {
     expect(phases).toEqual(["type_check", "tests", "self_review"]);
   });
 
+  it("starts type-checking and tests before either check finishes", async () => {
+    let resolveTypes!: (value: string) => void;
+    let resolveTests!: (value: { block: string; scope: "full" }) => void;
+    vi.mocked(typeErrorsForTurn).mockImplementationOnce(
+      () => new Promise((resolve) => (resolveTypes = resolve)),
+    );
+    vi.mocked(testFailuresForTurn).mockImplementationOnce(
+      () => new Promise((resolve) => (resolveTests = resolve)),
+    );
+
+    const { gate } = gateFor({ edited: ["lib/x.ts"] });
+    const pending = gate.checkBeforeSubmit(ROOMY);
+    await vi.waitFor(() => {
+      expect(typeErrorsForTurn).toHaveBeenCalled();
+      expect(testFailuresForTurn).toHaveBeenCalled();
+    });
+
+    resolveTypes("TYPES");
+    resolveTests({ block: "TESTS", scope: "full" });
+    await expect(pending).resolves.toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
+  });
+
   it("ne s'ouvre qu'UNE fois : le second create_pr livre", async () => {
     // A door that re-checks on each attempt is a door that can refuse to
     // open up — and an agent who can no longer deliver is worse than an agent who delivers
