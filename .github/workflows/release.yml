@@ -36,9 +36,11 @@ jobs:
 
       - name: Validate release request
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
           RELEASE_SHA: ${{ inputs.sha }}
         run: |
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git fetch origin production --tags
           node scripts/release-policy.mjs "$RELEASE_SHA"
           test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"
@@ -97,12 +99,12 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
           RELEASE_SHA: ${{ inputs.sha }}
         run: |
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git fetch origin production --tags
           node scripts/release-policy.mjs "$RELEASE_SHA"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "v$RELEASE_VERSION" -m "minddy v$RELEASE_VERSION" "${{ inputs.sha }}"
-          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git push origin "v$RELEASE_VERSION"
 
       - name: Publish GitHub release

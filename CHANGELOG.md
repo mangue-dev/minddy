@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- Public release validation and tag creation now authenticate every protected
+  production-ref fetch with the workflow's ephemeral GitHub token.
+
 ## [0.10.13] - 2026-08-19
 
 ### Changed

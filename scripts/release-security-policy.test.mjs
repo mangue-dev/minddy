@@ -95,3 +95,34 @@ test("the deployment and workflow require the current version and three attestat
   assert.ok(preparation !== -1 && preparation < securityGate, "the review covers the prepared commit");
   assert.ok(securityGate < push, "the review blocks before pushing the candidate");
 });
+
+test("the public release authenticates every protected fetch", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+  const authenticatedRemote =
+    'git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"';
+  const protectedFetch = "git fetch origin production --tags";
+  const offsetsOf = (needle) => {
+    const offsets = [];
+    let offset = workflow.indexOf(needle);
+    while (offset !== -1) {
+      offsets.push(offset);
+      offset = workflow.indexOf(needle, offset + needle.length);
+    }
+    return offsets;
+  };
+  const authenticationOffsets = offsetsOf(authenticatedRemote);
+  const fetchOffsets = offsetsOf(protectedFetch);
+
+  assert.equal(fetchOffsets.length, 2, "both release validation stages fetch protected refs");
+  assert.equal(
+    authenticationOffsets.length,
+    fetchOffsets.length,
+    "each protected release fetch configures authentication",
+  );
+  for (let index = 0; index < fetchOffsets.length; index += 1) {
+    assert.ok(
+      authenticationOffsets[index] < fetchOffsets[index],
+      "release authentication precedes its protected fetch",
+    );
+  }
+});
