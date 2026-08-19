@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- The clean-room CLI now accepts the argument separator used by its documented
+  `pnpm validate:self-hosted -- --…` commands.
+
 ## [0.10.5] - 2026-08-18
 
 ### Changed

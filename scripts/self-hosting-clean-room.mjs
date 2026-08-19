@@ -45,6 +45,7 @@ export function parseArgs(argv) {
       if (!next || next.startsWith("--")) throw new Error(`${arg} expects a value.`);
       return next;
     };
+    if (arg === "--") continue;
     if (arg === "--from-tag") options.fromTag = value();
     else if (arg === "--to-tag") options.toTag = value();
     else if (arg === "--from-ref") options.fromRef = value();

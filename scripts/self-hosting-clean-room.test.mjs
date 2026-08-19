@@ -17,7 +17,7 @@ import {
 } from "./self-hosting-clean-room.mjs";
 
 test("requires an explicit consecutive release pair", () => {
-  assert.deepEqual(parseArgs(["--from-tag", "v1.2.3", "--to-tag", "v1.2.4"]), {
+  assert.deepEqual(parseArgs(["--", "--from-tag", "v1.2.3", "--to-tag", "v1.2.4"]), {
     fromTag: "v1.2.3",
     toTag: "v1.2.4",
     report: null,
