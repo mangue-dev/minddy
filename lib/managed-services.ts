@@ -1,3 +1,5 @@
+import { resolveDeploymentEdition } from "@/lib/env";
+
 /**
  * Capabilities operated by minddy, separate from the self-hosted core.
  *
@@ -7,6 +9,7 @@
  */
 export interface ManagedServiceEnvironment {
   [key: string]: string | undefined;
+  MINDDY_EDITION?: string;
   MINDDY_MANAGED_BILLING?: string;
   MINDDY_MANAGED_AI?: string;
   STRIPE_SECRET_KEY?: string;
@@ -40,14 +43,16 @@ export function hasManagedBillingConfiguration(env: ManagedServiceEnvironment): 
 }
 
 export function resolveManagedServices(env: ManagedServiceEnvironment): ManagedServices {
+  const cloud = resolveDeploymentEdition(env) === "cloud";
   return {
-    billing: enabled(env.MINDDY_MANAGED_BILLING) && hasManagedBillingConfiguration(env),
-    ai: enabled(env.MINDDY_MANAGED_AI) && Boolean(env.OPENROUTER_API_KEY),
+    billing: cloud && enabled(env.MINDDY_MANAGED_BILLING) && hasManagedBillingConfiguration(env),
+    ai: cloud && enabled(env.MINDDY_MANAGED_AI) && Boolean(env.OPENROUTER_API_KEY),
   };
 }
 
 export function managedServices(): ManagedServices {
   return resolveManagedServices({
+    MINDDY_EDITION: process.env.MINDDY_EDITION,
     MINDDY_MANAGED_BILLING: process.env.MINDDY_MANAGED_BILLING,
     MINDDY_MANAGED_AI: process.env.MINDDY_MANAGED_AI,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,

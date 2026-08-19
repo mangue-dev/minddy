@@ -27,6 +27,7 @@ export const REQUIRED_RELEASE_PATHS = [
 
 const SECRET_NAME = /(?:KEY|SECRET|TOKEN|PASSWORD|DATABASE_URL|DB_URL)$/i;
 const CLOUD_OPT_INS = [
+  "MINDDY_EDITION",
   "MINDDY_MANAGED_AI",
   "MINDDY_MANAGED_BILLING",
   "AGENT_EXECUTION_BACKEND",
@@ -128,6 +129,7 @@ export function cloudEnvironmentFindings(env = process.env) {
   return CLOUD_OPT_INS.filter((name) => {
     const value = env[name]?.trim();
     if (!value) return false;
+    if (name === "MINDDY_EDITION") return value === "cloud";
     if (name === "AGENT_EXECUTION_BACKEND") return value !== "local";
     return value !== "0" && value.toLowerCase() !== "false";
   });

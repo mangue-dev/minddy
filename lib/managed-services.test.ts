@@ -21,6 +21,7 @@ describe("resolveManagedServices", () => {
   it("requires an explicit opt-in and a complete provider configuration", () => {
     expect(
       resolveManagedServices({
+        MINDDY_EDITION: "cloud",
         MINDDY_MANAGED_BILLING: "1",
         MINDDY_MANAGED_AI: "1",
         ...stripe,
@@ -28,15 +29,22 @@ describe("resolveManagedServices", () => {
       }),
     ).toEqual({ billing: true, ai: true });
     expect(
-      resolveManagedServices({ MINDDY_MANAGED_BILLING: "1", MINDDY_MANAGED_AI: "1" }),
+      resolveManagedServices({
+        MINDDY_EDITION: "cloud",
+        MINDDY_MANAGED_BILLING: "1",
+        MINDDY_MANAGED_AI: "1",
+      }),
     ).toEqual({ billing: false, ai: false });
   });
 
-  it("never infers an edition from the hostname or hosting provider", () => {
+  it("does not activate managed services outside the explicit Cloud edition", () => {
     expect(
       resolveManagedServices({
+        MINDDY_EDITION: "self-hosted",
         VERCEL: "1",
         NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+        MINDDY_MANAGED_BILLING: "1",
+        MINDDY_MANAGED_AI: "1",
         ...stripe,
         OPENROUTER_API_KEY: "or-key",
       }),

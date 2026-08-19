@@ -11,7 +11,6 @@ import {
   sanitizeAnalyticsProps,
 } from "@/lib/analytics-sanitize";
 import { shouldSendServerAnalytics } from "@/lib/analytics-localhost";
-import { isOfficialMinddyCloud } from "@/lib/deployment-profile";
 
 /**
  * PostHog events emitted by the SERVER (MIN-78).
@@ -55,13 +54,10 @@ function sanitizeServerProperties(
  * the production project.
  */
 export function getServerPostHog(): PostHog | null {
-  const legacyHost = isOfficialMinddyCloud(process.env)
-    ? "https://eu.i.posthog.com"
-    : undefined;
   const serverKey = process.env.POSTHOG_API_KEY?.trim();
-  const serverHost = process.env.POSTHOG_HOST?.trim() || legacyHost;
+  const serverHost = process.env.POSTHOG_HOST?.trim();
   const publicKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
-  const publicHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || legacyHost;
+  const publicHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim();
   // A pair remains atomic: mix a server key with the public host (or
   // the reverse) would enable a client that the diagnostic capabilities register
   // as incomplete. The explicit server pair keeps priority.

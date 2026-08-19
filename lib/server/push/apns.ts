@@ -4,10 +4,6 @@ import { connect } from "node:http2";
 import { createPrivateKey, sign } from "node:crypto";
 
 import type { PushPayload } from "./payload";
-import {
-  isOfficialMinddyCloud,
-  LEGACY_MINDDY_APNS_BUNDLE_ID,
-} from "@/lib/deployment-profile";
 
 const APNS_ORIGIN = "https://api.push.apple.com";
 const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
@@ -18,8 +14,7 @@ export interface ApnsResponse {
 }
 
 function apnsBundleId(): string {
-  return process.env.APNS_BUNDLE_ID?.trim() ||
-    (isOfficialMinddyCloud(process.env) ? LEGACY_MINDDY_APNS_BUNDLE_ID : "");
+  return process.env.APNS_BUNDLE_ID?.trim() || "";
 }
 
 export function isApnsConfigured(): boolean {

@@ -3,11 +3,7 @@ interface PublicSiteEnvironment {
   siteName?: string;
   contactEmail?: string;
   productFeedbackUrl?: string;
-  vercel?: string;
-  vercelProjectProductionUrl?: string;
 }
-
-import { isOfficialMinddyCloud } from "@/lib/deployment-profile";
 
 function optionalPublicUrl(value: string | undefined, variable: string): string | null {
   const raw = value?.trim();
@@ -29,16 +25,7 @@ function optionalPublicUrl(value: string | undefined, variable: string): string 
 
 /** Pure public configuration, shared by client build and tests. */
 export function resolvePublicSite(env: PublicSiteEnvironment) {
-  const officialCloud = isOfficialMinddyCloud({
-    NEXT_PUBLIC_APP_URL: env.appUrl,
-    VERCEL: env.vercel,
-    VERCEL_PROJECT_PRODUCTION_URL: env.vercelProjectProductionUrl,
-  });
-  const vercelOrigin = env.vercelProjectProductionUrl?.trim();
-  const rawUrl = env.appUrl?.trim() ||
-    (officialCloud && vercelOrigin
-      ? (vercelOrigin.includes("://") ? vercelOrigin : `https://${vercelOrigin}`)
-      : "http://localhost:3000");
+  const rawUrl = env.appUrl?.trim() || "http://localhost:3000";
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -62,14 +49,13 @@ export function resolvePublicSite(env: PublicSiteEnvironment) {
   return {
     url: parsed.origin,
     name: env.siteName?.trim() || "minddy",
-    // A self-hosted installation should never publish the operator's address
-    // cloud by default. The derived address remains specific to the domain of the instance
-    // and NEXT_PUBLIC_CONTACT_EMAIL allows you to explicitly replace it.
+    // The derived address stays specific to this instance; an operator can
+    // replace it explicitly with NEXT_PUBLIC_CONTACT_EMAIL.
     contactEmail:
       env.contactEmail?.trim() ||
-      (officialCloud ? "hello@minddy.app" : `contact@${parsed.hostname}`),
+      `contact@${parsed.hostname}`,
     productFeedbackUrl: optionalPublicUrl(
-      env.productFeedbackUrl || (officialCloud ? "https://feedback.minddy.app" : undefined),
+      env.productFeedbackUrl,
       "NEXT_PUBLIC_PRODUCT_FEEDBACK_URL",
     ),
   };
@@ -80,8 +66,6 @@ const publicSite = resolvePublicSite({
   siteName: process.env.NEXT_PUBLIC_SITE_NAME,
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
   productFeedbackUrl: process.env.NEXT_PUBLIC_PRODUCT_FEEDBACK_URL,
-  vercel: process.env.VERCEL,
-  vercelProjectProductionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
 });
 
 /** Canonical origin of this instance, never that of the default minddy infrastructure. */

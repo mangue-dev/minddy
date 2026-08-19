@@ -1,10 +1,6 @@
 import "server-only";
 
 import webpush from "web-push";
-import {
-  isOfficialMinddyCloud,
-  LEGACY_MINDDY_VAPID_SUBJECT,
-} from "@/lib/deployment-profile";
 
 /**
  * The server's VAPID configuration — the identity that signs each Web Push
@@ -26,8 +22,7 @@ import {
  * RFC 8292 does not admit anything else. An incorrect value would cause ALL
  * sendings to fail: the capacity is then deactivated. */
 function vapidSubject(): string | null {
-  const raw = process.env.VAPID_SUBJECT?.trim() ||
-    (isOfficialMinddyCloud(process.env) ? LEGACY_MINDDY_VAPID_SUBJECT : "");
+  const raw = process.env.VAPID_SUBJECT?.trim();
   if (!raw) return null;
   if (raw.startsWith("mailto:") || raw.startsWith("https://")) return raw;
   console.error(

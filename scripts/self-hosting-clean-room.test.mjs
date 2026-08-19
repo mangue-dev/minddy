@@ -86,14 +86,19 @@ test("rejects enabled proprietary services but accepts explicit local opt-outs",
     cloudEnvironmentFindings({
       MINDDY_MANAGED_AI: "0",
       MINDDY_MANAGED_BILLING: "false",
+      MINDDY_EDITION: "self-hosted",
       AGENT_EXECUTION_BACKEND: "local",
       NEXT_PUBLIC_POSTHOG_KEY: "",
     }),
     []
   );
   assert.deepEqual(
-    cloudEnvironmentFindings({ POSTHOG_API_KEY: "phx_test", AGENT_EXECUTION_BACKEND: "vercel" }),
-    ["AGENT_EXECUTION_BACKEND", "POSTHOG_API_KEY"]
+    cloudEnvironmentFindings({
+      MINDDY_EDITION: "cloud",
+      POSTHOG_API_KEY: "phx_test",
+      AGENT_EXECUTION_BACKEND: "vercel",
+    }),
+    ["MINDDY_EDITION", "AGENT_EXECUTION_BACKEND", "POSTHOG_API_KEY"]
   );
 });
 

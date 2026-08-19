@@ -1,10 +1,6 @@
 import "server-only";
 
 import { capability } from "@/lib/server/capabilities";
-import {
-  isOfficialMinddyCloud,
-  LEGACY_MINDDY_FEEDBACK_FROM,
-} from "@/lib/deployment-profile";
 
 /**
  * Sending the OTP code by email via Resend (raw fetch, same philosophy as the
@@ -26,11 +22,9 @@ export interface SendOtpEmailParams {
 }
 
 export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean> {
-  const officialCloud = isOfficialMinddyCloud(process.env);
-  const provider = process.env.EMAIL_PROVIDER?.trim() || (officialCloud ? "resend" : "");
+  const provider = process.env.EMAIL_PROVIDER?.trim();
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.FEEDBACK_EMAIL_FROM?.trim() ||
-    (officialCloud ? LEGACY_MINDDY_FEEDBACK_FROM : "");
+  const from = process.env.FEEDBACK_EMAIL_FROM?.trim();
   if (provider === "console" && process.env.NODE_ENV !== "production") {
     console.log(`[feedback-otp] (dev — no RESEND_API_KEY) code for ${params.to}: ${params.code}`);
     return true;

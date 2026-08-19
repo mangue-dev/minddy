@@ -8,7 +8,6 @@ import {
   setAnalyticsClient,
 } from "@/lib/analytics";
 import { CONSENT_CHANGED_EVENT, readConsent } from "@/lib/cookie-consent";
-import { isMinddyCloudHostname } from "@/lib/deployment-profile";
 
 /**
  * PostHog initialization (MIN-78).
@@ -72,8 +71,7 @@ export function PostHogInit() {
     // would accumulate without ever being emptied. The released callbacks do not find
     // no clients, therefore do nothing — this is the desired effect.
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ||
-      (isMinddyCloudHostname(window.location.hostname) ? "https://eu.i.posthog.com" : "");
+    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
     if (!key || !host) {
       markAnalyticsReady();
       return;

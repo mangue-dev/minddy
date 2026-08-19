@@ -19,6 +19,59 @@ export interface AppEnvironment {
   NODE_ENV?: string;
 }
 
+/** The product edition selected by Cloud Ops or a self-hosted operator. */
+export type DeploymentEdition = "cloud" | "self-hosted";
+
+export interface DeploymentEditionEnvironment {
+  MINDDY_EDITION?: string;
+}
+
+export interface LegacyCloudDiagnosticEnvironment extends DeploymentEditionEnvironment {
+  NEXT_PUBLIC_APP_URL?: string;
+  VERCEL?: string;
+}
+
+/**
+ * Resolves the edition without consulting a hostname, Vercel metadata, or
+ * another hosting characteristic. Omitting the variable is intentionally the
+ * conservative self-hosted configuration.
+ */
+export function resolveDeploymentEdition(
+  env: DeploymentEditionEnvironment,
+): DeploymentEdition {
+  const value = env.MINDDY_EDITION?.trim();
+  if (!value || value === "self-hosted") return "self-hosted";
+  if (value === "cloud") return "cloud";
+  throw new Error(
+    `Invalid MINDDY_EDITION=${JSON.stringify(value)}; expected cloud or self-hosted.`,
+  );
+}
+
+/** Server-side edition of the running instance. */
+export function getDeploymentEdition(): DeploymentEdition {
+  return resolveDeploymentEdition({ MINDDY_EDITION: process.env.MINDDY_EDITION });
+}
+
+/**
+ * Temporary migration diagnostic for the former Cloud deployment shape. It
+ * never changes the edition or enables a capability; it only tells Cloud Ops
+ * to set the explicit replacement before a deployment loses its legacy defaults.
+ */
+export function legacyCloudProfileDiagnostic(
+  env: LegacyCloudDiagnosticEnvironment,
+): string | null {
+  if (env.MINDDY_EDITION?.trim() || env.VERCEL?.trim() !== "1") return null;
+  try {
+    const host = new URL(env.NEXT_PUBLIC_APP_URL ?? "").hostname.toLowerCase();
+    if (host === "minddy.app" || host.endsWith(".minddy.app")) {
+      return "MINDDY_EDITION is unset on a legacy Minddy Cloud-shaped deployment; set MINDDY_EDITION=cloud explicitly.";
+    }
+  } catch {
+    // An absent or invalid public URL is handled by the public-site validation.
+  }
+  return null;
+}
+
 /** Pure resolution: Vercel refines production/preview, Node covers any other host. */
 export function resolveAppEnv(env: AppEnvironment): AppEnv {
   const v = env.NEXT_PUBLIC_VERCEL_ENV ?? env.VERCEL_ENV;

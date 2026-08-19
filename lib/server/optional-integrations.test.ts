@@ -28,11 +28,15 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("unexpected network call"))));
 });
 
-describe("intégrations absentes", () => {
-  it("conserve Resend et ses expéditeurs historiques sur le cloud officiel", async () => {
+describe("missing integrations", () => {
+  it("uses Resend only with an explicit provider and senders", async () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://www.minddy.app");
+    vi.stubEnv("MINDDY_EDITION", "cloud");
+    vi.stubEnv("EMAIL_PROVIDER", "resend");
     vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubEnv("FEEDBACK_EMAIL_FROM", "feedback@example.test");
+    vi.stubEnv("INVITATION_EMAIL_FROM", "invites@example.test");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 202 })));
 
     expect(await sendOtpEmail({ to: "a@example.test", code: "123456", locale: "fr" }))
@@ -53,12 +57,12 @@ describe("intégrations absentes", () => {
       JSON.parse(String(init?.body)) as { from: string },
     );
     expect(bodies.map(({ from }) => from)).toEqual([
-      "minddy <feedback@mail.minddy.app>",
-      "minddy <invites@mail.minddy.app>",
+      "feedback@example.test",
+      "invites@example.test",
     ]);
   });
 
-  it("ne contacte ni Vercel Domains, ni Resend, ni PostHog", async () => {
+  it("does not contact Vercel Domains, Resend, or PostHog", async () => {
     const fetchMock = vi.mocked(fetch);
 
     expect(await addDomainToVercel("example.test")).toEqual({ ok: false, code: "api_error" });
@@ -80,7 +84,7 @@ describe("intégrations absentes", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("n'active jamais le faux provider de domaines en production auto-hébergée", async () => {
+  it("never enables the fake domain provider in self-hosted production", async () => {
     vi.stubEnv("MDY_FAKE_VERCEL_DOMAINS", "1");
 
     expect(await addDomainToVercel("example.test")).toEqual({
@@ -90,7 +94,7 @@ describe("intégrations absentes", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("refuse les configurations partielles avant tout appel réseau", async () => {
+  it("rejects partial configurations before any network call", async () => {
     vi.stubEnv("EMAIL_PROVIDER", "resend");
     vi.stubEnv("RESEND_API_KEY", "resend-key");
     vi.stubEnv("INVITATION_EMAIL_FROM", "invites@example.test");
@@ -112,7 +116,7 @@ describe("intégrations absentes", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("n'ouvre aucun transport push et masque les forges", async () => {
+  it("opens no push transport and hides forges", async () => {
     expect(configureWebPush()).toBe(false);
     expect(await sendApnsNotification("apns:device", { title: "T", body: "B", url: "/", tag: "test" }))
       .toEqual({ status: 0, reason: "NotConfigured" });
@@ -121,14 +125,14 @@ describe("intégrations absentes", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("refuse Vercel Sandbox avant d'appeler le SDK", async () => {
+  it("rejects Vercel Sandbox before calling the SDK", async () => {
     await expect(
       getOrCreateAgentSandbox({ name: "test", onCreate: async () => {} }),
     ).rejects.toThrow(/AGENT_EXECUTION_BACKEND=vercel/);
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("n'utilise ni Stripe ni les forges à partir de secrets partiels", async () => {
+  it("uses neither Stripe nor forges from partial secrets", async () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_operator");
 
     await expect(createStripeCustomer({ userId: "user-1" })).rejects.toThrow(
@@ -144,7 +148,7 @@ describe("intégrations absentes", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("garde les adaptateurs de forge inertes quand le secret d'état manque", async () => {
+  it("keeps forge adapters inert when the state secret is missing", async () => {
     vi.stubEnv("GITHUB_APP_ID", "1");
     vi.stubEnv("GITHUB_APP_SLUG", "example-app");
     vi.stubEnv("GITHUB_APP_PRIVATE_KEY", "private-key");

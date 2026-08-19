@@ -30,7 +30,7 @@ describe("resolveCapabilities", () => {
     expect(capabilities.managedBilling.state).toBe("disabled");
   });
 
-  it("n'active la télémétrie Vercel publique que sur opt-in explicite", () => {
+  it("enables public Vercel telemetry only through an explicit opt-in", () => {
     expect(resolveCapabilities(core).vercelWebAnalytics.configured).toBe(false);
     expect(
       resolveCapabilities({
@@ -43,6 +43,7 @@ describe("resolveCapabilities", () => {
   it("diagnoses each partial configuration with its missing variables", () => {
     const capabilities = resolveCapabilities({
       ...core,
+      MINDDY_EDITION: "cloud",
       MINDDY_MANAGED_AI: "1",
       MINDDY_MANAGED_BILLING: "1",
       AGENT_EXECUTION_BACKEND: "vercel",
@@ -80,11 +81,13 @@ describe("resolveCapabilities", () => {
     expect(capabilities.transactionalEmail.configured).toBe(false);
   });
 
-  it("never infers managed services from the official hostname", () => {
-    const official = resolveCapabilities({
+  it("does not activate Cloud providers from deceptive host or Vercel metadata", () => {
+    const implicit = resolveCapabilities({
       ...core,
       VERCEL: "1",
       NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+      VERCEL_PROJECT_PRODUCTION_URL: "minddy.app",
+      GITHUB_REF_NAME: "production",
       OPENROUTER_API_KEY: "managed-key",
       RESEND_API_KEY: "resend-key",
       STRIPE_SECRET_KEY: "stripe-key",
@@ -102,6 +105,8 @@ describe("resolveCapabilities", () => {
     });
 
     for (const id of [
+      "managedBilling",
+      "managedAi",
       "vercelSandbox",
       "vercelWebAnalytics",
       "analytics",
@@ -109,39 +114,40 @@ describe("resolveCapabilities", () => {
       "webPush",
       "apns",
     ] as const) {
-      expect(official[id].configured, `${id}: ${official[id].diagnostic}`).toBe(true);
+      expect(implicit[id].configured, `${id}: ${implicit[id].diagnostic}`).toBe(false);
     }
-
-    expect(official.managedAi.configured).toBe(false);
-    expect(official.managedBilling.configured).toBe(false);
-
-    const anotherVercel = resolveCapabilities({
-      ...core,
-      VERCEL: "1",
-      NEXT_PUBLIC_APP_URL: "https://tickets.example.com",
-      OPENROUTER_API_KEY: "operator-key",
-    });
-    expect(anotherVercel.managedAi.configured).toBe(false);
-    expect(anotherVercel.vercelSandbox.configured).toBe(false);
-    expect(anotherVercel.vercelWebAnalytics.configured).toBe(false);
-
-    const optedOut = resolveCapabilities({
-      ...core,
-      VERCEL: "1",
-      NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
-      MINDDY_MANAGED_AI: "0",
-      AGENT_EXECUTION_BACKEND: "local",
-      EMAIL_PROVIDER: "disabled",
-      NEXT_PUBLIC_VERCEL_ANALYTICS: "0",
-      OPENROUTER_API_KEY: "managed-key",
-    });
-    expect(optedOut.managedAi.configured).toBe(false);
-    expect(optedOut.vercelSandbox.configured).toBe(false);
-    expect(optedOut.transactionalEmail.configured).toBe(false);
-    expect(optedOut.vercelWebAnalytics.configured).toBe(false);
   });
 
-  it("n'assemble pas une configuration PostHog avec deux paires partielles", () => {
+  it("requires the Cloud edition before managed services can start", () => {
+    const cloud = resolveCapabilities({
+      ...core,
+      MINDDY_EDITION: "cloud",
+      MINDDY_MANAGED_AI: "1",
+      MINDDY_MANAGED_BILLING: "1",
+      OPENROUTER_API_KEY: "managed-key",
+      STRIPE_SECRET_KEY: "stripe-key",
+      STRIPE_WEBHOOK_SECRET: "webhook-key",
+      STRIPE_PRICE_ID_GO: "go",
+      STRIPE_PRICE_ID_PRO: "pro",
+      STRIPE_PRICE_ID_GO_YEARLY: "go-year",
+      STRIPE_PRICE_ID_PRO_YEARLY: "pro-year",
+    });
+    expect(cloud.managedAi.configured).toBe(true);
+    expect(cloud.managedBilling.configured).toBe(true);
+
+    const selfHosted = resolveCapabilities({
+      ...core,
+      MINDDY_EDITION: "self-hosted",
+      MINDDY_MANAGED_AI: "1",
+      MINDDY_MANAGED_BILLING: "1",
+      OPENROUTER_API_KEY: "managed-key",
+      STRIPE_SECRET_KEY: "stripe-key",
+    });
+    expect(selfHosted.managedAi.configured).toBe(false);
+    expect(selfHosted.managedBilling.configured).toBe(false);
+  });
+
+  it("does not combine two partial PostHog pairs", () => {
     const capabilities = resolveCapabilities({
       ...core,
       POSTHOG_API_KEY: "server-key",
@@ -152,7 +158,7 @@ describe("resolveCapabilities", () => {
     expect(capabilities.analytics.configured).toBe(false);
   });
 
-  it("exige l'origine de l'instance pour Vercel Sandbox hors Vercel", () => {
+  it("requires the instance origin for Vercel Sandbox outside Vercel", () => {
     const capabilities = resolveCapabilities({
       ...core,
       AGENT_EXECUTION_BACKEND: "vercel",
@@ -185,7 +191,7 @@ describe("resolveCapabilities", () => {
     expect(capabilities.managedAi.requirement).toBe("replaceable");
   });
 
-  it("active les routes d'ordonnancement avec leur secret d'authentification", () => {
+  it("enables scheduler routes with their authentication secret", () => {
     expect(resolveCapabilities(core).scheduler)
       .toMatchObject({ state: "disabled", configured: false, missing: ["CRON_SECRET"] });
     expect(resolveCapabilities({ ...core, CRON_SECRET: "secret" }).scheduler)
