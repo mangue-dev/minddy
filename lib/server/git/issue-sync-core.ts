@@ -169,6 +169,15 @@ export interface GithubIssueComment {
   updatedAt: string | null;
 }
 
+/** A GitHub dependency, expressed as the blocking issue → blocked issue edge. */
+export interface GithubIssueDependency {
+  action: "added" | "removed";
+  blockingRepoId: string;
+  blockingNumber: number;
+  blockedRepoId: string;
+  blockedNumber: number;
+}
+
 /**
  * A forge label is an object — but the two don't name it the same:
  * GitHub writes `{name}`, GitLab `{title}`. A load can also give it as
@@ -343,6 +352,45 @@ export function normalizeGithubIssueCommentEvent(payload: unknown): GithubIssueC
     htmlUrl: comment.html_url ?? null,
     createdAt: timestampOrNull(comment.created_at),
     updatedAt: timestampOrNull(comment.updated_at),
+  };
+}
+
+/** Normalizes GitHub's `issue_dependencies` webhook into a minddy blocks edge. */
+export function normalizeGithubIssueDependencyEvent(
+  payload: unknown,
+): GithubIssueDependency | null {
+  const event = (payload ?? {}) as {
+    action?: string;
+    repository?: { id?: number } | null;
+    blocked_issue?: { number?: number } | null;
+    blocking_issue?: { number?: number } | null;
+    blocking_issue_repo?: { id?: number } | null;
+  };
+  const action =
+    event.action === "blocked_by_added"
+      ? "added"
+      : event.action === "blocked_by_removed"
+        ? "removed"
+        : null;
+  const blockedRepoId = event.repository?.id;
+  const blockingRepoId = event.blocking_issue_repo?.id ?? blockedRepoId;
+  const blockedNumber = event.blocked_issue?.number;
+  const blockingNumber = event.blocking_issue?.number;
+  if (
+    !action ||
+    blockedRepoId == null ||
+    blockingRepoId == null ||
+    typeof blockedNumber !== "number" ||
+    typeof blockingNumber !== "number"
+  ) {
+    return null;
+  }
+  return {
+    action,
+    blockingRepoId: String(blockingRepoId),
+    blockingNumber,
+    blockedRepoId: String(blockedRepoId),
+    blockedNumber,
   };
 }
 

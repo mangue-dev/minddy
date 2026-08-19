@@ -7,12 +7,21 @@ import { importIssuesIntoProject } from "@/lib/server/import-issues";
 import { ensureIssueLimit } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
+import {
+  addIssueRelation,
+  findIssueRelation,
+  removeIssueRelation,
+} from "@/lib/server/issue-relations";
 import { categoryKey, resolveCategoryIdsByName } from "@/lib/server/categories";
 import { readForgeLabels } from "@/lib/import/forge-labels";
 import type { ImportedIssue } from "@/lib/import/types";
 import type { IssueStatusValue } from "@/lib/issue-validation";
 import type { RepoProviderId } from "@/lib/repo-providers";
-import { listRepoOpenIssues } from "./github-app";
+import {
+  listGithubIssueComments,
+  listRepoOpenIssues,
+  type RemoteGithubIssueComment,
+} from "./github-app";
 import { getGitlabAccessToken, listGitlabOpenIssues } from "./gitlab-app";
 import {
   buildForgeAssigneeIndex,
@@ -24,6 +33,7 @@ import {
   REMOTE_LANDING_STATUS,
   statusForRemoteReconcile,
   type GithubIssueComment,
+  type GithubIssueDependency,
   type RemoteIssue,
 } from "./issue-sync-core";
 
@@ -526,6 +536,78 @@ export async function syncGithubIssueComment(comment: GithubIssueComment): Promi
   }
 }
 
+/** Mirrors supported GitHub blocking dependencies once both issues exist in a project. */
+export async function syncGithubIssueDependency(
+  dependency: GithubIssueDependency,
+): Promise<void> {
+  const targets = await listIssueSyncTargets({
+    provider: "github",
+    repoId: dependency.blockedRepoId,
+  });
+  for (const target of targets) {
+    if (!target.createdBy) continue;
+    try {
+      const service = getServiceClient();
+      const [blocking, blocked] = await Promise.all([
+        service
+          .from("issues")
+          .select("id")
+          .is("deleted_at", null)
+          .eq("project_id", target.projectId)
+          .eq("remote_provider", "github")
+          .eq("remote_repo_id", dependency.blockingRepoId)
+          .eq("remote_number", dependency.blockingNumber)
+          .maybeSingle(),
+        service
+          .from("issues")
+          .select("id")
+          .is("deleted_at", null)
+          .eq("project_id", target.projectId)
+          .eq("remote_provider", "github")
+          .eq("remote_repo_id", dependency.blockedRepoId)
+          .eq("remote_number", dependency.blockedNumber)
+          .maybeSingle(),
+      ]);
+      if (blocking.error || blocked.error || !blocking.data || !blocked.data) {
+        console.warn(
+          `[issue-sync] GitHub dependency skipped for target ${target.linkId}: an issue is not imported`,
+        );
+        continue;
+      }
+      const sourceId = blocking.data.id as string;
+      const targetId = blocked.data.id as string;
+      if (dependency.action === "added") {
+        const result = await addIssueRelation({
+          projectId: target.projectId,
+          actorId: target.createdBy,
+          sourceId,
+          targetId,
+          type: "blocks",
+        });
+        if (!result.ok) throw new Error(result.errorKey ?? result.rawMessage);
+      } else {
+        const relation = await findIssueRelation(
+          target.projectId,
+          sourceId,
+          "blocks",
+          targetId,
+        );
+        if (!relation) continue;
+        const result = await removeIssueRelation({
+          relationId: relation.id,
+          actorId: target.createdBy,
+        });
+        if (!result.ok) throw new Error(result.errorKey ?? result.rawMessage);
+      }
+    } catch (error) {
+      console.error(
+        `[issue-sync] GitHub dependency ${dependency.blockingNumber}→${dependency.blockedNumber} failed for target ${target.linkId}:`,
+        (error as Error).message,
+      );
+    }
+  }
+}
+
 async function applyGithubIssueComment(
   target: IssueSyncTarget,
   remote: GithubIssueComment,
@@ -616,6 +698,85 @@ async function applyGithubIssueComment(
   if (writeError) throw new Error(writeError.message);
 }
 
+function toGithubIssueComment(
+  repoId: string,
+  number: number,
+  comment: RemoteGithubIssueComment,
+): GithubIssueComment {
+  return {
+    repoId,
+    number,
+    remoteCommentId: comment.id,
+    action: "created",
+    body: comment.body,
+    authorLogin: comment.authorLogin,
+    authorAssociation: comment.authorAssociation,
+    htmlUrl: comment.htmlUrl,
+    createdAt: comment.createdAt,
+    updatedAt: comment.updatedAt,
+  };
+}
+
+/**
+ * Replays the current comment history after a GitHub backfill. The sidecar
+ * identity makes this safe when a live webhook was delivered at the same time.
+ */
+async function backfillGithubIssueComments(
+  target: IssueSyncTarget,
+  issues: BackfilledIssue[],
+): Promise<void> {
+  if (target.installationId == null || !target.repoFullName) return;
+  for (const issue of issues) {
+    try {
+      const comments = await listGithubIssueComments(
+        target.installationId,
+        target.repoFullName,
+        issue.number,
+      );
+      for (const comment of comments) {
+        await applyGithubIssueComment(
+          target,
+          toGithubIssueComment(target.externalRepoId, issue.number, comment),
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[issue-sync] GitHub comment backfill failed for ${target.repoFullName}#${issue.number}:`,
+        (error as Error).message,
+      );
+    }
+  }
+}
+
+/** Stores GitHub-only fields for every issue already present after the bulk import. */
+async function backfillGithubMetadata(
+  target: IssueSyncTarget,
+  issues: BackfilledIssue[],
+): Promise<void> {
+  const numbers = issues.map((issue) => issue.number);
+  if (numbers.length === 0) return;
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("issues")
+    .select("id, remote_number")
+    .is("deleted_at", null)
+    .eq("project_id", target.projectId)
+    .eq("remote_provider", "github")
+    .eq("remote_repo_id", target.externalRepoId)
+    .in("remote_number", numbers);
+  if (error) {
+    console.error("[issue-sync] GitHub metadata backfill lookup failed:", error.message);
+    return;
+  }
+  const idByNumber = new Map(
+    (data ?? []).map((row) => [row.remote_number as number, row.id as string]),
+  );
+  for (const issue of issues) {
+    const issueId = idByNumber.get(issue.number);
+    if (issueId) await syncGithubMetadata(issueId, toGithubBackfilledRemote(target, issue));
+  }
+}
+
 /**
  * The name of the stored repository follows the one that the forge has just announced.
  *
@@ -696,6 +857,31 @@ interface BackfilledIssue {
   dueDate: string | null;
   createdAt: string | null;
   closedAt: string | null;
+  updatedAt?: string | null;
+  githubMetadata?: RemoteIssue["githubMetadata"];
+}
+
+function toGithubBackfilledRemote(
+  target: IssueSyncTarget,
+  issue: BackfilledIssue,
+): RemoteIssue {
+  return {
+    provider: "github",
+    repoFullName: target.repoFullName ?? "",
+    repoId: target.externalRepoId,
+    number: issue.number,
+    title: issue.title,
+    body: issue.body,
+    url: issue.url,
+    action: "backfill",
+    actorLogin: null,
+    state: "open",
+    labels: issue.labels,
+    assigneeLogins: issue.assigneeLogins,
+    dueDate: issue.dueDate,
+    updatedAt: issue.updatedAt ?? null,
+    githubMetadata: issue.githubMetadata ?? null,
+  };
 }
 
 /** A remote output, brought back to the expected form by the bulk import. */
@@ -784,6 +970,8 @@ export async function backfillRemoteIssues(
       dueDate: i.dueDate ?? null,
       createdAt: i.createdAt ?? null,
       closedAt: i.closedAt ?? null,
+      updatedAt: i.updatedAt ?? null,
+      githubMetadata: i.githubMetadata,
     }));
   } else {
     const token = await getGitlabAccessToken(target.connectionId);
@@ -827,6 +1015,11 @@ export async function backfillRemoteIssues(
       return 0;
     }
     created = result.result.created;
+  }
+
+  if (target.provider === "github") {
+    await backfillGithubMetadata(target, remoteIssues);
+    await backfillGithubIssueComments(target, remoteIssues);
   }
 
   const service = getServiceClient();

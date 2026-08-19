@@ -71,9 +71,11 @@ vi.mock("@/lib/supabase-service", () => ({
 /** The real work of the receiver, reduced to a probe: has it been done? */
 const syncRemoteIssueEvent = vi.fn(async () => {});
 const syncGithubIssueComment = vi.fn(async () => {});
+const syncGithubIssueDependency = vi.fn(async () => {});
 vi.mock("@/lib/server/git/issue-sync", () => ({
   syncRemoteIssueEvent: (...a: unknown[]) => syncRemoteIssueEvent(...(a as [])),
   syncGithubIssueComment: (...a: unknown[]) => syncGithubIssueComment(...(a as [])),
+  syncGithubIssueDependency: (...a: unknown[]) => syncGithubIssueDependency(...(a as [])),
 }));
 
 const rotateGitlabWebhookSecret = vi.fn(async () => {});
@@ -317,6 +319,26 @@ describe("POST /api/webhooks/github", () => {
     expect(response.status).toBe(200);
     expect(syncGithubIssueComment).toHaveBeenCalledWith(
       expect.objectContaining({ remoteCommentId: "22", number: 7 }),
+    );
+  });
+
+  it("synchronizes a GitHub blocking dependency", async () => {
+    const response = await githubPOST(
+      githubRequest({
+        event: "issue_dependencies",
+        body: {
+          action: "blocked_by_added",
+          repository: { id: 9001 },
+          blocked_issue: { number: 8 },
+          blocking_issue: { number: 7 },
+          blocking_issue_repo: { id: 9001 },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(syncGithubIssueDependency).toHaveBeenCalledWith(
+      expect.objectContaining({ blockingNumber: 7, blockedNumber: 8 }),
     );
   });
 });

@@ -1390,7 +1390,16 @@
     "promptCopied": "Prompt copied. Paste it into your coding agent.",
     "verifyPromptCopied": "Prompt copied. Paste it into your coding agent to have it verify the implementation.",
     "promptCopiedMoved": "Prompt copied. The issue moved to “In Progress”.",
-    "moreActionsAriaLabel": "Issue actions"
+    "moreActionsAriaLabel": "Issue actions",
+    "githubMetadataTitle": "GitHub details",
+    "githubMetadataHint": "Fields kept from GitHub because minddy has no native equivalent.",
+    "githubAuthor": "Author",
+    "githubStateReason": "State reason",
+    "githubLocked": "Locked",
+    "githubMilestone": "Milestone",
+    "githubRawMetadata": "View all preserved GitHub metadata",
+    "githubYes": "Yes",
+    "githubNo": "No"
   },
   "Language": {
     "title": "Language",

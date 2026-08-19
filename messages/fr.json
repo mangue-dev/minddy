@@ -1390,7 +1390,16 @@
     "promptCopied": "Prompt copié. Collez-le dans votre agent de code.",
     "verifyPromptCopied": "Prompt copié. Collez-le dans votre agent de code pour qu'il vérifie l'implémentation.",
     "promptCopiedMoved": "Prompt copié. Le ticket est passé « En cours ».",
-    "moreActionsAriaLabel": "Actions du ticket"
+    "moreActionsAriaLabel": "Actions du ticket",
+    "githubMetadataTitle": "Détails GitHub",
+    "githubMetadataHint": "Champs conservés depuis GitHub, sans équivalent natif dans minddy.",
+    "githubAuthor": "Auteur",
+    "githubStateReason": "Motif de l’état",
+    "githubLocked": "Verrouillée",
+    "githubMilestone": "Jalon",
+    "githubRawMetadata": "Afficher toutes les métadonnées GitHub conservées",
+    "githubYes": "Oui",
+    "githubNo": "Non"
   },
   "Language": {
     "title": "Langue",

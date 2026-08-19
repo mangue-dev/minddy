@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -175,6 +176,16 @@ export function IssueSidePanel({
   // (dictation, or distant writing) — it only reads `value` during editing and
   // ne commite qu'au blur.
   const [editorKey, setEditorKey] = useState(0);
+  const { data: githubIssueData } = useQuery<{ github_metadata?: Record<string, unknown> | null }>({
+    queryKey: ["github-issue-metadata", issue?.id ?? ""],
+    queryFn: async () => {
+      const response = await fetch(`/api/issues/${issue?.id}`);
+      if (!response.ok) throw new Error("Failed to load GitHub issue metadata");
+      return response.json();
+    },
+    enabled: !!issue && issue.remote_provider === "github",
+  });
+  const githubMetadata = githubIssueData?.github_metadata ?? null;
 
   /**
    * Follow the REMOTE writings while the panel remains open (MIN-89).
@@ -1047,6 +1058,53 @@ export function IssueSidePanel({
                     onAddRelation={onAddRelation}
                     onRemoveRelation={onRemoveRelation}
                   />
+
+                  {githubMetadata && (
+                    <div className="border-t border-border/60 px-3 py-3 text-sm">
+                      <p className="font-medium">{t("githubMetadataTitle")}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("githubMetadataHint")}
+                      </p>
+                      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-muted-foreground">
+                        {typeof githubMetadata.author_login === "string" && (
+                          <>
+                            <dt>{t("githubAuthor")}</dt>
+                            <dd className="text-foreground">@{githubMetadata.author_login}</dd>
+                          </>
+                        )}
+                        {typeof githubMetadata.state_reason === "string" && (
+                          <>
+                            <dt>{t("githubStateReason")}</dt>
+                            <dd className="text-foreground">{githubMetadata.state_reason}</dd>
+                          </>
+                        )}
+                        {typeof githubMetadata.locked === "boolean" && (
+                          <>
+                            <dt>{t("githubLocked")}</dt>
+                            <dd className="text-foreground">
+                              {githubMetadata.locked ? t("githubYes") : t("githubNo")}
+                            </dd>
+                          </>
+                        )}
+                        {isGithubMetadataObject(githubMetadata.milestone) && (
+                          <>
+                            <dt>{t("githubMilestone")}</dt>
+                            <dd className="text-foreground">
+                              {githubMilestoneValue(githubMetadata.milestone)}
+                            </dd>
+                          </>
+                        )}
+                      </dl>
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                          {t("githubRawMetadata")}
+                        </summary>
+                        <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs">
+                          {JSON.stringify(githubMetadata, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  )}
                 </div>
 
                 {!isChild && (
@@ -1147,4 +1205,14 @@ export function IssueSidePanel({
       />
     </>
   );
+}
+
+function isGithubMetadataObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function githubMilestoneValue(milestone: Record<string, unknown>): string {
+  const title = typeof milestone.title === "string" ? milestone.title : null;
+  const dueOn = typeof milestone.due_on === "string" ? milestone.due_on : null;
+  return [title, dueOn].filter(Boolean).join(" · ") || "—";
 }

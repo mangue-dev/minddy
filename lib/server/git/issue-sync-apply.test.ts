@@ -33,12 +33,14 @@ let updates: Record<string, unknown>[] = [];
 let categorySets: Record<string, unknown>[] = [];
 let metadataWrites: Record<string, unknown>[] = [];
 let githubMetadataRows: Row[] = [];
+let commentRows: Row[] = [];
+let githubCommentSyncRows: Row[] = [];
 /** How many times the assignee index was built (two queries each). */
 let indexBuilds = 0;
 /** Does `createIssueForProject` fail, and on which key? */
 let createError: string | null = null;
 
-function table(rows: () => Row[], isGithubMetadata = false) {
+function table(rows: () => Row[], tableName: string) {
   const filters: ((row: Row) => boolean)[] = [];
   const query: Record<string, unknown> = {};
   query.select = () => query;
@@ -50,12 +52,33 @@ function table(rows: () => Row[], isGithubMetadata = false) {
     filters.push((row) => (row[column] ?? null) === value);
     return query;
   };
+  query.in = (column: string, values: unknown[]) => {
+    filters.push((row) => values.includes(row[column]));
+    return query;
+  };
   // The end of backfill timestamp on `project_git_links` — written, never read.
   query.update = () => ({ eq: async () => ({ error: null }) });
   query.upsert = async (values: Record<string, unknown>) => {
-    if (isGithubMetadata) metadataWrites.push(values);
+    if (tableName === "github_issue_sync_metadata") metadataWrites.push(values);
+    if (tableName === "github_issue_comment_syncs") {
+      const key = `${values.remote_comment_id}:${values.issue_id}`;
+      const existing = rows().find(
+        (row) => `${row.remote_comment_id}:${row.issue_id}` === key,
+      );
+      if (existing) Object.assign(existing, values);
+      else rows().push({ ...values });
+    }
     return { error: null };
   };
+  query.insert = (values: Record<string, unknown>) => ({
+    select: () => ({
+      single: async () => {
+        const row = { ...values, id: `inserted-${rows().length + 1}` };
+        rows().push(row);
+        return { data: row, error: null };
+      },
+    }),
+  });
   const matching = () => rows().filter((row) => filters.every((f) => f(row)));
   query.maybeSingle = async () => ({ data: matching()[0] ?? null, error: null });
   query.then = (onFulfilled: (value: unknown) => unknown) =>
@@ -67,12 +90,13 @@ const TABLES: Record<string, () => Row[]> = {
   issues: () => issueRows,
   issue_categories: () => issueCategoryRows,
   github_issue_sync_metadata: () => githubMetadataRows,
+  comments: () => commentRows,
+  github_issue_comment_syncs: () => githubCommentSyncRows,
 };
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: (name: string) =>
-      table(TABLES[name] ?? (() => []), name === "github_issue_sync_metadata"),
+    from: (name: string) => table(TABLES[name] ?? (() => []), name),
   }),
 }));
 
@@ -153,8 +177,11 @@ vi.mock("@/lib/server/plan-limit-error", () => ({
   isPlanLimitError: (e: unknown) => e instanceof PlanLimitError,
 }));
 
+const githubComments: Record<string, Record<string, unknown>[]> = {};
 vi.mock("@/lib/server/git/github-app", () => ({
   listRepoOpenIssues: async () => openIssues,
+  listGithubIssueComments: async (_installationId: number, _repo: string, issueNumber: number) =>
+    githubComments[String(issueNumber)] ?? [],
 }));
 vi.mock("@/lib/server/git/gitlab-app", () => ({
   getGitlabAccessToken: async () => "gitlab-token",
@@ -227,8 +254,11 @@ beforeEach(() => {
   categorySets = [];
   metadataWrites = [];
   githubMetadataRows = [];
+  commentRows = [];
+  githubCommentSyncRows = [];
   imports = [];
   openIssues = [];
+  for (const key of Object.keys(githubComments)) delete githubComments[key];
   indexBuilds = 0;
   createError = null;
   overIssueLimit = false;
@@ -540,6 +570,20 @@ describe("backfillRemoteIssues — l'import à l'activation du toggle", () => {
     htmlUrl: "https://github.com/acme/app/issues/7",
     labels: [],
     assigneeLogins: [],
+    updatedAt: null,
+    githubMetadata: {
+      nodeId: null,
+      authorLogin: null,
+      authorAssociation: null,
+      stateReason: null,
+      locked: false,
+      activeLockReason: null,
+      milestone: null,
+      createdAt: null,
+      closedAt: null,
+      closedByLogin: null,
+      issueType: null,
+    },
     ...overrides,
   });
 
@@ -577,6 +621,71 @@ describe("backfillRemoteIssues — l'import à l'activation du toggle", () => {
 
     expect(await backfillRemoteIssues(TARGET)).toBe(1);
     expect(batch().map((i) => (i.remote as { number: number }).number)).toEqual([8]);
+  });
+
+  it("imports existing GitHub comments when the repository link is enabled", async () => {
+    imported({ remote_number: 7 });
+    openIssues = [openIssue()];
+    githubComments["7"] = [
+      {
+        id: "comment-7",
+        body: "Historical context",
+        authorLogin: "octocat",
+        authorAssociation: "MEMBER",
+        htmlUrl: "https://github.com/acme/app/issues/7#issuecomment-7",
+        createdAt: "2026-08-19T10:00:00Z",
+        updatedAt: "2026-08-19T10:00:00Z",
+      },
+    ];
+
+    await backfillRemoteIssues(TARGET);
+
+    expect(commentRows).toMatchObject([
+      {
+        issue_id: "issue-1",
+        body: "Historical context",
+        created_at: "2026-08-19T10:00:00Z",
+      },
+    ]);
+    expect(githubCommentSyncRows).toMatchObject([
+      {
+        remote_comment_id: "comment-7",
+        issue_id: "issue-1",
+        author_login: "octocat",
+      },
+    ]);
+  });
+
+  it("preserves GitHub-only issue metadata for issues already present at backfill", async () => {
+    imported({ remote_number: 7 });
+    openIssues = [
+      openIssue({
+        updatedAt: "2026-08-19T10:00:00Z",
+        githubMetadata: {
+          nodeId: "I_kwDOA",
+          authorLogin: "octocat",
+          authorAssociation: "MEMBER",
+          stateReason: null,
+          locked: false,
+          activeLockReason: null,
+          milestone: { title: "Release 1.0" },
+          createdAt: "2026-08-19T09:00:00Z",
+          closedAt: null,
+          closedByLogin: null,
+          issueType: { name: "Bug" },
+        },
+      }),
+    ];
+
+    await backfillRemoteIssues(TARGET);
+
+    expect(metadataWrites).toContainEqual(
+      expect.objectContaining({
+        issue_id: "issue-1",
+        github_node_id: "I_kwDOA",
+        metadata: { issue_type: { name: "Bug" } },
+      }),
+    );
   });
 
   it("n'importe RIEN et n'appelle pas l'import quand tout est déjà là", async () => {

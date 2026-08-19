@@ -19,10 +19,12 @@ import {
 } from "@/lib/server/agent/pr-webhook-core";
 import {
   normalizeGithubIssueCommentEvent,
+  normalizeGithubIssueDependencyEvent,
   normalizeGithubIssueEvent,
 } from "@/lib/server/git/issue-sync-core";
 import {
   syncGithubIssueComment,
+  syncGithubIssueDependency,
   syncRemoteIssueEvent,
 } from "@/lib/server/git/issue-sync";
 import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
@@ -494,6 +496,11 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
   });
 }
 
+async function handleIssueDependency(payload: unknown): Promise<void> {
+  const dependency = normalizeGithubIssueDependencyEvent(payload);
+  if (dependency) await syncGithubIssueDependency(dependency);
+}
+
 async function handlePullRequestReviewComment(
   payload: PullRequestReviewCommentEvent,
 ): Promise<void> {
@@ -685,6 +692,8 @@ export async function POST(request: NextRequest) {
       );
     } else if (event === "issue_comment") {
       await handleIssueComment(JSON.parse(rawBody) as IssueCommentEvent);
+    } else if (event === "issue_dependencies") {
+      await handleIssueDependency(JSON.parse(rawBody));
     } else if (event === "check_suite") {
       await handleCheckSuite(JSON.parse(rawBody) as CheckSuiteEvent);
     } else if (event === "status") {

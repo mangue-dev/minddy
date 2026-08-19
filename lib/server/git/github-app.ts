@@ -8,6 +8,7 @@ import {
   githubHeaders,
   parseNextLink,
 } from "./github-rest";
+import type { GithubIssueMetadata } from "./issue-sync-core";
 
 /**
  * GitHub App client (MIN-47), ported from AutoKap (github-app.ts) and reduced to the flow
@@ -343,6 +344,19 @@ export interface RemoteRepoIssue {
   dueDate: string | null;
   createdAt: string | null;
   closedAt: string | null;
+  updatedAt: string | null;
+  githubMetadata: GithubIssueMetadata;
+}
+
+/** A regular issue comment returned by GitHub's paginated REST endpoint. */
+export interface RemoteGithubIssueComment {
+  id: string;
+  body: string;
+  authorLogin: string | null;
+  authorAssociation: string | null;
+  htmlUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 const REPO_ISSUES_PER_PAGE = 100;
@@ -379,7 +393,16 @@ export async function listRepoOpenIssues(
       assignees?: Array<{ login?: string }> | null;
       milestone?: { due_on?: string | null } | null;
       created_at?: string | null;
+      updated_at?: string | null;
       closed_at?: string | null;
+      node_id?: string | null;
+      state_reason?: string | null;
+      locked?: boolean | null;
+      active_lock_reason?: string | null;
+      user?: { login?: string | null } | null;
+      author_association?: string | null;
+      closed_by?: { login?: string | null } | null;
+      type?: Record<string, unknown> | null;
       pull_request?: unknown;
     }>;
     for (const row of rows) {
@@ -398,12 +421,73 @@ export async function listRepoOpenIssues(
         dueDate: row.milestone?.due_on ?? null,
         createdAt: row.created_at ?? null,
         closedAt: row.closed_at ?? null,
+        updatedAt: row.updated_at ?? null,
+        githubMetadata: {
+          nodeId: row.node_id ?? null,
+          authorLogin: row.user?.login ?? null,
+          authorAssociation: row.author_association ?? null,
+          stateReason: row.state_reason ?? null,
+          locked: row.locked === true,
+          activeLockReason: row.active_lock_reason ?? null,
+          milestone: row.milestone ?? null,
+          createdAt: row.created_at ?? null,
+          closedAt: row.closed_at ?? null,
+          closedByLogin: row.closed_by?.login ?? null,
+          issueType: row.type ?? null,
+        },
       });
       if (issues.length >= limit) break;
     }
     url = parseNextLink(response.headers.get("link"));
   }
   return issues;
+}
+
+/**
+ * Lists every comment of one issue, including comments created before the
+ * repository link was enabled. Pull-request comments never reach this helper.
+ */
+export async function listGithubIssueComments(
+  installationId: number | string,
+  repoFullName: string,
+  issueNumber: number,
+): Promise<RemoteGithubIssueComment[]> {
+  const { token } = await getInstallationToken(installationId);
+  const comments: RemoteGithubIssueComment[] = [];
+  let url: string | null =
+    `${GITHUB_API_BASE}/repos/${repoFullName}/issues/${issueNumber}/comments?per_page=${REPO_ISSUES_PER_PAGE}`;
+  while (url) {
+    const response = await fetch(url, { headers: githubHeaders(token) });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { message?: string };
+      throw new Error(
+        data.message || `listGithubIssueComments failed (${response.status})`,
+      );
+    }
+    const rows = (await response.json()) as Array<{
+      id?: number;
+      body?: string | null;
+      html_url?: string | null;
+      user?: { login?: string } | null;
+      author_association?: string | null;
+      created_at?: string | null;
+      updated_at?: string | null;
+    }>;
+    for (const row of rows) {
+      if (typeof row.id !== "number") continue;
+      comments.push({
+        id: String(row.id),
+        body: row.body ?? "",
+        authorLogin: row.user?.login ?? null,
+        authorAssociation: row.author_association ?? null,
+        htmlUrl: row.html_url ?? null,
+        createdAt: row.created_at ?? null,
+        updatedAt: row.updated_at ?? row.created_at ?? null,
+      });
+    }
+    url = parseNextLink(response.headers.get("link"));
+  }
+  return comments;
 }
 
 /**

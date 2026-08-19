@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   REMOTE_LANDING_STATUS,
   normalizeGithubIssueCommentEvent,
+  normalizeGithubIssueDependencyEvent,
   normalizeGithubIssueEvent,
   normalizeGitlabIssueEvent,
   remoteStateForStatus,
@@ -324,6 +325,38 @@ describe("normalizeGithubIssueCommentEvent", () => {
         repository: { id: 1 },
         issue: { number: 2 },
         comment: { id: 3 },
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("normalizeGithubIssueDependencyEvent", () => {
+  it("maps a blocked-by event to a blocking edge", () => {
+    expect(
+      normalizeGithubIssueDependencyEvent({
+        action: "blocked_by_added",
+        repository: { id: 10 },
+        blocked_issue: { number: 8 },
+        blocking_issue: { number: 7 },
+        blocking_issue_repo: { id: 10 },
+      }),
+    ).toEqual({
+      action: "added",
+      blockingRepoId: "10",
+      blockingNumber: 7,
+      blockedRepoId: "10",
+      blockedNumber: 8,
+    });
+  });
+
+  it("rejects incomplete and unsupported dependency payloads", () => {
+    expect(normalizeGithubIssueDependencyEvent({ action: "blocked_by_added" })).toBeNull();
+    expect(
+      normalizeGithubIssueDependencyEvent({
+        action: "renamed",
+        repository: { id: 10 },
+        blocked_issue: { number: 8 },
+        blocking_issue: { number: 7 },
       }),
     ).toBeNull();
   });
