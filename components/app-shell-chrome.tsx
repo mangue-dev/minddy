@@ -1261,6 +1261,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     icon: CalendarClock,
     href: "/routines",
     active: isRoutines,
+    shortcut: "U",
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
   };
