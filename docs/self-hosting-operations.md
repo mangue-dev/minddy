@@ -182,6 +182,9 @@ supabase db dump --db-url "$SUPABASE_DB_URL" \
 supabase db dump --db-url "$SUPABASE_DB_URL" \
   -f "$BACKUP_DIR/database/history_data.sql" --use-copy --data-only \
   --schema supabase_migrations
+psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At \
+  -f scripts/export-managed-policies.sql \
+  > "$BACKUP_DIR/database/managed_policies.sql"
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
   select jsonb_build_object(
     'auth.users', (select count(*) from auth.users),
@@ -194,10 +197,15 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 " > "$BACKUP_DIR/database/counts.json"
 ```
 
-Immediately verify that all six files are non-empty and that `data.sql`
+Immediately verify that all seven SQL files are non-empty and that `data.sql`
 contains in particular `COPY` sections for `auth.users`, `storage.objects` and
 minddy's `public` tables. An absence means that the URL or version of
 CLI did not produce a full backup; do not continue with the update.
+
+The normal Supabase dump deliberately excludes definitions owned by its
+managed `storage` and `realtime` schemas. `managed_policies.sql` preserves only
+their instance policies, including minddy's upload and broadcast rules,
+without attempting to recreate Supabase-owned tables or functions.
 
 ### 3. Back up secrets and configuration
 
@@ -453,6 +461,10 @@ psql --single-transaction --variable ON_ERROR_STOP=1 \
 psql --single-transaction --variable ON_ERROR_STOP=1 \
   --file "$BACKUP_DIR/database/history_schema.sql" \
   --file "$BACKUP_DIR/database/history_data.sql" \
+  --dbname "$RESTORE_DB_URL"
+
+psql --single-transaction --variable ON_ERROR_STOP=1 \
+  --file "$BACKUP_DIR/database/managed_policies.sql" \
   --dbname "$RESTORE_DB_URL"
 ```
 

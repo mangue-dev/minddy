@@ -19,6 +19,7 @@ export const REQUIRED_RELEASE_PATHS = [
   "docs/self-hosting-operations.md",
   "docs/self-hosting-clean-room.md",
   "scripts/bootstrap-supabase.mjs",
+  "scripts/export-managed-policies.sql",
   "scripts/verify-supabase-bootstrap.mjs",
   "supabase/config.toml",
   "supabase/migrations",

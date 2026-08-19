@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Fixed
+
+- The self-hosting backup now exports and restores Storage and Realtime
+  policies that the normal Supabase schema dump intentionally excludes.
+
 ## [0.10.7] - 2026-08-19
 
 ### Added
