@@ -102,6 +102,7 @@ jobs:
         run: |
           test "$GITHUB_REF" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git fetch origin main production
           test "$(git rev-parse origin/main)" = "$TARGET_SHA"
           git merge-base --is-ancestor origin/production "$TARGET_SHA"

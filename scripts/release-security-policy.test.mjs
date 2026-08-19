@@ -80,6 +80,15 @@ test("the deployment and workflow require the current version and three attestat
   }
   assert.match(workflow, /required-not-completed\).*exit 1/);
 
+  const authenticatedRemote = workflow.indexOf(
+    'git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"',
+  );
+  const protectedFetch = workflow.indexOf("git fetch origin main production");
+  assert.ok(
+    authenticatedRemote !== -1 && authenticatedRemote < protectedFetch,
+    "the protected promotion authenticates before fetching private refs",
+  );
+
   const preparation = deploy.indexOf('npm run release:prepare -- "$TARGET_VERSION"');
   const securityGate = deploy.indexOf("node scripts/release-security-policy.mjs");
   const push = deploy.indexOf("git push origin main");
