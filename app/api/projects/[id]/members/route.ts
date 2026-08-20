@@ -97,8 +97,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 /** POST /api/projects/[id]/members — owner invites by email. The address does not require
- to have a minddy account (MIN-197): an invitation email goes out, and
- registration from this link attaches the person to the project. */
+ * an existing minddy account: the durable invitation attaches when that address
+ * later completes registration. Email delivery is optional. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);

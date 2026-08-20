@@ -163,7 +163,6 @@
     "alreadyOwner": "Vous êtes déjà le propriétaire de ce projet.",
     "alreadyMember": "Cette personne est déjà membre.",
     "invitationAlreadyPending": "Une invitation est déjà en attente pour cet email.",
-    "invitationEmailUnavailable": "Cette adresse n'a pas de compte sur cette instance et l'e-mail applicatif n'est pas configuré. Demandez à l'opérateur de configurer EMAIL_PROVIDER avant de l'inviter.",
     "ownerOnly": "Action réservée au propriétaire du projet.",
     "smartAssignNotAllowed": "Votre budget d'usage IA est épuisé. Smart Assign reprendra à la prochaine période.",
     "automationsNotAllowed": "Votre plan n'inclut pas les agents de code, ou votre budget d'usage IA est épuisé. Les automatisations reprendront quand l'un des deux changera.",

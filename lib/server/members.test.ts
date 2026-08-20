@@ -236,8 +236,8 @@ beforeEach(() => {
   sendInvitationEmail.mockClear();
 });
 
-describe("inviteMember — une adresse sans compte", () => {
-  it("refuse une invitation externe impossible à livrer", async () => {
+describe("inviteMember — an address without an account", () => {
+  it("retains an invitation when application email is disabled", async () => {
     vi.stubEnv("EMAIL_PROVIDER", "");
 
     const result = await inviteMember({
@@ -246,12 +246,15 @@ describe("inviteMember — une adresse sans compte", () => {
       email: "nouvelle@example.test",
     });
 
-    expect(result).toEqual({
-      ok: false,
-      status: 503,
-      errorKey: "invitationEmailUnavailable",
+    expect(result.ok).toBe(true);
+    expect(invitationRows).toHaveLength(1);
+    expect(invitationRows[0]).toMatchObject({
+      invited_email: "nouvelle@example.test",
+      invited_user_id: null,
+      status: "pending",
     });
-    expect(invitationRows).toHaveLength(0);
+    await settle();
+    expect(sendInvitationEmail).not.toHaveBeenCalled();
   });
 
   it("crée quand même l'invitation, sans invited_user_id", async () => {

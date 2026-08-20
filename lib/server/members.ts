@@ -32,9 +32,9 @@ import type { Invitation } from "@/lib/types";
  * `project_invitations` that the guest accepts from his inbox; it can be born
  * without `invited_user_id` when the address does not yet have a minddy account, and gets
  * attached to an account later — at the first session whose verified email
- * matches (`attachPendingInvitations`, called by /auth/callback). An email
- * leaves in both cases: it is the only channel that reaches someone who does not
- * return on its own.
+ * matches (`attachPendingInvitations`, called by /auth/callback). Email delivery
+ * is best-effort and optional: without an email provider, the invitation remains
+ * available in the in-app inbox once that verified account exists.
  *
  * We NEVER join automatically: acceptance remains a gesture from
  * the guest (PATCH /api/projects/invitations).
@@ -47,7 +47,6 @@ type InviteError =
   | "alreadyOwner"
   | "alreadyMember"
   | "invitationAlreadyPending"
-  | "invitationEmailUnavailable"
   | "memberLimitReached"
   | "databaseError";
 
@@ -128,22 +127,6 @@ export async function inviteMember({
     }
   }
 
-  // An existing account will receive the invitation in its inbox, even without mail.
-  // For an unknown address, on the other hand, email is the only channel: create
-  // a line and announce success when Resend is absent makes a
-  // invitation that no one can discover. Console mode remains a real
-  // development transport, but is never accepted in production.
-  const consoleEmail =
-    process.env.EMAIL_PROVIDER?.trim() === "console" &&
-    process.env.NODE_ENV !== "production";
-  if (
-    !memberUser &&
-    !capability("transactionalEmail").configured &&
-    !consoleEmail
-  ) {
-    return { ok: false, status: 503, errorKey: "invitationEmailUnavailable" };
-  }
-
   // An outdated invitation for this address still holds its place in the index
   // unique partiel `(project_id, invited_email) where status = 'pending'` : sans
   //this household, inserting below would make 409 “invitation already pending”
@@ -187,8 +170,10 @@ export async function inviteMember({
   // push it here, by hand (MIN-183).
   if (memberUser) pushInvitation(memberUser.id, actorId);
 
-  // The email goes AFTER the response, but by `afterOrNow`: a promise
-  // detached would be frozen with the summon and die in flight (CLAUDE.md).
+  // Email delivery, when configured, happens AFTER the response via `afterOrNow`:
+  // a detached promise could be frozen with the invocation and die in flight
+  // (CLAUDE.md). The durable invitation does not depend on this best-effort
+  // delivery and still attaches to the recipient's in-app inbox.
   //
   // The rendered line is RECOMPOSED field by field, and not obtained by subtracting
   // the token of a `...row`: two columns have nothing to do in the response —
@@ -204,22 +189,27 @@ export async function inviteMember({
     status: raw.status,
     created_at: raw.created_at,
   };
-  const token = raw.token;
-  afterOrNow(async () => {
-    const inviters = await fetchAuthUsersById(getServiceClient(), [actorId]);
-    const named = toNamed(inviters.get(actorId));
-    await sendInvitationEmail({
-      to: normalized,
-      inviterName: displayName(named, ""),
-      projectName: access.project.name,
-      projectId: access.project.id,
-      projectOrbSeed: access.project.orb_seed,
-      projectIconUrl: access.project.icon_url,
-      token,
-      locale,
-      origin,
+  const consoleEmail =
+    process.env.EMAIL_PROVIDER?.trim() === "console" &&
+    process.env.NODE_ENV !== "production";
+  if (capability("transactionalEmail").configured || consoleEmail) {
+    const token = raw.token;
+    afterOrNow(async () => {
+      const inviters = await fetchAuthUsersById(getServiceClient(), [actorId]);
+      const named = toNamed(inviters.get(actorId));
+      await sendInvitationEmail({
+        to: normalized,
+        inviterName: displayName(named, ""),
+        projectName: access.project.name,
+        projectId: access.project.id,
+        projectOrbSeed: access.project.orb_seed,
+        projectIconUrl: access.project.icon_url,
+        token,
+        locale,
+        origin,
+      });
     });
-  });
+  }
 
   // The token does NOT come out of the function: the caller would return it in JSON to
   // who invites, and he has nothing to do about it — it's a secret of the email.
