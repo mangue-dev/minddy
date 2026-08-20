@@ -18,8 +18,11 @@ import {
 } from "lucide-react";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
-import { MINDDY_REPOSITORY_URL } from "@/lib/site";
+import { MINDDY_REPOSITORY_URL, SITE_URL } from "@/lib/site";
+import { localizedHref } from "@/lib/locale-href";
 import { CopyButton } from "@/components/marketing/copy-button";
+import { Github } from "@/components/git/provider-icons";
+import { SelfHostingAiActions } from "@/components/marketing/self-hosting-ai-actions";
 import { Reveal, RevealGroup, RevealHeading } from "@/components/marketing/reveal";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -65,7 +68,9 @@ function Command({ command, copy, copied }: { command: string; copy: string; cop
 }
 
 export default async function SelfHostingPage() {
+  const locale = (await getLocale()) as Locale;
   const t = await getTranslations("SelfHosting");
+  const guideUrl = `${SITE_URL}${localizedHref("/self-hosting", locale)}`;
 
   return (
     <>
@@ -98,7 +103,8 @@ export default async function SelfHostingPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
                 >
-                  {t("repositoryCta")} <ArrowRight className="h-4 w-4" />
+                  <Github className="h-4 w-4" aria-hidden />
+                  {t("repositoryCta")} <ArrowRight className="h-4 w-4" aria-hidden />
                 </a>
               </Reveal>
             </div>
@@ -110,6 +116,17 @@ export default async function SelfHostingPage() {
           </div>
         </div>
       </section>
+
+      <SelfHostingAiActions
+        title={t("aiActionsTitle")}
+        body={t("aiActionsBody")}
+        prompt={t("aiActionsPrompt", { guide: guideUrl })}
+        pageUrl={guideUrl}
+        claudeLabel={t("askClaude")}
+        codexLabel={t("askCodex")}
+        copyLinkLabel={t("copyLink")}
+        copiedLabel={t("copied")}
+      />
 
       <section className="border-y border-border bg-muted/20 py-16 sm:py-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
