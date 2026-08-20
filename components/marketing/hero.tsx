@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Download } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { AgentLoopFigure } from "./agent-loop-figure";
+import { HeroPlatformCta } from "./hero-platform-cta";
 import { TrackedCta } from "./tracked-cta";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
@@ -116,26 +116,22 @@ export async function Hero() {
             style={{ "--hero-d": afterTitle + 0.12 } as CSSProperties}
             className="hero-reveal mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
           >
-            {/* THE FIRST ACTION IS DOWNLOAD (MIN-292).
+            {/* THE PRIMARY ACTION MATCHES THE PLATFORM (MIN-292).
 
-                It took the place of “Start Free”, and what
-                made this choice impossible was lifted at the same time: the app
-                opened on the LOGIN screen, so download without account
-                led into the wall. It now opens for registration
-                (`login-form.tsx`), and the gesture ends where it promised
-                d'aller.
+                On macOS, the desktop app is primary. Elsewhere, browser signup is
+                primary, so visitors are never offered a download they cannot use.
+                Both flows lead to account creation.
 
-                It targets the PAGE and not `/api/desktop/download`: release 120 MB
+                The Mac link targets the PAGE and not `/api/desktop/download`: release 120 MB
                 on the click of someone who has just read a title would be
                 brutal, and the page says what the button cannot say — the
                 Intel chip, system requirements, and notifications that
                 stop when you exit the app. */}
-            <Button asChild size="lg">
-              <a href={href("/download")}>
-                <Download data-icon="inline-start" />
-                {t("heroCtaDownload")}
-              </a>
-            </Button>
+            <HeroPlatformCta
+              downloadHref={href("/download")}
+              downloadLabel={t("heroCtaDownload")}
+              browserLabel={t("ctaButton")}
+            />
             {/* The secondary action no longer targets /pricing: request the price from
                 someone who has just read the title arrives too early, and the note
                 just below already answers (“free up to 2 projects”).
@@ -151,14 +147,11 @@ export async function Hero() {
             </Button>
           </div>
 
-          {/* The offer note, and the entry by the BROWSER — who exchanged his
-              place with the download (MIN-292).
+          {/* The offer note and a second browser entry point (MIN-292).
 
-              It goes down from one button to one note, but it doesn't DISAPPEAR, and
-              that's what matters: the landing is seen from Windows, Linux and
-              phones, where the top button leads nowhere. She
-              there also remains a full button in the navigation bar,
-              the screen permanently.
+              Browser signup is primary outside macOS. Keeping this link beside the
+              offer note gives Mac visitors the same path without competing with the
+              desktop download.
 
               She keeps her `TrackedCta`: `landing_cta_clicked` counts the
               entries to REGISTRATION, and this is one — move it
