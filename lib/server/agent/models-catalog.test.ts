@@ -81,6 +81,7 @@ async function freshCatalog(
       };
     }),
     resolveProviderDefaultModel: vi.fn(async () => null),
+    userHasByokKey: vi.fn(async () => endpoint?.mode === "byok"),
   }));
   vi.doMock("./model-plan", () => ({
     getModelPlanLimit: vi.fn(async () => null),

@@ -309,11 +309,10 @@ export async function updateAccountSettings({
     next[CYCLE_UPCOMING_COUNT_META_KEY] = n;
   }
 
-  // Agent preferences (MIN-46 / MIN-122): only block that does not live in
-  // `user_metadata`. Validated and written exactly like the PUT of
-  // /api/account/agent-preferences, plafond de plan compris — refuser ici ce
-  // which would be refused at launch avoids saving a preference which
-  // would then block all runs on the account.
+  // Agent preferences (MIN-46 / MIN-122): the only block outside
+  // `user_metadata`. It is validated and written exactly like
+  // /api/account/agent-preferences, including the platform model ceiling, so a
+  // saved preference cannot later block every platform run on the account.
   const agentPatch: Record<string, unknown> = {};
   if ("default_model" in input) {
     const model = input.default_model ?? null;

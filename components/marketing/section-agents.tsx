@@ -19,10 +19,9 @@ import type { ScreenshotSlotId } from "./screenshot-slots";
  * agents keep the tracker up to date, the in-house agent executes and opens the PRs,
  * and Numo does the same thing from the app with the context of the page.
  *
- * This is where what the page kept silent is said: the MCP server is not guarded by
- * NO plan (`app/api/mcp/route.ts` makes no control), while the agent
- * Numo asks for Go or Pro. The /pricing table showed “Agent Numo” crossed out
- * for Free, and a visitor concluded that connecting Claude Code was profitable.
+ * This is where the page makes the availability explicit: the MCP server and
+ * the Numo agent are included in every plan. The Free plan limits workspace
+ * size and AI usage, not access to agents.
  *
  * The installation command and the list of compatible agents come from the same
  * registry as account settings (`lib/mcp-agents.ts`): add an agent
@@ -123,11 +122,8 @@ export async function SectionAgents() {
             </ul>
 
             {/* What the agent costs, and to whom. The second sentence is the only
-                location of the landing where BYOK is said (MIN-149): it follows
-                the one that announces the paid plan, because that's where a dev
-                who already has a key wonders what we will charge him. The detail
-                complete is the “Your key, your inference” section of
-                /pricing. */}
+                landing-page mention of BYOK (MIN-149). The full detail lives in
+                the “Your key, your inference” section of /pricing. */}
             <p className="mt-5 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
               {t("agentsPlanNote")} {t("agentsByokNote")}
             </p>

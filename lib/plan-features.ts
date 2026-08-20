@@ -34,13 +34,11 @@ export function planFeatureLabels(plan: BillingPlan, t: PlanFeatureTranslator): 
     plan.maxMembersPerProject == null
       ? t("featureUnlimitedMembers")
       : t("featureMaxMembers", { n: plan.maxMembersPerProject }),
+    t("featureModelsUpTo", { n: plan.maxModelMultiplier }),
     ...(plan.allowAgents ? [t("featureAgents")] : []),
-    // BYOK follows the agent because it is ONLY valid for him (`resolveAgentApiKey`
-    // is only called by the agent loop) and is guarded by the same
-    // condition: `checkAgentQuota` refuses a run without `allowAgents`, personal key
-    // or not. This is the central argument of price (MIN-149) — the subscription buys
-    // minddy, the agent's inference can stay with you — so it reads on
-    // the map, not just in FAQ.
+    // BYOK follows the agent because it is only valid for it
+    // (`resolveAgentApiKey` is only called by the agent loop). It belongs on
+    // the plan card rather than being hidden in the FAQ.
     ...(plan.allowAgents ? [t("featureByok")] : []),
   ];
 }

@@ -67,14 +67,10 @@ export interface BillingPlan {
   allowAgents: boolean;
   /**
    * Guests per project — the people we bring in, the OWNER NOT INCLUDED
-   * (“2 guests” = two people in addition to yourself). `null` = unlimited.
+   * (“3 guests” = three people in addition to yourself). `null` = unlimited.
    *
-   * It was a boolean, true on the only Pro (MIN-199): no one could
-   * bring anyone in without spending €20/month. So we charged
-   * the network effect BEFORE it exists, when it is it which brings the
-   * following users. What sells is now QUANTITY — like
-   * `maxProjects` and `maxIssuesPerProject` — and what remains for the Pro is
-   * the growing team.
+   * Collaboration is part of the product, not a paid capability. The Free plan
+   * has a small team cap; every paid plan is unlimited.
    */
   maxMembersPerProject: number | null;
   /** Plan highlighted in the UI. */
@@ -86,12 +82,12 @@ export const BILLING_PLANS: BillingPlan[] = [
     id: "free",
     priceEurMonthly: 0,
     includedUsageUsd: 0.5,
-    maxModelMultiplier: 5,
+    maxModelMultiplier: 1,
     maxStorageBytes: 1 * 1024 * 1024 * 1024, // 1 Go
     maxProjects: 2,
     maxIssuesPerProject: 300,
-    allowAgents: false,
-    maxMembersPerProject: 2,
+    allowAgents: true,
+    maxMembersPerProject: 3,
   },
   {
     id: "go",
@@ -102,7 +98,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     maxProjects: null,
     maxIssuesPerProject: null,
     allowAgents: true,
-    maxMembersPerProject: 5,
+    maxMembersPerProject: null,
     highlighted: true,
   },
   {

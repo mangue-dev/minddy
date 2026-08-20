@@ -75,10 +75,9 @@ export async function PUT(request: NextRequest) {
     }
     // We store the form that the regex validated — not the white spaces around it.
     patch.default_model = model === null ? null : model.trim();
-    // Ceiling of the plan model: we refuse to REGISTER what would be refused
-    // at launch. The picker is already graying these models; here we close the entry
-    // free, and above all we avoid writing a preference which would then block
-    // all runs in the account. Nothing to check in BYOK: these are its tokens.
+    // Ceiling of the plan model: reject a platform value that would be refused
+    // at launch. The picker already grays these models; this also prevents a
+    // saved preference from blocking all platform runs on the account.
     if (patch.default_model) {
       try {
         await ensureModelInPlan({

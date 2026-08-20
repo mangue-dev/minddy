@@ -100,9 +100,9 @@ export async function ensureIssueLimit(projectId: string): Promise<void> {
 }
 
 /**
- * Invitation guard: the guest cap PER DRAFT of the owner's plan
- * (MIN-199). The owner does not count — he has no line `project_members` —,
- * so “2 guests” means two people in addition to yourself.
+ * Invitation guard: the guest cap of the owner's plan (MIN-199). The owner
+ * does not count — they have no `project_members` row — so “3 guests” means
+ * three people in addition to yourself.
  *
  * An invitation still PENDING occupies its place: without that, we send
  * fifty at once and the ceiling no longer wants anything say.
@@ -148,7 +148,7 @@ export async function ensureMemberSlotAvailable(
   }
 }
 
-/** Agent Launch Guard: The plan must include agents (Go/Pro). */
+/** Agent launch guard: the plan must include agents. */
 export async function ensureAgentsAllowed(userId: string): Promise<void> {
   if (!isManagedBillingEnabled()) return;
   const { plan } = await getResolvedBilling(userId);

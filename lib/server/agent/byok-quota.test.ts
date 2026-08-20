@@ -63,6 +63,7 @@ const {
 const USER = "5ad9b962-93e7-4a7c-a44b-f4925484ba93";
 
 beforeEach(() => {
+  process.env.MINDDY_EDITION = "cloud";
   process.env.MINDDY_MANAGED_AI = "1";
   process.env.OPENROUTER_API_KEY = "platform-key";
   keyRow = {
@@ -153,7 +154,7 @@ describe("getUserByok — la validation gouverne", () => {
   });
 });
 
-// ── The compute ceiling never rises ────────────────────────────
+// ── BYOK bypasses minddy usage ─────────────────────────────────
 
 const plan = { id: "pro", allowAgents: true, includedUsageUsd: 10 };
 let usage = {
@@ -171,7 +172,7 @@ vi.mock("@/lib/server/usage", () => ({
 
 const { checkAgentQuota } = await import("./quota");
 
-describe("checkAgentQuota — BYOK ne paye pas la microVM", () => {
+describe("checkAgentQuota — BYOK bypasses minddy usage", () => {
   beforeEach(() => {
     keyRow = {
       provider: "openrouter",
@@ -186,13 +187,24 @@ describe("checkAgentQuota — BYOK ne paye pas la microVM", () => {
     };
   });
 
-  it("laisse passer des tokens illimités", async () => {
+  it("allows unlimited tokens", async () => {
     usage.usedUsd = 9_999;
     const quota = await checkAgentQuota(USER);
     expect(quota).toMatchObject({ allowed: true, unlimited: true, mode: "byok" });
   });
 
-  it("ne lit ni plan ni ledger minddy pour le BYOK auto-hébergé", async () => {
+  it("does not read a minddy plan or ledger for BYOK", async () => {
+    usage.byFeature = { sandbox_compute: 99, routine_compute: 99 };
+    usage.usedUsd = 999;
+
+    await expect(checkAgentQuota(USER)).resolves.toEqual({
+      allowed: true,
+      unlimited: true,
+      mode: "byok",
+    });
+  });
+
+  it("does not read a minddy plan or ledger for self-hosted BYOK", async () => {
     process.env.MINDDY_MANAGED_AI = "";
     usage.byFeature = { sandbox_compute: 99 };
     usage.usedUsd = 999;
@@ -204,29 +216,23 @@ describe("checkAgentQuota — BYOK ne paye pas la microVM", () => {
     });
   });
 
-  it("refuse quand les minutes de microVM ont mangé le budget du plan", async () => {
+  it("does not meter sandbox compute", async () => {
     usage.byFeature = { sandbox_compute: 8, routine_compute: 3 };
     usage.usedUsd = 11;
-    const quota = await checkAgentQuota(USER);
-    expect(quota.allowed).toBe(false);
-    expect(quota.reason).toBe("usage_budget_exceeded");
+    await expect(checkAgentQuota(USER)).resolves.toMatchObject({
+      allowed: true,
+      unlimited: true,
+      mode: "byok",
+    });
   });
 
-  it("compte les deux features de microVM ensemble — un run et une routine brûlent les mêmes minutes", async () => {
-    usage.byFeature = { sandbox_compute: 6, routine_compute: 3 };
-    const quota = await checkAgentQuota(USER);
-    expect(quota.allowed).toBe(true);
-    expect(quota.spent).toBe(9);
-    expect(quota.remaining).toBe(1);
-  });
-
-  it("ignore les tokens dans ce décompte : ils sont payés par la clé de l'utilisateur", async () => {
+  it("ignores token usage", async () => {
     usage.byFeature = { agent_code: 500, sandbox_compute: 1 };
     usage.usedUsd = 501;
     await expect(checkAgentQuota(USER)).resolves.toMatchObject({ allowed: true });
   });
 
-  it("une clé non validée retombe sur le plafond plateforme, tokens compris", async () => {
+  it("falls back to the platform budget for an unvalidated key", async () => {
     keyRow!.validated_at = null;
     usage.usedUsd = 12;
     const quota = await checkAgentQuota(USER);

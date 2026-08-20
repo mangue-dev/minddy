@@ -16,11 +16,8 @@ import { getOpenRouterModelInfo } from "./openrouter-index";
  *
  * Two rules, and they explain everything else:
  *
- * 1. **Mindy quota only.** In BYOK, the user pays their own
- * tokens: refusing him a model would mean refusing him HIS money. The
- * callers therefore pass the `mode` that they already know (`checkAgentQuota`
- * calculates it at launch); the PR review always runs on the
- * platform key and therefore always passes `platform`.
+ * 1. **Minddy quota only.** BYOK users pay for their own tokens, so the
+ * product does not limit their model choice.
  *
  * 2. **What the user CHOOSES, not what minddy solves.** The cap
  * concerns a model named by someone — run override, default personal,
@@ -30,9 +27,9 @@ import { getOpenRouterModelInfo } from "./openrouter-index";
  * a cap that would deny minddy's own default would leave an account
  * Go without any path to a review.
  *
- * We never refuse on ignorance: unknown prices (model absent from
- * the index, endpoint which publishes nothing) → authorized. The usage budget remains
- * behind as a hard ceiling.
+ * We never refuse on ignorance: unknown prices (model absent from the index,
+ * endpoint which publishes nothing) → authorized. The platform usage budget
+ * remains behind as a hard ceiling.
  */
 
 /** What an account is allowed to choose, and the scale on which to read it. */
@@ -71,7 +68,7 @@ export async function getModelMultiplier(
 
 /**
  * Guard of a model CHOSEN by the user: raises `model_above_plan` (403) if
- * its multiplier exceeds the plan cap. `mode: "byok"` does not check anything.
+ * its multiplier exceeds the plan cap. BYOK skips this check.
  *
  * The error parameters carry the model, its multiplier and the ceiling:
  * the screen should be able to say "Claude Opus 5 (×12) exceeds the ceiling of your

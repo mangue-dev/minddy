@@ -51,7 +51,7 @@ export function useAgentMenuActions({
   onCustomWithAgent,
   onOpenSession,
 }: {
-  /** Agents available (paid plan + linked deposit) — otherwise, no agent entry. */
+  /** Agents available (linked repository) — otherwise, no agent entry. */
   agentsEnabled: boolean;
   /** The ticket already has an agent conversation. */
   hasSession: boolean;

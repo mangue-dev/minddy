@@ -2034,10 +2034,9 @@ export async function prReviewResponse(
  * reread does not require any branch to inherit or previous run, just a PR.
  *
  * Two guards PRE-FLIGHT, in this order:
- * 1. **the plan** — having Numo proofread code is an agent gesture, sold to
- * from Go like launching a run (`checkAgentQuota` refuses without
- * `allowAgents`). The Pull requests page is already behind `AgentsPlanGate`,
- * but a UI guard is not a guard: this is where it is refused;
+ * 1. **the plan** — having Numo proofread code is an agent gesture. The Pull
+ * requests page is already behind `AgentsPlanGate`, but a UI guard is not a
+ * guard: this is where an unavailable agent plan is refused;
  * 2. **the usage budget** — like everywhere where a click triggers an LLM call:
  * it’s the trigger that pays.
  * The third refusal (ceiling of plan model) and keeps it “a session at the

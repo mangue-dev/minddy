@@ -92,16 +92,15 @@ const GROUPS: ReadonlyArray<Group> = [
   {
     key: "agents",
     rows: [
-      // The MCP server has NO plan guard (app/api/mcp): connect its
-      // own agents is free, only the Numo agent is sold.
+      // The MCP server has no plan guard (app/api/mcp), and every current plan
+      // includes the Numo agent.
       { key: "mcp", hint: true, value: EVERYWHERE },
       { key: "plan", hint: true, value: EVERYWHERE },
       { key: "agent", hint: true, value: (plan) => plan.allowAgents },
       // A PR only exists in minddy carried by an agent run
       // (`app/api/pull-requests` reads `agent_runs`): same guard as the agent.
       { key: "pr", hint: true, value: (plan) => plan.allowAgents },
-      // BYOK raises the usage cap, not the plan guard: `checkAgentQuota`
-      // refuse a run without `allowAgents`, personal key or not.
+      // BYOK removes minddy usage caps; every current plan also includes agents.
       { key: "byok", hint: true, value: (plan) => plan.allowAgents },
     ],
   },

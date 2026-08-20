@@ -18,10 +18,10 @@ import { capability } from "@/lib/server/capabilities";
  * `defaultModel` is the instance setting (`pr_review_model`, /admin): this verse
  * what the “default” option of the picker points to.
  *
- * The model ceiling of the plan is attached here for EVERYONE, including BYOK:
- * the review is paid for on the platform key, therefore on the minddy quota. The defect
- * instance, he escapes the ceiling (see `resolvePrReviewModel`) — he is
- * deliberately expensive, and refusing it would close the review to small plans.
+ * The model ceiling is attached only for runs on minddy's quota. A validated
+ * BYOK key leaves the review's model choice uncapped. The instance default
+ * (`pr_review_model`) also escapes the ceiling: it is deliberately expensive,
+ * and refusing it would close reviews to smaller plans.
  */
 
 export const runtime = "nodejs";

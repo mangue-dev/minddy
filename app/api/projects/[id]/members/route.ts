@@ -103,11 +103,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  // 20/min and not the default 60. What the road writes is counted on the
-  // fingers: the plan caps at 2 guests (Free) or 5 (Go), and even a project
-  // Professional who has an entire team doing it by hand, one form to the
-  // times — 20 per minute, that's already an invitation every 3 seconds without
-  // released. Beyond that, it is no longer someone who invites.
+  // Invitation writes are deliberately below the default 60/min. Twenty per
+  // minute already allows an invitation every three seconds; more is not a
+  // human invitation workflow.
   const rl = checkSessionRateLimit(auth.user.id, "project-members-write", {
     limit: 20,
   });

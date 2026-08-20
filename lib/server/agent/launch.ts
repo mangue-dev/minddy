@@ -364,8 +364,8 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       surface: aiSurface,
     });
     model = resolved.model;
-    // Ceiling of plan model (Minddy quota only): it concerns what
-    // the user CHOSE — not about the faults of minddy, whose instance
+    // Ceiling of the plan model (minddy quota only): it concerns what the user
+    // CHOSE — not the defaults chosen by minddy itself, whose instance
     // answers. The picker is already graying these models; this refusal catches the case where the
     // choice precedes the constraint (personal default recorded, then downgrade).
     if (resolved.chosenByUser) {

@@ -16,10 +16,9 @@ import { AGENT_PROVIDERS } from "@/lib/agent-providers";
  * WHAT NOT TO MAKE HIM SAY. The BYOK only covers the loop of
  * the code agent — `resolveAgentApiKey` (lib/server/agent/model.ts) is
  * only called by `execute.ts`. Numo in the app, the PR review, the dictation and the
- * feedback run on the platform key and are deducted from the usage included. And
- * the key does not raise the plan guard: `checkAgentQuota` refuses a run without
- * `allowAgents`. These two reservations fit in the footnote of the section, and
- * they remain there as long as the code has not changed.
+ * feedback run on the platform key and are deducted from the usage included.
+ * The key removes the agent's plan and model limits. These reservations fit in
+ * the footnote of the section and remain there as long as the code does not change.
  *
  * The providers come from the registry (`AGENT_PROVIDERS`), like the wizard des
  * settings: adding one makes it appear here. The generic is left out of the

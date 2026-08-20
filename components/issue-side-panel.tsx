@@ -939,8 +939,8 @@ export function IssueSidePanel({
                   key={issue.id}
                   plan={issue.plan}
                   onCommit={(plan) => void patch({ plan })}
-                  // Numo only appears where it can work: paid plan
-                  // + linked repository (same door as ⇧A / the “⋯” menu). The prompts
+                  // Numo only appears where it can work: a linked repository
+                  // (the same door as ⇧A / the “⋯” menu). The prompts
                   // Copyable ones work with any external agent.
                   onWriteWithAgent={agentsEnabled ? writePlanWithAgent : undefined}
                   onCopyPrompt={() => void copyPlanPrompt()}

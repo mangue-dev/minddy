@@ -230,9 +230,8 @@ function scheduleRefusal(err: unknown): Extract<RoutineResult<never>, { ok: fals
 }
 
 /**
- * The template cap of the plan, applied to the CHOSEN template for the routine. The
- * ceiling only applies to the minddy quota (in BYOK, the user pays his
- * tokens): we therefore read the account mode, like the launch.
+ * The template cap of the plan, applied to the chosen template for the
+ * routine. BYOK users choose their own models without this ceiling.
  */
 async function refuseModelAbovePlan(
   userId: string,

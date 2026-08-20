@@ -1,6 +1,11 @@
 import "server-only";
 
-import { getRootDefaultModel, resolveAgentApiKey, resolveProviderDefaultModel } from "./model";
+import {
+  getRootDefaultModel,
+  resolveAgentApiKey,
+  resolveProviderDefaultModel,
+  userHasByokKey,
+} from "./model";
 import { getBaselinePricing, getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
 import { listOpenRouterIndex } from "./openrouter-index";
 import {
@@ -67,9 +72,8 @@ export interface AgentModelsCatalog {
   defaultModel: string | null;
   models: AgentModelEntry[];
   /**
- * Plan multiplier cap, or `null` when none applies:
- * BYOK (user pays for tokens) and admin catalog. `null` = the picker
- * does not display a multiplier nor is it grayed out.
+   * Plan multiplier cap, or `null` when none applies (BYOK and the admin
+   * catalog). `null` = the picker does not display a multiplier or gray out a model.
  */
   maxMultiplier?: number | null;
   /** Account Plan — to name the limit in the UI (“your Go plan”). */
@@ -195,9 +199,9 @@ async function loadModels(
 }
 
 /**
- * Locates each model on the baseline scale, attaches the ceiling of the plan and the
- * list of recommended ones. `limit` absent (BYOK) → neither multiplier displayed nor
- * grayed out model; the advice remains — they don't talk about money.
+ * Locates each model on the baseline scale, attaches the ceiling of the plan,
+ * and resolves recommended models. Without a plan limit or a calculable
+ * baseline, the picker cannot display multipliers or gray out models.
  *
  * Everything that comes out of here is recalculated on each call, never cached with
  * the list: the baseline like the advice are lines `app_config` that a
@@ -299,9 +303,8 @@ async function resolveRecommended(
  * request. Never raises: on upstream failure, returns the expired cache if it
  * exists, otherwise an empty list.
  *
- * The multipliers and the cap are ONLY joined in platform mode: en
- * BYOK, the user pays for his own tokens — show him a cost scale
- * minddy and graying out half the catalog would be wrong twice.
+ * The multipliers and the cap only apply in platform mode. BYOK users pay for
+ * their own tokens, so the picker does not restrict their model choices.
  */
 export async function getAgentModelsForUser(userId: string): Promise<AgentModelsCatalog> {
   // Active Provider: BYOK of the account, or OpenRouter platform key.
@@ -370,18 +373,16 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
 }
 
 /**
- * Catalog of the PR review: that of the PLATFORM key, plus the ceiling of
- * counts. The review always runs on this key, therefore always on the quota
- * minddy — the ceiling even applies to a BYOK account, which will therefore see __
- * multipliers here while its agent picker shows none. This is
- * not an inconsistency: they are two different expenses, one his,
- * the other minddy's.
+ * Catalog of the PR review: the platform-compatible catalog with the plan
+ * ceiling when the run uses minddy's quota. BYOK removes that ceiling, just as
+ * it does for the code-agent picker.
  */
 export async function getPrReviewModelCatalog(userId: string): Promise<AgentModelsCatalog> {
-  const [models, limit] = await Promise.all([
+  const [models, hasByok] = await Promise.all([
     getPlatformModelCatalog(),
-    getModelPlanLimit(userId),
+    userHasByokKey(userId),
   ]);
+  const limit = hasByok ? null : await getModelPlanLimit(userId);
   return {
     provider: DEFAULT_AGENT_PROVIDER,
     defaultModel: null,

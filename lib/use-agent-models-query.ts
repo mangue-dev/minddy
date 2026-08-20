@@ -55,8 +55,8 @@ interface AgentModelsResult {
   defaultModel: string | null;
   models: AgentModel[];
   /**
- * Plan multiplier cap, or null when none applies (BYOK,
- * admin catalog) — the picker then displays neither multiplier nor grayed out.
+ * Plan multiplier cap, or null when none applies (BYOK or the admin catalog)
+ * — the picker then displays neither multiplier nor grayed-out models.
  */
   maxMultiplier: number | null;
   /** Account plan, to name it in the explanation of the limit. */

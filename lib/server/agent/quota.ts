@@ -9,37 +9,23 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Code agent access control (MIN-46 / MIN-10, recast by MIN-72):
- * 1. the PLAN must include agents (`allowAgents` — Free: no), BYOK or not.
- * 2. BYOK VALIDATED → LLM usage UNLIMITED (at its own expense), BUT the compute of the
- * microVM keeps its ceiling (see below).
- * 3. otherwise → monthly usage budget of the plan (USD at raw cost, ALL features
+ * 1. A validated BYOK key is unlimited: minddy neither meters its tokens nor
+ *    applies a plan or compute cap.
+ * 2. Without BYOK, the plan must include agents (`allowAgents`; all current
+ *    plans do) and its monthly usage budget applies (USD at raw cost, ALL features
  * combined — the old `agent_monthly_cap_usd` ceiling is replaced).
  *
- * The counted window comes from lib/server/usage.ts: current Stripe period or
- * calendar month, bounded by the admin watermark `agent_quota_resets`.
+ * The platform-quota window comes from lib/server/usage.ts: current Stripe
+ * period or calendar month, bounded by the admin watermark `agent_quota_resets`.
  *
- * ## What BYOK raises, and what it does not raise (MIN-344)
+ * ## BYOK validation (MIN-344)
  *
- * It raised EVERYTHING, and it was enough to declare a key - even an invented one - for that.
- * Two corrections, in two places:
+ * A declared key used to be enough to bypass every limit, even if it was
+ * invalid. The key must instead be recognized by its provider:
  * • the key must have been RECOGNIZED by the supplier (`user_ai_keys.validated_at`,
  * set by the `byok-validate.ts` probe); `getUserByok` ignores the others,
  * so `userHasByokKey` doesn't see them either;
- * • the compute sandbox NEVER rises. The tokens are paid by the key of
- * the user, the microVM is not: it runs on the Vercel account of
- * minddy, at the minute (`SANDBOX_USD_PER_MINUTE`). A personal key cannot therefore
- * open an unlimited compute tap — it was the only ceiling that
- * protected an expense that remains ours.
- *
- * The compute ceiling is the usage budget of the plan, read on the sole lines
- * of microVM (`sandbox_compute` + `routine_compute`). In other words: a BYOK account
- * is entitled to as many minutes of microVM as a platform account
- * could afford by spending its entire budget - and its own tokens, en
- * more, without limit. It's broad, and it's limited.
  */
-
-/** Ledger lines measuring MICROVM MINUTES, paid by minddy. */
-const COMPUTE_FEATURES = ["sandbox_compute", "routine_compute"] as const;
 
 export interface AgentQuota {
   allowed: boolean;
@@ -62,6 +48,7 @@ export async function checkAgentQuota(
   surface: Extract<AiSurface, "agent" | "automations"> = "agent",
 ): Promise<AgentQuota> {
   const hasByok = await userHasByokKey(userId, surface);
+  if (hasByok) return { allowed: true, unlimited: true, mode: "byok" };
   // In self-hosting, the tokens and the endpoint belong to the operator.
   // A BYOK key (or a local endpoint) is therefore authorized without reading a plan or
   // from ledger minddy ; without it, we refuse any platform call beforehand.
@@ -80,31 +67,6 @@ export async function checkAgentQuota(
       planId: plan.id,
       nextPlanId: nextBillingPlanId(plan.id),
       reason: "agents_not_in_plan",
-    };
-  }
-
-  if (hasByok) {
-    const usage = await getUserUsage(userId);
-    const cap = plan.includedUsageUsd;
-    // The TWO features of microVM: an agent run and a routine pass
-    // burn the same minutes on the same Vercel account, only the line of
-    // invoice differs. Counting them separately would leave half the tap
-    // ouverte.
-    const compute = COMPUTE_FEATURES.reduce(
-      (sum, feature) => sum + (usage.byFeature[feature] ?? 0),
-      0,
-    );
-    const allowed = compute < cap;
-    return {
-      allowed,
-      unlimited: true,
-      mode: "byok",
-      planId: plan.id,
-      spent: compute,
-      cap,
-      remaining: Math.max(0, cap - compute),
-      resetsAt: usage.period.end,
-      ...(allowed ? {} : { reason: "usage_budget_exceeded" as const }),
     };
   }
 

@@ -29,8 +29,8 @@ export const FAQ_KEYS = [
  * on your key" is what makes the rest of the page readable — the subscription
  * buys minddy, the included usage is the convenience of who doesn't want to bother.
  * The section “Your key, your inference” says it earlier on the page; the
- * question remains here because it carries both caveats (the key is only worth
- * to the agent, and it does not lift the plan guard).
+ * question remains here because it carries both caveats (the key only applies
+ * to the agent and does not cover Numo in the app).
  *
  * Money matters follow, then `mcp` — the last objection that the
  * table left open: connecting ITS agents is not guarded by any plan.

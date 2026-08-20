@@ -91,6 +91,28 @@ describe("maxModelMultiplier", () => {
   });
 });
 
+describe("structural plan limits", () => {
+  it("keeps Free small and makes every paid plan unlimited", () => {
+    const [free, ...paid] = BILLING_PLANS;
+
+    expect(free).toMatchObject({
+      maxProjects: 2,
+      maxIssuesPerProject: 300,
+      maxMembersPerProject: 3,
+      allowAgents: true,
+      maxModelMultiplier: 1,
+    });
+    for (const plan of paid) {
+      expect(plan).toMatchObject({
+        maxProjects: null,
+        maxIssuesPerProject: null,
+        maxMembersPerProject: null,
+        allowAgents: true,
+      });
+    }
+  });
+});
+
 /**
  * MIN-348 — the storage cap is the only plan field that TypeScript
  * does not apply: the sending goes from the right browser to the bucket, and it is the

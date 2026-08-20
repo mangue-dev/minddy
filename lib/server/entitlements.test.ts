@@ -116,6 +116,7 @@ const PROJECT = "22222222-2222-4222-8222-222222222222";
 const TRASHED = "2026-07-01T00:00:00.000Z";
 
 beforeEach(() => {
+  process.env.MINDDY_EDITION = "cloud";
   process.env.MINDDY_MANAGED_BILLING = "1";
   process.env.STRIPE_SECRET_KEY = "sk_test";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
@@ -127,12 +128,13 @@ beforeEach(() => {
   issueRows = [];
   memberRows = [];
   invitationRows = [];
-  // Free Plan: 2 projects, 300 tickets per project, 2 guests per project.
-  plan = { maxProjects: 2, maxIssuesPerProject: 300, maxMembersPerProject: 2 };
+  // Free plan: 2 projects, 300 issues per project, and 3 guests per project.
+  plan = { maxProjects: 2, maxIssuesPerProject: 300, maxMembersPerProject: 3 };
 });
 
 describe("project limit", () => {
   it("sells no structural limit to a self-hosted instance", async () => {
+    process.env.MINDDY_EDITION = "self-hosted";
     process.env.MINDDY_MANAGED_BILLING = "";
     projectRows = [
       { id: "p1", owner_id: OWNER, deleted_at: null },
@@ -183,7 +185,7 @@ describe("ticket limit per project", () => {
   });
 });
 
-describe("plafond d'invités par projet (MIN-199)", () => {
+describe("guest cap per project (MIN-199)", () => {
   const member = (n: number): Row => ({
     id: `m${n}`,
     project_id: PROJECT,
@@ -200,7 +202,7 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     expires_at: expires,
   });
 
-  it("allows the first two guests on the free plan through", async () => {
+  it("allows the first three guests on the free plan", async () => {
     await expect(
       ensureMemberSlotAvailable(OWNER, PROJECT)
     ).resolves.toBeUndefined();
@@ -211,11 +213,14 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     ).resolves.toBeUndefined();
 
     memberRows = [member(1), member(2)];
+    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).resolves.toBeUndefined();
+
+    memberRows = [member(1), member(2), member(3)];
     await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
   });
 
   it("counts a PENDING invitation as an occupied slot", async () => {
-    memberRows = [member(1)];
+    memberRows = [member(1), member(2)];
     invitationRows = [invitation(1, "pending")];
     await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
   });
@@ -250,7 +255,7 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("never counts anything when the plan is unlimited (Pro)", async () => {
+  it("never counts anything when the plan is unlimited (Go and Pro)", async () => {
     plan.maxMembersPerProject = null;
     memberRows = Array.from({ length: 50 }, (_, i) => member(i));
     await expect(
@@ -259,8 +264,9 @@ describe("plafond d'invités par projet (MIN-199)", () => {
   });
 
   it("does not downgrade a project already above its cap", async () => {
-    // Subscription expired: the 4 members remain, only the 5th invitation is
-    // refused — custody is only carried out upon invitation, never retroactively.
+    // An expired subscription leaves four guests in place; only the next
+    // invitation is refused. Enforcement happens on invitation, never
+    // retroactively.
     memberRows = [member(1), member(2), member(3), member(4)];
     await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
     expect(memberRows).toHaveLength(4);
