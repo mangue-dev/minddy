@@ -35,6 +35,20 @@ export interface CapabilityStatus {
 
 export type CapabilityEnvironment = Record<string, string | undefined>;
 
+export type AgentExecutionBackend = "self-hosted" | "vercel" | null;
+
+/**
+ * The server sandbox selected for every non-desktop agent run. Interactive
+ * Numo sessions, routines, automations, and reviews deliberately share this
+ * decision instead of selecting execution infrastructure per feature.
+ */
+export function resolveAgentExecutionBackend(
+  env: CapabilityEnvironment,
+): AgentExecutionBackend {
+  const backend = env.AGENT_EXECUTION_BACKEND?.trim();
+  return backend === "self-hosted" || backend === "vercel" ? backend : null;
+}
+
 import { resolveDeploymentEdition } from "@/lib/env";
 
 const present = (env: CapabilityEnvironment, key: string): boolean =>
@@ -151,7 +165,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     ready: "Managed OpenRouter quota is enabled; BYOK remains an alternative.",
   });
 
-  const sandboxBackend = env.AGENT_EXECUTION_BACKEND?.trim();
+  const sandboxBackend = resolveAgentExecutionBackend(env);
   const sandboxKeys = present(env, "VERCEL")
     ? []
     : missing(env, [

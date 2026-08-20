@@ -87,11 +87,13 @@ analytics, Edge Functions, image transformation, the pooler, and other unused
 containers. Database, attachments, and backup storage grow over time; keep
 restorable backups on separate storage.
 
-### Code agents and routines
+### Numo agents and routines
 
-The reference server installation includes scheduled routines. The scheduler
-calls minddy on the private Compose network, and the built-in runner opens one
-restricted Docker sandbox per agent run on the server:
+The reference server installation includes both interactive Numo agents and
+scheduled routines. They enter the same launch and execution path. The scheduler
+calls minddy on the private Compose network for due routines, while an interactive
+run starts from the app; the built-in runner then opens one restricted Docker
+sandbox per run on the server in either case:
 
 ```dotenv
 AGENT_EXECUTION_BACKEND=self-hosted
@@ -101,6 +103,9 @@ AGENT_CONTROL_ORIGIN=http://minddy:3000
 
 The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`; the operator
 does not configure a separate execution service or keep a desktop app online.
+Starting Numo from the app therefore opens a server sandbox just like a routine.
+An explicit desktop-local run remains a separate opt-in for working directly in
+a folder attached to the desktop app.
 The runner has access to the Docker socket so it can create sandboxes. The
 sandbox containers do not receive that socket, the Supabase network, or instance
 secrets. They receive CPU, memory, process, capability, and filesystem limits.

@@ -8,6 +8,7 @@ import {
   type ModelReasoning,
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
+import type { AgentExecutionBackend } from "@/lib/capabilities";
 
 /**
  * Model catalog for the picker (MIN-46). `staleTime` long: the catalog
@@ -70,6 +71,8 @@ interface AgentModelsResult {
   recommended: string[];
   /** The cloud backend can actually launch a session on this instance. */
   cloudExecutionConfigured: boolean;
+  /** Identifies whether that server-side sandbox is local to the instance or hosted. */
+  executionBackend: AgentExecutionBackend;
   /** Scheduled task routes are protected and can be scheduled. */
   routineSchedulingConfigured: boolean;
   /** Non-secret local config: its catalog is read by the Electron shell. */
@@ -88,6 +91,7 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     planId: null,
     recommended: [],
     cloudExecutionConfigured: false,
+    executionBackend: null,
     routineSchedulingConfigured: false,
   };
   const res = await fetch(SCOPE_ENDPOINTS[scope]);
@@ -100,6 +104,7 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     planId?: string | null;
     recommended?: string[];
     cloudExecutionConfigured?: boolean;
+    executionBackend?: AgentExecutionBackend;
     routineSchedulingConfigured?: boolean;
     localEndpoint?: {
       provider?: AgentProviderId;
@@ -123,6 +128,7 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     // An unknown ability remains unavailable: activate it during a failure or
     // a loading would offer an action which the server will then refuse in 503.
     cloudExecutionConfigured: data.cloudExecutionConfigured ?? false,
+    executionBackend: data.executionBackend ?? null,
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
@@ -155,6 +161,7 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     planId: data?.planId ?? null,
     recommended: data?.recommended ?? [],
     cloudExecutionConfigured: data?.cloudExecutionConfigured ?? false,
+    executionBackend: data?.executionBackend ?? null,
     routineSchedulingConfigured: data?.routineSchedulingConfigured ?? false,
     loading: isPending,
   };

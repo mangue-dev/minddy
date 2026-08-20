@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getPrReviewModelCatalog } from "@/lib/server/agent/models-catalog";
 import { getInstancePrReviewModel } from "@/lib/server/agent/model";
 import { capability } from "@/lib/server/capabilities";
+import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 
 /**
  * Picker's catalog "have verified by Numo".
@@ -38,5 +39,6 @@ export async function GET(request: NextRequest) {
     ...catalog,
     defaultModel,
     cloudExecutionConfigured: capability("agentExecution").configured,
+    executionBackend: resolveAgentExecutionBackend(process.env),
   });
 }

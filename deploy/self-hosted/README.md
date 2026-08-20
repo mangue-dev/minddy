@@ -34,8 +34,10 @@ docker compose --env-file "$MINDDY_DEPLOY_DIR/.env" \
   -f "$MINDDY_DEPLOY_DIR/compose.managed.yml" up -d
 ```
 
-The same command starts the scheduler and built-in agent runner. No additional
-profile or external sandbox account is required for routines.
+The same command starts the scheduler and built-in agent runner. Interactive
+Numo runs and routine runs both create isolated Docker sandboxes through this
+runner. No additional profile, desktop app, or external sandbox account is
+required.
 
 ### Official Supabase stack
 

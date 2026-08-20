@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Check, ChevronsUpDown, Cloud, FolderPlus, GitBranch, Laptop } from "lucide-react";
+import { Check, ChevronsUpDown, Cloud, FolderPlus, GitBranch, Laptop, Server } from "lucide-react";
 import {
   Button,
   Command,
@@ -16,6 +16,7 @@ import {
 } from "mangue-ui";
 import type { LocalRepoRefusal } from "@/lib/desktop/local-repo";
 import type { MessageKey } from "@/lib/i18n-keys";
+import type { AgentExecutionBackend } from "@/lib/capabilities";
 import {
   Tooltip,
   TooltipContent,
@@ -71,6 +72,7 @@ export function EnvironmentCombobox({
   needsAttach = false,
   localAvailable = true,
   cloudAvailable = true,
+  executionBackend = "vercel",
   onAttach,
   disabled,
   disabledTooltip,
@@ -86,6 +88,8 @@ export function EnvironmentCombobox({
   localAvailable?: boolean;
   /** False for a private BYOK endpoint: it cannot exit to a microVM. */
   cloudAvailable?: boolean;
+  /** Changes the server option from generic cloud wording to this instance's sandbox. */
+  executionBackend?: AgentExecutionBackend;
   onAttach?: () => void;
   disabled?: boolean;
   /** Tooltip of the locked chip (frozen environment for the conversation). */
@@ -96,13 +100,15 @@ export function EnvironmentCombobox({
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
 
-  const Icon = value === "cloud" ? Cloud : value === "worktree" ? GitBranch : Laptop;
+  const serverIsSelfHosted = executionBackend === "self-hosted";
+  const ServerIcon = serverIsSelfHosted ? Server : Cloud;
+  const Icon = value === "cloud" ? ServerIcon : value === "worktree" ? GitBranch : Laptop;
   // The button names the type of environment, never the concrete path. THE
   // folder remains useful in the help menu, but a long path makes the chip
   // unstable and contradicts the local/cloud vocabulary of the application.
   const label =
     value === "cloud"
-      ? t("environmentCloud")
+      ? t(serverIsSelfHosted ? "environmentServerSandbox" : "environmentCloud")
       : value === "worktree"
         ? t("environmentWorktree")
         : t("environmentLocal");
@@ -171,11 +177,13 @@ export function EnvironmentCombobox({
           <CommandList className="p-1">
             {cloudAvailable ? (
               <CommandItem value="cloud" onSelect={() => pick("cloud")}>
-                <Cloud className="size-4 shrink-0 text-muted-foreground" />
+                <ServerIcon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1">
-                  <span className="block">{t("environmentCloud")}</span>
+                  <span className="block">
+                    {t(serverIsSelfHosted ? "environmentServerSandbox" : "environmentCloud")}
+                  </span>
                   <span className="block text-xs text-muted-foreground">
-                    {t("environmentCloudHint")}
+                    {t(serverIsSelfHosted ? "environmentServerSandboxHint" : "environmentCloudHint")}
                   </span>
                 </span>
                 <Check

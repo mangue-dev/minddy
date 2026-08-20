@@ -74,6 +74,7 @@ import {
 import { checkAgentQuota } from "./quota";
 import { generatedAgentBranchName } from "./branch-name";
 import { resolveServerExecSecret, signServerExecToken } from "./server-exec-token";
+import { resolveAgentExecutionTarget } from "@/lib/agent-execution-target";
 
 /** The tightest of the provided ceilings (omitted values impose no limit). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
@@ -524,7 +525,11 @@ export async function executeAgentRun(
   /** A local turn never starts a microVM. Computed before the first event so its
    *  write can overlap all job preparation. */
   const localTurn = run.local_exec === true;
-  const selfHostedSandbox = !localTurn && process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted";
+  const executionTarget = resolveAgentExecutionTarget(
+    { localExec: localTurn },
+    process.env,
+  );
+  const selfHostedSandbox = executionTarget === "self-hosted";
 
   /**
    * CHUNK COMPUTE METERING, callable BEFORE suspension (MIN-224).

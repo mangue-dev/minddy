@@ -515,6 +515,7 @@ export function PrDetail({
   const {
     defaultModel: providerDefaultModel,
     cloudExecutionConfigured,
+    executionBackend,
   } = useAgentModelsQuery();
   const { cloudExecutionConfigured: reviewExecutionConfigured } =
     useAgentModelsQuery("review");
@@ -1959,6 +1960,7 @@ export function PrDetail({
                   onChange={setEnvironment}
                   localAvailable={localRepo.available}
                   cloudAvailable={cloudExecutionConfigured}
+                  executionBackend={executionBackend}
                   folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                   needsAttach={localRepo.state?.status !== "ready"}
                   onAttach={() => {

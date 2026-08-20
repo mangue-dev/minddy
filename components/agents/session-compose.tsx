@@ -224,6 +224,7 @@ export function SessionCompose({
     provider,
     defaultModel: providerDefaultModel,
     cloudExecutionConfigured,
+    executionBackend,
   } = useAgentModelsQuery();
   const aiAvailability = useAiSurfaceAvailability("agent");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
@@ -485,6 +486,7 @@ export function SessionCompose({
                         onChange={setEnvironment}
                         localAvailable={localRepo.available}
                         cloudAvailable={!localEndpoint && cloudExecutionConfigured}
+                        executionBackend={executionBackend}
                         folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                         needsAttach={localRepo.state?.status !== "ready"}
                         onAttach={() => {

@@ -11,6 +11,7 @@ import {
   type ShellResult,
 } from "./repo-host";
 import type { HarnessLayout } from "./harness-layout";
+import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 
 /**
  * Code Agent Vercel Sandbox Layer (MIN-46) — the microVM itself: its
@@ -175,7 +176,7 @@ export async function getOrCreateAgentSandbox(opts: {
    * injection) — while the callers wire it. */
   networkPolicy?: NetworkPolicy;
 }): Promise<{ sandbox: AgentSandbox; created: boolean }> {
-  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+  if (resolveAgentExecutionBackend(process.env) === "self-hosted") {
     requireCapability("agentExecution");
     const result = await SelfHostedSandbox.getOrCreate(opts.name);
     if (result.created) await opts.onCreate(result.sandbox);
@@ -230,7 +231,7 @@ export function sandboxName(sandbox: AgentSandbox): string {
  * Best-effort — never raises (already stopped/expired/not found).
  */
 export async function stopSandboxByName(name: string): Promise<void> {
-  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+  if (resolveAgentExecutionBackend(process.env) === "self-hosted") {
     const sandbox = await SelfHostedSandbox.get(name).catch(() => null);
     await sandbox?.stop().catch(() => {});
     return;
@@ -257,7 +258,7 @@ export async function stopSandboxByName(name: string): Promise<void> {
  * rest is already served by the forge, which costs nothing.
  */
 export async function getAgentSandboxByName(name: string): Promise<AgentSandbox | null> {
-  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+  if (resolveAgentExecutionBackend(process.env) === "self-hosted") {
     return SelfHostedSandbox.get(name).catch(() => null);
   }
   if (!requireSandboxCapability()) return null;
@@ -322,7 +323,7 @@ export async function isLoopCommandAlive(
   sandboxId: string,
   commandId: string,
 ): Promise<boolean | null> {
-  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+  if (resolveAgentExecutionBackend(process.env) === "self-hosted") {
     try {
       const sandbox = await SelfHostedSandbox.get(sandboxId);
       if (!sandbox) return null;

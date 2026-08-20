@@ -526,6 +526,7 @@ export function AgentConversation({
     provider,
     defaultModel: providerDefaultModel,
     cloudExecutionConfigured,
+    executionBackend,
   } = useAgentModelsQuery();
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
@@ -960,6 +961,7 @@ export function AgentConversation({
                       onChange={setEnvironment}
                       localAvailable={localRepo.available}
                       cloudAvailable={!localEndpoint && cloudExecutionConfigured}
+                      executionBackend={executionBackend}
                       folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                       needsAttach={localRepo.state?.status !== "ready"}
                       onAttach={() => {
