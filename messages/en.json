@@ -4349,7 +4349,7 @@
     "more_import_body": "The Linear export, the Jira export, or any CSV.",
     "more_api_title": "Public API",
     "more_api_body": "Your own tools post issues and feedback into minddy.",
-    "openSourceTitle": "Open source, down to the code",
+    "openSourceTitle": "Open source",
     "openSourceSubtitle": "Read how minddy works, run it on infrastructure you control, or help shape what comes next.",
     "openSource_inspect_title": "Inspect it",
     "openSource_inspect_body": "The application code, release process, and security model are out in the open.",
