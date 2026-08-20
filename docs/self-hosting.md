@@ -69,6 +69,27 @@ bootstrap also creates the five generated secrets for a local install so that
 enabling an associated feature later does not require storing a weak placeholder.
 Secrets must be at least 32 characters where the application validates them.
 
+### Code agents and routines
+
+`AGENT_EXECUTION_BACKEND=local` supports only runs started from the desktop
+application. It cannot run a routine: a scheduler has no user machine to wake
+or execute on. Leave scheduled jobs disabled when using that backend.
+
+To run routines from a self-hosted deployment, use Vercel Sandbox explicitly:
+
+```dotenv
+AGENT_EXECUTION_BACKEND=vercel
+VERCEL_TOKEN=operator-vercel-token
+VERCEL_TEAM_ID=operator-vercel-team-id
+VERCEL_PROJECT_ID=operator-vercel-project-id
+MINDDY_PUBLIC_APP_URL=https://tickets.example.com
+```
+
+The Vercel account and Sandbox costs remain operator-owned. Enable an HTTP
+scheduler as well (`CRON_SECRET` and the `scheduled-jobs` Compose profile, or
+an equivalent authenticated scheduler); otherwise a routine can be created but
+will never be executed.
+
 For a public service, set `MINDDY_PUBLIC_APP_URL` to one absolute HTTPS origin with
 no path or trailing slash. It is used for invitation links, OAuth/MCP metadata,
 and webhook callbacks. Locally it may be omitted, which means

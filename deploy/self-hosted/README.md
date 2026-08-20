@@ -94,6 +94,14 @@ and sends authenticated requests only to the internal `minddy` service. It is
 behind the `scheduled-jobs` profile so restore and maintenance operators can
 leave it off. `CRON_SECRET` is mandatory whenever the profile is enabled.
 
+Routines additionally need an execution backend. The default
+`AGENT_EXECUTION_BACKEND=local` supports desktop-initiated work only; it cannot
+run scheduled work on the server. To enable routines, set
+`AGENT_EXECUTION_BACKEND=vercel` and provide `VERCEL_TOKEN`, `VERCEL_TEAM_ID`,
+and `VERCEL_PROJECT_ID` in the protected environment file. The Compose host
+does not need to run on Vercel: those credentials authorize its connection to
+the operator-owned Vercel Sandbox project.
+
 Run the versioned validation before an operator smoke test:
 
 ```bash
