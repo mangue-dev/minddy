@@ -34,13 +34,15 @@ minddy are explicit opt-ins: an environment key alone does not activate them.
   activate code execution. Minddy Cloud deployments that offer routines must
   set `AGENT_EXECUTION_BACKEND=vercel` explicitly. Without it, a scheduled
   routine is skipped with `executionBackendUnavailable`.
-- `AGENT_EXECUTION_BACKEND=vercel` is the only choice that authorizes the creation or
-  the awakening of a Vercel Sandbox. Vercel identifiers present for domains
+- `AGENT_EXECUTION_BACKEND=vercel` authorizes the creation or awakening of a
+  Vercel Sandbox. Vercel identifiers present for domains
   therefore never trigger compute. On a Vercel-hosted deployment, Sandbox uses
   OIDC. Outside Vercel, set `VERCEL_TOKEN`, `VERCEL_TEAM_ID`,
   `VERCEL_PROJECT_ID`, and `MINDDY_PUBLIC_APP_URL` so the application can use
-  the operator's Vercel Sandbox project. `AGENT_EXECUTION_BACKEND=local` is
-  limited to desktop-initiated runs and cannot execute scheduled routines.
+  the operator's Vercel Sandbox project. `AGENT_EXECUTION_BACKEND=self-hosted`
+  uses the built-in server runner and is the default in the reference Compose
+  profiles. `AGENT_EXECUTION_BACKEND=local` is limited to desktop-initiated runs
+  and cannot execute scheduled routines.
 - `EMAIL_PROVIDER=resend` is required before any call to the Resend API. The
   senders are mandatory and instance-specific; no minddy domain is chosen by
   default.

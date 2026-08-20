@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 export function parseArgs(argv) {
-  const options = { scheduler: true };
+  const options = {};
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     const value = () => {
@@ -23,7 +23,6 @@ export function parseArgs(argv) {
     else if (arg === "--supabase-compose") options.supabaseCompose = resolve(value());
     else if (arg === "--public-url") options.publicUrl = value();
     else if (arg === "--persistence-url") options.persistenceUrl = value();
-    else if (arg === "--skip-scheduler") options.scheduler = false;
     else if (arg === "--help" || arg === "-h") options.help = true;
     else throw new Error(`Unknown option: ${arg}`);
   }
@@ -83,15 +82,12 @@ export async function smoke(options) {
   if (options.persistenceUrl && before !== await fingerprint(options.persistenceUrl)) {
     throw new Error("The persistence URL changed after the application and proxy restart.");
   }
-  if (options.scheduler) {
-    runDocker(composeArgs(options, ["--profile", "scheduled-jobs", "up", "-d", "--wait", "scheduler"]));
-  }
 }
 
 export async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   if (options.help) {
-    console.log("Usage: node scripts/smoke-self-hosted-compose.mjs --profile managed|full --env-file PATH --public-url URL [--supabase-compose PATH] [--persistence-url URL] [--skip-scheduler]");
+    console.log("Usage: node scripts/smoke-self-hosted-compose.mjs --profile managed|full --env-file PATH --public-url URL [--supabase-compose PATH] [--persistence-url URL]");
     return;
   }
   await smoke(options);

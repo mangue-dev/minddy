@@ -1,7 +1,8 @@
 import "server-only";
 
-import { Sandbox, type NetworkPolicy } from "@vercel/sandbox";
+import { Sandbox as VercelSandbox, type NetworkPolicy } from "@vercel/sandbox";
 import { requireCapability } from "@/lib/server/capabilities";
+import { SelfHostedSandbox } from "./self-hosted-sandbox";
 
 import {
   SANDBOX_RUNTIME,
@@ -60,7 +61,36 @@ const SANDBOX_TIMEOUT_MS = 24 * 60 * 60_000;
  * (lasts forever). */
 const SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 * 24 * 60 * 60_000;
 
-export type { Sandbox };
+export interface AgentSandboxCommand {
+  readonly cmdId: string;
+  readonly exitCode: number | null;
+  stdout(): Promise<string>;
+  stderr(): Promise<string>;
+  wait(opts?: { signal?: AbortSignal }): Promise<void>;
+}
+
+export interface AgentSandboxCommandResult extends AgentSandboxCommand {}
+
+export interface AgentSandbox {
+  readonly name: string;
+  runCommand(input: {
+    cmd: string;
+    args?: string[];
+    cwd?: string;
+    timeoutMs?: number;
+    signal?: AbortSignal;
+    env?: Record<string, string>;
+    detached?: boolean;
+  }): Promise<AgentSandboxCommandResult>;
+  readFileToBuffer(input: { path: string }): Promise<Buffer | null>;
+  writeFiles(files: Array<{ path: string; content: string }>): Promise<void>;
+  mkDir(path: string): Promise<void>;
+  stop(): Promise<void>;
+  updateNetworkPolicy(policy: NetworkPolicy): Promise<void>;
+  getCommand(commandId: string): Promise<AgentSandboxCommand | null>;
+}
+
+export type Sandbox = AgentSandbox;
 
 /**
  * Everything `repo-host.ts` does to the repository, rendered by RPC round trips to
@@ -73,7 +103,7 @@ export type { Sandbox };
  * cloud. Passing it rather than assuming it is what makes the day when a host
  * is talking to something else, there is nothing to find in this file.
  */
-export function sandboxHost(sandbox: Sandbox, layout: HarnessLayout): RepoHost {
+export function sandboxHost(sandbox: AgentSandbox, layout: HarnessLayout): RepoHost {
   return {
     layout,
     exec: async (command: string, opts?: ShellOptions): Promise<ShellResult> => {
@@ -86,7 +116,7 @@ export function sandboxHost(sandbox: Sandbox, layout: HarnessLayout): RepoHost {
         env: opts?.env,
       });
       const [stdout, stderr] = await Promise.all([res.stdout(), res.stderr()]);
-      return { exitCode: res.exitCode, stdout, stderr };
+      return { exitCode: res.exitCode ?? 1, stdout, stderr };
     },
     readFile: async (absPath: string): Promise<string | null> => {
       const buf = await sandbox.readFileToBuffer({ path: absPath });
@@ -140,11 +170,17 @@ function sandboxCredentials(): { token: string; teamId: string; projectId: strin
  */
 export async function getOrCreateAgentSandbox(opts: {
   name: string;
-  onCreate: (sandbox: Sandbox) => Promise<void>;
+  onCreate: (sandbox: AgentSandbox) => Promise<void>;
   /** Policy of MIN-223. Absent = previous behavior (open network, no
    * injection) — while the callers wire it. */
   networkPolicy?: NetworkPolicy;
-}): Promise<{ sandbox: Sandbox; created: boolean }> {
+}): Promise<{ sandbox: AgentSandbox; created: boolean }> {
+  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+    requireCapability("agentExecution");
+    const result = await SelfHostedSandbox.getOrCreate(opts.name);
+    if (result.created) await opts.onCreate(result.sandbox);
+    return result;
+  }
   // SDK import is inert, but any compute operation must be a
   // explicit choice. Without a Vercel backend configured, we stop short of the SDK.
   requireCapability("vercelSandbox");
@@ -165,25 +201,25 @@ export async function getOrCreateAgentSandbox(opts: {
     keepLastSnapshots: { count: 1 },
     resume: true,
     ...(opts.networkPolicy ? { networkPolicy: opts.networkPolicy } : {}),
-    onCreate: async (fresh: Sandbox) => {
+    onCreate: async (fresh: VercelSandbox) => {
       created = true;
-      await opts.onCreate(fresh);
+      await opts.onCreate(fresh as unknown as AgentSandbox);
     },
   };
   const sandbox = snapshotId
-    ? await Sandbox.getOrCreate({ ...base, source: { type: "snapshot", snapshotId } })
-    : await Sandbox.getOrCreate({ ...base, runtime: SANDBOX_RUNTIME });
+    ? await VercelSandbox.getOrCreate({ ...base, source: { type: "snapshot", snapshotId } })
+    : await VercelSandbox.getOrCreate({ ...base, runtime: SANDBOX_RUNTIME });
 
   if (opts.networkPolicy && !created) {
     await sandbox.updateNetworkPolicy(opts.networkPolicy).catch((err) => {
       console.error("[agent-sandbox] network policy refresh failed:", (err as Error).message);
     });
   }
-  return { sandbox, created };
+  return { sandbox: sandbox as unknown as AgentSandbox, created };
 }
 
 /** Stable name of the microVM to persist in agent_runs.sandbox_id. */
-export function sandboxName(sandbox: Sandbox): string {
+export function sandboxName(sandbox: AgentSandbox): string {
   return sandbox.name;
 }
 
@@ -194,10 +230,15 @@ export function sandboxName(sandbox: Sandbox): string {
  * Best-effort — never raises (already stopped/expired/not found).
  */
 export async function stopSandboxByName(name: string): Promise<void> {
+  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+    const sandbox = await SelfHostedSandbox.get(name).catch(() => null);
+    await sandbox?.stop().catch(() => {});
+    return;
+  }
   if (!requireSandboxCapability()) return;
   try {
     const creds = sandboxCredentials();
-    const sandbox = await Sandbox.get({ ...creds, name, resume: false });
+    const sandbox = await VercelSandbox.get({ ...creds, name, resume: false });
     await sandbox.stop();
   } catch {
     // best-effort.
@@ -215,11 +256,14 @@ export async function stopSandboxByName(name: string): Promise<void> {
  * a diff would restart its compute billing on a click — and the diff of a run at
  * rest is already served by the forge, which costs nothing.
  */
-export async function getAgentSandboxByName(name: string): Promise<Sandbox | null> {
+export async function getAgentSandboxByName(name: string): Promise<AgentSandbox | null> {
+  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+    return SelfHostedSandbox.get(name).catch(() => null);
+  }
   if (!requireSandboxCapability()) return null;
   try {
     const creds = sandboxCredentials();
-    return await Sandbox.get({ ...creds, name, resume: false });
+    return await VercelSandbox.get({ ...creds, name, resume: false }) as unknown as AgentSandbox;
   } catch {
     return null;
   }
@@ -278,10 +322,32 @@ export async function isLoopCommandAlive(
   sandboxId: string,
   commandId: string,
 ): Promise<boolean | null> {
+  if (process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted") {
+    try {
+      const sandbox = await SelfHostedSandbox.get(sandboxId);
+      if (!sandbox) return null;
+      const command = await sandbox.getCommand(commandId);
+      if (!command) return null;
+      if (command.exitCode != null) return false;
+      const abort = new AbortController();
+      let timedOut = false;
+      const timer = setTimeout(() => { timedOut = true; abort.abort(); }, LOOP_COMMAND_WAIT_MS);
+      try {
+        await command.wait({ signal: abort.signal });
+        return false;
+      } catch {
+        return timedOut ? true : null;
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch {
+      return null;
+    }
+  }
   if (!requireSandboxCapability()) return null;
   try {
     const creds = sandboxCredentials();
-    const sandbox = await Sandbox.get({ ...creds, name: sandboxId, resume: false });
+    const sandbox = await VercelSandbox.get({ ...creds, name: sandboxId, resume: false });
     const command = await sandbox.getCommand(commandId);
     if (!command) return null;
     // Already reconciled (order not detached, or someone waited for it before

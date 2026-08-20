@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const catalog = await getAgentModelsForUser(auth.user.id);
   return NextResponse.json({
     ...catalog,
-    cloudExecutionConfigured: capability("vercelSandbox").configured,
+    cloudExecutionConfigured: capability("agentExecution").configured,
     routineSchedulingConfigured: capability("scheduler").configured,
   });
 }

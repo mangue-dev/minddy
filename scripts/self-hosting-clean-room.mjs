@@ -348,7 +348,7 @@ export function cloudEnvironmentFindings(env = process.env) {
     const value = env[name]?.trim();
     if (!value) return false;
     if (name === "MINDDY_EDITION") return value === "cloud";
-    if (name === "AGENT_EXECUTION_BACKEND") return value !== "local";
+    if (name === "AGENT_EXECUTION_BACKEND") return value === "vercel";
     return value !== "0" && value.toLowerCase() !== "false";
   });
 }

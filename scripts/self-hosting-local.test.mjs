@@ -8,16 +8,31 @@ import test from "node:test";
 import {
   DEFAULT_LOCAL_PORT,
   assertPortAvailable,
+  browserCommand,
   help,
   parseArgs,
   productionBuildIsCurrent,
 } from "./self-hosting-local.mjs";
 
 test("the local self-hosting command uses minddy's dedicated port", () => {
-  assert.equal(parseArgs([]).port, DEFAULT_LOCAL_PORT);
+  assert.deepEqual(parseArgs([]), { port: DEFAULT_LOCAL_PORT, open: true, stopBackendOnExit: true });
   assert.equal(DEFAULT_LOCAL_PORT, 6463);
   assert.equal(parseArgs(["--", "--port", "16463"]).port, 16463);
   assert.match(help(), /6463/);
+});
+
+test("the local launcher opens the right client and owns backend shutdown", () => {
+  assert.deepEqual(parseArgs(["--no-open", "--keep-backend"]), {
+    port: DEFAULT_LOCAL_PORT,
+    open: false,
+    stopBackendOnExit: false,
+  });
+  assert.deepEqual(browserCommand("http://localhost:6463/signup", "darwin"), {
+    command: "open",
+    args: ["http://localhost:6463/signup"],
+  });
+  assert.equal(browserCommand("http://localhost:6463/signup", "win32").command, "cmd.exe");
+  assert.equal(browserCommand("http://localhost:6463/signup", "linux").command, "xdg-open");
 });
 
 test("the local port must be safe for an unprivileged process", () => {

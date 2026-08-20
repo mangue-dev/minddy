@@ -5,6 +5,7 @@ import {
   handleControlPlaneRequest,
 } from "@/lib/server/agent/control-plane";
 import { admitLocalCaller, resolveLocalExecSecret } from "@/lib/server/agent/local-exec-token";
+import { admitServerExecCaller, resolveServerExecSecret } from "@/lib/server/agent/server-exec-token";
 import {
   AGENT_VM_PATH_PREFIX,
   admitSandboxCaller,
@@ -95,7 +96,7 @@ export const maxDuration = 60;
  */
 async function serveControlPlane(
   request: Request,
-  caller: { runId: string; sandboxName?: string; local?: { gen: number } },
+  caller: { runId: string; sandboxName?: string; local?: { gen: number }; server?: true },
 ): Promise<Response> {
   // The path is the one the caller requested — on channel 1, the proxy
   // rebuilt from `vercel-forwarded-*` headers; on track 2, it is
@@ -132,6 +133,7 @@ async function serveControlPlane(
     body,
     ...(caller.sandboxName ? { sandboxName: caller.sandboxName } : {}),
     ...(caller.local ? { local: caller.local } : {}),
+    ...(caller.server ? { server: true as const } : {}),
   });
   return Response.json(result.body, { status: result.status });
 }
@@ -161,6 +163,16 @@ const handler = defineSandboxProxy(
    * He doesn't go to Vercel's house to speak, and he only enters with a token of ours.
    */
   async (request) => {
+    const serverAdmission = admitServerExecCaller(
+      request.headers.get("authorization"),
+      resolveServerExecSecret(),
+    );
+    if (serverAdmission.ok) {
+      return await serveControlPlane(request, {
+        runId: serverAdmission.runId,
+        server: true,
+      });
+    }
     const admission = admitLocalCaller(
       request.headers.get("authorization"),
       resolveLocalExecSecret(),

@@ -3,7 +3,7 @@ import "server-only";
 import { harnessBundleSource } from "./harness-bundle";
 import { assertUsableLayout } from "./harness-layout";
 import { vmBundlePath, vmJobPath, type VmJob } from "./vm/protocol";
-import type { Sandbox } from "./sandbox";
+import type { AgentSandbox } from "./sandbox";
 
 /**
  * STARTING THE LOOP IN THE MICROVM (MIN-224) — the last gesture of the
@@ -52,7 +52,7 @@ import type { Sandbox } from "./sandbox";
  * `running` until someone notices.
  */
 export async function startVmLoop(
-  sandbox: Sandbox,
+  sandbox: AgentSandbox,
   /**
    * The job WITHOUT `bootstrapMs`: this field belongs to this function, and to it
    * alone. The caller can therefore neither forget it nor invent one - it's here

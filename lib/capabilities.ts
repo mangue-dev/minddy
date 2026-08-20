@@ -12,6 +12,7 @@ export type CapabilityId =
   | "storage"
   | "managedBilling"
   | "managedAi"
+  | "agentExecution"
   | "vercelSandbox"
   | "vercelDomains"
   | "vercelWebAnalytics"
@@ -182,6 +183,36 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
             missing: sandboxKeys,
             diagnostic: `Vercel Sandbox selected but credentials are missing: ${sandboxKeys.join(", ")}.`,
           });
+  const selfHostedRunnerMissing = missing(env, ["AGENT_RUNNER_URL", "AGENT_RUNNER_SECRET"]);
+  const agentExecution = sandboxBackend === "self-hosted"
+    ? selfHostedRunnerMissing.length === 0
+      ? status({
+          id: "agentExecution",
+          requirement: "replaceable",
+          state: "ready",
+          diagnostic: "The built-in self-hosted agent runner is configured.",
+        })
+      : status({
+          id: "agentExecution",
+          requirement: "replaceable",
+          state: "incomplete",
+          missing: selfHostedRunnerMissing,
+          diagnostic: `Self-hosted agent runner selected but configuration is missing: ${selfHostedRunnerMissing.join(", ")}.`,
+        })
+    : sandboxBackend === "vercel"
+      ? status({
+          id: "agentExecution",
+          requirement: "replaceable",
+          state: vercelSandbox.state,
+          missing: vercelSandbox.missing,
+          diagnostic: vercelSandbox.diagnostic,
+        })
+      : status({
+          id: "agentExecution",
+          requirement: "replaceable",
+          state: "disabled",
+          diagnostic: "Server-side agent execution is disabled; desktop-local runs remain available.",
+        });
 
   const domainMissing = missing(env, ["VERCEL_TOKEN", "VERCEL_PROJECT_ID"]);
   const vercelDomains = status({
@@ -296,6 +327,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     }),
     managedBilling: billing,
     managedAi,
+    agentExecution,
     vercelSandbox,
     vercelDomains,
     vercelWebAnalytics: status({

@@ -23,12 +23,12 @@ Storage, and Realtime.
 | Web application | Any host that can run a Next.js production server behind HTTPS | Yes |
 | Database, Auth, Realtime, Storage | A Supabase Cloud project on `supabase.com`, or the official self-hosted Supabase distribution | Yes |
 | Object storage | The Storage backend of that Supabase instance (local volume or its configured S3-compatible backend) | Yes |
-| Scheduled work | Any HTTP scheduler that calls the documented cron endpoints with `CRON_SECRET`; Vercel Cron is one adapter | No, jobs remain disabled without it |
+| Scheduled work | Built-in scheduler in the reference Compose profiles, or an equivalent HTTP scheduler | Yes in the reference server installation |
 | Auth email | SMTP configured in Supabase/GoTrue | Recommended for a public service |
 | Application email | Resend, explicitly configured, or no provider; `console` is development-only | No |
 | AI | Per-user BYOK/local provider, or the managed OpenRouter mode | No |
-| Code agent | Local runtime, or Vercel Sandbox when explicitly configured | No |
-| GitHub, GitLab, Stripe, PostHog, Web Push, APNs, Vercel domains/analytics | Operator-owned accounts only | No |
+| Code agent | Desktop-local runtime, built-in self-hosted Docker sandboxes, or Vercel Sandbox | Yes in the reference server installation |
+| GitHub, GitLab, application email, Web Push, scheduled routines | Operator-owned accounts only | No |
 
 GitHub integration targets `github.com` and GitLab integration targets
 `gitlab.com`. GitHub Enterprise Server and self-managed GitLab are not silently
@@ -59,36 +59,57 @@ This table is the short operational classification.
 | Class | Variables | How to obtain them |
 | --- | --- | --- |
 | Required to run a deployed instance | `MINDDY_PUBLIC_APP_URL`, `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the selected public HTTPS or private HTTP origin. Copy the Supabase API URL, anon key, and service-role key from Supabase Cloud or the selected stack. Never expose the service-role key to a browser. |
-| Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET` | `pnpm bootstrap:supabase` writes missing values to `.env.local`. It never replaces existing values. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
+| Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET`, `AGENT_RUNNER_SECRET` | The guided installers write missing values without replacing existing ones. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
 | Recommended instance identity | `MINDDY_PUBLIC_SITE_NAME`, `MINDDY_PUBLIC_CONTACT_EMAIL`, `ADMIN_EMAILS`, `OAUTH_ISSUER` | Choose operator-owned public values. `OAUTH_ISSUER` is normally empty and is only needed when OAuth/MCP is intentionally published at an origin different from the app origin. |
-| Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, Vercel domain variables, PostHog pairs, VAPID/APNs variables, `OPENROUTER_API_KEY`, `AGENT_EXECUTION_BACKEND`, `CRON_SECRET`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. |
+| Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, Vercel domain variables, PostHog pairs, VAPID/APNs variables, `OPENROUTER_API_KEY`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. |
 | Cloud-reserved settings | `MINDDY_MANAGED_AI`, `MINDDY_MANAGED_BILLING`, Stripe price/key variables, `MINDDY_DESKTOP_FEED_URL`, `BLOB_READ_WRITE_TOKEN`, `APPLE_KEYCHAIN_PROFILE` | Leave absent or set the two managed flags to `0` when self-hosting. They are for Minddy-operated managed services, release distribution, or build infrastructure—not prerequisites for the open-source core. |
 
 `SUPABASE_SERVICE_ROLE_KEY` is required when `NODE_ENV=production`. The
-bootstrap also creates the five generated secrets for a local install so that
-enabling an associated feature later does not require storing a weak placeholder.
-Secrets must be at least 32 characters where the application validates them.
+server installer always creates the AI-key, feedback-SSO, runner, and scheduler
+secrets. Git secrets are created only when `github` or `gitlab` is explicitly
+enabled. Secrets must be at least 32 characters where the application validates
+them.
+
+### Capacity recommendations
+
+Treat these as resources available to minddy and Docker, not the machine's
+total installed capacity.
+
+| Route | Minimum | Recommended |
+| --- | --- | --- |
+| Single-user local minimal stack | 4 GB free RAM, 2 CPU cores, 10 GB free SSD | 8 GB free RAM, 4 CPU cores, 20 GB free SSD |
+| Dedicated server with Supabase Cloud | 4 GB RAM, 2 CPU cores, 20 GB SSD | 8 GB RAM, 4 CPU cores, 40 GB or more SSD |
+| Dedicated server with Supabase on the same host | 8 GB RAM, 4 CPU cores, 60 GB SSD | 16 GB or more RAM, 6 CPU cores, 100 GB or more SSD |
+
+The same-host figures follow the [official Supabase Docker capacity guidance](https://supabase.com/docs/guides/self-hosting/docker).
+The local estimate is lower because the supported minimal profile omits Studio,
+analytics, Edge Functions, image transformation, the pooler, and other unused
+containers. Database, attachments, and backup storage grow over time; keep
+restorable backups on separate storage.
 
 ### Code agents and routines
 
-`AGENT_EXECUTION_BACKEND=local` supports only runs started from the desktop
-application. It cannot run a routine: a scheduler has no user machine to wake
-or execute on. Leave scheduled jobs disabled when using that backend.
-
-To run routines from a self-hosted deployment, use Vercel Sandbox explicitly:
+The reference server installation includes scheduled routines. The scheduler
+calls minddy on the private Compose network, and the built-in runner opens one
+restricted Docker sandbox per agent run on the server:
 
 ```dotenv
-AGENT_EXECUTION_BACKEND=vercel
-VERCEL_TOKEN=operator-vercel-token
-VERCEL_TEAM_ID=operator-vercel-team-id
-VERCEL_PROJECT_ID=operator-vercel-project-id
-MINDDY_PUBLIC_APP_URL=https://tickets.example.com
+AGENT_EXECUTION_BACKEND=self-hosted
+AGENT_RUNNER_URL=http://agent-runner:6464
+AGENT_CONTROL_ORIGIN=http://minddy:3000
 ```
 
-The Vercel account and Sandbox costs remain operator-owned. Enable an HTTP
-scheduler as well (`CRON_SECRET` and the `scheduled-jobs` Compose profile, or
-an equivalent authenticated scheduler); otherwise a routine can be created but
-will never be executed.
+The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`; the operator
+does not configure a separate execution service or keep a desktop app online.
+The runner has access to the Docker socket so it can create sandboxes. The
+sandbox containers do not receive that socket, the Supabase network, or instance
+secrets. They receive CPU, memory, process, capability, and filesystem limits.
+Only the trusted runner container has host-level Docker authority, so protect
+the server and never expose port 6464.
+
+`AGENT_EXECUTION_BACKEND=vercel` remains available for deployments that
+deliberately use an operator-owned Vercel Sandbox project. The `local` backend
+continues to mean desktop-initiated runs only.
 
 For a public service, set `MINDDY_PUBLIC_APP_URL` to one absolute HTTPS origin with
 no path or trailing slash. It is used for invitation links, OAuth/MCP metadata,
@@ -126,15 +147,18 @@ reports that conflict and accepts an explicit alternative with
 
 On macOS, install the signed minddy desktop app from
 [minddy.app/download](https://www.minddy.app/download), choose
-**minddy > Connect to a Server…**, and enter `http://localhost:6463`. A newly
-selected server opens its sign-up screen. On Windows and Linux, open
-`http://localhost:6463/signup` in the browser; no desktop build is currently
-published for those systems. Create an account, create a project, and create an
-issue. `supabase status` prints the local mail inbox URL if email confirmation
-is enabled.
+**minddy > Connect to a Server… > Run local minddy on this Mac**, and select
+the cloned minddy folder. The app remembers that folder, starts Supabase and
+minddy on later app launches, waits for health, and opens sign-up. Quitting the
+app stops both. On Windows and Linux, `pnpm self-host:local` starts both
+services and opens `http://localhost:6463/signup` in the default browser; no
+desktop build is currently published for those systems. Create an account,
+create a project, and create an issue.
 
-Stop the application with `Ctrl+C`, then stop its local backend with
-`supabase stop`. Run `pnpm self-host:local` from the clone to start both again.
+In a terminal, `Ctrl+C` stops the application and its local Supabase backend
+together. Run `pnpm self-host:local` from the clone to start both again. Use
+`--no-open` only when another client owns navigation, and `--keep-backend` only
+when you deliberately want Supabase to remain allocated after minddy stops.
 
 To reset an evaluation stack, explicitly destroy its local data and bootstrap it
 again:
@@ -211,13 +235,21 @@ installer never replaces an existing `.env` or changes its image pin. A later
 invocation reuses that file and safely repeats Compose pulls, `up`, migrations,
 and bucket reconciliation; it does not rotate data-encryption or cron secrets. Public
 DNS, firewall ports 80 and 443, Supabase provisioning, and a restorable
-backup policy remain operator responsibilities. Scheduler, AI, billing,
-analytics, email, Git hosting, and every other optional integration remain off
-unless configured deliberately.
+backup policy remain operator responsibilities. The scheduler and agent runner
+start as core services; managed AI, billing, analytics, email, Git hosting, and
+other external integrations remain off unless configured deliberately.
+
+The guided page and installer expose only four useful optional self-host choices:
+`application-email`, `web-push`, `github`, and `gitlab`. Repeat
+`--enable <feature>` in non-interactive commands. The installer generates only
+the internal secrets required by those choices and leaves external provider
+credentials blank for the operator to supply. Stripe billing, PostHog/Vercel
+analytics, Minddy-managed AI, Vercel domain management, and APNs release
+credentials are intentionally not offered as initial self-host options.
 
 Run the read-only diagnostic after installation and after maintenance. It
 redacts credentials while checking configuration, compatibility, containers,
-DNS/TLS, app health, optional scheduler state, disk space, and—when a database
+DNS/TLS, app health, scheduler and agent-runner state, disk space, and—when a database
 URL is supplied—migrations and Storage.
 
 ```bash
@@ -278,7 +310,8 @@ into two supported deployment paths:
 
 - `compose.managed.yml` runs minddy behind Caddy with an operator-provided
   Supabase project; and
-- `compose.full.yml` overlays minddy, Caddy, and opt-in scheduled jobs on the
+- `compose.full.yml` overlays minddy, Caddy, scheduled jobs, and the built-in
+  agent runner on the
   exact official Supabase Docker revision recorded in the compatibility matrix.
 
 The full profile does not copy Supabase into this repository. Fetch its pinned
@@ -287,9 +320,9 @@ with the profile as shown in that directory's README, and keep every upstream
 service image unchanged. Public paths expose only Caddy ports 80 and 443; a
 private full-stack path additionally exposes Caddy port 8000 to its LAN. The
 full profile binds PostgreSQL to loopback for bootstrap and maintenance.
-They use health checks and leave scheduled jobs disabled until the
-`scheduled-jobs` profile is selected. The README also documents automatic Caddy
-TLS and the loopback option for an existing TLS load balancer.
+They use health checks and start scheduling and server-side agent execution by
+default. The README also documents automatic Caddy TLS and the loopback option
+for an existing TLS load balancer.
 
 ## Production configuration outside the repository
 
@@ -309,9 +342,10 @@ be recorded in your platform configuration:
 
 ## Scheduled jobs
 
-Background work is intentionally off until `CRON_SECRET` exists. Configure your
-scheduler to invoke the paths and schedules in [`vercel.json`](../vercel.json),
-or select only the jobs you operate. Each request must include:
+The reference server installer generates `CRON_SECRET` and starts the scheduler.
+Custom deployments may invoke the paths and schedules in
+[`vercel.json`](../vercel.json) from an equivalent scheduler. Each request must
+include:
 
 ```text
 Authorization: Bearer <CRON_SECRET>

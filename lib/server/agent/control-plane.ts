@@ -340,6 +340,8 @@ export async function handleControlPlaneRequest(opts: {
    * pretending to protect him would be the only thing we couldn't hold.
    */
   local?: { gen: number };
+  /** A sandbox launched by the built-in self-hosted server runner. */
+  server?: true;
 }): Promise<ControlPlaneResult> {
   const { runId, method, surface } = opts;
   const body = opts.body ?? {};
@@ -442,6 +444,12 @@ export async function handleControlPlaneRequest(opts: {
     if (run.local_exec_gen !== opts.local.gen) {
       return forbidden("local execution token superseded — ask the app for a fresh one");
     }
+    if (run.status !== "running") {
+      return { status: 409, body: { error: "run is no longer running" } };
+    }
+  }
+  if (opts.server) {
+    if (run.local_exec) return forbidden("a desktop-local run cannot execute in the server sandbox");
     if (run.status !== "running") {
       return { status: 409, body: { error: "run is no longer running" } };
     }
@@ -724,15 +732,19 @@ export async function handleControlPlaneRequest(opts: {
      * run in the cloud when mint is not available (`admitLocalRun`,
      *   [local-exec.ts](local-exec.ts)) ; ici, on refuse.
      */
-    if (!opts.local) {
+    if (!opts.local && !opts.server) {
       return forbidden("a microVM gets its model key from the firewall, not from here");
     }
     if (run.key_mode === "byok") {
       const { resolveAgentApiKey } = await import("./model");
-      const endpoint = await resolveAgentApiKey(run.created_by ?? "", "agent", {
+      const endpoint = await resolveAgentApiKey(
+        run.created_by ?? "",
+        run.chain_id || run.routine_id ? "automations" : "agent",
+        {
         allowLocal: true,
         requireByok: true,
-      }).catch(() => null);
+        },
+      ).catch(() => null);
       // The key could have been removed after launch. Never substitute then
       // the platform key to a fixed BYOK run: this would mean changing payer and
       // download a shared secret to a user device.

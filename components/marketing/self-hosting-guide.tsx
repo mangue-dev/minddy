@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRight,
+  Bell,
   Bot,
   Check,
   CheckCircle2,
@@ -10,8 +11,10 @@ import {
   Database,
   ExternalLink,
   Gauge,
+  GitBranch,
   Globe2,
   Laptop,
+  Mail,
   Monitor,
   Server,
   ShieldCheck,
@@ -19,10 +22,12 @@ import {
 } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { CopyButton } from "@/components/marketing/copy-button";
+import { Github } from "@/components/git/provider-icons";
 
 type Path = "local" | "team";
 type SupabaseMode = "managed" | "full";
 type ServerAccess = "private" | "public";
+type OptionalFeature = "application-email" | "web-push" | "github" | "gitlab";
 
 export interface SelfHostingGuideCopy {
   chooserTitle: string;
@@ -54,6 +59,11 @@ export interface SelfHostingGuideCopy {
   manualInstallBody: string;
   promptNeedsSetup: string;
   localPromptTemplate: string;
+  localAutostartPrompt: string;
+  localPromptClientOld: string;
+  localPromptClientNew: string;
+  localPromptStopOld: string;
+  localPromptStopNew: string;
   teamPromptSimpleTemplate: string;
   teamPromptManagedMode: string;
   teamPromptFullMode: string;
@@ -125,6 +135,37 @@ export interface SelfHostingGuideCopy {
   fullBadge: string;
   managedNeed: string;
   fullNeed: string;
+  specsTitle: string;
+  specsAvailable: string;
+  specsMinimum: string;
+  specsRecommended: string;
+  specsLocalMinimum: string;
+  specsLocalRecommended: string;
+  specsCloudMinimum: string;
+  specsCloudRecommended: string;
+  specsFullMinimum: string;
+  specsFullRecommended: string;
+  specsStorageNote: string;
+  specsSource: string;
+  servicesQuestion: string;
+  servicesBody: string;
+  servicesExcluded: string;
+  serviceEmailTitle: string;
+  serviceEmailBody: string;
+  serviceEmailSetup: string;
+  servicePushTitle: string;
+  servicePushBody: string;
+  servicePushSetup: string;
+  serviceGithubTitle: string;
+  serviceGithubBody: string;
+  serviceGithubSetup: string;
+  serviceGitlabTitle: string;
+  serviceGitlabBody: string;
+  serviceGitlabSetup: string;
+  selectedServicesTitle: string;
+  selectedServicesBody: string;
+  selectedServicesPrompt: string;
+  serverRoutinesPrompt: string;
   privateSupabaseManagedNotice: string;
   privateSupabaseFullNotice: string;
   privateNetworkBoundary: string;
@@ -491,6 +532,7 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
   const [serverIp, setServerIp] = useState("");
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
+  const [optionalFeatures, setOptionalFeatures] = useState<OptionalFeature[]>([]);
   const guideRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -528,11 +570,13 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
   const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile\npnpm self-host:local`;
   const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile`;
   const fetchSupabase = "node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase";
-  const installServer = supabaseMode === "managed"
+  const installServerBase = supabaseMode === "managed"
     ? `pnpm self-host:install -- --mode managed \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail}`
     : serverAccess === "private"
       ? `pnpm self-host:install -- --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-dir /srv/minddy/supabase`
       : `pnpm self-host:install -- --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host ${supabaseHost} \\\n  --supabase-dir /srv/minddy/supabase`;
+  const featureFlags = optionalFeatures.map((feature) => ` \\\n  --enable ${feature}`).join("");
+  const installServer = `${installServerBase}${featureFlags}`;
   const doctor = supabaseMode === "managed"
     ? "pnpm self-host:doctor -- --mode managed"
     : "pnpm self-host:doctor -- --mode full --supabase-compose /srv/minddy/supabase/docker/docker-compose.yml";
@@ -545,7 +589,19 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
     .replaceAll("MINDDY_RELEASE_TAG", releaseTag)
     .replaceAll("MINDDY_PNPM_VERSION", pnpmVersion)
     .replaceAll("MINDDY_LOCAL_ORIGIN", localOrigin)
-    .replaceAll("MINDDY_DOWNLOAD_URL", links.download);
+    .replace(copy.localPromptClientOld, copy.localPromptClientNew)
+    .replace(copy.localPromptStopOld, copy.localPromptStopNew)
+    .replaceAll("MINDDY_DOWNLOAD_URL", links.download) + `\n\n${copy.localAutostartPrompt}`;
+  const featureCatalog = [
+    { id: "application-email" as const, title: copy.serviceEmailTitle, body: copy.serviceEmailBody, setup: copy.serviceEmailSetup, icon: Mail },
+    { id: "web-push" as const, title: copy.servicePushTitle, body: copy.servicePushBody, setup: copy.servicePushSetup, icon: Bell },
+    { id: "github" as const, title: copy.serviceGithubTitle, body: copy.serviceGithubBody, setup: copy.serviceGithubSetup, icon: Github },
+    { id: "gitlab" as const, title: copy.serviceGitlabTitle, body: copy.serviceGitlabBody, setup: copy.serviceGitlabSetup, icon: GitBranch },
+  ];
+  const selectedFeatureCatalog = featureCatalog.filter(({ id }) => optionalFeatures.includes(id));
+  const selectedFeaturesPrompt = selectedFeatureCatalog.length > 0
+    ? `\n\n${copy.selectedServicesPrompt}\n${selectedFeatureCatalog.map(({ title, setup }) => `- ${title}: ${setup}`).join("\n")}`
+    : "";
   const teamPrompt = copy.teamPromptSimpleTemplate
     .replaceAll("MINDDY_GUIDE_URL", links.guide)
     .replaceAll("MINDDY_REPOSITORY_URL", repositoryUrl)
@@ -561,7 +617,29 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
     .replaceAll("MINDDY_APP_ORIGIN", serverOrigin)
     .replaceAll("MINDDY_INSTALL_COMMAND", installServer)
     .replaceAll("MINDDY_DOCTOR_COMMAND", doctor)
-    .replaceAll("MINDDY_DOWNLOAD_URL", links.download);
+    .replaceAll("MINDDY_DOWNLOAD_URL", links.download) + selectedFeaturesPrompt + `\n\n${copy.serverRoutinesPrompt}`;
+
+  const toggleFeature = (feature: OptionalFeature) => {
+    setOptionalFeatures((current) => current.includes(feature)
+      ? current.filter((item) => item !== feature)
+      : [...current, feature]);
+  };
+  const specs = path === "local"
+    ? [copy.specsLocalMinimum, copy.specsLocalRecommended]
+    : supabaseMode === "full"
+      ? [copy.specsFullMinimum, copy.specsFullRecommended]
+      : [copy.specsCloudMinimum, copy.specsCloudRecommended];
+  const specsCard = (
+    <section className="mb-6 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
+      <h3 className="font-medium">{copy.specsTitle}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">{copy.specsAvailable}</p>
+      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-border bg-background p-4"><dt className="text-xs font-medium text-muted-foreground">{copy.specsMinimum}</dt><dd className="mt-1 text-sm font-medium">{specs[0]}</dd></div>
+        <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4"><dt className="text-xs font-medium text-primary">{copy.specsRecommended}</dt><dd className="mt-1 text-sm font-medium">{specs[1]}</dd></div>
+      </dl>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{copy.specsStorageNote} <a className="underline underline-offset-2" href="https://supabase.com/docs/guides/self-hosting/docker" target="_blank" rel="noopener noreferrer">{copy.specsSource}</a></p>
+    </section>
+  );
 
   return (
     <section id="choose-path" className="py-16 sm:py-20">
@@ -653,6 +731,7 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
                   <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
                   <p>{copy.localBoundary}</p>
                 </div>
+                {specsCard}
                 <PromptCard prompt={localPrompt} body={copy.localAiInstallBody} copy={copy} />
                 <details className="rounded-2xl border border-border bg-card p-5 sm:p-6">
                   <summary className="cursor-pointer text-lg font-medium">{copy.manualInstallTitle}</summary>
@@ -687,7 +766,7 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
                   <div className="rounded-2xl border border-border bg-card p-5">
                     <h3 className="font-medium">{copy.localLaterTitle}</h3>
                     <p className="mt-4 text-xs font-medium text-muted-foreground">{copy.localStopLabel}</p>
-                    <Command command="supabase stop" copy={copy} />
+                    <Command command="Ctrl+C" copy={copy} />
                     <p className="mt-4 text-xs font-medium text-muted-foreground">{copy.localRestartLabel}</p>
                     <Command command="pnpm self-host:local" copy={copy} />
                   </div>
@@ -784,8 +863,22 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
                     )}
                     <p className="mt-3 text-sm text-muted-foreground">{supabaseMode === "managed" ? copy.managedNeed : copy.fullNeed}</p>
                   </fieldset>
+                  <fieldset className="mt-6">
+                    <legend className="text-sm font-medium">{copy.servicesQuestion}</legend>
+                    <p className="mt-1 text-sm text-muted-foreground">{copy.servicesBody}</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {featureCatalog.map(({ id, title, body, icon: Icon }) => (
+                        <label key={id} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", optionalFeatures.includes(id) ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
+                          <input type="checkbox" checked={optionalFeatures.includes(id)} onChange={() => toggleFeature(id)} className="sr-only" />
+                          <div className="flex items-start gap-3"><Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><div className="min-w-0 flex-1"><span className="font-medium">{title}</span><p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p></div>{optionalFeatures.includes(id) && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" aria-hidden /></span>}</div>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-xs text-muted-foreground">{copy.servicesExcluded}</p>
+                  </fieldset>
                 </div>
 
+                {specsCard}
                 <PromptCard prompt={teamPrompt} body={copy.teamAiInstallBody} copy={copy} disabled={!serverSetupValid} />
 
                 <details className="rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -824,6 +917,7 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
                   <Step number={supabaseMode === "full" ? 4 : 3} title={copy.stepRunInstallerTitle} body={copy.stepRunInstallerBody}>
                     <Command command={installServer} copy={copy} />
                     <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>
+                    {selectedFeatureCatalog.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><h4 className="text-sm font-medium">{copy.selectedServicesTitle}</h4><p className="mt-1 text-sm text-muted-foreground">{copy.selectedServicesBody}</p><Checklist items={selectedFeatureCatalog.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}
                   </Step>
                   <Step number={supabaseMode === "full" ? 5 : 4} title={copy.stepEmailTitle} body={supabaseMode === "managed" ? copy.stepEmailManagedBody : copy.stepEmailFullBody}>
                     <EmailConfiguration serverOrigin={serverOrigin} mode={supabaseMode} templates={emailTemplates} copy={copy} />

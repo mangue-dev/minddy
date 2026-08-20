@@ -8,6 +8,7 @@ interface ServerPickerOptions {
   currentOrigin: string;
   isCustomServer: boolean;
   onSave: (origin: string) => void;
+  onUseLocal: () => Promise<{ error?: string }>;
   onUseCloud: () => void;
 }
 
@@ -50,6 +51,8 @@ function pickerHtml(currentOrigin: string, isCustomServer: boolean): string {
     <main>
       <h1>Connect to a server</h1>
       <p>Use your own minddy server in this Mac app. Public servers need HTTPS; localhost and private network IPs can use HTTP.</p>
+      <button id="local" type="button">Run local minddy on this Mac</button>
+      <p class="local-help">Choose the minddy folder once. The app will start its local server and Supabase automatically from then on.</p>
       <form id="form">
         <label for="origin">Server address</label>
         <input id="origin" name="origin" type="url" required spellcheck="false" value="${escapeHtml(currentOrigin)}" placeholder="https://minddy.example.com">
@@ -67,6 +70,11 @@ function pickerHtml(currentOrigin: string, isCustomServer: boolean): string {
       const form = document.getElementById("form");
       const input = document.getElementById("origin");
       const error = document.getElementById("error");
+      document.getElementById("local").addEventListener("click", async () => {
+        error.textContent = "Starting local minddy…";
+        const result = await window.minddyServerPicker.useLocal();
+        error.textContent = result?.error || "";
+      });
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         error.textContent = "";
@@ -93,7 +101,7 @@ export function openServerPicker(options: ServerPickerOptions): void {
     parent: options.parent,
     modal: true,
     width: 540,
-    height: 340,
+    height: 430,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -124,11 +132,18 @@ export function openServerPicker(options: ServerPickerOptions): void {
     options.onUseCloud();
     picker.close();
   });
+  ipcMain.handle("minddy:server-picker:local", async (event) => {
+    if (!picker || event.sender !== picker.webContents) return { error: "This server window is no longer active." };
+    const result = await options.onUseLocal();
+    if (!result.error) picker.close();
+    return result;
+  });
 
   picker.once("ready-to-show", () => picker?.show());
   picker.once("closed", () => {
     ipcMain.removeHandler("minddy:server-picker:save");
     ipcMain.removeHandler("minddy:server-picker:cloud");
+    ipcMain.removeHandler("minddy:server-picker:local");
     picker = null;
   });
   void picker.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(pickerHtml(options.currentOrigin, options.isCustomServer))}`);

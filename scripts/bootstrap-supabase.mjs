@@ -24,13 +24,11 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = resolve(SCRIPT_DIR, "..");
 export const MIGRATIONS_DIR = resolve(ROOT_DIR, "supabase/migrations");
 const DEFAULT_ENV_FILE = resolve(ROOT_DIR, ".env.local");
-const GENERATED_SECRET_KEYS = [
-  "GIT_STATE_SECRET",
-  "GIT_TOKEN_ENCRYPTION_SECRET",
+const CORE_SECRET_KEYS = [
   "AI_KEY_ENCRYPTION_SECRET",
   "FEEDBACK_SSO_ENCRYPTION_SECRET",
-  "CRON_SECRET",
 ];
+const OPTIONAL_CAPABILITIES = ["github", "gitlab", "scheduler"];
 export const MINIMAL_LOCAL_EXCLUDES = [
   "studio",
   "imgproxy",
@@ -53,6 +51,7 @@ export function parseArgs(argv) {
     minimal: false,
     appUrl: "http://localhost:3000",
     envFile: DEFAULT_ENV_FILE,
+    capabilities: new Set(),
     dryRun: false,
   };
 
@@ -80,6 +79,10 @@ export function parseArgs(argv) {
       options.appUrl = value();
     } else if (arg === "--env-file") {
       options.envFile = resolve(ROOT_DIR, value());
+    } else if (arg === "--enable") {
+      const capability = value();
+      if (!OPTIONAL_CAPABILITIES.includes(capability)) fail(`unknown optional capability: ${capability}.`);
+      options.capabilities.add(capability);
     } else if (arg === "--dry-run") {
       options.dryRun = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -125,12 +128,14 @@ Options:
   --db-url <url>       Applies migrations to an already started remote stack.
   --skip-start         Does not run \`supabase start\` in local mode.
   --env-file <path>    Local file to complete (default: .env.local).
+  --enable <feature>    Generate secrets for github, gitlab, or scheduler. Repeat as needed.
   --dry-run            Checks prerequisites without writing or applying changes.
   -h, --help           Shows this help.
 
 Remote mode: also provide MINDDY_PUBLIC_SUPABASE_URL,
 MINDDY_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY in the shell. The
-five missing application secrets are generated in .env.local.`;
+required application secrets are generated in .env.local. Optional integration
+secrets are generated only when their feature is explicitly enabled.`;
 }
 
 export function listMigrations(directory = MIGRATIONS_DIR) {
@@ -200,8 +205,13 @@ export function appendMissingEnv(file, values) {
   return additions.map((line) => line.slice(0, line.indexOf("=")));
 }
 
-export function generatedSecrets() {
-  return Object.fromEntries(GENERATED_SECRET_KEYS.map((key) => [key, randomBytes(32).toString("hex")]));
+export function generatedSecrets(capabilities = new Set()) {
+  const keys = [...CORE_SECRET_KEYS];
+  if (capabilities.has("github") || capabilities.has("gitlab")) {
+    keys.push("GIT_STATE_SECRET", "GIT_TOKEN_ENCRYPTION_SECRET");
+  }
+  if (capabilities.has("scheduler")) keys.push("CRON_SECRET");
+  return Object.fromEntries(keys.map((key) => [key, randomBytes(32).toString("hex")]));
 }
 
 export function run(command, args, { dryRun = false, env } = {}) {
@@ -315,7 +325,7 @@ export async function main(argv = process.argv.slice(2)) {
     appValues = remoteAppValues();
   }
 
-  const generated = { ...appValues, ...generatedSecrets() };
+  const generated = { ...appValues, ...generatedSecrets(options.capabilities) };
   if (options.dryRun) {
     console.log(`→ would complete ${basename(options.envFile)} without replacing existing values.`);
   } else {

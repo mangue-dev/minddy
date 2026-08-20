@@ -1230,3 +1230,22 @@ describe("le plan de contrôle vu depuis une machine", () => {
     expect((await call("POST", "/events", { type: "assistant_message" })).status).toBe(200);
   });
 });
+
+describe("the control plane seen from the built-in server sandbox", () => {
+  const callServer = (
+    method: string,
+    surface: string,
+    body: Record<string, unknown> | null = null,
+  ) => handleControlPlaneRequest({ runId: RUN_ID, method, surface, body, server: true });
+
+  it("admits a running server job and rejects a desktop-local or completed job", async () => {
+    h.run = { ...h.run!, local_exec: false, status: "running" };
+    expect((await callServer("POST", "/events", { type: "assistant_message" })).status).toBe(200);
+
+    h.run = { ...h.run!, local_exec: true, status: "running" };
+    expect((await callServer("POST", "/events", { type: "assistant_message" })).status).toBe(403);
+
+    h.run = { ...h.run!, local_exec: false, status: "completed" };
+    expect((await callServer("POST", "/events", { type: "assistant_message" })).status).toBe(409);
+  });
+});

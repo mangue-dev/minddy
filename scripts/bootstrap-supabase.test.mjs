@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   MINIMAL_LOCAL_EXCLUDES,
   appendMissingEnv,
+  generatedSecrets,
   listMigrations,
   parseArgs,
   parseEnv,
@@ -30,6 +31,21 @@ test("minimal local mode skips only services that minddy does not require", () =
     "supavisor",
     "mailpit",
   ]);
+});
+
+test("bootstrap generates optional secrets only for selected capabilities", () => {
+  const minimal = generatedSecrets();
+  assert.ok(minimal.AI_KEY_ENCRYPTION_SECRET);
+  assert.ok(minimal.FEEDBACK_SSO_ENCRYPTION_SECRET);
+  assert.equal(minimal.GIT_STATE_SECRET, undefined);
+  assert.equal(minimal.CRON_SECRET, undefined);
+
+  const selected = generatedSecrets(new Set(["github", "scheduler"]));
+  assert.ok(selected.GIT_STATE_SECRET);
+  assert.ok(selected.GIT_TOKEN_ENCRYPTION_SECRET);
+  assert.ok(selected.CRON_SECRET);
+  assert.deepEqual([...parseArgs(["--enable", "gitlab", "--enable", "scheduler"]).capabilities], ["gitlab", "scheduler"]);
+  assert.throws(() => parseArgs(["--enable", "posthog"]), /unknown optional capability/);
 });
 
 test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {

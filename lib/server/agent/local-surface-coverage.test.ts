@@ -138,6 +138,12 @@ const COQUILLE = {
   "push-installation-store.ts":
     "lecture/écriture de l'identité APNs ; validation dans @/lib/desktop/push-installation",
   "repo-store.ts": "lecture/écriture des attachements ; parse dans @/lib/desktop/local-repo",
+  "server-store.ts": "reads and writes the selected server; validation lives in @/lib/desktop/server-origin",
+  "server-picker.ts":
+    "composes the native server picker window; validation lives in @/lib/desktop/server-origin",
+  "server-picker-preload.ts": "closed IPC bridge for the server picker window",
+  "local-runtime.ts":
+    "starts the local self-host launcher and waits for health; its contract lives in scripts/self-hosting-local.mjs",
   "local-repo.ts": "panneau système + rangement ; verdicts dans @/lib/desktop/local-repo",
   "run-log.ts":
     "le `fs` du journal d'un tour local et le ramassage du rapport de diagnostic ; " +

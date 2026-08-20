@@ -76,6 +76,7 @@ import { subagentUsageSeq } from "../subagent-config";
 import {
   isCurrentRepoJob,
   isLocalJob,
+  isTokenAuthenticatedJob,
   type VmJob,
   type VmPushResult,
   type VmTurnReport,
@@ -527,7 +528,7 @@ export async function runOpencodeTurn(
   // The capped mint is the only mandatory round trip before opening the
   // local proxy. It does not need either the repository or the harness files: the
   // starting from the entry covers its latency with all this preparation.
-  const localLlmKeyPromise = local
+  const authenticatedLlmKeyPromise = isTokenAuthenticatedJob(job)
     ? (() => {
         timing("llm-key-requested");
         return cp.llmKey().then((key) => {
@@ -539,7 +540,7 @@ export async function runOpencodeTurn(
   // An invalid repository may exit before the proxy joins the key.
   // The error remains carried by the original promise if it is expected, but
   // does not become an unhandled release on this early exit path.
-  void localLlmKeyPromise?.catch(() => {});
+  void authenticatedLlmKeyPromise?.catch(() => {});
 
   /**
    * WHAT A CHAIN ​​HAPPENS BEFORE LEAVING THE MACHINE (MIN-361).
@@ -641,8 +642,8 @@ export async function runOpencodeTurn(
         job: j,
         redact: secrets.redact,
         onTiming: timing,
-        ...(isLocalJob(j)
-          ? { apiKey: () => localLlmKeyPromise!, deferApiKey: true }
+        ...(isTokenAuthenticatedJob(j)
+          ? { apiKey: () => authenticatedLlmKeyPromise!, deferApiKey: true }
           : {}),
       })))(job);
 
@@ -1195,7 +1196,7 @@ export async function runOpencodeTurn(
     // The server and session were booted during mint. We keep the
     // refusal BEFORE the prompt — no supplier call goes out without a key — but
     // a slow key no longer serializes all OpenCode startup behind it.
-    await Promise.all([warmToolsPromise, ...(localLlmKeyPromise ? [localLlmKeyPromise] : [])]);
+    await Promise.all([warmToolsPromise, ...(authenticatedLlmKeyPromise ? [authenticatedLlmKeyPromise] : [])]);
 
     // ── The flow, translated as the water goes by ─────────────────────────────────────
     const state = newTurnStreamState();

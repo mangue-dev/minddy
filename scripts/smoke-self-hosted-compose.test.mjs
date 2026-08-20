@@ -8,9 +8,7 @@ test("requires the upstream Compose file only for the full smoke profile", () =>
     "--profile", "managed",
     "--env-file", ".env.example",
     "--public-url", "http://localhost",
-    "--skip-scheduler",
   ]);
-  assert.equal(managed.scheduler, false);
   assert.match(composeArgs(managed).join(" "), /compose\.managed\.yml/);
   assert.throws(
     () => parseArgs(["--profile", "full", "--env-file", ".env.example", "--public-url", "https://tickets.example.test"]),

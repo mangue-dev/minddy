@@ -81,6 +81,17 @@ describe("resolveCapabilities", () => {
     expect(capabilities.transactionalEmail.configured).toBe(false);
   });
 
+  it("enables the built-in self-hosted agent runner without Vercel credentials", () => {
+    const capabilities = resolveCapabilities({
+      ...core,
+      AGENT_EXECUTION_BACKEND: "self-hosted",
+      AGENT_RUNNER_URL: "http://agent-runner:6464",
+      AGENT_RUNNER_SECRET: "runner-secret",
+    });
+    expect(capabilities.agentExecution.state).toBe("ready");
+    expect(capabilities.vercelSandbox.configured).toBe(false);
+  });
+
   it("does not activate Cloud providers from deceptive host or Vercel metadata", () => {
     const implicit = resolveCapabilities({
       ...core,

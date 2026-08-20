@@ -219,7 +219,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // comes from the repository, the model of `pr_review_model`, and nothing is written on a
   // ticket (neither status, nor event, nor branch inheritance).
   if (input.pullRequestId) {
-    if (!capability("vercelSandbox").configured) {
+    if (!capability("agentExecution").configured) {
       return { ok: false, error: "executionBackendUnavailable" };
     }
     return launchPrReviewRun(input, input.pullRequestId);
@@ -330,7 +330,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     };
   }
   const localExec = localExecRequested(input);
-  if (!localExec && !capability("vercelSandbox").configured) {
+  if (!localExec && !capability("agentExecution").configured) {
     return { ok: false, error: "executionBackendUnavailable" };
   }
   const byok = await byokPromise;

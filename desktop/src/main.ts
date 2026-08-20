@@ -65,6 +65,13 @@ import {
 import { buildAppMenu } from "./menu";
 import { openServerPicker } from "./server-picker";
 import {
+  LOCAL_SELF_HOST_ORIGIN,
+  readLocalRuntimeRoot,
+  startLocalRuntime,
+  stopLocalRuntime,
+  writeLocalRuntimeRoot,
+} from "./local-runtime";
+import {
   readDesktopServerOrigin,
   writeDesktopServerOrigin,
 } from "./server-store";
@@ -119,6 +126,7 @@ function rebuildAppMenu(): void {
         currentOrigin: origin,
         isCustomServer: customServerOrigin !== null,
         onSave: setCustomServer,
+        onUseLocal: useLocalMinddy,
         onUseCloud: useMinddyCloud,
       });
     },
@@ -126,7 +134,34 @@ function rebuildAppMenu(): void {
   });
 }
 
+function showLocalRuntimeStatus(message: string): void {
+  if (!mainWindow) return;
+  const html = `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="light dark"><title>Starting minddy</title><style>body{font:15px -apple-system,BlinkMacSystemFont,sans-serif;display:grid;min-height:100vh;margin:0;place-items:center;background:Canvas;color:CanvasText}p{color:GrayText}</style><main><h1>Starting local minddy…</h1><p>${message}</p></main>`;
+  void mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+}
+
+async function useLocalMinddy(): Promise<{ error?: string }> {
+  if (!mainWindow) return { error: "The main window is unavailable." };
+  const selection = await dialog.showOpenDialog(mainWindow, {
+    title: "Choose the minddy folder",
+    properties: ["openDirectory"],
+    buttonLabel: "Use this folder",
+  });
+  if (selection.canceled || !selection.filePaths[0]) return { error: "Choose the minddy folder to continue." };
+  try {
+    const root = writeLocalRuntimeRoot(selection.filePaths[0]);
+    showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
+    await startLocalRuntime(root);
+    writeDesktopServerOrigin(LOCAL_SELF_HOST_ORIGIN);
+    applyServerOrigin(LOCAL_SELF_HOST_ORIGIN, "/signup");
+    return {};
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not start local minddy." };
+  }
+}
+
 function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH): void {
+  if (next !== LOCAL_SELF_HOST_ORIGIN) stopLocalRuntime();
   customServerOrigin = next;
   origin = next ?? desktopOriginForChannel(channel);
   trace("server", { origin, custom: next !== null });
@@ -482,7 +517,7 @@ function guardNavigation(window: BrowserWindow): void {
   });
 }
 
-function createWindow(): BrowserWindow {
+function createWindow(loadInitialOrigin = true): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -622,7 +657,7 @@ function createWindow(): BrowserWindow {
   powerMonitor.on("lock-screen", () => trace("power:lock-screen"));
   powerMonitor.on("unlock-screen", () => trace("power:unlock-screen"));
 
-  void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
+  if (loadInitialOrigin) void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
   return window;
 }
 
@@ -969,7 +1004,37 @@ if (!app.requestSingleInstanceLock()) {
     applyAboutPanel();
     hardenSession();
     registerIpc();
-    mainWindow = createWindow();
+    const localSelected = customServerOrigin === LOCAL_SELF_HOST_ORIGIN;
+    const localRoot = localSelected ? readLocalRuntimeRoot() : null;
+    mainWindow = createWindow(!localSelected);
+    if (localRoot) {
+      showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
+      void startLocalRuntime(localRoot)
+        .then(() => mainWindow?.loadURL(`${LOCAL_SELF_HOST_ORIGIN}${DESKTOP_ENTRY_PATH}`))
+        .catch((error) => {
+          if (!mainWindow) return;
+          dialog.showErrorBox("Local minddy could not start", error instanceof Error ? error.message : String(error));
+          rebuildAppMenu();
+          openServerPicker({
+            parent: mainWindow,
+            currentOrigin: LOCAL_SELF_HOST_ORIGIN,
+            isCustomServer: true,
+            onSave: setCustomServer,
+            onUseLocal: useLocalMinddy,
+            onUseCloud: useMinddyCloud,
+          });
+        });
+    } else if (localSelected) {
+      showLocalRuntimeStatus("Choose the installed minddy folder to start the local instance.");
+      openServerPicker({
+        parent: mainWindow,
+        currentOrigin: LOCAL_SELF_HOST_ORIGIN,
+        isCustomServer: true,
+        onSave: setCustomServer,
+        onUseLocal: useLocalMinddy,
+        onUseCloud: useMinddyCloud,
+      });
+    }
     // When the app is running, macOS puts the load back on the process instead of displaying
     // the banner itself. We make it native here; when the app is exited,
     // APNs and macOS display it without any minddy process — the heart of the ticket.
@@ -1069,6 +1134,7 @@ if (!app.requestSingleInstanceLock()) {
     stopClaimingLocalRuns?.();
     stopClaimingLocalRuns = null;
     stopAllLocalTurns();
+    stopLocalRuntime();
     const window = mainWindow;
     mainWindow = null;
     window?.destroy();

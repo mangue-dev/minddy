@@ -25,6 +25,7 @@ to be checked back and forth rather than reread twice separately.
 | `src/channel-store.ts` | the channel retained on disk (`userData/channel.json`) |
 | `src/server-store.ts` | the selected self-hosted origin (`userData/server.json`) |
 | `src/server-picker.ts` | the isolated server form and its validation bridge |
+| `src/local-runtime.ts` | the selected local clone and its owned Supabase + minddy process |
 | `src/preload.ts` | **entire** surface area exposed to the page (8 members) |
 | `src/menu.ts` | the application menu — it is mainly used to REMOVE ⌘W and ⌘R |
 | `src/updater.ts` | updates, and the frank renunciation outside the packaged app |

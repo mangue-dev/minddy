@@ -37,6 +37,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ...catalog,
     defaultModel,
-    cloudExecutionConfigured: capability("vercelSandbox").configured,
+    cloudExecutionConfigured: capability("agentExecution").configured,
   });
 }

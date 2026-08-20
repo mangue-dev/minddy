@@ -37,13 +37,17 @@ ENV PORT=3000
 
 WORKDIR /app
 
-RUN groupadd --gid 10001 minddy \
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates git \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 minddy \
     && useradd --uid 10001 --gid minddy --create-home --shell /usr/sbin/nologin minddy
 
 COPY --from=build --chown=minddy:minddy /app/public ./public
 COPY --from=build --chown=minddy:minddy /app/supabase/email-templates ./supabase/email-templates
 COPY --from=build --chown=minddy:minddy /app/.next/standalone ./
 COPY --from=build --chown=minddy:minddy /app/.next/static ./.next/static
+COPY --from=build --chown=minddy:minddy /app/deploy/self-hosted/agent-runner.mjs ./agent-runner.mjs
 
 USER minddy
 

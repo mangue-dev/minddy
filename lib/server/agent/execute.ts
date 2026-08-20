@@ -73,6 +73,7 @@ import {
 } from "./runs";
 import { checkAgentQuota } from "./quota";
 import { generatedAgentBranchName } from "./branch-name";
+import { resolveServerExecSecret, signServerExecToken } from "./server-exec-token";
 
 /** The tightest of the provided ceilings (omitted values impose no limit). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
@@ -523,6 +524,7 @@ export async function executeAgentRun(
   /** A local turn never starts a microVM. Computed before the first event so its
    *  write can overlap all job preparation. */
   const localTurn = run.local_exec === true;
+  const selfHostedSandbox = !localTurn && process.env.AGENT_EXECUTION_BACKEND?.trim() === "self-hosted";
 
   /**
    * CHUNK COMPUTE METERING, callable BEFORE suspension (MIN-224).
@@ -758,18 +760,20 @@ export async function executeAgentRun(
     // `/llm-key`, which mints it and persists its hash. Minting it here as well
     // would create and revoke a key before the first token.
     if (keyMode === "platform" && !localTurn) {
-      const minted = await mintRunKey({
-        runId: run.id,
-        capUsd: runKeyCapUsd({
-          runBudgetUsd: run.budget_usd,
-          runSpentUsd: Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
-          accountRemainingUsd:
-            quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
-        }),
-      });
-      if (minted) {
-        vmKey = minted.key;
-        vmKeyHash = minted.hash;
+      if (!selfHostedSandbox) {
+        const minted = await mintRunKey({
+          runId: run.id,
+          capUsd: runKeyCapUsd({
+            runBudgetUsd: run.budget_usd,
+            runSpentUsd: Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
+            accountRemainingUsd:
+              quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
+          }),
+        });
+        if (minted) {
+          vmKey = minted.key;
+          vmKeyHash = minted.hash;
+        }
       }
     }
 
@@ -1433,6 +1437,16 @@ export async function executeAgentRun(
       ledgerRunId: run.run_id ?? run.id,
       projectId: run.project_id,
       appOrigin: agentControlOrigin(),
+      ...(selfHostedSandbox
+        ? (() => {
+            const secret = resolveServerExecSecret();
+            if (!secret) throw new Error("server execution secret is not configured");
+            return {
+              controlToken: signServerExecToken(run.id, secret),
+              executionEnvironment: "server" as const,
+            };
+          })()
+        : {}),
       model: run.model,
       baseUrl,
       provider,

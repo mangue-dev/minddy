@@ -181,6 +181,8 @@ export interface VmJob {
  * on the local path, talking asks for this token.
  */
   controlToken?: string;
+  /** Identifies a token-authenticated sandbox that runs inside a self-hosted server. */
+  executionEnvironment?: "server";
   // ── Model ──────────────────────────────── ────────────────────────────────
   model: string;
   /** OpenAI-compatible URL base. The KEY is not here: the firewall
@@ -400,7 +402,14 @@ export function isCurrentRepoJob(job: Pick<VmJob, "repoMode">): boolean {
  * kind of copied test is exactly what ends up no longer meaning the
  * same thing on both sides.
  */
-export function isLocalJob(job: Pick<VmJob, "controlToken">): boolean {
+export function isLocalJob(job: Pick<VmJob, "controlToken" | "executionEnvironment">): boolean {
+  return Boolean(job.controlToken?.trim()) && job.executionEnvironment !== "server";
+}
+
+/** Whether the harness must authenticate directly and obtain its LLM key from the control plane. */
+export function isTokenAuthenticatedJob(
+  job: Pick<VmJob, "controlToken" | "executionEnvironment">,
+): boolean {
   return Boolean(job.controlToken?.trim());
 }
 

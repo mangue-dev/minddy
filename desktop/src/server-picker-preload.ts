@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld("minddyServerPicker", {
   useCloud() {
     return ipcRenderer.invoke("minddy:server-picker:cloud") as Promise<void>;
   },
+  useLocal() {
+    return ipcRenderer.invoke("minddy:server-picker:local") as Promise<{ error?: string }>;
+  },
 });

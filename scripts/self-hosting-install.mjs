@@ -6,7 +6,7 @@
  * the operator. This script refuses to replace it; rerunning it resumes only
  * the phase commands that are safe to repeat.
  */
-import { createHmac, randomBytes } from "node:crypto";
+import { createECDH, createHmac, randomBytes } from "node:crypto";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { dirname, resolve } from "node:path";
@@ -17,7 +17,7 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = resolve(SCRIPT_DIR, "..");
 export const DEFAULT_DEPLOY_DIR = resolve(ROOT_DIR, "deploy/self-hosted");
 const DEFAULT_ENV_FILE = resolve(DEFAULT_DEPLOY_DIR, ".env");
-const OPTIONAL_CAPABILITIES = ["scheduler"];
+export const OPTIONAL_CAPABILITIES = ["application-email", "web-push", "github", "gitlab"];
 
 export function fail(message) {
   throw new Error(`Self-hosted installation failed: ${message}`);
@@ -88,7 +88,8 @@ Options:
   --supabase-host <hostname> Public API hostname for full HTTPS mode.
   --db-url <postgres-url>   Migration connection for managed mode. Full mode derives it.
   --image <oci-reference>   Verified immutable minddy OCI digest to deploy.
-  --enable scheduler         Start the opt-in scheduler after bootstrap.
+  --enable <feature>         Enable application-email, web-push, github, or gitlab.
+                              Repeat for multiple features. Routines are included.
   --env-file <path>         Environment file to create (default: deploy/self-hosted/.env).
   --deploy-dir <path>       Versioned self-hosted asset directory.
   --skip-start              Create configuration without starting containers.
@@ -159,11 +160,12 @@ export function createSupabaseJwt(secret, role) {
   return `${header}.${payload}.${signature}`;
 }
 
-export function generatedValues() {
+export function generatedValues(capabilities = new Set()) {
   const secret = () => randomBytes(32).toString("hex");
   const jwtSecret = secret();
-  return {
-    CRON_SECRET: secret(),
+  const values = {
+    AI_KEY_ENCRYPTION_SECRET: secret(),
+    FEEDBACK_SSO_ENCRYPTION_SECRET: secret(),
     POSTGRES_PASSWORD: secret(),
     JWT_SECRET: jwtSecret,
     ANON_KEY: createSupabaseJwt(jwtSecret, "anon"),
@@ -179,7 +181,20 @@ export function generatedValues() {
     S3_PROTOCOL_ACCESS_KEY_SECRET: secret(),
     MINIO_ROOT_PASSWORD: secret(),
     POOLER_TENANT_ID: randomBytes(12).toString("hex"),
+    AGENT_RUNNER_SECRET: secret(),
+    CRON_SECRET: secret(),
   };
+  if (capabilities.has("github") || capabilities.has("gitlab")) {
+    values.GIT_STATE_SECRET = secret();
+    values.GIT_TOKEN_ENCRYPTION_SECRET = secret();
+  }
+  if (capabilities.has("web-push")) {
+    const vapid = createECDH("prime256v1");
+    vapid.generateKeys();
+    values.MINDDY_PUBLIC_VAPID_PUBLIC_KEY = vapid.getPublicKey().toString("base64url");
+    values.VAPID_PRIVATE_KEY = vapid.getPrivateKey().toString("base64url");
+  }
+  return values;
 }
 
 function envValue(value) {
@@ -251,7 +266,7 @@ function assertCompleteEnvironment(values) {
   if (placeholders.length > 0) fail(`${placeholders.join(", ")} is incomplete in the existing environment file. It was not changed.`);
 }
 
-export function environmentValues(options, generated = generatedValues()) {
+export function environmentValues(options, generated = generatedValues(options.capabilities)) {
   const appUrl = options.appUrl
     ? normalizeAppOrigin(options.appUrl)
     : normalizeAppOrigin(options.domain === "localhost" ? "http://localhost" : `https://${normalizeHostname(options.domain)}`);
@@ -271,6 +286,7 @@ export function environmentValues(options, generated = generatedValues()) {
   const runtimeKeys = full
     ? { MINDDY_PUBLIC_SUPABASE_ANON_KEY: generated.ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: generated.SERVICE_ROLE_KEY }
     : { MINDDY_PUBLIC_SUPABASE_ANON_KEY: options.anonKey, SUPABASE_SERVICE_ROLE_KEY: options.serviceRoleKey };
+  const capabilities = options.capabilities ?? new Set();
   return {
     ...generated,
     MINDDY_DEPLOY_DIR: options.deployDir,
@@ -290,7 +306,12 @@ export function environmentValues(options, generated = generatedValues()) {
     ...runtimeKeys,
     MINDDY_MANAGED_AI: "0",
     MINDDY_MANAGED_BILLING: "0",
-    AGENT_EXECUTION_BACKEND: "local",
+    MINDDY_SELF_HOST_FEATURES: [...capabilities].join(","),
+    AGENT_EXECUTION_BACKEND: "self-hosted",
+    AGENT_RUNNER_URL: "http://agent-runner:6464",
+    AGENT_CONTROL_ORIGIN: "http://minddy:3000",
+    EMAIL_PROVIDER: capabilities.has("application-email") ? "resend" : "",
+    VAPID_SUBJECT: capabilities.has("web-push") ? `mailto:${adminEmail}` : "",
     MINDDY_SCHEDULER_URL: "http://minddy:3000",
     ADMIN_EMAILS: adminEmail,
     MINDDY_PUBLIC_CONTACT_EMAIL: adminEmail,
@@ -375,14 +396,32 @@ export async function collectOptions(options) {
     if (!value) fail("a PostgreSQL URL is required unless --skip-bootstrap is used.");
     return value;
   });
-  if (!options.capabilities.has("scheduler")) {
-    const enableScheduler = await ask("Enable the optional scheduler? (yes/no)", "no", (value) => {
-      if (!['yes', 'no'].includes(value.toLowerCase())) fail("answer yes or no.");
-      return value.toLowerCase() === "yes";
-    });
-    if (enableScheduler) options.capabilities.add("scheduler");
+  if (options.capabilities.size === 0) {
+    const selected = await ask(
+      "Optional features (comma-separated: application-email, web-push, github, gitlab; blank for none)",
+      "none",
+      (value) => value.toLowerCase(),
+    );
+    if (selected !== "none") {
+      for (const capability of selected.split(",").map((value) => value.trim()).filter(Boolean)) {
+        if (!OPTIONAL_CAPABILITIES.includes(capability)) fail(`unknown optional capability: ${capability}.`);
+        options.capabilities.add(capability);
+      }
+    }
   }
   return options;
+}
+
+export function inferCapabilities(values) {
+  const capabilities = new Set();
+  for (const capability of (values.MINDDY_SELF_HOST_FEATURES || "").split(",").map((value) => value.trim())) {
+    if (OPTIONAL_CAPABILITIES.includes(capability)) capabilities.add(capability);
+  }
+  if (values.EMAIL_PROVIDER === "resend") capabilities.add("application-email");
+  if (values.MINDDY_PUBLIC_VAPID_PUBLIC_KEY || values.VAPID_PRIVATE_KEY) capabilities.add("web-push");
+  if (values.GITHUB_APP_ID) capabilities.add("github");
+  if (values.GITLAB_OAUTH_CLIENT_ID) capabilities.add("gitlab");
+  return capabilities;
 }
 
 function checkConfigFile(options) {
@@ -428,6 +467,7 @@ export async function main(argv = process.argv.slice(2)) {
     options.supabaseHost ||= values.SUPABASE_HOST;
     options.anonKey ||= values.MINDDY_PUBLIC_SUPABASE_ANON_KEY;
     options.serviceRoleKey ||= values.SUPABASE_SERVICE_ROLE_KEY;
+    for (const capability of inferCapabilities(values)) options.capabilities.add(capability);
     if (!options.mode && options.interactive) {
       options.mode = await ask("Deployment mode for the existing configuration (managed/full)", "managed", (value) => {
         if (!['managed', 'full'].includes(value)) fail("mode must be managed or full.");
@@ -447,7 +487,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
   if (options.bootstrap && !options.dbUrl) fail("--db-url is required unless --skip-bootstrap is used.");
   console.log(`This will ${hasExistingEnvironment ? "reuse" : "create"} ${options.envFile} (mode 0600), start the ${options.mode} Compose profile, and ${options.bootstrap ? "run" : "not run"} Supabase bootstrap.`);
-  console.log(`Optional capabilities: ${options.capabilities.size ? [...options.capabilities].join(", ") : "none (scheduler and integrations stay disabled)"}.`);
+  console.log(`Optional integrations: ${options.capabilities.size ? [...options.capabilities].join(", ") : "none"}. Scheduled routines and server agent sandboxes are included.`);
   assertPrerequisites(options);
   if (hasExistingEnvironment) console.log("→ existing environment file left unchanged; resuming safe Compose/bootstrap phases.");
   else if (options.dryRun) console.log("→ would create the protected environment file without replacing an existing file.");
@@ -460,11 +500,15 @@ export async function main(argv = process.argv.slice(2)) {
   const compose = ["compose", "--env-file", options.envFile, ...files.flatMap((file) => ["-f", file])];
   command("docker", [...compose, "pull"], { dryRun: options.dryRun });
   recordCheckpoint(options.envFile, "images-pulled", options);
-  command("docker", [...compose, ...(options.capabilities.has("scheduler") ? ["--profile", "scheduled-jobs"] : []), "up", "-d", "--wait", "--wait-timeout", "60"], { dryRun: options.dryRun });
+  command("docker", [...compose, "up", "-d", "--wait", "--wait-timeout", "60"], { dryRun: options.dryRun });
   recordCheckpoint(options.envFile, options.mode === "full" ? "database-started" : "application-stack-started", options);
   if (options.bootstrap) {
     const bootstrap = resolve(SCRIPT_DIR, "bootstrap-supabase.mjs");
-    command(process.execPath, [bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile], {
+    const bootstrapCapabilities = [...options.capabilities]
+      .filter((capability) => ["github", "gitlab"].includes(capability))
+      .flatMap((capability) => ["--enable", capability]);
+    bootstrapCapabilities.push("--enable", "scheduler");
+    command(process.execPath, [bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile, ...bootstrapCapabilities], {
       dryRun: options.dryRun,
       env: {
         MINDDY_PUBLIC_APP_URL: values.MINDDY_PUBLIC_APP_URL,

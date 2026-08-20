@@ -17,7 +17,7 @@ function fail(message) {
 }
 
 export function parseArgs(argv) {
-  const options = { port: DEFAULT_LOCAL_PORT };
+  const options = { port: DEFAULT_LOCAL_PORT, open: true, stopBackendOnExit: true };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--") continue;
@@ -28,6 +28,10 @@ export function parseArgs(argv) {
         fail("--port must be an integer between 1024 and 65535.");
       }
       options.port = port;
+    } else if (arg === "--no-open") {
+      options.open = false;
+    } else if (arg === "--keep-backend") {
+      options.stopBackendOnExit = false;
     } else if (arg === "--help" || arg === "-h") {
       options.help = true;
     } else {
@@ -38,13 +42,15 @@ export function parseArgs(argv) {
 }
 
 export function help() {
-  return `Usage: pnpm self-host:local [-- --port <port>]
+  return `Usage: pnpm self-host:local [-- --port <port>] [--no-open] [--keep-backend]
 
 Starts minddy's minimal local stack and binds the app to localhost only.
 
 Options:
-  --port <port>  Local app port (default: ${DEFAULT_LOCAL_PORT}).
-  -h, --help     Shows this help.`;
+  --port <port>   Local app port (default: ${DEFAULT_LOCAL_PORT}).
+  --no-open       Do not open the sign-up page in the default browser.
+  --keep-backend  Keep Supabase running after minddy stops.
+  -h, --help      Shows this help.`;
 }
 
 export function assertPortAvailable(port) {
@@ -77,6 +83,63 @@ function run(command, args, env) {
       else resolve(code ?? 1);
     });
   });
+}
+
+export function browserCommand(url, platform = process.platform) {
+  if (platform === "darwin") return { command: "open", args: [url] };
+  if (platform === "win32") return { command: "cmd.exe", args: ["/d", "/s", "/c", "start", "", url] };
+  return { command: "xdg-open", args: [url] };
+}
+
+export function openDefaultBrowser(url, platform = process.platform) {
+  const invocation = browserCommand(url, platform);
+  const child = spawn(invocation.command, invocation.args, { detached: true, stdio: "ignore" });
+  child.on("error", (error) => console.warn(`Could not open the browser automatically: ${error.message}`));
+  child.unref();
+}
+
+export async function waitForHealth(url, { timeoutMs = 120_000, intervalMs = 500, fetcher = fetch } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetcher(url);
+      if (response.ok) return;
+    } catch {
+      // The server is still starting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  fail(`minddy did not become healthy within ${Math.ceil(timeoutMs / 1000)} seconds. Check the terminal output above.`);
+}
+
+async function runLocalServer(packageRunner, port, runtimeEnv, onReady) {
+  const child = spawn(
+    packageRunner,
+    ["exec", "next", "start", "--hostname", "127.0.0.1", "--port", String(port)],
+    { stdio: "inherit", env: runtimeEnv },
+  );
+  const forwardInterrupt = () => {
+    if (!child.killed) child.kill("SIGINT");
+  };
+  const forwardTermination = () => {
+    if (!child.killed) child.kill("SIGTERM");
+  };
+  process.once("SIGINT", forwardInterrupt);
+  process.once("SIGTERM", forwardTermination);
+  try {
+    const exit = new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("exit", (code, signal) => resolve({ code: code ?? 1, signal }));
+    });
+    await Promise.race([
+      waitForHealth(`http://localhost:${port}/api/health`).then(onReady),
+      exit.then(({ code, signal }) => fail(`minddy stopped before it became ready (${signal || `code ${code}`}).`)),
+    ]);
+    return await exit;
+  } finally {
+    process.removeListener("SIGINT", forwardInterrupt);
+    process.removeListener("SIGTERM", forwardTermination);
+  }
 }
 
 export function productionBuildIsCurrent({ buildIdFile, stateFile, version, appUrl }) {
@@ -121,13 +184,24 @@ export async function main(argv = process.argv.slice(2)) {
       "utf8",
     );
   }
-  console.log(`✓ Local services are ready. Opening minddy at ${appUrl}.`);
-  const code = await run(
-    packageRunner,
-    ["exec", "next", "start", "--hostname", "127.0.0.1", "--port", String(options.port)],
-    runtimeEnv,
-  );
-  if (code !== 0) fail(`the minddy process exited with code ${code}.`);
+  let result;
+  try {
+    result = await runLocalServer(packageRunner, options.port, runtimeEnv, () => {
+      console.log(`✓ Local services are ready at ${appUrl}.`);
+      if (options.open) openDefaultBrowser(`${appUrl}/signup`);
+    });
+  } finally {
+    if (options.stopBackendOnExit) {
+      console.log("→ Stopping the local Supabase backend.");
+      const stopCode = await run("supabase", ["stop"], runtimeEnv).catch((error) => {
+        console.warn(`Could not stop Supabase automatically: ${error instanceof Error ? error.message : error}`);
+        return 0;
+      });
+      if (stopCode !== 0) console.warn(`Supabase stop exited with code ${stopCode}.`);
+    }
+  }
+  if (result.signal && !["SIGINT", "SIGTERM"].includes(result.signal)) fail(`the minddy process stopped after signal ${result.signal}.`);
+  if (!result.signal && result.code !== 0) fail(`the minddy process exited with code ${result.code}.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

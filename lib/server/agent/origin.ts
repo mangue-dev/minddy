@@ -35,6 +35,8 @@ export function getAgentDrainOrigin(): string {
  * does not know how to reach a localhost.
  */
 export function agentControlOrigin(): string {
+  const internal = process.env.AGENT_CONTROL_ORIGIN?.trim();
+  if (internal) return new URL(internal).origin;
   const scope = currentDeploymentScope();
   if (scope) return `https://${scope}`;
   const explicit = process.env.MINDDY_PUBLIC_APP_URL?.trim();
