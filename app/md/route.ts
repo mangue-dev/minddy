@@ -281,49 +281,43 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
 
 async function renderSelfHosting(locale: Locale, canonical: string): Promise<string> {
   const t = await getTranslations({ locale, namespace: "SelfHosting" });
-  const topology = ["app", "database", "storage", "realtime"] as const;
-  const steps = ["prerequisites", "clone", "local", "remote", "verify"] as const;
-  const optional = ["ai", "git", "email", "scheduler", "analytics", "billing"] as const;
-  const operations = ["update", "backup", "restore", "diagnose"] as const;
+  const foundations = ["app", "supabase", "data"] as const;
+  const operations = ["backup", "update", "diagnose"] as const;
 
   return [
     header(t("metaTitle"), t("metaDescription"), canonical),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
-    t("heroNote"),
-    `## ${t("topologyTitle")}`,
-    t("topologySubtitle"),
-    topology
-      .map((key) => `- **${t(`topology_${key}_title`)}**: ${t(`topology_${key}_body`)}`)
+    `## ${t("howTitle")}`,
+    t("howBody"),
+    foundations
+      .map((key) => `- **${t(`foundation_${key}_title`)}**: ${t(`foundation_${key}_body`)}`)
       .join("\n"),
-    `> ${t("topologyWarning")}`,
-    `## ${t("stepsTitle")}`,
-    t("stepsSubtitle"),
-    steps
-      .map((key, index) => {
-        const command = `\`\`\`bash\n${t(`step_${key}_command`)}\n\`\`\``;
-        return [
-          `### ${index + 1}. ${t(`step_${key}_title`)}`,
-          t(`step_${key}_body`),
-          command,
-        ].join("\n\n");
-      })
-      .join("\n\n"),
-    `## ${t("optionalTitle")}`,
-    t("optionalSubtitle"),
-    optional
-      .map((key) => `- **${t(`optional_${key}_title`)}**: ${t(`optional_${key}_body`)}`)
-      .join("\n"),
-    `### ${t("unsupportedTitle")}`,
-    t("unsupportedBody"),
+    `> ${t("howBoundary")}`,
+    `## ${t("localTitle")}`,
+    t("localGuideBody"),
+    `> ${t("localBoundary")}`,
+    `### ${t("stepInstallLocalTitle")}`,
+    t("stepInstallLocalBody"),
+    "```bash\ncorepack enable\ncorepack prepare pnpm@10.28.0 --activate\npnpm install --frozen-lockfile\npnpm self-host:local\n```",
+    `### ${t("stepOpenLocalTitle")}`,
+    t("stepOpenLocalBody"),
+    `- **${t("macAppTitle")}**: ${t("macLocalBody")}`,
+    `- **${t("browserTitle")}**: ${t("browserLocalBody")}`,
+    `## ${t("teamTitle")}`,
+    t("teamGuideBody"),
+    `> ${t("teamBoundary")}`,
+    `1. **${t("stepPrepareServerTitle")}** — ${t("stepPrepareServerBody")}`,
+    `2. **${t("stepGetReleaseTitle")}** — ${t("stepGetReleaseBody", { release: "…" })}`,
+    `3. **${t("stepRunInstallerTitle")}** — ${t("stepRunInstallerBody")}`,
+    `4. **${t("stepEmailTitle")}** — ${t("stepEmailManagedBody")}`,
+    `5. **${t("stepVerifyServerTitle")}** — ${t("stepVerifyServerBody")}`,
+    `6. **${t("stepSignupServerTitle")}** — ${t("stepSignupServerBody")}`,
     `## ${t("operationsTitle")}`,
     t("operationsSubtitle"),
     operations
       .map((key) => `- **${t(`operation_${key}_title`)}**: ${t(`operation_${key}_body`)}`)
       .join("\n"),
-    t("runbookNote"),
-    `## ${t("finishTitle")}`,
-    t("finishBody"),
     links(locale),
   ].join("\n\n") + "\n";
 }

@@ -6,9 +6,11 @@ import test from "node:test";
 
 import {
   checkpointPath,
+  combineFullEnvironmentTemplates,
   createEnvironmentFile,
   createSupabaseJwt,
   environmentValues,
+  fullBootstrapDatabaseUrl,
   normalizeImageReference,
   parseArgs as parseInstallArgs,
   parseEnvironment,
@@ -84,6 +86,19 @@ test("complete-stack credentials are internally paired", () => {
   const [header, payload, signature] = token.split(".");
   assert.ok(header && payload && signature);
   assert.match(Buffer.from(payload, "base64url").toString(), /service_role/);
+});
+
+test("the complete profile includes upstream defaults and derives a loopback bootstrap URL", () => {
+  const template = combineFullEnvironmentTemplates(
+    "POSTGRES_HOST=db\nPOSTGRES_DB=postgres\n",
+    "MINDDY_HOST=tickets.example.com\nMINDDY_POSTGRES_BIND_PORT=54322\n",
+  );
+  assert.match(template, /POSTGRES_HOST=db/);
+  assert.match(template, /MINDDY_HOST=tickets\.example\.com/);
+  assert.equal(
+    fullBootstrapDatabaseUrl({ POSTGRES_PASSWORD: "secret/with?symbols", MINDDY_POSTGRES_BIND_PORT: "55432" }),
+    "postgresql://postgres:secret%2Fwith%3Fsymbols@127.0.0.1:55432/postgres",
+  );
 });
 
 test("the doctor reports only keys and redacts connection passwords", () => {

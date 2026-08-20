@@ -695,7 +695,7 @@ async function ensureOpencodeOnce(
   | { ok: true; note: string | null }
   | { ok: false; reason: "no_npm" | "install_failed"; message: string }
 > {
-  const { decision, npmPath } = readOpencodeFacts(installDir);
+  const { decision, npm, env } = readOpencodeFacts(installDir);
   if (decision.action === "ready") return { ok: true, note: null };
   if (decision.action === "refuse") {
     return { ok: false, reason: "no_npm", message: opencodeRefusalMessage("no_npm") };
@@ -709,7 +709,7 @@ async function ensureOpencodeOnce(
       message: `Could not create ${installDir}: ${(error as Error).message}`,
     };
   }
-  const failure = await installOpencode({ installDir, npmPath: npmPath! });
+  const failure = await installOpencode({ installDir, npm: npm!, env });
   if (failure) return { ok: false, reason: "install_failed", message: failure };
   return { ok: true, note: opencodeInstallNote(decision.why) };
 }

@@ -92,8 +92,9 @@ will never be executed.
 
 For a public service, set `MINDDY_PUBLIC_APP_URL` to one absolute HTTPS origin with
 no path or trailing slash. It is used for invitation links, OAuth/MCP metadata,
-and webhook callbacks. Locally it may be omitted, which means
-`http://localhost:3000`.
+and webhook callbacks. The supported single-user command sets it to
+`http://localhost:6463`. The ordinary development command keeps its separate
+`http://localhost:3000` fallback.
 
 ## Installation: local Supabase from a clean clone
 
@@ -107,18 +108,33 @@ cd minddy
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
-pnpm bootstrap:supabase
-pnpm dev
+pnpm self-host:local
 ```
 
-`bootstrap:supabase` validates migration names and order, starts the local
+`self-host:local` checks that minddy's dedicated port is available, runs the
+bootstrap, creates a production build when the release or port changed, and
+binds the application to loopback. Later restarts reuse that build, avoiding
+the development watcher and its memory cost. The bootstrap validates migration names and order, starts the local
 stack, obtains local Supabase API keys, applies migrations, creates or corrects
 Storage buckets, writes only missing values to `.env.local`, and verifies the
-database and Storage API. Run it a second time to confirm idempotency.
+database and Storage API. `--minimal` leaves Studio, analytics, Edge Functions,
+image transformation, the pooler, and other services that minddy does not use
+stopped, reducing the local memory footprint. Port `6463` avoids the common
+application-development port `3000`. If it is already occupied, the command
+reports that conflict and accepts an explicit alternative with
+`pnpm self-host:local -- --port <port>`.
 
-Open `http://localhost:3000`, create an account, create a project, and create an
-issue. `supabase status` prints the local mail inbox URL if email confirmation is
-enabled.
+On macOS, install the signed minddy desktop app from
+[minddy.app/download](https://www.minddy.app/download), choose
+**minddy > Connect to a Server…**, and enter `http://localhost:6463`. A newly
+selected server opens its sign-up screen. On Windows and Linux, open
+`http://localhost:6463/signup` in the browser; no desktop build is currently
+published for those systems. Create an account, create a project, and create an
+issue. `supabase status` prints the local mail inbox URL if email confirmation
+is enabled.
+
+Stop the application with `Ctrl+C`, then stop its local backend with
+`supabase stop`. Run `pnpm self-host:local` from the clone to start both again.
 
 To reset an evaluation stack, explicitly destroy its local data and bootstrap it
 again:
@@ -238,10 +254,11 @@ into two supported deployment paths:
 The full profile does not copy Supabase into this repository. Fetch its pinned
 upstream Docker directory with `scripts/fetch-official-supabase.mjs`, combine it
 with the profile as shown in that directory's README, and keep every upstream
-service image unchanged. Both paths expose only Caddy ports 80 and 443, use
-health checks, and leave scheduled jobs disabled until the `scheduled-jobs`
-profile is selected. The README also documents automatic Caddy TLS and the
-loopback option for an existing TLS load balancer.
+service image unchanged. Both paths expose only Caddy ports 80 and 443 publicly;
+the full profile also binds PostgreSQL to loopback for bootstrap and maintenance.
+They use health checks and leave scheduled jobs disabled until the
+`scheduled-jobs` profile is selected. The README also documents automatic Caddy
+TLS and the loopback option for an existing TLS load balancer.
 
 ## Production configuration outside the repository
 

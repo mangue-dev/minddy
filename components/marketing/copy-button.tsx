@@ -57,9 +57,19 @@ export function CopyButton({
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      // Clipboard refused (insecure context, permission): we don't say
-      // not “copied” however.
-      return;
+      // Some embedded browsers deny the modern clipboard permission even for
+      // a direct click. Keep the button useful there without retaining the text
+      // in the document after the copy attempt.
+      const field = document.createElement("textarea");
+      field.value = text;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.opacity = "0";
+      document.body.append(field);
+      field.select();
+      const copied = document.execCommand("copy");
+      field.remove();
+      if (!copied) return;
     }
     setCopied(true);
     if (timer.current !== null) window.clearTimeout(timer.current);

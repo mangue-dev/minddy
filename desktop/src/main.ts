@@ -63,16 +63,21 @@ import {
   localBranches,
 } from "./local-repo";
 import { buildAppMenu } from "./menu";
+import { openServerPicker } from "./server-picker";
+import {
+  readDesktopServerOrigin,
+  writeDesktopServerOrigin,
+} from "./server-store";
 import { replayUpdateStatus, requestInstall, startAutoUpdates } from "./updater";
 import { trace } from "./trace";
 
 /**
  * Minddy's shell (MIN-291) — §2 from docs/desktop-electron.md.
  *
- * A single `BrowserWindow`, which loads the remote origin. **No screen to
- * it, no `file://`, no UI bundle**: this is what ensures that
- * the desktop app and the web always say the same thing, and that delivering a
- * feature does not require re-signing a binary.
+ * The main `BrowserWindow` loads the selected minddy origin, so the desktop app
+ * and web interface stay identical. The only local screen is the small server
+ * picker owned by the shell; it contains no product UI and exposes only the IPC
+ * call that validates and stores an origin.
  *
  * Everything decided here is decided on PURE functions of `lib/desktop/`,
  * tested after the repository: this file is just wiring, and it is
@@ -100,6 +105,52 @@ let apnsRegistration: Promise<string> | null = null;
  */
 let channel: DesktopChannel = "stable";
 let origin: string = DESKTOP_ORIGIN;
+let customServerOrigin: string | null = null;
+
+function rebuildAppMenu(): void {
+  if (!mainWindow) return;
+  buildAppMenu(mainWindow, channel, onChannelChange, {
+    origin,
+    isCustom: customServerOrigin !== null,
+    choose: () => {
+      if (!mainWindow) return;
+      openServerPicker({
+        parent: mainWindow,
+        currentOrigin: origin,
+        isCustomServer: customServerOrigin !== null,
+        onSave: setCustomServer,
+        onUseCloud: useMinddyCloud,
+      });
+    },
+    useCloud: useMinddyCloud,
+  });
+}
+
+function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH): void {
+  customServerOrigin = next;
+  origin = next ?? desktopOriginForChannel(channel);
+  trace("server", { origin, custom: next !== null });
+  void prewarmLocalAgent(origin);
+  applyAboutPanel();
+  rebuildAppMenu();
+  if (mainWindow) {
+    void mainWindow.loadURL(`${origin}${entryPath}`);
+    mainWindow.show();
+    mainWindow.focus();
+  }
+}
+
+function setCustomServer(next: string): void {
+  writeDesktopServerOrigin(next);
+  applyServerOrigin(next, "/signup");
+}
+
+function useMinddyCloud(): void {
+  writeDesktopServerOrigin(null);
+  writeDesktopChannel("stable");
+  channel = "stable";
+  applyServerOrigin(null);
+}
 
 /**
  * Switches the channel: we take the session, we retain, then we reload.
@@ -121,6 +172,7 @@ let origin: string = DESKTOP_ORIGIN;
  * before acting.
  */
 async function setChannel(next: DesktopChannel): Promise<void> {
+  if (customServerOrigin) return;
   if (next === channel) return;
   const from = origin;
   const to = desktopOriginForChannel(next);
@@ -139,7 +191,7 @@ async function setChannel(next: DesktopChannel): Promise<void> {
   // would announce the old origin until the next launch.
   applyAboutPanel();
   if (mainWindow) {
-    buildAppMenu(mainWindow, channel, onChannelChange);
+    rebuildAppMenu();
     goHome(mainWindow);
     mainWindow.show();
     mainWindow.focus();
@@ -154,7 +206,7 @@ async function setChannel(next: DesktopChannel): Promise<void> {
  */
 function onChannelChange(next: DesktopChannel): void {
   void setChannel(next).catch((error) => {
-    console.error("[channel] bascule impossible", error);
+    console.error("[channel] switch failed", error);
   });
 }
 
@@ -910,8 +962,9 @@ if (!app.requestSingleInstanceLock()) {
     // The channel BEFORE the window: it says which origin to load, and
     // there is no second loading to hope for to catch up.
     channel = readDesktopChannel();
-    origin = desktopOriginForChannel(channel);
-    trace("channel", { channel, origin });
+    customServerOrigin = readDesktopServerOrigin();
+    origin = customServerOrigin ?? desktopOriginForChannel(channel);
+    trace("channel", { channel, origin, customServer: customServerOrigin !== null });
 
     applyAboutPanel();
     hardenSession();
@@ -935,7 +988,7 @@ if (!app.requestSingleInstanceLock()) {
       });
       notification.show();
     });
-    buildAppMenu(mainWindow, channel, onChannelChange);
+    rebuildAppMenu();
     // Possible installation of opencode and harness cache begins
     // while the window is open. No secrets or deposits are affected.
     void prewarmLocalAgent(origin);

@@ -28,6 +28,7 @@
     "bootstrap:supabase": "node scripts/bootstrap-supabase.mjs",
     "verify:supabase": "node scripts/verify-supabase-bootstrap.mjs",
     "self-host:install": "node scripts/self-hosting-install.mjs",
+    "self-host:local": "node scripts/self-hosting-local.mjs",
     "self-host:doctor": "node scripts/self-hosting-doctor.mjs",
     "self-host:update": "node scripts/self-hosting-maintenance.mjs update",
     "self-host:backup": "node scripts/self-hosting-maintenance.mjs backup",

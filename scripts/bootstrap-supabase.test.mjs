@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  MINIMAL_LOCAL_EXCLUDES,
   appendMissingEnv,
   listMigrations,
   parseArgs,
@@ -14,9 +15,26 @@ import { parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
 import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
 import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
+test("minimal local mode skips only services that minddy does not require", () => {
+  const options = parseArgs(["--minimal", "--app-url", "http://localhost:6463"]);
+  assert.equal(options.local, true);
+  assert.equal(options.minimal, true);
+  assert.equal(options.appUrl, "http://localhost:6463");
+  assert.deepEqual(MINIMAL_LOCAL_EXCLUDES, [
+    "studio",
+    "imgproxy",
+    "postgres-meta",
+    "edge-runtime",
+    "logflare",
+    "vector",
+    "supavisor",
+    "mailpit",
+  ]);
+});
+
 test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {
   const migrations = listMigrations();
-  assert.equal(migrations.length, 4);
+  assert.equal(migrations.length, 5);
   assert.deepEqual([...migrations].sort(), migrations);
   assert.equal(migrations[0], "20270106090000_baseline.sql");
   assert.equal(migrations[1], "20270106091000_initial_data.sql");
@@ -25,6 +43,7 @@ test("migrations are sorted, include the vector extension, and repair Realtime p
     migrations[3],
     "20270106094000_page_broadcast_and_pull_request_notification_deduplication.sql",
   );
+  assert.equal(migrations[4], "20270106095000_github_issue_sync_metadata.sql");
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 
@@ -56,6 +75,7 @@ test("remote mode requires a database URL and the verifier covers invariants", (
   assert.equal(parseArgs(["--", "--local"]).local, true);
   assert.equal(parseArgs(["--db-url", "postgresql://example"]).local, false);
   assert.throws(() => parseArgs(["--unknown"]), /unknown option/);
+  assert.throws(() => parseArgs(["--app-url", "localhost:6463"]), /absolute http\(s\) origin/);
   assert.doesNotThrow(() => checkLocalConfig());
   const sql = verificationSql();
   assert.match(sql, /vector_extension/);

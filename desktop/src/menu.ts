@@ -31,7 +31,13 @@ import { checkForUpdatesFromMenu } from "./updater";
 export function buildAppMenu(
   window: BrowserWindow,
   channel: DesktopChannel,
-  onChannelChange: (channel: DesktopChannel) => void
+  onChannelChange: (channel: DesktopChannel) => void,
+  server: {
+    origin: string;
+    isCustom: boolean;
+    choose: () => void;
+    useCloud: () => void;
+  },
 ): void {
   const isMac = process.platform === "darwin";
 
@@ -62,7 +68,27 @@ export function buildAppMenu(
                 checked: channel === "preview",
                 click: (item) =>
                   onChannelChange(item.checked ? "preview" : "stable"),
+                visible: !server.isCustom,
               },
+              { type: "separator" },
+              {
+                label: server.isCustom
+                  ? `Server: ${new URL(server.origin).host}`
+                  : "Server: minddy Cloud",
+                enabled: false,
+              },
+              {
+                label: "Connect to a Server…",
+                click: server.choose,
+              },
+              ...(server.isCustom
+                ? ([
+                    {
+                      label: "Use minddy Cloud",
+                      click: server.useCloud,
+                    },
+                  ] as Electron.MenuItemConstructorOptions[])
+                : []),
               { type: "separator" },
               { role: "services" },
               { type: "separator" },

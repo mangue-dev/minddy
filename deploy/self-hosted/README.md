@@ -65,9 +65,11 @@ docker compose --env-file "$MINDDY_DEPLOY_DIR/.env" \
   -f "$MINDDY_DEPLOY_DIR/compose.full.yml" up -d
 ```
 
-The full profile removes every upstream host port, including Kong and
-Supavisor. Caddy is the only public service. Upstream PostgreSQL and Storage
-paths remain persistent exactly as defined by the official distribution; Caddy
+The full profile removes every upstream public host port, including Kong and
+Supavisor. Caddy is the only public service. PostgreSQL binds only to the host
+loopback on `MINDDY_POSTGRES_BIND_PORT` for bootstrap and maintenance. Upstream
+PostgreSQL and Storage paths remain persistent exactly as defined by the
+official distribution; Caddy
 uses the named `caddy_data` and `caddy_config` volumes for certificates and
 state. Do not change individual upstream service images or make local edits in
 `$MINDDY_SUPABASE_DIR`; fetch the next matrix-pinned revision during an upgrade.

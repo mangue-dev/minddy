@@ -104,7 +104,11 @@ contract does not depend on a rereading.
 ## Authorized URLs
 
 `site_url` = `https://www.minddy.app/`, and the allowlist only contains
-`https://www.minddy.app/auth/callback` and `http://localhost:3000/auth/callback`.
+`https://www.minddy.app/auth/callback`. The versioned local configuration uses
+the loopback-only patterns `http://localhost:*/auth/callback` and
+`http://127.0.0.1:*/auth/callback`; these cover the dedicated self-hosting port,
+an explicit fallback port, and application development without allowing a
+remote HTTP callback.
 
 **Consequence to be aware of**: a Vercel preview is not there, therefore a link requested
 from a preview to production (GoTrue falls back on `site_url`).

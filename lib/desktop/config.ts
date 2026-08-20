@@ -10,10 +10,9 @@
 /**
  * The development origin, or `null` — `MINDDY_DESKTOP_ORIGIN`.
  *
- * It only exists to develop against `localhost`: in production the
- * shell is signed and distributed, the origins are hard-coded — an app de
- * desktop whose origin can be hijacked by an environment variable is
- * an app whose login screen can be hijacked.
+ * It only exists to develop against `localhost`: the signed app never reads an
+ * origin from its environment. Installed users can choose a server through the
+ * validated native picker, and that explicit choice is stored in `userData`.
  *
  * When it is installed, it wins on EVERYTHING, channel included: on `localhost` there
  * is neither stable nor preview, there is only one dev server.

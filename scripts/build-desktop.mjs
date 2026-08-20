@@ -74,6 +74,7 @@ const result = await build({
   entryPoints: [
     path.join(repo, "desktop", "src", "main.ts"),
     path.join(repo, "desktop", "src", "preload.ts"),
+    path.join(repo, "desktop", "src", "server-picker-preload.ts"),
   ],
   outdir: OUT_DIR,
   bundle: true,

@@ -9,6 +9,10 @@ services:
   supavisor:
     ports: !reset []
 
+  db:
+    ports:
+      - 127.0.0.1:${MINDDY_POSTGRES_BIND_PORT:-54322}:5432
+
   minddy:
     image: ${MINDDY_IMAGE:?Set MINDDY_IMAGE from the matching compatibility row.}
     restart: unless-stopped

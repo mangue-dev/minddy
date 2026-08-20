@@ -83,7 +83,7 @@ Options:
                               Existing Supabase credentials for managed mode.
   --supabase-dir <path>     Pinned upstream Supabase checkout for full mode.
   --supabase-host <hostname> Public API hostname for full mode.
-  --db-url <postgres-url>   Migration connection used only by bootstrap.
+  --db-url <postgres-url>   Migration connection for managed mode. Full mode derives it.
   --image <oci-reference>   Verified immutable minddy OCI digest to deploy.
   --enable scheduler         Start the opt-in scheduler after bootstrap.
   --env-file <path>         Environment file to create (default: deploy/self-hosted/.env).
@@ -140,13 +140,17 @@ export function generatedValues() {
     JWT_SECRET: jwtSecret,
     ANON_KEY: createSupabaseJwt(jwtSecret, "anon"),
     SERVICE_ROLE_KEY: createSupabaseJwt(jwtSecret, "service_role"),
+    DASHBOARD_PASSWORD: secret(),
     SECRET_KEY_BASE: secret(),
+    REALTIME_DB_ENC_KEY: randomBytes(8).toString("hex"),
     VAULT_ENC_KEY: randomBytes(16).toString("hex"),
     PG_META_CRYPTO_KEY: secret(),
     LOGFLARE_PUBLIC_ACCESS_TOKEN: secret(),
     LOGFLARE_PRIVATE_ACCESS_TOKEN: secret(),
     S3_PROTOCOL_ACCESS_KEY_ID: randomBytes(16).toString("hex"),
     S3_PROTOCOL_ACCESS_KEY_SECRET: secret(),
+    MINIO_ROOT_PASSWORD: secret(),
+    POOLER_TENANT_ID: randomBytes(12).toString("hex"),
   };
 }
 
@@ -160,6 +164,10 @@ export function renderEnvironment(template, values) {
     if (!match || values[match[1]] === undefined) return line;
     return `${match[1]}=${envValue(values[match[1]])}`;
   }).join("\n").replace(/\n*$/, "\n");
+}
+
+export function combineFullEnvironmentTemplates(upstream, minddy) {
+  return `${upstream.trimEnd()}\n\n# minddy deployment values\n${minddy.trimStart()}`;
 }
 
 export function parseEnvironment(text) {
@@ -236,6 +244,7 @@ export function environmentValues(options, generated = generatedValues()) {
     MINDDY_HOST: domain,
     SUPABASE_HOST: supabaseHost || `supabase.${domain}`,
     CADDY_EMAIL: caddyEmail,
+    MINDDY_POSTGRES_BIND_PORT: "54322",
     MINDDY_EDITION: "self-hosted",
     MINDDY_PUBLIC_APP_URL: appUrl,
     MINDDY_PUBLIC_SUPABASE_URL: supabaseUrl,
@@ -311,7 +320,7 @@ export async function collectOptions(options) {
     if (!options.supabaseDir) options.supabaseDir = await ask("Pinned upstream Supabase checkout", undefined, (value) => resolve(value));
     if (!options.supabaseHost) options.supabaseHost = await ask("Public Supabase API hostname", `supabase.${normalizeHostname(options.domain)}`, normalizeHostname);
   }
-  if (!options.dbUrl && options.bootstrap) options.dbUrl = await ask("PostgreSQL URL for bootstrap", undefined, (value) => {
+  if (options.mode === "managed" && !options.dbUrl && options.bootstrap) options.dbUrl = await ask("PostgreSQL URL for bootstrap", undefined, (value) => {
     if (!value) fail("a PostgreSQL URL is required unless --skip-bootstrap is used.");
     return value;
   });
@@ -329,7 +338,20 @@ function checkConfigFile(options) {
   if (existsSync(options.envFile)) fail(`${options.envFile} already exists. It was not changed; review it or select another --env-file.`);
   const template = resolve(options.deployDir, ".env.example");
   if (!existsSync(template)) fail(`environment template is missing: ${template}`);
-  return readFileSync(template, "utf8");
+  const minddyTemplate = readFileSync(template, "utf8");
+  if (options.mode !== "full") return minddyTemplate;
+  if (!options.supabaseDir) fail("full mode requires --supabase-dir pointing to the pinned upstream checkout.");
+  const upstreamTemplate = resolve(options.supabaseDir, "docker/.env.example");
+  if (!existsSync(upstreamTemplate)) fail(`upstream environment template is missing: ${upstreamTemplate}. Run fetch-official-supabase first.`);
+  return combineFullEnvironmentTemplates(readFileSync(upstreamTemplate, "utf8"), minddyTemplate);
+}
+
+export function fullBootstrapDatabaseUrl(values) {
+  const password = values.POSTGRES_PASSWORD;
+  if (!password) fail("POSTGRES_PASSWORD is missing from the full-stack environment.");
+  const port = values.MINDDY_POSTGRES_BIND_PORT || "54322";
+  if (!/^\d{2,5}$/.test(port)) fail("MINDDY_POSTGRES_BIND_PORT must be a TCP port.");
+  return `postgresql://postgres:${encodeURIComponent(password)}@127.0.0.1:${port}/postgres`;
 }
 
 function assertRequestedImage(options, values) {
@@ -369,6 +391,9 @@ export async function main(argv = process.argv.slice(2)) {
     environment = renderEnvironment(template, values);
   }
   if (!options.mode) fail("--mode is required when resuming an existing environment file.");
+  if (options.mode === "full" && options.bootstrap && !options.dbUrl) {
+    options.dbUrl = fullBootstrapDatabaseUrl(values);
+  }
   if (options.bootstrap && !options.dbUrl) fail("--db-url is required unless --skip-bootstrap is used.");
   console.log(`This will ${hasExistingEnvironment ? "reuse" : "create"} ${options.envFile} (mode 0600), start the ${options.mode} Compose profile, and ${options.bootstrap ? "run" : "not run"} Supabase bootstrap.`);
   console.log(`Optional capabilities: ${options.capabilities.size ? [...options.capabilities].join(", ") : "none (scheduler and integrations stay disabled)"}.`);

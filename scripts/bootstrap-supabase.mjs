@@ -31,13 +31,30 @@ const GENERATED_SECRET_KEYS = [
   "FEEDBACK_SSO_ENCRYPTION_SECRET",
   "CRON_SECRET",
 ];
+export const MINIMAL_LOCAL_EXCLUDES = [
+  "studio",
+  "imgproxy",
+  "postgres-meta",
+  "edge-runtime",
+  "logflare",
+  "vector",
+  "supavisor",
+  "mailpit",
+];
 
 export function fail(message) {
   throw new Error(`Supabase bootstrap failed: ${message}`);
 }
 
 export function parseArgs(argv) {
-  const options = { local: true, start: true, envFile: DEFAULT_ENV_FILE, dryRun: false };
+  const options = {
+    local: true,
+    start: true,
+    minimal: false,
+    appUrl: "http://localhost:3000",
+    envFile: DEFAULT_ENV_FILE,
+    dryRun: false,
+  };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -57,6 +74,10 @@ export function parseArgs(argv) {
       delete options.dbUrl;
     } else if (arg === "--skip-start") {
       options.start = false;
+    } else if (arg === "--minimal") {
+      options.minimal = true;
+    } else if (arg === "--app-url") {
+      options.appUrl = value();
     } else if (arg === "--env-file") {
       options.envFile = resolve(ROOT_DIR, value());
     } else if (arg === "--dry-run") {
@@ -69,6 +90,25 @@ export function parseArgs(argv) {
   }
 
   if (!options.local && !options.dbUrl) fail("--db-url is required outside local mode.");
+  if (options.local) {
+    let appUrl;
+    try {
+      appUrl = new URL(options.appUrl);
+    } catch {
+      fail("--app-url must be an absolute http(s) origin.");
+    }
+    if (
+      (appUrl.protocol !== "http:" && appUrl.protocol !== "https:") ||
+      appUrl.username ||
+      appUrl.password ||
+      appUrl.pathname !== "/" ||
+      appUrl.search ||
+      appUrl.hash
+    ) {
+      fail("--app-url must be an absolute http(s) origin without a path, query, or credentials.");
+    }
+    options.appUrl = appUrl.origin;
+  }
   if (!options.envFile.startsWith(`${ROOT_DIR}/`)) {
     fail("--env-file must stay inside this clone to avoid writing an unexpected file.");
   }
@@ -80,6 +120,8 @@ export function help() {
 
 Options:
   --local              Prepare the local Docker stack (default).
+  --minimal            Skip local services that minddy does not need.
+  --app-url <origin>   Public origin of the local app (default: http://localhost:3000).
   --db-url <url>       Applies migrations to an already started remote stack.
   --skip-start         Does not run \`supabase start\` in local mode.
   --env-file <path>    Local file to complete (default: .env.local).
@@ -254,13 +296,18 @@ export async function main(argv = process.argv.slice(2)) {
     // The CLI downloads and checks services through Docker. Checking it before
     // `supabase start` avoids the vague “Cannot connect to Docker daemon”.
     run("docker", ["info"], { dryRun: options.dryRun });
-    if (options.start) run("supabase", ["start"], { dryRun: options.dryRun });
+    if (options.start) {
+      const startArgs = options.minimal
+        ? ["start", "--exclude", MINIMAL_LOCAL_EXCLUDES.join(",")]
+        : ["start"];
+      run("supabase", startArgs, { dryRun: options.dryRun });
+    }
     const status = readLocalStatus({ dryRun: options.dryRun });
     dbUrl = status.DB_URL;
     appValues = {
       MINDDY_PUBLIC_SUPABASE_URL: status.API_URL,
       MINDDY_PUBLIC_SUPABASE_ANON_KEY: status.ANON_KEY,
-      MINDDY_PUBLIC_APP_URL: "http://localhost:3000",
+      MINDDY_PUBLIC_APP_URL: options.appUrl,
       SUPABASE_SERVICE_ROLE_KEY: status.SERVICE_ROLE_KEY,
     };
   } else {

@@ -96,10 +96,12 @@ becomes a second app to maintain.
 
 ## 2. The shell
 
-**Decision: a single `BrowserWindow`, which loads `https://www.minddy.app`, without
-no local rendering.** No `file://`, no UI bundle in the app — that's what
-which ensures that the desktop app and the web always say the same thing, and that
-delivering a feature does not require re-signing a binary.
+**Current implementation: one product `BrowserWindow` loads minddy Cloud or an
+explicitly selected self-hosted origin.** The product UI is never bundled in the
+app, so the desktop and web clients still render the same interface. The shell
+contains one isolated local form for selecting a server. It accepts HTTPS remote
+origins and HTTP loopback origins, stores the choice in `userData/server.json`,
+and exposes no general-purpose bridge to that form.
 
 Settings that cannot be discussed:
 

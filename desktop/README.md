@@ -1,9 +1,9 @@
 # Minddy's macOS shell
 
-A single window, which loads `https://www.minddy.app` — or
-`https://preview.minddy.app`, of the person's choice (see “The channel”).
-**No screen of its own, no local rendering**: delivering a Minddy feature does not require re-signing a
-binary, and the desktop app still says the same thing as the web.
+A single product window loads minddy Cloud or a server selected by the person
+using the app. The product interface always comes from that server, so delivering
+a minddy feature does not require re-signing a binary. The shell owns one small
+local form for selecting the origin; it contains no product UI.
 
 Complete framework: [docs/desktop-electron.md](../docs/desktop-electron.md) §2 and
 §3. Ticket: MIN-291.
@@ -23,6 +23,8 @@ to be checked back and forth rather than reread twice separately.
 | --- | --- |
 | `src/main.ts` | window, navigation guard, `minddy://`, dock badge, IPC |
 | `src/channel-store.ts` | the channel retained on disk (`userData/channel.json`) |
+| `src/server-store.ts` | the selected self-hosted origin (`userData/server.json`) |
+| `src/server-picker.ts` | the isolated server form and its validation bridge |
 | `src/preload.ts` | **entire** surface area exposed to the page (8 members) |
 | `src/menu.ts` | the application menu — it is mainly used to REMOVE ⌘W and ⌘R |
 | `src/updater.ts` | updates, and the frank renunciation outside the packaged app |
@@ -51,19 +53,30 @@ env -u ELECTRON_RUN_AS_NODE npm --prefix desktop start
 deposit, **excludes this folder** (root tsconfig) — otherwise it would be necessary
 install Electron to compile the site.
 
-To work against a local server rather than production:
+To work against a local server rather than production without changing the
+stored server choice:
 
 ```bash
 MINDDY_DESKTOP_ORIGIN=http://localhost:3000 npm start
 ```
 
-The variable only exists for that. In production the origin is hard: an app for
-office whose origin is diverted by an environment variable is an app
-from which the login screen is hijacked.
+The variable only exists for development. A packaged app ignores it. Installed
+users choose a server from **minddy > Connect to a Server…**; remote origins must
+use HTTPS, while HTTP is accepted only for loopback addresses.
+
+## The selected server
+
+The server picker stores one normalized origin in `userData/server.json` before
+loading it. A new selection opens `/signup`; later launches open `/home` as
+usual. Cookies are not copied between cloud and self-hosted origins.
+
+Choosing **Use minddy Cloud** removes the custom selection and returns to the
+stable cloud channel. While a custom server is active, the preview channel is
+hidden because it is a property of minddy Cloud, not of the operator's server.
 
 ## The channel (MIN-352)
 
-The shell loads one of TWO origins, and nothing else:
+When minddy Cloud is selected, the shell loads one of two cloud origins:
 
 | Channel | Origin | What it is |
 | --- | --- | --- |
