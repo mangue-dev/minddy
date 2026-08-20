@@ -9,6 +9,7 @@ import {
   Equal,
   Download,
   FileText,
+  GitFork,
   Laptop,
   LayoutGrid,
   MessagesSquare,
@@ -46,6 +47,7 @@ type NavLink = {
   href: string;
   key: MessageKey<"Landing">;
   icon: LucideIcon;
+  external?: boolean;
 };
 
 /**
@@ -97,6 +99,7 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
 const LINKS: ReadonlyArray<NavLink> = [
   { href: "/#workflow", key: "navHowItWorks", icon: Route },
   { href: "/pricing", key: "navPricing", icon: Tag },
+  { href: "https://github.com/mangue-dev/minddy", key: "navOpenSource", icon: GitFork, external: true },
 ];
 
 /** Line and icon pad of the mobile drawer, shared by its two blocks. */
@@ -209,7 +212,17 @@ export function MarketingNav() {
           <nav className="hidden items-center gap-5 text-sm text-muted-foreground md:flex lg:gap-7">
             <NavProductMenu entries={PRODUCT_ENTRIES} label={t("navProduct")} locale={locale} />
             {LINKS.map((link) =>
-              link.href.startsWith("/#") ? (
+              link.external ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="transition-colors hover:text-foreground"
+                >
+                  {t(link.key)}
+                </a>
+              ) : link.href.startsWith("/#") ? (
                 <a key={link.href} href={href(link.href)} className="transition-colors hover:text-foreground">
                   {t(link.key)}
                 </a>
@@ -334,7 +347,11 @@ export function MarketingNav() {
               );
               return (
                 <SheetClose key={link.href} asChild>
-                  {link.href.startsWith("/#") ? (
+                  {link.external ? (
+                    <a href={link.href} target="_blank" rel="noreferrer" className={MOBILE_ROW}>
+                      {content}
+                    </a>
+                  ) : link.href.startsWith("/#") ? (
                     <a href={href(link.href)} className={MOBILE_ROW}>
                       {content}
                     </a>

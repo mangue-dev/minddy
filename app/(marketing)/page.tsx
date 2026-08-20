@@ -10,6 +10,7 @@ import { SectionAgents } from "@/components/marketing/section-agents";
 import { SectionPages } from "@/components/marketing/section-pages";
 import { SectionFeedback } from "@/components/marketing/section-feedback";
 import { SectionMore } from "@/components/marketing/section-more";
+import { SectionOpenSource } from "@/components/marketing/section-open-source";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
 import { SectionFaq } from "@/components/marketing/section-faq";
 import { SectionCta } from "@/components/marketing/section-cta";
@@ -57,6 +58,7 @@ export default async function LandingPage() {
       <SectionPages />
       <SectionFeedback />
       <SectionMore />
+      <SectionOpenSource />
       <SectionPricingTeaser />
       <SectionFaq />
       <SectionCta />
