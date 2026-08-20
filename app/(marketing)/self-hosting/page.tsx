@@ -24,6 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SelfHostingPage() {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("SelfHosting");
+  const tCommon = await getTranslations("Common");
   const guideUrl = `${SITE_URL}${localizedHref("/self-hosting", locale)}`;
   const releaseTag = `v${packageJson.version}`;
   const releaseBase = `${MINDDY_REPOSITORY_URL}/blob/${releaseTag}`;
@@ -32,6 +33,8 @@ export default async function SelfHostingPage() {
     readSelfHostingEmailTemplate("reset-password"),
   ]);
   const guideCopy = {
+    continueLabel: tCommon("continue"),
+    backLabel: tCommon("back"),
     chooserTitle: t("chooserTitle"),
     chooserBody: t("chooserBody"),
     recommended: t("recommended"),

@@ -19,12 +19,16 @@ import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
 import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
+import { browserRuntimeConfig } from "./runtime-config-provider";
 import type { User, Session } from "@supabase/supabase-js";
+
+export type OAuthProvider = "google" | "github";
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  oauthProviders: OAuthProvider[];
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (
     email: string,
@@ -38,9 +42,9 @@ interface AuthContextValue {
    * a revealer of accounts.
    */
   sendPasswordReset: (email: string) => Promise<void>;
-  /** Wired for later — OAuth buttons aren't shown in the v1 foundations UI. */
+  /** Starts an OAuth sign-in flow for an enabled Supabase external provider. */
   signInWithOAuth: (
-    provider: "google" | "github",
+    provider: OAuthProvider,
     redirectAfter?: string
   ) => Promise<void>;
   /**
@@ -114,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([]);
   const { track, identify, reset } = useAnalytics();
 
   // Snapshot of freshest user, read by updateUserMetadata to merge on
@@ -124,6 +129,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
   // String of serialized metadata writes (see updateUserMetadata).
   const metaWriteChain = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    const { supabaseUrl, supabaseAnonKey } = browserRuntimeConfig();
+    const controller = new AbortController();
+
+    void fetch(`${supabaseUrl}/auth/v1/settings`, {
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+      },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const body: unknown = await response.json();
+        const external =
+          typeof body === "object" && body !== null && "external" in body
+            ? (body as { external?: unknown }).external
+            : null;
+        if (!external || typeof external !== "object") return;
+        setOauthProviders(
+          (["google", "github"] as const).filter(
+            (provider) => (external as Record<string, unknown>)[provider] === true,
+          ),
+        );
+      })
+      .catch(() => {
+        // A failed settings check must not expose buttons that cannot work.
+      });
+
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const supabase = getSupabase();
@@ -455,6 +492,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       session,
       loading,
+      oauthProviders,
       signInWithPassword,
       signUpWithPassword,
       sendPasswordReset,
@@ -475,6 +513,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       session,
       loading,
+      oauthProviders,
       signInWithPassword,
       signUpWithPassword,
       sendPasswordReset,

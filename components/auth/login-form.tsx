@@ -43,6 +43,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const searchParams = useSearchParams();
   const {
     user,
+    oauthProviders,
     signInWithPassword,
     signInWithOAuth,
     needsMfaChallenge,
@@ -232,12 +233,13 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
           </div>
 
           <OAuthButtons
+            providers={oauthProviders}
             pending={oauthPending}
             disabled={busy}
             onSelect={(provider) => void handleOAuth(provider)}
           />
 
-          <AuthSeparator label={t("orContinueWithEmail")} />
+          {oauthProviders.length > 0 && <AuthSeparator label={t("orContinueWithEmail")} />}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Field id="email" label={t("email")}>

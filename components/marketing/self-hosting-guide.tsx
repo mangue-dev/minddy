@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowLeft,
   ArrowRight,
   Bell,
   Bot,
@@ -18,11 +20,11 @@ import {
   Monitor,
   Server,
   ShieldCheck,
-  Users,
 } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { Github } from "@/components/git/provider-icons";
+import { WizardStepper } from "@/components/wizard/wizard-stepper";
 
 type Path = "local" | "team";
 type SupabaseMode = "managed" | "full";
@@ -30,6 +32,8 @@ type ServerAccess = "private" | "public";
 type OptionalFeature = "application-email" | "web-push" | "github" | "gitlab";
 
 export interface SelfHostingGuideCopy {
+  continueLabel: string;
+  backLabel: string;
   chooserTitle: string;
   chooserBody: string;
   recommended: string;
@@ -257,6 +261,15 @@ interface SelfHostingGuideProps {
   repositoryUrl: string;
   releaseTag: string;
   pnpmVersion: string;
+}
+
+interface SelfHostingGuideStage {
+  id: string;
+  title: string;
+  subtitle?: string;
+  content: ReactNode;
+  hideSubmit?: boolean;
+  submitDisabled?: boolean;
 }
 
 const EXTERNAL_TOOLS = [
@@ -533,23 +546,40 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
   const [optionalFeatures, setOptionalFeatures] = useState<OptionalFeature[]>([]);
-  const guideRef = useRef<HTMLDivElement>(null);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const wizardRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
-    if (hash === "local" || hash === "team") setPath(hash);
+    if (hash === "local" || hash === "team") {
+      setPath(hash);
+      setStepIndex(1);
+    }
   }, []);
 
   const selectPath = (nextPath: Path) => {
     setPath(nextPath);
-    window.history.replaceState(null, "", `#${nextPath}`);
-    window.requestAnimationFrame(() => guideRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    setDirection(1);
+    setStepIndex(1);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${nextPath}`);
   };
 
   const clearPath = () => {
     setPath(null);
+    setDirection(-1);
+    setStepIndex(0);
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
-    document.getElementById("choose-path")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const goBack = () => {
+    if (stepIndex <= 0) return;
+    if (stepIndex === 1) {
+      clearPath();
+      return;
+    }
+    setDirection(-1);
+    setStepIndex((current) => current - 1);
   };
 
   const enteredHost = normalizeHostname(domain);
@@ -641,319 +671,488 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
     </section>
   );
 
-  return (
-    <section id="choose-path" className="py-16 sm:py-20">
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <header className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">{copy.chooserTitle}</h2>
-          <p className="mt-3 leading-relaxed text-pretty text-muted-foreground">{copy.chooserBody}</p>
-        </header>
+  const pathStageContent = (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <button
+        type="button"
+        aria-pressed={path === "local"}
+        onClick={() => selectPath("local")}
+        className={cn(
+          "group rounded-2xl border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-6",
+          path === "local" ? "border-primary ring-1 ring-primary/20" : "border-border",
+        )}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Laptop className="h-5 w-5" aria-hidden />
+          </span>
+          <span className="rounded-full border border-primary/25 bg-primary/[0.05] px-2.5 py-1 text-xs font-medium text-primary">{copy.recommended}</span>
+        </div>
+        <h3 className="mt-5 text-xl font-semibold tracking-tight">{copy.localTitle}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.localBody}</p>
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4 text-xs">
+          <span className="font-medium">{copy.localTime}</span>
+          <span className="text-muted-foreground">{copy.localFactUsers}</span>
+          <span className="text-muted-foreground">{copy.localFactNetwork}</span>
+        </div>
+        <div className="mt-5 flex items-center gap-2 text-sm font-medium text-primary">
+          {copy.choosePath}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </div>
+      </button>
 
-        <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          <button
-            type="button"
-            aria-pressed={path === "local"}
-            onClick={() => selectPath("local")}
-            className={cn(
-              "group rounded-2xl border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-6",
-              path === "local" ? "border-primary ring-1 ring-primary/20" : "border-border",
-            )}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Laptop className="h-5 w-5" aria-hidden />
-              </span>
-              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">{copy.recommended}</span>
-            </div>
-            <h3 className="mt-5 text-xl font-semibold tracking-tight">{copy.localTitle}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.localBody}</p>
-            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4 text-xs">
-              <span className="font-medium">{copy.localTime}</span>
-              <span className="text-muted-foreground">{copy.localFactUsers}</span>
-              <span className="text-muted-foreground">{copy.localFactNetwork}</span>
-            </div>
-            <div className="mt-5 flex items-center gap-2 text-sm font-medium text-primary">
-              {copy.choosePath}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-            </div>
-          </button>
+      <button
+        type="button"
+        aria-pressed={path === "team"}
+        onClick={() => selectPath("team")}
+        className={cn(
+          "group rounded-2xl border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-6",
+          path === "team" ? "border-primary ring-1 ring-primary/20" : "border-border",
+        )}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Server className="h-5 w-5" aria-hidden />
+          </span>
+          <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">{copy.teamTime}</span>
+        </div>
+        <h3 className="mt-5 text-xl font-semibold tracking-tight">{copy.teamTitle}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.teamBody}</p>
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4 text-xs">
+          <span className="font-medium">{copy.teamFactUsers}</span>
+          <span className="text-muted-foreground">{copy.teamFactNetwork}</span>
+          <span className="text-muted-foreground">{copy.teamFactMemory}</span>
+        </div>
+        <div className="mt-5 flex items-center gap-2 text-sm font-medium text-primary">
+          {copy.choosePath}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </div>
+      </button>
+    </div>
+  );
 
-          <button
-            type="button"
-            aria-pressed={path === "team"}
-            onClick={() => selectPath("team")}
-            className={cn(
-              "group rounded-2xl border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-6",
-              path === "team" ? "border-primary ring-1 ring-primary/20" : "border-border",
+  const localStages: SelfHostingGuideStage[] = [
+    {
+      id: "local-install",
+      title: copy.localGuideTitle,
+      subtitle: copy.localGuideBody,
+      content: (
+        <div className="space-y-6">
+          <div className="flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground">
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
+            <p>{copy.localBoundary}</p>
+          </div>
+          {specsCard}
+          <PromptCard prompt={localPrompt} body={copy.localAiInstallBody} copy={copy} />
+          <details className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <summary className="cursor-pointer text-lg font-medium">{copy.manualInstallTitle}</summary>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.manualInstallBody}</p>
+            <div className="mt-6 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden />
+                <h3 className="font-medium">{copy.requirementsTitle}</h3>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{copy.requirementsReady}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {EXTERNAL_TOOLS.map(({ key, href }) => <ResourceLink key={key} href={href}>{copy[key]}</ResourceLink>)}
+              </div>
+            </div>
+            <ol className="mt-6 space-y-4">
+              <Step number={1} title={copy.stepCheckToolsTitle} body={copy.stepCheckToolsBody}>
+                <Command command={"node --version\ndocker --version\nsupabase --version\ngit --version"} copy={copy} />
+              </Step>
+              <Step number={2} title={copy.stepInstallLocalTitle} body={copy.stepInstallLocalBody}>
+                <Command command={localInstall} copy={copy} />
+                <div className="mt-4 rounded-xl border border-primary/20 bg-primary/[0.05] p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Gauge className="h-4 w-4 text-primary" aria-hidden />
+                    {copy.localOptimizationTitle}
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.localOptimizationBody}</p>
+                  <Checklist items={[copy.localOptimizationOne, copy.localOptimizationTwo, copy.localOptimizationThree]} />
+                </div>
+              </Step>
+            </ol>
+          </details>
+        </div>
+      ),
+    },
+    {
+      id: "local-open",
+      title: copy.stepOpenLocalTitle,
+      subtitle: copy.stepOpenLocalBody,
+      content: (
+        <div className="space-y-6">
+          <ClientAccess serverOrigin={localOrigin} signupUrl={localSignupUrl} local copy={copy} downloadUrl={links.download} />
+          <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5">
+            <h3 className="font-medium">{copy.localOptimizationTitle}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.localOptimizationBody}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "local-test",
+      title: copy.stepTestLocalTitle,
+      subtitle: copy.stepTestLocalBody,
+      content: (
+        <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+          <Checklist items={[copy.testAccount, copy.testProject, copy.testAttachment]} />
+        </div>
+      ),
+    },
+    {
+      id: "local-maintain",
+      title: copy.localLaterTitle,
+      subtitle: copy.localTeamAnswer,
+      hideSubmit: true,
+      content: (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="font-medium">{copy.localLaterTitle}</h3>
+            <p className="mt-4 text-xs font-medium text-muted-foreground">{copy.localStopLabel}</p>
+            <Command command="Ctrl+C" copy={copy} />
+            <p className="mt-4 text-xs font-medium text-muted-foreground">{copy.localRestartLabel}</p>
+            <Command command="pnpm self-host:local" copy={copy} />
+          </div>
+          <div className="rounded-2xl border border-border bg-muted/20 p-5">
+            <h3 className="font-medium">{copy.localTeamQuestion}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.localTeamAnswer}</p>
+            <button type="button" onClick={() => selectPath("team")} className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline">
+              {copy.teamTitle}<ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const teamStages: SelfHostingGuideStage[] = [
+    {
+      id: "team-setup",
+      title: copy.teamGuideTitle,
+      subtitle: copy.teamGuideBody,
+      submitDisabled: !serverSetupValid,
+      content: (
+        <div className="space-y-6">
+          <div className="flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
+            <p>{serverAccess === "private"
+              ? (supabaseMode === "full" ? copy.privateFullNetworkBoundary : copy.privateNetworkBoundary)
+              : copy.publicNetworkBoundary}</p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+            <h3 className="text-xl font-semibold tracking-tight">{copy.setupTitle}</h3>
+            <fieldset className="mt-5">
+              <legend className="text-sm font-medium">{copy.accessQuestion}</legend>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                {([
+                  { access: "private" as const, title: copy.privateAccessTitle, body: copy.privateAccessBody, badge: copy.privateAccessBadge, icon: ShieldCheck },
+                  { access: "public" as const, title: copy.publicAccessTitle, body: copy.publicAccessBody, badge: null, icon: Globe2 },
+                ]).map(({ access, title, body, badge, icon: Icon }) => (
+                  <label key={access} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", serverAccess === access ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
+                    <input
+                      type="radio"
+                      name="server-access"
+                      value={access}
+                      checked={serverAccess === access}
+                      onChange={() => setServerAccess(access)}
+                      className="sr-only"
+                    />
+                    <div className="flex items-start gap-3">
+                      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{title}</span>
+                          {badge && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{badge}</span>}
+                        </div>
+                        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium">
+                {serverAccess === "private" ? copy.serverIpLabel : copy.domainLabel}
+                {serverAccess === "private" ? (
+                  <input value={serverIp} onChange={(event) => setServerIp(event.target.value)} inputMode="decimal" spellCheck={false} placeholder="192.168.1.50" aria-invalid={serverIp.length > 0 && !serverIpValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                ) : (
+                  <input value={domain} onChange={(event) => setDomain(event.target.value)} inputMode="url" spellCheck={false} placeholder="tickets.example.com" aria-invalid={domain.length > 0 && !domainValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                )}
+                <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{serverAccess === "private" ? copy.serverIpHint : copy.domainHint}</span>
+                {serverAccess === "private" && serverIp.length > 0 && !serverIpValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.serverIpError}</span>}
+                {serverAccess === "public" && domain.length > 0 && !domainValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.domainError}</span>}
+              </label>
+              <label className="text-sm font-medium">
+                {copy.emailLabel}
+                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="ops@example.com" aria-invalid={email.length > 0 && !emailValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{copy.emailHint}</span>
+                {email.length > 0 && !emailValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.emailError}</span>}
+              </label>
+            </div>
+
+            <fieldset className="mt-6">
+              <legend className="text-sm font-medium">{copy.supabaseQuestion}</legend>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                {([
+                  { mode: "managed" as const, title: copy.managedTitle, body: copy.managedBody, badge: copy.managedBadge, icon: Database },
+                  { mode: "full" as const, title: copy.fullTitle, body: copy.fullBody, badge: copy.fullBadge, icon: Server },
+                ]).map(({ mode, title, body, badge, icon: Icon }) => (
+                  <label key={mode} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", supabaseMode === mode ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
+                    <input type="radio" name="supabase-mode" value={mode} checked={supabaseMode === mode} onChange={() => setSupabaseMode(mode)} className="sr-only" />
+                    <div className="flex items-start gap-3">
+                      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{title}</span>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{badge}</span>
+                        </div>
+                        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              {serverAccess === "private" && (
+                <p className="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
+                  {supabaseMode === "managed" ? copy.privateSupabaseManagedNotice : copy.privateSupabaseFullNotice}
+                </p>
+              )}
+              <p className="mt-3 text-sm text-muted-foreground">{supabaseMode === "managed" ? copy.managedNeed : copy.fullNeed}</p>
+            </fieldset>
+
+            <fieldset className="mt-6">
+              <legend className="text-sm font-medium">{copy.servicesQuestion}</legend>
+              <p className="mt-1 text-sm text-muted-foreground">{copy.servicesBody}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {featureCatalog.map(({ id, title, body, icon: Icon }) => (
+                  <label key={id} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", optionalFeatures.includes(id) ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
+                    <input type="checkbox" checked={optionalFeatures.includes(id)} onChange={() => toggleFeature(id)} className="sr-only" />
+                    <div className="flex items-start gap-3">
+                      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium">{title}</span>
+                        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                      </div>
+                      {optionalFeatures.includes(id) && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" aria-hidden /></span>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">{copy.servicesExcluded}</p>
+            </fieldset>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "team-install",
+      title: copy.stepPrepareServerTitle,
+      subtitle: copy.stepPrepareServerBody,
+      content: (
+        <div className="space-y-6">
+          {specsCard}
+          <PromptCard prompt={teamPrompt} body={copy.teamAiInstallBody} copy={copy} disabled={!serverSetupValid} />
+          <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <h3 className="text-lg font-medium">{copy.stepPrepareServerTitle}</h3>
+            <Checklist items={serverAccess === "private"
+              ? [
+                  copy.serverChecklistDocker,
+                  supabaseMode === "full" ? copy.privateFullNetworkBoundary : copy.privateNetworkBoundary,
+                  copy.serverChecklistSmtp,
+                ]
+              : [copy.serverChecklistDocker, copy.serverChecklistDns, copy.serverChecklistPorts, copy.serverChecklistSmtp]} />
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ResourceLink href="https://docs.docker.com/engine/install/">{copy.installDocker}</ResourceLink>
+              {supabaseMode === "managed" && <ResourceLink href="https://supabase.com/dashboard/projects">{copy.managedTitle}</ResourceLink>}
+            </div>
+            {serverAccess === "public" && (
+              <div className="mt-4 rounded-xl border border-border bg-background p-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Globe2 className="h-4 w-4 text-primary" aria-hidden />
+                  {copy.dnsTitle}
+                </div>
+                <dl className="mt-3 space-y-2 font-mono text-xs">
+                  <div className="flex flex-wrap justify-between gap-2"><dt>{copy.dnsApp}</dt><dd>{host} → {copy.dnsTarget}</dd></div>
+                  {supabaseMode === "full" && <div className="flex flex-wrap justify-between gap-2"><dt>{copy.dnsSupabase}</dt><dd>{supabaseHost} → {copy.dnsTarget}</dd></div>}
+                </dl>
+              </div>
             )}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Server className="h-5 w-5" aria-hidden />
-              </span>
-              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">{copy.teamTime}</span>
+          </section>
+          <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <h3 className="text-lg font-medium">{copy.stepGetReleaseTitle}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.stepGetReleaseBody}</p>
+            <Command command={serverClone} copy={copy} />
+            <div className="mt-4"><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div>
+          </section>
+          {supabaseMode === "full" && (
+            <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <h3 className="text-lg font-medium">{copy.stepFetchSupabaseTitle}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.stepFetchSupabaseBody}</p>
+              <Command command={fetchSupabase} copy={copy} />
+            </section>
+          )}
+          <section className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+            <h3 className="text-lg font-medium">{copy.stepRunInstallerTitle}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.stepRunInstallerBody}</p>
+            <Command command={installServer} copy={copy} />
+            <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              {copy.installerSafe}
+            </p>
+            {selectedFeatureCatalog.length > 0 && (
+              <div className="mt-4 rounded-xl border border-border bg-background p-4">
+                <h4 className="text-sm font-medium">{copy.selectedServicesTitle}</h4>
+                <p className="mt-1 text-sm text-muted-foreground">{copy.selectedServicesBody}</p>
+                <Checklist items={selectedFeatureCatalog.map(({ title, setup }) => title + ": " + setup)} />
+              </div>
+            )}
+          </section>
+        </div>
+      ),
+    },
+    {
+      id: "team-verify",
+      title: copy.stepEmailTitle,
+      subtitle: supabaseMode === "managed" ? copy.stepEmailManagedBody : copy.stepEmailFullBody,
+      content: (
+        <div className="space-y-6">
+          <EmailConfiguration serverOrigin={serverOrigin} mode={supabaseMode} templates={emailTemplates} copy={copy} />
+          <section className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+            <h3 className="text-lg font-medium">{copy.stepVerifyServerTitle}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.stepVerifyServerBody}</p>
+            <Command command={doctor} copy={copy} />
+            <Checklist items={serverAccess === "private"
+              ? [copy.doctorPass, copy.emailPass, copy.backupPass]
+              : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} />
+          </section>
+        </div>
+      ),
+    },
+    {
+      id: "team-signup",
+      title: copy.stepSignupServerTitle,
+      subtitle: copy.stepSignupServerBody,
+      hideSubmit: true,
+      content: (
+        <div className="space-y-6">
+          <ClientAccess serverOrigin={serverOrigin} signupUrl={signupUrl} local={false} privateNetwork={serverAccess === "private"} copy={copy} downloadUrl={links.download} />
+          <div className="rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
+            <h3 className="text-lg font-medium tracking-tight">{copy.serverAnswersTitle}</h3>
+            <div className="mt-4 divide-y divide-border">
+              {[
+                [copy.answerExposureQuestion, copy.answerExposure],
+                [copy.answerOptionalQuestion, copy.answerOptional],
+                [copy.answerUpdatesQuestion, copy.answerUpdates],
+              ].map(([question, answer]) => (
+                <details key={question} className="group py-4 first:pt-0 last:pb-0">
+                  <summary className="cursor-pointer list-none pr-6 text-sm font-medium marker:hidden">{question}</summary>
+                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{answer}</p>
+                </details>
+              ))}
             </div>
-            <h3 className="mt-5 text-xl font-semibold tracking-tight">{copy.teamTitle}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.teamBody}</p>
-            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4 text-xs">
-              <span className="font-medium">{copy.teamFactUsers}</span>
-              <span className="text-muted-foreground">{copy.teamFactNetwork}</span>
-              <span className="text-muted-foreground">{copy.teamFactMemory}</span>
-            </div>
-            <div className="mt-5 flex items-center gap-2 text-sm font-medium text-primary">
-              {copy.choosePath}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-            </div>
+            <div className="mt-5"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>
+          </div>
+          <button type="button" onClick={clearPath} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {copy.changePath}
           </button>
         </div>
+      ),
+    },
+  ];
 
-        {path && (
-          <div ref={guideRef} className="scroll-mt-24 pt-14">
-            <div className="mb-8 flex flex-col gap-4 border-b border-border pb-8 sm:flex-row sm:items-end sm:justify-between">
-              <div className="max-w-2xl">
-                <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                  {path === "local" ? <Gauge className="h-4 w-4" aria-hidden /> : <Users className="h-4 w-4" aria-hidden />}
-                  {path === "local" ? copy.localFactMemory : copy.teamFactUsers}
-                </div>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-                  {path === "local" ? copy.localGuideTitle : copy.teamGuideTitle}
-                </h2>
-                <p className="mt-3 leading-relaxed text-muted-foreground">
-                  {path === "local" ? copy.localGuideBody : copy.teamGuideBody}
-                </p>
+  const pathStage = {
+    id: "path",
+    title: copy.chooserTitle,
+    subtitle: copy.chooserBody,
+    content: pathStageContent,
+    hideSubmit: true,
+    submitDisabled: false,
+  };
+  const stages = [pathStage, ...(path === "local" ? localStages : path === "team" ? teamStages : [])];
+  const currentStageIndex = Math.min(stepIndex, stages.length - 1);
+  const currentStage = stages[currentStageIndex];
+
+  useEffect(() => {
+    if (stepIndex > 0) {
+      window.requestAnimationFrame(() => wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  }, [stepIndex]);
+
+  const handleWizardSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (currentStage.submitDisabled || currentStageIndex >= stages.length - 1) return;
+    setDirection(1);
+    setStepIndex((current) => current + 1);
+  };
+
+  const handleStageClick = (targetIndex: number) => {
+    if (targetIndex >= currentStageIndex) return;
+    if (targetIndex === 0) {
+      clearPath();
+      return;
+    }
+    setDirection(-1);
+    setStepIndex(targetIndex);
+  };
+
+  return (
+    <section id="choose-path" ref={wizardRef} className="scroll-mt-20 border-y border-border bg-muted/10 py-14 sm:py-20">
+      <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
+        <div className="flex justify-center">
+          <WizardStepper
+            currentStep={currentStageIndex + 1}
+            totalSteps={stages.length}
+            onStepClick={handleStageClick}
+            getStepLabel={(step) => stages[step - 1]?.title}
+          />
+        </div>
+
+        <form onSubmit={handleWizardSubmit} className="mt-10">
+          <AnimatePresence initial={false} mode="wait" custom={direction}>
+            <motion.div
+              key={currentStage.id}
+              custom={direction}
+              initial={{ opacity: 0, x: direction * 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: direction * -18 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-1.5 text-left">
+                <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{currentStage.title}</h2>
+                {currentStage.subtitle && <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">{currentStage.subtitle}</p>}
               </div>
-              <button type="button" onClick={clearPath} className="self-start text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-                {copy.changePath}
+              <div className="mt-7">{currentStage.content}</div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-8 flex flex-col items-center gap-3">
+            {!currentStage.hideSubmit && (
+              <button
+                type="submit"
+                disabled={currentStage.submitDisabled}
+                className="inline-flex h-10 min-w-40 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {copy.continueLabel}
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
               </button>
-            </div>
-
-            {path === "local" ? (
-              <div>
-                <div className="mb-6 flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground">
-                  <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
-                  <p>{copy.localBoundary}</p>
-                </div>
-                {specsCard}
-                <PromptCard prompt={localPrompt} body={copy.localAiInstallBody} copy={copy} />
-                <details className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-                  <summary className="cursor-pointer text-lg font-medium">{copy.manualInstallTitle}</summary>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.manualInstallBody}</p>
-                  <div className="mt-6 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
-                  <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" aria-hidden /><h3 className="font-medium">{copy.requirementsTitle}</h3></div>
-                  <p className="mt-2 text-sm text-muted-foreground">{copy.requirementsReady}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {EXTERNAL_TOOLS.map(({ key, href }) => <ResourceLink key={key} href={href}>{copy[key]}</ResourceLink>)}
-                  </div>
-                  </div>
-                  <ol className="mt-6 space-y-4">
-                  <Step number={1} title={copy.stepCheckToolsTitle} body={copy.stepCheckToolsBody}>
-                    <Command command={"node --version\ndocker --version\nsupabase --version\ngit --version"} copy={copy} />
-                  </Step>
-                  <Step number={2} title={copy.stepInstallLocalTitle} body={copy.stepInstallLocalBody}>
-                    <Command command={localInstall} copy={copy} />
-                    <div className="mt-4 rounded-xl border border-primary/20 bg-primary/[0.05] p-4">
-                      <div className="flex items-center gap-2 text-sm font-medium"><Gauge className="h-4 w-4 text-primary" aria-hidden />{copy.localOptimizationTitle}</div>
-                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.localOptimizationBody}</p>
-                      <Checklist items={[copy.localOptimizationOne, copy.localOptimizationTwo, copy.localOptimizationThree]} />
-                    </div>
-                  </Step>
-                  <Step number={3} title={copy.stepOpenLocalTitle} body={copy.stepOpenLocalBody}>
-                    <ClientAccess serverOrigin={localOrigin} signupUrl={localSignupUrl} local copy={copy} downloadUrl={links.download} />
-                  </Step>
-                  <Step number={4} title={copy.stepTestLocalTitle} body={copy.stepTestLocalBody}>
-                    <Checklist items={[copy.testAccount, copy.testProject, copy.testAttachment]} />
-                  </Step>
-                  </ol>
-                  <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-card p-5">
-                    <h3 className="font-medium">{copy.localLaterTitle}</h3>
-                    <p className="mt-4 text-xs font-medium text-muted-foreground">{copy.localStopLabel}</p>
-                    <Command command="Ctrl+C" copy={copy} />
-                    <p className="mt-4 text-xs font-medium text-muted-foreground">{copy.localRestartLabel}</p>
-                    <Command command="pnpm self-host:local" copy={copy} />
-                  </div>
-                  <div className="rounded-2xl border border-border bg-muted/20 p-5">
-                    <h3 className="font-medium">{copy.localTeamQuestion}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.localTeamAnswer}</p>
-                    <button type="button" onClick={() => selectPath("team")} className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline">
-                      {copy.teamTitle}<ArrowRight className="h-4 w-4" aria-hidden />
-                    </button>
-                  </div>
-                  </div>
-                </details>
-              </div>
-            ) : (
-              <div>
-                <div className="mb-6 flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
-                  <p>{serverAccess === "private"
-                    ? (supabaseMode === "full" ? copy.privateFullNetworkBoundary : copy.privateNetworkBoundary)
-                    : copy.publicNetworkBoundary}</p>
-                </div>
-
-                <div className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                  <h3 className="text-xl font-semibold tracking-tight">{copy.setupTitle}</h3>
-                  <fieldset className="mt-5">
-                    <legend className="text-sm font-medium">{copy.accessQuestion}</legend>
-                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                      {([
-                        { access: "private" as const, title: copy.privateAccessTitle, body: copy.privateAccessBody, badge: copy.privateAccessBadge, icon: ShieldCheck },
-                        { access: "public" as const, title: copy.publicAccessTitle, body: copy.publicAccessBody, badge: null, icon: Globe2 },
-                      ]).map(({ access, title, body, badge, icon: Icon }) => (
-                        <label key={access} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", serverAccess === access ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
-                          <input
-                            type="radio"
-                            name="server-access"
-                            value={access}
-                            checked={serverAccess === access}
-                            onChange={() => setServerAccess(access)}
-                            className="sr-only"
-                          />
-                          <div className="flex items-start gap-3">
-                            <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">{title}</span>
-                                {badge && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{badge}</span>}
-                              </div>
-                              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
-                            </div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                    <label className="text-sm font-medium">
-                      {serverAccess === "private" ? copy.serverIpLabel : copy.domainLabel}
-                      {serverAccess === "private" ? (
-                        <input value={serverIp} onChange={(event) => setServerIp(event.target.value)} inputMode="decimal" spellCheck={false} placeholder="192.168.1.50" aria-invalid={serverIp.length > 0 && !serverIpValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
-                      ) : (
-                        <input value={domain} onChange={(event) => setDomain(event.target.value)} inputMode="url" spellCheck={false} placeholder="tickets.example.com" aria-invalid={domain.length > 0 && !domainValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
-                      )}
-                      <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{serverAccess === "private" ? copy.serverIpHint : copy.domainHint}</span>
-                      {serverAccess === "private" && serverIp.length > 0 && !serverIpValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.serverIpError}</span>}
-                      {serverAccess === "public" && domain.length > 0 && !domainValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.domainError}</span>}
-                    </label>
-                    <label className="text-sm font-medium">
-                      {copy.emailLabel}
-                      <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="ops@example.com" aria-invalid={email.length > 0 && !emailValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
-                      <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{copy.emailHint}</span>
-                      {email.length > 0 && !emailValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.emailError}</span>}
-                    </label>
-                  </div>
-                  <fieldset className="mt-6">
-                    <legend className="text-sm font-medium">{copy.supabaseQuestion}</legend>
-                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                      {([
-                        { mode: "managed" as const, title: copy.managedTitle, body: copy.managedBody, badge: copy.managedBadge, icon: Database },
-                        { mode: "full" as const, title: copy.fullTitle, body: copy.fullBody, badge: copy.fullBadge, icon: Server },
-                      ]).map(({ mode, title, body, badge, icon: Icon }) => (
-                        <label key={mode} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", supabaseMode === mode ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
-                          <input type="radio" name="supabase-mode" value={mode} checked={supabaseMode === mode} onChange={() => setSupabaseMode(mode)} className="sr-only" />
-                          <div className="flex items-start gap-3">
-                            <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-                            <div><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{title}</span><span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{badge}</span></div><p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p></div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                    {serverAccess === "private" && (
-                      <p className="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
-                        {supabaseMode === "managed" ? copy.privateSupabaseManagedNotice : copy.privateSupabaseFullNotice}
-                      </p>
-                    )}
-                    <p className="mt-3 text-sm text-muted-foreground">{supabaseMode === "managed" ? copy.managedNeed : copy.fullNeed}</p>
-                  </fieldset>
-                  <fieldset className="mt-6">
-                    <legend className="text-sm font-medium">{copy.servicesQuestion}</legend>
-                    <p className="mt-1 text-sm text-muted-foreground">{copy.servicesBody}</p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      {featureCatalog.map(({ id, title, body, icon: Icon }) => (
-                        <label key={id} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", optionalFeatures.includes(id) ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
-                          <input type="checkbox" checked={optionalFeatures.includes(id)} onChange={() => toggleFeature(id)} className="sr-only" />
-                          <div className="flex items-start gap-3"><Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><div className="min-w-0 flex-1"><span className="font-medium">{title}</span><p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p></div>{optionalFeatures.includes(id) && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" aria-hidden /></span>}</div>
-                        </label>
-                      ))}
-                    </div>
-                    <p className="mt-3 text-xs text-muted-foreground">{copy.servicesExcluded}</p>
-                  </fieldset>
-                </div>
-
-                {specsCard}
-                <PromptCard prompt={teamPrompt} body={copy.teamAiInstallBody} copy={copy} disabled={!serverSetupValid} />
-
-                <details className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-                  <summary className="cursor-pointer text-lg font-medium">{copy.manualInstallTitle}</summary>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.manualInstallBody}</p>
-                  <ol className="mt-6 space-y-4">
-                  <Step number={1} title={copy.stepPrepareServerTitle} body={copy.stepPrepareServerBody}>
-                    <Checklist items={serverAccess === "private"
-                      ? [
-                          copy.serverChecklistDocker,
-                          supabaseMode === "full" ? copy.privateFullNetworkBoundary : copy.privateNetworkBoundary,
-                          copy.serverChecklistSmtp,
-                        ]
-                      : [copy.serverChecklistDocker, copy.serverChecklistDns, copy.serverChecklistPorts, copy.serverChecklistSmtp]} />
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <ResourceLink href="https://docs.docker.com/engine/install/">{copy.installDocker}</ResourceLink>
-                      {supabaseMode === "managed" && <ResourceLink href="https://supabase.com/dashboard/projects">{copy.managedTitle}</ResourceLink>}
-                    </div>
-                    {serverAccess === "public" && <div className="mt-4 rounded-xl border border-border bg-background p-4">
-                      <div className="flex items-center gap-2 text-sm font-medium"><Globe2 className="h-4 w-4 text-primary" aria-hidden />{copy.dnsTitle}</div>
-                      <dl className="mt-3 space-y-2 font-mono text-xs">
-                        <div className="flex flex-wrap justify-between gap-2"><dt>{copy.dnsApp}</dt><dd>{host} → {copy.dnsTarget}</dd></div>
-                        {supabaseMode === "full" && <div className="flex flex-wrap justify-between gap-2"><dt>{copy.dnsSupabase}</dt><dd>{supabaseHost} → {copy.dnsTarget}</dd></div>}
-                      </dl>
-                    </div>}
-                  </Step>
-                  <Step number={2} title={copy.stepGetReleaseTitle} body={copy.stepGetReleaseBody}>
-                    <Command command={serverClone} copy={copy} />
-                    <div className="mt-4"><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div>
-                  </Step>
-                  {supabaseMode === "full" && (
-                    <Step number={3} title={copy.stepFetchSupabaseTitle} body={copy.stepFetchSupabaseBody}>
-                      <Command command={fetchSupabase} copy={copy} />
-                    </Step>
-                  )}
-                  <Step number={supabaseMode === "full" ? 4 : 3} title={copy.stepRunInstallerTitle} body={copy.stepRunInstallerBody}>
-                    <Command command={installServer} copy={copy} />
-                    <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>
-                    {selectedFeatureCatalog.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><h4 className="text-sm font-medium">{copy.selectedServicesTitle}</h4><p className="mt-1 text-sm text-muted-foreground">{copy.selectedServicesBody}</p><Checklist items={selectedFeatureCatalog.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}
-                  </Step>
-                  <Step number={supabaseMode === "full" ? 5 : 4} title={copy.stepEmailTitle} body={supabaseMode === "managed" ? copy.stepEmailManagedBody : copy.stepEmailFullBody}>
-                    <EmailConfiguration serverOrigin={serverOrigin} mode={supabaseMode} templates={emailTemplates} copy={copy} />
-                  </Step>
-                  <Step number={supabaseMode === "full" ? 6 : 5} title={copy.stepVerifyServerTitle} body={copy.stepVerifyServerBody}>
-                    <Command command={doctor} copy={copy} />
-                    <Checklist items={serverAccess === "private"
-                      ? [copy.doctorPass, copy.emailPass, copy.backupPass]
-                      : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} />
-                  </Step>
-                  <Step number={supabaseMode === "full" ? 7 : 6} title={copy.stepSignupServerTitle} body={copy.stepSignupServerBody}>
-                    <ClientAccess serverOrigin={serverOrigin} signupUrl={signupUrl} local={false} privateNetwork={serverAccess === "private"} copy={copy} downloadUrl={links.download} />
-                  </Step>
-                  </ol>
-
-                  <div className="mt-8 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
-                  <h3 className="text-lg font-medium tracking-tight">{copy.serverAnswersTitle}</h3>
-                  <div className="mt-4 divide-y divide-border">
-                    {[
-                      [copy.answerExposureQuestion, copy.answerExposure],
-                      [copy.answerOptionalQuestion, copy.answerOptional],
-                      [copy.answerUpdatesQuestion, copy.answerUpdates],
-                    ].map(([question, answer]) => (
-                      <details key={question} className="group py-4 first:pt-0 last:pb-0">
-                        <summary className="cursor-pointer list-none pr-6 text-sm font-medium marker:hidden">{question}</summary>
-                        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{answer}</p>
-                      </details>
-                    ))}
-                  </div>
-                  <div className="mt-5"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>
-                  </div>
-                </details>
-              </div>
+            )}
+            {currentStageIndex > 0 && (
+              <button
+                type="button"
+                onClick={goBack}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                {copy.backLabel}
+              </button>
             )}
           </div>
-        )}
+        </form>
       </div>
     </section>
   );

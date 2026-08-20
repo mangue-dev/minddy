@@ -71,7 +71,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
   const tCommon = useTranslations("Common");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, signUpWithPassword, signInWithOAuth } = useAuth();
+  const { user, oauthProviders, signUpWithPassword, signInWithOAuth } = useAuth();
   const { track } = useAnalytics();
   const inDesktopApp = useInDesktopApp();
 
@@ -318,11 +318,14 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                 {step === "account" && (
                   <>
                     <OAuthButtons
+                      providers={oauthProviders}
                       pending={oauthPending}
                       disabled={busy}
                       onSelect={(provider) => void handleOAuth(provider)}
                     />
-                    <AuthSeparator label={t("orContinueWithEmail")} />
+                    {oauthProviders.length > 0 && (
+                      <AuthSeparator label={t("orContinueWithEmail")} />
+                    )}
                     <Field id="email" label={t("email")}>
                       <Input
                         id="email"
@@ -460,4 +463,3 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
     </AuthColumn>
   );
 }
-

@@ -13,6 +13,7 @@ import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/password-policy";
 import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
+import type { OAuthProvider } from "@/lib/auth-context";
 
 /**
  * What login and registration have in common (MIN-300).
@@ -24,7 +25,7 @@ import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
  * in the desktop app window. The rest is up to everyone.
  */
 
-export type OAuthProvider = "google" | "github";
+export type { OAuthProvider } from "@/lib/auth-context";
 
 /** Multicolor Google logo (inline — no external asset). */
 export function GoogleGlyph() {
@@ -171,37 +172,44 @@ export function SignupLegalNotice({ external }: { external: boolean }) {
  * creates the account on the first pass.
  */
 export function OAuthButtons({
+  providers,
   pending,
   disabled,
   onSelect,
 }: {
+  providers: OAuthProvider[];
   pending: OAuthProvider | null;
   disabled: boolean;
   onSelect: (provider: OAuthProvider) => void;
 }) {
   const t = useTranslations("Auth");
+  if (providers.length === 0) return null;
   return (
     <div className="space-y-2.5">
-      <Button
-        type="button"
-        variant="outline"
-        className="h-10 w-full justify-center gap-2.5"
-        disabled={disabled}
-        onClick={() => onSelect("google")}
-      >
-        {pending === "google" ? <Spinner /> : <GoogleGlyph />}
-        {t("continueWithGoogle")}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        className="h-10 w-full justify-center gap-2.5"
-        disabled={disabled}
-        onClick={() => onSelect("github")}
-      >
-        {pending === "github" ? <Spinner /> : <Github className="size-4" />}
-        {t("continueWithGitHub")}
-      </Button>
+      {providers.includes("google") && (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 w-full justify-center gap-2.5"
+          disabled={disabled}
+          onClick={() => onSelect("google")}
+        >
+          {pending === "google" ? <Spinner /> : <GoogleGlyph />}
+          {t("continueWithGoogle")}
+        </Button>
+      )}
+      {providers.includes("github") && (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 w-full justify-center gap-2.5"
+          disabled={disabled}
+          onClick={() => onSelect("github")}
+        >
+          {pending === "github" ? <Spinner /> : <Github className="size-4" />}
+          {t("continueWithGitHub")}
+        </Button>
+      )}
     </div>
   );
 }
