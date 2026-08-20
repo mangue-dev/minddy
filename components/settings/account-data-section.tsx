@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -16,7 +16,7 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, Upload } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
@@ -43,6 +43,8 @@ export function AccountDataSection() {
   const { user, signOut } = useAuth();
 
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<DeletionPreview | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
@@ -105,6 +107,35 @@ export function AccountDataSection() {
     }
   };
 
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetch("/api/account/import", {
+        method: "POST",
+        body: form,
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        result?: { remappedIds: number; skippedMemberships: number };
+      };
+      if (!response.ok) throw new Error(body.error ?? t("genericError"));
+      toast.success(
+        t("importDoneToast", {
+          remapped: body.result?.remappedIds ?? 0,
+          skipped: body.result?.skippedMemberships ?? 0,
+        }),
+      );
+      window.location.reload();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -138,6 +169,40 @@ export function AccountDataSection() {
 
   return (
     <>
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountDataImport}
+        icon={Upload}
+        title={t("importTitle")}
+        description={t("importDesc")}
+      >
+        <SettingsRow
+          label={t("importButton")}
+          hint={t("importHint")}
+          control={
+            <>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void handleImport(file);
+                }}
+              />
+              <Button
+                variant="outline"
+                onClick={() => importInputRef.current?.click()}
+                disabled={importing}
+              >
+                {importing ? <Spinner /> : <Upload className="size-4" />}
+                {t("importButton")}
+              </Button>
+            </>
+          }
+        />
+      </SettingsGroup>
+
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountDataExport}
         icon={Download}

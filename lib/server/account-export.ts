@@ -2,6 +2,12 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { CONTACT_EMAIL } from "@/lib/site";
+import {
+  ACCOUNT_TRANSFER_FORMAT,
+  ACCOUNT_TRANSFER_VERSION,
+  CURRENT_ACCOUNT_EXPORT_VERSION,
+} from "@/lib/account-transfer";
+import { projectIconPaths } from "@/lib/server/project-storage";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -22,8 +28,8 @@ import { CONTACT_EMAIL } from "@/lib/site";
  * What the export does NOT contain, and why:
  * • the content of other people's projects that she did not write — it is not her
  * given within the meaning of article 20, and the application already shows it to her ;
- * • the bytes of the attachments — the export is a JSON; the files remain
- * downloadable from the application as long as the account exists;
+ * • secrets such as API keys, OAuth tokens, repository credentials, and billing
+ * identifiers — file bytes are included for transfer, but credentials are not;
  * • the slightest secret. No key, no token, no fingerprint comes out
  * from here: an export is a file that hangs in a folder of
  * downloads. API keys we only give the prefix already displayed on
@@ -31,7 +37,7 @@ import { CONTACT_EMAIL } from "@/lib/site";
  */
 
 /** Format version. To be incremented if the shape of the document changes. */
-export const EXPORT_FORMAT_VERSION = 2;
+export const EXPORT_FORMAT_VERSION = CURRENT_ACCOUNT_EXPORT_VERSION;
 
 type Row = Record<string, unknown>;
 
@@ -61,20 +67,74 @@ function one(table: string, result: QueryResult): Row | null {
   return (unwrap(table, result) as Row | null) ?? null;
 }
 
+/** Include file bytes so a transfer can recreate attachments on another instance. */
+async function includeStorageBytes(
+  service: ReturnType<typeof getServiceClient>,
+  rows: Row[],
+): Promise<Row[]> {
+  return Promise.all(
+    rows.map(async (row) => {
+      const storagePath = row.storage_path;
+      if (typeof storagePath !== "string" || !storagePath) return row;
+      const { data, error } = await service.storage
+        .from("attachments")
+        .download(storagePath);
+      if (error || !data) {
+        throw new Error(`attachments/${storagePath}: ${error?.message ?? "download failed"}`);
+      }
+      return {
+        ...row,
+        storage_base64: Buffer.from(await data.arrayBuffer()).toString("base64"),
+      };
+    }),
+  );
+}
+
+async function includeProjectIcons(
+  service: ReturnType<typeof getServiceClient>,
+  projects: Row[],
+): Promise<Row[]> {
+  const paths = await projectIconPaths(
+    service,
+    projects.map((project) => project.id as string),
+  );
+  return Promise.all(
+    projects.map(async (project) => {
+      const id = project.id as string;
+      const path = paths.find((candidate) => candidate.startsWith(`${id}.`));
+      if (!path) return project;
+      const { data, error } = await service.storage.from("project-icons").download(path);
+      if (error || !data) {
+        throw new Error(`project-icons/${path}: ${error?.message ?? "download failed"}`);
+      }
+      return {
+        ...project,
+        project_icon_base64: Buffer.from(await data.arrayBuffer()).toString("base64"),
+        project_icon_mime_type: data.type || "image/webp",
+      };
+    }),
+  );
+}
+
 // `deleted_at` is one of them: the export gives EVERYTHING that the account holds,
 // trash included (MIN-133) — filtering it would cut off a GDPR export of data
 // still very present. The column says which ones were awaiting purge.
 // The body of the pages is in: without it, the export would say that a wiki exists
 // without giving a line.
 const PAGE_COLUMNS =
-  "id, project_id, parent_id, title, icon, content, position, favorite, " +
-  "created_by, updated_by, created_at, updated_at, deleted_at";
+  "id, project_id, parent_id, title, icon, content, position, favorite, version, " +
+  "created_by, updated_by, created_at, updated_at, deleted_at, deleted_by";
 
 const ISSUE_COLUMNS =
   "id, project_id, number, title, description, plan, status, priority, effort, " +
-  "assignee_id, due_date, created_by, created_at, updated_at, completed_at, deleted_at";
+  "assignee_id, due_date, position, created_by, created_at, updated_at, completed_at, " +
+  "deleted_at, deleted_by, objective_id, parent_id, cycle_id, recurrence, " +
+  "recurrence_series_id, remote_provider, remote_repo_id, remote_number, remote_url, " +
+  "automation_override";
 
 export interface AccountExport {
+  transfer_format: typeof ACCOUNT_TRANSFER_FORMAT;
+  transfer_version: number;
   format_version: number;
   exported_at: string;
   /** What the reader needs to know to understand the file. */
@@ -89,6 +149,8 @@ export interface AccountExport {
   page_files: Row[];
   pages: Row[];
   objectives: Row[];
+  categories: Row[];
+  issue_categories: Row[];
   views: Row[];
   cycles: Row[];
   scratchpad: Row | null;
@@ -130,7 +192,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .eq("owner_id", userId)
       .order("created_at")
   );
-  const ownedIds = ownedProjects.map((p) => p.id as string);
+  const exportedProjects = await includeProjectIcons(service, ownedProjects);
+  const ownedIds = exportedProjects.map((p) => p.id as string);
 
   const [
     preferences,
@@ -142,6 +205,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     pageFiles,
     pages,
     objectives,
+    categories,
     views,
     cycles,
     scratchpad,
@@ -168,13 +232,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .or(`created_by.eq.${userId},assignee_id.eq.${userId}`),
     service
       .from("comments")
-      .select("id, issue_id, body, created_at, updated_at")
+      .select(
+        "id, issue_id, parent_id, body, via_assistant, via_mcp, created_at, updated_at"
+      )
       .eq("author_id", userId)
       .order("created_at"),
     service
       .from("attachments")
       .select(
-        "id, project_id, issue_id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, created_at"
+        "id, project_id, issue_id, comment_id, objective_id, kind, url, page_id, " +
+          "storage_path, icon_data_url, file_name, mime_type, size_bytes, created_at"
       )
       .eq("created_by", userId)
       .order("created_at"),
@@ -184,7 +251,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     service
       .from("page_files")
       .select(
-        "id, project_id, page_id, file_name, mime_type, size_bytes, created_at"
+        "id, project_id, page_id, storage_path, file_name, mime_type, size_bytes, created_at"
       )
       .eq("created_by", userId)
       .order("created_at"),
@@ -201,6 +268,13 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
       ? service.from("objectives").select("*").in("project_id", ownedIds)
+      : Promise.resolve({ data: [] as Row[], error: null }),
+    ownedIds.length
+      ? service
+          .from("categories")
+          .select("id, project_id, name, color, created_at")
+          .in("project_id", ownedIds)
+          .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("views").select("*").eq("user_id", userId),
     service.from("cycles").select("*").eq("user_id", userId).order("start_date"),
@@ -351,7 +425,25 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     issuesById.set(issue.id as string, issue);
   }
 
+  const ownedIssueIds = list("issues", ownedIssues).map((issue) => issue.id as string);
+  const issueCategories = ownedIssueIds.length
+    ? list(
+        "issue_categories",
+        await service
+          .from("issue_categories")
+          .select("issue_id, category_id")
+          .in("issue_id", ownedIssueIds),
+      )
+    : [];
+  const exportedAttachments = await includeStorageBytes(
+    service,
+    list("attachments", attachments),
+  );
+  const exportedPageFiles = await includeStorageBytes(service, list("page_files", pageFiles));
+
   return {
+    transfer_format: ACCOUNT_TRANSFER_FORMAT,
+    transfer_version: ACCOUNT_TRANSFER_VERSION,
     format_version: EXPORT_FORMAT_VERSION,
     exported_at: new Date().toISOString(),
     readme: {
@@ -365,13 +457,13 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
         "Tickets que vous avez créés ou qui vous sont assignés, plus tous ceux " +
         "des projets que vous possédez.",
       attachments:
-        "Ressources que vous avez ajoutées : fichiers (métadonnées seulement — " +
-        "les fichiers eux-mêmes restent téléchargeables depuis l'application " +
-        "tant que le compte existe), liens, dont l'URL figure ici, et pages du " +
+        "Ressources que vous avez ajoutées : fichiers et leur contenu pour " +
+        "permettre le transfert, liens, " +
+        "dont l'URL figure ici, et pages du " +
         "projet, désignées par leur identifiant.",
       page_files:
         "Fichiers et images que vous avez déposés DANS le corps d'une page " +
-        "(métadonnées seulement, comme ci-dessus). Ils sont listés à part des " +
+        "(contenu inclus pour permettre le transfert). Ils sont listés à part des " +
         "ressources : ce ne sont pas des pièces jointes d'un ticket, mais des " +
         "morceaux du document lui-même.",
       pages:
@@ -398,14 +490,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       user_metadata: user.user_metadata ?? {},
     },
     preferences: one("user_agent_preferences", preferences),
-    owned_projects: ownedProjects,
+    owned_projects: exportedProjects,
     memberships: list("project_members", memberships),
     issues: [...issuesById.values()],
     comments: list("comments", comments),
-    attachments: list("attachments", attachments),
-    page_files: list("page_files", pageFiles),
+    attachments: exportedAttachments,
+    page_files: exportedPageFiles,
     pages: list("pages", pages),
     objectives: list("objectives", objectives),
+    categories: list("categories", categories),
+    issue_categories: issueCategories,
     views: list("views", views),
     cycles: list("cycles", cycles),
     scratchpad: one("user_scratchpad", scratchpad),

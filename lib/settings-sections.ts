@@ -29,6 +29,7 @@ import {
   Trash2,
   TriangleAlert,
   User,
+  Upload,
   Users,
   WandSparkles,
   Workflow,
@@ -105,6 +106,7 @@ export const SETTINGS_SECTIONS = {
   accountAiProvider: "account-ai-provider",
   accountAgent: "account-agent",
   accountAnalytics: "account-analytics",
+  accountDataImport: "account-data-import",
   accountDataExport: "account-data-export",
   accountDataDelete: "account-data-delete",
 
@@ -439,6 +441,16 @@ export function useSettingsSections(): SettingsSection[] {
           "audience", "analytics", "mesure", "statistiques", "posthog",
           "cookies", "consentement", "consent", "vie privée", "vie privee",
           "privacy", "rgpd", "gdpr", "suivi", "tracking",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountDataImport,
+        tab: "data",
+        icon: Upload,
+        title: tData("importTitle"),
+        keywords: [
+          "import", "importer", "transfer", "transfert", "données", "donnees",
+          "data", "instance", "self-hosted", "cloud", "json",
         ],
       }),
       account({

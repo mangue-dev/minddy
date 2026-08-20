@@ -2163,6 +2163,11 @@
     "desktopAppCta": "Download"
   },
   "AccountData": {
+    "importTitle": "Transfer data from another minddy instance",
+    "importDesc": "Restore an account export here. The import is additive and keeps original IDs whenever they are available.",
+    "importButton": "Import a transfer file",
+    "importHint": "Projects, issues, pages, settings and personal history are restored. Memberships are restored only for projects that already exist here; credentials and subscriptions are never imported.",
+    "importDoneToast": "Import complete. {remapped, plural, =0 {Original IDs were preserved.} one {# ID was remapped because it was already in use.} other {# IDs were remapped because they were already in use.}} {skipped, plural, =0 {} one {# membership was skipped because its project is not available here.} other {# memberships were skipped because their projects are not available here.}}",
     "exportTitle": "Export my data",
     "exportDesc": "Get a copy of everything minddy keeps about you, as a JSON file.",
     "exportButton": "Download my data",

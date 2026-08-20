@@ -2163,6 +2163,11 @@
     "desktopAppCta": "Télécharger"
   },
   "AccountData": {
+    "importTitle": "Transférer des données depuis une autre instance minddy",
+    "importDesc": "Restaurez ici un export de compte. L'import est cumulatif et conserve les identifiants d'origine lorsqu'ils sont disponibles.",
+    "importButton": "Importer un fichier de transfert",
+    "importHint": "Projets, tickets, pages, réglages et historique personnel sont restaurés. Les appartenances ne le sont que pour les projets déjà présents ici ; les identifiants secrets et abonnements ne sont jamais importés.",
+    "importDoneToast": "Import terminé. {remapped, plural, =0 {Les identifiants d'origine ont été conservés.} one {# identifiant a été remappé car il était déjà utilisé.} other {# identifiants ont été remappés car ils étaient déjà utilisés.}} {skipped, plural, =0 {} one {# appartenance a été ignorée car son projet n'est pas disponible ici.} other {# appartenances ont été ignorées car leurs projets ne sont pas disponibles ici.}}",
     "exportTitle": "Exporter mes données",
     "exportDesc": "Récupérez une copie de tout ce que minddy conserve sur vous, dans un fichier JSON.",
     "exportButton": "Télécharger mes données",
