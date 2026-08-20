@@ -68,6 +68,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import Link from "next/link";
+import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 
 const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
 
@@ -137,6 +139,7 @@ export const AssistantShell = forwardRef<
   const tc = useTranslations("Common");
   const tToolCall = useTranslations("ToolCall");
   const tSeed = useTranslations("Seed");
+  const aiAvailability = useAiSurfaceAvailability("assistant");
 
   // The conversation lives ABOVE the panel (AssistantChatProvider): it
   // survives the closing of the Sheet, which dismantles this shell. Here, we don't do
@@ -243,20 +246,22 @@ export const AssistantShell = forwardRef<
     ref,
     () => ({
       sendMessage: (pid, msg, opts) =>
-        sendMessage(pid, msg, {
-          pageContext:
-            opts?.pageContext !== undefined
-              ? opts.pageContext
-              : effectiveContextRef.current,
-          ...(opts?.mentions?.length ? { mentions: opts.mentions } : {}),
-          ...(opts?.command ? { command: opts.command } : {}),
-          ...(opts?.attachments?.length
-            ? { attachments: opts.attachments }
-            : {}),
-        }),
+        !aiAvailability.loading && !aiAvailability.available
+          ? undefined
+          : sendMessage(pid, msg, {
+              pageContext:
+                opts?.pageContext !== undefined
+                  ? opts.pageContext
+                  : effectiveContextRef.current,
+              ...(opts?.mentions?.length ? { mentions: opts.mentions } : {}),
+              ...(opts?.command ? { command: opts.command } : {}),
+              ...(opts?.attachments?.length
+                ? { attachments: opts.attachments }
+                : {}),
+            }),
       fill: (text) => chatInputRef.current?.fill(text),
     }),
-    [sendMessage]
+    [aiAvailability.available, aiAvailability.loading, sendMessage]
   );
 
   const handleSend = useCallback(
@@ -266,6 +271,7 @@ export const AssistantShell = forwardRef<
       mentions: AssistantMention[] = [],
       command?: AssistantCommandId,
     ) => {
+      if (!aiAvailability.loading && !aiAvailability.available) return;
       sendMessage(projectId, message, {
         pageContext: effectiveContextRef.current,
         attachments,
@@ -273,7 +279,7 @@ export const AssistantShell = forwardRef<
         command,
       });
     },
-    [projectId, sendMessage]
+    [aiAvailability.available, aiAvailability.loading, projectId, sendMessage]
   );
 
   const slashCommands = useSlashCommands();
@@ -593,7 +599,34 @@ export const AssistantShell = forwardRef<
   // Same form as the page editor: the body first, its contexts then.
   // Writing the provider around the `return` would have reindented two hundred lines
   // from JSX for a direction line.
-  const shell = (
+  const unavailable = !aiAvailability.loading && !aiAvailability.available;
+  const shell = unavailable ? (
+    <div className="relative flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+      {onClose ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="absolute top-2 right-2"
+          aria-label={tc("close")}
+          onClick={onClose}
+        >
+          <X className="size-4" />
+        </Button>
+      ) : null}
+      <NumoIcon state="idle" className="size-12 text-muted-foreground" />
+      <div className="max-w-sm space-y-1">
+        <p className="text-sm font-medium text-foreground">
+          {t("providerUnavailableTitle")}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {t("providerUnavailableDescription")}
+        </p>
+      </div>
+      <Button asChild size="sm">
+        <Link href="/settings?tab=agent">{t("providerUnavailableCta")}</Link>
+      </Button>
+    </div>
+  ) : (
     <div className="flex h-full overflow-hidden">
       {/* Permanent sidebar — only outside compact mode. */}
       {!compact && (
@@ -781,6 +814,7 @@ export const AssistantShell = forwardRef<
                   isStreaming={isStreaming}
                   beam={isBusy}
                   noBorder={!hasMessages}
+                  disabled={aiAvailability.loading}
                   mentionables={mentionables}
                   onMentionQuery={onMentionQuery}
                   commands={slashCommands}

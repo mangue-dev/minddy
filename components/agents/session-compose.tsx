@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -48,6 +49,7 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import { MentionLinksProvider } from "@/components/mention-links";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
+import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 
 /**
  * DRAFT selector of the conversation. Mandatory: without ticket, only the
@@ -161,6 +163,7 @@ export function SessionCompose({
 }) {
   const t = useTranslations("Agent");
   const tAgents = useTranslations("Agents");
+  const tAssistant = useTranslations("Assistant");
   const tNav = useTranslations("Nav");
 
   /**
@@ -222,6 +225,8 @@ export function SessionCompose({
     defaultModel: providerDefaultModel,
     cloudExecutionConfigured,
   } = useAgentModelsQuery();
+  const aiAvailability = useAiSurfaceAvailability("agent");
+  const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
   // Launch reasoning level (MIN-122), frozen on the server-side run:
@@ -272,6 +277,7 @@ export function SessionCompose({
     attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
   ) => {
+    if (aiUnavailable) return;
     if (launching) return;
     const prompt = message.trim();
     if (!prompt) return;
@@ -374,7 +380,23 @@ export function SessionCompose({
         <span className="truncate text-sm font-medium">{tAgents("newButton")}</span>
       </div>
       <div className="min-h-0 flex-1">
-        {launchText ? (
+        {aiUnavailable ? (
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+            <div className="max-w-sm space-y-1">
+              <p className="text-base font-medium">
+                {tAssistant("providerUnavailableTitle")}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {tAssistant("providerUnavailableDescription")}
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link href="/settings?tab=agent">
+                {tAssistant("providerUnavailableCta")}
+              </Link>
+            </Button>
+          </div>
+        ) : launchText ? (
           /* Mention pills LEAD SOMEWHERE, here as in the
  conversation ([agent-conversation.tsx]): without this provider, the
  optimistic bubble displays `@MIN-42` and the click does nothing — so
@@ -427,10 +449,12 @@ export function SessionCompose({
             // choose a project, or connect one to a repository if there is one
             // no where to launch the agent.
             sendDisabled={
-              !projectId || (environment === "cloud" && !cloudExecutionConfigured)
+              aiUnavailable || !projectId || (environment === "cloud" && !cloudExecutionConfigured)
             }
             sendDisabledTooltip={
-              environment === "cloud" && !cloudExecutionConfigured
+              aiUnavailable
+                ? tAssistant("providerUnavailableDescription")
+                : environment === "cloud" && !cloudExecutionConfigured
                 ? t("errorExecutionBackendUnavailable")
                 : noRepoAnywhere
                   ? t("composeNoRepo")

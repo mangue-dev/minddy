@@ -42,7 +42,10 @@ import {
 import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
-import { resolveAiRuntime } from "@/lib/server/ai-runtime";
+import {
+  ManagedAiUnavailableError,
+  resolveAiRuntime,
+} from "@/lib/server/ai-runtime";
 import type { AttachmentInput } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -277,13 +280,27 @@ export async function POST(request: NextRequest) {
     (a): a is AttachmentInput => a.kind !== "link"
   );
 
+  // Resolve this before persisting a turn. On self-hosted instances without a
+  // managed quota or a usable BYOK key, a failed request must not leave a
+  // conversation stuck in the generating state.
+  let aiRuntime;
+  try {
+    aiRuntime = await resolveAiRuntime({
+      userId: user.id,
+      modelKey: "assistant_model",
+      surface: "assistant",
+    });
+  } catch (error) {
+    if (!(error instanceof ManagedAiUnavailableError)) throw error;
+    const tApi = await getTranslations("ApiErrors");
+    return Response.json(
+      { error: tApi("aiProviderUnavailable"), code: "ai_provider_unavailable" },
+      { status: 503 },
+    );
+  }
+
   const service = getServiceClient();
 
-  const aiRuntime = await resolveAiRuntime({
-    userId: user.id,
-    modelKey: "assistant_model",
-    surface: "assistant",
-  });
   const model = aiRuntime.model;
 
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
