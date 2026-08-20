@@ -5,7 +5,11 @@ import {
   sectionHeadingChain,
   splitTaskSection,
 } from "@/lib/scratchpad-prompt";
-import { scratchpadSectionSubtree, SPACER_LINE } from "@/lib/scratchpad";
+import {
+  MAX_SCRATCHPAD_LENGTH,
+  scratchpadSectionSubtree,
+  SPACER_LINE,
+} from "@/lib/scratchpad";
 
 describe("sectionHeadingChain", () => {
   it("carries the sections that CONTAIN the task, widest first", () => {
@@ -241,5 +245,18 @@ describe("buildScratchpadPrompt", () => {
     );
     expect(prompt).toContain('This task is from the section named "Deploy".');
     expect(prompt).not.toContain(SPACER_LINE);
+  });
+
+  it("keeps the final task when a notebook prompt is larger than the old API cap", () => {
+    const prefix = Array.from(
+      { length: 1_500 },
+      (_, index) => `- [ ] task ${index}`,
+    ).join("\n");
+    const finalTask = "- [ ] final task must reach the agent";
+    const notes = `## Carnet\n${prefix}\n${finalTask}`;
+
+    expect(notes.length).toBeGreaterThan(20_000);
+    expect(notes.length).toBeLessThan(MAX_SCRATCHPAD_LENGTH);
+    expect(buildScratchpadPrompt(notes)).toContain(finalTask);
   });
 });

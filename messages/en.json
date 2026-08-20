@@ -2383,6 +2383,7 @@
     "composeWorkingIn": "We're working in <project></project>",
     "composePlaceholderFree": "What should Numo work on?",
     "errorPromptRequired": "The instruction is empty. Write what the agent should do.",
+    "errorPromptTooLong": "This instruction is too long. Shorten it before launching the agent.",
     "composeProjectPlaceholder": "Project",
     "composeProjectEmpty": "No project.",
     "composeProjectRequired": "Pick a project first. The agent clones its repository.",

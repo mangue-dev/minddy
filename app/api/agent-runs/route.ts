@@ -8,6 +8,7 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
+import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -235,7 +236,10 @@ export async function GET(request: NextRequest) {
 
 // POST notebook terminals: the note is a free text (persisted in `prompt` of the
 // run), model and branch of short identifiers.
-const MAX_PROMPT_LENGTH = 20_000;
+// A notebook may contain MAX_SCRATCHPAD_LENGTH characters, and its prompt adds
+// framing around that content. Keep enough headroom for the framing so a large
+// notebook is never silently cut before it reaches the agent.
+const MAX_PROMPT_LENGTH = MAX_SCRATCHPAD_LENGTH + 8_192;
 const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
 
@@ -300,8 +304,7 @@ export async function POST(request: NextRequest) {
   }
 
   const projectId = typeof body.projectId === "string" ? body.projectId.trim() : "";
-  const prompt =
-    typeof body.prompt === "string" ? body.prompt.trim().slice(0, MAX_PROMPT_LENGTH) : "";
+  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   // A uuid is 36 characters long: beyond the margin, forged body.
   if (!projectId || projectId.length > 64) {
     return NextResponse.json({ error: "projectId required" }, { status: 400 });
@@ -310,6 +313,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "promptRequired", code: "promptRequired" },
       { status: 400 },
+    );
+  }
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return NextResponse.json(
+      { error: "promptTooLong", code: "promptTooLong", maxLength: MAX_PROMPT_LENGTH },
+      { status: 413 },
     );
   }
 

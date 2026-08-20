@@ -31,6 +31,7 @@ const AGENT_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
   supersededRun: "errorSupersededRun",
   prMerged: "errorPrMerged",
   promptRequired: "errorPromptRequired",
+  promptTooLong: "errorPromptTooLong",
 };
 
 export function useAgentErrorMessage() {
