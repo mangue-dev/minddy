@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ASSISTANT_TOOLS } from "./tools";
+import { ASSISTANT_TOOLS, GLOBAL_ASSISTANT_TOOLS } from "./tools";
 
 const tool = (name: string) =>
   ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
@@ -23,5 +23,12 @@ describe("Numo tool contracts", () => {
     expect(comment?.function.parameters.properties).toHaveProperty("body");
     expect(comment?.function.parameters.required).toEqual(["body"]);
     expect(comment?.function.parameters.properties).toHaveProperty("feedback_post_id");
+  });
+
+  it("makes product knowledge available without requiring a project", () => {
+    expect(tool("get_help")?.function.parameters.required).toEqual(["topic"]);
+    const global = GLOBAL_ASSISTANT_TOOLS.find((candidate) => candidate.function.name === "get_help");
+
+    expect(global?.function.parameters.properties).not.toHaveProperty("project_id");
   });
 });

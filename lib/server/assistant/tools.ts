@@ -193,6 +193,19 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "get_help",
+      description:
+        "Read minddy's product knowledge for a feature or topic. Use this before explaining a product feature, setup path, plan capability, or open-source/self-hosting detail.",
+      parameters: {
+        type: "object",
+        properties: { topic: { type: "string", description: "Knowledge topic id or natural-language query." } },
+        required: ["topic"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_issues",
       description:
         "List the project's issues (compact rows: id, identifier, title, status, priority, effort, assignee_id, objective_id, due_date, recurrence, parent_id, category_ids). Filterable. Use this to resolve which issues the user means before editing.",
@@ -1990,7 +2003,7 @@ export const ACCOUNT_TOOLS = new Set([
 
 // Tools that never take a project (ask_user, the web, and the account-level
 // tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
-const NON_PROJECT_TOOLS = new Set(["ask_user", "web_search", ...ACCOUNT_TOOLS]);
+const NON_PROJECT_TOOLS = new Set(["ask_user", "web_search", "get_help", ...ACCOUNT_TOOLS]);
 
 // Every tool that operates on a project. In global mode these get a required
 // `project_id` parameter injected (see buildGlobalTools).

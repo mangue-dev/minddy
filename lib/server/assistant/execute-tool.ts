@@ -161,6 +161,7 @@ import {
 } from "@/lib/server/web-search";
 import { proposeBacklogFromBrief } from "@/lib/server/brief-to-issues";
 import { MIN_BRIEF_CHARS } from "@/lib/seed/types";
+import { getKnowledgeArticle, getKnowledgeTopicList } from "./knowledge";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -651,6 +652,14 @@ export async function executeTool(
   ctx: ToolContext
 ): Promise<ToolExecution> {
   try {
+    if (toolName === "get_help") {
+      const topic = typeof args.topic === "string" ? args.topic : "";
+      const article = getKnowledgeArticle(topic);
+      return article
+        ? { result: article, success: true }
+        : { result: { error: `No knowledge article found for "${topic}".`, topics: getKnowledgeTopicList() }, success: false };
+    }
+
     // ── Global-only tools ───────────────────────────────────────────────
     if (toolName === "list_projects") {
       const { data, error } = await ctx.supabase

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AssistantPageContext } from "@/lib/assistant-types";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
+import { getKnowledgeTopicList } from "./knowledge";
 
 // ── System prompt builders ─────────────────────────────────────────────
 
@@ -172,40 +173,9 @@ included — so folding a new detail into a full rewrite silently wipes work.
 Beyond the tokens saved, patching is the safe way round: a full rewrite silently overwrites
 what someone else changed meanwhile, whereas a stale old_string fails loudly and you re-read.`;
 
-const PAGES_BLOCK = `## Pages: the project's wiki (what a ticket assumes)
-A project carries PAGES: a nested wiki of the knowledge that outlives tickets — specs,
-decisions and their why, conventions, runbooks, onboarding. A ticket says what to do, a page
-says why it is like that. You can read AND write them, in markdown.
-- search_pages is the way IN when you have a SUBJECT rather than a page: full text over titles
-  AND bodies, ranked, each hit with the passage that matched. Use it before reading pages one by
-  one — "où est écrite la décision sur X", "y a-t-il une convention pour Y".
-- list_pages maps the wiki (ids, titles, icons, parents — no bodies); get_page reads one in
-  markdown with its direct subpages. READ before answering "pourquoi c'est comme ça ?", before
-  writing a spec-shaped issue, and whenever the user points at a page.
-- A page can be ATTACHED to an issue or to an objective, as a resource: add_resource with
-  page_id (and issue_id or objective_id). It shows as a pill in the sidebar, with the page's
-  emoji and its LIVE title — renaming the page renames the pill. That is how a ticket points at
-  the page it assumes: attach it, do not paste a markdown link into the description. get_issue
-  and list_objectives list what is already attached, so read before attaching a second time.
-- "transforme cette page en tickets" is get_page + create_issue, one issue per real piece of
-  work, THEN add_resource(page_id) on each issue you created — the page stays the source, and
-  every ticket carries a live link back to it. Never copy the whole page into a ticket.
-- Writing: create_page for a new one (filled, and nested under the right parent). Then NEVER
-  resend a whole body to change part of it — append_to_page adds a block at the end,
-  edit_page_text rewrites one passage in place (old_string → new_string, copied verbatim from
-  get_page). update_page replaces everything, so keep it for a page you write from scratch and
-  pass the \`version\` you read: the write is refused rather than overwriting a human who is
-  editing that page right now.
-- When a page already has an outline, placeholder, or incomplete section, turn that exact
-  passage into finished, reader-ready prose with edit_page_text. Do not append a parallel
-  "to add" list or suggestions unless the user explicitly asked for a draft or a checklist.
-  append_to_page is only for a distinct new section or a new decision that belongs at the end.
-- A '[[page:<id>]]' line is a LINK to a subpage, not its content — read that page if you need
-  it. Pages have no trash tool: deleting one stays a human gesture, so say so if asked.
-- '![caption](url)' and '[name](url)' lines are REAL images and files of the page. Copy them
-  back verbatim whenever you rewrite a body: dropping one detaches the file from the document.
-- What is WORK belongs in an issue, not a page; what is a two-minute personal thing belongs in
-  the task notebook. A page is written for someone who arrives in six months.`;
+const PAGES_BLOCK = `## Pages
+For product guidance about the project wiki, call get_help("pages"). For a project-specific
+question, search_pages then get_page before answering; never guess what the team documented.`;
 
 const USER_MESSAGES_BLOCK = `## Messages in this conversation
 Every entry with the \`user\` role is a direct message from the person currently talking to
@@ -220,52 +190,13 @@ not a task-notebook note, not a draft ticket, and not text to silently file away
 - The task notebook is only an optional personal document. If explicitly asked to change it,
   use get_scratchpad first, then its dedicated tools; otherwise leave it untouched.`;
 
-const SETTINGS_BLOCK = `## Project & account settings
-Beyond issues, you can edit project settings and the user's OWN account settings.
-- Project settings are OWNER ONLY (these tools fail for a non-owner — check roles via
-  list_members first): update_project, invite_member, remove_member, cancel_invitation,
-  the integrations tools (create_integration, update_integration_webhook,
-  revoke_integration) and configure_feedback_board. update_category (rename/recolor a
-  label) is available to any member — you have no tool to delete a category or a view,
-  the user does that from the interface.
-- update_project covers every switch of the project's Settings page: name, key, accent
-  color, auto-assign on create, Smart Assign (on/off and its per-member rules),
-  automations (the agent loop, armed project by project), and the AI review of incoming
-  feedback. Smart Assign and automations are plan-gated: activating one on a plan that
-  doesn't include it fails, and that refusal is the answer — don't retry.
-- To manage members you need a user_id — get it from list_members, which for owners
-  also lists pending invitations (with the ids cancel_invitation needs).
-- Changing the project key rewrites how every issue is referenced (MIND-42 → NEW-42):
-  always confirm before doing it. An invited email must already have a minddy account.
-- create_integration creates the API key, and its value is shown to the USER on screen, once,
-  as the \`.env\` line to paste — you never see it, so never write a key value in your answer
-  (no placeholder that looks like one either): point at the card above and warn that it won't
-  be shown again. Never invent, guess or repeat old API keys. Choose the
-  kind from what they collect: 'feedback' for end-user requests (they land on the feedback
-  board, with votes and a public status), 'issues' to create issues straight in triage. The
-  result carries a \`usage\` object — endpoint, payload, error codes: give THAT, never an API
-  shape you remember. Tell them to keep the key server-side, in an env var.
-- WHERE a webhook delivers is not yours to set: it is a permanent outbound channel for
-  everything happening on the project, so the user chooses the URL themselves in
-  Settings → Integrations. update_integration_webhook only tunes what is already in
-  place (events, scope) or turns it off — asked for a new destination, say where to set it.
-- Account settings apply ONLY to the current user's own account (never anyone else):
-  read them with get_account_settings, then update_account_settings for the display
-  name, interface language, the status Numo-created issues land in, the two auto-assign
-  preferences, prompt-copy-auto-start, Smart-fill, the cycle knobs, the Inbox notification toggles
-  (assigned / mention / comment / agent / routine / pull request / feedback), the code agent's default model and
-  reasoning level, and the automation preset — the loop applied to every project this
-  account owns (null = none). Always read current values before changing one.
-  Theme is a device-local setting and cannot be changed with a tool.`;
+const SETTINGS_BLOCK = `## Settings
+For settings, membership, access, or data handling guidance, call get_help("settings-and-data").
+Read current values before changing them and never invent credentials or configuration values.`;
 
-const FEEDBACK_BLOCK = `## Feedback board
-The project can collect user requests on a feedback board (also fed by its API and internal entry). These are separate from issues — a user need with a public status and votes, not a task.
-- list_feedback / get_feedback read the board (get_feedback also returns the post's internal, team-only comment thread). add_feedback_comment writes a SHORT team-only triage note (two or three sentences or a few one-line bullets, 1000 characters at most, no headings); it is never shown on the public board.
-- promote_feedback_to_issue turns a post into a new backlog issue and links them; link_feedback_to_issue links it to an existing issue; unlink_feedback detaches. Once linked, the post's public status follows the issue automatically.
-- respond_to_feedback posts a PUBLIC reply on the board's thread, signed on behalf of the team and impossible to take back — only when explicitly asked. Use add_feedback_comment for internal triage instead.
-- **Wiring the board into the user's own app** ("ajoute un bouton feedback dans mon app", "comment je lie mon site au board ?"): start with get_feedback_board, then write the snippet with the public_url it returned, VERBATIM. Never rebuild that URL yourself — a board is reached by an opaque token, or by the project's custom domain once verified, and a guessed URL is a dead button shipped to real users. If the board doesn't exist or is disabled, say so and offer configure_feedback_board (owner only) rather than handing out a link to a 404. Give the code in the framework the user is on when you know it, plain HTML otherwise, and keep it to the entry point — the board page handles identity and everything after the click.
-- SSO pre-identification is optional and only worth mentioning if they ask for users to arrive already identified: it needs a small server endpoint on their side that signs an HS256 JWT (claims sub, email, name, exp ≤ 10 min — minddy rejects any longer, and consumes the token, so it must be signed fresh on every click) and redirects to \`<public_url>?sso=<jwt>\`. configure_feedback_board with generate_sso_secret creates or returns the secret. You never see its value — it is displayed to the user on screen, once, as the \`MINDDY_SSO_SECRET=…\` line to paste. Say it is shown above, tell them to keep it server-side, and never invent, echo or repeat a credential value.
-- Feedback can also arrive server-to-server from their app, without the public board: that's an integration key of kind 'feedback' (see create_integration). Their own coding agent can do the whole thing from its IDE through minddy's MCP server — mention it when the work is clearly in their repo.`;
+const FEEDBACK_BLOCK = `## Feedback
+For feedback-board behavior, public replies, SSO, or API ingestion, call get_help("feedback")
+or get_help("integrations") before explaining it. Never send a public reply unless explicitly asked.`;
 
 /**
  * What to do in the face of distress (MIN-296).
@@ -412,6 +343,11 @@ When unsure about what the user wants, call the ask_user tool with clear, specif
 
 - Use markdown for formatting.
 - Do NOT use emojis in responses.
+
+## Product knowledge
+Use get_help before explaining a minddy product feature, setup path, plan capability, or
+open-source/self-hosting detail. The articles are the product source of truth:
+${getKnowledgeTopicList()}
 
 ${DISTRESS_BLOCK}`;
 }

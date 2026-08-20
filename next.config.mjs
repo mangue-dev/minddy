@@ -109,11 +109,12 @@ const nextConfig = {
     optimizePackageImports: ["radix-ui"],
   },
   /**
- * BOTH ESBUILD BUNDLES OF THE REPOSITORY, embedded in the functions.
+ * Runtime files of the repository, embedded in the functions.
  *
- * Both are produced by `prebuild` and PATH READ at runtime — one
- * by `fs`, the other by `require`. Next's tracer tracks IMPORTS: a
- * file read by path is not an edge of the graph, and so it cannot see it pass. Without these lines, the function deploys without them.
+ * The agent bundle and Markdown projection are produced by `prebuild`; the
+ * product knowledge is versioned Markdown. All are read by path at runtime.
+ * Next's tracer tracks imports, not arbitrary file reads, so these patterns
+ * keep them in the deployed function.
  *
  * `.agent-vm/` (MIN-224) — the microVM harness, written to the VM at
  * startup of each round. Absent, each `loop_in_vm` run fails on a
@@ -131,9 +132,12 @@ const nextConfig = {
  * from page routes. Restricting the pattern would amount to keeping this
  * list by hand, to save a file that Vercel pools in any way
  * between traces.
+ *
+ * `content/knowledge/` — the articles Numo retrieves with `get_help`. They are
+ * intentionally outside the source graph so product updates stay Markdown-only.
  */
   outputFileTracingIncludes: {
-    "/api/**": [".agent-vm/**"],
+    "/api/**": [".agent-vm/**", "content/knowledge/**"],
     "/**": [".pages-md/**"],
   },
   // Bridge Vercel's server-only VERCEL_ENV into a public var so client

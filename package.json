@@ -19,6 +19,7 @@
     "test:release": "node --test scripts/release-lib.test.mjs scripts/release-policy.test.mjs scripts/release-scope.test.mjs scripts/release-security-policy.test.mjs",
     "check:public-repo": "node scripts/check-public-repo.mjs",
     "check:owned-english": "node scripts/check-owned-english.mjs",
+    "check:knowledge": "node scripts/knowledge-check.mjs",
     "start": "next start",
     "lint": "oxlint --deny-warnings",
     "typecheck": "tsc --noEmit",

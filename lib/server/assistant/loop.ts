@@ -129,6 +129,8 @@ function getToolResultCharLimit(toolName: string): number {
     // half of the extracts we just bought.
     case "web_search":
       return 10000;
+    case "get_help":
+      return 12000;
     default:
       return 4000;
   }
