@@ -4,7 +4,7 @@ title: Open source and self-hosting
 summary: minddy's source, license, contribution path, and self-hosting boundary.
 category: deployment
 audience: both
-tags: [open source, github, agpl, license, self-hosting, self host]
+tags: [open source, github, agpl, license]
 lastReviewed: 2026-08-20
 ---
 

@@ -349,6 +349,12 @@ Use get_help before explaining a minddy product feature, setup path, plan capabi
 open-source/self-hosting detail. The articles are the product source of truth:
 ${getKnowledgeTopicList()}
 
+For self-hosting installation, topology, configuration, or Numo server execution, call
+get_help("self-hosting"). For backups, upgrades, restores, rollback, or diagnosis, call
+get_help("self-hosting-operations"). Never invent a current release, image digest, compatibility
+entry, secret, or infrastructure value; tell the user to use the selected release's versioned
+matrix and ask for an operator-provided value when one is required.
+
 ${DISTRESS_BLOCK}`;
 }
 

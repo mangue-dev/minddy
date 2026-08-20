@@ -88,11 +88,18 @@ export function getKnowledgeArticle(query: string): KnowledgeArticle | null {
   loadKnowledge();
   const exact = byId!.get(normalized);
   if (exact) return exact;
-  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const tokens = normalized.replace(/[^a-z0-9-]+/g, " ").split(/\s+/).filter(Boolean);
   let best: { article: KnowledgeArticle; score: number } | null = null;
   for (const article of cache!) {
-    const haystack = [article.id, article.title, ...article.tags, article.content].join(" ").toLowerCase();
-    const score = tokens.reduce((total, token) => total + (token.length > 2 && haystack.includes(token) ? 1 : 0), 0);
+    const topicText = [article.id, article.title, ...article.tags].join(" ").toLowerCase();
+    const contentText = article.content.toLowerCase();
+    const score = tokens.reduce(
+      (total, token) =>
+        total +
+        (token.length > 2 && topicText.includes(token) ? 5 : 0) +
+        (token.length > 2 && contentText.includes(token) ? 1 : 0),
+      0,
+    );
     if (score > 0 && (!best || score > best.score)) best = { article, score };
   }
   return best?.article ?? null;

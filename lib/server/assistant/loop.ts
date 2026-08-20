@@ -130,7 +130,7 @@ function getToolResultCharLimit(toolName: string): number {
     case "web_search":
       return 10000;
     case "get_help":
-      return 12000;
+      return 24000;
     default:
       return 4000;
   }
