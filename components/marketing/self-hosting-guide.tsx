@@ -22,6 +22,7 @@ import { CopyButton } from "@/components/marketing/copy-button";
 
 type Path = "local" | "team";
 type SupabaseMode = "managed" | "full";
+type ServerAccess = "private" | "public";
 
 export interface SelfHostingGuideCopy {
   chooserTitle: string;
@@ -49,10 +50,15 @@ export interface SelfHostingGuideCopy {
   teamAiInstallBody: string;
   copyInstallPrompt: string;
   reviewInstallPrompt: string;
+  manualInstallTitle: string;
+  manualInstallBody: string;
+  promptNeedsSetup: string;
   localPromptTemplate: string;
-  teamPromptTemplate: string;
+  teamPromptSimpleTemplate: string;
   teamPromptManagedMode: string;
   teamPromptFullMode: string;
+  teamPromptManagedPreparation: string;
+  teamPromptFullPreparation: string;
   requirementsTitle: string;
   requirementsReady: string;
   installNode: string;
@@ -74,11 +80,13 @@ export interface SelfHostingGuideCopy {
   macAppTitle: string;
   macLocalBody: string;
   macTeamBody: string;
+  macPrivateBody: string;
   downloadMacApp: string;
   macServerMenu: string;
   browserTitle: string;
   browserLocalBody: string;
   browserTeamBody: string;
+  browserPrivateBody: string;
   stepTestLocalTitle: string;
   stepTestLocalBody: string;
   testAccount: string;
@@ -93,6 +101,15 @@ export interface SelfHostingGuideCopy {
   teamGuideBody: string;
   teamBoundary: string;
   setupTitle: string;
+  accessQuestion: string;
+  privateAccessTitle: string;
+  privateAccessBody: string;
+  privateAccessBadge: string;
+  publicAccessTitle: string;
+  publicAccessBody: string;
+  serverIpLabel: string;
+  serverIpHint: string;
+  serverIpError: string;
   domainLabel: string;
   domainHint: string;
   domainError: string;
@@ -108,6 +125,11 @@ export interface SelfHostingGuideCopy {
   fullBadge: string;
   managedNeed: string;
   fullNeed: string;
+  privateSupabaseManagedNotice: string;
+  privateSupabaseFullNotice: string;
+  privateNetworkBoundary: string;
+  privateFullNetworkBoundary: string;
+  publicNetworkBoundary: string;
   stepPrepareServerTitle: string;
   stepPrepareServerBody: string;
   serverChecklistDocker: string;
@@ -129,7 +151,27 @@ export interface SelfHostingGuideCopy {
   stepEmailTitle: string;
   stepEmailManagedBody: string;
   stepEmailFullBody: string;
-  openAuthGuide: string;
+  emailUrlsTitle: string;
+  emailCloudLocation: string;
+  emailFullLocation: string;
+  emailSiteUrlLabel: string;
+  emailRedirectUrlLabel: string;
+  emailSmtpTitle: string;
+  emailSmtpCloudBody: string;
+  emailSmtpFullBody: string;
+  emailSmtpFields: string;
+  emailRestartTitle: string;
+  emailTemplatesTitle: string;
+  emailTemplatesManagedBody: string;
+  emailTemplatesFullBody: string;
+  emailConfirmTitle: string;
+  emailResetTitle: string;
+  emailSubjectLabel: string;
+  emailBodyLabel: string;
+  emailReviewTemplate: string;
+  emailVerifyTitle: string;
+  emailVerifySignup: string;
+  emailVerifyReset: string;
   stepVerifyServerTitle: string;
   stepVerifyServerBody: string;
   doctorPass: string;
@@ -154,13 +196,23 @@ interface GuideLinks {
   guide: string;
   download: string;
   release: string;
-  auth: string;
   operations: string;
+}
+
+interface EmailTemplate {
+  subject: string;
+  body: string;
+}
+
+interface SelfHostingGuideEmailTemplates {
+  confirmSignup: EmailTemplate;
+  resetPassword: EmailTemplate;
 }
 
 interface SelfHostingGuideProps {
   copy: SelfHostingGuideCopy;
   links: GuideLinks;
+  emailTemplates: SelfHostingGuideEmailTemplates;
   repositoryUrl: string;
   releaseTag: string;
   pnpmVersion: string;
@@ -177,7 +229,7 @@ function Command({ command, copy }: { command: string; copy: SelfHostingGuideCop
   return (
     <div className="mt-4 rounded-xl border border-border bg-background p-3">
       <div className="flex items-start justify-between gap-3">
-        <pre className="min-w-0 overflow-x-auto font-mono text-xs leading-relaxed text-foreground">
+        <pre className="max-h-96 min-w-0 overflow-auto font-mono text-xs leading-relaxed text-foreground">
           <code>{command}</code>
         </pre>
         <CopyButton text={command} label={copy.copy} copiedLabel={copy.copied} />
@@ -186,7 +238,17 @@ function Command({ command, copy }: { command: string; copy: SelfHostingGuideCop
   );
 }
 
-function PromptCard({ prompt, body, copy }: { prompt: string; body: string; copy: SelfHostingGuideCopy }) {
+function PromptCard({
+  prompt,
+  body,
+  copy,
+  disabled = false,
+}: {
+  prompt: string;
+  body: string;
+  copy: SelfHostingGuideCopy;
+  disabled?: boolean;
+}) {
   return (
     <div className="mb-8 rounded-2xl border border-primary/25 bg-primary/[0.05] p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -201,6 +263,7 @@ function PromptCard({ prompt, body, copy }: { prompt: string; body: string; copy
           text={prompt}
           label={copy.copyInstallPrompt}
           copiedLabel={copy.copied}
+          disabled={disabled}
           className="h-10 justify-center rounded-full border-primary/30 px-4 text-sm text-foreground"
         />
       </div>
@@ -212,6 +275,7 @@ function PromptCard({ prompt, body, copy }: { prompt: string; body: string; copy
           {prompt}
         </pre>
       </details>
+      {disabled && <p className="mt-3 text-sm text-destructive" role="alert">{copy.promptNeedsSetup}</p>}
     </div>
   );
 }
@@ -220,12 +284,14 @@ function ClientAccess({
   serverOrigin,
   signupUrl,
   local,
+  privateNetwork = false,
   copy,
   downloadUrl,
 }: {
   serverOrigin: string;
   signupUrl: string;
   local: boolean;
+  privateNetwork?: boolean;
   copy: SelfHostingGuideCopy;
   downloadUrl: string;
 }) {
@@ -237,7 +303,7 @@ function ClientAccess({
           {copy.macAppTitle}
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {local ? copy.macLocalBody : copy.macTeamBody}
+          {local ? copy.macLocalBody : privateNetwork ? copy.macPrivateBody : copy.macTeamBody}
         </p>
         <p className="mt-3 rounded-lg bg-background px-3 py-2 font-mono text-xs text-foreground">
           {copy.macServerMenu} → {serverOrigin}
@@ -250,7 +316,7 @@ function ClientAccess({
           {copy.browserTitle}
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {local ? copy.browserLocalBody : copy.browserTeamBody}
+          {local ? copy.browserLocalBody : privateNetwork ? copy.browserPrivateBody : copy.browserTeamBody}
         </p>
         <a href={signupUrl} target={local ? undefined : "_blank"} rel={local ? undefined : "noopener noreferrer"} className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
           {copy.openSignup}<ArrowRight className="h-4 w-4" aria-hidden />
@@ -288,6 +354,105 @@ function Checklist({ items }: { items: string[] }) {
   );
 }
 
+function EmailTemplateCard({
+  title,
+  template,
+  copy,
+}: {
+  title: string;
+  template: EmailTemplate;
+  copy: SelfHostingGuideCopy;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-background p-4">
+      <h4 className="text-sm font-medium">{title}</h4>
+      <p className="mt-3 text-xs font-medium text-muted-foreground">{copy.emailSubjectLabel}</p>
+      <Command command={template.subject} copy={copy} />
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-muted-foreground">{copy.emailBodyLabel}</p>
+        <CopyButton text={template.body} label={copy.copy} copiedLabel={copy.copied} />
+      </div>
+      <details className="mt-3 rounded-lg border border-border p-3">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+          {copy.emailReviewTemplate}
+        </summary>
+        <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-muted-foreground">
+          {template.body}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
+function EmailConfiguration({
+  serverOrigin,
+  mode,
+  templates,
+  copy,
+}: {
+  serverOrigin: string;
+  mode: SupabaseMode;
+  templates: SelfHostingGuideEmailTemplates;
+  copy: SelfHostingGuideCopy;
+}) {
+  const callbackUrl = `${serverOrigin}/auth/callback`;
+  const smtpConfiguration = mode === "managed"
+    ? copy.emailSmtpFields
+    : `SMTP_ADMIN_EMAIL=accounts@example.com
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=replace-with-smtp-user
+SMTP_PASS=replace-with-smtp-password
+SMTP_SENDER_NAME=minddy`;
+
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-xl border border-border bg-background p-4">
+          <h4 className="text-sm font-medium">{copy.emailUrlsTitle}</h4>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {mode === "managed" ? copy.emailCloudLocation : copy.emailFullLocation}
+          </p>
+          <Command
+            command={`${copy.emailSiteUrlLabel}=${serverOrigin}\n${copy.emailRedirectUrlLabel}=${callbackUrl}`}
+            copy={copy}
+          />
+        </section>
+        <section className="rounded-xl border border-border bg-background p-4">
+          <h4 className="text-sm font-medium">{copy.emailSmtpTitle}</h4>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {mode === "managed" ? copy.emailSmtpCloudBody : copy.emailSmtpFullBody}
+          </p>
+          <Command command={smtpConfiguration} copy={copy} />
+          {mode === "full" && <p className="mt-3 text-xs text-muted-foreground">{copy.emailRestartTitle}</p>}
+          {mode === "full" && (
+            <Command
+              command={"docker compose --env-file deploy/self-hosted/.env \\\n  -f /srv/minddy/supabase/docker/docker-compose.yml \\\n  -f deploy/self-hosted/compose.full.yml up -d auth"}
+              copy={copy}
+            />
+          )}
+        </section>
+      </div>
+
+      <section className="rounded-xl border border-border bg-muted/20 p-4">
+        <h4 className="text-sm font-medium">{copy.emailTemplatesTitle}</h4>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {mode === "managed" ? copy.emailTemplatesManagedBody : copy.emailTemplatesFullBody}
+        </p>
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <EmailTemplateCard title={copy.emailConfirmTitle} template={templates.confirmSignup} copy={copy} />
+          <EmailTemplateCard title={copy.emailResetTitle} template={templates.resetPassword} copy={copy} />
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+        <h4 className="text-sm font-medium">{copy.emailVerifyTitle}</h4>
+        <Checklist items={[copy.emailVerifySignup, copy.emailVerifyReset]} />
+      </section>
+    </div>
+  );
+}
+
 function ResourceLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
@@ -310,11 +475,22 @@ function isHostname(value: string) {
   return /^(?:localhost|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)$/.test(value);
 }
 
-export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmVersion }: SelfHostingGuideProps) {
+function isPrivateIpv4(value: string) {
+  const parts = value.trim().split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  return parts[0] === 10 ||
+    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+    (parts[0] === 192 && parts[1] === 168) ||
+    (parts[0] === 169 && parts[1] === 254);
+}
+
+export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, releaseTag, pnpmVersion }: SelfHostingGuideProps) {
   const [path, setPath] = useState<Path | null>(null);
+  const [serverAccess, setServerAccess] = useState<ServerAccess>("private");
   const [supabaseMode, setSupabaseMode] = useState<SupabaseMode>("managed");
-  const [domain, setDomain] = useState("tickets.example.com");
-  const [email, setEmail] = useState("ops@example.com");
+  const [serverIp, setServerIp] = useState("");
+  const [domain, setDomain] = useState("");
+  const [email, setEmail] = useState("");
   const guideRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -336,22 +512,33 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
 
   const enteredHost = normalizeHostname(domain);
   const domainValid = isHostname(enteredHost);
+  const serverIpValid = isPrivateIpv4(serverIp);
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const host = domainValid ? enteredHost : "tickets.example.com";
+  const addressValid = serverAccess === "private" ? serverIpValid : domainValid;
+  const host = serverAccess === "private"
+    ? (serverIpValid ? serverIp.trim() : "192.168.1.50")
+    : (domainValid ? enteredHost : "tickets.example.com");
   const adminEmail = emailValid ? email.trim() : "ops@example.com";
   const supabaseHost = `supabase.${host}`;
-  const signupUrl = `https://${host}/signup`;
+  const serverOrigin = `${serverAccess === "private" ? "http" : "https"}://${host}`;
+  const signupUrl = `${serverOrigin}/signup`;
+  const serverSetupValid = addressValid && emailValid;
   const localOrigin = "http://localhost:6463";
   const localSignupUrl = `${localOrigin}/signup`;
   const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile\npnpm self-host:local`;
   const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile`;
   const fetchSupabase = "node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase";
   const installServer = supabaseMode === "managed"
-    ? `pnpm self-host:install -- --mode managed \\\n  --domain ${host} \\\n  --admin-email ${adminEmail}`
-    : `pnpm self-host:install -- --mode full \\\n  --domain ${host} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host ${supabaseHost} \\\n  --supabase-dir /srv/minddy/supabase`;
+    ? `pnpm self-host:install -- --mode managed \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail}`
+    : serverAccess === "private"
+      ? `pnpm self-host:install -- --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-dir /srv/minddy/supabase`
+      : `pnpm self-host:install -- --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host ${supabaseHost} \\\n  --supabase-dir /srv/minddy/supabase`;
   const doctor = supabaseMode === "managed"
     ? "pnpm self-host:doctor -- --mode managed"
     : "pnpm self-host:doctor -- --mode full --supabase-compose /srv/minddy/supabase/docker/docker-compose.yml";
+  const networkSetup = serverAccess === "private"
+    ? (supabaseMode === "full" ? copy.privateFullNetworkBoundary : copy.privateNetworkBoundary)
+    : `${copy.publicNetworkBoundary}${supabaseMode === "full" ? ` ${copy.dnsSupabase}: ${supabaseHost} → ${copy.dnsTarget}.` : ""}`;
   const localPrompt = copy.localPromptTemplate
     .replaceAll("MINDDY_GUIDE_URL", links.guide)
     .replaceAll("MINDDY_REPOSITORY_URL", repositoryUrl)
@@ -359,14 +546,21 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
     .replaceAll("MINDDY_PNPM_VERSION", pnpmVersion)
     .replaceAll("MINDDY_LOCAL_ORIGIN", localOrigin)
     .replaceAll("MINDDY_DOWNLOAD_URL", links.download);
-  const teamPrompt = copy.teamPromptTemplate
+  const teamPrompt = copy.teamPromptSimpleTemplate
     .replaceAll("MINDDY_GUIDE_URL", links.guide)
     .replaceAll("MINDDY_REPOSITORY_URL", repositoryUrl)
     .replaceAll("MINDDY_RELEASE_TAG", releaseTag)
     .replaceAll("MINDDY_PNPM_VERSION", pnpmVersion)
     .replaceAll("MINDDY_DOMAIN", host)
+    .replaceAll("MINDDY_APP_ORIGIN", serverOrigin)
+    .replaceAll("MINDDY_ACCESS_MODE", serverAccess === "private" ? copy.privateAccessTitle : copy.publicAccessTitle)
+    .replaceAll("MINDDY_NETWORK_SETUP", networkSetup)
     .replaceAll("MINDDY_ADMIN_EMAIL", adminEmail)
     .replaceAll("MINDDY_SUPABASE_MODE", supabaseMode === "managed" ? copy.teamPromptManagedMode : copy.teamPromptFullMode)
+    .replaceAll("MINDDY_SUPABASE_PREPARATION", supabaseMode === "managed" ? copy.teamPromptManagedPreparation : copy.teamPromptFullPreparation)
+    .replaceAll("MINDDY_APP_ORIGIN", serverOrigin)
+    .replaceAll("MINDDY_INSTALL_COMMAND", installServer)
+    .replaceAll("MINDDY_DOCTOR_COMMAND", doctor)
     .replaceAll("MINDDY_DOWNLOAD_URL", links.download);
 
   return (
@@ -460,14 +654,17 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
                   <p>{copy.localBoundary}</p>
                 </div>
                 <PromptCard prompt={localPrompt} body={copy.localAiInstallBody} copy={copy} />
-                <div className="mb-8 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
+                <details className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+                  <summary className="cursor-pointer text-lg font-medium">{copy.manualInstallTitle}</summary>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.manualInstallBody}</p>
+                  <div className="mt-6 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
                   <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-primary" aria-hidden /><h3 className="font-medium">{copy.requirementsTitle}</h3></div>
                   <p className="mt-2 text-sm text-muted-foreground">{copy.requirementsReady}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {EXTERNAL_TOOLS.map(({ key, href }) => <ResourceLink key={key} href={href}>{copy[key]}</ResourceLink>)}
                   </div>
-                </div>
-                <ol className="space-y-4">
+                  </div>
+                  <ol className="mt-6 space-y-4">
                   <Step number={1} title={copy.stepCheckToolsTitle} body={copy.stepCheckToolsBody}>
                     <Command command={"node --version\ndocker --version\nsupabase --version\ngit --version"} copy={copy} />
                   </Step>
@@ -485,8 +682,8 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
                   <Step number={4} title={copy.stepTestLocalTitle} body={copy.stepTestLocalBody}>
                     <Checklist items={[copy.testAccount, copy.testProject, copy.testAttachment]} />
                   </Step>
-                </ol>
-                <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                  </ol>
+                  <div className="mt-6 grid gap-4 lg:grid-cols-2">
                   <div className="rounded-2xl border border-border bg-card p-5">
                     <h3 className="font-medium">{copy.localLaterTitle}</h3>
                     <p className="mt-4 text-xs font-medium text-muted-foreground">{copy.localStopLabel}</p>
@@ -501,29 +698,67 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
                       {copy.teamTitle}<ArrowRight className="h-4 w-4" aria-hidden />
                     </button>
                   </div>
-                </div>
+                  </div>
+                </details>
               </div>
             ) : (
               <div>
                 <div className="mb-6 flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
-                  <p>{copy.teamBoundary}</p>
+                  <p>{serverAccess === "private"
+                    ? (supabaseMode === "full" ? copy.privateFullNetworkBoundary : copy.privateNetworkBoundary)
+                    : copy.publicNetworkBoundary}</p>
                 </div>
 
                 <div className="mb-8 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
                   <h3 className="text-xl font-semibold tracking-tight">{copy.setupTitle}</h3>
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <fieldset className="mt-5">
+                    <legend className="text-sm font-medium">{copy.accessQuestion}</legend>
+                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                      {([
+                        { access: "private" as const, title: copy.privateAccessTitle, body: copy.privateAccessBody, badge: copy.privateAccessBadge, icon: ShieldCheck },
+                        { access: "public" as const, title: copy.publicAccessTitle, body: copy.publicAccessBody, badge: null, icon: Globe2 },
+                      ]).map(({ access, title, body, badge, icon: Icon }) => (
+                        <label key={access} className={cn("cursor-pointer rounded-xl border p-4 transition-colors", serverAccess === access ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
+                          <input
+                            type="radio"
+                            name="server-access"
+                            value={access}
+                            checked={serverAccess === access}
+                            onChange={() => setServerAccess(access)}
+                            className="sr-only"
+                          />
+                          <div className="flex items-start gap-3">
+                            <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium">{title}</span>
+                                {badge && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{badge}</span>}
+                              </div>
+                              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <label className="text-sm font-medium">
-                      {copy.domainLabel}
-                      <input value={domain} onChange={(event) => setDomain(event.target.value)} inputMode="url" spellCheck={false} aria-invalid={!domainValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
-                      <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{copy.domainHint}</span>
-                      {!domainValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.domainError}</span>}
+                      {serverAccess === "private" ? copy.serverIpLabel : copy.domainLabel}
+                      {serverAccess === "private" ? (
+                        <input value={serverIp} onChange={(event) => setServerIp(event.target.value)} inputMode="decimal" spellCheck={false} placeholder="192.168.1.50" aria-invalid={serverIp.length > 0 && !serverIpValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                      ) : (
+                        <input value={domain} onChange={(event) => setDomain(event.target.value)} inputMode="url" spellCheck={false} placeholder="tickets.example.com" aria-invalid={domain.length > 0 && !domainValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                      )}
+                      <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{serverAccess === "private" ? copy.serverIpHint : copy.domainHint}</span>
+                      {serverAccess === "private" && serverIp.length > 0 && !serverIpValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.serverIpError}</span>}
+                      {serverAccess === "public" && domain.length > 0 && !domainValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.domainError}</span>}
                     </label>
                     <label className="text-sm font-medium">
                       {copy.emailLabel}
-                      <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" aria-invalid={!emailValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
+                      <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="ops@example.com" aria-invalid={email.length > 0 && !emailValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
                       <span className="mt-1.5 block text-xs font-normal text-muted-foreground">{copy.emailHint}</span>
-                      {!emailValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.emailError}</span>}
+                      {email.length > 0 && !emailValid && <span className="mt-1 block text-xs font-normal text-destructive" role="alert">{copy.emailError}</span>}
                     </label>
                   </div>
                   <fieldset className="mt-6">
@@ -542,26 +777,40 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
                         </label>
                       ))}
                     </div>
+                    {serverAccess === "private" && (
+                      <p className="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
+                        {supabaseMode === "managed" ? copy.privateSupabaseManagedNotice : copy.privateSupabaseFullNotice}
+                      </p>
+                    )}
                     <p className="mt-3 text-sm text-muted-foreground">{supabaseMode === "managed" ? copy.managedNeed : copy.fullNeed}</p>
                   </fieldset>
                 </div>
 
-                <PromptCard prompt={teamPrompt} body={copy.teamAiInstallBody} copy={copy} />
+                <PromptCard prompt={teamPrompt} body={copy.teamAiInstallBody} copy={copy} disabled={!serverSetupValid} />
 
-                <ol className="space-y-4">
+                <details className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+                  <summary className="cursor-pointer text-lg font-medium">{copy.manualInstallTitle}</summary>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.manualInstallBody}</p>
+                  <ol className="mt-6 space-y-4">
                   <Step number={1} title={copy.stepPrepareServerTitle} body={copy.stepPrepareServerBody}>
-                    <Checklist items={[copy.serverChecklistDocker, copy.serverChecklistDns, copy.serverChecklistPorts, copy.serverChecklistSmtp]} />
+                    <Checklist items={serverAccess === "private"
+                      ? [
+                          copy.serverChecklistDocker,
+                          supabaseMode === "full" ? copy.privateFullNetworkBoundary : copy.privateNetworkBoundary,
+                          copy.serverChecklistSmtp,
+                        ]
+                      : [copy.serverChecklistDocker, copy.serverChecklistDns, copy.serverChecklistPorts, copy.serverChecklistSmtp]} />
                     <div className="mt-4 flex flex-wrap gap-2">
                       <ResourceLink href="https://docs.docker.com/engine/install/">{copy.installDocker}</ResourceLink>
                       {supabaseMode === "managed" && <ResourceLink href="https://supabase.com/dashboard/projects">{copy.managedTitle}</ResourceLink>}
                     </div>
-                    <div className="mt-4 rounded-xl border border-border bg-background p-4">
+                    {serverAccess === "public" && <div className="mt-4 rounded-xl border border-border bg-background p-4">
                       <div className="flex items-center gap-2 text-sm font-medium"><Globe2 className="h-4 w-4 text-primary" aria-hidden />{copy.dnsTitle}</div>
                       <dl className="mt-3 space-y-2 font-mono text-xs">
                         <div className="flex flex-wrap justify-between gap-2"><dt>{copy.dnsApp}</dt><dd>{host} → {copy.dnsTarget}</dd></div>
                         {supabaseMode === "full" && <div className="flex flex-wrap justify-between gap-2"><dt>{copy.dnsSupabase}</dt><dd>{supabaseHost} → {copy.dnsTarget}</dd></div>}
                       </dl>
-                    </div>
+                    </div>}
                   </Step>
                   <Step number={2} title={copy.stepGetReleaseTitle} body={copy.stepGetReleaseBody}>
                     <Command command={serverClone} copy={copy} />
@@ -577,18 +826,20 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
                     <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>
                   </Step>
                   <Step number={supabaseMode === "full" ? 5 : 4} title={copy.stepEmailTitle} body={supabaseMode === "managed" ? copy.stepEmailManagedBody : copy.stepEmailFullBody}>
-                    <div className="mt-4 flex flex-wrap gap-2"><ResourceLink href={links.auth}>{copy.openAuthGuide}</ResourceLink></div>
+                    <EmailConfiguration serverOrigin={serverOrigin} mode={supabaseMode} templates={emailTemplates} copy={copy} />
                   </Step>
                   <Step number={supabaseMode === "full" ? 6 : 5} title={copy.stepVerifyServerTitle} body={copy.stepVerifyServerBody}>
                     <Command command={doctor} copy={copy} />
-                    <Checklist items={[copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} />
+                    <Checklist items={serverAccess === "private"
+                      ? [copy.doctorPass, copy.emailPass, copy.backupPass]
+                      : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} />
                   </Step>
                   <Step number={supabaseMode === "full" ? 7 : 6} title={copy.stepSignupServerTitle} body={copy.stepSignupServerBody}>
-                    <ClientAccess serverOrigin={`https://${host}`} signupUrl={signupUrl} local={false} copy={copy} downloadUrl={links.download} />
+                    <ClientAccess serverOrigin={serverOrigin} signupUrl={signupUrl} local={false} privateNetwork={serverAccess === "private"} copy={copy} downloadUrl={links.download} />
                   </Step>
-                </ol>
+                  </ol>
 
-                <div className="mt-8 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
+                  <div className="mt-8 rounded-2xl border border-border bg-muted/20 p-5 sm:p-6">
                   <h3 className="text-lg font-medium tracking-tight">{copy.serverAnswersTitle}</h3>
                   <div className="mt-4 divide-y divide-border">
                     {[
@@ -603,7 +854,8 @@ export function SelfHostingGuide({ copy, links, repositoryUrl, releaseTag, pnpmV
                     ))}
                   </div>
                   <div className="mt-5"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>
-                </div>
+                  </div>
+                </details>
               </div>
             )}
           </div>

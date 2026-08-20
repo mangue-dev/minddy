@@ -49,7 +49,7 @@ function pickerHtml(currentOrigin: string, isCustomServer: boolean): string {
   <body>
     <main>
       <h1>Connect to a server</h1>
-      <p>Use your own minddy server in this Mac app. Remote servers need HTTPS; localhost can use HTTP.</p>
+      <p>Use your own minddy server in this Mac app. Public servers need HTTPS; localhost and private network IPs can use HTTP.</p>
       <form id="form">
         <label for="origin">Server address</label>
         <input id="origin" name="origin" type="url" required spellcheck="false" value="${escapeHtml(currentOrigin)}" placeholder="https://minddy.example.com">

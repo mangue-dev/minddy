@@ -9,16 +9,17 @@ describe("normalizeDesktopServerOrigin", () => {
     );
   });
 
-  it("allows HTTP only for a loopback server", () => {
+  it("allows HTTP for loopback and private network servers", () => {
     expect(normalizeDesktopServerOrigin("http://localhost:6463")).toBe(
       "http://localhost:6463",
     );
     expect(normalizeDesktopServerOrigin("http://127.0.0.1:6463")).toBe(
       "http://127.0.0.1:6463",
     );
-    expect(() => normalizeDesktopServerOrigin("http://192.168.1.20:6463")).toThrow(
-      /must use HTTPS/,
-    );
+    expect(normalizeDesktopServerOrigin("http://192.168.1.20")).toBe("http://192.168.1.20");
+    expect(normalizeDesktopServerOrigin("http://10.0.0.8")).toBe("http://10.0.0.8");
+    expect(normalizeDesktopServerOrigin("http://[fd12::8]")).toBe("http://[fd12::8]");
+    expect(() => normalizeDesktopServerOrigin("http://203.0.113.20")).toThrow(/must use HTTPS/);
   });
 
   it("rejects ambiguous or privileged addresses", () => {

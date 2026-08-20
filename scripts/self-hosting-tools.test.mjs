@@ -11,6 +11,7 @@ import {
   createSupabaseJwt,
   environmentValues,
   fullBootstrapDatabaseUrl,
+  normalizeAppOrigin,
   normalizeImageReference,
   parseArgs as parseInstallArgs,
   parseEnvironment,
@@ -44,6 +45,53 @@ test("the installer creates a readable self-hosted configuration with integratio
   assert.equal(parsed.MINDDY_MANAGED_BILLING, "0");
   assert.equal(parsed.AGENT_EXECUTION_BACKEND, "local");
   assert.equal(parsed.MINDDY_IMAGE, `ghcr.io/mangue-dev/minddy@sha256:${"b".repeat(64)}`);
+});
+
+test("a private server uses its LAN origin without requesting a domain", () => {
+  const options = parseInstallArgs([
+    "--non-interactive",
+    "--mode", "managed",
+    "--app-url", "http://192.168.1.50",
+    "--admin-email", "ops@example.test",
+    "--supabase-url", "https://project.supabase.co",
+    "--anon-key", "anon-key",
+    "--service-role-key", "service-role-key",
+  ]);
+  const values = environmentValues(options);
+  assert.equal(values.MINDDY_HOST, "192.168.1.50");
+  assert.equal(values.MINDDY_SITE_ADDRESS, "http://192.168.1.50");
+  assert.equal(values.MINDDY_PUBLIC_APP_URL, "http://192.168.1.50");
+  assert.equal(normalizeAppOrigin("https://tickets.example.test/"), "https://tickets.example.test");
+  assert.throws(() => normalizeAppOrigin("http://203.0.113.20"), /must use HTTPS/);
+});
+
+test("the complete local Supabase stack uses a dedicated private LAN port", () => {
+  const values = environmentValues(parseInstallArgs([
+    "--non-interactive",
+    "--mode", "full",
+    "--app-url", "http://10.0.0.8",
+    "--admin-email", "ops@example.test",
+    "--supabase-dir", "/srv/minddy/supabase",
+  ]));
+  assert.equal(values.MINDDY_PUBLIC_APP_URL, "http://10.0.0.8");
+  assert.equal(values.MINDDY_PUBLIC_SUPABASE_URL, "http://10.0.0.8:8000");
+  assert.equal(values.SUPABASE_SITE_ADDRESS, "http://10.0.0.8:8000");
+  assert.equal(values.MINDDY_SUPABASE_HTTP_BIND_ADDRESS, "0.0.0.0");
+  assert.equal(values.MINDDY_SUPABASE_HTTP_PORT, "8000");
+});
+
+test("the complete public Supabase stack keeps its API port on loopback", () => {
+  const values = environmentValues(parseInstallArgs([
+    "--non-interactive",
+    "--mode", "full",
+    "--app-url", "https://tickets.example.test",
+    "--admin-email", "ops@example.test",
+    "--supabase-host", "supabase.example.test",
+    "--supabase-dir", "/srv/minddy/supabase",
+  ]));
+  assert.equal(values.MINDDY_PUBLIC_SUPABASE_URL, "https://supabase.example.test");
+  assert.equal(values.SUPABASE_SITE_ADDRESS, "supabase.example.test");
+  assert.equal(values.MINDDY_SUPABASE_HTTP_BIND_ADDRESS, "127.0.0.1");
 });
 
 test("the installer accepts only the release's immutable OCI pin", () => {

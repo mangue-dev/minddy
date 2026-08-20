@@ -62,7 +62,7 @@ MINDDY_DESKTOP_ORIGIN=http://localhost:3000 npm start
 
 The variable only exists for development. A packaged app ignores it. Installed
 users choose a server from **minddy > Connect to a Server…**; remote origins must
-use HTTPS, while HTTP is accepted only for loopback addresses.
+use HTTPS, while HTTP is accepted only for loopback and private-network IP addresses.
 
 ## The selected server
 

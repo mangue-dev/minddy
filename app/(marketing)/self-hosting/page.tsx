@@ -1,29 +1,25 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight, Database, HardDrive, Server, ShieldCheck } from "lucide-react";
+import { ArrowRight, Server, ShieldCheck } from "lucide-react";
 import packageJson from "@/package.json";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { MINDDY_REPOSITORY_URL, SITE_URL } from "@/lib/site";
 import { localizedHref } from "@/lib/locale-href";
+import {
+  readSelfHostingEmailTemplate,
+  SELF_HOSTING_EMAIL_SUBJECTS,
+} from "@/lib/self-hosting-email-templates";
 import { Github } from "@/components/git/provider-icons";
 import {
   SelfHostingGuide,
   type SelfHostingGuideCopy,
 } from "@/components/marketing/self-hosting-guide";
-import { Reveal, RevealGroup, RevealHeading } from "@/components/marketing/reveal";
+import { Reveal, RevealHeading } from "@/components/marketing/reveal";
 
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "selfHosting", locale: (await getLocale()) as Locale });
 }
-
-const FOUNDATIONS = [
-  { key: "app", icon: Server },
-  { key: "supabase", icon: Database },
-  { key: "data", icon: HardDrive },
-] as const;
-
-const OPERATIONS = ["backup", "update", "diagnose"] as const;
 
 export default async function SelfHostingPage() {
   const locale = (await getLocale()) as Locale;
@@ -31,6 +27,10 @@ export default async function SelfHostingPage() {
   const guideUrl = `${SITE_URL}${localizedHref("/self-hosting", locale)}`;
   const releaseTag = `v${packageJson.version}`;
   const releaseBase = `${MINDDY_REPOSITORY_URL}/blob/${releaseTag}`;
+  const [confirmSignupTemplate, resetPasswordTemplate] = await Promise.all([
+    readSelfHostingEmailTemplate("confirm-signup"),
+    readSelfHostingEmailTemplate("reset-password"),
+  ]);
   const guideCopy = {
     chooserTitle: t("chooserTitle"),
     chooserBody: t("chooserBody"),
@@ -57,10 +57,15 @@ export default async function SelfHostingPage() {
     teamAiInstallBody: t("teamAiInstallBody"),
     copyInstallPrompt: t("copyInstallPrompt"),
     reviewInstallPrompt: t("reviewInstallPrompt"),
+    manualInstallTitle: t("manualInstallTitle"),
+    manualInstallBody: t("manualInstallBody"),
+    promptNeedsSetup: t("promptNeedsSetup"),
     localPromptTemplate: t.raw("localPromptTemplate") as string,
-    teamPromptTemplate: t.raw("teamPromptTemplate") as string,
+    teamPromptSimpleTemplate: t.raw("teamPromptSimpleTemplate") as string,
     teamPromptManagedMode: t("teamPromptManagedMode"),
     teamPromptFullMode: t("teamPromptFullMode"),
+    teamPromptManagedPreparation: t("teamPromptManagedPreparation"),
+    teamPromptFullPreparation: t("teamPromptFullPreparation"),
     requirementsTitle: t("requirementsTitle"),
     requirementsReady: t("requirementsReady"),
     installNode: t("installNode"),
@@ -82,11 +87,13 @@ export default async function SelfHostingPage() {
     macAppTitle: t("macAppTitle"),
     macLocalBody: t("macLocalBody"),
     macTeamBody: t("macTeamBody"),
+    macPrivateBody: t("macPrivateBody"),
     downloadMacApp: t("downloadMacApp"),
     macServerMenu: t("macServerMenu"),
     browserTitle: t("browserTitle"),
     browserLocalBody: t("browserLocalBody"),
     browserTeamBody: t("browserTeamBody"),
+    browserPrivateBody: t("browserPrivateBody"),
     stepTestLocalTitle: t("stepTestLocalTitle"),
     stepTestLocalBody: t("stepTestLocalBody"),
     testAccount: t("testAccount"),
@@ -101,6 +108,15 @@ export default async function SelfHostingPage() {
     teamGuideBody: t("teamGuideBody"),
     teamBoundary: t("teamBoundary"),
     setupTitle: t("setupTitle"),
+    accessQuestion: t("accessQuestion"),
+    privateAccessTitle: t("privateAccessTitle"),
+    privateAccessBody: t("privateAccessBody"),
+    privateAccessBadge: t("privateAccessBadge"),
+    publicAccessTitle: t("publicAccessTitle"),
+    publicAccessBody: t("publicAccessBody"),
+    serverIpLabel: t("serverIpLabel"),
+    serverIpHint: t("serverIpHint"),
+    serverIpError: t("serverIpError"),
     domainLabel: t("domainLabel"),
     domainHint: t("domainHint"),
     domainError: t("domainError"),
@@ -116,6 +132,11 @@ export default async function SelfHostingPage() {
     fullBadge: t("fullBadge"),
     managedNeed: t("managedNeed"),
     fullNeed: t("fullNeed"),
+    privateSupabaseManagedNotice: t("privateSupabaseManagedNotice"),
+    privateSupabaseFullNotice: t("privateSupabaseFullNotice"),
+    privateNetworkBoundary: t("privateNetworkBoundary"),
+    privateFullNetworkBoundary: t("privateFullNetworkBoundary"),
+    publicNetworkBoundary: t("publicNetworkBoundary"),
     stepPrepareServerTitle: t("stepPrepareServerTitle"),
     stepPrepareServerBody: t("stepPrepareServerBody"),
     serverChecklistDocker: t("serverChecklistDocker"),
@@ -137,7 +158,27 @@ export default async function SelfHostingPage() {
     stepEmailTitle: t("stepEmailTitle"),
     stepEmailManagedBody: t("stepEmailManagedBody"),
     stepEmailFullBody: t("stepEmailFullBody"),
-    openAuthGuide: t("openAuthGuide"),
+    emailUrlsTitle: t("emailUrlsTitle"),
+    emailCloudLocation: t("emailCloudLocation"),
+    emailFullLocation: t("emailFullLocation"),
+    emailSiteUrlLabel: t("emailSiteUrlLabel"),
+    emailRedirectUrlLabel: t("emailRedirectUrlLabel"),
+    emailSmtpTitle: t("emailSmtpTitle"),
+    emailSmtpCloudBody: t("emailSmtpCloudBody"),
+    emailSmtpFullBody: t("emailSmtpFullBody"),
+    emailSmtpFields: t("emailSmtpFields"),
+    emailRestartTitle: t("emailRestartTitle"),
+    emailTemplatesTitle: t("emailTemplatesTitle"),
+    emailTemplatesManagedBody: t("emailTemplatesManagedBody"),
+    emailTemplatesFullBody: t("emailTemplatesFullBody"),
+    emailConfirmTitle: t("emailConfirmTitle"),
+    emailResetTitle: t("emailResetTitle"),
+    emailSubjectLabel: t("emailSubjectLabel"),
+    emailBodyLabel: t("emailBodyLabel"),
+    emailReviewTemplate: t("emailReviewTemplate"),
+    emailVerifyTitle: t("emailVerifyTitle"),
+    emailVerifySignup: t("emailVerifySignup"),
+    emailVerifyReset: t("emailVerifyReset"),
     stepVerifyServerTitle: t("stepVerifyServerTitle"),
     stepVerifyServerBody: t("stepVerifyServerBody"),
     doctorPass: t("doctorPass"),
@@ -185,29 +226,9 @@ export default async function SelfHostingPage() {
               <ul className="mt-4 space-y-2 text-sm">
                 {[t("promiseOne"), t("promiseTwo"), t("promiseThree")].map((item) => <li key={item} className="flex gap-2"><span className="text-primary">✓</span>{item}</li>)}
               </ul>
+              <p className="mt-4 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">{t("howBoundary")}</p>
             </Reveal>
           </div>
-        </div>
-      </section>
-
-      <section className="border-y border-border bg-muted/20 py-14 sm:py-16">
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-          <header className="max-w-2xl">
-            <RevealHeading className="text-2xl font-semibold tracking-tighter text-balance sm:text-3xl" text={t("howTitle")} />
-            <Reveal as="p" delay={0.1} className="mt-3 leading-relaxed text-muted-foreground">{t("howBody")}</Reveal>
-          </header>
-          <RevealGroup as="ol" step={0.08} className="mt-8 grid gap-3 md:grid-cols-3">
-            {FOUNDATIONS.map(({ key, icon: Icon }, index) => (
-              <li key={key} className="relative rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-center justify-between"><Icon className="h-5 w-5 text-primary" aria-hidden /><span className="text-xs font-medium text-muted-foreground">0{index + 1}</span></div>
-                <h2 className="mt-5 font-medium">{t(`foundation_${key}_title`)}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(`foundation_${key}_body`)}</p>
-              </li>
-            ))}
-          </RevealGroup>
-          <Reveal className="mt-4 flex gap-3 rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden /><p>{t("howBoundary")}</p>
-          </Reveal>
         </div>
       </section>
 
@@ -217,8 +238,17 @@ export default async function SelfHostingPage() {
           guide: guideUrl,
           download: `${SITE_URL}${localizedHref("/download", locale)}`,
           release: `${MINDDY_REPOSITORY_URL}/releases/tag/${releaseTag}`,
-          auth: `${releaseBase}/docs/auth-supabase-config.md`,
           operations: `${releaseBase}/docs/self-hosting-operations.md`,
+        }}
+        emailTemplates={{
+          confirmSignup: {
+            subject: SELF_HOSTING_EMAIL_SUBJECTS["confirm-signup"],
+            body: confirmSignupTemplate,
+          },
+          resetPassword: {
+            subject: SELF_HOSTING_EMAIL_SUBJECTS["reset-password"],
+            body: resetPasswordTemplate,
+          },
         }}
         repositoryUrl={MINDDY_REPOSITORY_URL}
         releaseTag={releaseTag}
@@ -227,18 +257,14 @@ export default async function SelfHostingPage() {
 
       <section className="border-y border-border bg-muted/20 py-14 sm:py-16">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-          <header className="max-w-2xl">
+          <div className="flex max-w-3xl flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <header>
             <h2 className="text-2xl font-semibold tracking-tighter sm:text-3xl">{t("operationsTitle")}</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t("operationsSubtitle")}</p>
-          </header>
-          <div className="mt-7 grid gap-3 md:grid-cols-3">
-            {OPERATIONS.map((key) => (
-              <a key={key} href={`${releaseBase}/docs/self-hosting-operations.md`} target="_blank" rel="noopener noreferrer" aria-label={t(`operation_${key}_title`)} className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-background">
-                <div className="flex items-center justify-between"><Github className="h-4 w-4 text-primary" aria-hidden /><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden /></div>
-                <h3 className="mt-4 font-medium">{t(`operation_${key}_title`)}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(`operation_${key}_body`)}</p>
-              </a>
-            ))}
+            </header>
+            <a href={`${releaseBase}/docs/self-hosting-operations.md`} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium transition-colors hover:bg-background">
+              {t("openOperationsGuide")}<ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
           </div>
         </div>
       </section>

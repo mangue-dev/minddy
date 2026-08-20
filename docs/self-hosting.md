@@ -21,7 +21,7 @@ Storage, and Realtime.
 | Component | Supported choices | Required |
 | --- | --- | --- |
 | Web application | Any host that can run a Next.js production server behind HTTPS | Yes |
-| Database, Auth, Realtime, Storage | A managed Supabase project, or the official self-hosted Supabase distribution | Yes |
+| Database, Auth, Realtime, Storage | A Supabase Cloud project on `supabase.com`, or the official self-hosted Supabase distribution | Yes |
 | Object storage | The Storage backend of that Supabase instance (local volume or its configured S3-compatible backend) | Yes |
 | Scheduled work | Any HTTP scheduler that calls the documented cron endpoints with `CRON_SECRET`; Vercel Cron is one adapter | No, jobs remain disabled without it |
 | Auth email | SMTP configured in Supabase/GoTrue | Recommended for a public service |
@@ -58,7 +58,7 @@ This table is the short operational classification.
 
 | Class | Variables | How to obtain them |
 | --- | --- | --- |
-| Required to run a deployed instance | `MINDDY_PUBLIC_APP_URL`, `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the canonical HTTPS origin yourself. Copy the Supabase API URL, anon key, and service-role key from the selected Supabase project or stack. Never expose the service-role key to a browser. |
+| Required to run a deployed instance | `MINDDY_PUBLIC_APP_URL`, `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the selected public HTTPS or private HTTP origin. Copy the Supabase API URL, anon key, and service-role key from Supabase Cloud or the selected stack. Never expose the service-role key to a browser. |
 | Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET` | `pnpm bootstrap:supabase` writes missing values to `.env.local`. It never replaces existing values. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
 | Recommended instance identity | `MINDDY_PUBLIC_SITE_NAME`, `MINDDY_PUBLIC_CONTACT_EMAIL`, `ADMIN_EMAILS`, `OAUTH_ISSUER` | Choose operator-owned public values. `OAUTH_ISSUER` is normally empty and is only needed when OAuth/MCP is intentionally published at an origin different from the app origin. |
 | Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, Vercel domain variables, PostHog pairs, VAPID/APNs variables, `OPENROUTER_API_KEY`, `AGENT_EXECUTION_BACKEND`, `CRON_SECRET`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. |
@@ -147,12 +147,12 @@ pnpm bootstrap:supabase
 `supabase db reset --local` is destructive. It is not an update or recovery
 procedure for a running instance.
 
-## Installation: managed or self-hosted remote Supabase
+## Installation: Supabase Cloud or self-hosted Supabase
 
 ### Guided reference-profile installation
 
 For either versioned Compose profile, use the guided installer from the release
-directory. It asks for the deployment mode, public domain, administrator, and
+directory. It asks for the deployment mode, app address, administrator, and
 only the optional capabilities that should be enabled. It generates distinct
 secrets, creates `deploy/self-hosted/.env` with mode `0600`, pulls and starts
 the selected stack, and runs the existing idempotent Supabase bootstrap.
@@ -161,26 +161,56 @@ the selected stack, and runs the existing idempotent Supabase bootstrap.
 pnpm self-host:install
 ```
 
-For non-interactive automation, pass every required input explicitly. Managed
-mode requires credentials for an existing Supabase project; full mode requires
+For non-interactive automation, pass every required input explicitly. Supabase
+Cloud mode requires credentials for a project on `supabase.com`; full mode requires
 the pinned upstream checkout and a PostgreSQL connection that is reachable by
 the host running the bootstrap.
 
 ```bash
 pnpm self-host:install -- --non-interactive --mode managed \
-  --domain tickets.example.com --admin-email ops@example.com \
-  --supabase-url https://supabase.example.com --anon-key '...' \
+  --app-url https://tickets.example.com --admin-email ops@example.com \
+  --supabase-url https://project.supabase.co --anon-key '...' \
   --service-role-key '...' --db-url 'postgresql://postgres:...@db.example.com:5432/postgres' \
   --image 'ghcr.io/mangue-dev/minddy@sha256:replace-with-the-release-digest'
 ```
+
+A server on a trusted home or office network does not need a domain. Use its
+private IPv4 address with either Supabase Cloud or the complete Supabase stack,
+and do not forward its ports on the router. The lower-memory Cloud example is:
+
+```bash
+pnpm self-host:install -- --non-interactive --mode managed \
+  --app-url http://192.168.1.50 --admin-email ops@example.com \
+  --supabase-url https://project.supabase.co --anon-key '...' \
+  --service-role-key '...' --db-url 'postgresql://postgres:...@db.example.com:5432/postgres' \
+  --image 'ghcr.io/mangue-dev/minddy@sha256:replace-with-the-release-digest'
+```
+
+Private HTTP is accepted only for localhost and private IPv4 addresses. To run
+Supabase on that same private server, fetch the pinned upstream checkout and use
+full mode without `--supabase-host`:
+
+```bash
+node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase
+pnpm self-host:install -- --non-interactive --mode full \
+  --app-url http://192.168.1.50 --admin-email ops@example.com \
+  --supabase-dir /srv/minddy/supabase \
+  --image 'ghcr.io/mangue-dev/minddy@sha256:replace-with-the-release-digest'
+```
+
+This exposes minddy at `http://192.168.1.50` and the Supabase API at
+`http://192.168.1.50:8000`. Restrict inbound TCP ports 80 and 8000 to the
+trusted LAN, keep 443 closed unless it is otherwise needed, and never forward
+80, 443, or 8000 on the router. A domain and HTTPS can be added later using the
+operations runbook.
 
 Before supplying `--image`, download the matching GitHub Release assets, verify
 `SHA256SUMS`, and copy the `reference` value from `release-manifest.json`. The
 option accepts only the immutable official GHCR digest, never a moving tag. The
 installer never replaces an existing `.env` or changes its image pin. A later
 invocation reuses that file and safely repeats Compose pulls, `up`, migrations,
-and bucket reconciliation; it does not rotate data-encryption or cron secrets. DNS,
-firewall ports 80 and 443, upstream Supabase provisioning, and a restorable
+and bucket reconciliation; it does not rotate data-encryption or cron secrets. Public
+DNS, firewall ports 80 and 443, Supabase provisioning, and a restorable
 backup policy remain operator responsibilities. Scheduler, AI, billing,
 analytics, email, Git hosting, and every other optional integration remain off
 unless configured deliberately.
@@ -254,8 +284,9 @@ into two supported deployment paths:
 The full profile does not copy Supabase into this repository. Fetch its pinned
 upstream Docker directory with `scripts/fetch-official-supabase.mjs`, combine it
 with the profile as shown in that directory's README, and keep every upstream
-service image unchanged. Both paths expose only Caddy ports 80 and 443 publicly;
-the full profile also binds PostgreSQL to loopback for bootstrap and maintenance.
+service image unchanged. Public paths expose only Caddy ports 80 and 443; a
+private full-stack path additionally exposes Caddy port 8000 to its LAN. The
+full profile binds PostgreSQL to loopback for bootstrap and maintenance.
 They use health checks and leave scheduled jobs disabled until the
 `scheduled-jobs` profile is selected. The README also documents automatic Caddy
 TLS and the loopback option for an existing TLS load balancer.

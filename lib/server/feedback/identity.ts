@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomBytes, randomUUID } from "node:crypto";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 import { getServiceClient } from "@/lib/supabase-service";
 import { findAvatarSeed } from "@/lib/server/avatar-seeds";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
@@ -276,7 +277,7 @@ export function feedbackSessionCookieOptions(
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: SESSION_COOKIE_OPTIONS.secure,
     path: opts?.atRoot ? "/" : `/f/${boardToken}`,
     expires: expiresAt,
   };

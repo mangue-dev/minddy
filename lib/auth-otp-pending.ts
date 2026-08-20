@@ -2,6 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { parseOtpType } from "@/lib/desktop/auth-link";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
  * The token of an e-mail link, put on hold while we ask the
@@ -88,7 +89,7 @@ export function authPendingCookieOptions(maxAgeSeconds = AUTH_PENDING_TTL_SECOND
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: SESSION_COOKIE_OPTIONS.secure,
     path: "/auth",
     maxAge: maxAgeSeconds,
   };

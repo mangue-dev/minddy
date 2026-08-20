@@ -99,8 +99,8 @@ becomes a second app to maintain.
 **Current implementation: one product `BrowserWindow` loads minddy Cloud or an
 explicitly selected self-hosted origin.** The product UI is never bundled in the
 app, so the desktop and web clients still render the same interface. The shell
-contains one isolated local form for selecting a server. It accepts HTTPS remote
-origins and HTTP loopback origins, stores the choice in `userData/server.json`,
+contains one isolated local form for selecting a server. It accepts HTTPS public
+origins and HTTP loopback or private-network IP origins, stores the choice in `userData/server.json`,
 and exposes no general-purpose bridge to that form.
 
 Settings that cannot be discussed:

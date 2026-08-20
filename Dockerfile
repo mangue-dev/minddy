@@ -41,6 +41,7 @@ RUN groupadd --gid 10001 minddy \
     && useradd --uid 10001 --gid minddy --create-home --shell /usr/sbin/nologin minddy
 
 COPY --from=build --chown=minddy:minddy /app/public ./public
+COPY --from=build --chown=minddy:minddy /app/supabase/email-templates ./supabase/email-templates
 COPY --from=build --chown=minddy:minddy /app/.next/standalone ./
 COPY --from=build --chown=minddy:minddy /app/.next/static ./.next/static
 

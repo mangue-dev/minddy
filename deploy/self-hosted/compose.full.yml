@@ -13,6 +13,13 @@ services:
     ports:
       - 127.0.0.1:${MINDDY_POSTGRES_BIND_PORT:-54322}:5432
 
+  auth:
+    environment:
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: '{{ if eq (printf "%v" (index .Data "locale")) "fr" }}Confirmez votre adresse e-mail{{ else }}Confirm your email{{ end }}'
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: '{{ if eq (printf "%v" (index .Data "locale")) "fr" }}Réinitialisez votre mot de passe{{ else }}Reset your password{{ end }}'
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://minddy:3000/api/self-hosting/email-templates/confirm-signup
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: http://minddy:3000/api/self-hosting/email-templates/reset-password
+
   minddy:
     image: ${MINDDY_IMAGE:?Set MINDDY_IMAGE from the matching compatibility row.}
     restart: unless-stopped
@@ -46,9 +53,12 @@ services:
     ports:
       - ${MINDDY_HTTP_BIND_ADDRESS:-0.0.0.0}:80:80
       - ${MINDDY_HTTP_BIND_ADDRESS:-0.0.0.0}:443:443
+      - ${MINDDY_SUPABASE_HTTP_BIND_ADDRESS:-127.0.0.1}:${MINDDY_SUPABASE_HTTP_PORT:-8000}:8000
     environment:
-      MINDDY_HOST: ${MINDDY_HOST:?Set MINDDY_HOST to the public hostname.}
-      SUPABASE_HOST: ${SUPABASE_HOST:?Set SUPABASE_HOST to the public Supabase API hostname.}
+      MINDDY_HOST: ${MINDDY_HOST:?Set MINDDY_HOST to the selected app host.}
+      MINDDY_SITE_ADDRESS: ${MINDDY_SITE_ADDRESS:-${MINDDY_HOST}}
+      SUPABASE_HOST: ${SUPABASE_HOST:?Set SUPABASE_HOST to the selected Supabase API host.}
+      SUPABASE_SITE_ADDRESS: ${SUPABASE_SITE_ADDRESS:-${SUPABASE_HOST}}
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL for certificate notices.}
     volumes:
       - ${MINDDY_DEPLOY_DIR:?Set MINDDY_DEPLOY_DIR to this release directory.}/Caddyfile.full:/etc/caddy/Caddyfile:ro

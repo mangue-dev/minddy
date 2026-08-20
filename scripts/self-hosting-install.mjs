@@ -43,6 +43,7 @@ export function parseArgs(argv) {
     if (arg === "--") continue;
     if (arg === "--mode") options.mode = value();
     else if (arg === "--domain") options.domain = value();
+    else if (arg === "--app-url") options.appUrl = value();
     else if (arg === "--admin-email") options.adminEmail = value();
     else if (arg === "--caddy-email") options.caddyEmail = value();
     else if (arg === "--supabase-url") options.supabaseUrl = value();
@@ -66,6 +67,7 @@ export function parseArgs(argv) {
     else fail(`unknown option: ${arg}. See --help.`);
   }
   if (options.mode && !["managed", "full"].includes(options.mode)) fail("--mode must be managed or full.");
+  if (options.domain && options.appUrl) fail("use either --domain or --app-url, not both.");
   return options;
 }
 
@@ -75,14 +77,15 @@ export function help() {
 The installer explains each step and will never replace an existing environment file.
 
 Options:
-  --mode managed|full       Managed Supabase or the complete official stack.
-  --domain <hostname>       Public minddy hostname (without a URL scheme).
+  --mode managed|full       Supabase Cloud or the complete official stack.
+  --app-url <origin>        minddy origin. Private HTTP IPs and public HTTPS are supported.
+  --domain <hostname>       Backward-compatible shortcut for https://<hostname>.
   --admin-email <email>     First instance administrator email.
   --caddy-email <email>     Certificate notification email (defaults to admin).
   --supabase-url <https-url> --anon-key <key> --service-role-key <key>
-                              Existing Supabase credentials for managed mode.
+                              Supabase Cloud credentials for managed mode.
   --supabase-dir <path>     Pinned upstream Supabase checkout for full mode.
-  --supabase-host <hostname> Public API hostname for full mode.
+  --supabase-host <hostname> Public API hostname for full HTTPS mode.
   --db-url <postgres-url>   Migration connection for managed mode. Full mode derives it.
   --image <oci-reference>   Verified immutable minddy OCI digest to deploy.
   --enable scheduler         Start the opt-in scheduler after bootstrap.
@@ -94,8 +97,9 @@ Options:
   --dry-run                 Show actions without writing or starting anything.
   -h, --help                Show this help.
 
-All optional integrations are disabled. The operator remains responsible for DNS,
-firewall ports 80/443, a backup policy, and the selected Supabase service.`;
+All optional integrations are disabled. Public deployments require DNS and firewall
+ports 80/443. Private HTTP deployments must remain on a trusted private network;
+the full stack also serves its Supabase API on LAN port 8000.`;
 }
 
 export function normalizeImageReference(value) {
@@ -112,6 +116,30 @@ export function normalizeHostname(value) {
     fail(`invalid hostname: ${value}. Use a DNS hostname without a URL scheme.`);
   }
   return hostname;
+}
+
+function isPrivateIpv4(hostname) {
+  const parts = hostname.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  return parts[0] === 10 ||
+    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+    (parts[0] === 192 && parts[1] === 168) ||
+    (parts[0] === 169 && parts[1] === 254);
+}
+
+export function normalizeAppOrigin(value) {
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    fail(`invalid app URL: ${value}. Use an absolute origin such as https://minddy.example.com or http://192.168.1.50.`);
+  }
+  if (url.username || url.password || url.pathname !== "/" || url.search || url.hash || url.port) {
+    fail("--app-url must be an origin without credentials, a path, query, or custom port.");
+  }
+  if (url.protocol === "https:") return url.origin;
+  if (url.protocol === "http:" && (url.hostname === "localhost" || isPrivateIpv4(url.hostname))) return url.origin;
+  fail("--app-url must use HTTPS, except for localhost or a private IPv4 address.");
 }
 
 export function assertEmail(value, label) {
@@ -224,13 +252,20 @@ function assertCompleteEnvironment(values) {
 }
 
 export function environmentValues(options, generated = generatedValues()) {
-  const domain = normalizeHostname(options.domain);
+  const appUrl = options.appUrl
+    ? normalizeAppOrigin(options.appUrl)
+    : normalizeAppOrigin(options.domain === "localhost" ? "http://localhost" : `https://${normalizeHostname(options.domain)}`);
+  const domain = new URL(appUrl).hostname;
   const adminEmail = assertEmail(options.adminEmail, "--admin-email");
   const caddyEmail = assertEmail(options.caddyEmail || adminEmail, "--caddy-email");
   const full = options.mode === "full";
-  const supabaseHost = full ? normalizeHostname(options.supabaseHost || `supabase.${domain}`) : undefined;
-  const appUrl = domain === "localhost" ? "http://localhost" : `https://${domain}`;
-  const supabaseUrl = full ? `https://${supabaseHost}` : options.supabaseUrl?.replace(/\/$/, "");
+  const privateFull = full && appUrl.startsWith("http://");
+  const supabaseHost = full
+    ? (privateFull ? domain : normalizeHostname(options.supabaseHost || `supabase.${domain}`))
+    : undefined;
+  const supabaseUrl = full
+    ? (privateFull ? `http://${domain}:8000` : `https://${supabaseHost}`)
+    : options.supabaseUrl?.replace(/\/$/, "");
   if (!supabaseUrl || !/^https?:\/\//.test(supabaseUrl)) fail("--supabase-url must be an HTTP(S) URL in managed mode.");
   if (!full && (!options.anonKey || !options.serviceRoleKey)) fail("managed mode requires --anon-key and --service-role-key.");
   const runtimeKeys = full
@@ -242,8 +277,12 @@ export function environmentValues(options, generated = generatedValues()) {
     MINDDY_ENV_FILE: options.envFile,
     ...(options.image ? { MINDDY_IMAGE: options.image } : {}),
     MINDDY_HOST: domain,
+    MINDDY_SITE_ADDRESS: appUrl.startsWith("http://") ? appUrl : domain,
     SUPABASE_HOST: supabaseHost || `supabase.${domain}`,
+    SUPABASE_SITE_ADDRESS: privateFull ? supabaseUrl : (supabaseHost || `supabase.${domain}`),
     CADDY_EMAIL: caddyEmail,
+    MINDDY_SUPABASE_HTTP_BIND_ADDRESS: privateFull ? "0.0.0.0" : "127.0.0.1",
+    MINDDY_SUPABASE_HTTP_PORT: "8000",
     MINDDY_POSTGRES_BIND_PORT: "54322",
     MINDDY_EDITION: "self-hosted",
     MINDDY_PUBLIC_APP_URL: appUrl,
@@ -259,6 +298,8 @@ export function environmentValues(options, generated = generatedValues()) {
     SUPABASE_PUBLIC_URL: supabaseUrl,
     API_EXTERNAL_URL: `${supabaseUrl}/auth/v1`,
     ADDITIONAL_REDIRECT_URLS: `${appUrl}/auth/callback`,
+    SMTP_ADMIN_EMAIL: adminEmail,
+    SMTP_SENDER_NAME: "minddy",
   };
 }
 
@@ -284,7 +325,8 @@ export function assertPrerequisites(options) {
   command("docker", ["info"], { dryRun: options.dryRun });
   command("docker", ["compose", "version"], { dryRun: options.dryRun });
   if (options.dryRun) return;
-  for (const port of [80, 443]) {
+  const ports = options.mode === "full" ? [80, 443, 8000] : [80, 443];
+  for (const port of ports) {
     const result = spawnSync("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"], { encoding: "utf8" });
     if (result.status === 0 && result.stdout.trim()) fail(`port ${port} is already in use by process ${result.stdout.trim().split(/\s+/).join(", ")}.`);
     if (result.error?.code !== "ENOENT" && result.status !== 0 && result.status !== 1) {
@@ -309,16 +351,25 @@ export async function collectOptions(options) {
     if (!['managed', 'full'].includes(value)) fail("mode must be managed or full.");
     return value;
   });
-  if (!options.domain) options.domain = await ask("Public minddy hostname", undefined, normalizeHostname);
+  if (!options.domain && !options.appUrl) options.appUrl = await ask(
+    "minddy URL (public HTTPS domain or private HTTP IP)",
+    undefined,
+    normalizeAppOrigin,
+  );
   if (!options.adminEmail) options.adminEmail = await ask("Administrator email", undefined, (value) => assertEmail(value, "administrator email"));
   if (!options.caddyEmail) options.caddyEmail = options.adminEmail;
   if (options.mode === "managed") {
-    if (!options.supabaseUrl) options.supabaseUrl = await ask("Existing Supabase API URL", undefined, (value) => value);
+    if (!options.supabaseUrl) options.supabaseUrl = await ask("Supabase Cloud project URL", undefined, (value) => value);
     if (!options.anonKey) options.anonKey = await ask("Supabase anon key", undefined, (value) => value);
     if (!options.serviceRoleKey) options.serviceRoleKey = await ask("Supabase service-role key", undefined, (value) => value);
   } else {
     if (!options.supabaseDir) options.supabaseDir = await ask("Pinned upstream Supabase checkout", undefined, (value) => resolve(value));
-    if (!options.supabaseHost) options.supabaseHost = await ask("Public Supabase API hostname", `supabase.${normalizeHostname(options.domain)}`, normalizeHostname);
+    const appUrl = options.appUrl
+      ? normalizeAppOrigin(options.appUrl)
+      : normalizeAppOrigin(`https://${normalizeHostname(options.domain)}`);
+    if (appUrl.startsWith("https://") && !options.supabaseHost) {
+      options.supabaseHost = await ask("Public Supabase API hostname", `supabase.${new URL(appUrl).hostname}`, normalizeHostname);
+    }
   }
   if (options.mode === "managed" && !options.dbUrl && options.bootstrap) options.dbUrl = await ask("PostgreSQL URL for bootstrap", undefined, (value) => {
     if (!value) fail("a PostgreSQL URL is required unless --skip-bootstrap is used.");
@@ -370,7 +421,7 @@ export async function main(argv = process.argv.slice(2)) {
     values = parseEnvironment(readFileSync(options.envFile, "utf8"));
     assertCompleteEnvironment(values);
     assertRequestedImage(options, values);
-    options.domain ||= values.MINDDY_HOST;
+    options.appUrl ||= values.MINDDY_PUBLIC_APP_URL;
     options.adminEmail ||= values.ADMIN_EMAILS?.split(",")[0];
     options.caddyEmail ||= values.CADDY_EMAIL;
     options.supabaseUrl ||= values.MINDDY_PUBLIC_SUPABASE_URL;
@@ -385,7 +436,7 @@ export async function main(argv = process.argv.slice(2)) {
     }
   } else {
     options = await collectOptions(options);
-    if (!options.mode || !options.domain || !options.adminEmail) fail("--mode, --domain, and --admin-email are required with --non-interactive.");
+    if (!options.mode || (!options.domain && !options.appUrl) || !options.adminEmail) fail("--mode, --app-url (or --domain), and --admin-email are required with --non-interactive.");
     const template = checkConfigFile(options);
     values = environmentValues(options);
     environment = renderEnvironment(template, values);

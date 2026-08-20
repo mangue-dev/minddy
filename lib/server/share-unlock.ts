@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies, headers } from "next/headers";
 
+import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { clientIpFromHeaders } from "@/lib/server/request-ip";
 import { isCustomPublicHost, publicCookiePath } from "@/lib/server/custom-domains";
@@ -105,7 +106,7 @@ export async function unlockShareWithPassword({
     {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: SESSION_COOKIE_OPTIONS.secure,
       // On custom domain, the root: the visible path does not contain
       // never the token, and the VALUE of the cookie remains linked to this sharing.
       path: publicCookiePath(await isCustomPublicHost(), cookiePath),

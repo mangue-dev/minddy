@@ -30,6 +30,7 @@ services:
       - ${MINDDY_HTTP_BIND_ADDRESS:-0.0.0.0}:443:443
     environment:
       MINDDY_HOST: ${MINDDY_HOST:?Set MINDDY_HOST to the public hostname.}
+      MINDDY_SITE_ADDRESS: ${MINDDY_SITE_ADDRESS:-${MINDDY_HOST}}
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL for certificate notices.}
     volumes:
       - ${MINDDY_DEPLOY_DIR:?Set MINDDY_DEPLOY_DIR to this release directory.}/Caddyfile:/etc/caddy/Caddyfile:ro

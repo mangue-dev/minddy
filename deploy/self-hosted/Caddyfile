@@ -2,7 +2,7 @@
   email {$CADDY_EMAIL}
 }
 
-{$MINDDY_HOST} {
+{$MINDDY_SITE_ADDRESS} {
   encode zstd gzip
   reverse_proxy minddy:3000
 }

@@ -29,7 +29,7 @@ copies, or changes Supabase services.
 export MINDDY_DEPLOY_DIR=/srv/minddy/release/deploy/self-hosted
 cp "$MINDDY_DEPLOY_DIR/.env.example" "$MINDDY_DEPLOY_DIR/.env"
 chmod 600 "$MINDDY_DEPLOY_DIR/.env"
-# Edit $MINDDY_DEPLOY_DIR/.env, including the existing Supabase URL and keys.
+# Edit $MINDDY_DEPLOY_DIR/.env, including the Supabase Cloud URL and keys.
 docker compose --env-file "$MINDDY_DEPLOY_DIR/.env" \
   -f "$MINDDY_DEPLOY_DIR/compose.managed.yml" up -d
 ```
@@ -76,18 +76,25 @@ state. Do not change individual upstream service images or make local edits in
 
 ## TLS and network boundary
 
-Set `MINDDY_HOST` to the public DNS hostname and provide `CADDY_EMAIL`. Caddy
-then obtains and renews certificates automatically, and publishes only ports 80
-and 443. Ensure both ports reach the host and DNS resolves to it before starting
-the profile. For a pre-existing TLS load balancer, bind Caddy to loopback with
+For a public deployment, set `MINDDY_HOST` and `MINDDY_SITE_ADDRESS` to the DNS
+hostname and provide `CADDY_EMAIL`. Caddy then obtains and renews certificates
+automatically. Ensure ports 80 and 443 reach the host and DNS resolves before
+starting the profile. For a pre-existing TLS load balancer, bind Caddy to loopback with
 `MINDDY_HTTP_BIND_ADDRESS=127.0.0.1` and configure that balancer to proxy to it.
-Set `MINDDY_HOST` to `http://localhost` only for a disposable non-TLS smoke run;
-it is not a production setting.
 
-The complete profile also requires `SUPABASE_HOST`; Caddy terminates TLS for it
-and sends only API traffic to the upstream Kong service. Studio, PostgreSQL,
-Supavisor, and all other internal service ports are never published by the
-reference profile.
+Both profiles support a server confined to a trusted private network. Set
+`MINDDY_HOST` to its private IPv4 address and
+`MINDDY_SITE_ADDRESS=http://<private-ip>`. For the complete profile, also set
+`SUPABASE_SITE_ADDRESS=http://<private-ip>:8000` and
+`MINDDY_SUPABASE_HTTP_BIND_ADDRESS=0.0.0.0`. Restrict ports 80 and 8000 to the
+LAN, keep router ports 80, 443, and 8000 closed, and never expose this HTTP mode
+to the internet.
+
+For public HTTPS, the complete profile also requires `SUPABASE_HOST`; Caddy
+terminates TLS for it and sends API traffic to the upstream Kong service. For a
+private full stack, the installer derives the Supabase API address from the
+server IP and uses port 8000. PostgreSQL, Supavisor, and all other internal
+service ports are never published by the reference profile.
 
 ## Scheduled jobs and checks
 

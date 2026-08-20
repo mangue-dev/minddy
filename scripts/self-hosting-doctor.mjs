@@ -121,16 +121,23 @@ function composeStatus(options) {
 async function networkFindings(values) {
   const findings = [];
   const hostname = values.MINDDY_HOST;
-  if (!hostname || hostname === "localhost") return [{ name: "DNS", state: "warn", detail: "public DNS/TLS check skipped for localhost." }];
-  try {
-    const addresses = await lookup(hostname, { all: true });
-    findings.push({ name: "DNS", state: "pass", detail: `${addresses.length} DNS record(s) resolve.` });
-  } catch (error) {
-    findings.push({ name: "DNS", state: "fail", detail: redact(error instanceof Error ? error.message : error) });
+  const appUrl = values.MINDDY_PUBLIC_APP_URL;
+  const privateHttp = appUrl?.startsWith("http://");
+  if (!hostname || hostname === "localhost") {
+    findings.push({ name: "Network address", state: "warn", detail: "public DNS/TLS check skipped for localhost." });
+  } else if (privateHttp) {
+    findings.push({ name: "Network address", state: "warn", detail: "private HTTP mode is enabled; keep the server behind the LAN firewall and do not forward its ports." });
+  } else {
+    try {
+      const addresses = await lookup(hostname, { all: true });
+      findings.push({ name: "DNS", state: "pass", detail: `${addresses.length} DNS record(s) resolve.` });
+    } catch (error) {
+      findings.push({ name: "DNS", state: "fail", detail: redact(error instanceof Error ? error.message : error) });
+    }
   }
   try {
-    const response = await fetch(`${values.MINDDY_PUBLIC_APP_URL.replace(/\/$/, "")}/api/health`, { signal: AbortSignal.timeout(10_000) });
-    findings.push({ name: "TLS and application health", state: response.ok ? "pass" : "fail", detail: response.ok ? `HTTPS health endpoint returned ${response.status}.` : `health endpoint returned ${response.status}.` });
+    const response = await fetch(`${appUrl.replace(/\/$/, "")}/api/health`, { signal: AbortSignal.timeout(10_000) });
+    findings.push({ name: privateHttp ? "Application health" : "TLS and application health", state: response.ok ? "pass" : "fail", detail: response.ok ? `Health endpoint returned ${response.status}.` : `health endpoint returned ${response.status}.` });
   } catch (error) {
     findings.push({ name: "TLS and application health", state: "fail", detail: redact(error instanceof Error ? error.message : error) });
   }
