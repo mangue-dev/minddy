@@ -8,6 +8,7 @@ import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import { getOrCreateAgentSandbox, sandboxHost, sandboxName, type Sandbox } from "./sandbox";
+import { SelfHostedSandbox } from "./self-hosted-sandbox";
 import { cloudLayout } from "./harness-layout";
 import { cloneRepo, clonePullRequest, revParseHead, repoBackgroundRunner } from "./repo-host";
 import { BackgroundJobs } from "./background";
@@ -740,6 +741,13 @@ export async function executeAgentRun(
     // microVM since MIN-223: this key (or the run key below) is what the firewall
     // injects — the network policy cannot be built without it.
     const { apiKey, baseUrl, provider, mode: keyMode } = endpoint;
+    const serverControlToken = selfHostedSandbox
+      ? (() => {
+          const secret = resolveServerExecSecret();
+          if (!secret) throw new Error("server execution secret is not configured");
+          return signServerExecToken(run.id, secret);
+        })()
+      : null;
 
     /**
      * THE KEY THE FIREWALL WILL INJECT, which is not necessarily `apiKey`.
@@ -760,7 +768,7 @@ export async function executeAgentRun(
      * visible in the logs.
      */
     let vmKeyHash: string | null = null;
-    let vmKey = apiKey;
+    let vmKey = selfHostedSandbox ? AGENT_LLM_PLACEHOLDER_KEY : apiKey;
     // Locally, the key must never enter the job: the proxy requests it once from
     // `/llm-key`, which mints it and persists its hash. Minting it here as well
     // would create and revoke a key before the first token.
@@ -874,6 +882,14 @@ export async function executeAgentRun(
         });
       },
     });
+    const llmRelayUrl =
+      selfHostedSandbox && sb instanceof SelfHostedSandbox
+        ? await sb.configureLlmRelay({
+            apiKey: apiKey || null,
+            baseUrl,
+            controlToken: serverControlToken!,
+          })
+        : null;
     sandbox = sb;
     /**
      * Hands on the repository, through RPC (MIN-224). In the old form this was the
@@ -1443,14 +1459,11 @@ export async function executeAgentRun(
       projectId: run.project_id,
       appOrigin: agentControlOrigin(),
       ...(selfHostedSandbox
-        ? (() => {
-            const secret = resolveServerExecSecret();
-            if (!secret) throw new Error("server execution secret is not configured");
-            return {
-              controlToken: signServerExecToken(run.id, secret),
-              executionEnvironment: "server" as const,
-            };
-          })()
+        ? {
+            controlToken: serverControlToken!,
+            executionEnvironment: "server" as const,
+            llmRelayUrl: llmRelayUrl!,
+          }
         : {}),
       model: run.model,
       baseUrl,

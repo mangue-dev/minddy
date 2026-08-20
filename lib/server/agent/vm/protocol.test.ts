@@ -56,6 +56,12 @@ describe("parseVmJob", () => {
     expect(() => parseVmJob(job({ layout: broken }))).toThrow(/absolute/i);
   });
 
+  it("requires a relay URL for a server-hosted job", () => {
+    expect(() => parseVmJob(job({ executionEnvironment: "server", controlToken: "token" }))).toThrow(
+      /LLM relay URL/i,
+    );
+  });
+
   /**
  * MIN-358 — the deposit mode has NO default, and it is asymmetrical on purpose:
  * `current` is the one you don't want to play by accident, and it is

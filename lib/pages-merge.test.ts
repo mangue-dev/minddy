@@ -53,6 +53,19 @@ describe("mergeDocs", () => {
     expect(result.changed).toBe(true);
   });
 
+  it("keeps a local edit when two remote versions arrive before it is saved", () => {
+    const base = doc(p("a", "A"), p("b", "B"));
+    const mine = doc(p("a", "A local"), p("b", "B"));
+    const firstRemote = doc(p("a", "A"), p("b", "B remote 1"));
+    const secondRemote = doc(p("a", "A"), p("b", "B remote 2"));
+
+    const firstMerge = mergeDocs(base, mine, firstRemote);
+    const secondMerge = mergeDocs(firstRemote, firstMerge.doc, secondRemote);
+
+    expect(read(secondMerge.doc)).toEqual(["a:A local", "b:B remote 2"]);
+    expect(secondMerge.changed).toBe(true);
+  });
+
   it("signale le bloc que les deux ont touché, et garde la version distante", () => {
     const base = doc(p("a", "A"), p("b", "B"));
     const mine = doc(p("a", "A"), p("b", "chez moi"));

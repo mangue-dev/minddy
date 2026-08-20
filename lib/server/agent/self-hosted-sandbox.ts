@@ -76,6 +76,16 @@ export class SelfHostedSandbox implements AgentSandbox {
     return result.exists && result.running ? new SelfHostedSandbox(name) : null;
   }
 
+  async configureLlmRelay(input: {
+    apiKey: string | null;
+    baseUrl: string;
+    controlToken: string;
+  }): Promise<string> {
+    await runnerRequest(sandboxPath(this.name, "/llm"), { body: input });
+    const { url } = runnerConfig();
+    return `${url}${sandboxPath(this.name, "/llm")}`;
+  }
+
   async runCommand(input: {
     cmd: string;
     args?: string[];

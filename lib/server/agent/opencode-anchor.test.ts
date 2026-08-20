@@ -100,7 +100,7 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
     ]) {
       expect(text, tool).toContain(`\`${tool}\``);
     }
-    expect(text).toContain("The one place the harness checks for you: your FIRST");
+    expect(text).toContain("The harness owns git, and your shell enforces it.");
   });
 
   it("dit la langue de réponse et le ticket comme ancrage", () => {

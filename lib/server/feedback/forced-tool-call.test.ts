@@ -72,6 +72,7 @@ function stubFetch(handler: (model: string) => Response) {
 
 beforeEach(() => {
   modelsSent.length = 0;
+  process.env.MINDDY_EDITION = "cloud";
   process.env.MINDDY_MANAGED_AI = "1";
   process.env.OPENROUTER_API_KEY = "sk-test";
   vi.spyOn(console, "warn").mockImplementation(() => {});

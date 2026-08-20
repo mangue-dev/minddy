@@ -70,4 +70,25 @@ describe("self-hosted agent sandbox", () => {
       detached: true,
     });
   });
+
+  it("configures an LLM relay without placing the provider key in the sandbox", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      runnerResponse({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    const sandbox = new SelfHostedSandbox("agent-numo-1");
+
+    const relayUrl = await sandbox.configureLlmRelay({
+      apiKey: "provider-key",
+      baseUrl: "https://provider.example/v1",
+      controlToken: "server-token",
+    });
+
+    expect(relayUrl).toBe("http://agent-runner:6464/v1/sandboxes/agent-numo-1/llm");
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      apiKey: "provider-key",
+      baseUrl: "https://provider.example/v1",
+      controlToken: "server-token",
+    });
+  });
 });

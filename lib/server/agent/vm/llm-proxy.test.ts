@@ -189,6 +189,42 @@ describe("le proxy ne sert qu'une route", () => {
   });
 });
 
+describe("the self-hosted relay", () => {
+  it("forwards completions to the runner with the control token, never a provider key", async () => {
+    const requests: Array<{ url: string; init: RequestInit }> = [];
+    const upstream = (async (url: string | URL | Request, init?: RequestInit) => {
+      requests.push({ url: String(url), init: init ?? {} });
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    const proxy = await startLlmProxy({
+      job: JOB,
+      fetchImpl: upstream,
+      relay: {
+        baseUrl: "http://agent-runner:6464/v1/sandboxes/agent-1/llm",
+        token: () => "server-control-token",
+      },
+    });
+
+    try {
+      await fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        headers: { authorization: "Bearer placeholder", "content-type": "application/json" },
+        body: JSON.stringify({ model: "openai/gpt-5", messages: [] }),
+      });
+
+      expect(requests).toHaveLength(1);
+      expect(requests[0].url).toBe(
+        "http://agent-runner:6464/v1/sandboxes/agent-1/llm/chat/completions",
+      );
+      expect(requests[0].init.headers).toMatchObject({
+        authorization: "Bearer server-control-token",
+      });
+    } finally {
+      await proxy.close();
+    }
+  });
+});
+
 /** A hand-written HTTP request — the only way to get a
  * request-target that `fetch` would refuse to leave as is. */
 function rawRequest(origin: string, requestTarget: string): Promise<string> {

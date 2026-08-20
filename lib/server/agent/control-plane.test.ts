@@ -1248,4 +1248,13 @@ describe("the control plane seen from the built-in server sandbox", () => {
     h.run = { ...h.run!, local_exec: false, status: "completed" };
     expect((await callServer("POST", "/events", { type: "assistant_message" })).status).toBe(409);
   });
+
+  it("never returns a provider key to a server sandbox", async () => {
+    h.run = { ...h.run!, local_exec: false, status: "running", key_mode: "byok" };
+
+    const res = await callServer("POST", "/llm-key");
+
+    expect(res.status).toBe(403);
+    expect(h.minted).toEqual([]);
+  });
 });

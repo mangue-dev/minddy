@@ -226,6 +226,13 @@ function batchFileCount(args: Record<string, unknown>): number {
 }
 
 const TOOL_META: Record<string, ToolMeta> = {
+  get_help: {
+    icon: MessageCircleQuestion,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("readingProductHelp");
+      return success ? t("productHelpRead") : t("readProductHelpFailed");
+    },
+  },
   list_projects: {
     icon: LayoutGrid,
     getLabel: (_args, result, _success, status, t) => {
@@ -1038,6 +1045,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       const raw = typeof args.title === "string" ? args.title.trim() : "";
       const title = raw.length > 60 ? `${raw.slice(0, 60)}…` : raw;
       return title ? t("agentCreatePrTitled", { title }) : t("agentCreatePr");
+    },
+  },
+  validate_changes: {
+    icon: ClipboardCheck,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("validatingChanges");
+      return success ? t("changesValidated") : t("validateChangesFailed");
     },
   },
   // The three writings of a REREADING session (MIN-168): the pull request

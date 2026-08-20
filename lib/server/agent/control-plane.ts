@@ -721,9 +721,9 @@ export async function handleControlPlaneRequest(opts: {
      *
      * Two modes, no implicit fallback:
      *
-     * - **BYOK**: the user's key is returned as is. The premises is
-     * reserved for interactive launches; routines and other triggers
-     * without users remain in the cloud;
+     * - **BYOK**: the user's key is returned as is only to the local,
+     * interactive launcher. A server sandbox uses the runner relay, which
+     * never returns the provider key;
      * - **platform**: no mint = no key. 503, never
      * `OPENROUTER_API_KEY`: the key
      * platform is UNCAPPED and shared with Numo, transcription,
@@ -732,7 +732,10 @@ export async function handleControlPlaneRequest(opts: {
      * run in the cloud when mint is not available (`admitLocalRun`,
      *   [local-exec.ts](local-exec.ts)) ; ici, on refuse.
      */
-    if (!opts.local && !opts.server) {
+    if (opts.server) {
+      return forbidden("a server sandbox gets model access through the runner relay");
+    }
+    if (!opts.local) {
       return forbidden("a microVM gets its model key from the firewall, not from here");
     }
     if (run.key_mode === "byok") {

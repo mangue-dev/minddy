@@ -10,6 +10,7 @@ const sandboxNetwork = process.env.AGENT_RUNNER_NETWORK?.trim();
 const port = Number(process.env.AGENT_RUNNER_PORT || 6464);
 const maxBodyBytes = 5 * 1024 * 1024;
 const stoppedSandboxRetentionMs = 7 * 24 * 60 * 60_000;
+const llmRelays = new Map();
 
 if (!secret || !sandboxImage || !sandboxNetwork) {
   throw new Error("AGENT_RUNNER_SECRET, AGENT_RUNNER_SANDBOX_IMAGE, and AGENT_RUNNER_NETWORK are required");
@@ -121,6 +122,7 @@ async function removeExpiredSandboxes(now = Date.now()) {
     const finishedAt = Date.parse(inspected?.State?.FinishedAt || "");
     if (!Number.isFinite(finishedAt) || now - finishedAt < stoppedSandboxRetentionMs) continue;
     await docker("DELETE", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}?v=true`).then(async () => {
+      llmRelays.delete(name);
       await docker("DELETE", `/v1.44/volumes/${encodeURIComponent(sandboxVolumeName(name))}`).catch((error) => {
         if (error.status !== 404) throw error;
       });
@@ -225,6 +227,68 @@ function authorized(header) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
+function authorizedRelay(header, token) {
+  const supplied = Buffer.from((header || "").replace(/^Bearer\s+/i, ""));
+  const expected = Buffer.from(token);
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
+
+function completionUrl(baseUrl) {
+  if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+    throw Object.assign(new Error("LLM base URL is required"), { status: 400 });
+  }
+  let normalized;
+  try {
+    normalized = new URL(baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+  } catch {
+    throw Object.assign(new Error("LLM base URL is invalid"), { status: 400 });
+  }
+  if (normalized.protocol !== "https:" && normalized.protocol !== "http:") {
+    throw Object.assign(new Error("LLM base URL must use HTTP(S)"), { status: 400 });
+  }
+  return new URL("chat/completions", normalized).toString();
+}
+
+async function relayLlmCompletion(name, request, response) {
+  const relay = llmRelays.get(name);
+  if (!relay || !authorizedRelay(request.headers.authorization, relay.controlToken)) {
+    return json(response, 401, { error: "unauthorized" });
+  }
+  const body = await readBody(request);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw Object.assign(new Error("LLM completion body must be an object"), { status: 400 });
+  }
+  const headers = { "content-type": "application/json" };
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (
+      ["host", "content-length", "connection", "accept-encoding", "authorization"].includes(key) ||
+      typeof value !== "string"
+    ) continue;
+    headers[key] = value;
+  }
+  if (relay.apiKey) headers.authorization = `Bearer ${relay.apiKey}`;
+
+  const upstream = await fetch(relay.url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  const responseHeaders = {};
+  upstream.headers.forEach((value, key) => {
+    if (["content-encoding", "content-length", "transfer-encoding"].includes(key)) return;
+    responseHeaders[key] = value;
+  });
+  response.writeHead(upstream.status, responseHeaders);
+  if (!upstream.body) return response.end();
+  const reader = upstream.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    response.write(value);
+  }
+  response.end();
+}
+
 function json(response, status, value) {
   const body = Buffer.from(JSON.stringify(value));
   response.writeHead(status, { "content-type": "application/json", "content-length": body.length });
@@ -237,15 +301,22 @@ const server = createServer(async (request, response) => {
       await docker("GET", "/_ping");
       return json(response, 200, { ok: true });
     }
-    if (!authorized(request.headers.authorization)) return json(response, 401, { error: "unauthorized" });
     const url = new URL(request.url || "/", "http://runner");
+    const match = /^\/v1\/sandboxes\/([^/]+)(\/.*)?$/.exec(url.pathname);
+    if (match) {
+      const name = decodeURIComponent(match[1]);
+      const action = match[2] || "";
+      sandboxContainerName(name);
+      if (action === "/llm/chat/completions" && request.method === "POST") {
+        return await relayLlmCompletion(name, request, response);
+      }
+    }
+    if (!authorized(request.headers.authorization)) return json(response, 401, { error: "unauthorized" });
     const commandMatch = /^\/v1\/commands\/([^/]+)$/.exec(url.pathname);
     if (commandMatch && request.method === "GET") return json(response, 200, await inspectCommand(decodeURIComponent(commandMatch[1])));
-    const match = /^\/v1\/sandboxes\/([^/]+)(\/.*)?$/.exec(url.pathname);
     if (!match) return json(response, 404, { error: "not found" });
     const name = decodeURIComponent(match[1]);
     const action = match[2] || "";
-    sandboxContainerName(name);
 
     if (!action && request.method === "POST") return json(response, 200, await ensureSandbox(name));
     if (!action && request.method === "GET") {
@@ -253,6 +324,17 @@ const server = createServer(async (request, response) => {
       return json(response, 200, { exists: Boolean(container), running: Boolean(container?.State?.Running) });
     }
     const body = await readBody(request);
+    if (action === "/llm" && request.method === "POST") {
+      if (typeof body.controlToken !== "string" || !body.controlToken.trim()) {
+        throw Object.assign(new Error("LLM relay control token is required"), { status: 400 });
+      }
+      llmRelays.set(name, {
+        apiKey: typeof body.apiKey === "string" && body.apiKey ? body.apiKey : null,
+        controlToken: body.controlToken,
+        url: completionUrl(body.baseUrl),
+      });
+      return json(response, 200, { ok: true });
+    }
     if (action === "/commands" && request.method === "POST") return json(response, 200, await createExec(name, body));
     if (action === "/mkdir" && request.method === "POST") {
       const target = assertSandboxPath(body.path);
@@ -285,6 +367,7 @@ const server = createServer(async (request, response) => {
     if (action === "/stop" && request.method === "POST") {
       const container = await inspectContainer(name);
       if (container?.State?.Running) await docker("POST", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}/stop?t=10`);
+      llmRelays.delete(name);
       return json(response, 200, { ok: true });
     }
     return json(response, 404, { error: "not found" });

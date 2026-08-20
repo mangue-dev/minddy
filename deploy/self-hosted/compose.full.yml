@@ -113,6 +113,7 @@ services:
       - /tmp:size=64m,mode=1777
     networks:
       - private
+      - agent_egress
     security_opt:
       - no-new-privileges:true
     healthcheck:

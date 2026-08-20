@@ -2897,6 +2897,12 @@
     "automationActor": "L'automatisation"
   },
   "ToolCall": {
+    "readingProductHelp": "Lecture de l'aide produit…",
+    "productHelpRead": "Aide produit lue",
+    "readProductHelpFailed": "Impossible de lire l'aide produit",
+    "validatingChanges": "Vérification des modifications…",
+    "changesValidated": "Modifications vérifiées",
+    "validateChangesFailed": "Échec de la vérification des modifications",
     "loadingProjects": "Chargement des projets…",
     "foundProjects": "{count, plural, one {# projet trouvé} other {# projets trouvés}}",
     "loadingIssues": "Chargement des tickets…",

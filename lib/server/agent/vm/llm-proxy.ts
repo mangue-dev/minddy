@@ -169,6 +169,8 @@ export interface LlmProxyOptions {
   apiKey?: () => Promise<string | null>;
   /** Opens port during mint; each relay still waits for the key. */
   deferApiKey?: boolean;
+  /** A runner relay used by server-hosted sandboxes. It accepts completions only. */
+  relay?: { baseUrl: string; token: () => string };
   /** Jalons locaux de diagnostic, sans corps, URL ni secret. */
   onTiming?: (stage: string) => void;
   /**
@@ -446,7 +448,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   }
 
   async function relayOnce(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const route = resolveProxyTarget(req.method, req.url, job.baseUrl);
+    const route = resolveProxyTarget(req.method, req.url, opts.relay?.baseUrl ?? job.baseUrl);
     if (!route.ok) {
       // The body is READ ANYWAY before refusing: a client who has started to
       // write and who is responded to without emptying the socket ends up with a
@@ -489,7 +491,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
         // On a machine, opencode always carries the placeholder in this field.
         // Without a local key, relaying it would cause servers that are not waiting to fail
         // no authentication; with key, it crushes it further down.
-        (opts.apiKey && key === "authorization")
+        (opts.apiKey || opts.relay) && key === "authorization"
       ) continue;
       if (typeof value === "string") headers[key] = value;
     }
@@ -499,6 +501,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     // ONLY difference between the two worlds.
     const relayKey = apiKey ?? (opts.apiKey ? await apiKeyPromise : null);
     if (relayKey) headers.authorization = `Bearer ${relayKey}`;
+    if (opts.relay) headers.authorization = `Bearer ${opts.relay.token()}`;
 
     opts.onTiming?.("llm-upstream-request");
     const upstreamRequest: RequestInit = {

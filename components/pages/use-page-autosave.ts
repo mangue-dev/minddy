@@ -233,7 +233,7 @@ export function usePageAutosave({
       const mine = screen.current ?? (sent.content as PageDocJSON | null);
       const merged = mergeDocs(base.current.content, mine, theirs);
 
-      base.current = { content: merged.doc, version: err.page.version };
+      base.current = { content: theirs, version: err.page.version };
       adopt(merged.doc);
       if (merged.conflicts.length > 0) {
         setConflicts((current) => [...current, ...merged.conflicts]);
@@ -276,7 +276,7 @@ export function usePageAutosave({
 
       const theirs = (remote.content as PageDocJSON | null) ?? null;
       const merged = mergeDocs(base.current.content, screen.current, theirs);
-      base.current = { content: merged.doc, version: remote.version };
+      base.current = { content: theirs, version: remote.version };
       adopt(merged.doc);
       if (merged.conflicts.length > 0) {
         setConflicts((current) => [...current, ...merged.conflicts]);

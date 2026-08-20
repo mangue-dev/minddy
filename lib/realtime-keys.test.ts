@@ -210,7 +210,7 @@ describe("le trigger des pages", () => {
 describe("page body Realtime migration", () => {
   it("broadcasts body updates without adding the body to the payload", () => {
     const sql = canonicalSql(
-      readMigration("20270106093000_broadcast_page_content_updates.sql")
+      readMigration("20270106094000_page_broadcast_and_pull_request_notification_deduplication.sql")
     );
     expect(sql).toContain("drop trigger if exists pages_broadcast_update on public.pages");
     expect(sql).toContain("old.content is distinct from new.content");

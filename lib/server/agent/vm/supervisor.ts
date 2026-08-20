@@ -76,7 +76,6 @@ import { subagentUsageSeq } from "../subagent-config";
 import {
   isCurrentRepoJob,
   isLocalJob,
-  isTokenAuthenticatedJob,
   type VmJob,
   type VmPushResult,
   type VmTurnReport,
@@ -528,7 +527,7 @@ export async function runOpencodeTurn(
   // The capped mint is the only mandatory round trip before opening the
   // local proxy. It does not need either the repository or the harness files: the
   // starting from the entry covers its latency with all this preparation.
-  const authenticatedLlmKeyPromise = isTokenAuthenticatedJob(job)
+  const authenticatedLlmKeyPromise = isLocalJob(job)
     ? (() => {
         timing("llm-key-requested");
         return cp.llmKey().then((key) => {
@@ -642,8 +641,16 @@ export async function runOpencodeTurn(
         job: j,
         redact: secrets.redact,
         onTiming: timing,
-        ...(isTokenAuthenticatedJob(j)
+        ...(isLocalJob(j)
           ? { apiKey: () => authenticatedLlmKeyPromise!, deferApiKey: true }
+          : {}),
+        ...(j.executionEnvironment === "server"
+          ? {
+              relay: {
+                baseUrl: j.llmRelayUrl!,
+                token: () => j.controlToken!,
+              },
+            }
           : {}),
       })))(job);
 

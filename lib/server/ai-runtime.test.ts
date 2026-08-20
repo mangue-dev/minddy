@@ -22,6 +22,7 @@ describe("resolveAiRuntime", () => {
   beforeEach(() => {
     config.clear();
     getUserByok.mockReset();
+    process.env.MINDDY_EDITION = "cloud";
     process.env.OPENROUTER_API_KEY = "platform-key";
     process.env.MINDDY_MANAGED_AI = "1";
     config.set("assistant_model", "platform/chat");

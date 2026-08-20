@@ -34,11 +34,11 @@ the control plane or cloud credentials.
 
 ### MIN-411-M1 — live deployment authorization probe absent
 
-**Severity:** Medium.  
+**Severity:** Medium.
 **Location:** `SECURITY.md` documents `scripts/security-probe.mjs`, but no such
-file exists under `scripts/`.  
+file exists under `scripts/`.
 **Impact:** A deployment drift in RLS, grants, Storage policy, or privileged
-RPC exposure could evade the source-level guardrails.  
+RPC exposure could evade the source-level guardrails.
 **Disposition:** Accepted temporarily and tracked as `MIN-413` with a plan to
 restore a redacted, explicitly authorized live probe. The static migration and
 negative-path test suites remain required until then.

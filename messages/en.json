@@ -2897,6 +2897,12 @@
     "automationActor": "The automation"
   },
   "ToolCall": {
+    "readingProductHelp": "Reading product guidance…",
+    "productHelpRead": "Product guidance read",
+    "readProductHelpFailed": "Could not read product guidance",
+    "validatingChanges": "Validating changes…",
+    "changesValidated": "Changes validated",
+    "validateChangesFailed": "Changes validation failed",
     "loadingProjects": "Loading projects…",
     "foundProjects": "{count, plural, one {Found # project} other {Found # projects}}",
     "loadingIssues": "Loading issues…",

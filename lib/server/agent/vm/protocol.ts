@@ -45,8 +45,11 @@ import type { AgentLiveDiff } from "../agent-contract";
  * “without harm”. Ignored, it would do a `git add -A` and a
  * `git checkout -b` in someone's repository — which is precisely what
  * this batch exists to prevent. Refusal is better than refusal.
+ *
+ * **3** — self-hosted server jobs now require an LLM relay endpoint. An older
+ * harness would otherwise request a provider key directly from the control plane.
  */
-export const VM_PROTOCOL_VERSION = 2;
+export const VM_PROTOCOL_VERSION = 3;
 
 /**
  * `vmBundlePath` and `vmJobPath` now live in
@@ -167,14 +170,15 @@ export interface VmJob {
  * prod by default (see `agentControlOrigin`). */
   appOrigin: string;
   /**
- * THE LOCAL EXECUTION TOKEN (MIN-355) — present ONLY when the round plays
- * on the user's machine. In microVM, there is nothing to carry: the
- * firewall signs after the exit of the VM.
+ * THE DIRECT EXECUTION TOKEN (MIN-355) — present when the round runs on a
+ * user's machine or in a self-hosted server sandbox. In microVM, there is
+ * nothing to carry: the firewall signs after the exit of the VM.
  *
  * It is here, therefore on a disk that the model can read, and it is not a
  * negligence — a secret placed on the machine that we suspect is not hidden.
  * What is processed is its power (see `handleControlPlaneRequest`), and its
- * duration: fifteen minutes.
+ * duration: it is limited and only grants the surfaces appropriate to
+ * its execution environment.
  *
  * READ BEFORE ANY VALIDATION by [main.ts](main.ts), and it must remain
  * true: a harness which REFUSES its job must still be able to say why, and
@@ -183,6 +187,8 @@ export interface VmJob {
   controlToken?: string;
   /** Identifies a token-authenticated sandbox that runs inside a self-hosted server. */
   executionEnvironment?: "server";
+  /** Runner-only relay base URL for a self-hosted server sandbox. */
+  llmRelayUrl?: string;
   // ── Model ──────────────────────────────── ────────────────────────────────
   model: string;
   /** OpenAI-compatible URL base. The KEY is not here: the firewall
@@ -373,6 +379,17 @@ export function parseVmJob(raw: unknown): VmJob {
   // error, and it is precisely the one that a job of an unexpected form would silence.
   if (job.repoMode !== "clone" && job.repoMode !== "current") {
     throw new Error(`vm job: unknown repoMode ${JSON.stringify(job.repoMode)}`);
+  }
+  if (job.executionEnvironment !== undefined && job.executionEnvironment !== "server") {
+    throw new Error(`vm job: unknown execution environment ${JSON.stringify(job.executionEnvironment)}`);
+  }
+  if (job.executionEnvironment === "server") {
+    if (typeof job.controlToken !== "string" || !job.controlToken.trim()) {
+      throw new Error("vm job: server execution requires a control token");
+    }
+    if (typeof job.llmRelayUrl !== "string" || !job.llmRelayUrl.trim()) {
+      throw new Error("vm job: server execution requires an LLM relay URL");
+    }
   }
   return job as VmJob;
 }
