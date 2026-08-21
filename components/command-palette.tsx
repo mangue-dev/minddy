@@ -88,6 +88,7 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { useAnalytics } from "@/lib/use-analytics";
+import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import type {
   Issue,
   Member,
@@ -355,7 +356,9 @@ export function CommandPalette({
   // `searchBoost` — these only categorize a current search. In tail,
   // saved views were found under tickets and pages, so
   // under thousands of lines: the exact opposite of the rapid access that we have
-  // made yourself.
+  // made yourself. Tickets are the one exception: they always come after every
+  // command, navigation target, setting, objective, and page so a large ticket
+  // index cannot bury a more specific result.
   const categories = useMemo<CategoryDefinition[]>(
     () => [
       {
@@ -363,7 +366,7 @@ export function CommandPalette({
         label: tNav("savedViews"),
         searchBoost: GROUP_BOOSTS.views,
       },
-      ...groups.map((g, i) => {
+      ...moveIssueGroupsToEnd(groups).map((g, i) => {
         const id = g.key ?? g.heading ?? `group-${i}`;
         return {
           id,
