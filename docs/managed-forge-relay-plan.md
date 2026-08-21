@@ -7,6 +7,14 @@ deployed from this codebase, so the relay API ships behind the same
 `MINDDY_EDITION=cloud` + `MINDDY_MANAGED_FORGE=1` gate as managed billing and
 AI).
 
+Policy revision, decided during implementation and applied everywhere in this
+revision of the document: the relay is **default-on** for self-hosted instead
+of opt-in. An instance with no operator-owned forge app registers itself
+automatically on first connect ("self-service provisioning", see below);
+`MINDDY_FORGE_RELAY=0` opts out entirely. The sections below describe the
+SHIPPED behavior; where the original text said "explicit opt-in", read
+"default with explicit opt-out".
+
 ## Problem
 
 The Numo agent needs repository access on github.com and gitlab.com. Today that
@@ -24,8 +32,10 @@ itself is not blocked (`lib/server/agent/repo-access.ts` is credential-agnostic)
 the friction is purely in obtaining forge credentials.
 
 This plan evaluates and specifies a **managed forge relay**: self-hosted
-instances may opt in to using the GitHub App and GitLab OAuth app operated by
-minddy, so Numo works out of the box without operator-owned forge apps.
+instances use the GitHub App and GitLab OAuth app operated by minddy by
+default, so Numo works out of the box without operator-owned forge apps. An
+operator can still bring their own apps (they take precedence for new
+connections), or opt out entirely with `MINDDY_FORGE_RELAY=0`.
 
 ## Why direct credential sharing does not work
 
@@ -64,9 +74,12 @@ established:
   require operator-owned OAuth apps; a relay is the differentiating managed
   service.
 
-Conclusion: the relay is a legitimate, well-precedented managed service, and it
-fits the existing editions contract as long as it stays an explicit opt-in that
-the core never silently depends on.
+Conclusion: the relay is a legitimate, well-precedented managed service. The
+original conclusion — "fits the editions contract as long as it stays an
+explicit opt-in" — was revised to default-on with an explicit, documented
+opt-out: the capability catalog keeps classifying the relay as a *replaceable*
+provider (never a required one), the opt-out is a single variable, and an
+instance that opts out never contacts minddy infrastructure at all.
 
 ## Design overview
 
@@ -82,7 +95,9 @@ Two sides, one protocol:
    authenticates the instance to the control plane and plugs into the existing
    token-resolution choke points.
 
-The core keeps working with zero relay configuration; the capability catalog
+The core keeps working with zero relay configuration — and, since the
+default-on revision, also works with zero relay configuration BY using the
+relay (self-service provisioning). Either way the capability catalog
 classifies the relay as a *replaceable* provider of the `github`/`gitlab`
 capabilities, never a required one.
 
@@ -90,8 +105,13 @@ capabilities, never a required one.
 
 Instance side:
 
-- `MINDDY_FORGE_RELAY_URL` — control plane base URL. Presence alone does not
-  activate anything (same rule as `OPENROUTER_API_KEY`).
+- `MINDDY_FORGE_RELAY` — set to `0` to opt out entirely (installer:
+  `--no-forge-relay`): no automatic provisioning, no call ever reaches minddy
+  infrastructure, only operator-owned apps are used.
+- `MINDDY_FORGE_RELAY_URL` — control plane base URL. With
+  `MINDDY_FORGE_RELAY_INSTANCE_ID` + `MINDDY_FORGE_RELAY_SECRET` it PINS an
+  identity issued from the operator's minddy Cloud account, overriding
+  automatic provisioning (useful for a self-hosted relay or staging).
 - `MINDDY_FORGE_RELAY_INSTANCE_ID` + `MINDDY_FORGE_RELAY_SECRET` — instance
   credentials issued at registration (see below).
 
@@ -103,12 +123,22 @@ Cloud side (control plane only, never the open core):
 
 ## Instance identity and authentication
 
-- Registration happens through the operator's minddy Cloud account: the
-  operator names the instance, and Cloud issues an instance ID plus a secret
-  (or, preferred, an Ed25519 keypair where Cloud stores only the public key).
-- Every relay request is signed (HMAC-SHA256 over method + path + body +
-  timestamp, or an asymmetric JWT) and replay-protected (timestamp window +
-  nonce cache).
+- Registration is SELF-SERVICE by default: a self-hosted instance with no
+  operator-owned forge app generates an Ed25519 keypair on first connect and
+  registers the PUBLIC key at `POST /api/relay/register`, receiving its
+  instance ID. The identity is stored in the instance's own database
+  (`forge_relay_provisioning`, encrypted at rest) — no operator action and no
+  environment variable. The open endpoint is bounded by a per-IP rate limit,
+  one identity per public key (idempotent retries), and unilateral revocation
+  from the Cloud dashboard.
+- Operators who prefer explicit control can still register through their
+  minddy Cloud account and pin the credentials with
+  `MINDDY_FORGE_RELAY_URL` + `MINDDY_FORGE_RELAY_INSTANCE_ID` +
+  `MINDDY_FORGE_RELAY_SECRET`; those variables override automatic
+  provisioning. `MINDDY_FORGE_RELAY=0` (installer: `--no-forge-relay`) opts
+  out entirely.
+- Every relay request is signed (Ed25519 over method + path + timestamp +
+  nonce + body hash) and replay-protected (timestamp window + nonce cache).
 - Instances can be revoked unilaterally by the operator from the Cloud
   dashboard; revocation kills webhook fan-out and token minting immediately.
 
@@ -318,10 +348,15 @@ user-identity method.
   the doctor (`scripts/self-hosting-doctor.mjs`) reports "using managed forge
   relay" vs "operator-owned app" vs "disabled".
 - `docs/self-hosting.md`, `docs/editions.md`, `docs/public-core-boundary.md`,
-  `.env.example`, and `deploy/self-hosted/.env.example` are updated. The rule
-  "an absent optional integration stays disabled; it does not fall back to
-  Minddy infrastructure" is preserved verbatim: the relay activates only with
-  explicit operator configuration and a completed claim.
+  `.env.example`, and `deploy/self-hosted/.env.example` are updated. The
+  original rule "an absent optional integration stays disabled; it does not
+  fall back to Minddy infrastructure" was REVISED with the default-on policy:
+  an absent operator-owned integration no longer disables forge access — it
+  falls back to the managed relay, unless `MINDDY_FORGE_RELAY=0` says
+  otherwise. What is preserved verbatim is the underlying principle: the
+  capability catalog never reports a replaceable provider as required, the
+  opt-out is total, and every fallback is documented in the same places the
+  old rule was.
 - New editions CI fixture `managed-forge.env`: relay configured, local apps
   absent — instance must start and report the relay provider, and must never
   read local app variables.
@@ -451,9 +486,11 @@ Phase 5 — GitLab broker + relay
 
 Phase 6 — Hardening and rollout
 - [x] Doctor checks: `forgeAccessFinding` (scripts/self-hosting-doctor.mjs)
-  reports "managed forge relay" / "operator-owned app" / "disabled", fails on
-  a relay configuration missing `GIT_STATE_SECRET` or a webhook secret under
-  32 characters.
+  reports "managed forge relay" / "operator-owned app" / "disabled", and fails
+  on a relay configuration — pinned OR automatic — missing `GIT_STATE_SECRET`
+  or `GIT_TOKEN_ENCRYPTION_SECRET`, or a webhook secret under 32 characters.
+  Provisioning itself refuses to register before the instance-side secrets
+  exist, so a misconfigured install never orphans identities on Cloud.
 - [x] Docs: editions.md configuration contract + fixture table,
   self-hosting.md relay section, public-core-boundary.md inventory row,
   `.env.example` + `deploy/self-hosted/.env.example` variable blocks.
@@ -469,8 +506,10 @@ Phase 6 — Hardening and rollout
 
 ## Rollout runbook
 
-The relay becomes critical infrastructure for every opting-in instance; the
-rollout is deliberately staged and each stage has an explicit exit criterion.
+The relay becomes critical infrastructure for every instance that uses it —
+which, since the default-on revision, is every self-hosted instance that has
+not opted out; the rollout is deliberately staged and each stage has an
+explicit exit criterion.
 
 1. **Internal instance** (minddy team only).
    - Deploy Cloud with `MINDDY_MANAGED_FORGE=1` + `MINDDY_FORGE_RELAY_URL`;
@@ -487,8 +526,12 @@ rollout is deliberately staged and each stage has an explicit exit criterion.
      relay; token-mint p95 within budget; revocation drill executed once
      (revoked instance stops receiving events immediately).
 3. **General availability**.
-   - Announce as strictly optional in the self-hosting docs; keep the
-     "absent configuration stays disabled" rule verbatim everywhere.
+   - Announce as the default forge channel in the self-hosting docs, with the
+     opt-out (`MINDDY_FORGE_RELAY=0` / `--no-forge-relay`) given equal
+     prominence: an operator who must never contact minddy infrastructure
+     finds the switch in the first paragraph, not a footnote. The installer's
+     `--no-forge-relay` flag and the doctor's "disabled" report are the
+     verifiable counterparts.
    - Operational commitment before GA: on-call rotation covering the relay,
      status-page entry, SLA expectation documented, kill-switch drill
      (`MINDDY_MANAGED_FORGE=0` must degrade to 503 on relay routes without
@@ -497,9 +540,13 @@ rollout is deliberately staged and each stage has an explicit exit criterion.
 ## Risks and open questions
 
 - **Operational commitment**: the relay becomes critical infrastructure for
-  every instance that opts in — on-call, status page, and an SLA expectation.
+  every self-hosted instance that has not opted out — on-call, status page,
+  and an SLA expectation.
 - **Vendor trust**: some operators self-host precisely to avoid minddy-operated
-  infrastructure; the relay must remain strictly optional and clearly labeled.
+  infrastructure. Default-on raises the stakes of this objection: the answer
+  is a first-class, documented, single-variable opt-out
+  (`MINDDY_FORGE_RELAY=0`), a doctor report that says which mode is active,
+  and zero contact with minddy infrastructure once opted out.
 - **GitHub App visibility**: all relayed instances share one app identity
   (`minddy[bot]` commits, one app on the org's installed-apps page). Acceptable
   for most, but worth documenting.

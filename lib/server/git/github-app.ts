@@ -46,6 +46,22 @@ export function isGithubAppConfigured(): boolean {
   return capability("github").configured;
 }
 
+/**
+ * LOCAL operator-owned App credentials only — distinct from
+ * `isGithubAppConfigured()`, which also counts the managed forge relay as
+ * available (it is a default self-hosted capability). The connect routes use
+ * this to decide between the local install flow and the relayed claim flow.
+ * Mirrors the local branch of the `github` capability.
+ */
+export function isLocalGithubAppConfigured(): boolean {
+  return Boolean(
+    process.env.GITHUB_APP_ID?.trim() &&
+      process.env.GITHUB_APP_SLUG?.trim() &&
+      process.env.GITHUB_APP_PRIVATE_KEY?.trim() &&
+      process.env.GIT_STATE_SECRET?.trim(),
+  );
+}
+
 export function isGithubWebhookConfigured(): boolean {
   return !!process.env.GITHUB_WEBHOOK_SECRET;
 }

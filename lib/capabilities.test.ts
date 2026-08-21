@@ -243,7 +243,7 @@ describe("resolveCapabilities", () => {
     });
   });
 
-  it("keeps the operator-owned app ahead of the relay and stays disabled without either", () => {
+  it("keeps the operator-owned app ahead of the relay and provisions automatically by default", () => {
     const relay = {
       MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
       MINDDY_FORGE_RELAY_INSTANCE_ID: "instance-id",
@@ -262,19 +262,43 @@ describe("resolveCapabilities", () => {
     });
     expect(local.gitlab.diagnostic).toContain("managed forge relay");
 
-    const absent = resolveCapabilities(core);
-    expect(absent.github.state).toBe("disabled");
-    expect(absent.gitlab.state).toBe("disabled");
+    // Self-hosted default: no operator-owned app and no relay variables —
+    // the relay identity is provisioned automatically on first connect.
+    // The instance-side secrets stay required (the installer generates them).
+    const automatic = resolveCapabilities({
+      ...core,
+      GIT_STATE_SECRET: "state-secret",
+      GIT_TOKEN_ENCRYPTION_SECRET: "x".repeat(32),
+    });
+    for (const id of ["github", "gitlab"] as const) {
+      expect(automatic[id]).toMatchObject({
+        requirement: "replaceable",
+        state: "ready",
+        configured: true,
+      });
+      expect(automatic[id].diagnostic).toContain("provisioned automatically");
+    }
+
+    // The explicit opt-out (--no-forge-relay) restores the disabled state.
+    const optedOut = resolveCapabilities({ ...core, MINDDY_FORGE_RELAY: "0" });
+    expect(optedOut.github.state).toBe("disabled");
+    expect(optedOut.gitlab.state).toBe("disabled");
+
+    // The cloud edition never self-provisions: it operates the relay instead.
+    const cloud = resolveCapabilities({ ...core, MINDDY_EDITION: "cloud" });
+    expect(cloud.github.state).toBe("disabled");
+    expect(cloud.gitlab.state).toBe("disabled");
   });
 
-  it("reports an incomplete relay configuration instead of pretending readiness", () => {
+  it("falls back to automatic provisioning when relay variables are only partial", () => {
     const capabilities = resolveCapabilities({
       ...core,
       MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
       GIT_STATE_SECRET: "state-secret",
     });
-    expect(capabilities.github.state).toBe("disabled");
-    expect(capabilities.gitlab.state).toBe("disabled");
+    // Partial explicit variables do not select a pinned control plane
+    // (all three are required); the instance stays on the automatic default.
+    expect(capabilities.github).toMatchObject({ state: "ready", configured: true });
 
     const missingState = resolveCapabilities({
       ...core,

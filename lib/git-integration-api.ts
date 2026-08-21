@@ -53,7 +53,12 @@ export interface ProjectGitLinkResponse {
 
 export type StartConnectResponse =
   | { mode: "reuse"; connectionId: string }
-  | { mode: "install" | "oauth"; url: string };
+  | { mode: "install" | "oauth"; url: string }
+  /** Relay-only instance: the official minddy App is claimed through the
+   * managed forge relay. The client opens the claim interstitial with `code`,
+   * which polls until the installation is bound to this instance; the claim
+   * URL is derived server-side by the poll itself, never passed along. */
+  | { mode: "claim"; url: string; code: string };
 
 export async function fetchProjectGitLinkApi(
   projectId: string,

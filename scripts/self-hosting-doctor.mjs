@@ -92,10 +92,18 @@ export function disabledCapabilities(values) {
 }
 
 /**
- * How this installation reaches github.com/gitlab.com: the managed forge relay,
- * an operator-owned app, or nothing. The operator-owned app takes precedence
- * for new connections when both are configured (existing connections keep the
- * channel they were established through), mirroring `lib/capabilities.ts`.
+ * How this installation reaches github.com/gitlab.com: the managed forge
+ * relay, an operator-owned app, or nothing. The operator-owned app takes
+ * precedence for new connections when both are configured (existing
+ * connections keep the channel they were established through), mirroring
+ * `lib/capabilities.ts`. The relay is the DEFAULT: with no operator-owned
+ * app and no explicit opt-out (`--no-forge-relay` → MINDDY_FORGE_RELAY=0),
+ * the instance provisions its relay identity automatically on first connect.
+ *
+ * Both relay modes (pinned variables or automatic provisioning) store
+ * relayed tokens encrypted at rest and sign git states with instance-side
+ * secrets: without them every connect fails at use time, exactly like the
+ * `incomplete` state of the capability catalog.
  */
 export function forgeAccessFinding(values) {
   const relayConfigured = Boolean(
@@ -112,13 +120,28 @@ export function forgeAccessFinding(values) {
       detail: `operator-owned app (${[githubLocal && "GitHub", gitlabLocal && "GitLab"].filter(Boolean).join(", ")}).`,
     };
   }
+  if (values.MINDDY_FORGE_RELAY?.trim() === "0") {
+    return {
+      name: "Forge access",
+      state: "pass",
+      detail: "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app.",
+    };
+  }
+  const missingState = !values.GIT_STATE_SECRET?.trim();
+  const missingTokenCrypto = !(
+    values.GIT_TOKEN_ENCRYPTION_SECRET?.trim() ||
+    values.GITLAB_TOKEN_ENCRYPTION_SECRET?.trim()
+  );
+  const missingSecrets = [
+    ...(missingState ? ["GIT_STATE_SECRET"] : []),
+    ...(missingTokenCrypto ? ["GIT_TOKEN_ENCRYPTION_SECRET"] : []),
+  ];
   if (relayConfigured) {
-    const missingState = !values.GIT_STATE_SECRET?.trim();
     const webhookSecret = values.MINDDY_FORGE_RELAY_WEBHOOK_SECRET?.trim() ?? "";
     const missingWebhookSecret = !webhookSecret || webhookSecret.length < 32;
-    if (missingState || missingWebhookSecret) {
+    if (missingWebhookSecret || missingSecrets.length > 0) {
       const missing = [
-        ...(missingState ? ["GIT_STATE_SECRET"] : []),
+        ...missingSecrets,
         ...(missingWebhookSecret ? ["MINDDY_FORGE_RELAY_WEBHOOK_SECRET (32+ characters)"] : []),
       ];
       return {
@@ -134,12 +157,24 @@ export function forgeAccessFinding(values) {
     };
   }
   const partial = values.MINDDY_FORGE_RELAY_URL?.trim() || values.MINDDY_FORGE_RELAY_INSTANCE_ID?.trim() || values.MINDDY_FORGE_RELAY_SECRET?.trim();
+  if (partial) {
+    return {
+      name: "Forge access",
+      state: "pass",
+      detail: "forge relay configuration is incomplete; the automatic relay provisioning stays available unless the partial variables are removed.",
+    };
+  }
+  if (missingSecrets.length > 0) {
+    return {
+      name: "Forge access",
+      state: "fail",
+      detail: `managed forge relay (automatic) is the default channel but missing: ${missingSecrets.join(", ")}.`,
+    };
+  }
   return {
     name: "Forge access",
     state: "pass",
-    detail: partial
-      ? "forge relay configuration is incomplete; forge integrations stay disabled."
-      : "disabled: no operator-owned forge app and no managed forge relay.",
+    detail: "managed forge relay (automatic): GitHub and GitLab connect from within the app; credentials are provisioned on first connect.",
   };
 }
 

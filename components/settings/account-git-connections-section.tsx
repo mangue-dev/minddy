@@ -164,6 +164,15 @@ export function AccountGitConnectionsSection() {
       if (res.mode === "reuse") {
         // Nothing to install: the connection already existed, it was just reassembled.
         void queryClient.invalidateQueries({ queryKey: gitConnectionsQueryKey });
+      } else if (res.mode === "claim") {
+        // Relay-only instance: the official App is claimed through the relay.
+        // The interstitial polls until the claim resolves; it gets the claim
+        // URL from its own poll, never from the query string.
+        const params = new URLSearchParams({
+          code: res.code,
+          return: "/settings?tab=git",
+        });
+        window.location.href = `/connect/github?${params.toString()}`;
       } else {
         window.location.href = res.url; // page exit to the forge
       }

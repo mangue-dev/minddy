@@ -13,7 +13,6 @@ import {
   Database,
   ExternalLink,
   Gauge,
-  GitBranch,
   Globe2,
   Laptop,
   Mail,
@@ -23,13 +22,12 @@ import {
 } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { CopyButton } from "@/components/marketing/copy-button";
-import { Github } from "@/components/git/provider-icons";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 
 type Path = "local" | "team";
 type SupabaseMode = "managed" | "full";
 type ServerAccess = "private" | "public";
-type OptionalFeature = "application-email" | "web-push" | "github" | "gitlab";
+type OptionalFeature = "application-email" | "web-push";
 
 export interface SelfHostingGuideCopy {
   continueLabel: string;
@@ -160,12 +158,6 @@ export interface SelfHostingGuideCopy {
   servicePushTitle: string;
   servicePushBody: string;
   servicePushSetup: string;
-  serviceGithubTitle: string;
-  serviceGithubBody: string;
-  serviceGithubSetup: string;
-  serviceGitlabTitle: string;
-  serviceGitlabBody: string;
-  serviceGitlabSetup: string;
   selectedServicesTitle: string;
   selectedServicesBody: string;
   selectedServicesPrompt: string;
@@ -625,8 +617,6 @@ export function SelfHostingGuide({ copy, links, emailTemplates, repositoryUrl, r
   const featureCatalog = [
     { id: "application-email" as const, title: copy.serviceEmailTitle, body: copy.serviceEmailBody, setup: copy.serviceEmailSetup, icon: Mail },
     { id: "web-push" as const, title: copy.servicePushTitle, body: copy.servicePushBody, setup: copy.servicePushSetup, icon: Bell },
-    { id: "github" as const, title: copy.serviceGithubTitle, body: copy.serviceGithubBody, setup: copy.serviceGithubSetup, icon: Github },
-    { id: "gitlab" as const, title: copy.serviceGitlabTitle, body: copy.serviceGitlabBody, setup: copy.serviceGitlabSetup, icon: GitBranch },
   ];
   const selectedFeatureCatalog = featureCatalog.filter(({ id }) => optionalFeatures.includes(id));
   const selectedFeaturesPrompt = selectedFeatureCatalog.length > 0

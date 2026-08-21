@@ -30,6 +30,10 @@ export const PROTECTED_PREFIXES = [
   "/pull-requests",
   "/statistics",
   "/trash",
+  // Forge-relay claim interstitial (`app/(app)/connect/github/`): polls the
+  // authenticated claim endpoint, so it requires a session like the settings
+  // pages that lead to it.
+  "/connect",
   // `/my` is redirected to `/all?view=my` by next.config, but keep it here
   // prevents one day of deactivation of the redirection from exposing it.
   "/my",

@@ -101,6 +101,12 @@ function seedInstance(): void {
 const { POST: startIdentity } = await import("@/app/api/account/git-identities/route");
 const { verifyRelayUserState } = await import("@/lib/server/forge-relay/user-broker");
 
+// The route provisions the relay identity on first use when no local
+// credentials exist; provisioning succeeds exactly when the relay answers.
+vi.mock("@/lib/server/forge-relay/provisioning", () => ({
+  ensureForgeRelayProvisioned: async () => relayConfigured,
+}));
+
 function startRequest(provider: string): never {
   return {
     nextUrl: new URL("http://localhost/api/account/git-identities"),
@@ -133,8 +139,9 @@ describe("POST /api/account/git-identities — relayed GitHub authorization", ()
     });
   });
 
-  it("keeps the direct GitHub flow when the relay is not configured", async () => {
+  it("keeps the direct GitHub flow when the relay is not configured and local credentials exist", async () => {
     relayConfigured = false;
+    localGithubUserAuth = true;
     const response = await startIdentity(startRequest("github"));
     const { url } = (await response.json()) as { url: string };
     expect(url).toContain("https://github.com/login/oauth/authorize");
@@ -149,5 +156,13 @@ describe("POST /api/account/git-identities — relayed GitHub authorization", ()
     const { url } = (await response.json()) as { url: string };
     expect(url).toContain("https://github.com/login/oauth/authorize");
     expect(getGithubUserAuthorizeUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers 503 when neither the relay nor local credentials exist", async () => {
+    // Provisioning failed AND no operator-owned app: the connect cannot be
+    // served, instead of silently falling back to an unconfigured flow.
+    relayConfigured = false;
+    const response = await startIdentity(startRequest("github"));
+    expect(response.status).toBe(503);
   });
 });

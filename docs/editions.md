@@ -60,16 +60,19 @@ minddy are explicit opt-ins: an environment key alone does not activate them.
   forges are not supported until a configurable provider exists.
 - The managed forge relay (docs/managed-forge-relay-plan.md) lets a self-hosted
   instance use the GitHub App and GitLab OAuth app operated by minddy instead
-  of operator-owned apps. It activates only with `MINDDY_FORGE_RELAY_URL` +
-  `MINDDY_FORGE_RELAY_INSTANCE_ID` + `MINDDY_FORGE_RELAY_SECRET` and a
-  completed instance claim; the Cloud side of the relay additionally requires
-  `MINDDY_EDITION=cloud` and `MINDDY_MANAGED_FORGE=1` (the relay API —
-  instance registry, token minting, link mirror — lives in this codebase and
-  answers 503 without that gate). An operator-owned app, when configured,
-  takes precedence for new connections — an existing connection keeps the
-  channel it was established through until it is reconnected via the other
-  one. An absent relay configuration
-  stays disabled; it does not fall back to Minddy infrastructure.
+  of operator-owned apps. It is the DEFAULT on the self-hosted edition: with
+  no operator-owned app and no explicit opt-out, the instance provisions its
+  relay identity automatically on first connect (credentials stored in its own
+  database) — no relay variable to set. Explicit variables
+  (`MINDDY_FORGE_RELAY_URL` + `MINDDY_FORGE_RELAY_INSTANCE_ID` +
+  `MINDDY_FORGE_RELAY_SECRET`) override the automatic provisioning;
+  `MINDDY_FORGE_RELAY=0` opts out entirely. The Cloud side of the relay
+  additionally requires `MINDDY_EDITION=cloud` and `MINDDY_MANAGED_FORGE=1`
+  (the relay API — instance registry, token minting, link mirror — lives in
+  this codebase and answers 503 without that gate). An operator-owned app,
+  when configured, takes precedence for new connections — an existing
+  connection keeps the channel it was established through until it is
+  reconnected via the other one.
 
 Old deductions based on Vercel deployment or origin
 `*.minddy.app` no longer selects managed services. Cloud deployment

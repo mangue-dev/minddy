@@ -138,13 +138,15 @@ describe("missing integrations", () => {
     await expect(createStripeCustomer({ userId: "user-1" })).rejects.toThrow(
       /MINDDY_MANAGED_BILLING/,
     );
-    await expect(getInstallationToken(1)).rejects.toThrow(/GITHUB_APP_ID/);
+    // The relay-first default still refuses a half-configured forge stack:
+    // the instance-side secrets are required before any local adapter runs.
+    await expect(getInstallationToken(1)).rejects.toThrow(/GIT_STATE_SECRET/);
     await expect(
       exchangeGitlabCode({
         code: "code",
         redirectUri: "https://example.test/callback",
       }),
-    ).rejects.toThrow(/GITLAB_OAUTH_CLIENT_ID/);
+    ).rejects.toThrow(/GIT_STATE_SECRET/);
     expect(fetch).not.toHaveBeenCalled();
   });
 

@@ -4,6 +4,7 @@ import {
   resolveForgeRelayConfig,
   type ForgeRelayConfig,
 } from "@/lib/forge-relay";
+import { getProvisionedRelayConfig } from "./provisioning";
 import {
   signRelayRequest,
   type RelayRequestSignature,
@@ -12,16 +13,19 @@ import {
 /**
  * Instance-side client of the managed forge relay
  * (docs/managed-forge-relay-plan.md). Every request is signed with the
- * instance's Ed25519 private key (kept in `MINDDY_FORGE_RELAY_SECRET`-issued
- * key material) and carries the instance id; the transport origin is the
- * pinned `MINDDY_FORGE_RELAY_URL`.
+ * instance's Ed25519 private key and carries the instance id; the transport
+ * origin is the pinned control-plane URL.
  *
- * The relay is strictly optional: every helper here fails fast when the
- * instance has not opted in, and callers degrade to the local provider.
+ * Two configuration sources, in order: explicit environment variables
+ * (Cloud, operators who pin a control plane), then the identity provisioned
+ * automatically on first connect and stored in the instance database
+ * (`./provisioning`). Callers that may run before provisioning must await
+ * `ensureForgeRelayProvisioned()`; the getters here are sync and read only
+ * the environment plus the in-process cache.
  */
 
 export function forgeRelayConfig(): ForgeRelayConfig | null {
-  return resolveForgeRelayConfig(process.env);
+  return resolveForgeRelayConfig(process.env) ?? getProvisionedRelayConfig();
 }
 
 export function isForgeRelayClientConfigured(): boolean {

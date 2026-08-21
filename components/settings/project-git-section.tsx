@@ -148,6 +148,15 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
       const res = await startGitConnectApi(projectId, provider);
       if (res.mode === "reuse") {
         setActiveConnectionId(res.connectionId);
+      } else if (res.mode === "claim") {
+        // Relay-only instance: the official App is claimed through the relay.
+        // The interstitial polls until the claim resolves; it gets the claim
+        // URL from its own poll, never from the query string.
+        const params = new URLSearchParams({
+          code: res.code,
+          return: `/projects/${projectId}/settings?tab=git`,
+        });
+        window.location.href = `/connect/github?${params.toString()}`;
       } else {
         window.location.href = res.url; // redirection to the provider
       }

@@ -80,6 +80,34 @@ describe("instance-signed GitLab authorization state", () => {
     });
   });
 
+  it("carries the instance-relative return path through verification", async () => {
+    const token = signRelayGitlabState({
+      userId: "user-on-instance",
+      callbackOrigin: "https://on-prem.example.com",
+      returnPath: "/projects/p-1/settings?tab=git",
+      privateKey: privateKeyPem,
+    });
+    await expect(
+      verifyInstanceSignedState(INSTANCE_ID, token, "forge-relay-gitlab-authorize"),
+    ).resolves.toMatchObject({
+      returnPath: "/projects/p-1/settings?tab=git",
+    });
+
+    // An exotic return path is dropped at verification, never propagated.
+    const hostile = signRelayGitlabState({
+      userId: "user-on-instance",
+      callbackOrigin: "https://on-prem.example.com",
+      returnPath: "https://evil.example/phishing",
+      privateKey: privateKeyPem,
+    });
+    const verified = await verifyInstanceSignedState(
+      INSTANCE_ID,
+      hostile,
+      "forge-relay-gitlab-authorize",
+    );
+    expect(verified?.returnPath).toBeUndefined();
+  });
+
   it("rejects a tampered state and a GitHub-kind state", async () => {
     const token = signRelayGitlabState({
       userId: "u",
@@ -110,9 +138,24 @@ describe("cloud-signed GitLab state", () => {
       instanceId: INSTANCE_ID,
       userId: "u",
       callbackOrigin: "https://on-prem.example.com",
+      returnPath: "/projects/p-1/settings?tab=git",
     });
-    expect(verifyCloudGitlabState(token)).toMatchObject({ instanceId: INSTANCE_ID });
+    expect(verifyCloudGitlabState(token)).toMatchObject({
+      instanceId: INSTANCE_ID,
+      returnPath: "/projects/p-1/settings?tab=git",
+    });
     expect(verifyCloudGitlabState(`${token}x`)).toBeNull();
+  });
+
+  it("drops an exotic return path instead of propagating it", () => {
+    const token = signCloudGitlabState({
+      instanceId: INSTANCE_ID,
+      userId: "u",
+      callbackOrigin: "https://on-prem.example.com",
+      returnPath: "//evil.example",
+    });
+    const verified = verifyCloudGitlabState(token);
+    expect(verified?.returnPath).toBeUndefined();
   });
 });
 

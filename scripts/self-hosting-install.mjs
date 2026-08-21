@@ -17,7 +17,7 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = resolve(SCRIPT_DIR, "..");
 export const DEFAULT_DEPLOY_DIR = resolve(ROOT_DIR, "deploy/self-hosted");
 const DEFAULT_ENV_FILE = resolve(DEFAULT_DEPLOY_DIR, ".env");
-export const OPTIONAL_CAPABILITIES = ["application-email", "web-push", "github", "gitlab"];
+export const OPTIONAL_CAPABILITIES = ["application-email", "web-push"];
 
 export function fail(message) {
   throw new Error(`Self-hosted installation failed: ${message}`);
@@ -59,6 +59,8 @@ export function parseArgs(argv) {
       const capability = value();
       if (!OPTIONAL_CAPABILITIES.includes(capability)) fail(`unknown optional capability: ${capability}.`);
       options.capabilities.add(capability);
+    } else if (arg === "--no-forge-relay") {
+      options.forgeRelay = false;
     } else if (arg === "--non-interactive") options.interactive = false;
     else if (arg === "--skip-start") options.start = false;
     else if (arg === "--skip-bootstrap") options.bootstrap = false;
@@ -88,8 +90,11 @@ Options:
   --supabase-host <hostname> Public API hostname for full HTTPS mode.
   --db-url <postgres-url>   Migration connection for managed mode. Full mode derives it.
   --image <oci-reference>   Verified immutable minddy OCI digest to deploy.
-  --enable <feature>         Enable application-email, web-push, github, or gitlab.
+  --enable <feature>         Enable application-email or web-push.
                               Repeat for multiple features. Routines are included.
+  --no-forge-relay           Opt out of the managed forge relay: GitHub/GitLab
+                              then require operator-owned app credentials, and
+                              nothing ever contacts minddy infrastructure.
   --env-file <path>         Environment file to create (default: deploy/self-hosted/.env).
   --deploy-dir <path>       Versioned self-hosted asset directory.
   --skip-start              Create configuration without starting containers.
@@ -183,11 +188,12 @@ export function generatedValues(capabilities = new Set()) {
     POOLER_TENANT_ID: randomBytes(12).toString("hex"),
     AGENT_RUNNER_SECRET: secret(),
     CRON_SECRET: secret(),
+    // Forge secrets are ALWAYS generated: GitHub/GitLab connect through the
+    // managed forge relay by default (credentials provisioned on first
+    // connect), and both local and relayed tokens encrypt at rest with these.
+    GIT_STATE_SECRET: secret(),
+    GIT_TOKEN_ENCRYPTION_SECRET: secret(),
   };
-  if (capabilities.has("github") || capabilities.has("gitlab")) {
-    values.GIT_STATE_SECRET = secret();
-    values.GIT_TOKEN_ENCRYPTION_SECRET = secret();
-  }
   if (capabilities.has("web-push")) {
     const vapid = createECDH("prime256v1");
     vapid.generateKeys();
@@ -306,6 +312,9 @@ export function environmentValues(options, generated = generatedValues(options.c
     ...runtimeKeys,
     MINDDY_MANAGED_AI: "0",
     MINDDY_MANAGED_BILLING: "0",
+    // Forge relay opt-out only: the default (empty) keeps the automatic
+    // provisioning of the relay identity on first connect.
+    ...(options.forgeRelay === false ? { MINDDY_FORGE_RELAY: "0" } : {}),
     MINDDY_SELF_HOST_FEATURES: [...capabilities].join(","),
     AGENT_EXECUTION_BACKEND: "self-hosted",
     AGENT_RUNNER_URL: "http://agent-runner:6464",
@@ -398,7 +407,7 @@ export async function collectOptions(options) {
   });
   if (options.capabilities.size === 0) {
     const selected = await ask(
-      "Optional features (comma-separated: application-email, web-push, github, gitlab; blank for none)",
+      "Optional features (comma-separated: application-email, web-push; blank for none)",
       "none",
       (value) => value.toLowerCase(),
     );
@@ -419,8 +428,6 @@ export function inferCapabilities(values) {
   }
   if (values.EMAIL_PROVIDER === "resend") capabilities.add("application-email");
   if (values.MINDDY_PUBLIC_VAPID_PUBLIC_KEY || values.VAPID_PRIVATE_KEY) capabilities.add("web-push");
-  if (values.GITHUB_APP_ID) capabilities.add("github");
-  if (values.GITLAB_OAUTH_CLIENT_ID) capabilities.add("gitlab");
   return capabilities;
 }
 
@@ -504,11 +511,9 @@ export async function main(argv = process.argv.slice(2)) {
   recordCheckpoint(options.envFile, options.mode === "full" ? "database-started" : "application-stack-started", options);
   if (options.bootstrap) {
     const bootstrap = resolve(SCRIPT_DIR, "bootstrap-supabase.mjs");
-    const bootstrapCapabilities = [...options.capabilities]
-      .filter((capability) => ["github", "gitlab"].includes(capability))
-      .flatMap((capability) => ["--enable", capability]);
-    bootstrapCapabilities.push("--enable", "scheduler");
-    command(process.execPath, [bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile, ...bootstrapCapabilities], {
+    // Forge secrets are generated unconditionally (relay-first default), so
+    // the bootstrap only needs to know about the scheduler.
+    command(process.execPath, [bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile, "--enable", "scheduler"], {
       dryRun: options.dryRun,
       env: {
         MINDDY_PUBLIC_APP_URL: values.MINDDY_PUBLIC_APP_URL,

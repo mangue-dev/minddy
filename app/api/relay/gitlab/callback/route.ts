@@ -58,6 +58,9 @@ export async function GET(request: NextRequest) {
       `/api/git/gitlab/relay-callback?delivery=${encodeURIComponent(deliveryId)}`,
       state.callbackOrigin,
     );
+    if (state.returnPath) {
+      returnUrl.searchParams.set("return", state.returnPath);
+    }
     return page(
       "GitLab connected",
       `<p>Returning to your minddy instance…</p>

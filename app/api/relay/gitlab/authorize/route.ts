@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
     instanceId: verified.instanceId,
     userId: verified.userId,
     callbackOrigin: verified.callbackOrigin,
+    returnPath: verified.returnPath,
   });
   const authorizeUrl = getGitlabAuthorizeUrl({
     redirectUri: `${canonicalAppOrigin()}/api/relay/gitlab/callback`,

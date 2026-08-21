@@ -521,6 +521,19 @@ export function CreateProjectWizard({
       const res = await startAccountGitConnectApi(provider, "wizard");
       if (res.mode === "reuse") {
         setActiveConnectionId(res.connectionId);
+      } else if (res.mode === "claim") {
+        // Relay-only instance: the official App is claimed through the relay.
+        // The draft goes to the database BEFORE the redirect, and the
+        // interstitial returns to /home?setup=git, where ProjectDraftResume
+        // reopens the wizard right here.
+        await saveProjectDraft(snapshot());
+        setDraftExists(true);
+        setPendingDraftId(draftId);
+        const params = new URLSearchParams({
+          code: res.code,
+          return: "/home?setup=git",
+        });
+        window.location.href = `/connect/github?${params.toString()}`;
       } else {
         // We leave the app: the draft goes to the database BEFORE the redirect, and
         // sessionStorage only keeps the id. The callback returns to

@@ -50,7 +50,10 @@ export function resolveAgentExecutionBackend(
 }
 
 import { resolveDeploymentEdition } from "@/lib/env";
-import { resolveForgeRelayConfig } from "@/lib/forge-relay";
+import {
+  isForgeRelayOptedOut,
+  resolveForgeRelayConfig,
+} from "@/lib/forge-relay";
 
 const present = (env: CapabilityEnvironment, key: string): boolean =>
   Boolean(env[key]?.trim());
@@ -330,16 +333,18 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     });
 
   /**
-   * A git provider served either by the operator-owned app (local credentials,
-   * precedence for new connections when both are configured) or by the
-   * managed forge relay (docs/managed-forge-relay-plan.md). The relay is a
-   * REPLACEABLE provider: an absent relay configuration never activates it —
-   * the capability simply stays disabled, exactly as with a missing local
-   * app. Variables that stay instance-side in relay mode (`relayMissing`,
-   * e.g. the git state signing secret) keep being required there too. Note
-   * this is the CONFIGURATION-level view: each connection also carries a
-   * `source` marker, and token routing follows the channel the connection was
-   * actually established through until it is reconnected.
+   * A git provider served either by the operator-owned app (local
+   * credentials, precedence for new connections when both are configured) or
+   * by the managed forge relay (docs/managed-forge-relay-plan.md). The relay
+   * is a REPLACEABLE provider with three activation shapes, in order:
+   * explicit relay variables (pinned control plane), then automatic
+   * provisioning — the DEFAULT on a self-hosted edition without local app,
+   * where credentials are issued on first connect and stored in the instance
+   * database — and finally `MINDDY_FORGE_RELAY=0`, which disables it exactly
+   * like a missing local app. Note this is the CONFIGURATION-level view:
+   * each connection also carries a `source` marker, and token routing
+   * follows the channel the connection was actually established through
+   * until it is reconnected.
    */
   const gitProvider = (
     id: CapabilityId,
@@ -348,6 +353,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     localReady: string,
     localOff: string,
     relayReady: string,
+    autoReady: string,
   ): CapabilityStatus => {
     if (localMissing.length === 0) {
       return status({
@@ -371,6 +377,29 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
             state: "incomplete",
             missing: relayMissing,
             diagnostic: `Managed forge relay selected but configuration is missing: ${relayMissing.join(", ")}.`,
+          });
+    }
+    if (
+      resolveDeploymentEdition(env) === "self-hosted" &&
+      !isForgeRelayOptedOut(env)
+    ) {
+      // Automatic provisioning removes only the CLOUD-side app credentials:
+      // the instance-side secrets (git state signing, token encryption) stay
+      // required — relayed tokens and claim states use them exactly like the
+      // pinned-relay path.
+      return relayMissing.length === 0
+        ? status({
+            id,
+            requirement: "replaceable",
+            state: "ready",
+            diagnostic: autoReady,
+          })
+        : status({
+            id,
+            requirement: "replaceable",
+            state: "incomplete",
+            missing: relayMissing,
+            diagnostic: `Managed forge relay is selected by default but configuration is missing: ${relayMissing.join(", ")}.`,
           });
     }
     return status({
@@ -446,6 +475,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       "GitHub App integration is configured (operator-owned app).",
       "GitHub integration is hidden because its configuration is absent or incomplete.",
       "GitHub integration is served by the managed forge relay.",
+      "GitHub integration connects through the managed forge relay; credentials are provisioned automatically on first connect.",
     ),
     gitlab: gitProvider(
       "gitlab",
@@ -458,6 +488,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       "GitLab OAuth integration is configured (operator-owned app).",
       "GitLab integration is hidden because its configuration is absent or incomplete.",
       "GitLab integration is served by the managed forge relay.",
+      "GitLab integration connects through the managed forge relay; credentials are provisioned automatically on first connect.",
     ),
   };
 }

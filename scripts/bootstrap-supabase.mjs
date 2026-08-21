@@ -28,7 +28,7 @@ const CORE_SECRET_KEYS = [
   "AI_KEY_ENCRYPTION_SECRET",
   "FEEDBACK_SSO_ENCRYPTION_SECRET",
 ];
-const OPTIONAL_CAPABILITIES = ["github", "gitlab", "scheduler"];
+const OPTIONAL_CAPABILITIES = ["scheduler"];
 export const MINIMAL_LOCAL_EXCLUDES = [
   "studio",
   "imgproxy",
@@ -128,14 +128,17 @@ Options:
   --db-url <url>       Applies migrations to an already started remote stack.
   --skip-start         Does not run \`supabase start\` in local mode.
   --env-file <path>    Local file to complete (default: .env.local).
-  --enable <feature>    Generate secrets for github, gitlab, or scheduler. Repeat as needed.
+  --enable <feature>   Generate secrets for scheduler. Repeat as needed.
   --dry-run            Checks prerequisites without writing or applying changes.
   -h, --help           Shows this help.
 
 Remote mode: also provide MINDDY_PUBLIC_SUPABASE_URL,
 MINDDY_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY in the shell. The
-required application secrets are generated in .env.local. Optional integration
-secrets are generated only when their feature is explicitly enabled.`;
+required application secrets are generated in .env.local. Forge secrets
+(GIT_STATE_SECRET, GIT_TOKEN_ENCRYPTION_SECRET) are always generated: GitHub and
+GitLab connect through the managed forge relay by default, and relayed tokens
+encrypt at rest with them. Optional integration secrets are generated only when
+their feature is explicitly enabled.`;
 }
 
 export function listMigrations(directory = MIGRATIONS_DIR) {
@@ -206,10 +209,10 @@ export function appendMissingEnv(file, values) {
 }
 
 export function generatedSecrets(capabilities = new Set()) {
-  const keys = [...CORE_SECRET_KEYS];
-  if (capabilities.has("github") || capabilities.has("gitlab")) {
-    keys.push("GIT_STATE_SECRET", "GIT_TOKEN_ENCRYPTION_SECRET");
-  }
+  // Forge secrets are ALWAYS generated: GitHub/GitLab connect through the
+  // managed forge relay by default (credentials provisioned on first
+  // connect), and both local and relayed tokens encrypt at rest with these.
+  const keys = [...CORE_SECRET_KEYS, "GIT_STATE_SECRET", "GIT_TOKEN_ENCRYPTION_SECRET"];
   if (capabilities.has("scheduler")) keys.push("CRON_SECRET");
   return Object.fromEntries(keys.map((key) => [key, randomBytes(32).toString("hex")]));
 }

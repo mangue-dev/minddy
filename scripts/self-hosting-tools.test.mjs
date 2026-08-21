@@ -50,7 +50,7 @@ test("the installer creates a readable self-hosted configuration with integratio
 });
 
 test("the installer scopes generated configuration to selected useful features", () => {
-  const capabilities = new Set(["application-email", "web-push", "github"]);
+  const capabilities = new Set(["application-email", "web-push"]);
   const options = parseInstallArgs([
     "--non-interactive", "--mode", "managed", "--domain", "tickets.example.test",
     "--admin-email", "ops@example.test", "--supabase-url", "https://project.supabase.co",
@@ -66,10 +66,24 @@ test("the installer scopes generated configuration to selected useful features",
   assert.ok(values.MINDDY_PUBLIC_VAPID_PUBLIC_KEY);
   assert.ok(values.VAPID_PRIVATE_KEY);
   assert.ok(values.GIT_STATE_SECRET);
+  assert.ok(values.GIT_TOKEN_ENCRYPTION_SECRET);
   assert.ok(values.CRON_SECRET);
   assert.ok(values.AGENT_RUNNER_SECRET);
   assert.deepEqual([...inferCapabilities(values)].sort(), [...capabilities].sort());
   assert.throws(() => parseInstallArgs(["--enable", "posthog"]), /unknown optional capability/);
+  assert.throws(() => parseInstallArgs(["--enable", "github"]), /unknown optional capability/);
+});
+
+test("the forge relay is on by default and --no-forge-relay writes the opt-out", () => {
+  const base = [
+    "--non-interactive", "--mode", "managed", "--domain", "tickets.example.test",
+    "--admin-email", "ops@example.test", "--supabase-url", "https://project.supabase.co",
+    "--anon-key", "anon", "--service-role-key", "service",
+  ];
+  const defaultValues = environmentValues(parseInstallArgs(base));
+  assert.equal(defaultValues.MINDDY_FORGE_RELAY, undefined);
+  const optedOut = environmentValues(parseInstallArgs([...base, "--no-forge-relay"]));
+  assert.equal(optedOut.MINDDY_FORGE_RELAY, "0");
 });
 
 test("a private server uses its LAN origin without requesting a domain", () => {
@@ -204,14 +218,24 @@ test("the doctor names the forge access mode: relay, operator-owned app, or disa
     MINDDY_FORGE_RELAY_SECRET: "instance-secret",
     MINDDY_FORGE_RELAY_WEBHOOK_SECRET: "x".repeat(32),
     GIT_STATE_SECRET: "state-secret",
+    GIT_TOKEN_ENCRYPTION_SECRET: "token-crypto-secret",
   };
   assert.equal(forgeAccessFinding(relay).detail, "managed forge relay (github, gitlab); no operator-owned app variables are read.");
   assert.equal(
     forgeAccessFinding({ ...relay, GITHUB_APP_ID: "1", GITHUB_APP_SLUG: "app", GITHUB_APP_PRIVATE_KEY: "key" }).detail,
     "operator-owned app (GitHub).",
   );
-  assert.equal(forgeAccessFinding({}).detail, "disabled: no operator-owned forge app and no managed forge relay.");
-  assert.equal(forgeAccessFinding({ MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app" }).detail, "forge relay configuration is incomplete; forge integrations stay disabled.");
+  // The relay is the DEFAULT on a self-hosted instance: with no variables at
+  // all, credentials are provisioned automatically on first connect.
+  assert.equal(
+    forgeAccessFinding({ GIT_STATE_SECRET: "state-secret", GIT_TOKEN_ENCRYPTION_SECRET: "token-crypto-secret" }).detail,
+    "managed forge relay (automatic): GitHub and GitLab connect from within the app; credentials are provisioned on first connect.",
+  );
+  assert.equal(
+    forgeAccessFinding({ MINDDY_FORGE_RELAY: "0" }).detail,
+    "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app.",
+  );
+  assert.equal(forgeAccessFinding({ MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app" }).detail, "forge relay configuration is incomplete; the automatic relay provisioning stays available unless the partial variables are removed.");
   assert.equal(forgeAccessFinding({ ...relay, GIT_STATE_SECRET: "" }).state, "fail");
   assert.equal(
     forgeAccessFinding({ ...relay, MINDDY_FORGE_RELAY_WEBHOOK_SECRET: "short" }).state,
@@ -221,4 +245,10 @@ test("the doctor names the forge access mode: relay, operator-owned app, or disa
     forgeAccessFinding({ ...relay, MINDDY_FORGE_RELAY_WEBHOOK_SECRET: "x".repeat(32) }).detail,
     "managed forge relay (github, gitlab); no operator-owned app variables are read.",
   );
+  // Both relay modes fail WITHOUT the instance-side secrets: connects would
+  // 503 at use time even though the doctor's other checks stay green.
+  const missingBoth = forgeAccessFinding({});
+  assert.equal(missingBoth.state, "fail");
+  assert.match(missingBoth.detail, /GIT_STATE_SECRET, GIT_TOKEN_ENCRYPTION_SECRET/);
+  assert.match(forgeAccessFinding({ GIT_STATE_SECRET: "state-secret" }).detail, /GIT_TOKEN_ENCRYPTION_SECRET/);
 });

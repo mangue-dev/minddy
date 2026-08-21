@@ -33,24 +33,28 @@ test("minimal local mode skips only services that minddy does not require", () =
   ]);
 });
 
-test("bootstrap generates optional secrets only for selected capabilities", () => {
+test("bootstrap always generates the forge secrets; optional secrets follow capabilities", () => {
   const minimal = generatedSecrets();
   assert.ok(minimal.AI_KEY_ENCRYPTION_SECRET);
   assert.ok(minimal.FEEDBACK_SSO_ENCRYPTION_SECRET);
-  assert.equal(minimal.GIT_STATE_SECRET, undefined);
+  // Forge secrets are unconditional: GitHub/GitLab connect through the
+  // managed forge relay by default.
+  assert.ok(minimal.GIT_STATE_SECRET);
+  assert.ok(minimal.GIT_TOKEN_ENCRYPTION_SECRET);
   assert.equal(minimal.CRON_SECRET, undefined);
 
-  const selected = generatedSecrets(new Set(["github", "scheduler"]));
+  const selected = generatedSecrets(new Set(["scheduler"]));
   assert.ok(selected.GIT_STATE_SECRET);
   assert.ok(selected.GIT_TOKEN_ENCRYPTION_SECRET);
   assert.ok(selected.CRON_SECRET);
-  assert.deepEqual([...parseArgs(["--enable", "gitlab", "--enable", "scheduler"]).capabilities], ["gitlab", "scheduler"]);
+  assert.deepEqual([...parseArgs(["--enable", "scheduler"]).capabilities], ["scheduler"]);
   assert.throws(() => parseArgs(["--enable", "posthog"]), /unknown optional capability/);
+  assert.throws(() => parseArgs(["--enable", "github"]), /unknown optional capability/);
 });
 
 test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {
   const migrations = listMigrations();
-  assert.equal(migrations.length, 5);
+  assert.equal(migrations.length, 13);
   assert.deepEqual([...migrations].sort(), migrations);
   assert.equal(migrations[0], "20270106090000_baseline.sql");
   assert.equal(migrations[1], "20270106091000_initial_data.sql");
@@ -60,6 +64,13 @@ test("migrations are sorted, include the vector extension, and repair Realtime p
     "20270106094000_page_broadcast_and_pull_request_notification_deduplication.sql",
   );
   assert.equal(migrations[4], "20270106095000_github_issue_sync_metadata.sql");
+  // The managed forge relay control plane and its instance-side
+  // self-provisioning close the list.
+  assert.equal(migrations[6], "20270106110000_forge_relay_control_plane.sql");
+  assert.equal(
+    migrations[12],
+    "20270106170000_forge_relay_self_provisioning.sql",
+  );
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 

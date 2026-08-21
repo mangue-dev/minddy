@@ -41,11 +41,40 @@ const DELIVERY_RESULT_TTL_MS = 60 * 60_000;
 
 export const RELAY_USER_STATE_KIND = "forge-relay-user-authorize";
 
+/** Where a browser lands when no return context was carried (account git settings). */
+export const RELAY_DEFAULT_RETURN_PATH = "/settings?tab=git";
+
+/**
+ * The only shape an instance-relative return path may take. Applied at every
+ * hop of the brokered flows (instance state → cloud state → callback
+ * redirect): a signed state may only ever send the user to a path of THIS
+ * instance, never to another origin or an exotic scheme.
+ */
+export function safeRelayReturnPath(value: string | null | undefined): string {
+  return (
+    typeof value === "string" &&
+    value.length <= 200 &&
+    value.startsWith("/") &&
+    !value.startsWith("//") &&
+    !value.includes("\\") &&
+    !value.includes("\r") &&
+    !value.includes("\n")
+      ? value
+      : RELAY_DEFAULT_RETURN_PATH
+  );
+}
+
 interface RelayUserStatePayload {
   kind: typeof RELAY_USER_STATE_KIND;
   userId: string;
   /** Closed return table key ("settings" | "pr"), as in the local flow. */
   origin?: string;
+  /**
+   * Instance-relative return path. Unused by THIS broker (GitHub uses the
+   * closed `origin` table) but carried by the GitLab broker's states, which
+   * share `verifyInstanceSignedState`.
+   */
+  returnPath?: string;
   /** Instance origin the browser is sent back to. */
   callbackOrigin: string;
   iat: number;
@@ -84,6 +113,7 @@ interface VerifiedRelayUserState {
   instanceName: string;
   userId: string;
   origin?: string;
+  returnPath?: string;
   callbackOrigin: string;
 }
 
@@ -195,6 +225,13 @@ export async function verifyInstanceSignedState(
   } catch {
     return null;
   }
+  // The return path is re-validated at every hop; here it only decides
+  // whether it is CARRIED at all.
+  const returnPath =
+    typeof payload.returnPath === "string" &&
+    safeRelayReturnPath(payload.returnPath) === payload.returnPath
+      ? payload.returnPath
+      : undefined;
   if (
     payload.kind !== expectedKind ||
     typeof payload.userId !== "string" ||
@@ -212,6 +249,7 @@ export async function verifyInstanceSignedState(
     instanceName: row.name,
     userId: payload.userId,
     ...(payload.origin ? { origin: payload.origin } : {}),
+    ...(returnPath ? { returnPath } : {}),
     callbackOrigin: payload.callbackOrigin,
   };
 }

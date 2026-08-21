@@ -18,7 +18,13 @@ import {
   getGitlabAccessToken,
   getGitlabAuthorizeUrl,
   isGitlabConfigured,
+  isLocalGitlabOAuthConfigured,
 } from "@/lib/server/git/gitlab-app";
+import { isLocalGithubAppConfigured } from "@/lib/server/git/github-app";
+import { forgeRelayConfig } from "@/lib/server/forge-relay/client";
+import { ensureForgeRelayProvisioned } from "@/lib/server/forge-relay/provisioning";
+import { signRelayGitlabState } from "@/lib/server/forge-relay/gitlab-broker";
+import { generateClaimCode } from "@/lib/server/forge-relay/claims";
 import { ensureRepoWebhookSecret } from "@/lib/server/git/webhook-secret";
 import {
   backfillRemoteIssues,
@@ -214,7 +220,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (!isRepoProviderId(provider)) {
       return NextResponse.json({ error: t("gitInvalidProvider") }, { status: 400 });
     }
-    if (!isProviderConfigured(provider)) {
+    // The managed forge relay is a DEFAULT capability of the self-hosted
+    // edition: without a local app, the first connect provisions the relay
+    // identity automatically (docs/managed-forge-relay-plan.md).
+    let providerConfigured = isProviderConfigured(provider);
+    if (!providerConfigured) {
+      providerConfigured = await ensureForgeRelayProvisioned();
+    }
+    if (!providerConfigured) {
       return NextResponse.json(
         { error: t("gitProviderNotConfigured") },
         { status: 503 },
@@ -230,18 +243,57 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // Always from the project settings: the creation wizard,
     // se connecte au niveau compte (/api/account/git-connections), parce qu'il
     // does not yet have a project to attach the install to.
-    const state = signGitLinkState({
-      projectId: id,
-      userId: auth.user.id,
-      provider,
-    });
     if (provider === "github") {
+      // RELAY-ONLY instance: claim the official minddy App through the relay
+      // instead of an operator-owned app (same contract as the account route).
+      if (!isLocalGithubAppConfigured()) {
+        const config = (await ensureForgeRelayProvisioned())
+          ? forgeRelayConfig()
+          : null;
+        if (!config) {
+          return NextResponse.json(
+            { error: t("gitProviderNotConfigured") },
+            { status: 503 },
+          );
+        }
+        const code = generateClaimCode();
+        const url = `${config.url.replace(/\/$/, "")}/api/relay/github/claim?instance=${encodeURIComponent(config.instanceId)}&code=${code}`;
+        return NextResponse.json({ mode: "claim", url, code });
+      }
+      const state = signGitLinkState({
+        projectId: id,
+        userId: auth.user.id,
+        provider,
+      });
       const url = `https://github.com/apps/${getGithubAppSlug()}/installations/new?state=${encodeURIComponent(state)}`;
       return NextResponse.json({ mode: "install", url });
     }
+    if (!isLocalGitlabOAuthConfigured()) {
+      const config = (await ensureForgeRelayProvisioned())
+        ? forgeRelayConfig()
+        : null;
+      if (!config) {
+        return NextResponse.json(
+          { error: t("gitProviderNotConfigured") },
+          { status: 503 },
+        );
+      }
+      const state = signRelayGitlabState({
+        userId: auth.user.id,
+        callbackOrigin: canonicalAppOrigin(),
+        returnPath: `/projects/${id}/settings?tab=git`,
+        privateKey: config.secret,
+      });
+      const url = `${config.url.replace(/\/$/, "")}/api/relay/gitlab/authorize?instance=${encodeURIComponent(config.instanceId)}&state=${encodeURIComponent(state)}`;
+      return NextResponse.json({ mode: "oauth", url });
+    }
     const url = getGitlabAuthorizeUrl({
       redirectUri: `${canonicalAppOrigin()}/api/git/gitlab/callback`,
-      state,
+      state: signGitLinkState({
+        projectId: id,
+        userId: auth.user.id,
+        provider,
+      }),
     });
     return NextResponse.json({ mode: "oauth", url });
   }

@@ -16,6 +16,7 @@ import {
   forgeRelaySigningKey,
   isForgeRelayClientConfigured,
 } from "@/lib/server/forge-relay/client";
+import { ensureForgeRelayProvisioned } from "@/lib/server/forge-relay/provisioning";
 import { signRelayUserState } from "@/lib/server/forge-relay/user-broker";
 import { signRelayGitlabState } from "@/lib/server/forge-relay/gitlab-broker";
 import {
@@ -114,14 +115,15 @@ export async function POST(request: NextRequest) {
   // stay local (the 8h refresh grant runs Cloud-side for relayed identities).
   //
   // Precedence is the documented one: with a LOCAL app configured, new
-  // authorizations stay local — the relay only serves instances that have no
-  // local credentials. A connection keeps the channel it was established
-  // through until it is reconnected via the other one.
-  if (
-    provider === "github" &&
-    !isLocalGithubUserAuthConfigured() &&
-    isForgeRelayClientConfigured()
-  ) {
+  // authorizations stay local — otherwise the relay serves the request,
+  // provisioning its identity automatically on first use.
+  if (provider === "github" && !isLocalGithubUserAuthConfigured()) {
+    if (!isForgeRelayClientConfigured() && !(await ensureForgeRelayProvisioned())) {
+      return NextResponse.json(
+        { error: t("gitProviderNotConfigured") },
+        { status: 503 },
+      );
+    }
     const config = forgeRelayConfig();
     const state = signRelayUserState({
       userId: auth.user.id,
@@ -137,15 +139,19 @@ export async function POST(request: NextRequest) {
   // Tokens come back as a one-shot delivery, then live on the instance; their
   // refresh grant runs Cloud-side (it needs the managed app's credentials).
   // Same precedence rule as the GitHub branch above.
-  if (
-    provider === "gitlab" &&
-    !isLocalGitlabOAuthConfigured() &&
-    isForgeRelayClientConfigured()
-  ) {
+  if (provider === "gitlab" && !isLocalGitlabOAuthConfigured()) {
+    if (!isForgeRelayClientConfigured() && !(await ensureForgeRelayProvisioned())) {
+      return NextResponse.json(
+        { error: t("gitProviderNotConfigured") },
+        { status: 503 },
+      );
+    }
     const config = forgeRelayConfig();
     const state = signRelayGitlabState({
       userId: auth.user.id,
       callbackOrigin: canonicalAppOrigin(),
+      returnPath:
+        origin === "pr" ? "/pull-requests?connected=git" : "/settings?tab=git",
       privateKey: forgeRelaySigningKey(),
     });
     const url = `${config!.url.replace(/\/$/, "")}/api/relay/gitlab/authorize?instance=${encodeURIComponent(config!.instanceId)}&state=${encodeURIComponent(state)}`;

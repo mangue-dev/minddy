@@ -8,6 +8,7 @@ import { encryptForgeToken } from "@/lib/server/git/token-crypto";
 import {
   createUserDelivery,
   consumeUserDelivery,
+  safeRelayReturnPath,
   type RelayUserDelivery,
 } from "./user-broker";
 
@@ -47,6 +48,13 @@ interface RelayGitlabStatePayload {
   kind: typeof RELAY_GITLAB_STATE_KIND;
   userId: string;
   callbackOrigin: string;
+  /**
+   * Instance-relative page the callback leads back to (project settings,
+   * wizard, …). Signed by the instance and re-validated at every hop —
+   * without it the browser would always land on the account git settings,
+   * losing a project-level connect's context.
+   */
+  returnPath?: string;
   iat: number;
 }
 
@@ -58,13 +66,22 @@ interface RelayGitlabStatePayload {
 export function signRelayGitlabState(input: {
   userId: string;
   callbackOrigin: string;
+  returnPath?: string;
   privateKey: string;
   now?: number;
 }): string {
+  // Only a well-shaped relative path is carried; anything else falls back to
+  // the callback's default at redirect time.
+  const returnPath =
+    input.returnPath &&
+    safeRelayReturnPath(input.returnPath) === input.returnPath
+      ? input.returnPath
+      : undefined;
   const payload: RelayGitlabStatePayload = {
     kind: RELAY_GITLAB_STATE_KIND,
     userId: input.userId,
     callbackOrigin: input.callbackOrigin,
+    ...(returnPath ? { returnPath } : {}),
     iat: input.now ?? Date.now(),
   };
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -86,6 +103,7 @@ export function signCloudGitlabState(payload: {
   instanceId: string;
   userId: string;
   callbackOrigin: string;
+  returnPath?: string;
 }): string {
   const body = Buffer.from(
     JSON.stringify({ kind: "forge-relay-gitlab-cloud", ...payload, iat: Date.now() }),
@@ -95,7 +113,12 @@ export function signCloudGitlabState(payload: {
 
 export function verifyCloudGitlabState(
   token: string | null | undefined,
-): { instanceId: string; userId: string; callbackOrigin: string } | null {
+): {
+  instanceId: string;
+  userId: string;
+  callbackOrigin: string;
+  returnPath?: string;
+} | null {
   if (!token) return null;
   const dotIndex = token.indexOf(".");
   if (dotIndex <= 0 || dotIndex === token.length - 1) return null;
@@ -116,6 +139,7 @@ export function verifyCloudGitlabState(
       instanceId?: string;
       userId?: string;
       callbackOrigin?: string;
+      returnPath?: string;
       iat?: number;
     };
     if (
@@ -132,6 +156,10 @@ export function verifyCloudGitlabState(
       instanceId: payload.instanceId,
       userId: payload.userId,
       callbackOrigin: payload.callbackOrigin,
+      ...(typeof payload.returnPath === "string" &&
+      safeRelayReturnPath(payload.returnPath) === payload.returnPath
+        ? { returnPath: payload.returnPath }
+        : {}),
     };
   } catch {
     return null;

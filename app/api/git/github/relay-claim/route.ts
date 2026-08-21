@@ -52,6 +52,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid claim code" }, { status: 400 });
   }
 
+  // The claim URL is ALWAYS derived server-side from the pinned relay
+  // configuration and handed back to the interstitial: the page never opens
+  // a URL it received through its own query string.
+  const config = forgeRelayConfig();
+  const claimUrl = `${config!.url.replace(/\/$/, "")}/api/relay/github/claim?instance=${encodeURIComponent(config!.instanceId)}&code=${encodeURIComponent(code)}`;
+
   const result = await relayRequest<{
     status: "pending" | "claimed";
     installationId?: number;
@@ -61,7 +67,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: 502 });
   }
   if (result.data.status !== "claimed" || !result.data.installationId) {
-    return NextResponse.json({ status: "pending" });
+    return NextResponse.json({ status: "pending", claimUrl });
   }
 
   try {

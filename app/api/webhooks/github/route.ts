@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { enqueueRelayDeliveryForPayload } from "@/lib/server/forge-relay/fanout";
+import {
+  getProvisionedWebhookSecret,
+  loadProvisionedRelayConfig,
+} from "@/lib/server/forge-relay/provisioning";
 import { syncPrState, findRunsForPr } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import {
@@ -652,11 +656,18 @@ export async function POST(request: NextRequest) {
   // delivery verifies against GITHUB_WEBHOOK_SECRET exactly as always; a
   // RELAYED delivery (fan-out from the managed forge relay, marked by
   // X-Minddy-Relay) verifies against the instance-generated relay webhook
-  // secret. Relay mode reads only relay variables — never local app ones.
+  // secret — explicit env first, then the automatically provisioned one.
+  // Relay mode reads only relay material — never local app ones.
   const relayed = request.headers.get("x-minddy-relay") === "1";
-  const secret = relayed
+  let secret: string | null | undefined = relayed
     ? process.env.MINDDY_FORGE_RELAY_WEBHOOK_SECRET
     : process.env.GITHUB_WEBHOOK_SECRET;
+  if (relayed && !secret) {
+    // After a restart the provisioned secret is not in memory yet: one
+    // database read (never a registration — this path is unauthenticated).
+    await loadProvisionedRelayConfig();
+    secret = getProvisionedWebhookSecret();
+  }
 
   // Full FAIL-CLOSED (MIN-118), aligned to GitLab receiver: without
   // secret deployed, NO events are processed — even those that only

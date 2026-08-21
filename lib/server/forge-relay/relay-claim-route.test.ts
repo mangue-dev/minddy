@@ -85,10 +85,16 @@ describe("POST /api/git/github/relay-claim", () => {
 });
 
 describe("GET /api/git/github/relay-claim", () => {
-  it("reports pending without touching the local connections", async () => {
+  it("reports pending with the server-derived claim URL", async () => {
     const response = await pollClaim(getRequest(`http://localhost/api/git/github/relay-claim?code=${CODE}`));
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ status: "pending" });
+    // The claim URL comes from the pinned relay configuration, never from
+    // the client: the interstitial can only open this instance's own claim
+    // page.
+    await expect(response.json()).resolves.toEqual({
+      status: "pending",
+      claimUrl: `https://relay.example.com/api/relay/github/claim?instance=0f0e0d0c-0b0a-4948-8272-6d6f64656c79&code=${CODE}`,
+    });
     expect(relayCalls).toEqual([
       { path: "/api/relay/github/claim-result", body: { code: CODE } },
     ]);

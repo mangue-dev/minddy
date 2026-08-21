@@ -14,11 +14,17 @@ import {
 import {
   getGithubAppSlug,
   isGithubAppConfigured,
+  isLocalGithubAppConfigured,
 } from "@/lib/server/git/github-app";
 import {
   getGitlabAuthorizeUrl,
   isGitlabConfigured,
+  isLocalGitlabOAuthConfigured,
 } from "@/lib/server/git/gitlab-app";
+import { forgeRelayConfig } from "@/lib/server/forge-relay/client";
+import { ensureForgeRelayProvisioned } from "@/lib/server/forge-relay/provisioning";
+import { signRelayGitlabState } from "@/lib/server/forge-relay/gitlab-broker";
+import { generateClaimCode } from "@/lib/server/forge-relay/claims";
 import {
   ACCOUNT_CONNECT_PROJECT,
   signGitLinkState,
@@ -111,7 +117,15 @@ export async function POST(request: NextRequest) {
   if (!isRepoProviderId(provider)) {
     return NextResponse.json({ error: t("gitInvalidProvider") }, { status: 400 });
   }
-  if (!isProviderConfigured(provider)) {
+  // The managed forge relay is a DEFAULT capability of the self-hosted
+  // edition: when the local provider is absent, the first connect provisions
+  // the relay identity automatically (docs/managed-forge-relay-plan.md) — no
+  // environment setup for the operator.
+  let providerConfigured = isProviderConfigured(provider);
+  if (!providerConfigured) {
+    providerConfigured = await ensureForgeRelayProvisioned();
+  }
+  if (!providerConfigured) {
     return NextResponse.json(
       { error: t("gitProviderNotConfigured") },
       { status: 503 },
@@ -129,19 +143,67 @@ export async function POST(request: NextRequest) {
   const origin =
     typeof rawOrigin === "string" && ORIGINS.has(rawOrigin) ? rawOrigin : "settings";
 
-  const state = signGitLinkState({
-    projectId: ACCOUNT_CONNECT_PROJECT,
-    userId: auth.user.id,
-    provider,
-    origin,
-  });
   if (provider === "github") {
+    // RELAY-ONLY instance: the official minddy GitHub App is claimed through
+    // the relay instead of asking the operator to create their own app. The
+    // client opens the claim URL and polls with the code until the
+    // installation is bound.
+    if (!isLocalGithubAppConfigured()) {
+      const config = (await ensureForgeRelayProvisioned())
+        ? forgeRelayConfig()
+        : null;
+      if (!config) {
+        return NextResponse.json(
+          { error: t("gitProviderNotConfigured") },
+          { status: 503 },
+        );
+      }
+      const code = generateClaimCode();
+      const url = `${config.url.replace(/\/$/, "")}/api/relay/github/claim?instance=${encodeURIComponent(config.instanceId)}&code=${code}`;
+      return NextResponse.json({ mode: "claim", url, code });
+    }
+    const state = signGitLinkState({
+      projectId: ACCOUNT_CONNECT_PROJECT,
+      userId: auth.user.id,
+      provider,
+      origin,
+    });
     const url = `https://github.com/apps/${getGithubAppSlug()}/installations/new?state=${encodeURIComponent(state)}`;
     return NextResponse.json({ mode: "install", url });
   }
+
+  // GitLab: the OAuth connection IS the account connection. Without a local
+  // OAuth app, the dance is brokered by the relay (same entry as personal
+  // identities); tokens come back instance-side either way.
+  if (!isLocalGitlabOAuthConfigured()) {
+    const config = (await ensureForgeRelayProvisioned())
+      ? forgeRelayConfig()
+      : null;
+    if (!config) {
+      return NextResponse.json(
+        { error: t("gitProviderNotConfigured") },
+        { status: 503 },
+      );
+    }
+    const state = signRelayGitlabState({
+      userId: auth.user.id,
+      callbackOrigin: canonicalAppOrigin(),
+      // Same return table as the local flow's signed state: the brokered
+      // callback leads back where the connect was started from.
+      returnPath: origin === "wizard" ? "/home?setup=git" : "/settings?tab=git",
+      privateKey: config.secret,
+    });
+    const url = `${config.url.replace(/\/$/, "")}/api/relay/gitlab/authorize?instance=${encodeURIComponent(config.instanceId)}&state=${encodeURIComponent(state)}`;
+    return NextResponse.json({ mode: "oauth", url });
+  }
   const url = getGitlabAuthorizeUrl({
     redirectUri: `${canonicalAppOrigin()}/api/git/gitlab/callback`,
-    state,
+    state: signGitLinkState({
+      projectId: ACCOUNT_CONNECT_PROJECT,
+      userId: auth.user.id,
+      provider,
+      origin,
+    }),
   });
   return NextResponse.json({ mode: "oauth", url });
 }
