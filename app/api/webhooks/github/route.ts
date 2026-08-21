@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
+import { isManagedForgeEnabled } from "@/lib/managed-services";
+import { enqueueRelayDeliveryForPayload } from "@/lib/server/forge-relay/fanout";
 import { syncPrState, findRunsForPr } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import {
@@ -645,7 +647,16 @@ async function handleIssues(payload: unknown): Promise<void> {
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+
+  // Two accepted secrets (docs/managed-forge-relay-plan.md): a DIRECT GitHub
+  // delivery verifies against GITHUB_WEBHOOK_SECRET exactly as always; a
+  // RELAYED delivery (fan-out from the managed forge relay, marked by
+  // X-Minddy-Relay) verifies against the instance-generated relay webhook
+  // secret. Relay mode reads only relay variables — never local app ones.
+  const relayed = request.headers.get("x-minddy-relay") === "1";
+  const secret = relayed
+    ? process.env.MINDDY_FORGE_RELAY_WEBHOOK_SECRET
+    : process.env.GITHUB_WEBHOOK_SECRET;
 
   // Full FAIL-CLOSED (MIN-118), aligned to GitLab receiver: without
   // secret deployed, NO events are processed — even those that only
@@ -654,7 +665,11 @@ export async function POST(request: NextRequest) {
   // historical partial fail-open left this door open. 503 rather than
   // 200: GitHub will re-deliver once the secret is deployed.
   if (!secret) {
-    console.error("[webhooks/github] GITHUB_WEBHOOK_SECRET is not set — event refused");
+    console.error(
+      relayed
+        ? "[webhooks/github] MINDDY_FORGE_RELAY_WEBHOOK_SECRET is not set — relayed event refused"
+        : "[webhooks/github] GITHUB_WEBHOOK_SECRET is not set — event refused",
+    );
     return NextResponse.json({ error: "webhook secret not configured" }, { status: 503 });
   }
 
@@ -674,6 +689,23 @@ export async function POST(request: NextRequest) {
     await isReplayedForgeDelivery("github", request.headers.get("x-github-delivery"))
   ) {
     return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  // MANAGED FORGE RELAY (Cloud side): a delivery for an installation claimed
+  // by a relayed instance is fanned out to that instance and NOT processed
+  // here — the installation belongs to the instance, no local row would ever
+  // match. Unclaimed installations (Cloud's own) fall through to the local
+  // handlers unchanged.
+  if (isManagedForgeEnabled()) {
+    const relayedInstance = await enqueueRelayDeliveryForPayload({
+      provider: "github",
+      event: request.headers.get("x-github-event"),
+      deliveryGuid: request.headers.get("x-github-delivery"),
+      rawBody,
+    });
+    if (relayedInstance) {
+      return NextResponse.json({ ok: true, relayed: true });
+    }
   }
 
   const event = request.headers.get("x-github-event");

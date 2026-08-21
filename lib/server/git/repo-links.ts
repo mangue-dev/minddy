@@ -6,6 +6,8 @@ import type { CandidateRepo, ProjectGitLink } from "@/lib/types";
 import { getUserConnection } from "./connections";
 import { listInstallationRepositories } from "./github-app";
 import { getGitlabAccessToken, listGitlabProjects } from "./gitlab-app";
+import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
+import { pushRelayLinkEvent } from "@/lib/server/forge-relay/link-push";
 
 /**
  * Access to project link ↔ repository (project_git_links) — MIN-47. Customer service;
@@ -146,6 +148,23 @@ export async function bindRepo(params: {
 
   const link = await getProjectLink(params.projectId);
   if (!link) throw new Error("Failed to read bound repository");
+
+  // Link lifecycle sync (docs/managed-forge-relay-plan.md): a RELAYED link is
+  // pushed to the control-plane mirror, which authorizes token mints. Local
+  // links never touch the relay — not even to announce a repo name.
+  if (
+    isForgeRelayClientConfigured() &&
+    connection.source === "relay" &&
+    link.repo_full_name
+  ) {
+    await pushRelayLinkEvent({
+      event: "linked",
+      provider: link.provider,
+      repo: link.repo_full_name,
+      connectionId: link.connection_id,
+    });
+  }
+
   return { ok: true, link };
 }
 
@@ -156,7 +175,34 @@ export async function unlinkProject(projectId: string): Promise<boolean> {
     .from("project_git_links")
     .delete()
     .eq("project_id", projectId)
-    .select("id")
+    .select(
+      "id, provider, repo_full_name, connection_id, git_connections(source)",
+    )
     .maybeSingle();
-  return !!data;
+  if (!data) return false;
+  // Embedded to-one relationship: object at runtime, cast via unknown.
+  const removed = data as unknown as {
+    id: string;
+    provider: string;
+    repo_full_name: string | null;
+    connection_id: string;
+    git_connections: { source: string | null } | null;
+  };
+  const connectionSource = removed.git_connections?.source ?? null;
+
+  // Only RELAYED links are announced to the control-plane mirror (the
+  // snapshot inside the push is filtered the same way).
+  if (
+    isForgeRelayClientConfigured() &&
+    connectionSource === "relay" &&
+    removed.repo_full_name
+  ) {
+    await pushRelayLinkEvent({
+      event: "unlinked",
+      provider: removed.provider,
+      repo: removed.repo_full_name,
+      connectionId: removed.connection_id,
+    });
+  }
+  return true;
 }

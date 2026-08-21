@@ -14,6 +14,17 @@ import {
   gitlabNextPage,
 } from "./gitlab-rest";
 import { ensureRepoWebhookSecret } from "./webhook-secret";
+import {
+  forgeRelayConfig,
+  isForgeRelayClientConfigured,
+} from "@/lib/server/forge-relay/client";
+import { refreshGitlabTokensViaRelay } from "@/lib/server/forge-relay/token-refresh";
+import { pushGitlabHookSecret } from "@/lib/server/forge-relay/gitlab-hook-sync";
+
+/** Stable hook identity (docs/managed-forge-relay-plan.md): set as the
+ * description at creation and on every update, so the hook is found by MARKER
+ * even when its URL changes between local and relay modes. */
+export const GITLAB_HOOK_MARKER = "minddy-forge-webhook";
 
 /**
  * OAuth GitLab app + token plumbing (MIN-47), AutoKap scope
@@ -189,6 +200,10 @@ export async function getGitlabUser(accessToken: string): Promise<GitlabUser> {
 interface AccountTokenRow {
   id: string;
   provider: string | null;
+  /** "relay" when the connection was established through the managed forge
+   * relay — its tokens belong to the MANAGED app's client, so their refresh
+   * grant must run Cloud-side, not here (no local client credentials). */
+  source: string | null;
   access_token_encrypted: string | null;
   refresh_token_encrypted: string | null;
   token_expires_at: string | null;
@@ -201,7 +216,7 @@ async function loadAccountTokenRow(
   const { data } = await supabase
     .from("git_connections")
     .select(
-      "id, provider, access_token_encrypted, refresh_token_encrypted, token_expires_at",
+      "id, provider, source, access_token_encrypted, refresh_token_encrypted, token_expires_at",
     )
     .eq("id", connectionId)
     .maybeSingle();
@@ -215,6 +230,23 @@ async function loadAccountTokenRow(
  * leave in base a token that the other comes from to invalidate.
  */
 const inFlight = new Map<string, Promise<string>>();
+
+/**
+ * Refresh grant for a RELAYED connection (docs/managed-forge-relay-plan.md).
+ * The token belongs to the managed app's client — a local grant would fail
+ * (no local client credentials) and a local app's credentials would fail the
+ * other way (grant issued by another app). Cloud runs the refresh; same
+ * single-use rotation semantics as the direct grant.
+ */
+async function relayedGitlabRefresh(refreshToken: string): Promise<GitlabTokenSet> {
+  const refreshed = await refreshGitlabTokensViaRelay(refreshToken);
+  return {
+    accessToken: refreshed.accessToken,
+    refreshToken: refreshed.refreshToken,
+    expiresAt: refreshed.expiresAt ?? new Date(Date.now() + 7200_000).toISOString(),
+    scope: refreshed.scope ?? GITLAB_OAUTH_SCOPES,
+  };
+}
 
 /**
  * Returns a valid GitLab access token for a connection (git_connections.id),
@@ -268,10 +300,13 @@ async function mintGitlabAccessToken(
 
   let refreshed: GitlabTokenSet;
   try {
-    refreshed = await requestGitlabToken(
-      { refresh_token: refreshToken, grant_type: "refresh_token" },
-      nowMs,
-    );
+    refreshed =
+      row.source === "relay"
+        ? await relayedGitlabRefresh(refreshToken)
+        : await requestGitlabToken(
+            { refresh_token: refreshToken, grant_type: "refresh_token" },
+            nowMs,
+          );
   } catch (err) {
     // Single-use rotation race: another worker refreshed first.
     // We reread; if the winner has ADVANCED the stored expiry beyond what was read,
@@ -447,6 +482,9 @@ export async function listGitlabOpenIssues(
 interface GitlabHook {
   id: number;
   url?: string;
+  /** Stable marker set at creation — identifies the hook even when its URL
+   * changes (relay mode points it at Cloud instead of the instance). */
+  description?: string;
   issues_events?: boolean;
   merge_requests_events?: boolean;
   note_events?: boolean;
@@ -463,6 +501,7 @@ interface GitlabHook {
 interface GitlabHookWrite {
   url: string;
   token: string;
+  description?: string;
   issues_events: boolean;
   merge_requests_events: boolean;
   note_events: boolean;
@@ -496,10 +535,26 @@ interface GitlabHookWrite {
 export async function ensureGitlabIssuesHook(
   accessToken: string,
   projectId: string,
-  opts: { enabled?: boolean; secret: string },
+  opts: { enabled?: boolean; secret: string; source?: string | null },
 ): Promise<string | null> {
   requireCapability("gitlab");
-  const webhookUrl = `${SITE_URL}/api/webhooks/gitlab`;
+  // RELAY mode (docs/managed-forge-relay-plan.md): the hook points at Cloud's
+  // relay receiver instead of the instance origin — Cloud re-signs and fans
+  // deliveries out with the SAME per-repo secret, so the receiver is
+  // unchanged. Hook identification switches from exact URL to the stable
+  // description marker: without it, flipping between local and relay would
+  // create a DUPLICATE hook (and duplicate deliveries, one of which fails
+  // signature verification at the instance).
+  //
+  // Relay-ness is a property of the CONNECTION (its `source` marker), not of
+  // the instance configuration: on an instance that also serves local GitLab
+  // apps, local repositories must keep their instance-pointed hook and never
+  // leak their name or hook secret to Cloud.
+  const relayed = opts.source === "relay" && isForgeRelayClientConfigured();
+  const relayConfig = relayed ? forgeRelayConfig() : null;
+  const webhookUrl = relayConfig
+    ? `${relayConfig.url.replace(/\/$/, "")}/api/relay/gitlab/webhook`
+    : `${SITE_URL}/api/webhooks/gitlab`;
   const secret = opts.secret;
 
   const base = `${GITLAB_API_BASE}/projects/${encodeURIComponent(projectId)}/hooks`;
@@ -509,7 +564,9 @@ export async function ensureGitlabIssuesHook(
     throw new Error(data.message || `list hooks failed (${listResponse.status})`);
   }
   const hooks = (await listResponse.json()) as GitlabHook[];
-  const existing = hooks.find((h) => h.url === webhookUrl);
+  const existing = hooks.find(
+    (h) => h.description === GITLAB_HOOK_MARKER || h.url === webhookUrl,
+  );
 
   const write = async (url: string, method: "POST" | "PUT", body: GitlabHookWrite) => {
     const response = await fetch(url, {
@@ -527,14 +584,23 @@ export async function ensureGitlabIssuesHook(
     return data.id != null ? String(data.id) : null;
   };
 
+  const finish = async (hookId: string | null): Promise<string | null> => {
+    // The per-repo secret is shared with Cloud at registration time AND on
+    // every rotation — this function IS both paths.
+    if (relayConfig) await pushGitlabHookSecret(projectId, secret);
+    return hookId;
+  };
+
   if (!existing) {
     // Nothing to create for a simple deactivation — nor for a rotation, which
     // only makes sense on an already installed hook.
     if (opts.enabled !== true) return null;
-    return write(base, "POST", {
-      url: webhookUrl,
-      token: secret,
-      issues_events: true,
+    return finish(
+      await write(base, "POST", {
+        url: webhookUrl,
+        token: secret,
+        description: GITLAB_HOOK_MARKER,
+        issues_events: true,
       merge_requests_events: true,
       // MR comments (thread message, line remark) go into
       // the ticket activity log — GitLab only delivers them under this
@@ -549,12 +615,14 @@ export async function ensureGitlabIssuesHook(
       pipeline_events: true,
       push_events: false,
       enable_ssl_verification: true,
-    });
+    }),
+    );
   }
 
   await write(`${base}/${existing.id}`, "PUT", {
     url: webhookUrl,
     token: secret,
+    description: GITLAB_HOOK_MARKER,
     // Omitted = secret rotation: project setting is not the issue,
     // we put back what the hook already carried.
     issues_events: opts.enabled ?? existing.issues_events ?? false,
@@ -570,7 +638,7 @@ export async function ensureGitlabIssuesHook(
     push_events: false,
     enable_ssl_verification: true,
   });
-  return String(existing.id);
+  return finish(String(existing.id));
 }
 
 /**
@@ -599,7 +667,17 @@ export async function rotateGitlabWebhookSecret(params: {
       externalRepoId: params.externalRepoId,
     });
     const token = await getGitlabAccessToken(params.connectionId);
-    await ensureGitlabIssuesHook(token, params.externalRepoId, { secret });
+    // The rotation must preserve the hook's relay-ness: the source marker of
+    // the connection decides where the hook points and whether the secret is
+    // shared with Cloud.
+    const supabase = getServiceClient();
+    const { data: connection } = await supabase
+      .from("git_connections")
+      .select("source")
+      .eq("id", params.connectionId)
+      .maybeSingle();
+    const source = (connection as { source: string | null } | null)?.source ?? null;
+    await ensureGitlabIssuesHook(token, params.externalRepoId, { secret, source });
     console.info(
       `[gitlab-app] webhook secret rotated for project ${params.externalRepoId}`,
     );

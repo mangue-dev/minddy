@@ -208,4 +208,83 @@ describe("resolveCapabilities", () => {
     expect(resolveCapabilities({ ...core, CRON_SECRET: "secret" }).scheduler)
       .toMatchObject({ state: "external", configured: true });
   });
+
+  it("serves git providers through the managed forge relay only when fully configured", () => {
+    const relay = {
+      MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
+      MINDDY_FORGE_RELAY_INSTANCE_ID: "instance-id",
+      MINDDY_FORGE_RELAY_SECRET: "instance-secret",
+      GIT_STATE_SECRET: "state-secret",
+      // Relayed tokens are stored encrypted instance-side.
+      GIT_TOKEN_ENCRYPTION_SECRET: "x".repeat(32),
+    };
+    const capabilities = resolveCapabilities({ ...core, ...relay });
+
+    for (const id of ["github", "gitlab"] as const) {
+      expect(capabilities[id]).toMatchObject({
+        requirement: "replaceable",
+        state: "ready",
+        configured: true,
+      });
+      expect(capabilities[id].diagnostic).toContain("managed forge relay");
+    }
+
+    // Without the token encryption secret the GitLab relay path is
+    // INCOMPLETE: brokered tokens could not be stored at handoff.
+    const withoutEncryption = resolveCapabilities({
+      ...core,
+      ...relay,
+      GIT_TOKEN_ENCRYPTION_SECRET: undefined,
+    });
+    expect(withoutEncryption.github).toMatchObject({ state: "ready" });
+    expect(withoutEncryption.gitlab).toMatchObject({
+      state: "incomplete",
+      missing: ["GIT_TOKEN_ENCRYPTION_SECRET"],
+    });
+  });
+
+  it("keeps the operator-owned app ahead of the relay and stays disabled without either", () => {
+    const relay = {
+      MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
+      MINDDY_FORGE_RELAY_INSTANCE_ID: "instance-id",
+      MINDDY_FORGE_RELAY_SECRET: "instance-secret",
+      GIT_STATE_SECRET: "state-secret",
+      GIT_TOKEN_ENCRYPTION_SECRET: "x".repeat(32),
+      GITHUB_APP_ID: "1",
+      GITHUB_APP_SLUG: "example-app",
+      GITHUB_APP_PRIVATE_KEY: "private-key",
+    };
+    const local = resolveCapabilities({ ...core, ...relay });
+    expect(local.github).toMatchObject({
+      requirement: "optional",
+      state: "ready",
+      diagnostic: expect.stringContaining("operator-owned app"),
+    });
+    expect(local.gitlab.diagnostic).toContain("managed forge relay");
+
+    const absent = resolveCapabilities(core);
+    expect(absent.github.state).toBe("disabled");
+    expect(absent.gitlab.state).toBe("disabled");
+  });
+
+  it("reports an incomplete relay configuration instead of pretending readiness", () => {
+    const capabilities = resolveCapabilities({
+      ...core,
+      MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
+      GIT_STATE_SECRET: "state-secret",
+    });
+    expect(capabilities.github.state).toBe("disabled");
+    expect(capabilities.gitlab.state).toBe("disabled");
+
+    const missingState = resolveCapabilities({
+      ...core,
+      MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
+      MINDDY_FORGE_RELAY_INSTANCE_ID: "instance-id",
+      MINDDY_FORGE_RELAY_SECRET: "instance-secret",
+    });
+    expect(missingState.github).toMatchObject({
+      state: "incomplete",
+      missing: ["GIT_STATE_SECRET"],
+    });
+  });
 });

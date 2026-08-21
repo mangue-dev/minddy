@@ -50,6 +50,7 @@ export function resolveAgentExecutionBackend(
 }
 
 import { resolveDeploymentEdition } from "@/lib/env";
+import { resolveForgeRelayConfig } from "@/lib/forge-relay";
 
 const present = (env: CapabilityEnvironment, key: string): boolean =>
   Boolean(env[key]?.trim());
@@ -299,6 +300,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
   if (!present(env, "APNS_BUNDLE_ID")) {
     apnsMissing.push("APNS_BUNDLE_ID");
   }
+  const gitStateMissing = missing(env, ["GIT_STATE_SECRET"]);
   const githubMissing = missing(env, [
     "GITHUB_APP_ID",
     "GITHUB_APP_SLUG",
@@ -326,6 +328,59 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       diagnostic:
         absent.length === 0 ? ready : `${off} Missing: ${absent.join(", ")}.`,
     });
+
+  /**
+   * A git provider served either by the operator-owned app (local credentials,
+   * precedence for new connections when both are configured) or by the
+   * managed forge relay (docs/managed-forge-relay-plan.md). The relay is a
+   * REPLACEABLE provider: an absent relay configuration never activates it —
+   * the capability simply stays disabled, exactly as with a missing local
+   * app. Variables that stay instance-side in relay mode (`relayMissing`,
+   * e.g. the git state signing secret) keep being required there too. Note
+   * this is the CONFIGURATION-level view: each connection also carries a
+   * `source` marker, and token routing follows the channel the connection was
+   * actually established through until it is reconnected.
+   */
+  const gitProvider = (
+    id: CapabilityId,
+    localMissing: string[],
+    relayMissing: string[],
+    localReady: string,
+    localOff: string,
+    relayReady: string,
+  ): CapabilityStatus => {
+    if (localMissing.length === 0) {
+      return status({
+        id,
+        requirement: "optional",
+        state: "ready",
+        diagnostic: localReady,
+      });
+    }
+    if (resolveForgeRelayConfig(env)) {
+      return relayMissing.length === 0
+        ? status({
+            id,
+            requirement: "replaceable",
+            state: "ready",
+            diagnostic: relayReady,
+          })
+        : status({
+            id,
+            requirement: "replaceable",
+            state: "incomplete",
+            missing: relayMissing,
+            diagnostic: `Managed forge relay selected but configuration is missing: ${relayMissing.join(", ")}.`,
+          });
+    }
+    return status({
+      id,
+      requirement: "optional",
+      state: "disabled",
+      missing: localMissing,
+      diagnostic: `${localOff} Missing: ${localMissing.join(", ")}.`,
+    });
+  };
 
   return {
     supabase,
@@ -384,17 +439,25 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       "APNs is configured.",
       "APNs is disabled; no connection to Apple is opened.",
     ),
-    github: optional(
+    github: gitProvider(
       "github",
       githubMissing,
-      "GitHub App integration is configured.",
+      gitStateMissing,
+      "GitHub App integration is configured (operator-owned app).",
       "GitHub integration is hidden because its configuration is absent or incomplete.",
+      "GitHub integration is served by the managed forge relay.",
     ),
-    gitlab: optional(
+    gitlab: gitProvider(
       "gitlab",
       gitlabMissing,
-      "GitLab OAuth integration is configured.",
+      // Relayed tokens are stored instance-side (encrypted at rest), so the
+      // relay path requires the same encryption secret as the local one —
+      // without it the connect flow would fail at encrypt time after Cloud
+      // had already consumed the brokered delivery.
+      [...gitStateMissing, ...(gitlabSecret ? [] : ["GIT_TOKEN_ENCRYPTION_SECRET"])],
+      "GitLab OAuth integration is configured (operator-owned app).",
       "GitLab integration is hidden because its configuration is absent or incomplete.",
+      "GitLab integration is served by the managed forge relay.",
     ),
   };
 }

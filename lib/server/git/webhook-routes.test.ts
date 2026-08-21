@@ -112,18 +112,32 @@ vi.mock("@/lib/server/agent/pr-activity", () => ({
 vi.mock("@/lib/server/agent/pr-opened-notify", () => ({
   notifyPullRequestOpened: async () => {},
 }));
+const findPullRequestByNumber = vi.fn(async (): Promise<Record<string, unknown> | null> => null);
 vi.mock("@/lib/server/agent/pull-requests", () => ({
-  findPullRequestByNumber: async () => null,
+  findPullRequestByNumber: (...a: unknown[]) => findPullRequestByNumber(...(a as [])),
   findPullRequestsByHeadSha: async () => [],
   resolveIssueForPr: async () => null,
   upsertPullRequest: async () => null,
 }));
+const handleForgeNumoMention = vi.fn(async () => {});
 vi.mock("@/lib/server/agent/pr-mention", () => ({
-  handleForgeNumoMention: async () => {},
+  handleForgeNumoMention: (...a: unknown[]) => handleForgeNumoMention(...(a as [])),
 }));
 vi.mock("@/lib/server/agent/pr-live", () => ({
   broadcastPrChanged: () => {},
   broadcastPrChangedByNumber: async () => {},
+}));
+
+// Managed forge relay (docs/managed-forge-relay-plan.md): off by default in
+// this file (self-hosted behavior); the fan-out suite flips it on.
+let managedForge = false;
+const enqueueRelayDeliveryForPayload = vi.fn(async (): Promise<string | null> => null);
+vi.mock("@/lib/managed-services", () => ({
+  isManagedForgeEnabled: () => managedForge,
+}));
+vi.mock("@/lib/server/forge-relay/fanout", () => ({
+  enqueueRelayDeliveryForPayload: (...args: unknown[]) =>
+    enqueueRelayDeliveryForPayload(...(args as [])),
 }));
 
 const { ensureRepoWebhookSecret } = await import(
@@ -190,11 +204,14 @@ function link(overrides: Row = {}): Row {
 beforeEach(() => {
   vi.clearAllMocks();
   verifyGithubSignature.mockReturnValue(true);
+  managedForge = false;
+  enqueueRelayDeliveryForPayload.mockResolvedValue(null);
   linkRows = [link()];
   deliveries = [];
   process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
   delete process.env.GITLAB_WEBHOOK_SECRET;
   process.env.GITHUB_WEBHOOK_SECRET = "github-app-secret";
+  delete process.env.MINDDY_FORGE_RELAY_WEBHOOK_SECRET;
 });
 
 describe("POST /api/webhooks/gitlab", () => {
@@ -340,5 +357,107 @@ describe("POST /api/webhooks/github", () => {
     expect(syncGithubIssueDependency).toHaveBeenCalledWith(
       expect.objectContaining({ blockingNumber: 7, blockedNumber: 8 }),
     );
+  });
+});
+
+describe("POST /api/webhooks/github — relayed deliveries", () => {
+  function relayedRequest(opts: { deliveryId?: string } = {}) {
+    return new Request("https://minddy.app/api/webhooks/github", {
+      method: "POST",
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-github-event": "issue_comment",
+        "x-hub-signature-256": "sha256=whatever",
+        "x-github-delivery": opts.deliveryId ?? crypto.randomUUID(),
+        "x-minddy-relay": "1",
+      }),
+      body: JSON.stringify(GITHUB_ISSUE),
+    }) as unknown as Parameters<typeof githubPOST>[0];
+  }
+
+  it("verifies a relayed delivery against the RELAY secret, never the local app one", async () => {
+    process.env.MINDDY_FORGE_RELAY_WEBHOOK_SECRET = "relay-webhook-secret";
+    await githubPOST(relayedRequest());
+    expect(verifyGithubSignature).toHaveBeenCalledWith(
+      expect.any(String),
+      "sha256=whatever",
+      "relay-webhook-secret",
+    );
+  });
+
+  it("keeps verifying DIRECT deliveries against GITHUB_WEBHOOK_SECRET", async () => {
+    process.env.MINDDY_FORGE_RELAY_WEBHOOK_SECRET = "relay-webhook-secret";
+    await githubPOST(githubRequest());
+    expect(verifyGithubSignature).toHaveBeenCalledWith(
+      expect.any(String),
+      "sha256=whatever",
+      "github-app-secret",
+    );
+  });
+
+  it("fails closed for a relayed delivery when only the local app secret exists", async () => {
+    // The editions rule: relay mode reads ONLY relay variables.
+    const response = await githubPOST(relayedRequest());
+    expect(response.status).toBe(503);
+    expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
+  });
+
+  it("fans out to the claiming instance on Cloud and skips local processing", async () => {
+    managedForge = true;
+    enqueueRelayDeliveryForPayload.mockResolvedValue("instance-1");
+    const response = await githubPOST(githubRequest());
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, relayed: true });
+    expect(enqueueRelayDeliveryForPayload).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "github" }),
+    );
+    expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
+  });
+
+  it("processes unclaimed installations locally even with the managed forge on", async () => {
+    managedForge = true;
+    enqueueRelayDeliveryForPayload.mockResolvedValue(null);
+    const response = await githubPOST(githubRequest());
+    expect(response.status).toBe(200);
+    expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("triggers the @numo review from a verified relayed mention (end-to-end chain)", async () => {
+    // The full Phase-4 promise: a relayed `@numo` mention reaches the instance
+    // receiver and triggers the agent exactly like a direct delivery.
+    process.env.MINDDY_FORGE_RELAY_WEBHOOK_SECRET = "relay-webhook-secret";
+    findPullRequestByNumber.mockResolvedValue({
+      id: "pr-1",
+      issue_id: "issue-1",
+      number: 7,
+      repo_full_name: "acme/app",
+    });
+
+    const response = await githubPOST(
+      new Request("https://minddy.app/api/webhooks/github", {
+        method: "POST",
+        headers: new Headers({
+          "content-type": "application/json",
+          "x-github-event": "issue_comment",
+          "x-hub-signature-256": "sha256=whatever",
+          "x-github-delivery": crypto.randomUUID(),
+          "x-minddy-relay": "1",
+        }),
+        body: JSON.stringify({
+          action: "created",
+          repository: { id: 9001, full_name: "acme/app" },
+          issue: { number: 7, pull_request: { url: "https://github.com/acme/app/pull/7" } },
+          comment: {
+            id: 22,
+            body: "@numo what happened here?",
+            user: { login: "octocat" },
+            created_at: "2026-08-19T12:00:00Z",
+          },
+        }),
+      }) as unknown as Parameters<typeof githubPOST>[0],
+    );
+
+    expect(response.status).toBe(200);
+    expect(handleForgeNumoMention).toHaveBeenCalledTimes(1);
   });
 });

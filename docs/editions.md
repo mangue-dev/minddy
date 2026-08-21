@@ -58,6 +58,18 @@ minddy are explicit opt-ins: an environment key alone does not activate them.
   with `MINDDY_PUBLIC_VERCEL_ANALYTICS=1`.
 - Built-in Git providers target `github.com` and `gitlab.com`. Self-hosted
   forges are not supported until a configurable provider exists.
+- The managed forge relay (docs/managed-forge-relay-plan.md) lets a self-hosted
+  instance use the GitHub App and GitLab OAuth app operated by minddy instead
+  of operator-owned apps. It activates only with `MINDDY_FORGE_RELAY_URL` +
+  `MINDDY_FORGE_RELAY_INSTANCE_ID` + `MINDDY_FORGE_RELAY_SECRET` and a
+  completed instance claim; the Cloud side of the relay additionally requires
+  `MINDDY_EDITION=cloud` and `MINDDY_MANAGED_FORGE=1` (the relay API —
+  instance registry, token minting, link mirror — lives in this codebase and
+  answers 503 without that gate). An operator-owned app, when configured,
+  takes precedence for new connections — an existing connection keeps the
+  channel it was established through until it is reconnected via the other
+  one. An absent relay configuration
+  stays disabled; it does not fall back to Minddy infrastructure.
 
 Old deductions based on Vercel deployment or origin
 `*.minddy.app` no longer selects managed services. Cloud deployment
@@ -98,6 +110,7 @@ partial configurations are tested as unavailable capacities.
 | `partial-billing.env` | Billing is announced `incomplete`, missing variables are listed and the webhook responds `503`. |
 | `partial-ai.env` | Managed AI is announced `incomplete` and the runtime refuses any platform fallback. |
 | `implicit-identifiers.env` | Domain `minddy.app`, Vercel, branch `production`, client identifier and keys present remain self-hosted without opt-in. |
+| `managed-forge.env` | The instance starts without any operator-owned forge app; GitHub and GitLab are announced as served by the managed forge relay, and no local app variable is read. |
 
 The integration test covers together `lib/managed-services.ts`, the catalog of
 capabilities, `lib/server/entitlements.ts`, the Stripe adapter and webhook,

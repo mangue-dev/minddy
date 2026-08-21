@@ -71,12 +71,15 @@ export interface IssueSyncTarget {
   installationId: number | null;
   externalRepoId: string;
   repoFullName: string | null;
+  /** "relay" when the connection was established through the managed forge
+   * relay — decides whether GitLab hook provisioning points at Cloud. */
+  connectionSource?: string | null;
   /** The owner who linked the repository — technical actor of the entries. */
   createdBy: string | null;
 }
 
 const TARGET_COLUMNS =
-  "id, project_id, provider, connection_id, installation_id, external_repo_id, repo_full_name, created_by";
+  "id, project_id, provider, connection_id, installation_id, external_repo_id, repo_full_name, created_by, git_connections(source)";
 
 type TargetRow = {
   id: string;
@@ -87,6 +90,7 @@ type TargetRow = {
   external_repo_id: string;
   repo_full_name: string | null;
   created_by: string | null;
+  git_connections?: { source: string | null } | { source: string | null }[] | null;
 };
 
 const toTarget = (row: TargetRow): IssueSyncTarget => ({
@@ -97,6 +101,10 @@ const toTarget = (row: TargetRow): IssueSyncTarget => ({
   installationId: row.installation_id,
   externalRepoId: row.external_repo_id,
   repoFullName: row.repo_full_name,
+  // Embedded to-one relationship: object at runtime, cast via unknown.
+  connectionSource: Array.isArray(row.git_connections)
+    ? row.git_connections[0]?.source ?? null
+    : row.git_connections?.source ?? null,
   createdBy: row.created_by,
 });
 

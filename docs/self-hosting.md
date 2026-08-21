@@ -28,11 +28,29 @@ Storage, and Realtime.
 | Application email | Resend, explicitly configured, or no provider; `console` is development-only | No |
 | AI | Per-user BYOK/local provider, or the managed OpenRouter mode | No |
 | Code agent | Desktop-local runtime, built-in self-hosted Docker sandboxes, or Vercel Sandbox | Yes in the reference server installation |
-| GitHub, GitLab, application email, Web Push, scheduled routines | Operator-owned accounts only | No |
+| GitHub, GitLab, application email, Web Push, scheduled routines | Operator-owned accounts only (GitHub/GitLab may instead use the managed forge relay, explicitly opted in) | No |
 
 GitHub integration targets `github.com` and GitLab integration targets
 `gitlab.com`. GitHub Enterprise Server and self-managed GitLab are not silently
 substituted and are currently unsupported by these adapters.
+
+Instead of creating an operator-owned GitHub App and GitLab OAuth app, an
+instance may opt in to the managed forge relay operated by minddy
+(docs/managed-forge-relay-plan.md): `MINDDY_FORGE_RELAY_URL` +
+`MINDDY_FORGE_RELAY_INSTANCE_ID` + `MINDDY_FORGE_RELAY_SECRET`, with instance
+credentials issued from the operator's minddy Cloud account. Connecting GitHub
+goes through a claim flow — the instance hands the operator a claim URL on the
+relay, the operator installs the managed GitHub App, and the instance stores
+the connection flagged as relay-sourced. The relay is a
+replaceable provider: it activates only with the complete configuration and a
+completed claim, an operator-owned app takes precedence for new connections
+(an existing connection keeps the channel it was established through until it
+is reconnected via the other one), and the
+self-hosting doctor reports which mode is active ("managed forge relay",
+"operator-owned app", or "disabled"). GitHub webhooks for relayed
+installations are fanned out by the relay to `MINDDY_FORGE_RELAY_WEBHOOK_SECRET`-signed
+deliveries on this instance's `/api/webhooks/github`; direct deliveries keep
+verifying against `GITHUB_WEBHOOK_SECRET`.
 
 Do not configure a Minddy Cloud URL, key, sender address, analytics host, VAPID
 subject, or Apple bundle ID on a third-party instance. An absent optional
@@ -61,8 +79,8 @@ This table is the short operational classification.
 | Required to run a deployed instance | `MINDDY_PUBLIC_APP_URL`, `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the selected public HTTPS or private HTTP origin. Copy the Supabase API URL, anon key, and service-role key from Supabase Cloud or the selected stack. Never expose the service-role key to a browser. |
 | Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET`, `AGENT_RUNNER_SECRET` | The guided installers write missing values without replacing existing ones. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
 | Recommended instance identity | `MINDDY_PUBLIC_SITE_NAME`, `MINDDY_PUBLIC_CONTACT_EMAIL`, `ADMIN_EMAILS`, `OAUTH_ISSUER` | Choose operator-owned public values. `OAUTH_ISSUER` is normally empty and is only needed when OAuth/MCP is intentionally published at an origin different from the app origin. |
-| Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, Vercel domain variables, PostHog pairs, VAPID/APNs variables, `OPENROUTER_API_KEY`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. |
-| Cloud-reserved settings | `MINDDY_MANAGED_AI`, `MINDDY_MANAGED_BILLING`, Stripe price/key variables, `MINDDY_DESKTOP_FEED_URL`, `BLOB_READ_WRITE_TOKEN`, `APPLE_KEYCHAIN_PROFILE` | Leave absent or set the two managed flags to `0` when self-hosting. They are for Minddy-operated managed services, release distribution, or build infrastructure—not prerequisites for the open-source core. |
+| Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, forge relay variables (`MINDDY_FORGE_RELAY_URL`, `MINDDY_FORGE_RELAY_INSTANCE_ID`, `MINDDY_FORGE_RELAY_SECRET`), Vercel domain variables, PostHog pairs, VAPID/APNs variables, `OPENROUTER_API_KEY`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. |
+| Cloud-reserved settings | `MINDDY_MANAGED_AI`, `MINDDY_MANAGED_BILLING`, `MINDDY_MANAGED_FORGE`, Stripe price/key variables, `MINDDY_DESKTOP_FEED_URL`, `BLOB_READ_WRITE_TOKEN`, `APPLE_KEYCHAIN_PROFILE` | Leave absent or set the managed flags to `0` when self-hosting. They are for Minddy-operated managed services, release distribution, or build infrastructure—not prerequisites for the open-source core. |
 
 `SUPABASE_SERVICE_ROLE_KEY` is required when `NODE_ENV=production`. The
 server installer always creates the AI-key, feedback-SSO, runner, and scheduler

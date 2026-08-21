@@ -25,7 +25,7 @@ describe("ordonnanceur facultatif", () => {
       readFileSync(new URL("../../vercel.json", import.meta.url), "utf8"),
     ) as { crons?: unknown[] };
 
-    expect(config.crons).toHaveLength(8);
+    expect(config.crons).toHaveLength(9);
   });
 
   it("laisse la route cron inerte sans CRON_SECRET", async () => {

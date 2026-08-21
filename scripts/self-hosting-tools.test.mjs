@@ -20,7 +20,7 @@ import {
   recordCheckpoint,
   renderEnvironment,
 } from "./self-hosting-install.mjs";
-import { compatibilityFinding, configFindings, disabledCapabilities, parseArgs as parseDoctorArgs, redact } from "./self-hosting-doctor.mjs";
+import { compatibilityFinding, configFindings, disabledCapabilities, forgeAccessFinding, parseArgs as parseDoctorArgs, redact } from "./self-hosting-doctor.mjs";
 import { maintenanceMessage, parseArgs as parseMaintenanceArgs } from "./self-hosting-maintenance.mjs";
 
 test("the installer creates a readable self-hosted configuration with integrations disabled", () => {
@@ -195,4 +195,30 @@ test("maintenance commands remain explicit safety gates", () => {
   assert.equal(options.confirmBlankTarget, true);
   assert.match(maintenanceMessage(options, { MINDDY_RELEASE: "0.10.19" }), /Restore preflight/);
   assert.throws(() => maintenanceMessage({ action: "restore", backupDir: "/tmp/backup" }, { MINDDY_RELEASE: "0.10.19" }), /confirm-blank-target/);
+});
+
+test("the doctor names the forge access mode: relay, operator-owned app, or disabled", () => {
+  const relay = {
+    MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
+    MINDDY_FORGE_RELAY_INSTANCE_ID: "instance-id",
+    MINDDY_FORGE_RELAY_SECRET: "instance-secret",
+    MINDDY_FORGE_RELAY_WEBHOOK_SECRET: "x".repeat(32),
+    GIT_STATE_SECRET: "state-secret",
+  };
+  assert.equal(forgeAccessFinding(relay).detail, "managed forge relay (github, gitlab); no operator-owned app variables are read.");
+  assert.equal(
+    forgeAccessFinding({ ...relay, GITHUB_APP_ID: "1", GITHUB_APP_SLUG: "app", GITHUB_APP_PRIVATE_KEY: "key" }).detail,
+    "operator-owned app (GitHub).",
+  );
+  assert.equal(forgeAccessFinding({}).detail, "disabled: no operator-owned forge app and no managed forge relay.");
+  assert.equal(forgeAccessFinding({ MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app" }).detail, "forge relay configuration is incomplete; forge integrations stay disabled.");
+  assert.equal(forgeAccessFinding({ ...relay, GIT_STATE_SECRET: "" }).state, "fail");
+  assert.equal(
+    forgeAccessFinding({ ...relay, MINDDY_FORGE_RELAY_WEBHOOK_SECRET: "short" }).state,
+    "fail",
+  );
+  assert.equal(
+    forgeAccessFinding({ ...relay, MINDDY_FORGE_RELAY_WEBHOOK_SECRET: "x".repeat(32) }).detail,
+    "managed forge relay (github, gitlab); no operator-owned app variables are read.",
+  );
 });

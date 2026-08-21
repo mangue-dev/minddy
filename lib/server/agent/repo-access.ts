@@ -2,8 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { getInstallationToken } from "@/lib/server/git/github-app";
-import { getGitlabAccessToken } from "@/lib/server/git/gitlab-app";
+import { forgeProviderForConnection } from "@/lib/server/git/forge-provider";
 import { GITLAB_HOST } from "@/lib/server/git/gitlab-rest";
 
 /**
@@ -94,10 +93,19 @@ interface GitLinkRow {
   repo_full_name: string | null;
   default_branch: string | null;
   project_id?: string;
+  /** Embedded from git_connections; PostgREST types it as an array, the
+   * runtime serves a to-one object. */
+  git_connections?: { source: string } | { source: string }[] | null;
+}
+
+function linkConnectionSource(row: GitLinkRow): string | null {
+  const embedded = row.git_connections;
+  if (!embedded) return null;
+  return Array.isArray(embedded) ? (embedded[0]?.source ?? null) : embedded.source;
 }
 
 const GIT_LINK_COLUMNS =
-  "id, provider, connection_id, installation_id, repo_full_name, default_branch";
+  "id, provider, connection_id, installation_id, repo_full_name, default_branch, git_connections(source)";
 
 /**
  * Clone target of the project, or null if it has no repository linked to it. Raise if the link
@@ -224,6 +232,11 @@ async function targetFromLink(
     throw new Error("Project git link is missing repo_full_name");
   }
 
+  // Token source behind the ForgeProvider seam (docs/managed-forge-relay-plan.md):
+  // the connection's `source` marker decides — "relay" connections mint their
+  // GitHub tokens through the Cloud control plane, everything else stays local.
+  const provider = forgeProviderForConnection(linkConnectionSource(row));
+
   if (row.provider === "github") {
     if (row.installation_id == null) {
       throw new Error("GitHub link is missing its installation id");
@@ -236,9 +249,12 @@ async function targetFromLink(
      * there is nothing to guess.
      */
     const repoName = row.repo_full_name.split("/").pop() ?? row.repo_full_name;
-    const { token } = await getInstallationToken(row.installation_id, {
-      repositories: [repoName],
-      permissions: GITHUB_PERMISSIONS_BY_ACCESS[access],
+    const { token } = await provider.getInstallationToken({
+      installationId: row.installation_id,
+      scope: {
+        repositories: [repoName],
+        permissions: GITHUB_PERMISSIONS_BY_ACCESS[access],
+      },
     });
     return {
       provider: "github",
@@ -252,7 +268,7 @@ async function targetFromLink(
   }
 
   if (row.provider === "gitlab") {
-    const token = await getGitlabAccessToken(row.connection_id);
+    const token = await provider.getGitlabAccessToken(row.connection_id);
     // Clone OAuth : user `oauth2`, mot de passe = l'access token (doc GitLab).
     const host = new URL(GITLAB_HOST).host;
     return {

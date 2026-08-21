@@ -15,6 +15,7 @@ describe("resolveManagedServices", () => {
     expect(resolveManagedServices({ ...stripe, OPENROUTER_API_KEY: "or-key" })).toEqual({
       billing: false,
       ai: false,
+      forge: false,
     });
   });
 
@@ -27,14 +28,14 @@ describe("resolveManagedServices", () => {
         ...stripe,
         OPENROUTER_API_KEY: "or-key",
       }),
-    ).toEqual({ billing: true, ai: true });
+    ).toEqual({ billing: true, ai: true, forge: false });
     expect(
       resolveManagedServices({
         MINDDY_EDITION: "cloud",
         MINDDY_MANAGED_BILLING: "1",
         MINDDY_MANAGED_AI: "1",
       }),
-    ).toEqual({ billing: false, ai: false });
+    ).toEqual({ billing: false, ai: false, forge: false });
   });
 
   it("does not activate managed services outside the explicit Cloud edition", () => {
@@ -48,6 +49,29 @@ describe("resolveManagedServices", () => {
         ...stripe,
         OPENROUTER_API_KEY: "or-key",
       }),
-    ).toEqual({ billing: false, ai: false });
+    ).toEqual({ billing: false, ai: false, forge: false });
+  });
+
+  it("activates the managed forge relay only with the Cloud flag and a relay URL", () => {
+    expect(
+      resolveManagedServices({
+        MINDDY_EDITION: "cloud",
+        MINDDY_MANAGED_FORGE: "1",
+      }),
+    ).toEqual({ billing: false, ai: false, forge: false });
+    expect(
+      resolveManagedServices({
+        MINDDY_EDITION: "self-hosted",
+        MINDDY_MANAGED_FORGE: "1",
+        MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
+      }),
+    ).toEqual({ billing: false, ai: false, forge: false });
+    expect(
+      resolveManagedServices({
+        MINDDY_EDITION: "cloud",
+        MINDDY_MANAGED_FORGE: "1",
+        MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
+      }),
+    ).toEqual({ billing: false, ai: false, forge: true });
   });
 });

@@ -14,6 +14,8 @@ const DEFAULT_DEPLOY_DIR = resolve(ROOT_DIR, "deploy/self-hosted");
 const OPTIONAL_INTEGRATIONS = [
   "MINDDY_MANAGED_AI",
   "MINDDY_MANAGED_BILLING",
+  "MINDDY_MANAGED_FORGE",
+  "MINDDY_FORGE_RELAY_URL",
   "STRIPE_SECRET_KEY",
   "POSTHOG_API_KEY",
   "RESEND_API_KEY",
@@ -87,6 +89,58 @@ export function disabledCapabilities(values) {
     const value = values[name]?.trim();
     return !value || value === "0" || value.toLowerCase() === "false";
   });
+}
+
+/**
+ * How this installation reaches github.com/gitlab.com: the managed forge relay,
+ * an operator-owned app, or nothing. The operator-owned app takes precedence
+ * for new connections when both are configured (existing connections keep the
+ * channel they were established through), mirroring `lib/capabilities.ts`.
+ */
+export function forgeAccessFinding(values) {
+  const relayConfigured = Boolean(
+    values.MINDDY_FORGE_RELAY_URL?.trim() &&
+      values.MINDDY_FORGE_RELAY_INSTANCE_ID?.trim() &&
+      values.MINDDY_FORGE_RELAY_SECRET?.trim(),
+  );
+  const githubLocal = Boolean(values.GITHUB_APP_ID?.trim() && values.GITHUB_APP_SLUG?.trim() && values.GITHUB_APP_PRIVATE_KEY?.trim());
+  const gitlabLocal = Boolean(values.GITLAB_OAUTH_CLIENT_ID?.trim() && values.GITLAB_OAUTH_CLIENT_SECRET?.trim());
+  if (githubLocal || gitlabLocal) {
+    return {
+      name: "Forge access",
+      state: "pass",
+      detail: `operator-owned app (${[githubLocal && "GitHub", gitlabLocal && "GitLab"].filter(Boolean).join(", ")}).`,
+    };
+  }
+  if (relayConfigured) {
+    const missingState = !values.GIT_STATE_SECRET?.trim();
+    const webhookSecret = values.MINDDY_FORGE_RELAY_WEBHOOK_SECRET?.trim() ?? "";
+    const missingWebhookSecret = !webhookSecret || webhookSecret.length < 32;
+    if (missingState || missingWebhookSecret) {
+      const missing = [
+        ...(missingState ? ["GIT_STATE_SECRET"] : []),
+        ...(missingWebhookSecret ? ["MINDDY_FORGE_RELAY_WEBHOOK_SECRET (32+ characters)"] : []),
+      ];
+      return {
+        name: "Forge access",
+        state: "fail",
+        detail: `managed forge relay is configured but missing: ${missing.join(", ")}.`,
+      };
+    }
+    return {
+      name: "Forge access",
+      state: "pass",
+      detail: "managed forge relay (github, gitlab); no operator-owned app variables are read.",
+    };
+  }
+  const partial = values.MINDDY_FORGE_RELAY_URL?.trim() || values.MINDDY_FORGE_RELAY_INSTANCE_ID?.trim() || values.MINDDY_FORGE_RELAY_SECRET?.trim();
+  return {
+    name: "Forge access",
+    state: "pass",
+    detail: partial
+      ? "forge relay configuration is incomplete; forge integrations stay disabled."
+      : "disabled: no operator-owned forge app and no managed forge relay.",
+  };
 }
 
 function composeFiles(options) {
@@ -210,6 +264,7 @@ export async function diagnose(options) {
   const runnerEnabled = Boolean(status.records?.some((record) => /agent-runner/.test(record.Service ?? record.Name ?? "")));
   findings.push({ name: "Agent runner", state: runnerEnabled ? "pass" : "fail", detail: runnerEnabled ? "server sandbox runner container is running." : "server sandbox runner container is missing." });
   findings.push(diskFinding(options.deployDir));
+  findings.push(forgeAccessFinding(values));
   findings.push({ name: "Optional capabilities", state: "pass", detail: `${disabledCapabilities(values).join(", ")} disabled or unconfigured.` });
   if (options.network) findings.push(...await networkFindings(values));
   return findings;

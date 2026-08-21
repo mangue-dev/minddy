@@ -3,6 +3,7 @@ import "server-only";
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
 import { capability, requireCapability } from "@/lib/server/capabilities";
 import { isForgeTokenCryptoConfigured } from "./token-crypto";
+import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 
 /**
  * GitHub App USER authorization (MIN-144) — tokens
@@ -46,13 +47,19 @@ function getClientSecret(): string {
  * `isGithubAppConfigured()`: an installation can work very well (connection
  * deposit, agent) without the App carrying a client id — this is even the state before
  * MIN-144. The UI uses this to not offer a button that would respond 400.
+ *
+ * RELAYED instances have no local client id/secret, but the managed forge
+ * relay brokers the OAuth dance for them — so a configured relay counts as
+ * deployed too. Token encryption is required in both cases: the tokens are
+ * stored instance-side either way.
  */
 export function isGithubUserAuthConfigured(): boolean {
+  if (!isForgeTokenCryptoConfigured()) return false;
+  if (isForgeRelayClientConfigured()) return true;
   return !!(
     capability("github").configured &&
     process.env.GITHUB_APP_CLIENT_ID &&
-    process.env.GITHUB_APP_CLIENT_SECRET &&
-    isForgeTokenCryptoConfigured()
+    process.env.GITHUB_APP_CLIENT_SECRET
   );
 }
 

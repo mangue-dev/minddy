@@ -99,6 +99,12 @@ export const SECRET_SPECS: SecretSpec[] = [
     purpose: "signature des webhooks GitHub",
   },
   {
+    name: "MINDDY_FORGE_RELAY_WEBHOOK_SECRET",
+    minLength: KEY_MIN,
+    requiredWhenDeployed: false,
+    purpose: "HMAC signature of relayed forge webhook fan-out (instance-generated)",
+  },
+  {
     name: "GITLAB_WEBHOOK_SECRET",
     minLength: KEY_MIN,
     requiredWhenDeployed: false,

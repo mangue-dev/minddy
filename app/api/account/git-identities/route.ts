@@ -11,6 +11,13 @@ import {
   isGithubUserAuthConfigured,
 } from "@/lib/server/git/github-user-auth";
 import {
+  forgeRelayConfig,
+  forgeRelaySigningKey,
+  isForgeRelayClientConfigured,
+} from "@/lib/server/forge-relay/client";
+import { signRelayUserState } from "@/lib/server/forge-relay/user-broker";
+import { signRelayGitlabState } from "@/lib/server/forge-relay/gitlab-broker";
+import {
   getGitlabAuthorizeUrl,
   isGitlabConfigured,
 } from "@/lib/server/git/gitlab-app";
@@ -97,6 +104,37 @@ export async function POST(request: NextRequest) {
   const rawOrigin = (body as { origin?: unknown }).origin;
   const origin =
     typeof rawOrigin === "string" && ORIGINS.has(rawOrigin) ? rawOrigin : "settings";
+
+  // RELAYED instances have no local GitHub client id/secret: the OAuth dance
+  // is brokered by the managed forge relay, which holds the app's registered
+  // user-callback URL (docs/managed-forge-relay-plan.md). The instance signs
+  // the authorization request with its relay key; storage and human gestures
+  // stay local (the 8h refresh grant runs Cloud-side for relayed identities).
+  if (provider === "github" && isForgeRelayClientConfigured()) {
+    const config = forgeRelayConfig();
+    const state = signRelayUserState({
+      userId: auth.user.id,
+      origin,
+      callbackOrigin: canonicalAppOrigin(),
+      privateKey: forgeRelaySigningKey(),
+    });
+    const url = `${config!.url.replace(/\/$/, "")}/api/relay/github/user-authorize?instance=${encodeURIComponent(config!.instanceId)}&state=${encodeURIComponent(state)}`;
+    return NextResponse.json({ url });
+  }
+
+  // Same broker for GitLab: the OAuth redirect URI is registered on Cloud.
+  // Tokens come back as a one-shot delivery, then live on the instance; their
+  // refresh grant runs Cloud-side (it needs the managed app's credentials).
+  if (provider === "gitlab" && isForgeRelayClientConfigured()) {
+    const config = forgeRelayConfig();
+    const state = signRelayGitlabState({
+      userId: auth.user.id,
+      callbackOrigin: canonicalAppOrigin(),
+      privateKey: forgeRelaySigningKey(),
+    });
+    const url = `${config!.url.replace(/\/$/, "")}/api/relay/gitlab/authorize?instance=${encodeURIComponent(config!.instanceId)}&state=${encodeURIComponent(state)}`;
+    return NextResponse.json({ url });
+  }
 
   const state = signGitLinkState({
     projectId: ACCOUNT_CONNECT_PROJECT,

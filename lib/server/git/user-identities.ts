@@ -8,6 +8,7 @@ import {
   refreshGithubUserToken,
   type GithubUserTokenSet,
 } from "./github-user-auth";
+import { refreshGithubUserTokensViaRelay } from "@/lib/server/forge-relay/token-refresh";
 
 /**
  * The PERSONAL git account of a minddy user (MIN-144), table
@@ -106,6 +107,10 @@ export async function upsertUserIdentity(params: {
   accountLogin: string | null;
   accountAvatarUrl: string | null;
   tokens: GithubUserTokenSet;
+  /** "relay" when the authorization was brokered by the managed forge relay —
+   * its refresh grant belongs to the managed app's client and must run
+   * Cloud-side (see `mintGithubUserToken`). */
+  source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
   const { data, error } = await supabase
@@ -123,6 +128,7 @@ export async function upsertUserIdentity(params: {
           : null,
         token_expires_at: params.tokens.expiresAt,
         oauth_scopes: params.tokens.scope,
+        source: params.source ?? "local",
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,provider" },
@@ -207,6 +213,9 @@ export async function deleteUserIdentity(
 
 interface TokenRow {
   id: string;
+  /** "relay" → the grant belongs to the managed app's client; its refresh
+   * must run Cloud-side (see `upsertUserIdentity`). */
+  source: string | null;
   account_login: string | null;
   account_avatar_url: string | null;
   access_token_encrypted: string | null;
@@ -222,7 +231,7 @@ async function loadTokenRow(
   const { data } = await supabase
     .from("git_user_identities")
     .select(
-      "id, account_login, account_avatar_url, access_token_encrypted, " +
+      "id, source, account_login, account_avatar_url, access_token_encrypted, " +
         "refresh_token_encrypted, token_expires_at",
     )
     .eq("user_id", userId)
@@ -321,7 +330,14 @@ async function mintGithubUserToken(
 
   let refreshed: GithubUserTokenSet;
   try {
-    refreshed = await refreshGithubUserToken(refreshToken);
+    // The refresh grant only works with the client that issued the
+    // authorization: a relayed identity must refresh through the relay (the
+    // local app's credentials would fail the grant, and relayed instances
+    // hold none anyway). Local identities keep refreshing locally.
+    refreshed =
+      row.source === "relay"
+        ? await refreshGithubUserTokensViaRelay(refreshToken)
+        : await refreshGithubUserToken(refreshToken);
   } catch (err) {
     // Single-use rotation race: another worker refreshed first. We
     // rereads; if the stored expiry has ADVANCED, its token is fresh — we take it back.

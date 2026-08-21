@@ -155,6 +155,8 @@ jobs:
             smoke: false
           - edition: minddy-cloud
             smoke: true
+          - edition: managed-forge
+            smoke: true
           - edition: partial-billing
             smoke: false
           - edition: partial-ai

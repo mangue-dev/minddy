@@ -176,12 +176,18 @@ export async function getUserConnection(
   userId: string,
   connectionId: string,
 ): Promise<
-  { id: string; provider: RepoProviderId; installation_id: number | null } | null
+  {
+    id: string;
+    provider: RepoProviderId;
+    installation_id: number | null;
+    /** "relay" when the connection was established through the managed forge relay. */
+    source: string | null;
+  } | null
 > {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("git_connections")
-    .select("id, provider, installation_id")
+    .select("id, provider, installation_id, source")
     .eq("id", connectionId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -190,6 +196,7 @@ export async function getUserConnection(
     id: data.id,
     provider: data.provider as RepoProviderId,
     installation_id: data.installation_id,
+    source: data.source ?? null,
   };
 }
 
@@ -223,6 +230,8 @@ export async function upsertGithubConnection(params: {
   accountLogin: string | null;
   accountType: string | null;
   repositorySelection: string | null;
+  /** "relay" when the installation was claimed through the managed forge relay. */
+  source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
   const nowIso = new Date().toISOString();
@@ -244,6 +253,11 @@ export async function upsertGithubConnection(params: {
         account_login: params.accountLogin,
         account_type: params.accountType,
         repository_selection: params.repositorySelection,
+        // The latest successful connection establishment defines the source:
+        // re-claiming a locally-connected installation through the relay (or
+        // the reverse) must flip the marker, or token mints keep routing to a
+        // provider the instance no longer owns.
+        source: params.source ?? "local",
         updated_at: nowIso,
       })
       .eq("id", existing.id);
@@ -259,6 +273,7 @@ export async function upsertGithubConnection(params: {
       account_login: params.accountLogin,
       account_type: params.accountType,
       repository_selection: params.repositorySelection,
+      source: params.source ?? "local",
     })
     .select("id")
     .single();
@@ -283,6 +298,10 @@ export async function upsertGitlabConnection(params: {
   providerAccountId: string;
   accountLogin: string | null;
   tokens: GitlabTokenSet;
+  /** "relay" when the OAuth dance was brokered by the managed forge relay —
+   * the token pair belongs to the managed app's client, so its refresh grant
+   * must run Cloud-side (see `getGitlabAccessToken`). */
+  source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
   const nowIso = new Date().toISOString();
@@ -306,6 +325,9 @@ export async function upsertGitlabConnection(params: {
       .from("git_connections")
       .update({
         account_login: params.accountLogin,
+        // Same rule as the GitHub upsert: the latest connection
+        // establishment defines which app owns the stored grant.
+        source: params.source ?? "local",
         ...tokenFields,
         updated_at: nowIso,
       })
@@ -320,6 +342,7 @@ export async function upsertGitlabConnection(params: {
       provider: "gitlab",
       provider_account_id: params.providerAccountId,
       account_login: params.accountLogin,
+      source: params.source ?? "local",
       ...tokenFields,
     })
     .select("id")

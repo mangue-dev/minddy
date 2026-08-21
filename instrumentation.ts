@@ -26,4 +26,12 @@ export async function register() {
   getDeploymentEdition();
   assertRuntimeConfig();
   assertSecretsAreStrong();
+
+  // Managed forge relay: register (or rotate) the webhook fan-out endpoint
+  // once per server instance. No-op unless the relay is configured; failures
+  // are logged, never fatal — the next startup retries.
+  const { ensureRelayWebhookRegistration } = await import(
+    "@/lib/server/forge-relay/webhook-registration"
+  );
+  await ensureRelayWebhookRegistration();
 }

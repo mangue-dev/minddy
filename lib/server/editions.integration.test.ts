@@ -76,11 +76,29 @@ const matrix = edition ? describe : describe.skip;
 
 matrix(`edition matrix: ${edition ?? "no fixture"}`, () => {
   it("resolves services and clearly announces partial capabilities", () => {
-    expect(managedServices()).toEqual({ billing: expectBilling, ai: expectAi });
+    expect(managedServices()).toEqual({
+      billing: expectBilling,
+      ai: expectAi,
+      forge: false,
+    });
 
     const capabilities = resolveCapabilities(process.env);
     expect(capabilities.managedBilling.configured).toBe(expectBilling);
     expect(capabilities.managedAi.configured).toBe(expectAi);
+
+    // The managed-forge fixture is a SELF-HOSTED instance using the relay:
+    // it operates no managed service itself, but its git providers are
+    // announced as served by the relay, never by a local app variable.
+    if (edition === "managed-forge") {
+      for (const id of ["github", "gitlab"] as const) {
+        expect(capabilities[id]).toMatchObject({
+          requirement: "replaceable",
+          state: "ready",
+          configured: true,
+        });
+        expect(capabilities[id].diagnostic).toContain("managed forge relay");
+      }
+    }
 
     const partial = process.env.MINDDY_TEST_PARTIAL;
     if (partial === "billing") {

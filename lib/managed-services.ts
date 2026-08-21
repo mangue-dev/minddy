@@ -12,6 +12,8 @@ export interface ManagedServiceEnvironment {
   MINDDY_EDITION?: string;
   MINDDY_MANAGED_BILLING?: string;
   MINDDY_MANAGED_AI?: string;
+  MINDDY_MANAGED_FORGE?: string;
+  MINDDY_FORGE_RELAY_URL?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRICE_ID_GO?: string;
@@ -24,6 +26,7 @@ export interface ManagedServiceEnvironment {
 export interface ManagedServices {
   billing: boolean;
   ai: boolean;
+  forge: boolean;
 }
 
 function enabled(value: string | undefined): boolean {
@@ -47,6 +50,11 @@ export function resolveManagedServices(env: ManagedServiceEnvironment): ManagedS
   return {
     billing: cloud && enabled(env.MINDDY_MANAGED_BILLING) && hasManagedBillingConfiguration(env),
     ai: cloud && enabled(env.MINDDY_MANAGED_AI) && Boolean(env.OPENROUTER_API_KEY),
+    // The managed forge relay (docs/managed-forge-relay-plan.md): the Cloud
+    // deployment operates the GitHub App / GitLab OAuth relay for opting-in
+    // self-hosted instances. Active only with the explicit flag AND a
+    // configured relay control-plane URL.
+    forge: cloud && enabled(env.MINDDY_MANAGED_FORGE) && Boolean(env.MINDDY_FORGE_RELAY_URL?.trim()),
   };
 }
 
@@ -55,6 +63,8 @@ export function managedServices(): ManagedServices {
     MINDDY_EDITION: process.env.MINDDY_EDITION,
     MINDDY_MANAGED_BILLING: process.env.MINDDY_MANAGED_BILLING,
     MINDDY_MANAGED_AI: process.env.MINDDY_MANAGED_AI,
+    MINDDY_MANAGED_FORGE: process.env.MINDDY_MANAGED_FORGE,
+    MINDDY_FORGE_RELAY_URL: process.env.MINDDY_FORGE_RELAY_URL,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     STRIPE_PRICE_ID_GO: process.env.STRIPE_PRICE_ID_GO,
@@ -71,4 +81,8 @@ export function isManagedBillingEnabled(): boolean {
 
 export function isManagedAiEnabled(): boolean {
   return managedServices().ai;
+}
+
+export function isManagedForgeEnabled(): boolean {
+  return managedServices().forge;
 }

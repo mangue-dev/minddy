@@ -339,6 +339,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         hookId = await ensureGitlabIssuesHook(token, link.externalRepoId, {
           enabled,
           secret,
+          // Relay-ness belongs to the connection: a local GitLab app on an
+          // instance that also uses the relay keeps its instance-pointed hook.
+          source: link.connectionSource ?? null,
         });
       } catch (err) {
         console.error("[git-link] gitlab hook failed:", (err as Error).message);

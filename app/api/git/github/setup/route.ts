@@ -4,9 +4,15 @@ import {
   readForgeCallbackSession,
   sessionMatchesState,
 } from "@/lib/server/git/callback-session";
+import { getServiceClient } from "@/lib/supabase-service";
 import { getInstallationAccount } from "@/lib/server/git/github-app";
 import { upsertGithubConnection } from "@/lib/server/git/connections";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { isManagedForgeEnabled } from "@/lib/managed-services";
+import {
+  bindRelayClaim,
+  verifyRelayClaimState,
+} from "@/lib/server/forge-relay/claims";
 
 /**
  * GET /api/git/github/setup — Setup URL de l'app GitHub (MIN-47).
@@ -17,10 +23,57 @@ import { canonicalAppOrigin } from "@/lib/server/app-origin";
  * compte enregistrer l'installation (MIN-324 — cf. callback-session.ts). On
  * checks both, we save the connection at account level, then we return
  * the user to the project settings to choose a repository.
+ *
+ * RELAY claims (docs/managed-forge-relay-plan.md): when the state is a
+ * forge-relay claim state, the installation is bound to the claiming INSTANCE
+ * (not to a Cloud user account) and the operator gets a plain confirmation
+ * page — no session applies, the operator's account lives on the instance.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const origin = canonicalAppOrigin();
+
+  const relayClaim = verifyRelayClaimState(searchParams.get("state"));
+  if (relayClaim) {
+    // Same kill switch as every other relay route (GA runbook commitment):
+    // the local flow below stays reachable, only claims are cut.
+    const failPage = (title: string, detail: string, status: number) =>
+      new NextResponse(
+        `<!doctype html><html><body style="font-family:system-ui;max-width:32rem;margin:4rem auto">
+          <h1>${title}</h1>${detail}
+        </body></html>`,
+        { status, headers: { "content-type": "text/html; charset=utf-8" } },
+      );
+    if (!isManagedForgeEnabled()) {
+      return failPage(
+        "GitHub claim failed",
+        "<p>The managed forge relay is not configured on Cloud.</p><p>Go back to your minddy instance and restart the connection.</p>",
+        503,
+      );
+    }
+    const installationId = Number(searchParams.get("installation_id"));
+    const binding = Number.isFinite(installationId) && installationId > 0
+      ? await bindRelayClaim({
+          instanceId: relayClaim.instanceId,
+          code: relayClaim.code,
+          installationId,
+        })
+      : { ok: false as const, status: 400, error: "Missing installation id" };
+    const title = binding.ok ? "GitHub connected" : "GitHub claim failed";
+    const detail = binding.ok
+      ? `<p>The installation <code>${binding.installationId}</code>${binding.accountLogin ? ` (${binding.accountLogin})` : ""} is now bound to your minddy instance. You can close this page and return to your instance.</p>`
+      : `<p>${binding.error}</p><p>Go back to your minddy instance and restart the connection.</p>`;
+    return new NextResponse(
+      `<!doctype html><html><body style="font-family:system-ui;max-width:32rem;margin:4rem auto">
+        <h1>${title}</h1>${detail}
+      </body></html>`,
+      {
+        status: binding.ok ? 200 : binding.status,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      },
+    );
+  }
+
   const { userId: sessionUserId, applyCookies } =
     await readForgeCallbackSession(request);
   const state = verifyGitLinkState(searchParams.get("state"));
@@ -62,6 +115,24 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // An installation CLAIMED by a relay instance must not become a Cloud
+    // connection: the webhook receiver routes claimed installations to their
+    // instance and skips local handlers, so the Cloud account would silently
+    // stop receiving PR and issue events.
+    const { data: relayClaimed } = await getServiceClient()
+      .from("forge_relay_installations")
+      .select("id")
+      .eq("installation_id", installationId)
+      .limit(1)
+      .maybeSingle();
+    if (relayClaimed) {
+      console.error(
+        "[git/github/setup] installation is claimed by a forge-relay instance",
+      );
+      return applyCookies(
+        NextResponse.redirect(new URL(`${base}&git=error`, origin)),
+      );
+    }
     const account = await getInstallationAccount(installationId);
     const connectionId = await upsertGithubConnection({
       // `state.userId` rather than `sessionUserId`: the guard above has them

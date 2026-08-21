@@ -34,6 +34,23 @@ vi.mock("@/lib/server/api-auth", () => ({
   }),
 }));
 
+// The setup route checks `forge_relay_installations` before storing a Cloud
+// connection (an installation claimed by an instance must not become a Cloud
+// connection). These tests exercise the LOCAL branch: no relay claims exist.
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: () => ({
+    from: () => {
+      const chain = {
+        select: () => chain,
+        eq: () => chain,
+        limit: () => chain,
+        maybeSingle: async () => ({ data: null }),
+      };
+      return chain;
+    },
+  }),
+}));
+
 const getInstallationAccount = vi.fn();
 const upsertGithubConnection = vi.fn();
 vi.mock("@/lib/server/git/github-app", () => ({

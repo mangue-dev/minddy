@@ -1,0 +1,131 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * Instance side of the installation claim
+ * (docs/managed-forge-relay-plan.md, "Installation claim"): `POST` hands the
+ * operator's browser a Cloud claim URL, `GET` polls the outcome and stores the
+ * local connection flagged `source: "relay"` — the marker that routes this
+ * connection's token mints to the relay provider.
+ */
+
+let relayConfigured = true;
+const relayCalls: { path: string; body: Record<string, unknown> }[] = [];
+let claimResult: { ok: boolean; error: string | null; data: unknown } = {
+  ok: true,
+  error: null,
+  data: { status: "pending" },
+};
+
+vi.mock("@/lib/server/api-auth", () => ({
+  getAuthedUser: async () => ({
+    ok: true as const,
+    user: { id: "operator-user-id" },
+    supabase: {},
+    response: null,
+  }),
+}));
+vi.mock("@/lib/server/forge-relay/client", () => ({
+  isForgeRelayClientConfigured: () => relayConfigured,
+  forgeRelayConfig: () =>
+    relayConfigured
+      ? {
+          url: "https://relay.example.com",
+          instanceId: "0f0e0d0c-0b0a-4948-8272-6d6f64656c79",
+          secret: "secret",
+        }
+      : null,
+  relayRequest: async (path: string, body: Record<string, unknown>) => {
+    relayCalls.push({ path, body });
+    return claimResult;
+  },
+}));
+
+const upsertGithubConnection = vi.fn();
+vi.mock("@/lib/server/git/connections", () => ({
+  upsertGithubConnection: (...args: unknown[]) => upsertGithubConnection(...args),
+}));
+
+const { POST: startClaim, GET: pollClaim } = await import(
+  "@/app/api/git/github/relay-claim/route"
+);
+
+const CODE = "c".repeat(64);
+
+beforeEach(() => {
+  relayConfigured = true;
+  relayCalls.length = 0;
+  claimResult = { ok: true, error: null, data: { status: "pending" } };
+  upsertGithubConnection.mockReset();
+});
+
+function getRequest(url: string): never {
+  // The route only reads `nextUrl`; a plain Request has none.
+  return { nextUrl: new URL(url) } as never;
+}
+
+describe("POST /api/git/github/relay-claim", () => {
+  it("hands back the Cloud claim URL and a single-use code", async () => {
+    const response = await startClaim(
+      new Request("http://localhost/api/git/github/relay-claim", { method: "POST" }) as never,
+    );
+    expect(response.status).toBe(200);
+    const { claimUrl, code } = (await response.json()) as { claimUrl: string; code: string };
+    expect(code).toMatch(/^[0-9a-f]{64}$/);
+    expect(claimUrl).toContain("https://relay.example.com/api/relay/github/claim?instance=");
+    expect(claimUrl).toContain(`code=${code}`);
+  });
+
+  it("refuses to start when the relay is not configured", async () => {
+    relayConfigured = false;
+    const response = await startClaim(
+      new Request("http://localhost/api/git/github/relay-claim", { method: "POST" }) as never,
+    );
+    expect(response.status).toBe(400);
+  });
+});
+
+describe("GET /api/git/github/relay-claim", () => {
+  it("reports pending without touching the local connections", async () => {
+    const response = await pollClaim(getRequest(`http://localhost/api/git/github/relay-claim?code=${CODE}`));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: "pending" });
+    expect(relayCalls).toEqual([
+      { path: "/api/relay/github/claim-result", body: { code: CODE } },
+    ]);
+    expect(upsertGithubConnection).not.toHaveBeenCalled();
+  });
+
+  it("stores the relayed connection on success", async () => {
+    upsertGithubConnection.mockResolvedValue("conn-relay-1");
+    claimResult = {
+      ok: true,
+      error: null,
+      data: { status: "claimed", installationId: 4242, accountLogin: "acme" },
+    };
+
+    const response = await pollClaim(getRequest(`http://localhost/api/git/github/relay-claim?code=${CODE}`));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: "connected", connectionId: "conn-relay-1" });
+    expect(upsertGithubConnection).toHaveBeenCalledWith({
+      userId: "operator-user-id",
+      installationId: 4242,
+      accountLogin: "acme",
+      accountType: null,
+      repositorySelection: null,
+      source: "relay",
+    });
+  });
+
+  it("surfaces a relay refusal instead of storing a half connection", async () => {
+    claimResult = { ok: false, error: "Relay instance is revoked", data: null };
+    const response = await pollClaim(getRequest(`http://localhost/api/git/github/relay-claim?code=${CODE}`));
+    expect(response.status).toBe(502);
+    expect(upsertGithubConnection).not.toHaveBeenCalled();
+  });
+
+  it("refuses a malformed claim code", async () => {
+    const response = await pollClaim(getRequest("http://localhost/api/git/github/relay-claim?code=short"));
+    expect(response.status).toBe(400);
+    expect(relayCalls).toHaveLength(0);
+  });
+});
