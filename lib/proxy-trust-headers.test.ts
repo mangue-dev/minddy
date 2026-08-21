@@ -30,7 +30,12 @@ type SetAll = (c: { name: string; value: string; options: CookieOptions }[]) => 
 
 /** What the lib would “render” to write on the next call to getSession. */
 let refreshed: { name: string; value: string; options: CookieOptions }[] = [];
-let session: { user: { id: string }; access_token?: string } | null = null;
+let session:
+  | {
+      user: { id: string; user_metadata?: Record<string, unknown> };
+      access_token?: string;
+    }
+  | null = null;
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (_url: string, _key: string, options: { cookies: { setAll: SetAll } }) => ({
@@ -87,12 +92,14 @@ describe("trusted headers sent by the client", () => {
         "x-minddy-public": "1",
         "x-minddy-locale": "fr",
         "x-minddy-route": "pricing",
+        "x-minddy-theme": "dark",
       }),
     );
 
     const forwarded = forwardedHeaders(response);
     expect(forwarded["x-minddy-locale"]).toBeUndefined();
     expect(forwarded["x-minddy-route"]).toBeUndefined();
+    expect(forwarded["x-minddy-theme"]).toBeUndefined();
     // `/f/` is a public site: the proxy sets the flag ITSELF. What
     // counts is that it comes from him — hence the systematic cleaning, including
     // where the final value is the same.
@@ -150,5 +157,65 @@ describe("cookies refreshed while reading the session (MIN-293)", () => {
     expect(response.cookies.get("sb-access-token")?.secure).toBe(
       process.env.NODE_ENV === "production",
     );
+  });
+});
+
+describe("account theme header (x-minddy-theme)", () => {
+  it.each(["light", "dark", "system"] as const)(
+    "asserts the saved theme on app routes: %s",
+    async (theme) => {
+      session = { user: { id: "u1", user_metadata: { theme } } };
+
+      const response = await proxy(request("/home"));
+
+      expect(forwardedHeaders(response)["x-minddy-theme"]).toBe(theme);
+    },
+  );
+
+  it("asserts nothing when the account never chose a theme", async () => {
+    session = { user: { id: "u1" } };
+
+    const response = await proxy(request("/home"));
+
+    expect(forwardedHeaders(response)["x-minddy-theme"]).toBeUndefined();
+  });
+
+  it("treats an invalid metadata value as no theme at all", async () => {
+    session = {
+      user: { id: "u1", user_metadata: { theme: "neon" } },
+    };
+
+    const response = await proxy(request("/home"));
+
+    expect(forwardedHeaders(response)["x-minddy-theme"]).toBeUndefined();
+  });
+
+  it("never asserts it on public pages", async () => {
+    session = { user: { id: "u1", user_metadata: { theme: "dark" } } };
+
+    const response = await proxy(request("/fr/tarifs"));
+
+    expect(forwardedHeaders(response)["x-minddy-theme"]).toBeUndefined();
+    expect(forwardedHeaders(response)["x-minddy-public"]).toBe("1");
+  });
+
+  it("keeps the refreshed session cookies across the response rebuild (MIN-293)", async () => {
+    // Asserting the theme rebuilds the NextResponse; a naive rebuild drops
+    // the cookies the session read has just rotated, and the next refresh
+    // dies in refresh_token_not_found.
+    const OPTIONS = { path: "/", sameSite: "lax" as const };
+    refreshed = [
+      { name: "sb-access-token", value: "neuf", options: OPTIONS },
+      { name: "sb-refresh-token", value: "aussi-neuf", options: OPTIONS },
+    ];
+    session = { user: { id: "u1", user_metadata: { theme: "light" } } };
+
+    const response = await proxy(request("/home"));
+
+    expect(forwardedHeaders(response)["x-minddy-theme"]).toBe("light");
+    expect(response.cookies.get("sb-access-token")?.value).toBe("neuf");
+    expect(response.cookies.get("sb-refresh-token")?.value).toBe("aussi-neuf");
+    // The other proxy assertions survive the rebuild too.
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   });
 });

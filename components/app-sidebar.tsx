@@ -33,11 +33,11 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-  useTheme,
   cn,
   type NavItem,
   type NavSection,
 } from "mangue-ui";
+import { useAccountTheme } from "@/lib/use-account-theme";
 import { Kbd } from "@/components/ui/kbd";
 import {
   IssueContextMenu,
@@ -402,7 +402,9 @@ const THEME_CHOICES = [
     current setting, so as not to have to open the submenu to read it. */
 function ThemeSubmenu() {
   const t = useTranslations("Nav");
-  const { theme, setTheme } = useTheme();
+  // The account theme: the choice is persisted to user_metadata so it
+  // follows the account to every device (lib/use-account-theme.ts).
+  const { theme, setTheme } = useAccountTheme();
   const CurrentIcon =
     THEME_CHOICES.find((c) => c.value === theme)?.icon ?? Monitor;
 

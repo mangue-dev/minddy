@@ -11,7 +11,6 @@ import {
   SelectValue,
   SegmentedControl,
   Switch,
-  useTheme,
   toast,
   type SegmentedControlOption,
 } from "mangue-ui";
@@ -42,6 +41,7 @@ import {
   type SendMode,
 } from "@/lib/keyboard/send-shortcut";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
+import { useAccountTheme } from "@/lib/use-account-theme";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -63,7 +63,9 @@ export function AccountPreferencesSection() {
   const currentLocale = useLocale() as Locale;
   const router = useRouter();
   const { user, updateUser, updateUserMetadata } = useAuth();
-  const { theme, setTheme } = useTheme();
+  // The theme is an ACCOUNT setting: the hook persists the choice to
+  // user_metadata so it follows the account to every device.
+  const { theme, setTheme } = useAccountTheme();
   const modKey = useModKey();
   const [switchingLocale, setSwitchingLocale] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -256,6 +258,7 @@ export function AccountPreferencesSection() {
 
         <SettingsRow
           label={ta("themeTitle")}
+          hint={ta("themeSyncHint")}
           control={
             <SegmentedControl
               options={themeOptions}

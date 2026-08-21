@@ -28,6 +28,7 @@ import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
 import { DesktopWindowButtons } from "@/components/desktop-window-buttons";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
+import { ThemeAccountSync } from "@/components/theme-account-sync";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
 const AssistantPanel = dynamic(
@@ -47,6 +48,9 @@ const ScratchpadModal = dynamic(
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
+      {/* Adopts the ACCOUNT theme at sign-in (and migrates legacy accounts):
+          renders nothing, sits here to see both Auth and Theme providers. */}
+      <ThemeAccountSync />
       {/* The sending shortcut chosen by the account, placed high: all
  composers of the app are below, and none need to know
  Supabase to read it (see lib/keyboard/use-send-mode). */}

@@ -40,6 +40,12 @@ import {
   type NotificationPrefs,
 } from "@/lib/notification-prefs";
 import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import {
+  ACCOUNT_THEME_META_KEY,
+  isAccountTheme,
+  resolveAccountTheme,
+  type AccountTheme,
+} from "@/lib/account-theme";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { userHasByokKey } from "@/lib/server/agent/model";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
@@ -59,6 +65,9 @@ export interface AccountSettings {
   display_name: string;
   email: string | null;
   locale: Locale;
+  /** Appearance saved on the account (follows the user across devices).
+   * `null` = never set: devices keep their own default. */
+  theme: AccountTheme | null;
   numo_default_status: ReturnType<typeof resolveNumoDefaultStatus>;
   auto_assign_created: boolean;
   auto_assign_on_start: boolean;
@@ -147,6 +156,7 @@ function toSettings(
       "",
     email,
     locale,
+    theme: resolveAccountTheme(meta),
     numo_default_status: resolveNumoDefaultStatus(meta),
     auto_assign_created: meta.auto_assign_created === true,
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
@@ -211,6 +221,16 @@ export async function updateAccountSettings({
       return { ok: false, error: `locale must be one of: ${locales.join(", ")}.` };
     }
     next.locale = input.locale;
+  }
+  if ("theme" in input) {
+    // `null` clears the account theme: devices fall back to their own default.
+    if (input.theme === null) {
+      delete next[ACCOUNT_THEME_META_KEY];
+    } else if (!isAccountTheme(input.theme)) {
+      return { ok: false, error: "theme must be one of: light, dark, system." };
+    } else {
+      next[ACCOUNT_THEME_META_KEY] = input.theme;
+    }
   }
   if ("numo_default_status" in input) {
     if (!isNumoDefaultStatus(input.numo_default_status)) {
@@ -357,6 +377,7 @@ export async function updateAccountSettings({
   const CHANGEABLE = [
     "display_name",
     "locale",
+    "theme",
     "numo_default_status",
     "auto_assign_created",
     "auto_assign_on_start",

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useTheme } from "mangue-ui/components/theme-provider";
 import { useAssistantChat } from "@/lib/use-assistant-chat";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { resolveAssistantScope } from "@/lib/assistant-scope";
@@ -22,6 +23,7 @@ import {
 } from "@/lib/assistant-api";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
+import { isAccountTheme } from "@/lib/account-theme";
 
 /**
  * The Numo conversation LIVES ABOVE the panel, not in it.
@@ -90,8 +92,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
 
   // Numo can modify account settings on the server side (via the admin API),
   // which does not trigger any client auth event — we therefore reload the
-  // account, and if he changed the language (a cookie, not user_metadata) we
-  // applique aussi ce changement.
+  // account, and if it changed the language (a cookie, not user_metadata),
+  // apply that change too.
+  const { setTheme } = useTheme();
   const handleToolResult = useCallback(
     (name: string, success: boolean, result: unknown) => {
       if (!success || name !== "update_account_settings") return;
@@ -101,8 +104,14 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       if (nextLocale && nextLocale !== currentLocale) {
         void setLocaleCookie(nextLocale).then(() => router.refresh());
       }
+      // The theme is saved on the account: adopt it immediately (the provider
+      // write also refreshes the localStorage cache the pre-paint script and
+      // the ThemeProvider read back).
+      const nextTheme = (result as { settings?: { theme?: unknown } })
+        ?.settings?.theme;
+      if (isAccountTheme(nextTheme)) setTheme(nextTheme);
     },
-    [refreshUser, currentLocale, router],
+    [refreshUser, currentLocale, router, setTheme],
   );
 
   const {

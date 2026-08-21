@@ -15,6 +15,10 @@ import {
 } from "@/lib/public-routes";
 import { isProtectedPath } from "@/lib/protected-prefixes";
 import { decodeJwtPayload, needsMfaChallenge } from "@/lib/mfa";
+import {
+  ACCOUNT_THEME_HEADER,
+  resolveAccountTheme,
+} from "@/lib/account-theme";
 import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
@@ -500,6 +504,15 @@ export async function proxy(request: NextRequest) {
   // --- Routes de l'app : session obligatoire -------------------------------
   let response = nextClean(request);
 
+  // Cookies written while reading the session (MIN-293): the response is
+  // rebuilt below when the account theme is asserted, and a rebuild must
+  // carry them — or the rotation is spent and the next refresh dies.
+  let refreshedCookies: {
+    name: string;
+    value: string;
+    options?: Record<string, unknown>;
+  }[] = [];
+
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
@@ -507,6 +520,7 @@ export async function proxy(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
+        refreshedCookies = cookiesToSet;
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = nextClean(request);
         cookiesToSet.forEach(({ name, value, options }) =>
@@ -543,6 +557,24 @@ export async function proxy(request: NextRequest) {
     // if only as “page with redirection”.
     redirect.headers.set("X-Robots-Tag", "noindex, nofollow");
     return redirect;
+  }
+
+  // Cross-device theme (account settings): the chosen appearance travels
+  // in `user_metadata`, so the root layout can start from the ACCOUNT value
+  // instead of the app default — the pre-paint script applies it before the
+  // first paint, with no flash, even on a device that has never been seen.
+  // Re-asserted on EVERY request (unlike the NEXT_LOCALE seed below, which is
+  // written once): a stale theme is visible immediately, in every pixel.
+  // Placed BEFORE the noindex header below: the rebuild replaces the
+  // response, and anything set earlier on it would be lost.
+  const accountTheme = resolveAccountTheme(
+    session.user.user_metadata as Record<string, unknown> | undefined,
+  );
+  if (accountTheme) {
+    response = nextClean(request, { [ACCOUNT_THEME_HEADER]: accountTheme });
+    for (const { name, value, options } of refreshedCookies) {
+      response.cookies.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS });
+    }
   }
 
   // The authenticated app has nothing to do in an index, whatever

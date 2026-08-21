@@ -12,6 +12,10 @@ import { ThemeInitScript } from "@/components/theme-init-script";
 import { publicClientMessages } from "@/lib/public-client-messages";
 import { RuntimeConfigProvider } from "@/lib/runtime-config-provider";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import {
+  ACCOUNT_THEME_HEADER,
+  isAccountTheme,
+} from "@/lib/account-theme";
 import { SITE_NAME, SITE_URL, SITE_VERIFICATION } from "@/lib/site";
 import "./globals.css";
 
@@ -119,7 +123,19 @@ export default async function RootLayout({
   // Anonymous public pages (feedback board, shared views): the proxy poses
   // this header so that they follow the system preference instead of being forced
   // to dark mode like the internal app (MIN-60).
-  const defaultTheme = headerList.get("x-minddy-public") === "1" ? "system" : "dark";
+  const isPublicSite = headerList.get("x-minddy-public") === "1";
+
+  // The theme saved on the ACCOUNT, asserted by the proxy for app routes
+  // (`lib/account-theme.ts`). It becomes the default everywhere — the
+  // pre-paint script and the provider both start from it, so a new device
+  // renders the right theme from the first pixel. Public pages stay on the
+  // system preference: an anonymous visitor has no account to read.
+  const rawAccountTheme = headerList.get(ACCOUNT_THEME_HEADER);
+  const accountTheme = !isPublicSite && isAccountTheme(rawAccountTheme)
+    ? rawAccountTheme
+    : null;
+  const defaultTheme: "light" | "dark" | "system" =
+    isPublicSite ? "system" : accountTheme ?? "dark";
 
   // This provider only sends the four namespaces of the public site to the browser
   // instead of the 67 in the catalog: the messages are a component PROP
@@ -145,7 +161,7 @@ export default async function RootLayout({
             (useServerInsertedHTML) : un <script> rendu par un composant fait
             complaining about React 19 every time the client re-renders the root layout — see the
             composant. */}
-        <ThemeInitScript defaultTheme={defaultTheme} />
+        <ThemeInitScript defaultTheme={defaultTheme} accountTheme={accountTheme} />
       </head>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}

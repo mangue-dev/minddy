@@ -39,7 +39,8 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast, useTheme } from "mangue-ui";
+import { toast } from "mangue-ui";
+import { useAccountTheme } from "@/lib/use-account-theme";
 import { Copy, UserRound, Triangle, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh, IterationCw, Link2, Target, Bookmark, BookmarkPlus, Pencil } from "lucide-react";
 import {
   CommandPalette as CommandPaletteShell,
@@ -218,7 +219,9 @@ export function CommandPalette({
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();
   const { projects } = useProjects();
-  const { theme, setTheme } = useTheme();
+  // The account theme: the choice is persisted to user_metadata so it
+  // follows the account to every device (lib/use-account-theme.ts).
+  const { theme, setTheme } = useAccountTheme();
 
   // Saved views: the current screen, retained under a name, re-openable from
   // any device. The list only loads when you open the

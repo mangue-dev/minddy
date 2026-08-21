@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { APP_VERSION } from "@/lib/app-version";
-import { toast, useTheme } from "mangue-ui";
+import { toast } from "mangue-ui";
 import {
   BarChart3,
   ClipboardCopy,
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
+import { useAccountTheme } from "@/lib/use-account-theme";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useMyAvatarSeed } from "@/lib/use-my-avatar";
 import { UserAvatar } from "@/components/user-avatar";
@@ -46,7 +47,9 @@ export function useAccountActions(): {
   const t = useTranslations("Nav");
   const router = useRouter();
   const { signOut } = useAuth();
-  const { theme, setTheme } = useTheme();
+  // The account theme: the choice is persisted to user_metadata so it
+  // follows the account to every device (lib/use-account-theme.ts).
+  const { theme, setTheme } = useAccountTheme();
   const isAdmin = useIsAdmin();
 
   // Memorized: the “count” group is concatenated to the palette groups, and

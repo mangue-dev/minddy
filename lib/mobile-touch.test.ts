@@ -277,7 +277,9 @@ describe("les autres pièges du tactile", () => {
   });
 
   it("la barre d'état suit le thème réel, et ses couleurs suivent les tokens", () => {
-    const script = read(join(REPO, "components/theme-init-script.tsx"));
+    // The BODY of the pre-paint script lives in lib/theme-script.ts (pure
+    // module); the component only injects it.
+    const script = read(join(REPO, "lib/theme-script.ts"));
     expect(script).toContain('name","theme-color"');
     // The observer keeps the tag current when we switch themes.
     expect(script).toContain("MutationObserver");

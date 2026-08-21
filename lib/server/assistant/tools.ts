@@ -9,6 +9,7 @@ import { PLAN_TASK_STATES } from "@/lib/plan";
 import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
+import { ACCOUNT_THEMES } from "@/lib/account-theme";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
@@ -1328,7 +1329,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model and reasoning level, and the automation preset. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model and reasoning level, and the automation preset. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1337,7 +1338,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_account_settings",
       description:
-        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. (Theme is a device-local setting and cannot be changed here.)",
+        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user.",
       parameters: {
         type: "object",
         properties: {
@@ -1349,6 +1350,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "string",
             enum: [...locales],
             description: "Interface language.",
+          },
+          theme: {
+            type: ["string", "null"],
+            enum: [...ACCOUNT_THEMES, null],
+            description:
+              "Display theme, saved on the account so every device of the user picks it up. null clears it: devices fall back to their own default.",
           },
           numo_default_status: {
             type: "string",
