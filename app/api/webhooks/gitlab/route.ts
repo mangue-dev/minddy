@@ -25,6 +25,7 @@ import {
   verifyWebhookToken,
 } from "@/lib/server/git/webhook-secret";
 import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
+import { reconcileRepoRename } from "@/lib/server/git/repo-rename";
 import { isForgeTokenCryptoConfigured } from "@/lib/server/git/token-crypto";
 import { rotateGitlabWebhookSecret } from "@/lib/server/git/gitlab-app";
 import {
@@ -582,6 +583,23 @@ export async function POST(request: NextRequest) {
     )
   ) {
     return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  // Repository RENAME reconciliation: the numeric `project.id` survives a
+  // rename, `path_with_namespace` does not. If a link still lives under the
+  // old path, migrate it before any handler reads a dead name. Fail-open:
+  // the event itself must keep being processed.
+  try {
+    await reconcileRepoRename({
+      provider: "gitlab",
+      externalRepoId: repoId,
+      fullName: payload.project?.path_with_namespace ?? null,
+    });
+  } catch (err) {
+    console.error(
+      "[webhooks/gitlab] repo rename reconcile failed:",
+      (err as Error).message,
+    );
   }
 
   try {

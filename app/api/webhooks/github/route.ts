@@ -34,6 +34,7 @@ import {
   syncRemoteIssueEvent,
 } from "@/lib/server/git/issue-sync";
 import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
+import { reconcileRepoRename } from "@/lib/server/git/repo-rename";
 import {
   findPullRequestByNumber,
   findPullRequestsByHeadSha,
@@ -737,6 +738,28 @@ export async function POST(request: NextRequest) {
   }
 
   const event = request.headers.get("x-github-event");
+  // Repository RENAME reconciliation: every payload carries the stable
+  // `repository.id` and the CURRENT `full_name`; if a link still lives under
+  // the old name, migrate it before any handler reads a dead name. Fail-open:
+  // the event itself must keep being processed.
+  try {
+    const payload = JSON.parse(rawBody) as {
+      repository?: { id?: number; full_name?: string };
+    };
+    await reconcileRepoRename({
+      provider: "github",
+      externalRepoId:
+        typeof payload.repository?.id === "number"
+          ? String(payload.repository.id)
+          : null,
+      fullName: payload.repository?.full_name ?? null,
+    });
+  } catch (err) {
+    console.error(
+      "[webhooks/github] repo rename reconcile failed:",
+      (err as Error).message,
+    );
+  }
   try {
     if (event === "pull_request") {
       await handlePullRequest(JSON.parse(rawBody) as PullRequestEvent);
