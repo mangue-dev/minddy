@@ -9,7 +9,10 @@ import type { AssistantMessage } from "./assistant-types";
  * response — instead of receiving the entire turn of a block.
  *
  * One TURN = a user message, then everything Numo produces up to its
- * response. User messages always remain visible and separate turns.
+ * response. User messages always remain visible and separate turns — with one
+ * exception: the ANSWER to an ask_user question continues the SAME round
+ * (Numo merely paused mid-work), so asking a question never spawns a second
+ * accordion.
  */
 
 export type AssistantTurn = {
@@ -42,13 +45,30 @@ function isHidden(m: AssistantMessage): boolean {
 }
 
 /**
- * Message that ends a round: text (the response), or something that returns
- * to the user — a `ask_user` ends the round, the loop waits for the
- * response, and a seed suggestion (`propose_backlog`, MIN-173) waits de
- * even the gesture that creates the tickets. What is answered does not fold into the unrolled
- *: it remains on the screen, under the accordion.
+ * Assistant message that ends a round by handing back to the user and WAITING
+ * for their gesture: a seed suggestion (`propose_backlog`, MIN-173) waits for
+ * the create action. What is answered does not fold into the unfolded: it
+ * remains on the screen, under the accordion.
+ *
+ * `ask_user` is deliberately NOT here: a question is a pause inside the work,
+ * not its end. The user's answer keeps riding the same round (see
+ * `answersAskUser`), so the whole exchange shares one accordion.
  */
-const HANDS_BACK = new Set(["ask_user", "propose_backlog"]);
+const HANDS_BACK = new Set(["propose_backlog"]);
+
+/**
+ * Does this user message ANSWER an `ask_user` question Numo just asked?
+ * Mirrors the shell's absorption rule (assistant-shell.tsx): a user message
+ * directly following an assistant message that carries an `ask_user` call IS
+ * its answer — the server loop resumes on it, and the shell hides its bubble
+ * behind the ask_user line.
+ */
+function answersAskUser(prev: AssistantMessage | null): boolean {
+  return (
+    prev?.role === "assistant" &&
+    (prev.tool_calls ?? []).some((tc) => tc.function.name === "ask_user")
+  );
+}
 
 function closesTurn(m: AssistantMessage): boolean {
   if (m.role !== "assistant") return false;
@@ -129,17 +149,32 @@ export function buildAssistantBlocks(
     work = [];
   };
 
+  // Last non-hidden message read — tells a fresh user message apart from an
+  // ask_user answer (same rule the shell uses to hide answer bubbles).
+  let prevVisible: AssistantMessage | null = null;
+
   for (const m of messages) {
     if (isHidden(m)) continue;
     if (m.role === "user") {
-      // A user message closes the previous round (finished, or interrupted
-      // without response — his work is then displayed as is) and opens the next one.
+      if (answersAskUser(prevVisible)) {
+        // An answer to an ask_user question does NOT close the round: Numo
+        // merely paused mid-work. The message rides inside the ongoing turn
+        // (the shell maps it onto the ask_user line instead of showing a
+        // bubble), which keeps the turn's key, timer and accordion.
+        prevVisible = m;
+        continue;
+      }
+      // A fresh user message closes the previous round (finished, or
+      // interrupted without response — its work is then displayed as is) and
+      // opens the next one.
       flush(false);
       blocks.push({ kind: "message", message: m });
       opener = m;
+      prevVisible = m;
       continue;
     }
     work.push(m);
+    prevVisible = m;
   }
   flush(active);
 

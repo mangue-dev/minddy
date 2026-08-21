@@ -161,15 +161,58 @@ describe("buildAssistantBlocks", () => {
     expect(during.key).toBe(after.key);
   });
 
-  it("traite une question ask_user comme la fin du tour", () => {
+  it("keeps an ask_user round going: the answer rides inside the same turn", () => {
+    // The question is a pause mid-work, not its end: no second accordion, the
+    // round keeps its key (hence its WorkAccordion instance) across the pause.
     const blocks = buildAssistantBlocks([
       msg("u1", "user", "range mes tickets"),
       msg("a1", "assistant", null, { tool_calls: [call("list_issues")] }),
       msg("a2", "assistant", null, { tool_calls: [call("ask_user")] }),
+      msg("u2", "user", "ok pour les doublons"),
+      msg("a3", "assistant", "C'est rangé."),
+    ]);
+    expect(blocks.map((b) => (b.kind === "message" ? b.message.id : "turn"))).toEqual([
+      "u1",
+      "turn",
     ]);
     const [turn] = turns(blocks);
-    expect(turn.work.map((m) => m.id)).toEqual(["a1"]);
-    expect(turn.summary?.id).toBe("a2");
+    expect(turn.key).toBe("turn-u1");
+    expect(turn.work.map((m) => m.id)).toEqual(["a1", "a2"]);
+    expect(turn.summary?.id).toBe("a3");
+  });
+
+  it("keeps the pending question in the work of the open round", () => {
+    // While Numo waits for the answers (active), the ask_user message stays
+    // folded IN the accordion instead of surfacing as a pseudo-response.
+    const blocks = buildAssistantBlocks(
+      [
+        msg("u1", "user", "range mes tickets"),
+        msg("a1", "assistant", null, { tool_calls: [call("list_issues")] }),
+        msg("a2", "assistant", null, { tool_calls: [call("ask_user")] }),
+      ],
+      { active: true },
+    );
+    const [turn] = turns(blocks);
+    expect(turn.active).toBe(true);
+    expect(turn.work.map((m) => m.id)).toEqual(["a1", "a2"]);
+    expect(turn.summary).toBeNull();
+  });
+
+  it("opens a fresh turn for a message that is not an ask_user answer", () => {
+    const blocks = buildAssistantBlocks([
+      msg("u1", "user", "un"),
+      msg("a1", "assistant", null, { tool_calls: [call("ask_user")] }),
+      msg("u2", "user", "voilà ma réponse"),
+      msg("a2", "assistant", "Merci !"),
+      msg("u3", "user", "autre chose"),
+    ]);
+    expect(blocks.map((b) => (b.kind === "message" ? b.message.id : "turn"))).toEqual([
+      "u1",
+      "turn",
+      "u3",
+    ]);
+    const [first] = turns(blocks);
+    expect(first.summary?.id).toBe("a2");
   });
 
   it("traite une proposition d'amorce comme la fin du tour", () => {
@@ -285,6 +328,18 @@ describe("copyableMessageIds", () => {
       msg("u1", "user", "vas-y"),
       msg("a1", "assistant", "Je regarde…", { tool_calls: [call("list_issues")] }),
       msg("a2", "assistant", "Voilà."),
+    ]);
+    expect([...got]).toEqual(["a2"]);
+  });
+
+  it("marks the response of a round that went through a question", () => {
+    // The ask_user pause and the absorbed answer are work, not takeaways —
+    // only the final response gets the copy button.
+    const got = ids([
+      msg("u1", "user", "range mes tickets"),
+      msg("a1", "assistant", null, { tool_calls: [call("ask_user")] }),
+      msg("u2", "user", "vas-y"),
+      msg("a2", "assistant", "C'est rangé."),
     ]);
     expect([...got]).toEqual(["a2"]);
   });

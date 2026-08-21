@@ -91,8 +91,8 @@ export function formatWikiMap(pages: PromptPage[] | undefined): string {
 
 const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - Statuses: triage, backlog, todo, in_progress, in_review, done, canceled, duplicate.
-  The kanban board shows backlog → canceled only. 'triage' is the arrival zone where new
-  assistant-created issues wait for human validation. 'duplicate' requires duplicate_of_id.
+  The kanban board shows backlog → canceled only. 'triage' is the arrival zone where
+  incoming issues wait for human validation. 'duplicate' requires duplicate_of_id.
 - Priorities: none, low, medium, high, urgent.
 - Efforts (t-shirt sizes): xs, s, m, l, xl — or null.
 - due_date: ISO 8601 timestamp.
@@ -241,8 +241,11 @@ export function buildSharedRules(
   "refuse les doublons du triage"). Broader requests — improve, summarize, estimate, assign,
   categorize, "clean up", "review this issue" — do NOT imply a status change: do what was asked
   and leave the status untouched (you may SUGGEST a status change in your reply instead).
-- Issues you create land in '${defaultStatus}' by default${defaultStatus === "triage" ? " for human validation" : " (the user's chosen landing status)"}. Only pass an explicit
-  status to create_issue when the user clearly asked for one ("crée-la directement en backlog").
+- Where issues you create LAND is an account setting, not your call: leave status out of
+  create_issue calls and minddy files them in the user's chosen Numo landing status
+  ('${defaultStatus}' here${defaultStatus === "triage" ? " — its human validation gate" : ""}).
+  Pass a status ONLY when the user explicitly asked for one at creation ("crée-la directement
+  en backlog") — never to second-guess that setting.
 - When you create an issue, fill every field you can justify — ALWAYS estimate priority (from
   the urgency/impact wording) and effort (t-shirt size, from the apparent scope of the work),
   even when not stated: a reasoned estimate beats leaving the defaults. Attach the matching

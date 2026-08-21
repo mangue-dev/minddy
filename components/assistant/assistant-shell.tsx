@@ -402,16 +402,20 @@ export const AssistantShell = forwardRef<
   // folds into an accordion “Worked since X” / “Worked for X”, and
   // only the answer remains visible below — we follow the work, then we read the
   // final message, instead of receiving the turn of a block.
+  // A pending ask_user keeps the round OPEN: the pause is part of the same
+  // turn (the question card replaces the composer below), so no second
+  // accordion ever appears and the key stays stable across the answer.
   const blocks = useMemo(
     () =>
       buildAssistantBlocks(state.messages, {
-        active: isBusy,
+        active: isBusy || Boolean(activeAskUser),
         pendingWork:
           state.activeToolCalls.length > 0 || state.streamingContent.length > 0,
       }),
     [
       state.messages,
       isBusy,
+      activeAskUser,
       state.activeToolCalls.length,
       state.streamingContent.length,
     ]

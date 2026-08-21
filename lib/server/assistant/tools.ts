@@ -132,6 +132,18 @@ const ISSUE_FIELD_PROPERTIES = {
 
 const CREATE_ISSUE_FIELD_PROPERTIES = {
   ...ISSUE_FIELD_PROPERTIES,
+  // Creation-only landing rule (mirrors the code agent's create_issue): WHERE
+  // the issue lands is an account setting, not a model choice. execute-tool
+  // falls back to the user's configured Numo default when this field is left
+  // out, so omitting it is always safe; forcing one is reserved for an
+  // explicit user ask at creation. The shared `status` above stays on
+  // update_issues, where a user-asked change is the norm.
+  status: {
+    type: "string",
+    enum: [...ISSUE_STATUSES],
+    description:
+      "Landing status. LEAVE IT OUT by default: minddy files new issues in the user's chosen Numo landing status — an account setting, not your call. Pass one ONLY when the user explicitly asked for that status at creation ('crée-la directement en done'); 'duplicate' additionally requires duplicate_of_id.",
+  },
   smart_fill: {
     type: "boolean",
     description:
@@ -365,7 +377,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_issue",
       description:
-        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — the issue then lands in 'triage' for human validation. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first.",
+        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — minddy files new issues in the user's chosen Numo landing status (an account setting) on its own. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first.",
       parameters: {
         type: "object",
         properties: {

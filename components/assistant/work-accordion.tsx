@@ -43,10 +43,13 @@ export function WorkAccordion({
 
   // Open by default as long as it WORKS; closes automatically when
   // work transition → completed, while remaining foldable by hand.
+  // A turn that RESUMES after a pause (an answered ask_user re-activates the
+  // same instance) unfolds again, so the reader keeps following the work.
   const [open, setOpen] = useState(active);
   const wasActive = useRef(active);
   useEffect(() => {
     if (wasActive.current && !active) setOpen(false);
+    if (!wasActive.current && active) setOpen(true);
     wasActive.current = active;
   }, [active]);
 

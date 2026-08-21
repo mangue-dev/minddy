@@ -16,6 +16,19 @@ describe("Numo tool contracts", () => {
     expect(create?.function.parameters.properties).toHaveProperty("smart_fill");
   });
 
+  it("lets the account setting own where created issues land", () => {
+    // Regression guard: advertising a fixed landing zone ('triage') makes the
+    // model pass a status itself and override the user's Numo landing-status
+    // setting. The field stays exposed so an explicit user ask still goes
+    // through — execute-tool falls back to the configured default whenever
+    // the model leaves it out.
+    const status = tool("create_issue")?.function.parameters.properties
+      .status as { description?: string } | undefined;
+
+    expect(status?.description).toMatch(/account setting/i);
+    expect(status?.description).not.toContain("triage");
+  });
+
   it("advertises the internal feedback comment tool", () => {
     const comment = tool("add_feedback_comment");
 
