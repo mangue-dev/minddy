@@ -82,6 +82,13 @@ export interface OpencodeAnchorInput {
  * is no longer a six-month window (see `gitOwnershipBlock`).
  */
   currentRepo?: boolean;
+  /**
+   * Does this run have a LINKED FORGE REPOSITORY? `true` by default. `false`
+   * for a local run on a project with no linked repository (MIN-local-norepo):
+   * no push, no pull request — `create_pr` is not served, and every sentence
+   * that promises a remote goes.
+   */
+  hasRepo?: boolean;
   /** Is delegation offered, and on which models? Absent = no `task`. */
   subagents?: {
     favorites: Array<FavoriteSubagentModel & { multiplier?: number }>;
@@ -101,14 +108,15 @@ const n = OPENCODE_TOOL_NAMES;
  */
 function harnessDeltas(input: OpencodeAnchorInput): string {
   const routine = input.interactive === false;
+  const hasRepo = input.hasRepo !== false;
   const lines = [
     // The denial list is that of `command-guard`, and it IS NOT the same
     // on both sides from D6: `git commit` is returned to the model in deposit mode
     // fluent. Repeating it here without the scope would make the harness say the opposite of what
     // that it executes — the defect in §1 of the audit, one line below.
     input.currentRepo === true
-      ? `- **Your shell enforces what git may not do here.** ${GIT_REFUSALS_CURRENT_REPO(n)} See Git and pull requests below for who delivers.`
-      : `- **The harness owns git, and your shell enforces it.** \`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapped in \`bash -c\` included. Read-only git and \`git add\` are free. See Git and pull requests below for what happens instead.`,
+      ? `- **Your shell enforces what git may not do here.** ${GIT_REFUSALS_CURRENT_REPO(n, hasRepo)} See ${hasRepo ? "Git and pull requests" : "Git"} below for who delivers.`
+      : `- **The harness owns git, and your shell enforces it.** \`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapped in \`bash -c\` included. Read-only git and \`git add\` are free. See ${hasRepo ? "Git and pull requests" : "Git"} below for what happens instead.`,
     `- ${shellOutputNote(n)}`,
     `- **To rename or remove a file, use \`${n.shell}\`** (\`mv\`, \`rm\`): the end-of-turn commit picks them up like any other change.`,
     `- **There is no batch-edit tool.** One \`edit\` call changes one place; chain them rather than looking for a multi-edit. Read the file before editing it, and copy \`oldString\` verbatim from what \`${n.read}\` showed.`,
@@ -153,6 +161,7 @@ ${lines.join("\n")}`;
 function delegationSection(input: OpencodeAnchorInput): string {
   const subs = input.subagents;
   if (!subs) return "";
+  const hasRepo = input.hasRepo !== false;
   const ceiling = subs.maxMultiplier;
   const costNote = subs.favorites.some((f) => f.multiplier != null)
     ? `
@@ -174,7 +183,9 @@ function delegationSection(input: OpencodeAnchorInput): string {
 - **Delegate when** the work is broad but its conclusion is short (find every caller of X, map how a feature is wired), or when a task would flood your context with output you do not need to keep.
 - **Do NOT delegate** a change you can make in two tool calls: briefing a child and reading its report costs more than doing it yourself, and it leaves you trusting a summary where you could have read the code.
 - **\`${n.spawn}\` BLOCKS until the child is done.** There is nothing to poll and nothing to wait for by hand — when the call returns, the report is there. Several children of the SAME round run at once; a round that calls it once waits for that one.
-- **One writer at a time.** \`explore\` types are read-only and parallelise freely. A \`general\` type edits the repository, so while one is in flight your own editing tools are refused and so is \`create_pr\` — the sandbox is shared, and the harness commits everything it finds at the end of the turn, half-written work included.
+- **One writer at a time.** \`explore\` types are read-only and parallelise freely. A \`general\` type edits the repository, so while one is in flight your own editing tools are refused${
+    hasRepo ? " and so is `create_pr`" : ""
+  } — the sandbox is shared, and the harness commits everything it finds at the end of the turn, half-written work included.
 - **The report is all you get back.** The child cannot ask you anything and you cannot ask it a follow-up, so write \`prompt\` as a complete briefing — what to do, where (paths, symbols), what not to touch, and the exact shape of the answer you need. When a claim from a report matters, check it in the repository yourself.
 - It has none of your context: not this conversation, not the ticket, not the notebook, not the pull request — and it cannot delegate further.${modelsNote}`;
 }
@@ -190,11 +201,15 @@ export function buildOpencodeAnchor(input: OpencodeAnchorInput): string {
   }
   const routine = input.interactive === false;
   const notebook = input.anchor === "notebook";
+  const hasRepo = input.hasRepo !== false;
   const replyLanguage = input.locale === "fr" ? "French" : "English";
-  const anchorTools = notebook
-    ? `- \`validate_changes\` — run an explicit preflight of the current worktree (type-check, tests, diff review).
+  const validateTool = `- \`validate_changes\` — run an explicit preflight of the current worktree (type-check, tests, diff review).`;
+  const anchorTools = !hasRepo
+    ? validateTool
+    : notebook
+      ? `${validateTool}
 - \`create_pr\` — publish this session's pull request when there is none yet (see Git below).`
-    : `- \`validate_changes\` — run an explicit preflight of the current worktree (type-check, tests, diff review).
+      : `${validateTool}
 - \`create_pr\` — publish the ticket's pull request when there is none yet (see Git below).`;
   const chainTool = input.chain
     ? `
@@ -208,11 +223,18 @@ ${harnessDeltas(input)}
 ${anchorTools}${chainTool}
 ${minddyToolsBlock({ images: input.images === true, routine })}
 
-${anchorRulesSection({ notebook, routine, n, currentRepo: input.currentRepo === true })}${projectPrSection(routine)}${delegationSection(input)}
+${anchorRulesSection({
+  notebook,
+  routine,
+  n,
+  currentRepo: input.currentRepo === true,
+  hasRepo,
+})}${hasRepo ? projectPrSection(routine) : ""}${delegationSection(input)}
 
 ${workflowSteps({
   routine,
   n,
+  hasRepo,
   // The opencode edit is ours, except for its name: `edit.ts` is borrowed from
   // opencode (docs §3.1), so the advice for a missing `oldString` applies word
   // for word—the tool name is the only thing that changes.

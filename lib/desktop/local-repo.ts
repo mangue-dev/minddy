@@ -148,13 +148,20 @@ export function remoteMatchesRepo(url: string, expected: ExpectedRepo): boolean 
   return path.toLowerCase() === wanted.toLowerCase();
 }
 
-/** Can the folder be used as a local repository for this project? */
+/** Can the folder be used as a local repository for this project?
+ *
+ * `expected` is `null` for a project with NO linked repository (MIN-local-norepo):
+ * the folder must still be a git repository — the harness reads its history and
+ * its state — but no remote is required, and a remote that points anywhere is
+ * accepted: there is nothing to compare it against.
+ */
 export function localRepoVerdict(
   facts: LocalRepoFacts,
-  expected: ExpectedRepo,
+  expected: ExpectedRepo | null,
 ): { ok: true } | { ok: false; reason: LocalRepoRefusal } {
   if (!facts.isDirectory) return { ok: false, reason: "missing" };
   if (facts.gitConfig === null) return { ok: false, reason: "notGit" };
+  if (!expected) return { ok: true };
   const remotes = parseGitConfigRemotes(facts.gitConfig);
   if (remotes.length === 0) return { ok: false, reason: "noRemote" };
   const matched = remotes.some((remote) => remoteMatchesRepo(remote.url, expected));

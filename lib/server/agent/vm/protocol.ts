@@ -270,6 +270,9 @@ export interface VmJob {
   prInlineComments: number;
 
   // ── The deposit ─────────────────────────────── ───────────────────────────────
+  /** The branch the work bases on. `""` for a run on a project with NO linked
+   * repository: the session anchors on the checkout's own HEAD, and the only
+   * consumer (`prepareCurrentRepo`) reads empty as "no base to sync". */
   baseBranch: string;
   workBranch: string;
   /**
@@ -305,9 +308,11 @@ export interface VmJob {
  */
   committer: { name: string; email: string };
   /** Push URL, including EPHEMERAL forge token. He is already in the microVM
- * (he is the one who cloned); the loop asks for more from the
- * plan before each push, a turn which can last longer than the token. */
-  authUrl: string;
+   * (he is the one who cloned); the loop asks for more from the
+   * plan before each push, a turn which can last longer than the token.
+   * ABSENT for a local run on a project with NO linked repository: there is
+   * no remote, nothing is ever pushed, and `create_pr` is not served. */
+  authUrl?: string;
   /** Readable run reference in commit messages (`wip(...)`). */
   commitRef: string;
   /**

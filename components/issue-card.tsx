@@ -64,6 +64,7 @@ import {
 } from "@/lib/agent-compose-draft";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -1001,7 +1002,12 @@ export const IssueCard = memo(function IssueCard({
   const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
     issue.project_id
   );
-  const agentsEnabled = agentsAllowed && (repoLinkLoading || repoLink != null);
+  // In the desktop app a local run needs NO linked repository: it plays on the
+  // folder attached to this machine. In the browser the link stays the only
+  // door (the server refuses a `noRepo` cloud launch anyway).
+  const desktopAvailable = useMemo(() => !!getDesktopBridge(), []);
+  const agentsEnabled =
+    agentsAllowed && (repoLinkLoading || repoLink != null || desktopAvailable);
   // The ticket's PR → chip on the card (if it still calls for action) and
   // “View pull request” in the menu (whatever its state).
   // `?pr=` rather than `?run=`: the link must also work for a PR that no run

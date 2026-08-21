@@ -112,3 +112,35 @@ describe("l'ancrage se lit sur la ligne du run", () => {
     expect(anchorForRun({ issue_id: "i-1", pull_request_id: "pr-1" })).toBe("issue");
   });
 });
+
+describe("sans dépôt lié (`repo: false`), la forge disparaît de l'annonce", () => {
+  const names = (anchor: AgentAnchor) =>
+    agentToolsFor({ anchor, webSearch: true, chain: true, interactive: true, repo: false }).map(
+      (t) => t.function.name,
+    );
+
+  it("ne sert NI `create_pr` NI l'inventaire des pull requests du projet", () => {
+    for (const anchor of ["issue", "notebook"] as AgentAnchor[]) {
+      const offered = names(anchor);
+      expect(offered, anchor).not.toContain("create_pr");
+      for (const pr of [
+        "list_pull_requests",
+        "read_pull_request",
+        "comment_pull_request",
+        "comment_pull_request_line",
+        "reply_pull_request_thread",
+        "review_pull_request",
+        "set_pull_request_state",
+      ]) {
+        expect(offered, `${anchor} : ${pr}`).not.toContain(pr);
+      }
+    }
+  });
+
+  it("garde tout le reste — tickets, carnet, pages, objectifs", () => {
+    const offered = new Set(names("issue"));
+    for (const name of ["search_issues", "read_issue", "update_issue", "read_scratchpad"]) {
+      expect(offered.has(name), name).toBe(true);
+    }
+  });
+});

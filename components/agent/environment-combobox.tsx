@@ -72,8 +72,13 @@ export function EnvironmentCombobox({
   needsAttach = false,
   localAvailable = true,
   cloudAvailable = true,
+  /** True when the sandbox EXISTS but the project has no linked repository:
+   * the cloud entry is shown greyed, and choosing it reopens the repository
+   * link panel instead of launching a run that would be refused (`noRepo`). */
+  cloudNeedsRepo = false,
   executionBackend = "vercel",
   onAttach,
+  onLinkRepo,
   disabled,
   disabledTooltip,
   bare = false,
@@ -88,9 +93,15 @@ export function EnvironmentCombobox({
   localAvailable?: boolean;
   /** False for a private BYOK endpoint: it cannot exit to a microVM. */
   cloudAvailable?: boolean;
+  /** True when the sandbox EXISTS but the project has no linked repository:
+   * the cloud entry is shown greyed, and choosing it reopens the repository
+   * link panel instead of launching a run that would be refused (`noRepo`). */
+  cloudNeedsRepo?: boolean;
   /** Changes the server option from generic cloud wording to this instance's sandbox. */
   executionBackend?: AgentExecutionBackend;
   onAttach?: () => void;
+  /** Opens the project's repository link panel (cloud entry without a link). */
+  onLinkRepo?: () => void;
   disabled?: boolean;
   /** Tooltip of the locked chip (frozen environment for the conversation). */
   disabledTooltip?: string;
@@ -144,6 +155,12 @@ export function EnvironmentCombobox({
       onAttach?.();
       return;
     }
+    // The sandbox exists, the repository does not: the cloud entry explains
+    // itself by its repair gesture, not by a refusal after the fact.
+    if (next === "cloud" && cloudNeedsRepo) {
+      onLinkRepo?.();
+      return;
+    }
     onChange(next);
   };
 
@@ -176,14 +193,21 @@ export function EnvironmentCombobox({
         <Command shouldFilter={false}>
           <CommandList className="p-1">
             {cloudAvailable ? (
-              <CommandItem value="cloud" onSelect={() => pick("cloud")}>
+              <CommandItem
+                value="cloud"
+                aria-disabled={cloudNeedsRepo}
+                className={cn(cloudNeedsRepo && "cursor-not-allowed opacity-50")}
+                onSelect={() => pick("cloud")}
+              >
                 <ServerIcon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1">
                   <span className="block">
                     {t(serverIsSelfHosted ? "environmentServerSandbox" : "environmentCloud")}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {t(serverIsSelfHosted ? "environmentServerSandboxHint" : "environmentCloudHint")}
+                    {cloudNeedsRepo
+                      ? t("environmentCloudNeedsRepo")
+                      : t(serverIsSelfHosted ? "environmentServerSandboxHint" : "environmentCloudHint")}
                   </span>
                 </span>
                 <Check

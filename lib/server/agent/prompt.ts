@@ -163,8 +163,10 @@ export function minddyToolsBlock(opts: { images: boolean; routine: boolean }): s
  * end the turns with "it's delivered" when nothing was. `git push`,
  * remains refused — `create_pr` has the remote.
  */
-export const GIT_REFUSALS_CURRENT_REPO = (n: PromptToolNames): string =>
-  `\`${n.shell}\` REFUSES what would destroy work that is not yours — \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git clean -f\`, \`git stash drop/clear\`, \`git rebase\`, \`git cherry-pick\`, \`--amend\` — plus \`git push\`, which belongs to \`create_pr\`. The call comes back as an error, wrapping it in \`bash -c\` included. Everything else is yours, \`git add\` and \`git commit\` included. To undo a change you made, edit the file back.`;
+export const GIT_REFUSALS_CURRENT_REPO = (n: PromptToolNames, hasRepo = true): string =>
+  `\`${n.shell}\` REFUSES what would destroy work that is not yours — \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git clean -f\`, \`git stash drop/clear\`, \`git rebase\`, \`git cherry-pick\`, \`--amend\` —${
+    hasRepo ? " plus `git push`, which belongs to `create_pr`." : " plus `git push` — there is no remote to push to."
+  } The call comes back as an error, wrapping it in \`bash -c\` included. Everything else is yours, \`git add\` and \`git commit\` included. To undo a change you made, edit the file back.`;
 
 /**
  * THE HARNESS OWNS GIT, and the commands it refuses.
@@ -181,9 +183,15 @@ export const GIT_REFUSALS_CURRENT_REPO = (n: PromptToolNames): string =>
  * delivers YOUR work by committing” in the same sentence, while the code did not commit and the guardrail refused the model to do so: three
  * texts, three versions, and a round that delivered nothing.
  */
-export function gitOwnershipBlock(n: PromptToolNames, currentRepo = false): string {
+export function gitOwnershipBlock(
+  n: PromptToolNames,
+  currentRepo = false,
+  /** False for a run on a project with NO linked repository (local only): no
+   * forge, no push, no pull request — the sentences that promise a remote go. */
+  hasRepo = true,
+): string {
   const refusals = currentRepo
-    ? GIT_REFUSALS_CURRENT_REPO(n)
+    ? GIT_REFUSALS_CURRENT_REPO(n, hasRepo)
     : `\`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapping it in \`bash -c\` included. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
   if (!currentRepo) {
     return `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. ${refusals}
@@ -199,11 +207,19 @@ export function gitOwnershipBlock(n: PromptToolNames, currentRepo = false): stri
   return `- **You are on someone's computer, and the whole disk is within reach.** Read wherever you need to — a sibling repository, a package outside the attached folder, a config under \`~/.config\`. **But ASK before you WRITE anywhere outside this folder**, with \`${n.ask}\`, naming the exact path and why: nothing stops you, so the restraint is yours. Writing under the attached folder needs no permission — that is what the session is for. And their environment files stay closed either way: never read a \`.env\`, never copy one, never print one.
 - **This repository is the user's own working copy** — their branch, their uncommitted work, their \`node_modules\`, their real \`.env\` files. You are a guest in it: never switch branch, never stash, and leave alone what the task does not need.
 - **Nothing is committed for you here, and nothing is pushed.** When the turn ends, what you changed simply STAYS in the working tree — that is where they read it, in their own editor. So close your turn by saying what you changed, path by path: that IS your delivery. Never end on "I've committed this" or "it's shipped".
-- **You commit only when they ask you to.** Then it is a real commit on their branch: stage the paths YOU changed, one by one, and never \`git add -A\` / \`git commit -a\` — their own unfinished work is in this same tree, and a blanket stage would sweep it into your commit. Follow the repository's \`AGENTS.md\` / \`CLAUDE.md\` for how a commit message is written here. Publishing is a separate decision: \`create_pr\` owns the remote. ${refusals}
+- **You commit only when they ask you to.** Then it is a real commit on their branch: stage the paths YOU changed, one by one, and never \`git add -A\` / \`git commit -a\` — their own unfinished work is in this same tree, and a blanket stage would sweep it into your commit. Follow the repository's \`AGENTS.md\` / \`CLAUDE.md\` for how a commit message is written here.${
+    hasRepo ? " Publishing is a separate decision: `create_pr` owns the remote." : ""
+  } ${refusals}
 - **\`git status\` is NOT your diff here.** It shows their work in progress next to yours, and nothing in it tells the two apart. To see what you changed, diff the paths you edited this turn (\`git diff -- <paths>\`) — and never conclude from a dirty tree that you broke something.
-- **Use the built-in file editing tools for repository writes.** In this shared checkout, those write permissions are how the harness attributes a path to YOUR run. A redirect, \`sed -i\`, \`mv\`, \`rm\`, an installer or a code generator launched through \`${n.shell}\` has no reliable author identity when another agent is working at the same time, so its newly changed paths are deliberately not claimed in your diff. When a shell write is unavoidable, inspect it and report its paths separately in your reply.
-- **A file they were already editing, that you edit too, goes out with your pull request** — their unfinished work included. That is unavoidable when two people share a checkout; the conversation says it plainly when it happens. It is one more reason to touch only what the task needs.
-- **History is complete** — this is their normal clone, not a shallow window: \`git log\`, \`git show <sha>\`, \`git diff <sha> <sha>\` all reach back as far as the repository goes. But \`origin/<base>\` is only as fresh as their last \`git fetch\`, so it can be days behind the real base branch — never read it as the live tip.`;
+- **Use the built-in file editing tools for repository writes.** In this shared checkout, those write permissions are how the harness attributes a path to YOUR run. A redirect, \`sed -i\`, \`mv\`, \`rm\`, an installer or a code generator launched through \`${n.shell}\` has no reliable author identity when another agent is working at the same time, so its newly changed paths are deliberately not claimed in your diff. When a shell write is unavoidable, inspect it and report its paths separately in your reply.${
+    hasRepo
+      ? `
+- **A file they were already editing, that you edit too, goes out with your pull request** — their unfinished work included. That is unavoidable when two people share a checkout; the conversation says it plainly when it happens. It is one more reason to touch only what the task needs.`
+      : ""
+  }
+- **History is complete** — this is their normal clone, not a shallow window: \`git log\`, \`git show <sha>\`, \`git diff <sha> <sha>\` all reach back as far as the repository goes.${
+    hasRepo ? " But `origin/<base>` is only as fresh as their last `git fetch`, so it can be days behind the real base branch — never read it as the live tip." : ""
+  }`;
 }
 
 /** HARD rule, identical to the two anchors: the only status entry on the
@@ -257,9 +273,27 @@ export function anchorRulesSection(opts: {
   n: PromptToolNames;
   /** Does the trick play in the user checkout (MIN-358)? */
   currentRepo?: boolean;
+  /** False for a run on a project with NO linked repository (local only):
+   * no forge, no push, no pull request — the PR doctrine disappears. */
+  hasRepo?: boolean;
 }): string {
   const { notebook, routine, n } = opts;
-  const gitOwnership = gitOwnershipBlock(n, opts.currentRepo === true);
+  const gitOwnership = gitOwnershipBlock(n, opts.currentRepo === true, opts.hasRepo !== false);
+  // No linked repository: the PR lines would promise a tool that is not served
+  // and a remote that does not exist. One honest line replaces them.
+  const gitPrLines = opts.hasRepo === false
+    ? `- This project has NO repository linked to a forge: there is nothing to push to and no pull request to open. The work stays in the user's checkout, and they commit and publish it themselves.`
+    : routine
+    ? `- One pull request lives per run, on this run's working branch. Every push updates it automatically — you have nothing to manage.
+- **Opening it is YOUR call, and you have the mandate**: when this run's work is worth shipping, \`create_pr\` — nobody has to ask. When it is not (you found nothing, or nothing you can fix), change nothing and say so. The branch stays inside this machine as long as you have edited no file, so a run that concludes without pushing leaves no trace on the repository, which is exactly right.`
+    : notebook
+    ? `- One pull request lives per session at a time, on this session's working branch. If one already exists, every push updates it automatically (a rejected/closed one is reopened by the push) — you have nothing to manage.
+- If NO pull request exists yet, nothing forces one: create it with \`create_pr\` when the user asks for it, or propose it (or just do it) once you've completed a reviewable piece of work they asked for. Left to your own judgement, do not open one for a trivial or exploratory turn.
+- **But that judgement yields to theirs.** If the user tells you how they want pull requests handled — open one for every change without asking, never open one unprompted, always ask first — that instruction governs from then on, for the rest of the session, and you do not ask again. It holds whether they say it now or said it three turns ago.`
+    : `- One pull request lives per ticket at a time. If one already exists for this branch, every push updates it automatically (a rejected/closed one is reopened by the push) — you have nothing to manage.
+- If NO pull request exists yet, nothing forces one: create it with \`create_pr\` when the user asks for it, or propose it (or just do it) once you've completed a reviewable piece of work they asked for. Left to your own judgement, do not open one for a trivial or exploratory turn.
+- **But that judgement yields to theirs.** If the user tells you how they want pull requests handled — open one for every change without asking, never open one unprompted, always ask first — that instruction governs from then on, for the rest of the session, and you do not ask again. It holds whether they say it now or said it three turns ago.`;
+  const gitHeader = opts.hasRepo === false ? "## Git" : "## Git and pull requests";
   return routine
     ? `## Tickets of the project
 - This session is not anchored to a ticket, but the project's tickets are yours to read and edit. \`search_issues\` finds one, then \`read_issue\`, \`update_issue\`, \`write_issue_plan\`, \`append_to_plan\` and \`edit_issue_text\` take its identifier in \`issue\` — they have no default target here, so always pass it.
@@ -269,10 +303,9 @@ export function anchorRulesSection(opts: {
 - ${PLAN_EDIT_RULE}
 - ${STATUS_RULE}
 
-## Git and pull requests
+${gitHeader}
 ${gitOwnership}
-- One pull request lives per run, on this run's working branch. Every push updates it automatically — you have nothing to manage.
-- **Opening it is YOUR call, and you have the mandate**: when this run's work is worth shipping, \`create_pr\` — nobody has to ask. When it is not (you found nothing, or nothing you can fix), change nothing and say so. The branch stays inside this machine as long as you have edited no file, so a run that concludes without pushing leaves no trace on the repository, which is exactly right.`
+${gitPrLines}`
     : notebook
     ? `## General conversation
 - This conversation is not anchored to a ticket. The user's messages are the request; they may concern code, the project, an investigation, an explanation, or any other work available in this environment.
@@ -288,11 +321,9 @@ ${NOTEBOOK_RULES}
 - ${PLAN_EDIT_RULE}
 - ${STATUS_RULE}
 
-## Git and pull requests
+${gitHeader}
 ${gitOwnership}
-- One pull request lives per session at a time, on this session's working branch. If one already exists, every push updates it automatically (a rejected/closed one is reopened by the push) — you have nothing to manage.
-- If NO pull request exists yet, nothing forces one: create it with \`create_pr\` when the user asks for it, or propose it (or just do it) once you've completed a reviewable piece of work they asked for. Left to your own judgement, do not open one for a trivial or exploratory turn.
-- **But that judgement yields to theirs.** If the user tells you how they want pull requests handled — open one for every change without asking, never open one unprompted, always ask first — that instruction governs from then on, for the rest of the session, and you do not ask again. It holds whether they say it now or said it three turns ago.`
+${gitPrLines}`
     : `## The ticket
 - Your first message carries a SNAPSHOT of the ticket. It goes stale: whenever fresh state matters — the user mentions a comment, a resource, an edit you haven't seen, or you need the current plan — call \`read_issue\` instead of guessing. Open the files that matter to the request (specs, mockups, logs) with \`read_resource\`.
 - **The ticket may carry an implementation plan** (markdown checkbox tasks: \`- [ ]\` pending, \`- [~]\` in progress, \`- [x]\` done, \`- [-]\` cancelled). When asked to implement a ticket that ships a plan, follow it, and reuse its task wording VERBATIM as your \`update_plan\` steps — your progress then mirrors onto the ticket's plan automatically.
@@ -308,11 +339,9 @@ ${gitOwnership}
 - The user's personal notebook is readable and writable from here as well: \`read_scratchpad\` for its live state, \`update_scratchpad_task\` to tick off a task of theirs that your work just completed.
 ${NOTEBOOK_RULES}
 
-## Git and pull requests
+${gitHeader}
 ${gitOwnership}
-- One pull request lives per ticket at a time. If one already exists for this branch, every push updates it automatically (a rejected/closed one is reopened by the push) — you have nothing to manage.
-- If NO pull request exists yet, nothing forces one: create it with \`create_pr\` when the user asks for it, or propose it (or just do it) once you've completed a reviewable piece of work they asked for. Left to your own judgement, do not open one for a trivial or exploratory turn.
-- **But that judgement yields to theirs.** If the user tells you how they want pull requests handled — open one for every change without asking, never open one unprompted, always ask first — that instruction governs from then on, for the rest of the session, and you do not ask again. It holds whether they say it now or said it three turns ago.`;
+${gitPrLines}`;
 }
 
 /**
@@ -396,6 +425,9 @@ export function workflowSteps(opts: {
   routine: boolean;
   n: PromptToolNames;
   failedEditAdvice: string;
+  /** False for a run on a project with NO linked repository: no pull request
+   * to publish, so the publishing step disappears rather than lying. */
+  hasRepo?: boolean;
 }): string {
   const { routine, n, failedEditAdvice } = opts;
   const runtimeProof = n.background
@@ -408,9 +440,9 @@ export function workflowSteps(opts: {
    - **Behaviour you add or change comes WITH ITS TEST, in the same turn.** Running the existing suite proves nothing about code nobody has ever tested — for new behaviour it passes empty. Before writing one, \`${n.read}\` a test that already covers something close: it hands you the runner, the file naming, the fixtures and the conventions instead of you guessing them, and a repository whose tests you never opened is one whose conventions you are inventing. If the repository genuinely has no test suite, say that in your reply rather than skipping the step in silence.
    - **When what you changed only shows at RUNTIME** — a page, an API route, a realtime subscription, the lifecycle of a hook — go further than a green test: make the code actually RUN and look at what it does. ${runtimeProof} When there is nothing to \`curl\` — state living in a client hook, a subscription, a background job, a cache — drive the real code path from a throwaway script or a test and print what happened. "It compiles" is not "it works".
 4. **Re-read your own diff before you reply — how carefully is your call.** Run \`git diff\` and read it when what you just did earns it: several files, a shared type or contract, anything the user will not be able to check easily, anything touching money, auth, migrations or deletion. Skip it for a change you can hold in your head — a line removed, a string fixed. What a diff catches, and nothing else does, is the mistake no single file shows: a value produced in one file and consumed in another (i18n placeholders, props, payload fields, columns) where the two sides disagree, a new case added in one place and ignored in its counterpart, something changed halfway. Plus the obvious: diff minimal, no stray or debug files, nothing unrelated to the request. And when the change replaces state that other code also writes, \`grep\` the other writers: the line that defeats a change is usually one that did not change.
-5. **Validate explicitly when useful.** \`validate_changes\` runs the repository type-check, relevant tests, and a diff review. It can take time, so use it when the user asks for verification or before publishing work whose confidence matters. Read its report, fix what it finds, and call it again after further edits. A failure that was already present before your changes is not yours: leave it alone and say so.
-6. **Publish separately.** \`create_pr\` only commits, pushes, and opens or updates the pull request. It does not run type-checks or tests. The pull request's CI and required status checks provide the authoritative validation for merging.
-7. **Reply.** End the turn with a clear message: what you did or found, the concrete files touched (\`path:line\`), how you verified it, and the pull request link if you opened one. No raw file dumps. **The user sees exactly ONE message per turn: your last one**, and writing it ENDS the turn — nothing comes back after it, so say everything that matters now. Being honest about what you did not verify costs you nothing; claiming a check you never ran is the one thing that cannot be repaired.`;
+5. **Validate explicitly when useful.** \`validate_changes\` runs the repository type-check, relevant tests, and a diff review. It can take time, so use it when the user asks for verification or before publishing work whose confidence matters. Read its report, fix what it finds, and call it again after further edits. A failure that was already present before your changes is not yours: leave it alone and say so.${opts.hasRepo === false ? "" : `
+6. **Publish separately.** \`create_pr\` only commits, pushes, and opens or updates the pull request. It does not run type-checks or tests. The pull request's CI and required status checks provide the authoritative validation for merging.`}
+${opts.hasRepo === false ? "6" : "7"}. **Reply.** End the turn with a clear message: what you did or found, the concrete files touched (\`path:line\`), and how you verified it.${opts.hasRepo === false ? "" : " Mention the pull request link if you opened one."} No raw file dumps. **The user sees exactly ONE message per turn: your last one**, and writing it ENDS the turn — nothing comes back after it, so say everything that matters now. Being honest about what you did not verify costs you nothing; claiming a check you never ran is the one thing that cannot be repaired.`;
 }
 
 /**
@@ -894,7 +926,9 @@ function landingStatusLine(status: string | null | undefined): string {
  */
 export function buildAgentContextMessage(input: {
   issue: AgentIssueContext;
-  repo: AgentRepoContext;
+  /** `null` for a run on a project with NO linked repository (local only):
+   * the workspace sentence describes the attached folder instead. */
+  repo: AgentRepoContext | null;
   projectName?: string | null;
   resources?: AgentResourceContext[];
   /** Does the run model see the images (MIN-111)? Then marks the
@@ -904,7 +938,7 @@ export function buildAgentContextMessage(input: {
   /** Landing status of a ticket created by the agent (launcher setting). */
   numoDefaultStatus?: string | null;
 }): string {
-  const { issue, repo } = input;
+  const { issue } = input;
   /**
  * CLOISONNED, like the body of a reread PR (MIN-328). A ticket is not
  * always written by the team: promoting a return of the public board makes it a
@@ -935,7 +969,11 @@ export function buildAgentContextMessage(input: {
           .join("\n")}`
       : "";
 
-  return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.
+  const repoBlock = input.repo
+    ? `Repository: **${input.repo.fullName}** — working branch **${input.repo.workBranch}** (based on **${input.repo.defaultBranch}**). The harness commits and pushes ${input.repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.`
+    : `Workspace: the folder the user attached to this project on their own machine — a local git checkout with no forge remote. You edit the files; NOTHING is committed or pushed for you: what you change simply stays in their working tree, and they review, commit and publish it themselves.`;
+
+  return `${repoBlock}
 
 # Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${resourcesBlock}
 
@@ -1214,13 +1252,17 @@ export function buildPrReviewContextMessage(input: {
  * can be reread at any time via `read_scratchpad`.
  */
 export function buildNotebookContextMessage(input: {
-  repo: AgentRepoContext;
+  /** `null` for a run on a project with NO linked repository (local only):
+   * the workspace sentence describes the attached folder instead. */
+  repo: AgentRepoContext | null;
   projectName?: string | null;
   /** Landing status of a ticket created by the agent (launcher setting). */
   numoDefaultStatus?: string | null;
 }): string {
-  const { repo } = input;
-  return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.${input.projectName ? `\nProject: ${input.projectName}` : ""}
+  const repoBlock = input.repo
+    ? `Repository: **${input.repo.fullName}** — working branch **${input.repo.workBranch}** (based on **${input.repo.defaultBranch}**). The harness commits and pushes ${input.repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.`
+    : `Workspace: the folder the user attached to this project on their own machine — a local git checkout with no forge remote. You edit the files; NOTHING is committed or pushed for you: what you change simply stays in their working tree, and they review, commit and publish it themselves.`;
+  return `${repoBlock}${input.projectName ? `\nProject: ${input.projectName}` : ""}
 
 This session was launched from the user's NOTEBOOK: their note follows as the next message — it is your instruction, a free-form prompt rather than a formal ticket. The note is a snapshot of part of the notebook; \`read_scratchpad\` gives you its live state (all tasks with their \`task_index\` and current checkboxes) whenever it matters — and always right before \`update_scratchpad_task\`.${landingStatusLine(input.numoDefaultStatus)}`;
 }

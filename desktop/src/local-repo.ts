@@ -29,8 +29,11 @@ import { readLocalRepos, writeLocalRepos } from "./repo-store";
  * panel, the storage, and the question “what state to return to”.
  */
 
-/** The state of a given path, revalidated against the repository linked to the project. */
-function stateFor(dirPath: string, expected: ExpectedRepo): LocalRepoState {
+/** The state of a given path, revalidated against the repository linked to the project.
+ *
+ * `expected` is `null` for a project with no linked repository: the folder must
+ * be a git repository, but no remote is required (see `localRepoVerdict`). */
+function stateFor(dirPath: string, expected: ExpectedRepo | null): LocalRepoState {
   const verdict = localRepoVerdict(readGitFacts(dirPath), expected);
   return verdict.ok
     ? { status: "ready", path: dirPath, folder: localRepoFolderName(dirPath) }
@@ -47,7 +50,7 @@ function stateFor(dirPath: string, expected: ExpectedRepo): LocalRepoState {
  */
 export function describeLocalRepo(
   projectId: string,
-  expected: ExpectedRepo,
+  expected: ExpectedRepo | null,
 ): LocalRepoState {
   const stored = readLocalRepos()[projectId];
   if (!stored) return { status: "none" };
@@ -58,11 +61,17 @@ export function describeLocalRepo(
  * Ready folders among the projects known to the launcher. This revalidation is
  * important: an old attachment must not make the model believe that it
  * can open a folder that has been moved, unmounted or linked to another repository.
+ *
+ * A project WITHOUT a linked repository is validated too — as a plain git
+ * checkout, remote optional: a local-only project (no forge attached) is exactly
+ * the case the folder attachment exists for.
  */
 export function localProjectsFor(projects: readonly LocalTurnProject[]): LocalProject[] {
   return projects.map((project) => {
-    if (!project.repoFullName) return { ...project, localPath: null };
-    const state = describeLocalRepo(project.id, { fullName: project.repoFullName });
+    const state = describeLocalRepo(
+      project.id,
+      project.repoFullName ? { fullName: project.repoFullName } : null,
+    );
     return {
       ...project,
       localPath: state.status === "ready" ? state.path : null,
@@ -85,12 +94,14 @@ export function localProjectsFor(projects: readonly LocalTurnProject[]): LocalPr
  */
 export async function attachLocalRepo(
   projectId: string,
-  expected: ExpectedRepo,
+  expected: ExpectedRepo | null,
   window: BrowserWindow | null,
 ): Promise<LocalRepoState> {
   const options: Electron.OpenDialogOptions = {
     properties: ["openDirectory"],
-    message: `Choisir le dossier local de ${expected.fullName}`,
+    message: expected
+      ? `Choisir le dossier local de ${expected.fullName}`
+      : "Choisir le dossier local du projet",
     buttonLabel: "Attacher",
   };
   const picked = window
@@ -117,7 +128,10 @@ export function detachLocalRepo(projectId: string): LocalRepoState {
 }
 
 /** Local branches, read without letting the page designate a disk path. */
-export function localBranches(projectId: string, expected: ExpectedRepo): string[] {
+export function localBranches(
+  projectId: string,
+  expected: ExpectedRepo | null,
+): string[] {
   const state = describeLocalRepo(projectId, expected);
   if (state.status !== "ready") return [];
   try {

@@ -859,6 +859,13 @@ export async function runOpencodeTurn(
     await assertNoSecretsPushed();
     authUrl = (await cp.repoAuthUrl()) ?? authUrl;
     secrets.addAuthUrl(authUrl);
+    // A run on a project with NO linked repository arrives without a push URL,
+    // and nothing can mint one: the delivery tool is not served (`create_pr`
+    // requires `job.authUrl`), so reaching this line is a contract breach —
+    // said plainly rather than passed to `git push` as `undefined`.
+    if (!authUrl) {
+      throw new Error("no repository is linked to this project: there is nowhere to push");
+    }
     if (!current) {
       return await commitAndPush(host, {
         authUrl,
@@ -927,8 +934,9 @@ export async function runOpencodeTurn(
    * delivery. It is killed BEFORE staging, and the model learns it in the same
    * response — including when the push fails behind.
    */
-  const createPr: SupervisorTool | null = job.writesToRepo
-    ? async (args) => {
+  const createPr: SupervisorTool | null =
+    job.writesToRepo && job.authUrl
+      ? async (args) => {
         const writing = subagents.runningImplementId();
         if (writing) {
           return {

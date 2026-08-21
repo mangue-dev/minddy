@@ -267,7 +267,10 @@ export async function prepareCurrentRepo(
   host: RepoHost,
   opts: {
     runId: string;
-    authUrl: string;
+    /** Absent for a run on a project with NO linked repository: there is no
+     * remote to fetch from, and the two remote reads below are skipped — the
+     * session then anchors on the local refs only. */
+    authUrl?: string;
     workBranch: string;
     remoteWorkMayExist?: boolean;
     /** Base branch chosen at launch: a cloud branch is brought back
@@ -306,7 +309,7 @@ export async function prepareCurrentRepo(
   ]);
 
   let baseParent = localBase;
-  if (base && !baseParent) {
+  if (base && !baseParent && opts.authUrl) {
     // The branch only exists in the cloud: we bring it under a private ref to
     // minddy, without moving HEAD or user refs.
     const fetched = await host.exec(
@@ -327,7 +330,7 @@ export async function prepareCurrentRepo(
   }
 
   let parent = localRunParent;
-  if (!parent && opts.remoteWorkMayExist !== false) {
+  if (!parent && opts.authUrl && opts.remoteWorkMayExist !== false) {
     // Has the run already pushed, from here or another machine? We bring back our tip
     // sous NOTRE ref — jamais sous `refs/heads/` ni `refs/remotes/origin/`, qui
     // both belong to the user.

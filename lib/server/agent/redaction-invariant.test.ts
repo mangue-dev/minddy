@@ -152,10 +152,11 @@ describe("le registre porte le token de la VM comme celui de la fonction", () =>
     // The three gestures that write a token-authenticated URL INTO the microVM:
     // the clone of an ordinary run, that of a replay, and the loop job.
     // `target.authUrl` would be the original bug — a function token in a
-    // `.git/config` that the model can read.
+    // `.git/config` that the model can read. (`vmTarget!` : a PR run always has
+    // its repository, the assertion only surfaces that invariant.)
     for (const geste of [
-      "await cloneRepo(sandboxHost(fresh, cloudLayout()), {\n          authUrl: vmTarget.authUrl,",
-      "authUrl: vmTarget.authUrl,\n            baseBranch,",
+      "await cloneRepo(sandboxHost(fresh, cloudLayout()), {\n          authUrl: vmTarget!.authUrl,",
+      "authUrl: vmTarget!.authUrl,\n            baseBranch,",
     ]) {
       expect(source).toContain(geste);
     }

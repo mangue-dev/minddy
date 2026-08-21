@@ -62,6 +62,7 @@ import {
 import { usePlanGates } from "@/lib/use-billing-query";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -249,7 +250,12 @@ export function IssueSidePanel({
   const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
     issue?.project_id ?? null
   );
-  const agentsEnabled = agentsAllowed && (repoLinkLoading || repoLink != null);
+  // In the desktop app a local run needs NO linked repository: it plays on the
+  // folder attached to this machine. In the browser the link stays the only
+  // door (the server refuses a `noRepo` cloud launch anyway).
+  const desktopAvailable = useMemo(() => !!getDesktopBridge(), []);
+  const agentsEnabled =
+    agentsAllowed && (repoLinkLoading || repoLink != null || desktopAvailable);
   const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
   const latestRun = runs[0] ?? null;
   // A restartable conversation exists (at least one non-`failed` run).

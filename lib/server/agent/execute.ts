@@ -58,7 +58,6 @@ import {
   resolveRunPrefs,
   prTerm,
   SANDBOX_USAGE_SEQ_BASE,
-  type PrLandingContext,
 } from "./pr-landing";
 import {
   stampRun,
@@ -452,7 +451,7 @@ export async function executeAgentRun(
      */
     onLocalAssignment?: (
       job: Omit<VmJob, "layout" | "bootstrapMs">,
-      meta: { repoFullName: string },
+      meta: { repoFullName: string | null },
     ) => void;
   },
 ): Promise<ExecuteOutcome> {
@@ -603,7 +602,14 @@ export async function executeAgentRun(
     // the Mac could even start opencode, although the first token depends only on
     // their final result. Keep target resolution first so its error and security
     // boundary remain unchanged.
-    const targetPromise = resolveRepoCloneTarget(run.project_id);
+    //
+    // A run with NO repo link (local only, MIN-local-norepo) resolves to `null`
+    // instead of throwing: the turn plays on the machine's attached folder and
+    // needs no forge identity. A CLOUD run without a link still dies below —
+    // there is nothing to clone.
+    const targetPromise = run.repo_link_id
+      ? resolveRepoCloneTarget(run.project_id)
+      : Promise.resolve(null);
     const issuePromise = run.issue_id
       ? loadIssueContext(run, run.issue_id, {
           // On an opencode continuation, the prompt is intentionally empty: the
@@ -630,17 +636,25 @@ export async function executeAgentRun(
     });
 
     // Clone target (fresh token for this chunk) + the provider's PR/MR client.
+    // `null` target = no linked repository: only a local turn can be here, and
+    // everything forge-shaped below degrades to a no-repo session.
     const target = await targetPromise;
-    if (!target) throw new Error("No repository linked to this project");
-    secrets.addAuthUrl(target.authUrl);
-    secrets.add(target.token);
-    const forge = forgeFor(target.provider);
+    if (!target && !localTurn) throw new Error("No repository linked to this project");
+    if (target) {
+      secrets.addAuthUrl(target.authUrl);
+      secrets.add(target.token);
+    }
+    const forge = target ? forgeFor(target.provider) : null;
     // This identity may need the forge on the process's first turn. It depends on
     // no other context, so starting it here overlaps quota, preferences, issue,
-    // and prompt construction.
+    // and prompt construction. Without a repository there is nothing to resolve:
+    // the default identity travels, and no one will ever commit for the model
+    // anyway (current-checkout mode commits nothing).
     const committerPromise = run.pull_request_id
       ? Promise.resolve(defaultCommitterIdentity())
-      : resolveCommitterIdentity(target);
+      : target
+        ? resolveCommitterIdentity(target)
+        : Promise.resolve(defaultCommitterIdentity());
 
     // Run anchor, with THREE values: minddy issue, NOTEBOOK (MIN-84, the launcher's
     // note is the instruction), or PULL REQUEST (MIN-168 — a read-only review
@@ -687,8 +701,10 @@ export async function executeAgentRun(
           run.project_id,
           policy.repository === "read" ? "repo-read" : "repo-write",
         ).catch(() => null)) ?? target;
-    secrets.addAuthUrl(vmTarget.authUrl);
-    secrets.add(vmTarget.token);
+    if (vmTarget) {
+      secrets.addAuthUrl(vmTarget.authUrl);
+      secrets.add(vmTarget.token);
+    }
     /**
      * Does the harness write to the REPOSITORY for this session? False for a
      * review, and this is the harness half of the “no writes” guarantee — the other
@@ -706,8 +722,10 @@ export async function executeAgentRun(
     const { locale: commentLocale, numoDefaultStatus } = prefs;
     // Review session: the branches are those of the PR — its base is the diff
     // comparison point, and its head is what we review. Otherwise, use the base
-    // selected at launch and the run's working branch.
-    const baseBranch = (prRun?.baseBranch || run.base_branch) ?? target.defaultBranch;
+    // selected at launch and the run's working branch. Without a linked
+    // repository there is no default branch to fall back to: `""` means "no
+    // base" for the only consumer that reads it on a local turn.
+    const baseBranch = (prRun?.baseBranch || run.base_branch) ?? target?.defaultBranch ?? "";
     const workBranch = prRun
       ? pullRequestLocalBranch(prRun)
       : run.branch_name ??
@@ -837,6 +855,9 @@ export async function executeAgentRun(
       }),
       onCreate: async (fresh) => {
         if (prRun) {
+          // A PR run always has its repository — the launch resolves the project
+          // THROUGH the link — so `target`/`forge` are non-null here by
+          // construction; the assertions only surface that invariant.
           // By the PR's SERVER REF, not the branch name: on a fork, the head branch
           // does not exist in the base repository (see `clonePullRequest`). No
           // committer identity needs resolving — nothing will be committed.
@@ -847,10 +868,10 @@ export async function executeAgentRun(
           // deletion from the PR. Best-effort on both sides — an unreadable merge
           // base degrades the review but does not cancel it. The head is given by
           // its SHA: on a fork, its branch name does not exist here.
-          const baseSha = await forge
+          const baseSha = await forge!
             .getMergeBaseSha({
-              token: target.token,
-              repoFullName: target.repoFullName,
+              token: target!.token,
+              repoFullName: target!.repoFullName,
               number: prRun.number,
               base: baseBranch,
               head: prRun.headSha ?? prRun.headBranch ?? "",
@@ -863,7 +884,7 @@ export async function executeAgentRun(
             // `vmTarget`: what the clone writes to `.git/config` remains readable
             // for the microVM's entire lifetime. For a review, it is a READ token
             // for the single linked repository (MIN-327).
-            authUrl: vmTarget.authUrl,
+            authUrl: vmTarget!.authUrl,
             baseBranch,
             headRef: pullRequestHeadRef(prRun.provider, prRun.number),
             headBranch: prRun.headBranch,
@@ -876,7 +897,7 @@ export async function executeAgentRun(
         // travels in the job and is supplied with `git -c`, on the only command
         // that commits. A value used in one place cannot leak into someone's repo.
         await cloneRepo(sandboxHost(fresh, cloudLayout()), {
-          authUrl: vmTarget.authUrl,
+          authUrl: vmTarget!.authUrl,
           baseBranch,
           workBranch,
         });
@@ -1055,10 +1076,10 @@ export async function executeAgentRun(
       // forge calls to rewrite it identically would waste network traffic.
       prBoot = prRun
         ? await loadPrReviewBoot({
-            forge,
+            forge: forge!,
             call: {
-              token: target.token,
-              repoFullName: target.repoFullName,
+              token: target!.token,
+              repoFullName: target!.repoFullName,
               number: prRun.number,
             },
             pr: prRun,
@@ -1073,7 +1094,7 @@ export async function executeAgentRun(
       }
       const contextMsg = prRun
         ? buildPrReviewContextMessage({
-            repo: { fullName: target.repoFullName },
+            repo: { fullName: target!.repoFullName },
             pr: {
               number: prRun.number,
               title: prRun.title,
@@ -1081,7 +1102,7 @@ export async function executeAgentRun(
               state: prRun.state,
               headBranch: prRun.headBranch,
               baseBranch,
-              term: prTerm(target.provider),
+              term: prTerm(target!.provider),
             },
             issue: prBoot?.issue ?? null,
             files: prBoot?.files ?? [],
@@ -1103,14 +1124,20 @@ export async function executeAgentRun(
                 description: issue.description,
                 plan: issue.plan,
               },
-              repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+              // No linked repository → no repo block: the context names the
+              // attached folder instead (see the builder).
+              repo: target
+                ? { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch }
+                : null,
               projectName: issue.projectName,
               resources: issue.resources,
               images: imageInput,
               numoDefaultStatus,
             })
           : buildNotebookContextMessage({
-              repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+              repo: target
+                ? { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch }
+                : null,
               projectName: project.name,
               numoDefaultStatus,
             });
@@ -1126,15 +1153,18 @@ export async function executeAgentRun(
       // previous session summary, PR, and review thread — so it can iterate instead
       // of starting over. Not applicable to a review, which has neither lineage nor
       // prior work: its PR context is already the one above.
-      const inheritedPr = writesToRepo
-        ? await buildInheritedPrContext(run, {
-            forge,
-            token: target.token,
-            repoFullName: target.repoFullName,
-            provider: target.provider,
-            repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
-          })
-        : null;
+      // Without a linked repository there is no forge to read a previous PR
+      // from: the inheritance block is skipped entirely.
+      const inheritedPr =
+        writesToRepo && target && forge
+          ? await buildInheritedPrContext(run, {
+              forge,
+              token: target.token,
+              repoFullName: target.repoFullName,
+              provider: target.provider,
+              repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+            })
+          : null;
       if (inheritedPr) messages.push({ role: "user", content: inheritedPr });
       // Repository instructions (AGENTS.md / CLAUDE.md) — a dedicated message after
       // the context. The root is ALWAYS marked as seen, whether found or not: only
@@ -1232,6 +1262,9 @@ export async function executeAgentRun(
         locale: commentLocale,
         anchor,
         currentRepo,
+        // No linked repository → no forge: the anchor drops `create_pr`, the
+        // project-PR section, and every sentence that promises a remote.
+        hasRepo: target != null,
         interactive: !run.routine_id,
         webSearch: webSearchAllowed,
         webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
@@ -1261,31 +1294,13 @@ export async function executeAgentRun(
 
     // Session PR state, MUTATED during the turn (create_pr, reopening on push):
     // turn completion reads the current state, not the one frozen at claim time.
-    const prState: { number: number | null; url: string | null; state: AgentRun["pr_state"] } = {
-      number: run.pr_number,
-      url: run.pr_url,
-      state: run.pr_state,
-    };
-
     /**
      * Landing the turn on the pull request and issue — open, reopen, record, comment,
-     * trace. A single IMPLEMENTATION
-     * ([pr-landing.ts](pr-landing.ts)) since MIN-224: the new form, where the loop
-     * lives in the microVM, lands its turns through the control plane and must tell
-     * exactly the same story. Two copies would diverge at the first fix applied to
-     * only one side.
+     * trace — happens through the CONTROL PLANE since MIN-224: the loop lives in
+     * the microVM (or on the machine), and `pr-landing.ts` is driven from
+     * `control-plane.ts`. The old in-process `PrLandingContext` died with it;
+     * a run with no linked repository simply never lands a PR.
      */
-    const _landing: PrLandingContext = {
-      run,
-      target,
-      forge,
-      issue: issue ? { identifier: issue.identifier } : null,
-      workBranch,
-      baseBranch,
-      locale: commentLocale,
-      emit,
-      prState,
-    };
     // Model context window AND input price (OpenRouter): derive the compaction
     // threshold from both — the window BOUNDS it, and the price SIZES it. One index
     // read serves both (process cache).
@@ -1530,8 +1545,9 @@ export async function executeAgentRun(
       workBranch,
       // A first turn whose branch has not yet been stamped cannot exist on the
       // remote. The harness can start directly from HEAD instead of paying for a
-      // `git fetch` destined to return “ref does not exist”.
-      remoteWorkMayExist: run.branch_name != null || run.continuations > 0,
+      // `git fetch` destined to return "ref does not exist". Without a linked
+      // repository there is no remote at all: the answer is always no.
+      remoteWorkMayExist: target != null && (run.branch_name != null || run.continuations > 0),
       /**
        * THE FUNCTION CAN PRODUCE ONLY A CLONE (MIN-358). It created the microVM and
        * cloned into it; the `current` mode belongs to a launcher that works in a
@@ -1548,7 +1564,9 @@ export async function executeAgentRun(
         : await committerPromise,
       // The job GOES into the microVM: it is `vmTarget`, never `target` (MIN-327).
       // The loop uses it only for `git` — and a review receives only a read token.
-      authUrl: vmTarget.authUrl,
+      // ABSENT on a no-repository local run: nothing is ever pushed, and the
+      // harness serves no delivery tool (`create_pr` requires it).
+      ...(vmTarget ? { authUrl: vmTarget.authUrl } : {}),
       commitRef,
       filesFromSha,
       locale: commentLocale,
@@ -1595,7 +1613,11 @@ export async function executeAgentRun(
        * not the type.
        */
       const { layout: _cloudLayout, ...assignment } = job;
-      opts.onLocalAssignment?.(assignment, { repoFullName: target.repoFullName });
+      opts.onLocalAssignment?.(assignment, {
+        // `null` = the project has no linked repository: the machine validates
+        // the attached folder as a plain git checkout, without remote comparison.
+        repoFullName: target?.repoFullName ?? null,
+      });
       // The initial claim (or steering of a continuation) already refreshed activity.
       // We only await the event started at the beginning: in practice it finished
       // long ago, without adding another SQL write.

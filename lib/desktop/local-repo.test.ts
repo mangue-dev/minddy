@@ -172,6 +172,35 @@ describe("localRepoVerdict", () => {
       reason: "wrongRepo",
     });
   });
+
+  describe("without a linked repository (expected = null)", () => {
+    it("accepts a repository with NO remote — the local-only project case", () => {
+      expect(
+        localRepoVerdict({ isDirectory: true, gitConfig: "[core]\n\tbare = false\n" }, null),
+      ).toEqual({ ok: true });
+    });
+
+    it("accepts any remote — there is no identity to compare against", () => {
+      const text = `[remote "origin"]\n\turl = git@github.com:mangue-dev/autre.git\n`;
+      expect(localRepoVerdict({ isDirectory: true, gitConfig: text }, null)).toEqual({
+        ok: true,
+      });
+    });
+
+    it("still refuses a missing folder", () => {
+      expect(localRepoVerdict({ isDirectory: false, gitConfig: null }, null)).toEqual({
+        ok: false,
+        reason: "missing",
+      });
+    });
+
+    it("still refuses a folder without .git", () => {
+      expect(localRepoVerdict({ isDirectory: true, gitConfig: null }, null)).toEqual({
+        ok: false,
+        reason: "notGit",
+      });
+    });
+  });
 });
 
 describe("parseGitDirPointer", () => {

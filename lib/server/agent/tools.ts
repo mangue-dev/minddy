@@ -3,6 +3,7 @@ import {
   CREATE_ROUTINE_DESCRIPTION,
   CREATE_ROUTINE_PARAMETERS,
 } from "@/lib/server/routine-tool-schema";
+import { PROJECT_PR_TOOL_NAMES } from "./platform-tool-names";
 // Type ONLY (therefore deleted during compilation): the anchor is declared in the module
 // prompts, which is the one that translates it into text.
 import type { AgentAnchor } from "./prompt";
@@ -1349,6 +1350,7 @@ export function agentToolsFor(opts: {
    * only the choice of model disappears.
    */
   subagentModels?: boolean;
+  repo?: boolean;
   /**
    * Is the run a step in an automation CHAIN ​​(MIN-147)? Only this
    * case serves `report_verdict`: outside the chain, no one reads a verdict, and a
@@ -1411,6 +1413,13 @@ export function agentToolsFor(opts: {
       if (name === "web_search") return opts.webSearch;
       if (name === "report_verdict") return opts.chain === true;
       if (NON_INTERACTIVE_FORBIDDEN_TOOLS.has(name)) return opts.interactive !== false;
+      // No linked repository → no forge: the delivery tool and the project-PR
+      // inventory would only ever fail, so they are not announced (same
+      // all-or-nothing rule as `web_search`).
+      if (opts.repo === false) {
+        if (name === "create_pr") return false;
+        if (PROJECT_PR_TOOL_NAMES.has(name)) return false;
+      }
       return true;
     })
     .map((t) => {

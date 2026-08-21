@@ -343,9 +343,9 @@ describe("la préparation locale d'`execute.ts`", () => {
 
   it("rend l'affectation au lieu de lancer la boucle", () => {
     const local = source.slice(source.indexOf("if (localTurn) {"));
-    expect(local).toContain("opts.onLocalAssignment?.(assignment, { repoFullName: target.repoFullName })");
+    expect(local).toContain("opts.onLocalAssignment?.(assignment, {");
     // The microVM loop comes AFTER, and is therefore never reached.
-    expect(local.indexOf("opts.onLocalAssignment?.(assignment, { repoFullName: target.repoFullName })")).toBeLessThan(
+    expect(local.indexOf("opts.onLocalAssignment?.(assignment, {")).toBeLessThan(
       local.indexOf("startVmLoop("),
     );
   });
@@ -383,7 +383,7 @@ describe("la préparation locale d'`execute.ts`", () => {
     // These operations do not depend on each other. They must be
     // launched before waiting for the target, otherwise each round trip lengthens the
     // time between the sending of the first token.
-    const prepareAt = source.indexOf("const targetPromise = resolveRepoCloneTarget(run.project_id);");
+    const prepareAt = source.indexOf("const targetPromise = run.repo_link_id");
     const endpointAt = source.indexOf("const endpointPromise = resolveAgentApiKey(");
     const targetAwaitAt = source.indexOf("const target = await targetPromise;");
     expect(prepareAt).toBeGreaterThan(-1);
@@ -404,7 +404,9 @@ describe("la préparation locale d'`execute.ts`", () => {
   });
 
   it("rend l'identité du dépôt avec l'affectation sans la résoudre une seconde fois", () => {
-    expect(source).toContain("{ repoFullName: target.repoFullName }");
+    // `null` = project without a linked repository: the shell validates the
+    // attached folder as a plain git checkout, without remote comparison.
+    expect(source).toContain("repoFullName: target?.repoFullName ?? null");
   });
 
   it("recouvre l'event de démarrage et ne publie pas de sandbox cloud en local", () => {

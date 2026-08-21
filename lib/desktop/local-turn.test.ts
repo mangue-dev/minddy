@@ -68,6 +68,15 @@ describe("parseLocalTurnAssignment", () => {
     expect(parsed?.repoFullName).toBe("mangue-dev/minddy");
   });
 
+  it("accepts a NULL repoFullName — project with no linked repository", () => {
+    const parsed = parseLocalTurnAssignment(assignment({ repoFullName: null }));
+    expect(parsed?.repoFullName).toBeNull();
+  });
+
+  it("still refuses a repoFullName that is neither a path nor null", () => {
+    expect(parseLocalTurnAssignment(assignment({ repoFullName: 42 }))).toBeNull();
+  });
+
   it("reads the project catalog without ever accepting a path in it", () => {
     const parsed = parseLocalTurnAssignment(
       assignment({
@@ -441,5 +450,10 @@ describe("ce que l'utilisateur lit quand rien n'a démarré", () => {
     expect(localTurnRefusalMessage("no_repo", "x/y")).toMatch(/attach/i);
     expect(localTurnRefusalMessage("repo_invalid", "x/y")).toMatch(/moved|unmounted/i);
     expect(localTurnRefusalMessage("assignment_invalid", "x/y")).toMatch(/update/i);
+  });
+
+  it("reads without a repository identity (local-only project)", () => {
+    expect(localTurnRefusalMessage("no_repo", null)).toMatch(/attach/i);
+    expect(localTurnRefusalMessage("repo_invalid", null)).toMatch(/moved|unmounted/i);
   });
 });

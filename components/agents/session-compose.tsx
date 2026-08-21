@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -27,6 +28,7 @@ import {
   type AgentEnvironment,
 } from "@/components/agent/environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { launchGeneralAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
@@ -177,6 +179,7 @@ export function SessionCompose({
 
   const agentErrorMessage = useAgentErrorMessage();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { projects } = useProjects();
   // The account is named here like everywhere else (sidebar, menu
   // mobile): its full display name, never the raw email.
@@ -188,18 +191,25 @@ export function SessionCompose({
   );
 
   /**
-   * Projects where the agent can work: those that have a DEPOSIT linked. THE
-   * others are not proposed — the agent would fail in its first second
-   * (`noRepo`), once the instruction has been written and sent. Better not to
-   * offer than refuse after the fact.
+   * Projects where the agent can work: those that have a DEPOSIT linked — or,
+   * in the desktop app, ANY project: a local run plays on the folder attached
+   * to the machine and does not need a forge. THE others are not proposed —
+   * the agent would fail in its first second (`noRepo`), once the instruction
+   * has been written and sent. Better not to offer than refuse after the fact.
    */
   const { projectIds: gitLinked, loading: gitLinkedLoading } =
     useGitLinkedProjectsQuery();
+  // Read once: the bridge exists only in the desktop app, and a render-time
+  // read would diverge between server and client render.
+  const desktopAvailable = useMemo(() => !!getDesktopBridge(), []);
   const launchable = useMemo(
-    () => projects.filter((p) => gitLinked.has(p.id)),
-    [projects, gitLinked],
+    () =>
+      desktopAvailable
+        ? projects
+        : projects.filter((p) => gitLinked.has(p.id)),
+    [projects, gitLinked, desktopAvailable],
   );
-  /** No deposits anywhere: there are no conversations to initiate from here. */
+  /** No way to launch anywhere: no linked repository, and no desktop app to run locally. */
   const noRepoAnywhere = !gitLinkedLoading && launchable.length === 0;
 
   // The project leaves PRE-CHOSEN: the one that the draft designates, otherwise the last
@@ -295,7 +305,22 @@ export function SessionCompose({
       toast.error(t("errorExecutionBackendUnavailable"));
       return;
     }
+    // No linked repository and no local folder: the launch would be refused
+    // (`noRepo`). Say it with the repair gesture, not after the fact. While
+    // the git-link query is pending, `linked` is `false` by default — skip the
+    // guard and let the server, which has the answer, decide.
+    if (!localExec && !localRepo.linked && !localRepo.linkLoading) {
+      toast.error(t("errorNoRepo"));
+      router.push(`/projects/${projectId}/settings?tab=git`);
+      return;
+    }
     const localWorktree = localExec && environment === "worktree";
+    // A worktree branches from the forge and pushes to it: on a project
+    // WITHOUT a linked repository the server downgrades the run to the
+    // current checkout — say so rather than let the shape change silently.
+    if (localWorktree && !localRepo.linked && !localRepo.linkLoading) {
+      toast.info(t("localWorktreeDowngraded"));
+    }
     setLaunching(true);
     setLaunchText(prompt);
     setLaunchMentions(mentions);
@@ -480,12 +505,20 @@ export function SessionCompose({
                 />
                 {projectId ? (
                   <>
-                    {localRepo.linked ? (
+                    {/* Desktop: the chip always exists (local choice). Browser:
+                        only for a linked project, where it offers the cloud. */}
+                    {localRepo.available || localRepo.linked ? (
                       <EnvironmentCombobox
                         value={environment}
                         onChange={setEnvironment}
                         localAvailable={localRepo.available}
                         cloudAvailable={!localEndpoint && cloudExecutionConfigured}
+                        // No linked repository → the sandbox has nothing to clone:
+                        // the cloud entry is greyed and reopens the link panel.
+                        cloudNeedsRepo={!localRepo.linked}
+                        onLinkRepo={() => {
+                          router.push(`/projects/${projectId}/settings?tab=git`);
+                        }}
                         executionBackend={executionBackend}
                         folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                         needsAttach={localRepo.state?.status !== "ready"}

@@ -137,8 +137,10 @@ export interface DesktopBridge {
    * main process does not have a session), and it is she who decides against what
    * we validate. This is not a security border — the file comes from a
    * human gesture in a system panel — but a safeguard against inattention.
+   * `null` for a project with no linked repository: the folder is validated as a
+   * plain git repository, without remote comparison.
    */
-  localRepo(input: { projectId: string; fullName: string }): Promise<LocalRepoState>;
+  localRepo(input: { projectId: string; fullName: string | null }): Promise<LocalRepoState>;
   /**
    * Open the system panel and attach the chosen folder to this project.
    *
@@ -149,12 +151,15 @@ export interface DesktopBridge {
    */
   chooseLocalRepo(input: {
     projectId: string;
-    fullName: string;
+    fullName: string | null;
   }): Promise<LocalRepoState>;
   /** Forget the folder attached to this project. Returns the following state. */
   forgetLocalRepo(input: { projectId: string }): Promise<LocalRepoState>;
   /** The branches already present in the attached repository. */
-  localRepoBranches?(input: { projectId: string; fullName: string }): Promise<string[]>;
+  localRepoBranches?(input: {
+    projectId: string;
+    fullName: string | null;
+  }): Promise<string[]>;
   /**
    * Reads models exposed by Ollama or an OpenAI-compatible endpoint on the
    * local loop. The main process refuses any URL that does not point to

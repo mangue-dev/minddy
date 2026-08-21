@@ -257,10 +257,6 @@ export async function POST(request: NextRequest) {
   // This identity must exist before issuing the lease: issue a token
   // increments its generation and revokes the previous one. Let's not do this
   // irreversible writing for an incomplete assignment.
-  if (!prepared.repoFullName) {
-    return NextResponse.json({ error: "prepared turn has no repository identity" }, { status: 409 });
-  }
-
   const lease = await issueLocalExecToken(run.id);
   if (!lease.ok) {
     console.error(`[desktop-local-turn] ${selectedRunId} : bail refusé (${lease.error})`);
@@ -273,6 +269,8 @@ export async function POST(request: NextRequest) {
    * The `owner/repo` of the project leaves with the assignment: it is against him that the
    * machine revalidates the attached file, **at the time of the turn**. The attachment could
    * been done a month ago, and a chosen path proves nothing.
+   * `null` for a project with no linked repository: the machine validates the
+   * folder as a plain git checkout, without remote comparison.
    */
   // `executeAgentRun` has just resolved this same target to build the job.
   // Having her rehit the forge here created a second token just for rereading

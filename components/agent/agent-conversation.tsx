@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -168,6 +169,7 @@ export function AgentConversation({
   const t = useTranslations("Agent");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
 
   /**
@@ -582,7 +584,22 @@ export function AgentConversation({
       toast.error(t("errorExecutionBackendUnavailable"));
       return;
     }
+    // No linked repository and no local folder: the launch would be refused
+    // (`noRepo`). Say it with the repair gesture, not after the fact. While
+    // the git-link query is pending, `linked` is `false` by default — skip the
+    // guard and let the server, which has the answer, decide.
+    if (!localExec && !localRepo.linked && !localRepo.linkLoading) {
+      toast.error(t("errorNoRepo"));
+      router.push(`/projects/${projectId}/settings?tab=git`);
+      return;
+    }
     const localWorktree = localExec && environment === "worktree";
+    // A worktree branches from the forge and pushes to it: on a project
+    // WITHOUT a linked repository the server downgrades the run to the
+    // current checkout — say so rather than let the shape change silently.
+    if (localWorktree && !localRepo.linked && !localRepo.linkLoading) {
+      toast.info(t("localWorktreeDowngraded"));
+    }
     setLaunching(true);
     // OPTIMISTIC display of the 1st message, as for a follow-up: the POST continues
     // the pre-checks (issue, deposit, quota, model resolution) before submitting the
@@ -955,12 +972,18 @@ export function AgentConversation({
                     cloudLabel={t("branchCloudGroup")}
                     bare
                   />
-                  {localRepo.linked ? (
+                  {/* Desktop: the chip always exists (local choice). Browser:
+                      only for a linked project, where it offers the cloud. */}
+                  {localRepo.available || localRepo.linked ? (
                     <EnvironmentCombobox
                       value={environment}
                       onChange={setEnvironment}
                       localAvailable={localRepo.available}
                       cloudAvailable={!localEndpoint && cloudExecutionConfigured}
+                      // No linked repository → the sandbox has nothing to clone:
+                      // the cloud entry is greyed and reopens the link panel.
+                      cloudNeedsRepo={!localRepo.linked}
+                      onLinkRepo={() => router.push(`/projects/${projectId}/settings?tab=git`)}
                       executionBackend={executionBackend}
                       folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                       needsAttach={localRepo.state?.status !== "ready"}

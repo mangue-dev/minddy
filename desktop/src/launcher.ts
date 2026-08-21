@@ -337,7 +337,12 @@ export async function runAssignment(
 
   // 1. THE DEPOSIT, now revalidated. The attachment dates back perhaps a month: the
   // folder could have been moved, the disk unmounted, the project re-linked elsewhere.
-  const repo = describeLocalRepo(assignment.projectId, { fullName: assignment.repoFullName });
+  // No linked repository → no identity to compare against: the folder is validated
+  // as a plain git checkout (remote optional).
+  const repo = describeLocalRepo(
+    assignment.projectId,
+    assignment.repoFullName ? { fullName: assignment.repoFullName } : null,
+  );
   if (repo.status !== "ready") {
     const reason: LocalTurnRefusal = repo.status === "none" ? "no_repo" : "repo_invalid";
     const message = localTurnRefusalMessage(reason, assignment.repoFullName);

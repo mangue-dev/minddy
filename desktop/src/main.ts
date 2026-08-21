@@ -768,13 +768,17 @@ function registerIpc(): void {
   ipcMain.handle("minddy:local-repo:read", (_event, input: unknown) => {
     const parsed = localRepoRequest(input);
     if (!parsed) return { status: "none" };
-    return describeLocalRepo(parsed.projectId, { fullName: parsed.fullName });
+    return describeLocalRepo(parsed.projectId, parsed.fullName ? { fullName: parsed.fullName } : null);
   });
 
   ipcMain.handle("minddy:local-repo:choose", async (_event, input: unknown) => {
     const parsed = localRepoRequest(input);
     if (!parsed) return { status: "none" };
-    return attachLocalRepo(parsed.projectId, { fullName: parsed.fullName }, mainWindow);
+    return attachLocalRepo(
+      parsed.projectId,
+      parsed.fullName ? { fullName: parsed.fullName } : null,
+      mainWindow,
+    );
   });
 
   ipcMain.handle("minddy:local-repo:forget", (_event, input: unknown) => {
@@ -785,7 +789,9 @@ function registerIpc(): void {
 
   ipcMain.handle("minddy:local-repo:branches", (_event, input: unknown) => {
     const parsed = localRepoRequest(input);
-    return parsed ? localBranches(parsed.projectId, { fullName: parsed.fullName }) : [];
+    return parsed
+      ? localBranches(parsed.projectId, parsed.fullName ? { fullName: parsed.fullName } : null)
+      : [];
   });
 
   // A remote page does not receive a network proxy through the Electron bridge. She
@@ -806,13 +812,17 @@ function readString(value: unknown): string | null {
   return trimmed && trimmed.length <= 256 ? trimmed : null;
 }
 
-/** What the renderer has the right to send, reduced to this or nothing. */
-function localRepoRequest(input: unknown): { projectId: string; fullName: string } | null {
+/** What the renderer has the right to send, reduced to this or nothing.
+ *
+ * `fullName` is optional: a project with no linked repository has no remote
+ * identity to validate against, and the attachment still makes sense — the
+ * folder is then validated as a plain git repository. */
+function localRepoRequest(input: unknown): { projectId: string; fullName: string | null } | null {
   if (typeof input !== "object" || input === null) return null;
   const { projectId, fullName } = input as { projectId?: unknown; fullName?: unknown };
   const id = readString(projectId);
-  const name = readString(fullName);
-  return id && name ? { projectId: id, fullName: name } : null;
+  if (!id) return null;
+  return { projectId: id, fullName: readString(fullName) };
 }
 
 /**

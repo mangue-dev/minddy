@@ -124,12 +124,16 @@ export interface LocalTurnAssignment {
   readonly runId: string;
   readonly projectId: string;
   /**
- * The `owner/repo` of the project, to revalidate the attached folder **at the time of the
- * round**. The attachment could have been made a month ago, the repository moved, the
- * disk unmounted, the project re-linked elsewhere: responding based on the file de
- * settings would send a run to a folder that no longer exists.
- */
-  readonly repoFullName: string;
+   * The `owner/repo` of the project, to revalidate the attached folder **at the time of the
+   * round**. The attachment could have been made a month ago, the repository moved, the
+   * disk unmounted, the project re-linked elsewhere: responding based on the file de
+   * settings would send a run to a folder that no longer exists.
+   *
+   * `null` for a project with NO linked repository: the run plays on the attached
+   * folder as a plain git checkout — the machine still revalidates that the folder
+   * exists and is a repository, there is just no remote identity to compare against.
+   */
+  readonly repoFullName: string | null;
   /** The isolated checkout is a decision fixed at the start of the session. */
   readonly localWorktree: boolean;
   /**
@@ -195,7 +199,9 @@ export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | nu
   if (typeof raw !== "object" || raw === null) return null;
   const { runId, projectId, repoFullName, localWorktree, projects, job } = raw as Record<string, unknown>;
   if (!isNonEmptyString(runId) || !isNonEmptyString(projectId)) return null;
-  if (!isRepoFullName(repoFullName)) return null;
+  // `null` = project without a linked repository: the folder is validated as a
+  // plain git checkout, without remote comparison (see `LocalTurnAssignment`).
+  if (repoFullName !== null && !isRepoFullName(repoFullName)) return null;
   // A server deployed just before migration does not yet know this field.
   // Its absence falls on historical, safe behavior (current checkout);
   // only a value present but poorly formed is an inconsistent contract.
@@ -382,14 +388,14 @@ export function staleRunRoots(
  * The log phrase for pre-fork denial. In English, like the menu and
  * the diagnostic report — it's the same text, and it ends up pasted into a support thread.
  */
-export function localTurnRefusalMessage(reason: LocalTurnRefusal, repoFullName: string): string {
+export function localTurnRefusalMessage(reason: LocalTurnRefusal, repoFullName: string | null): string {
   switch (reason) {
     case "assignment_invalid":
       return "minddy sent a turn this version of the app cannot read. Update the app.";
     case "no_repo":
-      return `No local folder is attached to ${repoFullName} on this Mac. Attach one in the project settings.`;
+      return `No local folder is attached to ${repoFullName ?? "this project"} on this Mac. Attach one in the project settings.`;
     case "repo_invalid":
-      return `The folder attached to ${repoFullName} is no longer that repository — it may have moved, or the disk may be unmounted.`;
+      return `The folder attached to ${repoFullName ?? "this project"} is no longer usable — it may have moved, or the disk may be unmounted.`;
     case "bundle":
       return "The agent harness could not be obtained or verified, so no turn was started.";
     case "opencode":

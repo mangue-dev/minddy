@@ -419,6 +419,15 @@ describe("buildAgentContextMessage", () => {
     expect(msg).toContain("- [ ] créer la route");
     expect(msg).toContain("- [x] écrire le test");
   });
+
+  it("sans dépôt lié, décrit le dossier attaché et ne promet NI commit NI push", () => {
+    const msg = buildAgentContextMessage({ ...base, repo: null });
+    expect(msg).toMatch(/attached to this project/i);
+    expect(msg).not.toMatch(/Repository: \*\*/);
+    expect(msg).toMatch(/NOTHING is committed or pushed/i);
+    // The ticket block is intact: only the workspace line changes.
+    expect(msg).toContain("# Ticket — MIN-42: Add search");
+  });
 });
 
 /**

@@ -297,11 +297,24 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   const quotaPromise = checkAgentQuota(input.userId, aiSurface);
   const byokPromise = getUserByok(input.userId, aiSurface);
 
+  // Read BEFORE the link gate: a local run is the only one allowed to launch
+  // without a linked repository (see below), so the request must be resolved
+  // first. `localExecRequested` folds in the third-party-content scope
+  // (button/chat only, no PR/routine/chain anchor) — a no-repository run is
+  // therefore always an interactive one, never an automation.
+  const localExec = localExecRequested(input);
   const link = await linkPromise;
-  if (!link) return { ok: false, error: "noRepo" };
+  // A LOCAL run can do without a linked repository: it plays on the folder
+  // attached to the machine, which carries no remote identity to honor. The
+  // cloud and the sandbox keep the hard requirement — without a forge there is
+  // nothing to clone, nothing to push, and no pull request to open.
+  if (!link && !localExec) return { ok: false, error: "noRepo" };
   // The authoritative provider register (MIN-69): a known provider with the
   // write capacity (PR/MR) can carry the agent — github AND gitlab.
-  if (!isRepoProviderId(link.provider) || !REPO_PROVIDERS[link.provider].capabilities.write) {
+  if (
+    link &&
+    (!isRepoProviderId(link.provider) || !REPO_PROVIDERS[link.provider].capabilities.write)
+  ) {
     return { ok: false, error: "unsupportedProvider" };
   }
 
@@ -329,7 +342,6 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       quota,
     };
   }
-  const localExec = localExecRequested(input);
   if (!localExec && !capability("agentExecution").configured) {
     return { ok: false, error: "executionBackendUnavailable" };
   }
@@ -418,8 +430,10 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     run = await createRun({
       projectId,
       issueId,
-      repoLinkId: link.id,
-      connectionId: link.connection_id,
+      // `null` for a local run on a project with no linked repository: the
+      // lineage columns stay empty and the run plays on the machine's folder.
+      repoLinkId: link?.id ?? null,
+      connectionId: link?.connection_id ?? null,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
       promptMentions: input.promptMentions ?? null,
@@ -448,7 +462,10 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       // leaves, and this is how “a replay run does not start locally”
       // is a property of the code rather than a `if` to remember.
       localExec,
-      localWorktree: localExec && input.localWorktree === true,
+      // A worktree without a linked repository has nothing to branch from the
+      // forge and nowhere to push: the current-checkout mode is the only honest
+      // shape, so the request is dropped rather than frozen into a dead end.
+      localWorktree: localExec && !!link && input.localWorktree === true,
     });
   } catch (err) {
     // Lost race against a concurrent launch (double-click, two tabs):

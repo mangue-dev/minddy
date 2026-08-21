@@ -196,6 +196,9 @@ function toolsFor(job: VmJob): AgentToolDef[] {
     subagentModels: job.subagents.models,
     chain: job.chain,
     interactive: job.interactive,
+    // No push URL → no forge: `create_pr` and the project-PR inventory are
+    // not served (local run on a project with no linked repository).
+    repo: job.authUrl != null,
     // MIN-293: `run_background` is not served on a machine. The condition
     // is placed HERE, in the only harness tool factory, and not one
     // second time in `localToolsFor` — the bridge only writes what is served,

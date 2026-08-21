@@ -41,11 +41,12 @@ import { useLocalRepo } from "@/lib/use-local-repo";
 export function ProjectLocalRepoSection({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
   const ta = useTranslations("Agent");
-  const { state, linked, busy, attach, detach } = useLocalRepo(projectId);
+  const { state, busy, attach, detach } = useLocalRepo(projectId);
 
-  // No bridge (so no desktop app), or no linked repository: nothing to
-  // attach, and a gray card would teach nothing.
-  if (!state || !linked) return null;
+  // No bridge (so no desktop app): nothing to attach, and a gray card would
+  // teach nothing. A project WITHOUT a linked repository still shows the card —
+  // attaching a folder is what makes a local-only project work at all.
+  if (!state) return null;
 
   const choose = () => {
     void attach().then((next) => {
