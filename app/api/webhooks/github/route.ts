@@ -682,6 +682,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
+  // MANAGED FORGE RELAY (Cloud side): a delivery for an installation claimed
+  // by a relayed instance is fanned out to that instance and NOT processed
+  // here — the installation belongs to the instance, no local row would ever
+  // match. Unclaimed installations (Cloud's own) fall through to the local
+  // handlers unchanged.
+  //
+  // This runs BEFORE the dedup insert on purpose: a failed enqueue must
+  // answer 5xx while the delivery is still unmarked, so GitHub re-delivers
+  // and nothing is lost. After a dedup mark, a 200 would drop the event and
+  // even a manual re-delivery would be absorbed as a replay. Duplicate
+  // enqueues of the same GUID are absorbed by the queue's unique constraint.
+  if (isManagedForgeEnabled()) {
+    try {
+      const relayedInstance = await enqueueRelayDeliveryForPayload({
+        provider: "github",
+        event: request.headers.get("x-github-event"),
+        deliveryGuid: request.headers.get("x-github-delivery"),
+        rawBody,
+      });
+      if (relayedInstance) {
+        return NextResponse.json({ ok: true, relayed: true });
+      }
+    } catch (err) {
+      console.error(
+        "[webhooks/github] relay fan-out enqueue failed:",
+        (err as Error).message,
+      );
+      return NextResponse.json(
+        { error: "relay fan-out unavailable" },
+        { status: 503 },
+      );
+    }
+  }
+
   // Replay: the same delivery, already processed (MIN-333). After verification —
   // marking a delivery without a valid signature would mean being able to
   // silence the real event which carries it.
@@ -689,23 +723,6 @@ export async function POST(request: NextRequest) {
     await isReplayedForgeDelivery("github", request.headers.get("x-github-delivery"))
   ) {
     return NextResponse.json({ ok: true, duplicate: true });
-  }
-
-  // MANAGED FORGE RELAY (Cloud side): a delivery for an installation claimed
-  // by a relayed instance is fanned out to that instance and NOT processed
-  // here — the installation belongs to the instance, no local row would ever
-  // match. Unclaimed installations (Cloud's own) fall through to the local
-  // handlers unchanged.
-  if (isManagedForgeEnabled()) {
-    const relayedInstance = await enqueueRelayDeliveryForPayload({
-      provider: "github",
-      event: request.headers.get("x-github-event"),
-      deliveryGuid: request.headers.get("x-github-delivery"),
-      rawBody,
-    });
-    if (relayedInstance) {
-      return NextResponse.json({ ok: true, relayed: true });
-    }
   }
 
   const event = request.headers.get("x-github-event");

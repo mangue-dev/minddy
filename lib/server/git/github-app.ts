@@ -234,6 +234,25 @@ export function __clearInstallationTokenCacheForTests(): void {
   installationTokenCache.clear();
 }
 
+/**
+ * Token source of the listing helpers below (forge-provider seam,
+ * docs/managed-forge-relay-plan.md): defaults to the local App mint, and a
+ * RELAYED connection passes `ForgeProvider.getInstallationToken` so the token
+ * is minted by the Cloud control plane instead. Same shape as
+ * `ForgeProvider.getInstallationToken` — the object-method form keeps the
+ * call sites free of any `this` binding.
+ */
+export type InstallationTokenMinter = (input: {
+  installationId: number | string;
+  scope?: InstallationTokenScope;
+}) => Promise<InstallationToken>;
+
+/** The default minter: the local App, unchanged behavior. */
+const localInstallationTokenMinter: InstallationTokenMinter = ({
+  installationId,
+  scope,
+}) => getInstallationToken(installationId, scope);
+
 export interface InstallationRepo {
   id: number;
   owner: string;
@@ -251,8 +270,9 @@ const INSTALLATION_REPOS_PER_PAGE = 100;
  */
 export async function listInstallationRepositories(
   installationId: number | string,
+  mint: InstallationTokenMinter = localInstallationTokenMinter,
 ): Promise<InstallationRepo[]> {
-  const { token } = await getInstallationToken(installationId);
+  const { token } = await mint({ installationId });
   const repos: InstallationRepo[] = [];
   let url: string | null = `${GITHUB_API_BASE}/installation/repositories?per_page=${INSTALLATION_REPOS_PER_PAGE}`;
   while (url) {
@@ -371,8 +391,9 @@ export async function listRepoOpenIssues(
   repoFullName: string,
   /** Hard ceiling: we stop as soon as it is reached (bounded backfill). */
   limit = Number.POSITIVE_INFINITY,
+  mint: InstallationTokenMinter = localInstallationTokenMinter,
 ): Promise<RemoteRepoIssue[]> {
-  const { token } = await getInstallationToken(installationId);
+  const { token } = await mint({ installationId });
   const issues: RemoteRepoIssue[] = [];
   let url: string | null =
     `${GITHUB_API_BASE}/repos/${repoFullName}/issues?state=open&per_page=${REPO_ISSUES_PER_PAGE}`;
@@ -451,8 +472,9 @@ export async function listGithubIssueComments(
   installationId: number | string,
   repoFullName: string,
   issueNumber: number,
+  mint: InstallationTokenMinter = localInstallationTokenMinter,
 ): Promise<RemoteGithubIssueComment[]> {
-  const { token } = await getInstallationToken(installationId);
+  const { token } = await mint({ installationId });
   const comments: RemoteGithubIssueComment[] = [];
   let url: string | null =
     `${GITHUB_API_BASE}/repos/${repoFullName}/issues/${issueNumber}/comments?per_page=${REPO_ISSUES_PER_PAGE}`;

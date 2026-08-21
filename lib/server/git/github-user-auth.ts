@@ -1,7 +1,7 @@
 import "server-only";
 
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
-import { capability, requireCapability } from "@/lib/server/capabilities";
+import { requireCapability } from "@/lib/server/capabilities";
 import { isForgeTokenCryptoConfigured } from "./token-crypto";
 import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 
@@ -56,10 +56,26 @@ function getClientSecret(): string {
 export function isGithubUserAuthConfigured(): boolean {
   if (!isForgeTokenCryptoConfigured()) return false;
   if (isForgeRelayClientConfigured()) return true;
-  return !!(
-    capability("github").configured &&
-    process.env.GITHUB_APP_CLIENT_ID &&
-    process.env.GITHUB_APP_CLIENT_SECRET
+  return isLocalGithubUserAuthConfigured();
+}
+
+/**
+ * LOCAL user-authorization credentials only (operator-owned App + its client
+ * id/secret), distinct from `isGithubUserAuthConfigured()` which also counts
+ * the managed forge relay as deployed. The connect route uses this to hold
+ * the documented precedence (docs/managed-forge-relay-plan.md): with a local
+ * app configured, new authorizations stay local even when the relay is also
+ * available.
+ */
+export function isLocalGithubUserAuthConfigured(): boolean {
+  return Boolean(
+    isForgeTokenCryptoConfigured() &&
+      process.env.GITHUB_APP_ID?.trim() &&
+      process.env.GITHUB_APP_SLUG?.trim() &&
+      process.env.GITHUB_APP_PRIVATE_KEY?.trim() &&
+      process.env.GIT_STATE_SECRET?.trim() &&
+      process.env.GITHUB_APP_CLIENT_ID?.trim() &&
+      process.env.GITHUB_APP_CLIENT_SECRET?.trim(),
   );
 }
 

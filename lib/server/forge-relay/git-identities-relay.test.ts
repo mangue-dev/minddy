@@ -40,6 +40,7 @@ vi.mock("@/lib/server/git/link-state", () => ({
 }));
 vi.mock("@/lib/server/git/gitlab-app", () => ({
   isGitlabConfigured: () => false,
+  isLocalGitlabOAuthConfigured: () => false,
   getGitlabAuthorizeUrl: vi.fn(() => "https://gitlab.com/oauth/authorize"),
 }));
 vi.mock("@/lib/server/app-origin", () => ({
@@ -50,8 +51,12 @@ const getGithubUserAuthorizeUrl = vi.fn(
   ({ redirectUri, state }: { redirectUri: string; state: string }) =>
     `https://github.com/login/oauth/authorize?redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`,
 );
+let localGithubUserAuth = false;
 vi.mock("@/lib/server/git/github-user-auth", () => ({
   isGithubUserAuthConfigured: () => true,
+  // The documented precedence (docs/managed-forge-relay-plan.md): with local
+  // credentials, new authorizations stay local even when the relay answers.
+  isLocalGithubUserAuthConfigured: () => localGithubUserAuth,
   getGithubUserAuthorizeUrl: (args: { redirectUri: string; state: string }) =>
     getGithubUserAuthorizeUrl(args),
 }));
@@ -105,6 +110,7 @@ function startRequest(provider: string): never {
 
 beforeEach(() => {
   relayConfigured = true;
+  localGithubUserAuth = false;
   getGithubUserAuthorizeUrl.mockClear();
   seedInstance();
 });
@@ -129,6 +135,16 @@ describe("POST /api/account/git-identities — relayed GitHub authorization", ()
 
   it("keeps the direct GitHub flow when the relay is not configured", async () => {
     relayConfigured = false;
+    const response = await startIdentity(startRequest("github"));
+    const { url } = (await response.json()) as { url: string };
+    expect(url).toContain("https://github.com/login/oauth/authorize");
+    expect(getGithubUserAuthorizeUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the direct GitHub flow when a LOCAL app is configured too — local wins", async () => {
+    // Mixed setup: both channels are reachable, and the documented precedence
+    // gives new connections to the operator-owned app.
+    localGithubUserAuth = true;
     const response = await startIdentity(startRequest("github"));
     const { url } = (await response.json()) as { url: string };
     expect(url).toContain("https://github.com/login/oauth/authorize");

@@ -35,6 +35,10 @@ interface EnqueueRow {
  * Resolves the target instance(s) of a raw webhook payload from its
  * installation id and enqueues one delivery per claimed installation.
  * Best-effort and silent for unclaimed installations (Cloud's own).
+ *
+ * DB failures THROW instead of being swallowed: the caller answers 5xx so the
+ * forge re-delivers, and the instance-side dedup has not been marked yet —
+ * answering 200 here would drop the event permanently.
  */
 export async function enqueueRelayDeliveryForPayload(input: {
   provider: string;
@@ -55,15 +59,18 @@ export async function enqueueRelayDeliveryForPayload(input: {
   }
 
   const supabase = getServiceClient();
-  const { data: claims } = await supabase
+  const { data: claims, error: claimsError } = await supabase
     .from("forge_relay_installations")
     .select("instance_id")
     .eq("installation_id", installationId);
+  if (claimsError) {
+    throw new Error(`relay claim lookup failed: ${claimsError.message}`);
+  }
   const instances = (claims ?? []) as EnqueueRow[];
   if (instances.length === 0) return null;
 
   for (const claim of instances) {
-    await supabase.from("forge_relay_deliveries").upsert(
+    const { error } = await supabase.from("forge_relay_deliveries").upsert(
       {
         instance_id: claim.instance_id,
         provider: input.provider,
@@ -73,6 +80,9 @@ export async function enqueueRelayDeliveryForPayload(input: {
       },
       { onConflict: "instance_id,provider,delivery_guid", ignoreDuplicates: true },
     );
+    if (error) {
+      throw new Error(`relay delivery enqueue failed: ${error.message}`);
+    }
   }
   return instances[0]?.instance_id ?? null;
 }

@@ -6,7 +6,7 @@ import type { IssueStatus } from "@/lib/issue-constants";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
 import { GITLAB_API_BASE, gitlabHeaders } from "./gitlab-rest";
-import { getInstallationToken } from "./github-app";
+import { forgeProviderForConnection } from "./forge-provider";
 import { getGitlabAccessToken } from "./gitlab-app";
 import { resolveForgeActor } from "./forge-actor";
 import { remoteStateForStatus, type RemoteState } from "./issue-sync-core";
@@ -50,6 +50,9 @@ interface PushTarget {
   provider: RepoProviderId;
   connectionId: string;
   installationId: number | null;
+  /** "relay" when the connection was established through the managed forge
+   * relay — routes the fallback token mint to the ForgeProvider seam. */
+  connectionSource: string | null;
   repoFullName: string | null;
   externalRepoId: string;
 }
@@ -99,7 +102,7 @@ async function pushRemoteState(params: {
   const { data } = await service
     .from("project_git_links")
     .select(
-      "provider, connection_id, installation_id, repo_full_name, external_repo_id",
+      "provider, connection_id, installation_id, repo_full_name, external_repo_id, git_connections(source)",
     )
     .eq("project_id", params.projectId)
     .eq("provider", params.provider)
@@ -110,12 +113,25 @@ async function pushRemoteState(params: {
     .maybeSingle();
   if (!data) return;
 
+  // Embedded to-one relationship: object at runtime, cast via unknown.
+  const row = data as unknown as {
+    provider: string;
+    connection_id: string;
+    installation_id: number | null;
+    repo_full_name: string | null;
+    external_repo_id: string;
+    git_connections?: { source: string | null } | { source: string | null }[] | null;
+  };
+
   const target: PushTarget = {
-    provider: data.provider as RepoProviderId,
-    connectionId: data.connection_id as string,
-    installationId: data.installation_id as number | null,
-    repoFullName: data.repo_full_name as string | null,
-    externalRepoId: data.external_repo_id as string,
+    provider: row.provider as RepoProviderId,
+    connectionId: row.connection_id,
+    installationId: row.installation_id,
+    connectionSource: Array.isArray(row.git_connections)
+      ? row.git_connections[0]?.source ?? null
+      : row.git_connections?.source ?? null,
+    repoFullName: row.repo_full_name,
+    externalRepoId: row.external_repo_id,
   };
 
   const token = await resolveWriteToken(target, params.actorId);
@@ -164,7 +180,15 @@ async function resolveWriteToken(
   try {
     if (target.provider === "github") {
       if (target.installationId == null) return null;
-      const { token } = await getInstallationToken(target.installationId);
+      // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED
+      // connection mints its fallback token through the Cloud control plane —
+      // the local App key does not exist (relay-only) or belongs to another
+      // App than the installation (mixed setup). GitLab stays instance-side:
+      // `getGitlabAccessToken` already routes the refresh grant by source.
+      const forge = forgeProviderForConnection(target.connectionSource);
+      const { token } = await forge.getInstallationToken({
+        installationId: target.installationId,
+      });
       return token;
     }
     return await getGitlabAccessToken(target.connectionId);

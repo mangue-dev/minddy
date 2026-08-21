@@ -5,6 +5,7 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import type { CandidateRepo, ProjectGitLink } from "@/lib/types";
 import { getUserConnection } from "./connections";
 import { listInstallationRepositories } from "./github-app";
+import { forgeProviderForConnection } from "./forge-provider";
 import { getGitlabAccessToken, listGitlabProjects } from "./gitlab-app";
 import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 import { pushRelayLinkEvent } from "@/lib/server/forge-relay/link-push";
@@ -65,15 +66,29 @@ export async function getProjectLink(
 /**
  * Lists the candidate repositories of a connection (dispatch by provider). Used by
  * the repository selector. Raised if the provider is unknown or the API call fails.
+ *
+ * The GitHub token comes from the ForgeProvider seam (docs/managed-forge-relay-plan.md):
+ * a RELAYED connection (`source: "relay"`) mints through the Cloud control plane —
+ * minting locally would fail on a relay-only instance (no local app key) and hit the
+ * wrong App in a mixed setup.
  */
 export async function listCandidateRepos(
-  connection: { id: string; provider: RepoProviderId; installation_id: number | null },
+  connection: {
+    id: string;
+    provider: RepoProviderId;
+    installation_id: number | null;
+    source?: string | null;
+  },
 ): Promise<CandidateRepo[]> {
   if (connection.provider === "github") {
     if (connection.installation_id == null) {
       throw new Error("GitHub connection is missing its installation id");
     }
-    const repos = await listInstallationRepositories(connection.installation_id);
+    const forge = forgeProviderForConnection(connection.source);
+    const repos = await listInstallationRepositories(
+      connection.installation_id,
+      forge.getInstallationToken,
+    );
     return repos.map((r) => ({
       external_repo_id: String(r.id),
       owner: r.owner,

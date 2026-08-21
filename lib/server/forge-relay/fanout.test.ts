@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import {
   FakeQuery,
   fakeTables,
+  setFakeInsertError,
   setFakeTable,
 } from "../../../test/forge-relay/fake-supabase";
 
@@ -113,6 +114,25 @@ describe("enqueueRelayDeliveryForPayload", () => {
       });
     }
     expect(fakeTables["forge_relay_deliveries"]).toHaveLength(1);
+  });
+
+  it("THROWS when the enqueue write fails — the caller must answer 5xx", async () => {
+    // A swallowed error would let the receiver answer 200 after the dedup
+    // window: the forge would never re-deliver and the event would be lost.
+    setFakeInsertError({ code: "08006", message: "connection failure" });
+    try {
+      await expect(
+        enqueueRelayDeliveryForPayload({
+          provider: "github",
+          event: "issues",
+          deliveryGuid: "guid-fail",
+          rawBody: JSON.stringify({ installation: { id: 4242 } }),
+        }),
+      ).rejects.toThrow(/relay delivery enqueue failed/);
+    } finally {
+      setFakeInsertError(null);
+    }
+    expect(fakeTables["forge_relay_deliveries"] ?? []).toHaveLength(0);
   });
 });
 

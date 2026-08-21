@@ -9,6 +9,7 @@ import {
 import {
   getGithubUserAuthorizeUrl,
   isGithubUserAuthConfigured,
+  isLocalGithubUserAuthConfigured,
 } from "@/lib/server/git/github-user-auth";
 import {
   forgeRelayConfig,
@@ -20,6 +21,7 @@ import { signRelayGitlabState } from "@/lib/server/forge-relay/gitlab-broker";
 import {
   getGitlabAuthorizeUrl,
   isGitlabConfigured,
+  isLocalGitlabOAuthConfigured,
 } from "@/lib/server/git/gitlab-app";
 import {
   ACCOUNT_CONNECT_PROJECT,
@@ -110,7 +112,16 @@ export async function POST(request: NextRequest) {
   // user-callback URL (docs/managed-forge-relay-plan.md). The instance signs
   // the authorization request with its relay key; storage and human gestures
   // stay local (the 8h refresh grant runs Cloud-side for relayed identities).
-  if (provider === "github" && isForgeRelayClientConfigured()) {
+  //
+  // Precedence is the documented one: with a LOCAL app configured, new
+  // authorizations stay local — the relay only serves instances that have no
+  // local credentials. A connection keeps the channel it was established
+  // through until it is reconnected via the other one.
+  if (
+    provider === "github" &&
+    !isLocalGithubUserAuthConfigured() &&
+    isForgeRelayClientConfigured()
+  ) {
     const config = forgeRelayConfig();
     const state = signRelayUserState({
       userId: auth.user.id,
@@ -125,7 +136,12 @@ export async function POST(request: NextRequest) {
   // Same broker for GitLab: the OAuth redirect URI is registered on Cloud.
   // Tokens come back as a one-shot delivery, then live on the instance; their
   // refresh grant runs Cloud-side (it needs the managed app's credentials).
-  if (provider === "gitlab" && isForgeRelayClientConfigured()) {
+  // Same precedence rule as the GitHub branch above.
+  if (
+    provider === "gitlab" &&
+    !isLocalGitlabOAuthConfigured() &&
+    isForgeRelayClientConfigured()
+  ) {
     const config = forgeRelayConfig();
     const state = signRelayGitlabState({
       userId: auth.user.id,

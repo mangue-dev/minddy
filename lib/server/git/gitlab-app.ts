@@ -88,6 +88,27 @@ export function isGitlabConfigured(): boolean {
   return capability("gitlab").configured;
 }
 
+/**
+ * LOCAL OAuth app credentials only — distinct from `isGitlabConfigured()`,
+ * which also counts the managed forge relay as deployed. The connect route
+ * uses this to hold the documented precedence
+ * (docs/managed-forge-relay-plan.md): with a local app configured, new
+ * connections stay local even when the relay is also available. Mirrors the
+ * local branch of the `gitlab` capability (client id/secret, git state
+ * signing secret, token encryption secret).
+ */
+export function isLocalGitlabOAuthConfigured(): boolean {
+  const tokenEncryption =
+    process.env.GIT_TOKEN_ENCRYPTION_SECRET ||
+    process.env.GITLAB_TOKEN_ENCRYPTION_SECRET;
+  return Boolean(
+    process.env.GITLAB_OAUTH_CLIENT_ID?.trim() &&
+      process.env.GITLAB_OAUTH_CLIENT_SECRET?.trim() &&
+      process.env.GIT_STATE_SECRET?.trim() &&
+      tokenEncryption?.trim(),
+  );
+}
+
 // --- OAuth authorize + token exchange ------------------------------------
 
 /** Constructs the authorize GitLab URL that the connect route redirects to. */

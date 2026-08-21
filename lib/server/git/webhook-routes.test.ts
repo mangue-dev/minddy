@@ -414,6 +414,24 @@ describe("POST /api/webhooks/github — relayed deliveries", () => {
     expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
   });
 
+  it("answers 503 WITHOUT marking the dedup when the fan-out enqueue fails", async () => {
+    // The failure window: a 200 here (or a dedup mark before the enqueue)
+    // would make GitHub's re-delivery land as a "replay" — event lost.
+    managedForge = true;
+    enqueueRelayDeliveryForPayload.mockRejectedValue(
+      new Error("relay delivery enqueue failed: connection failure"),
+    );
+    const response = await githubPOST(githubRequest({ deliveryId: "livraison-gh-err" }));
+    expect(response.status).toBe(503);
+    expect(deliveries).toHaveLength(0);
+
+    // The forge re-delivers once the queue is back: processed fresh.
+    enqueueRelayDeliveryForPayload.mockResolvedValue(null);
+    const retry = await githubPOST(githubRequest({ deliveryId: "livraison-gh-err" }));
+    expect(retry.status).toBe(200);
+    expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
+  });
+
   it("processes unclaimed installations locally even with the managed forge on", async () => {
     managedForge = true;
     enqueueRelayDeliveryForPayload.mockResolvedValue(null);

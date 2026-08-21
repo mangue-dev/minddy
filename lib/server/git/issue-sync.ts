@@ -22,6 +22,7 @@ import {
   listRepoOpenIssues,
   type RemoteGithubIssueComment,
 } from "./github-app";
+import { forgeProviderForConnection } from "./forge-provider";
 import { getGitlabAccessToken, listGitlabOpenIssues } from "./gitlab-app";
 import {
   buildForgeAssigneeIndex,
@@ -734,12 +735,17 @@ async function backfillGithubIssueComments(
   issues: BackfilledIssue[],
 ): Promise<void> {
   if (target.installationId == null || !target.repoFullName) return;
+  // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED connection
+  // mints its listing tokens through the Cloud control plane, like every other
+  // GitHub call site.
+  const forge = forgeProviderForConnection(target.connectionSource);
   for (const issue of issues) {
     try {
       const comments = await listGithubIssueComments(
         target.installationId,
         target.repoFullName,
         issue.number,
+        forge.getInstallationToken,
       );
       for (const comment of comments) {
         await applyGithubIssueComment(
@@ -963,10 +969,15 @@ export async function backfillRemoteIssues(
   let remoteIssues: BackfilledIssue[];
   if (target.provider === "github") {
     if (target.installationId == null || !target.repoFullName) return 0;
+    // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED
+    // connection mints through the Cloud control plane — the local mint would
+    // throw without a local app key, or hit the wrong App in a mixed setup.
+    const forge = forgeProviderForConnection(target.connectionSource);
     const issues = await listRepoOpenIssues(
       target.installationId,
       target.repoFullName,
       REMOTE_BACKFILL_MAX,
+      forge.getInstallationToken,
     );
     remoteIssues = issues.map((i) => ({
       number: i.number,
