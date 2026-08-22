@@ -6,20 +6,22 @@ cd "$ROOT_DIR"
 
 usage() {
   cat <<'EOF'
-Usage: npm run deploy [-- auto|all|custom]
+Usage: npm run deploy [-- auto|all|custom|windows]
 
 Minddy's single publishing assistant.
 
   auto    recommend scopes based on modified files
   all     publish the core, deploy the web app, and publish the desktop applications
   custom  ask a question for each scope
+  windows publish only the existing version's Microsoft Store packages
 
-With no argument, an interactive menu offers these three modes.
+With no argument, an interactive menu offers the automatic, all, and custom modes.
 
 Scopes:
   public core  SemVer version + tag + GitHub Release + artifacts
   Cloud web    www.minddy.app instance deployed from `production`
   desktop      macOS, Linux, and Microsoft Store Windows packages attached to the core release
+  windows      x64 and ARM64 Store MSIX packages, without macOS or Linux jobs
 
 Marketing is part of the web build: a marketing-only change suggests
 a Cloud deployment without artificially creating a core version.
@@ -36,7 +38,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
 fi
 
 MODE="${1:-}"
-if [ "$#" -gt 1 ] || { [ -n "$MODE" ] && [ "$MODE" != "auto" ] && [ "$MODE" != "all" ] && [ "$MODE" != "custom" ]; }; then
+if [ "$#" -gt 1 ] || { [ -n "$MODE" ] && [ "$MODE" != "auto" ] && [ "$MODE" != "all" ] && [ "$MODE" != "custom" ] && [ "$MODE" != "windows" ]; }; then
   usage
   exit 1
 fi
@@ -130,7 +132,7 @@ yes_no() {
 }
 
 case "$MODE" in
-  auto|all) ;;
+  auto|all|windows) ;;
   custom)
     if yes_no "Publish a new version of the public heart?" "$([ "$AUTO_CORE" = "true" ] && echo yes || echo no)"; then CORE=1; fi
     if yes_no "Deploy the Minddy Cloud web (marketing included)?" "$([ "$AUTO_WEB" = "true" ] && echo yes || echo no)"; then WEB=1; fi
@@ -148,6 +150,8 @@ SELECTION=$(node -e '
 CORE=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).core ? "1" : "0")' "$SELECTION")
 WEB=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).web ? "1" : "0")' "$SELECTION")
 DESKTOP=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).desktop ? "1" : "0")' "$SELECTION")
+DESKTOP_TARGET="all"
+[ "$MODE" = "windows" ] && DESKTOP_TARGET="windows"
 
 if [ "$CORE" -eq 0 ] && [ "$WEB" -eq 0 ] && [ "$DESKTOP" -eq 0 ]; then
   echo "Nothing to publish based on this choice."
@@ -155,7 +159,7 @@ if [ "$CORE" -eq 0 ] && [ "$WEB" -eq 0 ] && [ "$DESKTOP" -eq 0 ]; then
 fi
 
 echo ""
-echo "Publication selected: core=$CORE · web=$WEB · desktop=$DESKTOP"
+echo "Publication selected: core=$CORE · web=$WEB · desktop=$DESKTOP · desktop target=$DESKTOP_TARGET"
 
 SECURITY_CHECKLIST_VERSION="1.0"
 SECURITY_REVIEW_REF="${MINDDY_SECURITY_REVIEW_REF:-}"
@@ -361,11 +365,22 @@ if [ "$DESKTOP" -eq 1 ]; then
     echo "Error: desktop applications need an existing public core release v$DESKTOP_VERSION."
     exit 1
   fi
-  git fetch origin production
-  DESKTOP_RUN_SHA=$(git rev-parse origin/production)
-  echo "→ Publishing desktop applications for macOS, Linux, and Microsoft Store, v$DESKTOP_VERSION..."
-  dispatch_and_wait desktop-release.yml production "$DESKTOP_RUN_SHA" -f version="$DESKTOP_VERSION"
-  git pull --ff-only origin main
+  if [ "$DESKTOP_TARGET" = "windows" ]; then
+    DESKTOP_WORKFLOW_REF="main"
+    DESKTOP_RUN_SHA=$(git rev-parse HEAD)
+    echo "→ Publishing only Microsoft Store packages for v$DESKTOP_VERSION..."
+  else
+    git fetch origin production
+    DESKTOP_WORKFLOW_REF="production"
+    DESKTOP_RUN_SHA=$(git rev-parse origin/production)
+    echo "→ Publishing desktop applications for macOS, Linux, and Microsoft Store, v$DESKTOP_VERSION..."
+  fi
+  dispatch_and_wait desktop-release.yml "$DESKTOP_WORKFLOW_REF" "$DESKTOP_RUN_SHA" \
+    -f version="$DESKTOP_VERSION" \
+    -f target="$DESKTOP_TARGET"
+  if [ "$DESKTOP_TARGET" = "all" ]; then
+    git pull --ff-only origin main
+  fi
 fi
 
 echo ""

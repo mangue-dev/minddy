@@ -41,6 +41,8 @@ export function selectReleaseScopes(mode, detected, custom = {}) {
     selected = { core: true, web: true, desktop: true };
   } else if (mode === "custom") {
     selected = { core: Boolean(custom.core), web: Boolean(custom.web), desktop: Boolean(custom.desktop) };
+  } else if (mode === "windows") {
+    selected = { core: false, web: false, desktop: true };
   } else {
     throw new Error(`unknown deployment mode: ${mode}`);
   }

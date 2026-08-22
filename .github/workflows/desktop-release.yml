@@ -7,6 +7,14 @@ on:
         description: "Core version already released (without v prefix)"
         required: true
         type: string
+      target:
+        description: "Desktop platforms to publish"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - windows
 
 permissions:
   contents: write
@@ -20,6 +28,7 @@ concurrency:
 jobs:
   macos:
     name: Sign, notarize and attach macOS v${{ inputs.version }}
+    if: inputs.target == 'all'
     runs-on: macos-26
     timeout-minutes: 45
     environment: public-release
@@ -87,6 +96,7 @@ jobs:
           shasum -a 256 * > SHA256SUMS-macOS
 
       - name: Attest macOS desktop artifacts
+        if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: .desktop-release-macos/*
@@ -113,6 +123,7 @@ jobs:
 
   linux:
     name: Build, sign and attach Linux v${{ inputs.version }}
+    if: inputs.target == 'all'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     environment: public-release
@@ -187,6 +198,7 @@ jobs:
           find desktop/release -maxdepth 1 -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.asc' -o -name 'latest-linux*.yml' -o -name 'SHA256SUMS-linux-*' \) -exec cp {} .desktop-release-linux/ \;
 
       - name: Attest Linux desktop artifacts
+        if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: .desktop-release-linux/*
@@ -207,6 +219,7 @@ jobs:
 
   windows:
     name: Build and attach Store MSIX v${{ inputs.version }}
+    if: inputs.target == 'all' || inputs.target == 'windows'
     runs-on: windows-2025
     timeout-minutes: 45
     environment: public-release
@@ -266,9 +279,17 @@ jobs:
             Set-Content .desktop-release-windows/SHA256SUMS-Windows
 
       - name: Attest Windows desktop artifacts
+        if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: .desktop-release-windows/*
+
+      - name: Document unavailable GitHub attestation
+        if: github.event.repository.visibility != 'public'
+        run: >-
+          echo '::notice::GitHub artifact attestations are unavailable for a
+          user-owned private repository; verify SHA256SUMS-Windows before Store
+          submission.'
 
       - name: Attach Windows artifacts to the core release
         shell: bash
@@ -287,6 +308,7 @@ jobs:
 
   record:
     name: Record the published desktop fingerprint
+    if: inputs.target == 'all'
     needs: [macos, linux, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 10

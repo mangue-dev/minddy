@@ -65,8 +65,9 @@ pnpm desktop:dev  # run the optional desktop shell
   code agent.
 - **Deployment:** `pnpm deploy` is the interactive maintainer entry point. It
   detects whether to release the public core, deploy the Minddy Cloud web app,
-  and publish desktop applications for macOS, Linux, and Windows, with automatic, all,
-  and custom modes. It waits for CI, requests an approved fast-forward from
+and publish desktop applications for macOS, Linux, and Windows, with automatic, all,
+custom, and Windows-only modes. The Windows-only mode reuses an existing core
+release and avoids starting macOS or Linux runners. The assistant waits for CI, requests an approved fast-forward from
   `main` to `production`, verifies the Vercel deployment, and only tags that
   deployed SHA. Builds and production secrets never come from the maintainer's
   machine. Self-hosters should adapt its `production`/Vercel conventions to

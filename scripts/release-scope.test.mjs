@@ -62,3 +62,10 @@ test("custom mode respects the manual choice", () => {
     { core: false, web: true, desktop: false },
   );
 });
+
+test("windows mode publishes only the existing Store packages", () => {
+  assert.deepEqual(
+    selectReleaseScopes("windows", { core: true, web: true, desktop: true }),
+    { core: false, web: false, desktop: true },
+  );
+});

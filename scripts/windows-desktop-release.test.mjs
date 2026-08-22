@@ -73,3 +73,19 @@ test("Windows packaging cannot enter an electron-updater channel", async () => {
   assert.match(config, /^  publish: null$/m);
   assert.match(config, /^  publisherDisplayName: mangue-dev$/m);
 });
+
+test("Windows Store releases can run without macOS or Linux", async () => {
+  const workflow = await readFile(
+    new URL("../.github/workflows/desktop-release.yml", import.meta.url),
+    "utf8",
+  );
+  const deploy = await readFile(new URL("../deploy.sh", import.meta.url), "utf8");
+
+  assert.match(workflow, /^      target:$/m);
+  assert.match(workflow, /^    if: inputs\.target == 'all'$/m);
+  assert.match(workflow, /^    if: inputs\.target == 'all' \|\| inputs\.target == 'windows'$/m);
+  assert.match(workflow, /name: Attest Windows desktop artifacts\n\s+if: github\.event\.repository\.visibility == 'public'/);
+  assert.match(workflow, /name: Document unavailable GitHub attestation/);
+  assert.match(deploy, /MODE" = "windows"/);
+  assert.match(deploy, /-f target="\$DESKTOP_TARGET"/);
+});
