@@ -83,8 +83,20 @@ export const PUBLIC_ROUTES = [
     en: "/self-hosting",
     fr: "/fr/auto-hebergement",
     namespace: "SelfHosting",
-    lastModified: "2026-08-19",
+    lastModified: "2026-08-21",
     priority: 0.7,
+  },
+  // The installation wizard. A tool page rather than an argument page: it is
+  // listed so the proxy serves it (sessionless, FR rewrite) and the metadata
+  // factory can title it, but it carries a lower weight than the guide above,
+  // which is the page engines should land on.
+  {
+    key: "selfHostingInstall",
+    en: "/self-hosting/install",
+    fr: "/fr/auto-hebergement/installer",
+    namespace: "SelfHostingInstall",
+    lastModified: "2026-08-21",
+    priority: 0.5,
   },
   // The desktop app (MIN-292). It has its own page and not a button on the landing:
   // what to say here — macOS only, and the notifications that

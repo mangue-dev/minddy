@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  Bot,
+  KeyRound,
+  MessageSquareHeart,
+  Mic,
+  Plus,
+  Sparkles,
+  Trash2,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 import {
   Button,
   Input,
@@ -19,8 +29,17 @@ import {
 } from "mangue-ui";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import { HelpHint } from "@/components/settings/help-hint";
 import { ModelCombobox } from "@/components/agent/model-combobox";
+import { ByokModelCombobox } from "@/components/admin/byok-model-combobox";
+import { ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
+import { getAgentProvider } from "@/lib/agent-providers";
+import {
+  byokProviderFromConfigKey,
+  modelKeyFromByokConfigKey,
+  type ByokCatalogProvider,
+} from "@/lib/byok-model-catalog";
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_GROUPS,
@@ -62,7 +81,9 @@ async function patchConfig(key: string, value: string): Promise<void> {
 
 /**
  * Admin-only dashboard to edit the AI models minddy runs from `app_config`.
- * Model rows are free-text `provider/model` ids saved on demand; the feedback
+ * Platform rows are chosen in the OpenRouter catalog (`ModelCombobox`); BYOK
+ * defaults are grouped one card per provider and picked in that provider's
+ * native namespace (`ByokModelCombobox`, MIN-416). The feedback
  * classification flag is a switch that saves immediately. Access is enforced
  * server-side by `app/(app)/admin/layout.tsx` and the API — this is UI only.
  */
@@ -101,6 +122,22 @@ export function AdminModelsDashboard() {
     return map;
   }, []);
 
+  // The BYOK group is not rendered flat: one section per provider (MIN-416),
+  // so the admin sees each vendor's namespace as a unit instead of a mixed
+  // list where "OpenAI · transcription_model" sits next to Google rows.
+  // Fields of a provider without catalog support (generic) stay in the
+  // leftover bucket and render as free-text rows.
+  const byokByProvider = useMemo(() => {
+    const map: Partial<Record<ByokCatalogProvider, AiConfigField[]>> = {};
+    const other: AiConfigField[] = [];
+    for (const f of fieldsByGroup.byok) {
+      const provider = byokProviderFromConfigKey(f.key);
+      if (provider) (map[provider] ??= []).push(f);
+      else other.push(f);
+    }
+    return { map, other };
+  }, [fieldsByGroup]);
+
   // Reflect a saved value back into local state so the row's dirty check resets.
   const onSaved = useCallback((key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -123,12 +160,13 @@ export function AdminModelsDashboard() {
         /* It's literally a settings screen: one group per family, one
  field per row. Same grammar as /settings (MIN-167). */
         <div className="flex flex-col gap-4">
-          {AI_MODEL_CONFIG_GROUPS.map((group) => (
+          {AI_MODEL_CONFIG_GROUPS.filter((group) => group !== "byok").map((group) => (
             <SettingsGroup
               key={group}
+              icon={GROUP_ICONS[group]}
               title={t(`groups.${group}.title`)}
-              // Description optionnelle : certains groupes s'expliquent par
-              // descriptions of their fields.
+              // Optional description: some groups explain themselves through
+              // the descriptions of their fields.
               description={
                 // Cast: the key only exists for certain groups (2 out of 4),
                 // what the guy can't say — `t.has` is the safeguard,
@@ -150,9 +188,205 @@ export function AdminModelsDashboard() {
               ))}
             </SettingsGroup>
           ))}
+
+          {/* ── Personal keys: one modular section per BYOK provider ── */}
+          <section className="flex flex-col gap-4">
+            <div className="flex items-center gap-1.5 px-0.5">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                {t("groups.byok.title")}
+              </h2>
+              <HelpHint>{t("groups.byok.desc")}</HelpHint>
+            </div>
+            {(Object.keys(byokByProvider.map) as ByokCatalogProvider[]).map((provider) => (
+              <ByokProviderSection
+                key={provider}
+                provider={provider}
+                fields={byokByProvider.map[provider] ?? []}
+                values={values}
+                loading={values === null}
+                onSaved={onSaved}
+              />
+            ))}
+            {byokByProvider.other.length > 0 ? (
+              <SettingsGroup icon={KeyRound} title={t("groups.byokOther")}>
+                {byokByProvider.other.map((field) => (
+                  <ConfigRow
+                    key={field.key}
+                    field={field}
+                    value={values?.[field.key] ?? null}
+                    suffix={null}
+                    loading={values === null}
+                    onSaved={onSaved}
+                  />
+                ))}
+              </SettingsGroup>
+            ) : null}
+          </section>
         </div>
       )}
     </div>
+  );
+}
+
+/** Section icon of each model-config family — same grammar as /settings. */
+const GROUP_ICONS: Record<AiConfigGroup, LucideIcon> = {
+  assistant: Sparkles,
+  automations: Workflow,
+  agent: Bot,
+  byok: KeyRound,
+  voice: Mic,
+  feedback: MessageSquareHeart,
+};
+
+/**
+ * One BYOK provider, as one card: its account-wide default on top, then one
+ * row per call type. Every control is the provider-aware picker
+ * (`ByokModelCombobox`) — it lists this provider's native models with no API
+ * key required, and keeps free entry for what the index does not mirror.
+ */
+function ByokProviderSection({
+  provider,
+  fields,
+  values,
+  loading,
+  onSaved,
+}: {
+  provider: ByokCatalogProvider;
+  fields: AiConfigField[];
+  values: ConfigValues | null;
+  loading: boolean;
+  onSaved: (key: string, value: string) => void;
+}) {
+  const t = useTranslations("Admin");
+  const tAgent = useTranslations("Agent");
+  // The border default (`byok_default_model_<provider>`) leads; the per-call
+  // keys follow in registry order.
+  const ordered = useMemo(
+    () =>
+      [...fields].sort(
+        (a, b) => Number(!a.key.startsWith("byok_default_model_")) - Number(!b.key.startsWith("byok_default_model_")),
+      ),
+    [fields],
+  );
+
+  return (
+    <SettingsGroup
+      avatar={<ProviderLogo provider={provider} size={16} />}
+      title={getAgentProvider(provider)?.label ?? provider}
+    >
+      {ordered.map((field) => {
+        const isBorderDefault = field.key.startsWith("byok_default_model_");
+        // Feature rows speak the label of THEIR call type ("Assistant",
+        // "Voice dictation"…); inside a provider-titled section that reads
+        // better than the generated "Provider · key" label of the flat list.
+        const modelKey = modelKeyFromByokConfigKey(field.key);
+        const label = isBorderDefault
+          ? t("byok.borderDefault")
+          : modelKey
+            ? t(`fields.${modelKey}.label` as AdminKey)
+            : (field.adminLabel ?? t(`fields.${field.key}.label` as AdminKey));
+        return (
+          <ByokModelRow
+            key={field.key}
+            field={field}
+            provider={provider}
+            isBorderDefault={isBorderDefault}
+            label={label}
+            value={values?.[field.key] ?? null}
+            loading={loading}
+            onSaved={onSaved}
+            defaultLabel={`${t("fieldDefault")} (${formatModelName(field.fallback) || field.fallback})`}
+            placeholder={tAgent("modelSearchPlaceholder")}
+            useCustomLabel={(query) => tAgent("modelUseCustom", { model: query })}
+            loadingLabel={tAgent("modelSearchLoading")}
+          />
+        );
+      })}
+    </SettingsGroup>
+  );
+}
+
+/**
+ * A BYOK default row. The control depends on whether this provider has a
+ * catalog-backed picker (OpenAI / Anthropic / Google, MIN-416): a real
+ * searchable select fed server-side — or, for any other provider id, the old
+ * free-text input, because their namespace cannot be derived from OpenRouter.
+ */
+function ByokModelRow({
+  field,
+  provider,
+  isBorderDefault,
+  label,
+  value,
+  loading,
+  onSaved,
+  defaultLabel,
+  placeholder,
+  useCustomLabel,
+  loadingLabel,
+}: {
+  field: AiConfigField;
+  provider: ByokCatalogProvider;
+  /** The account-wide border default — labeled differently from call-type rows. */
+  isBorderDefault: boolean;
+  label: string;
+  value: string | null;
+  loading: boolean;
+  onSaved: (key: string, value: string) => void;
+  defaultLabel: string;
+  placeholder: string;
+  useCustomLabel: (query: string) => string;
+  loadingLabel: string;
+}) {
+  const t = useTranslations("Admin");
+  const saved = (value ?? "").trim();
+  const [busy, setBusy] = useState(false);
+
+  const select = async (next: string) => {
+    if (busy || next === saved) return;
+    setBusy(true);
+    try {
+      await patchConfig(field.key, next);
+      onSaved(field.key, next);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-2 py-3.5">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-9 w-full max-w-md" />
+      </div>
+    );
+  }
+
+  return (
+    <SettingsRow
+      label={label}
+      hint={
+        isBorderDefault || saved ? undefined : `${t("fieldDefault")} · ${formatModelName(field.fallback) || field.fallback}`
+      }
+      control={
+        <div className="flex min-w-0 items-center gap-2 sm:w-72">
+          <ByokModelCombobox
+            provider={provider}
+            value={saved}
+            defaultLabel={defaultLabel}
+            onChange={(next) => void select(next)}
+            disabled={busy}
+            placeholder={placeholder}
+            useCustomLabel={useCustomLabel}
+            loadingLabel={loadingLabel}
+          />
+          {busy ? <Spinner className="shrink-0" /> : null}
+        </div>
+      }
+    />
   );
 }
 

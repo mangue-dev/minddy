@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, type ReactNode } from "react";
+import { Children, createElement, type ReactNode } from "react";
 import { cn } from "mangue-ui";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -41,7 +41,8 @@ import { HelpHint } from "@/components/settings/help-hint";
 
 /** Group card: header (icon, title, index, master control), body, footer. */
 export function SettingsGroup({
-  icon: Icon,
+  icon,
+  avatar,
   anchor,
   title,
   description,
@@ -54,6 +55,8 @@ export function SettingsGroup({
   children,
 }: {
   icon?: LucideIcon;
+  /** Full-width visual in place of the icon pad (e.g. a provider logo). */
+  avatar?: ReactNode;
   /** Settings catalog entry ([lib/settings-sections.ts]): the map
  * becomes reachable from ⌘K, who opens it then expands and highlights it.
  * The type prohibits an anchor absent from the catalog — the opposite (an entry in the
@@ -100,18 +103,30 @@ export function SettingsGroup({
         )}
       >
         <div className={cn("flex min-w-0 gap-3", description ? "items-start" : "items-center")}>
-          {Icon && (
+          {avatar ? (
             <span
               className={cn(
                 "flex size-8 shrink-0 items-center justify-center rounded-lg",
                 description && "mt-0.5",
-                destructive
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-muted text-muted-foreground",
+                destructive ? "bg-destructive/10" : "bg-muted",
               )}
             >
-              <Icon className="size-4" />
+              {avatar}
             </span>
+          ) : (
+            icon && (
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                  description && "mt-0.5",
+                  destructive
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                {createElement(icon, { className: "size-4" })}
+              </span>
+            )
           )}
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex items-center gap-1.5">

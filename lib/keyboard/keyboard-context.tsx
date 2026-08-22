@@ -2,8 +2,7 @@
 
 // Global navigation keyboard chords, a la AutoKap. A leader key **G** (Go) arms
 // a chord; the next key picks the destination. While a chord is armed, the
-// sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar) and
-// a short "G then…" toast appears (covers the collapsed-sidebar case).
+// sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar).
 //
 //   Global:      G H home · G I inbox · G R pull requests · G J agents · G U routines
 //                G A assistant (Numo) · G N notes
@@ -32,9 +31,6 @@ import {
   type SetStateAction,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { toast } from "mangue-ui";
-import { Kbd } from "@/components/ui/kbd";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
@@ -92,7 +88,6 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   const { toggle: toggleAssistant } = useAssistantPanel();
   const { open: openScratchpad } = useScratchpad();
   const { present: secondaryPresent } = useSecondarySidebar();
-  const tk = useTranslations("Keyboard");
   const [chordPrefix, setChordPrefix] = useState<string | null>(null);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
   const cheatsheetValue = useMemo<Cheatsheet>(
@@ -110,8 +105,6 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   toggleAssistantRef.current = toggleAssistant;
   const openScratchpadRef = useRef(openScratchpad);
   openScratchpadRef.current = openScratchpad;
-  const thenRef = useRef(tk("then"));
-  thenRef.current = tk("then");
   const secondaryPresentRef = useRef(secondaryPresent);
   secondaryPresentRef.current = secondaryPresent;
   // Mirrors chordPrefix synchronously for the listener (state is async).
@@ -119,7 +112,6 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let prefixToastId: string | number | null = null;
 
     const disarm = () => {
       armedRef.current = false;
@@ -127,10 +119,6 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
       if (timer !== null) {
         clearTimeout(timer);
         timer = null;
-      }
-      if (prefixToastId !== null) {
-        toast.dismiss(prefixToastId);
-        prefixToastId = null;
       }
     };
 
@@ -230,13 +218,6 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
       e.stopImmediatePropagation();
       armedRef.current = true;
       setChordPrefix(CHORD_PREFIX);
-      prefixToastId = toast(
-        <span className="flex items-center gap-2">
-          <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
-          <span className="text-xs text-muted-foreground">{thenRef.current}…</span>
-        </span>,
-        { duration: CHORD_TIMEOUT_MS },
-      );
       timer = setTimeout(disarm, CHORD_TIMEOUT_MS);
     };
 

@@ -1955,3 +1955,68 @@ html[data-desktop-app]
     transition: none;
   }
 }
+
+/* ─── Toasts (sonner) — Geist-style solid status pills ──────────────────────
+   Repaints every typed toast as a self-contained colored pill with white
+   icon + text, after Vercel's Geist design system: blue for informational,
+   green for success, orange for warning, red for error — instantly
+   scannable instead of the previous neutral card look shared by all types.
+
+   HOW: sonner gates its per-type colors behind `richColors` and injects its
+   stylesheet into <head> at RUNTIME, i.e. potentially AFTER this sheet. Its
+   type rules ([data-rich-colors]…) and its base rule both sit at
+   specificity (0,2,0), so equal-specificity overrides here would race the
+   injection order and lose. These selectors carry THREE attributes
+   (0,3,0) and set the final properties directly, so they win regardless of
+   order — and `richColors` stays off, nothing else about sonner changes.
+
+   The bare `toast(...)` calls (data-type="default") deliberately KEEP the
+   neutral card skin: one of them is the keyboard-chord hint, whose <Kbd>
+   cap and muted helper text assume a card surface and would be unreadable
+   on a saturated background.
+
+   One palette for both themes: the pill carries its own foreground, so it
+   interacts with neither page. Retune here, everything follows.
+   Reference for design handoff:
+     info    #0070F3 · success #15803D · warning #DC5A00 · error #EE0000 */
+:root {
+  --toast-info: #0070f3;
+  --toast-success: #0070f3;
+  --toast-warning: #dc5a00;
+  --toast-error: #ee0000;
+}
+
+/* Corner radius: sonner ships 8px via `--border-radius` on the toaster
+   (runtime-injected at (0,1,0)); `[data-y-position]` is always present and
+   lifts the override to (0,2,0), so it wins regardless of injection order. */
+[data-sonner-toaster][data-y-position] {
+  --border-radius: 14px;
+}
+
+[data-sonner-toaster]
+  [data-sonner-toast][data-styled="true"][data-type="info"] {
+  background: var(--toast-info);
+  border-color: var(--toast-info);
+  color: #fff;
+}
+
+[data-sonner-toaster]
+  [data-sonner-toast][data-styled="true"][data-type="success"] {
+  background: var(--toast-success);
+  border-color: var(--toast-success);
+  color: #fff;
+}
+
+[data-sonner-toaster]
+  [data-sonner-toast][data-styled="true"][data-type="warning"] {
+  background: var(--toast-warning);
+  border-color: var(--toast-warning);
+  color: #fff;
+}
+
+[data-sonner-toaster]
+  [data-sonner-toast][data-styled="true"][data-type="error"] {
+  background: var(--toast-error);
+  border-color: var(--toast-error);
+  color: #fff;
+}

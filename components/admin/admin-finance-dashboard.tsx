@@ -34,6 +34,11 @@ import {
  * what comes in (Stripe, collected net of fees and reimbursements) and what
  * sort (OpenRouter, converted at each day's rate).
  *
+ * The Stripe half is CONDITIONAL (MIN-416): an instance without a connected
+ * billing integration has no revenue, no MRR and no margin to read — only
+ * the cost side renders there. `finance.stripe.configured` is the server's
+ * own word on the matter; nothing is guessed client-side.
+ *
  * The graph is DIVERGENT: income rises above the baseline,
  * cost goes below, on ONE scale in euros. Two scales
  * distinct (one axis per series) would give an image of the margin purely
@@ -300,6 +305,10 @@ export function AdminFinanceDashboard() {
         <>
           <MoneyTiles finance={finance} t={t} />
 
+          {!finance.stripe.configured ? (
+            <p className="text-xs text-muted-foreground">{t("finance.stripeHidden")}</p>
+          ) : null}
+
           <FreshnessBar
             finance={finance}
             refreshing={refreshing}
@@ -312,7 +321,7 @@ export function AdminFinanceDashboard() {
             info={t("finance.chartInfo")}
           >
             <StatsCard className="flex flex-col gap-4">
-              <MarginChart days={finance.days} t={t} />
+              <MarginChart days={finance.days} revenue={finance.stripe.configured} t={t} />
             </StatsCard>
           </StatsSection>
 
@@ -351,6 +360,25 @@ function MoneyTiles({
     value === null
       ? "—"
       : format.number(value, { style: "currency", currency: "EUR" });
+
+  // Without a connected billing integration the revenue half of the equation
+  // does not exist: no collection, no MRR, and a margin against zero income
+  // would be noise. The cost tile takes the whole width (MIN-416).
+  if (!finance.stripe.configured) {
+    return (
+      <StatsCard className="grid grid-cols-1">
+        <Metric
+          variant="hero"
+          label={t("finance.monthCost")}
+          value={eur(finance.month.costEur)}
+          hint={t("finance.monthCostUsd", {
+            amount: `$${finance.month.costUsd.toFixed(2)}`,
+          })}
+          info={t("finance.monthCostInfo")}
+        />
+      </StatsCard>
+    );
+  }
 
   const margin = finance.month.marginEur;
 
@@ -445,17 +473,22 @@ function FreshnessBar({
             })
           : t("finance.fxMissing")}
       </span>
-      <span aria-hidden>·</span>
-      <span>
-        {finance.stripe.reachable
-          ? t("finance.stripeFresh", { minutes })
-          : t("finance.stripeUnreachable")}
-      </span>
-      {finance.stripe.testMode && (
-        <Badge variant="secondary" className="h-5">
-          {t("finance.testMode")}
-        </Badge>
-      )}
+      {/* The Stripe freshness only speaks when Stripe is part of the equation. */}
+      {finance.stripe.configured ? (
+        <>
+          <span aria-hidden>·</span>
+          <span>
+            {finance.stripe.reachable
+              ? t("finance.stripeFresh", { minutes })
+              : t("finance.stripeUnreachable")}
+          </span>
+          {finance.stripe.testMode && (
+            <Badge variant="secondary" className="h-5">
+              {t("finance.testMode")}
+            </Badge>
+          )}
+        </>
+      ) : null}
       <Button
         variant="ghost"
         size="sm"
@@ -476,12 +509,17 @@ function FreshnessBar({
  * One column per day: income goes up, cost goes down, around a line of
  * common basis. ONE euro scale for both directions — that's what
  * makes the comparison honest, and therefore the margin readable.
+ *
+ * `revenue` false (billing not connected, MIN-416): the cost series alone
+ * remains, and the legend keeps only the entry that still means something.
  */
 function MarginChart({
   days,
+  revenue,
   t,
 }: {
   days: AdminFinanceDay[];
+  revenue: boolean;
   t: AdminT;
 }) {
   const format = useFormatter();
@@ -489,10 +527,10 @@ function MarginChart({
   const scale = useMemo(
     () =>
       days.reduce(
-        (max, day) => Math.max(max, day.revenueEur, day.costEur ?? 0),
+        (max, day) => Math.max(max, revenue ? day.revenueEur : 0, day.costEur ?? 0),
         0,
       ),
-    [days],
+    [days, revenue],
   );
 
   const eur = useCallback(
@@ -526,10 +564,12 @@ function MarginChart({
       {/* Two series → systematic legend: identity is never based on
  the only color. */}
       <div className="flex items-center gap-4 text-xs">
-        <span className="flex items-center gap-1.5">
-          <span className={cn("size-2.5 rounded-[2px]", REVENUE_COLOR)} aria-hidden />
-          <span className="text-muted-foreground">{t("finance.legendRevenue")}</span>
-        </span>
+        {revenue ? (
+          <span className="flex items-center gap-1.5">
+            <span className={cn("size-2.5 rounded-[2px]", REVENUE_COLOR)} aria-hidden />
+            <span className="text-muted-foreground">{t("finance.legendRevenue")}</span>
+          </span>
+        ) : null}
         <span className="flex items-center gap-1.5">
           <span className={cn("size-2.5 rounded-[2px]", COST_COLOR)} aria-hidden />
           <span className="text-muted-foreground">{t("finance.legendCost")}</span>
@@ -551,19 +591,21 @@ function MarginChart({
  (the overview) may be low, a diverging graph
  splits its height in two and would lose its intermediate values ​​— a day at 30% of the maximum
  should remain a bar, not a dash. */}
-                    <div className="flex h-24 items-end">
-                      <div
-                        className={cn(
-                          "w-full rounded-t-[3px] transition-[height]",
-                          day.revenueEur > 0 ? REVENUE_COLOR : "",
-                        )}
-                        style={
-                          day.revenueEur > 0
-                            ? { height: `${Math.max(revenueHeight, 3)}%` }
-                            : undefined
-                        }
-                      />
-                    </div>
+                    {revenue ? (
+                      <div className="flex h-24 items-end">
+                        <div
+                          className={cn(
+                            "w-full rounded-t-[3px] transition-[height]",
+                            day.revenueEur > 0 ? REVENUE_COLOR : "",
+                          )}
+                          style={
+                            day.revenueEur > 0
+                              ? { height: `${Math.max(revenueHeight, 3)}%` }
+                              : undefined
+                          }
+                        />
+                      </div>
+                    ) : null}
                     {/* The baseline: zero is a real line, not a
                         limite implicite entre deux blocs de couleur. */}
                     <div className="h-px w-full bg-border" />
@@ -584,15 +626,23 @@ function MarginChart({
                 </TooltipTrigger>
                 <TooltipContent>
                   <span className="font-medium">{dayLabel(day.day)}</span>
-                  <span className="mt-1 block text-background/70">
-                    {t("finance.tooltipRevenue", { amount: eur(day.revenueEur) })}
-                  </span>
-                  <span className="block text-background/70">
-                    {t("finance.tooltipCost", { amount: eur(day.costEur) })}
-                  </span>
-                  <span className="block text-background/70">
-                    {t("finance.tooltipMargin", { amount: eur(day.marginEur) })}
-                  </span>
+                  {revenue ? (
+                    <>
+                      <span className="mt-1 block text-background/70">
+                        {t("finance.tooltipRevenue", { amount: eur(day.revenueEur) })}
+                      </span>
+                      <span className="block text-background/70">
+                        {t("finance.tooltipCost", { amount: eur(day.costEur) })}
+                      </span>
+                      <span className="block text-background/70">
+                        {t("finance.tooltipMargin", { amount: eur(day.marginEur) })}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="mt-1 block text-background/70">
+                      {t("finance.tooltipCost", { amount: eur(day.costEur) })}
+                    </span>
+                  )}
                 </TooltipContent>
               </Tooltip>
             );

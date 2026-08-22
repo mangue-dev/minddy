@@ -54,6 +54,8 @@ import type {
   AdminUsersResponse,
 } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
+import { giftSectionVisible } from "@/lib/admin-tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -97,6 +99,13 @@ import {
  * Only screen of the app where the raw email is displayed: it is the identifier with
  * which an admin works, and access is locked on the server side
  * (`app/(app)/admin/layout.tsx` + `isAdminUser` on each route).
+ *
+ * GDPR audit (MIN-416): every datum here is either an admin ACTION target
+ * (email, plan override, quota reset, internal flag) or a counter without
+ * personal content (projects, tickets, spend). No IP address, no session
+ * log, no message or ticket body ever reaches this screen, and lifecycle
+ * timestamps are limited to what support needs (registered / last sign-in /
+ * last activity). Nothing to remove without breaking an action above.
  */
 
 const PAGE_SIZE = 25;
@@ -214,10 +223,16 @@ function InternalBadge() {
 /** Account panel: its complete profile and all admin actions. */
 function UserSheet({
   user,
+  giftVisible,
   onClose,
   onChanged,
 }: {
   user: AdminUserRow | null;
+  /** Whether the “Gift a plan” section renders for THIS account
+   * (`giftSectionVisible`, lib/admin-tabs.ts): the instance needs Stripe or
+   * paid plans configured, unless an override is already in progress — it
+   * then needs its section to be removable. */
+  giftVisible: (user: AdminUserRow | null) => boolean;
   onClose: () => void;
   onChanged: (updated: Partial<AdminUserRow> & { userId: string }) => void;
 }) {
@@ -659,6 +674,7 @@ function UserSheet({
           </SettingsGroup>
 
           {/* ── Plan: offer, for a time or without limit ───────────── */}
+          {giftVisible(user) ? (
           <SettingsGroup
             icon={Gift}
             title={t("billing.title")}
@@ -768,6 +784,7 @@ function UserSheet({
               }
             />
           </SettingsGroup>
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>
@@ -791,6 +808,14 @@ function Value({
 export function AdminUsersDashboard() {
   const t = useTranslations("Admin");
   const format = useFormatter();
+  // The “Gift a plan” section only exists when the instance can honor it
+  // (Stripe or paid plans configured, MIN-416); an override already in
+  // progress keeps its section regardless, so it stays removable.
+  const billingAvailable = useAdminCapabilities().configured("managedBilling");
+  const giftVisible = useCallback(
+    (user: AdminUserRow | null) => giftSectionVisible(billingAvailable, !!user?.billing.override),
+    [billingAvailable],
+  );
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUserRow[]>([]);
@@ -973,6 +998,7 @@ export function AdminUsersDashboard() {
 
       <UserSheet
         user={selected}
+        giftVisible={giftVisible}
         onClose={() => setSelectedId(null)}
         onChanged={applyChange}
       />

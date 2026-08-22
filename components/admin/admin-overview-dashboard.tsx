@@ -140,6 +140,53 @@ function PlanRow({
   );
 }
 
+/**
+ * The onboarding funnel as ONE stacked band (MIN-416): completed, started
+ * but not completed, and never-presented read as proportions of the same
+ * whole — four detached tiles said nothing about how the stages compare.
+ * The segments are a strict partition of the accounts. Neutral tints only:
+ * the reading order does the work, not color.
+ */
+function FunnelBand({
+  segments,
+}: {
+  segments: Array<{ label: string; count: number; className: string }>;
+}) {
+  const total = segments.reduce((sum, s) => sum + s.count, 0);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex h-2.5 w-full gap-px overflow-hidden rounded-full bg-muted">
+        {total > 0 &&
+          segments.map((s) => (
+            <Tooltip key={s.label}>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn("h-full transition-all", s.className)}
+                  style={{ width: `${(s.count / total) * 100}%` }}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <span className="font-medium">{s.label}</span>
+                <span className="block text-background/70 tabular-nums">
+                  {s.count} · {Math.round((s.count / total) * 100)}%
+                </span>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {segments.map((s) => (
+          <span key={s.label} className="flex items-center gap-1.5">
+            <span className={cn("size-2 rounded-[3px]", s.className)} aria-hidden />
+            {s.label}
+            <span className="tabular-nums">{s.count}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AdminOverviewDashboard() {
   const t = useTranslations("Admin");
   const [data, setData] = useState<AdminOverview | null>(null);
@@ -253,28 +300,50 @@ export function AdminOverviewDashboard() {
         </StatsCard>
       </StatsSection>
 
-      {/* 3 — Where are the newcomers? */}
+      {/* 3 — Where are the newcomers? The funnel reads as proportions of the
+          same whole; the tiles below keep the exact counts. */}
       <StatsSection
         title={t("overview.onboarding")}
         info={t("overview.onboardingInfo")}
       >
-        <StatsCard className="grid grid-cols-2 gap-5 sm:grid-cols-4">
-          <TotalItem
-            label={t("overview.onboardingStarted")}
-            value={data.onboarding.started}
+        <StatsCard className="flex flex-col gap-5">
+          <FunnelBand
+            segments={[
+              {
+                label: t("overview.onboardingCompleted"),
+                count: data.onboarding.completed,
+                className: "bg-foreground/70",
+              },
+              {
+                label: t("overview.onboardingStarted"),
+                count: Math.max(data.onboarding.started - data.onboarding.completed, 0),
+                className: "bg-foreground/35",
+              },
+              {
+                label: t("overview.onboardingNeverSeen"),
+                count: notStarted,
+                className: "bg-border",
+              },
+            ]}
           />
-          <TotalItem
-            label={t("overview.onboardingCompleted")}
-            value={data.onboarding.completed}
-          />
-          <TotalItem
-            label={t("overview.onboardingDismissed")}
-            value={data.onboarding.dismissed}
-          />
-          <TotalItem
-            label={t("overview.onboardingNeverSeen")}
-            value={notStarted}
-          />
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+            <TotalItem
+              label={t("overview.onboardingStarted")}
+              value={data.onboarding.started}
+            />
+            <TotalItem
+              label={t("overview.onboardingCompleted")}
+              value={data.onboarding.completed}
+            />
+            <TotalItem
+              label={t("overview.onboardingDismissed")}
+              value={data.onboarding.dismissed}
+            />
+            <TotalItem
+              label={t("overview.onboardingNeverSeen")}
+              value={notStarted}
+            />
+          </div>
         </StatsCard>
       </StatsSection>
 

@@ -15,6 +15,11 @@ import {
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
+import {
+  visibleAdminTabs,
+  type AdminTabId,
+} from "@/lib/admin-tabs";
 import { AdminOverviewDashboard } from "./admin-overview-dashboard";
 import { AdminUsersDashboard } from "./admin-users-dashboard";
 import { AdminModelsDashboard } from "./admin-models-dashboard";
@@ -49,11 +54,9 @@ import { AdminFinanceDashboard } from "./admin-finance-dashboard";
  * Access locked on the server side by `app/(app)/admin/layout.tsx`.
  */
 
-const TABS = ["overview", "users", "finances", "models"] as const;
-type AdminTab = (typeof TABS)[number];
+type AdminTab = AdminTabId;
 
 const DEFAULT_TAB: AdminTab = "overview";
-
 const ICONS: Record<AdminTab, LucideIcon> = {
   overview: LayoutDashboard,
   users: Users,
@@ -72,9 +75,16 @@ export function AdminDashboard() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const contentFade = useScrollFade<HTMLDivElement>();
+  // Tab existence follows the instance, not the product (MIN-416): the
+  // “Finances” screen reads the OpenRouter ledger, so an instance without a
+  // linked OpenRouter key has nothing to show there and the tab disappears.
+  // While the capabilities have not arrived (`null`) the tab stays — no
+  // flicker on first paint; the API itself re-checks every access anyway.
+  const openRouterLinked = useAdminCapabilities().configured("managedAi");
 
   const requested = searchParams.get("tab");
-  const valid = (TABS as readonly string[]).includes(requested ?? "");
+  const visibleTabs = useMemo(() => visibleAdminTabs(openRouterLinked), [openRouterLinked]);
+  const valid = (visibleTabs as readonly string[]).includes(requested ?? "");
   const active: AdminTab = valid ? (requested as AdminTab) : DEFAULT_TAB;
 
   // Under `md`, the rail and the content take turns in full screen, like everywhere
@@ -83,8 +93,13 @@ export function AdminDashboard() {
   const [mobileDetail, setMobileDetail] = useState(valid);
 
   const items = useMemo(
-    () => TABS.map((tab) => ({ value: tab, label: t(`tabs.${tab}`), icon: ICONS[tab] })),
-    [t],
+    () =>
+      visibleTabs.map((tab) => ({
+        value: tab,
+        label: t(`tabs.${tab}`),
+        icon: ICONS[tab],
+      })),
+    [t, visibleTabs],
   );
 
   const setActive = useCallback(
