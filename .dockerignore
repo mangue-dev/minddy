@@ -12,7 +12,9 @@ desktop
 captures
 assets
 docs
-supabase
+supabase/*
+!supabase/email-templates
+!supabase/email-templates/**
 .claude
 tools
 coverage

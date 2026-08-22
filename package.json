@@ -16,7 +16,7 @@
     "release:prepare": "node scripts/prepare-release.mjs",
     "release:artifacts": "node scripts/build-release-artifacts.mjs",
     "release:container-artifact": "node scripts/add-container-release-artifact.mjs",
-    "test:release": "node --test scripts/release-lib.test.mjs scripts/release-policy.test.mjs scripts/release-scope.test.mjs scripts/release-security-policy.test.mjs scripts/linux-desktop-release.test.mjs scripts/linux-release-notes.test.mjs scripts/windows-desktop-release.test.mjs",
+    "test:release": "node --test scripts/release-lib.test.mjs scripts/release-policy.test.mjs scripts/release-scope.test.mjs scripts/release-security-policy.test.mjs scripts/container-release.test.mjs scripts/linux-desktop-release.test.mjs scripts/linux-release-notes.test.mjs scripts/windows-desktop-release.test.mjs",
     "check:public-repo": "node scripts/check-public-repo.mjs",
     "check:owned-english": "node scripts/check-owned-english.mjs",
     "check:knowledge": "node scripts/knowledge-check.mjs",
