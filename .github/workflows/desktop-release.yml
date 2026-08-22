@@ -203,9 +203,88 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  windows:
+    name: Build and attach Store MSIX v${{ inputs.version }}
+    runs-on: windows-2025
+    timeout-minutes: 45
+    environment: public-release
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: v${{ inputs.version }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate core release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"
+          test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "v$RELEASE_VERSION")"
+          test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"
+          test "$(node -p "require('./desktop/package.json').version")" = "$RELEASE_VERSION"
+          gh release view "v$RELEASE_VERSION" >/dev/null
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: npm --prefix desktop ci --ignore-scripts
+
+      - name: Build unsigned Store submission packages
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          MINDDY_WINDOWS_STORE_IDENTITY_NAME: ${{ vars.WINDOWS_STORE_IDENTITY_NAME }}
+          MINDDY_WINDOWS_STORE_PUBLISHER: ${{ vars.WINDOWS_STORE_PUBLISHER }}
+        run: npm --prefix desktop run dist:win:store
+
+      - name: Validate MSIX manifests with the Windows SDK
+        shell: pwsh
+        env:
+          MINDDY_WINDOWS_STORE_IDENTITY_NAME: ${{ vars.WINDOWS_STORE_IDENTITY_NAME }}
+          MINDDY_WINDOWS_STORE_PUBLISHER: ${{ vars.WINDOWS_STORE_PUBLISHER }}
+        run: ./scripts/verify-windows-desktop.ps1
+
+      - name: Stage Windows desktop artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory .desktop-release-windows
+          Copy-Item desktop/release/windows-store/*.msix .desktop-release-windows/
+          Get-FileHash .desktop-release-windows/* -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } |
+            Set-Content .desktop-release-windows/SHA256SUMS-Windows
+
+      - name: Attest Windows desktop artifacts
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: .desktop-release-windows/*
+
+      - name: Attach Windows artifacts to the core release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: gh release upload "v$RELEASE_VERSION" .desktop-release-windows/*
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-release-${{ inputs.version }}
+          path: .desktop-release-windows/
+          if-no-files-found: ignore
+          retention-days: 30
+
   record:
     name: Record the published desktop fingerprint
-    needs: [macos, linux]
+    needs: [macos, linux, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: public-release

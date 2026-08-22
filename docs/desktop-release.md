@@ -115,9 +115,9 @@ XDG paths, and updater behavior are documented in
 2. The shell has changed → automatic mode offers desktop applications; manual
    mode asks the question with “yes” by default.
 3. If desktop applications are retained, `deploy.sh` first waits for the core
-   release, then triggers the GitHub jobs for macOS and Linux. It waits for
-   macOS signing and notarization plus Linux GPG signing and publication before
-   attaching the artifacts to the release.
+   release, then triggers the GitHub jobs for macOS, Linux, and Windows. It
+   waits for macOS signing and notarization, Linux GPG signing, and the Store
+   MSIX packages before attaching the artifacts to the release.
 4. After success, the bot commits `desktop/released.json` to `main`. This statement
    makes the following detection accurate; it is never written before the
    binaries and their manifest are actually published.
@@ -173,6 +173,65 @@ never updated, without saying anything.
 
 ---
 
+## Windows: Microsoft Store
+
+Windows is distributed exclusively through Microsoft Store as x64 and ARM64
+MSIX packages. Microsoft signs the submitted packages and owns their update
+lifecycle. There is no Windows direct installer, Authenticode certificate, or
+Windows `electron-updater` feed.
+
+The shell never initializes `electron-updater` on Windows. The **Check for
+Updates…** command instead says that Microsoft Store owns the installation.
+
+The shared `protocols` declaration writes `minddy://` into
+`AppxManifest.xml`. Windows delivers cold-start and second-instance links
+through `argv`; both routes are handled before the renderer subscribes. AppX
+also declares `runFullTrust`, which the Electron shell needs to launch the
+supported local self-hosted runtime. Stopping that runtime uses `taskkill /t`
+so the `cmd`, pnpm, Supabase, and Next.js child processes are closed together.
+
+### Partner Center setup and Store submission
+
+1. The reserved **minddy** product has this immutable identity:
+   `mangue-dev.minddy`, publisher
+   `CN=D5052B10-735B-4EF0-920F-642DFBDEB04F`, and publisher display name
+   `mangue-dev`.
+2. Configure them as GitHub environment variables
+   `WINDOWS_STORE_IDENTITY_NAME` and `WINDOWS_STORE_PUBLISHER` on
+   `public-release`. They are injected as
+   `MINDDY_WINDOWS_STORE_IDENTITY_NAME` and
+   `MINDDY_WINDOWS_STORE_PUBLISHER` during packaging.
+3. Run **Public desktop release** for an already published core version. The
+   Windows job creates one x64 and one ARM64 MSIX, unpacks both with the Windows
+   SDK, and verifies identity, publisher, `minddy://`, and `runFullTrust`.
+4. Download the attested `.msix` assets from the GitHub Release and add both to
+   the same Partner Center submission. These artifacts are intentionally
+   unsigned: Partner Center applies the production signature and distributes
+   Store updates.
+5. After Store certification, install from the Store on a clean Windows
+   machine and verify login through `minddy://`, local runtime startup and
+   shutdown, update ownership, and uninstall. This post-certification check is
+   the only validation that exercises Microsoft's final signature and delivery.
+
+The identity name and publisher must remain byte-for-byte stable after the
+first submission. `scripts/build-windows-store.mjs` refuses missing values and
+renames electron-builder's AppX target output to the modern `.msix` extension.
+The application version is converted to the four-component Windows package
+version by electron-builder; every Store submission must therefore use a newer
+SemVer release.
+
+Local packaging and validation commands are:
+
+```powershell
+$env:MINDDY_WINDOWS_STORE_IDENTITY_NAME = "mangue-dev.minddy"
+$env:MINDDY_WINDOWS_STORE_PUBLISHER = "CN=D5052B10-735B-4EF0-920F-642DFBDEB04F"
+$env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
+npm --prefix desktop run dist:win:store
+./scripts/verify-windows-desktop.ps1
+```
+
+---
+
 ## The three refusals of publication
 
 [`publish-desktop.mjs`](../scripts/publish-desktop.mjs) checks before sending
@@ -204,6 +263,7 @@ says — a quiet ceiling is a lie.
 | `PUBLIC_DESKTOP_FEED_URL` | the public folder of the stream | build workflow; same value configured for `/api/desktop/download` |
 | `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | Apple notarization | GitHub environment `public-release` |
 | `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD` | signature Developer ID | GitHub environment `public-release` |
+| `WINDOWS_STORE_IDENTITY_NAME`, `WINDOWS_STORE_PUBLISHER` | immutable Partner Center package identity | GitHub environment variables on `public-release` |
 | `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` | write public feed | GitHub-only workflow |
 
 The public value of the flow is also configured on Vercel for the route of

@@ -15,7 +15,9 @@
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run dist:mac",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
-    "dist:linux": "npm run build && electron-builder --linux --publish never"
+    "dist:linux": "npm run build && electron-builder --linux --publish never",
+    "dist:win": "npm run dist:win:store",
+    "dist:win:store": "npm run build && node ../scripts/build-windows-store.mjs"
   },
   "devDependencies": {
     "electron": "^43.4.0",

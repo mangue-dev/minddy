@@ -181,6 +181,56 @@ jobs:
           grep -Fx 'MimeType=x-scheme-handler/minddy;' "$RUNNER_TEMP/minddy.desktop"
           grep -Fx 'StartupWMClass=minddy' "$RUNNER_TEMP/minddy.desktop"
 
+  windows-desktop-package:
+    name: Windows desktop packages
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: npm --prefix desktop ci --ignore-scripts
+
+      # Store signs production packages. CI uses a disposable local identity
+      # only so Add-AppxPackage can exercise install and uninstall before upload.
+      - name: Create disposable MSIX test identity
+        shell: pwsh
+        run: |
+          $password = ConvertTo-SecureString "minddy-ci-only" -AsPlainText -Force
+          $certificate = New-SelfSignedCertificate `
+            -Type Custom `
+            -Subject "CN=D5052B10-735B-4EF0-920F-642DFBDEB04F" `
+            -KeyUsage DigitalSignature `
+            -FriendlyName "minddy CI" `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+          Export-PfxCertificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.pfx" -Password $password
+          Export-Certificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer"
+          Import-Certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer" -CertStoreLocation Cert:\CurrentUser\TrustedPeople
+          "CSC_LINK=$env:RUNNER_TEMP\minddy-ci.pfx" >> $env:GITHUB_ENV
+          "CSC_KEY_PASSWORD=minddy-ci-only" >> $env:GITHUB_ENV
+          "MINDDY_WINDOWS_STORE_IDENTITY_NAME=mangue-dev.minddy" >> $env:GITHUB_ENV
+          "MINDDY_WINDOWS_STORE_PUBLISHER=CN=D5052B10-735B-4EF0-920F-642DFBDEB04F" >> $env:GITHUB_ENV
+
+      - name: Build Store packages
+        run: npm --prefix desktop run dist:win
+
+      - name: Validate MSIX manifests, clean install, deep link, and uninstall
+        shell: pwsh
+        run: ./scripts/verify-windows-desktop.ps1 -InstallStore
+
   editions:
     name: Edition / ${{ matrix.edition }}
     runs-on: ubuntu-latest

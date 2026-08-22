@@ -131,6 +131,7 @@ in the deposit.
 npm --prefix desktop run pack   # an unsigned .app in desktop/release/mac-*/
 npm --prefix desktop run dist   # signed and notarized .dmg and .zip files
 npm --prefix desktop run dist:linux # AppImage, DEB, and RPM artifacts
+npm --prefix desktop run dist:win:store  # x64 and ARM64 Store MSIX packages
 ```
 
 The Linux reference download is the AppImage. Its x64 and ARM64 update feeds
@@ -139,6 +140,12 @@ detached signatures but are intentionally updated through the next verified
 package rather than by the in-app updater. See
 [docs/linux-desktop.md](../docs/linux-desktop.md) for the release,
 verification, XDG, deep-link, and local-runtime contracts.
+
+Microsoft Store is the exclusive Windows distribution path and owns signing
+plus updates for the submitted MSIX packages. The shell never initializes
+electron-updater on Windows. The complete Partner Center and clean installation
+procedure is in
+[docs/desktop-release.md](../docs/desktop-release.md#windows-microsoft-store).
 
 **The icon no longer has its own step.** Its source is `build/icon.icon`, the folder
 rendered by Icon Composer: we open it, we save it, and the build following the

@@ -1004,10 +1004,10 @@ if (!app.requestSingleInstanceLock()) {
     receiveDeepLink(url);
   });
 
-  // A freedesktop launcher starts a stopped app with the protocol URL in argv.
-  // Queue it before the window exists so authentication cannot arrive before
-  // the renderer subscribes to the main-process bridge.
-  if (process.platform === "linux") {
+  // Freedesktop and Windows launchers start a stopped app with the protocol URL
+  // in argv. Queue it before the window exists so authentication cannot arrive
+  // before the renderer subscribes to the main-process bridge.
+  if (process.platform !== "darwin") {
     for (const arg of desktopProtocolArguments(process.argv)) receiveDeepLink(arg);
   }
 
@@ -1029,9 +1029,12 @@ if (!app.requestSingleInstanceLock()) {
     // including its return of payment. This is the price to pay to be able to test
     // a deep link in dev — but if a link opens the wrong window afterwards
     // suddenly, this is where you have to look, not in the link.
-    if (app.isPackaged) {
+    // AppX/MSIX owns protocol registration through AppxManifest.xml. Writing a
+    // parallel registry association from inside the Store sandbox would create
+    // a competing owner and is unnecessary.
+    if (app.isPackaged && !process.windowsStore) {
       app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL);
-    } else {
+    } else if (!app.isPackaged) {
       app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL, process.execPath, [
         path.resolve(process.argv[1] ?? ""),
       ]);

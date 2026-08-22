@@ -36,7 +36,7 @@ describe("withDesktopUserAgent", () => {
 });
 
 describe("desktopProtocolArguments", () => {
-  it("selects protocol URLs from a Linux launcher argv", () => {
+  it("selects protocol URLs from Linux and Windows launcher argv", () => {
     expect(
       desktopProtocolArguments([
         "/opt/minddy/minddy",

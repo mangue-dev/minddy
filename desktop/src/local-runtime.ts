@@ -3,6 +3,11 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { app } from "electron";
 
+import {
+  localRuntimeProcessSpec,
+  localRuntimeStopSpec,
+} from "@/lib/desktop/local-runtime-platform";
+
 export const LOCAL_SELF_HOST_ORIGIN = "http://localhost:6463";
 const LOCAL_RUNTIME_FILE = "local-runtime.json";
 let runtime: ChildProcess | null = null;
@@ -55,11 +60,12 @@ export async function startLocalRuntime(root: string): Promise<void> {
   if (await isHealthy()) return;
   if (runtime && runtime.exitCode === null) return;
   const validatedRoot = validateLocalRuntimeRoot(root);
-  const command = process.platform === "win32" ? "pnpm self-host:local -- --no-open" : "exec pnpm self-host:local -- --no-open";
-  const shell = process.env.SHELL || (process.platform === "darwin" ? "/bin/zsh" : "/bin/sh");
-  runtime = process.platform === "win32"
-    ? spawn("cmd.exe", ["/d", "/s", "/c", command], { cwd: validatedRoot, stdio: "ignore", windowsHide: true })
-    : spawn(shell, ["-lc", command], { cwd: validatedRoot, stdio: "ignore" });
+  const spec = localRuntimeProcessSpec(process.platform, process.env.SHELL);
+  runtime = spawn(spec.command, spec.args, {
+    cwd: validatedRoot,
+    stdio: "ignore",
+    windowsHide: spec.windowsHide,
+  });
 
   const deadline = Date.now() + 10 * 60_000;
   while (Date.now() < deadline) {
@@ -73,6 +79,18 @@ export async function startLocalRuntime(root: string): Promise<void> {
 
 /** Lets the launcher stop both the web process and its local Supabase backend. */
 export function stopLocalRuntime(): void {
-  if (runtime && runtime.exitCode === null) runtime.kill("SIGTERM");
+  if (runtime && runtime.exitCode === null) {
+    const spec = runtime.pid ? localRuntimeStopSpec(process.platform, runtime.pid) : null;
+    if (spec) {
+      // `cmd.exe` is only the launcher. Terminate its complete process tree so
+      // pnpm, Supabase, and the local Next.js server do not survive app exit.
+      spawn(spec.command, spec.args, {
+        stdio: "ignore",
+        windowsHide: spec.windowsHide,
+      });
+    } else {
+      runtime.kill("SIGTERM");
+    }
+  }
   runtime = null;
 }

@@ -42,6 +42,35 @@ protocols:
     schemes:
       - minddy
 
+# Windows is distributed exclusively through Microsoft Store. The AppX target
+# produces the MSIX payload submitted to Partner Center; Microsoft signs and
+# updates that package. There is deliberately no direct installer or Windows
+# electron-updater feed.
+win:
+  target:
+    - target: appx
+      arch: [x64, arm64]
+  executableName: minddy
+  icon: build/icon-iOS-Default-1024x1024@1x.png
+
+# Partner Center assigns the identity name and publisher. They are release
+# configuration, not source-code constants; build-windows-store.mjs refuses to
+# build when either value is absent. `electronUpdaterAware: false` also keeps
+# update metadata out of Store artifacts at packaging time.
+appx:
+  artifactName: minddy-${version}-windows-${arch}-store.${ext}
+  identityName: ${env.MINDDY_WINDOWS_STORE_IDENTITY_NAME}
+  publisher: ${env.MINDDY_WINDOWS_STORE_PUBLISHER}
+  publisherDisplayName: mangue-dev
+  applicationId: minddy
+  displayName: minddy
+  languages: [en-US, fr-FR]
+  minVersion: "10.0.17763.0"
+  maxVersionTested: "10.0.26100.0"
+  electronUpdaterAware: false
+  capabilities:
+    - runFullTrust
+
 # Linux is distributed first as a portable AppImage. Native DEB and RPM builds
 # are published alongside it for administrators who require distro packages.
 # `syncDesktopName` and `desktopName` in package.json keep the launcher name,

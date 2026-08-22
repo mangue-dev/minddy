@@ -238,8 +238,13 @@ attaches `.dmg`, `.zip`, blockmaps and `latest-mac.yml`. In parallel, it builds
 Linux AppImage, DEB, and RPM packages on Ubuntu for `x64` and `arm64`, signs
 every Linux package and each architecture-specific update manifest with GPG,
 verifies each signature, and attaches the public key, checksums, signatures, and
-attestations. It records the desktop fingerprint only after both jobs succeed. See
-[linux-desktop.md](linux-desktop.md) for the Linux verification contract.
+attestations. A third job builds Windows x64 and ARM64 Store MSIX packages and
+validates their manifests. Microsoft Store is the exclusive Windows signing,
+distribution, and update channel. The workflow records the desktop fingerprint
+only after all three jobs succeed. See
+[linux-desktop.md](linux-desktop.md) for the Linux verification contract and
+[desktop-release.md](desktop-release.md#windows-microsoft-store) for the Windows
+release contract.
 
 The following secrets belong to the GitHub environment
 `public-release`, not to an account or a personal keychain:
@@ -250,6 +255,10 @@ The following secrets belong to the GitHub environment
   Generic stable electron-updater flow.
 - `LINUX_GPG_PRIVATE_KEY` and `LINUX_GPG_PASSPHRASE`, plus the public
   `LINUX_GPG_FINGERPRINT`, for detached Linux package and metadata signatures.
+The `public-release` environment variables `WINDOWS_STORE_IDENTITY_NAME` and
+`WINDOWS_STORE_PUBLISHER` carry the immutable Partner Center identity. They are
+configuration, not secrets. Store MSIX packages are attached unsigned for
+Partner Center to sign. Windows does not use the generic updater feed.
 
 The role must be transferable to another maintainer and the secrets must
 be rotary. The workflow attaches immutable binaries to GitHub Releases and

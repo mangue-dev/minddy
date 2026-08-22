@@ -44,6 +44,8 @@ const PACKAGING_INPUTS = [
   // authorization produced a DIFFERENT app that the fingerprint declared "to
   // day ". This is exactly the lie that this script exists to prevent.
   "desktop/build/fr.lproj",
+  // Microsoft Store tile assets are injected directly by electron-builder.
+  "desktop/build/appx",
   // The Icon Composer source is a FILE (`icon.json` + the SVG): it is
   // unfolded file by file, cf. `expandDirectories`.
   "desktop/build/icon.icon",
