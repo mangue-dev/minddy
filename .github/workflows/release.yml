@@ -26,7 +26,7 @@ jobs:
   release:
     name: Verify, tag and publish v${{ inputs.version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     environment: public-release
     steps:
       - uses: actions/checkout@v5
@@ -92,10 +92,12 @@ jobs:
         shell: bash
         env:
           VERSION: ${{ inputs.version }}
+          SHA: ${{ inputs.sha }}
         run: |
           IFS=. read -r major minor patch <<< "$VERSION"
           {
             echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/minddy"
+            echo "candidate_tag=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/minddy:candidate-$SHA"
             echo "release_tag=v$VERSION"
             echo "minor_tag=v$major.$minor"
             echo "major_tag=v$major"
@@ -139,7 +141,7 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.image.outputs.tags }}
+          tags: ${{ steps.image.outputs.candidate_tag }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ inputs.sha }}
@@ -157,6 +159,7 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
+          scanners: vuln
 
       - name: Attest OCI image provenance
         if: github.event.repository.visibility == 'public'
@@ -173,6 +176,18 @@ jobs:
           IMAGE: ${{ steps.image.outputs.name }}
           DIGEST: ${{ steps.container.outputs.digest }}
         run: cosign sign --yes "$IMAGE@$DIGEST"
+
+      - name: Promote official OCI tags
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.container.outputs.digest }}
+          TAGS: ${{ steps.image.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            if [[ -n "$tag" ]]; then
+              docker buildx imagetools create --tag "$tag" "$IMAGE@$DIGEST"
+            fi
+          done <<< "$TAGS"
 
       - name: Add immutable container identity to release assets
         env:

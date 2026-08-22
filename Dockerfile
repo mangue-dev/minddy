@@ -2,7 +2,7 @@
 
 # The build stage contains the package manager and compiler. The final image
 # only contains the traced Next.js server and its production dependencies.
-FROM node:24-bookworm-slim AS base
+FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS base
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -37,7 +37,10 @@ ENV PORT=3000
 
 WORKDIR /app
 
-RUN apt-get update \
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+      /usr/local/bin/pnpm /usr/local/bin/pnpx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+    && apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 minddy \
