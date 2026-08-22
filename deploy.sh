@@ -19,7 +19,7 @@ With no argument, an interactive menu offers these three modes.
 Scopes:
   public core  SemVer version + tag + GitHub Release + artifacts
   Cloud web    www.minddy.app instance deployed from `production`
-  desktop      signed macOS application and signed Linux packages attached to the core release
+  desktop      macOS, Linux, and Microsoft Store Windows packages attached to the core release
 
 Marketing is part of the web build: a marketing-only change suggests
 a Cloud deployment without artificially creating a core version.
@@ -130,7 +130,7 @@ case "$MODE" in
   custom)
     if yes_no "Publish a new version of the public heart?" "$([ "$AUTO_CORE" = "true" ] && echo yes || echo no)"; then CORE=1; fi
     if yes_no "Deploy the Minddy Cloud web (marketing included)?" "$([ "$AUTO_WEB" = "true" ] && echo yes || echo no)"; then WEB=1; fi
-    if yes_no "Build and publish the desktop applications for macOS and Linux?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
+    if yes_no "Build and publish the desktop applications for macOS, Linux, and Windows?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
     ;;
 esac
 
@@ -342,7 +342,7 @@ if [ "$DESKTOP" -eq 1 ]; then
   fi
   git fetch origin production
   DESKTOP_RUN_SHA=$(git rev-parse origin/production)
-  echo "→ Publishing signed desktop applications for macOS and Linux, v$DESKTOP_VERSION..."
+  echo "→ Publishing desktop applications for macOS, Linux, and Microsoft Store, v$DESKTOP_VERSION..."
   dispatch_and_wait desktop-release.yml production "$DESKTOP_RUN_SHA" -f version="$DESKTOP_VERSION"
   git pull --ff-only origin main
 fi

@@ -6,7 +6,7 @@ pages, a public feedback board, and an MCP server that lets coding agents work
 with the same backlog as the team.
 
 The application is built with Next.js, React, Tailwind CSS, and Supabase. It
-also includes optional macOS and Linux desktop shells and integrations for GitHub,
+also includes optional macOS, Linux, and Microsoft Store Windows desktop shells and integrations for GitHub,
 GitLab, Stripe, and OpenRouter.
 
 ## Run locally
@@ -65,7 +65,7 @@ pnpm desktop:dev  # run the optional desktop shell
   code agent.
 - **Deployment:** `pnpm deploy` is the interactive maintainer entry point. It
   detects whether to release the public core, deploy the Minddy Cloud web app,
-  and publish desktop applications for macOS and Linux, with automatic, all,
+  and publish desktop applications for macOS, Linux, and Windows, with automatic, all,
   and custom modes. It waits for CI, requests an approved fast-forward from
   `main` to `production`, verifies the Vercel deployment, and only tags that
   deployed SHA. Builds and production secrets never come from the maintainer's
