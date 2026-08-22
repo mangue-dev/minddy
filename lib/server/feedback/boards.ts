@@ -31,6 +31,10 @@ export interface FeedbackBoardRow {
   show_views: boolean;
   /** Views (views.id) displayed in tabs — each view is opt-in. */
   visible_view_ids: string[];
+  /** Opt-in coupling with published pages as public site tabs. */
+  show_pages: boolean;
+  /** Published pages (pages.id) displayed in tabs — each page is opt-in. */
+  visible_page_ids: string[];
   /** Opt-in: display the post categories on the public board (MIN-52). */
   show_categories: boolean;
   /** Public Comments on Returns (MIN-196). False = read only:
@@ -45,7 +49,7 @@ export interface FeedbackBoardRow {
 }
 
 const BOARD_SELECT =
-  "id, project_id, token, enabled, show_views, visible_view_ids, show_categories, allow_comments, accent_light, accent_dark, sso_secret, created_at, updated_at";
+  "id, project_id, token, enabled, show_views, visible_view_ids, show_pages, visible_page_ids, show_categories, allow_comments, accent_light, accent_dark, sso_secret, created_at, updated_at";
 
 export interface PublicBoardContext {
   board: FeedbackBoardRow;
@@ -177,6 +181,32 @@ export async function setBoardVisibleViews(
   const { error } = await service
     .from("feedback_boards")
     .update({ visible_view_ids: viewIds })
+    .eq("project_id", projectId);
+  return !error;
+}
+
+/** Coupling board ⇄ published pages (public site tabs), opt-in. */
+export async function setBoardShowPages(
+  projectId: string,
+  showPages: boolean
+): Promise<boolean> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("feedback_boards")
+    .update({ show_pages: showPages })
+    .eq("project_id", projectId);
+  return !error;
+}
+
+/** Selection of published pages displayed in tabs (replaces the list). */
+export async function setBoardVisiblePages(
+  projectId: string,
+  pageIds: string[]
+): Promise<boolean> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("feedback_boards")
+    .update({ visible_page_ids: pageIds })
     .eq("project_id", projectId);
   return !error;
 }

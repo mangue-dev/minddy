@@ -79,12 +79,17 @@ describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
       "show_categories",
       "show_views",
       "visible_view_ids",
+      "show_pages",
+      "visible_page_ids",
       "allow_comments",
     ]) {
       expect(param("minddy_configure_feedback_board", optional).required).toBe(false);
     }
     expect(param("minddy_configure_feedback_board", "visible_view_ids").description).toMatch(
       /shared view ids/i
+    );
+    expect(param("minddy_configure_feedback_board", "visible_page_ids").description).toMatch(
+      /published page ids/i
     );
   });
 

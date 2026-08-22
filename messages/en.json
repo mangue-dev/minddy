@@ -829,7 +829,8 @@
     "commentAnonymousNotice": "Your comment shows no name, only your avatar.",
     "commentDelete": "Delete my comment",
     "commentsClosed": "Comments are closed on this board.",
-    "commentFailed": "Your comment could not be posted. Try again."
+    "commentFailed": "Your comment could not be posted. Try again.",
+    "untitledPage": "Untitled page"
   },
   "FeedbackBoard": {
     "title": "Feedback",
@@ -2746,6 +2747,10 @@
     "feedbackShowViews": "Shared view tabs",
     "feedbackShowViewsDesc": "Shows the checked views as tabs on the board.",
     "feedbackNoSharedViews": "No shared views yet.",
+    "feedbackShowPages": "Published page tabs",
+    "feedbackShowPagesDesc": "Shows the checked published pages as tabs on the board.",
+    "feedbackNoPublishedPages": "No published pages yet.",
+    "feedbackUntitledPage": "Untitled page",
     "feedbackShowCategories": "Categories on the public board",
     "feedbackShowCategoriesDesc": "When off, they're visible to your team only.",
     "feedbackAccentTitle": "Accent color",

@@ -13,7 +13,9 @@ import {
   setBoardAccent,
   setBoardAllowComments,
   setBoardShowCategories,
+  setBoardShowPages,
   setBoardShowViews,
+  setBoardVisiblePages,
   setBoardVisibleViews,
 } from "@/lib/server/feedback/boards";
 
@@ -34,6 +36,8 @@ function boardPayload(
     enabled: board.enabled,
     show_views: board.show_views,
     visible_view_ids: board.visible_view_ids,
+    show_pages: board.show_pages,
+    visible_page_ids: board.visible_page_ids,
     show_categories: board.show_categories,
     allow_comments: board.allow_comments,
     accent_light: board.accent_light,
@@ -57,18 +61,36 @@ async function listSharedViews(projectId: string): Promise<{ id: string; name: s
     .filter((v): v is { id: string; name: string } => v !== null);
 }
 
+/** Published project pages — tab checklist material. Any share level goes
+ (the owner may check a protected page; like the views, it only surfaces
+ publicly when its level is `public`). */
+async function listPublishedPages(projectId: string): Promise<{ id: string; title: string }[]> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("view_shares")
+    .select("pages!inner (id, title, project_id)")
+    .eq("pages.project_id", projectId)
+    .is("pages.deleted_at", null)
+    .order("created_at", { ascending: true });
+  return (data ?? [])
+    .map((row) => row.pages as unknown as { id: string; title: string } | null)
+    .filter((p): p is { id: string; title: string } => p !== null);
+}
+
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const guard = await requireProjectMember(request, id);
   if (!guard.ok) return guard.response;
 
-  const [board, sharedViews] = await Promise.all([
+  const [board, sharedViews, publishedPages] = await Promise.all([
     getBoardForProject(id),
     listSharedViews(id),
+    listPublishedPages(id),
   ]);
   return NextResponse.json({
     board: boardPayload(board, guard.access.isOwner),
     shared_views: sharedViews,
+    published_pages: publishedPages,
   });
 }
 
@@ -106,6 +128,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
   if (typeof body.show_views === "boolean") {
     const ok = await setBoardShowViews(id, body.show_views);
+    if (!ok) {
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
+  }
+  if (typeof body.show_pages === "boolean") {
+    const ok = await setBoardShowPages(id, body.show_pages);
     if (!ok) {
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
@@ -156,13 +184,31 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }
+  if (body.visible_page_ids !== undefined) {
+    if (
+      !Array.isArray(body.visible_page_ids) ||
+      body.visible_page_ids.length > 50 ||
+      body.visible_page_ids.some((v) => typeof v !== "string")
+    ) {
+      return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+    }
+    // Only published pages of the project are retained.
+    const known = new Set((await listPublishedPages(id)).map((p) => p.id));
+    const ids = (body.visible_page_ids as string[]).filter((v) => known.has(v));
+    const ok = await setBoardVisiblePages(id, ids);
+    if (!ok) {
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
+  }
   if (
     typeof body.enabled !== "boolean" &&
     typeof body.show_views !== "boolean" &&
+    typeof body.show_pages !== "boolean" &&
     typeof body.show_categories !== "boolean" &&
     typeof body.allow_comments !== "boolean" &&
     Object.keys(accentPatch).length === 0 &&
-    body.visible_view_ids === undefined
+    body.visible_view_ids === undefined &&
+    body.visible_page_ids === undefined
   ) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -171,6 +217,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({
     board: boardPayload(board, true),
     shared_views: await listSharedViews(id),
+    published_pages: await listPublishedPages(id),
   });
 }
 

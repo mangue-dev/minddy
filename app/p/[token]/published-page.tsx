@@ -10,6 +10,7 @@ import { publicTokenMetadata } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
 import { getPublicPageBundle } from "@/lib/server/page-publication";
 import { isShareUnlocked } from "@/lib/server/share-unlock";
+import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import { PublicPageShell } from "@/components/public-page-shell";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
@@ -80,11 +81,25 @@ export async function PublishedPage({
 }) {
   const bundle = await bundleOf(token, pageId);
   if (!bundle) notFound();
-  const t = await getTranslations("PublicPage");
 
-  if (!(await isShareUnlocked(bundle.share))) {
+  // The public project site: Feedback tab, shared views and published pages.
+  // A protected page reveals nothing about itself, but the site navigation
+  // remains (its own token never enters the list: only `public` shares do).
+  const [t, tFeedback, unlocked] = await Promise.all([
+    getTranslations("PublicPage"),
+    getTranslations("PublicFeedback"),
+    isShareUnlocked(bundle.share),
+  ]);
+  const tabs = await getPublicSiteTabs({
+    projectId: bundle.project.id,
+    feedbackLabel: tFeedback("title"),
+    untitledLabel: t("untitled"),
+    current: { kind: "page", shareToken: token },
+  });
+
+  if (!unlocked) {
     return (
-      <PublicPageShell>
+      <PublicPageShell tabs={tabs}>
         <main className="flex flex-1 items-center justify-center p-6">
           <PagePasswordForm token={token} />
         </main>
@@ -99,6 +114,7 @@ export async function PublishedPage({
   return (
     <PublicPageShell
       contained
+      tabs={tabs}
       // The project logo and name, as on the feedback board: one page
       // published is circulating far from minddy, and it is the only thing that says where
       // it came from.

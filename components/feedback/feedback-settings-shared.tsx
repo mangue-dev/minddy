@@ -57,6 +57,8 @@ export interface BoardSettings {
   enabled: boolean;
   show_views: boolean;
   visible_view_ids: string[];
+  show_pages: boolean;
+  visible_page_ids: string[];
   show_categories: boolean;
   allow_comments: boolean;
   accent_light: string | null;
@@ -71,9 +73,15 @@ export interface SharedView {
   name: string;
 }
 
+export interface PublishedPageItem {
+  id: string;
+  title: string;
+}
+
 export interface FeedbackSettingsData {
   board: BoardSettings | null;
   shared_views: SharedView[];
+  published_pages: PublishedPageItem[];
 }
 
 export const feedbackSettingsKey = (projectId: string) =>
@@ -182,6 +190,7 @@ export function useFeedbackBoardSettings(projectId: string) {
   return {
     board: data?.board ?? null,
     sharedViews: data?.shared_views ?? [],
+    publishedPages: data?.published_pages ?? [],
     isPending,
     busy,
     patchBoard,
@@ -231,18 +240,55 @@ export function SettingsRows({ children }: { children: ReactNode }) {
 }
 
 /**
+ * One tab-family checklist (shared views or published pages): each entry is
+ * opt-in, and every click sends the WHOLE selection — same semantics as the
+ * API behind it.
+ */
+function TabPickList({
+  items,
+  selectedIds,
+  disabled,
+  onToggle,
+}: {
+  items: { id: string; label: string }[];
+  selectedIds: string[];
+  disabled: boolean;
+  onToggle: (id: string, next: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {items.map((item) => {
+        const checked = selectedIds.includes(item.id);
+        return (
+          <label key={item.id} className="flex items-center gap-2.5 text-sm">
+            <Checkbox
+              checked={checked}
+              disabled={disabled}
+              onCheckedChange={(next) => onToggle(item.id, Boolean(next))}
+            />
+            {item.label}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * What the board shows to the public: the word first (comments), then
- * displays. Three rows, to be placed in the board card (page) or in
+ * displays. Four rows, to be placed in the board card (page) or in
  * `SettingsRows` (wizard).
  */
 export function BoardVisibilityRows({
   board,
   sharedViews,
+  publishedPages,
   isOwner,
   onPatch,
 }: {
   board: BoardSettings;
   sharedViews: SharedView[];
+  publishedPages: PublishedPageItem[];
   isOwner: boolean;
   onPatch: (body: Partial<BoardSettings>) => void | Promise<unknown>;
 }) {
@@ -285,31 +331,59 @@ export function BoardVisibilityRows({
               {t("feedbackNoSharedViews")}
             </p>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              {sharedViews.map((view) => {
-                const checked = board.visible_view_ids.includes(view.id);
-                return (
-                  <label
-                    key={view.id}
-                    className="flex items-center gap-2.5 text-sm"
-                  >
-                    <Checkbox
-                      checked={checked}
-                      disabled={!isOwner}
-                      onCheckedChange={(next) => {
-                        const ids = next
-                          ? [...board.visible_view_ids, view.id]
-                          : board.visible_view_ids.filter(
-                              (id) => id !== view.id,
-                            );
-                        void onPatch({ visible_view_ids: ids });
-                      }}
-                    />
-                    {view.name}
-                  </label>
-                );
-              })}
-            </div>
+            <TabPickList
+              items={sharedViews.map((view) => ({
+                id: view.id,
+                label: view.name,
+              }))}
+              selectedIds={board.visible_view_ids}
+              disabled={!isOwner}
+              onToggle={(id, next) =>
+                void onPatch({
+                  visible_view_ids: next
+                    ? [...board.visible_view_ids, id]
+                    : board.visible_view_ids.filter((v) => v !== id),
+                })
+              }
+            />
+          ))}
+      </SettingsRow>
+
+      {/* Published Pages Tabs — same coupling as the views, its own switch:
+          the views switch only speaks of views and must not lie. */}
+      <SettingsRow
+        label={t("feedbackShowPages")}
+        hint={t("feedbackShowPagesDesc")}
+        control={
+          <Switch
+            checked={board.show_pages}
+            disabled={!isOwner}
+            onCheckedChange={(v) => void onPatch({ show_pages: v })}
+            aria-label={t("feedbackShowPages")}
+          />
+        }
+      >
+        {board.show_pages &&
+          (publishedPages.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {t("feedbackNoPublishedPages")}
+            </p>
+          ) : (
+            <TabPickList
+              items={publishedPages.map((page) => ({
+                id: page.id,
+                label: page.title || t("feedbackUntitledPage"),
+              }))}
+              selectedIds={board.visible_page_ids}
+              disabled={!isOwner}
+              onToggle={(id, next) =>
+                void onPatch({
+                  visible_page_ids: next
+                    ? [...board.visible_page_ids, id]
+                    : board.visible_page_ids.filter((p) => p !== id),
+                })
+              }
+            />
           ))}
       </SettingsRow>
 

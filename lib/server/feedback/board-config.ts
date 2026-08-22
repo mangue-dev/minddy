@@ -9,7 +9,9 @@ import {
   rotateSsoSecret,
   setBoardAllowComments,
   setBoardShowCategories,
+  setBoardShowPages,
   setBoardShowViews,
+  setBoardVisiblePages,
   setBoardVisibleViews,
 } from "@/lib/server/feedback/boards";
 import { getDomainForBoard } from "@/lib/server/custom-domains";
@@ -46,6 +48,9 @@ export interface FeedbackBoardConfig {
   allow_comments: boolean;
   /** Shared views shown in tabs when `show_views` is true. */
   visible_view_ids: string[];
+  show_pages: boolean;
+  /** Published pages shown in tabs when `show_pages` is true. */
+  visible_page_ids: string[];
 }
 
 const NO_BOARD: FeedbackBoardConfig = {
@@ -59,6 +64,8 @@ const NO_BOARD: FeedbackBoardConfig = {
   show_views: false,
   allow_comments: false,
   visible_view_ids: [],
+  show_pages: false,
+  visible_page_ids: [],
 };
 
 export async function getFeedbackBoardConfig(
@@ -84,6 +91,8 @@ export async function getFeedbackBoardConfig(
     show_views: board.show_views,
     allow_comments: board.allow_comments,
     visible_view_ids: board.visible_view_ids ?? [],
+    show_pages: board.show_pages,
+    visible_page_ids: board.visible_page_ids ?? [],
   };
 }
 
@@ -111,6 +120,8 @@ export async function configureFeedbackBoard(input: {
   showViews?: boolean;
   allowComments?: boolean;
   visibleViewIds?: string[];
+  showPages?: boolean;
+  visiblePageIds?: string[];
   origin?: string;
 }): Promise<ConfigureBoardResult> {
   const {
@@ -121,12 +132,16 @@ export async function configureFeedbackBoard(input: {
     showViews,
     allowComments,
     visibleViewIds,
+    showPages,
+    visiblePageIds,
   } = input;
   const touchesDisplay =
     showCategories !== undefined ||
     showViews !== undefined ||
     allowComments !== undefined ||
-    visibleViewIds !== undefined;
+    visibleViewIds !== undefined ||
+    showPages !== undefined ||
+    visiblePageIds !== undefined;
   if (enabled === undefined && !generateSso && !touchesDisplay) {
     return { ok: false, errorKey: "noFieldsToUpdate" };
   }
@@ -158,6 +173,12 @@ export async function configureFeedbackBoard(input: {
       return { ok: false, errorKey: "databaseError" };
     }
     if (visibleViewIds !== undefined && !(await setBoardVisibleViews(projectId, visibleViewIds))) {
+      return { ok: false, errorKey: "databaseError" };
+    }
+    if (showPages !== undefined && !(await setBoardShowPages(projectId, showPages))) {
+      return { ok: false, errorKey: "databaseError" };
+    }
+    if (visiblePageIds !== undefined && !(await setBoardVisiblePages(projectId, visiblePageIds))) {
       return { ok: false, errorKey: "databaseError" };
     }
   }

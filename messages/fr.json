@@ -829,7 +829,8 @@
     "commentAnonymousNotice": "Votre commentaire n'affiche aucun nom, seulement votre avatar.",
     "commentDelete": "Supprimer mon commentaire",
     "commentsClosed": "Les commentaires sont fermés sur ce board.",
-    "commentFailed": "Votre commentaire n'a pas pu être publié. Réessayez."
+    "commentFailed": "Votre commentaire n'a pas pu être publié. Réessayez.",
+    "untitledPage": "Page sans titre"
   },
   "FeedbackBoard": {
     "title": "Retours",
@@ -2746,6 +2747,10 @@
     "feedbackShowViews": "Onglets des vues partagées",
     "feedbackShowViewsDesc": "Affiche les vues cochées comme onglets sur le board.",
     "feedbackNoSharedViews": "Aucune vue partagée pour l'instant.",
+    "feedbackShowPages": "Onglets des pages publiées",
+    "feedbackShowPagesDesc": "Affiche les pages publiées cochées comme onglets sur le board.",
+    "feedbackNoPublishedPages": "Aucune page publiée pour l'instant.",
+    "feedbackUntitledPage": "Page sans titre",
     "feedbackShowCategories": "Catégories sur le board public",
     "feedbackShowCategoriesDesc": "Quand c'est désactivé, elles ne sont visibles que par votre équipe.",
     "feedbackAccentTitle": "Couleur d'accent",

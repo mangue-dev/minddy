@@ -3994,6 +3994,21 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Which shared view ids appear as tabs. The list replaces the current " +
             "selection; non-shared or foreign-project views are ignored."
           ),
+        show_pages: z
+          .boolean()
+          .optional()
+          .describe(
+            "Show the project's published wiki pages as tabs on the public site."
+          ),
+        visible_page_ids: z
+          .array(z.string().uuid())
+          .max(50)
+          .optional()
+          .describe(
+            "Which published page ids (from list_pages) appear as tabs. A page " +
+            "must be published to show up. The list replaces the current " +
+            "selection; unpublished or foreign-project pages are ignored."
+          ),
       }),
       annotations: WRITE_IDEMPOTENT,
     },
@@ -4017,6 +4032,21 @@ export function registerMinddyTools(rawServer: McpServer): void {
         );
         visibleViewIds = visibleViewIds.filter((id) => known.has(id));
       }
+      let visiblePageIds = args.visible_page_ids;
+      if (visiblePageIds !== undefined) {
+        const { data: publishedPages, error } = await getServiceClient()
+          .from("view_shares")
+          .select("pages!inner (id, project_id)")
+          .eq("pages.project_id", scope.access.project.id)
+          .is("pages.deleted_at", null);
+        if (error) return fail("database_error", error.message);
+        const known = new Set(
+          (publishedPages ?? [])
+            .map((row) => (row.pages as { id?: string } | null)?.id)
+            .filter((id): id is string => typeof id === "string")
+        );
+        visiblePageIds = visiblePageIds.filter((id) => known.has(id));
+      }
 
       const result = await configureFeedbackBoard({
         projectId: scope.access.project.id,
@@ -4026,6 +4056,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         showCategories: args.show_categories,
         showViews: args.show_views,
         visibleViewIds,
+        showPages: args.show_pages,
+        visiblePageIds,
       });
       if (!result.ok) {
         switch (result.errorKey) {
@@ -4033,7 +4065,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
             return fail(
               "invalid_params",
               "Pass enabled, show_categories, show_views, visible_view_ids, " +
-                "allow_comments and/or generate_sso_secret."
+                "show_pages, visible_page_ids, allow_comments and/or " +
+                "generate_sso_secret."
             );
           case "boardNotFound":
             return fail(

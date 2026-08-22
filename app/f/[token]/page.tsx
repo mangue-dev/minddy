@@ -106,6 +106,7 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
     getPublicSiteTabs({
       projectId: ctx.project.id,
       feedbackLabel: t("title"),
+      untitledLabel: t("untitledPage"),
       current: { kind: "feedback" },
       domainTarget,
     }),

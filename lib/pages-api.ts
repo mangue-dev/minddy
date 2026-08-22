@@ -250,6 +250,36 @@ export function discardPageOnUnload(projectId: string, pageId: string): void {
   }).catch(() => {});
 }
 
+/* ─── Watching (MIN-278 follow-up) ─────────────────────────────────────────── */
+
+/** The watch route, shared by the ping and its departure. */
+const pageWatchUrl = (projectId: string, pageId: string) =>
+  `/api/projects/${projectId}/pages/${pageId}/watch`;
+
+/**
+ * Watch heartbeat: proves the page is open on screen.
+ *
+ * The server keeps a `page_viewers` row fresh for it, which silences the
+ * agent-write notification while the reader watches the write arrive live.
+ * Fire-and-forget: a lost ping is invisible until three of them are.
+ */
+export function pingPageWatchApi(projectId: string, pageId: string): void {
+  void fetch(pageWatchUrl(projectId, pageId), { method: "POST" }).catch(
+    () => {}
+  );
+}
+
+/** Stops watching — when the editor unmounts or the tab hides for good. */
+export function clearPageWatchOnUnload(
+  projectId: string,
+  pageId: string
+): void {
+  void fetch(pageWatchUrl(projectId, pageId), {
+    method: "DELETE",
+    keepalive: true,
+  }).catch(() => {});
+}
+
 /** Immediate rollback (an “Undo” toast). */
 export async function restorePageApi(
   projectId: string,

@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
-import type { PageWriteKind } from "@/lib/pages";
+import { PAGE_WATCH_FRESH_MS, type PageWriteKind } from "@/lib/pages";
 
 /**
  * What a page TELLS when it changes (MIN-278): its activity line, and
@@ -115,6 +115,13 @@ export async function recordPageEvent(
  * run under the id of the account that allowed them — the bearer
  * of the MCP key, the Numo user, the project owner. So this is the only person to warn, and warning the entire project with a gesture that no one asked for would be exactly the noise this ticket seeks to avoid.
  *
+ * Unless they are watching the page RIGHT NOW: a fresh row in
+ * `page_viewers` (lib/page-watch.ts pings it while the editor holds the
+ * document open) means the write is already arriving live through realtime —
+ * refetch and merge into the open editor — and the inbox line would only
+ * repeat what the reader is seeing happen. Somewhere else in the app, or away
+ * entirely, the line stays useful and keeps its push.
+ *
  * `actor_id` remains NULL on the line: the actor is not a person, this is
  * the agent. Leaving it filled would cause the recipient to see their own portrait
  * next to "someone wrote in this page".
@@ -127,6 +134,18 @@ export async function notifyAgentPageWrite(
   service: SupabaseClient,
   params: { projectId: string; pageId: string; actorId: string },
 ): Promise<void> {
+  // Watching beats warning: one indexed read before the write. The window is
+  // generous on purpose — three missed heartbeats still count as watching,
+  // so a single dropped ping never resurrects the line.
+  const { data } = await service
+    .from("page_viewers")
+    .select("user_id")
+    .eq("page_id", params.pageId)
+    .eq("user_id", params.actorId)
+    .gte("seen_at", new Date(Date.now() - PAGE_WATCH_FRESH_MS).toISOString())
+    .limit(1);
+  if (data && data.length > 0) return;
+
   await insertNotifications(
     service,
     [

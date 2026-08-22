@@ -1797,6 +1797,10 @@ export async function executeTool(
           visibleViewIds: Array.isArray(args.visible_view_ids)
             ? args.visible_view_ids.filter((v): v is string => typeof v === "string")
             : undefined,
+          showPages: typeof args.show_pages === "boolean" ? args.show_pages : undefined,
+          visiblePageIds: Array.isArray(args.visible_page_ids)
+            ? args.visible_page_ids.filter((v): v is string => typeof v === "string")
+            : undefined,
           origin: SITE_URL,
         });
         if (!result.ok) return settingsError(result.errorKey);

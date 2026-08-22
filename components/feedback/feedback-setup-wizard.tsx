@@ -117,6 +117,7 @@ export function FeedbackSetupWizard({
   const {
     board,
     sharedViews,
+    publishedPages,
     isPending,
     patchBoard,
     patchBoardDebounced,
@@ -390,6 +391,7 @@ export function FeedbackSetupWizard({
           <BoardVisibilityRows
             board={board}
             sharedViews={sharedViews}
+            publishedPages={publishedPages}
             isOwner={isOwner}
             onPatch={patchBoard}
           />

@@ -207,12 +207,13 @@ export default async function SharedViewPage({ params }: PageProps) {
   if (!ctx) notFound();
   const { view } = ctx;
   const unlocked = await isUnlocked(ctx);
-  // The public project site: Feedback tabs + shared views. A view
-  // locked doesn't reveal anything about itself, but the site navigation remains.
+  // The public project site: Feedback tab, shared views and published
+  // pages. A view locked doesn't reveal anything about itself, but the site navigation remains.
   const tFeedback = await getTranslations("PublicFeedback");
   const tabs = await getPublicSiteTabs({
     projectId: ctx.project.id,
     feedbackLabel: tFeedback("title"),
+    untitledLabel: tFeedback("untitledPage"),
     current: { kind: "view", shareToken: token },
     domainTarget: await getRequestDomainTarget(),
   });

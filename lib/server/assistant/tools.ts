@@ -949,7 +949,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "configure_feedback_board",
       description:
-        "Publish or unpublish the project's public feedback board, set its display options (categories shown on posts, shared views shown as tabs), and/or get its SSO secret. OWNER ONLY. Read the current values with get_feedback_board first. enabled true creates the board if the project has none (collection through the API keeps working when it is off — only the public page 404s). generate_sso_secret true returns the HS256 secret used to pre-identify signed-in users on the board: it NEVER rotates an existing secret (that would break a live integration), it returns the current one or creates the first. The secret is a credential — surface it once, tell the user to put it in an env var (MINDDY_SSO_SECRET), never client-side.",
+        "Publish or unpublish the project's public feedback board, set its display options (categories shown on posts, shared views and published pages shown as tabs), and/or get its SSO secret. OWNER ONLY. Read the current values with get_feedback_board first. enabled true creates the board if the project has none (collection through the API keeps working when it is off — only the public page 404s). generate_sso_secret true returns the HS256 secret used to pre-identify signed-in users on the board: it NEVER rotates an existing secret (that would break a live integration), it returns the current one or creates the first. The secret is a credential — surface it once, tell the user to put it in an env var (MINDDY_SSO_SECRET), never client-side.",
       parameters: {
         type: "object",
         properties: {
@@ -982,6 +982,17 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             items: { type: "string" },
             description:
               "Which shared views appear as tabs (view ids from list_views — a view must be shared to show up). REPLACES the whole list.",
+          },
+          show_pages: {
+            type: "boolean",
+            description:
+              "Show the project's published wiki pages as tabs on the public site, next to the board.",
+          },
+          visible_page_ids: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Which published pages appear as tabs (page ids from list_pages — a page must be published to show up). REPLACES the whole list.",
           },
         },
       },

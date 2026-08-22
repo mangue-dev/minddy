@@ -160,7 +160,7 @@ describe("recordPageEvent", () => {
 
 describe("notifyAgentPageWrite", () => {
   it("notifies the launcher without an actor and moves its unread row", async () => {
-    const { service } = stubService([]);
+    const { service, filters } = stubService([]);
     await notifyAgentPageWrite(service, {
       projectId: PROJECT,
       pageId: PAGE,
@@ -183,5 +183,23 @@ describe("notifyAgentPageWrite", () => {
     // Ten passages on the same page = one line, not ten (MIN-278, “no
     // noise "). The `page_id` clause of `insertNotifications` limits it to this one.
     expect(opts).toEqual({ replaceUnread: true });
+    // The watching read comes FIRST, and only for THIS page and THIS reader.
+    expect(filters.map(([column]) => column)).toEqual([
+      "page_id",
+      "user_id",
+      "seen_at",
+    ]);
+  });
+
+  it("says NOTHING to a reader who has the page open right now", async () => {
+    const { service } = stubService([{ user_id: ACTOR }]);
+    await notifyAgentPageWrite(service, {
+      projectId: PROJECT,
+      pageId: PAGE,
+      actorId: ACTOR,
+    });
+    // The write is already arriving live in their editor; an inbox line
+    // would only repeat what they are seeing happen.
+    expect(H.insertNotifications).not.toHaveBeenCalled();
   });
 });

@@ -147,6 +147,60 @@ async function access(actorId: string, projectId: string): Promise<boolean> {
   return (await getProjectAccess(actorId, projectId)) !== null;
 }
 
+/* ─── Watching (MIN-278 follow-up) ─────────────────────────────────────────── */
+
+/**
+ * Proves that the caller still has this page open on screen.
+ *
+ * One row per (page, viewer), upserted every `PAGE_WATCH_PING_MS` by
+ * lib/page-watch.ts while the editor holds the document. It is what lets
+ * `notifyAgentPageWrite` tell "away" from "reading": a fresh row is a reader,
+ * and a reader needs no inbox line for an agent's write — it arrives live.
+ * The route checks access itself; the table only ever carries rows for pages
+ * the pinger can read.
+ */
+export async function touchPageWatcher(
+  pageId: string,
+  actorId: string
+): Promise<boolean> {
+  const service = getServiceClient();
+  // The project id alone: a ping runs every twenty seconds and must not drag
+  // the body through PostgREST each time.
+  const { data } = await service
+    .from("pages")
+    .select("project_id")
+    .eq("id", pageId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!data?.project_id || !(await access(actorId, data.project_id))) {
+    return false;
+  }
+  const { error } = await service
+    .from("page_viewers")
+    .upsert({ page_id: pageId, user_id: actorId }, { onConflict: "page_id,user_id" });
+  if (error) {
+    console.error("[pages] watch ping failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Leaves the page: removes the watcher row. Best-effort both ways — an error
+ * costs nothing (the row goes stale on its own after `PAGE_WATCH_FRESH_MS`),
+ * and so does a missing row.
+ */
+export async function clearPageWatcher(
+  pageId: string,
+  actorId: string
+): Promise<void> {
+  await getServiceClient()
+    .from("page_viewers")
+    .delete()
+    .eq("page_id", pageId)
+    .eq("user_id", actorId);
+}
+
 /**
  * A page and its project, or null. `includeTrashed` is only true for
  * gestures which refer to a trashed page (restore).

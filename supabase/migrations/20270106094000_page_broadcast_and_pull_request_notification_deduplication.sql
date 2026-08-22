@@ -41,5 +41,7 @@ USING ranked
 WHERE notification.id = ranked.id
   AND ranked.position > 1;
 
-CREATE UNIQUE INDEX notifications_one_opened_pull_request_per_recipient
+-- IF NOT EXISTS: instances that ran the pre-squash 093000+094000 pair already
+-- carry both this index and the trigger above, with their history repaired.
+CREATE UNIQUE INDEX IF NOT EXISTS notifications_one_opened_pull_request_per_recipient
   ON public.notifications (user_id, type, pull_request_id);

@@ -24,6 +24,20 @@
  */
 export type PageWriteKind = "human" | "agent";
 
+/**
+ * How often the open page proves it is still on screen (MIN-278 follow-up).
+ *
+ * The editor pings the watch route at this cadence; the server keeps a viewer
+ * row fresh and skips the agent-write notification for it. Three beats of
+ * margin before the server stops believing in a watcher
+ * (`PAGE_WATCH_FRESH_MS`): one missed ping must not resurrect the inbox line,
+ * a closed laptop must not silence it forever.
+ */
+export const PAGE_WATCH_PING_MS = 20_000;
+
+/** A viewer row older than this no longer counts as watching. */
+export const PAGE_WATCH_FRESH_MS = 3 * PAGE_WATCH_PING_MS;
+
 /** A page, as it comes out of the table (raw columns). */
 export interface Page {
   id: string;

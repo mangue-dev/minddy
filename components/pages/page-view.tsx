@@ -77,6 +77,7 @@ import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
+import { usePageWatch } from "@/lib/use-page-watch";
 import {
   usePageAutosave,
   type PageSaveState,
@@ -274,6 +275,9 @@ function PageSurface({
   const pagesLoaded = !pagesLoading;
   const { members, loading: membersLoading } = useMembersQuery(projectId, true);
   const present = usePresentOn(pageId);
+  // The watch heartbeat: while this surface holds the document open, the
+  // server knows someone is reading it and stays quiet about agent writes.
+  usePageWatch(projectId, pageId);
   const mentionSources = useDescriptionMentions(projectId, members);
   const mentions = useMemo(
     () => ({

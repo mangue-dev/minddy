@@ -85,8 +85,16 @@ export function ProjectFeedbackSettings({
 }) {
   const t = useTranslations("Settings");
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { board, sharedViews, isPending, busy, patchBoard, patchBoardDebounced, post } =
-    useFeedbackBoardSettings(projectId);
+  const {
+    board,
+    sharedViews,
+    publishedPages,
+    isPending,
+    busy,
+    patchBoard,
+    patchBoardDebounced,
+    post,
+  } = useFeedbackBoardSettings(projectId);
 
   // Custom domain (MIN-36) — same query as CustomDomainSection
   // (deduplicated by React Query) to prefer the verified domain in the URL.
@@ -273,11 +281,12 @@ export function ProjectFeedbackSettings({
               )}
             </SettingsRow>
 
-            {/* Public comments, views tabs, categories — the same
+            {/* Public comments, views tabs, pages tabs, categories — the same
                 rows as the “What the public sees” step of the wizard. */}
             <BoardVisibilityRows
               board={board}
               sharedViews={sharedViews}
+              publishedPages={publishedPages}
               isOwner={isOwner}
               onPatch={patchBoard}
             />
