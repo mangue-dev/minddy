@@ -23,6 +23,14 @@ test("locks packaging to the Partner Center product identity", () => {
   );
 });
 
+test("writes the literal Partner Center identity into the AppX configuration", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  assert.match(config, /^  identityName: mangue-dev\.minddy$/m);
+  assert.match(config, /^  publisher: CN=D5052B10-735B-4EF0-920F-642DFBDEB04F$/m);
+  assert.doesNotMatch(config, /identityName: \$\{env\./);
+  assert.doesNotMatch(config, /publisher: \$\{env\./);
+});
+
 test("requires one MSIX package for each Windows architecture", () => {
   const packages = [
     "minddy-1.2.3-windows-arm64-store.msix",
