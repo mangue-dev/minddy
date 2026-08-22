@@ -282,40 +282,51 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
 async function renderSelfHosting(locale: Locale, canonical: string): Promise<string> {
   const t = await getTranslations({ locale, namespace: "SelfHosting" });
   const foundations = ["app", "supabase", "data"] as const;
+  const routes = [
+    {
+      title: t("localTitle"),
+      body: t("localBody"),
+      details: [t("localTime"), t("localFactUsers"), t("localFactNetwork"), t("localFactMemory")],
+      cta: t("routeCtaLocal"),
+    },
+    {
+      title: t("teamTitle"),
+      body: t("teamBody"),
+      details: [t("teamTime"), t("teamFactUsers"), t("teamFactNetwork"), t("teamFactMemory")],
+      cta: t("routeCtaTeam"),
+    },
+  ];
   const operations = ["backup", "update", "diagnose"] as const;
+  const installRoute = routeByKey("selfHostingInstall");
+  const installUrl = `${SITE_URL}${locale === "fr" ? installRoute.fr : installRoute.en}`;
 
   return [
     header(t("metaTitle"), t("metaDescription"), canonical),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
+    `- ${t("heroCtaPrimary")}: ${installUrl}`,
+    `## ${t("promiseTitle")}`,
+    t("promiseBody"),
+    [t("promiseOne"), t("promiseTwo"), t("promiseThree")].map((item) => `- ${item}`).join("\n"),
     `## ${t("howTitle")}`,
     t("howBody"),
     foundations
       .map((key) => `- **${t(`foundation_${key}_title`)}**: ${t(`foundation_${key}_body`)}`)
       .join("\n"),
     `> ${t("howBoundary")}`,
-    `## ${t("localTitle")}`,
-    t("localGuideBody"),
-    `> ${t("localBoundary")}`,
-    `### ${t("stepInstallLocalTitle")}`,
-    t("stepInstallLocalBody"),
-    "```bash\ncorepack enable\ncorepack prepare pnpm@10.28.0 --activate\npnpm install --frozen-lockfile\npnpm self-host:local\n```",
-    `### ${t("stepOpenLocalTitle")}`,
-    t("stepOpenLocalBody"),
-    `- **${t("macAppTitle")}**: ${t("macLocalBody")}`,
-    `- **${t("browserTitle")}**: ${t("browserLocalBody")}`,
-    `## ${t("teamTitle")}`,
-    t("teamGuideBody"),
-    `- **${t("privateAccessTitle")}**: ${t("privateAccessBody")}`,
-    `- **${t("publicAccessTitle")}**: ${t("publicAccessBody")}`,
-    `- **${t("managedTitle")}**: ${t("managedBody")}`,
-    `- **${t("fullTitle")}**: ${t("fullBody")}`,
-    `1. **${t("stepPrepareServerTitle")}** — ${t("stepPrepareServerBody")}`,
-    `2. **${t("stepGetReleaseTitle")}** — ${t("stepGetReleaseBody", { release: "…" })}`,
-    `3. **${t("stepRunInstallerTitle")}** — ${t("stepRunInstallerBody")}`,
-    `4. **${t("stepEmailTitle")}** — ${t("stepEmailManagedBody")}`,
-    `5. **${t("stepVerifyServerTitle")}** — ${t("stepVerifyServerBody")}`,
-    `6. **${t("stepSignupServerTitle")}** — ${t("stepSignupServerBody")}`,
+    `## ${t("routesTitle")}`,
+    t("routesBody"),
+    routes
+      .map(({ title, body, details, cta }) => [`### ${title}`, body, `- ${details.join("\n- ")}`, `_${cta}_`].join("\n\n"))
+      .join("\n\n"),
+    `## ${t("migrationTitle")}`,
+    t("migrationBody"),
+    `- **${t("migrationExportTitle")}**: ${t("migrationExportBody")}`,
+    `- **${t("migrationImportTitle")}**: ${t("migrationImportBody")}`,
+    `> ${t("migrationNote")}`,
+    `## ${t("limitsTitle")}`,
+    t("limitsBody"),
+    t("limitsExcluded"),
     `## ${t("operationsTitle")}`,
     t("operationsSubtitle"),
     operations

@@ -20,6 +20,10 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 export const FRENCH_SLUG_REDIRECTS = [
   { source: "/fr/pricing", destination: "/fr/tarifs" },
   { source: "/fr/self-hosting", destination: "/fr/auto-hebergement" },
+  {
+    source: "/fr/self-hosting/install",
+    destination: "/fr/auto-hebergement/installer",
+  },
   { source: "/fr/download", destination: "/fr/telecharger" },
   { source: "/fr/changelog", destination: "/fr/nouveautes" },
   { source: "/fr/legal", destination: "/fr/mentions-legales" },
@@ -37,6 +41,7 @@ export const PUBLIC_ROUTE_PATHS = [
   "/pricing",
   "/mcp",
   "/self-hosting",
+  "/self-hosting/install",
   "/download",
   "/changelog",
   "/alternatives/linear",
@@ -50,6 +55,7 @@ export const PUBLIC_ROUTE_PATHS = [
   "/fr/tarifs",
   "/fr/mcp",
   "/fr/auto-hebergement",
+  "/fr/auto-hebergement/installer",
   "/fr/telecharger",
   "/fr/nouveautes",
   "/fr/alternatives/linear",

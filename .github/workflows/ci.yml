@@ -130,8 +130,8 @@ jobs:
           status=$?
           set -e
           test "$status" -ne 0
-          rg 'server → `api\.stripe\.com`: stripe is not enabled' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
-          ! rg '/v1/customers' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
+          grep -F 'server → `api.stripe.com`: stripe is not enabled' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
+          ! grep -F '/v1/customers' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
 
       - name: Upload self-hosted egress reports
         if: always()
