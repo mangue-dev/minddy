@@ -57,6 +57,8 @@ test("Windows CI builds and validates the Store distribution", async () => {
   assert.match(workflow, /CSC_IDENTITY_AUTO_DISCOVERY: "false"/);
   assert.match(workflow, /name: Sign disposable CI packages/);
   assert.match(workflow, /Windows Kits\\10\\bin\\\*\\x64\\signtool\.exe/);
+  assert.match(workflow, /Cert:\\LocalMachine\\TrustedPeople/);
+  assert.doesNotMatch(workflow, /Cert:\\CurrentUser\\TrustedPeople/);
   assert.doesNotMatch(workflow, /CSC_LINK=\$env:RUNNER_TEMP\\minddy-ci\.pfx/);
   assert.match(workflow, /verify-windows-desktop\.ps1/);
 });

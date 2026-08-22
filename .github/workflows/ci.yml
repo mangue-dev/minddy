@@ -218,7 +218,8 @@ jobs:
             -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
           Export-PfxCertificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.pfx" -Password $password
           Export-Certificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer"
-          Import-Certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer" -CertStoreLocation Cert:\CurrentUser\TrustedPeople
+          # AppX deployment validates machine trust, even for a per-user install.
+          Import-Certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
           "MINDDY_WINDOWS_STORE_IDENTITY_NAME=mangue-dev.minddy" >> $env:GITHUB_ENV
           "MINDDY_WINDOWS_STORE_PUBLISHER=CN=D5052B10-735B-4EF0-920F-642DFBDEB04F" >> $env:GITHUB_ENV
 
