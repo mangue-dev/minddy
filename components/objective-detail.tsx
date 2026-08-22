@@ -27,7 +27,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
+// see markdown-editor-lazy.tsx. Warmed from idle time in ObjectiveDetail.
+import {
+  MarkdownEditor,
+  useIdleMarkdownEditorPreload,
+} from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import {
   AssigneeValue,
@@ -216,6 +221,8 @@ export function ObjectiveDetail({
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
   const { track } = useAnalytics();
+  // Mounts with the objectives page: warm the editor chunk once painted.
+  useIdleMarkdownEditorPreload();
   const [name, setName] = useState(objective.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Remount the markdown editor when the description is rewritten under it

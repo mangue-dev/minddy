@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -40,7 +41,13 @@ import {
 import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { SubIssuesSection } from "@/components/sub-issues-section";
 import { RelationsSection } from "@/components/relations-section";
-import { AgentChatModal } from "@/components/agent/agent-chat-modal";
+// Deferred: the agent conversation carries the whole AI streaming stack
+// (streamdown + shiki) — it must not ride along on every board navigation.
+// The modal only mounts once a run exists AND the user opens it.
+const AgentChatModal = dynamic(
+  () => import("@/components/agent/agent-chat-modal").then((m) => m.AgentChatModal),
+  { ssr: false }
+);
 import { IssueAgentChip } from "@/components/agent/issue-agent-chip";
 import { ChainStatusBar } from "@/components/automations/chain-status-bar";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
@@ -87,7 +94,12 @@ import {
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { IssueResourcesSection } from "@/components/issue-resources-section";
 import { IssuePlan } from "@/components/issue-plan";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
+// this panel — see markdown-editor-lazy.tsx. Warmed from idle time below.
+import {
+  MarkdownEditor,
+  useIdleMarkdownEditorPreload,
+} from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
@@ -171,6 +183,9 @@ export function IssueSidePanel({
   const tCommon = useTranslations("Common");
   const tPlan = useTranslations("Plan");
   const tAgent = useTranslations("Agent");
+  // The panel mounts with its board: warm the editor chunk once the page has
+  // painted, so opening a ticket never shows the loading fallback.
+  useIdleMarkdownEditorPreload();
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState<"description" | "plan">(initialTab);

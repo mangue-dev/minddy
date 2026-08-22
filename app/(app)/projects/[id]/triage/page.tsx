@@ -36,7 +36,12 @@ import { PriorityIndicator } from "@/components/issue-indicators";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// Deferred editor: keeps tiptap (~1.5 MB) out of the triage route —
+// see markdown-editor-lazy.tsx. Warmed from idle time in TriagePage.
+import {
+  MarkdownEditor,
+  useIdleMarkdownEditorPreload,
+} from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
@@ -68,6 +73,8 @@ export default function TriagePage() {
   const tIssueUI = useTranslations("IssueUI");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
+  // Mounts with the page: warm the deferred editor chunk once painted.
+  useIdleMarkdownEditorPreload();
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const router = useRouter();

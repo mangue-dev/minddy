@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useParams,
@@ -47,7 +48,15 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
-import { ProjectImportDialog } from "@/components/project-seed/project-import-dialog";
+// Deferred: the import wizard (and its papaparse CSV machinery) only runs from
+// ?setup=import — a one-time gesture that must not tax every board navigation.
+const ProjectImportDialog = dynamic(
+  () =>
+    import("@/components/project-seed/project-import-dialog").then(
+      (m) => m.ProjectImportDialog
+    ),
+  { ssr: false }
+);
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import { createIssueApi } from "@/lib/issues-api";
 import {

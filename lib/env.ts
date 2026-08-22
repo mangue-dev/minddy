@@ -82,7 +82,11 @@ export function resolveAppEnv(env: AppEnvironment): AppEnv {
 }
 
 export function getAppEnv(): AppEnv {
-  return resolveAppEnv(process.env);
+  return resolveAppEnv({
+    NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    NODE_ENV: process.env.NODE_ENV,
+  });
 }
 
 /**

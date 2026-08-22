@@ -18,7 +18,13 @@ import {
 } from "mangue-ui";
 import { Check } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
+// see markdown-editor-lazy.tsx. The dialog mounts with the page, which warms
+// the chunk from idle time (hook below).
+import {
+  MarkdownEditor,
+  useIdleMarkdownEditorPreload,
+} from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { DateTimePicker } from "@/components/date-time-picker";
@@ -206,6 +212,8 @@ export function ObjectiveDialog({
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const { track } = useAnalytics();
+  // Mounts with the objectives page: warm the editor chunk once painted.
+  useIdleMarkdownEditorPreload();
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   // Id of the draft loaded in the form (MIN-41), so re-closing updates it in

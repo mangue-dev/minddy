@@ -2140,14 +2140,13 @@ html[data-desktop-app]
    stylesheet into <head> at RUNTIME, i.e. potentially AFTER this sheet. Its
    type rules ([data-rich-colors]…) and its base rule both sit at
    specificity (0,2,0), so equal-specificity overrides here would race the
-   injection order and lose. These selectors carry THREE attributes
-   (0,3,0) and set the final properties directly, so they win regardless of
-   order — and `richColors` stays off, nothing else about sonner changes.
+   injection order and lose. These selectors add enough specificity and set
+   the final properties directly, so they win regardless of order — and
+   `richColors` stays off, nothing else about sonner changes.
 
-   The bare `toast(...)` calls (data-type="default") deliberately KEEP the
-   neutral card skin: one of them is the keyboard-chord hint, whose <Kbd>
-   cap and muted helper text assume a card surface and would be unreadable
-   on a saturated background.
+   Bare `toast(...)` calls (data-type="default") use the same blue pill as
+   informational toasts: the app has no semantic success state for these
+   generic confirmations.
 
    One palette for both themes: the pill carries its own foreground, so it
    interacts with neither page. Retune here, everything follows.
@@ -2165,6 +2164,18 @@ html[data-desktop-app]
    lifts the override to (0,2,0), so it wins regardless of injection order. */
 [data-sonner-toaster][data-y-position] {
   --border-radius: 14px;
+}
+
+[data-sonner-toaster]
+  [data-sonner-toast][data-styled="true"] {
+  border-radius: 14px;
+}
+
+[data-sonner-toaster]
+  [data-sonner-toast][data-styled="true"][data-type="default"] {
+  background: var(--toast-info);
+  border-color: var(--toast-info);
+  color: #fff;
 }
 
 [data-sonner-toaster]

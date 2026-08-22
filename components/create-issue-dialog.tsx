@@ -14,7 +14,13 @@ import {
   toast,
 } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// Deferred editor: keeps tiptap (~1.5 MB) out of every board route's graph —
+// see markdown-editor-lazy.tsx. The chunk is warmed from idle time by the
+// hook below, so the first open waits on nothing.
+import {
+  MarkdownEditor,
+  useIdleMarkdownEditorPreload,
+} from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
@@ -191,6 +197,9 @@ export function CreateIssueDialog({
   const drop = useFileDrop(uploads.addFiles);
   const drafts = useDrafts("issue", projectId, open);
   const mentions = useDescriptionMentions(projectId, members);
+  // This dialog mounts with its board: warm the editor chunk once the page
+  // has painted, so opening the form never shows the loading fallback.
+  useIdleMarkdownEditorPreload();
 
   /**
    * SMART-FILL (MIN-260) — armed by the count, guilty by the ticket.

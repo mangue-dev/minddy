@@ -25,7 +25,10 @@ import { AutoTextarea } from "@/components/auto-textarea";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { EmptyScene } from "@/components/empty-scene";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// Deferred editor: keeps tiptap (~1.5 MB) out of the public board's initial
+// payload — see markdown-editor-lazy.tsx. No idle preload here: an anonymous
+// visitor may never post, and the plain-text fallback covers the rare wait.
+import { MarkdownEditor } from "@/components/markdown-editor-lazy";
 import { NumoIcon } from "@/components/numo-icon";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";

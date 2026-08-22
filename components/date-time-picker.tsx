@@ -8,7 +8,7 @@
 
 import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { enUS, fr } from "react-day-picker/locale";
+import { enUS as rdpEnUS, fr as rdpFr } from "react-day-picker/locale";
 import {
   Popover,
   PopoverAnchor,
@@ -25,7 +25,6 @@ import {
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
 import { CalendarDays, Repeat } from "lucide-react";
-import { Calendar } from "@/components/calendar";
 import { dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
 import {
   RECURRENCE_CADENCES,
@@ -43,6 +42,14 @@ import {
 
 /** Default time applied when the time toggle is switched on. */
 const DEFAULT_HOUR = 9;
+
+// Deferred: react-day-picker (+ date-fns) loads when a picker first opens,
+// not with every route that renders a date field. The fallback holds the
+// calendar's footprint so the popover doesn't collapse while it streams in.
+const CalendarSurface = React.lazy(() =>
+  import("@/components/calendar").then((m) => ({ default: m.Calendar }))
+);
+const CALENDAR_FALLBACK = "h-[300px] w-72 animate-pulse rounded-md bg-muted/50";
 
 // "anchored" has no visible trigger: it opens (controlled) at `anchor`, the
 // mouse position — used by the keyboard field shortcuts (issue-field-shortcuts).
@@ -108,7 +115,9 @@ export function DateTimePicker({
   const tRec = useTranslations("Recurrence");
   const format = useFormatter();
   const locale = useLocale();
-  const dfLocale = locale === "fr" ? fr : enUS;
+  // Locale objects come from a tiny standalone subpath — only DayPicker itself
+  // (via <Calendar> below) is heavy enough to deserve the lazy boundary.
+  const dfLocale = locale === "fr" ? rdpFr : rdpEnUS;
 
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -443,15 +452,17 @@ export function DateTimePicker({
             )}
           </div>
         )}
-        <Calendar
-          mode="single"
-          selected={selected ?? undefined}
-          onSelect={handleDaySelect}
-          month={month}
-          onMonthChange={setMonth}
-          modifiers={{ highlighted: occurrences }}
-          locale={dfLocale}
-        />
+        <React.Suspense fallback={<div className={CALENDAR_FALLBACK} aria-hidden />}>
+          <CalendarSurface
+            mode="single"
+            selected={selected ?? undefined}
+            onSelect={handleDaySelect}
+            month={month}
+            onMonthChange={setMonth}
+            modifiers={{ highlighted: occurrences }}
+            locale={dfLocale}
+          />
+        </React.Suspense>
         <div className="flex flex-col gap-2.5 border-t border-border pt-3">
           <div className="flex items-center justify-between gap-3">
             <label htmlFor={switchId} className="text-sm text-muted-foreground">

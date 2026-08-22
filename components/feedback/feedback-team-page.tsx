@@ -104,7 +104,12 @@ import type {
   Project,
 } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// Deferred editor: keeps tiptap (~1.5 MB) out of the feedback route —
+// see markdown-editor-lazy.tsx.
+import {
+  MarkdownEditor,
+  useIdleMarkdownEditorPreload,
+} from "@/components/markdown-editor-lazy";
 import { StatusIndicator } from "@/components/issue-indicators";
 import {
   FeedbackStatusBadge,
@@ -759,6 +764,9 @@ export function FeedbackTeamPage() {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const now = useNow();
+  // Mounts with the page: warm the deferred editor chunk once painted, so a
+  // team reply never waits on tiptap (markdown-editor-lazy.tsx).
+  useIdleMarkdownEditorPreload();
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const searchParams = useSearchParams();

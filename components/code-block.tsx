@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { codeToHtml } from "shiki";
 import { Check, Copy } from "lucide-react";
 import { IconButton, cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
@@ -10,6 +9,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+/* Shiki (~450 KB with its grammars) is fetched on demand, not at import time.
+   This module sits in the render path of every markdown surface — issue
+   timelines, plans, PR descriptions — so a static import would tax every
+   board navigation for a highlighter most descriptions never use. The first
+   fenced block that actually mounts triggers the fetch; until it resolves the
+   raw code shows on a muted background (same fallback as below). */
+let shikiPromise: Promise<typeof import("shiki")> | null = null;
+
+function loadShiki() {
+  shikiPromise ??= import("shiki");
+  return shikiPromise;
+}
 
 /* Same pair as the Numo assistant (@streamdown/code defaults), so every code
    block in the app reads with one visual voice. Dual themes emit both palettes
@@ -28,7 +40,8 @@ function highlightedHtml(code: string, language: string): Promise<string | null>
   const key = `${language}\u0000${code}`;
   let cached = highlightCache.get(key);
   if (!cached) {
-    cached = codeToHtml(code, { lang: language, themes: THEMES })
+    cached = loadShiki()
+      .then(({ codeToHtml }) => codeToHtml(code, { lang: language, themes: THEMES }))
       .catch(() => null);
     highlightCache.set(key, cached);
   }
