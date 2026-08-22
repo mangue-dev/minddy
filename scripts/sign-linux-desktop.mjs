@@ -24,9 +24,11 @@ function fail(message) {
   process.exit(1);
 }
 
-function gpg(argumentsList, input = "") {
+function gpg(argumentsList, input) {
   return new Promise((resolve, reject) => {
-    const child = spawn("gpg", argumentsList, { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn("gpg", argumentsList, {
+      stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -42,7 +44,7 @@ function gpg(argumentsList, input = "") {
       if (code === 0) resolve({ stdout, stderr });
       else reject(new Error(stderr.trim() || `gpg exited with code ${code}`));
     });
-    child.stdin.end(input);
+    if (child.stdin) child.stdin.end(input);
   });
 }
 

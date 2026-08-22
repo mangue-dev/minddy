@@ -97,3 +97,9 @@ test("Linux packaging CI builds both configured architectures", async () => {
   assert.doesNotMatch(workflow, /dist:linux\s+--\s+--x64/);
   assert.match(workflow, /test -f desktop\/release\/latest-linux-arm64\.yml/);
 });
+
+test("native Linux packages declare Electron's direct ALSA runtime dependency", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  assert.match(config, /^deb:\n(?:  .+\n)*?    - libasound2t64 \| libasound2$/m);
+  assert.match(config, /^rpm:\n(?:  .+\n)*?    - alsa-lib$/m);
+});
