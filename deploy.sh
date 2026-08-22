@@ -385,5 +385,9 @@ fi
 
 echo ""
 echo "✓ Publication finished: core=$CORE · web=$WEB · desktop=$DESKTOP"
-[ -n "$DEPLOYED_SHA" ] && echo "  production : $DEPLOYED_SHA"
-[ -n "$TARGET_VERSION" ] && echo "  tag        : v$TARGET_VERSION → $DEPLOYED_SHA"
+if [ -n "$DEPLOYED_SHA" ]; then
+  echo "  production : $DEPLOYED_SHA"
+fi
+if [ -n "$TARGET_VERSION" ]; then
+  echo "  tag        : v$TARGET_VERSION → $DEPLOYED_SHA"
+fi
