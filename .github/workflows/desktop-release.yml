@@ -35,6 +35,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"
           test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "v$RELEASE_VERSION")"
           test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"
@@ -127,6 +128,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"
           test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "v$RELEASE_VERSION")"
           test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"
@@ -221,6 +223,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"
           test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "v$RELEASE_VERSION")"
           test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"

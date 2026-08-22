@@ -164,6 +164,41 @@ test("the public release authenticates every protected fetch", () => {
   }
 });
 
+test("the desktop release authenticates every protected tag fetch", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/desktop-release.yml", import.meta.url),
+    "utf8",
+  );
+  const authenticatedRemote =
+    'git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"';
+  const protectedFetch =
+    'git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"';
+  const offsetsOf = (needle) => {
+    const offsets = [];
+    let offset = workflow.indexOf(needle);
+    while (offset !== -1) {
+      offsets.push(offset);
+      offset = workflow.indexOf(needle, offset + needle.length);
+    }
+    return offsets;
+  };
+  const authenticationOffsets = offsetsOf(authenticatedRemote);
+  const fetchOffsets = offsetsOf(protectedFetch);
+
+  assert.equal(fetchOffsets.length, 3, "all desktop jobs fetch the protected release tag");
+  assert.equal(
+    authenticationOffsets.length,
+    fetchOffsets.length + 1,
+    "each desktop fetch and the release record push configure authentication",
+  );
+  for (let index = 0; index < fetchOffsets.length; index += 1) {
+    assert.ok(
+      authenticationOffsets[index] < fetchOffsets[index],
+      "desktop release authentication precedes its protected fetch",
+    );
+  }
+});
+
 test("the public release only requests GitHub attestations when supported", () => {
   const workflow = readFileSync(
     new URL("../.github/workflows/release.yml", import.meta.url),
