@@ -47,6 +47,10 @@ test("Windows CI builds and validates the Store distribution", async () => {
   const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   assert.match(workflow, /name: Windows desktop packages/);
   assert.match(workflow, /npm --prefix desktop run dist:win/);
+  assert.match(workflow, /CSC_IDENTITY_AUTO_DISCOVERY: "false"/);
+  assert.match(workflow, /name: Sign disposable CI packages/);
+  assert.match(workflow, /Windows Kits\\10\\bin\\\*\\x64\\signtool\.exe/);
+  assert.doesNotMatch(workflow, /CSC_LINK=\$env:RUNNER_TEMP\\minddy-ci\.pfx/);
   assert.match(workflow, /verify-windows-desktop\.ps1/);
 });
 

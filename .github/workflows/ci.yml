@@ -219,13 +219,28 @@ jobs:
           Export-PfxCertificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.pfx" -Password $password
           Export-Certificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer"
           Import-Certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer" -CertStoreLocation Cert:\CurrentUser\TrustedPeople
-          "CSC_LINK=$env:RUNNER_TEMP\minddy-ci.pfx" >> $env:GITHUB_ENV
-          "CSC_KEY_PASSWORD=minddy-ci-only" >> $env:GITHUB_ENV
           "MINDDY_WINDOWS_STORE_IDENTITY_NAME=mangue-dev.minddy" >> $env:GITHUB_ENV
           "MINDDY_WINDOWS_STORE_PUBLISHER=CN=D5052B10-735B-4EF0-920F-642DFBDEB04F" >> $env:GITHUB_ENV
 
       - name: Build Store packages
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm --prefix desktop run dist:win
+
+      # Production submission packages remain unsigned for Partner Center.
+      # Sign the CI copies only, without timestamping, so Windows can install
+      # them for the clean-machine smoke test.
+      - name: Sign disposable CI packages
+        shell: pwsh
+        run: |
+          $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signTool) { throw "signtool.exe was not found in the Windows SDK." }
+          Get-ChildItem desktop/release/windows-store/*.msix | ForEach-Object {
+            & $signTool.FullName sign /fd SHA256 /f "$env:RUNNER_TEMP\minddy-ci.pfx" /p "minddy-ci-only" $_.FullName | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "SignTool could not sign $($_.Name)." }
+          }
 
       - name: Validate MSIX manifests, clean install, deep link, and uninstall
         shell: pwsh
