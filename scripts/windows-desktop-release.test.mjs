@@ -43,6 +43,13 @@ test("requires one MSIX package for each Windows architecture", () => {
   );
 });
 
+test("keeps generated release output out of subsequent packages", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  const buildScript = await readFile(new URL("./build-windows-store.mjs", import.meta.url), "utf8");
+  assert.match(config, /^  - "!release\/\*\*"$/m);
+  assert.match(buildScript, /await rm\(output, \{ recursive: true, force: true \}\);/);
+});
+
 test("Windows CI builds and validates the Store distribution", async () => {
   const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   assert.match(workflow, /name: Windows desktop packages/);
@@ -61,5 +68,6 @@ test("Windows packaging cannot enter an electron-updater channel", async () => {
   assert.doesNotMatch(config, /target: nsis/);
   assert.doesNotMatch(updater, /windowsStore:/);
   assert.match(config, /^appx:\n(?:  .+\n)*?  electronUpdaterAware: false$/m);
+  assert.match(config, /^  publish: null$/m);
   assert.match(config, /^  publisherDisplayName: mangue-dev$/m);
 });

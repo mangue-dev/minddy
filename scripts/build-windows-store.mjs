@@ -40,6 +40,8 @@ requireWindowsStoreIdentity(
   requiredEnvironment("MINDDY_WINDOWS_STORE_PUBLISHER")
 );
 
+await rm(output, { recursive: true, force: true });
+
 const builderCli = path.join(desktop, "node_modules", "electron-builder", "out", "cli", "cli.js");
 await run(process.execPath, [
   builderCli,
