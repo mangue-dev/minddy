@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -39,4 +40,14 @@ export function linuxDesktopPaths(
     cache: path.join(cacheHome, appName),
     logs: path.join(stateHome, appName, "logs"),
   };
+}
+
+/**
+ * Electron refuses to override a path with a directory that does not exist.
+ * Create the resolved XDG locations before main.ts passes them to Electron.
+ */
+export function prepareLinuxDesktopPaths(paths: LinuxDesktopPaths): void {
+  for (const directory of Object.values(paths)) {
+    mkdirSync(directory, { recursive: true });
+  }
 }

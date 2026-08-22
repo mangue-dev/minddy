@@ -106,7 +106,9 @@ The desktop step of `deploy.sh` uses the version of the core that the wizard com
 to publish, so that each application carries the version of the site from which it is
 taken. The public desktop release, without dependency on the workstation, is described
 in [`releases.md`](releases.md) and runs in GitHub Actions; `npm run deploy` triggers
-it and waits for its result.
+it and waits for its result. Linux formats, GPG verification, key rotation,
+XDG paths, and updater behavior are documented in
+[`linux-desktop.md`](linux-desktop.md).
 
 1. Nothing has changed in the shell → `Desktop app: unchanged since 0.9.2 —
    nothing to republish.` and the deployment continues. **This is the common case.**

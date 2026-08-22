@@ -84,6 +84,13 @@ export const DESKTOP_BUNDLE_ID = "app.minddy.desktop";
 /** The URL scheme that macOS assigns to us (`minddy://auth?code=…`). */
 export const DESKTOP_PROTOCOL = "minddy";
 
+/** Returns protocol URLs delivered as command-line arguments on Linux. */
+export function desktopProtocolArguments(argv: readonly string[]): string[] {
+  return argv.filter((argument) =>
+    argument.toLowerCase().startsWith(`${DESKTOP_PROTOCOL}:`)
+  );
+}
+
 /** The host of the authentication deep link: `minddy://auth`. */
 export const DESKTOP_AUTH_HOST = "auth";
 

@@ -168,7 +168,7 @@ jobs:
       - name: Build Linux AppImage, DEB, and RPM packages
         env:
           MINDDY_DESKTOP_FEED_URL: https://updates.invalid/desktop
-        run: npm --prefix desktop run dist:linux -- --x64
+        run: npm --prefix desktop run dist:linux
 
       - name: Verify desktop integration and update metadata
         run: |

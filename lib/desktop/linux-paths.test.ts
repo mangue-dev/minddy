@@ -1,6 +1,9 @@
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { linuxDesktopPaths } from "./linux-paths";
+import { linuxDesktopPaths, prepareLinuxDesktopPaths } from "./linux-paths";
 
 describe("linuxDesktopPaths", () => {
   it("uses the XDG homes for all persistent desktop state", () => {
@@ -33,5 +36,21 @@ describe("linuxDesktopPaths", () => {
       cache: "/home/minddy/.cache/minddy",
       logs: "/home/minddy/.local/state/minddy/logs",
     });
+  });
+
+  it("creates every directory before Electron path overrides are applied", () => {
+    const root = mkdtempSync(join(tmpdir(), "minddy-linux-paths-"));
+    const paths = {
+      userData: join(root, "config", "minddy"),
+      cache: join(root, "cache", "minddy"),
+      logs: join(root, "state", "minddy", "logs"),
+    };
+
+    try {
+      prepareLinuxDesktopPaths(paths);
+      expect(Object.values(paths).every((directory) => existsSync(directory))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

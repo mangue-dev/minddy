@@ -86,7 +86,8 @@ Desktop state follows the XDG base-directory specification:
 | Purpose | Default location |
 | --- | --- |
 | Server selection, session data, local runtime configuration, and agent files | `$XDG_CONFIG_HOME/minddy` or `~/.config/minddy` |
-| Chromium and updater cache | `$XDG_CACHE_HOME/minddy` or `~/.cache/minddy` |
+| Chromium disk cache | `$XDG_CACHE_HOME/minddy` or `~/.cache/minddy` |
+| Downloaded updater files | `$XDG_CACHE_HOME/minddy-desktop-updater` or `~/.cache/minddy-desktop-updater` |
 | Application logs | `$XDG_STATE_HOME/minddy/logs` or `~/.local/state/minddy/logs` |
 
 The **Run local minddy on this computer** flow is supported on Linux. Select a
@@ -121,6 +122,22 @@ The release requires these protected environment values:
 | `LINUX_GPG_FINGERPRINT` | variable | Exact allowed signer fingerprint |
 | `PUBLIC_DESKTOP_FEED_URL` | secret | Generic HTTPS update-feed directory |
 | `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` | secret | Permission to write the public feed |
+
+## Rotate the signing key
+
+Create the replacement key offline and keep the existing private key available
+until at least one release has completed with the replacement. Before changing
+the protected environment values, publish the replacement public key and its
+full fingerprint through an authenticated project channel, and add both the
+current and replacement fingerprints to the preceding GitHub Release notes.
+
+Update `LINUX_GPG_PRIVATE_KEY`, `LINUX_GPG_PASSPHRASE`, and
+`LINUX_GPG_FINGERPRINT` together, then run the next desktop release. Verify its
+public key, detached signatures, and signed checksum lists from an independent
+environment before removing the old private key. Keep old public keys attached
+to their original GitHub Releases. If a key is compromised, publish its
+revocation certificate and fingerprint before trusting a replacement; do not
+use the compromised key for a transition signature.
 
 CI also runs the packaging and pure release-helper tests before a public
 release. The key is not a commercial code-signing certificate: GPG ownership

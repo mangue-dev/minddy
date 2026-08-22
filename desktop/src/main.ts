@@ -27,10 +27,14 @@ import {
   DESKTOP_ENTRY_PATH,
   DESKTOP_ORIGIN,
   DESKTOP_PROTOCOL,
+  desktopProtocolArguments,
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
 import { deviceIdForUserData } from "@/lib/desktop/device-id";
-import { linuxDesktopPaths } from "@/lib/desktop/linux-paths";
+import {
+  linuxDesktopPaths,
+  prepareLinuxDesktopPaths,
+} from "@/lib/desktop/linux-paths";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
@@ -95,6 +99,7 @@ import { trace } from "./trace";
 
 /** The auth link received before the page is ready to hear it. */
 let pendingAuthLink: DesktopAuthLink | null = null;
+let pendingOpenPath: string | null = null;
 let mainWindow: BrowserWindow | null = null;
 let stopClaimingLocalRuns: (() => void) | null = null;
 /** Only one APNs registration at a time, shared between site mounts. */
@@ -415,11 +420,8 @@ function receiveDeepLink(raw: string): void {
   // which had already been rendered with the old plan.
   const next = parseDesktopOpenLink(raw);
   if (next) {
-    const window = mainWindow;
-    if (!window) return;
-    window.show();
-    window.focus();
-    void window.loadURL(`${origin}${next}`);
+    pendingOpenPath = next;
+    flushOpenLink();
     return;
   }
 
@@ -431,6 +433,15 @@ function receiveDeepLink(raw: string): void {
   window.show();
   window.focus();
   flushAuthLink();
+}
+
+function flushOpenLink(): void {
+  if (!pendingOpenPath || !mainWindow) return;
+  const next = pendingOpenPath;
+  pendingOpenPath = null;
+  mainWindow.show();
+  mainWindow.focus();
+  void mainWindow.loadURL(`${origin}${next}`);
 }
 
 function flushAuthLink(): void {
@@ -959,8 +970,10 @@ app.setName(app.isPackaged ? DESKTOP_APP_NAME : `${DESKTOP_APP_NAME}-dev`);
 // lock and the persisted server selection below.
 if (process.platform === "linux") {
   const xdg = linuxDesktopPaths(process.env, os.homedir(), app.getName());
+  prepareLinuxDesktopPaths(xdg);
   app.setPath("userData", xdg.userData);
-  app.setPath("cache", xdg.cache);
+  app.setPath("sessionData", xdg.userData);
+  app.commandLine.appendSwitch("disk-cache-dir", xdg.cache);
   app.setAppLogsPath(xdg.logs);
 }
 
@@ -978,9 +991,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", (_event, argv) => {
-    for (const arg of argv) {
-      if (arg.startsWith(`${DESKTOP_PROTOCOL}:`)) receiveDeepLink(arg);
-    }
+    for (const arg of desktopProtocolArguments(argv)) receiveDeepLink(arg);
     if (mainWindow) {
       mainWindow.show();
       mainWindow.focus();
@@ -992,6 +1003,13 @@ if (!app.requestSingleInstanceLock()) {
     event.preventDefault();
     receiveDeepLink(url);
   });
+
+  // A freedesktop launcher starts a stopped app with the protocol URL in argv.
+  // Queue it before the window exists so authentication cannot arrive before
+  // the renderer subscribes to the main-process bridge.
+  if (process.platform === "linux") {
+    for (const arg of desktopProtocolArguments(process.argv)) receiveDeepLink(arg);
+  }
 
   void app.whenReady().then(() => {
     // The suffix is ​​ADDED, it does not replace: falsify the user agent to
@@ -1077,6 +1095,7 @@ if (!app.requestSingleInstanceLock()) {
     // The window is passed to the updater so that its installation proposal
     // attaches to it, rather than floating alone in the middle of the screen.
     startAutoUpdates(() => mainWindow);
+    flushOpenLink();
     flushAuthLink();
 
     /**

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { desktopUserAgentSuffix, withDesktopUserAgent } from "./config";
+import {
+  desktopProtocolArguments,
+  desktopUserAgentSuffix,
+  withDesktopUserAgent,
+} from "./config";
 
 /** Electron's default user agent, noted in a real window (MIN-291):
  * it ALREADY has `<nom de l'app>/<version>`, in the middle, before `Chrome/…`. */
@@ -28,5 +32,21 @@ describe("withDesktopUserAgent", () => {
 
   it("nomme l'app, pas le moteur", () => {
     expect(desktopUserAgentSuffix("9.9.9")).toBe("minddy-desktop/9.9.9");
+  });
+});
+
+describe("desktopProtocolArguments", () => {
+  it("selects protocol URLs from a Linux launcher argv", () => {
+    expect(
+      desktopProtocolArguments([
+        "/opt/minddy/minddy",
+        "--no-sandbox",
+        "minddy://auth?code=abc",
+        "MINDDY://open?next=%2Fbilling",
+      ])
+    ).toEqual([
+      "minddy://auth?code=abc",
+      "MINDDY://open?next=%2Fbilling",
+    ]);
   });
 });
