@@ -40,67 +40,63 @@ export function buildAppMenu(
   },
 ): void {
   const isMac = process.platform === "darwin";
-
-  const menu = Menu.buildFromTemplate([
-    ...(isMac
+  const serverMenuItems: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: server.isCustom
+        ? `Server: ${new URL(server.origin).host}`
+        : "Server: minddy Cloud",
+      enabled: false,
+    },
+    {
+      label: "Connect to a Server…",
+      click: server.choose,
+    },
+    ...(server.isCustom
       ? ([
           {
-            label: app.name,
-            submenu: [
-              // `about` opens the native panel, the content of which is placed by
-              // `app.setAboutPanelOptions` (main.ts). Without that, it displays the name
-              // and Electron's version.
-              { role: "about" },
-              {
-                // The REQUESTED verification: it is the only one that answers “you
-                // are up to date”, because here someone asked the question. That
-                // which runs on its own stays silent (updater.ts).
-                label: "Check for Updates…",
-                click: () => void checkForUpdatesFromMenu(),
-              },
-              {
-                // The channel, in plain language: it’s not “a beta”, it’s the same
-                // app served by the last commit of `main`. Same data,
-                // same accounts — hence the absence of warning here, and the
-                // complete sentence in the settings, where there is room.
-                label: "Preview Latest Features",
-                type: "checkbox",
-                checked: channel === "preview",
-                click: (item) =>
-                  onChannelChange(item.checked ? "preview" : "stable"),
-                visible: !server.isCustom,
-              },
-              { type: "separator" },
-              {
-                label: server.isCustom
-                  ? `Server: ${new URL(server.origin).host}`
-                  : "Server: minddy Cloud",
-                enabled: false,
-              },
-              {
-                label: "Connect to a Server…",
-                click: server.choose,
-              },
-              ...(server.isCustom
-                ? ([
-                    {
-                      label: "Use minddy Cloud",
-                      click: server.useCloud,
-                    },
-                  ] as Electron.MenuItemConstructorOptions[])
-                : []),
-              { type: "separator" },
-              { role: "services" },
-              { type: "separator" },
-              { role: "hide" },
-              { role: "hideOthers" },
-              { role: "unhide" },
-              { type: "separator" },
-              { role: "quit" },
-            ],
+            label: "Use minddy Cloud",
+            click: server.useCloud,
           },
         ] as Electron.MenuItemConstructorOptions[])
       : []),
+  ];
+  const applicationMenuItems: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac ? ([{ role: "about" }] as Electron.MenuItemConstructorOptions[]) : []),
+    {
+      // This explicitly requested check is the only one allowed to answer that
+      // the app is up to date. Background checks remain silent.
+      label: "Check for Updates…",
+      click: () => void checkForUpdatesFromMenu(),
+    },
+    {
+      label: "Preview Latest Features",
+      type: "checkbox",
+      checked: channel === "preview",
+      click: (item) =>
+        onChannelChange(item.checked ? "preview" : "stable"),
+      visible: !server.isCustom,
+    },
+    { type: "separator" },
+    ...serverMenuItems,
+    ...(isMac
+      ? ([
+          { type: "separator" },
+          { role: "services" },
+          { type: "separator" },
+          { role: "hide" },
+          { role: "hideOthers" },
+          { role: "unhide" },
+        ] as Electron.MenuItemConstructorOptions[])
+      : []),
+    { type: "separator" },
+    { role: "quit" },
+  ];
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: app.name,
+      submenu: applicationMenuItems,
+    },
     {
       label: "Edit",
       submenu: [

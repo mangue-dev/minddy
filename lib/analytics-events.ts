@@ -508,10 +508,12 @@ export interface AnalyticsEventProps {
   /** "No thanks", and it's forever (see lib/desktop/install-prompt.ts).
  * The report to `shown` says if the proposal bothers more than it helps. */
   desktop_install_prompt_dismissed: NoProps;
-  /** Clicking on the `/download` button. `arch` distinguishes the Intel link from the
- * main button: this is what will tell if old Macs are still worth their
- * build. */
-  desktop_download_clicked: { arch: "arm64" | "x64" };
+  /** Clicking on a downloadable desktop package, before the server confirms it left. */
+  desktop_download_clicked: {
+    platform: "macos" | "linux";
+    format: "dmg" | "AppImage" | "deb" | "rpm";
+    arch: "arm64" | "x64";
+  };
   /** Playable dictation demo (MIN-150). `input` distinguishes taking the microphone from
  * the example sentence: knowing which of the two makes the “aha” decides
  * which one to highlight. No dictated text comes back, ever. */

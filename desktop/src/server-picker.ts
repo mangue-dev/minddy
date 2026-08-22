@@ -31,7 +31,7 @@ function pickerHtml(currentOrigin: string, isCustomServer: boolean): string {
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
     <title>Connect to a server</title>
     <style>
-      :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+      :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
       body { margin: 0; background: Canvas; color: CanvasText; }
       main { padding: 32px; }
       h1 { margin: 0; font-size: 24px; letter-spacing: -.02em; }
@@ -50,8 +50,8 @@ function pickerHtml(currentOrigin: string, isCustomServer: boolean): string {
   <body>
     <main>
       <h1>Connect to a server</h1>
-      <p>Use your own minddy server in this Mac app. Public servers need HTTPS; localhost and private network IPs can use HTTP.</p>
-      <button id="local" type="button">Run local minddy on this Mac</button>
+      <p>Use your own minddy server in this desktop app. Public servers need HTTPS; localhost and private network IPs can use HTTP.</p>
+      <button id="local" type="button">Run local minddy on this computer</button>
       <p class="local-help">Choose the minddy folder once. The app will start its local server and Supabase automatically from then on.</p>
       <form id="form">
         <label for="origin">Server address</label>

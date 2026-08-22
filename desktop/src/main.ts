@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import {
   BrowserWindow,
@@ -29,6 +30,7 @@ import {
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
 import { deviceIdForUserData } from "@/lib/desktop/device-id";
+import { linuxDesktopPaths } from "@/lib/desktop/linux-paths";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
@@ -119,24 +121,27 @@ function rebuildAppMenu(): void {
   buildAppMenu(mainWindow, channel, onChannelChange, {
     origin,
     isCustom: customServerOrigin !== null,
-    choose: () => {
-      if (!mainWindow) return;
-      openServerPicker({
-        parent: mainWindow,
-        currentOrigin: origin,
-        isCustomServer: customServerOrigin !== null,
-        onSave: setCustomServer,
-        onUseLocal: useLocalMinddy,
-        onUseCloud: useMinddyCloud,
-      });
-    },
+    choose: openCurrentServerPicker,
     useCloud: useMinddyCloud,
+  });
+}
+
+/** Opens the same custom-server and local-runtime flow from every desktop platform. */
+function openCurrentServerPicker(): void {
+  if (!mainWindow) return;
+  openServerPicker({
+    parent: mainWindow,
+    currentOrigin: origin,
+    isCustomServer: customServerOrigin !== null,
+    onSave: setCustomServer,
+    onUseLocal: useLocalMinddy,
+    onUseCloud: useMinddyCloud,
   });
 }
 
 function showLocalRuntimeStatus(message: string): void {
   if (!mainWindow) return;
-  const html = `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="light dark"><title>Starting minddy</title><style>body{font:15px -apple-system,BlinkMacSystemFont,sans-serif;display:grid;min-height:100vh;margin:0;place-items:center;background:Canvas;color:CanvasText}p{color:GrayText}</style><main><h1>Starting local minddy…</h1><p>${message}</p></main>`;
+  const html = `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="light dark"><title>Starting minddy</title><style>body{font:15px system-ui,sans-serif;display:grid;min-height:100vh;margin:0;place-items:center;background:Canvas;color:CanvasText}p{color:GrayText}</style><main><h1>Starting local minddy…</h1><p>${message}</p></main>`;
   void mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 }
 
@@ -949,6 +954,16 @@ function hardenSession(): void {
 // `www.minddy.app`. You have to log in once, and that's it.
 app.setName(app.isPackaged ? DESKTOP_APP_NAME : `${DESKTOP_APP_NAME}-dev`);
 
+// Keep all Linux shell state inside the XDG locations selected by the user.
+// This must precede every call that reads `userData`, including the instance
+// lock and the persisted server selection below.
+if (process.platform === "linux") {
+  const xdg = linuxDesktopPaths(process.env, os.homedir(), app.getName());
+  app.setPath("userData", xdg.userData);
+  app.setPath("cache", xdg.cache);
+  app.setAppLogsPath(xdg.logs);
+}
+
 // Electron test bench only: allows Playwright to launch a second
 // shell with a COPY of the connected profile, without taking the lock or touching
 // to data from the development window used by the person. An app
@@ -1025,25 +1040,11 @@ if (!app.requestSingleInstanceLock()) {
           if (!mainWindow) return;
           dialog.showErrorBox("Local minddy could not start", error instanceof Error ? error.message : String(error));
           rebuildAppMenu();
-          openServerPicker({
-            parent: mainWindow,
-            currentOrigin: LOCAL_SELF_HOST_ORIGIN,
-            isCustomServer: true,
-            onSave: setCustomServer,
-            onUseLocal: useLocalMinddy,
-            onUseCloud: useMinddyCloud,
-          });
+          openCurrentServerPicker();
         });
     } else if (localSelected) {
       showLocalRuntimeStatus("Choose the installed minddy folder to start the local instance.");
-      openServerPicker({
-        parent: mainWindow,
-        currentOrigin: LOCAL_SELF_HOST_ORIGIN,
-        isCustomServer: true,
-        onSave: setCustomServer,
-        onUseLocal: useLocalMinddy,
-        onUseCloud: useMinddyCloud,
-      });
+      openCurrentServerPicker();
     }
     // When the app is running, macOS puts the load back on the process instead of displaying
     // the banner itself. We make it native here; when the app is exited,

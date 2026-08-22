@@ -3,7 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   desktopFeedBaseUrl,
   dmgForArch,
+  isLinuxArch,
+  isLinuxPackageFormat,
   isMacArch,
+  linuxPackageForArch,
+  linuxUpdateManifestForArch,
+  parseLatestLinuxFeed,
   parseLatestMacFeed,
 } from "@/lib/desktop/update-feed";
 import { posthogCookieName, readPosthogDistinctId } from "@/lib/posthog-cookie";
@@ -46,6 +51,7 @@ export const dynamic = "force-dynamic";
 
 /** The default, and it is not neutral: all Macs sold since 2020. */
 const DEFAULT_ARCH = "arm64";
+const DEFAULT_LINUX_ARCH = "x64";
 
 export async function GET(request: NextRequest) {
   const base = desktopFeedBaseUrl();
@@ -56,8 +62,34 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const requested = request.nextUrl.searchParams.get("arch");
-  const arch = isMacArch(requested) ? requested : DEFAULT_ARCH;
+  const platform = request.nextUrl.searchParams.get("platform") === "linux" ? "linux" : "macos";
+  const requestedArch = request.nextUrl.searchParams.get("arch");
+
+  if (platform === "linux") {
+    const arch = isLinuxArch(requestedArch) ? requestedArch : DEFAULT_LINUX_ARCH;
+    const requestedFormat = request.nextUrl.searchParams.get("format");
+    const format = isLinuxPackageFormat(requestedFormat) ? requestedFormat : "AppImage";
+    const response = await fetch(`${base}/${linuxUpdateManifestForArch(arch)}`, {
+      cache: "no-store",
+    }).catch(() => null);
+    const release = response?.ok ? parseLatestLinuxFeed(await response.text()) : null;
+    const file = release && linuxPackageForArch(release, format, arch);
+
+    if (!file) {
+      return NextResponse.json(
+        { error: "desktop_release_unavailable", platform, format, arch },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    captureDownload(request, { platform, format, arch, version: release.version });
+    return NextResponse.redirect(`${base}/${file}`, {
+      status: 302,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
+  const arch = isMacArch(requestedArch) ? requestedArch : DEFAULT_ARCH;
 
   // `no-store` on reading the manifest: the `fetch` cache would retain the
   // previous version during the window following a release, i.e.
@@ -75,7 +107,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  captureDownload(request, { arch, version: release.version });
+  captureDownload(request, { platform, format: "dmg", arch, version: release.version });
 
   return NextResponse.redirect(`${base}/${file}`, {
     status: 302,
@@ -93,7 +125,7 @@ export async function GET(request: NextRequest) {
  */
 function captureDownload(
   request: NextRequest,
-  properties: { arch: string; version: string }
+  properties: { platform: "macos" | "linux"; format: string; arch: string; version: string }
 ): void {
   const cookieName = posthogCookieName(process.env.MINDDY_PUBLIC_POSTHOG_KEY);
   const known = cookieName

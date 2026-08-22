@@ -56,9 +56,10 @@ export async function startLocalRuntime(root: string): Promise<void> {
   if (runtime && runtime.exitCode === null) return;
   const validatedRoot = validateLocalRuntimeRoot(root);
   const command = process.platform === "win32" ? "pnpm self-host:local -- --no-open" : "exec pnpm self-host:local -- --no-open";
+  const shell = process.env.SHELL || (process.platform === "darwin" ? "/bin/zsh" : "/bin/sh");
   runtime = process.platform === "win32"
     ? spawn("cmd.exe", ["/d", "/s", "/c", command], { cwd: validatedRoot, stdio: "ignore", windowsHide: true })
-    : spawn(process.env.SHELL || "/bin/zsh", ["-lic", command], { cwd: validatedRoot, stdio: "ignore" });
+    : spawn(shell, ["-lc", command], { cwd: validatedRoot, stdio: "ignore" });
 
   const deadline = Date.now() + 10 * 60_000;
   while (Date.now() < deadline) {

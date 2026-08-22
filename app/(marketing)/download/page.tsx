@@ -8,6 +8,8 @@ import {
   desktopFeedBaseUrl,
   dmgEntry,
   formatBytes,
+  linuxPackageEntry,
+  parseLatestLinuxFeed,
   parseLatestMacFeed,
 } from "@/lib/desktop/update-feed";
 import { Reveal, RevealGroup, RevealHeading } from "@/components/marketing/reveal";
@@ -17,7 +19,7 @@ import { TrackedDownloadLink } from "@/components/marketing/tracked-download-lin
 import { IsoTile, type IsoTileName } from "@/components/marketing/iso-tile";
 
 /**
- * `/download` — l'app de bureau macOS (MIN-292).
+ * `/download` — minddy desktop applications (MIN-292, MIN-418).
  *
  * **A PAGE and not a button on the landing**, because there is something here
  * honest thing to say that doesn't fit under a button: app left, no more
@@ -28,7 +30,7 @@ import { IsoTile, type IsoTileName } from "@/components/marketing/iso-tile";
  * reassurance that faces him.
  *
  * **Numbers are READ, not written.** Version and weight come from
- * flow manifest (`latest-mac.yml`), with a cache time. A “~100 MB”
+ * update manifests, with a cache time. A “~100 MB”
  * hard in `messages/*.json` would be false on the next publication, and
  * no one would think to correct it. Feed unreachable → the page falls on
  * generic values ​​and keeps its button: it never deprives itself of its only
@@ -78,9 +80,25 @@ async function currentRelease(): Promise<{ version: string; size: number | null 
   return { version: release.version, size: dmgEntry(release, "arm64")?.size ?? null };
 }
 
+async function currentLinuxRelease(): Promise<{ version: string; size: number | null } | null> {
+  const base = desktopFeedBaseUrl();
+  if (!base) return null;
+  const response = await fetch(`${base}/latest-linux.yml`, {
+    next: { revalidate: 3600 },
+  }).catch(() => null);
+  if (!response?.ok) return null;
+  const release = parseLatestLinuxFeed(await response.text());
+  if (!release) return null;
+  return { version: release.version, size: linuxPackageEntry(release, "AppImage", "x64")?.size ?? null };
+}
+
 export default async function DownloadPage() {
   const locale = (await getLocale()) as Locale;
-  const [t, release] = await Promise.all([getTranslations("Download"), currentRelease()]);
+  const [t, release, linuxRelease] = await Promise.all([
+    getTranslations("Download"),
+    currentRelease(),
+    currentLinuxRelease(),
+  ]);
 
   const specs = [
     {
@@ -143,12 +161,14 @@ export default async function DownloadPage() {
                 className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3"
               >
                 <Button asChild size="lg">
-                  <TrackedDownloadLink arch="arm64" href="/api/desktop/download">
+                  <TrackedDownloadLink platform="macos" format="dmg" arch="arm64" href="/api/desktop/download">
                     <Download data-icon="inline-start" />
                     {t("downloadButton")}
                   </TrackedDownloadLink>
                 </Button>
                 <TrackedDownloadLink
+                  platform="macos"
+                  format="dmg"
                   arch="x64"
                   href="/api/desktop/download?arch=x64"
                   className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
@@ -161,15 +181,85 @@ export default async function DownloadPage() {
                 {t("requirements")}
               </Reveal>
 
-              {/* macOS is the only target, and it says HERE — under the button,
- not halfway through the page. From MIN-292 the landing leads directly to
- this page via a "Download for Mac" button: someone
- on Windows or Linux gets there, and must have their answer before
- having to scroll to look for it.
- And it doesn't stop at refusal: on these machines minddy
- is used in the browser, which is a response, not a closed door. */}
+              {/* macOS remains the primary hero, while the Linux AppImage is
+ placed directly beside it. Visitors on every platform can immediately see
+ which native download applies and retain a browser fallback. */}
               <Reveal as="p" delay={0.36} className="mt-1.5 text-xs text-muted-foreground">
                 {t("platformNote")}
+              </Reveal>
+
+              <Reveal delay={0.42} className="mt-7 max-w-md rounded-xl border bg-muted/20 p-4">
+                <p className="text-sm font-medium">{t("linuxTitle")}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {t("linuxBody")}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  <TrackedDownloadLink
+                    platform="linux"
+                    format="AppImage"
+                    arch="x64"
+                    href="/api/desktop/download?platform=linux&format=AppImage&arch=x64"
+                    className="font-medium underline-offset-4 hover:underline"
+                  >
+                    {t("linuxAppImageX64")}
+                  </TrackedDownloadLink>
+                  <TrackedDownloadLink
+                    platform="linux"
+                    format="AppImage"
+                    arch="arm64"
+                    href="/api/desktop/download?platform=linux&format=AppImage&arch=arm64"
+                    className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    {t("linuxAppImageArm64")}
+                  </TrackedDownloadLink>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {linuxRelease
+                    ? t("linuxRelease", {
+                        version: linuxRelease.version,
+                        size: linuxRelease.size ? formatBytes(linuxRelease.size, locale) : t("specSizeUnknown"),
+                      })
+                    : t("linuxReleaseUnknown")}
+                </p>
+                <p className="mt-3 text-xs text-muted-foreground">{t("linuxPackages")}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                  <TrackedDownloadLink
+                    platform="linux"
+                    format="deb"
+                    arch="x64"
+                    href="/api/desktop/download?platform=linux&format=deb&arch=x64"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {t("linuxDebX64")}
+                  </TrackedDownloadLink>
+                  <TrackedDownloadLink
+                    platform="linux"
+                    format="rpm"
+                    arch="x64"
+                    href="/api/desktop/download?platform=linux&format=rpm&arch=x64"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {t("linuxRpmX64")}
+                  </TrackedDownloadLink>
+                  <TrackedDownloadLink
+                    platform="linux"
+                    format="deb"
+                    arch="arm64"
+                    href="/api/desktop/download?platform=linux&format=deb&arch=arm64"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {t("linuxDebArm64")}
+                  </TrackedDownloadLink>
+                  <TrackedDownloadLink
+                    platform="linux"
+                    format="rpm"
+                    arch="arm64"
+                    href="/api/desktop/download?platform=linux&format=rpm&arch=arm64"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {t("linuxRpmArm64")}
+                  </TrackedDownloadLink>
+                </div>
               </Reveal>
             </div>
 

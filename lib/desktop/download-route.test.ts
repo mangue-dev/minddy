@@ -37,6 +37,18 @@ sha512: TFNQaGZ2VXpEZw==
 releaseDate: '2026-08-13T09:12:44.113Z'
 `;
 
+const LINUX_FEED = `version: 1.2.0
+files:
+  - url: minddy-1.2.0-arm64.AppImage
+    sha512: appimage
+`;
+
+const LINUX_X64_FEED = `version: 1.2.0
+files:
+  - url: minddy-desktop_1.2.0_amd64.deb
+    sha512: deb
+`;
+
 const BASE = "https://blob.example.com/desktop";
 const POSTHOG_KEY = "phc_test";
 
@@ -89,13 +101,44 @@ describe("GET /api/desktop/download", () => {
     expect(captureServerEvent).toHaveBeenCalledTimes(1);
     const event = captureServerEvent.mock.calls[0][0];
     expect(event.event).toBe("desktop_download_started");
-    expect(event.properties).toMatchObject({ arch: "arm64", version: "1.2.0" });
+    expect(event.properties).toMatchObject({
+      platform: "macos",
+      format: "dmg",
+      arch: "arm64",
+      version: "1.2.0",
+    });
   });
 
   it("distingue le lien Intel du bouton principal", async () => {
     mockFeed(FEED);
     await GET(request("https://minddy.app/api/desktop/download?arch=x64"));
     expect(captureServerEvent.mock.calls[0][0].properties).toMatchObject({ arch: "x64" });
+  });
+
+  it("serves the requested portable Linux format and tracks it distinctly", async () => {
+    mockFeed(LINUX_FEED);
+    const response = await GET(
+      request("https://minddy.app/api/desktop/download?platform=linux&format=AppImage&arch=arm64")
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(`${BASE}/minddy-1.2.0-arm64.AppImage`);
+    expect(fetch).toHaveBeenCalledWith(`${BASE}/latest-linux-arm64.yml`, { cache: "no-store" });
+    expect(captureServerEvent.mock.calls[0][0].properties).toMatchObject({
+      platform: "linux",
+      format: "AppImage",
+      arch: "arm64",
+    });
+  });
+
+  it("reads the x64 manifest for a distro package", async () => {
+    mockFeed(LINUX_X64_FEED);
+    const response = await GET(
+      request("https://minddy.app/api/desktop/download?platform=linux&format=deb&arch=x64")
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(`${BASE}/minddy-desktop_1.2.0_amd64.deb`);
+    expect(fetch).toHaveBeenCalledWith(`${BASE}/latest-linux.yml`, { cache: "no-store" });
   });
 
   it("ne compte RIEN quand le flux est injoignable — 503, pas de fichier parti", async () => {

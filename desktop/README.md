@@ -1,4 +1,4 @@
-# Minddy's macOS shell
+# Minddy's desktop shell
 
 A single product window loads minddy Cloud or a server selected by the person
 using the app. The product interface always comes from that server, so delivering
@@ -62,8 +62,10 @@ MINDDY_DESKTOP_ORIGIN=http://localhost:3000 npm start
 ```
 
 The variable only exists for development. A packaged app ignores it. Installed
-users choose a server from **minddy > Connect to a Server…**; remote origins must
-use HTTPS, while HTTP is accepted only for loopback and private-network IP addresses.
+users choose a server from **minddy > Connect to a Server…** in the application
+menu; remote origins must use HTTPS, while HTTP is accepted only for loopback and
+private-network IP addresses. This shared flow works on macOS and Linux,
+including **Run local minddy on this computer**.
 
 ## The selected server
 
@@ -128,7 +130,15 @@ in the deposit.
 ```bash
 npm --prefix desktop run pack   # an unsigned .app in desktop/release/mac-*/
 npm --prefix desktop run dist   # signed and notarized .dmg and .zip files
+npm --prefix desktop run dist:linux # AppImage, DEB, and RPM artifacts
 ```
+
+The Linux reference download is the AppImage. Its x64 and ARM64 update feeds
+are signed with a project GPG key; the DEB and RPM packages carry the same
+detached signatures but are intentionally updated through the next verified
+package rather than by the in-app updater. See
+[docs/linux-desktop.md](../docs/linux-desktop.md) for the release,
+verification, XDG, deep-link, and local-runtime contracts.
 
 **The icon no longer has its own step.** Its source is `build/icon.icon`, the folder
 rendered by Icon Composer: we open it, we save it, and the build following the

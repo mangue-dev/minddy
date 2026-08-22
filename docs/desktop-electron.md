@@ -7,7 +7,8 @@
 > the deliverable of MIN-285 is this text, not a prototype; **the agent who acts on
 > the local repository is the subject**, the wrapper is only the vehicle; the
 > notifications were initially limited to the open app (replaced by
-> APNs in MIN-356); macOS is the only target.
+> APNs in MIN-356); macOS was the only target until the Linux distribution in
+> MIN-418.
 >
 > **What was read to write it**, rather than assumed: the harness of the
 > microVM and its protocol ([vm/protocol.ts](../lib/server/agent/vm/protocol.ts),

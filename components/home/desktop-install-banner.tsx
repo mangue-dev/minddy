@@ -17,13 +17,14 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { isDesktop } from "@/lib/desktop/bridge";
 import {
   DESKTOP_PROMPT_DISMISSED_META_KEY,
+  isLinuxPlatform,
   isMacPlatform,
   resolveDesktopPromptDismissed,
   shouldOfferDesktopApp,
 } from "@/lib/desktop/install-prompt";
 
 /**
- * “minddy exists as a Mac app” — on the WEB home page, only once in a lifetime
+ * “minddy exists as a desktop app” — on the WEB home page, only once in a lifetime
  * of the account (MIN-292).
  *
  * **To reject is to dismiss forever.** The refusal is written in the
@@ -63,6 +64,13 @@ export function DesktopInstallBanner() {
         platform: navigator.platform,
         userAgent: navigator.userAgent,
         maxTouchPoints: navigator.maxTouchPoints,
+      }),
+      isLinux: isLinuxPlatform({
+        uaDataPlatform: (
+          navigator as Navigator & { userAgentData?: { platform?: string } }
+        ).userAgentData?.platform,
+        platform: navigator.platform,
+        userAgent: navigator.userAgent,
       }),
       dismissed: alreadyDismissed,
     });

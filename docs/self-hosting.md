@@ -176,14 +176,13 @@ application-development port `3000`. If it is already occupied, the command
 reports that conflict and accepts an explicit alternative with
 `pnpm self-host:local -- --port <port>`.
 
-On macOS, install the signed minddy desktop app from
+On macOS or Linux, install the signed minddy desktop app from
 [minddy.app/download](https://www.minddy.app/download), choose
-**minddy > Connect to a Server… > Run local minddy on this Mac**, and select
-the cloned minddy folder. The app remembers that folder, starts Supabase and
-minddy on later app launches, waits for health, and opens sign-up. Quitting the
-app stops both. On Windows and Linux, `pnpm self-host:local` starts both
-services and opens `http://localhost:6463/signup` in the default browser; no
-desktop build is currently published for those systems. Create an account,
+**minddy > Connect to a Server… > Run local minddy on this computer**, and
+select the cloned minddy folder. The app remembers that folder, starts Supabase
+and minddy on later app launches, waits for health, and opens sign-up. Quitting
+the app stops both. On Windows, `pnpm self-host:local` starts both services and
+opens `http://localhost:6463/signup` in the default browser. Create an account,
 create a project, and create an issue.
 
 In a terminal, `Ctrl+C` stops the application and its local Supabase backend

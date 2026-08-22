@@ -4,7 +4,13 @@ import {
   dmgEntry,
   dmgForArch,
   formatBytes,
+  isLinuxArch,
+  isLinuxPackageFormat,
   isMacArch,
+  linuxPackageEntry,
+  linuxPackageForArch,
+  linuxUpdateManifestForArch,
+  parseLatestLinuxFeed,
   parseLatestMacFeed,
 } from "./update-feed";
 
@@ -30,6 +36,28 @@ files:
 path: minddy-1.2.0-arm64.dmg
 sha512: TFNQaGZ2VXpEZw==
 releaseDate: '2026-08-13T09:12:44.113Z'
+`;
+
+const LINUX_FEED = `version: 1.2.0
+files:
+  - url: minddy-1.2.0-arm64.AppImage
+    sha512: appimage
+    size: 120000000
+  - url: minddy-1.2.0-arm64.deb
+    sha512: deb
+    size: 110000000
+  - url: minddy-1.2.0-arm64.rpm
+    sha512: rpm
+    size: 110000000
+  - url: minddy-1.2.0.AppImage
+    sha512: appimage
+    size: 120000000
+  - url: minddy-1.2.0.deb
+    sha512: deb
+    size: 110000000
+  - url: minddy-1.2.0.rpm
+    sha512: rpm
+    size: 110000000
 `;
 
 describe("parseLatestMacFeed", () => {
@@ -126,6 +154,40 @@ describe("isMacArch", () => {
     expect(isMacArch("x64")).toBe(true);
     expect(isMacArch("universal")).toBe(false);
     expect(isMacArch(null)).toBe(false);
+  });
+});
+
+describe("parseLatestLinuxFeed", () => {
+  it("reads every supported Linux package format for its architecture", () => {
+    const release = parseLatestLinuxFeed(LINUX_FEED);
+    expect(release?.version).toBe("1.2.0");
+    expect(release?.files).toHaveLength(6);
+    expect(linuxPackageEntry(release!, "AppImage", "arm64")).toMatchObject({
+      name: "minddy-1.2.0-arm64.AppImage",
+      size: 120000000,
+    });
+    expect(linuxPackageForArch(release!, "rpm", "x64")).toBe("minddy-1.2.0.rpm");
+  });
+
+  it("rejects incomplete or unrelated manifests", () => {
+    expect(parseLatestLinuxFeed("version: 1.2.0\nfiles:\n  - url: minddy.zip\n")).toBeNull();
+  });
+});
+
+describe("Linux feed selectors", () => {
+  it("accepts only the published architectures and formats", () => {
+    expect(isLinuxArch("arm64")).toBe(true);
+    expect(isLinuxArch("x64")).toBe(true);
+    expect(isLinuxArch("armv7l")).toBe(false);
+    expect(isLinuxPackageFormat("AppImage")).toBe(true);
+    expect(isLinuxPackageFormat("deb")).toBe(true);
+    expect(isLinuxPackageFormat("rpm")).toBe(true);
+    expect(isLinuxPackageFormat("zip")).toBe(false);
+  });
+
+  it("selects the manifest that electron-builder gives each Linux architecture", () => {
+    expect(linuxUpdateManifestForArch("x64")).toBe("latest-linux.yml");
+    expect(linuxUpdateManifestForArch("arm64")).toBe("latest-linux-arm64.yml");
   });
 });
 

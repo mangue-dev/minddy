@@ -69,7 +69,7 @@ The assistant displays what it has detected since the last tag and since
 `production`, then suggests:
 
 1. **Automatic recommendation**: selection based on modified files;
-2. **Publish everything directly**: core + web Cloud + macOS;
+2. **Publish everything directly**: core + web Cloud + desktop applications;
 3. **Choose perimeter by perimeter**;
 4. cancel.
 
@@ -79,8 +79,8 @@ In automatic mode:
 - any commit missing from `production` suggests web deployment;
 - the marketing paths are indicated and do not alone lead to a release of the
   heart;
-- macOS is only suggested if the actual shell footprint differs from the
-  last publication.
+- desktop applications are only suggested if the actual shell footprint differs
+  from the last publication.
 
 If core is selected, the wizard asks for patch/minor/major or an explicit
 version. It updates the four manifests/lockfiles, creates the
@@ -227,15 +227,19 @@ fast-forward. Its application tree restores the stable version without rewriting
 the history. The background correction then starts from this restored `main` and receives
 a new deployment; she never lives only on `production`.
 
-## App macOS publique
+## Public desktop applications
 
 The desktop does not automatically receive each version of the core: it is a
 window on the web, and a web modification does not change the shell. When
-`npm run desktop:check` shows a different fingerprint, launch **macOS public
-release** with a core version already released. The workflow rebuilt on
-`macos-26`, signs, notarizes, staples the ticket, checks the update flow,
-adds its checksums and attestations, then attaches `.dmg`, `.zip`, blockmaps and
-`latest-mac.yml` to the existing release.
+`npm run desktop:check` shows a different fingerprint, launch **Public desktop
+release** with a core version already released. The workflow builds macOS on
+`macos-26`, signs, notarizes, staples the ticket, checks the update flow, and
+attaches `.dmg`, `.zip`, blockmaps and `latest-mac.yml`. In parallel, it builds
+Linux AppImage, DEB, and RPM packages on Ubuntu for `x64` and `arm64`, signs
+every Linux package and each architecture-specific update manifest with GPG,
+verifies each signature, and attaches the public key, checksums, signatures, and
+attestations. It records the desktop fingerprint only after both jobs succeed. See
+[linux-desktop.md](linux-desktop.md) for the Linux verification contract.
 
 The following secrets belong to the GitHub environment
 `public-release`, not to an account or a personal keychain:
@@ -244,6 +248,8 @@ The following secrets belong to the GitHub environment
 - `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`;
 - `PUBLIC_DESKTOP_FEED_URL` and `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` for the
   Generic stable electron-updater flow.
+- `LINUX_GPG_PRIVATE_KEY` and `LINUX_GPG_PASSPHRASE`, plus the public
+  `LINUX_GPG_FINGERPRINT`, for detached Linux package and metadata signatures.
 
 The role must be transferable to another maintainer and the secrets must
 be rotary. The workflow attaches immutable binaries to GitHub Releases and
@@ -335,12 +341,13 @@ SemVer commits and validate their exact Git objects before publication:
    ```
 
    In each assistant run, select public core and Cloud web, and provide the
-   security-review evidence required by the release checklist. Select macOS
-   only when that artifact is part of the release. `deploy.sh` pushes the exact
-   checked-out candidate, waits for its successful `main` CI, advances the
-   protected `production` branch, verifies the Production deployment, and only
-   then creates the public tag. Do not push the target to `main` before the
-   source run completes. After publication, verify both mappings:
+   security-review evidence required by the release checklist. Select desktop
+   applications only when their artifacts are part of the release. `deploy.sh`
+   pushes the exact checked-out candidate, waits for its successful `main` CI,
+   advances the protected `production` branch, verifies the Production
+   deployment, and only then creates the public tag. Do not push the target to
+   `main` before the source run completes. After publication, verify both
+   mappings:
 
    ```bash
    test "$(git rev-parse "v$SOURCE_VERSION^{commit}")" = "$SOURCE_SHA"

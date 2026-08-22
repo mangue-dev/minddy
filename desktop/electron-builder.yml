@@ -34,13 +34,39 @@ files:
   - "!tsconfig.json"
   - "!electron-builder.yml"
 
-# It's HIM who writes `CFBundleURLTypes`, and that's what makes the deep link
-Testable authentication # for the first time: `app.setAsDefaultProtocolClient`
+# It writes `CFBundleURLTypes`, which makes deep-link authentication testable
+# for the first time: `app.setAsDefaultProtocolClient`
 # just ANNOUNCES a schema that the bundle must already declare.
 protocols:
   - name: minddy
     schemes:
       - minddy
+
+# Linux is distributed first as a portable AppImage. Native DEB and RPM builds
+# are published alongside it for administrators who require distro packages.
+# `syncDesktopName` and `desktopName` in package.json keep the launcher name,
+# Electron WM_CLASS and StartupWMClass identical, so GNOME and KDE associate a
+# running minddy window with its icon. electron-builder derives
+# `x-scheme-handler/minddy` from the shared `protocols` block above.
+linux:
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+    - target: rpm
+      arch: [x64, arm64]
+  category: Office
+  executableName: minddy
+  syncDesktopName: true
+  icon: build/icon-iOS-Default-1024x1024@1x.png
+  maintainer: mangue <hello@minddy.app>
+  vendor: mangue
+  synopsis: A desktop window for minddy
+  description: minddy is an issue tracker for product teams and coding agents.
+  desktop:
+    entry:
+      Keywords: issues;projects;productivity;agents;
 
 mac:
   category: public.app-category.productivity

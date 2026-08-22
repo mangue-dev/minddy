@@ -6,6 +6,10 @@ import {
   updatePromptCopy,
 } from "@/lib/desktop/update-prompt";
 import {
+  manualDesktopUpdateMessage,
+  supportsAutomaticDesktopUpdates,
+} from "@/lib/desktop/update-platform";
+import {
   IDLE_UPDATE_STATUS,
   reduceUpdateStatus,
   type DesktopUpdateEvent,
@@ -111,7 +115,13 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
 
   // Outside of the packaged app there is neither signature nor `app-update.yml`: Squirrel
   // would fail loudly every time the dev launches.
-  if (!app.isPackaged) return;
+  if (
+    !app.isPackaged ||
+    !supportsAutomaticDesktopUpdates({
+      platform: process.platform,
+      appImagePath: process.env.APPIMAGE,
+    })
+  ) return;
 
   // We download alone, but we don't IMPOSE anything: the installation is REQUIRED
   // once the download is finished (`update-downloaded` below), and a refusal
@@ -209,6 +219,22 @@ export async function checkForUpdatesFromMenu(): Promise<void> {
       type: "info",
       message: "Updates only work in the installed app.",
       detail: "This window was launched from the repository.",
+    });
+    return;
+  }
+
+  const manualUpdateMessage = manualDesktopUpdateMessage(process.platform);
+  if (
+    !supportsAutomaticDesktopUpdates({
+      platform: process.platform,
+      appImagePath: process.env.APPIMAGE,
+    }) &&
+    manualUpdateMessage
+  ) {
+    await dialog.showMessageBox({
+      type: "info",
+      message: "Updates are managed outside the app.",
+      detail: manualUpdateMessage,
     });
     return;
   }

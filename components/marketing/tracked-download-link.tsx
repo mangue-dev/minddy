@@ -4,6 +4,8 @@ import type { ComponentProps, ReactNode } from "react";
 import { useAnalytics } from "@/lib/use-analytics";
 import type { AnalyticsPropsFor } from "@/lib/analytics-events";
 
+type DownloadPlatform = AnalyticsPropsFor<"desktop_download_clicked">["platform"];
+type DownloadFormat = AnalyticsPropsFor<"desktop_download_clicked">["format"];
 type DownloadArch = AnalyticsPropsFor<"desktop_download_clicked">["arch"];
 
 /**
@@ -22,13 +24,20 @@ type DownloadArch = AnalyticsPropsFor<"desktop_download_clicked">["arch"];
  * between the two is what says a `.dmg` is not gone.
  */
 export function TrackedDownloadLink({
+  platform,
+  format,
   arch,
   children,
   ...props
-}: { arch: DownloadArch; children: ReactNode } & ComponentProps<"a">) {
+}: {
+  platform: DownloadPlatform;
+  format: DownloadFormat;
+  arch: DownloadArch;
+  children: ReactNode;
+} & ComponentProps<"a">) {
   const { track } = useAnalytics();
   return (
-    <a {...props} onClick={() => track("desktop_download_clicked", { arch })}>
+    <a {...props} onClick={() => track("desktop_download_clicked", { platform, format, arch })}>
       {children}
     </a>
   );

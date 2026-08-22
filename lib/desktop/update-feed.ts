@@ -20,11 +20,27 @@
 
 /** The two Mac architectures that we publish. */
 export type MacArch = "arm64" | "x64";
+export type LinuxArch = "arm64" | "x64";
+export type LinuxPackageFormat = "AppImage" | "deb" | "rpm";
 
 export const MAC_ARCHES: readonly MacArch[] = ["arm64", "x64"] as const;
+export const LINUX_ARCHES: readonly LinuxArch[] = ["x64", "arm64"] as const;
 
 export function isMacArch(value: string | null | undefined): value is MacArch {
   return value === "arm64" || value === "x64";
+}
+
+export function isLinuxArch(value: string | null | undefined): value is LinuxArch {
+  return value === "arm64" || value === "x64";
+}
+
+export function isLinuxPackageFormat(value: string | null | undefined): value is LinuxPackageFormat {
+  return value === "AppImage" || value === "deb" || value === "rpm";
+}
+
+/** electron-builder names x64's feed without a suffix and appends other architectures. */
+export function linuxUpdateManifestForArch(arch: LinuxArch): string {
+  return arch === "arm64" ? "latest-linux-arm64.yml" : "latest-linux.yml";
 }
 
 export interface DesktopRelease {
@@ -35,6 +51,17 @@ export interface DesktopRelease {
     arch: MacArch;
     kind: "dmg" | "zip";
     /** Bytes, `null` when the manifest does not say so. */
+    size: number | null;
+  }>;
+}
+
+/** A Linux architecture's feed contains every package format built for that architecture. */
+export interface LinuxDesktopRelease {
+  version: string;
+  files: ReadonlyArray<{
+    name: string;
+    arch: LinuxArch;
+    format: LinuxPackageFormat;
     size: number | null;
   }>;
 }
@@ -60,7 +87,14 @@ export function desktopFeedBaseUrl(): string | null {
  * as more than one architecture is published; everything else is Intel.
  */
 function archOf(name: string): MacArch {
-  return name.includes("arm64") ? "arm64" : "x64";
+  return /(?:^|[-_.])(?:arm64|aarch64)(?:[-_.]|$)/i.test(name) ? "arm64" : "x64";
+}
+
+function linuxFormatOf(name: string): LinuxPackageFormat | null {
+  if (name.endsWith(".AppImage")) return "AppImage";
+  if (name.endsWith(".deb")) return "deb";
+  if (name.endsWith(".rpm")) return "rpm";
+  return null;
 }
 
 /**
@@ -114,6 +148,40 @@ export function parseLatestMacFeed(yml: string): DesktopRelease | null {
   return files.length > 0 ? { version, files } : null;
 }
 
+/** Parses electron-builder's Linux feed without adding a YAML parser to the site bundle. */
+export function parseLatestLinuxFeed(yml: string): LinuxDesktopRelease | null {
+  const version = /^version:\s*(.+)$/m.exec(yml)?.[1]?.trim().replace(/^['"]|['"]$/g, "");
+  if (!version) return null;
+
+  const files: Array<LinuxDesktopRelease["files"][number]> = [];
+  let current: LinuxDesktopRelease["files"][number] | null = null;
+  const flush = () => {
+    if (current && !files.some((file) => file.name === current!.name)) files.push(current);
+    current = null;
+  };
+
+  for (const line of yml.split("\n")) {
+    const url = /^\s*-\s*url:\s*(.+)$/.exec(line);
+    if (url) {
+      flush();
+      const name = url[1].trim().replace(/^['"]|['"]$/g, "");
+      const format = linuxFormatOf(name);
+      current = format ? { name, arch: archOf(name), format, size: null } : null;
+      continue;
+    }
+    if (!current) continue;
+    if (/^\S/.test(line)) {
+      flush();
+      continue;
+    }
+    const size = /^\s*size:\s*(\d+)\s*$/.exec(line);
+    if (size) current.size = Number(size[1]);
+  }
+  flush();
+
+  return files.length > 0 ? { version, files } : null;
+}
+
 /**
  * The name of the file to be used for an architecture — always `.dmg`: this is
  * the first download, that of a human. The `.zip` of the same stream exists
@@ -129,6 +197,23 @@ export function dmgEntry(
   arch: MacArch
 ): DesktopRelease["files"][number] | null {
   return release.files.find((file) => file.kind === "dmg" && file.arch === arch) ?? null;
+}
+
+/** Finds one published Linux installer for the requested architecture and format. */
+export function linuxPackageEntry(
+  release: LinuxDesktopRelease,
+  format: LinuxPackageFormat,
+  arch: LinuxArch
+): LinuxDesktopRelease["files"][number] | null {
+  return release.files.find((file) => file.format === format && file.arch === arch) ?? null;
+}
+
+export function linuxPackageForArch(
+  release: LinuxDesktopRelease,
+  format: LinuxPackageFormat,
+  arch: LinuxArch
+): string | null {
+  return linuxPackageEntry(release, format, arch)?.name ?? null;
 }
 
 /**

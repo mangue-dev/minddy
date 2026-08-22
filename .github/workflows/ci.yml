@@ -141,6 +141,46 @@ jobs:
           path: ${{ runner.temp }}/self-hosted-egress-*.md
           if-no-files-found: error
 
+  linux-desktop-package:
+    name: Linux desktop packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: npm --prefix desktop ci --ignore-scripts
+      - name: Install RPM build tooling
+        run: sudo apt-get update && sudo apt-get install --yes rpm
+
+      - name: Build Linux AppImage, DEB, and RPM packages
+        env:
+          MINDDY_DESKTOP_FEED_URL: https://updates.invalid/desktop
+        run: npm --prefix desktop run dist:linux -- --x64
+
+      - name: Verify desktop integration and update metadata
+        run: |
+          test -f desktop/release/latest-linux.yml
+          test -f desktop/release/latest-linux-arm64.yml
+          test -n "$(find desktop/release -maxdepth 1 -name '*.AppImage' -print -quit)"
+          deb_file="$(find desktop/release -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$deb_file"
+          dpkg-deb --fsys-tarfile "$deb_file" | tar -xOf - ./usr/share/applications/minddy.desktop > "$RUNNER_TEMP/minddy.desktop"
+          grep -Fx 'MimeType=x-scheme-handler/minddy;' "$RUNNER_TEMP/minddy.desktop"
+          grep -Fx 'StartupWMClass=minddy' "$RUNNER_TEMP/minddy.desktop"
+
   editions:
     name: Edition / ${{ matrix.edition }}
     runs-on: ubuntu-latest

@@ -103,25 +103,26 @@ Current: c28ea4e2f76e
 ## The normal flow: `npm run deploy`
 
 The desktop step of `deploy.sh` uses the version of the core that the wizard comes from
-to publish, so that the app carries the version of the site from which it is taken. The
-public macOS release, without dependency on the workstation, is described in
-[`releases.md`](releases.md) and runs in GitHub Actions; `npm run deploy`
-triggers it and waits for its result.
+to publish, so that each application carries the version of the site from which it is
+taken. The public desktop release, without dependency on the workstation, is described
+in [`releases.md`](releases.md) and runs in GitHub Actions; `npm run deploy` triggers
+it and waits for its result.
 
 1. Nothing has changed in the shell → `Desktop app: unchanged since 0.9.2 —
    nothing to republish.` and the deployment continues. **This is the common case.**
-2. The shell has changed → automatic mode offers macOS; manual mode
-   asks the question with “yes” by default.
-3. If macOS is retained, `deploy.sh` first waits for core release, triggers
-   the GitHub macOS runner, then waits for signature, notarization, publication of the
-   flow and adding artifacts to the release.
+2. The shell has changed → automatic mode offers desktop applications; manual
+   mode asks the question with “yes” by default.
+3. If desktop applications are retained, `deploy.sh` first waits for the core
+   release, then triggers the GitHub jobs for macOS and Linux. It waits for
+   macOS signing and notarization plus Linux GPG signing and publication before
+   attaching the artifacts to the release.
 4. After success, the bot commits `desktop/released.json` to `main`. This statement
    makes the following detection accurate; it is never written before the
    binaries and their manifest are actually published.
 
 `npm run desktop:release` remains a local diagnostic command which should neither
 publish the public feed or serve as proof of release. The public stream passes
-exclusively by `Public macOS release`, checkout the heart tag, then get
+exclusively by `Public desktop release`, checkout the heart tag, then get
 its signature and publication identifiers from `public-release`.
 
 ### How long, and should you stay ahead

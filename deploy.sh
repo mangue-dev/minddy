@@ -11,7 +11,7 @@ Usage: npm run deploy [-- auto|all|custom]
 Minddy's single publishing assistant.
 
   auto    recommend scopes based on modified files
-  all     publish the core, deploy the web app, and publish macOS
+  all     publish the core, deploy the web app, and publish the desktop applications
   custom  ask a question for each scope
 
 With no argument, an interactive menu offers these three modes.
@@ -19,7 +19,7 @@ With no argument, an interactive menu offers these three modes.
 Scopes:
   public core  SemVer version + tag + GitHub Release + artifacts
   Cloud web    www.minddy.app instance deployed from `production`
-  macOS        signed/notarized app attached to the core release
+  desktop      signed macOS application and signed Linux packages attached to the core release
 
 Marketing is part of the web build: a marketing-only change suggests
 a Cloud deployment without artificially creating a core version.
@@ -82,7 +82,7 @@ echo ""
 echo "Automatic detection:"
 echo "public core: $AUTO_CORE ($CORE_COUNT files since the last tag)"
 echo "  Cloud web   : $AUTO_WEB ($WEB_COUNT files since production)"
-echo "macOS: $AUTO_DESKTOP (shell fingerprint)"
+echo "desktop: $AUTO_DESKTOP (shell fingerprint)"
 if [ "$MARKETING" = "true" ]; then
   echo "marketing: $MARKETING_COUNT files — included in web deployment"
 fi
@@ -130,7 +130,7 @@ case "$MODE" in
   custom)
     if yes_no "Publish a new version of the public heart?" "$([ "$AUTO_CORE" = "true" ] && echo yes || echo no)"; then CORE=1; fi
     if yes_no "Deploy the Minddy Cloud web (marketing included)?" "$([ "$AUTO_WEB" = "true" ] && echo yes || echo no)"; then WEB=1; fi
-    if yes_no "Build and publish the macOS app?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
+    if yes_no "Build and publish the desktop applications for macOS and Linux?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
     ;;
 esac
 
@@ -151,7 +151,7 @@ if [ "$CORE" -eq 0 ] && [ "$WEB" -eq 0 ] && [ "$DESKTOP" -eq 0 ]; then
 fi
 
 echo ""
-echo "Publication selected: core=$CORE · web=$WEB · macOS=$DESKTOP"
+echo "Publication selected: core=$CORE · web=$WEB · desktop=$DESKTOP"
 
 SECURITY_CHECKLIST_VERSION="1.0"
 SECURITY_REVIEW_REF="${MINDDY_SECURITY_REVIEW_REF:-}"
@@ -160,7 +160,7 @@ PENTEST_STATUS="${MINDDY_PENTEST_STATUS:-}"
 
 require_gh() {
   if ! command -v gh >/dev/null 2>&1; then
-    echo "Error: GitHub CLI (gh) is required for public core or macOS releases."
+    echo "Error: GitHub CLI (gh) is required for public core or desktop releases."
     exit 1
   fi
   if ! gh auth status >/dev/null 2>&1; then
@@ -337,17 +337,17 @@ fi
 if [ "$DESKTOP" -eq 1 ]; then
   DESKTOP_VERSION="${TARGET_VERSION:-$(node -p "require('./package.json').version")}"
   if ! gh release view "v$DESKTOP_VERSION" >/dev/null 2>&1; then
-    echo "Error: the macOS app needs an existing public core release v$DESKTOP_VERSION."
+    echo "Error: desktop applications need an existing public core release v$DESKTOP_VERSION."
     exit 1
   fi
   git fetch origin production
   DESKTOP_RUN_SHA=$(git rev-parse origin/production)
-  echo "→ Publishing signed macOS app for v$DESKTOP_VERSION..."
+  echo "→ Publishing signed desktop applications for macOS and Linux, v$DESKTOP_VERSION..."
   dispatch_and_wait desktop-release.yml production "$DESKTOP_RUN_SHA" -f version="$DESKTOP_VERSION"
   git pull --ff-only origin main
 fi
 
 echo ""
-echo "✓ Publication finished: core=$CORE · web=$WEB · macOS=$DESKTOP"
+echo "✓ Publication finished: core=$CORE · web=$WEB · desktop=$DESKTOP"
 [ -n "$DEPLOYED_SHA" ] && echo "  production : $DEPLOYED_SHA"
 [ -n "$TARGET_VERSION" ] && echo "  tag        : v$TARGET_VERSION → $DEPLOYED_SHA"

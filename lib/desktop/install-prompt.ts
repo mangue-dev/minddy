@@ -8,8 +8,8 @@
  * **Three conditions, and each removes a population that would be driven away:**
  *
  * 1. **Not in the desktop app.** Offering to install it to someone who has it open is the definition of noise.
- * 2. **On a Mac.** There is no Windows or Linux version; offering it
- * elsewhere is promising what you don't have.
+ * 2. **On a supported desktop platform.** macOS and Linux users can install
+ * the app; unsupported platforms must not receive a broken download promise.
  * 3. **Not already ruled out.** The user said no once, and “once”
  * means forever.
  */
@@ -65,12 +65,22 @@ export function isMacPlatform(probe: PlatformProbe): boolean {
   return /Mac OS X|Macintosh/i.test(userAgent ?? "");
 }
 
-/** Faut-il proposer l'app de bureau ? */
+/** Is the browser running on a Linux desktop platform? */
+export function isLinuxPlatform(probe: PlatformProbe): boolean {
+  const { uaDataPlatform, platform, userAgent } = probe;
+
+  if (uaDataPlatform) return uaDataPlatform === "Linux";
+  if (platform) return /^Linux/i.test(platform);
+  return /\bLinux\b/i.test(userAgent ?? "");
+}
+
+/** Should the signed desktop application be offered from the browser? */
 export function shouldOfferDesktopApp(input: {
   /** Are we ALREADY running in the app? (presence of the bridge, cf. bridge.ts) */
   inDesktopApp: boolean;
   isMac: boolean;
+  isLinux?: boolean;
   dismissed: boolean;
 }): boolean {
-  return !input.inDesktopApp && input.isMac && !input.dismissed;
+  return !input.inDesktopApp && (input.isMac || Boolean(input.isLinux)) && !input.dismissed;
 }

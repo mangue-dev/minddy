@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DESKTOP_PROMPT_DISMISSED_META_KEY,
+  isLinuxPlatform,
   isMacPlatform,
   resolveDesktopPromptDismissed,
   shouldOfferDesktopApp,
@@ -13,7 +14,7 @@ describe("resolveDesktopPromptDismissed", () => {
     expect(resolveDesktopPromptDismissed({})).toBe(false);
   });
 
-  it("n'accepte que le VRAI booléen", () => {
+  it("accepts only the boolean true", () => {
     expect(resolveDesktopPromptDismissed({ [DESKTOP_PROMPT_DISMISSED_META_KEY]: true })).toBe(true);
     // A value inherited from another format must not hide the proposition
     // forever on a misunderstanding.
@@ -56,8 +57,21 @@ describe("isMacPlatform", () => {
     ).toBe(false);
   });
 
-  it("ne conclut rien d'une sonde vide", () => {
+  it("does not infer a platform from an empty probe", () => {
     expect(isMacPlatform({})).toBe(false);
+  });
+});
+
+describe("isLinuxPlatform", () => {
+  it("recognizes Linux from user-agent client hints", () => {
+    expect(isLinuxPlatform({ uaDataPlatform: "Linux" })).toBe(true);
+    expect(isLinuxPlatform({ uaDataPlatform: "Windows" })).toBe(false);
+  });
+
+  it("falls back to navigator.platform and the user agent", () => {
+    expect(isLinuxPlatform({ platform: "Linux x86_64" })).toBe(true);
+    expect(isLinuxPlatform({ userAgent: "Mozilla/5.0 (X11; Linux x86_64)" })).toBe(true);
+    expect(isLinuxPlatform({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" })).toBe(false);
   });
 });
 
@@ -68,12 +82,16 @@ describe("shouldOfferDesktopApp", () => {
     expect(shouldOfferDesktopApp(mac)).toBe(true);
   });
 
+  it("offers on Linux in a browser to someone who has dismissed nothing", () => {
+    expect(shouldOfferDesktopApp({ ...mac, isMac: false, isLinux: true })).toBe(true);
+  });
+
   it("stays silent inside the app itself", () => {
     expect(shouldOfferDesktopApp({ ...mac, inDesktopApp: true })).toBe(false);
   });
 
-  it("se tait hors macOS — il n'y a pas de version à proposer", () => {
-    expect(shouldOfferDesktopApp({ ...mac, isMac: false })).toBe(false);
+  it("stays silent on unsupported desktop platforms", () => {
+    expect(shouldOfferDesktopApp({ ...mac, isMac: false, isLinux: false })).toBe(false);
   });
 
   it("stays silent once dismissed, forever", () => {
