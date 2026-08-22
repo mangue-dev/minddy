@@ -151,6 +151,7 @@ export function blockExtensions(
   options: {
     headless?: boolean;
     nodeViews?: Record<string, NodeViewRenderer>;
+    extensions?: Record<string, AnyExtension>;
   } = {}
 ): Extensions {
   const seen = new Set<string>();
@@ -159,10 +160,11 @@ export function blockExtensions(
     for (const extension of block.extensions as AnyExtension[]) {
       if (seen.has(extension.name)) continue;
       seen.add(extension.name);
+      const baseExtension = options.extensions?.[extension.name] ?? extension;
       const withStorage =
         extension.name === block.nodeName
-          ? withMarkdown(block, extension)
-          : extension;
+          ? withMarkdown(block, baseExtension)
+          : baseExtension;
       const view = options.nodeViews?.[extension.name];
       extensions.push(
         options.headless

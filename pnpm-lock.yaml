@@ -71,6 +71,9 @@ importers:
       '@tiptap/extension-code-block':
         specifier: 3.29.2
         version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
+      '@tiptap/extension-code-block-lowlight':
+        specifier: 3.29.2
+        version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/extension-code-block@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)(highlight.js@11.11.2)(lowlight@3.3.0)
       '@tiptap/extension-details':
         specifier: 3.29.2
         version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/extension-text-style@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2)))(@tiptap/pm@3.29.2)
@@ -152,6 +155,9 @@ importers:
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
+      lowlight:
+        specifier: ^3.3.0
+        version: 3.3.0
       lucide-react:
         specifier: ^1.31.0
         version: 1.31.0(react@19.2.3)
@@ -209,6 +215,9 @@ importers:
       sharp:
         specifier: ^0.35.3
         version: 0.35.3(@types/node@20.19.43)
+      shiki:
+        specifier: ^3.23.0
+        version: 3.23.0
       streamdown:
         specifier: ^2.5.0
         version: 2.5.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -2588,10 +2597,6 @@ packages:
   '@shikijs/engine-javascript@3.23.0':
     resolution: {integrity: sha512-aHt9eiGFobmWR5uqJUViySI1bHMqrAgamWE1TYSUoftkAeCCAiGawPMwM+VCadylQtF4V3VNOZ5LmfItH5f3yA==}
 
-  '@shikijs/engine-javascript@4.4.1':
-    resolution: {integrity: sha512-6U4lJBh8LTvIkEVqRHv/rr3ruwtO6IweFQt1ME1ntHJMGHS+6N86vfYGO1o8c/DtOCTia2lfhdQBtBrps1sDfQ==}
-    engines: {node: '>=20'}
-
   '@shikijs/engine-javascript@4.4.3':
     resolution: {integrity: sha512-FbOjFJp9VLdo1Wevs10BBtVxiTWwNLqZh5Gkhjgda/ioL15YOgeSl9n+6XMa3qRlPQzfhFNe641SrynFHYG0nQ==}
     engines: {node: '>=20'}
@@ -2599,20 +2604,12 @@ packages:
   '@shikijs/engine-oniguruma@3.23.0':
     resolution: {integrity: sha512-1nWINwKXxKKLqPibT5f4pAFLej9oZzQTsby8942OTlsJzOBZ0MWKiwzMsd+jhzu8YPCHAswGnnN1YtQfirL35g==}
 
-  '@shikijs/engine-oniguruma@4.4.1':
-    resolution: {integrity: sha512-p23RugMKss0r5DAtRJW1yAXUDl60JvhQYV20yuxei//26JyDSJefV3umyWzzwep2weblMnJGDYahuti6XkcMgA==}
-    engines: {node: '>=20'}
-
   '@shikijs/engine-oniguruma@4.4.3':
     resolution: {integrity: sha512-EcOQkxdxGQrc1Row/cC2c96/v1dbZqGnEVu1qTuT/MJmp6+cXCvQussowVmCv5Tqr3KuY3c7IbM6HTW3LJ1k9w==}
     engines: {node: '>=20'}
 
   '@shikijs/langs@3.23.0':
     resolution: {integrity: sha512-2Ep4W3Re5aB1/62RSYQInK9mM3HsLeB91cHqznAJMuylqjzNVAVCMnNWRHFtcNHXsoNRayP9z1qj4Sq3nMqYXg==}
-
-  '@shikijs/langs@4.4.1':
-    resolution: {integrity: sha512-xb2kCMloBCIraIy2fS5MW0t/BxVY3q2nDyQKBoeSeq6KNrQbShHetCFlw2n35fGIJ6t3+hXDLQogP5ir9O9bvA==}
-    engines: {node: '>=20'}
 
   '@shikijs/langs@4.4.3':
     resolution: {integrity: sha512-ePic0yfAJGOF83D5wBHK/00EjK65oahBYxFk5epgq33WRv7X9UuxLEV8PtR0szC0z8dl7INIpIodB99JRFlR+A==}
@@ -2646,10 +2643,6 @@ packages:
 
   '@shikijs/themes@3.23.0':
     resolution: {integrity: sha512-5qySYa1ZgAT18HR/ypENL9cUSGOeI2x+4IvYJu4JgVJdizn6kG4ia5Q1jDEOi7gTbN4RbuYtmHh0W3eccOrjMA==}
-
-  '@shikijs/themes@4.4.1':
-    resolution: {integrity: sha512-wudOaoFro+/Zl9gQv2W1Ur5XlVduqvTuYLI483Xi0wgc1A+cy1hfB2r6ac6ufBgF+ID7KJEW7L41MHrzQ4wH+w==}
-    engines: {node: '>=20'}
 
   '@shikijs/themes@4.4.3':
     resolution: {integrity: sha512-w8UHjeUnIR965KMWJHUPXOc2mNJUnK3vpVLYLvw5IYU2mnTTJ89E24OrJDBNiJDQ0qzb0tc4l7mrIXx5cFeIyw==}
@@ -2952,6 +2945,15 @@ packages:
     resolution: {integrity: sha512-3bWcCUPbCHv0XttlMdnAtXLNYWx2pblByMgxmGsaP9FU0QnslGXty6A6gHCqI33ygRg1vrA6U5Wtpwbi5aKu5g==}
     peerDependencies:
       '@tiptap/extension-list': 3.29.2
+
+  '@tiptap/extension-code-block-lowlight@3.29.2':
+    resolution: {integrity: sha512-iUtg33uSlbnU0y6c3nUSWdw8ILmbuc+HeAouqZ7Vl4leYddLf7wLP4s+RJ8PKDJe8m1r6GTK6VVpCOUK5eIFzQ==}
+    peerDependencies:
+      '@tiptap/core': 3.29.2
+      '@tiptap/extension-code-block': 3.29.2
+      '@tiptap/pm': 3.29.2
+      highlight.js: ^11
+      lowlight: ^2 || ^3
 
   '@tiptap/extension-code-block@3.29.2':
     resolution: {integrity: sha512-w153ct8g6dLiPTdXQ6SOIMxX4SEo5Q50AmjdEEEcJ7ZcYUcde/ScSskLHfOYmyt5ZFAiyEwr121+pux+p3/oAQ==}
@@ -4270,6 +4272,10 @@ packages:
   hastscript@9.0.1:
     resolution: {integrity: sha512-g7df9rMFX/SPi34tyGCyUBREQoKkapwdY/T04Qn9TDWfHhAYt4/I0gMVirzK5wEzeUqIjEB+LXC/ypb7Aqno5w==}
 
+  highlight.js@11.11.2:
+    resolution: {integrity: sha512-oaXMACAU0kzOMXBjWpNcX+vlwSBCIAiZ9BHa7gA15NOTtT2L/l8OSZDuqS2XppOhZBPJ7hm4o8ep2kyuip2uEQ==}
+    engines: {node: '>=12.0.0'}
+
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
@@ -4658,6 +4664,9 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
+
+  lowlight@3.3.0:
+    resolution: {integrity: sha512-0JNhgFoPvP6U6lE/UdVsSq99tn6DhjjpAj5MxG49ewd2mOBVtwWYIT8ClyABhq198aXXODMU6Ox8DrGy/CpTZQ==}
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
@@ -5644,10 +5653,6 @@ packages:
 
   shiki@3.23.0:
     resolution: {integrity: sha512-55Dj73uq9ZXL5zyeRPzHQsK7Nbyt6Y10k5s7OjuFZGMhpp4r/rsLBH0o/0fstIzX1Lep9VxefWljK/SKCzygIA==}
-
-  shiki@4.4.1:
-    resolution: {integrity: sha512-rFP+iYKzjLEIqiMiKANhARqiAbk4deDhWnBtnUO/K0D0dPxMGDH4N0FVfBY/VeI+lPrV4wNGCHQZp7EOr7NNBw==}
-    engines: {node: '>=20'}
 
   shiki@4.4.3:
     resolution: {integrity: sha512-Mb/GvXPHBAXdgGIcnfU5L3ldpn1XcxrGkPHwqgRx17/I2XRfqlFKk2vGkHWINn1kdXvzJZeuO3is6I9KLPFm0g==}
@@ -7118,14 +7123,14 @@ snapshots:
   '@pierre/diffs@1.3.3(@shikijs/themes@4.4.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@pierre/theme': 2.0.0
-      '@pierre/theming': 1.0.0(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(shiki@4.4.1)
+      '@pierre/theming': 1.0.0(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(shiki@4.4.3)
       '@shikijs/transformers': 4.4.1
       diff: 9.0.0
       hast-util-to-html: 9.0.5
       lru_map: 0.4.1
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
-      shiki: 4.4.1
+      shiki: 4.4.3
     transitivePeerDependencies:
       - '@shikijs/themes'
 
@@ -7133,13 +7138,13 @@ snapshots:
 
   '@pierre/theme@2.0.0': {}
 
-  '@pierre/theming@1.0.0(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(shiki@4.4.1)':
+  '@pierre/theming@1.0.0(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(shiki@4.4.3)':
     optionalDependencies:
       '@pierre/theme': 2.0.0
       '@shikijs/themes': 4.4.3
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
-      shiki: 4.4.1
+      shiki: 4.4.3
 
   '@posthog/browser-common@0.2.1':
     dependencies:
@@ -8511,12 +8516,6 @@ snapshots:
       '@shikijs/vscode-textmate': 10.0.2
       oniguruma-to-es: 4.3.6
 
-  '@shikijs/engine-javascript@4.4.1':
-    dependencies:
-      '@shikijs/types': 4.4.1
-      '@shikijs/vscode-textmate': 10.0.2
-      oniguruma-to-es: 4.3.6
-
   '@shikijs/engine-javascript@4.4.3':
     dependencies:
       '@shikijs/types': 4.4.3
@@ -8528,11 +8527,6 @@ snapshots:
       '@shikijs/types': 3.23.0
       '@shikijs/vscode-textmate': 10.0.2
 
-  '@shikijs/engine-oniguruma@4.4.1':
-    dependencies:
-      '@shikijs/types': 4.4.1
-      '@shikijs/vscode-textmate': 10.0.2
-
   '@shikijs/engine-oniguruma@4.4.3':
     dependencies:
       '@shikijs/types': 4.4.3
@@ -8541,10 +8535,6 @@ snapshots:
   '@shikijs/langs@3.23.0':
     dependencies:
       '@shikijs/types': 3.23.0
-
-  '@shikijs/langs@4.4.1':
-    dependencies:
-      '@shikijs/types': 4.4.1
 
   '@shikijs/langs@4.4.3':
     dependencies:
@@ -8571,10 +8561,6 @@ snapshots:
   '@shikijs/themes@3.23.0':
     dependencies:
       '@shikijs/types': 3.23.0
-
-  '@shikijs/themes@4.4.1':
-    dependencies:
-      '@shikijs/types': 4.4.1
 
   '@shikijs/themes@4.4.3':
     dependencies:
@@ -8843,6 +8829,14 @@ snapshots:
   '@tiptap/extension-bullet-list@3.29.2(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))':
     dependencies:
       '@tiptap/extension-list': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
+
+  '@tiptap/extension-code-block-lowlight@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/extension-code-block@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)(highlight.js@11.11.2)(lowlight@3.3.0)':
+    dependencies:
+      '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
+      '@tiptap/extension-code-block': 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
+      '@tiptap/pm': 3.29.2
+      highlight.js: 11.11.2
+      lowlight: 3.3.0
 
   '@tiptap/extension-code-block@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)':
     dependencies:
@@ -10274,6 +10268,8 @@ snapshots:
       property-information: 7.2.0
       space-separated-tokens: 2.0.2
 
+  highlight.js@11.11.2: {}
+
   hoist-non-react-statics@3.3.2:
     dependencies:
       react-is: 16.13.1
@@ -10620,6 +10616,12 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+
+  lowlight@3.3.0:
+    dependencies:
+      '@types/hast': 3.0.5
+      devlop: 1.1.0
+      highlight.js: 11.11.2
 
   lru-cache@10.4.3: {}
 
@@ -12144,17 +12146,6 @@ snapshots:
       '@shikijs/langs': 3.23.0
       '@shikijs/themes': 3.23.0
       '@shikijs/types': 3.23.0
-      '@shikijs/vscode-textmate': 10.0.2
-      '@types/hast': 3.0.5
-
-  shiki@4.4.1:
-    dependencies:
-      '@shikijs/core': 4.4.1
-      '@shikijs/engine-javascript': 4.4.1
-      '@shikijs/engine-oniguruma': 4.4.1
-      '@shikijs/langs': 4.4.1
-      '@shikijs/themes': 4.4.1
-      '@shikijs/types': 4.4.1
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.5
 

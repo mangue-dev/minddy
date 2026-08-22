@@ -12,6 +12,10 @@ import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "tiptap-markdown";
 import { useTranslations } from "next-intl";
 import { Spinner, cn } from "mangue-ui";
+import {
+  setCodeBlockLabels,
+} from "@/components/code-block-lowlight";
+import { codeBlockEditorExtension } from "@/components/code-block-node-view";
 import { Heading1, Heading2, Heading3, List, ListTodo, Mic } from "lucide-react";
 import {
   removeSettledTasks,
@@ -61,8 +65,8 @@ const PROSE = cn(
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_li]:my-0.5",
   "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]",
-  "[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:text-sm",
-  "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
+  "[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted [&_pre]:p-3",
+  "[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[1em]",
   "[&_h1]:mt-5 [&_h1]:mb-1.5 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:tracking-tight",
   "[&_h2]:mt-5 [&_h2]:mb-1 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight",
   "[&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-semibold",
@@ -190,6 +194,13 @@ export function ScratchpadEditor({
 }) {
   const t = useTranslations("Scratchpad");
   const tDictate = useTranslations("Dictate");
+  const tCommon = useTranslations("Common");
+
+  setCodeBlockLabels({
+    copy: tCommon("copy"),
+    copied: tCommon("copied"),
+    language: tCommon("codeLanguage"),
+  });
 
   const editorRef = useRef<Editor | null>(null);
   const startDictationRef = useRef<() => void>(() => {});
@@ -392,7 +403,12 @@ export function ScratchpadEditor({
         StarterKit.configure({
           heading: { levels: [1, 2, 3] },
           paragraph: false,
+          codeBlock: false,
         }),
+        // Lowlight code block instead of the StarterKit one (same node,
+        // same attributes): fences highlight live in the notebook, like
+        // everywhere a committed block is read (components/code-block-lowlight).
+        codeBlockEditorExtension(),
         ScratchpadParagraph,
         ScratchpadTaskList,
         ScratchpadTaskItem,

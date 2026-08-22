@@ -56,6 +56,10 @@ export interface PageExtensionsOptions {
  * Ignored in `headless`, where there is no view.
  */
   nodeViews?: Record<string, NodeViewRenderer>;
+
+  /** Optional browser-side replacements for extensions that need a richer
+   * runtime configuration, such as the complete code grammar catalog. */
+  extensions?: Record<string, AnyExtension>;
 }
 
 export function pageExtensions(
@@ -65,6 +69,7 @@ export function pageExtensions(
     headless = false,
     mention = MentionNodeBase,
     nodeViews,
+    extensions,
   } = options;
 
   return [
@@ -81,7 +86,7 @@ export function pageExtensions(
       orderedList: false,
       listItem: false,
     }),
-    ...blockExtensions({ headless, nodeViews }),
+    ...blockExtensions({ headless, nodeViews, extensions }),
     ...pageColorExtensions(),
     PageBlockShortcuts,
     mention,

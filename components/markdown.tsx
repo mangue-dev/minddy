@@ -7,6 +7,8 @@ import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
+import { CodeBlock } from "@/components/code-block";
+import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import {
   memberLabel,
@@ -181,7 +183,26 @@ export function Markdown({
             "mr-1.5 inline-block size-3.5 translate-y-[0.15em] accent-primary",
           ),
           code: styled("code", "rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"),
-          pre: styled("pre", "my-3 overflow-x-auto rounded-lg bg-muted p-3 text-xs"),
+          /* A fenced block becomes a full <CodeBlock>: language badge, Shiki
+             highlighting, copy button. The hast tree is read (not the rendered
+             children) because the inner <code> never mounts — the fallback
+             below keeps the old muted block for a shape we don't recognize. */
+          pre: ({ node, children }) => {
+            const block = extractCodeBlock(node);
+            if (block) {
+              return (
+                <CodeBlock
+                  code={block.code}
+                  language={block.language || undefined}
+                />
+              );
+            }
+            return (
+              <pre className="my-3 overflow-x-auto rounded-xl bg-muted p-4 [&_code]:text-[1em]">
+                {children}
+              </pre>
+            );
+          },
           kbd: styled(
             "kbd",
             "rounded border border-border bg-muted px-1 font-mono text-[0.85em]",

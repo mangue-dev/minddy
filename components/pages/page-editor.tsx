@@ -47,6 +47,8 @@ import {
 import { Arrows } from "@/components/editor-arrows";
 import { noteTyping, trackPointerFreshness } from "@/lib/keyboard/hover-keys";
 import { setDetailsLabels } from "@/components/pages/blocks/details";
+import { setCodeBlockLabels } from "@/components/code-block-lowlight";
+import { codeBlockEditorExtension } from "@/components/code-block-node-view";
 import {
   BlockPlaceholder,
   pagePlaceholder,
@@ -96,8 +98,8 @@ const PROSE = cn(
   "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
   "[&_li]:my-0.5",
   "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]",
-  "[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:text-sm",
-  "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
+  "[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted [&_pre]:p-3",
+  "[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[1em]",
   "[&_h1]:mt-6 [&_h1]:mb-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:tracking-tight",
   "[&_h2]:mt-5 [&_h2]:mb-1.5 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight",
   "[&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-semibold",
@@ -239,6 +241,7 @@ export function PageEditor({
   className?: string;
 }) {
   const t = useTranslations("Pages");
+  const tCommon = useTranslations("Common");
 
   const slashItems = useMemo(() => pageSlashItems(t), [t]);
 
@@ -249,6 +252,11 @@ export function PageEditor({
   // The fold button of the leaflet is rendered by a node view without React: it
   // cannot read the catalog itself, we ask it here (see details.ts).
   setDetailsLabels({ expand: t("toggleExpand"), collapse: t("toggleCollapse") });
+  setCodeBlockLabels({
+    copy: tCommon("copy"),
+    copied: tCommon("copied"),
+    language: tCommon("codeLanguage"),
+  });
 
   // The title bracket goes through a ref, and the function given to the extension
   // NEVER change identity: same rule as the rest of the file — tiptap
@@ -288,6 +296,7 @@ export function PageEditor({
             image: imageNodeView(),
             pageFile: fileNodeView(),
           },
+          extensions: { codeBlock: codeBlockEditorExtension() },
         }),
         ...(mentions ? [MentionSuggest.configure(mentions)] : []),
         // “->” becomes “→” under the fingers, as in the notebook and in

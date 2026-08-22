@@ -1,12 +1,14 @@
-import { CodeBlock } from "@tiptap/extension-code-block";
 import { Code2 } from "lucide-react";
+import { HighlightedCodeBlock } from "@/components/code-block-lowlight";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
-/** No syntax highlighting in v1 (it would require lowlight/shiki in the editor bundle): the block keeps its language as an attribute, so adding it later will not affect storage or markdown. */
+/** Syntax highlighting comes from lowlight (see components/code-block-lowlight):
+    the block keeps its language as an attribute, so storage and markdown are
+    unaffected by the rendering layer. */
 export const codeBlock: PageBlock = {
   id: "codeBlock",
   nodeName: "codeBlock",
-  extensions: [CodeBlock],
+  extensions: [HighlightedCodeBlock],
   icon: Code2,
   labelKey: "blockCode",
   slash: {
