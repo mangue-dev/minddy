@@ -31,6 +31,11 @@ on:
           - not-required
           - completed
           - required-not-completed
+      private_test_release:
+        description: "Explicit exception for a documented test release while this repository is private"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -58,6 +63,8 @@ jobs:
           SECURITY_REVIEW_REF: ${{ inputs.security_review_ref }}
           RESIDUAL_RISKS: ${{ inputs.residual_risks }}
           PENTEST_STATUS: ${{ inputs.pentest_status }}
+          PRIVATE_TEST_RELEASE: ${{ inputs.private_test_release }}
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
         run: |
           test "$CHECKLIST_VERSION" = "1.0"
           test -n "$SECURITY_REVIEW_REF"
@@ -67,9 +74,19 @@ jobs:
           case "$RESIDUAL_RISKS" in none|documented) ;; *) echo "Invalid residual risk status"; exit 1 ;; esac
           case "$PENTEST_STATUS" in
             not-required|completed) ;;
-            required-not-completed) echo "Required pentest is not complete"; exit 1 ;;
+            required-not-completed)
+              test "$PRIVATE_TEST_RELEASE" = "true" || { echo "Required pentest is not complete"; exit 1; }
+              test "$RESIDUAL_RISKS" = "documented" || { echo "Private test releases must document residual risks"; exit 1; }
+              test "$REPOSITORY_PRIVATE" = "true" || { echo "Private test releases require a private repository"; exit 1; }
+              echo "::warning::Proceeding under the explicit private test release exception with an incomplete pentest"
+              ;;
             *) echo "Invalid pentest status"; exit 1 ;;
           esac
+
+          if [ "$PRIVATE_TEST_RELEASE" = "true" ] && [ "$PENTEST_STATUS" != "required-not-completed" ]; then
+            echo "The private test exception is only valid for an incomplete required pentest"
+            exit 1
+          fi
 
           {
             echo "### Release security review"
@@ -77,6 +94,7 @@ jobs:
             echo "- Report: \`$SECURITY_REVIEW_REF\`"
             echo "- Residual risks: \`$RESIDUAL_RISKS\`"
             echo "- Pentest: \`$PENTEST_STATUS\`"
+            echo "- Private test exception: \`$PRIVATE_TEST_RELEASE\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   promote:
@@ -99,6 +117,7 @@ jobs:
           SECURITY_REVIEW_REF: ${{ inputs.security_review_ref }}
           RESIDUAL_RISKS: ${{ inputs.residual_risks }}
           PENTEST_STATUS: ${{ inputs.pentest_status }}
+          PRIVATE_TEST_RELEASE: ${{ inputs.private_test_release }}
         run: |
           test "$GITHUB_REF" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
@@ -126,6 +145,7 @@ jobs:
             echo "- Security review: \`$SECURITY_REVIEW_REF\`"
             echo "- Residual risks: \`$RESIDUAL_RISKS\`"
             echo "- Pentest: \`$PENTEST_STATUS\`"
+            echo "- Private test exception: \`$PRIVATE_TEST_RELEASE\`"
             echo ""
             echo "#### Changements Cloud"
             git log --format='- `%h` %s' "origin/production..$TARGET_SHA"

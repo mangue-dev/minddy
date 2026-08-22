@@ -23,6 +23,10 @@ Scopes:
 
 Marketing is part of the web build: a marketing-only change suggests
 a Cloud deployment without artificially creating a core version.
+
+When a required pentest is still pending, an interactive private-repository
+test release can be explicitly accepted. For non-interactive use, set
+MINDDY_PRIVATE_TEST_RELEASE=1 together with documented residual risks.
 EOF
 }
 
@@ -157,6 +161,11 @@ SECURITY_CHECKLIST_VERSION="1.0"
 SECURITY_REVIEW_REF="${MINDDY_SECURITY_REVIEW_REF:-}"
 RESIDUAL_RISKS="${MINDDY_RESIDUAL_RISKS:-}"
 PENTEST_STATUS="${MINDDY_PENTEST_STATUS:-}"
+PRIVATE_TEST_RELEASE="${MINDDY_PRIVATE_TEST_RELEASE:-0}"
+if [ "$PRIVATE_TEST_RELEASE" != "0" ] && [ "$PRIVATE_TEST_RELEASE" != "1" ]; then
+  echo "Error: MINDDY_PRIVATE_TEST_RELEASE must be 0 or 1."
+  exit 1
+fi
 
 require_gh() {
   if ! command -v gh >/dev/null 2>&1; then
@@ -298,13 +307,22 @@ if [ "$WEB" -eq 1 ]; then
         *) echo "Invalid choice."; exit 1 ;;
       esac
     fi
+    if [ "$PENTEST_STATUS" = "required-not-completed" ] && [ "$PRIVATE_TEST_RELEASE" = "0" ]; then
+      echo ""
+      echo "The required pentest is incomplete. This exception is only permitted"
+      echo "for a documented test release while the GitHub repository is private."
+      if yes_no "Continue with the private test release exception?" no; then
+        PRIVATE_TEST_RELEASE="1"
+      fi
+    fi
   fi
 
   node scripts/release-security-policy.mjs \
     "$SECURITY_CHECKLIST_VERSION" \
     "$SECURITY_REVIEW_REF" \
     "$RESIDUAL_RISKS" \
-    "$PENTEST_STATUS" >/dev/null
+    "$PENTEST_STATUS" \
+    "$PRIVATE_TEST_RELEASE" >/dev/null
 fi
 
 DEPLOYED_SHA=""
@@ -316,12 +334,15 @@ if [ "$CORE" -eq 1 ] || [ "$WEB" -eq 1 ]; then
   wait_for_run ci.yml "$DEPLOYED_SHA" push main
 
   echo "→ Requesting protected promotion and Cloud deployment..."
+  PRIVATE_TEST_INPUT="false"
+  [ "$PRIVATE_TEST_RELEASE" = "1" ] && PRIVATE_TEST_INPUT="true"
   dispatch_and_wait promote-production.yml main "$DEPLOYED_SHA" \
     -f sha="$DEPLOYED_SHA" \
     -f checklist_version="$SECURITY_CHECKLIST_VERSION" \
     -f security_review_ref="$SECURITY_REVIEW_REF" \
     -f residual_risks="$RESIDUAL_RISKS" \
-    -f pentest_status="$PENTEST_STATUS"
+    -f pentest_status="$PENTEST_STATUS" \
+    -f private_test_release="$PRIVATE_TEST_INPUT"
   git fetch origin production
   if [ "$(git rev-parse origin/production)" != "$DEPLOYED_SHA" ]; then
     echo "Error: production does not point to the verified SHA $DEPLOYED_SHA."

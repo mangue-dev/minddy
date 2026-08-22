@@ -11,6 +11,7 @@ const valid = {
   reviewRef: "minddy-cloud-ops#123",
   residualRisks: "none",
   pentest: "not-required",
+  privateTestRelease: false,
 };
 
 test("accepts a current review with no residual risk or required pentest", () => {
@@ -50,6 +51,39 @@ test("rejects promotion when the required pentest is not complete", () => {
   );
 });
 
+test("accepts an explicitly documented private test release with an incomplete pentest", () => {
+  assert.deepEqual(
+    assertSecurityRelease({
+      ...valid,
+      residualRisks: "documented",
+      pentest: "required-not-completed",
+      privateTestRelease: true,
+    }),
+    {
+      ...valid,
+      residualRisks: "documented",
+      pentest: "required-not-completed",
+      privateTestRelease: true,
+    },
+  );
+});
+
+test("rejects an undocumented or unnecessary private test exception", () => {
+  assert.throws(
+    () =>
+      assertSecurityRelease({
+        ...valid,
+        pentest: "required-not-completed",
+        privateTestRelease: true,
+      }),
+    /document residual risks/,
+  );
+  assert.throws(
+    () => assertSecurityRelease({ ...valid, privateTestRelease: true }),
+    /only valid for an incomplete required pentest/,
+  );
+});
+
 test("rejects ambiguous statuses", () => {
   assert.throws(
     () => assertSecurityRelease({ ...valid, residualRisks: "unknown" }),
@@ -78,7 +112,10 @@ test("the deployment and workflow require the current version and three attestat
     assert.match(source, /residual_risks|RESIDUAL_RISKS/);
     assert.match(source, /pentest_status|PENTEST_STATUS/);
   }
-  assert.match(workflow, /required-not-completed\).*exit 1/);
+  assert.match(workflow, /test "\$PRIVATE_TEST_RELEASE" = "true".*Required pentest is not complete/);
+  assert.match(workflow, /test "\$RESIDUAL_RISKS" = "documented"/);
+  assert.match(workflow, /github\.event\.repository\.private/);
+  assert.match(workflow, /PRIVATE_TEST_RELEASE/);
 
   const authenticatedRemote = workflow.indexOf(
     'git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"',

@@ -21,7 +21,13 @@ function requiredText(value, label) {
  * The detailed proof remains in the reference: no secrets or exploitable details
  * must be copied into the workflow entries or logs.
  */
-export function assertSecurityRelease({ checklistVersion, reviewRef, residualRisks, pentest }) {
+export function assertSecurityRelease({
+  checklistVersion,
+  reviewRef,
+  residualRisks,
+  pentest,
+  privateTestRelease = false,
+}) {
   if (checklistVersion !== SECURITY_CHECKLIST_VERSION) {
     throw new Error(
       `Checklist ${checklistVersion || "missing"} is invalid: use version ${SECURITY_CHECKLIST_VERSION}.`,
@@ -37,8 +43,14 @@ export function assertSecurityRelease({ checklistVersion, reviewRef, residualRis
       "Pentest status must be not-required, completed, or required-not-completed.",
     );
   }
-  if (pentest === "required-not-completed") {
+  if (pentest === "required-not-completed" && !privateTestRelease) {
     throw new Error("Promotion rejected: the required pentest is not complete.");
+  }
+  if (privateTestRelease && pentest !== "required-not-completed") {
+    throw new Error("The private test exception is only valid for an incomplete required pentest.");
+  }
+  if (privateTestRelease && residualRisks !== "documented") {
+    throw new Error("A private test release with an incomplete pentest must document residual risks.");
   }
 
   return {
@@ -46,6 +58,7 @@ export function assertSecurityRelease({ checklistVersion, reviewRef, residualRis
     reviewRef: normalizedRef,
     residualRisks,
     pentest,
+    privateTestRelease,
   };
 }
 
@@ -56,6 +69,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       reviewRef: process.argv[3],
       residualRisks: process.argv[4],
       pentest: process.argv[5],
+      privateTestRelease: process.argv[6] === "1",
     });
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } catch (error) {
