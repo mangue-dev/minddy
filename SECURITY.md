@@ -362,12 +362,67 @@ delivered and `tailwindcss` the CSS served, without being `dependencies`.
 - **deploy pipeline** ([deploy.sh](deploy.sh)): replays these same gates, more
 the CI verdict for the deployed commit. Last trickle, not source of
 truth.
-- **Sonde anti cross-tenant** ([scripts/security-probe.mjs](scripts/security-probe.mjs)) :
-REALLY verifies against production that RLS + grants refuse cross access
-(reading/writing a foreign project, RPC definer, secret columns,
-upload outside prefix, bucket listing, moving a line to its
-own project, hard delete of a page). **Manual execution** (touch
-  prod) — outside vitest's `include`.
+- **Live authorization probe** ([scripts/security-probe.mjs](scripts/security-probe.mjs)):
+manually verifies a deployed Supabase project's RLS, column grants, and Storage
+policies. It checks cross-tenant issue reads and writes, privileged RPC denial,
+secret-column denial, foreign Storage listing and uploads, immutable project
+keys, and page hard-delete denial. It is deliberately outside Vitest and is
+never run by CI.
+
+### Live probe fixtures and invocation
+
+Run the probe only after an operator has created **dedicated disposable probe
+fixtures**. They may be in production only when they contain no customer data,
+no usable credential, and may safely be changed or deleted if a control has
+regressed. Do not use a service-role key: the probe must use the public anon key
+and ordinary user access tokens, otherwise it would bypass the controls under
+test. Do not place these values in tracked files or pass them on the command
+line.
+
+- `SECURITY_PROBE_CROSS_TENANT_TOKEN` belongs only to
+  `SECURITY_PROBE_SOURCE_PROJECT_ID`; it must not be a member of
+  `SECURITY_PROBE_FOREIGN_PROJECT_ID`.
+- `SECURITY_PROBE_DUAL_MEMBER_TOKEN` belongs to both dedicated projects. The
+  reassignable issue and disposable page are in the source project, so the
+  probe reaches the tenant-key trigger and the no-delete policy rather than an
+  unrelated membership check.
+- `SECURITY_PROBE_FOREIGN_ISSUE_ID` is a disposable issue in the foreign
+  project. `SECURITY_PROBE_REASSIGNABLE_ISSUE_ID` and
+  `SECURITY_PROBE_HARD_DELETE_PAGE_ID` are disposable records in the source
+  project.
+- `SECURITY_PROBE_SECRET_CONNECTION_ID` is a probe-only `git_connections`
+  record owned by the cross-tenant user. Its encrypted-token columns must be
+  null or non-secret test values.
+- `SECURITY_PROBE_FOREIGN_STORAGE_PATH` is an existing non-sensitive sentinel
+  file beneath `projects/${SECURITY_PROBE_FOREIGN_PROJECT_ID}/`; it confirms
+  that an unrelated user cannot list the foreign prefix.
+
+Load the values from the operator's secret store, then run the following from a
+clean shell. The explicit confirmation is required; missing or malformed
+configuration stops the probe before it makes a request.
+
+```sh
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_ANON_KEY="…"
+export SECURITY_PROBE_CROSS_TENANT_TOKEN="…"
+export SECURITY_PROBE_DUAL_MEMBER_TOKEN="…"
+export SECURITY_PROBE_SOURCE_PROJECT_ID="…"
+export SECURITY_PROBE_FOREIGN_PROJECT_ID="…"
+export SECURITY_PROBE_FOREIGN_ISSUE_ID="…"
+export SECURITY_PROBE_REASSIGNABLE_ISSUE_ID="…"
+export SECURITY_PROBE_HARD_DELETE_PAGE_ID="…"
+export SECURITY_PROBE_SECRET_CONNECTION_ID="…"
+export SECURITY_PROBE_FOREIGN_STORAGE_PATH="projects/<foreign-project-id>/security-probe/listing-sentinel.txt"
+node scripts/security-probe.mjs --confirm
+```
+
+The probe prints only check names and failure HTTP statuses, never configuration
+values or response bodies. A failed unauthorized upload, write, reassignment,
+or delete is expected to leave no change. If a probe detects a regression,
+treat the dedicated fixtures as potentially altered, stop, preserve the output,
+and follow the incident procedure below before reseeding them. Local HTTP is
+refused unless `SECURITY_PROBE_ALLOW_INSECURE_LOCAL=true` is set for a localhost
+Supabase instance.
 - **Migration guardrail** ([lib/schema-guardrails.test.ts](lib/schema-guardrails.test.ts)),
 him in the sequel: he rereads the migrations written since the last broom and
 fails if one creates a policy without `TO` clause, a table without RLS, a
