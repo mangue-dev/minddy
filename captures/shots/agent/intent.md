@@ -18,9 +18,8 @@ that he is working: you follow the progress without rereading the entire thread.
 - the **test command** that he launched.
 - The summary, which asks a question — the run is **at rest, waiting for
 response**, not running.
-- The bottom composer: model (`Claude Sonnet 4.5`) and branches
-(`main → numo/aur-2-palette-shortcuts`). It is this last detail which connects
-this capture to that of the pull request.
+- The bottom composer, showing the `Claude Sonnet 4.5` model. Branches are no
+longer rendered in this view in production.
 
 ## Or
 

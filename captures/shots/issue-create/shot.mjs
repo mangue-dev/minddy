@@ -90,7 +90,6 @@ const VARIANTS = [
 ];
 
 async function capture({ locale, theme }) {
-  const words = ARIA[locale];
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
   try {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
@@ -104,8 +103,12 @@ async function capture({ locale, theme }) {
 
     // `c` — the creation shortcut, global (lib/create-context.tsx).
     await page.keyboard.press("c");
-    const dialog = page.getByRole("dialog", { name: words.dialog });
+    const dialog = page.getByRole("dialog", { name: /^(?:Nouveau ticket|New issue)$/ });
     await dialog.waitFor({ state: "visible", timeout: 10_000 });
+    const words =
+      (await page.getByRole("dialog", { name: ARIA.fr.dialog }).count()) > 0
+        ? ARIA.fr
+        : ARIA.en;
 
     // The title field is `autoFocus`: we type directly in it.
     await page.keyboard.type(ISSUE.title, { delay: 6 });

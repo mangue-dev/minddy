@@ -25,6 +25,7 @@ export async function openPage({
   locale = "fr",
   authed = true,
   viewport = CAPTURE.viewport,
+  frozenNow = CAPTURE.frozenNow,
 } = {}) {
   loadEnv();
 
@@ -82,7 +83,7 @@ export async function openPage({
       // @ts-ignore
       window.Date = Frozen;
     },
-    [theme, CAPTURE.frozenNow],
+    [theme, frozenNow],
   );
 
   await context.addCookies([

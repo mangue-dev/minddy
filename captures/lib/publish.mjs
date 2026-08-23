@@ -182,12 +182,12 @@ export async function writeManifest() {
   });
 
   const lines = [
-    "// GÉNÉRÉ — ne pas éditer à la main.",
+    "// GENERATED — do not edit manually.",
     "//",
-    "// Produit par `node captures/lib/publish.mjs` à partir du contenu réel de",
-    "// `public/captures/`. Chaque entrée vaut `<emplacement>-<langue>-<thème>`",
-    "// et garantit que le fichier existe : la landing ne pointe donc jamais une",
-    "// image absente, elle rend son cadre de réservation à la place.",
+    "// Produced by `node captures/lib/publish.mjs` from the actual contents of",
+    "// `public/captures/`. Each entry is `<slot>-<locale>-<theme>` and confirms",
+    "// that the file exists, so the landing page never references a missing image",
+    "// and renders its placeholder frame instead.",
     "",
     "export const PUBLISHED_SCREENSHOTS: ReadonlySet<string> = new Set([",
     ...published.map((key) => `  "${key}",`),

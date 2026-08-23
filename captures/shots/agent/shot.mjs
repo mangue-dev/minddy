@@ -31,7 +31,6 @@ const TRACE = [
   "components/palette/provider.tsx",
   "components/palette/row.tsx",
   "pnpm vitest run palette",
-  "numo/aur-2-palette-shortcuts",
 ];
 
 const PUBLISH = process.argv.includes("--publish");
@@ -82,9 +81,13 @@ async function capture({ locale, theme }) {
     // This wording is translated; we rebuild it from the catalog rather than
     // copy it, and we only keep the first half — the separator and the
     // sentence case are set by the component, not by a key.
-    const readSummary = await toolCallLabel(locale, "summaryRead", 2);
+    const readSummaries = await Promise.all(
+      ["fr", "en"].map((lang) => toolCallLabel(lang, "summaryRead", 2)),
+    );
     const readGroup = page
-      .getByRole("button", { name: new RegExp(escapeRe(readSummary), "i") })
+      .getByRole("button", {
+        name: new RegExp(readSummaries.map(escapeRe).join("|"), "i"),
+      })
       .first();
     await readGroup.click();
     await page
@@ -96,19 +99,21 @@ async function capture({ locale, theme }) {
     await page.mouse.move(600, 60);
     await page.waitForTimeout(400);
 
-    const editsLabel = await applyEditsLabel(locale);
+    const editsLabels = await Promise.all(
+      ["fr", "en"].map((lang) => applyEditsLabel(lang)),
+    );
     const check = await page.evaluate(
-      ({ trace, editsLabel }) => {
+      ({ trace, editsLabels }) => {
         const main = document.querySelector("main");
         const text = main?.textContent || "";
         return {
           missing: trace.filter((t) => !text.includes(t)),
-          hasEdits: text.includes(editsLabel),
+          hasEdits: editsLabels.some((label) => text.includes(label)),
           // The faulty wording before correction, whatever the language.
           zeroEdits: /(0 fichier|0 file)/.test(text),
         };
       },
-      { trace: TRACE, editsLabel },
+      { trace: TRACE, editsLabels },
     );
 
     if (check.missing.length > 0) {
@@ -119,7 +124,7 @@ async function capture({ locale, theme }) {
     }
     if (!check.hasEdits) {
       throw new Error(
-        `${locale}/${theme} — « ${editsLabel} » ne s'affiche pas` +
+        `${locale}/${theme} — aucun libellé d'édition de 3 fichiers ne s'affiche` +
           (check.zeroEdits
             ? `, le fil annonce zéro fichier édité. La correction de ` +
               `components/assistant/tool-call-display.tsx n'est pas en production : ` +
@@ -130,7 +135,7 @@ async function capture({ locale, theme }) {
 
     const path = `${OUT}/${locale}-${theme}.png`;
     await shoot(page, path);
-    return { path, locale, theme, editsLabel };
+    return { path, locale, theme, editsLabel: editsLabels.find((label) => check.hasEdits) };
   } finally {
     await browser.close();
   }

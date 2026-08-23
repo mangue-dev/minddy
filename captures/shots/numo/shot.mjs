@@ -37,6 +37,9 @@ const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
  */
 const VIEWPORT = { width: 1200, height: 900 };
 
+/** Keep the seeded conversation within the panel's rolling 30-day list. */
+const LISTING_NOW = "2026-08-23T10:30:00.000Z";
+
 /** Title of the conversation sown — a piece of data, therefore the same in both languages. */
 const CONVERSATION = "Sweep the unassigned backlog";
 
@@ -64,11 +67,17 @@ const DURATION = /\b1\b[^0-9]*\b3\b/;
  * copied: a capture must not continue to pass if the product changes
  * ce texte.
  */
-async function toolLabels(locale) {
-  return Promise.all([
-    toolCallLabel(locale, "foundIssues", 3),
-    toolCallLabel(locale, "issuesUpdated", 2),
-  ]);
+async function toolLabels() {
+  return (
+    await Promise.all(
+      ["fr", "en"].map((locale) =>
+        Promise.all([
+          toolCallLabel(locale, "foundIssues", 3),
+          toolCallLabel(locale, "issuesUpdated", 2),
+        ]),
+      ),
+    )
+  ).flat();
 }
 
 const PUBLISH = process.argv.includes("--publish");
@@ -80,7 +89,12 @@ const VARIANTS = [
 ];
 
 async function capture({ locale, theme }) {
-  const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
+  const { browser, page } = await openPage({
+    theme,
+    locale,
+    viewport: VIEWPORT,
+    frozenNow: LISTING_NOW,
+  });
   try {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-1" });
@@ -101,8 +115,20 @@ async function capture({ locale, theme }) {
     // No conversation is restored: `localStorage` is blank in a
     // capture context. We go through the list, and aim for the title — a
     // English data, valid for both languages.
-    await panel.getByRole("button", { name: "Conversations" }).click();
-    await page.getByText(CONVERSATION, { exact: false }).first().click();
+    const historyTrigger = panel.getByRole("button", { name: "Conversations" });
+    const conversationButton = page.getByRole("button", { name: new RegExp(CONVERSATION) });
+    let opened = false;
+    for (let attempt = 0; attempt < 3 && !opened; attempt += 1) {
+      await historyTrigger.click();
+      opened = await conversationButton
+        .waitFor({ state: "visible", timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false);
+    }
+    if (!opened) {
+      throw new Error(`${locale}/${theme} — la liste des conversations ne s'est pas ouverte.`);
+    }
+    await conversationButton.click();
     await page
       .getByText("Nobody owns anything", { exact: false })
       .waitFor({ state: "visible", timeout: 15_000 });
@@ -142,9 +168,9 @@ async function capture({ locale, theme }) {
     await page.evaluate(() => document.activeElement?.blur?.());
     await page.waitForTimeout(400);
 
-    const labels = await toolLabels(locale);
+    const labels = await toolLabels();
     const check = await page.evaluate(
-      ({ labels, viewName }) => {
+      ({ labels, viewNames }) => {
         const dialog = document.querySelector('[role="dialog"]');
         const log = dialog?.querySelector('[role="log"]');
         const text = log?.textContent || "";
@@ -158,11 +184,11 @@ async function capture({ locale, theme }) {
           hasSummary: !!log && /\b1\b[^0-9]*\b3\b/.test(text),
           hasInstruction: text.includes("Nobody owns anything"),
           hasOutcome: text.includes("AUR-11") && text.includes("AUR-7"),
-          hasContext: (dialog?.textContent || "").includes(viewName),
+          hasContext: viewNames.some((viewName) => (dialog?.textContent || "").includes(viewName)),
           tips,
         };
       },
-      { labels, viewName: DEFAULT_VIEW_NAMES[locale] },
+      { labels, viewNames: Object.values(DEFAULT_VIEW_NAMES) },
     );
 
     if (!check.hasInstruction) {

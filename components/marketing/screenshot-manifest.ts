@@ -1,9 +1,9 @@
-// GENERATED — do not edit by hand.
+// GENERATED — do not edit manually.
 //
-// Produced by `node captures/lib/publish.mjs` from actual content of
-// `public/captures/`. Each entry is named `<slot>-<locale>-<theme>`
-// and guarantees that the file exists: the landing therefore never points to a
-// image missing, it returns its reservation frame instead.
+// Produced by `node captures/lib/publish.mjs` from the actual contents of
+// `public/captures/`. Each entry is `<slot>-<locale>-<theme>` and confirms
+// that the file exists, so the landing page never references a missing image
+// and renders its placeholder frame instead.
 
 export const PUBLISHED_SCREENSHOTS: ReadonlySet<string> = new Set([
   "featureCycle-en-dark",
