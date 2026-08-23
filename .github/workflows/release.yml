@@ -54,6 +54,9 @@ jobs:
       - name: Public repository check
         run: node scripts/check-public-repo.mjs
 
+      - name: Remote public namespace check
+        run: node scripts/check-public-repo.mjs --remote origin
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10.28.0

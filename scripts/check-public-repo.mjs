@@ -9,13 +9,20 @@
  * `--worktree` applies the same rules to files not yet indexed.
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { extname } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { extname, join } from "node:path";
+import { createHash } from "node:crypto";
 
 const staged = process.argv.includes("--staged");
 const worktree = process.argv.includes("--worktree");
-if (staged && worktree) {
-  throw new Error("--staged and --worktree are incompatible");
+const remoteFlag = process.argv.indexOf("--remote");
+const remoteName = remoteFlag === -1 ? null : process.argv[remoteFlag + 1];
+if (remoteFlag !== -1 && (!remoteName || remoteName.startsWith("-"))) {
+  throw new Error("--remote requires the name of a configured Git remote");
+}
+if ([staged, worktree, Boolean(remoteName)].filter(Boolean).length > 1) {
+  throw new Error("--staged, --worktree and --remote are mutually exclusive");
 }
 const textExtensions = new Set([".cjs", ".css", ".html", ".js", ".json", ".md", ".mjs", ".sh", ".ts", ".tsx", ".txt", ".yml", ".yaml"]);
 const fixturePath = /(?:^|\/)(?:fixtures?|__tests__)(?:\/|$)|\.test\.[cm]?[jt]sx?$/;
@@ -91,23 +98,32 @@ const privateSurfaceContent = [
   },
 ];
 
+let repository = process.cwd();
+
+function redactRemoteUrl(value) {
+  return value.replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi, "$1***@");
+}
+
 function git(args) {
   return execFileSync("git", args, {
+    cwd: repository,
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024,
+    env: { ...process.env, GIT_NO_REPLACE_OBJECTS: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
 }
 
 function checkedGit(args, input) {
   const result = spawnSync("git", args, {
-    cwd: process.cwd(),
+    cwd: repository,
     input,
     encoding: null,
     maxBuffer: 512 * 1024 * 1024,
+    env: { ...process.env, GIT_NO_REPLACE_OBJECTS: "1" },
   });
   if (result.status !== 0) {
-    throw new Error(result.stderr?.toString("utf8") || `git ${args.join(" ")} failed`);
+    throw new Error(redactRemoteUrl(result.stderr?.toString("utf8") || `git ${args.join(" ")} failed`));
   }
   return result.stdout;
 }
@@ -133,8 +149,23 @@ function scanText(path, text, failures, prefix = "") {
  * in a commit that would be made public. Local tooling private refs
  * (e.g. `refs/codex/*`) are not part of a standard push and should not cause the post to fail. Inaccessible objects are not pushed by Git: the purge procedure is documented in the audit.
  */
-function scanReachableHistory(failures) {
-  const entries = git(["rev-list", "--objects", "HEAD", "--branches", "--tags", "--remotes=origin"])
+function refInventory(includeAllRefs) {
+  const prefixes = includeAllRefs
+    ? ["refs"]
+    : ["refs/heads", "refs/tags", "refs/remotes/origin", "refs/pull", "refs/replace", "refs/notes"];
+  return git(["for-each-ref", "--format=%(refname)%00%(objectname)%00%(objecttype)", ...prefixes])
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [name, object, type] = line.split("\0");
+      return { name, object, type };
+    });
+}
+
+function scanReachableHistory(failures, includeAllRefs = false) {
+  const refs = refInventory(includeAllRefs);
+  const entries = checkedGit(["rev-list", "--objects", "--stdin"], `${refs.map(({ object }) => object).join("\n")}\n`)
+    .toString("utf8")
     .split("\n")
     .filter(Boolean)
     .map((line) => {
@@ -156,7 +187,7 @@ function scanReachableHistory(failures) {
     .map((line) => line.split(" "))
     .filter(([, type]) => type === "blob")
     .map(([id, , rawSize]) => ({ id, size: Number(rawSize) }));
-  if (blobs.length === 0) return { objects: objectIds.length, blobs: 0 };
+  if (blobs.length === 0) return { refs, objects: objectIds.length, blobs: 0 };
 
   const batches = [];
   let current = [];
@@ -195,7 +226,51 @@ function scanReachableHistory(failures) {
       );
     }
   }
-  return { objects: objectIds.length, blobs: blobs.length };
+  return { refs, objects: objectIds.length, blobs: blobs.length };
+}
+
+function scanUnexpectedObjects(failures) {
+  const output = git(["fsck", "--no-reflogs", "--unreachable", "--no-dangling"]);
+  const count = output.split("\n").filter((line) => line.startsWith("unreachable ")).length;
+  if (count > 0) failures.push(`${count} unreachable object(s) retained in the scanned repository`);
+  return count;
+}
+
+function scanRemote(remote) {
+  const remoteUrl = git(["remote", "get-url", remote]).trim();
+  const temporaryRoot = mkdtempSync(join(tmpdir(), "minddy-public-repository-"));
+  const mirror = join(temporaryRoot, "repository.git");
+  try {
+    // A mirror avoids trusting the caller's remote-tracking configuration.
+    // GitHub does not advertise pull-request refs by default, so fetch their
+    // two documented namespaces explicitly before scanning every mirror ref.
+    checkedGit(["clone", "--mirror", "--no-local", remoteUrl, mirror]);
+    repository = mirror;
+    checkedGit(["fetch", "--prune", "origin", "+refs/pull/*/head:refs/pull/*/head", "+refs/pull/*/merge:refs/pull/*/merge", "+refs/replace/*:refs/replace/*", "+refs/notes/*:refs/notes/*"]);
+    const failures = [];
+    const history = scanReachableHistory(failures, true);
+    const unreachable = scanUnexpectedObjects(failures);
+    return { failures, history, unreachable };
+  } finally {
+    repository = process.cwd();
+    rmSync(temporaryRoot, { force: true, recursive: true });
+  }
+}
+
+if (remoteName) {
+  const { failures, history, unreachable } = scanRemote(remoteName);
+  const fingerprint = createHash("sha256")
+    .update(history.refs.map(({ name, object, type }) => `${name}\0${object}\0${type}\n`).sort().join(""))
+    .digest("hex");
+  const summary = `${history.refs.length} refs, ${history.blobs} blobs in ${history.objects} reachable Git objects, ${unreachable} unreachable objects, ref inventory SHA-256 ${fingerprint}`;
+  if (failures.length) {
+    console.error("The remote public namespace cannot contain:");
+    for (const failure of failures) console.error(`- ${failure}`);
+    console.error(`Remote inventory: ${summary}.`);
+    process.exit(1);
+  }
+  console.log(`Remote public namespace check passed (${summary}).`);
+  process.exit(0);
 }
 
 const rawPaths = staged
