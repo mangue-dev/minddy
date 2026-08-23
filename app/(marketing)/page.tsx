@@ -4,6 +4,7 @@ import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { HeroShader } from "@/components/marketing/hero-shader";
 import { Hero } from "@/components/marketing/hero";
+import { SectionEditions } from "@/components/marketing/section-editions";
 import { SectionTracker } from "@/components/marketing/section-tracker";
 import { SectionSpeed } from "@/components/marketing/section-speed";
 import { SectionAgents } from "@/components/marketing/section-agents";
@@ -59,6 +60,7 @@ export default async function LandingPage() {
       <SectionFeedback />
       <SectionMore />
       <SectionOpenSource />
+      <SectionEditions />
       <SectionPricingTeaser />
       <SectionFaq />
       <SectionCta />

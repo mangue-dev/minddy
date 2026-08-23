@@ -33,12 +33,14 @@ starting Next.js. See [CONTRIBUTING.md](CONTRIBUTING.md) before running code fro
 an untrusted pull request: dependency installation, tests, and development
 commands execute repository code.
 
-The [self-hosted distribution contract](docs/self-hosting-distribution.md)
-defines the two supported paths, compatibility matrix, release guarantees, and
-operator responsibilities. For a reproducible local or self-hosted Supabase
-bootstrap, see [docs/self-hosting.md](docs/self-hosting.md). On a fresh local
-clone, use `pnpm bootstrap:supabase` before `pnpm dev` instead of manually
-applying SQL in the Supabase dashboard. After installation, follow the
+Minddy Cloud is the hosted and operated option from Minddy. **Self-hosted** is
+the same public core on infrastructure you control: no Minddy account, Stripe,
+PostHog, or managed provider is required. The [edition guide](docs/editions.md)
+explains the choice, data flows, responsibilities, and costs in one place. For
+a reproducible local or self-hosted Supabase bootstrap, see
+[docs/self-hosting.md](docs/self-hosting.md). On a fresh local clone, use
+`pnpm bootstrap:supabase` before `pnpm dev` instead of manually applying SQL in
+the Supabase dashboard. After installation, follow the
 [self-hosted operations runbook](docs/self-hosting-operations.md) for upgrades,
 coordinated Postgres and Storage backups, disaster recovery, and rollback.
 Release acceptance is recorded with the isolated

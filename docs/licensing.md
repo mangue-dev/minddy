@@ -14,7 +14,7 @@ The term "AGPL-3.0-only" is intentional: no future migration to another version 
 
 There is **no distributed Enterprise edition** or proprietary core-loaded module. Everything needed to install, administer, use, export and scale self-hosted minddy belongs to the AGPL core: web application, API, database schema and migrations, desktop client, published CLI/tooling and operating documentation.
 
-Revenue can come from services that are not a distribution or extension of the core: managed hosting, support/SLA, migration, training and private operations (billing, support, fleet monitoring, service account management). These surfaces must live outside this deposit and communicate with the heart through documented protocols. They must not contain a function necessary for normal use of the self-hosted edition.
+Revenue can come from services that are not a distribution or extension of the core: managed hosting, support/SLA, migration, training and private operations (billing, support, fleet monitoring, service account management). These surfaces must live outside this repository and communicate with the core through documented protocols. They must not contain a function necessary for normal use of the self-hosted edition. Minddy Cloud is one such operated service; self-hosted minddy remains the same public core, not a reduced license tier. See [the edition guide](editions.md).
 
 A future commercial edition can only be decided after a new check of the chain of rights. Without a CLA or assignment explicitly covering the dual license, the rights holders of each contribution concerned will have to authorize this commercial license; the AGPL alone does not allow this.
 
@@ -40,4 +40,3 @@ The license relates to copyright and any patents, not to trademarks. Any rights 
 - Keys, customer data, production configurations and hosting infrastructure are not part of the corresponding source code and should never be published.
 
 This policy must be reviewed before each modification of the boundary between the core and a commercial area, and each time code or assets from an external source are added.
-

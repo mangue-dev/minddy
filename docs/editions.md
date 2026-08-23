@@ -1,138 +1,111 @@
-# Editions and managed services
+# Minddy Cloud and self-hosted
 
-## Decision
+## The promise
 
-minddy is an **AGPL-3.0-only** core that can be installed and used without a
-minddy account, Stripe, minddy AI credits, or calls to infrastructure operated
-by minddy. An installation is self-hosted by default. Services operated by
-minddy are explicit opt-ins: an environment key alone does not activate them.
+Minddy Cloud is the hosted, operated option from Minddy. Self-hosted minddy is
+the same public AGPL-3.0-only core running on infrastructure you choose. It
+does not need a Minddy account, Stripe, PostHog, or any Minddy-managed provider.
 
-| Perimeter | Self-Hosted Core (AGPL) | Cloud minddy | Possible business service |
-| --- | --- | --- | --- |
-| Product | Application, API, migrations, exports, desktop, MCP and administration | Same heart, hosted and operated by minddy | No modules distributed to date |
-| Data and accounts | Operator Instance and Supabase | Operated by minddy | Cannot become necessary to the heart |
-| Payment | No Stripe required; no map or plan blocks the heart | Stripe, only when `MINDDY_MANAGED_BILLING=1` and its configuration is complete | Support, SLA, migration or exploitation, outside of this repository |
-| AI | BYOK to a chosen provider, or local endpoint/self-hosted model; the key and the cost remain with the operator | Minddy quota only when `MINDDY_MANAGED_AI=1` and OpenRouter is configured | Can be operated as a separate service, never as a heart lock |
-| Limits | No commercial limits on projects, tickets, members or agents | Plans and quotas measured in the ledger, according to the cloud contract | To be re-decided after checking the chain of rights |
+There is no reduced self-hosted edition and no private module required for
+normal use. The choice is about who operates the service, holds provider
+accounts, performs backups and upgrades, and supplies support—not about which
+product features a person is allowed to use.
 
-## Configuration contract
+## Which should I choose?
 
-- `MINDDY_MANAGED_BILLING=1` enables Stripe integration **if** secrets and
-  the required price IDs are present. Otherwise the service is unavailable; no
-  Stripe request is sent and purchase routes return `503`.
-- `MINDDY_MANAGED_AI=1` authorizes the OpenRouter platform key. Without this opt-in,
-  minddy never chooses `OPENROUTER_API_KEY` as a fallback: an AI call requires
-  a BYOK key or a local endpoint configured by the operator.
-- These two flags are the only edition selection. The hostname, Vercel, the
-  branch name and a customer ID cannot activate billing or
-  managed quota, including on `minddy.app` and on the `production` branch.
-- The cloud interface only displays purchases, Stripe portal, budget and limits
-  when the corresponding abilities are active. The API exposes these
-  capabilities so that customers never infer a right from a key or
-  default plan.
-- `MINDDY_EDITION=cloud` selects Cloud-managed billing and AI only; it does not
-  activate code execution. Minddy Cloud deployments that offer routines must
-  set `AGENT_EXECUTION_BACKEND=vercel` explicitly. Without it, a scheduled
-  routine is skipped with `executionBackendUnavailable`.
-- `AGENT_EXECUTION_BACKEND=vercel` authorizes the creation or awakening of a
-  Vercel Sandbox. Vercel identifiers present for domains
-  therefore never trigger compute. On a Vercel-hosted deployment, Sandbox uses
-  OIDC. Outside Vercel, set `VERCEL_TOKEN`, `VERCEL_TEAM_ID`,
-  `VERCEL_PROJECT_ID`, and `MINDDY_PUBLIC_APP_URL` so the application can use
-  the operator's Vercel Sandbox project. `AGENT_EXECUTION_BACKEND=self-hosted`
-  uses the built-in server runner and is the default in the reference Compose
-  profiles. `AGENT_EXECUTION_BACKEND=local` is limited to desktop-initiated runs
-  and cannot execute scheduled routines.
-- `EMAIL_PROVIDER=resend` is required before any call to the Resend API. The
-  senders are mandatory and instance-specific; no minddy domain is chosen by
-  default.
-- PostHog is an optional public core provider, not a reserved capacity
-  for the Cloud. Each surface requires its own pair:
-  `MINDDY_PUBLIC_POSTHOG_KEY` + `MINDDY_PUBLIC_POSTHOG_HOST` for the browser,
-  `POSTHOG_API_KEY` + `POSTHOG_HOST` for the server. A missing server pair
-  can reuse the full public pair; two half pairs are never
-  assembled. The operator therefore chooses the PostHog destination, while
-  Minddy Cloud provides its own operating configuration.
-- Web Push requires an explicit `VAPID_SUBJECT`, and APNs require an explicit `APNS_BUNDLE_ID`.
-- Vercel Analytics and Speed Insights are displayed on public pages only
-  with `MINDDY_PUBLIC_VERCEL_ANALYTICS=1`.
-- Built-in Git providers target `github.com` and `gitlab.com`. Self-hosted
-  forges are not supported until a configurable provider exists.
-- The managed forge relay (docs/managed-forge-relay-plan.md) lets a self-hosted
-  instance use the GitHub App and GitLab OAuth app operated by minddy instead
-  of operator-owned apps. It is the DEFAULT on the self-hosted edition: with
-  no operator-owned app and no explicit opt-out, the instance provisions its
-  relay identity automatically on first connect (credentials stored in its own
-  database) — no relay variable to set. Explicit variables
-  (`MINDDY_FORGE_RELAY_URL` + `MINDDY_FORGE_RELAY_INSTANCE_ID` +
-  `MINDDY_FORGE_RELAY_SECRET`) override the automatic provisioning;
-  `MINDDY_FORGE_RELAY=0` opts out entirely. The Cloud side of the relay
-  additionally requires `MINDDY_EDITION=cloud` and `MINDDY_MANAGED_FORGE=1`
-  (the relay API — instance registry, token minting, link mirror — lives in
-  this codebase and answers 503 without that gate). An operator-owned app,
-  when configured, takes precedence for new connections — an existing
-  connection keeps the channel it was established through until it is
-  reconnected via the other one.
+Choose **Minddy Cloud** when you want Minddy to run the application and its
+operational dependencies for you. It is the right fit when a managed service,
+Cloud billing, and product support matter more than controlling the hosting
+stack.
 
-Old deductions based on Vercel deployment or origin
-`*.minddy.app` no longer selects managed services. Cloud deployment
-must provide the same explicit flags as any operator.
+Choose **self-hosted** when you need to control the hosting location, data
+destinations, provider accounts, or upgrade schedule, and can take on the
+operational work. A single developer can run it locally; a team can operate a
+documented server installation.
 
-The executable catalog of these decisions lives in `lib/capabilities.ts`. It
-classifies each capability (`required`, `replaceable`, `optional`), lists
-missing variables, and produces the diagnosis used by the server guards.
+Examples:
 
-## BYOK, local models and managed quota
+- A small product team that does not want to operate databases or backups uses
+  Minddy Cloud.
+- A company with residency requirements runs self-hosted minddy and selects its
+  own Supabase, storage, email, analytics, AI, and Git providers.
+- An individual developer runs the local self-hosted route with no public
+  domain, Minddy account, or optional integration.
 
-**BYOK** is a user-provided key for a remote provider. The
-provider then bills the key holder for the tokens. A **self-hosted model** is a
-local or private endpoint configured by the operator; no call leaves the
-infrastructure designated by that endpoint. The **mindy quota**
-is distinct: it only applies to the tokens and compute actually provided
-by the minddy cloud, and its cost is recorded in `ai_usage`.
+## Responsibility and data matrix
 
-So a self-hosted installation can voluntarily use OpenRouter
-with its own BYOK key; this does not transform this instance into a client of the
-quota minddy. Conversely, a cloud instance that offers the platform key
-continues to measure its calls and compute before serving them.
+| Question | Minddy Cloud | Self-hosted |
+| --- | --- | --- |
+| Who is it for? | Teams that want a service operated by Minddy. | Operators who want infrastructure and provider control. |
+| Is the product different? | No. It runs the public core. | No. It runs the same public core and release artifacts. |
+| Who runs the app, database, Storage, and scheduler? | Minddy. | The operator, using the supported deployment paths. |
+| Who owns the provider accounts? | Minddy for services it operates. | The operator chooses and owns every configured provider account. |
+| Where does instance data go? | To the services configured and operated for Minddy Cloud. | It stays in operator-selected infrastructure unless the operator explicitly enables an integration. |
+| Is a Minddy account required? | Yes, to use Cloud. | No. |
+| Is Stripe required? | Only for Minddy Cloud subscriptions. | No. |
+| Is PostHog required? | Minddy Cloud may configure it for its service. | No. It is off unless the operator configures an endpoint. |
+| Are AI, email, Git, push, analytics, or managed services required? | Cloud can operate selected services. | No. Each is optional and disabled until configured. BYOK and local AI endpoints are supported choices. |
+| Who creates backups and runs restores? | Minddy, as part of operating Cloud. | The operator: database, Storage, configuration, retention, and restore drills. |
+| Who applies updates and handles incidents? | Minddy. | The operator follows the versioned upgrade and operations runbooks. |
+| What support is included? | The Cloud support terms apply. | Release tooling and best-effort community help for reproducible core defects; no SLA or infrastructure operation. |
+| What does it cost? | Cloud subscription and any applicable service usage. | The operator pays its infrastructure and optional providers. |
 
-## CI matrix of editions
+## Self-hosted data flows
 
-The `Édition / …` job of `.github/workflows/ci.yml` executes each scenario in
-a disposable GitHub Actions job, without `secrets.*`. The values under
-`test/fixtures/editions/` are dummy tokens that provide access to no supplier.
-The two deployable editions (`self-hosted-minimal` and
-`minddy-cloud`) also go through `next build`, then a real HTTP start;
-partial configurations are tested as unavailable capacities.
+With only required configuration, a self-hosted instance communicates with its
+operator-selected application host and Supabase stack. It does not call Minddy
+Cloud, Stripe, PostHog, OpenRouter, or any other managed provider by default.
+Optional capabilities make their own outbound calls only after the operator
+enables or connects them. GitHub and GitLab may use the managed forge relay as
+their connection channel when an operator explicitly starts that integration;
+operator-owned provider apps and the explicit relay opt-out remain available.
 
-| Fixture | Expected |
-| --- | --- |
-| `self-hosted-minimal.env` | The core starts without Stripe or managed AI; no commercial guard reads the plan. |
-| `self-hosted-byok.env` | The operator key is the payer; no quota, ledger or Minddy supplier account is consulted. |
-| `minddy-cloud.env` | Billing and managed AI are ready; plan guards, Stripe webhook, platform payer and quota are active. |
-| `partial-billing.env` | Billing is announced `incomplete`, missing variables are listed and the webhook responds `503`. |
-| `partial-ai.env` | Managed AI is announced `incomplete` and the runtime refuses any platform fallback. |
-| `implicit-identifiers.env` | Domain `minddy.app`, Vercel, branch `production`, client identifier and keys present remain self-hosted without opt-in. |
-| `managed-forge.env` | The instance starts without any operator-owned forge app; GitHub and GitLab are announced as served by the managed forge relay, and no local app variable is read. |
+This includes AI, email, GitHub/GitLab, web push, analytics, and any external
+object storage. A self-hosted operator should review each provider's data terms
+before enabling it. The configuration and doctor commands report incomplete
+optional capabilities instead of selecting a fallback provider.
 
-The integration test covers together `lib/managed-services.ts`, the catalog of
-capabilities, `lib/server/entitlements.ts`, the Stripe adapter and webhook,
-`lib/server/ai-runtime.ts` and `lib/server/agent/quota.ts`. To replay a
-fixture locally from the repository root:
+## Supported self-hosted operation
 
-```bash
-set -a
-source test/fixtures/editions/self-hosted-minimal.env
-set +a
-pnpm exec vitest run lib/server/editions.integration.test.ts
-```
+The two supported paths, release compatibility, upgrade guarantees, and
+operator responsibilities are in the
+[self-hosted distribution contract](self-hosting-distribution.md). The quick
+summary is:
 
-## Repository boundary
+- use the tagged source or official image from
+  [`mangue-dev/minddy`](https://github.com/mangue-dev/minddy);
+- run a Next.js application and a Supabase stack that provides Postgres, Auth,
+  Storage, and Realtime;
+- use the documented compatibility matrix and verification commands;
+- maintain TLS, secrets, host patching, monitoring, backups, restore tests, and
+  upgrades for a shared deployment.
 
-The boundary follows the [licensing policy](licensing.md): the core and
-everything necessary for normal use remains in this AGPL repository. Billing,
-support, fleet supervision, operations, and any future business commitments
-live in a separate service or repository and use documented protocols.
-There is currently no Enterprise package or proprietary extension
-chargeable by the core. Any change to this boundary requires the chain-of-rights
-review specified by `docs/licensing.md`.
+The core intentionally does not support PostgreSQL alone, unpinned derivative
+Supabase stacks, or self-managed GitHub Enterprise/GitLab adapters. Those are
+compatibility limits, not feature gates.
+
+## Managed capabilities are explicit opt-ins
+
+`MINDDY_MANAGED_BILLING=1` enables Stripe integration only when its complete
+configuration is present. `MINDDY_MANAGED_AI=1` authorizes the Cloud-managed
+OpenRouter platform key only when it is configured. `MINDDY_EDITION=cloud`
+selects Cloud-managed billing and AI; it never activates code execution by
+itself. A hostname, Vercel deployment, branch name, customer ID, or environment
+key cannot silently switch an installation to Cloud or enable a provider.
+
+PostHog needs a complete browser or server pair, `EMAIL_PROVIDER=resend` needs
+the operator's sender configuration, and Vercel Analytics needs an explicit
+public flag. The executable catalog in `lib/capabilities.ts` classifies each
+capability and reports missing configuration.
+
+The CI edition matrix tests the minimal self-hosted, BYOK, Cloud, partial
+configuration, and implicit-identifier scenarios without real provider
+credentials. See `test/fixtures/editions/` and
+`lib/server/editions.integration.test.ts`.
+
+## Distribution boundary
+
+Everything required to install, administer, use, export, and scale the core is
+in this AGPL repository. Cloud hosting, support, billing, fleet supervision,
+and any future commercial commitments are operated services rather than a
+separate product edition. See [the licensing policy](licensing.md).

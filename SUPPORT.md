@@ -1,14 +1,19 @@
 # Support
 
+Minddy Cloud is operated by Minddy; self-hosted minddy is the same public core
+operated by its installer. The [edition guide](docs/editions.md) explains the
+hosting, data, provider, backup, and update responsibilities before you choose
+a support channel.
+
 ## Choose the right channel
 
 | Need | Channel | Commitment |
 | --- | --- | --- |
-| Install, configure or use open source core | [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions) | Public assistance, to the best of availability, without guaranteed delay |
+| Install, configure or use the self-hosted open-source core | [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions) | Public assistance, to the best of availability, without guaranteed delay; the operator remains responsible for its infrastructure and data |
 | Reproducible core bug | [Bug form](https://github.com/mangue-dev/minddy-issues/issues/new?template=bug_report.yml) | Community triage, with no guarantee of fix or timeline |
 | Evolution of the heart | [Improvement form](https://github.com/mangue-dev/minddy-issues/issues/new?template=feature_request.yml) | Public discussion; acceptance does not constitute a commitment to delivery |
 | Vulnerability or proof of exploitation | [SECURITY.md](SECURITY.md#12-report-vulnerability) | Private channel and coordinated disclosure |
-| Hosted account, billing or managed service data | [hello@minddy.app](mailto:hello@minddy.app) | Private support according to the conditions of the subscribed offer |
+| Minddy Cloud account, billing or managed service data | [hello@minddy.app](mailto:hello@minddy.app) | Private support according to the conditions of the subscribed Cloud offer |
 | SLA, migration, training or support | [hello@minddy.app](mailto:hello@minddy.app) | Commercial service distinct from the community project |
 
 ## Community support

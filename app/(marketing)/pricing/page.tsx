@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import Link from "next/link";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
+import { localizedHref } from "@/lib/locale-href";
 import { PricingPlans } from "@/components/marketing/pricing-plans";
 import { PricingComparison } from "@/components/marketing/pricing-comparison";
-import { SectionByok } from "@/components/marketing/section-byok";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { StructuredData } from "@/components/marketing/structured-data";
@@ -18,9 +19,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PricingPage() {
-  const [t, tl] = await Promise.all([
+  const [t, tl, locale] = await Promise.all([
     getTranslations("Pricing"),
     getTranslations("Landing"),
+    getLocale(),
   ]);
 
   const faqItems = PRICING_FAQ_KEYS.map((key) => ({
@@ -44,6 +46,12 @@ export default async function PricingPage() {
             <p className="text-lg leading-relaxed text-pretty text-muted-foreground">
               {t("heroSubtitle")}
             </p>
+            <p className="mt-5 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+              {t("cloudNotice")} {" "}
+              <Link href={localizedHref("/self-hosting", locale as Locale)} className="font-medium text-foreground underline underline-offset-4">
+                {t("cloudNoticeCta")}
+              </Link>
+            </p>
           </header>
 
           {/* On this page the cards directly follow the `<h1>`: they
@@ -51,11 +59,6 @@ export default async function PricingPage() {
           <PricingPlans headingLevel={2} />
         </div>
       </section>
-
-      {/* Just after the cards, before the board: this is the answer to the
- question that prices just asked (MIN-149). The included usage is
- a convenience; who already has a key does not have to be counted. */}
-      <SectionByok />
 
       <section className="border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">

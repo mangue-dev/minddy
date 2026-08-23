@@ -132,7 +132,7 @@ export async function Hero() {
               downloadLabel={t("heroCtaDownload")}
               browserLabel={t("ctaButton")}
             />
-            {/* The secondary action no longer targets /pricing: request the price from
+            {/* The secondary action now makes the hosting choice visible before a
                 someone who has just read the title arrives too early, and the note
                 just below already answers (“free up to 2 projects”).
                 It sends the ticket → pull request route, the question
@@ -143,7 +143,7 @@ export async function Hero() {
                 in the page. Leaving him there would inflate “hero” with people who
                 just wanted to read more. */}
             <Button asChild size="lg" variant="outline">
-              <a href={href("/#workflow")}>{t("heroCtaSecondary")}</a>
+              <a href={href("/self-hosting")}>{t("heroCtaSecondary")}</a>
             </Button>
           </div>
 

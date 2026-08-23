@@ -16,6 +16,8 @@ import {
 import { planFeatureLabels } from "@/lib/plan-features";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
+import { localizedHref } from "@/lib/locale-href";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Public sitemap maps (MIN-73). Same grid and same hierarchy as
@@ -185,6 +187,12 @@ export function PricingPlans({ headingLevel = 3 }: { headingLevel?: 2 | 3 } = {}
       </div>
 
       <p className="text-center text-xs text-muted-foreground">{tl("pricingNote")}</p>
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+        {tl("pricingSelfHostedNote")} {" "}
+        <Link href={localizedHref("/self-hosting", locale as Locale)} className="font-medium text-foreground underline underline-offset-4">
+          {tl("pricingSelfHostedCta")}
+        </Link>
+      </p>
     </div>
   );
 }

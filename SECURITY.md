@@ -5,8 +5,10 @@ authentication, authorization, encryption and public surfaces
 are designed, and what to do in the event of an incident. It completes the decisions
 recorded over time in migrations and code — it does not replace them.
 
-**Stack:** Next.js (App Router) + Supabase (PostgreSQL, Auth, Storage), deployed
-on Vercel (native HTTPS, HTTP→HTTPS redirection managed by the platform).
+**Stack:** Next.js (App Router) + Supabase (PostgreSQL, Auth, Storage). Minddy
+Cloud is operated on its managed infrastructure; self-hosted operators select
+and secure their own supported hosting stack. The edition and data-flow boundary
+is documented in [docs/editions.md](docs/editions.md).
 
 ## Supported versions
 
