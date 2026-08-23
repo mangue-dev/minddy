@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
@@ -17,8 +18,6 @@ import { ChevronRight, GitPullRequest, ListFilter, Plus } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";
-import { PrDetail } from "@/components/pull-requests/pr-detail";
-import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
@@ -46,6 +45,27 @@ import type {
   PullRequestListResponse,
   PullRequestStateFilter,
 } from "@/lib/agent-api";
+
+const PrDetail = dynamic(
+  () => import("@/components/pull-requests/pr-detail").then((m) => m.PrDetail),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
+        <Skeleton className="h-9 w-full rounded-lg" />
+        <Skeleton className="min-h-0 flex-1 rounded-xl" />
+      </div>
+    ),
+  },
+);
+
+const PrIssuePanel = dynamic(
+  () =>
+    import("@/components/pull-requests/pr-issue-panel").then(
+      (m) => m.PrIssuePanel,
+    ),
+  { ssr: false },
+);
 
 const ALL_PULL_REQUESTS_QUERY_KEY = ["pull-requests", "all"] as const;
 

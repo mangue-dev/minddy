@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { useDesktopUpdateStatus } from "@/lib/desktop/use-update-status";
@@ -68,7 +69,6 @@ import { useIsAdmin } from "@/lib/use-is-admin";
 import { useMyAvatarSeed } from "@/lib/use-my-avatar";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { UserAvatar } from "@/components/user-avatar";
-import { WhatsNewDialog } from "@/components/whats-new-dialog";
 import { hasRecentChangelog } from "@/lib/changelog";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
@@ -159,6 +159,11 @@ export type AppNavItem = NavItem & {
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
 const MotionLink = motion.create(Link);
+
+const WhatsNewDialog = dynamic(
+  () => import("@/components/whats-new-dialog").then((m) => m.WhatsNewDialog),
+  { ssr: false },
+);
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
@@ -441,6 +446,7 @@ function AccountButton({
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const seed = useMyAvatarSeed();
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [whatsNewMounted, setWhatsNewMounted] = useState(false);
 
   // After assembly only: the freshness can be read on the visitor's clock,
   // and a server rendering which would decide for him would cause the hydration to diverge
@@ -507,7 +513,12 @@ function AccountButton({
           {/* The public changelog, in a modal: we read what has just been released
               without leaving the app. Blue badge as long as the last delivery has
               moins de cinq jours. */}
-          <DropdownMenuItem onSelect={() => setWhatsNewOpen(true)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              setWhatsNewMounted(true);
+              setWhatsNewOpen(true);
+            }}
+          >
             <Newspaper />
             {t("whatsNew")}
             {recentChangelog && (
@@ -527,7 +538,9 @@ function AccountButton({
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-      <WhatsNewDialog open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
+      {whatsNewMounted ? (
+        <WhatsNewDialog open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
+      ) : null}
     </>
   );
 }

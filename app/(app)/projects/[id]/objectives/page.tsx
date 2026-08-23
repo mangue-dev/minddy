@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   useParams,
   usePathname,
@@ -43,7 +44,6 @@ import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
-import { ObjectiveDialog } from "@/components/objective-dialog";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
@@ -52,6 +52,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+const ObjectiveDialog = dynamic(
+  () => import("@/components/objective-dialog").then((m) => m.ObjectiveDialog),
+  { ssr: false },
+);
 
 /**
  * What the column shows. The four states of a goal, plus the two that
@@ -279,6 +284,7 @@ function ObjectivesInner() {
   const { open: openAssistant } = useAssistantPanel();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMounted, setDialogMounted] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Under `md` the two panes take turns in full screen: the list first,
   // the details after choosing.
@@ -371,6 +377,10 @@ function ObjectivesInner() {
     }
   }, [newParam, pathname, router]);
 
+  useEffect(() => {
+    if (dialogOpen) setDialogMounted(true);
+  }, [dialogOpen]);
+
   // Deep link (notifications, palette): ?open=<id> selects THIS goal
   // rather than the first one in the list, then purges the setting so that one
   // background refetch does not bring the selection back here. We wait for him to be
@@ -434,7 +444,7 @@ function ObjectivesInner() {
   /* `projectId` is not just the button label: it is the prefix of
  attachment storage, the scope of local drafts, and the
  project that the dictation route is querying. */
-  const createDialog = (
+  const createDialog = dialogMounted ? (
     <ObjectiveDialog
       open={dialogOpen}
       onOpenChange={setDialogOpen}
@@ -444,7 +454,7 @@ function ObjectivesInner() {
       onCreate={createObjective}
       onUpdate={updateObjective}
     />
-  );
+  ) : null;
 
   // No objective at all (not “nothing in this filter”): both panes have no
   // nothing left to show, and the screen must say where to start rather than

@@ -50,8 +50,9 @@ export interface PaletteGroup {
 
 /**
  * Header search affordance: a pill-shaped button that opens the command palette
- * (command-palette.tsx). The palette owns the global shortcuts (⌘K / ⌘P / F);
- * this pill is just the pointer entry point in the desktop header.
+ * (command-palette.tsx). The app shell owns the global shortcuts (⌘K / ⌘P / F)
+ * so they work before the deferred palette chunk loads; this pill is the
+ * pointer entry point in the desktop header.
  */
 export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
   const t = useTranslations("Nav");

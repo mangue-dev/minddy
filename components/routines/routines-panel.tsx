@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton, cn } from "mangue-ui";
@@ -15,8 +16,6 @@ import {
   groupByProject,
   toggledSet,
 } from "@/components/sidebar-project-group";
-import { CreateRoutineWizard } from "@/components/routines/create-routine-wizard";
-import { RoutineDetail } from "@/components/routines/routine-detail";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -30,6 +29,27 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+const RoutineDetail = dynamic(
+  () => import("@/components/routines/routine-detail").then((m) => m.RoutineDetail),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
+        <Skeleton className="h-9 w-full rounded-lg" />
+        <Skeleton className="min-h-0 flex-1 rounded-xl" />
+      </div>
+    ),
+  },
+);
+
+const CreateRoutineWizard = dynamic(
+  () =>
+    import("@/components/routines/create-routine-wizard").then(
+      (m) => m.CreateRoutineWizard,
+    ),
+  { ssr: false },
+);
 
 /**
  * The ROUTINES page (MIN-185): the list on the left, the chosen routine on the right.
@@ -67,6 +87,7 @@ export function RoutinesPanel({
 
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardMounted, setWizardMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -222,6 +243,7 @@ export function RoutinesPanel({
 
   const openWizard = (projectId?: string | null) => {
     setWizardProjectId(projectId ?? null);
+    setWizardMounted(true);
     setWizardOpen(true);
   };
 
@@ -419,15 +441,17 @@ export function RoutinesPanel({
         )}
       </div>
 
-      <CreateRoutineWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        initialProjectId={wizardProjectId}
-        onCreated={(routine) => {
-          void refresh();
-          onSelect(routine.id);
-        }}
-      />
+      {wizardMounted ? (
+        <CreateRoutineWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          initialProjectId={wizardProjectId}
+          onCreated={(routine) => {
+            void refresh();
+            onSelect(routine.id);
+          }}
+        />
+      ) : null}
     </>
   );
 }

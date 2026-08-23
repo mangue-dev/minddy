@@ -68,7 +68,6 @@ import { NewMenu } from "@/components/new-menu";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { UsageIndicator } from "@/components/usage-indicator";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { CommandPalette } from "@/components/command-palette";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
@@ -97,7 +96,7 @@ import {
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import { useZenMode } from "@/lib/zen-mode-context";
 import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
-import { BranchCleanupDialog } from "@/components/settings/git-branch-cleanup";
+import { useCommandPaletteLauncher } from "@/lib/use-command-palette-launcher";
 import type {
   BranchCleanupTarget,
   PageSearchHit,
@@ -159,6 +158,19 @@ function truncateExcerpt(excerpt: string): string {
 const ExportIssuesDialog = dynamic(
   () => import("@/components/export-issues-dialog").then((m) => m.ExportIssuesDialog),
   { ssr: false }
+);
+
+const CommandPalette = dynamic(
+  () => import("@/components/command-palette").then((m) => m.CommandPalette),
+  { ssr: false },
+);
+
+const BranchCleanupDialog = dynamic(
+  () =>
+    import("@/components/settings/git-branch-cleanup").then(
+      (m) => m.BranchCleanupDialog,
+    ),
+  { ssr: false },
 );
 
 /** Right-aligned project tag shown on palette rows (orb + name), AutoKap-style. */
@@ -350,8 +362,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
 
   // Command palette open state — shared by the header search pill and the
-  // global shortcuts (⌘K / ⌘P / F, handled inside <CommandPalette>).
+  // lightweight global shortcut launcher. The full palette mounts on demand.
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteMounted, setPaletteMounted] = useState(false);
 
   // Does the page have a secondary sidebar? The mounting of the bar is
   // correct answer; the road gives the same before hydration, where nothing is
@@ -1491,6 +1504,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // revalidates it when the snapshot has aged (no-op while fresh).
   const handlePaletteOpenChange = useCallback(
     (next: boolean) => {
+      if (next) setPaletteMounted(true);
       setPaletteOpen(next);
       if (!next) return;
       armSearchIndex();
@@ -1498,6 +1512,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     },
     [armSearchIndex, refreshSearchIndex]
   );
+  useCommandPaletteLauncher({
+    open: paletteOpen,
+    onOpenChange: handlePaletteOpenChange,
+  });
 
   return (
     <AppShell
@@ -1581,12 +1599,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
  index also serves these actions: members and categories of the project
  OF THE TICKET, which is not necessarily that of the page (MIN-91). */}
-      <CommandPalette
-        groups={paletteGroups}
-        open={paletteOpen}
-        onOpenChange={handlePaletteOpenChange}
-        searchIndex={searchIndex}
-      />
+      {paletteMounted ? (
+        <CommandPalette
+          groups={paletteGroups}
+          open={paletteOpen}
+          onOpenChange={handlePaletteOpenChange}
+          searchIndex={searchIndex}
+        />
+      ) : null}
       {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
  dialog as the settings button, mounted here to be reachable
  from any page, on any of my projects. The key

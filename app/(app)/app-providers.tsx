@@ -10,7 +10,10 @@ import { CreateProvider } from "@/lib/create-context";
 import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { AssistantChatProvider } from "@/lib/assistant-chat-context";
 import { ScratchpadProvider } from "@/lib/scratchpad-context";
-import { KeyboardProvider } from "@/lib/keyboard/keyboard-context";
+import {
+  KeyboardProvider,
+  useCheatsheet,
+} from "@/lib/keyboard/keyboard-context";
 import { SendModeBoundary } from "@/app/(app)/send-mode-boundary";
 import { SecondarySidebarProvider } from "@/lib/secondary-sidebar-context";
 import { ZenModeProvider } from "@/lib/zen-mode-context";
@@ -19,7 +22,6 @@ import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
-import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { NewVersionBanner } from "@/components/new-version-banner";
 import { PushServiceWorker } from "@/components/push-service-worker";
@@ -44,6 +46,19 @@ const ScratchpadModal = dynamic(
     ),
   { ssr: false }
 );
+
+const KeyboardCheatsheet = dynamic(
+  () =>
+    import("@/components/keyboard-cheatsheet").then(
+      (m) => m.KeyboardCheatsheet,
+    ),
+  { ssr: false },
+);
+
+function DeferredKeyboardCheatsheet() {
+  const { open } = useCheatsheet();
+  return open ? <KeyboardCheatsheet /> : null;
+}
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -93,7 +108,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             <AssistantPanel />
                             <AssistantFab />
                             <ScratchpadModal />
-                            <KeyboardCheatsheet />
+                            <DeferredKeyboardCheatsheet />
                             <AnalyticsProjectGroup />
                             <NewVersionBanner />
                             <PushServiceWorker />

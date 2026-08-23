@@ -87,7 +87,6 @@ import {
 } from "@/lib/issue-constants";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
-import { eventKey } from "@/lib/keyboard/event-key";
 import { useAnalytics } from "@/lib/use-analytics";
 import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import type {
@@ -296,45 +295,6 @@ export function CommandPalette({
     },
     [currentProjectId, members, searchIndex]
   );
-
-  // Global open shortcuts. ⌘K / ⌘P toggle from anywhere (edit combos are
-  // safe even inside inputs — the standard "summon" behaviour, and it captures
-  // the VS Code reflex); ⌘P also overrides the browser print dialog. F opens
-  // when not editing text (the documented "search" key). Escape / click-outside
-  // close via the palette itself.
-  const openRef = useRef(open);
-  useEffect(() => {
-    openRef.current = open;
-  }, [open]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const isMod = e.metaKey || e.ctrlKey;
-      const key = eventKey(e);
-
-      if (isMod && !e.shiftKey && !e.altKey && (key === "k" || key === "p")) {
-        e.preventDefault();
-        if (!openRef.current) track("command_palette_opened", { source: "shortcut" });
-        onOpenChange(!openRef.current);
-        return;
-      }
-
-      if (!isMod && !e.altKey && key === "f") {
-        const el = e.target as HTMLElement | null;
-        const typing =
-          el &&
-          (el.tagName === "INPUT" ||
-            el.tagName === "TEXTAREA" ||
-            el.isContentEditable);
-        if (typing) return; // F = plain text in editors
-        e.preventDefault();
-        if (!openRef.current) track("command_palette_opened", { source: "shortcut" });
-        onOpenChange(true);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onOpenChange, track]);
 
   // A board pill has requested grouped actions → we open the palette by
   // bulk mode (it will then display the selection options).

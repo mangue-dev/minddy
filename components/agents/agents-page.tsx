@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -22,12 +23,9 @@ import {
   IssueContextMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
-import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
 import { EmptyScene } from "@/components/empty-scene";
 import { FormDialog } from "@/components/form-dialog";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
-import { SessionCompose } from "@/components/agents/session-compose";
-import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import {
   PROJECT_GROUP_INDENT,
@@ -64,6 +62,36 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+function DetailLoading() {
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <Skeleton className="min-h-0 flex-1 rounded-xl" />
+    </div>
+  );
+}
+
+const AgentSessionDetail = dynamic(
+  () =>
+    import("@/components/agents/agent-session-detail").then(
+      (m) => m.AgentSessionDetail,
+    ),
+  { ssr: false, loading: DetailLoading },
+);
+
+const SessionCompose = dynamic(
+  () => import("@/components/agents/session-compose").then((m) => m.SessionCompose),
+  { ssr: false, loading: DetailLoading },
+);
+
+const PrIssuePanel = dynamic(
+  () =>
+    import("@/components/pull-requests/pr-issue-panel").then(
+      (m) => m.PrIssuePanel,
+    ),
+  { ssr: false },
+);
 
 /**
  * True as soon as the detail pane is rendered by the layout (breakpoint md = 768px, the

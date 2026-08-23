@@ -3,7 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { createIssueForProject } from "@/lib/server/create-issue";
-import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { ISSUE_SELECT } from "@/lib/server/issue-mapper";
+import { buildProjectIssueResponse } from "@/lib/server/project-issue-response";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -18,16 +19,26 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  const t = await getTranslations("ApiErrors");
 
-  // RLS issues_select scopes to accessible projects; ordering by position then
-  // number gives a stable per-column order.
-  const { data, error } = await auth.supabase
-    .from("issues")
-    .select(ISSUE_SELECT)
-    .eq("project_id", id)
-    .order("position", { ascending: true })
-    .order("number", { ascending: true });
+  // The issue rows and their resource counts are independent reads. Running
+  // them together removes one database round trip from every cold board load.
+  const [t, issuesResult, resourcesResult] = await Promise.all([
+    getTranslations("ApiErrors"),
+    // RLS issues_select scopes to accessible projects; ordering by position then
+    // number gives a stable per-column order.
+    auth.supabase
+      .from("issues")
+      .select(ISSUE_SELECT)
+      .eq("project_id", id)
+      .order("position", { ascending: true })
+      .order("number", { ascending: true }),
+    auth.supabase
+      .from("attachments")
+      .select("issue_id")
+      .eq("project_id", id)
+      .is("comment_id", null),
+  ]);
+  const { data, error } = issuesResult;
 
   if (error) {
     console.error("[api/issues] list failed:", error.message);
@@ -38,27 +49,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // excluded) — one indexed query, folded onto each issue so « copy the
   // prompt » can flag resources in the XML without a per-card fetch. Failure is
   // non-fatal: the board still renders, just without the counts.
-  const resourceCounts = new Map<string, number>();
-  const { data: resourceRows, error: resourceError } = await auth.supabase
-    .from("attachments")
-    .select("issue_id")
-    .eq("project_id", id)
-    .is("comment_id", null);
+  const { data: resourceRows, error: resourceError } = resourcesResult;
   if (resourceError) {
     console.error("[api/issues] resource counts failed:", resourceError.message);
-  } else {
-    for (const row of resourceRows ?? []) {
-      const issueId = row.issue_id as string;
-      resourceCounts.set(issueId, (resourceCounts.get(issueId) ?? 0) + 1);
-    }
   }
 
   return NextResponse.json(
-    (data ?? []).map((row) => {
-      const mapped = mapIssueRow(row);
-      const issueId = (row as { id: string }).id;
-      return { ...mapped, resource_count: resourceCounts.get(issueId) ?? 0 };
-    })
+    buildProjectIssueResponse(data ?? [], resourceError ? [] : (resourceRows ?? [])),
   );
 }
 

@@ -40,10 +40,8 @@ import {
   useAssistantPanel,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
-import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { NumoIcon } from "@/components/numo-icon";
 import { EmptyScene } from "@/components/empty-scene";
-import { IssueSidePanel } from "@/components/issue-side-panel";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
@@ -56,6 +54,14 @@ const ProjectImportDialog = dynamic(
       (m) => m.ProjectImportDialog
     ),
   { ssr: false }
+);
+const CreateIssueDialog = dynamic(
+  () => import("@/components/create-issue-dialog").then((m) => m.CreateIssueDialog),
+  { ssr: false },
+);
+const IssueSidePanel = dynamic(
+  () => import("@/components/issue-side-panel").then((m) => m.IssueSidePanel),
+  { ssr: false },
 );
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import { createIssueApi } from "@/lib/issues-api";
@@ -167,8 +173,10 @@ function ProjectBoard() {
   );
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [createMounted, setCreateMounted] = useState(false);
   const [createStatus, setCreateStatus] = useState<IssueStatus | undefined>(undefined);
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  const [sidePanelMounted, setSidePanelMounted] = useState(false);
   // Which tab the side panel shows when it (re)opens on an issue.
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
@@ -176,6 +184,7 @@ function ProjectBoard() {
   // The import boot (MIN-171): `?setup=import` opens the import panel
   // with the CSV deposited in the wizard.
   const [importOpen, setImportOpen] = useState(false);
+  const [importMounted, setImportMounted] = useState(false);
   // What the wizard collected one step earlier (brief pasted, CSV submitted).
   // Taken once: reopening it later leaves an empty surface.
   const [handoff, setHandoff] = useState<ReturnType<typeof takeSeedHandoff>>(null);
@@ -193,6 +202,18 @@ function ProjectBoard() {
     {}
   );
   const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    if (createOpen) setCreateMounted(true);
+  }, [createOpen]);
+
+  useEffect(() => {
+    if (openIssueId) setSidePanelMounted(true);
+  }, [openIssueId]);
+
+  useEffect(() => {
+    if (importOpen) setImportMounted(true);
+  }, [importOpen]);
 
   // Open the create dialog, optionally preset to a column's status.
   const openCreate = (status?: IssueStatus) => {
@@ -667,65 +688,71 @@ function ProjectBoard() {
         </>
       )}
 
-      <CreateIssueDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        projectId={projectId}
-        projects={projects}
-        members={members}
-        categories={categories}
-        objectives={objectives}
-        onCreate={createIssue}
-        onCreateInProject={createIssueInProject}
-        initialStatus={createStatus}
-        // The project board opens its own dialog (column presets) —
-        // distinguished from the global dialog in the stats.
-        analyticsSource={activeObjective ? "objective" : "board"}
-        initialObjectiveId={activeObjective?.id ?? null}
-        initialAssigneeId={
-          // On an assigned-to-me board, a new unassigned issue would instantly
-          // vanish — pre-assign it to the creator.
-          !activeObjective && config.filters.assignee?.includes(ME_ASSIGNEE)
-            ? myUserId
-            : null
-        }
-      />
-
-      <IssueSidePanel
-        issue={openIssue}
-        open={!!openIssue}
-        onOpenChange={(next) => {
-          if (!next) {
-            setOpenIssueId(null);
-            // Strip the deep-link param so re-opening the same issue works.
-            if (issueParam) router.replace(pathname);
+      {createMounted ? (
+        <CreateIssueDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          projectId={projectId}
+          projects={projects}
+          members={members}
+          categories={categories}
+          objectives={objectives}
+          onCreate={createIssue}
+          onCreateInProject={createIssueInProject}
+          initialStatus={createStatus}
+          // The project board opens its own dialog (column presets) —
+          // distinguished from the global dialog in the stats.
+          analyticsSource={activeObjective ? "objective" : "board"}
+          initialObjectiveId={activeObjective?.id ?? null}
+          initialAssigneeId={
+            // On an assigned-to-me board, a new unassigned issue would instantly
+            // vanish — pre-assign it to the creator.
+            !activeObjective && config.filters.assignee?.includes(ME_ASSIGNEE)
+              ? myUserId
+              : null
           }
-        }}
-        projectKey={project.key}
-        members={members}
-        categories={categories}
-        objectives={objectives}
-        allIssues={issues}
-        relations={relations}
-        onUpdate={updateIssue}
-        onDelete={deleteIssue}
-        onSetCategories={setCategories}
-        onCreate={createIssue}
-        onOpenIssue={(id) => {
-          setOpenIssueId(id);
-          setOpenIssueTab("description");
-        }}
-        onAddRelation={handleAddRelation}
-        onRemoveRelation={handleRemoveRelation}
-        initialTab={openIssueTab}
-      />
+        />
+      ) : null}
 
-      <ProjectImportDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        projectId={projectId}
-        initialFile={handoff?.kind === "import" ? handoff.file : null}
-      />
+      {sidePanelMounted ? (
+        <IssueSidePanel
+          issue={openIssue}
+          open={!!openIssue}
+          onOpenChange={(next) => {
+            if (!next) {
+              setOpenIssueId(null);
+              // Strip the deep-link param so re-opening the same issue works.
+              if (issueParam) router.replace(pathname);
+            }
+          }}
+          projectKey={project.key}
+          members={members}
+          categories={categories}
+          objectives={objectives}
+          allIssues={issues}
+          relations={relations}
+          onUpdate={updateIssue}
+          onDelete={deleteIssue}
+          onSetCategories={setCategories}
+          onCreate={createIssue}
+          onOpenIssue={(id) => {
+            setOpenIssueId(id);
+            setOpenIssueTab("description");
+          }}
+          onAddRelation={handleAddRelation}
+          onRemoveRelation={handleRemoveRelation}
+          initialTab={openIssueTab}
+        />
+      ) : null}
+
+      {importMounted ? (
+        <ProjectImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          projectId={projectId}
+          initialFile={handoff?.kind === "import" ? handoff.file : null}
+        />
+      ) : null}
     </div>
   );
 }
