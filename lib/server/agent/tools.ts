@@ -106,7 +106,7 @@ const CORE_TOOLS: AgentToolDef[] = [
           command: {
             type: "string",
             description:
-              "For 'start': the shell command to run in the background, e.g. 'npm run dev'. Ignored otherwise.",
+              "For 'start': one literal executable followed by literal arguments, e.g. 'npm run dev'. Shell operators, expansion, shell interpreters, and shell scripts are rejected. Ignored otherwise.",
           },
           workdir: {
             type: "string",

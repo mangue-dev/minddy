@@ -1,4 +1,9 @@
-import { checkCommand, FORBIDDEN_COMMAND_REASON, type CommandScope } from "./command-guard";
+import {
+  checkCommand,
+  FORBIDDEN_COMMAND_REASON,
+  type CommandScope,
+  type CommandVerdict,
+} from "./command-guard";
 import { headTail } from "./prune";
 
 /**
@@ -104,6 +109,205 @@ function sq(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+/** A background command after the untrusted shell string has been reduced to data. */
+export interface BackgroundInvocation {
+  executable: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+export type BackgroundCommandVerdict =
+  | { allowed: true; invocation: BackgroundInvocation }
+  | { allowed: false; reason: string };
+
+/**
+ * Environment overrides useful to long-lived development processes. Keeping this
+ * list explicit prevents assignments such as `PATH=.`, `BASH_ENV=...` or
+ * `NODE_OPTIONS=--require ...` from turning process lookup/startup into another
+ * command-evaluation surface.
+ */
+const BACKGROUND_ENV = new Set([
+  "CHOKIDAR_USEPOLLING",
+  "CI",
+  "DEBUG",
+  "FORCE_COLOR",
+  "HOST",
+  "HOSTNAME",
+  "NEXT_TELEMETRY_DISABLED",
+  "NODE_ENV",
+  "NO_COLOR",
+  "PORT",
+  "TURBO_FORCE",
+  "WATCH",
+  "WATCHPACK_POLLING",
+]);
+
+/** Programs whose purpose is to reinterpret arguments or repository files as commands. */
+const BACKGROUND_INTERPRETERS = new Set([
+  ".",
+  "bash",
+  "builtin",
+  "command",
+  "coproc",
+  "dash",
+  "env",
+  "eval",
+  "exec",
+  "function",
+  "ksh",
+  "nohup",
+  "sh",
+  "source",
+  "xargs",
+  "zsh",
+]);
+
+function backgroundRefusal(detail: string): BackgroundCommandVerdict {
+  return {
+    allowed: false,
+    reason:
+      `Refused background command — ${detail}. Background jobs accept one literal executable ` +
+      `and literal arguments; use run_command for shell composition.`,
+  };
+}
+
+/**
+ * Parse the small shell-like input retained by the public tool for compatibility.
+ * Quotes only group literal arguments. No shell operator, expansion or substitution
+ * survives this function, so the runner can invoke the resulting argv as data.
+ */
+export function parseBackgroundCommand(
+  command: string,
+  scope: CommandScope = {},
+): BackgroundCommandVerdict {
+  const tokens: string[] = [];
+  let current = "";
+  let started = false;
+  let quote: "'" | '"' | null = null;
+
+  const flush = () => {
+    if (started) tokens.push(current);
+    current = "";
+    started = false;
+  };
+
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (ch === "\0") return backgroundRefusal("NUL bytes are not valid command data");
+
+    if (quote === "'") {
+      if (ch === "'") quote = null;
+      else current += ch;
+      started = true;
+      continue;
+    }
+
+    if (ch === "\\") {
+      if (i + 1 >= command.length) return backgroundRefusal("the command ends with an escape");
+      current += command[++i];
+      started = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      quote = quote === '"' ? null : '"';
+      started = true;
+      continue;
+    }
+    if (ch === "'") {
+      if (quote === '"') current += ch;
+      else quote = "'";
+      started = true;
+      continue;
+    }
+
+    // A dollar or backtick outside single quotes would be evaluated by `sh -c`.
+    // It is refused even when it looks harmless: the execution boundary must not
+    // guess which expanded value the shell will eventually produce.
+    if (ch === "$" || ch === "`") {
+      return backgroundRefusal("shell expansion and command substitution are unavailable");
+    }
+
+    if (quote === null && /[;&|()<>\n\r]/.test(ch)) {
+      return backgroundRefusal(`shell operator ${JSON.stringify(ch)} is unavailable`);
+    }
+    if (quote === null && /\s/.test(ch)) {
+      flush();
+      continue;
+    }
+    current += ch;
+    started = true;
+  }
+
+  if (quote != null) return backgroundRefusal("the command contains an unterminated quote");
+  flush();
+  if (tokens.length === 0) return backgroundRefusal("the command is empty");
+
+  const env: Record<string, string> = {};
+  let executableIndex = 0;
+  while (executableIndex < tokens.length) {
+    const assignment = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(tokens[executableIndex]);
+    if (!assignment) break;
+    const [, name, value] = assignment;
+    if (!BACKGROUND_ENV.has(name)) {
+      return backgroundRefusal(`environment override ${JSON.stringify(name)} is unavailable`);
+    }
+    env[name] = value;
+    executableIndex++;
+  }
+
+  const executable = tokens[executableIndex] ?? "";
+  if (!executable) return backgroundRefusal("the command has no executable");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(executable)) {
+    return backgroundRefusal("the executable must be a literal program name from PATH");
+  }
+  if (BACKGROUND_INTERPRETERS.has(executable)) {
+    return backgroundRefusal(`interpreter ${JSON.stringify(executable)} is unavailable`);
+  }
+
+  const invocation = { executable, args: tokens.slice(executableIndex + 1), env };
+  const verdict = checkBackgroundInvocation(invocation, scope);
+  return verdict.allowed ? { allowed: true, invocation } : verdict;
+}
+
+/**
+ * Revalidate structured data at the execution boundary. This deliberately does
+ * not trust `parseBackgroundCommand`: alternate/internal callers must receive the
+ * same Git and interpreter policy before anything reaches the host.
+ */
+export function checkBackgroundInvocation(
+  invocation: BackgroundInvocation,
+  scope: CommandScope = {},
+): CommandVerdict {
+  const { executable, args, env } = invocation;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(executable) || BACKGROUND_INTERPRETERS.has(executable)) {
+    return {
+      allowed: false,
+      reason: `Refused background executable ${JSON.stringify(executable)} — only literal, non-shell programs are allowed.`,
+    };
+  }
+  if (args.some((arg) => typeof arg !== "string" || arg.includes("\0"))) {
+    return { allowed: false, reason: "Refused background command with invalid argument data." };
+  }
+  for (const [name, value] of Object.entries(env)) {
+    if (!BACKGROUND_ENV.has(name) || typeof value !== "string" || value.includes("\0")) {
+      return {
+        allowed: false,
+        reason: `Refused background environment override ${JSON.stringify(name)}.`,
+      };
+    }
+  }
+
+  // Single-quote every value before asking the shared Git guard. The rendering
+  // represents the exact argv and cannot introduce shell behavior of its own.
+  const rendered = [
+    ...Object.entries(env).map(([name, value]) => `${name}=${sq(value)}`),
+    sq(executable),
+    ...args.map(sq),
+  ].join(" ");
+  return checkCommand(rendered, scope);
+}
+
 /**
  * Test whether a job is alive by the process STATE rather than `kill -0`: PID 1
  * in the microVM does not reap its orphans, so a dead job remains a ZOMBIE — and
@@ -127,21 +331,45 @@ function aliveFn(pid: number): string {
  *  - the PID is written BY the job (`echo $$`), not read from `$!`: depending on
  *    whether `setsid` forks, `$!` refers to one process or the other.
  */
-export function backgroundStartScript(p: BackgroundPaths, command: string, dir: string): string {
+export function backgroundStartScript(
+  p: BackgroundPaths,
+  invocation: BackgroundInvocation,
+  dir: string,
+): string {
   // The job body: its PID, the command, then its exit code. No `exec`: the shell
   // remains the command's parent — the probe follows it, and it writes the exit
   // code. The command runs in a SUBSHELL: without the parentheses, an `exit 3`
   // (or a failing `set -e`) would exit the job shell before the exit-code line,
   // which we would then never see.
-  const inner = [`echo $$ > ${sq(p.pid)}`, `( ${command}\n)`, `echo $? > ${sq(p.exit)}`].join("\n");
+  const environment = Object.entries(invocation.env).map(([name, value]) => `${name}=${sq(value)}`);
+  /**
+   * Do not inherit the supervisor/opencode environment. It contains service
+   * addresses and short-lived control material that a development process does
+   * not need. Repository programs receive only ordinary process basics plus the
+   * explicitly allowlisted overrides parsed above.
+   */
+  const cleanEnvironment = [
+    `HOME="$HOME"`,
+    'LANG="${LANG:-C.UTF-8}"',
+    'LC_ALL="${LC_ALL:-}"',
+    'LOGNAME="${LOGNAME:-}"',
+    'PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}"',
+    'TERM="${TERM:-dumb}"',
+    'TMPDIR="${TMPDIR:-/tmp}"',
+    'USER="${USER:-}"',
+    ...environment,
+  ];
+  const execute = `env -i ${cleanEnvironment.join(" ")} -- "$@"`;
+  const inner = [`echo $$ > ${sq(p.pid)}`, `( ${execute}\n)`, `echo $? > ${sq(p.exit)}`].join("\n");
+  const argv = [invocation.executable, ...invocation.args].map(sq).join(" ");
   return [
     `mkdir -p ${sq(dir)}`,
     `rm -f ${sq(p.pid)} ${sq(p.exit)}`,
     `: > ${sq(p.log)}`,
     `if command -v setsid >/dev/null 2>&1; then`,
-    `  setsid sh -c ${sq(inner)} > ${sq(p.log)} 2>&1 < /dev/null &`,
+    `  setsid sh -c ${sq(inner)} minddy-background ${argv} > ${sq(p.log)} 2>&1 < /dev/null &`,
     `else`,
-    `  sh -c ${sq(inner)} > ${sq(p.log)} 2>&1 < /dev/null &`,
+    `  sh -c ${sq(inner)} minddy-background ${argv} > ${sq(p.log)} 2>&1 < /dev/null &`,
     `fi`,
     // The job writes its PID on its first line: a few tenths of a second is enough.
     `i=0`,
@@ -226,7 +454,7 @@ export function parseBackgroundProbe(
 
 /** The microVM hands (implemented by `sandbox.ts`, wired by `execute.ts`). */
 export interface BackgroundJobRunner {
-  start(opts: { jobId: string; command: string; workdir?: string }): Promise<BackgroundStarted>;
+  start(opts: { jobId: string; invocation: BackgroundInvocation; workdir?: string }): Promise<BackgroundStarted>;
   read(opts: { jobId: string; pid: number; offset: number }): Promise<BackgroundChunk>;
   stop(opts: { jobId: string; pid: number }): Promise<void>;
 }
@@ -322,9 +550,9 @@ export class BackgroundJobs {
     const command = String(args.command ?? "").trim();
     if (!command) return fail("command is required to start a background job.");
 
-    // The MIN-108 git guard applies HERE TOO: without it, `run_background` would
-    // be a backdoor to `git push` and the like.
-    const verdict = checkCommand(command, this.scope);
+    // Convert the public string to a static argv before reserving or launching a
+    // job. The runner receives no shell program supplied by the model.
+    const verdict = parseBackgroundCommand(command, this.scope);
     if (!verdict.allowed) return fail(verdict.reason, FORBIDDEN_COMMAND_REASON);
 
     const live = [...this.jobs.values()].filter(isLive);
@@ -352,7 +580,7 @@ export class BackgroundJobs {
     try {
       const started = await this.runner.start({
         jobId,
-        command,
+        invocation: verdict.invocation,
         workdir: args.workdir != null && String(args.workdir).trim() !== "" ? String(args.workdir) : undefined,
       });
       job.pid = started.pid;

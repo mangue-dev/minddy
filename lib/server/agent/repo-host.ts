@@ -2,9 +2,11 @@ import {
   backgroundProbeScript,
   backgroundStartScript,
   backgroundStopScript,
+  checkBackgroundInvocation,
   parseBackgroundProbe,
   BACKGROUND_FETCH_BYTES,
   type BackgroundChunk,
+  type BackgroundInvocation,
   type BackgroundJobRunner,
   type BackgroundPaths,
 } from "./background";
@@ -870,10 +872,14 @@ function backgroundPaths(layout: HarnessLayout, jobId: string): BackgroundPaths 
  */
 export async function startBackground(
   host: RepoHost,
-  opts: { jobId: string; command: string; cwd?: string },
+  opts: { jobId: string; invocation: BackgroundInvocation; cwd?: string },
 ): Promise<{ pid: number; logPath: string }> {
+  // Defense in depth at the host boundary: internal callers cannot bypass the
+  // public tool's parser and smuggle a shell interpreter or forbidden Git argv.
+  const verdict = checkBackgroundInvocation(opts.invocation, { local: false });
+  if (!verdict.allowed) throw new Error(verdict.reason);
   const p = backgroundPaths(host.layout, opts.jobId);
-  const launcher = backgroundStartScript(p, opts.command, host.layout.toolOutputDir);
+  const launcher = backgroundStartScript(p, opts.invocation, host.layout.toolOutputDir);
 
   const res = await host.exec(launcher, {
     cwd: opts.cwd,
@@ -1317,10 +1323,10 @@ export async function globRepo(
  */
 export function repoBackgroundRunner(host: RepoHost): BackgroundJobRunner {
   return {
-    start: ({ jobId, command, workdir }) =>
+    start: ({ jobId, invocation, workdir }) =>
       startBackground(host, {
         jobId,
-        command,
+        invocation,
         cwd: workdir ? resolveWithin(host.layout.repoDir, workdir) : undefined,
       }),
     read: ({ jobId, pid, offset }) =>

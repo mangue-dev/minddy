@@ -4,6 +4,8 @@ import {
   backgroundProbeScript,
   backgroundStartScript,
   backgroundStopScript,
+  checkBackgroundInvocation,
+  parseBackgroundCommand,
   parseBackgroundProbe,
   BACKGROUND_OUTPUT_CAP,
   BACKGROUND_PROBE_HEADER,
@@ -13,6 +15,8 @@ import {
   type BackgroundJobRunner,
 } from "./background";
 import { FORBIDDEN_COMMAND_REASON } from "./command-guard";
+import { layoutForRoot } from "./harness-layout";
+import { startBackground, type RepoHost } from "./repo-host";
 
 /**
  * Background jobs (MIN-114). What is tested here is the POLICY: the git
@@ -32,13 +36,17 @@ interface FakeProc {
 
 function fakeRunner() {
   const procs = new Map<string, FakeProc>();
-  const starts: Array<{ jobId: string; command: string; workdir?: string }> = [];
+  const starts: Array<{
+    jobId: string;
+    invocation: { executable: string; args: string[]; env: Record<string, string> };
+    workdir?: string;
+  }> = [];
   let nextPid = 100;
   const byPid = new Map<number, string>();
 
   const runner: BackgroundJobRunner = {
-    async start({ jobId, command, workdir }) {
-      starts.push({ jobId, command, workdir });
+    async start({ jobId, invocation, workdir }) {
+      starts.push({ jobId, invocation, workdir });
       const pid = nextPid++;
       procs.set(jobId, { log: "", running: true, exitCode: null, killed: 0 });
       byPid.set(pid, jobId);
@@ -79,9 +87,13 @@ const paths = {
   exit: "/vercel/sandbox/tool-output/bg-1.exit",
 };
 
-describe("le shell d'un job", () => {
-  it("détache le job, redirige ses flux et fait écrire le PID par le job", () => {
-    const script = backgroundStartScript(paths, "npm run dev", "/vercel/sandbox/tool-output");
+describe("a job's lifecycle shell", () => {
+  it("detaches the job, redirects its streams, and lets the job write its PID", () => {
+    const script = backgroundStartScript(
+      paths,
+      { executable: "npm", args: ["run", "dev"], env: {} },
+      "/vercel/sandbox/tool-output",
+    );
     expect(script).toContain("setsid sh -c");
     // stdin closed: a job waiting for an entry would die instead of holding the
     // microVM; stdout/stderr in the log, otherwise the launcher would wait for its end.
@@ -89,20 +101,34 @@ describe("le shell d'un job", () => {
     expect(script).toContain("echo $$ >");
     expect(script).toContain("echo $? >");
     expect(script).not.toContain("$!");
+    expect(script).toContain('"$@"');
+    expect(script).toContain("minddy-background 'npm' 'run' 'dev'");
+    expect(script).toContain("env -i");
+    expect(script).not.toContain("OPENCODE_CONFIG_CONTENT");
+    expect(script).not.toContain("SUPERVISOR_TOKEN");
   });
 
-  it("passe une commande à guillemets sans la casser", () => {
-    const script = backgroundStartScript(paths, `sh -c 'echo it'\\''s alive'`, "/tmp");
-    // A single quoted string for the entire body of the job: nothing escapes.
-    expect(script).toContain(`echo it'`);
+  it("passes quoted arguments as positional data instead of shell source", () => {
+    const script = backgroundStartScript(
+      paths,
+      { executable: "node", args: ["server.js", "it's alive; $(id)"], env: {} },
+      "/tmp",
+    );
+    expect(script).toContain(`'it'\\''s alive; $(id)'`);
     expect(script.match(/setsid sh -c '/g)).toHaveLength(1);
+    expect(script).not.toContain(`( node server.js`);
   });
 
-  it("met la commande dans un sous-shell pour ne pas perdre son code de sortie", () => {
-    // Measured on a real microVM: without the parentheses, `echo boom; exit 3`
-    // exited the job shell BEFORE the line that writes the exit code.
-    const script = backgroundStartScript(paths, "echo boom; exit 3", "/tmp");
-    expect(script).toContain("( echo boom; exit 3\n)");
+  it("runs argv in a subshell so it always records the exit code", () => {
+    const script = backgroundStartScript(
+      paths,
+      { executable: "npm", args: ["run", "dev"], env: { CI: "1" } },
+      "/tmp",
+    );
+    expect(script).toContain("( env -i ");
+    expect(script).toContain("CI=");
+    expect(script).toContain(`-- "$@"`);
+    expect(script).toContain("echo $? >");
   });
 
   it("sonde à partir de l'offset, borne l'incrément par la queue", () => {
@@ -168,7 +194,7 @@ describe("lecture de la sonde", () => {
   });
 });
 
-describe("run_background — garde-fou git (MIN-108 vaut ici aussi)", () => {
+describe("run_background — static command boundary", () => {
   it("refuse une commande git interdite, avec le même `reason` que run_command", async () => {
     const { runner, starts } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
@@ -180,7 +206,7 @@ describe("run_background — garde-fou git (MIN-108 vaut ici aussi)", () => {
     expect(starts).toHaveLength(0);
   });
 
-  it("attrape la commande interdite cachée dans une chaîne", async () => {
+  it("rejects a forbidden command hidden in shell composition", async () => {
     const { runner, starts } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     const out = await jobs.handle({
@@ -191,14 +217,89 @@ describe("run_background — garde-fou git (MIN-108 vaut ici aussi)", () => {
     expect(starts).toHaveLength(0);
   });
 
-  it("laisse passer un serveur de dev", async () => {
+  it("passes a safe development server as structured argv", async () => {
     const { runner, starts } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     const out = await jobs.handle({ action: "start", command: "npm run dev", workdir: "apps/web" });
     expect(out.success).toBe(true);
-    expect(starts).toEqual([{ jobId: "bg-1", command: "npm run dev", workdir: "apps/web" }]);
+    expect(starts).toEqual([
+      {
+        jobId: "bg-1",
+        invocation: { executable: "npm", args: ["run", "dev"], env: {} },
+        workdir: "apps/web",
+      },
+    ]);
     expect(asRecord(out.result).job_id).toBe("bg-1");
     expect(String(asRecord(out.result).log_path)).toContain("bg-1.log");
+  });
+
+  it("rejects evaluators, expansion, substitutions, and shell scripts", async () => {
+    const commands = [
+      "eval 'git push origin HEAD'",
+      'tool=git; "$tool" push origin HEAD',
+      'echo "$(git push origin HEAD)"',
+      "echo `git reset --hard`",
+      "source ./agent-command.sh",
+      ". ./agent-command.sh",
+      "bash ./agent-command.sh",
+      "sh -c 'git push origin HEAD'",
+      "./agent-command.sh",
+      "PATH=. git push origin HEAD",
+      "NODE_OPTIONS=--require=./agent-command.js npm run dev",
+    ];
+    for (const command of commands) {
+      const { runner, starts } = fakeRunner();
+      const out = await new BackgroundJobs(runner).handle({ action: "start", command });
+      expect(out.success, command).toBe(false);
+      expect(out.reason, command).toBe(FORBIDDEN_COMMAND_REASON);
+      expect(starts, command).toHaveLength(0);
+    }
+  });
+
+  it("accepts literal quoting and a narrow set of startup environment flags", async () => {
+    const verdict = parseBackgroundCommand(`CI=1 PORT='3000' npm run dev -- --hostname "127.0.0.1"`);
+    expect(verdict).toEqual({
+      allowed: true,
+      invocation: {
+        executable: "npm",
+        args: ["run", "dev", "--", "--hostname", "127.0.0.1"],
+        env: { CI: "1", PORT: "3000" },
+      },
+    });
+  });
+
+  it("rechecks forged structured input at the execution boundary", () => {
+    expect(
+      checkBackgroundInvocation({ executable: "sh", args: ["-c", "git push"], env: {} }).allowed,
+    ).toBe(false);
+    expect(
+      checkBackgroundInvocation({ executable: "git", args: ["push", "origin", "HEAD"], env: {} })
+        .allowed,
+    ).toBe(false);
+    expect(
+      checkBackgroundInvocation({ executable: "npm", args: ["run", "dev"], env: {} }).allowed,
+    ).toBe(true);
+  });
+
+  it("rejects forged structured input before the host executes", async () => {
+    let executions = 0;
+    const host: RepoHost = {
+      layout: layoutForRoot("/run/background-boundary", "/opt/opencode"),
+      exec: async () => {
+        executions++;
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      readFile: async () => null,
+      writeFile: async () => {},
+      mkdir: async () => {},
+    };
+    await expect(
+      startBackground(host, {
+        jobId: "bg-forged",
+        invocation: { executable: "sh", args: ["-c", "git push origin HEAD"], env: {} },
+      }),
+    ).rejects.toThrow(/only literal, non-shell programs/i);
+    expect(executions).toBe(0);
   });
 });
 
