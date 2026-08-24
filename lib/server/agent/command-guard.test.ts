@@ -391,3 +391,99 @@ describe("checkCommand — git ailleurs, et les enveloppes (MIN-360)", () => {
     expect(allowed("env -u GIT_DIR ls -la")).toBe(true);
   });
 });
+
+describe("checkCommand — shell expansion cannot hide Git policy (MIN-422)", () => {
+  for (const cmd of [
+    "g=git; $g push origin HEAD",
+    "g=git; ${g} reset --hard",
+    'g=git; "$g" config core.hooksPath .ci/hooks',
+    'tool=git; env "$tool" push --force',
+    "${tool:-git} push origin HEAD",
+    "$'git' reset --hard",
+    "$(printf git) reset --hard",
+    '"$(printf git)" config core.hooksPath .ci/hooks',
+    "`printf git` push origin HEAD",
+    "/usr/bin/g?t push origin HEAD",
+    "/usr/bin/[g]it reset --hard",
+  ]) {
+    it(`refuses an expanded executable in \`${cmd}\``, () => {
+      const verdict = refused(cmd);
+      expect(verdict.allowed).toBe(false);
+      if (!verdict.allowed) expect(verdict.reason).toMatch(/must see literal executable/i);
+    });
+  }
+
+  for (const cmd of [
+    'action=push; git "$action" origin HEAD',
+    'git "$(printf reset)" --hard',
+    "git `printf config` core.hooksPath .ci/hooks",
+    'mode=--force; git clean "$mode"',
+    'key=core.hooksPath; git config "$key" .ci/hooks',
+    'flag=--amend; git commit "$flag" --no-edit',
+    "git p[us]sh origin HEAD",
+    "git c*nfig core.hooksPath .ci/hooks",
+    "git clean -?",
+    "git checkout --f* main",
+    "git config core.hooksP* .ci/hooks",
+  ]) {
+    it(`refuses expansion in a Git policy token in \`${cmd}\``, () => {
+      expect(allowed(cmd)).toBe(false);
+    });
+  }
+
+  it("checks commands executed inside quoted substitutions", () => {
+    expect(allowed('echo "$(git push origin HEAD)"')).toBe(false);
+    expect(allowed("printf '%s' \"`git reset --hard`\"")).toBe(false);
+  });
+
+  for (const cmd of [
+    "eval 'git push origin HEAD'",
+    'payload="git reset --hard"; eval "$payload"',
+    "source ./agent-command.sh",
+    ". ./agent-command.sh",
+    "command eval 'git config core.hooksPath .ci/hooks'",
+    "builtin source ./agent-command.sh",
+    "exec git push origin HEAD",
+    "exec -a git git reset --hard",
+    "env -S 'git push origin HEAD'",
+    "sudo env --split-string='git reset --hard'",
+    "bash -c 'eval \"git push origin HEAD\"'",
+    "g() { git push origin HEAD; }; g",
+    "function g { git reset --hard; }; g",
+    "if true; then git push origin HEAD; fi",
+    "while false; do git config core.hooksPath .ci/hooks; done",
+    "! git reset --hard",
+    "{ git push origin HEAD; }",
+  ]) {
+    it(`refuses a shell evaluator or indirect wrapper in \`${cmd}\``, () => {
+      expect(allowed(cmd)).toBe(false);
+    });
+  }
+
+  it("enforces the same expansion boundary for local repository runs", () => {
+    const local = (cmd: string) => checkCommand(cmd, { local: true }).allowed;
+    expect(local('g=git; "$g" push origin HEAD')).toBe(false);
+    expect(local('g=git; "$g" config core.hooksPath .ci/hooks')).toBe(false);
+    expect(local('action=reset; git "$action" --hard')).toBe(false);
+  });
+
+  for (const cmd of [
+    'echo "$HOME"',
+    'FOO="$HOME" git status --porcelain',
+    'git diff -- "$FILE"',
+    "rg -n *.ts lib/server/agent",
+    "git diff -- *.ts",
+    "git add *.ts",
+    'echo "$(pwd)"',
+    "printf '%s\\n' 'g=git; $g push'",
+    "grep -n '`git reset --hard`' notes.md",
+    'echo "\\$g push"',
+    "echo \"eval 'git push origin HEAD'\"",
+    "if true; then git status --porcelain; fi",
+    "while false; do git diff --stat; done",
+  ]) {
+    it(`allows expansion that cannot select Git policy in \`${cmd}\``, () => {
+      expect(allowed(cmd)).toBe(true);
+    });
+  }
+});

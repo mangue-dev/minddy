@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-24T21:45:26.343Z",
+  "files": [
+    "lib/server/agent/command-guard.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_d479ff0a9a6e607b",
+      "filePath": "lib/server/agent/command-guard.ts",
+      "title": "Shell expansion bypasses all protected Git-command checks",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"fixed\",\n    \"reasoning\": \"The finding was valid in the committed baseline: its own former header explicitly stated that `g=git; $g reset --hard` passed, because `gitInvocation()` only recognized literal `git` tokens. The current working tree patches that boundary in `command-guard.ts`: tokenization records unescaped shell expansions and glob syntax, and `checkSegment()` rejects an indirect executable before attempting Git recognition. It also rejects expansion/glob use in Git globals and subcommands, and in arguments for policy-bearing commands including `config`, `commit`, `checkout`, `stash`, `clean`, and `switch`. Active `$()` and backtick substitutions are recursively inspected, while `eval`, `source`, `.`, and related evaluators are denied; this prevents the shell from resolving an unchecked Git invocation after authorization. The effective execution path is guarded: the OpenCode supervisor passes every non-local `bash` permission through `decidePermission()`, which calls `checkCommand()` before replying `once`; `run_background` independently calls the same guard. Local OpenCode runs currently disable the `bash` capability altogether, so the claimed local shell route is not available through that permission path. The uncommitted regression tests directly cover variable-expanded, command-substituted, quoted, glob-derived, wrapper-derived, and local-scope `git push`, destructive Git, and dangerous `git config` cases. I did not execute tests because this review is restricted to static analysis, but the source-level mitigation matches the stated bypass and is wired into the authorization points.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "fixed",
+      "reasoning": "The finding was valid in the committed baseline: its own former header explicitly stated that `g=git; $g reset --hard` passed, because `gitInvocation()` only recognized literal `git` tokens. The current working tree patches that boundary in `command-guard.ts`: tokenization records unescaped shell expansions and glob syntax, and `checkSegment()` rejects an indirect executable before attempting Git recognition. It also rejects expansion/glob use in Git globals and subcommands, and in arguments for policy-bearing commands including `config`, `commit`, `checkout`, `stash`, `clean`, and `switch`. Active `$()` and backtick substitutions are recursively inspected, while `eval`, `source`, `.`, and related evaluators are denied; this prevents the shell from resolving an unchecked Git invocation after authorization. The effective execution path is guarded: the OpenCode supervisor passes every non-local `bash` permission through `decidePermission()`, which calls `checkCommand()` before replying `once`; `run_background` independently calls the same guard. Local OpenCode runs currently disable the `bash` capability altogether, so the claimed local shell route is not available through that permission path. The uncommitted regression tests directly cover variable-expanded, command-substituted, quoted, glob-derived, wrapper-derived, and local-scope `git push`, destructive Git, and dangerous `git config` cases. I did not execute tests because this review is restricted to static analysis, but the source-level mitigation matches the stated bypass and is wired into the authorization points."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_d479ff0a9a6e607b"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

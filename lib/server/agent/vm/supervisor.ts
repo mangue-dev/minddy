@@ -35,9 +35,7 @@ import {
 import {
   BackgroundJobs,
   OPENCODE_BACKGROUND_LOG_NOTES,
-  type BackgroundJobRunner,
 } from "../background";
-import { forgetHarnessChild, noteHarnessChild } from "./child-registry";
 // The SAME normalization as the home loop: `update_plan` is a tool for
 // control, and both engines must derive the same event `plan_update`.
 import { normalizePlan } from "../agent-contract";
@@ -300,58 +298,6 @@ export interface SupervisorInput {
   prompt: string;
   /** The minddy anchor (ticket / notebook / reread), reinjected in `instructions`. */
   anchorInstructions: string;
-}
-
-/**
- * GROUND JOBS, REGISTERED IN THE CHILDREN'S REGISTRY (MIN-364, decision D8).
- *
- * This was the written CONDITION of reopening `run_background` locally, and
- * it comes down to one fact: the jobs leave in `setsid`, so they
- * survive the shell that launched them — and the harness itself when it is killed
- * net (⌘Q, main process crash), since the end of turn `stopAll`
- * then never turns. Without a register, the `npm run dev` of the model remained alive,
- * port 3000 held, **and nowhere knew where to find it**.
- *
- * The inscription is done BEHIND the `start` rather than in `background.ts`:
- * this module is pure and testable without a disk, and that is what makes it valuable.
- * Here, the supervisor already knows how to write to the machine's disk.
- *
- * `kind: "background"` is not cosmetic: `killTargets` reports these children
- * **in GROUP** (`-pid`), because the session leader is not the server but
- * the shell that launched it — killing the lone leader would leave the `next dev` behind.
- *
- * Outside the local path, the function returns the runner as it is: the microVM dies with
- * his children, and one more file would keep nothing there.
- */
-function registeredBackgroundRunner(
-  runner: BackgroundJobRunner,
-  harnessDir: string,
-  local: boolean,
-): BackgroundJobRunner {
-  if (!local) return runner;
-  return {
-    start: async (opts) => {
-      const started = await runner.start(opts);
-      // AFTER the start, because it is he who makes the pid — and the only moment
-      // uncovered is one where the job does not yet have a number to write.
-      if (started.pid > 0) {
-        noteHarnessChild(harnessDir, {
-          pid: started.pid,
-          kind: "background",
-          label: opts.command.slice(0, 200),
-        });
-      }
-      return started;
-    },
-    read: (opts) => runner.read(opts),
-    stop: async (opts) => {
-      await runner.stop(opts);
-      // Removed only when you stopped it YOURSELF: a job you didn't know about
-      // kill must remain in the register, it is precisely him who is the launcher
-      // will have to harvest.
-      forgetHarnessChild(harnessDir, opts.pid);
-    },
-  };
 }
 
 /**
@@ -762,32 +708,27 @@ export async function runOpencodeTurn(
   );
 
   /**
-   * GROUND JOBS (MIN-286, lot 3; MIN-114 for politics) — `bash` does not have
-   * background mode, so the tool is ours and its register lives HERE.
+   * BACKGROUND JOBS (MIN-286, batch 3; MIN-114 for policy) — `bash` does not
+   * have background mode, so the tool is ours and its registry lives HERE.
    *
-   * `background.ts` does not move one line: the job ceiling, the safeguard
-   * `checkCommand`, offsets and formatting are pure there, and they are
- * that were missing from the fallback ("start your server with `&`") that this tool replaces.
-   * What is new takes three connections: the bridge executes it, `create_pr`
-   * kills before staging, end of turn kills before committing.
+   * Host execution is created only inside a disposable microVM. A local job
+   * receives neither the generated tool nor a runner that could execute a
+   * forged request on the developer's machine.
    *
-   * `seqBase: 0` as in [turn.ts](turn.ts): the log files are
-   * numbered by TOWER, and a tower has its microVM.
+   * `seqBase: 0` as in [turn.ts](turn.ts): log files are numbered per turn,
+   * and a turn has its own microVM.
    */
-  const background = new BackgroundJobs(
-    registeredBackgroundRunner(repoBackgroundRunner(host), job.layout.harnessDir, local),
-    0,
-    // The log lives outside the repository, and a reading outside the repository is refused by our
-    // own permission verdict (`external_directory`): this is the SHELL that we
-    // sends it to read, not `read`.
-    OPENCODE_BACKGROUND_LOG_NOTES,
-    // The same world as that of the permission verdict: a `git commit` launched in
-    // in the foreground, it is judged like a foreground `git commit` (MIN-364).
-    { local },
-  );
-  const servesBackground = localToolsFor(job).some(
-    (t) => t.function.name === "run_background",
-  );
+  const background = local
+    ? null
+    : new BackgroundJobs(
+        repoBackgroundRunner(host),
+        0,
+        OPENCODE_BACKGROUND_LOG_NOTES,
+        { local: false },
+      );
+  const servesBackground =
+    background !== null &&
+    localToolsFor(job).some((t) => t.function.name === "run_background");
 
   /**
    * Jobs killed before a `git add -A`, TOLD to the model. A server stopped in
@@ -795,7 +736,7 @@ export async function runOpencodeTurn(
    * died looking for what he broke (MIN-209).
    */
   async function stopJobsForStaging(): Promise<string> {
-    const stopped = await background.stopAll().catch(() => 0);
+    const stopped = background ? await background.stopAll().catch(() => 0) : 0;
     if (stopped === 0) return "";
     return (
       `${stopped === 1 ? "1 background job was" : `${stopped} background jobs were`} stopped ` +
@@ -1038,7 +979,9 @@ export async function runOpencodeTurn(
       ...(validateChanges ? { validate_changes: validateChanges } : {}),
       // `handle` never raises: everything returns to the model as a result of
       // tool, successful or in error (ceiling reached, order refused, unknown job).
-      ...(servesBackground ? { run_background: (args) => background.handle(args) } : {}),
+      ...(servesBackground && background
+        ? { run_background: (args) => background.handle(args) }
+        : {}),
       /**
        * THE TOUR CHECKLIST — a CONTROL tool, executed here and nowhere
        * elsewhere (the same gesture as the home loop: normalize, emit
@@ -2485,7 +2428,7 @@ export async function runOpencodeTurn(
      * would keep the microVM awake after the round ends. Same gesture as
      * [turn.ts](turn.ts), in the same place.
      */
-    await background.stopAll().catch(() => 0);
+    await background?.stopAll().catch(() => 0);
     let pushed: VmPushResult | null = null;
     let pushError: string | undefined;
     /**
@@ -2618,7 +2561,7 @@ export async function runOpencodeTurn(
     // Net: a round that exits through an exception has not passed through the stop
     // pre-push, and a dev server would survive the round. `stopAll` is
     // idempotent — a job that has already been killed is no longer alive, so it is not killed again.
-    await background.stopAll().catch(() => 0);
+    await background?.stopAll().catch(() => 0);
     await server?.stop().catch(() => {});
     await proxy.close().catch(() => {});
     await bridge.close().catch(() => {});

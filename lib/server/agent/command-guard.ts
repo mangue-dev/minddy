@@ -15,8 +15,10 @@
  * the remote. All reading git (`status`, `log`, `diff`, `show`, `branch`)
  * and `git add` remain free.
  *
- * The parsing is textual, not a real shell: `g=git; $g reset --hard` passes. There
- * target is a distracted model, not an attacker — the attacker already has `rm -rf`.
+ * The parsing is textual, not a real shell. MIN-422 closes the security-relevant
+ * gap between those two worlds: an executable name and every token that decides
+ * Git policy must be literal. Shell-expanded forms such as `g=git; $g reset --hard`
+ * are refused because the guard cannot authorize the command the shell will produce.
  *
  * One case still deserved to be closed (MIN-244): `bash -lc "git reset --hard"`
  * is not an attacker's trick but a form that the model writes by itself, and
@@ -93,10 +95,17 @@ export interface CommandScope {
 /** Characters that end a command in a `sh -c`: chaining, pipe,
  * subshell, substitution. The production record shows exactly this case —
  *  `cd /vercel/sandbox/repo && git checkout -- package-lock.json`. */
-const SEGMENT_BREAKS = new Set([";", "&", "|", "\n", "(", ")", "`"]);
+const SEGMENT_BREAKS = new Set([";", "&", "|", "\n", "(", ")"]);
 
 /** Commands that wrap another: we look at what they launch. */
-const WRAPPERS = new Set(["sudo", "env", "command", "time", "nohup", "xargs"]);
+const WRAPPERS = new Set([
+  "sudo", "env", "command", "builtin", "exec", "time", "nohup", "xargs",
+  // Shell control prefixes whose following simple command is still policy-bearing.
+  "!", "{", "if", "then", "else", "elif", "while", "until", "do",
+]);
+
+/** Shell builtins that execute text or a file after authorization has finished. */
+const SHELL_EVALUATORS = new Set(["eval", "source", ".", "function", "coproc"]);
 
 /**
  * ENVELOPE OPTIONS THAT HAVE A FOLLOWING WORD VALUE (MIN-360).
@@ -118,7 +127,18 @@ const WRAPPER_VALUE_OPTIONS: Record<string, ReadonlySet<string>> = {
     "--max-chars", "-a", "--arg-file", "-d", "--delimiter", "-E", "-e", "--eof"]),
   time: new Set(["-f", "--format", "-o", "--output"]),
   command: new Set<string>(),
+  builtin: new Set<string>(),
+  exec: new Set(["-a"]),
   nohup: new Set<string>(),
+  "!": new Set<string>(),
+  "{": new Set<string>(),
+  if: new Set<string>(),
+  then: new Set<string>(),
+  else: new Set<string>(),
+  elif: new Set<string>(),
+  while: new Set<string>(),
+  until: new Set<string>(),
+  do: new Set<string>(),
 };
 
 /**
@@ -133,6 +153,12 @@ const DESTRUCTIVE = new Set([
   "rebase",
   "cherry-pick",
 ]);
+
+/** Subcommands whose arguments decide whether an otherwise allowed form is destructive. */
+const GIT_ARGUMENT_POLICY = new Set(["config", "commit", "checkout", "stash", "clean", "switch"]);
+
+/** Bound recursive shell payload/substitution inspection without silently allowing overflow. */
+const MAX_SHELL_DEPTH = 8;
 
 /**
  * Cuts the command into segments executed independently, respecting the
@@ -174,16 +200,39 @@ function splitSegments(command: string): string[] {
   return segments.filter((s) => s.trim().length > 0);
 }
 
-/** Breaks a segment into words, quotation marks removed (`git "checkout" -- x`). */
-function tokenize(segment: string): string[] {
+interface TokenizedSegment {
+  tokens: string[];
+  /** Token indexes containing shell expansion outside single quotes. */
+  expansions: ReadonlySet<number>;
+  /** Token indexes containing active pathname glob syntax. */
+  globs: ReadonlySet<number>;
+}
+
+/**
+ * Breaks a segment into words with quotation marks removed (`git "checkout" -- x`).
+ * Expansion metadata remains attached to its token so policy-bearing words cannot
+ * change after authorization. A dollar sign escaped with `\\` or enclosed in
+ * single quotes is literal and therefore does not set the expansion bit.
+ */
+function tokenize(segment: string): TokenizedSegment {
   const tokens: string[] = [];
+  const expansions = new Set<number>();
+  const globs = new Set<number>();
   let current = "";
   let started = false;
+  let expands = false;
+  let globsPath = false;
   let quote: '"' | "'" | null = null;
   const flush = () => {
-    if (started) tokens.push(current);
+    if (started) {
+      if (expands) expansions.add(tokens.length);
+      if (globsPath) globs.add(tokens.length);
+      tokens.push(current);
+    }
     current = "";
     started = false;
+    expands = false;
+    globsPath = false;
   };
   for (let i = 0; i < segment.length; i++) {
     const ch = segment[i];
@@ -196,6 +245,7 @@ function tokenize(segment: string): string[] {
         quote = null;
         continue;
       }
+      if (quote === '"' && (ch === "$" || ch === "`")) expands = true;
       current += ch;
       continue;
     }
@@ -213,11 +263,93 @@ function tokenize(segment: string): string[] {
       flush();
       continue;
     }
+    if (ch === "$" || ch === "`") expands = true;
+    if (ch === "*" || ch === "?" || ch === "[") globsPath = true;
     current += ch;
     started = true;
   }
   flush();
-  return tokens;
+  return { tokens, expansions, globs };
+}
+
+type SubstitutionFrame = { quote: '"' | "'" | null };
+
+/** Find the closing parenthesis of `$(`, including nested substitutions/groups. */
+function substitutionEnd(command: string, start: number): number {
+  const frames: SubstitutionFrame[] = [{ quote: null }];
+  for (let i = start; i < command.length; i++) {
+    const frame = frames[frames.length - 1];
+    const ch = command[i];
+    if (ch === "\\" && frame.quote !== "'") {
+      i++;
+      continue;
+    }
+    if (ch === "'" && frame.quote !== '"') {
+      frame.quote = frame.quote === "'" ? null : "'";
+      continue;
+    }
+    if (ch === '"' && frame.quote !== "'") {
+      frame.quote = frame.quote === '"' ? null : '"';
+      continue;
+    }
+    if (frame.quote === "'") continue;
+    if (ch === "$" && command[i + 1] === "(") {
+      frames.push({ quote: null });
+      i++;
+      continue;
+    }
+    if (frame.quote == null && ch === "(") {
+      frames.push({ quote: null });
+      continue;
+    }
+    if (frame.quote == null && ch === ")") {
+      frames.pop();
+      if (frames.length === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/** Commands executed by active `$()` or backtick substitutions, excluding single quotes. */
+function commandSubstitutions(command: string): string[] {
+  const substitutions: string[] = [];
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (ch === "\\" && quote !== "'") {
+      i++;
+      continue;
+    }
+    if (ch === "'" && quote !== '"') {
+      quote = quote === "'" ? null : "'";
+      continue;
+    }
+    if (ch === '"' && quote !== "'") {
+      quote = quote === '"' ? null : '"';
+      continue;
+    }
+    if (quote === "'") continue;
+    if (ch === "$" && command[i + 1] === "(") {
+      const end = substitutionEnd(command, i + 2);
+      if (end >= 0) {
+        substitutions.push(command.slice(i + 2, end));
+        i = end;
+      }
+      continue;
+    }
+    if (ch === "`") {
+      let end = i + 1;
+      while (end < command.length && command[end] !== "`") {
+        if (command[end] === "\\") end++;
+        end++;
+      }
+      if (end < command.length) {
+        substitutions.push(command.slice(i + 1, end));
+        i = end;
+      }
+    }
+  }
+  return substitutions;
 }
 
 /** Index of the first word that is truly a binary: skips assignments
@@ -285,27 +417,40 @@ const GIT_GLOBAL_ELSEWHERE = new Set(["-C", "--git-dir", "--work-tree", "--names
  * live `-C`, `--git-dir` and `-c <key>=<value>` which sets a hook for time
  * of an order.
  */
-function gitInvocation(
-  tokens: string[],
-): { sub: string; args: string[]; globals: string[] } | null {
+function gitInvocation(tokens: string[]): {
+  sub: string;
+  args: string[];
+  globals: string[];
+  policyTokenIndexes: number[];
+  argsStart: number;
+} | null {
   let i = skipPrefix(tokens);
   const bin = tokens[i];
   if (!bin || !(bin === "git" || bin.endsWith("/git"))) return null;
   i++;
   const globals: string[] = [];
+  const policyTokenIndexes: number[] = [];
   while (i < tokens.length && tokens[i].startsWith("-")) {
+    policyTokenIndexes.push(i);
     const opt = tokens[i];
     i++;
     if (GIT_GLOBAL_WITH_VALUE.has(opt)) {
+      policyTokenIndexes.push(i);
       globals.push(`${opt}=${tokens[i] ?? ""}`);
       i++;
     } else {
       globals.push(opt);
     }
   }
-  // `git -C /autre` sans sous-commande ne fait rien, mais ses globales se jugent
-  // anyway: making null here would make them invisible.
-  return { sub: tokens[i] ?? "", args: tokens.slice(i + 1), globals };
+  // A Git invocation without a subcommand still has policy-bearing globals.
+  policyTokenIndexes.push(i);
+  return {
+    sub: tokens[i] ?? "",
+    args: tokens.slice(i + 1),
+    globals,
+    policyTokenIndexes,
+    argsStart: i + 1,
+  };
 }
 
 /**
@@ -438,6 +583,17 @@ function harnessCommitRefusal(): CommandVerdict {
   };
 }
 
+/** Refuse a shell-expanded word when its eventual value controls Git authorization. */
+function shellExpansionRefusal(what: string): CommandVerdict {
+  return {
+    allowed: false,
+    reason:
+      `Refused shell-expanded ${what} — the guard must see literal executable, Git option, ` +
+      `subcommand, and destructive-mode names before the shell runs. Write the command ` +
+      `literally so its Git effects can be verified.`,
+  };
+}
+
 /**
  * `git config` — or rather the only part that matters: what WRITES (MIN-360).
  *
@@ -529,15 +685,40 @@ const shortFlagWith = (letter: string) => (a: string) =>
 
 /** Is this segment running a forbidden git command? */
 function checkSegment(segment: string, depth: number, scope: CommandScope): CommandVerdict {
-  const tokens = tokenize(segment);
+  const tokenized = tokenize(segment);
+  const { tokens, expansions, globs } = tokenized;
+  const isIndirect = (index: number) => expansions.has(index) || globs.has(index);
+
+  // Any expanded executable could become `git` only after this guard approves it.
+  // Assignments and ordinary argument expansions remain available; only the word
+  // that selects the program must be literal.
+  const executableIndex = skipPrefix(tokens);
+  const envWrapperIndex = tokens.findIndex((token, index) => token === "env" && index < executableIndex);
+  if (
+    envWrapperIndex >= 0 &&
+    tokens
+      .slice(envWrapperIndex + 1, executableIndex)
+      .some((token) => token === "-S" || token === "--split-string" || token.startsWith("--split-string="))
+  ) {
+    return shellExpansionRefusal("`env --split-string` payload");
+  }
+  if (isIndirect(executableIndex)) {
+    return shellExpansionRefusal(`executable name \`${tokens[executableIndex]}\``);
+  }
+  const executable = tokens[executableIndex];
+  if (SHELL_EVALUATORS.has(executable)) {
+    return shellExpansionRefusal(`shell evaluator \`${executable}\``);
+  }
 
   // `bash -lc "git reset --hard"`: the shell hides git behind its own `-c`.
   // We re-parse his argument as a command in its own right. The depth
   // terminal `bash -c "bash -c …"`, which has no reason to exist.
   const inner = shellCommandArg(tokens);
-  if (inner != null && depth < 3) {
+  if (inner != null && depth < MAX_SHELL_DEPTH) {
     const verdict = check(inner, depth + 1, scope);
     if (!verdict.allowed) return verdict;
+  } else if (inner != null) {
+    return shellExpansionRefusal("nested shell command");
   }
 
   // `.git/` by the shell — independent of git: `echo … > .git/hooks/pre-commit`
@@ -555,7 +736,18 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
 
   const git = gitInvocation(tokens);
   if (!git) return { allowed: true };
-  const { sub, args, globals } = git;
+  const { sub, args, globals, policyTokenIndexes, argsStart } = git;
+
+  const expandedPolicyIndex = policyTokenIndexes.find(isIndirect);
+  if (expandedPolicyIndex != null) {
+    return shellExpansionRefusal(`Git policy token \`${tokens[expandedPolicyIndex]}\``);
+  }
+  if (GIT_ARGUMENT_POLICY.has(sub)) {
+    const expandedArgIndex = args.findIndex((_, index) => isIndirect(argsStart + index));
+    if (expandedArgIndex >= 0) {
+      return shellExpansionRefusal(`\`git ${sub}\` argument \`${args[expandedArgIndex]}\``);
+    }
+  }
 
   // The globals, BEFORE the subcommand: `git -C /autre checkout main` is
   // harmless here and not there, and it's the `-C` that says so.
@@ -624,6 +816,14 @@ export function checkCommand(command: string, scope: CommandScope = {}): Command
 }
 
 function check(command: string, depth: number, scope: CommandScope): CommandVerdict {
+  const substitutions = commandSubstitutions(command);
+  if (substitutions.length > 0 && depth >= MAX_SHELL_DEPTH) {
+    return shellExpansionRefusal("nested command substitution");
+  }
+  for (const inner of substitutions) {
+    const verdict = check(inner, depth + 1, scope);
+    if (!verdict.allowed) return verdict;
+  }
   for (const segment of splitSegments(command)) {
     const verdict = checkSegment(segment, depth, scope);
     if (!verdict.allowed) return verdict;
