@@ -13,7 +13,7 @@ import { cloudLayout, layoutForRoot } from "../harness-layout";
 const LAYOUT = cloudLayout();
 const ANCHOR_FILE = opencodeAnchorFile(LAYOUT);
 const TOOL_DIR = opencodeToolDir(LAYOUT);
-import { SUPERVISOR_URL_ENV } from "./opencode-tools";
+import { SUPERVISOR_TOKEN_ENV, SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge } from "./tool-bridge";
 import type { ControlPlaneClient } from "./control-plane-client";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
@@ -109,6 +109,7 @@ function parentRound(messageId: string, finish: string): string {
 const h = {
   files: [] as Array<{ path: string; content: string }>,
   env: {} as Record<string, string>,
+  clientAuth: null as { username: string; password: string } | null,
   stopped: false,
   events: [] as Array<{ type: string; payload: Record<string, unknown> }>,
   usage: [] as Array<Record<string, unknown>>,
@@ -392,8 +393,15 @@ function deps(): SupervisorDeps {
     writeFile: async (path, content) => {
       h.files.push({ path, content });
     },
-    client: (baseUrl) =>
-      new OpencodeClient({ baseUrl, directory: LAYOUT.repoDir, fetchImpl: fakeFetch() }),
+    client: (baseUrl, auth) => {
+      h.clientAuth = auth ?? null;
+      return new OpencodeClient({
+        baseUrl,
+        directory: LAYOUT.repoDir,
+        fetchImpl: fakeFetch(),
+        ...(auth ? { auth } : {}),
+      });
+    },
     /**
      * The proxy, in memory: it renders what `h.generations` declares and applies
      * the SAME pairing as the real one (`takeGeneration`), which is tested separately
@@ -500,6 +508,7 @@ const run = (
 beforeEach(() => {
   h.files = [];
   h.env = {};
+  h.clientAuth = null;
   h.stopped = false;
   h.events = [];
   h.usage = [];
@@ -572,7 +581,7 @@ describe("le décor, posé avant le premier octet de serveur", () => {
     for (const f of h.files) expect(f.path.startsWith("/vercel/sandbox/repo/")).toBe(false);
   });
 
-  it("donne au serveur la config du tour et l'adresse du pont", async () => {
+  it("configures per-turn credentials for both local service endpoints", async () => {
     await run();
     expect(JSON.parse(h.env.OPENCODE_CONFIG_CONTENT).model).toBe(
       "minddy/deepseek/deepseek-v4-flash",
@@ -580,6 +589,14 @@ describe("le décor, posé avant le premier octet de serveur", () => {
     // The 32 tools generated read this variable: without it, they return a
     // sentence to the model instead of calling anything.
     expect(h.env[SUPERVISOR_URL_ENV]).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(h.env[SUPERVISOR_TOKEN_ENV]).toHaveLength(43);
+    expect(h.env.OPENCODE_SERVER_USERNAME).toBe("minddy");
+    expect(h.env.OPENCODE_SERVER_PASSWORD).toHaveLength(43);
+    expect(h.clientAuth).toEqual({
+      username: h.env.OPENCODE_SERVER_USERNAME,
+      password: h.env.OPENCODE_SERVER_PASSWORD,
+    });
+    expect(h.env[SUPERVISOR_TOKEN_ENV]).not.toBe(h.env.OPENCODE_SERVER_PASSWORD);
     expect(h.env.OPENCODE_CONFIG_CONTENT).not.toContain("ghs_SECRET");
   });
 
@@ -2469,15 +2486,7 @@ describe("un tour sur la machine de quelqu'un", () => {
     expect(h.routes).not.toContain("POST /session");
   });
 
-  /**
-   * MIN-364, decision D5 — LEAVING THE FILE IS AUTHORIZED, AND LEAVES A TRACE.
-   *
-   * This is the counterpart of openness, and its only honest justification:
-   * wall before (`external_directory: "deny"`) only caught honest tools
-   * and pushed the work towards `bash`, where we no longer see anything. Here the verdict
-   * doesn't restrict anything AND the thread keeps the list of excursions.
-   */
-  describe("sortir du dossier attaché", () => {
+  describe("repository confinement", () => {
     const externalFrame = JSON.stringify({
       type: "permission.asked",
       properties: {
@@ -2491,28 +2500,20 @@ describe("un tour sur la machine de quelqu'un", () => {
       },
     });
 
-    it("autorise, et publie la sortie au fil avec son chemin", async () => {
+    it("rejects an external-directory permission request", async () => {
       h.extraFrames = [externalFrame];
       await runLocal();
-      expect(h.permissionReplies).toEqual([{ id: "per_ext", reply: "once" }]);
-      const trace = h.events.find(
-        (e) => e.type === "status" && e.payload.phase === "outside_repo",
+      expect(h.permissionReplies[0]).toMatchObject({ id: "per_ext", reply: "reject" });
+      expect(h.events.some((e) => e.type === "status" && e.payload.phase === "outside_repo")).toBe(
+        false,
       );
-      // The path is rewritten like the rest of the local path: what goes up
-      // says where the agent went, never the name of its owner.
-      expect(trace?.payload.path).toBe("~/Projets/voisin");
     });
 
-    it("n'annonce un dossier QU'UNE fois, quel que soit le nombre d'accès", async () => {
-      // Opencode asks again on each access (we answer `once`, never `always`):
-      // a lathe that reads thirty files from a neighboring repository would publish thirty
-      // identical lines, and an illegible trace is no longer a trace.
+    it("rejects every repeated external-directory request", async () => {
       h.extraFrames = [externalFrame, externalFrame, externalFrame];
       await runLocal();
       expect(h.permissionReplies).toHaveLength(3);
-      expect(
-        h.events.filter((e) => e.type === "status" && e.payload.phase === "outside_repo"),
-      ).toHaveLength(1);
+      expect(h.permissionReplies.every((reply) => reply.reply === "reject")).toBe(true);
     });
 
     it("refuse encore en microVM, où il n'y a qu'un dépôt", async () => {
@@ -2664,28 +2665,13 @@ describe("un tour sur la machine de quelqu'un", () => {
     });
   });
 
-  /**
-   * MIN-364 (decision D8) — THE CHILDREN'S REGISTRY COVERS GROUND JOBS.
-   *
-   * This was the written CONDITION for the reopening of `run_background` locally,
-   * and there is nothing theoretical about it: jobs go to `setsid`, expressly
-   * to survive the shell, and the end-of-turn `stopAll` never runs when
-   * the harness is killed outright (⌘Q, main process crash). Without this writing,
-   * the `npm run dev` of the model remains alive, port 3000 held, and nothing null
-   * I don't know where to find him.
-   *
-   * The test written in a REAL temporary folder: `child-registry.ts` makes some
-   * `writeFileSync` synchronous (by design — a process killed cleanly does not have the
-   * time of an asynchronous flush), and it is the file on the disk which is the
-   * contract with the launcher.
-   */
-  describe("les jobs de fond, inscrits au registre", () => {
+  describe("background jobs", () => {
     let root = "";
     beforeEach(() => {
       root = mkdtempSync(join(tmpdir(), "mdy-supervisor-"));
     });
 
-    const runInTemp = async (): Promise<string> => {
+    it("does not expose a background-command handler to local runs", async () => {
       const layout = layoutForRoot(root, `${root}/oc`);
       await runOpencodeTurn(
         job({ layout, controlToken: "jeton-de-bail" }),
@@ -2696,50 +2682,7 @@ describe("un tour sur la machine de quelqu'un", () => {
           ...deps(),
           startToolBridge: async (opts) => {
             h.supervisorTools = (opts.supervisorTools ?? {}) as typeof h.supervisorTools;
-            await h.supervisorTools.run_background({ action: "start", command: "npm run dev" });
-            return await startToolBridge(opts);
-          },
-        },
-      );
-      return join(layout.harnessDir, "children.json");
-    };
-
-    it("inscrit le job, en GROUPE, et le retire quand il l'a tué lui-même", async () => {
-      const file = await runInTemp();
-      // The round has ended, so `stopAll` has passed: the entry must have been
-      // WITHDRAWN. It's the other half of the contract — a record that doesn't forget
-      // would never kill pids reassigned to others, at the next startup.
-      const after = JSON.parse(readFileSync(file, "utf8")) as { children: unknown[] };
-      expect(after.children).toEqual([]);
-      // And the job was indeed launched, then killed, in that order.
-      expect(h.exec.findIndex((c) => c.includes("setsid"))).toBeGreaterThanOrEqual(0);
-      expect(h.exec.findIndex((c) => c.includes("kill -TERM"))).toBeGreaterThan(
-        h.exec.findIndex((c) => c.includes("setsid")),
-      );
-      rmSync(root, { recursive: true, force: true });
-    });
-
-    it("garde l'inscription tant que le job VIT — c'est là qu'elle sert", async () => {
-      const layout = layoutForRoot(root, `${root}/oc`);
-      const file = join(layout.harnessDir, "children.json");
-      await runOpencodeTurn(
-        job({ layout, controlToken: "jeton-de-bail" }),
-        { prompt: "fais le ticket", anchorInstructions: "# Ancrage" },
-        cp(),
-        host(layout),
-        {
-          ...deps(),
-          startToolBridge: async (opts) => {
-            h.supervisorTools = (opts.supervisorTools ?? {}) as typeof h.supervisorTools;
-            await h.supervisorTools.run_background({ action: "start", command: "npm run dev" });
-            // Read DURING the tour: this is the only moment where the observation has a
-            // meaning, since the end of the turn kills everything.
-            const live = JSON.parse(readFileSync(file, "utf8")) as {
-              children: Array<{ pid: number; kind: string; label?: string }>;
-            };
-            expect(live.children).toEqual([
-              { pid: 4242, kind: "background", label: "npm run dev" },
-            ]);
+            expect(h.supervisorTools.run_background).toBeUndefined();
             return await startToolBridge(opts);
           },
         },

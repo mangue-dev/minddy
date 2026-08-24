@@ -3,13 +3,6 @@ import { posix as posixPath } from "node:path";
 import { checkCommand, FORBIDDEN_COMMAND_REASON } from "../command-guard";
 import { assertNotGit, resolveWithin } from "../repo-path";
 import { isSecretFile } from "../secret-scan";
-import {
-  fetchHostname,
-  fetchPort,
-  isPrivateHostname,
-  privateFetchMessage,
-  PRIVATE_FETCH_REASON,
-} from "./private-address";
 
 /**
  * THE SAFEGUARDS, REPRESENTED ON THE OPENCODE PERMISSION REQUEST (MIN-286, lot 2).
@@ -153,6 +146,9 @@ export const DOOM_LOOP_REASON = "doom_loop";
 /** `tool_result.reason` of an ability that the tower config has turned off. */
 export const DISABLED_PERMISSION_REASON = "disabled_permission";
 
+/** A host capability removed from local runs rather than heuristically parsed. */
+export const LOCAL_CAPABILITY_REASON = "local_capability_disabled";
+
 /**
  * THE PERMISSIONS THAT WE READ, AND THE VERSION WHERE WE READ THEM (MIN-364, lot 7).
  *
@@ -221,57 +217,6 @@ export const SECRET_FILE_READ_REASON = "secret_file_read";
 export interface PermissionScope {
   /** Does the trick play on the user's machine (`isLocalJob`)? */
   local?: boolean;
-  /**
-   * HARNESS PORTS ON THE LOCAL LOOP (MIN-364, decision D8) — the proxy
-   * LLM, the tools bridge, the opencode server of the tour.
-   *
-   * These are the ONLY ones that `webfetch` still refuses locally. The refusal before
-   * concerned all private space, and its collateral damage was exactly
-   * the capacity we want: `curl localhost:3000` to go to the page we want
-   * just wrote render. Both are distinguished by the port, and the supervisor
-   * is the only one to know them — hence the passage through the scope rather than a
-   * constante.
-   *
-   * Empty = we do not know which ports to protect, and we then refuse all
-   * local loop: ignorance does not mean authorization.
-   */
-  harnessPorts?: readonly number[];
-}
-
-/**
- * THE LITERAL VERDICT OF A `webfetch` — the PURE half of the guardrail (MIN-360,
- * then MIN-364 for the port).
- *
- * The other half is the RESOLUTION of the name, which requires a resolver and therefore lives
- * in [local-guard.ts](local-guard.ts). Both are necessary: ​​this one
- * refuses `http://127.0.0.1:<harness port>`, the other refuses the public domain
- * that points to it.
- */
-export function webfetchLiteralVerdict(
-  url: string | undefined,
-  harnessPorts: readonly number[] = [],
-): PermissionVerdict {
-  const hostname = fetchHostname(url);
-  if (!hostname) {
-    return {
-      reply: "reject",
-      message: "The harness could not read the URL to fetch, so it refused it.",
-      reason: PRIVATE_FETCH_REASON,
-    };
-  }
-  if (isPrivateHostname(hostname) && isHarnessPort(url, harnessPorts)) {
-    return { reply: "reject", message: privateFetchMessage(hostname), reason: PRIVATE_FETCH_REASON };
-  }
-  return ALLOW;
-}
-
-/**
- * Is this fetch aimed at a harness service? Without a list, EVERYTHING counts: this is the
- * prudent conduct of ignorance, and it returns the behavior before D8.
- */
-export function isHarnessPort(url: string | undefined, harnessPorts: readonly number[]): boolean {
-  if (harnessPorts.length === 0) return true;
-  return harnessPorts.includes(fetchPort(url));
 }
 
 /**
@@ -299,6 +244,14 @@ export function decidePermission(
       return decideTask(ask, subagents);
 
     case "bash": {
+      if (scope.local) {
+        return {
+          reply: "reject",
+          message:
+            "Shell commands are unavailable in local runs because they would inherit unrestricted host filesystem and network access.",
+          reason: LOCAL_CAPABILITY_REASON,
+        };
+      }
       const command = (ask.command ?? "").trim();
       // A `bash` request without an order does not exist in the measure. If she
       // appeared, we would not know what we were authorizing, so we refuse it.
@@ -310,7 +263,7 @@ export function decidePermission(
       }
       // The travel scope: `git commit` is refused in microVM (harness commit)
       // and rendered to the model on someone's machine (D6, MIN-364).
-      const verdict = checkCommand(command, { local: scope.local === true });
+      const verdict = checkCommand(command, { local: false });
       if (verdict.allowed) return ALLOW;
       return { reply: "reject", message: verdict.reason, reason: FORBIDDEN_COMMAND_REASON };
     }
@@ -332,21 +285,8 @@ export function decidePermission(
       }
       try {
         for (const { path } of targets) {
-          /**
-           * ⚠ IT IS THIS `case` WHICH MADE THE BORDER, not the config line
-           * (MIN-364, decision D5).
-           *
-           * `absoluteInRepo` LIFTING on any path outside the depot: `external_directory`
-           * could go to `allow`, the writing was refused here. THE
-           * perimeter therefore opens here, and nowhere else.
-           *
-           * What remains, and which does not depend on any perimeter decision:
-           * ****CODE_0__**. `assertNotGit` refuses a `.git` segment ANYWHERE in
-           * the path, agent repository or neighboring repository — a hook written there executes
-           * at the next gesture of a human, and a `config` carries
-           * identifiers. This is the only remaining scope of §9 of the audit.
-           */
-          const abs = scope.local ? absoluteOnDisk(repoDir, path) : absoluteInRepo(repoDir, path);
+          /** Lexically contain every write and protect repository metadata. */
+          const abs = absoluteInRepo(repoDir, path);
           assertNotGit(repoDir, abs, path);
         }
         return ALLOW;
@@ -355,65 +295,30 @@ export function decidePermission(
       }
     }
 
-    /**
-     * EXIT THE FILE (MIN-364, decision D5) — and this `case` has changed in nature
-     * twice, which is worth writing about.
-     *
-     * It has been described as "a second curtain" and as "that which holds the model
-     * away from the rest of the record”: both were wrong. Our config posed
-     * `external_directory: "deny"`, and a config `deny` **short-circuits before
-     * any publication** — measured, the request never arrived here
-     * ([opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts)).
-     * And even published it would have held nothing: twenty of the thirty orders
-     * measured reach an external folder without ever publishing anything else
-     * as `bash` (measurement n°1 at the head of the file).
-     *
-     * **Locally, it is now in `ask` and this branch is running — for
-     * allow.** The wall before only grabbed the honest tools and pushed
-     * work towards `bash`, that is to say towards the place where we no longer see
-     * Nothing. Authorize by LEAVING A TRACE (the supervisor publishes an event to
-     * each file exit, cf. `supervisor.ts`) is the exact opposite: the
-     * verdict does not restrict anything, and the thread keeps the list of excursions.
-     *
-     * The “ask before writing elsewhere” rule lives in PROMPT, and it
-     * is assumed as a courtesy and not as a wall (D5, point 1): a
-     * model who doesn't read it writes it elsewhere without asking, and nothing stops her.
-     * What would not be acceptable is to describe it elsewhere as a
-     * garantie.
-     *
-     * Apart from the local path, nothing moves: the microVM only has one repository, the config there
-     * keeps its `deny`, and this branch is never reached.
-     */
+    /** Defense in depth if a future OpenCode version publishes this denied action. */
     case "external_directory":
-      if (scope.local) return ALLOW;
       return {
         reply: "reject",
         message: `The harness only allows work inside the repository (${repoDir}).`,
+        ...(scope.local ? { reason: LOCAL_CAPABILITY_REASON } : {}),
       };
 
-    /**
-     * READING (MIN-360) — a request that never happened, because our
-     * config disait `read: "allow"`.
-     *
-     * What this line erased is a protection that opencode DELIVERS: its
-     * ruleset by default sets `*.env` and `*.env.*` to `ask`. Our rules being
-     * concatenated after and the last one which matches winner, our `allow`
-     * removed the question. No consequence on a disposable clone; in fashion
-     * current repository, this is the REAL `.env` of the user, with their real keys,
-     * which silently entered the context of the model.
-     *
-     * ⚠ WHAT THIS REFUSAL DOES NOT CLOSE, and it is better to write it than leave it
-     * believe: `bash` remains open, and `cat .env` does not pass through here. This is the
-     * “paper wall” of §2 of the audit — a reading scope that would hold
-     * really would require keeping the SHELL, which is not from this lot. This
-     * This refusal closes the path by which a distracted model gets there alone.
-     */
+    /** Local reads are repository-contained and environment files remain denied. */
     case "read": {
       const path = (ask.filepath ?? "").trim();
       if (!path) {
         return {
           reply: "reject",
           message: "The harness could not read the path to open, so it refused the read.",
+        };
+      }
+      try {
+        absoluteInRepo(repoDir, path);
+      } catch (err) {
+        return {
+          reply: "reject",
+          message: (err as Error).message,
+          ...(scope.local ? { reason: LOCAL_CAPABILITY_REASON } : {}),
         };
       }
       if (!isSecretFile(path)) return ALLOW;
@@ -427,22 +332,16 @@ export function decidePermission(
       };
     }
 
-    /**
-     * THE FETCH (MIN-360, then MIN-364). Except local path, it is in `allow` in
-     * the config and therefore does not arrive here. Locally, it is the local loop of
-     * the user it reaches — see [private-address.ts](private-address.ts).
-     *
-     * The control is in TWO stages: the literal here, the RESOLUTION in
-     * [local-guard.ts](local-guard.ts). Without the second, a public domain which
-     * pointing to the proxy port would pass — and this is the form that an attack takes.
-     *
-     * What has changed with D8: the refusal concerns the PORT, no longer everything
-     * private space. An agent who can't go to the page he came from
-     * to write no longer has a feedback loop at all, and it is precisely that
-     * that the desktop app makes possible for the first time.
-     */
+    /** Local runs expose no direct URL-fetch capability. */
     case "webfetch":
-      return scope.local ? webfetchLiteralVerdict(ask.url, scope.harnessPorts ?? []) : ALLOW;
+      return scope.local
+        ? {
+            reply: "reject",
+            message:
+              "Direct URL fetching is unavailable in local runs. Use the scoped web_search tool when it is offered.",
+            reason: LOCAL_CAPABILITY_REASON,
+          }
+        : ALLOW;
 
     /**
      * READING WITHOUT CHALLENGES (MIN-364, lot 7). `glob` and `grep` are in `allow`
@@ -624,19 +523,4 @@ function absoluteInRepo(repoDir: string, filepath: string): string {
     throw new Error(`Path escapes the repository: ${filepath}`);
   }
   return resolved;
-}
-
-/**
- * THE SAME PATH, WITHOUT THE BORDER (MIN-364, decision D5) — on the machine
- * the user, where the entire disk is within range.
- *
- * No longer LIFTS on the depot exit; it normalizes, and that's it. What
- * still keeps something is `assertNotGit`, called just after by
- * the caller: a `.git` segment, wherever it is on the disk, remains refused.
- *
- * A relative path remains relative to the DEPOSIT, `..` included: it is the cwd of the
- * model, and a `../other-project/x.ts` designates the neighboring folder.
- */
-function absoluteOnDisk(repoDir: string, filepath: string): string {
-  return posixPath.normalize(filepath.startsWith("/") ? filepath : `${repoDir}/${filepath}`);
 }

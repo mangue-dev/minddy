@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import {
   changedFiles,
   workingTreeChangedFiles,
@@ -62,7 +64,12 @@ import {
   opencodeServerEnv,
   subagentAgentTable,
 } from "./opencode-config";
-import { localToolsFor, opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
+import {
+  localToolsFor,
+  opencodeToolFiles,
+  SUPERVISOR_TOKEN_ENV,
+  SUPERVISOR_URL_ENV,
+} from "./opencode-tools";
 import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
 import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
 import { newLiveEditLog } from "../live-edits";
@@ -253,7 +260,10 @@ export interface SupervisorDeps {
   /** Writes a file to the microVM (config, tools, anchor). */
   writeFile(path: string, content: string): Promise<void>;
   /** The server's HTTP client — injected for the same reasons. */
-  client(baseUrl: string): OpencodeClient;
+  client(
+    baseUrl: string,
+    auth: { username: string; password: string },
+  ): OpencodeClient;
   /**
    * The local proxy placed in front of the provider ([llm-proxy.ts](llm-proxy.ts)).
    * Injected so that a test does not open a socket; in production, it is
@@ -264,6 +274,7 @@ export interface SupervisorDeps {
   startToolBridge?(opts: {
     job: VmJob;
     cp: ControlPlaneClient;
+    authorizationToken: string;
     delivery?: OpencodeDelivery;
     supervisorTools?: Record<string, SupervisorTool>;
     port?: number;
@@ -341,16 +352,6 @@ function registeredBackgroundRunner(
       forgetHarnessChild(harnessDir, opts.pid);
     },
   };
-}
-
-/** The port of a local service URL, or 0 if it does not carry a readable one. */
-function portOfUrl(url: string): number {
-  try {
-    const parsed = new URL(url);
-    return Number(parsed.port) || 0;
-  } catch {
-    return 0;
-  }
 }
 
 /**
@@ -512,6 +513,13 @@ export async function runOpencodeTurn(
   const previous = job.opencode;
 
   const secrets = new SecretRedactor();
+  const opencodeAuth = {
+    username: "minddy",
+    password: randomBytes(32).toString("base64url"),
+  };
+  const bridgeToken = randomBytes(32).toString("base64url");
+  secrets.add(opencodeAuth.password);
+  secrets.add(bridgeToken);
   let authUrl = job.authUrl;
   secrets.addAuthUrl(authUrl);
 
@@ -1021,6 +1029,7 @@ export async function runOpencodeTurn(
     job,
     cp,
     delivery,
+    authorizationToken: bridgeToken,
     onToolRefused: (callId, reason) => refusedCalls.set(callId, reason),
     // A REVIEW session has neither: `agentToolsFor` does not have them
     // is not used for anchoring `pr`, and the bridge refuses what would happen anyway.
@@ -1100,28 +1109,10 @@ export async function runOpencodeTurn(
     }),
     // The address of the bridge, read by the 32 tools generated (see `SUPERVISOR_URL_ENV`).
     [SUPERVISOR_URL_ENV]: bridge.url,
+    [SUPERVISOR_TOKEN_ENV]: bridgeToken,
+    OPENCODE_SERVER_USERNAME: opencodeAuth.username,
+    OPENCODE_SERVER_PASSWORD: opencodeAuth.password,
   };
-
-  /**
-   * THE THREE PORTS THAT `webfetch` STILL REFUSES (MIN-364, decision D8).
-   *
-   * The refusal covered all private space, and its collateral damage was the
-   * capacity we want: `curl localhost:3000` to see render the page
-   * that we have just written. What remains refused is what is not a page —
-   * the **LLM proxy** (it carries the model key), the **tools bridge** (it
-   * does not authenticate ANYTHING: joining your port means calling `create_pr` or
-   * `update_issue` in place of the agent) and the **opencode server** of the tour
-   * (its API responds to whoever joins it: open a session, respond to a
-   * permission in place of the supervisor).
-   *
-   * Read here because it is here, and nowhere else, that they are known: the
-   * first two are assigned at startup, the third comes from the host.
-   */
-  const harnessPorts = [
-    portOfUrl(proxy.url),
-    portOfUrl(bridge.url),
-    deps.opencodePort,
-  ].filter((port) => port > 0);
 
   /**
    * STARTED IN `try`, and this is not a technical detail: the proxy and the
@@ -1130,7 +1121,7 @@ export async function runOpencodeTurn(
    * his `listen` and would die from that, not from its cause.
    */
   let server: { stop(): Promise<void> } | null = null;
-  const client = deps.client(`http://127.0.0.1:${deps.opencodePort}`);
+  const client = deps.client(`http://127.0.0.1:${deps.opencodePort}`, opencodeAuth);
 
   /**
    * THE LEDGER OF THE TOUR, DECLARED OUTSIDE THE `try` — so that the EXCEPTIONAL path
@@ -1883,23 +1874,11 @@ export async function runOpencodeTurn(
               pending: pendingTasks.size,
               maxParallel: job.subagents.maxParallel,
             },
-            { local, harnessPorts },
+            { local },
           );
-          /**
-           * THEN DISK AND RESOLVER (MIN-360), and on the local path
-           * only. Two safeguards cannot be decided on a chain: one
-           * symbolic link placed in the repository (`ln -s`, which nothing prevents) and
-           * a public domain that resolves to the local loop.
-           *
-           * The meaning is one way — `refineLocalVerdict` can only refuse
-           * what was authorized —, and it is applied BEFORE the side effects
-           * of the verdict: a writing refused here must not enter into the
-           * perimeter of the tour.
-           */
+          /** Resolve filesystem targets before any allowed local read or write. */
           if (local) {
-            verdict = await refineLocalVerdict(out.permission, verdict, job.layout.repoDir, {
-              harnessPorts,
-            });
+            verdict = await refineLocalVerdict(out.permission, verdict, job.layout.repoDir);
           }
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);

@@ -234,6 +234,9 @@ interface OpencodeModelDef {
  */
 const DISABLED_BUILTINS = ["todowrite", "websearch", "skill"] as const;
 
+/** Prompt-callable capabilities that are unsafe on a user's host. */
+const LOCAL_DISABLED_BUILTINS = ["bash", "webfetch"] as const;
+
 /** WRITE built-ins, removed from a session that is not writing (replay). */
 const WRITE_BUILTINS = ["edit", "write", "apply_patch"] as const;
 
@@ -409,24 +412,20 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
      * (docs/harness-opencode.md §3.1). An ACL placed on an action that does not exist
      * you never see yourself failing: it reads like a guarantee.
      */
-    // Each command goes through us: this is where `command-guard` executes.
-    bash: "ask",
+    // Cloud commands retain the existing command guard. Local runs have no
+    // prompt-callable shell because it would inherit the host's authority.
+    bash: local ? "deny" : "ask",
     edit: write,
     // Second curtain only: permission `question` is NOT consulted
     // (measure). What really takes `ask_user` out of a routine is the game of
      // the agent's tools (`primaryTools`).
     question: job.interactive ? "ask" : "deny",
     /**
-     * `webfetch` (MIN-360) — `allow` in microVM, `ask` on a machine.
-     *
-     * In `allow`, it is NEVER published under permission: `decidePermission` does not
-     * saw no fetch. In the microVM it was of no consequence, the loop
-     * local only carrying our two servers and the firewall limiting the rest.
-     * On a Mac, the same line reaches the LLM proxy (hence the key), the bridge
-     * tools — which does not authenticate anything —, the user's dev servers, a
-     * Ollama, a NAS, and everything its VPN makes reachable.
+     * Cloud webfetch is bounded by the microVM firewall. Local webfetch is
+     * removed because application-level URL classification cannot constrain
+     * redirects, DNS rebinding, or arbitrary services reachable from the host.
      */
-    webfetch: local ? "ask" : "allow",
+    webfetch: local ? "deny" : "allow",
     websearch: "deny",
     todowrite: "deny",
     /**
@@ -440,24 +439,8 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
      * rather than “Unknown agent type”.
      */
     task: "ask",
-    /**
-     * EXIT THE FILE (MIN-364, decision D5).
-     *
-     * In microVM: `deny`. There is only a deposit and a harness, everything else is
-     * off-topic, and a config `deny` bypasses before publication.
-     *
-     * On the user's machine: `ask`, **to authorize**. The front wall
-     * only caught the honest tools — twenty of the thirty orders measured
-     * reach an external folder without publishing anything other than `bash` — and it
-     * therefore pushed the work towards the place where we no longer see anything. `ask`
-     * renders an immediate `once` AND publishes the output to the thread: the verdict does not restrict
-     * nothing, and we keep track of each excursion.
-     *
-     * The price, to know rather than to discover: an HTTP round trip in a loop
-     * local on the ~10 orders (out of 30 measured) that actually publish this
-     * permission. The other twenty never pass through here anyway.
-     */
-    external_directory: local ? "ask" : "deny",
+    /** External paths are outside the capability set in every run mode. */
+    external_directory: "deny",
   };
 }
 
@@ -465,6 +448,7 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
 function toolMap(job: VmJob): Record<string, boolean> {
   const map: Record<string, boolean> = {};
   for (const name of DISABLED_BUILTINS) map[name] = false;
+  if (isLocalJob(job)) for (const name of LOCAL_DISABLED_BUILTINS) map[name] = false;
   if (!job.writesToRepo) for (const name of WRITE_BUILTINS) map[name] = false;
   return map;
 }
@@ -480,6 +464,7 @@ function toolMap(job: VmJob): Record<string, boolean> {
 function primaryTools(job: VmJob): Record<string, boolean> {
   const tools: Record<string, boolean> = {};
   for (const name of DISABLED_BUILTINS) tools[name] = false;
+  if (isLocalJob(job)) for (const name of LOCAL_DISABLED_BUILTINS) tools[name] = false;
   if (!job.writesToRepo) for (const name of WRITE_BUILTINS) tools[name] = false;
   // Delegation is the `task` tool: it disappears when the turn has no
   // subagents to give, rather than being served and refusing.
@@ -611,8 +596,10 @@ function subagentTools(job: VmJob, mode: "explore" | "implement"): Record<string
   for (const name of EXPLORE_TOOLS) tools[name] = true;
   if (mode === "explore") return tools;
 
-  tools.bash = true;
-  tools.webfetch = true;
+  if (!isLocalJob(job)) {
+    tools.bash = true;
+    tools.webfetch = true;
+  }
   // The three writing interfaces are open together: it is opencode which
   // slice according to the model OF THE GIRL (`apply_patch` on the `gpt-*`, the tools
   // per chain otherwise), and it decides before this game applies. In
@@ -631,7 +618,7 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
       // This is the ONLY thing the parent reads about a sub-agent (she goes into
       // the description of the tool `task`): without it, opencode writes “This subagent
       // should only be called manually by the user” and the offer disappears.
-      description: subagentDescription(entry),
+      description: subagentDescription(entry, job),
       tools: subagentTools(job, entry.mode),
       permission: explore
         ? // `read` follows the same rule as the parent (MIN-360), and it's here
@@ -648,11 +635,13 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
 }
 
 /** What the parent reads to choose: the mode, then the model and its use. */
-function subagentDescription(entry: SubagentAgentEntry): string {
+function subagentDescription(entry: SubagentAgentEntry, job: VmJob): string {
   const what =
     entry.mode === "explore"
       ? "READ-ONLY investigation: it can read, search and list files, nothing else. Parallelisable."
-      : "Edits the repository: reading, searching, editing, running commands. It cannot open a pull request, touch the ticket, the notebook or the session plan — it reports back, you decide.";
+      : isLocalJob(job)
+        ? "Edits only this repository: reading, searching and editing files. Host commands and arbitrary network requests are unavailable. It cannot open a pull request, touch the ticket, the notebook or the session plan — it reports back, you decide."
+        : "Edits the repository: reading, searching, editing, running commands. It cannot open a pull request, touch the ticket, the notebook or the session plan — it reports back, you decide.";
   const on = entry.modelId
     ? `Runs on ${entry.label ?? entry.modelId} (${entry.modelId}).${entry.useCase ? ` ${entry.useCase}` : ""}`
     : "Runs on your own model.";

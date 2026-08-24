@@ -613,30 +613,20 @@ describe("les permissions du chemin local (MIN-360)", () => {
     expect(onMachine().agent.explore.permission?.read).toBe("ask");
   });
 
-  it("passe `webfetch` en `ask` sur une machine", () => {
-    // In `allow` it is NEVER published on leave: the verdict did not see
-    // no fetch, and on a Mac the local loop carries the LLM proxy.
+  it("removes prompt-callable shell and direct fetch capabilities on a host", () => {
     expect(cloud().permission.webfetch).toBe("allow");
-    expect(onMachine().permission.webfetch).toBe("ask");
-    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.webfetch).toBe("ask");
+    expect(cloud().permission.bash).toBe("ask");
+    for (const name of ["bash", "webfetch"]) {
+      expect(onMachine().permission[name]).toBe("deny");
+      expect(onMachine().tools[name]).toBe(false);
+      expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].tools?.[name]).toBe(false);
+      expect(onMachine().agent.general.tools?.[name]).toBeUndefined();
+    }
   });
 
-  /**
-   * MIN-364 (decision D5) — THE FOURTH LINE THAT SWINGS.
-   *
-   * `external_directory` changes from `deny` to `ask` **to authorize**: `deny`
-   * of config bypasses before publication, so it only catches the tools
-   * honest and pushed the work towards `bash`, where we no longer see anything. In
-   * `ask`, the supervisor renders `once` AND publishes the output to the thread.
-   */
-  it("ouvre le disque en LAISSANT une trace, et rien d'autre ne bouge", () => {
+  it("keeps external directories denied in every execution environment", () => {
     expect(cloud().permission.external_directory).toBe("deny");
-    expect(onMachine().permission.external_directory).toBe("ask");
-    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.external_directory).toBe("ask");
-
-    // The rest of the ACL is the same: these lots tighten four lines, not the round.
-    const { read: _r1, webfetch: _w1, external_directory: _e1, ...cloudRest } = cloud().permission;
-    const { read: _r2, webfetch: _w2, external_directory: _e2, ...localRest } = onMachine().permission;
-    expect(localRest).toEqual(cloudRest);
+    expect(onMachine().permission.external_directory).toBe("deny");
+    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.external_directory).toBe("deny");
   });
 });

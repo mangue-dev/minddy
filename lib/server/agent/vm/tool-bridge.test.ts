@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { startToolBridge, type ToolBridge } from "./tool-bridge";
-import { DOMAIN_TOOL_NAMES } from "./opencode-tools";
+import { bridgedToolNamesFor, DOMAIN_TOOL_NAMES } from "./opencode-tools";
 import type { OpencodeDelivery } from "./opencode-delivery";
 import type { ControlPlaneClient } from "./control-plane-client";
 import type { VmJob } from "./protocol";
@@ -15,6 +15,7 @@ import type { VmJob } from "./protocol";
  */
 
 const calls: Array<{ name: string; body: Record<string, unknown> }> = [];
+const DEFAULT_TOKEN = "test-bridge-token";
 
 function cp(over: Partial<ControlPlaneClient> = {}): ControlPlaneClient {
   return {
@@ -28,6 +29,20 @@ function cp(over: Partial<ControlPlaneClient> = {}): ControlPlaneClient {
 
 function job(over: Partial<VmJob> = {}): VmJob {
   return {
+    anchor: "issue",
+    model: "deepseek/deepseek-v4-flash",
+    interactive: true,
+    chain: false,
+    writesToRepo: true,
+    authUrl: "https://x-access-token:test@github.com/org/repo.git",
+    subagents: {
+      models: false,
+      favorites: [],
+      maxParallel: 2,
+      allowedIds: [],
+      abovePlanIds: [],
+      maxMultiplier: null,
+    },
     webSearch: true,
     webSearchMax: 5,
     imageInput: false,
@@ -41,10 +56,14 @@ async function call(
   bridge: ToolBridge,
   name: string,
   args: Record<string, unknown> = {},
+  token: string | null = DEFAULT_TOKEN,
 ): Promise<{ status: number; body: string }> {
   const res = await fetch(`${bridge.url}/tool/${name}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ args, callID: "call_1", sessionID: "ses_1" }),
   });
   return { status: res.status, body: await res.text() };
@@ -58,6 +77,7 @@ async function withBridge(
     supervisorTools?: Record<string, never>;
     delivery?: OpencodeDelivery;
     onToolRefused?: (callId: string, reason: string) => void;
+    authorizationToken?: string;
   },
   body: (bridge: ToolBridge) => Promise<void>,
 ): Promise<void> {
@@ -66,6 +86,7 @@ async function withBridge(
     job: opts.job ?? job(),
     cp: opts.cp ?? cp(),
     port: 0,
+    authorizationToken: opts.authorizationToken ?? DEFAULT_TOKEN,
     ...(opts.supervisorTools ? { supervisorTools: opts.supervisorTools } : {}),
     ...(opts.delivery ? { delivery: opts.delivery } : {}),
     ...(opts.onToolRefused ? { onToolRefused: opts.onToolRefused } : {}),
@@ -76,6 +97,20 @@ async function withBridge(
     await bridge.close();
   }
 }
+
+describe("bridge authentication", () => {
+  it("rejects missing and incorrect bearer credentials before dispatch", async () => {
+    await withBridge({ authorizationToken: "per-turn-bridge-token" }, async (bridge) => {
+      expect((await call(bridge, "read_issue", {}, null)).status).toBe(401);
+      expect((await call(bridge, "read_issue", {}, "wrong-token")).status).toBe(401);
+      expect(calls).toHaveLength(0);
+
+      const allowed = await call(bridge, "read_issue", {}, "per-turn-bridge-token");
+      expect(allowed.status).toBe(200);
+      expect(calls).toHaveLength(1);
+    });
+  });
+});
 
 describe("recherche web — le plafond du tour", () => {
   it("laisse passer les cinq premières, refuse la sixième sans la payer", async () => {
@@ -138,7 +173,7 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
         return { result: { ok: true }, success: true, inlineUsed: inline };
       },
     });
-    await withBridge({ job: job({ imageInput: true }), cp: client }, async (bridge) => {
+    await withBridge({ job: job({ anchor: "pr", imageInput: true }), cp: client }, async (bridge) => {
       await call(bridge, "comment_pr_line", { body: "x" });
       await call(bridge, "comment_pr_line", { body: "y" });
       // The ceiling of the 5 anchors is counted over the life of the RUN: the function makes the
@@ -164,9 +199,11 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     });
   });
 
-  it("route tous les tools de domaine — un servi et non routé est notre défaut", async () => {
-    await withBridge({}, async (bridge) => {
-      for (const name of DOMAIN_TOOL_NAMES) {
+  it("routes every domain tool offered on the current run", async () => {
+    const currentJob = job();
+    await withBridge({ job: currentJob }, async (bridge) => {
+      for (const name of bridgedToolNamesFor(currentJob)) {
+        if (!DOMAIN_TOOL_NAMES.has(name)) continue;
         // `create_pr` is the only one not to be a hatch: it is cut into
         // two (the VM pushes, the function opens) and it only has a handler on one
         // session that writes. Without it it is refused, never transmitted as is:
@@ -175,6 +212,15 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
         expect(res.status).toBe(200);
       }
       expect(calls.some((c) => c.name === "create_pr")).toBe(false);
+    });
+  });
+
+  it("rejects a known domain tool omitted from the current run", async () => {
+    await withBridge({ job: job({ interactive: false }) }, async (bridge) => {
+      const res = await call(bridge, "create_routine", { prompt: "persist" });
+      expect(res.status).toBe(200);
+      expect(JSON.parse(res.body).error).toContain("not available on this turn");
+      expect(calls).toHaveLength(0);
     });
   });
 
@@ -362,7 +408,10 @@ describe("images — l'enveloppe de pièces jointes", () => {
     await withBridge({ cp: withImage(), job: job({ imageInput: true }) }, async (bridge) => {
       const res = await fetch(`${bridge.url}/tool/read_resource`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${DEFAULT_TOKEN}`,
+        },
         body: JSON.stringify({ args: { resource_id: "r1" } }),
       });
       expect(res.headers.get("x-minddy-attachments")).toBe("1");
@@ -392,7 +441,10 @@ describe("images — l'enveloppe de pièces jointes", () => {
     await withBridge({}, async (bridge) => {
       const res = await fetch(`${bridge.url}/tool/read_issue`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${DEFAULT_TOKEN}`,
+        },
         body: JSON.stringify({ args: {} }),
       });
       expect(res.headers.get("x-minddy-attachments")).toBeNull();

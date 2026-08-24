@@ -1,8 +1,6 @@
 /**
- * WHAT COMES FROM THE USER'S MACHINE (MIN-361) — a PUR module, without
- * a single import, like its guardrail neighbors (`local-exec-scope.ts`,
- * `private-address.ts`): it goes down into the harness bundle, and it must
- * be able to be broken in a test rather than in production.
+ * WHAT COMES FROM THE USER'S MACHINE (MIN-361) — a pure module without
+ * imports. It ships in the harness bundle and remains directly testable.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * THE POINT THAT IS NOT REPAIRABLE AFTER THE HOT

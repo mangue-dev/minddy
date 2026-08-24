@@ -300,6 +300,11 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
     // `directory` is the repository: all routes inherited from opencode want it
     // in query, and it is he who gives the server its project identity (the hash
     // of the first commit — cf. the batch 0 recovery probe).
-    client: (baseUrl) => new OpencodeClient({ baseUrl, directory: layout.repoDir }),
+    client: (baseUrl, auth) =>
+      new OpencodeClient({
+        baseUrl,
+        directory: layout.repoDir,
+        ...(auth ? { auth } : {}),
+      }),
   };
 }

@@ -1,7 +1,12 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 import type { ControlPlaneClient } from "./control-plane-client";
-import { DOMAIN_TOOL_NAMES, TOOL_ATTACHMENTS_HEADER } from "./opencode-tools";
+import {
+  bridgedToolNamesFor,
+  DOMAIN_TOOL_NAMES,
+  LOCAL_TOOL_NAMES,
+  TOOL_ATTACHMENTS_HEADER,
+} from "./opencode-tools";
 import type { OpencodeDelivery } from "./opencode-delivery";
 import type { VmJob } from "./protocol";
 
@@ -120,10 +125,11 @@ interface ToolOutcome {
 export interface ToolBridgeOptions {
   job: VmJob;
   cp: ControlPlaneClient;
+  /** Per-turn bearer token required on every generated tool request. */
+  authorizationToken: string;
   /**
    * The delivery rules ([opencode-delivery.ts](opencode-delivery.ts)).
-   * Absent, the bridge is a bare hatch - this is what the tests want
-   * have nothing to say about the plan or the door, and never a production tour.
+   * Tests may omit delivery behavior, but authentication is always required.
    */
   delivery?: OpencodeDelivery;
   /**
@@ -166,6 +172,7 @@ const SUPERVISOR_ONLY = new Set([
 /** Starts the bridge. The supervisor opens it BEFORE the opencode server. */
 export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBridge> {
   const { job, cp } = opts;
+  const allowedTools = bridgedToolNamesFor(job);
 
   /**
    * Web searches already paid for by this TOUR, mother and daughters combined — the same
@@ -259,6 +266,15 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     name: string,
     args: Record<string, unknown>,
   ): Promise<ToolOutcome | null> {
+    if (!allowedTools.has(name)) {
+      if (DOMAIN_TOOL_NAMES.has(name) || LOCAL_TOOL_NAMES.has(name)) {
+        return {
+          result: { error: `${name} is not available on this turn.` },
+          success: false,
+        };
+      }
+      return null;
+    }
     const own = supervisorTools[name];
     if (own) return await own(args);
     if (SUPERVISOR_ONLY.has(name)) {
@@ -273,6 +289,11 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
   }
 
   const server = createServer((req, res) => {
+    if (req.headers.authorization !== `Bearer ${opts.authorizationToken}`) {
+      res.writeHead(401, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "unauthorized tool bridge request" }));
+      return;
+    }
     void handle(req, res).catch((err) => {
       // A failure of the bridge itself (unreadable body, cut socket): it is said
       // to the model as a tool error, never by crashing the process

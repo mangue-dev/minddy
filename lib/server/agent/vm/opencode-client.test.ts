@@ -14,14 +14,38 @@ import {
  *, would pay off in production at three in the morning.
  */
 
-function clientWith(handler: (url: string, init?: RequestInit) => Response): OpencodeClient {
+function clientWith(
+  handler: (url: string, init?: RequestInit) => Response,
+  auth?: { username: string; password: string },
+): OpencodeClient {
   return new OpencodeClient({
     baseUrl: "http://127.0.0.1:4096",
     directory: "/vercel/sandbox/repo",
     fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) =>
       handler(String(input), init)) as typeof fetch,
+    ...(auth ? { auth } : {}),
   });
 }
+
+describe("server authentication", () => {
+  it("adds HTTP Basic credentials to every request", async () => {
+    const headers: string[] = [];
+    const client = clientWith(
+      (_url, init) => {
+        headers.push(new Headers(init?.headers).get("authorization") ?? "");
+        return new Response('{"healthy":true}', { status: 200 });
+      },
+      { username: "minddy", password: "per-turn-password" },
+    );
+
+    await client.healthy();
+    await client.createSession();
+    expect(headers).toEqual([
+      `Basic ${Buffer.from("minddy:per-turn-password").toString("base64")}`,
+      `Basic ${Buffer.from("minddy:per-turn-password").toString("base64")}`,
+    ]);
+  });
+});
 
 describe("le piège des deux générations d'API", () => {
   it("dit « la route n'existe pas » au lieu d'exploser sur du HTML", async () => {

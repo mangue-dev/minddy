@@ -51,6 +51,8 @@ export interface OpencodeClientOptions {
   directory: string;
   /** Injected for testing. Default: the global `fetch`. */
   fetchImpl?: typeof fetch;
+  /** HTTP Basic credentials configured on the per-turn server. */
+  auth?: { username: string; password: string };
 }
 
 /**
@@ -85,11 +87,15 @@ export class OpencodeClient {
   private readonly base: string;
   private readonly directory: string;
   private readonly http: typeof fetch;
+  private readonly authorization: string | null;
 
   constructor(opts: OpencodeClientOptions) {
     this.base = opts.baseUrl.replace(/\/+$/, "");
     this.directory = opts.directory;
     this.http = opts.fetchImpl ?? fetch;
+    this.authorization = opts.auth
+      ? `Basic ${Buffer.from(`${opts.auth.username}:${opts.auth.password}`).toString("base64")}`
+      : null;
   }
 
   /** An INHERITANCE route (`/session/…`), always with `?directory=`. */
@@ -99,7 +105,7 @@ export class OpencodeClient {
   }
 
   private async json<T>(route: string, init?: RequestInit): Promise<T> {
-    const res = await this.http(route, init);
+    const res = await this.request(route, init);
     const text = await res.text();
     if (!res.ok) throw new OpencodeHttpError(res.status, route, text);
     // A misspelled route returns the TUI page, not a 404: the message
@@ -108,6 +114,12 @@ export class OpencodeClient {
       throw new OpencodeHttpError(res.status, route, "réponse HTML : la route n'existe pas");
     }
     return (text ? JSON.parse(text) : {}) as T;
+  }
+
+  private async request(route: string, init?: RequestInit): Promise<Response> {
+    const headers = new Headers(init?.headers);
+    if (this.authorization) headers.set("authorization", this.authorization);
+    return await this.http(route, { ...init, headers });
   }
 
   /**
@@ -182,7 +194,7 @@ export class OpencodeClient {
   async warmTools(model: string, provider = "minddy", agent = "build"): Promise<void> {
     const query = new URLSearchParams({ provider, model, agent });
     const route = this.legacy(`/experimental/tool?${query.toString()}`);
-    const res = await this.http(route);
+    const res = await this.request(route);
     const body = await res.text();
     if (!res.ok) throw new OpencodeHttpError(res.status, route, body);
   }
@@ -194,7 +206,7 @@ export class OpencodeClient {
  */
   async promptAsync(sessionId: string, text: string): Promise<void> {
     const route = this.legacy(`/session/${sessionId}/prompt_async`);
-    const res = await this.http(route, {
+    const res = await this.request(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ parts: [{ type: "text", text }] }),
@@ -205,7 +217,7 @@ export class OpencodeClient {
   /** Cuts the turn in flight. Measured at 40 ms, and without effect if nothing is running. */
   async abort(sessionId: string): Promise<void> {
     const route = this.legacy(`/session/${sessionId}/abort`);
-    await this.http(route, { method: "POST" }).catch(() => undefined);
+    await this.request(route, { method: "POST" }).catch(() => undefined);
   }
 
   /**
@@ -223,7 +235,7 @@ export class OpencodeClient {
     message?: string,
   ): Promise<void> {
     const route = this.legacy(`/permission/${permissionId}/reply`);
-    const res = await this.http(route, {
+    const res = await this.request(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reply, ...(message ? { message } : {}) }),
@@ -248,7 +260,7 @@ export class OpencodeClient {
  */
   async replyQuestion(questionId: string, answers: string[][]): Promise<void> {
     const route = this.legacy(`/question/${questionId}/reply`);
-    const res = await this.http(route, {
+    const res = await this.request(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ answers }),
@@ -264,7 +276,7 @@ export class OpencodeClient {
  */
   async rejectQuestion(questionId: string): Promise<void> {
     const route = this.legacy(`/question/${questionId}/reject`);
-    await this.http(route, {
+    await this.request(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{}",
@@ -313,7 +325,7 @@ export class OpencodeClient {
  * fixtures — a network flow is not replayed in a unit test.
  */
   async *events(signal?: AbortSignal): AsyncGenerator<OpencodeEvent> {
-    const res = await this.http(this.legacy("/event"), { signal });
+    const res = await this.request(this.legacy("/event"), { signal });
     if (!res.ok || !res.body) {
       throw new OpencodeHttpError(res.status, "/event", "flux d'events indisponible");
     }

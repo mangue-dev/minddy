@@ -279,39 +279,12 @@ describe("où les fichiers sont posés", () => {
     );
   });
 
-  /**
- * MIN-364 (decision D8) — AND ON SOMEONE'S MACHINE TOO, NOW.
- *
- * It had disappeared (MIN-293) for an operating reason called: the
- * jobs go to `setsid`, **expressly to survive the shell**, and the
- * `stopAll` at the end of the turn never runs when the harness is killed (⌘Q,
- * main process crash) — the `npm run dev` then remained alive, port 3000
- * held, without even a window to close.
- *
- * The written condition for reopening was the child register, and it
- * is met: the supervisor enters each job there (`kind: "background"`, therefore
- * reported in GROUP), the launcher rereads it at ⌘Q and at startup. What the
- * withdrawal cost was the first parity gap in the file — a local
- * agent could neither launch a server nor see its page render.
- */
-  it("un tour local reçoit le catalogue de projets avec ses chemins", () => {
+  it("keeps only control-only local tools on a host", () => {
     const local = job({ controlToken: "bail-hs256" });
-    expect(localToolsFor(local).map((t) => t.function.name)).toEqual([
-      "run_background",
-      "update_plan",
-      "validate_changes",
-      "list_projects",
-    ]);
-    expect(localToolsFor(local).map((t) => t.function.name)).toContain("run_background");
-    expect(localToolsFor(local).map((t) => t.function.name)).toContain("list_projects");
-    expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
-      `${TOOL_DIR}/run_background.ts`,
-    );
-    expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
-      `${TOOL_DIR}/list_projects.ts`,
-    );
-    // The domain tools remain the same: the catalog never leaves
-    // the harness for the control plane.
+    expect(localToolsFor(local).map((t) => t.function.name)).toEqual(["update_plan"]);
+    for (const name of ["run_background", "validate_changes", "list_projects"]) {
+      expect(opencodeToolFiles(local).map((f) => f.path)).not.toContain(`${TOOL_DIR}/${name}.ts`);
+    }
     expect(domainToolsFor(local).map((t) => t.function.name)).toEqual(
       domainToolsFor(job()).map((t) => t.function.name),
     );
