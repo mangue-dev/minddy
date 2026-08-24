@@ -4,6 +4,8 @@ import {
   changedFiles,
   workingTreeChangedFiles,
   commitAndPush,
+  PR_BASE_TAG,
+  readFileAtRef,
   readWorkFile,
   repoBackgroundRunner,
   sq,
@@ -322,46 +324,60 @@ const INSTRUCTION_SEARCH_PRUNED = [
   "coverage",
 ];
 
+type InstructionSource = "worktree" | "pr-base";
+
 /**
- * DEPOSIT CONVENTIONS, FOUND RATHER THAN SELF-DISCOVERED (MIN-360, then
- * MIN-364 for nested).
+ * Finds repository convention files without restoring OpenCode's project
+ * auto-discovery (MIN-360 and MIN-364).
  *
- * Opencode would fetch `AGENTS.md` and `CLAUDE.md` on its own, going up
- * from the depot. It’s the SAME feedback that collected the plugins and tools
- * of a `.opencode/`, that is to say arbitrary code written by anyone who can
- * committer — and it’s this feedback that we cut
- * (`OPENCODE_DISABLE_PROJECT_CONFIG`, cf. [opencode-config.ts](opencode-config.ts)).
+ * A write session uses the working tree. A pull-request review uses only the
+ * trusted `pr-base` ref for both discovery and later reads (MIN-427). Discovering
+ * from the head would let a contributor add or delete a nested instruction file
+ * and thereby change the privileged instruction document even if content reads
+ * themselves were pinned to the base.
  *
- * We therefore return the only piece that does not execute anything: these two file names, and
- * nothing else. **The root AND subfolders** (MIN-364): the mechanism
- * lazy person who served the nested ones stuck to the RESULT of a tool
- * file, and these tools belong to opencode — it no longer has a point
- * hook, so a monorepo in which each package carries its conventions does not
- * no longer saw them at all.
- *
- * The order is that of depth, from the most GENERAL to the most SPECIFIC: it is
- * the order in which the rules are overloaded, and this is the order that the document
- * served ad to model.
- *
- * End-to-end best effort: a mute probe returns an empty list, never a
- * error — a round does not stop because a `find` did not respond.
+ * Results are ordered from general to specific and bounded by depth, count, and
+ * the existing pruned-directory policy. A failed probe returns no instructions;
+ * it never falls back from the PR base to the untrusted head.
  */
-async function findInstructionFiles(host: RepoHost): Promise<string[]> {
+async function findInstructionFiles(
+  host: RepoHost,
+  source: InstructionSource,
+): Promise<string[]> {
   const names = REPO_INSTRUCTION_FILES;
   const prune = INSTRUCTION_SEARCH_PRUNED.map((dir) => `-name ${sq(dir)}`).join(" -o ");
   const wanted = names.map((name) => `-name ${sq(name)}`).join(" -o ");
+  const refFilter = names.map((name) => `$NF == "${name}"`).join(" || ");
   try {
-    const res = await host.exec(
-      `find . -maxdepth ${INSTRUCTION_FILES_MAX_DEPTH} \\( ${prune} \\) -prune -o ` +
-        `-type f \\( ${wanted} \\) -print 2>/dev/null`,
-      { timeoutMs: 30_000 },
-    );
+    const res =
+      source === "pr-base"
+        ? await host.exec(
+            `git ls-tree -r --name-only ${sq(PR_BASE_TAG)} | ` +
+              `awk -F/ ${sq(refFilter)}`,
+            { timeoutMs: 30_000 },
+          )
+        : await host.exec(
+            `find . -maxdepth ${INSTRUCTION_FILES_MAX_DEPTH} \\( ${prune} \\) -prune -o ` +
+              `-type f \\( ${wanted} \\) -print 2>/dev/null`,
+            { timeoutMs: 30_000 },
+          );
+    if (res.exitCode !== 0) return [];
     const found = res.stdout
       .split("\n")
       .map((line) => line.trim().replace(/^\.\//, ""))
-      .filter((line) => line && names.includes(line.split("/").pop() ?? ""));
-    // Depth first (the general before the specific), then the declared order
-    // names — `AGENTS.md` before `CLAUDE.md`, like everywhere else.
+      .filter((line) => {
+        const segments = line.split("/");
+        return (
+          line.length > 0 &&
+          segments.length <= INSTRUCTION_FILES_MAX_DEPTH &&
+          names.includes(segments.at(-1) ?? "") &&
+          !segments
+            .slice(0, -1)
+            .some((segment) => INSTRUCTION_SEARCH_PRUNED.includes(segment))
+        );
+      });
+    // Depth first (general before specific), then `AGENTS.md` before
+    // `CLAUDE.md`, matching every other instruction path.
     return [...new Set(found)]
       .sort((a, b) => {
         const depth = a.split("/").length - b.split("/").length;
@@ -375,35 +391,29 @@ async function findInstructionFiles(host: RepoHost): Promise<string[]> {
 }
 
 /**
- * THE CONVENTIONS DOCUMENT SERVED AT THE TOUR, written next to the anchor.
+ * Builds the bounded conventions document served beside the Minddy anchor.
  *
- * ⚠ THIS IS WHERE THE BORDER NOTE COMES BACK (MIN-364, §5.4 of the audit of
- * 15/08). It was missing on the local path: `readRepoInstructions` is not called
- * that on the server side, where `host` is `null` locally, therefore the CONTENT of `AGENTS.md`
- * arrived well (opencode loads the `instructions` key) but without the sentence which
- * tells the model that these files are DATA about the project and not a source
- * orders. This is exactly the safeguard for prompt injection on a file that
- * anyone can commit — and the submission of a review is not even that of
- * the user.
- *
- * We read ourselves rather than naming N paths to opencode, because that's the
- * only way to HIGH: he reads in full what is given to him, and thirty
- * `AGENTS.md` of monorepo would enter in full in the system prompt, each time
- * round.
+ * The wrapper labels repository instructions as project data rather than
+ * privileged orders. The supervisor reads and caps the files itself because
+ * OpenCode would otherwise load every named file in full on every round.
+ * Pull-request reviews use `pr-base` throughout and never fall back to head.
  */
 async function servedInstructionsFile(
   host: RepoHost,
   writeFile: (path: string, content: string) => Promise<void>,
+  source: InstructionSource,
 ): Promise<string[]> {
-  const paths = await findInstructionFiles(host);
+  const paths = await findInstructionFiles(host, source);
   if (paths.length === 0) return [];
-  // Each reading is independent and the final document keeps the order of
-  // `paths` thanks to `Promise.all`. In a monorepo, reading them serially made
-  // wait for the opencode server behind each disk/RPC round trip.
+  // Each read is independent, while Promise.all preserves path order. This
+  // overlaps disk/RPC round trips for monorepos without changing precedence.
   const files = (
     await Promise.all(
       paths.map(async (path): Promise<RepoInstructionFile | null> => {
-        const content = await readWorkFile(host, path).catch(() => null);
+        const content = await (source === "pr-base"
+          ? readFileAtRef(host, PR_BASE_TAG, path)
+          : readWorkFile(host, path)
+        ).catch(() => null);
         return content?.trim() ? { path, content } : null;
       }),
     )
@@ -414,8 +424,8 @@ async function servedInstructionsFile(
   try {
     await writeFile(target, document);
   } catch {
-    // A file that we did not know how to write should not bring down the trick: the
-    // model will work without the conventions, which is the case before this batch.
+    // A failed wrapper write degrades to no repository conventions. It must not
+    // stop the turn or fall back to direct, uncapped project-file discovery.
     return [];
   }
   return [target];
@@ -580,11 +590,16 @@ export async function runOpencodeTurn(
     ...opencodeToolFiles(job).map((file) => deps.writeFile(file.path, file.content)),
   ]);
   timing("harness-files-ready");
-  // The repository conventions are independent of the proxy or the bridge. We start
-  // their discovery immediately, then we wait for the document just before
-  // give the environment to the server: opencode always sees the file
-  // full, but the disk/RPC cost overlaps with local initialization.
-  const servedInstructionsPromise = servedInstructionsFile(host, deps.writeFile);
+  // Repository conventions are independent of the proxy and bridge. Start their
+  // discovery now, then await the complete document immediately before server
+  // startup. A read-only PR review is checked out at an untrusted head, so its
+  // only authoritative instruction source is the trusted base ref (MIN-427).
+  const instructionSource: InstructionSource = job.writesToRepo ? "worktree" : "pr-base";
+  const servedInstructionsPromise = servedInstructionsFile(
+    host,
+    deps.writeFile,
+    instructionSource,
+  );
 
   // The local key mint is a round trip to the control plane. He
   // does not depend on the bridge: it is covered with the construction of the rest of the

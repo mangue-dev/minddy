@@ -1,5 +1,6 @@
 import {
   typeErrorsForTurn,
+  formattedDiagnosticCount,
   TYPECHECK_MIN_BUDGET_MS,
   testFailuresForTurn,
   TEST_MIN_BUDGET_MS,
@@ -212,7 +213,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
       phase: "type_check",
       durationMs: Date.now() - startedAt,
       files: touched.length,
-      errorsShown: block ? block.split("\n").filter((l) => /error TS\d+/.test(l)).length : 0,
+      errorsShown: formattedDiagnosticCount(block),
     };
     if (publishStatus) await emit("status", status);
     return { block, status };
@@ -279,7 +280,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
       phase: "tests",
       scope: out?.scope ?? "none",
       durationMs: Date.now() - startedAt,
-      failuresShown: block ? block.split("\n").filter((l) => l.startsWith("FAIL ")).length : 0,
+      failuresShown: formattedDiagnosticCount(block),
     };
     if (publishStatus) await emit("status", status);
     return { block, status };
