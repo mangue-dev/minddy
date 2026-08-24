@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-24T14:57:36.120Z",
+  "files": [
+    "deploy/self-hosted/agent-runner.mjs"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_5edd0fa60566517b",
+      "filePath": "deploy/self-hosted/agent-runner.mjs",
+      "title": "LLM relay follows unvalidated redirects and re-resolves user-controlled endpoints",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"fixed\",\n    \"reasoning\": \"The finding accurately described the older code path, but the current target file no longer performs a bare fetch to the user-controlled provider URL. deploy/self-hosted/agent-runner.mjs now imports assertPublicHttpUrl and requestPublicUrl from deploy/self-hosted/agent-runner-egress.mjs, validates the computed /chat/completions URL when /llm is configured, and uses requestPublicUrl for the relay POST. The egress helper resolves the hostname itself, rejects localhost, .localhost, .local, private, link-local, reserved, multicast, IPv4 legacy forms, and IPv6 transition forms, and rejects the whole hostname if any DNS answer is private. Its pinnedRequest passes a custom lookup function to node:http/node:https so the socket connects only to the exact address that passed validation, preventing DNS rebinding between validation and connection. Redirects are handled manually rather than by fetch: each 3xx Location is parsed, sensitive headers are stripped on cross-origin redirects, and the next URL is passed back through assertPublicHttpUrl before another request is opened. The test file scripts/agent-runner-egress.test.mjs includes explicit coverage for private redirects, mixed public-private redirect DNS answers, and public redirect hops being revalidated and pinned. Git history confirms commit 7358441c replaced fetch(relay.url) with requestPublicUrl(relay.url) and added the runner-side registration validation. A user can still choose a generic BYOK base URL, but the concrete redirect-to-internal-service and DNS-rebinding attack scenario described in this finding is blocked in the runner itself.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "fixed",
+      "reasoning": "The finding accurately described the older code path, but the current target file no longer performs a bare fetch to the user-controlled provider URL. deploy/self-hosted/agent-runner.mjs now imports assertPublicHttpUrl and requestPublicUrl from deploy/self-hosted/agent-runner-egress.mjs, validates the computed /chat/completions URL when /llm is configured, and uses requestPublicUrl for the relay POST. The egress helper resolves the hostname itself, rejects localhost, .localhost, .local, private, link-local, reserved, multicast, IPv4 legacy forms, and IPv6 transition forms, and rejects the whole hostname if any DNS answer is private. Its pinnedRequest passes a custom lookup function to node:http/node:https so the socket connects only to the exact address that passed validation, preventing DNS rebinding between validation and connection. Redirects are handled manually rather than by fetch: each 3xx Location is parsed, sensitive headers are stripped on cross-origin redirects, and the next URL is passed back through assertPublicHttpUrl before another request is opened. The test file scripts/agent-runner-egress.test.mjs includes explicit coverage for private redirects, mixed public-private redirect DNS answers, and public redirect hops being revalidated and pinned. Git history confirms commit 7358441c replaced fetch(relay.url) with requestPublicUrl(relay.url) and added the runner-side registration validation. A user can still choose a generic BYOK base URL, but the concrete redirect-to-internal-service and DNS-rebinding attack scenario described in this finding is blocked in the runner itself."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_5edd0fa60566517b"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

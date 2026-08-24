@@ -26,3 +26,12 @@ make the exception obvious from its surrounding code or fixture path.
 - Run the smallest relevant test or lint command after source/configuration
   changes.
 - Review `git diff --check` and confirm that excluded paths are untouched.
+
+## Minddy tools
+
+- Treat the Minddy MCP tools as available for issue work in this repository.
+  Discover their callable names by searching for the `mcp__minddy__` prefix;
+  do not conclude that they are unavailable from an exact short-name lookup.
+- When an issue identifier and project ID are provided, read the issue and its
+  plan, keep plan task states synchronized while working, add a concise outcome
+  comment, and update the issue status when the requested work is complete.
