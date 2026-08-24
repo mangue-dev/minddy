@@ -27,6 +27,7 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import { isManagedAiEnabled } from "@/lib/managed-services";
+import { safeFetch } from "@/lib/server/safe-fetch";
 
 /**
  * Code agent template catalog (MIN-46), resolved according to the provider
@@ -100,6 +101,7 @@ export interface AgentModelsCatalog {
 }
 
 const TTL_MS = 60 * 60 * 1000;
+const MAX_MODELS_RESPONSE_BYTES = 5 * 1024 * 1024;
 const cache = new Map<string, { at: number; models: AgentModelEntry[] }>();
 
 /** Discard non-conversational models (embeddings, audio, image, etc.). */
@@ -149,11 +151,12 @@ async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
 
 /** OpenAI-compatible `/models` endpoint (OpenAI, Google, generic). */
 async function listOpenAICompat(baseUrl: string, apiKey: string): Promise<AgentModelEntry[]> {
-  const res = await fetch(`${baseUrl}/models`, {
+  const res = await safeFetch(`${baseUrl}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` },
+    maxBytes: MAX_MODELS_RESPONSE_BYTES,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = (await res.json()) as { data?: Array<{ id: string }> };
+  const body = JSON.parse(res.bytes.toString("utf8")) as { data?: Array<{ id: string }> };
   const models = (body.data ?? [])
     .map((m) => m.id?.replace(/^models\//, "")) // Gemini prefix `models/…`
     .filter((id): id is string => !!id && !NON_CHAT_RE.test(id))
@@ -161,13 +164,16 @@ async function listOpenAICompat(baseUrl: string, apiKey: string): Promise<AgentM
   return sortById(models);
 }
 
-/** Anthropic : `/v1/models` natif (x-api-key + anthropic-version). */
+/** Native Anthropic `/v1/models` endpoint (`x-api-key` + `anthropic-version`). */
 async function listAnthropic(baseUrl: string, apiKey: string): Promise<AgentModelEntry[]> {
-  const res = await fetch(`${baseUrl}/models?limit=1000`, {
+  const res = await safeFetch(`${baseUrl}/models?limit=1000`, {
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    maxBytes: MAX_MODELS_RESPONSE_BYTES,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = (await res.json()) as { data?: Array<{ id: string; display_name?: string }> };
+  const body = JSON.parse(res.bytes.toString("utf8")) as {
+    data?: Array<{ id: string; display_name?: string }>;
+  };
   const models = (body.data ?? [])
     .filter((m) => !!m.id)
     .map((m) => ({ id: m.id, name: m.display_name ?? m.id }));
@@ -287,10 +293,9 @@ async function resolveRecommended(
   const price = new Map(
     index.map((m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const),
   );
-  // Prix inconnu → `Infinity`, donc en fin de liste. `localeCompare` en second
-  // criterion: two models at the same price (families price in stages)
-  // would otherwise keep the writing order of the `app_config` line, which is not
-  // no longer supposed to mean anything.
+  // Unknown price maps to `Infinity`, so it sorts last. `localeCompare` is the
+  // second criterion: otherwise models at the same price would preserve an
+  // `app_config` order that is not meant to carry any meaning.
   const cost = (id: string) => price.get(id) ?? Infinity;
   return applicable
     .sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
@@ -314,9 +319,9 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   let mode: "platform" | "byok" = "platform";
   let endpointConfigured = true;
   try {
-    // Cette lecture ne sonde jamais un endpoint local (`listStrategy: none`) ;
-    // it only serves to return the correct provider and to keep the picker in the
-    // same namespace as the local run.
+    // This read never probes a local endpoint (`listStrategy: none`); it only
+    // returns the correct provider and keeps the picker in the local run's
+    // namespace.
     const endpoint = await resolveAgentApiKey(userId, "agent", { allowLocal: true });
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);

@@ -2,6 +2,7 @@ import "server-only";
 
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { Readable } from "node:stream";
 import { pinnedRequest } from "@/lib/server/pinned-request";
 
 /**
@@ -41,6 +42,7 @@ export class SafeFetchError extends Error {
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_REDIRECTS = 3;
+const REDIRECT_SENSITIVE_HEADERS = new Set(["authorization", "cookie", "proxy-authorization"]);
 
 /** Parses a dotted-decimal IPv4 address into four bytes. */
 function ipv4Octets(address: string): number[] | null {
@@ -285,6 +287,83 @@ export interface SafeResponse {
   truncated: boolean;
 }
 
+export interface SafeFetchResponseOptions extends RequestInit {
+  maxRedirects?: number;
+}
+
+/**
+ * Fetch-compatible variant for provider APIs that stream responses or accept
+ * multipart bodies. It applies the same per-hop validation and socket pinning
+ * as `safeFetch`, while leaving response consumption to the caller.
+ */
+export async function safeFetchResponse(
+  rawUrl: string | URL,
+  options: SafeFetchResponseOptions = {},
+): Promise<Response> {
+  const { maxRedirects = DEFAULT_MAX_REDIRECTS, ...requestInit } = options;
+  let target = await assertPublicHttpUrl(rawUrl);
+  const request = new Request(target.url, { ...requestInit, redirect: "manual" });
+  let method = request.method;
+  let headers = new Headers(request.headers);
+  let body = request.body ? Buffer.from(await request.arrayBuffer()) : undefined;
+  const signal = requestInit.signal ?? new AbortController().signal;
+
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    headers.set("accept-encoding", "identity");
+    if (body === undefined) headers.delete("content-length");
+    else headers.set("content-length", String(body.byteLength));
+
+    let response;
+    try {
+      response = await pinnedRequest(target.url, {
+        address: target.address,
+        headers: Object.fromEntries(headers.entries()),
+        signal,
+        method,
+        body,
+      });
+    } catch {
+      throw new SafeFetchError("unreachable");
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      response.destroy();
+      if (!location || hop === maxRedirects) throw new SafeFetchError("unreachable");
+
+      let next: URL;
+      try {
+        next = new URL(location, target.url);
+      } catch {
+        throw new SafeFetchError("url");
+      }
+      if (next.origin !== target.url.origin) {
+        for (const name of REDIRECT_SENSITIVE_HEADERS) headers.delete(name);
+      }
+      if (
+        response.status === 303 ||
+        ((response.status === 301 || response.status === 302) && method === "POST")
+      ) {
+        method = "GET";
+        body = undefined;
+        headers.delete("content-type");
+      }
+      target = await assertPublicHttpUrl(next);
+      continue;
+    }
+
+    const noBody = method === "HEAD" || [204, 205, 304].includes(response.status);
+    if (noBody) response.destroy();
+    const result = new Response(
+      noBody ? null : (Readable.toWeb(response.stream as Readable) as ReadableStream<Uint8Array>),
+      { status: response.status, headers: response.headers },
+    );
+    Object.defineProperty(result, "url", { value: target.url.toString() });
+    return result;
+  }
+  throw new SafeFetchError("unreachable");
+}
+
 export async function safeFetch(
   rawUrl: string | URL,
   options: SafeFetchOptions
@@ -324,6 +403,18 @@ export async function safeFetch(
         next = new URL(location, target.url);
       } catch {
         throw new SafeFetchError("url");
+      }
+      if (next.origin !== target.url.origin && options.headers) {
+        // Match the browser/fetch credential boundary: a redirect may move to
+        // another public origin, but it must not carry the caller's secrets.
+        options = {
+          ...options,
+          headers: Object.fromEntries(
+            Object.entries(options.headers).filter(
+              ([name]) => !REDIRECT_SENSITIVE_HEADERS.has(name.toLowerCase()),
+            ),
+          ),
+        };
       }
       // Each jump is a new host to validate and pin.
       target = await assertPublicHttpUrl(next);

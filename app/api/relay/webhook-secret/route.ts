@@ -4,6 +4,7 @@ import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { verifyRelayRequest } from "@/lib/server/forge-relay/protocol";
 import { parseRelayJsonObject } from "@/lib/server/forge-relay/json-body";
 import { encryptForgeToken } from "@/lib/server/git/token-crypto";
+import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -16,28 +17,25 @@ import { getServiceClient } from "@/lib/supabase-service";
  */
 
 /**
- * Cloud POSTS webhook payloads and signature headers to this URL, so
- * cleartext http is only tolerated for loopback hosts (local development) —
- * never for an arbitrary internet host. This bounds what a compromised
- * instance secret can point Cloud at (no http SSRF surface beyond loopback).
+ * Cloud POSTs webhook payloads and signature headers to this URL. Registration
+ * applies the same public-address policy as delivery so a target cannot be
+ * persisted while it resolves to a private network or cloud metadata service.
+ * Delivery resolves it again because DNS may change after registration.
  */
-function isAcceptableWebhookUrl(value: string): boolean {
+async function isAcceptableWebhookUrl(value: string): Promise<boolean> {
   let url: URL;
   try {
     url = new URL(value);
   } catch {
     return false;
   }
-  if (url.protocol === "https:") return true;
-  if (url.protocol !== "http:") return false;
-  const host = url.hostname.toLowerCase();
-  return (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host === "127.0.0.1" ||
-    host === "[::1]" ||
-    host === "::1"
-  );
+  if (url.protocol !== "https:") return false;
+  try {
+    await assertPublicHttpUrl(url);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -61,17 +59,16 @@ export async function POST(request: NextRequest) {
   if (!body) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const webhookUrl =
-    typeof body.webhookUrl === "string" && isAcceptableWebhookUrl(body.webhookUrl)
-      ? body.webhookUrl
-      : null;
+  const webhookUrl = typeof body.webhookUrl === "string" ? body.webhookUrl : null;
+  const acceptableWebhookUrl =
+    webhookUrl !== null && (await isAcceptableWebhookUrl(webhookUrl));
   const secret =
     typeof body.secret === "string" && body.secret.length >= 32 ? body.secret : null;
-  if (!webhookUrl || !secret) {
+  if (!webhookUrl || !acceptableWebhookUrl || !secret) {
     return NextResponse.json(
       {
         error:
-          "webhookUrl must be https (http only allowed for loopback hosts) and secret (32+ characters) are required",
+          "webhookUrl must be an HTTPS URL resolving only to public addresses and secret (32+ characters) are required",
       },
       { status: 400 },
     );

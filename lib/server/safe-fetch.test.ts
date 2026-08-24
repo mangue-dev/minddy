@@ -9,11 +9,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * NAT64 — plus non-routable ranges that are easy to overlook.
  */
 
-const pinnedRequest = vi.hoisted(() => vi.fn());
+const { lookup, pinnedRequest } = vi.hoisted(() => ({
+  lookup: vi.fn(),
+  pinnedRequest: vi.fn(),
+}));
 vi.mock("server-only", () => ({}));
+vi.mock("node:dns/promises", () => ({ lookup }));
 vi.mock("./pinned-request", () => ({ pinnedRequest }));
 
-const { isPrivateAddress, SafeFetchError, safeFetch } = await import("./safe-fetch");
+const { isPrivateAddress, SafeFetchError, safeFetch, safeFetchResponse } = await import(
+  "./safe-fetch"
+);
+
+beforeEach(() => {
+  lookup.mockReset();
+  lookup.mockResolvedValue([{ address: "93.184.216.34" }]);
+  pinnedRequest.mockReset();
+});
 
 describe("isPrivateAddress — blocked", () => {
   it.each([
@@ -103,8 +115,6 @@ describe("isPrivateAddress — allowed", () => {
 describe("safeFetch — POST", () => {
   const stream = () => Readable.from([Buffer.from("")]);
 
-  beforeEach(() => pinnedRequest.mockReset());
-
   it("passes the method, body, and byte length", async () => {
     pinnedRequest.mockResolvedValue({
       status: 200,
@@ -153,5 +163,134 @@ describe("safeFetch — POST", () => {
       })
     ).rejects.toEqual(new SafeFetchError("url"));
     expect(pinnedRequest).not.toHaveBeenCalled();
+  });
+});
+
+describe("safeFetch — redirects", () => {
+  const response = (status: number, headers: HeadersInit = {}) => ({
+    status,
+    headers: new Headers(headers),
+    stream: Readable.from([Buffer.from("")]),
+    destroy: vi.fn(),
+  });
+
+  it.each([
+    ["private", "http://10.0.0.8/models"],
+    ["loopback", "http://127.0.0.1/models"],
+    ["link-local", "http://169.254.169.254/latest/meta-data"],
+  ])("rejects a redirect to a %s address before connecting", async (_label, location) => {
+    pinnedRequest.mockResolvedValue(response(302, { location }));
+
+    await expect(
+      safeFetch("https://93.184.216.34/models", { maxBytes: 1024 }),
+    ).rejects.toEqual(new SafeFetchError("url"));
+    expect(pinnedRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a redirect host whose DNS answer mixes public and private addresses", async () => {
+    pinnedRequest.mockResolvedValue(
+      response(302, { location: "https://rebind.example/models" }),
+    );
+    lookup.mockResolvedValue([
+      { address: "93.184.216.34" },
+      { address: "127.0.0.1" },
+    ]);
+
+    await expect(
+      safeFetch("https://93.184.216.34/models", { maxBytes: 1024 }),
+    ).rejects.toEqual(new SafeFetchError("url"));
+    expect(pinnedRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("pins the validated DNS address for every public redirect hop", async () => {
+    pinnedRequest
+      .mockResolvedValueOnce(
+        response(302, { location: "https://redirect.example/models" }),
+      )
+      .mockResolvedValueOnce(response(200));
+    lookup.mockResolvedValue([{ address: "1.1.1.1" }]);
+
+    await expect(
+      safeFetch("https://93.184.216.34/models", { maxBytes: 1024 }),
+    ).resolves.toMatchObject({ ok: true, url: new URL("https://redirect.example/models") });
+    expect(pinnedRequest).toHaveBeenCalledTimes(2);
+    expect(pinnedRequest.mock.calls[1]?.[1]).toMatchObject({ address: "1.1.1.1" });
+  });
+
+  it("does not forward credentials to a different public origin", async () => {
+    pinnedRequest
+      .mockResolvedValueOnce(
+        response(302, { location: "https://redirect.example/models" }),
+      )
+      .mockResolvedValueOnce(response(200));
+
+    await safeFetch("https://93.184.216.34/models", {
+      headers: {
+        Authorization: "Bearer secret",
+        Cookie: "session=secret",
+        Accept: "application/json",
+      },
+      maxBytes: 1024,
+    });
+
+    expect(pinnedRequest.mock.calls[0]?.[1].headers).toMatchObject({
+      Authorization: "Bearer secret",
+      Cookie: "session=secret",
+      Accept: "application/json",
+    });
+    expect(pinnedRequest.mock.calls[1]?.[1].headers).toMatchObject({
+      Accept: "application/json",
+    });
+    expect(pinnedRequest.mock.calls[1]?.[1].headers).not.toHaveProperty("Authorization");
+    expect(pinnedRequest.mock.calls[1]?.[1].headers).not.toHaveProperty("Cookie");
+  });
+});
+
+describe("safeFetchResponse", () => {
+  const response = (status: number, headers: HeadersInit = {}, body = "") => ({
+    status,
+    headers: new Headers(headers),
+    stream: Readable.from([Buffer.from(body)]),
+    destroy: vi.fn(),
+  });
+
+  it("rejects a DNS-rebinding redirect before opening the second connection", async () => {
+    pinnedRequest.mockResolvedValue(
+      response(302, { location: "https://rebind.example/chat/completions" }),
+    );
+    lookup.mockResolvedValue([
+      { address: "93.184.216.34" },
+      { address: "10.0.0.8" },
+    ]);
+
+    await expect(
+      safeFetchResponse("https://93.184.216.34/chat/completions", {
+        method: "POST",
+        body: "{}",
+      }),
+    ).rejects.toEqual(new SafeFetchError("url"));
+    expect(pinnedRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("serializes multipart bodies and exposes the pinned response as a native Response", async () => {
+    pinnedRequest.mockResolvedValue(
+      response(200, { "content-type": "application/json" }, '{"text":"ok"}'),
+    );
+    const form = new FormData();
+    form.append("model", "whisper-1");
+
+    const result = await safeFetchResponse("https://93.184.216.34/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: "Bearer secret" },
+      body: form,
+    });
+
+    expect(result).toBeInstanceOf(Response);
+    await expect(result.json()).resolves.toEqual({ text: "ok" });
+    const options = pinnedRequest.mock.calls[0]?.[1];
+    expect(options.address).toBe("93.184.216.34");
+    expect(options.headers["content-type"]).toMatch(/^multipart\/form-data; boundary=/);
+    expect(options.body).toBeInstanceOf(Buffer);
+    expect(options.body.toString("utf8")).toContain("whisper-1");
   });
 });

@@ -10,14 +10,15 @@ import {
 /**
  * `POST /api/relay/webhook-secret` — the instance registers (or rotates) its
  * fan-out endpoint over the signed channel. Pinned: the endpoint must be
- * https (http only tolerated for loopback hosts — Cloud POSTs payloads and
- * signature headers to it, so cleartext internet hosts are refused), and a
- * malformed body from an authenticated instance is a 400, not a 500.
+ * HTTPS and resolve only to public addresses. A malformed body from an
+ * authenticated instance is a 400, not a 500.
  */
 
 vi.stubEnv("GIT_TOKEN_ENCRYPTION_SECRET", "token-crypto-secret-0123456789abcdef");
 
 let forgeEnabled = true;
+const lookup = vi.hoisted(() => vi.fn());
+vi.mock("node:dns/promises", () => ({ lookup }));
 vi.mock("@/lib/managed-services", () => ({
   isManagedForgeEnabled: () => forgeEnabled,
 }));
@@ -57,6 +58,8 @@ function signedRequest(rawBody: string): Request {
 
 beforeEach(() => {
   forgeEnabled = true;
+  lookup.mockReset();
+  lookup.mockResolvedValue([{ address: "93.184.216.34" }]);
   setFakeTable("forge_relay_instances", [
     {
       id: INSTANCE_ID,
@@ -86,27 +89,49 @@ describe("POST /api/relay/webhook-secret", () => {
     });
   });
 
-  it("refuses a cleartext internet host (Cloud POSTs signatures to it)", async () => {
+  it.each([
+    "http://on-prem.example.com/api/webhooks/github",
+    "http://localhost:3000/api/webhooks/github",
+  ])("refuses a cleartext target: %s", async (webhookUrl) => {
     const response = await route(
-      signedRequest(JSON.stringify({ webhookUrl: "http://on-prem.example.com/api/webhooks/github", secret: SECRET })) as never,
+      signedRequest(JSON.stringify({ webhookUrl, secret: SECRET })) as never,
     );
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
-      error: expect.stringContaining("https"),
+      error: expect.stringContaining("HTTPS"),
     });
     expect(fakeTables["forge_relay_instances"]?.[0]).toMatchObject({ webhook_url: null });
   });
 
-  it("tolerates http for loopback hosts only", async () => {
-    const loopback = await route(
-      signedRequest(JSON.stringify({ webhookUrl: "http://localhost:3000/api/webhooks/github", secret: SECRET })) as never,
+  it.each([
+    "https://127.0.0.1/api/webhooks/github",
+    "https://10.0.0.5/api/webhooks/github",
+    "https://169.254.169.254/latest/meta-data/",
+    "https://[::1]/api/webhooks/github",
+    "https://0x7f000001/api/webhooks/github",
+  ])("refuses a private or provider-internal address: %s", async (webhookUrl) => {
+    const response = await route(
+      signedRequest(JSON.stringify({ webhookUrl, secret: SECRET })) as never,
     );
-    expect(loopback.status).toBe(200);
+    expect(response.status).toBe(400);
+    expect(fakeTables["forge_relay_instances"]?.[0]).toMatchObject({ webhook_url: null });
+  });
 
-    const notLoopback = await route(
-      signedRequest(JSON.stringify({ webhookUrl: "http://localhost.example.com.evil.test/api/webhooks/github", secret: SECRET })) as never,
+  it("refuses a hostname when any DNS answer is private", async () => {
+    lookup.mockResolvedValue([
+      { address: "93.184.216.34" },
+      { address: "169.254.169.254" },
+    ]);
+    const response = await route(
+      signedRequest(
+        JSON.stringify({
+          webhookUrl: "https://metadata.google.internal/api/webhooks/github",
+          secret: SECRET,
+        }),
+      ) as never,
     );
-    expect(notLoopback.status).toBe(400);
+    expect(response.status).toBe(400);
+    expect(fakeTables["forge_relay_instances"]?.[0]).toMatchObject({ webhook_url: null });
   });
 
   it("answers 400 on a malformed body instead of throwing", async () => {

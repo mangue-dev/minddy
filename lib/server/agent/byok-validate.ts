@@ -5,6 +5,7 @@ import {
   isLocalAgentProvider,
   type AgentProviderId,
 } from "@/lib/agent-providers";
+import { safeFetch } from "@/lib/server/safe-fetch";
 
 /**
  * PROBE A BYOK KEY (MIN-344) — does the provider recognize this key?
@@ -84,9 +85,11 @@ export async function probeByokKey(params: {
 
   const { url, headers } = probeRequestFor(provider, baseUrl.replace(/\/+$/, ""), apiKey);
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       headers,
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      maxBytes: 1,
+      onOverflow: "truncate",
+      timeoutMs: PROBE_TIMEOUT_MS,
     });
     if (res.ok) return "valid";
     // 401/403 = the key is refused. 402 also: OpenRouter renders it for a key

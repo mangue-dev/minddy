@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { decryptForgeToken } from "@/lib/server/git/token-crypto";
+import { safeFetch } from "@/lib/server/safe-fetch";
 
 /**
  * GitHub webhook fan-out, Cloud side (docs/managed-forge-relay-plan.md,
@@ -26,6 +27,9 @@ import { decryptForgeToken } from "@/lib/server/git/token-crypto";
 
 const BACKOFF_MINUTES = [1, 5, 15, 30, 60];
 const MAX_ATTEMPTS = BACKOFF_MINUTES.length;
+const DELIVERY_TIMEOUT_MS = 15_000;
+/** Only the status matters; cap and discard the response as it arrives. */
+const MAX_RESPONSE_BYTES = 4096;
 
 interface EnqueueRow {
   instance_id: string;
@@ -208,7 +212,10 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
     }
 
     try {
-      const response = await fetch(endpoint, {
+      // Re-resolve and pin the destination for every attempt. A target that
+      // changed to a private address after registration must fail closed, and
+      // redirects must not forward signed tenant data to another destination.
+      const response = await safeFetch(endpoint, {
         method: "POST",
         headers: fanoutHeaders({
           provider: row.provider,
@@ -218,7 +225,10 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
           rawBody: row.payload,
         }),
         body: row.payload,
-        signal: AbortSignal.timeout(15_000),
+        maxBytes: MAX_RESPONSE_BYTES,
+        onOverflow: "truncate",
+        maxRedirects: 0,
+        timeoutMs: DELIVERY_TIMEOUT_MS,
       });
       if (response.ok) {
         // Compare-and-set: only the worker that flips THIS pending row at

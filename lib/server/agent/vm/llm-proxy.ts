@@ -17,6 +17,7 @@ import {
 } from "@/lib/server/ai-usage-shape";
 import type { NormalizedUsage } from "@/lib/server/ai-usage";
 import type { RedactText } from "../redact";
+import { safeFetchResponse } from "@/lib/server/safe-fetch";
 
 /**
  * THE SUPERVISOR'S LOCAL PROXY (MIN-286, lot 2) — the forty lines that
@@ -401,7 +402,12 @@ export function takeGeneration(
 /** Starts the proxy. Returns its URL, build queue, and shutdown. */
 export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   const { job } = opts;
-  const http = opts.fetchImpl ?? fetch;
+  // Local model servers and the trusted self-hosted runner intentionally use
+  // private addresses. Every direct cloud provider request uses the transport
+  // that pins validated DNS answers across redirects.
+  const http =
+    opts.fetchImpl ??
+    (opts.relay || isLocalAgentProvider(job.provider) ? fetch : safeFetchResponse);
   /**
    * The COMMON queue, powered by a PER REQUEST reader. A shared drive
    * would mix two responses in flight — and two girls in parallel, that's

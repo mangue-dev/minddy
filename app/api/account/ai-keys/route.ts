@@ -25,12 +25,12 @@ import type { AgentProviderId } from "@/lib/agent-providers";
 /**
  * Account “BYOK” key (MIN-46 / MIN-10). ONE active provider: OpenRouter,
  * OpenAI, Anthropic, Google, a generic OpenAI-compatible endpoint or a
- * endpoint local (OpenAI-compatible / Ollama). Reconfigurer = remplacer (on
- * delete the others). The key in plain language
- * is NEVER returned — only provider + key_prefix + base_url. Scriptures
- * via customer service (RLS = read-owner); encrypted key at rest
+ * local endpoint (OpenAI-compatible / Ollama). Reconfiguring replaces the
+ * other providers. The plaintext key is NEVER returned — only provider,
+ * key_prefix, and base_url. Writes use the service client (RLS is read-owner);
+ * the key is encrypted at rest
  * (AES-256-GCM). Changing/removing the provider resets the default model
- * perso (il appartenait au namespace de l'ancien provider).
+ * because it belonged to the previous provider's namespace.
  */
 
 const SANITIZED =
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
   // mere presence on base lifted any usage ceiling, including that of
   // compute of the microVM, which minddy pays for. A frank refusal (401/403) is a fact
   // which is returned to the user immediately — registering a dead key does not
-  // rendrait service ni maintenant ni au premier run. Un verdict `unknown`
+  // help either now or on the first run. An `unknown` verdict
   // (supplier unreachable) saves the key WITHOUT validation date: it does not
   // raises nothing, and `getUserByok` will try again on first use.
   const effectiveBaseUrl = resolveProviderBaseUrl(provider, baseUrl);
@@ -256,9 +256,11 @@ export async function PATCH(request: NextRequest) {
     .select("provider")
     .eq("user_id", auth.user.id)
     .maybeSingle();
-  const localProvider = isLocalAgentProvider(
-    (active as { provider?: string } | null)?.provider,
-  );
+  const activeProvider = (active as { provider?: string } | null)?.provider;
+  if (!activeProvider) {
+    return NextResponse.json({ error: "No BYOK key configured" }, { status: 404 });
+  }
+  const localProvider = isLocalAgentProvider(activeProvider);
   const update: { enabled_surfaces?: string[]; feature_models?: Record<string, string> } = {};
   if ("enabled_surfaces" in body) {
     const surfaces = parseAiSurfaces(body.enabled_surfaces);
@@ -284,12 +286,17 @@ export async function PATCH(request: NextRequest) {
     .from("user_ai_keys")
     .update(update)
     .eq("user_id", auth.user.id)
+    // Bind validation and write to the same row. A concurrent provider change
+    // must not apply cloud-only surfaces to a newly stored local endpoint.
+    .eq("provider", activeProvider)
     .select(SANITIZED)
     .maybeSingle();
   if (error) {
     console.error("[api/account/ai-keys] preferences update failed:", error.message);
     return NextResponse.json({ error: "Could not save BYOK preferences" }, { status: 500 });
   }
-  if (!data) return NextResponse.json({ error: "No BYOK key configured" }, { status: 404 });
+  if (!data) {
+    return NextResponse.json({ error: "BYOK configuration changed; retry" }, { status: 409 });
+  }
   return NextResponse.json({ key: data });
 }

@@ -14,6 +14,7 @@ import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { safeFetchResponse } from "@/lib/server/safe-fetch";
 
 /**
  * Cost tracking context for an embeddings call (one call = one run).
@@ -84,7 +85,8 @@ export async function embedTexts(
 
   const input = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
   const attempt = async (model: string): Promise<(number[] | null)[]> => {
-    const response = await fetch(endpoint, {
+    const http = runtime?.mode === "byok" ? safeFetchResponse : fetch;
+    const response = await http(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

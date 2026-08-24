@@ -26,6 +26,7 @@ import {
 } from "@/lib/ai-chat";
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 import { isManagedAiEnabled } from "@/lib/managed-services";
+import { safeFetchResponse } from "@/lib/server/safe-fetch";
 
 export type AiKeyMode = "platform" | "byok";
 
@@ -152,6 +153,7 @@ async function retryRejectedChatRequest(
   endpoint: string,
   firstResponse: Response,
   firstRequest: RequestInit,
+  request: (url: string, init: RequestInit) => Promise<Response>,
 ): Promise<Response> {
   if (firstResponse.status !== 400 || typeof firstRequest.body !== "string") {
     return firstResponse;
@@ -163,7 +165,7 @@ async function retryRejectedChatRequest(
   );
   return retryBody === null
     ? firstResponse
-    : fetch(endpoint, { ...firstRequest, body: retryBody });
+    : request(endpoint, { ...firstRequest, body: retryBody });
 }
 
 /**
@@ -202,10 +204,11 @@ export async function fetchAiChat(
   if (runtime.provider === "openrouter") {
     return fetchOpenRouterWithSuffixFallback(endpoint, model, request, logPrefix);
   }
+  const http = runtime.mode === "byok" ? safeFetchResponse : fetch;
   const firstRequest = request(model);
-  const firstResponse = await fetch(endpoint, firstRequest);
+  const firstResponse = await http(endpoint, firstRequest);
   return {
-    response: await retryRejectedChatRequest(endpoint, firstResponse, firstRequest),
+    response: await retryRejectedChatRequest(endpoint, firstResponse, firstRequest, http),
     model,
   };
 }

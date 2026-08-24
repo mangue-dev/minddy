@@ -26,6 +26,8 @@ vi.mock("@/lib/supabase-service", () => ({
 vi.mock("@/lib/managed-services", () => ({
   isManagedForgeEnabled: () => true,
 }));
+const safeFetch = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/safe-fetch", () => ({ safeFetch }));
 
 const INSTANCE_ID = "0f0e0d0c-0b0a-4948-8272-6d6f64656c79";
 const WEBHOOK_SECRET = "instance-generated-webhook-secret-32ch";
@@ -49,21 +51,28 @@ const { enqueueRelayDeliveryForPayload, processDueRelayDeliveries } = await impo
   "./fanout"
 );
 
-type FetchCall = { url: string; init: RequestInit };
-let fetchCalls: FetchCall[] = [];
-let fetchStatus = 200;
+type SafeFetchCall = {
+  url: string;
+  options: {
+    headers?: Record<string, string>;
+    body?: string;
+    maxRedirects?: number;
+    maxBytes?: number;
+    timeoutMs?: number;
+  };
+};
+let safeFetchCalls: SafeFetchCall[] = [];
+let deliveryStatus = 200;
 
 beforeEach(() => {
-  fetchCalls = [];
-  fetchStatus = 200;
+  safeFetchCalls = [];
+  deliveryStatus = 200;
   seedWorld();
-  vi.stubGlobal(
-    "fetch",
-    async (url: string | URL, init?: RequestInit) => {
-      fetchCalls.push({ url: String(url), init: init ?? {} });
-      return new Response("{}", { status: fetchStatus });
-    },
-  );
+  safeFetch.mockReset();
+  safeFetch.mockImplementation(async (url: string, options: SafeFetchCall["options"]) => {
+    safeFetchCalls.push({ url, options });
+    return { ok: deliveryStatus >= 200 && deliveryStatus < 300, status: deliveryStatus };
+  });
 });
 
 describe("enqueueRelayDeliveryForPayload", () => {
@@ -161,10 +170,15 @@ describe("processDueRelayDeliveries", () => {
 
     const outcome = await processDueRelayDeliveries();
     expect(outcome).toEqual({ processed: 1, delivered: 1, dead: 0 });
-    expect(fetchCalls).toHaveLength(1);
-    const { url, init } = fetchCalls[0];
+    expect(safeFetchCalls).toHaveLength(1);
+    const { url, options } = safeFetchCalls[0];
     expect(url).toBe(ENDPOINT);
-    const headers = new Headers(init.headers as HeadersInit);
+    expect(options).toMatchObject({
+      maxRedirects: 0,
+      maxBytes: 4096,
+      timeoutMs: 15_000,
+    });
+    const headers = new Headers(options.headers);
     expect(headers.get("x-github-delivery")).toBe(delivery.delivery_guid);
     expect(headers.get("x-github-event")).toBe("issue_comment");
     expect(headers.get("x-minddy-relay")).toBe("1");
@@ -172,7 +186,7 @@ describe("processDueRelayDeliveries", () => {
     // The signature must verify against the INSTANCE-generated secret.
     const expected =
       "sha256=" +
-      crypto.createHmac("sha256", WEBHOOK_SECRET).update(String(init.body)).digest("hex");
+      crypto.createHmac("sha256", WEBHOOK_SECRET).update(String(options.body)).digest("hex");
     expect(headers.get("x-hub-signature-256")).toBe(expected);
 
     expect((fakeTables["forge_relay_deliveries"] as unknown[])[0]).toMatchObject({
@@ -181,7 +195,7 @@ describe("processDueRelayDeliveries", () => {
   });
 
   it("backs off on failure and dead-letters after exhaustion", async () => {
-    fetchStatus = 500;
+    deliveryStatus = 500;
     const midWay = dueDelivery({ attempts: 3 });
     const exhausted = dueDelivery({ attempts: 4 });
     seedWorld({ deliveries: [midWay, exhausted] });
@@ -216,7 +230,7 @@ describe("processDueRelayDeliveries", () => {
 
     const outcome = await processDueRelayDeliveries();
     expect(outcome).toEqual({ processed: 2, delivered: 0, dead: 1 });
-    expect(fetchCalls).toHaveLength(0);
+    expect(safeFetchCalls).toHaveLength(0);
 
     const rows = fakeTables["forge_relay_deliveries"] as Record<string, unknown>[];
     const freshRow = rows.find((r) => r.id === fresh.id);
@@ -234,21 +248,44 @@ describe("processDueRelayDeliveries", () => {
     });
   });
 
+  it("backs off when delivery-time target validation rejects a changed address", async () => {
+    const delivery = dueDelivery({
+      forge_relay_instances: {
+        webhook_url: "https://metadata.google.internal/latest/meta-data/",
+        webhook_secret_encrypted: encryptForgeToken(WEBHOOK_SECRET),
+      },
+    });
+    seedWorld({ deliveries: [delivery] });
+    safeFetch.mockRejectedValueOnce(new Error("url"));
+
+    const outcome = await processDueRelayDeliveries();
+    expect(outcome).toEqual({ processed: 1, delivered: 0, dead: 0 });
+    expect(safeFetch).toHaveBeenCalledWith(
+      "https://metadata.google.internal/latest/meta-data/",
+      expect.objectContaining({ maxRedirects: 0 }),
+    );
+    expect(fakeTables["forge_relay_deliveries"]?.[0]).toMatchObject({
+      status: "pending",
+      attempts: 1,
+      last_error: "url",
+    });
+  });
+
   it("counts a delivery once when a concurrent worker already delivered the row", async () => {
     const delivery = dueDelivery();
     seedWorld({ deliveries: [delivery] });
 
     // A second worker delivers the row WHILE our POST runs: our compare-and-set
     // on (status=pending) then matches nothing, so we must not double-count.
-    vi.stubGlobal("fetch", async (url: string | URL, init?: RequestInit) => {
-      fetchCalls.push({ url: String(url), init: init ?? {} });
+    safeFetch.mockImplementation(async (url: string, options: SafeFetchCall["options"]) => {
+      safeFetchCalls.push({ url, options });
       const rows = fakeTables["forge_relay_deliveries"] as Record<string, unknown>[];
       const row = rows.find((r) => r.id === delivery.id);
       if (row) {
         row.status = "delivered";
         row.delivered_at = new Date().toISOString();
       }
-      return new Response("{}", { status: 200 });
+      return { ok: true, status: 200 };
     });
 
     const outcome = await processDueRelayDeliveries();

@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 const config = new Map<string, string>();
 const getUserByok = vi.fn();
+const safeFetchResponse = vi.fn();
 
 vi.mock("@/lib/server/app-config", () => ({
   getAppConfigValues: vi.fn(async (keys: string[]) =>
@@ -15,6 +16,7 @@ vi.mock("@/lib/server/agent/model", () => ({
   getUserByok,
   resolveProviderDefaultModel: vi.fn(async () => null),
 }));
+vi.mock("@/lib/server/safe-fetch", () => ({ safeFetchResponse }));
 
 const { fetchAiChat, resolveAiRuntime } = await import("@/lib/server/ai-runtime");
 
@@ -26,6 +28,7 @@ describe("resolveAiRuntime", () => {
     process.env.OPENROUTER_API_KEY = "platform-key";
     process.env.MINDDY_MANAGED_AI = "1";
     config.set("assistant_model", "platform/chat");
+    safeFetchResponse.mockReset();
   });
 
   it("falls back entirely to Minddy when the surface is unchecked", async () => {
@@ -120,9 +123,10 @@ describe("fetchAiChat", () => {
     },
   };
 
-  it("retente l'autre alias de plafond après un rejet explicite", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
+  beforeEach(() => safeFetchResponse.mockReset());
+
+  it("retries the other token-limit alias after an explicit rejection", async () => {
+    const fetchMock = safeFetchResponse
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({ error: { message: "Unsupported parameter: max_completion_tokens" } }),
@@ -150,12 +154,10 @@ describe("fetchAiChat", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).not.toHaveProperty(
       "max_completion_tokens",
     );
-    fetchMock.mockRestore();
   });
 
   it("does not retry a 400 unrelated to the cap", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
+    const fetchMock = safeFetchResponse
       .mockResolvedValueOnce(new Response("invalid tool schema", { status: 400 }));
 
     const { response } = await fetchAiChat(
@@ -168,7 +170,6 @@ describe("fetchAiChat", () => {
 
     expect(response.status).toBe(400);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    fetchMock.mockRestore();
   });
 
   it("retries with reasoning none after an explicit function-tools rejection", async () => {
@@ -178,8 +179,7 @@ describe("fetchAiChat", () => {
       baseUrl: "https://api.openai.com/v1",
       model: "gpt-future",
     };
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
+    const fetchMock = safeFetchResponse
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -214,6 +214,5 @@ describe("fetchAiChat", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
       reasoning_effort: "none",
     });
-    fetchMock.mockRestore();
   });
 });
