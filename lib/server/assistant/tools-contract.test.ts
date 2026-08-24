@@ -38,6 +38,21 @@ describe("Numo tool contracts", () => {
     expect(comment?.function.parameters.properties).toHaveProperty("feedback_post_id");
   });
 
+  it("advertises the owner-only backlog proposal", () => {
+    expect(tool("propose_backlog")?.function.description).toMatch(/OWNER ONLY/i);
+  });
+
+  it("keeps feedback comment guidance aligned with the comment service", () => {
+    const comment = tool("add_feedback_comment");
+
+    expect(comment?.function.description).not.toMatch(/1000 characters|no headings/i);
+    const body = comment?.function.parameters.properties.body as { description?: string };
+
+    expect(body.description).not.toMatch(
+      /1000 characters|no headings/i,
+    );
+  });
+
   it("makes product knowledge available without requiring a project", () => {
     expect(tool("get_help")?.function.parameters.required).toEqual(["topic"]);
     const global = GLOBAL_ASSISTANT_TOOLS.find((candidate) => candidate.function.name === "get_help");

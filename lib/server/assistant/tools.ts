@@ -397,7 +397,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "propose_backlog",
       description:
-        "Turn a project you have framed WITH the user into the backlog that starts it, in ONE pass: you hand over a brief, minddy cuts it into 3–6 objectives and 10–40 issues, and the PROPOSAL is displayed to the user, who unchecks what they don't want, fixes the titles and creates it themselves. This call WRITES NOTHING. Use it when the user wants to start a project from your conversation ('aide-moi à démarrer ce projet', a brand-new project with an empty board, a discussion that has converged on what to build), and NEVER as a way to create a few issues someone already listed — that's create_issue. Two conditions before calling it: (1) the project is actually framed — the goal, what it must do, the perimeter, the constraints, the choices already made; ask what you're missing first (see ask_user), a proposal built on two vague sentences wastes the user's review; (2) it replaces the batch — never chain create_issue calls to build a backlog, twenty calls cost twenty round-trips and all land in triage. The pass takes up to a minute or two. Your turn ENDS on this call — say in ONE short sentence what you are about to propose BEFORE calling it, because you get no word after: the user then reviews the proposal on screen and tells you what they created, so create, edit or comment on nothing in the meantime.",
+        "Turn a project you have framed WITH the user into the backlog that starts it, in ONE pass: you hand over a brief, minddy cuts it into 3–6 objectives and 10–40 issues, and the PROPOSAL is displayed to the user, who unchecks what they don't want, fixes the titles and creates it themselves. This call WRITES NOTHING. OWNER ONLY — a non-owner cannot seed the project's backlog. Use it when the user wants to start a project from your conversation ('aide-moi à démarrer ce projet', a brand-new project with an empty board, a discussion that has converged on what to build), and NEVER as a way to create a few issues someone already listed — that's create_issue. Two conditions before calling it: (1) the project is actually framed — the goal, what it must do, the perimeter, the constraints, the choices already made; ask what you're missing first (see ask_user), a proposal built on two vague sentences wastes the user's review; (2) it replaces the batch — never chain create_issue calls to build a backlog, twenty calls cost twenty round-trips and all land in triage. The pass takes up to a minute or two. Your turn ENDS on this call — say in ONE short sentence what you are about to propose BEFORE calling it, because you get no word after: the user then reviews the proposal on screen and tells you what they created, so create, edit or comment on nothing in the meantime.",
       parameters: {
         type: "object",
         properties: {
@@ -1094,7 +1094,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "add_feedback_comment",
       description:
-        "Post a SHORT, team-only internal comment on a feedback post for triage notes. It is never shown on the public board and is signed as Numo in the team timeline. Use two or three sentences or a few one-line bullets, 1000 characters at most, with no headings. Omit feedback_post_id to target the current feedback post.",
+        "Post a SHORT, team-only internal comment on a feedback post for triage notes. It is never shown on the public board and is signed as Numo in the team timeline. Use two or three sentences or a few one-line bullets. The body is trimmed and capped at 65,536 characters by the comment service. Omit feedback_post_id to target the current feedback post.",
       parameters: {
         type: "object",
         properties: {
@@ -1105,7 +1105,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           body: {
             type: "string",
             description:
-              "Short markdown triage note: two or three sentences, 1000 characters at most, no headings.",
+              "Short markdown triage note: two or three sentences or a few one-line bullets.",
           },
         },
         required: ["body"],
@@ -1967,7 +1967,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read the pull request attached to an issue: its title, description, state, branch, CI checks, the per-file diffs (patches, capped), and the review comments anchored to specific lines of code (with their file:line anchor and the diff snippet they were written against). Use it to explain what a PR changes, review it, or answer questions about its content or the review feedback on it. Works for ANY pull request of the linked repository attached to the issue — one the code agent opened, one a human opened that matched by convention, or one attached with link_pull_request. When the issue carries several, it reads the live one (draft or open), otherwise the most recently updated.",
+        "Read the pull request attached to an issue: its title, description, state, branch, CI checks, the per-file diffs (patches, capped), and the review comments anchored to specific lines of code (with their file:line anchor and the diff snippet they were written against). Use it to explain what a PR changes or answer questions about its content or review feedback. To make changes to the PR, use launch_code_agent on the linked issue. Works for ANY pull request of the linked repository attached to the issue — one the code agent opened, one a human opened that matched by convention, or one attached with link_pull_request. When the issue carries several, it reads the live one (draft or open), otherwise the most recently updated.",
       parameters: {
         type: "object",
         properties: {

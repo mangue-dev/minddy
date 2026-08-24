@@ -134,6 +134,12 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     issueTitles: pickList("issueTitles"),
     issueIdentifier: pick("issueIdentifier"),
     issueTitle: pick("issueTitle"),
+    prNumber:
+      typeof obj.prNumber === "number" && Number.isInteger(obj.prNumber) && obj.prNumber >= 0
+        ? obj.prNumber
+        : undefined,
+    prState: pick("prState"),
+    prRunId: pick("prRunId"),
     objectiveId: pick("objectiveId"),
     objectiveName: pick("objectiveName"),
     objectiveColor: pick("objectiveColor"),
