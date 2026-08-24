@@ -2,6 +2,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { request as httpRequest, createServer } from "node:http";
 import { posix as path } from "node:path";
+import { assertPublicHttpUrl, requestPublicUrl } from "./agent-runner-egress.mjs";
 
 const socketPath = process.env.DOCKER_HOST?.replace(/^unix:\/\//, "") || "/var/run/docker.sock";
 const secret = process.env.AGENT_RUNNER_SECRET?.trim();
@@ -268,7 +269,7 @@ async function relayLlmCompletion(name, request, response) {
   }
   if (relay.apiKey) headers.authorization = `Bearer ${relay.apiKey}`;
 
-  const upstream = await fetch(relay.url, {
+  const upstream = await requestPublicUrl(relay.url, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -279,13 +280,7 @@ async function relayLlmCompletion(name, request, response) {
     responseHeaders[key] = value;
   });
   response.writeHead(upstream.status, responseHeaders);
-  if (!upstream.body) return response.end();
-  const reader = upstream.body.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    response.write(value);
-  }
+  for await (const chunk of upstream.stream) response.write(chunk);
   response.end();
 }
 
@@ -328,10 +323,12 @@ const server = createServer(async (request, response) => {
       if (typeof body.controlToken !== "string" || !body.controlToken.trim()) {
         throw Object.assign(new Error("LLM relay control token is required"), { status: 400 });
       }
+      const url = completionUrl(body.baseUrl);
+      await assertPublicHttpUrl(url);
       llmRelays.set(name, {
         apiKey: typeof body.apiKey === "string" && body.apiKey ? body.apiKey : null,
         controlToken: body.controlToken,
-        url: completionUrl(body.baseUrl),
+        url,
       });
       return json(response, 200, { ok: true });
     }

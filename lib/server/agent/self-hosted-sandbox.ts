@@ -18,6 +18,7 @@ async function runnerRequest<T>(
   const { url, secret } = runnerConfig();
   const response = await fetch(`${url}${path}`, {
     method: init.method ?? "POST",
+    redirect: "error",
     headers: {
       authorization: `Bearer ${secret}`,
       ...(init.body === undefined ? {} : { "content-type": "application/json" }),

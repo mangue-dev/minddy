@@ -39,6 +39,7 @@ describe("self-hosted agent sandbox", () => {
       "http://agent-runner:6464/v1/sandboxes/agent-numo-1",
       expect.objectContaining({
         method: "POST",
+        redirect: "error",
         headers: expect.objectContaining({ authorization: "Bearer runner-secret" }),
       }),
     );
