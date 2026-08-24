@@ -1,44 +1,44 @@
 import "server-only";
 
-import webpush, { type WebPushError } from "web-push";
+import type { WebPushError } from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { configureWebPush } from "./vapid";
 import { sendApnsNotification } from "./apns";
 import { toPushLocale, type PushLocale, type PushPayload } from "./payload";
+import { sendPinnedWebPushNotification } from "./web";
 
 /**
- * Web Push sending, and the maintenance of the subscription base that goes with it (MIN-183).
+ * Web Push delivery and the related subscription maintenance (MIN-183).
  *
  * ## The contract: never throw
  *
- * Same contract as `insertNotifications` — we log, we swallow. An unreachable push
- * service must not fail the comment that triggered it, nor the
- * cascade of automations in which it runs.
+ * This has the same contract as `insertNotifications`: log and swallow. An unreachable
+ * push service must not fail the comment that triggered it or the automation cascade
+ * containing it.
  *
  * ## Subscriptions DIE, and that's normal
  *
- * A subscription has no announced end of life: the user uninstalls the
- * PWA, revokes the permission, deletes the site data — and the endpoint responds
- * then 404 or 410, definitively. Without purging, the table would accumulate dead rows which the settings map would show as active devices, and which would continue to be pushed on each event. The purge is therefore done HERE,
- * at the moment when the push service tells us: this is the only place that
- * learns it.
+ * A subscription has no announced end of life. The user can uninstall the PWA,
+ * revoke permission, or delete site data, after which the endpoint permanently
+ * responds with 404 or 410. Without purging, the table would accumulate dead rows
+ * that settings still present as active devices and every event would keep trying.
+ * Purging therefore happens here, when the push service reports it.
  *
- * The other codes are not treated the same, and that is the point:
- * • 403 → the SIGNATURE is refused: the VAPID keys have changed under the subscriptions. It's not the device that died, it's us
- * who broke the link — deleting would erase the evidence.
- * • 413 → payload too big. A manufacturing bug, not a device.
- * • 429 ​​/ 5xx → transient. We count, we keep, it will come back.
+ * Other status codes deliberately have different handling:
+ * - 403 means the signature was refused because the VAPID keys changed beneath
+ *   the subscription. The device is not dead; deleting it would erase evidence.
+ * - 413 means the payload is too large, which is a construction bug, not a device issue.
+ * - 429 and 5xx are transient. Count the failure and keep the subscription.
  *
- * ## Bounded competition
+ * ## Bounded concurrency
  *
- * Someone can have ten devices, and an insert can concern ten people.
- * A `Promise.all` on the entire product would open a hundred requests outgoing from a
- * shot from a lambda. Five at a time are more than enough and hold the
- * short tail.
+ * A person can have ten devices and a notification insert can concern ten people.
+ * One unbounded `Promise.all` could open a hundred outbound requests from a single
+ * serverless invocation. Five at a time keeps the tail controlled.
  */
 
-/** What the table stores of a device, reduced to what the send needs. */
+/** The device fields needed for delivery. */
 export interface PushSubscriptionRow {
   id: string;
   endpoint: string;
@@ -50,11 +50,13 @@ export interface PushSubscriptionRow {
 
 const CONCURRENCY = 5;
 
-/** 24 hours: beyond that, an inbox notification is no longer of interest — the device which
- * turns back on three days later does not have to receive a burst from the day before. */
+/**
+ * After 24 hours an inbox notification is stale. A device returning three days
+ * later should not receive a burst of old alerts.
+ */
 const TTL_SECONDS = 60 * 60 * 24;
 
-/** The outcome of a send to a device, as the caller can read it. */
+/** The delivery outcome exposed to callers. */
 export type PushSendOutcome = "sent" | "gone" | "failed" | "skipped";
 
 const statusOf = (e: unknown): number | null => {
@@ -63,9 +65,8 @@ const statusOf = (e: unknown): number | null => {
 };
 
 /**
- * A send, to a device. Updates the row based on the outcome: success →
- * timestamp and failure counter reset to zero; subscription dead → the line
- * disappears; transient failure → counter goes up.
+ * Delivers to one device and maintains its row: success updates the timestamp and
+ * resets failures, a dead subscription is removed, and transient failures increment.
  */
 async function sendToSubscription(
   service: SupabaseClient,
@@ -90,7 +91,7 @@ async function sendToSubscription(
       return "gone";
     }
     console.error(
-      `[push/apns] envoi échoué (${response.status || "sans statut"}): ${response.reason ?? "raison inconnue"}`
+      `[push/apns] delivery failed (${response.status || "no status"}): ${response.reason ?? "unknown reason"}`
     );
     await incrementFailureCount(service, sub.id);
     return "failed";
@@ -98,7 +99,7 @@ async function sendToSubscription(
 
   if (!configureWebPush() || !sub.p256dh || !sub.auth) return "skipped";
   try {
-    await webpush.sendNotification(
+    await sendPinnedWebPushNotification(
       {
         endpoint: sub.endpoint,
         keys: { p256dh: sub.p256dh, auth: sub.auth },
@@ -123,14 +124,14 @@ async function sendToSubscription(
 
     if (status === 403) {
       console.error(
-        "[push] 403 du service de push — clés VAPID désaccordées de cet abonnement " +
-          "(la paire a-t-elle changé ?). L'appareil devra se réabonner."
+        "[push] push service returned 403: this subscription no longer matches " +
+          "the configured VAPID keys. The device must subscribe again."
       );
       return "failed";
     }
 
     console.error(
-      `[push] envoi échoué (${status ?? "sans statut"}):`,
+      `[push] delivery failed (${status ?? "no status"}):`,
       (e as Error).message
     );
     // `failure_count + 1` without RPC: the value read may be out of date, but
@@ -165,8 +166,10 @@ async function inBatches<T>(
   return out;
 }
 
-/** The active devices of an account. Client SERVICE: we read on behalf of
- * someone else, outside of any authenticated request. */
+/**
+ * An account's active devices. The service client reads on another user's behalf,
+ * outside any authenticated request.
+ */
 export async function activeSubscriptionsOf(
   service: SupabaseClient,
   userId: string
@@ -177,7 +180,7 @@ export async function activeSubscriptionsOf(
     .eq("user_id", userId)
     .eq("enabled", true);
   if (error) {
-    console.error("[push] lecture des abonnements échouée:", error.message);
+    console.error("[push] failed to read subscriptions:", error.message);
     return [];
   }
   return (data ?? []) as PushSubscriptionRow[];
@@ -186,9 +189,9 @@ export async function activeSubscriptionsOf(
 /**
  * Pushes to all active devices in an account.
  *
- * `payloadFor` is called by LANGUAGE and not by device: the wording is the
- * even for two phones in French, and it costs a trainer
- * next-intl. Making `null` (target disappeared) sends nothing for that language.
+ * `payloadFor` is called once per language rather than once per device. Two phones
+ * using the same locale share the wording and one next-intl formatter. Returning
+ * `null` for a disappeared target sends nothing for that language.
  */
 export async function sendPushToUser(
   service: SupabaseClient,

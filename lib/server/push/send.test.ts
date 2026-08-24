@@ -6,12 +6,11 @@ import type { PushPayload } from "./payload";
 /**
  * MIN-183 — maintenance of the subscription base.
  *
- * This is the part that you CANNOT see when trying the app: a subscription
- * dies without warning (PWA uninstalled, permission revoked, site data
- * deleted), and the push service says it only once, by a status code,
- * at the time of sending. Getting the policy wrong is never noticed right away — either the table fills up with dead rows that the map presents as
- * active devices, or we delete perfectly alive subscriptions
- * on a passing incident, and people stop being notified without knowing it.
+ * This behavior is invisible while trying the app. A subscription dies without
+ * warning when the PWA is uninstalled, permission is revoked, or site data is
+ * deleted, and the push service reports it only through a delivery status code.
+ * A wrong policy either fills the table with dead rows shown as active devices,
+ * or deletes healthy subscriptions after a transient incident.
  *
  * The four cases below ARE this policy.
  */
@@ -22,9 +21,10 @@ const H = vi.hoisted(() => ({
 }));
 
 vi.mock("web-push", () => ({
-  default: { sendNotification: H.send, setVapidDetails: vi.fn() },
+  default: { setVapidDetails: vi.fn() },
 }));
 vi.mock("./apns", () => ({ sendApnsNotification: H.sendApns }));
+vi.mock("./web", () => ({ sendPinnedWebPushNotification: H.send }));
 
 const { sendPushToUser } = await import("./send");
 
@@ -33,8 +33,8 @@ const webPushError = (statusCode: number) =>
   Object.assign(new Error(`push failed: ${statusCode}`), { statusCode });
 
 const PAYLOAD: PushPayload = {
-  title: "MIN-42 · Réparer le sélecteur",
-  body: "Alice a commenté",
+  title: "MIN-42 · Repair the selector",
+  body: "Alice commented",
   url: "/projects/p/?issue=i",
   tag: "/projects/p/?issue=i",
 };
@@ -87,7 +87,7 @@ beforeEach(() => {
 });
 
 describe("sendPushToUser", () => {
-  it("envoie, et remet le compteur d'échecs à zéro", async () => {
+  it("sends and resets the failure counter", async () => {
     H.send.mockResolvedValue(undefined);
     const { service, ops } = stubService(ONE_DEVICE);
 
@@ -107,7 +107,7 @@ describe("sendPushToUser", () => {
     ]);
   });
 
-  it("route un appareil natif vers APNs", async () => {
+  it("routes a native device through APNs", async () => {
     H.sendApns.mockResolvedValue({ status: 200, reason: null });
     const { service, ops } = stubService([
       {
@@ -132,7 +132,7 @@ describe("sendPushToUser", () => {
     });
   });
 
-  it("purge un token APNs révoqué", async () => {
+  it("purges a revoked APNs token", async () => {
     H.sendApns.mockResolvedValue({ status: 410, reason: "Unregistered" });
     const { service, ops } = stubService([
       {
@@ -155,7 +155,7 @@ describe("sendPushToUser", () => {
 
   // 404/410: the push service tells us that the subscription no longer exists. It is
   // permanent — the line will never again designate a reachable device.
-  it.each([404, 410])("PURGE la ligne sur un %i", async (status) => {
+  it.each([404, 410])("purges the row on %i", async (status) => {
     H.send.mockRejectedValue(webPushError(status));
     const { service, ops } = stubService(ONE_DEVICE);
 
@@ -168,7 +168,7 @@ describe("sendPushToUser", () => {
   // 403: it is the SIGNATURE which is refused — our VAPID keys have changed under
   // subscription feet. The device is alive; deleting would erase the
   // proof of the problem and would force everyone to resubscribe.
-  it("GARDE la ligne sur un 403", async () => {
+  it("keeps the row on 403", async () => {
     H.send.mockRejectedValue(webPushError(403));
     const { service, ops } = stubService(ONE_DEVICE);
 
@@ -178,8 +178,8 @@ describe("sendPushToUser", () => {
     expect(ops).toEqual([]);
   });
 
-  // 429 / 5xx : passager. On compte, on garde.
-  it.each([429, 500, 503])("incrémente et garde sur un %i", async (status) => {
+  // 429 and 5xx are transient. Count the failure and keep the row.
+  it.each([429, 500, 503])("increments and keeps the row on %i", async (status) => {
     H.send.mockRejectedValue(webPushError(status));
     const { service, ops } = stubService(ONE_DEVICE);
 
@@ -191,7 +191,7 @@ describe("sendPushToUser", () => {
     ]);
   });
 
-  it("ne construit la charge utile qu'UNE FOIS par langue, pas par appareil", async () => {
+  it("builds the payload once per language rather than once per device", async () => {
     H.send.mockResolvedValue(undefined);
     const { service } = stubService([
       { id: "d1", endpoint: "https://push.example/1", p256dh: "k", auth: "a", locale: "fr" },
@@ -208,7 +208,7 @@ describe("sendPushToUser", () => {
     expect(payloadFor.mock.calls.map((c) => c[0]).sort()).toEqual(["en", "fr"]);
   });
 
-  it("n'envoie qu'à l'appareil demandé avec `onlyEndpoint` (bouton d'essai)", async () => {
+  it("sends only to the device selected by `onlyEndpoint`", async () => {
     H.send.mockResolvedValue(undefined);
     const { service } = stubService([
       { id: "d1", endpoint: "https://push.example/1", p256dh: "k", auth: "a", locale: "fr" },
@@ -225,7 +225,7 @@ describe("sendPushToUser", () => {
     });
   });
 
-  it("ne pousse rien quand la charge utile est nulle (cible disparue)", async () => {
+  it("does not push when the payload is null", async () => {
     const { service, ops } = stubService(ONE_DEVICE);
     const tally = await sendPushToUser(service, "u1", () => null);
     expect(tally).toEqual({ sent: 0, gone: 0, failed: 0 });
@@ -233,9 +233,8 @@ describe("sendPushToUser", () => {
     expect(ops).toEqual([]);
   });
 
-  // Without keys, the app must run: the inbox fills, nothing is raised, we do not
-  // don't even touch the base.
-  it("s'éteint proprement sans clés VAPID", async () => {
+  // Without keys, the app still runs and fills the inbox without touching push rows.
+  it("shuts down cleanly without VAPID keys", async () => {
     vi.stubEnv("VAPID_PRIVATE_KEY", "");
     const { service, ops } = stubService(ONE_DEVICE);
 

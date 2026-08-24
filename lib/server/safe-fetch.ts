@@ -271,9 +271,9 @@ export interface SafeFetchOptions {
   method?: "GET" | "POST";
   /**
    * POST body. It is NOT replayed on redirects because forwarding a signed
-   * payload to a host the caller did not choose would leak webhook data.
+   * payload to a host the caller did not choose would leak request data.
    */
-  body?: string;
+  body?: string | Buffer;
 }
 
 export interface SafeResponse {
