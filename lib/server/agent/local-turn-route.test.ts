@@ -337,8 +337,10 @@ describe("le drain laisse les runs locaux à leur machine", () => {
 describe("la préparation locale d'`execute.ts`", () => {
   const source = readFileSync(join(__dirname, "execute.ts"), "utf8");
 
-  it("ne réveille aucune microVM sur un tour local", () => {
-    expect(source).toContain("localTurn ? { sandbox: null } : await getOrCreateAgentSandbox(");
+  it("does not wake a microVM for a local turn", () => {
+    expect(source).toContain(
+      "localTurn ? { sandbox: null, created: false } : await getOrCreateAgentSandbox(",
+    );
   });
 
   it("rend l'affectation au lieu de lancer la boucle", () => {

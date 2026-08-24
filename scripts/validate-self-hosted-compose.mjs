@@ -20,6 +20,7 @@ export const REQUIRED_PROFILE_FILES = [
   "deploy/self-hosted/scheduler.mjs",
   "deploy/self-hosted/agent-runner.mjs",
   "deploy/self-hosted/agent-runner-egress.mjs",
+  "deploy/self-hosted/agent-runner-git-relay.mjs",
   "deploy/self-hosted/.env.example",
 ];
 

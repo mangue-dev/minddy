@@ -307,11 +307,12 @@ export interface VmJob {
  * linked to a real account, otherwise Vercel blocks the deployment.
  */
   committer: { name: string; email: string };
-  /** Push URL, including EPHEMERAL forge token. He is already in the microVM
-   * (he is the one who cloned); the loop asks for more from the
-   * plan before each push, a turn which can last longer than the token.
-   * ABSENT for a local run on a project with NO linked repository: there is
-   * no remote, nothing is ever pushed, and `create_pr` is not served. */
+  /**
+   * Git remote used for push. It is credential-free in Vercel sandboxes and a
+   * repository-scoped relay URL in self-hosted sandboxes. Desktop-local runs may
+   * use an authenticated URL on the user's machine. Absent when no repository is
+   * linked, in which case `create_pr` is not served.
+   */
   authUrl?: string;
   /** Readable run reference in commit messages (`wip(...)`). */
   commitRef: string;

@@ -73,18 +73,14 @@ import { surfaceForAgentRun } from "@/lib/ai-surfaces";
  * WHAT WAS ADDED WITH THE LOOP (MIN-224). PULL REQUEST tools,
  * `create_pr` and `web_search` are now served: what was missing was not
  * the surface but what the loop would send — the counter of anchors placed,
- * the push state of the round. Plus `/rest`, the end of the turn, and `/repo-auth`, which makes
- * a fresh forge token to a VM that has been working longer than the
- * sien.
+ * the push state of the round. `/rest` completes the turn, while `/repo-auth`
+ * rotates an expiring forge credential in trusted network infrastructure.
  *
- * THE ONLY SECRET THE VM HOLDS, AND IT MUST BE TOLD (MIN-327). “The microVM does not
- * holds no secrets" was written here and in `network-policy.ts`, and it was
- * false: the forge token is in its `.git/config` since the clone, by
- * construction — that’s what it grows with. The correct sentence is narrower:
- * the VM does not hold any secrets **from minddy** (neither LLM key, nor Supabase key, nor
- * identity token), and the only one she carries is scoped at the project submission, with
- * the minimum power of its anchoring (`RepoTokenAccess` in `repo-access.ts`).
- * The overly broad statement is what saved me from looking at it for two tickets.
+ * FORGE CREDENTIALS DO NOT ENTER THE SANDBOX (MIN-421).
+ * The firewall or trusted runner relay supplies repository-scoped Git
+ * authentication after requests leave the untrusted process. The remote stored
+ * in `.git/config` is credential-free or contains only the run-scoped relay
+ * credential. A refresh updates infrastructure and returns no forge secret.
  *
  * AND THERE IS NOW A SECOND ADMISSION ROUTE (MIN-355). A trick that plays
  * on the user's machine does not have a firewall to sign anything
@@ -650,55 +646,29 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "POST" && surface === "/repo-auth") {
-    /**
-     * AND A LOCAL MACHINE DOES NOT RECEIVE ANY AT ALL (MIN-355).
-     *
-     * It is the most expensive surface of the control plane: it returns a token
-     * installation code `repo-write` **on request, renewable indefinitely**. On
-     * the cloud path, which the terminal is the microVM — disposable, cut off at rest,
-     * and who already holds this token in her `.git/config` (she cannot clone
-     * without). Neither of these two sentences is true of a Mac.
-     *
-     * The renewal therefore goes through the APP, which has the user's session:
-     * an authority who knows WHO is asking, where this token only knows which run.
-     * This is the first of three reductions of power, and the only one that removes
-     * something at an honest turn — the price is assumed.
-     */
+    /** Desktop-local execution refreshes repository access through the signed-in
+     * app, not through its readable execution token (MIN-355). */
     if (opts.local) {
       return forbidden("a local run renews its repository token through the app, not here");
     }
-    // A FRESH smithing token. This is the only reason for this surface to exist: a
-    // tower that lives in the VM can last longer than the token
-    // installation which cloned the repository, and a push which fails in 401 at the
-    // Third hour would be the round's work lost until the next round.
-    /**
-     * AND A REVIEW DOES NOT RECEIVE ANY (MIN-327).
-     *
-     * The surface delivered a new token to any VM, without looking
-     * anchoring: a proofreading session — the only one from which all the content comes
-     * of an unknown fork — got one WRITING, which landed in its
-     * `.git/config`. A prompt injection from the fork was enough to read it
-     * and exfiltrate it.
-     *
-     * But a reread never pushes: `writesToRepo` is false in
-     * `execute.ts`, and on the VM side `repoAuthUrl()` is ONLY called from `pushWork`.
-     * Refusing here therefore takes nothing away from him — and his clone leaves with a token
-     * `repo-read` (cf. `RepoTokenAccess`).
-     *
-     * The refusal is LOUD rather than silent: it is a boundary, it must
-     * see yourself in a log. The client of the control plane tolerates it (it falls
-     * on the URL that his job carries).
-     */
+    // Mint a fresh repository credential for trusted infrastructure. The
+    // requesting process receives only an acknowledgement; the credential is
+    // rotated in the Vercel firewall or self-hosted runner relay.
+    /** A review never pushes, so it cannot rotate infrastructure to write access.
+     * The refusal is explicit because this is an authorization boundary. */
     if (anchorForRun(run) === "pr") {
       return forbidden("a review session never pushes, so it gets no repository token");
     }
-    const { resolveRepoCloneTarget } = await import("./repo-access");
-    // `repo-write` and not `full`: this token goes down into the microVM, where `git` is
-    // its only consumer. It clones, it fetches, it pushes — it does not emerge once
-    // pull request and does not approve one.
+    const [{ resolveRepoCloneTarget }, { refreshAgentSandboxForgeAccess }] = await Promise.all([
+      import("./repo-access"),
+      import("./sandbox"),
+    ]);
+    // `repo-write`, not `full`: the trusted relay uses it only for Git smart HTTP.
     const target = await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null);
     if (!target) return { status: 404, body: { error: "no repository linked" } };
-    return ok({ authUrl: target.authUrl });
+    const sandboxName = opts.sandboxName ?? run.sandbox_id ?? `agent-${run.id}`;
+    await refreshAgentSandboxForgeAccess(sandboxName, target);
+    return ok({ refreshed: true });
   }
 
   if (method === "POST" && surface === "/llm-key") {

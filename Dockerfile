@@ -52,6 +52,7 @@ COPY --from=build --chown=minddy:minddy /app/.next/standalone ./
 COPY --from=build --chown=minddy:minddy /app/.next/static ./.next/static
 COPY --from=build --chown=minddy:minddy /app/deploy/self-hosted/agent-runner.mjs ./agent-runner.mjs
 COPY --from=build --chown=minddy:minddy /app/deploy/self-hosted/agent-runner-egress.mjs ./agent-runner-egress.mjs
+COPY --from=build --chown=minddy:minddy /app/deploy/self-hosted/agent-runner-git-relay.mjs ./agent-runner-git-relay.mjs
 
 USER minddy
 

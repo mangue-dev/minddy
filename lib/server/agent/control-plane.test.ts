@@ -60,6 +60,7 @@ const h = vi.hoisted(() => ({
   scratchpadCalls: [] as string[],
   /** The token PROFILE requested from `resolveRepoCloneTarget`, call by call. */
   repoAccessAsked: [] as string[],
+  forgeRefreshes: [] as Array<{ name: string; token: string }>,
   /** The LLM keys requested from the supplier, with the ceiling placed on each. */
   minted: [] as Array<{ runId: string; capUsd: number }>,
   /** Revoked keys — which must never survive the turn that requested it. */
@@ -154,9 +155,16 @@ vi.mock("./repo-access", () => ({
       provider: "github",
       repoFullName: "org/repo",
       token: `tok-${access}`,
+      remoteUrl: "https://github.com/org/repo.git",
       authUrl: `https://x-access-token:tok-${access}@github.com/org/repo.git`,
       defaultBranch: "main",
     };
+  }),
+}));
+
+vi.mock("./sandbox", () => ({
+  refreshAgentSandboxForgeAccess: vi.fn(async (name: string, target: { token: string }) => {
+    h.forgeRefreshes.push({ name, token: target.token });
   }),
 }));
 
@@ -273,6 +281,7 @@ beforeEach(() => {
   h.journal.length = 0;
   h.scratchpadCalls.length = 0;
   h.repoAccessAsked.length = 0;
+  h.forgeRefreshes.length = 0;
   h.minted.length = 0;
   h.revoked.length = 0;
   h.mintFails = false;
@@ -814,36 +823,30 @@ describe("l'ancrage du run ferme la surface `/tool/`", () => {
 });
 
 /**
- * MIN-327 — THE FORGE TOKEN A MICROVM RECEIVES DEPENDS ON ITS ANCHOR.
- *
- * `/repo-auth` returned a fresh token to any VM, without looking
- * anchoring. A replay — the only one where all content comes from a fork
- * unknown — got one IN WRITING, which landed in his `.git/config`:
- * an injection from the fork was enough to read it and exfiltrate it, and it
- * then opened all the private repositories of the installation.
+ * MIN-421 — `/repo-auth` refreshes trusted infrastructure and returns no
+ * credential. Reviews remain unable to rotate the transport to write access.
  */
-describe("le token de forge remis à la microVM", () => {
-  it("refuse tout token à une session de RELECTURE", async () => {
+describe("forge authentication refresh", () => {
+  it("refuses every refresh from a review session", async () => {
     h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
     const res = await call("POST", "/repo-auth");
     expect(res.status).toBe(403);
-    // And nothing was minted: the refusal is upstream of the forge, not a token
-    // that we would make to throw away.
+    // Nothing is minted when authorization fails.
     expect(h.repoAccessAsked).toEqual([]);
   });
 
-  it("rend au run de TICKET un token de dépôt, pas le token de la fonction", async () => {
+  it("rotates a repository-scoped token without returning it to an issue run", async () => {
     const res = await call("POST", "/repo-auth");
     expect(res.status).toBe(200);
-    // `repo-write`: the VM clones, fetches and pushes. She doesn't wear a sweater
-    // request and does not approve one — these gestures go back to `/tool/`.
     expect(h.repoAccessAsked).toEqual(["repo-write"]);
-    expect(res.body).toEqual({
-      authUrl: "https://x-access-token:tok-repo-write@github.com/org/repo.git",
-    });
+    expect(h.forgeRefreshes).toEqual([
+      { name: `agent-${RUN_ID}`, token: "tok-repo-write" },
+    ]);
+    expect(res.body).toEqual({ refreshed: true });
+    expect(JSON.stringify(res.body)).not.toContain("tok-repo-write");
   });
 
-  it("rend le même token restreint à un run de CARNET", async () => {
+  it("rotates the same scoped credential for a notebook run", async () => {
     h.run = { ...h.run, issue_id: null, pull_request_id: null };
     expect((await call("POST", "/repo-auth")).status).toBe(200);
     expect(h.repoAccessAsked).toEqual(["repo-write"]);

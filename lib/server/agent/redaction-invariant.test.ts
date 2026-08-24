@@ -123,42 +123,27 @@ describe("la substitution descend dans les payloads imbriqués", () => {
 });
 
 /**
- * MIN-327 — TWO TOKENS IN THE SAME ROUND, SO TWO TO SUBSTITUTE.
- *
- * Since the microVM token is no longer that of the function (`vmTarget`
- * against `target` in `execute.ts`), the secret register must bear the
- * TWO: it is that of the VM which is in `.git/config` and which `git remote -v`
- * sort, it is that of the function which appears in an error message of the
- * wrought. Saving just one would make the substitution true on half of the
- * paths — the exact failure mode of MIN-328, where a passing secret doesn't break
- * nothing and is nowhere to be seen.
- *
- * Lexical, like the rest of the file: the actual path requests a microVM.
+ * MIN-421 — forge credentials are registered for server-side error redaction,
+ * but only a credential-free URL or a run-scoped relay URL enters the VM job.
+ * These lexical assertions cover the cloud bootstrap without requiring a real
+ * Vercel sandbox.
  */
-describe("le registre porte le token de la VM comme celui de la fonction", () => {
+describe("forge credentials stop at the trusted sandbox boundary", () => {
   const source = read("execute.ts");
 
-  it("enregistre le token que la microVM détient", () => {
+  it("registers the infrastructure-held token for redaction", () => {
     expect(source).toContain("secrets.addAuthUrl(vmTarget.authUrl)");
     expect(source).toContain("secrets.add(vmTarget.token)");
   });
 
-  it("enregistre toujours celui de la fonction", () => {
+  it("still registers the function credential", () => {
     expect(source).toContain("secrets.addAuthUrl(target.authUrl)");
     expect(source).toContain("secrets.add(target.token)");
   });
 
-  it("ne laisse aucune URL de clone descendre dans la VM sans venir de `vmTarget`", () => {
-    // The three gestures that write a token-authenticated URL INTO the microVM:
-    // the clone of an ordinary run, that of a replay, and the loop job.
-    // `target.authUrl` would be the original bug — a function token in a
-    // `.git/config` that the model can read. (`vmTarget!` : a PR run always has
-    // its repository, the assertion only surfaces that invariant.)
-    for (const geste of [
-      "await cloneRepo(sandboxHost(fresh, cloudLayout()), {\n          authUrl: vmTarget!.authUrl,",
-      "authUrl: vmTarget!.authUrl,\n            baseBranch,",
-    ]) {
-      expect(source).toContain(geste);
-    }
+  it("never passes the authenticated forge URL to clone or the cloud VM job", () => {
+    expect(source).toContain("return vmTarget.remoteUrl");
+    expect(source).toContain("...(sandboxRepoUrl ? { authUrl: sandboxRepoUrl } : {})");
+    expect(source).not.toContain("authUrl: vmTarget!.authUrl");
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "./repo-host";
 import type { HarnessLayout } from "./harness-layout";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
+import { rotateAgentForgeCredential } from "./network-policy";
 
 /**
  * Code Agent Vercel Sandbox Layer (MIN-46) — the microVM itself: its
@@ -74,6 +75,7 @@ export interface AgentSandboxCommandResult extends AgentSandboxCommand {}
 
 export interface AgentSandbox {
   readonly name: string;
+  readonly networkPolicy?: NetworkPolicy;
   runCommand(input: {
     cmd: string;
     args?: string[];
@@ -268,6 +270,33 @@ export async function getAgentSandboxByName(name: string): Promise<AgentSandbox 
   } catch {
     return null;
   }
+}
+
+/** Rotate forge authentication in trusted infrastructure without returning the
+ * credential to the sandbox process that requested the refresh. */
+export async function refreshAgentSandboxForgeAccess(
+  name: string,
+  target: {
+    authUrl: string;
+    remoteUrl: string;
+    provider: "github" | "gitlab";
+    repoFullName: string;
+    token: string;
+  },
+): Promise<void> {
+  const sandbox = await getAgentSandboxByName(name);
+  if (!sandbox) throw new Error("agent sandbox is unavailable");
+  if (sandbox instanceof SelfHostedSandbox) {
+    await sandbox.refreshGitRelay(target.authUrl);
+    return;
+  }
+  const policy = rotateAgentForgeCredential(sandbox.networkPolicy, {
+    provider: target.provider,
+    repoFullName: target.repoFullName,
+    token: target.token,
+    origin: new URL(target.remoteUrl).origin,
+  });
+  await sandbox.updateNetworkPolicy(policy);
 }
 
 function requireSandboxCapability(): boolean {

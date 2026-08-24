@@ -22,23 +22,12 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  * `agent-<run.id>`. **A VM cannot therefore claim anything other than its own
  * run** — which a token carried in the VM would not have been able to guarantee.
  *
- * THE SECRET SHE HOLDS ANYWAY, and the sentence above said the opposite
- * (MIN-327). **The forge token is in the VM**, in the `remote.origin.url` that
- * `git clone` wrote in `.git/config`. This cannot be made up for by
- * network policy: this is what the VM clones and pushes with, it cannot
- * work without. What is catchable, and has been since MIN-327, is this
- * que ce token OUVRE :
- *
- * - it is scoped AT THE DEPOSIT that the project has linked (`repositories` to the mint), where it
- * was valid on all deposits of the installation;
- * - its power is that of ANCHORING the run: `contents: write` for a run which
- * pushes, `contents: read` for a reread, which does not write anything in the repository and
- * whose content comes from an unknown fork (`RepoTokenAccess`, repo-access.ts);
- * - and it does not appear in the logs: the substitution of `redact.ts` on
- * removes anything OUT of the loop, before the model even sees it.
- *
- * The overly broad statement was not neutral: it exempted us from looking
- * what this token really opened up.
+ * FORGE CREDENTIALS DO NOT ENTER THE VM (MIN-421). Git uses a credential-free
+ * remote. The firewall injects HTTP Basic authentication only for the linked
+ * repository's smart-HTTP path. The unrestricted catch-all below therefore
+ * cannot carry a reusable GitHub or GitLab credential to another destination.
+ * A long-running writer can ask the control plane to rotate this firewall rule,
+ * but the response still contains only the credential-free remote URL.
  *
  * AND ALL OF THE ABOVE IS ONLY WORTH ONE MICROVM (MIN-355, MIN-357). This file
  * describes a policy imposed by the Vercel Sandbox firewall: a trick that plays
@@ -217,6 +206,39 @@ export interface AgentNetworkPolicyInput {
    * don't talk to production.
    */
   appOrigin: string;
+  /** Optional forge credential held by the firewall, never by the VM. */
+  forge?: AgentForgeCredential;
+}
+
+export interface AgentForgeCredential {
+  provider: "github" | "gitlab";
+  repoFullName: string;
+  token: string;
+  /** GitLab may be configured on a self-managed public origin. */
+  origin?: string;
+}
+
+/** Credential-free HTTPS remote persisted in `.git/config`. */
+export function agentForgeRemoteUrl(input: Omit<AgentForgeCredential, "token">): string {
+  const origin = input.provider === "github" ? "https://github.com" : (input.origin ?? "https://gitlab.com");
+  return `${origin.replace(/\/+$/, "")}/${input.repoFullName}.git`;
+}
+
+function forgeRules(input: AgentForgeCredential): { host: string; rules: NetworkPolicyRule[] } {
+  const remote = new URL(agentForgeRemoteUrl(input));
+  const username = input.provider === "github" ? "x-access-token" : "oauth2";
+  const authorization = `Basic ${Buffer.from(`${username}:${input.token}`).toString("base64")}`;
+  return {
+    host: remote.host,
+    rules: [
+      { method: "GET", suffix: "/info/refs" },
+      { method: "POST", suffix: "/git-upload-pack" },
+      { method: "POST", suffix: "/git-receive-pack" },
+    ].map(({ method, suffix }) => ({
+      match: { method: [method], path: { exact: `${remote.pathname}${suffix}` } },
+      transform: [{ headers: { authorization } }],
+    })),
+  };
 }
 
 /** Host + path of an absolute URL. Raises on an unreadable URL — better
@@ -276,7 +298,56 @@ export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): Network
   ] as const) {
     (allow[host] ??= []).push(rule);
   }
+  if (input.forge) {
+    if (!input.forge.token.trim()) {
+      throw new Error("agent network policy: missing forge token");
+    }
+    const forge = forgeRules(input.forge);
+    (allow[forge.host] ??= []).push(...forge.rules);
+  }
   return { allow };
+}
+
+/**
+ * Replace the linked repository's authentication rule while preserving the
+ * LLM and control-plane rules already installed on a running sandbox.
+ */
+export function rotateAgentForgeCredential(
+  policy: NetworkPolicy | undefined,
+  input: AgentForgeCredential,
+): NetworkPolicy {
+  if (!policy || typeof policy === "string" || !policy.allow || Array.isArray(policy.allow)) {
+    throw new Error("agent network policy: cannot rotate forge credential without an object policy");
+  }
+  if (!input.token.trim()) throw new Error("agent network policy: missing forge token");
+  const forge = forgeRules(input);
+  const isForgeRule = (rule: NetworkPolicyRule): boolean => {
+    const path = rule.match?.path;
+    const authorization = rule.transform?.find((transform) =>
+      transform.headers?.authorization?.startsWith("Basic "),
+    );
+    const exactPath = path && "exact" in path && typeof path.exact === "string" ? path.exact : undefined;
+    return Boolean(
+      authorization &&
+      exactPath &&
+      ["/info/refs", "/git-upload-pack", "/git-receive-pack"].some((suffix) =>
+        exactPath.endsWith(suffix),
+      )
+    );
+  };
+  const allow = Object.fromEntries(
+    Object.entries(policy.allow).map(([host, rules]) => [
+      host,
+      rules.filter((rule) => !isForgeRule(rule)),
+    ]),
+  );
+  return {
+    ...policy,
+    allow: {
+      ...allow,
+      [forge.host]: [...(allow[forge.host] ?? []), ...forge.rules],
+    },
+  };
 }
 
 /** URL that the loop, IN the VM, calls for a control plane surface

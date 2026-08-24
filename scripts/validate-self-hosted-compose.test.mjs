@@ -22,6 +22,7 @@ test("the release profile inventory includes both Compose paths and their runtim
     "deploy/self-hosted/scheduler.mjs",
     "deploy/self-hosted/agent-runner.mjs",
     "deploy/self-hosted/agent-runner-egress.mjs",
+    "deploy/self-hosted/agent-runner-git-relay.mjs",
     "deploy/self-hosted/.env.example",
   ]);
 });

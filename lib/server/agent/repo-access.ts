@@ -6,56 +6,34 @@ import { forgeProviderForConnection } from "@/lib/server/git/forge-provider";
 import { GITLAB_HOST } from "@/lib/server/git/gitlab-rest";
 
 /**
- * Solves how to clone the repository linked to a project in the Agent Sandbox
- * (MIN-46 + MIN-69). We mint an EPHEMERAL token — GitHub installation token
- * (getInstallationToken, MIN-47) ou access token OAuth GitLab (refresh paresseux
- * via getGitlabAccessToken) — and we build an HTTPS clone URL
- * token-authenticated — never persisted outside the microVM.
+ * Resolve access to the repository linked to a project (MIN-46 + MIN-69).
+ * The result carries both a credential-free remote and an authenticated URL.
+ * The latter remains in trusted function/runner infrastructure for sandbox
+ * execution; desktop-local execution may use it on the user's own machine.
  *
  * We read directly `project_git_links` (which denormalizes `installation_id`)
  * rather than getProjectLink(), because the latter does not return the installation_id
- * necessary for the mint of the token. To be called again to obtain a fresh token before
- * each network operation (clone/push) of a long run.
+ * required to mint the token. Call again before a later network operation when
+ * the short-lived credential may have expired.
  *
- * SINCE MIN-327, the token is no longer “that of the installation”: it is scoped
- * AT THE DEPOSIT of the bond, and its power depends on who will hold it — see
- * `RepoTokenAccess` below. It's the same appeal, with one more argument,
- * because the question “what can this token do?” » must not land far from
- * the place that makes it.
+ * Since MIN-327, GitHub tokens are scoped to the linked repository and their
+ * permission level depends on the operation; see `RepoTokenAccess` below.
  */
 
 export type RepoProvider = "github" | "gitlab";
 
 /**
- * WHAT THE TOKEN HAS THE RIGHT TO DO (MIN-327), and who will hold it.
+ * Forge authority profiles (MIN-327, MIN-421):
  *
- * Three profiles, and the line that counts passes between the first and the two
- * others: `full` remains in the FUNCTION, `repo-write` and `repo-read` go down
- * in the MICROVM, where `git clone` writes them in `.git/config` and where the model
- * lance du shell.
+ * - `full` remains in the function for forge API operations.
+ * - `repo-write` grants GitHub `contents: write` for clone/fetch/push through
+ *   trusted network infrastructure.
+ * - `repo-read` grants GitHub `contents: read` for pull-request review clones.
  *
- * - `full` — the maximum token of the installation ON THE LINKED REPOSITORY. Open a PR,
- * comment, reread, merge, close an issue: everything that speaks to the API of
- * the forge from our roads. It never leaves the process.
- * - `repo-write` — `contents: write`, nothing else. That's all `git`
- * needs (clone, fetch, ls-remote, push) and that's all the microVM
- * of a ticket or notebook run receives: the token it carries can no longer
- * merge a PR, neither approve, nor comment — these gestures go through the
- * control plane, which replays them on the function side under the run anchor.
- * - `repo-read` — `contents: read`. REREADING, the only anchor whose
- * content comes from an unknown fork. She doesn't write anything in the repository
- * (`writesToRepo` in execute.ts): giving it something to grow was a
- * contradiction, and an injection from the fork was enough to harvest it.
- *
- * **GitLab does not know this distinction, and this is assumed.** The token is
- * the OAuth access token of the connection, with scope `api` on the entire account
- * (see `GITLAB_OAUTH_SCOPES`): GitLab does not offer any down-scoping of a token
- * OAuth at the time of use, and project access tokens — the only mechanism
- * reduced scope — are PERSISTENT tokens to create, track and revoke,
- * for a minimum duration of one day. The profile is therefore WITHOUT EFFECT on the GitLab side,
- * and a GitLab replay runs with a token that can write. It says here,
- * in SECURITY.md and binding UI — such as no bot identity
- * (MIN-146), this is a constraint of the platform, not an oversight.
+ * GitLab cannot down-scope an OAuth token at use time. Its account-wide `api`
+ * token therefore remains entirely outside the sandbox and is injected only by
+ * the trusted repository-scoped transport. The profile has no effect on GitLab
+ * authority, but it still documents the caller's intended operation.
  */
 export type RepoTokenAccess = "full" | "repo-write" | "repo-read";
 
@@ -77,7 +55,9 @@ export interface RepoCloneTarget {
   repoFullName: string;
   /** Base branch (fallback "main" if the repository does not expose it). */
   defaultBranch: string;
-  /** Clone/push HTTPS URL with embedded ephemeral token (never stored). */
+  /** Credential-free HTTPS URL safe to persist inside an untrusted sandbox. */
+  remoteUrl: string;
+  /** Credential-bearing HTTPS URL for trusted function/desktop operations only. */
   authUrl: string;
   /** Raw token (for possible REST calls: PR, etc.). */
   token: string;
@@ -260,6 +240,7 @@ async function targetFromLink(
       provider: "github",
       repoFullName: row.repo_full_name,
       defaultBranch: row.default_branch ?? "main",
+      remoteUrl: `https://github.com/${row.repo_full_name}.git`,
       authUrl: `https://x-access-token:${token}@github.com/${row.repo_full_name}.git`,
       token,
       linkId: row.id,
@@ -269,12 +250,14 @@ async function targetFromLink(
 
   if (row.provider === "gitlab") {
     const token = await provider.getGitlabAccessToken(row.connection_id);
-    // Clone OAuth : user `oauth2`, mot de passe = l'access token (doc GitLab).
+    // GitLab OAuth clone authentication uses `oauth2` as the username and the
+    // access token as the password.
     const host = new URL(GITLAB_HOST).host;
     return {
       provider: "gitlab",
       repoFullName: row.repo_full_name,
       defaultBranch: row.default_branch ?? "main",
+      remoteUrl: `${GITLAB_HOST.replace(/\/+$/, "")}/${row.repo_full_name}.git`,
       authUrl: `https://oauth2:${token}@${host}/${row.repo_full_name}.git`,
       token,
       linkId: row.id,

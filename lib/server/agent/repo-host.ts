@@ -140,8 +140,9 @@ export function historySince(now: Date = new Date()): string {
  * Clone the repository (shallow) on `baseBranch` into the layout repository,
  * then check out `workBranch`: resume the remote branch if it already exists
  * (the run pushed WIP in a previous chunk), otherwise create it from the base.
- * `authUrl` carries an ephemeral installation token — never persisted outside
- * the microVM.
+ * In an untrusted sandbox, `authUrl` is deliberately a credential-free forge
+ * URL (Vercel) or a repository-scoped runner relay URL (self-hosted). Desktop
+ * local execution may still supply an authenticated URL on the user's machine.
  *
  * The clone uses the history window described above, and `--single-branch` is
  * EXPLICIT: `--depth` implied it, and `--shallow-since` does so in practice,
@@ -325,7 +326,9 @@ async function baseTipSha(host: RepoHost, baseBranch: string): Promise<string> {
 /**
  * Stage everything, commit if there are changes, then push HEAD → workBranch.
  * Call on every suspend and at the end (the repository state becomes durable in
- * git). `authUrl` must carry a FRESH token (the caller resolves it again first).
+ * Git). In sandbox mode the caller refreshes trusted network authentication
+ * first and passes the unchanged safe remote URL; desktop-local mode may pass a
+ * freshly authenticated URL directly.
  *
  * NO BRANCH FOR NOTHING (MIN-123): `git push HEAD:refs/heads/<branch>` CREATES
  * the remote branch even when the tree is clean — at the base SHA. A session

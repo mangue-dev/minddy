@@ -3,6 +3,11 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { request as httpRequest, createServer } from "node:http";
 import { posix as path } from "node:path";
 import { assertPublicHttpUrl, requestPublicUrl } from "./agent-runner-egress.mjs";
+import {
+  authorizedGitRelay,
+  gitRelayConfig,
+  gitRelayTarget,
+} from "./agent-runner-git-relay.mjs";
 
 const socketPath = process.env.DOCKER_HOST?.replace(/^unix:\/\//, "") || "/var/run/docker.sock";
 const secret = process.env.AGENT_RUNNER_SECRET?.trim();
@@ -10,8 +15,10 @@ const sandboxImage = process.env.AGENT_RUNNER_SANDBOX_IMAGE?.trim();
 const sandboxNetwork = process.env.AGENT_RUNNER_NETWORK?.trim();
 const port = Number(process.env.AGENT_RUNNER_PORT || 6464);
 const maxBodyBytes = 5 * 1024 * 1024;
+const maxGitBodyBytes = 100 * 1024 * 1024;
 const stoppedSandboxRetentionMs = 7 * 24 * 60 * 60_000;
 const llmRelays = new Map();
+const gitRelays = new Map();
 
 if (!secret || !sandboxImage || !sandboxNetwork) {
   throw new Error("AGENT_RUNNER_SECRET, AGENT_RUNNER_SANDBOX_IMAGE, and AGENT_RUNNER_NETWORK are required");
@@ -124,6 +131,7 @@ async function removeExpiredSandboxes(now = Date.now()) {
     if (!Number.isFinite(finishedAt) || now - finishedAt < stoppedSandboxRetentionMs) continue;
     await docker("DELETE", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}?v=true`).then(async () => {
       llmRelays.delete(name);
+      gitRelays.delete(name);
       await docker("DELETE", `/v1.44/volumes/${encodeURIComponent(sandboxVolumeName(name))}`).catch((error) => {
         if (error.status !== 404) throw error;
       });
@@ -222,6 +230,17 @@ async function readBody(request) {
   catch { throw Object.assign(new Error("invalid JSON body"), { status: 400 }); }
 }
 
+async function readRawBody(request, limit = maxGitBodyBytes) {
+  const chunks = [];
+  let length = 0;
+  for await (const chunk of request) {
+    length += chunk.length;
+    if (length > limit) throw Object.assign(new Error("request body too large"), { status: 413 });
+    chunks.push(Buffer.from(chunk));
+  }
+  return chunks.length === 0 ? undefined : Buffer.concat(chunks);
+}
+
 function authorized(header) {
   const supplied = Buffer.from((header || "").replace(/^Bearer\s+/i, ""));
   const expected = Buffer.from(secret);
@@ -284,6 +303,36 @@ async function relayLlmCompletion(name, request, response) {
   response.end();
 }
 
+async function relayGit(name, action, request, response, url) {
+  const relay = gitRelays.get(name);
+  if (!relay || !authorizedGitRelay(request.headers.authorization, relay.controlToken)) {
+    return json(response, 401, { error: "unauthorized" });
+  }
+  const target = gitRelayTarget(relay, action, url.search, request.method);
+  const headers = { authorization: relay.authorization };
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (
+      ["host", "content-length", "connection", "accept-encoding", "authorization"].includes(key) ||
+      typeof value !== "string"
+    ) continue;
+    headers[key] = value;
+  }
+  const upstream = await requestPublicUrl(target, {
+    method: request.method,
+    headers,
+    body: await readRawBody(request),
+    maxRedirects: 0,
+  });
+  const responseHeaders = {};
+  upstream.headers.forEach((value, key) => {
+    if (["content-encoding", "content-length", "transfer-encoding"].includes(key)) return;
+    responseHeaders[key] = value;
+  });
+  response.writeHead(upstream.status, responseHeaders);
+  for await (const chunk of upstream.stream) response.write(chunk);
+  response.end();
+}
+
 function json(response, status, value) {
   const body = Buffer.from(JSON.stringify(value));
   response.writeHead(status, { "content-type": "application/json", "content-length": body.length });
@@ -304,6 +353,9 @@ const server = createServer(async (request, response) => {
       sandboxContainerName(name);
       if (action === "/llm/chat/completions" && request.method === "POST") {
         return await relayLlmCompletion(name, request, response);
+      }
+      if (action.startsWith("/git/") && ["GET", "POST"].includes(request.method || "")) {
+        return await relayGit(name, action, request, response, url);
       }
     }
     if (!authorized(request.headers.authorization)) return json(response, 401, { error: "unauthorized" });
@@ -330,6 +382,18 @@ const server = createServer(async (request, response) => {
         controlToken: body.controlToken,
         url,
       });
+      return json(response, 200, { ok: true });
+    }
+    if (action === "/git" && request.method === "POST") {
+      const controlToken = typeof body.controlToken === "string" && body.controlToken.trim()
+        ? body.controlToken
+        : gitRelays.get(name)?.controlToken;
+      if (!controlToken) {
+        throw Object.assign(new Error("Git relay control token is required"), { status: 400 });
+      }
+      const relay = gitRelayConfig(body.authUrl, controlToken);
+      await assertPublicHttpUrl(relay.upstream);
+      gitRelays.set(name, relay);
       return json(response, 200, { ok: true });
     }
     if (action === "/commands" && request.method === "POST") return json(response, 200, await createExec(name, body));
@@ -365,6 +429,7 @@ const server = createServer(async (request, response) => {
       const container = await inspectContainer(name);
       if (container?.State?.Running) await docker("POST", `/v1.44/containers/${encodeURIComponent(sandboxContainerName(name))}/stop?t=10`);
       llmRelays.delete(name);
+      gitRelays.delete(name);
       return json(response, 200, { ok: true });
     }
     return json(response, 404, { error: "not found" });

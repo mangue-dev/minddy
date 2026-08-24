@@ -1,28 +1,9 @@
 /**
- * SUBSTITUTING THE FORGE TOKEN in anything OUT of the loop (MIN-239).
- *
- * The install token is in the clone URL (`repo-access.ts`), and
- * `git clone` writes that ENTIRE URL to `.git/config` like `remote.origin.url`.
- * Three doors then make it readable to the model — `run_command("git remote -v")`,
- * `run_command("cat .git/config")`, `read_file(".git/config")` — and nothing closes them: `assertNotGit` only keeps WRITE, and its message says so.
- *
- * **This is not a sandbox flaw.** The microVM has the token by design,
- * that's its job. This is a JOURNAL leak: the output of the tool leaves in
- * `agent_run_events` (persisted for 30 days, read by any member of the project) and in
- * `agent_runs.checkpoint`, where it remains as long as the conversation lives.
- *
- * Hence the form of the corrective: **substitute, never refuse**. `git remote -v` is
- * a legitimate command — it is its output that should not carry secrecy. A
- * read keep on `.git/` would close every third door, break `git log`
- * in the process, and leave `run_command` wide open.
- *
- * Corollary, and this is what makes the thing watertight: the substitution is placed at
- * the exit boundary of the loop, BEFORE the model. It therefore no longer sees the
- * token at all — it can no longer copy it into a file, a commit or its
- * own response.
- *
- * PUR module: it goes down into the microVM bundle with the
- * loop (`vm-bundle-secrets.test.ts`), it therefore reaches neither base nor environment.
+ * Redact known credentials before any output leaves the loop (MIN-239).
+ * MIN-421 removes reusable forge credentials from sandbox remotes, but this
+ * remains defense in depth for trusted-side clone errors, desktop-local Git URLs,
+ * and any future secret registered during a turn. The pure module is included in
+ * the VM bundle and imports neither database nor environment access.
  */
 
 /** Which replaces a secret. Recognizable, and readable by a human debugger. */
@@ -71,10 +52,8 @@ export function authUrlSecrets(authUrl: string | null | undefined): string[] {
 /**
  * The secret register of a run, and it is MUTABLE on purpose.
  *
- * A run lasts hours, a forge installation token an hour: it is
- * re-minted before each push (`pushWork` in the microVM, `freshTarget` at the end of
- * turn in the function). Any VU token remains in the register — a `.git/config`
- * read in round 3 carries that of the clone, not that of the last push.
+ * A run can last longer than a forge installation token, so credentials may be
+ * registered more than once while trusted infrastructure rotates them.
  */
 export class SecretRedactor {
   private readonly secrets = new Set<string>();

@@ -799,10 +799,9 @@ export async function runOpencodeTurn(
    * THE PUSH OF THE TOUR, in one place — it is used twice: `create_pr` (the VM
    * pushes, the function opens) and the end of the turn.
    *
-   * The push URL is RE-RESOLVED every time, and this is not a safety precaution.
- * For example: a microVM round lasts hours, while a forge installation token
- * expires after an hour. The secret register is cumulative — the clone token remains
-   * readable in `.git/config` long after being replaced here.
+   * Trusted Git authentication is refreshed before every push because a microVM
+   * round can outlive a GitHub installation token. The sandbox keeps using the
+   * same credential-free or relay remote.
    */
   /**
    * THE SECRETS SCAN, AND IT'S HARD (MIN-360) — it LIFTS, so nothing is committed
@@ -912,9 +911,9 @@ export async function runOpencodeTurn(
 
   /**
    * `create_pr` — THE ONLY TOOL CUT IN HALF, and it is in a good way: the
-   * repository lives in the microVM, forge token and pull request state
-   * function side ([control-plane.ts](../control-plane.ts), `runCreatePr`). THE
- * the supervisor therefore pushes, then opens it.
+   * repository lives in the microVM, while forge credentials and pull-request
+   * state remain in trusted infrastructure. The supervisor pushes through that
+   * transport, then the function opens the pull request.
    *
    * Three things distinguish it from a hatch, and each one fixes a real case:
    *
@@ -2970,11 +2969,10 @@ export function lastSeqByAggregate(
 }
 
 /**
- * The forge token does not come out either in an event or in the checkpoint (MIN-239): it
- * is readable in `.git/config`, and three tools take it out. The substitution
- * applies to CHAINS of the payload, **in depth** — a tool `preview` is
- * exactly where he landed. She has lived in `redact.ts` since MIN-343,
- * where Numo shares it: just one substitution, not two.
+ * Defense-in-depth secret redaction applies recursively to events and
+ * checkpoints (MIN-239). MIN-421 removes forge credentials from sandbox Git
+ * configuration, but trusted-side errors and desktop-local URLs still pass
+ * through this boundary.
  */
 function redactPayload(
   payload: Record<string, unknown>,

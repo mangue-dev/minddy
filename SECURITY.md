@@ -301,43 +301,36 @@ navigator: our routes do not see them. Their rate limit is set in the
 
 ## 9. The code agent — what its microVM holds
 
-The microVM of a run (Vercel Sandbox) executes the shell decided by a model, with
-an open outgoing network. We consider it **compromised by hypothesis**: the
-The question is not to prevent her from doing wrong, it is to limit what she holds.
+A run's sandbox executes model-selected shell commands with general outbound
+network access. We treat it as **compromised by hypothesis**: the boundary must
+limit what the sandbox holds, not rely on the model to protect credentials.
 
-- **She does not receive the secrets of the minddy platform.** Nor LLM key
-root (the firewall sets the `authorization` header *after* the exit of the
-VM), neither Supabase key nor identity token. The control plan recognizes the
-VM by the OIDC that the platform signs, and verifies the tenant
-(`team_id`/`project_id`) before the name (MIN-331). See
-  [lib/server/agent/network-policy.ts](lib/server/agent/network-policy.ts).
-- **It nevertheless holds a forge secret when the run must clone or
-  pousser.** `git clone`
-writes it in `.git/config` — that's what the VM clones and pushes with, it doesn't
-can't work without it. What is limited is what it opens
-  ([lib/server/agent/repo-access.ts](lib/server/agent/repo-access.ts),
-  `RepoTokenAccess`) :
-
-| Who owns it | Scope | Power |
-  | --- | --- | --- |
-| Our roads (PR, review, merge, issues) | the linked deposit | installation permissions |
-| microVM of a ticket / notebook run | the linked deposit | `contents: write` (clone + push) |
-| microVM of a pull request **replay** | the linked deposit | `contents: read` |
-
-Replay is the only anchor whose content comes from an **unknown fork**:
-it does not write anything in the repository, and `/repo-auth` **refuses** any token to it
-costs. Before MIN-327, the minted token was not valid for anything — it was valid for everyone
-the installation repositories — and a proofreader received one in writing.
-- **⚠ GitLab does not have this gradation.** The token given is the OAuth access token
-connection, scope `api` on the entire account: GitLab does not know
-down-scope an OAuth token for use, and its only mechanism with reduced scope
-(project access token) is a persistent token for at least one day. A
-GitLab rereading therefore runs with a token that can write. Constraint of the
-platform, assumed and said — such as the absence of bot identity (MIN-146).
-- **The token does not appear in the logs.** The substitution of
-[lib/server/agent/redact.ts](lib/server/agent/redact.ts) removes it from everything
-which exits the loop (tool exit, error message, checkpoint) *before* the
-pattern: `git remote -v` and `cat .git/config` render `[redacted]`.
+- **The sandbox receives no reusable Minddy or forge credential.** The Vercel
+  firewall installs the LLM authorization header after traffic leaves the VM.
+  It also installs short-lived Git authentication only on the linked
+  repository's smart-HTTP path. The self-hosted runner provides the equivalent
+  repository-scoped relay. The Git remote persisted in `.git/config` is therefore
+  credential-free (or contains only a run-scoped relay credential), including for
+  GitLab's account-wide OAuth token. See
+  [lib/server/agent/network-policy.ts](lib/server/agent/network-policy.ts) and
+  [deploy/self-hosted/agent-runner-git-relay.mjs](deploy/self-hosted/agent-runner-git-relay.mjs).
+- **The control plane identifies the VM without a bearer token inside it.** Vercel
+  signs the sandbox OIDC, and Minddy verifies `team_id` and `project_id` before
+  deriving the run from the sandbox name (MIN-331). Self-hosted server execution
+  uses a run-scoped control token with reduced authority.
+- **Forge authority remains least-privilege before it reaches trusted
+  infrastructure.** GitHub credentials are minted for the linked repository with
+  `contents: write` for issue/notebook runs and `contents: read` for pull-request
+  reviews. GitLab cannot down-scope its OAuth access token at use time, so its
+  account-wide credential is held only by the function or trusted runner and is
+  never returned to sandbox code.
+- **`/repo-auth` rotates infrastructure state; it does not return a credential.**
+  Long-running writers can refresh an expiring GitHub token, while review runs
+  remain unable to request write access. The response contains only an
+  acknowledgement.
+- **Defense-in-depth redaction remains active.**
+  [lib/server/agent/redact.ts](lib/server/agent/redact.ts) removes known secrets
+  from tool output, errors, and checkpoints before they leave the loop.
 - **What remains possible**, and which is limited elsewhere: exfiltrate the **content**
 of the repository (open network, assumed — a whitelist would break `npm install`
 among our users), and spend outside ledger on the credited LLM route

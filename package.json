@@ -34,7 +34,7 @@
     "self-host:update": "node scripts/self-hosting-maintenance.mjs update",
     "self-host:backup": "node scripts/self-hosting-maintenance.mjs backup",
     "self-host:restore": "node scripts/self-hosting-maintenance.mjs restore",
-    "test:self-hosted-tools": "node --test scripts/self-hosting-tools.test.mjs scripts/agent-runner-egress.test.mjs",
+    "test:self-hosted-tools": "node --test scripts/self-hosting-tools.test.mjs scripts/agent-runner-egress.test.mjs scripts/agent-runner-git-relay.test.mjs",
     "test:bootstrap:supabase": "node --test scripts/bootstrap-supabase.test.mjs",
     "validate:self-hosted": "node scripts/self-hosting-clean-room.mjs",
     "test:self-hosted": "node --test scripts/self-hosting-clean-room.test.mjs",

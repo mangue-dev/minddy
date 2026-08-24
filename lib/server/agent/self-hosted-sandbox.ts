@@ -87,6 +87,23 @@ export class SelfHostedSandbox implements AgentSandbox {
     return `${url}${sandboxPath(this.name, "/llm")}`;
   }
 
+  async configureGitRelay(input: {
+    authUrl: string;
+    repoFullName: string;
+    controlToken: string;
+  }): Promise<string> {
+    await runnerRequest(sandboxPath(this.name, "/git"), { body: input });
+    const { url } = runnerConfig();
+    const relay = new URL(`${url}${sandboxPath(this.name, `/git/${input.repoFullName}.git`)}`);
+    relay.username = "minddy";
+    relay.password = input.controlToken;
+    return relay.toString();
+  }
+
+  async refreshGitRelay(authUrl: string): Promise<void> {
+    await runnerRequest(sandboxPath(this.name, "/git"), { body: { authUrl } });
+  }
+
   async runCommand(input: {
     cmd: string;
     args?: string[];

@@ -150,7 +150,7 @@ export interface ControlPlaneClient {
   syncPlan(steps: PlanStep[]): Promise<void>;
   /** A PLATFORM tool (ticket, notebook, pull request, web search, PR). */
   callTool(name: string, body: Record<string, unknown>): Promise<VmToolResponse>;
-  /** A push URL with a FRESH forge token — one turn lasts longer than one token. */
+  /** Refresh trusted Git authentication; a safe URL is returned only for legacy callers. */
   repoAuthUrl(): Promise<string | null>;
   /**
    * THE KEY TO THE MODEL OF A LOCAL TOUR (MIN-357), minted to hard ceiling for this run.
@@ -386,9 +386,8 @@ export function createControlPlaneClient(
         const body = (await request("POST", "/repo-auth")) as { authUrl?: unknown };
         return typeof body.authUrl === "string" && body.authUrl ? body.authUrl : null;
       } catch (err) {
-        // The job already has one, installed at startup: a token that could not
-        // Being refreshed is no reason not to push. The caller
-        // falls back to it.
+        // The job already has a safe remote. A failed infrastructure refresh is
+        // reported by the eventual Git push, while the credential stays hidden.
         console.error("[agent-vm] repo auth refresh failed:", (err as Error).message);
         return null;
       }

@@ -508,10 +508,10 @@ function configKeyRefusal(key: string): CommandVerdict {
  * A TOKEN WHICH DESIGNATES `.git/` (MIN-360) — the hole that `assertNotGit` did not plug
  * not, because it keeps the FILE tools and `bash` does not pass through them.
  *
- * Writing to `.git/hooks/` causes code to be executed on the next git gesture of
- * the user; writing in `.git/config` puts a `insteadOf` or a
- * `credential.helper` that no one will reread. Also refusing READINGs is
- * volontaire : `.git/config` porte l'URL de push, token de forge compris.
+ * Writing to `.git/hooks/` causes code to execute on the next Git operation;
+ * writing `.git/config` can install an `insteadOf` or `credential.helper` rule.
+ * Reads are also refused because Git internals belong to the harness, even
+ * though MIN-421 removed reusable forge credentials from sandbox remotes.
  *
  * Case is collapsed because APFS is case insensitive — `.GIT/hooks`
  * denotes exactly the same folder. `.gitignore` and `x.git` (a clone URL)
@@ -548,7 +548,7 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
       allowed: false,
       reason:
         `Refused \`${internals}\` — \`.git/\` belongs to the harness. A file written there runs ` +
-        `on someone else's next git command, and \`.git/config\` holds the push credentials. ` +
+        `on someone else's next git command, and \`.git/config\` controls future Git behavior. ` +
         `Use git itself (\`git status\`, \`git log\`, \`git show\`) to read the repository's state.`,
     };
   }

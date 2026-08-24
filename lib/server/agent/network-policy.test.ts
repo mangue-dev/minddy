@@ -5,10 +5,12 @@ import {
   AGENT_LLM_PLACEHOLDER_KEY,
   AGENT_VM_PATH_PREFIX,
   admitSandboxCaller,
+  agentForgeRemoteUrl,
   agentSandboxName,
   agentVmUrl,
   buildAgentNetworkPolicy,
   resolveControlPlaneTenant,
+  rotateAgentForgeCredential,
   runIdFromSandboxName,
 } from "./network-policy";
 
@@ -132,6 +134,106 @@ describe("buildAgentNetworkPolicy — le reste d'Internet", () => {
 
   it("n'est jamais une politique de chaîne (allow-all / deny-all)", () => {
     expect(typeof policy()).toBe("object");
+  });
+});
+
+describe("forge authentication stays in trusted network policy", () => {
+  it("injects a GitHub token only on the linked repository smart-HTTP path", () => {
+    const built = policy({
+      forge: {
+        provider: "github",
+        repoFullName: "acme/private-app",
+        token: "ghs_repository_scoped",
+      },
+    });
+    const allow = built.allow;
+    if (!allow || Array.isArray(allow)) throw new Error("expected a record-form allow list");
+    const rules = allow["github.com"] ?? [];
+    expect(rules.map((rule) => rule.match)).toEqual([
+      { method: ["GET"], path: { exact: "/acme/private-app.git/info/refs" } },
+      { method: ["POST"], path: { exact: "/acme/private-app.git/git-upload-pack" } },
+      { method: ["POST"], path: { exact: "/acme/private-app.git/git-receive-pack" } },
+    ]);
+    for (const rule of rules) {
+      expect(rule.transform).toEqual([
+        {
+          headers: {
+            authorization: `Basic ${Buffer.from("x-access-token:ghs_repository_scoped").toString("base64")}`,
+          },
+        },
+      ]);
+    }
+    expect(JSON.stringify(rules)).not.toContain("other-repo");
+  });
+
+  it("uses GitLab OAuth only in the GitLab repository rule and keeps the remote clean", () => {
+    const remote = agentForgeRemoteUrl({
+      provider: "gitlab",
+      repoFullName: "group/private-app",
+      origin: "https://gitlab.com",
+    });
+    expect(remote).toBe("https://gitlab.com/group/private-app.git");
+    expect(remote).not.toContain("oauth2");
+
+    const built = policy({
+      forge: {
+        provider: "gitlab",
+        repoFullName: "group/private-app",
+        token: "gl_account_token",
+        origin: "https://gitlab.com",
+      },
+    });
+    const allow = built.allow;
+    if (!allow || Array.isArray(allow)) throw new Error("expected a record-form allow list");
+    const rules = allow["gitlab.com"] ?? [];
+    expect(rules.map((rule) => rule.match?.path)).toEqual([
+      { exact: "/group/private-app.git/info/refs" },
+      { exact: "/group/private-app.git/git-upload-pack" },
+      { exact: "/group/private-app.git/git-receive-pack" },
+    ]);
+    for (const rule of rules) {
+      expect(rule.transform).toEqual([
+        {
+          headers: {
+            authorization: `Basic ${Buffer.from("oauth2:gl_account_token").toString("base64")}`,
+          },
+        },
+      ]);
+    }
+  });
+
+  it("rotates the forge rule without exposing or replacing the LLM rule", () => {
+    const initial = policy({
+      forge: { provider: "github", repoFullName: "acme/private-app", token: "old-token" },
+    });
+    const rotated = rotateAgentForgeCredential(initial, {
+      provider: "github",
+      repoFullName: "acme/private-app",
+      token: "new-token",
+    });
+    const serialized = JSON.stringify(rotated);
+    expect(serialized).not.toContain("old-token");
+    expect(serialized).toContain(Buffer.from("x-access-token:new-token").toString("base64"));
+    expect(serialized).toContain("sk-or-v1-secret");
+  });
+
+  it("removes the old repository rule when a link moves", () => {
+    const initial = policy({
+      forge: { provider: "github", repoFullName: "acme/old-app", token: "old-token" },
+    });
+    const rotated = rotateAgentForgeCredential(initial, {
+      provider: "gitlab",
+      repoFullName: "new-group/new-app",
+      token: "gitlab-new-token",
+      origin: "https://gitlab.com",
+    });
+    if (typeof rotated === "string" || !rotated.allow || Array.isArray(rotated.allow)) {
+      throw new Error("expected a record-form allow list");
+    }
+    const allow = rotated.allow;
+    expect(allow["github.com"]).toEqual([]);
+    expect(JSON.stringify(rotated)).not.toContain("/acme/old-app.git/");
+    expect(allow["gitlab.com"]).toHaveLength(3);
   });
 });
 

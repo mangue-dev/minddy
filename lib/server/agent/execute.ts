@@ -500,15 +500,10 @@ export async function executeAgentRun(
   const sandboxUsageFeature = run.routine_id ? "routine_compute" : "sandbox_compute";
   let sandbox: Sandbox | null = null;
   /**
-   * The secrets for this chunk (MIN-239) — the forge token, in every form it may
-   * have taken. Declared BEFORE the `try` because `catch` needs it: a failed
-   * `git clone` copies the ENTIRE clone URL into stderr, and that message ends up
-   * in `agent_runs.error_message`, displayed in the UI.
-   *
-   * Populated on every target resolution: the token is re-minted before every push
-   * (a turn lasts hours, an installation token lasts one hour), and a `.git/config`
-   * read on round 3 contains the clone token, not the latest push token. The
-   * registry keeps them all.
+   * Credentials known to trusted bootstrap code (MIN-239). Declared before the
+   * `try` so clone, provider, and relay failures are redacted before their error
+   * messages reach the UI. Sandbox remotes themselves are credential-free after
+   * MIN-421.
    */
   const secrets = new SecretRedactor();
   // Chunk background jobs (MIN-114), visible to `finally`: regardless of the
@@ -678,22 +673,11 @@ export async function executeAgentRun(
       unattended: run.routine_id !== null,
     });
     /**
-     * THE TOKEN THAT GOES INTO THE MICROVM, which is no longer the one above it
-     * (MIN-327).
-     *
-     * `target` remains the FUNCTION token: it opens PRs, comments, reviews, merges,
-     * and never leaves the process. This one goes into the VM's `.git/config`,
-     * where the model runs shell commands — so it has only what `git` requests,
-     * and nothing more:
-     *
-     * - an issue or notebook run PUSHES → `contents: write`;
-     * - a REVIEW pushes nothing (`writesToRepo` below) and its content comes from
-     *   an unknown fork → `contents: read`. This is the heart of the issue: it was
-     *   receiving a write token for every repository in the installation.
-     *
-     * Minting can fail (the forge goes down between the two calls): fall back to
-     * `target` rather than killing the turn. This is the worst case, and it is the
-     * previous behavior.
+     * The credential held by trusted sandbox infrastructure (MIN-421).
+     * `target` remains the function token for forge API operations. This second
+     * token is repository-scoped and read-only for reviews, but it never enters
+     * the VM: Vercel's firewall or the self-hosted runner injects it only into
+     * Git smart-HTTP requests for the linked repository.
      */
     const vmTarget = localTurn
       ? target
@@ -842,18 +826,39 @@ export async function executeAgentRun(
     // Sandbox: wake the microVM (filesystem restored from the persistent snapshot
     // → fast continuation); otherwise `onCreate` clones the working branch.
     // Deterministic name → the same microVM/snapshot from one turn to the next.
-    const { sandbox: sb } = localTurn ? { sandbox: null } : await getOrCreateAgentSandbox({
+    let sandboxRepoUrl = localTurn ? vmTarget?.authUrl : vmTarget?.remoteUrl;
+    const configureSandboxRepo = async (fresh: Sandbox): Promise<string> => {
+      if (!vmTarget) throw new Error("No repository linked to this project");
+      if (fresh instanceof SelfHostedSandbox) {
+        return fresh.configureGitRelay({
+          authUrl: vmTarget.authUrl,
+          repoFullName: vmTarget.repoFullName,
+          controlToken: serverControlToken!,
+        });
+      }
+      return vmTarget.remoteUrl;
+    };
+    const sandboxResult = localTurn ? { sandbox: null, created: false } : await getOrCreateAgentSandbox({
       name: agentSandboxName(run.id),
-      // MIN-223: the microVM holds no MINDDY secret (the forge token is in its
-      // `.git/config` by construction — see `vmTarget`).
-      // Reapplied on every wake — the policy survives continuation, but with
-      // YESTERDAY'S key in it, and that key is revoked on suspension.
+      // Both LLM and forge credentials stay in the trusted network layer. The VM
+      // receives placeholder/request data and a credential-free Git remote only.
       networkPolicy: buildAgentNetworkPolicy({
         baseUrl,
         llmKey: vmKey,
         appOrigin: agentControlOrigin(),
+        ...(vmTarget
+          ? {
+              forge: {
+                provider: vmTarget.provider,
+                repoFullName: vmTarget.repoFullName,
+                token: vmTarget.token,
+                origin: new URL(vmTarget.remoteUrl).origin,
+              },
+            }
+          : {}),
       }),
       onCreate: async (fresh) => {
+        sandboxRepoUrl = await configureSandboxRepo(fresh);
         if (prRun) {
           // A PR run always has its repository — the launch resolves the project
           // THROUGH the link — so `target`/`forge` are non-null here by
@@ -881,10 +886,7 @@ export async function executeAgentRun(
               return null;
             });
           await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
-            // `vmTarget`: what the clone writes to `.git/config` remains readable
-            // for the microVM's entire lifetime. For a review, it is a READ token
-            // for the single linked repository (MIN-327).
-            authUrl: vmTarget!.authUrl,
+            authUrl: sandboxRepoUrl,
             baseBranch,
             headRef: pullRequestHeadRef(prRun.provider, prRun.number),
             headBranch: prRun.headBranch,
@@ -897,12 +899,16 @@ export async function executeAgentRun(
         // travels in the job and is supplied with `git -c`, on the only command
         // that commits. A value used in one place cannot leak into someone's repo.
         await cloneRepo(sandboxHost(fresh, cloudLayout()), {
-          authUrl: vmTarget!.authUrl,
+          authUrl: sandboxRepoUrl,
           baseBranch,
           workBranch,
         });
       },
     });
+    const { sandbox: sb, created: sandboxCreated } = sandboxResult;
+    if (!localTurn && !sandboxCreated && sb) {
+      sandboxRepoUrl = await configureSandboxRepo(sb);
+    }
     const llmRelayUrl =
       selfHostedSandbox && sb instanceof SelfHostedSandbox
         ? await sb.configureLlmRelay({
@@ -1562,11 +1568,10 @@ export async function executeAgentRun(
       committer: prRun
         ? defaultCommitterIdentity()
         : await committerPromise,
-      // The job GOES into the microVM: it is `vmTarget`, never `target` (MIN-327).
-      // The loop uses it only for `git` — and a review receives only a read token.
-      // ABSENT on a no-repository local run: nothing is ever pushed, and the
-      // harness serves no delivery tool (`create_pr` requires it).
-      ...(vmTarget ? { authUrl: vmTarget.authUrl } : {}),
+      // This URL is credential-free in Vercel sandboxes and points at the
+      // run-scoped trusted relay in self-hosted sandboxes. Only desktop-local
+      // execution retains the legacy authenticated URL on the user's machine.
+      ...(sandboxRepoUrl ? { authUrl: sandboxRepoUrl } : {}),
       commitRef,
       filesFromSha,
       locale: commentLocale,
