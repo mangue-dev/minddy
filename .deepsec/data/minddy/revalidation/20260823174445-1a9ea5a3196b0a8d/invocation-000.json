@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T17:46:34.113Z",
+  "files": [
+    "lib/server/agent/control-plane.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_02d1af72074e32df",
+      "filePath": "lib/server/agent/control-plane.ts",
+      "title": "Active agent runs retain project and repository authority after member removal",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The VM route authenticates the caller as the sandbox assigned to a run, deriving `runId` from the signed sandbox identity, but this proves only possession of an active run identity rather than current project membership. `handleControlPlaneRequest` loads the run with the service-role client and validates only sandbox-name consistency; it never calls `getProjectAccess(run.created_by, run.project_id)` or an equivalent revocation check. For a non-PR cloud run, `POST /repo-auth` subsequently calls `resolveRepoCloneTarget(run.project_id, \\\"repo-write\\\")`, whose project-only resolver reads the link and mints a scoped GitHub installation token without checking the run creator's current access. Thus, a member can start a cloud agent run while authorized, be removed through `removeMember` (which only deletes the `project_members` row), and the still-running sandbox can renew repository write credentials and push to that repository. No member-removal path cancels matching active runs, stops their sandboxes, or revokes existing run keys; the normal reapers act only on terminal/idle or dead-run conditions. Some issue, page, objective, and routine helpers independently re-check an `actorId` against current access, so stale project-tool mutation is not universal, but that does not mitigate the repository-token path. Current history shows sandbox identity binding and token scoping improvements, not a membership revalidation or removal-triggered run revocation, so the reported vulnerability remains present and exploitable.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The VM route authenticates the caller as the sandbox assigned to a run, deriving `runId` from the signed sandbox identity, but this proves only possession of an active run identity rather than current project membership. `handleControlPlaneRequest` loads the run with the service-role client and validates only sandbox-name consistency; it never calls `getProjectAccess(run.created_by, run.project_id)` or an equivalent revocation check. For a non-PR cloud run, `POST /repo-auth` subsequently calls `resolveRepoCloneTarget(run.project_id, \"repo-write\")`, whose project-only resolver reads the link and mints a scoped GitHub installation token without checking the run creator's current access. Thus, a member can start a cloud agent run while authorized, be removed through `removeMember` (which only deletes the `project_members` row), and the still-running sandbox can renew repository write credentials and push to that repository. No member-removal path cancels matching active runs, stops their sandboxes, or revokes existing run keys; the normal reapers act only on terminal/idle or dead-run conditions. Some issue, page, objective, and routine helpers independently re-check an `actorId` against current access, so stale project-tool mutation is not universal, but that does not mitigate the repository-token path. Current history shows sandbox identity binding and token scoping improvements, not a membership revalidation or removal-triggered run revocation, so the reported vulnerability remains present and exploitable."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_02d1af72074e32df"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

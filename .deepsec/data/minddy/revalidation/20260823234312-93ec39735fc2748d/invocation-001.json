@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T23:44:17.803Z",
+  "files": [
+    ".github/workflows/desktop-release.yml"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_6416a22b46856b5c",
+      "filePath": ".github/workflows/desktop-release.yml",
+      "title": "Privileged release workflow executes mutable third-party Action tags",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The workflow currently invokes every external action through mutable version tags, including actions/checkout@v5, pnpm/action-setup@v4, actions/setup-node@v5, actions/upload-artifact@v4, actions/download-artifact@v4, and actions/attest-build-provenance@v3. None of these references is bound to an immutable commit SHA, so the workflow does not cryptographically fix the action code that will execute on a future release run. A compromise of an action publisher or retargeting of one of these tags would execute attacker-controlled code on the same runner before later release steps. That code can alter the checkout or build tooling and persist until steps that receive Apple signing credentials, the Linux private GPG key and passphrase, the Blob write token, and the repository token. The workflow grants contents: write, id-token: write, and attestations: write globally, so every job and invoked action receives a broadly privileged token scope even where those permissions are not needed. The public-release environment may restrict who can approve or dispatch a release, but it does not isolate subsequently executed action code from secrets supplied to the approved job. The tag-validation change in commit 4542c1da only authenticates the git tag fetch and does not pin actions; mutable references have existed since the workflow was introduced in 89c34c3c and remain in HEAD. A concrete attack is a malicious pnpm/action-setup@v4 revision modifying workspace scripts or runner state, followed by the trusted release workflow invoking those scripts with signing or publishing secrets. Pinning each action to a reviewed full SHA and narrowing permissions per job would remove the mutable-action execution path and reduce its impact.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The workflow currently invokes every external action through mutable version tags, including actions/checkout@v5, pnpm/action-setup@v4, actions/setup-node@v5, actions/upload-artifact@v4, actions/download-artifact@v4, and actions/attest-build-provenance@v3. None of these references is bound to an immutable commit SHA, so the workflow does not cryptographically fix the action code that will execute on a future release run. A compromise of an action publisher or retargeting of one of these tags would execute attacker-controlled code on the same runner before later release steps. That code can alter the checkout or build tooling and persist until steps that receive Apple signing credentials, the Linux private GPG key and passphrase, the Blob write token, and the repository token. The workflow grants contents: write, id-token: write, and attestations: write globally, so every job and invoked action receives a broadly privileged token scope even where those permissions are not needed. The public-release environment may restrict who can approve or dispatch a release, but it does not isolate subsequently executed action code from secrets supplied to the approved job. The tag-validation change in commit 4542c1da only authenticates the git tag fetch and does not pin actions; mutable references have existed since the workflow was introduced in 89c34c3c and remain in HEAD. A concrete attack is a malicious pnpm/action-setup@v4 revision modifying workspace scripts or runner state, followed by the trusted release workflow invoking those scripts with signing or publishing secrets. Pinning each action to a reviewed full SHA and narrowing permissions per job would remove the mutable-action execution path and reduce its impact."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_6416a22b46856b5c"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

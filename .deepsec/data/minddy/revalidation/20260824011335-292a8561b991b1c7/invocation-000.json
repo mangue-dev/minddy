@@ -1,0 +1,61 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-24T01:14:38.901Z",
+  "files": [
+    "app/api/account/mfa/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_db12007e800a9ed7",
+      "filePath": "app/api/account/mfa/route.ts",
+      "title": "MFA activation and disablement accept stale AAL1 sessions",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_873075477008fc1f",
+      "filePath": "app/api/account/mfa/route.ts",
+      "title": "Recovery-code generation can be invoked without a rate limit",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"POST and DELETE call getAuthedUser without an option requiring aal2. That helper only rejects a request when the signed JWT both has app_metadata.mfa_enabled === true and has aal !== \\\"aal2\\\"; it does not consult GoTrue's current factor state. enableMfa does consult GoTrue and accepts any verified factor for the authenticated user, but it never verifies that the requesting session was the session that completed the TOTP challenge. Consequently, a stolen pre-enrollment aal1 JWT with mfa_enabled absent/false can remain accepted while the legitimate user has verified a factor but has not yet completed POST. The attacker can invoke POST in that window, cause the server to set the metadata flag, and receive the generated plaintext recovery codes. The same stale token continues to carry the old false/absent metadata, so it can also pass DELETE after activation and call disableMfa, which clears the flag, removes every factor, and deletes the recovery codes. The client does refresh its own session and calls signOut({ scope: \\\"others\\\" }), but both happen only after the vulnerable POST returns, and the sign-out failure is deliberately ignored. The proxy only redirects based on the same stale JWT predicate and does not protect API routes; API authentication independently validates the JWT but does not require an explicit aal2 claim here. Git history shows the target route has not received a functional remediation since its introduction; its later change was documentation-only.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The target POST performs no rate-limit check before enableMfa or issueRecoveryCodes. After a user has a verified factor, repeated authenticated POST requests all pass the factor-state check, regardless of whether MFA was already enabled. issueRecoveryCodes synchronously generates and scrypt-hashes ten codes, then performs a delete followed by an insert through the service-role client, so each request consumes CPU and database capacity. Neither the route nor the helper serializes this delete/insert sequence or makes issuance idempotent. Concurrent requests can therefore repeatedly invalidate or interleave recovery-code sets, producing returned sets that may no longer correspond to the final persisted state. The same code-generation helper is also exposed by the recovery-codes route without a limiter, confirming there is no shared protection at this boundary. The recovery endpoint does use checkSessionRateLimit with ten attempts per minute, but that protection is not imported or invoked by either recovery-code issuance path. This is an authenticated, per-account availability and integrity issue rather than a cross-account data disclosure, so the reported MEDIUM severity is appropriate.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "POST and DELETE call getAuthedUser without an option requiring aal2. That helper only rejects a request when the signed JWT both has app_metadata.mfa_enabled === true and has aal !== \"aal2\"; it does not consult GoTrue's current factor state. enableMfa does consult GoTrue and accepts any verified factor for the authenticated user, but it never verifies that the requesting session was the session that completed the TOTP challenge. Consequently, a stolen pre-enrollment aal1 JWT with mfa_enabled absent/false can remain accepted while the legitimate user has verified a factor but has not yet completed POST. The attacker can invoke POST in that window, cause the server to set the metadata flag, and receive the generated plaintext recovery codes. The same stale token continues to carry the old false/absent metadata, so it can also pass DELETE after activation and call disableMfa, which clears the flag, removes every factor, and deletes the recovery codes. The client does refresh its own session and calls signOut({ scope: \"others\" }), but both happen only after the vulnerable POST returns, and the sign-out failure is deliberately ignored. The proxy only redirects based on the same stale JWT predicate and does not protect API routes; API authentication independently validates the JWT but does not require an explicit aal2 claim here. Git history shows the target route has not received a functional remediation since its introduction; its later change was documentation-only."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "The target POST performs no rate-limit check before enableMfa or issueRecoveryCodes. After a user has a verified factor, repeated authenticated POST requests all pass the factor-state check, regardless of whether MFA was already enabled. issueRecoveryCodes synchronously generates and scrypt-hashes ten codes, then performs a delete followed by an insert through the service-role client, so each request consumes CPU and database capacity. Neither the route nor the helper serializes this delete/insert sequence or makes issuance idempotent. Concurrent requests can therefore repeatedly invalidate or interleave recovery-code sets, producing returned sets that may no longer correspond to the final persisted state. The same code-generation helper is also exposed by the recovery-codes route without a limiter, confirming there is no shared protection at this boundary. The recovery endpoint does use checkSessionRateLimit with ten attempts per minute, but that protection is not imported or invoked by either recovery-code issuance path. This is an authenticated, per-account availability and integrity issue rather than a cross-account data disclosure, so the reported MEDIUM severity is appropriate."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_db12007e800a9ed7"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_873075477008fc1f"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

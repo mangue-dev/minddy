@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T18:55:09.071Z",
+  "files": [
+    "app/api/git/github/setup/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_103c0cccfdb38449",
+      "filePath": "app/api/git/github/setup/route.ts",
+      "title": "Relay claim callback accepts arbitrary GitHub installation IDs",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The relay branch accepts a valid HMAC state and positive numeric `installation_id`, then calls `bindRelayClaim` without checking that GitHub delivered the request or that the installation resulted from the state’s installation flow. The public `/api/relay/github/claim` endpoint will mint such a state for any active instance and any syntactically valid 64-hex-character code; it does not persist a pending claim or authenticate possession of the instance key. An attacker can self-register an active relay instance because `/api/relay/register` is intentionally open, request a claim URL/state for that instance, and directly invoke `/api/git/github/setup` with an unclaimed victim installation ID before the ten-minute expiry. `bindRelayClaim` confirms only that the GitHub App can resolve the supplied installation and that it is not already Cloud-connected or relay-claimed, then inserts the attacker-owned instance binding and creates the claim handoff row. The claim code is first stored only after this binding, so hashing it and calling it single-use does not establish that a claim was previously initiated. The normal callback-session mitigation is not reached by this branch, and the Next proxy explicitly excludes `/api/`, so no framework session protection applies. The resulting binding is security-significant: the attacker’s instance can submit arbitrary signed link-mirror entries and then satisfy the relay mint endpoint’s instance and repository checks to obtain scoped installation tokens; GitHub webhooks are also routed to that instance. Git history shows the ordinary setup callback was protected by session validation in `17f19b33`, while the vulnerable relay-specific bypass was introduced later in `bc097376`; it has not been subsequently fixed.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The relay branch accepts a valid HMAC state and positive numeric `installation_id`, then calls `bindRelayClaim` without checking that GitHub delivered the request or that the installation resulted from the state’s installation flow. The public `/api/relay/github/claim` endpoint will mint such a state for any active instance and any syntactically valid 64-hex-character code; it does not persist a pending claim or authenticate possession of the instance key. An attacker can self-register an active relay instance because `/api/relay/register` is intentionally open, request a claim URL/state for that instance, and directly invoke `/api/git/github/setup` with an unclaimed victim installation ID before the ten-minute expiry. `bindRelayClaim` confirms only that the GitHub App can resolve the supplied installation and that it is not already Cloud-connected or relay-claimed, then inserts the attacker-owned instance binding and creates the claim handoff row. The claim code is first stored only after this binding, so hashing it and calling it single-use does not establish that a claim was previously initiated. The normal callback-session mitigation is not reached by this branch, and the Next proxy explicitly excludes `/api/`, so no framework session protection applies. The resulting binding is security-significant: the attacker’s instance can submit arbitrary signed link-mirror entries and then satisfy the relay mint endpoint’s instance and repository checks to obtain scoped installation tokens; GitHub webhooks are also routed to that instance. Git history shows the ordinary setup callback was protected by session validation in `17f19b33`, while the vulnerable relay-specific bypass was introduced later in `bc097376`; it has not been subsequently fixed."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_103c0cccfdb38449"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

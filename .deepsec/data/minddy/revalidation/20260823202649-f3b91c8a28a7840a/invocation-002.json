@@ -1,0 +1,45 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T20:30:58.297Z",
+  "files": [
+    "lib/server/agent/model.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_75dc3457c2545418",
+      "filePath": "lib/server/agent/model.ts",
+      "title": "Validated BYOK endpoint is later used through unpinned requests",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The finding remains exploitable in the current code. An authenticated user can register the `generic` cloud provider through `POST /api/account/ai-keys`; the route requires authentication and rejects a declared foreign Origin, but those controls do not constrain a malicious authenticated account. It validates the submitted custom URL with `assertPublicHttpUrl`, and `getUserByok` repeats that validation for each use, but both calls discard the returned `ValidatedTarget.address` and retain only the hostname-bearing URL string. `probeByokKey` subsequently calls ordinary `fetch` on `${baseUrl}/models`, while `fetchAiChat` calls ordinary `fetch` on `${baseUrl}/chat/completions`; the agent LLM proxy, embeddings client, and transcription helper likewise use the resolved custom base URL with ordinary fetches. A controlled hostname can resolve to only public addresses during `assertPublicHttpUrl` and then resolve to an internal address for the separate fetch lookup, so the private-address check does not govern the socket actually opened. The attacker can make the registration probe return a successful public response to obtain `validated_at`, then trigger an enabled BYOK AI surface while rebinding DNS; no application credential is added to the request, but the server performs attacker-directed authenticated POSTs with attacker-controlled request content and processes the resulting response. `safe-fetch.ts` and `pinned-request.ts` implement the necessary DNS pinning, but neither is used on these BYOK request paths. Git history shows that commit `c3e2b4e8` added registration-time and per-use validation for MIN-341, whereas the current `e0da16d0` changes are prose-only; no subsequent change routes these requests through a pinned client.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The finding remains exploitable in the current code. An authenticated user can register the `generic` cloud provider through `POST /api/account/ai-keys`; the route requires authentication and rejects a declared foreign Origin, but those controls do not constrain a malicious authenticated account. It validates the submitted custom URL with `assertPublicHttpUrl`, and `getUserByok` repeats that validation for each use, but both calls discard the returned `ValidatedTarget.address` and retain only the hostname-bearing URL string. `probeByokKey` subsequently calls ordinary `fetch` on `${baseUrl}/models`, while `fetchAiChat` calls ordinary `fetch` on `${baseUrl}/chat/completions`; the agent LLM proxy, embeddings client, and transcription helper likewise use the resolved custom base URL with ordinary fetches. A controlled hostname can resolve to only public addresses during `assertPublicHttpUrl` and then resolve to an internal address for the separate fetch lookup, so the private-address check does not govern the socket actually opened. The attacker can make the registration probe return a successful public response to obtain `validated_at`, then trigger an enabled BYOK AI surface while rebinding DNS; no application credential is added to the request, but the server performs attacker-directed authenticated POSTs with attacker-controlled request content and processes the resulting response. `safe-fetch.ts` and `pinned-request.ts` implement the necessary DNS pinning, but neither is used on these BYOK request paths. Git history shows that commit `c3e2b4e8` added registration-time and per-use validation for MIN-341, whereas the current `e0da16d0` changes are prose-only; no subsequent change routes these requests through a pinned client."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_75dc3457c2545418"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

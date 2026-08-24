@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T17:48:05.762Z",
+  "files": [
+    "lib/server/agent/repo-host.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_806368fbc2a1e6d2",
+      "filePath": "lib/server/agent/repo-host.ts",
+      "title": "Local background-job tool grants an agent unrestricted host shell execution",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current local-run path reaches `main.ts`, which constructs `localHost(job.layout)`; that host executes every `RepoHost.exec` request using the local machine's `child_process.spawn(\\\"sh\\\", [\\\"-c\\\", command])`. `repoBackgroundRunner` passes the model-supplied `command` to `startBackground`, and `backgroundStartScript` embeds it as the body of `setsid sh -c`; quoting preserves it as one argument but intentionally retains all shell semantics. `BackgroundJobs.start` only calls `checkCommand`, whose documented design is a narrow git/destructive-work guard rather than an execution allowlist, so ordinary commands that read arbitrary paths, change directory, invoke interpreters, or make network connections are allowed. Resolving `workdir` inside the repository does not constrain the shell body, which can use absolute paths or `cd` elsewhere. The local tool factory passes `local: isLocalJob(job)` to `agentToolsFor`, and current tests explicitly assert that a token-authenticated local job receives `run_background`; the supervisor wires it to `background.handle`. The local route restricts some third-party-triggered run types, but a victim can still start an interactive local agent run over a repository containing attacker-controlled instructions or source text that persuades the model to invoke this tool. The permission system does not mediate this local tool invocation, and its own comments state that its command guard is not an OS-level perimeter. Recent history confirms the feature remains active: the child registry addressed orphaned `setsid` processes, not filesystem or network isolation. Consequently, prompt-influenced agent input can cause arbitrary commands to execute with the desktop user's privileges and access to local credentials.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current local-run path reaches `main.ts`, which constructs `localHost(job.layout)`; that host executes every `RepoHost.exec` request using the local machine's `child_process.spawn(\"sh\", [\"-c\", command])`. `repoBackgroundRunner` passes the model-supplied `command` to `startBackground`, and `backgroundStartScript` embeds it as the body of `setsid sh -c`; quoting preserves it as one argument but intentionally retains all shell semantics. `BackgroundJobs.start` only calls `checkCommand`, whose documented design is a narrow git/destructive-work guard rather than an execution allowlist, so ordinary commands that read arbitrary paths, change directory, invoke interpreters, or make network connections are allowed. Resolving `workdir` inside the repository does not constrain the shell body, which can use absolute paths or `cd` elsewhere. The local tool factory passes `local: isLocalJob(job)` to `agentToolsFor`, and current tests explicitly assert that a token-authenticated local job receives `run_background`; the supervisor wires it to `background.handle`. The local route restricts some third-party-triggered run types, but a victim can still start an interactive local agent run over a repository containing attacker-controlled instructions or source text that persuades the model to invoke this tool. The permission system does not mediate this local tool invocation, and its own comments state that its command guard is not an OS-level perimeter. Recent history confirms the feature remains active: the child registry addressed orphaned `setsid` processes, not filesystem or network isolation. Consequently, prompt-influenced agent input can cause arbitrary commands to execute with the desktop user's privileges and access to local credentials."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_806368fbc2a1e6d2"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,46 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T18:32:20.419Z",
+  "files": [
+    "lib/server/agent/models-catalog.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_0d797163fb28b531",
+      "filePath": "lib/server/agent/models-catalog.ts",
+      "title": "Generic BYOK model listing follows redirects and loses DNS pinning",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"adjustedSeverity\": \"HIGH\",\n    \"reasoning\": \"The current code still calls native `fetch` at `models-catalog.ts:152` for the generic provider, and native fetch follows redirects by default without using the validated address returned by `assertPublicHttpUrl`. A logged-in attacker can register a generic BYOK endpoint on an attacker-controlled public host, have its initial key probe return a successful response, and then make the subsequent `/models` request redirect to an internal HTTP URL. `getUserByok` revalidates only the configured public base URL on each use (`model.ts:404-409`); it neither carries the resulting address into `listOpenAICompat` nor validates redirect destinations. Thus DNS rebinding between validation and native fetch also remains possible. The `/api/agent/models` route authenticates the caller but returns that caller's catalog verbatim, and the MCP `list_agent_models` path invokes the same catalog function, so account authentication does not prevent an attacker from using their own account as the SSRF primitive. If the internal target returns an OpenAI-like `{data:[{id:...}]}` response, those values are returned to the attacker; otherwise the request can still reach the internal target, although parsing normally yields an empty list or fails. The project has an existing `safeFetch` implementation that pins the validated address, revalidates every redirect, applies a timeout, and bounds response bytes, but this call site does not use it. Git history shows `listOpenAICompat` has used this direct fetch since the catalog was introduced and no later change replaced it, so the finding is not fixed. I adjusted severity from CRITICAL to HIGH because response disclosure is constrained to the expected `data[].id` shape and this request carries only the attacker's BYOK credential, but the attacker-controlled redirect still enables meaningful internal-network access and conditional data disclosure.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "adjustedSeverity": "HIGH",
+      "reasoning": "The current code still calls native `fetch` at `models-catalog.ts:152` for the generic provider, and native fetch follows redirects by default without using the validated address returned by `assertPublicHttpUrl`. A logged-in attacker can register a generic BYOK endpoint on an attacker-controlled public host, have its initial key probe return a successful response, and then make the subsequent `/models` request redirect to an internal HTTP URL. `getUserByok` revalidates only the configured public base URL on each use (`model.ts:404-409`); it neither carries the resulting address into `listOpenAICompat` nor validates redirect destinations. Thus DNS rebinding between validation and native fetch also remains possible. The `/api/agent/models` route authenticates the caller but returns that caller's catalog verbatim, and the MCP `list_agent_models` path invokes the same catalog function, so account authentication does not prevent an attacker from using their own account as the SSRF primitive. If the internal target returns an OpenAI-like `{data:[{id:...}]}` response, those values are returned to the attacker; otherwise the request can still reach the internal target, although parsing normally yields an empty list or fails. The project has an existing `safeFetch` implementation that pins the validated address, revalidates every redirect, applies a timeout, and bounds response bytes, but this call site does not use it. Git history shows `listOpenAICompat` has used this direct fetch since the catalog was introduced and no later change replaced it, so the finding is not fixed. I adjusted severity from CRITICAL to HIGH because response disclosure is constrained to the expected `data[].id` shape and this request carries only the attacker's BYOK credential, but the attacker-controlled redirect still enables meaningful internal-network access and conditional data disclosure."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_0d797163fb28b531"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:32:03.937Z",
+  "files": [
+    "lib/server/agent/repo-instructions.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_53f9e93a40015b00",
+      "filePath": "lib/server/agent/repo-instructions.ts",
+      "title": "PR-head repository instructions can reach the privileged agent",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The PR clone is explicitly checked out at the attacker-controlled PR head in `clonePullRequest`, while `pr-base` is fetched only as a tag. `readRepoInstructions(host, \\\"pr\\\")` correctly uses `readFileAtRef(host, PR_BASE_TAG, path)`, and its dedicated test proves that a head-only root `AGENTS.md` is excluded. However, `runOpencodeTurn` always starts `servedInstructionsFile(host, deps.writeFile)` without passing or considering `job.anchor`. That helper runs `find` in the checked-out working tree and then reads every discovered `AGENTS.md` or `CLAUDE.md`, including nested files, with `readWorkFile`, which resolves directly to that PR-head working tree. `formatServedInstructions` preserves the arbitrary content and `opencodeServerEnv` passes the generated harness file in OpenCode's `instructions` array, whose contents are added to the model system message. Thus, a fork contributor can add a root or nested instruction file containing a prompt-injection payload and have it supplied to the PR-review agent despite the base-only protection for the bootstrap path. The BOUNDARY text is useful model guidance but does not prevent the attacker-controlled content from entering the privileged model context or enforce tool-level constraints against instructions the model follows. Git history confirms that commit `633ccfe9` added the anchor-aware `readRepoInstructions` protection, while the later served-instructions implementation still reads the working tree; existing supervisor tests cover normal and nested serving but no PR-head exclusion.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The PR clone is explicitly checked out at the attacker-controlled PR head in `clonePullRequest`, while `pr-base` is fetched only as a tag. `readRepoInstructions(host, \"pr\")` correctly uses `readFileAtRef(host, PR_BASE_TAG, path)`, and its dedicated test proves that a head-only root `AGENTS.md` is excluded. However, `runOpencodeTurn` always starts `servedInstructionsFile(host, deps.writeFile)` without passing or considering `job.anchor`. That helper runs `find` in the checked-out working tree and then reads every discovered `AGENTS.md` or `CLAUDE.md`, including nested files, with `readWorkFile`, which resolves directly to that PR-head working tree. `formatServedInstructions` preserves the arbitrary content and `opencodeServerEnv` passes the generated harness file in OpenCode's `instructions` array, whose contents are added to the model system message. Thus, a fork contributor can add a root or nested instruction file containing a prompt-injection payload and have it supplied to the PR-review agent despite the base-only protection for the bootstrap path. The BOUNDARY text is useful model guidance but does not prevent the attacker-controlled content from entering the privileged model context or enforce tool-level constraints against instructions the model follows. Git history confirms that commit `633ccfe9` added the anchor-aware `readRepoInstructions` protection, while the later served-instructions implementation still reads the working tree; existing supervisor tests cover normal and nested serving but no PR-head exclusion."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_53f9e93a40015b00"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

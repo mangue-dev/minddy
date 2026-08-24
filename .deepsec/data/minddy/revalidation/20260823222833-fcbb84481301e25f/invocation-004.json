@@ -1,0 +1,45 @@
+{
+  "batchIndex": 4,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:34:05.898Z",
+  "files": [
+    "lib/server/agent/vm/local-uplink.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_7606bbce2a0882e6",
+      "filePath": "lib/server/agent/vm/local-uplink.ts",
+      "title": "Path-based output withholding is bypassed with shell variable expansion",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The local execution host invokes `sh -c <command>` with `process.env` (or a merge retaining it), so `$HOME` is expanded by the host shell and can resolve to the local user's home directory. The `bash` permission path calls `checkCommand`, but that guard only blocks selected Git/destructive operations and `.git` tokens; it does not impose a read scope or reject reads of `$HOME`. `filterLocalPayload` detects foreign access solely by matching literal `~`, `/Users`, `/home`, `/Volumes`, `/mnt`, or `/media` strings in the emitted tool-call and tool-result payloads. A command such as `cat \\\"$HOME/.ssh/id_rsa\\\"` contains none of those literal path forms, so its tool-call event does not populate `foreignCalls`. The resulting private-key content ordinarily contains no filesystem path either, so its tool-result preview also has a zero foreign-path count and is emitted instead of being replaced by `withheldOutput`. The event translator preserves the command and result under the same call ID, but this does not help because the map was never populated. Repository-supplied instruction files are delivered to the agent as data with a prompt-injection warning, but that is not an enforcement boundary against a malicious repository instruction influencing a locally initiated run. Git history shows the local-uplink feature was introduced in commit `123fcb9d`; the current `e0da16d0` change only rewrites its prose and does not add expansion-aware detection or filesystem confinement. Consequently, a prompt-injection-driven local shell read can place a local credential in project-visible `agent_run_events`, matching the finding's stated impact.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The local execution host invokes `sh -c <command>` with `process.env` (or a merge retaining it), so `$HOME` is expanded by the host shell and can resolve to the local user's home directory. The `bash` permission path calls `checkCommand`, but that guard only blocks selected Git/destructive operations and `.git` tokens; it does not impose a read scope or reject reads of `$HOME`. `filterLocalPayload` detects foreign access solely by matching literal `~`, `/Users`, `/home`, `/Volumes`, `/mnt`, or `/media` strings in the emitted tool-call and tool-result payloads. A command such as `cat \"$HOME/.ssh/id_rsa\"` contains none of those literal path forms, so its tool-call event does not populate `foreignCalls`. The resulting private-key content ordinarily contains no filesystem path either, so its tool-result preview also has a zero foreign-path count and is emitted instead of being replaced by `withheldOutput`. The event translator preserves the command and result under the same call ID, but this does not help because the map was never populated. Repository-supplied instruction files are delivered to the agent as data with a prompt-injection warning, but that is not an enforcement boundary against a malicious repository instruction influencing a locally initiated run. Git history shows the local-uplink feature was introduced in commit `123fcb9d`; the current `e0da16d0` change only rewrites its prose and does not add expansion-aware detection or filesystem confinement. Consequently, a prompt-injection-driven local shell read can place a local credential in project-visible `agent_run_events`, matching the finding's stated impact."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_7606bbce2a0882e6"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

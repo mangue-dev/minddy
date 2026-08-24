@@ -1,0 +1,45 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T17:48:57.472Z",
+  "files": [
+    "lib/server/agent/self-hosted-sandbox.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_6224f24d72791fed",
+      "filePath": "lib/server/agent/self-hosted-sandbox.ts",
+      "title": "Self-hosted LLM relay follows attacker-controlled redirects to private services",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"A regular authenticated user can save a `generic` BYOK base URL through `app/api/account/ai-keys/route.ts`; it initially calls `assertPublicHttpUrl`, and `getUserByok` repeats that validation before a server-side agent run. `assertPublicHttpUrl` correctly rejects private resolutions at validation time, but it only returns an address for callers that use the pinned-request path; neither the relay configuration nor the runner retains or uses that address. `executeAgentRun` passes the resolved user-controlled `baseUrl` to `SelfHostedSandbox.configureLlmRelay`, which sends it over the trusted runner API, and the runner's `completionUrl` only checks URL syntax and HTTP(S). On each completion, `deploy/self-hosted/agent-runner.mjs` performs plain `fetch(relay.url, { method: \\\"POST\\\", ... })`, whose default redirect mode follows redirects and whose DNS connection is not pinned. Thus, an attacker-controlled publicly resolvable provider can issue a 307/308 redirect from its `/chat/completions` endpoint to a private hostname or address reachable from the runner, causing the privileged runner to make the request; DNS can likewise change after the application's preliminary lookup. This is meaningful in the supplied Compose profiles because the runner is attached to the internal `private` network as well as egress and has the Docker socket mounted, while the isolated sandbox itself only receives the egress network. Authentication and the per-run relay control token restrict who can configure and invoke a relay, but do not prevent a legitimate low-privilege user from configuring their own generic provider and starting their own agent run. Git history shows the vulnerable relay and plain fetch were introduced together in commit `18465f29`; no subsequent change replaces it with `safeFetch`, disables redirects, or validates and pins every hop.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "A regular authenticated user can save a `generic` BYOK base URL through `app/api/account/ai-keys/route.ts`; it initially calls `assertPublicHttpUrl`, and `getUserByok` repeats that validation before a server-side agent run. `assertPublicHttpUrl` correctly rejects private resolutions at validation time, but it only returns an address for callers that use the pinned-request path; neither the relay configuration nor the runner retains or uses that address. `executeAgentRun` passes the resolved user-controlled `baseUrl` to `SelfHostedSandbox.configureLlmRelay`, which sends it over the trusted runner API, and the runner's `completionUrl` only checks URL syntax and HTTP(S). On each completion, `deploy/self-hosted/agent-runner.mjs` performs plain `fetch(relay.url, { method: \"POST\", ... })`, whose default redirect mode follows redirects and whose DNS connection is not pinned. Thus, an attacker-controlled publicly resolvable provider can issue a 307/308 redirect from its `/chat/completions` endpoint to a private hostname or address reachable from the runner, causing the privileged runner to make the request; DNS can likewise change after the application's preliminary lookup. This is meaningful in the supplied Compose profiles because the runner is attached to the internal `private` network as well as egress and has the Docker socket mounted, while the isolated sandbox itself only receives the egress network. Authentication and the per-run relay control token restrict who can configure and invoke a relay, but do not prevent a legitimate low-privilege user from configuring their own generic provider and starting their own agent run. Git history shows the vulnerable relay and plain fetch were introduced together in commit `18465f29`; no subsequent change replaces it with `safeFetch`, disables redirects, or validates and pins every hop."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_6224f24d72791fed"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 3,
+  "label": "initial",
+  "timestamp": "2026-08-23T20:32:03.392Z",
+  "files": [
+    "app/api/admin/forge-relay/instances/[id]/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_056dee545e3f74a2",
+      "filePath": "app/api/admin/forge-relay/instances/[id]/route.ts",
+      "title": "Revoked relay instances continue receiving webhook payloads",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The administrator-only DELETE route correctly requires an authenticated admin and then calls revokeRelayInstance, but that function only updates forge_relay_instances.status to \\\"revoked\\\" and sets revoked_at. It neither removes installation claims/link mirrors nor marks pending forge_relay_deliveries terminal, and the database schema has no status-dependent cascade or policy that would do so. For GitHub, enqueueRelayDeliveryForPayload resolves an incoming, signature-verified delivery solely through forge_relay_installations.instance_id and inserts a pending delivery without joining or filtering forge_relay_instances by active status. For GitLab, the public relay webhook similarly authorizes against the retained link-mirror webhook secret and enqueues to its instance_id without an active-instance check. The cron worker selects pending rows and joins only webhook_url and webhook_secret_encrypted; a revoked instance with its previously registered endpoint and secret is therefore still POSTed the signed raw payload. Relay request signing does reject a revoked instance from making subsequent control-plane calls, and cron authentication protects who can invoke the worker, but neither mitigation constrains this outbound delivery path. A concrete scenario is an instance compromise followed by an administrator revocation: later provider webhooks for its still-claimed installation or mirrored GitLab repository, plus already queued rows, continue to reach the attacker-controlled registered endpoint. This contradicts both the route documentation and the managed-forge design requirement that revocation immediately stops webhook fan-out, so the HIGH severity is appropriate.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The administrator-only DELETE route correctly requires an authenticated admin and then calls revokeRelayInstance, but that function only updates forge_relay_instances.status to \"revoked\" and sets revoked_at. It neither removes installation claims/link mirrors nor marks pending forge_relay_deliveries terminal, and the database schema has no status-dependent cascade or policy that would do so. For GitHub, enqueueRelayDeliveryForPayload resolves an incoming, signature-verified delivery solely through forge_relay_installations.instance_id and inserts a pending delivery without joining or filtering forge_relay_instances by active status. For GitLab, the public relay webhook similarly authorizes against the retained link-mirror webhook secret and enqueues to its instance_id without an active-instance check. The cron worker selects pending rows and joins only webhook_url and webhook_secret_encrypted; a revoked instance with its previously registered endpoint and secret is therefore still POSTed the signed raw payload. Relay request signing does reject a revoked instance from making subsequent control-plane calls, and cron authentication protects who can invoke the worker, but neither mitigation constrains this outbound delivery path. A concrete scenario is an instance compromise followed by an administrator revocation: later provider webhooks for its still-claimed installation or mirrored GitLab repository, plus already queued rows, continue to reach the attacker-controlled registered endpoint. This contradicts both the route documentation and the managed-forge design requirement that revocation immediately stops webhook fan-out, so the HIGH severity is appropriate."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_056dee545e3f74a2"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

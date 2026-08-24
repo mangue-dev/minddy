@@ -1,0 +1,45 @@
+{
+  "batchIndex": 4,
+  "label": "initial",
+  "timestamp": "2026-08-23T21:10:26.677Z",
+  "files": [
+    "lib/server/assistant/loop.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_e1da2d65a59a700d",
+      "filePath": "lib/server/assistant/loop.ts",
+      "title": "BYOK generic endpoint is fetched without DNS pinning or redirect validation",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The generic BYOK base URL is authenticated-user-controlled through `POST /api/account/ai-keys`; it is initially checked with `assertPublicHttpUrl`, and `getUserByok` repeats that check for each cloud custom URL. However, `assertPublicHttpUrl` only returns a validated address and `getUserByok` discards it, retaining only `baseUrl`. `processChat` receives that runtime from `resolveAiRuntime` and calls `fetchAiChat`, which builds `<baseUrl>/chat/completions` and uses ordinary global `fetch` for every non-OpenRouter provider, including `generic`. Ordinary `fetch` resolves the hostname anew and follows redirects by default, whereas the repository's `safeFetch` prevents this by passing the validated address to `pinnedRequest` and revalidating every redirect target. An authenticated attacker can register a generic endpoint on an attacker-controlled public hostname, configure an explicit generic assistant model, then change DNS after the per-use validation so the later fetch connects to an internal address; the request contains the user-controlled chat payload and bearer header. Alternatively, a public endpoint can issue a redirect such as HTTP 307 to an internal URL, which the direct fetch follows without the safe-fetch redirect validation. Route authentication, MFA, and same-origin checks constrain who may configure the endpoint but do not stop a malicious authenticated tenant from using their own BYOK endpoint for SSRF. Git history confirms that the later MIN-341 change added registration and per-use URL validation, but did not make `fetchAiChat` use the validated address or a redirect-safe client, so the reported weakness remains present.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The generic BYOK base URL is authenticated-user-controlled through `POST /api/account/ai-keys`; it is initially checked with `assertPublicHttpUrl`, and `getUserByok` repeats that check for each cloud custom URL. However, `assertPublicHttpUrl` only returns a validated address and `getUserByok` discards it, retaining only `baseUrl`. `processChat` receives that runtime from `resolveAiRuntime` and calls `fetchAiChat`, which builds `<baseUrl>/chat/completions` and uses ordinary global `fetch` for every non-OpenRouter provider, including `generic`. Ordinary `fetch` resolves the hostname anew and follows redirects by default, whereas the repository's `safeFetch` prevents this by passing the validated address to `pinnedRequest` and revalidating every redirect target. An authenticated attacker can register a generic endpoint on an attacker-controlled public hostname, configure an explicit generic assistant model, then change DNS after the per-use validation so the later fetch connects to an internal address; the request contains the user-controlled chat payload and bearer header. Alternatively, a public endpoint can issue a redirect such as HTTP 307 to an internal URL, which the direct fetch follows without the safe-fetch redirect validation. Route authentication, MFA, and same-origin checks constrain who may configure the endpoint but do not stop a malicious authenticated tenant from using their own BYOK endpoint for SSRF. Git history confirms that the later MIN-341 change added registration and per-use URL validation, but did not make `fetchAiChat` use the validated address or a redirect-safe client, so the reported weakness remains present."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_e1da2d65a59a700d"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

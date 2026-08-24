@@ -1,0 +1,46 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:29:38.510Z",
+  "files": [
+    "lib/push-devices-api.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_725c81f1238d30cf",
+      "filePath": "lib/push-devices-api.ts",
+      "title": "Push endpoint validation is lost before notification delivery",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"adjustedSeverity\": \"HIGH\",\n    \"reasoning\": \"The registration handler authenticates the caller and calls assertPublicHttpUrl(endpointValue), but it discards the returned validated address and persists only the hostname-containing endpoint string. sendPushToUser later loads that string through the service-role client, and sendToSubscription passes it directly to webpush.sendNotification without revalidating or pinning DNS, so delivery performs a fresh resolution outside safe-fetch/pinned-request. An attacker can register a syntactically valid Web Push subscription for a hostname they control while it resolves publicly, then change its DNS to an internal HTTPS address before using the authenticated test endpoint; the test route verifies only ownership of the database row and immediately invokes the privileged delivery path. Regular notification production also reaches the same sendPushToUser path. In addition, the database policy grants authenticated users INSERT and UPDATE on their own push_subscriptions rows with no endpoint URL constraint, so a user with their own Supabase JWT can bypass the route-level registration validation entirely and store an internal HTTPS endpoint directly. The direct delivery is blind and HTTPS certificate validation constrains targets to internal services presenting a certificate valid for the chosen hostname, but neither condition eliminates SSRF against such services. Recent history shows the registration-time assertion was introduced before the current code and the delivery call remains unmodified, so the issue is not fixed. HIGH is more appropriate than CRITICAL because exploitation requires an authenticated account and produces a constrained, generally blind HTTPS request rather than unrestricted internal access.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "adjustedSeverity": "HIGH",
+      "reasoning": "The registration handler authenticates the caller and calls assertPublicHttpUrl(endpointValue), but it discards the returned validated address and persists only the hostname-containing endpoint string. sendPushToUser later loads that string through the service-role client, and sendToSubscription passes it directly to webpush.sendNotification without revalidating or pinning DNS, so delivery performs a fresh resolution outside safe-fetch/pinned-request. An attacker can register a syntactically valid Web Push subscription for a hostname they control while it resolves publicly, then change its DNS to an internal HTTPS address before using the authenticated test endpoint; the test route verifies only ownership of the database row and immediately invokes the privileged delivery path. Regular notification production also reaches the same sendPushToUser path. In addition, the database policy grants authenticated users INSERT and UPDATE on their own push_subscriptions rows with no endpoint URL constraint, so a user with their own Supabase JWT can bypass the route-level registration validation entirely and store an internal HTTPS endpoint directly. The direct delivery is blind and HTTPS certificate validation constrains targets to internal services presenting a certificate valid for the chosen hostname, but neither condition eliminates SSRF against such services. Recent history shows the registration-time assertion was introduced before the current code and the delivery call remains unmodified, so the issue is not fixed. HIGH is more appropriate than CRITICAL because exploitation requires an authenticated account and produces a constrained, generally blind HTTPS request rather than unrestricted internal access."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_725c81f1238d30cf"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T20:01:04.098Z",
+  "files": [
+    "app/api/cron/forge-relay-deliveries/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_726fd19d8c631741",
+      "filePath": "app/api/cron/forge-relay-deliveries/route.ts",
+      "title": "Cron-triggered relay fan-out performs unvalidated outbound requests",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The cron handler correctly requires CRON_SECRET, but it invokes processDueRelayDeliveries(), which performs a bare POST fetch(endpoint) using the stored webhook_url. The registration route accepts any syntactically valid HTTPS URL; isAcceptableWebhookUrl checks only the URL scheme for HTTPS and performs no DNS resolution, IP-literal filtering, public-address validation, or redirect restriction. Node fetch follows redirects by default, so an accepted public HTTPS URL can also redirect the worker to an internal HTTP or HTTPS destination. The relay instance identity does not prevent attacker control of this value: POST /api/relay/register is explicitly self-service and unauthenticated, and the attacker who generated its Ed25519 key can sign the subsequent webhook-secret registration request. An attacker can claim an installation they control through the GitHub App claim flow, after which a genuine signed GitHub delivery is queued for that attacker-owned instance and the scheduled worker sends the request from the Cloud deployment. GitHub webhook signature validation protects the queue ingress but does not constrain the already attacker-selected fan-out destination. The repository's safe-fetch implementation provides the required public-IP validation, DNS pinning, redirect validation, and body limits, but fanout.ts neither calls it nor implements equivalent controls. Current history shows the affected fan-out implementation was introduced in bc097376 and the later c6cfc8c change only added queue-error handling, not an SSRF mitigation.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The cron handler correctly requires CRON_SECRET, but it invokes processDueRelayDeliveries(), which performs a bare POST fetch(endpoint) using the stored webhook_url. The registration route accepts any syntactically valid HTTPS URL; isAcceptableWebhookUrl checks only the URL scheme for HTTPS and performs no DNS resolution, IP-literal filtering, public-address validation, or redirect restriction. Node fetch follows redirects by default, so an accepted public HTTPS URL can also redirect the worker to an internal HTTP or HTTPS destination. The relay instance identity does not prevent attacker control of this value: POST /api/relay/register is explicitly self-service and unauthenticated, and the attacker who generated its Ed25519 key can sign the subsequent webhook-secret registration request. An attacker can claim an installation they control through the GitHub App claim flow, after which a genuine signed GitHub delivery is queued for that attacker-owned instance and the scheduled worker sends the request from the Cloud deployment. GitHub webhook signature validation protects the queue ingress but does not constrain the already attacker-selected fan-out destination. The repository's safe-fetch implementation provides the required public-IP validation, DNS pinning, redirect validation, and body limits, but fanout.ts neither calls it nor implements equivalent controls. Current history shows the affected fan-out implementation was introduced in bc097376 and the later c6cfc8c change only added queue-error handling, not an SSRF mitigation."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_726fd19d8c631741"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

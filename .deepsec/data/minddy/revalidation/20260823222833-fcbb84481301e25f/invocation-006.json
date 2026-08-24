@@ -1,0 +1,61 @@
+{
+  "batchIndex": 6,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:36:47.902Z",
+  "files": [
+    "lib/server/embeddings.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_b7b01eb59d056662",
+      "filePath": "lib/server/embeddings.ts",
+      "title": "BYOK embedding requests follow unvalidated redirects and do not pin DNS",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_31d6bb54019a0a29",
+      "filePath": "lib/server/embeddings.ts",
+      "title": "Private feedback can be enumerated through a publicly executable SECURITY DEFINER RPC",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The generic BYOK provider accepts a user-supplied HTTP(S) base URL through the authenticated account route, validates it with assertPublicHttpUrl, and stores it for the account owner. That validation is repeated in getUserByok on every use, but it only returns a validated address which is then discarded; resolveAiRuntime carries only the original hostname URL into embedTexts. embeddings.ts constructs `${runtime.baseUrl}/embeddings` and sends it through native fetch with its default redirect behavior, without redirect: \\\"manual\\\" and without the pinnedRequest transport used by safeFetch. A malicious project owner can run a public generic provider that passes validation and key probing, enable the feedback surface, select a feedback embedding model, and cause an embedding request by submitting feedback or using similar-post suggestions. That server can reply with a 307 or 308 redirect to an internal HTTP service, preserving the POST body, or exploit a DNS change after getUserByok validates the hostname and before fetch resolves it again. The runtime request includes user-controlled feedback text and is made from the application server, so this is an SSRF primitive even though the response is normally only processed as an embedding response. The current implementation has not been patched: the recent validation added to getUserByok revalidates the hostname but does not pin the subsequent embedding connection or validate redirect hops.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"match_feedback_posts is declared SECURITY DEFINER, owned by postgres, and queries feedback_posts solely by the caller-provided project UUID, embedding, and optional public-only flag. When p_public_only is false, its predicate deliberately includes private and unpublished posts, returning their titles and bodies. The function contains no auth.uid(), membership, board-token, or project-access check. feedback_posts has RLS enabled, but the SECURITY DEFINER function runs with its postgres owner privileges and the migration does not FORCE ROW LEVEL SECURITY, so table RLS does not protect this query. The grants section explicitly revokes and restricts other sensitive functions, but contains no REVOKE or service_role-only GRANT for match_feedback_posts; PostgreSQL functions are executable by PUBLIC by default, and the migration additionally grants default function privileges to anon and authenticated. Since the function is in Supabase's public schema, an unauthenticated caller using the public Supabase key can invoke the exposed RPC with a known target project UUID, a valid vector, and p_public_only set to false. The service-role use in embeddings.ts is appropriate for the internal call path but does not restrict direct RPC invocation. Git history shows no later migration changing this function or its privileges, so the disclosure remains present.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The generic BYOK provider accepts a user-supplied HTTP(S) base URL through the authenticated account route, validates it with assertPublicHttpUrl, and stores it for the account owner. That validation is repeated in getUserByok on every use, but it only returns a validated address which is then discarded; resolveAiRuntime carries only the original hostname URL into embedTexts. embeddings.ts constructs `${runtime.baseUrl}/embeddings` and sends it through native fetch with its default redirect behavior, without redirect: \"manual\" and without the pinnedRequest transport used by safeFetch. A malicious project owner can run a public generic provider that passes validation and key probing, enable the feedback surface, select a feedback embedding model, and cause an embedding request by submitting feedback or using similar-post suggestions. That server can reply with a 307 or 308 redirect to an internal HTTP service, preserving the POST body, or exploit a DNS change after getUserByok validates the hostname and before fetch resolves it again. The runtime request includes user-controlled feedback text and is made from the application server, so this is an SSRF primitive even though the response is normally only processed as an embedding response. The current implementation has not been patched: the recent validation added to getUserByok revalidates the hostname but does not pin the subsequent embedding connection or validate redirect hops."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "match_feedback_posts is declared SECURITY DEFINER, owned by postgres, and queries feedback_posts solely by the caller-provided project UUID, embedding, and optional public-only flag. When p_public_only is false, its predicate deliberately includes private and unpublished posts, returning their titles and bodies. The function contains no auth.uid(), membership, board-token, or project-access check. feedback_posts has RLS enabled, but the SECURITY DEFINER function runs with its postgres owner privileges and the migration does not FORCE ROW LEVEL SECURITY, so table RLS does not protect this query. The grants section explicitly revokes and restricts other sensitive functions, but contains no REVOKE or service_role-only GRANT for match_feedback_posts; PostgreSQL functions are executable by PUBLIC by default, and the migration additionally grants default function privileges to anon and authenticated. Since the function is in Supabase's public schema, an unauthenticated caller using the public Supabase key can invoke the exposed RPC with a known target project UUID, a valid vector, and p_public_only set to false. The service-role use in embeddings.ts is appropriate for the internal call path but does not restrict direct RPC invocation. Git history shows no later migration changing this function or its privileges, so the disclosure remains present."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_b7b01eb59d056662"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_31d6bb54019a0a29"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

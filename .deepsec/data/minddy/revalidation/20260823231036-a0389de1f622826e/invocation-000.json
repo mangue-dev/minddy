@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T23:11:35.760Z",
+  "files": [
+    "components/settings/account-data-section.tsx"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_10708531bdf6ea7e",
+      "filePath": "components/settings/account-data-section.tsx",
+      "title": "Account import enables cross-tenant project membership and data modification",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The authenticated POST route accepts a user-supplied JSON file, performs only structural validation, and passes it with the authenticated user ID to importAccountTransfer. The importer uses getServiceClient(), whose documented service-role client bypasses RLS, without a project-access check for imported references. addExistingProjectIds collects project_id values from memberships, issues, views, and pages, queries all matching projects as the service role, and maps each found ID to itself regardless of whether the importer owns or belongs to it. A crafted otherwise-valid transfer document containing a victim project UUID in memberships therefore reaches the final project_members upsert and inserts the attacker as a member; the database's normal owner-only membership-insert RLS policy does not apply to this client. Membership provides can_access_project access, which exposes the victim project and permits the normal member-authorized project operations. The same mapping is used before objectives, categories, issues, pages, page files, comments, and attachments are imported, allowing attacker-controlled rows to target that project; existing issues and pages with IDs in that project are deliberately retained and upserted rather than remapped. The role field is not validated, although setting it to owner does not change projects.owner_id; a regular member entry is already sufficient for the cross-tenant access impact. The route has JWT/MFA authentication, foreign-origin rejection, rate limiting, and file-size checks, but none constrains the imported project IDs to authorized projects. Git history shows the vulnerable implementation was introduced in 7048bb72, and there is no subsequent change to the relevant UI, route, or importer files in the current revision.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The authenticated POST route accepts a user-supplied JSON file, performs only structural validation, and passes it with the authenticated user ID to importAccountTransfer. The importer uses getServiceClient(), whose documented service-role client bypasses RLS, without a project-access check for imported references. addExistingProjectIds collects project_id values from memberships, issues, views, and pages, queries all matching projects as the service role, and maps each found ID to itself regardless of whether the importer owns or belongs to it. A crafted otherwise-valid transfer document containing a victim project UUID in memberships therefore reaches the final project_members upsert and inserts the attacker as a member; the database's normal owner-only membership-insert RLS policy does not apply to this client. Membership provides can_access_project access, which exposes the victim project and permits the normal member-authorized project operations. The same mapping is used before objectives, categories, issues, pages, page files, comments, and attachments are imported, allowing attacker-controlled rows to target that project; existing issues and pages with IDs in that project are deliberately retained and upserted rather than remapped. The role field is not validated, although setting it to owner does not change projects.owner_id; a regular member entry is already sufficient for the cross-tenant access impact. The route has JWT/MFA authentication, foreign-origin rejection, rate limiting, and file-size checks, but none constrains the imported project IDs to authorized projects. Git history shows the vulnerable implementation was introduced in 7048bb72, and there is no subsequent change to the relevant UI, route, or importer files in the current revision."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_10708531bdf6ea7e"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

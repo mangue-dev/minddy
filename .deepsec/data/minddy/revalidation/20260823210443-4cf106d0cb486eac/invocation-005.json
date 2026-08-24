@@ -1,0 +1,61 @@
+{
+  "batchIndex": 5,
+  "label": "initial",
+  "timestamp": "2026-08-23T21:11:53.118Z",
+  "files": [
+    "lib/server/git/webhook-secret.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_7d690875afcda7ff",
+      "filePath": "lib/server/git/webhook-secret.ts",
+      "title": "Legacy global webhook secret remains valid after per-repository rotation",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_efc9fc994e963c69",
+      "filePath": "lib/server/git/webhook-secret.ts",
+      "title": "Concurrent secret initialization can desynchronize the database and GitLab hook",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current code still returns `legacyGitlabWebhookSecret()` from `loadWebhookSecrets()` for every GitLab repository, regardless of whether `own` contains a repository-specific secret. `verifyWebhookToken()` accepts that legacy value after checking `own`, so an old global token remains valid indefinitely while `GITLAB_WEBHOOK_SECRET` is deployed. The GitLab receiver parses the attacker-controlled payload to obtain `project.id`, loads candidates for that ID, and does not have an independent GitLab signature or source-identity check beyond this token. Thus, a maintainer able to view the historic shared token in any old GitLab hook can submit a payload naming a different linked repository ID and pass verification. After acceptance, the route performs state-changing issue, merge-request, activity, and status synchronization; deduplication does not help because the attacker can choose fresh or absent delivery IDs. The attempted remediation only schedules `rotateGitlabWebhookSecret()` after a legacy-authenticated delivery, and `ensureRepoWebhookSecret()` may update the external hook, but neither operation changes the continuing legacy acceptance rule. The route test explicitly asserts that a legacy-secret request is processed and rotated, while there is no condition that retires fallback acceptance once a repository-specific secret exists. Recent history added relay and rename behavior but did not modify this fallback logic.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The race remains in the current `ensureRepoWebhookSecret()` implementation: it reads matching links, returns an existing decrypted secret if present, and otherwise calls `rotateRepoWebhookSecret()` without any lock, transaction, conditional update, or in-process per-repository promise. The schema has only a non-unique index on `(provider, external_repo_id)` and stores the secret directly on each `project_git_links` row, so it supplies no database serialization mechanism for this initialization. Two concurrent first-time callers can both read null encrypted-secret fields, independently generate values, and issue unconditional updates over the same repository's links. Both callers then continue to `ensureGitlabIssuesHook()` with the value they personally generated; the GitLab hook PUT requests are likewise not serialized by repository. If database update B wins but external hook update A finishes last, the hook signs future deliveries with A while `loadWebhookSecrets()` accepts only B, causing legitimate deliveries to receive 401 until another successful hook update. This can arise from concurrent issue-sync activation or linking operations involving the same GitLab repository, including separate project links that intentionally share one hook. The `inFlight` map in `gitlab-app.ts` protects only GitLab access-token refreshes keyed by connection ID and is reached after secret selection, so it does not mitigate this race. Repository-specific secret tests cover sequential rereads and deliberate rotation, but do not exercise concurrent initialization, and recent commits did not add synchronization.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current code still returns `legacyGitlabWebhookSecret()` from `loadWebhookSecrets()` for every GitLab repository, regardless of whether `own` contains a repository-specific secret. `verifyWebhookToken()` accepts that legacy value after checking `own`, so an old global token remains valid indefinitely while `GITLAB_WEBHOOK_SECRET` is deployed. The GitLab receiver parses the attacker-controlled payload to obtain `project.id`, loads candidates for that ID, and does not have an independent GitLab signature or source-identity check beyond this token. Thus, a maintainer able to view the historic shared token in any old GitLab hook can submit a payload naming a different linked repository ID and pass verification. After acceptance, the route performs state-changing issue, merge-request, activity, and status synchronization; deduplication does not help because the attacker can choose fresh or absent delivery IDs. The attempted remediation only schedules `rotateGitlabWebhookSecret()` after a legacy-authenticated delivery, and `ensureRepoWebhookSecret()` may update the external hook, but neither operation changes the continuing legacy acceptance rule. The route test explicitly asserts that a legacy-secret request is processed and rotated, while there is no condition that retires fallback acceptance once a repository-specific secret exists. Recent history added relay and rename behavior but did not modify this fallback logic."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "The race remains in the current `ensureRepoWebhookSecret()` implementation: it reads matching links, returns an existing decrypted secret if present, and otherwise calls `rotateRepoWebhookSecret()` without any lock, transaction, conditional update, or in-process per-repository promise. The schema has only a non-unique index on `(provider, external_repo_id)` and stores the secret directly on each `project_git_links` row, so it supplies no database serialization mechanism for this initialization. Two concurrent first-time callers can both read null encrypted-secret fields, independently generate values, and issue unconditional updates over the same repository's links. Both callers then continue to `ensureGitlabIssuesHook()` with the value they personally generated; the GitLab hook PUT requests are likewise not serialized by repository. If database update B wins but external hook update A finishes last, the hook signs future deliveries with A while `loadWebhookSecrets()` accepts only B, causing legitimate deliveries to receive 401 until another successful hook update. This can arise from concurrent issue-sync activation or linking operations involving the same GitLab repository, including separate project links that intentionally share one hook. The `inFlight` map in `gitlab-app.ts` protects only GitLab access-token refreshes keyed by connection ID and is reached after secret selection, so it does not mitigate this race. Repository-specific secret tests cover sequential rereads and deliberate rotation, but do not exercise concurrent initialization, and recent commits did not add synchronization."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_7d690875afcda7ff"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_efc9fc994e963c69"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

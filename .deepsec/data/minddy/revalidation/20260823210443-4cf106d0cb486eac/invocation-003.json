@@ -1,0 +1,61 @@
+{
+  "batchIndex": 3,
+  "label": "initial",
+  "timestamp": "2026-08-23T21:09:38.146Z",
+  "files": [
+    "lib/server/agent/vm/private-address.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_a5258c8c0ec7d69c",
+      "filePath": "lib/server/agent/vm/private-address.ts",
+      "title": "DNS validation is not pinned to the webfetch connection",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_61979a4d35680492",
+      "filePath": "lib/server/agent/vm/private-address.ts",
+      "title": "Private IPv6 encodings bypass the harness-address classifier",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"In a local job, OpenCode config sets `webfetch` to `ask`, and the supervisor obtains a permission verdict before replying to OpenCode. For a hostname targeting one of the three dynamically selected harness ports, `refineWebfetch` performs `node:dns/promises.lookup`, rejects private results, and otherwise returns `{ reply: \\\"once\\\" }`. The subsequent fetch is performed by OpenCode after that reply; this code passes neither the approved address nor any pinned connection object to OpenCode, so its HTTP client necessarily retains authority to resolve the hostname independently. An attacker controlling a DNS name can therefore return a public address for the guard lookup and change the answer to loopback between that lookup and OpenCode's connection, causing a fetch to the same harness port on `127.0.0.1`. This is security-relevant because the local supervisor explicitly identifies the tool bridge as unauthenticated and the proxy/OpenCode services as sensitive. The port is not a mitigation against the race: it merely narrows the vulnerable destination set to the exact services the guard intends to protect. The repository's `safe-fetch.ts` demonstrates the missing control by validating an address and passing it to `pinnedRequest`, including revalidation on redirects; that mechanism is not used here. Recent commit `e0da16d0` changed prose in this path but did not change this DNS-resolution or connection flow.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The classifier only recursively processes an IPv4-mapped IPv6 value when the embedded IPv4 portion is dotted decimal, via the `^::ffff:(dotted-v4)$` expression. A valid hexadecimal mapped form such as `::ffff:7f00:1` instead reaches the generic IPv6 branch, where it is neither `::`/`::1`, ULA, nor link-local and is incorrectly classified as public. The same gap applies to IPv4-compatible forms such as `::7f00:1` (and the dotted compatible notation described in the finding), which route to the IPv4 loopback address but do not match the narrow checks. For a URL using such a literal and a harness port, `isPrivateHostname` returns false; `refineWebfetch` then invokes `lookup`, and its result is evaluated by the same incomplete `isPrivateAddress` function before allowing the operation. Thus the two-stage guard does not repair the literal-classification bypass, and OpenCode can be authorized to connect to the loopback harness service. The existing tests cover only `::ffff:127.0.0.1`, not hexadecimal mapped or IPv4-compatible forms. `safe-fetch.ts` contains a materially more complete IPv6 parser that handles hexadecimal mapped and compatible IPv4, NAT64, and 6to4 encodings, but `private-address.ts` does not reuse it. Git history shows no functional correction after the implementation commit; the latest change is translation-only.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "In a local job, OpenCode config sets `webfetch` to `ask`, and the supervisor obtains a permission verdict before replying to OpenCode. For a hostname targeting one of the three dynamically selected harness ports, `refineWebfetch` performs `node:dns/promises.lookup`, rejects private results, and otherwise returns `{ reply: \"once\" }`. The subsequent fetch is performed by OpenCode after that reply; this code passes neither the approved address nor any pinned connection object to OpenCode, so its HTTP client necessarily retains authority to resolve the hostname independently. An attacker controlling a DNS name can therefore return a public address for the guard lookup and change the answer to loopback between that lookup and OpenCode's connection, causing a fetch to the same harness port on `127.0.0.1`. This is security-relevant because the local supervisor explicitly identifies the tool bridge as unauthenticated and the proxy/OpenCode services as sensitive. The port is not a mitigation against the race: it merely narrows the vulnerable destination set to the exact services the guard intends to protect. The repository's `safe-fetch.ts` demonstrates the missing control by validating an address and passing it to `pinnedRequest`, including revalidation on redirects; that mechanism is not used here. Recent commit `e0da16d0` changed prose in this path but did not change this DNS-resolution or connection flow."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "The classifier only recursively processes an IPv4-mapped IPv6 value when the embedded IPv4 portion is dotted decimal, via the `^::ffff:(dotted-v4)$` expression. A valid hexadecimal mapped form such as `::ffff:7f00:1` instead reaches the generic IPv6 branch, where it is neither `::`/`::1`, ULA, nor link-local and is incorrectly classified as public. The same gap applies to IPv4-compatible forms such as `::7f00:1` (and the dotted compatible notation described in the finding), which route to the IPv4 loopback address but do not match the narrow checks. For a URL using such a literal and a harness port, `isPrivateHostname` returns false; `refineWebfetch` then invokes `lookup`, and its result is evaluated by the same incomplete `isPrivateAddress` function before allowing the operation. Thus the two-stage guard does not repair the literal-classification bypass, and OpenCode can be authorized to connect to the loopback harness service. The existing tests cover only `::ffff:127.0.0.1`, not hexadecimal mapped or IPv4-compatible forms. `safe-fetch.ts` contains a materially more complete IPv6 parser that handles hexadecimal mapped and compatible IPv4, NAT64, and 6to4 encodings, but `private-address.ts` does not reuse it. Git history shows no functional correction after the implementation commit; the latest change is translation-only."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_a5258c8c0ec7d69c"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_61979a4d35680492"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T18:56:53.229Z",
+  "files": [
+    "lib/server/agent/diagnostics.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_9e9e28c7d79e0c6b",
+      "filePath": "lib/server/agent/diagnostics.ts",
+      "title": "Repository-controlled diagnostics are injected into the privileged agent context",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current code still passes repository-controlled diagnostic text directly into the model-visible `followUp` string. `typeErrorsForTurn` runs `tsc` in the repository and `parseTypeErrors` retains both the complete error line and any indented elaboration; neither path escapes, structures, or labels that text as untrusted. `testFailuresForTurn` likewise runs the repository test command, while `formatTestFailures` retains test titles and bodies and, when parsing is incomplete, returns the raw 3,000-character output tail. `wrapValidateChanges` attaches those blocks to the tool result, and `tool-bridge.ts` renders the follow-up as ordinary text immediately after the tool result, so there is no trust boundary comparable to the explicit repository-instructions boundary. A malicious contributor can make a TypeScript literal/type diagnostic or a failing test print instructions such as asking the agent to run a shell command that reads a credential file and posts it to an attacker-controlled endpoint. The output caps only limit volume and do not remove that capability-bearing content. This is materially exploitable in local-repository mode: the direct `read` tool rejects secret files, but every `bash` command is approved unless it matches the narrow git-focused `checkCommand` rules, so `cat .env` and outbound `curl` are allowed; the code explicitly acknowledges that this bypasses the read guard. The recent `5c408da0` change moved validation to explicit `validate_changes` but retained the same raw diagnostic-to-follow-up data flow, so it did not fix the issue. Cloud-mode redaction protects registered forge tokens in output, but it neither classifies diagnostics as untrusted nor prevents the model from being induced to execute other permitted commands.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current code still passes repository-controlled diagnostic text directly into the model-visible `followUp` string. `typeErrorsForTurn` runs `tsc` in the repository and `parseTypeErrors` retains both the complete error line and any indented elaboration; neither path escapes, structures, or labels that text as untrusted. `testFailuresForTurn` likewise runs the repository test command, while `formatTestFailures` retains test titles and bodies and, when parsing is incomplete, returns the raw 3,000-character output tail. `wrapValidateChanges` attaches those blocks to the tool result, and `tool-bridge.ts` renders the follow-up as ordinary text immediately after the tool result, so there is no trust boundary comparable to the explicit repository-instructions boundary. A malicious contributor can make a TypeScript literal/type diagnostic or a failing test print instructions such as asking the agent to run a shell command that reads a credential file and posts it to an attacker-controlled endpoint. The output caps only limit volume and do not remove that capability-bearing content. This is materially exploitable in local-repository mode: the direct `read` tool rejects secret files, but every `bash` command is approved unless it matches the narrow git-focused `checkCommand` rules, so `cat .env` and outbound `curl` are allowed; the code explicitly acknowledges that this bypasses the read guard. The recent `5c408da0` change moved validation to explicit `validate_changes` but retained the same raw diagnostic-to-follow-up data flow, so it did not fix the issue. Cloud-mode redaction protects registered forge tokens in output, but it neither classifies diagnostics as untrusted nor prevents the model from being induced to execute other permitted commands."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_9e9e28c7d79e0c6b"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

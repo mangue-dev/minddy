@@ -1,0 +1,16 @@
+{
+  "tags": [
+    "docker",
+    "github-actions",
+    "nextjs",
+    "node",
+    "react"
+  ],
+  "sentinels": [
+    "Dockerfile",
+    "next.config.mjs",
+    "package.json"
+  ],
+  "detectedAt": "2026-08-23T16:16:47.373Z",
+  "rootPath": "/private/tmp/minddy-deepsec-5930aa2cdec5"
+}

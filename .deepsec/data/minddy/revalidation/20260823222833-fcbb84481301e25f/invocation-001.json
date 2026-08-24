@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:30:58.863Z",
+  "files": [
+    "deploy/self-hosted/agent-runner.mjs"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_5edd0fa60566517b",
+      "filePath": "deploy/self-hosted/agent-runner.mjs",
+      "title": "LLM relay follows unvalidated redirects and re-resolves user-controlled endpoints",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current runner stores the user-derived generic provider URL after `completionUrl` checks only URL syntax and the HTTP(S) scheme, then calls Node's bare `fetch(relay.url)` with its default redirect behavior. The account BYOK route does call `assertPublicHttpUrl` at registration, and `getUserByok` repeats that check before each run, but those checks only validate a DNS result at that earlier point; neither passes a pinned address to the runner. A malicious public provider can therefore pass validation and then return a 307/308 redirect from its `/chat/completions` endpoint to an internal address, which preserves the relay's POST request and is followed without any target validation. DNS rebinding also works because the runner independently resolves the hostname when `fetch` connects, after the application's validation has completed. The self-hosted Compose configurations attach both `agent-runner` and `minddy` to `private` and `agent_egress`, so the runner can reach internal service names and network addresses unavailable to external callers. The relay streams the upstream response back to the sandbox, making this more than a blind request primitive, although response usefulness depends on the target's response format. The registration probe is also a bare `fetch` and follows redirects, so it does not reliably prevent configuration of such an endpoint. `safe-fetch.ts` has the necessary redirect-by-redirect validation and pinned-request mechanism, but the standalone runner neither imports nor implements either protection. Git history shows the vulnerable relay was introduced in commit `18465f29`, with no subsequent change to this file that addresses it.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current runner stores the user-derived generic provider URL after `completionUrl` checks only URL syntax and the HTTP(S) scheme, then calls Node's bare `fetch(relay.url)` with its default redirect behavior. The account BYOK route does call `assertPublicHttpUrl` at registration, and `getUserByok` repeats that check before each run, but those checks only validate a DNS result at that earlier point; neither passes a pinned address to the runner. A malicious public provider can therefore pass validation and then return a 307/308 redirect from its `/chat/completions` endpoint to an internal address, which preserves the relay's POST request and is followed without any target validation. DNS rebinding also works because the runner independently resolves the hostname when `fetch` connects, after the application's validation has completed. The self-hosted Compose configurations attach both `agent-runner` and `minddy` to `private` and `agent_egress`, so the runner can reach internal service names and network addresses unavailable to external callers. The relay streams the upstream response back to the sandbox, making this more than a blind request primitive, although response usefulness depends on the target's response format. The registration probe is also a bare `fetch` and follows redirects, so it does not reliably prevent configuration of such an endpoint. `safe-fetch.ts` has the necessary redirect-by-redirect validation and pinned-request mechanism, but the standalone runner neither imports nor implements either protection. Git history shows the vulnerable relay was introduced in commit `18465f29`, with no subsequent change to this file that addresses it."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_5edd0fa60566517b"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

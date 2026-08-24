@@ -1,0 +1,45 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T23:44:49.959Z",
+  "files": [
+    ".github/workflows/promote-production.yml"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_e3443f82ba732e0d",
+      "filePath": ".github/workflows/promote-production.yml",
+      "title": "Production promotion executes a mutable GitHub Action tag",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current workflow fully retains `uses: actions/checkout@v5` as the first step of the privileged `promote` job. `v5` is a movable Git tag, not an immutable full commit SHA, so GitHub resolves the action implementation at execution time from a mutable reference. The workflow-level permissions grant `contents: write`, and the `promote` job does not narrow them; therefore its automatic GitHub token can modify repository contents and the `production` branch. The job also targets the `cloud-production` environment, so any environment secrets approved for that job are available to code executing in the job. A compromised or retargeted upstream `actions/checkout` v5 action would execute before the workflow validates `inputs.sha`, successful CI, ancestry, or deployment status. `persist-credentials: false` only prevents checkout from leaving credentials in local Git configuration; it does not prevent the action itself from receiving or accessing its default token during execution. Git history shows later changes added review inputs, a private-test exception, and authenticated fetches, but none replaced the mutable checkout tag with a commit SHA. Consequently, an upstream action compromise provides a concrete pre-validation supply-chain path to exfiltrate available credentials or use the write-scoped token to alter the repository.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current workflow fully retains `uses: actions/checkout@v5` as the first step of the privileged `promote` job. `v5` is a movable Git tag, not an immutable full commit SHA, so GitHub resolves the action implementation at execution time from a mutable reference. The workflow-level permissions grant `contents: write`, and the `promote` job does not narrow them; therefore its automatic GitHub token can modify repository contents and the `production` branch. The job also targets the `cloud-production` environment, so any environment secrets approved for that job are available to code executing in the job. A compromised or retargeted upstream `actions/checkout` v5 action would execute before the workflow validates `inputs.sha`, successful CI, ancestry, or deployment status. `persist-credentials: false` only prevents checkout from leaving credentials in local Git configuration; it does not prevent the action itself from receiving or accessing its default token during execution. Git history shows later changes added review inputs, a private-test exception, and authenticated fetches, but none replaced the mutable checkout tag with a commit SHA. Consequently, an upstream action compromise provides a concrete pre-validation supply-chain path to exfiltrate available credentials or use the write-scoped token to alter the repository."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_e3443f82ba732e0d"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

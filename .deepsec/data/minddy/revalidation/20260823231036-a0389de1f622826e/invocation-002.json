@@ -1,0 +1,45 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T23:13:43.366Z",
+  "files": [
+    "lib/server/agent/vm/opencode-events.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_de5bfb20155e3c09",
+      "filePath": "lib/server/agent/vm/opencode-events.ts",
+      "title": "Model-controlled shell commands are automatically authorized on local machines",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current event translator copies OpenCode's `metadata.command` into `PermissionAsk` for every `permission.asked` event. The supervisor immediately calls `decidePermission` and replies `once` whenever `checkCommand` returns allowed; there is no user-facing approval or command allowlist. `checkCommand` explicitly focuses on destructive Git operations, Git configuration, `.git` path tokens, and pushes, while non-Git shell commands such as `find`, `cat`, `node`, `python`, `curl`, and shell redirections remain allowed. In local mode, `localHost` executes the approved string as `sh -c` with the desktop process environment and the user's local filesystem access, without an OS sandbox. The local configuration intentionally sets `external_directory` to `ask`, and `decidePermission` intentionally answers `once`; moreover, the code documentation records that many outside-directory shell operations emit only `bash` and bypass that permission entirely. An attacker who can cause a model to read repository-controlled content can instruct it to run a permitted command such as reading a home-directory credential file and sending its contents to an attacker-controlled endpoint; this path uses `bash`, so the `webfetch` local-address protections do not apply. Disabling repository OpenCode plugins and restricting direct read-tool access to `.env` files do not mitigate arbitrary shell reads. Git history confirms this behavior is current and deliberate: the local-mode changes document the command guard as an anti-accident measure rather than a security perimeter, not as a fix for model-controlled command execution.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current event translator copies OpenCode's `metadata.command` into `PermissionAsk` for every `permission.asked` event. The supervisor immediately calls `decidePermission` and replies `once` whenever `checkCommand` returns allowed; there is no user-facing approval or command allowlist. `checkCommand` explicitly focuses on destructive Git operations, Git configuration, `.git` path tokens, and pushes, while non-Git shell commands such as `find`, `cat`, `node`, `python`, `curl`, and shell redirections remain allowed. In local mode, `localHost` executes the approved string as `sh -c` with the desktop process environment and the user's local filesystem access, without an OS sandbox. The local configuration intentionally sets `external_directory` to `ask`, and `decidePermission` intentionally answers `once`; moreover, the code documentation records that many outside-directory shell operations emit only `bash` and bypass that permission entirely. An attacker who can cause a model to read repository-controlled content can instruct it to run a permitted command such as reading a home-directory credential file and sending its contents to an attacker-controlled endpoint; this path uses `bash`, so the `webfetch` local-address protections do not apply. Disabling repository OpenCode plugins and restricting direct read-tool access to `.env` files do not mitigate arbitrary shell reads. Git history confirms this behavior is current and deliberate: the local-mode changes document the command guard as an anti-accident measure rather than a security perimeter, not as a fix for model-controlled command execution."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_de5bfb20155e3c09"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,94 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-24T00:37:02.128Z",
+  "files": [
+    "app/api/account/ai-keys/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_7a48289c6ff6810f",
+      "filePath": "app/api/account/ai-keys/route.ts",
+      "title": "BYOK validation follows unvalidated redirects to internal services",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_114fa71b80f32505",
+      "filePath": "app/api/account/ai-keys/route.ts",
+      "title": "Racy provider update bypasses the local-endpoint server-use restriction",
+      "alias": "F2"
+    },
+    {
+      "findingId": "finding_e1b4eb05453e89fe",
+      "filePath": "app/api/account/ai-keys/route.ts",
+      "title": "Unbounded provider probes allow authenticated resource exhaustion",
+      "alias": "F3"
+    },
+    {
+      "findingId": "finding_67e34759a9eb9694",
+      "filePath": "app/api/account/ai-keys/route.ts",
+      "title": "BYOK replacement is not atomic and can lose or duplicate active configurations",
+      "alias": "F4"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"adjustedSeverity\": \"HIGH\",\n    \"reasoning\": \"POST authenticates the caller and validates a generic base URL with assertPublicHttpUrl before it invokes probeByokKey. That validation resolves and rejects private initial targets, but probeByokKey subsequently uses native fetch with its default redirect mode. Native fetch follows a redirect target without passing it through assertPublicHttpUrl and without using safe-fetch's pinned connection primitive. An authenticated attacker can supply a publicly resolvable generic endpoint whose /models response redirects to a private or link-local URL, causing the application server to issue the redirected GET request. The response body is not returned to the attacker, so this is primarily blind SSRF rather than demonstrated direct metadata exfiltration, which makes HIGH more appropriate than CRITICAL. The current code and the historical validation implementation both retain this direct-fetch behavior; the existing auth, MFA, and foreign-origin checks only restrict who can initiate it, not the outbound request.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"PATCH reads a provider row to decide whether requested surfaces are permitted, then performs an unqualified update of every user_ai_keys row for that user. A caller can start PATCH while a cloud provider is selected, allow its provider read to complete, then create a local_openai or ollama key with an internal base URL before PATCH reaches its update. The update can consequently assign assistant or another non-agent surface to the newly inserted local-provider row despite the local-provider check having passed for the prior row. getUserByok deliberately skips public-address validation for local providers, and resolveAiRuntime has no equivalent local-provider refusal before fetchAiChat directly fetches the resolved base URL. The assistant route invokes that resolver for the authenticated user's assistant surface, establishing a reachable server-side request path to the attacker-selected internal endpoint. In fact, POST also leaves enabled_surfaces to the database default, which includes all surfaces, so the intended local-only invariant lacks defense in depth even apart from the race. The local-endpoint feature was added in commit 4d04e1bc, but the current HEAD still contains the time-of-check/time-of-use split and the runtime bypass.\"\n  },\n  {\n    \"findingId\": \"F3\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The POST handler has no call to checkSessionRateLimit, rateLimitRefusal, or another route-local throttling helper. This contrasts with other costly authenticated routes, including assistant chat, transcription, imports, and account deletion, which explicitly apply the session limiter. An authenticated user can repeatedly submit generic public URLs controlled by them that hold the /models probe open until probeByokKey's eight-second AbortSignal timeout. Each request also performs DNS validation before opening the unbounded native-fetch probe, and there is no per-user or global in-process concurrency gate in this route. Authentication, MFA enforcement, and foreign-origin rejection do not constrain repeated same-origin or non-browser requests by a valid account. The encryption step is ordinary AES-GCM rather than the main demonstrated cost, but the missing limit still permits concurrent outbound-connection and request-worker exhaustion. The current proxy does not impose an API-wide rate limiter that would mitigate this route.\"\n  },\n  {\n    \"findingId\": \"F4\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"POST performs the replacement as separate service-role operations: it reads the existing provider, deletes rows for other providers, and only then upserts the requested provider. None of those operations is wrapped in a transaction, guarded by a per-user lock, or checked as one atomic compare-and-swap. If the upsert fails after the delete, the previously working provider configuration has already been removed. Two concurrent requests for distinct providers can both execute their deletes while no replacement row exists and subsequently each upsert its own provider row. The schema only has a unique index on (user_id, provider), so it permits those two rows for the same user and does not enforce the claimed one-active-provider invariant. Downstream reads order by created_at while PATCH updates all rows, making the resulting state inconsistent rather than safely self-correcting. Git history shows the same delete-before-upsert pattern remains in the current route.\"\n  }\n]\n```",
+      "parsedCount": 4
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "adjustedSeverity": "HIGH",
+      "reasoning": "POST authenticates the caller and validates a generic base URL with assertPublicHttpUrl before it invokes probeByokKey. That validation resolves and rejects private initial targets, but probeByokKey subsequently uses native fetch with its default redirect mode. Native fetch follows a redirect target without passing it through assertPublicHttpUrl and without using safe-fetch's pinned connection primitive. An authenticated attacker can supply a publicly resolvable generic endpoint whose /models response redirects to a private or link-local URL, causing the application server to issue the redirected GET request. The response body is not returned to the attacker, so this is primarily blind SSRF rather than demonstrated direct metadata exfiltration, which makes HIGH more appropriate than CRITICAL. The current code and the historical validation implementation both retain this direct-fetch behavior; the existing auth, MFA, and foreign-origin checks only restrict who can initiate it, not the outbound request."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "PATCH reads a provider row to decide whether requested surfaces are permitted, then performs an unqualified update of every user_ai_keys row for that user. A caller can start PATCH while a cloud provider is selected, allow its provider read to complete, then create a local_openai or ollama key with an internal base URL before PATCH reaches its update. The update can consequently assign assistant or another non-agent surface to the newly inserted local-provider row despite the local-provider check having passed for the prior row. getUserByok deliberately skips public-address validation for local providers, and resolveAiRuntime has no equivalent local-provider refusal before fetchAiChat directly fetches the resolved base URL. The assistant route invokes that resolver for the authenticated user's assistant surface, establishing a reachable server-side request path to the attacker-selected internal endpoint. In fact, POST also leaves enabled_surfaces to the database default, which includes all surfaces, so the intended local-only invariant lacks defense in depth even apart from the race. The local-endpoint feature was added in commit 4d04e1bc, but the current HEAD still contains the time-of-check/time-of-use split and the runtime bypass."
+    },
+    {
+      "findingId": "F3",
+      "verdict": "true-positive",
+      "reasoning": "The POST handler has no call to checkSessionRateLimit, rateLimitRefusal, or another route-local throttling helper. This contrasts with other costly authenticated routes, including assistant chat, transcription, imports, and account deletion, which explicitly apply the session limiter. An authenticated user can repeatedly submit generic public URLs controlled by them that hold the /models probe open until probeByokKey's eight-second AbortSignal timeout. Each request also performs DNS validation before opening the unbounded native-fetch probe, and there is no per-user or global in-process concurrency gate in this route. Authentication, MFA enforcement, and foreign-origin rejection do not constrain repeated same-origin or non-browser requests by a valid account. The encryption step is ordinary AES-GCM rather than the main demonstrated cost, but the missing limit still permits concurrent outbound-connection and request-worker exhaustion. The current proxy does not impose an API-wide rate limiter that would mitigate this route."
+    },
+    {
+      "findingId": "F4",
+      "verdict": "true-positive",
+      "reasoning": "POST performs the replacement as separate service-role operations: it reads the existing provider, deletes rows for other providers, and only then upserts the requested provider. None of those operations is wrapped in a transaction, guarded by a per-user lock, or checked as one atomic compare-and-swap. If the upsert fails after the delete, the previously working provider configuration has already been removed. Two concurrent requests for distinct providers can both execute their deletes while no replacement row exists and subsequently each upsert its own provider row. The schema only has a unique index on (user_id, provider), so it permits those two rows for the same user and does not enforce the claimed one-active-provider invariant. Downstream reads order by created_at while PATCH updates all rows, making the resulting state inconsistent rather than safely self-correcting. Git history shows the same delete-before-upsert pattern remains in the current route."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_7a48289c6ff6810f"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_114fa71b80f32505"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F3",
+        "resolvedFindingId": "finding_e1b4eb05453e89fe"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F4",
+        "resolvedFindingId": "finding_67e34759a9eb9694"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 4,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T20:29:33.006Z",
+  "files": [
+    "lib/server/agent/launch.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_6d5bd37ba4b7c19c",
+      "filePath": "lib/server/agent/launch.ts",
+      "title": "Issue-anchored runs can execute attacker-controlled ticket context on a local machine",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The issue-launch route requires an authenticated user who can read the issue, but it accepts `localExec: true` and calls `launchAgentRun` with `triggeredBy: \\\"button\\\"` and the issue ID. `localExecRequested` and the independently repeated `createRun`, desktop-turn, and lease checks all delegate to `localRunScope`, which only excludes pull-request anchors, routines, chains, and non-button/chat triggers; an issue anchor is explicitly permitted. The local-turn route then prepares the job and issues a local execution lease for the run created by the launching user, so no cross-user run-claim bypass is needed for the victim's own desktop to execute it. `loadIssueContext` reads the issue title, description, and plan, as well as attachment metadata, and `buildAgentContextMessage` injects them into the initial model context; the builder itself states that an issue may originate from an anonymously submitted public-feedback post. Promotion preserves the feedback post title and body into a newly created issue's title and description, providing a concrete anonymous-content-to-issue path; a project collaborator can likewise supply or alter issue content. The prompt's delimiters and statement that ticket text is data are instructional text rather than an enforced provenance boundary, while local `bash` permissions allow commands unless they match the limited command guard's prohibited Git/destructive patterns. The local prompt also acknowledges that the whole disk is reachable, so a successful prompt injection can cause commands to run on the launcher's workstation without a per-command user approval. Git history shows the current local-scope mechanism was added as a third-party-content safeguard, but its data model omits issue provenance and no subsequent change adds that missing exclusion.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The issue-launch route requires an authenticated user who can read the issue, but it accepts `localExec: true` and calls `launchAgentRun` with `triggeredBy: \"button\"` and the issue ID. `localExecRequested` and the independently repeated `createRun`, desktop-turn, and lease checks all delegate to `localRunScope`, which only excludes pull-request anchors, routines, chains, and non-button/chat triggers; an issue anchor is explicitly permitted. The local-turn route then prepares the job and issues a local execution lease for the run created by the launching user, so no cross-user run-claim bypass is needed for the victim's own desktop to execute it. `loadIssueContext` reads the issue title, description, and plan, as well as attachment metadata, and `buildAgentContextMessage` injects them into the initial model context; the builder itself states that an issue may originate from an anonymously submitted public-feedback post. Promotion preserves the feedback post title and body into a newly created issue's title and description, providing a concrete anonymous-content-to-issue path; a project collaborator can likewise supply or alter issue content. The prompt's delimiters and statement that ticket text is data are instructional text rather than an enforced provenance boundary, while local `bash` permissions allow commands unless they match the limited command guard's prohibited Git/destructive patterns. The local prompt also acknowledges that the whole disk is reachable, so a successful prompt injection can cause commands to run on the launcher's workstation without a per-command user approval. Git history shows the current local-scope mechanism was added as a third-party-content safeguard, but its data model omits issue provenance and no subsequent change adds that missing exclusion."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_6d5bd37ba4b7c19c"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

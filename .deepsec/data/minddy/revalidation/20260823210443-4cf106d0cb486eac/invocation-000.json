@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T21:05:48.106Z",
+  "files": [
+    "components/settings/byok-connect-panel.tsx"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_396c11c29aa82ea4",
+      "filePath": "components/settings/byok-connect-panel.tsx",
+      "title": "Generic BYOK endpoint enables SSRF through unpinned redirect-following requests",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The generic provider is an authenticated user-controlled cloud endpoint: the client submits any syntactically valid http(s) base URL, and the POST route accepts it after `assertPublicHttpUrl(raw)`. That helper resolves and rejects private addresses, but its returned validated address is discarded; it does not constrain the later connection. The route immediately passes the normalized generic URL to `probeByokKey`, which uses native `fetch()` on `${baseUrl}/models` with the default redirect behavior. An attacker can therefore host a publicly resolvable generic endpoint whose `/models` response redirects to a private or link-local target, causing the application server to follow that redirect without revalidation or address pinning. DNS rebinding between `assertPublicHttpUrl` and native `fetch()` is likewise possible, including on the later per-use check in `getUserByok`, because that check also discards the validated address. The same unpinned native fetch is reachable through the authenticated `/api/agent/models` route: model catalog resolution loads the saved generic URL and `listOpenAICompat` requests its `/models` endpoint. Authentication, MFA, and foreign-origin rejection restrict this to an authenticated account owner, but do not prevent that user from selecting their own malicious generic provider URL. `safeFetch` and `pinnedRequest` implement the required redirect-by-redirect validation and pinned connection behavior, yet neither is used in these BYOK probe or catalog calls. Git history shows the latest refresh commit only translated surrounding prose and retained the native fetches, so this has not been fixed.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The generic provider is an authenticated user-controlled cloud endpoint: the client submits any syntactically valid http(s) base URL, and the POST route accepts it after `assertPublicHttpUrl(raw)`. That helper resolves and rejects private addresses, but its returned validated address is discarded; it does not constrain the later connection. The route immediately passes the normalized generic URL to `probeByokKey`, which uses native `fetch()` on `${baseUrl}/models` with the default redirect behavior. An attacker can therefore host a publicly resolvable generic endpoint whose `/models` response redirects to a private or link-local target, causing the application server to follow that redirect without revalidation or address pinning. DNS rebinding between `assertPublicHttpUrl` and native `fetch()` is likewise possible, including on the later per-use check in `getUserByok`, because that check also discards the validated address. The same unpinned native fetch is reachable through the authenticated `/api/agent/models` route: model catalog resolution loads the saved generic URL and `listOpenAICompat` requests its `/models` endpoint. Authentication, MFA, and foreign-origin rejection restrict this to an authenticated account owner, but do not prevent that user from selecting their own malicious generic provider URL. `safeFetch` and `pinnedRequest` implement the required redirect-by-redirect validation and pinned connection behavior, yet neither is used in these BYOK probe or catalog calls. Git history shows the latest refresh commit only translated surrounding prose and retained the native fetches, so this has not been fixed."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_396c11c29aa82ea4"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

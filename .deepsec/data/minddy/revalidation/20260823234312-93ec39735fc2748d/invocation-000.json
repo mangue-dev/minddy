@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T23:43:35.943Z",
+  "files": [
+    ".github/workflows/dco.yml"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_4ff663c39f7684ed",
+      "filePath": ".github/workflows/dco.yml",
+      "title": "Checkout action is referenced by a mutable major-version tag",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The complete DCO workflow currently references `actions/checkout@v5` at line 20, which is a mutable tag rather than an immutable commit object. The workflow runs for pull request events and invokes the third-party action before its own sign-off verification script, so a changed upstream `v5` tag would execute attacker-controlled code on the GitHub-hosted runner. The workflow-level `contents: read` permission gives the job a repository-scoped read token, and `persist-credentials: false` only prevents checkout from storing that credential in the local Git configuration; it does not prevent a malicious action from accessing the runtime token or checked-out source. The action could therefore read and exfiltrate repository contents and use its granted read API access, particularly impacting a private repository. No subsequent validation in the shell step constrains code already executed by the action, and the quoted environment-variable handling only mitigates shell injection in that later step. Git history shows the workflow was introduced using `actions/checkout@v5` and the later Dependabot change did not alter this reference, so the issue has not been fixed. This is an upstream-action supply-chain risk contingent on compromise or unauthorized mutation of the referenced action tag, but that is precisely what immutable SHA pinning is intended to eliminate.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The complete DCO workflow currently references `actions/checkout@v5` at line 20, which is a mutable tag rather than an immutable commit object. The workflow runs for pull request events and invokes the third-party action before its own sign-off verification script, so a changed upstream `v5` tag would execute attacker-controlled code on the GitHub-hosted runner. The workflow-level `contents: read` permission gives the job a repository-scoped read token, and `persist-credentials: false` only prevents checkout from storing that credential in the local Git configuration; it does not prevent a malicious action from accessing the runtime token or checked-out source. The action could therefore read and exfiltrate repository contents and use its granted read API access, particularly impacting a private repository. No subsequent validation in the shell step constrains code already executed by the action, and the quoted environment-variable handling only mitigates shell injection in that later step. Git history shows the workflow was introduced using `actions/checkout@v5` and the later Dependabot change did not alter this reference, so the issue has not been fixed. This is an upstream-action supply-chain risk contingent on compromise or unauthorized mutation of the referenced action tag, but that is precisely what immutable SHA pinning is intended to eliminate."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_4ff663c39f7684ed"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

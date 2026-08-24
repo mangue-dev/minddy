@@ -1,0 +1,45 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T17:00:48.572Z",
+  "files": [
+    "lib/server/agent/repo-access.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_620e682305a26136",
+      "filePath": "lib/server/agent/repo-access.ts",
+      "title": "GitLab account-wide API token is exposed to the untrusted agent sandbox",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current GitLab branch of targetFromLink ignores its RepoTokenAccess argument and obtains the connection-wide OAuth access token through provider.getGitlabAccessToken(connectionId). It embeds that raw token in authUrl as https://oauth2:<token>@gitlab.com/<repo>.git, and cloneRepo/clonePullRequest pass that URL directly to git clone, which persists it as remote.origin.url in the sandbox checkout's .git/config. GITLAB_OAUTH_SCOPES is explicitly api, and gitlab-app.ts documents that this grants account-wide read/write API access and that GitLab OAuth tokens cannot be down-scoped to the linked repository. The GitHub path added by commit 4e655245 scopes both the repository and contents permission according to repo-read/repo-write, but that change intentionally left GitLab with the same broad OAuth token for every profile. The sandbox command permission path calls checkCommand, whose git config handling deliberately permits reads, including git config --get remote.origin.url; its .git path check does not apply because that path is not an argument. A shell command can combine that allowed read with an allowed outbound request, for example through command substitution, and the guard is documented as an anti-accident control rather than a security perimeter. buildAgentNetworkPolicy uses a catch-all allow entry, so arbitrary external egress is available from the VM. SecretRedactor only removes the token from tool output and persisted events after execution; it cannot prevent a command from sending the value to an attacker-controlled endpoint. Thus a malicious repository or fork prompt injection processed by an agent run can exfiltrate a still-valid GitLab api token and use it against other projects accessible to the linking account.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current GitLab branch of targetFromLink ignores its RepoTokenAccess argument and obtains the connection-wide OAuth access token through provider.getGitlabAccessToken(connectionId). It embeds that raw token in authUrl as https://oauth2:<token>@gitlab.com/<repo>.git, and cloneRepo/clonePullRequest pass that URL directly to git clone, which persists it as remote.origin.url in the sandbox checkout's .git/config. GITLAB_OAUTH_SCOPES is explicitly api, and gitlab-app.ts documents that this grants account-wide read/write API access and that GitLab OAuth tokens cannot be down-scoped to the linked repository. The GitHub path added by commit 4e655245 scopes both the repository and contents permission according to repo-read/repo-write, but that change intentionally left GitLab with the same broad OAuth token for every profile. The sandbox command permission path calls checkCommand, whose git config handling deliberately permits reads, including git config --get remote.origin.url; its .git path check does not apply because that path is not an argument. A shell command can combine that allowed read with an allowed outbound request, for example through command substitution, and the guard is documented as an anti-accident control rather than a security perimeter. buildAgentNetworkPolicy uses a catch-all allow entry, so arbitrary external egress is available from the VM. SecretRedactor only removes the token from tool output and persisted events after execution; it cannot prevent a command from sending the value to an attacker-controlled endpoint. Thus a malicious repository or fork prompt injection processed by an agent run can exfiltrate a still-valid GitLab api token and use it against other projects accessible to the linking account."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_620e682305a26136"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

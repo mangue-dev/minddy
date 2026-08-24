@@ -1,0 +1,45 @@
+{
+  "batchIndex": 4,
+  "label": "initial",
+  "timestamp": "2026-08-23T20:33:19.918Z",
+  "files": [
+    "components/auth/reset-password-form.tsx"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_d1adb0f0e806abc3",
+      "filePath": "components/auth/reset-password-form.tsx",
+      "title": "MFA requirement for password resets is enforced only in the client",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The reset form does gate its rendering on `needsMfaChallenge()`, but this is only React state derived from the browser-side Supabase client's AAL query. Its submit path calls `getSupabase().auth.updateUser({ password })` directly, with no application route handler, signed-claim check, or server-side authorization decision between the recovery session and GoTrue's password-update API. The recovery flow intentionally verifies the email OTP and creates that session in `/auth/confirm/complete`; a recovery session is therefore sufficient to authenticate the direct update request. The proxy and `getAuthedUser` do enforce the signed `mfa_enabled`/AAL condition for application routes, but neither mediates requests made directly to Supabase Auth. The only explicit AAL1 exception in the application is the recovery-code endpoint, and it does not protect this separate Auth API operation. `supabase/config.toml` contains no Auth-side policy requiring AAL2 for password updates, and the repository's MFA flag is an application-level JWT claim rather than a GoTrue authorization rule. An attacker possessing a valid password-recovery link for an MFA-enabled account can complete the link flow, retain the resulting AAL1 session, and invoke the same authenticated password-update operation without completing TOTP or supplying a recovery code. Git history shows the reset component was introduced in commit `3f200ebb`; the current later refresh only changes surrounding application source/configuration and does not add a server-side password-reset authorization boundary. This defeats the intended protection against a compromised mailbox taking over an MFA-protected account.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The reset form does gate its rendering on `needsMfaChallenge()`, but this is only React state derived from the browser-side Supabase client's AAL query. Its submit path calls `getSupabase().auth.updateUser({ password })` directly, with no application route handler, signed-claim check, or server-side authorization decision between the recovery session and GoTrue's password-update API. The recovery flow intentionally verifies the email OTP and creates that session in `/auth/confirm/complete`; a recovery session is therefore sufficient to authenticate the direct update request. The proxy and `getAuthedUser` do enforce the signed `mfa_enabled`/AAL condition for application routes, but neither mediates requests made directly to Supabase Auth. The only explicit AAL1 exception in the application is the recovery-code endpoint, and it does not protect this separate Auth API operation. `supabase/config.toml` contains no Auth-side policy requiring AAL2 for password updates, and the repository's MFA flag is an application-level JWT claim rather than a GoTrue authorization rule. An attacker possessing a valid password-recovery link for an MFA-enabled account can complete the link flow, retain the resulting AAL1 session, and invoke the same authenticated password-update operation without completing TOTP or supplying a recovery code. Git history shows the reset component was introduced in commit `3f200ebb`; the current later refresh only changes surrounding application source/configuration and does not add a server-side password-reset authorization boundary. This defeats the intended protection against a compromised mailbox taking over an MFA-protected account."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_d1adb0f0e806abc3"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

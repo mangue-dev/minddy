@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T23:12:39.023Z",
+  "files": [
+    "lib/server/agent/vm/opencode-client.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_6c58310439b36f60",
+      "filePath": "lib/server/agent/vm/opencode-client.ts",
+      "title": "Unauthenticated local OpenCode API can bypass the supervisor permission boundary",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current client sends only Content-Type on privileged OpenCode requests; replyPermission posts an approval directly to /permission/:id/reply with no authentication or capability proof. The server is spawned on 127.0.0.1 with an ephemeral port, but it runs in the same local host and security context as the OpenCode bash subprocesses, so loopback does not distinguish the supervisor from model-directed commands. The port is discoverable from the server command line or local process state, and command-guard explicitly has a narrow non-adversarial scope: it primarily restricts dangerous Git operations, while curl, node, process inspection, and arbitrary non-Git shell commands are permitted after the normal bash permission. The local webfetch guard blocks only the known harness ports, but it applies to OpenCode's webfetch tool rather than shell networking, leaving direct HTTP clients unaffected. The supervisor itself documents that the OpenCode API 'responds to whoever joins it,' and private-address.ts likewise states that the agent server answers to anyone who reaches it; this confirms there is no hidden framework authentication or origin check. A prompt-injected repository can arrange a background shell watcher/client, observe the unprotected SSE event stream for permission identifiers, and race or submit an 'once' approval to the permission endpoint, allowing the server to execute an action the supervisor would reject. Git history shows the permission safeguards commit introduced supervisor-mediated replies but no authentication boundary, and later current-code changes still retain the unauthenticated route and explicitly acknowledge the exposure. This bypass undermines protected edits, permission-denied reads, command restrictions, and task limits for an attacker able to influence the agent, so the reported HIGH severity is appropriate.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current client sends only Content-Type on privileged OpenCode requests; replyPermission posts an approval directly to /permission/:id/reply with no authentication or capability proof. The server is spawned on 127.0.0.1 with an ephemeral port, but it runs in the same local host and security context as the OpenCode bash subprocesses, so loopback does not distinguish the supervisor from model-directed commands. The port is discoverable from the server command line or local process state, and command-guard explicitly has a narrow non-adversarial scope: it primarily restricts dangerous Git operations, while curl, node, process inspection, and arbitrary non-Git shell commands are permitted after the normal bash permission. The local webfetch guard blocks only the known harness ports, but it applies to OpenCode's webfetch tool rather than shell networking, leaving direct HTTP clients unaffected. The supervisor itself documents that the OpenCode API 'responds to whoever joins it,' and private-address.ts likewise states that the agent server answers to anyone who reaches it; this confirms there is no hidden framework authentication or origin check. A prompt-injected repository can arrange a background shell watcher/client, observe the unprotected SSE event stream for permission identifiers, and race or submit an 'once' approval to the permission endpoint, allowing the server to execute an action the supervisor would reject. Git history shows the permission safeguards commit introduced supervisor-mediated replies but no authentication boundary, and later current-code changes still retain the unauthenticated route and explicitly acknowledge the exposure. This bypass undermines protected edits, permission-denied reads, command restrictions, and task limits for an attacker able to influence the agent, so the reported HIGH severity is appropriate."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_6c58310439b36f60"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

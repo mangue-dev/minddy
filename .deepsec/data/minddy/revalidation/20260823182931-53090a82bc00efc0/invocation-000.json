@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T18:31:15.660Z",
+  "files": [
+    "app/api/account/push-subscriptions/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_cc39ac3ce5498d55",
+      "filePath": "app/api/account/push-subscriptions/route.ts",
+      "title": "Push endpoint validation is not enforced when notifications are sent",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"false-positive\",\n    \"reasoning\": \"The stored endpoint is indeed only checked by `assertPublicHttpUrl` during registration, while `sendToSubscription` later passes it directly to `webpush.sendNotification`; no validated address is persisted or supplied to the send path. `web-push` 3.6.7 confirms that it performs a new DNS lookup through Node's `https.request`, so the registration-time DNS result is not a delivery-time pin. However, the route accepts only `https://` endpoints, and the dependency passes the original hostname to `https.request` without a custom agent, `rejectUnauthorized: false`, or custom certificate verifier. Node therefore performs normal certificate-chain and hostname validation before it can transmit the HTTP POST containing the push payload. A rebinding domain controlled by the attacker will resolve to the private IP at delivery, but an arbitrary internal service will not possess a certificate valid for that attacker-controlled hostname, so the TLS handshake fails and no HTTP request reaches the internal application. Repository-wide inspection found no project TLS override that disables this protection. The attacker could at most cause a TLS connection attempt/ClientHello to the rebinding target, not the claimed authenticated Web Push request to an arbitrary internal endpoint; a service already configured with a certificate for the attacker's domain would require separate control of that internal service. Git history shows the registration check was added in commit `c3e2b4e8`, and later commits did not add delivery pinning, but the stated critical SSRF exploit is blocked by HTTPS hostname verification.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "false-positive",
+      "reasoning": "The stored endpoint is indeed only checked by `assertPublicHttpUrl` during registration, while `sendToSubscription` later passes it directly to `webpush.sendNotification`; no validated address is persisted or supplied to the send path. `web-push` 3.6.7 confirms that it performs a new DNS lookup through Node's `https.request`, so the registration-time DNS result is not a delivery-time pin. However, the route accepts only `https://` endpoints, and the dependency passes the original hostname to `https.request` without a custom agent, `rejectUnauthorized: false`, or custom certificate verifier. Node therefore performs normal certificate-chain and hostname validation before it can transmit the HTTP POST containing the push payload. A rebinding domain controlled by the attacker will resolve to the private IP at delivery, but an arbitrary internal service will not possess a certificate valid for that attacker-controlled hostname, so the TLS handshake fails and no HTTP request reaches the internal application. Repository-wide inspection found no project TLS override that disables this protection. The attacker could at most cause a TLS connection attempt/ClientHello to the rebinding target, not the claimed authenticated Web Push request to an arbitrary internal endpoint; a service already configured with a certificate for the attacker's domain would require separate control of that internal service. Git history shows the registration check was added in commit `c3e2b4e8`, and later commits did not add delivery pinning, but the stated critical SSRF exploit is blocked by HTTPS hostname verification."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_cc39ac3ce5498d55"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

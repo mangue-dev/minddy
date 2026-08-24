@@ -1,0 +1,45 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T18:58:12.708Z",
+  "files": [
+    "lib/server/agent/tools.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_b295890dde86adc6",
+      "filePath": "lib/server/agent/tools.ts",
+      "title": "Agent is instructed to fetch user-controlled link resources without network validation",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"A project member can register a link resource directly through POST /api/issues/[id]/resources after normal authentication and project-access checks. That route calls parseResourcesInput, whose link branch only requires a parseable HTTP(S) URL, so private and link-local destinations such as http://169.254.169.254/ are accepted; it does not call assertPublicHttpUrl or resolveLinkResource. The protected /api/projects/[id]/link-preview route does use resolveLinkResource and safeFetch, but its output is not signed or otherwise required by the resource-write route, so it is not an effective write-path mitigation. During an agent run, read_resource returns the stored link URL to the model after confirming only that the resource belongs to the run's project, and both served descriptions explicitly tell the model to fetch the page itself. The VM network policy intentionally includes the catch-all '*' rule with no restrictions, and its own comments state that the rest of the Internet is open. The command guard is designed to prevent destructive Git operations rather than network access, so curl and equivalent HTTP clients remain permitted. An attacker who is a project member can attach an internal URL to a ticket, launch or influence an agent run for that ticket, and have the agent retrieve the response from a network location reachable by the sandbox; the response can then enter the agent conversation/output. Git blame shows the fetch instruction was introduced in commit 3138b867, and current history contains no change that removes it or adds URL validation at persistence or VM egress.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "A project member can register a link resource directly through POST /api/issues/[id]/resources after normal authentication and project-access checks. That route calls parseResourcesInput, whose link branch only requires a parseable HTTP(S) URL, so private and link-local destinations such as http://169.254.169.254/ are accepted; it does not call assertPublicHttpUrl or resolveLinkResource. The protected /api/projects/[id]/link-preview route does use resolveLinkResource and safeFetch, but its output is not signed or otherwise required by the resource-write route, so it is not an effective write-path mitigation. During an agent run, read_resource returns the stored link URL to the model after confirming only that the resource belongs to the run's project, and both served descriptions explicitly tell the model to fetch the page itself. The VM network policy intentionally includes the catch-all '*' rule with no restrictions, and its own comments state that the rest of the Internet is open. The command guard is designed to prevent destructive Git operations rather than network access, so curl and equivalent HTTP clients remain permitted. An attacker who is a project member can attach an internal URL to a ticket, launch or influence an agent run for that ticket, and have the agent retrieve the response from a network location reachable by the sandbox; the response can then enter the agent conversation/output. Git blame shows the fetch instruction was introduced in commit 3138b867, and current history contains no change that removes it or adds URL validation at persistence or VM egress."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_b295890dde86adc6"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

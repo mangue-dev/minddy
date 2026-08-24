@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T18:41:20.157Z",
+  "files": [
+    "app/api/account/push-subscriptions/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_cc39ac3ce5498d55",
+      "filePath": "app/api/account/push-subscriptions/route.ts",
+      "title": "Push endpoint validation is not enforced when notifications are sent",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"false-positive\",\n    \"reasoning\": \"POST requires a verified authenticated user, and RLS permits that user to persist only their own subscription, although these controls would not prevent a malicious account from supplying an endpoint. parsePushRegistration requires Web Push endpoints to begin with https://, after which assertPublicHttpUrl resolves the hostname and rejects any private, loopback, link-local, or otherwise non-public result at registration time. The stored hostname is later retrieved by activeSubscriptionsOf and passed to webpush.sendNotification without another address check, so the reported validation-time/delivery-time gap does structurally exist. However, the cached source for the locked web-push@3.6.7 dependency shows that it uses Node's https.request with the original endpoint hostname, no custom agent, and no rejectUnauthorized override. Node therefore performs TLS certificate and hostname validation against the original attacker-controlled hostname before transmitting the queued HTTP POST. After rebinding that hostname to an internal address, an ordinary internal HTTPS service cannot present a certificate valid for the attacker's hostname, so the connection fails during TLS negotiation and the internal HTTP request described by the finding is not delivered. The library also does not follow redirects, and the repository contains no global TLS-verification override that would remove this protection. At most, the target receives a TLS ClientHello, which does not provide the claimed critical internal-service access; successful delivery would require the internal target already to possess a trusted certificate for the attacker's hostname, an exceptional additional precondition rather than a consequence of this code. Git history confirms that c3e2b4e8 added registration-time SSRF validation while the original 090783c3 delivery implementation remained unchanged, so this is not a subsequently fixed sink. Revalidating and pinning delivery DNS would still be reasonable defense in depth, but the concrete critical DNS-rebinding SSRF asserted here is not exploitable under the transport's enforced HTTPS semantics.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "false-positive",
+      "reasoning": "POST requires a verified authenticated user, and RLS permits that user to persist only their own subscription, although these controls would not prevent a malicious account from supplying an endpoint. parsePushRegistration requires Web Push endpoints to begin with https://, after which assertPublicHttpUrl resolves the hostname and rejects any private, loopback, link-local, or otherwise non-public result at registration time. The stored hostname is later retrieved by activeSubscriptionsOf and passed to webpush.sendNotification without another address check, so the reported validation-time/delivery-time gap does structurally exist. However, the cached source for the locked web-push@3.6.7 dependency shows that it uses Node's https.request with the original endpoint hostname, no custom agent, and no rejectUnauthorized override. Node therefore performs TLS certificate and hostname validation against the original attacker-controlled hostname before transmitting the queued HTTP POST. After rebinding that hostname to an internal address, an ordinary internal HTTPS service cannot present a certificate valid for the attacker's hostname, so the connection fails during TLS negotiation and the internal HTTP request described by the finding is not delivered. The library also does not follow redirects, and the repository contains no global TLS-verification override that would remove this protection. At most, the target receives a TLS ClientHello, which does not provide the claimed critical internal-service access; successful delivery would require the internal target already to possess a trusted certificate for the attacker's hostname, an exceptional additional precondition rather than a consequence of this code. Git history confirms that c3e2b4e8 added registration-time SSRF validation while the original 090783c3 delivery implementation remained unchanged, so this is not a subsequently fixed sink. Revalidating and pinning delivery DNS would still be reasonable defense in depth, but the concrete critical DNS-rebinding SSRF asserted here is not exploitable under the transport's enforced HTTPS semantics."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_cc39ac3ce5498d55"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

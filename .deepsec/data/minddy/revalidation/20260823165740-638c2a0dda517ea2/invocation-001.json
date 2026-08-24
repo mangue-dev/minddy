@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T16:59:46.357Z",
+  "files": [
+    "lib/server/agent/network-policy.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_fdedd795a4393783",
+      "filePath": "lib/server/agent/network-policy.ts",
+      "title": "Unrestricted sandbox egress enables forge-token exfiltration",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current policy deliberately returns `allow: { \\\"*\\\": [] }`, and its tests explicitly assert that the rest of the Internet remains open. `execute.ts` applies this policy when creating or resuming each cloud microVM, then calls `cloneRepo` or `clonePullRequest` with `vmTarget.authUrl`. Those clone helpers invoke `git clone` with the credential-bearing URL, which persists it as `remote.origin.url` in the checkout's `.git/config`; both `redact.ts` and the execution comments explicitly acknowledge this. The VM provides an unrestricted shell (`bash`/`run_command`), while the command guard is designed to prevent destructive Git actions rather than arbitrary network access and documents that network composition is allowed. A contributor-controlled repository can therefore cause code run during a normal agent-requested build, test, or package-install step to read the local Git configuration and transmit the token to an attacker-controlled host. Output redaction only prevents the token from returning through model-visible logs; it does not prevent an in-VM process from reading the file or making the outbound request. GitHub tokens are narrowed to the linked repository and read/write profile, which reduces blast radius but does not stop theft or misuse of the token during its validity window; GitLab receives the connection OAuth token and the source explicitly states that its `api` scope is not down-scoped per repository. History confirms that commit `4e655245` introduced repository and permission scoping, but it retained the credential-bearing clone URL and open egress, so the reported underlying exfiltration path has not been fixed.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current policy deliberately returns `allow: { \"*\": [] }`, and its tests explicitly assert that the rest of the Internet remains open. `execute.ts` applies this policy when creating or resuming each cloud microVM, then calls `cloneRepo` or `clonePullRequest` with `vmTarget.authUrl`. Those clone helpers invoke `git clone` with the credential-bearing URL, which persists it as `remote.origin.url` in the checkout's `.git/config`; both `redact.ts` and the execution comments explicitly acknowledge this. The VM provides an unrestricted shell (`bash`/`run_command`), while the command guard is designed to prevent destructive Git actions rather than arbitrary network access and documents that network composition is allowed. A contributor-controlled repository can therefore cause code run during a normal agent-requested build, test, or package-install step to read the local Git configuration and transmit the token to an attacker-controlled host. Output redaction only prevents the token from returning through model-visible logs; it does not prevent an in-VM process from reading the file or making the outbound request. GitHub tokens are narrowed to the linked repository and read/write profile, which reduces blast radius but does not stop theft or misuse of the token during its validity window; GitLab receives the connection OAuth token and the source explicitly states that its `api` scope is not down-scoped per repository. History confirms that commit `4e655245` introduced repository and permission scoping, but it retained the credential-bearing clone URL and open egress, so the reported underlying exfiltration path has not been fixed."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_fdedd795a4393783"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

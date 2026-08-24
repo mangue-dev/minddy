@@ -1,0 +1,45 @@
+{
+  "batchIndex": 8,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:38:37.817Z",
+  "files": [
+    "lib/server/safe-fetch.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_e628f67d708d884c",
+      "filePath": "lib/server/safe-fetch.ts",
+      "title": "IPv6 translation prefixes can disguise private IPv4 destinations",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current `isPrivateAddress` rejects the stated `64:ff9b:1::a9fe:a9fe` example because its NAT64 branch matches every address beginning `64:ff9b`, including the local-use prefix; that portion of the finding is inaccurate. However, `::ffff:0:169.254.169.254` is normalized as IPv6 and expands to `[0,0,0,0,0xffff,0,0xa9fe,0xa9fe]`. It bypasses the mapped/compatible IPv4 check because that check requires `g4 === 0`, then returns `false` without evaluating the embedded private IPv4 address. Consequently `assertPublicHttpUrl` accepts an HTTP URL such as `http://[::ffff:0:a9fe:a9fe]/`, and `safeFetch` passes that literal address to `pinnedRequest`; pinning prevents DNS rebinding but does not make an incorrectly accepted destination safe. An authenticated project owner can persist such a value as an integration webhook, after which issue events cause server-side POSTs to it; authenticated link-preview/favicon flows provide other user-controlled `safeFetch` entry points. Authentication, owner checks, CSRF protections, redirect validation, and response-size caps do not protect against a malicious authorized user choosing an internal destination. In a deployment with an IPv4-translated IPv6/SIIT route, this address can be translated to the IPv4 link-local metadata endpoint, creating a concrete SSRF path. Git history shows this relevant logic remains unchanged from the original safe-fetch implementation, and tests cover only the well-known NAT64 prefix and ordinary mapped/compatible forms, not `::ffff:0:0/96`.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current `isPrivateAddress` rejects the stated `64:ff9b:1::a9fe:a9fe` example because its NAT64 branch matches every address beginning `64:ff9b`, including the local-use prefix; that portion of the finding is inaccurate. However, `::ffff:0:169.254.169.254` is normalized as IPv6 and expands to `[0,0,0,0,0xffff,0,0xa9fe,0xa9fe]`. It bypasses the mapped/compatible IPv4 check because that check requires `g4 === 0`, then returns `false` without evaluating the embedded private IPv4 address. Consequently `assertPublicHttpUrl` accepts an HTTP URL such as `http://[::ffff:0:a9fe:a9fe]/`, and `safeFetch` passes that literal address to `pinnedRequest`; pinning prevents DNS rebinding but does not make an incorrectly accepted destination safe. An authenticated project owner can persist such a value as an integration webhook, after which issue events cause server-side POSTs to it; authenticated link-preview/favicon flows provide other user-controlled `safeFetch` entry points. Authentication, owner checks, CSRF protections, redirect validation, and response-size caps do not protect against a malicious authorized user choosing an internal destination. In a deployment with an IPv4-translated IPv6/SIIT route, this address can be translated to the IPv4 link-local metadata endpoint, creating a concrete SSRF path. Git history shows this relevant logic remains unchanged from the original safe-fetch implementation, and tests cover only the well-known NAT64 prefix and ordinary mapped/compatible forms, not `::ffff:0:0/96`."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_e628f67d708d884c"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

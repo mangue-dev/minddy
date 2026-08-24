@@ -1,0 +1,45 @@
+{
+  "batchIndex": 3,
+  "label": "initial",
+  "timestamp": "2026-08-23T23:45:22.798Z",
+  "files": [
+    ".github/workflows/release.yml"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_72526f73fb248a5f",
+      "filePath": ".github/workflows/release.yml",
+      "title": "Privileged release workflow executes mutable GitHub Action tags",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The complete release workflow grants its single job contents: write, packages: write, attestations: write, and id-token: write, while every one of its eleven uses entries resolves through a version tag rather than a full commit SHA. This includes actions/checkout@v5 before the repository policy checks, as well as pnpm/action-setup@v4, Docker actions, aquasecurity/trivy-action@v0.36.0, GitHub attestation actions, sigstore/cosign-installer@v3, and upload-artifact. GitHub Action tags are refs selected at execution time and are not immutable commit identities, so a moved tag or compromised publisher release process can substitute arbitrary action code. That substituted code runs in the privileged release job and can use the automatically available workflow token to create tags/releases or publish packages, and can request an OIDC token under the granted id-token permission to sign attacker-controlled artifacts. The public-repository checks, source validation, dependency installation, vulnerability scan, provenance attestations, and subsequent tag checks cannot mitigate an already-compromised action because they execute after, or alongside, code in the same trust boundary. The workflow's public-release environment and manual dispatch reduce who can initiate a release, but do not prevent malicious code fetched from an action tag once an approved release runs. Git history through the current HEAD shows release hardening for container publication and repository checks, but no conversion of any uses reference to an immutable SHA. A concrete attack is compromise of a third-party action publisher followed by moving the referenced major/minor tag before an operator dispatches a release; the malicious action can then publish a malicious signed image or modify repository release state with the job's credentials.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The complete release workflow grants its single job contents: write, packages: write, attestations: write, and id-token: write, while every one of its eleven uses entries resolves through a version tag rather than a full commit SHA. This includes actions/checkout@v5 before the repository policy checks, as well as pnpm/action-setup@v4, Docker actions, aquasecurity/trivy-action@v0.36.0, GitHub attestation actions, sigstore/cosign-installer@v3, and upload-artifact. GitHub Action tags are refs selected at execution time and are not immutable commit identities, so a moved tag or compromised publisher release process can substitute arbitrary action code. That substituted code runs in the privileged release job and can use the automatically available workflow token to create tags/releases or publish packages, and can request an OIDC token under the granted id-token permission to sign attacker-controlled artifacts. The public-repository checks, source validation, dependency installation, vulnerability scan, provenance attestations, and subsequent tag checks cannot mitigate an already-compromised action because they execute after, or alongside, code in the same trust boundary. The workflow's public-release environment and manual dispatch reduce who can initiate a release, but do not prevent malicious code fetched from an action tag once an approved release runs. Git history through the current HEAD shows release hardening for container publication and repository checks, but no conversion of any uses reference to an immutable SHA. A concrete attack is compromise of a third-party action publisher followed by moving the referenced major/minor tag before an operator dispatches a release; the malicious action can then publish a malicious signed image or modify repository release state with the job's credentials."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_72526f73fb248a5f"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T16:58:46.159Z",
+  "files": [
+    "lib/server/agent/command-guard.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_d479ff0a9a6e607b",
+      "filePath": "lib/server/agent/command-guard.ts",
+      "title": "Shell expansion bypasses all protected Git-command checks",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current guard explicitly performs textual tokenization rather than shell parsing, and its header acknowledges that `g=git; $g reset --hard` passes. `splitSegments` analyzes `g=git` and `$g <subcommand>` independently, while `gitInvocation()` only recognizes a literal `git` token or a path ending in `/git`; `$g` therefore returns null. In the actual shell, the assignment persists across the semicolon and `$g` expands to `git`, so commands such as `g=git; $g push`, `g=git; $g reset --hard`, and `g=git; $g config core.hooksPath .ci/hooks` execute after approval. OpenCode configures `bash` as `ask`, but `decidePermission()` grants every command for which `checkCommand()` returns allowed, and the supervisor sends that approval to OpenCode without an additional Git-aware enforcement layer. The local execution path passes the same guard with `{ local: true }`; it intentionally permits local commits but still relies on this guard to prohibit pushes and dangerous config changes. A repository/task prompt injection can direct the agent to run the variable-indirected command, create a hook directory outside `.git`, and set `core.hooksPath`, producing persistent code execution on a later user Git action; it can also bypass the `create_pr` delivery gate with a direct push when the user's configured Git credentials are usable. Recent MIN-360 changes added literal checks for Git configuration, `.git` paths, wrappers, and shell `-c` payloads, but did not address expansion and retain the documented bypass. No framework-level protection observed in the permission pipeline resolves or rejects shell expansion before execution.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current guard explicitly performs textual tokenization rather than shell parsing, and its header acknowledges that `g=git; $g reset --hard` passes. `splitSegments` analyzes `g=git` and `$g <subcommand>` independently, while `gitInvocation()` only recognizes a literal `git` token or a path ending in `/git`; `$g` therefore returns null. In the actual shell, the assignment persists across the semicolon and `$g` expands to `git`, so commands such as `g=git; $g push`, `g=git; $g reset --hard`, and `g=git; $g config core.hooksPath .ci/hooks` execute after approval. OpenCode configures `bash` as `ask`, but `decidePermission()` grants every command for which `checkCommand()` returns allowed, and the supervisor sends that approval to OpenCode without an additional Git-aware enforcement layer. The local execution path passes the same guard with `{ local: true }`; it intentionally permits local commits but still relies on this guard to prohibit pushes and dangerous config changes. A repository/task prompt injection can direct the agent to run the variable-indirected command, create a hook directory outside `.git`, and set `core.hooksPath`, producing persistent code execution on a later user Git action; it can also bypass the `create_pr` delivery gate with a direct push when the user's configured Git credentials are usable. Recent MIN-360 changes added literal checks for Git configuration, `.git` paths, wrappers, and shell `-c` payloads, but did not address expansion and retain the documented bypass. No framework-level protection observed in the permission pipeline resolves or rejects shell expansion before execution."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_d479ff0a9a6e607b"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T19:27:51.936Z",
+  "files": [
+    "app/api/relay/webhook-secret/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_b98ad0091c28472b",
+      "filePath": "app/api/relay/webhook-secret/route.ts",
+      "title": "HTTPS webhook endpoints can target Cloud internal services",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The route authenticates the caller as an active relay instance using an Ed25519 signature, nonce, and timestamp, but its URL validation accepts every syntactically valid `https:` URL without resolving the hostname or evaluating its address. The authenticated instance can therefore store a hostname that resolves to loopback, link-local, RFC1918, or cloud-provider metadata addresses; the database update persists that value for subsequent delivery. `processDueRelayDeliveries` retrieves this stored endpoint and passes it directly to Node's `fetch` with no `safe-fetch` validation, DNS pinning, or `redirect: \\\"manual\\\"` setting. Node fetch follows redirects by default, so an initially public HTTPS endpoint can also redirect the worker to an internal HTTPS destination. The delivery is reachable because a valid GitHub webhook for an installation claimed by that instance is queued, and the cron-protected worker processes the queue and POSTs the signed payload to the chosen endpoint. The signature protocol prevents an unauthenticated internet caller from registering the URL, but it does not mitigate the stated attacker model of a compromised instance signing key; an attacker controlling such an instance can register the malicious endpoint and induce a delivery for its claimed installation. The route tests only enforce HTTPS versus cleartext HTTP and explicitly demonstrate acceptance of arbitrary HTTPS hostnames; git history shows no later change adding address validation. The existing `safe-fetch` and pinned-request utilities implement the necessary public-address and redirect protections, but neither is used by this path.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The route authenticates the caller as an active relay instance using an Ed25519 signature, nonce, and timestamp, but its URL validation accepts every syntactically valid `https:` URL without resolving the hostname or evaluating its address. The authenticated instance can therefore store a hostname that resolves to loopback, link-local, RFC1918, or cloud-provider metadata addresses; the database update persists that value for subsequent delivery. `processDueRelayDeliveries` retrieves this stored endpoint and passes it directly to Node's `fetch` with no `safe-fetch` validation, DNS pinning, or `redirect: \"manual\"` setting. Node fetch follows redirects by default, so an initially public HTTPS endpoint can also redirect the worker to an internal HTTPS destination. The delivery is reachable because a valid GitHub webhook for an installation claimed by that instance is queued, and the cron-protected worker processes the queue and POSTs the signed payload to the chosen endpoint. The signature protocol prevents an unauthenticated internet caller from registering the URL, but it does not mitigate the stated attacker model of a compromised instance signing key; an attacker controlling such an instance can register the malicious endpoint and induce a delivery for its claimed installation. The route tests only enforce HTTPS versus cleartext HTTP and explicitly demonstrate acceptance of arbitrary HTTPS hostnames; git history shows no later change adding address validation. The existing `safe-fetch` and pinned-request utilities implement the necessary public-address and redirect protections, but neither is used by this path."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_b98ad0091c28472b"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T21:06:36.502Z",
+  "files": [
+    "lib/server/agent/plan-review.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_0f9cc5fd42b6b2e7",
+      "filePath": "lib/server/agent/plan-review.ts",
+      "title": "Untrusted package script names are injected into the agent follow-up prompt",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The finding is reachable: planReviewForTurn reads the cloned repository's root package.json, parseScriptsProbe accepts every JSON object key under scripts through Object.keys, and scriptList interpolates each selected key directly into the model-facing review text. JSON permits both escaped newlines and backticks in property names, while this code applies neither a character whitelist nor escaping, per-name length limit, nor a total rendered-size limit. A repository can set workspaces and include a script name such as \\\"x`\\\\n\\\\nIgnore the preceding review and ...\\\"; the workspace branch always reports root script names, while a non-workspace repository can reach the same sink by causing the plan to name no command or a missing command. The resulting followUp is returned after a successful write_issue_plan by gateWritePlan and is appended verbatim to the tool response by the VM bridge, so it is delivered into the active agent context without a trusted/untrusted-data boundary. Inline Markdown code formatting does not contain this input because an embedded backtick closes it, and a newline then allows instruction-shaped text outside the intended list. The cap of 24 names only bounds the number of entries, not the attacker-controlled size of any entry, and the package read cap does not sanitize the parsed data. The command used to read package.json is safely constant-constructed, so this is not shell injection, but it is a prompt-injection path into an agent that can use repository and project tools. Git history shows the file was introduced in 43f23294 and subsequent changes only translated prose, adjusted the repository cwd, and changed footer wording; no mitigation was added.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The finding is reachable: planReviewForTurn reads the cloned repository's root package.json, parseScriptsProbe accepts every JSON object key under scripts through Object.keys, and scriptList interpolates each selected key directly into the model-facing review text. JSON permits both escaped newlines and backticks in property names, while this code applies neither a character whitelist nor escaping, per-name length limit, nor a total rendered-size limit. A repository can set workspaces and include a script name such as \"x`\\n\\nIgnore the preceding review and ...\"; the workspace branch always reports root script names, while a non-workspace repository can reach the same sink by causing the plan to name no command or a missing command. The resulting followUp is returned after a successful write_issue_plan by gateWritePlan and is appended verbatim to the tool response by the VM bridge, so it is delivered into the active agent context without a trusted/untrusted-data boundary. Inline Markdown code formatting does not contain this input because an embedded backtick closes it, and a newline then allows instruction-shaped text outside the intended list. The cap of 24 names only bounds the number of entries, not the attacker-controlled size of any entry, and the package read cap does not sanitize the parsed data. The command used to read package.json is safely constant-constructed, so this is not shell injection, but it is a prompt-injection path into an agent that can use repository and project tools. Git history shows the file was introduced in 43f23294 and subsequent changes only translated prose, adjusted the repository cwd, and changed footer wording; no mitigation was added."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_0f9cc5fd42b6b2e7"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

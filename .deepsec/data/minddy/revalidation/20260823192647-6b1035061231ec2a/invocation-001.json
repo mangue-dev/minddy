@@ -1,0 +1,61 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T19:29:32.615Z",
+  "files": [
+    "app/api/webhooks/gitlab/route.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_26e633840df18832",
+      "filePath": "app/api/webhooks/gitlab/route.ts",
+      "title": "Webhook repository name is not bound to the authenticated repository ID",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_970941c26a99983e",
+      "filePath": "app/api/webhooks/gitlab/route.ts",
+      "title": "Global legacy webhook secret remains valid for every repository after rotation",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current route parses the untrusted body, extracts only `payload.project.id`, and uses that ID to load the per-repository secret candidates. After a token for repository A is accepted, it passes the independently supplied `payload.project.path_with_namespace` to `reconcileRepoRename` without verifying that the name belongs to repository ID A. `reconcileRepoRename` service-role updates every link whose `external_repo_id` is A to the supplied name, migrates PR records, and has no forge API lookup or database constraint binding the new name to that ID. The route then dispatches merge-request, note, emoji, and pipeline handlers that all use that supplied name for PR lookup, run lookup, issue resolution, activity, and broadcasts. Therefore, a GitLab maintainer who can read A's hook token can submit a fresh synthetic delivery with A's ID, a victim repository B's name, and a victim PR number; after reconciliation, B-scoped lookups include the victim's links and can update its run/issue state or activity. The issue-sync path routes its actual issue target by numeric ID, but it still refreshes the A link to the attacker-selected name, so it does not mitigate the merge-request path. No Next.js middleware or origin check protects this provider-webhook endpoint; its security boundary is the webhook token. Git history shows the vulnerable reconciliation call was added in commit `1e6c662b`, and no later change binds the payload name to the authenticated ID.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"`loadWebhookSecrets` always returns `legacyGitlabWebhookSecret()` as `legacy`, irrespective of whether matching links already contain a decrypted repository-specific secret. `verifyWebhookToken` checks repository-specific candidates first but then accepts the global legacy value whenever the first check does not match, returning `legacy`. Consequently, a request naming any victim `project.id` is authenticated if its `X-Gitlab-Token` equals the still-configured global secret, even after that victim has a per-repository secret. The asynchronous `rotateGitlabWebhookSecret` only creates/persists a per-repository secret and rewrites the GitLab hook; it neither clears the environment variable nor records that a link may no longer use the fallback. Thus rotation does not remove the legacy credential from the receiver's accepted authentication set. A maintainer who obtained the shared legacy token from any old hook, or retained it from before rotation, can forge a new delivery for another linked repository by selecting that repository's numeric ID and a unique delivery UUID. Delivery deduplication does not help because it occurs only after successful authentication and only suppresses reused delivery IDs. The current tenant-isolation test explicitly confirms that the global fallback is accepted for a repository, but it does not test rejection when that repository already has an own secret; the current implementation remains vulnerable.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current route parses the untrusted body, extracts only `payload.project.id`, and uses that ID to load the per-repository secret candidates. After a token for repository A is accepted, it passes the independently supplied `payload.project.path_with_namespace` to `reconcileRepoRename` without verifying that the name belongs to repository ID A. `reconcileRepoRename` service-role updates every link whose `external_repo_id` is A to the supplied name, migrates PR records, and has no forge API lookup or database constraint binding the new name to that ID. The route then dispatches merge-request, note, emoji, and pipeline handlers that all use that supplied name for PR lookup, run lookup, issue resolution, activity, and broadcasts. Therefore, a GitLab maintainer who can read A's hook token can submit a fresh synthetic delivery with A's ID, a victim repository B's name, and a victim PR number; after reconciliation, B-scoped lookups include the victim's links and can update its run/issue state or activity. The issue-sync path routes its actual issue target by numeric ID, but it still refreshes the A link to the attacker-selected name, so it does not mitigate the merge-request path. No Next.js middleware or origin check protects this provider-webhook endpoint; its security boundary is the webhook token. Git history shows the vulnerable reconciliation call was added in commit `1e6c662b`, and no later change binds the payload name to the authenticated ID."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "`loadWebhookSecrets` always returns `legacyGitlabWebhookSecret()` as `legacy`, irrespective of whether matching links already contain a decrypted repository-specific secret. `verifyWebhookToken` checks repository-specific candidates first but then accepts the global legacy value whenever the first check does not match, returning `legacy`. Consequently, a request naming any victim `project.id` is authenticated if its `X-Gitlab-Token` equals the still-configured global secret, even after that victim has a per-repository secret. The asynchronous `rotateGitlabWebhookSecret` only creates/persists a per-repository secret and rewrites the GitLab hook; it neither clears the environment variable nor records that a link may no longer use the fallback. Thus rotation does not remove the legacy credential from the receiver's accepted authentication set. A maintainer who obtained the shared legacy token from any old hook, or retained it from before rotation, can forge a new delivery for another linked repository by selecting that repository's numeric ID and a unique delivery UUID. Delivery deduplication does not help because it occurs only after successful authentication and only suppresses reused delivery IDs. The current tenant-isolation test explicitly confirms that the global fallback is accepted for a repository, but it does not test rejection when that repository already has an own secret; the current implementation remains vulnerable."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_26e633840df18832"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_970941c26a99983e"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

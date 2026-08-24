@@ -1,0 +1,61 @@
+{
+  "batchIndex": 3,
+  "label": "initial",
+  "timestamp": "2026-08-23T17:50:28.557Z",
+  "files": [
+    "lib/server/agent/vm/supervisor.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_d9614150b8b2c728",
+      "filePath": "lib/server/agent/vm/supervisor.ts",
+      "title": "PR-head instruction files are injected into the agent's instruction context",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_9ae32dac052121f7",
+      "filePath": "lib/server/agent/vm/supervisor.ts",
+      "title": "Local agent runs allow prompt-controlled arbitrary filesystem and network access",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current supervisor always calls servedInstructionsFile(host, deps.writeFile) before starting OpenCode, without receiving or checking the job anchor. It discovers AGENTS.md and CLAUDE.md with findInstructionFiles against the checked-out worktree, then reads every discovered file through readWorkFile at lines 451-463. A PR review checkout is explicitly at the pull request head, so these files can be supplied or modified by the PR author. The resulting formatted document is written outside the repository but passed as repoInstructionFiles to opencodeServerEnv, whose configuration adds it to OpenCode's instructions array; OpenCode therefore incorporates its contents into system-context instructions. This bypasses repo-instructions.ts, where readInstructionsFrom correctly uses readFileAtRef(host, PR_BASE_TAG, path) when anchor === \\\"pr\\\". The boundary text in formatServedInstructions tells the model to treat the content as data, but it neither removes attacker-controlled content nor enforces behavior at the tool or OS layer. Git history shows the unsafe helper was introduced in 7f3f60b1 and remains unchanged at HEAD, while the safer PR-base logic remains present only in the older bootstrap path. An attacker can open a PR containing a malicious root or nested instruction file and cause it to be supplied to the review agent alongside shell-capable tooling, making this an exploitable prompt-injection boundary failure.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"For local jobs, the OpenCode configuration sets bash to \\\"ask\\\", and the supervisor automatically replies \\\"once\\\" whenever decidePermission accepts the command. The bash branch of decidePermission only invokes checkCommand, which intentionally blocks selected destructive or Git-related patterns rather than filesystem reads, arbitrary program execution, or network clients. The command-guard source expressly states that it is not a shell-security perimeter and that its parsing is aimed at accidental destructive Git operations, not an attacker. Local external_directory requests are also accepted unconditionally, and local edit checks deliberately use absoluteOnDisk rather than repository containment, retaining only .git protections. The integrated read and webfetch safeguards do not contain bash: opencode-permissions.ts explicitly notes that commands such as cat .env bypass read permissions, while ordinary tools such as curl pass the command guard. refineLocalVerdict only adds realpath protection for edits and local-loop protection for webfetch; it does not inspect or constrain bash commands. The supervisor runs on the user's machine for any job with a control token, and no OS sandbox, repository-scoped mount, or outbound egress policy is established in this path. Thus injected repository content, issue text, or other model-visible untrusted input can induce a permitted shell command to read files outside the repository and send their contents to an arbitrary external endpoint; the current audit comments themselves characterize this as a non-perimeter.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current supervisor always calls servedInstructionsFile(host, deps.writeFile) before starting OpenCode, without receiving or checking the job anchor. It discovers AGENTS.md and CLAUDE.md with findInstructionFiles against the checked-out worktree, then reads every discovered file through readWorkFile at lines 451-463. A PR review checkout is explicitly at the pull request head, so these files can be supplied or modified by the PR author. The resulting formatted document is written outside the repository but passed as repoInstructionFiles to opencodeServerEnv, whose configuration adds it to OpenCode's instructions array; OpenCode therefore incorporates its contents into system-context instructions. This bypasses repo-instructions.ts, where readInstructionsFrom correctly uses readFileAtRef(host, PR_BASE_TAG, path) when anchor === \"pr\". The boundary text in formatServedInstructions tells the model to treat the content as data, but it neither removes attacker-controlled content nor enforces behavior at the tool or OS layer. Git history shows the unsafe helper was introduced in 7f3f60b1 and remains unchanged at HEAD, while the safer PR-base logic remains present only in the older bootstrap path. An attacker can open a PR containing a malicious root or nested instruction file and cause it to be supplied to the review agent alongside shell-capable tooling, making this an exploitable prompt-injection boundary failure."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "For local jobs, the OpenCode configuration sets bash to \"ask\", and the supervisor automatically replies \"once\" whenever decidePermission accepts the command. The bash branch of decidePermission only invokes checkCommand, which intentionally blocks selected destructive or Git-related patterns rather than filesystem reads, arbitrary program execution, or network clients. The command-guard source expressly states that it is not a shell-security perimeter and that its parsing is aimed at accidental destructive Git operations, not an attacker. Local external_directory requests are also accepted unconditionally, and local edit checks deliberately use absoluteOnDisk rather than repository containment, retaining only .git protections. The integrated read and webfetch safeguards do not contain bash: opencode-permissions.ts explicitly notes that commands such as cat .env bypass read permissions, while ordinary tools such as curl pass the command guard. refineLocalVerdict only adds realpath protection for edits and local-loop protection for webfetch; it does not inspect or constrain bash commands. The supervisor runs on the user's machine for any job with a control token, and no OS sandbox, repository-scoped mount, or outbound egress policy is established in this path. Thus injected repository content, issue text, or other model-visible untrusted input can induce a permitted shell command to read files outside the repository and send their contents to an arbitrary external endpoint; the current audit comments themselves characterize this as a non-perimeter."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_d9614150b8b2c728"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_9ae32dac052121f7"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

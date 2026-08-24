@@ -1,0 +1,61 @@
+{
+  "batchIndex": 2,
+  "label": "initial",
+  "timestamp": "2026-08-23T21:08:22.778Z",
+  "files": [
+    "lib/server/agent/vm/opencode-permissions.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_87ffef71bc137cf6",
+      "filePath": "lib/server/agent/vm/opencode-permissions.ts",
+      "title": "Local agent runs can write arbitrary host files",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_bbfd12881e7743d1",
+      "filePath": "lib/server/agent/vm/opencode-permissions.ts",
+      "title": "Shell bypasses secret-read and network-fetch safeguards",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"In local mode, `decidePermission` selects `absoluteOnDisk` for every `edit` request, and that helper merely normalizes absolute paths or paths relative to `repoDir`; it performs no repository-boundary check. The subsequent `assertNotGit` only rejects a `.git` path component, so paths such as `../.ssh/config`, `~`-equivalent absolute user paths, shell startup files, or another checkout are approved. `refineLocalVerdict` resolves symlinks but intentionally retains only the `.git` check, so it does not restore a filesystem allowlist. The OpenCode configuration sets `external_directory` to `ask` locally, and the supervisor explicitly returns `ALLOW` for it while recording an audit event rather than requiring user approval. This is not only a theoretical permission helper: the local launcher builds a job whose `repoDir` is the attached checkout and `main.ts` runs it through `localHost`, which operates directly on the user's filesystem. The local-run route requires an authenticated user and limits trigger types, but those are launch controls rather than write confinement; a button/chat run can still be anchored to an issue whose description was promoted from public feedback. The code itself states that the ticket may originate from anonymous public feedback and that prompt instructions are not a security boundary. Recent history confirms that the repository boundary was deliberately removed for local mode in the MIN-364 changes; the current revision did not reintroduce it.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The local OpenCode configuration makes `read` and `webfetch` ask for permission, but also makes `bash` ask, and `decidePermission` approves every non-empty shell command unless `checkCommand` rejects it. `checkCommand` is a textual Git-safety guard: it blocks destructive Git operations, dangerous Git configuration, `.git` path tokens, and push behavior, but it does not prohibit `cat .env`, `printenv`, `curl`, Node, Python, or arbitrary shell redirection. Consequently, `cat .env` is approved by the `bash` branch and never reaches the `read` branch containing `isSecretFile`; the target file itself even documents this exact bypass. The built-in `webfetch` hostname, DNS, and harness-port controls apply only to that OpenCode tool and are not applied to subprocesses spawned from `bash`. Local execution uses `localHost.exec`, which invokes `spawn(\\\"sh\\\", [\\\"-c\\\", command])` with the inherited process environment, and no OS sandbox, mount namespace, or outbound network policy is present on this path. A hostile instruction can therefore cause the agent to read repository credentials with the shell and transmit them through an arbitrary network-capable executable. The prompt's untrusted-content guidance and the local-run trigger checks reduce exposure but do not technically prevent a model from issuing an approved shell command after processing malicious ticket content. The recent MIN-360/MIN-364 code added the tool-level read and webfetch checks while explicitly documenting that they are a \\\"paper wall\\\" while unrestricted shell access remains, so this has not been fixed.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "In local mode, `decidePermission` selects `absoluteOnDisk` for every `edit` request, and that helper merely normalizes absolute paths or paths relative to `repoDir`; it performs no repository-boundary check. The subsequent `assertNotGit` only rejects a `.git` path component, so paths such as `../.ssh/config`, `~`-equivalent absolute user paths, shell startup files, or another checkout are approved. `refineLocalVerdict` resolves symlinks but intentionally retains only the `.git` check, so it does not restore a filesystem allowlist. The OpenCode configuration sets `external_directory` to `ask` locally, and the supervisor explicitly returns `ALLOW` for it while recording an audit event rather than requiring user approval. This is not only a theoretical permission helper: the local launcher builds a job whose `repoDir` is the attached checkout and `main.ts` runs it through `localHost`, which operates directly on the user's filesystem. The local-run route requires an authenticated user and limits trigger types, but those are launch controls rather than write confinement; a button/chat run can still be anchored to an issue whose description was promoted from public feedback. The code itself states that the ticket may originate from anonymous public feedback and that prompt instructions are not a security boundary. Recent history confirms that the repository boundary was deliberately removed for local mode in the MIN-364 changes; the current revision did not reintroduce it."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "The local OpenCode configuration makes `read` and `webfetch` ask for permission, but also makes `bash` ask, and `decidePermission` approves every non-empty shell command unless `checkCommand` rejects it. `checkCommand` is a textual Git-safety guard: it blocks destructive Git operations, dangerous Git configuration, `.git` path tokens, and push behavior, but it does not prohibit `cat .env`, `printenv`, `curl`, Node, Python, or arbitrary shell redirection. Consequently, `cat .env` is approved by the `bash` branch and never reaches the `read` branch containing `isSecretFile`; the target file itself even documents this exact bypass. The built-in `webfetch` hostname, DNS, and harness-port controls apply only to that OpenCode tool and are not applied to subprocesses spawned from `bash`. Local execution uses `localHost.exec`, which invokes `spawn(\"sh\", [\"-c\", command])` with the inherited process environment, and no OS sandbox, mount namespace, or outbound network policy is present on this path. A hostile instruction can therefore cause the agent to read repository credentials with the shell and transmit them through an arbitrary network-capable executable. The prompt's untrusted-content guidance and the local-run trigger checks reduce exposure but do not technically prevent a model from issuing an approved shell command after processing malicious ticket content. The recent MIN-360/MIN-364 code added the tool-level read and webfetch checks while explicitly documenting that they are a \"paper wall\" while unrestricted shell access remains, so this has not been fixed."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_87ffef71bc137cf6"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_bbfd12881e7743d1"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

@@ -1,0 +1,45 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T21:53:24.575Z",
+  "files": [
+    "lib/server/feedback/voice.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_643554a05cffb4c0",
+      "filePath": "lib/server/feedback/voice.ts",
+      "title": "BYOK endpoint can reach internal services through unpinned requests",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The generic BYOK provider accepts a user-controlled HTTP(S) base URL after `assertPublicHttpUrl` performs a DNS lookup, and `getUserByok` repeats that preflight check for each use. Both voice paths subsequently make ordinary `fetch` requests: `transcribeAudio` posts to `${baseUrl}/audio/transcriptions`, while `fetchAiChat` posts to `chatCompletionsUrl(runtime.baseUrl)`. Neither call uses `pinnedRequest` or `safeFetch`, so the validated address is not bound to the actual socket connection. An authenticated attacker can register a generic provider hostname that initially resolves only to a public address and returns a successful `/models` probe, enable the feedback surface (enabled by default), then change DNS resolution for the later voice request to an internal address. The transcription request includes the audio payload and Bearer token, and the chat request includes the transcript, draft/history-derived prompt, and Bearer token; the response can also be returned through the normal voice flow. Native providers do not accept a custom base URL, and local providers are prevented from being enabled for feedback, but these controls do not protect the generic cloud provider. Redirects are also left to ordinary fetch behavior rather than being rejected or revalidated and pinned hop by hop. Git history shows BYOK support was added in commit `792d68ba`, while the later safe-fetch protections were not integrated into these outbound AI request helpers, so the issue remains present.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The generic BYOK provider accepts a user-controlled HTTP(S) base URL after `assertPublicHttpUrl` performs a DNS lookup, and `getUserByok` repeats that preflight check for each use. Both voice paths subsequently make ordinary `fetch` requests: `transcribeAudio` posts to `${baseUrl}/audio/transcriptions`, while `fetchAiChat` posts to `chatCompletionsUrl(runtime.baseUrl)`. Neither call uses `pinnedRequest` or `safeFetch`, so the validated address is not bound to the actual socket connection. An authenticated attacker can register a generic provider hostname that initially resolves only to a public address and returns a successful `/models` probe, enable the feedback surface (enabled by default), then change DNS resolution for the later voice request to an internal address. The transcription request includes the audio payload and Bearer token, and the chat request includes the transcript, draft/history-derived prompt, and Bearer token; the response can also be returned through the normal voice flow. Native providers do not accept a custom base URL, and local providers are prevented from being enabled for feedback, but these controls do not protect the generic cloud provider. Redirects are also left to ordinary fetch behavior rather than being rejected or revalidated and pinned hop by hop. Git history shows BYOK support was added in commit `792d68ba`, while the later safe-fetch protections were not integrated into these outbound AI request helpers, so the issue remains present."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_643554a05cffb4c0"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

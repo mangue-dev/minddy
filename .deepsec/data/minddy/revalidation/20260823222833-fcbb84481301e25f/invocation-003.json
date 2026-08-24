@@ -1,0 +1,61 @@
+{
+  "batchIndex": 3,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:33:05.710Z",
+  "files": [
+    "lib/server/agent/vm/local-guard.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_3a6650a59625bb34",
+      "filePath": "lib/server/agent/vm/local-guard.ts",
+      "title": "Webfetch permits prompt-injected access to private services on non-harness ports",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_1bb97224731375e0",
+      "filePath": "lib/server/agent/vm/local-guard.ts",
+      "title": "Harness-port DNS check is vulnerable to rebinding and redirect bypasses",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"On local runs, the generated OpenCode configuration sets `webfetch` to `ask`, and the supervisor receives its permission event, applies `decidePermission`, then applies `refineLocalVerdict` before replying `once` or `reject`. `webfetchLiteralVerdict` rejects a literal private hostname only when `isHarnessPort(url, harnessPorts)` is true. `refineWebfetch` repeats that literal check and immediately returns the allowed verdict for every URL whose port is not one of the dynamically assigned proxy, tool-bridge, and OpenCode ports; it performs no DNS resolution in that branch. The supervisor explicitly constructs that three-port list and documentation and tests state that non-harness private targets such as `localhost:3000`, `192.168.1.42:5173`, and `nas.local` are permitted. The historical diff shows this was deliberately introduced by decision D8, replacing the prior all-private-address protection; it has not subsequently been reverted or constrained by an allowlist. Consequently, prompt-influenced agent content can cause `webfetch` to retrieve a local, LAN, VPN, or link-local service on a normal port, with its result available to the agent's tool flow. The fact that this behavior supports development-server feedback does not prevent access to unrelated private services and therefore is not a mitigating authorization boundary. This is distinct from F2 because it needs neither a hostname race nor access to a harness port.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"For a public hostname addressed to a harness port, `refineWebfetch` calls `node:dns/promises.lookup(..., { all: true })` and rejects only if that single result contains a private address. After a public result, it returns `{ reply: \\\"once\\\" }`; the supervisor then merely posts that permission reply to OpenCode, rather than performing or mediating the HTTP connection. No approved IP address, DNS result, redirect policy, socket, or Host/SNI binding is carried from `refineWebfetch` into the eventual OpenCode `webfetch` request. An attacker controlling a hostname can therefore have the guard's lookup return a public address and have the later fetch resolution select a loopback or other private address, reaching a protected local service on its harness port. The same separation means a public URL approved for a harness port can redirect to a literal private harness URL without any subsequent invocation of this guard. This matters because the three guarded services listen on `127.0.0.1`; the source specifically documents the tool bridge as unauthenticated and the LLM proxy/OpenCode server as sensitive local services. The current history confirms only the port-scoping change was added after the original resolver guard, and no pinning or redirect revalidation was introduced. F2 is not a duplicate of F1: it bypasses the separate, intended protection for the otherwise blocked harness ports, whereas F1 concerns the intentionally allowed non-harness-port private network.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "On local runs, the generated OpenCode configuration sets `webfetch` to `ask`, and the supervisor receives its permission event, applies `decidePermission`, then applies `refineLocalVerdict` before replying `once` or `reject`. `webfetchLiteralVerdict` rejects a literal private hostname only when `isHarnessPort(url, harnessPorts)` is true. `refineWebfetch` repeats that literal check and immediately returns the allowed verdict for every URL whose port is not one of the dynamically assigned proxy, tool-bridge, and OpenCode ports; it performs no DNS resolution in that branch. The supervisor explicitly constructs that three-port list and documentation and tests state that non-harness private targets such as `localhost:3000`, `192.168.1.42:5173`, and `nas.local` are permitted. The historical diff shows this was deliberately introduced by decision D8, replacing the prior all-private-address protection; it has not subsequently been reverted or constrained by an allowlist. Consequently, prompt-influenced agent content can cause `webfetch` to retrieve a local, LAN, VPN, or link-local service on a normal port, with its result available to the agent's tool flow. The fact that this behavior supports development-server feedback does not prevent access to unrelated private services and therefore is not a mitigating authorization boundary. This is distinct from F2 because it needs neither a hostname race nor access to a harness port."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "For a public hostname addressed to a harness port, `refineWebfetch` calls `node:dns/promises.lookup(..., { all: true })` and rejects only if that single result contains a private address. After a public result, it returns `{ reply: \"once\" }`; the supervisor then merely posts that permission reply to OpenCode, rather than performing or mediating the HTTP connection. No approved IP address, DNS result, redirect policy, socket, or Host/SNI binding is carried from `refineWebfetch` into the eventual OpenCode `webfetch` request. An attacker controlling a hostname can therefore have the guard's lookup return a public address and have the later fetch resolution select a loopback or other private address, reaching a protected local service on its harness port. The same separation means a public URL approved for a harness port can redirect to a literal private harness URL without any subsequent invocation of this guard. This matters because the three guarded services listen on `127.0.0.1`; the source specifically documents the tool bridge as unauthenticated and the LLM proxy/OpenCode server as sensitive local services. The current history confirms only the port-scoping change was added after the original resolver guard, and no pinning or redirect revalidation was introduced. F2 is not a duplicate of F1: it bypasses the separate, intended protection for the otherwise blocked harness ports, whereas F1 concerns the intentionally allowed non-harness-port private network."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_3a6650a59625bb34"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_1bb97224731375e0"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

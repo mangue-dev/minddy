@@ -1,0 +1,46 @@
+{
+  "batchIndex": 0,
+  "label": "initial",
+  "timestamp": "2026-08-23T20:28:01.361Z",
+  "files": [
+    "lib/server/agent/byok-validate.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_5ea0a63d1e4ea8d5",
+      "filePath": "lib/server/agent/byok-validate.ts",
+      "title": "BYOK key probe follows unvalidated redirects and does not pin DNS",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"adjustedSeverity\": \"HIGH\",\n    \"reasoning\": \"The generic BYOK endpoint is authenticated but attacker-controlled: POST /api/account/ai-keys accepts a generic base_url, calls assertPublicHttpUrl(raw), then immediately calls probeByokKey with the normalized value. assertPublicHttpUrl does correctly reject private addresses at lookup time, but its returned validated address is discarded by the caller and probeByokKey uses native fetch rather than safeFetch/pinnedRequest. Native fetch follows redirects by default, while probeByokKey supplies no redirect mode or destination validation, so a public attacker-controlled endpoint can redirect its /models probe to an internal HTTP(S) service. The same separation permits DNS rebinding between the initial validation and fetch's independent DNS resolution, because the latter connection is not pinned to the public address previously checked. An attacker can invoke this route with their own authenticated account; getAuthedUser's JWT/MFA and foreign-origin protections prevent unauthorized or browser-CSRF requests but do not restrict a legitimate account holder from selecting their own generic endpoint. The probe exposes a limited response oracle through valid for any 2xx response, invalid for 401/402/403, unknown otherwise, plus request timing, and it can make an internal GET request from the application network. getUserByok repeats URL validation for stored custom URLs, but unvalidated records also re-enter the same unpinned probe path, so that check does not mitigate this sink. Git history shows that the current e0da16d0 change only translated comments in byok-validate.ts; the direct fetch behavior remains unchanged from the original implementation. The issue is exploitable blind SSRF, but the response body is not returned and the probe is limited to GET with an eight-second timeout, so HIGH better reflects the demonstrated impact than CRITICAL.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "adjustedSeverity": "HIGH",
+      "reasoning": "The generic BYOK endpoint is authenticated but attacker-controlled: POST /api/account/ai-keys accepts a generic base_url, calls assertPublicHttpUrl(raw), then immediately calls probeByokKey with the normalized value. assertPublicHttpUrl does correctly reject private addresses at lookup time, but its returned validated address is discarded by the caller and probeByokKey uses native fetch rather than safeFetch/pinnedRequest. Native fetch follows redirects by default, while probeByokKey supplies no redirect mode or destination validation, so a public attacker-controlled endpoint can redirect its /models probe to an internal HTTP(S) service. The same separation permits DNS rebinding between the initial validation and fetch's independent DNS resolution, because the latter connection is not pinned to the public address previously checked. An attacker can invoke this route with their own authenticated account; getAuthedUser's JWT/MFA and foreign-origin protections prevent unauthorized or browser-CSRF requests but do not restrict a legitimate account holder from selecting their own generic endpoint. The probe exposes a limited response oracle through valid for any 2xx response, invalid for 401/402/403, unknown otherwise, plus request timing, and it can make an internal GET request from the application network. getUserByok repeats URL validation for stored custom URLs, but unvalidated records also re-enter the same unpinned probe path, so that check does not mitigate this sink. Git history shows that the current e0da16d0 change only translated comments in byok-validate.ts; the direct fetch behavior remains unchanged from the original implementation. The issue is exploitable blind SSRF, but the response body is not returned and the probe is limited to GET with an eight-second timeout, so HIGH better reflects the demonstrated impact than CRITICAL."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_5ea0a63d1e4ea8d5"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

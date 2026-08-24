@@ -1,0 +1,61 @@
+{
+  "batchIndex": 5,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:35:20.389Z",
+  "files": [
+    "lib/server/ai-runtime.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_0117a8498010f8b1",
+      "filePath": "lib/server/ai-runtime.ts",
+      "title": "Local-only BYOK endpoints are fetched by server-side AI surfaces",
+      "alias": "F1"
+    },
+    {
+      "findingId": "finding_e3d785bc512efde5",
+      "filePath": "lib/server/ai-runtime.ts",
+      "title": "Generic BYOK endpoint validation is defeated by DNS rebinding and redirects",
+      "alias": "F2"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The current `resolveAiRuntime` accepts every non-null result from `getUserByok` and does not reject `local_openai` or `ollama`, unlike `resolveAgentApiKey`, which throws unless `allowLocal` is explicitly set. `fetchAiChat` then constructs `<baseUrl>/chat/completions` and sends an ordinary server-side POST to it. The authenticated `POST /api/account/ai-keys` route deliberately skips `assertPublicHttpUrl` and probing for local providers, allowing a user-controlled loopback or private `base_url`. Its upsert does not set `enabled_surfaces`, so the database default includes assistant, automations, voice, and feedback, not only agent. Although the PATCH route now refuses an attempt to set non-agent surfaces for a local provider, it does not correct the all-surfaces default created by POST; it also permits setting `feature_models` alone, allowing the user to supply an assistant model required for runtime selection. An authenticated attacker can therefore register `local_openai` with an internal URL, set an assistant feature model, and invoke the authenticated assistant or dictation route, which resolves that BYOK configuration and makes the cloud server connect to the chosen internal service. The assistant and dictation routes authenticate the caller and scope application data, but that does not mitigate an attacker using their own account as an SSRF primitive. Git history shows the local-provider support was introduced in `4d04e1bc`; subsequent current code still lacks a local-provider rejection in `resolveAiRuntime`.\"\n  },\n  {\n    \"findingId\": \"F2\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"Generic endpoints are checked with `assertPublicHttpUrl` at registration and again in `getUserByok`, which correctly rejects private addresses in the DNS answer at validation time. However, that helper returns a validated address only to its caller, and `getUserByok` discards it before returning the hostname-based `baseUrl`. `fetchAiChat` subsequently uses ordinary global `fetch`, so DNS is resolved again by the HTTP client rather than being pinned through `pinnedRequest`. An attacker can provide a generic hostname that resolves publicly during validation and resolves internally for the later chat request, making the second lookup a DNS-rebinding TOCTOU. `fetchAiChat` also leaves redirect following at the fetch default and does not validate redirect destinations, so an attacker-controlled public endpoint can issue a redirect, including a method-preserving redirect, toward an internal target. The request carries the OpenAI-compatible POST body and may contain user prompt, project, or assistant context; an internal response can also influence the server-side AI processing path. The repository's `safeFetch` and `pinnedRequest` implement the required validation, pinning, redirect handling, and response caps, but neither is used by this AI transport. The per-use validation added around `getUserByok` is therefore a partial mitigation only and does not fix the connection-time or redirect vulnerabilities.\"\n  }\n]\n```",
+      "parsedCount": 2
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The current `resolveAiRuntime` accepts every non-null result from `getUserByok` and does not reject `local_openai` or `ollama`, unlike `resolveAgentApiKey`, which throws unless `allowLocal` is explicitly set. `fetchAiChat` then constructs `<baseUrl>/chat/completions` and sends an ordinary server-side POST to it. The authenticated `POST /api/account/ai-keys` route deliberately skips `assertPublicHttpUrl` and probing for local providers, allowing a user-controlled loopback or private `base_url`. Its upsert does not set `enabled_surfaces`, so the database default includes assistant, automations, voice, and feedback, not only agent. Although the PATCH route now refuses an attempt to set non-agent surfaces for a local provider, it does not correct the all-surfaces default created by POST; it also permits setting `feature_models` alone, allowing the user to supply an assistant model required for runtime selection. An authenticated attacker can therefore register `local_openai` with an internal URL, set an assistant feature model, and invoke the authenticated assistant or dictation route, which resolves that BYOK configuration and makes the cloud server connect to the chosen internal service. The assistant and dictation routes authenticate the caller and scope application data, but that does not mitigate an attacker using their own account as an SSRF primitive. Git history shows the local-provider support was introduced in `4d04e1bc`; subsequent current code still lacks a local-provider rejection in `resolveAiRuntime`."
+    },
+    {
+      "findingId": "F2",
+      "verdict": "true-positive",
+      "reasoning": "Generic endpoints are checked with `assertPublicHttpUrl` at registration and again in `getUserByok`, which correctly rejects private addresses in the DNS answer at validation time. However, that helper returns a validated address only to its caller, and `getUserByok` discards it before returning the hostname-based `baseUrl`. `fetchAiChat` subsequently uses ordinary global `fetch`, so DNS is resolved again by the HTTP client rather than being pinned through `pinnedRequest`. An attacker can provide a generic hostname that resolves publicly during validation and resolves internally for the later chat request, making the second lookup a DNS-rebinding TOCTOU. `fetchAiChat` also leaves redirect following at the fetch default and does not validate redirect destinations, so an attacker-controlled public endpoint can issue a redirect, including a method-preserving redirect, toward an internal target. The request carries the OpenAI-compatible POST body and may contain user prompt, project, or assistant context; an internal response can also influence the server-side AI processing path. The repository's `safeFetch` and `pinnedRequest` implement the required validation, pinning, redirect handling, and response caps, but neither is used by this AI transport. The per-use validation added around `getUserByok` is therefore a partial mitigation only and does not fix the connection-time or redirect vulnerabilities."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_0117a8498010f8b1"
+      },
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F2",
+        "resolvedFindingId": "finding_e3d785bc512efde5"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 2,
+  "unresolvedFindingIds": []
+}

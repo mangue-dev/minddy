@@ -1,0 +1,45 @@
+{
+  "batchIndex": 7,
+  "label": "initial",
+  "timestamp": "2026-08-23T22:37:34.289Z",
+  "files": [
+    "lib/server/openrouter-transcribe.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_38526a3e28371b8b",
+      "filePath": "lib/server/openrouter-transcribe.ts",
+      "title": "User-controlled generic provider URL is fetched without redirect validation or DNS pinning",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"The generic provider's base URL is authenticated-user controlled: the account BYOK route accepts a generic HTTP(S) URL after `assertPublicHttpUrl`, stores it, and allows the user to enable the voice surface and supply a transcription model. At runtime, `getUserByok` again calls `assertPublicHttpUrl(baseUrl)`, but discards its returned validated address; `transcribeAudio` subsequently passes the hostname string to global `fetch`, which performs its own DNS resolution. Consequently, a DNS-rebinding domain can pass the check with a public address and resolve to an internal address for the actual fetch. The request also uses the default redirect policy, so an attacker-controlled public generic endpoint can issue a 307 or 308 redirect to an internal HTTP(S) target, preserving the POST method and multipart audio body; no redirect destination is checked. `safe-fetch.ts` demonstrates the intended mitigation—`pinnedRequest` connects to the checked address and revalidates each redirect—but this transcription code does not use it or an equivalent POST-capable helper. Authentication, same-origin protections, size limits, and rate limiting only limit who can invoke the route and request volume; an attacker can use their own authenticated account and do not prevent server-side access to private network targets. The transcription route returns parsed successful response content and includes up to 300 characters of unsuccessful response text in its error, making this more than a blind request primitive when the internal service responds compatibly. Git history shows the user-selectable `baseUrl` and direct `fetch` were introduced together in commit `792d68ba`, and subsequent changes to this file only translated comments, so the issue is not fixed.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "The generic provider's base URL is authenticated-user controlled: the account BYOK route accepts a generic HTTP(S) URL after `assertPublicHttpUrl`, stores it, and allows the user to enable the voice surface and supply a transcription model. At runtime, `getUserByok` again calls `assertPublicHttpUrl(baseUrl)`, but discards its returned validated address; `transcribeAudio` subsequently passes the hostname string to global `fetch`, which performs its own DNS resolution. Consequently, a DNS-rebinding domain can pass the check with a public address and resolve to an internal address for the actual fetch. The request also uses the default redirect policy, so an attacker-controlled public generic endpoint can issue a 307 or 308 redirect to an internal HTTP(S) target, preserving the POST method and multipart audio body; no redirect destination is checked. `safe-fetch.ts` demonstrates the intended mitigation—`pinnedRequest` connects to the checked address and revalidates each redirect—but this transcription code does not use it or an equivalent POST-capable helper. Authentication, same-origin protections, size limits, and rate limiting only limit who can invoke the route and request volume; an attacker can use their own authenticated account and do not prevent server-side access to private network targets. The transcription route returns parsed successful response content and includes up to 300 characters of unsuccessful response text in its error, making this more than a blind request primitive when the internal service responds compatibly. Git history shows the user-selectable `baseUrl` and direct `fetch` were introduced together in commit `792d68ba`, and subsequent changes to this file only translated comments, so the issue is not fixed."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_38526a3e28371b8b"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}

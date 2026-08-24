@@ -1,0 +1,45 @@
+{
+  "batchIndex": 1,
+  "label": "initial",
+  "timestamp": "2026-08-23T20:02:19.660Z",
+  "files": [
+    "lib/server/agent/background.ts"
+  ],
+  "requested": [
+    {
+      "findingId": "finding_0199d31c06ebf298",
+      "filePath": "lib/server/agent/background.ts",
+      "title": "Background command guard can be bypassed through shell indirection",
+      "alias": "F1"
+    }
+  ],
+  "rawResponses": [
+    {
+      "kind": "initial",
+      "rawText": "```json\n[\n  {\n    \"findingId\": \"F1\",\n    \"verdict\": \"true-positive\",\n    \"reasoning\": \"BackgroundJobs.start accepts the model-supplied command, calls checkCommand once, and then passes the unchanged string to repoBackgroundRunner. startBackground embeds that string in backgroundStartScript's inner body, which is executed by `sh -c`; therefore shell evaluation occurs after the textual inspection. checkCommand only tokenizes literal command segments and selectively recurses into literal shell `-c` arguments, so `eval 'git push origin HEAD'`, a variable-expanded command, or a sourced script has no top-level git invocation for it to reject. This limitation is explicitly acknowledged in command-guard.ts, which states that `g=git; $g reset --hard` passes because parsing is not a real shell parser. The bypass is reachable in production cloud runs: supervisor.ts exposes run_background through the local tool bridge when the normal tool set includes it, and the bridge invokes BackgroundJobs.handle. The cloud clone stores the VM-specific forge credential in remote.origin.url; execute.ts deliberately passes vmTarget.authUrl to cloneRepo, and network-policy.ts explicitly documents that the forge token remains readable in `.git/config` within the VM. The Vercel Sandbox network policy has a catch-all `\\\"*\\\": []`, so it permits general outbound traffic rather than restricting exfiltration destinations. Thus a repository prompt injection that causes the model to submit an indirect background command can bypass the intended push/destructive-command guard and can read and send the scoped ephemeral repository credential or repository data outward. Recent history does not show a fix: the current guard still contains the acknowledged textual-parser limitation, while existing tests cover direct commands and literal nested `bash -c` forms but not eval, variable expansion, or sourced/dynamic commands. The existing token is repository-scoped and ephemeral, which supports the reported HIGH severity rather than elevating it to a broader credential compromise.\"\n  }\n]\n```",
+      "parsedCount": 1
+    }
+  ],
+  "repairAttempts": 0,
+  "parsedVerdicts": [
+    {
+      "findingId": "F1",
+      "verdict": "true-positive",
+      "reasoning": "BackgroundJobs.start accepts the model-supplied command, calls checkCommand once, and then passes the unchanged string to repoBackgroundRunner. startBackground embeds that string in backgroundStartScript's inner body, which is executed by `sh -c`; therefore shell evaluation occurs after the textual inspection. checkCommand only tokenizes literal command segments and selectively recurses into literal shell `-c` arguments, so `eval 'git push origin HEAD'`, a variable-expanded command, or a sourced script has no top-level git invocation for it to reject. This limitation is explicitly acknowledged in command-guard.ts, which states that `g=git; $g reset --hard` passes because parsing is not a real shell parser. The bypass is reachable in production cloud runs: supervisor.ts exposes run_background through the local tool bridge when the normal tool set includes it, and the bridge invokes BackgroundJobs.handle. The cloud clone stores the VM-specific forge credential in remote.origin.url; execute.ts deliberately passes vmTarget.authUrl to cloneRepo, and network-policy.ts explicitly documents that the forge token remains readable in `.git/config` within the VM. The Vercel Sandbox network policy has a catch-all `\"*\": []`, so it permits general outbound traffic rather than restricting exfiltration destinations. Thus a repository prompt injection that causes the model to submit an indirect background command can bypass the intended push/destructive-command guard and can read and send the scoped ephemeral repository credential or repository data outward. Recent history does not show a fix: the current guard still contains the acknowledged textual-parser limitation, while existing tests cover direct commands and literal nested `bash -c` forms but not eval, variable expansion, or sourced/dynamic commands. The existing token is repository-scoped and ephemeral, which supports the reported HIGH severity rather than elevating it to a broader credential compromise."
+    }
+  ],
+  "reconciliation": {
+    "matches": [
+      {
+        "matchedBy": "finding-id",
+        "returnedFindingId": "F1",
+        "resolvedFindingId": "finding_0199d31c06ebf298"
+      }
+    ],
+    "missingFindingIds": [],
+    "unknownVerdicts": [],
+    "ambiguousVerdicts": []
+  },
+  "persistedCount": 1,
+  "unresolvedFindingIds": []
+}
