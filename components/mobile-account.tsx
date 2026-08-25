@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { useAccountTheme } from "@/lib/use-account-theme";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
-import { useMyAvatarSeed } from "@/lib/use-my-avatar";
+import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AppNavSection } from "@/components/app-sidebar";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
@@ -181,7 +181,7 @@ export function MobileMenuFooter() {
   const { user } = useAuth();
   const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
-  const seed = useMyAvatarSeed();
+  const seed = useMyAvatarSource();
 
   return (
     <div className="flex flex-col gap-2 px-1">

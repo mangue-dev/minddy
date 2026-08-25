@@ -3,16 +3,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
 /**
- * MIN-296 — what account deletion leaves (or doesn't) in BUCKETS.
+ * What account deletion leaves, or does not leave, in storage buckets.
  *
- * Rows cascade with `auth.users`, bytes don't: each bucket that carries something of the person must be scanned by hand, and a bucket
- * forgotten is not seen anywhere — the request succeeds, the screen says "deleted",
- * and the file remains served by its URL. One was missing: attachments
- * pull request comments (bucket `forge-attachments`, PUBLIC).
+ * Rows cascade with `auth.users`, but bytes do not. Every bucket carrying
+ * personal data must be scanned explicitly; otherwise deletion succeeds while
+ * a file remains available at its public URL.
  *
- * This file pins the four scans together: it is the LIST that is the
- * subject, not each one separately. A fifth bucket added on a day without its
- * passing here will break the countdown test.
+ * This test pins all storage families together. Adding a new personal bucket
+ * without extending account erasure must break the object-count assertion.
  */
 
 const service = vi.hoisted(() => {
@@ -105,6 +103,7 @@ beforeEach(() => {
     { project_id: PROJECT, provider: "github", repo_full_name: "acme/app" },
   ];
   service.tables.pull_requests = [{ id: PR }];
+  service.tables.user_avatars = [{ image_path: `users/${USER}.webp` }];
 
   service.objects.attachments = [
     `projects/${PROJECT}/a/note.pdf`,
@@ -112,15 +111,16 @@ beforeEach(() => {
   ];
   service.objects["project-icons"] = [`${PROJECT}/icon.png`];
   service.objects["forge-attachments"] = [`${PR}/abcd/diagram.png`];
+  service.objects["user-avatars"] = [`users/${USER}.webp`];
 });
 
-describe("deleteAccount — le balayage des buckets", () => {
-  it("emporte les pièces jointes des commentaires de PR des dépôts liés", async () => {
+describe("deleteAccount storage cleanup", () => {
+  it("removes pull-request comment attachments from linked repositories", async () => {
     await deleteAccount(USER);
     expect(removedPaths()).toContain(`${PR}/abcd/diagram.png`);
   });
 
-  it("épargne celles d'un dépôt qu'un projet survivant lie encore", async () => {
+  it("keeps forge attachments while a surviving project still links the repository", async () => {
     service.tables.project_git_links = [
       { project_id: PROJECT, provider: "github", repo_full_name: "acme/app" },
       { project_id: "other", provider: "github", repo_full_name: "acme/app" },
@@ -129,21 +129,22 @@ describe("deleteAccount — le balayage des buckets", () => {
     expect(removedPaths()).not.toContain(`${PR}/abcd/diagram.png`);
   });
 
-  it("balaye aussi les ressources, les fichiers de chat et l'icône du projet", async () => {
+  it("removes resources, chat files, project icons, and the user avatar", async () => {
     const result = await deleteAccount(USER);
     expect(removedPaths()).toEqual(
       expect.arrayContaining([
         `projects/${PROJECT}/a/note.pdf`,
         `chat/${USER}/screenshot.png`,
         `${PROJECT}/icon.png`,
+        `users/${USER}.webp`,
       ])
     );
-    // Four objects, one per family: resource, chat, icon, PR.
-    expect(result.removedStorageObjects).toBe(4);
+    // Five objects, one per family: resource, chat, icon, PR, and avatar.
+    expect(result.removedStorageObjects).toBe(5);
     expect(result.warnings).toEqual([]);
   });
 
-  it("efface le compte lui-même en dernier", async () => {
+  it("deletes the auth account after storage cleanup", async () => {
     await deleteAccount(USER);
     expect(service.deleteUser).toHaveBeenCalledWith(USER);
   });

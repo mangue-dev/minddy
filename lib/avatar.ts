@@ -4,11 +4,10 @@ import * as lorelei from "@dicebear/lorelei";
 /**
  * The default avatar of minddy.
  *
- * An account does not carry a photo: it carries an opaque seed
- * (`public.user_avatars`), and its portrait is drawn from it. Same
- * seed = same portrait, on each rendering, on each screen, without storing anything.
- * A new drawing (settings → “New avatar”) changes the seed, so the
- * portrait.
+ * An account defaults to an opaque seed (`public.user_avatars`) whose portrait
+ * is drawn here. The same seed produces the same portrait on every screen. An
+ * imported image bypasses this generator in `components/user-avatar.tsx`, while
+ * choosing a new Lorelei avatar replaces the seed and clears that image.
  *
  * The drawing comes from the `lorelei` style of DiceBear (CC0, Lisa Wischofsky): a
  * line face on a colored solid. It ONLY frames the head, which makes it

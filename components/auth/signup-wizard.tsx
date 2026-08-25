@@ -6,9 +6,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button, Input, Spinner } from "mangue-ui";
-import { ArrowLeft, Shuffle, UserPlus } from "lucide-react";
+import { ArrowLeft, UserPlus } from "lucide-react";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
-import { UserAvatar } from "@/components/user-avatar";
+import { UserAvatarPicker } from "@/components/user-avatar-picker";
 import {
   AuthColumn,
   AuthSeparator,
@@ -26,6 +26,7 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { errorReason } from "@/lib/analytics-sanitize";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
+import { stageSignupAvatarFile } from "@/lib/use-my-avatar";
 import {
   SIGNUP_STEPS,
   nextSignupStep,
@@ -92,28 +93,33 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
   const [direction, setDirection] = useState(1);
 
   const [fullName, setFullName] = useState("");
-  // The guest address is the one to which the email arrived: it is SHE who
-  // links the person to the project, not the link token. Pre-filling it avoids
-  // the most expensive mistake here — registering with another address and
-  // ne rien voir venir (MIN-197).
+  // Project invitations belong to the verified email address, not the link
+  // token. Pre-filling it prevents registration with another address and the
+  // confusing result of seeing no invited project (MIN-197).
   const [email, setEmail] = useState(invite?.invitedEmail ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   /**
-   * The account mark, taken HERE, before the account existed (MIN-300).
+   * The avatar choice is made before the account exists (MIN-300, MIN-449).
    *
-   * Elsewhere in the product, an avatar does not choose itself: it withdraws
-   * spell (`public.user_avatars`, settings → “New avatar”). The name stage
-   * follows the same rule — you see your brand, you can relaunch it, you don’t
-   * not choose. As there is no account yet to write it to, the draw
-   * travels in `user_metadata.avatar_seed` and arises at the first session.
+   * A Lorelei seed can travel directly in auth metadata. An imported image is
+   * kept locally until final submission, then staged under a single-use token
+   * that the first authenticated arrival claims from storage.
    *
-   * Drawn in an effect and not at the initial rendering: `crypto.randomUUID()` gives
-   * a different value on the server and in the browser, which would make
-   * diverger l'hydratation.
+   * The initial seed is created in an effect because `crypto.randomUUID()`
+   * would otherwise produce different server and browser renders.
    */
   const [avatarSeed, setAvatarSeed] = useState<string | null>(null);
   useEffect(() => setAvatarSeed(crypto.randomUUID()), []);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarUploadToken, setAvatarUploadToken] = useState<string | null>(null);
+  useEffect(
+    () => () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    },
+    [avatarPreviewUrl],
+  );
 
   const [loading, setLoading] = useState(false);
   // Provider being redirected — the page is going to Google/GitHub, so this
@@ -166,9 +172,15 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
     setLoading(true);
     track("signup_submitted", {});
     try {
+      let uploadToken = avatarUploadToken;
+      if (avatarFile && !uploadToken) {
+        uploadToken = await stageSignupAvatarFile(avatarFile);
+        setAvatarUploadToken(uploadToken);
+      }
       const { requiresEmailConfirmation } = await signUpWithPassword(email, password, {
         fullName: fullName.trim() || undefined,
         avatarSeed: avatarSeed ?? undefined,
+        avatarUploadToken: uploadToken ?? undefined,
       });
       track("signup_succeeded", {
         requires_email_confirmation: requiresEmailConfirmation,
@@ -179,15 +191,18 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
         setConfirmPassword("");
         return;
       }
-      // Immediate session (confirmation disabled): this account will not pass
-      // by `/auth/callback`, so this is where we place the chosen mark.
-      // Best-effort — a failed avatar is not worth keeping someone on
-      // the registration screen, and the account will draw one on first display.
-      if (avatarSeed) {
+      // With confirmation disabled there is no callback to claim the choice.
+      // This best-effort request mirrors authenticated arrival without keeping
+      // a successfully created account on the signup screen if it fails.
+      if (uploadToken || avatarSeed) {
         await fetch("/api/me/avatar", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ seed: avatarSeed }),
+          body: JSON.stringify(
+            uploadToken
+              ? { avatar_upload_token: uploadToken }
+              : { seed: avatarSeed },
+          ),
         }).catch(() => {});
       }
       router.push(redirectTo);
@@ -196,7 +211,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
       // the `code` and HTTP status which allow diagnosis. Without that,
       // a refusal that we do not yet know how to translate leaves no trace —
       // the call goes from the browser to Supabase, there is nothing on the Vercel side.
-      console.error("[signup] refus de Supabase Auth:", err);
+      console.error("[signup] account creation failed:", err);
       // We send a CATEGORY, never the message: it can carry the email.
       track("signup_failed", { reason: errorReason(err) });
       setError(authErrorMessage(err, t));
@@ -344,22 +359,31 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
 
                 {step === "identity" && (
                   <>
-                    {/* The brand, and the only gesture we have on it: the
- restart. Same grammar as account settings
- (account-profile-section.tsx). */}
-                    <div className="flex items-center gap-3">
-                      <UserAvatar seed={avatarSeed} className="size-11" />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setAvatarSeed(crypto.randomUUID())}
-                      >
-                        <Shuffle className="size-3.5" />
-                        {t("newAvatar")}
-                      </Button>
-                    </div>
+                    <UserAvatarPicker
+                      source={avatarSeed}
+                      previewUrl={avatarPreviewUrl}
+                      uploadLabel={t("uploadAvatar")}
+                      generateLabel={t("newLoreleiAvatar")}
+                      onUpload={(file) => {
+                        if (file.type && !file.type.startsWith("image/")) {
+                          setError(t("avatarInvalidFile"));
+                          return;
+                        }
+                        setError(null);
+                        setAvatarFile(file);
+                        setAvatarUploadToken(null);
+                        setAvatarPreviewUrl(URL.createObjectURL(file));
+                      }}
+                      onGenerate={() => {
+                        setAvatarFile(null);
+                        setAvatarUploadToken(null);
+                        setAvatarPreviewUrl(null);
+                        setAvatarSeed(crypto.randomUUID());
+                      }}
+                    />
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {t("avatarChoiceHint")}
+                    </p>
 
                     <Field id="full-name" label={t("fullName")}>
                       <Input

@@ -219,6 +219,23 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   const chatObjects = await listStoragePrefix(service, "attachments", `chat/${userId}`);
   removedStorageObjects += await removeObjects(service, "attachments", chatObjects, warnings);
 
+  // The auth-user cascade removes the avatar row, not the public storage
+  // object. Read its path while the row still exists, then erase the image.
+  const { data: avatar } = await service
+    .from("user_avatars")
+    .select("image_path")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const avatarPath = avatar?.image_path as string | null | undefined;
+  if (avatarPath) {
+    removedStorageObjects += await removeObjects(
+      service,
+      "user-avatars",
+      [avatarPath],
+      warnings,
+    );
+  }
+
   // Personal conversations of the code officer in OTHERS' projects
   // owners. `owner_id on delete set null` would anonymize them instead of
   // delete them; we first cut their compute and their key, then the cascade of

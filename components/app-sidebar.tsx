@@ -66,7 +66,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
-import { useMyAvatarSeed } from "@/lib/use-my-avatar";
+import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { hasRecentChangelog } from "@/lib/changelog";
@@ -444,7 +444,7 @@ function AccountButton({
   const isAdmin = useIsAdmin();
   const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
-  const seed = useMyAvatarSeed();
+  const seed = useMyAvatarSource();
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [whatsNewMounted, setWhatsNewMounted] = useState(false);
 

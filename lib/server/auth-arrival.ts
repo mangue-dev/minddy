@@ -5,7 +5,11 @@ import { NextResponse } from "next/server";
 
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
 import { attachPendingInvitations } from "@/lib/server/members";
-import { claimAvatarSeed } from "@/lib/server/avatar-seeds";
+import {
+  claimAvatarSeed,
+  claimPendingAvatar,
+  clearAvatarUploadToken,
+} from "@/lib/server/avatar-seeds";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -111,13 +115,12 @@ export async function claimInvitations(user: User | null): Promise<void> {
 }
 
 /**
- * The avatar chosen during registration becomes that of the account (MIN-300).
+ * The avatar chosen during registration becomes the account avatar.
  *
- * The wizard draws the mark in the browser, before no account exists:
- * it travels in `user_metadata.avatar_seed` and lands HERE, at the first
- *session. `claimAvatarSeed` never overwrites a mark already in place, so
- * going back through this path at each connection does not undo a “New avatar”
- * made from the settings.
+ * The wizard runs before an account exists. A generated avatar travels as
+ * `user_metadata.avatar_seed`; an imported image travels as the opaque
+ * `avatar_upload_token` of its staged storage object. The token is claimed
+ * first, so the subsequent seed claim cannot replace it.
  *
  * Expected, like the attachment of invitations and for the same reason: /home
  * asks for the avatar as soon as it is first rendered, and a delayed write would run
@@ -128,12 +131,30 @@ export async function claimInvitations(user: User | null): Promise<void> {
  * established.
  */
 export async function claimAvatarChoice(user: User | null): Promise<void> {
-  const seed = (user?.user_metadata as { avatar_seed?: unknown } | undefined)?.avatar_seed;
-  if (!user || typeof seed !== "string") return;
+  if (!user) return;
+  const metadata = user.user_metadata as {
+    avatar_seed?: unknown;
+    avatar_upload_token?: unknown;
+  };
+  const seed = typeof metadata.avatar_seed === "string" ? metadata.avatar_seed : null;
+  const token =
+    typeof metadata.avatar_upload_token === "string"
+      ? metadata.avatar_upload_token
+      : null;
+  if (!seed && !token) return;
   try {
-    await claimAvatarSeed(getServiceClient(), user.id, seed);
+    const service = getServiceClient();
+    if (token) {
+      await claimPendingAvatar(service, user.id, token);
+      await clearAvatarUploadToken(
+        service,
+        user.id,
+        user.user_metadata as Record<string, unknown>,
+      );
+    }
+    if (seed) await claimAvatarSeed(service, user.id, seed);
   } catch (err) {
-    console.error("[auth/callback] claim avatar seed failed:", err);
+    console.error("[auth/callback] claim avatar choice failed:", err);
   }
 }
 

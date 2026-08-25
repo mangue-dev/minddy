@@ -4,15 +4,19 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button, Input, Spinner, toast } from "mangue-ui";
-import { Download, Shuffle, User } from "lucide-react";
+import { Download, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { isDesktop } from "@/lib/desktop/bridge";
 import { emailLocalPart } from "@/lib/display-name";
 import { useAnalytics } from "@/lib/use-analytics";
-import { useMyAvatarSeed, useRegenerateAvatar } from "@/lib/use-my-avatar";
+import {
+  useMyAvatarSource,
+  useRegenerateAvatar,
+  useUploadAvatar,
+} from "@/lib/use-my-avatar";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { UserAvatar } from "@/components/user-avatar";
+import { UserAvatarPicker } from "@/components/user-avatar-picker";
 
 /** Read a string key off the user's auth metadata. */
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -23,9 +27,9 @@ function metaString(meta: Record<string, unknown>, key: string): string {
 /**
  * Account profile: avatar + display name (+ read-only email).
  *
- * The avatar can't be chosen: it is drawn from a seed the account carries
- * (public.user_avatars), and the only handle on it is a reroll. The name still
- * lives on the Supabase Auth account (`user_metadata.display_name/full_name`).
+ * The avatar uses either a generated Lorelei seed or a normalized imported
+ * image. The name still lives on the Supabase Auth account
+ * (`user_metadata.display_name/full_name`).
  */
 export function AccountProfileSection() {
   const { user, updateUser } = useAuth();
@@ -40,13 +44,13 @@ export function AccountProfileSection() {
     metaString(meta, "name") ||
     emailLocalPart(user?.email) ||
     "";
-  const seed = useMyAvatarSeed();
+  const avatarSource = useMyAvatarSource();
   const { track } = useAnalytics();
-  // Read AFTER editing: `window.minddy` does not exist in server rendering, and the
-  // supposer ferait diverger l'hydratation.
+  // Read after hydration: `window.minddy` does not exist during server rendering.
   const [inDesktopApp, setInDesktopApp] = useState(false);
   useEffect(() => setInDesktopApp(isDesktop()), []);
   const regenerate = useRegenerateAvatar();
+  const upload = useUploadAvatar();
 
   const [name, setName] = useState(currentName);
   const [busy, setBusy] = useState(false);
@@ -82,9 +86,22 @@ export function AccountProfileSection() {
   };
 
   const reroll = () => {
-    if (regenerate.isPending) return;
+    if (regenerate.isPending || upload.isPending) return;
     regenerate.mutate(undefined, {
       onError: (e) => toast.error((e as Error).message),
+      onSuccess: () => track("profile_updated", { field: "avatar" }),
+    });
+  };
+
+  const uploadFile = (file: File) => {
+    if (regenerate.isPending || upload.isPending) return;
+    if (file.type && !file.type.startsWith("image/")) {
+      toast.error(t("avatarInvalidFile"));
+      return;
+    }
+    upload.mutate(file, {
+      onError: (error) => toast.error((error as Error).message),
+      onSuccess: () => track("profile_updated", { field: "avatar" }),
     });
   };
 
@@ -101,24 +118,19 @@ export function AccountProfileSection() {
         </Button>
       }
     >
-      {/* The avatar does not choose itself: it withdraws. The portrait therefore takes the place
- of value, and the button is the gesture — like everywhere else. */}
       <SettingsRow
         label={t("avatarLabel")}
         hint={t("avatarHint")}
         control={
-          <>
-            <UserAvatar seed={seed} className="size-9" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={reroll}
-              disabled={regenerate.isPending}
-            >
-              {regenerate.isPending ? <Spinner /> : <Shuffle />}
-              {t("newAvatar")}
-            </Button>
-          </>
+          <UserAvatarPicker
+            source={avatarSource}
+            onUpload={uploadFile}
+            onGenerate={reroll}
+            uploadLabel={t("uploadAvatar")}
+            generateLabel={t("newLoreleiAvatar")}
+            uploading={upload.isPending}
+            generating={regenerate.isPending}
+          />
         }
       />
 

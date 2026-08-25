@@ -33,7 +33,11 @@ interface AuthContextValue {
   signUpWithPassword: (
     email: string,
     password: string,
-    options?: { fullName?: string; avatarSeed?: string }
+    options?: {
+      fullName?: string;
+      avatarSeed?: string;
+      avatarUploadToken?: string;
+    }
   ) => Promise<{ requiresEmailConfirmation: boolean }>;
   /**
    * Sends the password reset link (MIN-297). NEVER say
@@ -233,7 +237,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (
       email: string,
       password: string,
-      options?: { fullName?: string; avatarSeed?: string }
+      options?: {
+        fullName?: string;
+        avatarSeed?: string;
+        avatarUploadToken?: string;
+      }
     ) => {
       // The confirmation link will open in the DEFAULT browser, what
       // what we do — an email does not open in Electron. Marked `desktop=1`,
@@ -254,13 +262,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // appears in the “Redirect URLs” allowlist; otherwise it falls back on the
           // Site URL, and the confirmation link goes to the wrong domain.
           emailRedirectTo: confirmUrl.toString(),
-          // `avatar_seed`: the mark drawn during the wizard (MIN-300). She
-          // cannot be written in `user_avatars` now — there is no
-          // still counting — so she travels here, and lands at the first
-          // session (`claimAvatarSeed`).
+          // The wizard runs before an account exists. Its Lorelei seed or
+          // single-use staged-image token therefore travels in auth metadata
+          // and is claimed on the first authenticated arrival.
           data: {
             ...(options?.fullName ? { full_name: options.fullName } : {}),
             ...(options?.avatarSeed ? { avatar_seed: options.avatarSeed } : {}),
+            ...(options?.avatarUploadToken
+              ? { avatar_upload_token: options.avatarUploadToken }
+              : {}),
             // `locale`: the language of the interface at the time of registration.
             // This is what the GoTrue template of the confirmation email will read
             // — the very first sending of the account, and the only one that leaves BEFORE
