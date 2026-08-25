@@ -243,6 +243,39 @@ describe("POST /api/relay/gitlab/webhook", () => {
     expect(fakeTables["forge_relay_deliveries"] ?? []).toHaveLength(0);
   });
 
+  it("authenticates before parsing and never decrypts candidate secrets", async () => {
+    await registerAndMirror();
+    const row = fakeTables.forge_relay_link_mirror?.[0] as Record<string, unknown>;
+    row.webhook_secret_encrypted = "not-valid-ciphertext";
+
+    const malformed = new Request("http://localhost/api/relay/gitlab/webhook", {
+      method: "POST",
+      headers: { "x-gitlab-token": "wrong-secret" },
+      body: "not-json",
+    });
+    expect((await relayWebhook(malformed as never)).status).toBe(401);
+
+    const response = await relayWebhook(webhookRequest(HOOK_SECRET));
+    expect(response.status).toBe(200);
+  });
+
+  it("rejects an oversized authenticated webhook before parsing", async () => {
+    await registerAndMirror();
+    const response = await relayWebhook(
+      new Request("http://localhost/api/relay/gitlab/webhook", {
+        method: "POST",
+        headers: {
+          "content-length": String(2 * 1024 * 1024 + 1),
+          "x-gitlab-token": HOOK_SECRET,
+        },
+        body: "{}",
+      }) as never,
+    );
+
+    expect(response.status).toBe(413);
+    expect(fakeTables.forge_relay_deliveries ?? []).toHaveLength(0);
+  });
+
   async function registerAndMirror(): Promise<void> {
     const { registerGitlabHookSecret } = await import("@/lib/server/forge-relay/gitlab-broker");
     await registerGitlabHookSecret({

@@ -7,6 +7,9 @@ import {
 } from "@/lib/server/forge-relay/protocol";
 import { parseRelayJsonObject } from "@/lib/server/forge-relay/json-body";
 import { brokerTokenRefresh } from "@/lib/server/forge-relay/refresh-broker";
+import { readBoundedRequestBody } from "@/lib/server/forge-relay/request-body";
+
+export const RELAY_REFRESH_MAX_BODY_BYTES = 8 * 1024;
 
 /**
  * `POST /relay/github/user-refresh` — relay-brokered refresh of a
@@ -21,7 +24,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Managed forge relay is not configured" }, { status: 503 });
   }
 
-  const rawBody = await request.text();
+  const incoming = await readBoundedRequestBody(request, RELAY_REFRESH_MAX_BODY_BYTES);
+  if (!incoming.ok) {
+    return NextResponse.json({ error: "Relay request body is too large" }, { status: 413 });
+  }
+  const rawBody = incoming.body;
   const verification = await verifyRelayRequest({
     method: request.method,
     path: new URL(request.url).pathname,

@@ -210,6 +210,9 @@ const { signRelayRequest } = await import("./protocol");
 const { POST: gitlabRefreshRoute } = await import(
   "@/app/api/relay/gitlab/refresh/route"
 );
+const { POST: githubRefreshRoute } = await import(
+  "@/app/api/relay/github/user-refresh/route"
+);
 
 function signedRequest(path: string, rawBody: string): Request {
   const signature = signRelayRequest({
@@ -263,6 +266,18 @@ describe("POST /api/relay/gitlab/refresh", () => {
     expect(malformed.status).toBe(400);
   });
 
+  it("rejects oversized refresh bodies before signature verification", async () => {
+    const body = "x".repeat(8 * 1024 + 1);
+    const request = new Request("http://localhost/api/relay/gitlab/refresh", {
+      method: "POST",
+      headers: { "content-length": String(body.length) },
+      body,
+    });
+
+    expect((await gitlabRefreshRoute(request as never)).status).toBe(413);
+    expect(fakeTables.forge_relay_nonces).toHaveLength(0);
+  });
+
   it("refreshes over the signed channel end to end", async () => {
     const response = await gitlabRefreshRoute(
       signedRequest(
@@ -285,5 +300,20 @@ describe("POST /api/relay/gitlab/refresh", () => {
       ) as never,
     );
     expect(response.status).toBe(403);
+  });
+});
+
+describe("POST /api/relay/github/user-refresh", () => {
+  it("applies the same body ceiling before buffering", async () => {
+    const body = "x".repeat(8 * 1024 + 1);
+    const response = await githubRefreshRoute(
+      new Request("http://localhost/api/relay/github/user-refresh", {
+        method: "POST",
+        headers: { "content-length": String(body.length) },
+        body,
+      }) as never,
+    );
+
+    expect(response.status).toBe(413);
   });
 });

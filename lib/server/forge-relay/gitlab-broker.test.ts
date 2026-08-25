@@ -56,6 +56,7 @@ const {
   verifyCloudGitlabState,
   createGitlabTokenDelivery,
   consumeGitlabTokenDelivery,
+  gitlabHookTokenDigest,
   registerGitlabHookSecret,
 } = await import("./gitlab-broker");
 const { verifyInstanceSignedState } = await import("./user-broker");
@@ -205,6 +206,9 @@ describe("registerGitlabHookSecret", () => {
       repo_full_name: "acme/app",
     });
     expect(String(row.webhook_secret_encrypted)).not.toContain("per-repo-hook-secret");
+    expect(row.webhook_secret_digest).toBe(
+      gitlabHookTokenDigest("per-repo-hook-secret-0123456789abcdef"),
+    );
 
     // Lost link event: the minimal row still authorizes verification.
     const again = await registerGitlabHookSecret({

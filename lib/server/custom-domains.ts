@@ -17,16 +17,17 @@ import {
   VERCEL_CNAME_TARGET,
   type VercelVerificationRecord,
 } from "@/lib/server/vercel-domains";
+import { reserveProviderOperation } from "@/lib/server/provider-operation-guard";
 
 /**
- * Custom domains (MIN-36). A custom_domains line = a hostname
- * client that serves a feedback board OR a shared view at the root. The
- * table is RLS deny-all: everything goes through here (customer service), the access checks
- * live in the API routes.
+ * Custom domains (MIN-36). One `custom_domains` row maps a customer
+ * hostname to either a feedback board or a shared view at its root. The table
+ * is RLS deny-all: all service-role access goes through this module, while
+ * authorization remains in the API routes.
  *
- * Writing order: Vercel first, DB then — a base domain without
- * Vercel attachment would be a lie (never used), the reverse is repaired
- * on its own (the 409 “already on this project” is treated as a success when added).
+ * Write order is Vercel first, then the database. A database domain without a
+ * Vercel attachment would be unusable; the reverse case self-heals because a
+ * Vercel 409 for a domain already attached to this project counts as success.
  */
 
 export interface CustomDomainRow {
@@ -72,8 +73,8 @@ export function normalizeDomain(input: string): NormalizeDomainResult {
   if (!value || value.length > 253 || !HOSTNAME_RE.test(value)) {
     return { ok: false, error: "invalid" };
   }
-  // L'allowlist ops (MDY_CUSTOM_DOMAIN_ALLOWLIST) court-circuite l'interdit
-  // des suffixes minddy — dogfooding de feedback.minddy.app.
+  // The operations allowlist bypasses forbidden Minddy suffixes so deployments
+  // can dogfood a host such as feedback.minddy.app.
   if (
     !customDomainAllowlist().has(value) &&
     FORBIDDEN_SUFFIXES.some((suffix) => value === suffix || value.endsWith(`.${suffix}`))
@@ -108,9 +109,56 @@ async function getDomainRowForTarget(target: DomainTargetRef): Promise<CustomDom
   return "boardId" in target ? getDomainForBoard(target.boardId) : getDomainForShare(target.shareId);
 }
 
+export type DomainProviderOperationError = {
+  ok: false;
+  error: "rate_limited" | "operation_in_progress" | "provider_unavailable";
+  retryAfter?: number;
+};
+
 export type SetDomainResult =
   | { ok: true; row: CustomDomainRow }
-  | { ok: false; error: "invalid" | "apex" | "forbidden" | "taken" | "api_error" };
+  | { ok: false; error: "invalid" | "apex" | "forbidden" | "taken" | "api_error" }
+  | DomainProviderOperationError;
+
+const DOMAIN_PROVIDER_LIMIT = 20;
+const DOMAIN_PROVIDER_WINDOW_SECONDS = 60;
+const DOMAIN_MUTATION_DEDUPE_SECONDS = 10;
+const DOMAIN_REFRESH_DEDUPE_SECONDS = 15;
+
+function targetResourceKey(target: DomainTargetRef): string {
+  return "boardId" in target ? `board:${target.boardId}` : `share:${target.shareId}`;
+}
+
+function rowResourceKey(row: CustomDomainRow): string {
+  return row.board_id ? `board:${row.board_id}` : `share:${row.share_id}`;
+}
+
+async function reserveDomainProviderOperation(input: {
+  actorId: string;
+  operation: "mutation" | "refresh";
+  resourceKey: string;
+  dedupeSeconds: number;
+}): Promise<DomainProviderOperationError | null> {
+  const reservation = await reserveProviderOperation({
+    actorId: input.actorId,
+    provider: "vercel-domains",
+    operation: input.operation,
+    resourceKey: input.resourceKey,
+    limit: DOMAIN_PROVIDER_LIMIT,
+    windowSeconds: DOMAIN_PROVIDER_WINDOW_SECONDS,
+    dedupeSeconds: input.dedupeSeconds,
+  });
+  switch (reservation.state) {
+    case "reserved":
+      return null;
+    case "deduplicated":
+      return { ok: false, error: "operation_in_progress", retryAfter: reservation.retryAfter };
+    case "quota_exceeded":
+      return { ok: false, error: "rate_limited", retryAfter: reservation.retryAfter };
+    case "unavailable":
+      return { ok: false, error: "provider_unavailable" };
+  }
+}
 
 /** Attaches `domain` to the target (replaces any previous domain). */
 export async function setDomain(
@@ -121,6 +169,14 @@ export async function setDomain(
   const normalized = normalizeDomain(rawDomain);
   if (!normalized.ok) return { ok: false, error: normalized.error };
   const domain = normalized.domain;
+
+  const refusal = await reserveDomainProviderOperation({
+    actorId,
+    operation: "mutation",
+    resourceKey: targetResourceKey(target),
+    dedupeSeconds: DOMAIN_MUTATION_DEDUPE_SECONDS,
+  });
+  if (refusal) return refusal;
 
   const service = getServiceClient();
 
@@ -138,12 +194,12 @@ export async function setDomain(
     return { ok: true, row: existing }; // PUT idempotent
   }
 
-  // Replacement: the target had another domain → we detach it properly.
-  // The “if there was one” is IN `removeDomain`, not in a
+  // Replacement: detach the target's previous domain before attaching the new
+  // one. The “if there was one” guard belongs in the removal helper, not in a
   // `if (previous)` here: this guard is compiled in `if (true)`.
-  // The explanation is based on `removeDomain`.
+  // See the explanation on `removeDomainAfterReservation`.
   const previous = await getDomainRowForTarget(target);
-  if (!(await removeDomain(previous))) {
+  if (!(await removeDomainAfterReservation(previous))) {
     return { ok: false, error: "api_error" };
   }
 
@@ -177,9 +233,9 @@ export async function setDomain(
 }
 
 /**
- * Vercel detachment alone, when the custom_domains line leaves (or has left)
- * in cascade with its target (deletion of a share or a view). Failure = log
- * and continue: the orphan on the Vercel side repairs itself on the next addition (409-success).
+ * Detaches from Vercel only when a `custom_domains` row is being, or has been,
+ * removed by a target cascade. Failure is logged but does not block deletion:
+ * a later add repairs the Vercel orphan through the accepted 409 response.
  */
 export async function detachDomainFromVercelOnly(row: CustomDomainRow): Promise<void> {
   const removed = await removeDomainFromVercel(row.domain);
@@ -194,27 +250,23 @@ export async function detachDomainFromVercelOnly(row: CustomDomainRow): Promise<
 /**
  * Detaches from Vercel THEN deletes the row (the reverse leaves an orphan).
  *
- * **`null` = nothing to detach, and this is a success.** All three callers leave
- * from a search which may find nothing, and a detach is idempotent by
- * nature: the "if there is one" has its place here, once, rather than copied
- * on each call site.
+ * **`null` means there is nothing to detach, which is a success.** Callers all
+ * start with a lookup that may find nothing, and detachment is naturally
+ * idempotent. Keep the null guard here instead of copying it to every caller.
  *
- * It's not just a convenience, it's the only protection we control.
+ * This is not merely a convenience; it is the only reliable guard here.
  * Turbopack (Next 16.3) evaluates `await getDomainRowForTarget(target)` as a
- * always true value — the function is `async`, so its return is a
- * Promise, therefore an object, and the `await` is not modeled. The `if (previous)`
- * which protected this call in `setDomain` was compiled in `if (true)`, in dev
- * AS in production (verified in both outputs): the first domain
- * attached to a board or a shared view died en
- * `TypeError: Cannot read properties of null (reading 'domain')`, with a stack
- * which designates a branch that the source makes unreachable.
+ * truthy value: the function is async, so its return is a Promise object and
+ * the `await` is not modeled. The former `if (previous)` in `setDomain` was
+ * compiled as `if (true)` in both development and production. Attaching the
+ * first domain then failed with `Cannot read properties of null`, even though
+ * the source appeared to make that branch unreachable.
  *
- * So: **do not put guard back on the call site.** It would be reread
- * as protection, and wouldn't be one. This is the only place in the repository
- * where the compiler folds a condition on a runtime value —
- * checked on all the output of `.next` — but it is a place.
+ * Therefore, do not move this guard back to a call site. It would look safe
+ * but would not survive compilation. This is the only observed runtime-value
+ * condition folded this way in the generated `.next` output.
  */
-export async function removeDomain(row: CustomDomainRow | null): Promise<boolean> {
+async function removeDomainAfterReservation(row: CustomDomainRow | null): Promise<boolean> {
   if (!row) return true;
 
   const removed = await removeDomainFromVercel(row.domain);
@@ -230,6 +282,29 @@ export async function removeDomain(row: CustomDomainRow | null): Promise<boolean
   return true;
 }
 
+export type RemoveDomainResult =
+  | { ok: true }
+  | DomainProviderOperationError
+  | { ok: false; error: "api_error" };
+
+/** Reserves a shared mutation slot before detaching a domain from Vercel. */
+export async function removeDomain(
+  row: CustomDomainRow | null,
+  actorId: string,
+): Promise<RemoveDomainResult> {
+  if (!row) return { ok: true };
+  const refusal = await reserveDomainProviderOperation({
+    actorId,
+    operation: "mutation",
+    resourceKey: rowResourceKey(row),
+    dedupeSeconds: DOMAIN_MUTATION_DEDUPE_SECONDS,
+  });
+  if (refusal) return refusal;
+  return (await removeDomainAfterReservation(row))
+    ? { ok: true }
+    : { ok: false, error: "api_error" };
+}
+
 export interface DomainStatus {
   domain: string;
   status: "pending" | "verified";
@@ -237,14 +312,35 @@ export interface DomainStatus {
   dns: Array<{ type: "CNAME" | "TXT"; name: string; value: string }>;
 }
 
-/** Queries Vercel, persists the status, returns the form consumed by the UI. */
-export async function refreshDomainStatus(row: CustomDomainRow): Promise<DomainStatus> {
+export type RefreshDomainStatusResult =
+  | { ok: true; domain: DomainStatus; refreshed: boolean }
+  | DomainProviderOperationError;
+
+/** Queries Vercel, persists the status, and returns the UI representation. */
+export async function refreshDomainStatus(
+  row: CustomDomainRow,
+  actorId: string,
+  options?: { mutationAlreadyReserved?: boolean },
+): Promise<RefreshDomainStatusResult> {
+  if (!options?.mutationAlreadyReserved) {
+    const refusal = await reserveDomainProviderOperation({
+      actorId,
+      operation: "refresh",
+      resourceKey: rowResourceKey(row),
+      dedupeSeconds: DOMAIN_REFRESH_DEDUPE_SECONDS,
+    });
+    if (refusal?.error === "operation_in_progress") {
+      return { ok: true, domain: serializeDomainStatus(row), refreshed: false };
+    }
+    if (refusal) return refusal;
+  }
+
   const state = await getVercelDomainState(row.domain);
   const status: CustomDomainRow["status"] =
     state.verified && !state.misconfigured ? "verified" : "pending";
   const verification = state.verification.length > 0 ? state.verification : null;
-  // We never degrade an already known recommendation to null (response
-  // config in error) — the value per domain remains stable on the Vercel side.
+  // Never replace an existing recommendation with null after a failed config
+  // response; Vercel's domain-specific value remains stable.
   const cname_target = state.cnameTarget ?? row.cname_target;
 
   if (
@@ -259,7 +355,14 @@ export async function refreshDomainStatus(row: CustomDomainRow): Promise<DomainS
       .eq("id", row.id);
   }
 
-  return serializeDomainStatus({ ...row, status, verification, cname_target }, state.misconfigured);
+  return {
+    ok: true,
+    domain: serializeDomainStatus(
+      { ...row, status, verification, cname_target },
+      state.misconfigured,
+    ),
+    refreshed: true,
+  };
 }
 
 /** API/UI form without Vercel call (initial loading of settings). */
@@ -268,8 +371,8 @@ export function serializeDomainStatus(
   misconfigured?: boolean
 ): DomainStatus {
   const dns: DomainStatus["dns"] = [
-    // The recommended target by domain (vercel-dns-016 & co) when we read it,
-    // otherwise the generic one — which works but which Vercel now advises against.
+    // Prefer Vercel's domain-specific target when known; the generic target
+    // remains functional but is no longer recommended.
     { type: "CNAME", name: row.domain, value: row.cname_target ?? VERCEL_CNAME_TARGET },
     ...(row.verification ?? [])
       .filter((v) => v.type?.toUpperCase() === "TXT")
@@ -290,7 +393,7 @@ const getRequestHost = cache(async (): Promise<string> => {
   return normalizeHost(h.get("host") ?? "");
 });
 
-/** Host custom (≠ minddy.app / vercel.app / localhost), whatever the path. */
+/** Whether the request uses a custom host, regardless of its path. */
 export async function isCustomPublicHost(): Promise<boolean> {
   const host = await getRequestHost();
   return Boolean(host) && !isPrimaryHost(host);
@@ -307,10 +410,9 @@ export const getRequestDomainTarget = cache(async (): Promise<DomainTarget | nul
 });
 
 /**
- * Public prefix of board links: "" when the page is served by SON
- * custom domain (own URLs), otherwise /f/<token>. Aware of the MAPPING, not
- * only of the host: a shared view visited in pass-through on the domain
- * of a board keeps its token prefix.
+ * Public board-link prefix: empty when a page is served by its own custom
+ * domain, otherwise `/f/<token>`. This uses the mapped target, not just the
+ * host: a shared view visited through a board domain keeps its token prefix.
  */
 export function feedbackBasePath(token: string, target: DomainTarget | null): string {
   return target?.kind === "feedback" && target.token === token ? "" : `/f/${token}`;
@@ -321,15 +423,14 @@ export function shareBasePath(token: string, target: DomainTarget | null): strin
 }
 
 /**
- * Absolute canonical URL of a public page served under TWO hosts (MIN-88).
+ * Absolute canonical URL for a public page served under two hosts (MIN-88).
  *
- * A feedback board responds to both `www.minddy.app/f/<token>` and
- * the client's domain — two URLs, single content. The `canonical` designates
- * the one which is authentic: the client's domain when it is he who serves the page
- * (it is his site, not ours), `www.minddy.app` otherwise.
+ * A feedback board responds on both `www.minddy.app/f/<token>` and the
+ * customer's domain. The canonical URL selects the customer's domain when it
+ * serves the page directly, and `www.minddy.app` otherwise.
  *
- * `basePath` is what returns `feedbackBasePath` / `shareBasePath`: the
- * empty string means precisely “we are on the dedicated domain”.
+ * `basePath` comes from `feedbackBasePath` or `shareBasePath`; an empty value
+ * means the request is already on the dedicated domain.
  */
 export async function publicCanonicalUrl(basePath: string, subPath = ""): Promise<string> {
   const path = `${basePath}${subPath}` || "/";
@@ -341,9 +442,9 @@ export async function publicCanonicalUrl(basePath: string, subPath = ""): Promis
 }
 
 /**
- * Public cookie path: HOST aware only. On a custom domain
- *, the visible path never contains /f/<token> — a path-scoped cookie
- * would be invisible there; and one domain = only one site, so path=/ is safe.
+ * Public cookie path, based only on the host. A custom-domain URL never
+ * contains `/f/<token>`, so a token-path cookie would be invisible there.
+ * One custom domain maps to one site, making `path=/` safe.
  */
 export function publicCookiePath(isCustomHost: boolean, defaultPath: string): string {
   return isCustomHost ? "/" : defaultPath;

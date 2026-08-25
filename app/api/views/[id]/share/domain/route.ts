@@ -7,18 +7,35 @@ import {
   removeDomain,
   serializeDomainStatus,
   setDomain,
+  type DomainProviderOperationError,
 } from "@/lib/server/custom-domains";
 import { resolveShareForDomain } from "@/lib/server/view-shares";
 import { isVercelDomainsConfigured } from "@/lib/server/vercel-domains";
-import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+async function providerOperationRefusal(
+  refusal: DomainProviderOperationError,
+): Promise<NextResponse> {
+  const t = await getTranslations("ApiErrors");
+  if (refusal.error === "provider_unavailable") {
+    return NextResponse.json({ error: t("customDomainApiError") }, { status: 503 });
+  }
+  const retryAfter = refusal.retryAfter ?? 1;
+  return NextResponse.json(
+    {
+      error: t("tooManyAttempts", { seconds: retryAfter }),
+      retry_after: retryAfter,
+    },
+    { status: 429, headers: { "Retry-After": String(retryAfter) } },
+  );
+}
+
 /**
- * Custom domain of a shared view (MIN-36) — mirror of the route board
- * (app/api/projects/[id]/feedback/domain). GET for who can manage sharing;
- * PUT/DELETE owner-only (attaching a domain touches Vercel infrastructure). 404 while
- * that the view does not have a share: the domain attaches to an existing public link.
+ * Custom domain for a shared view (MIN-36), mirroring the feedback-board
+ * route. GET is available to users who can manage sharing; PUT/DELETE are
+ * owner-only because they change Vercel infrastructure. A view without an
+ * existing public share returns 404 because domains attach to public links.
  */
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -35,15 +52,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const row = resolved.share ? await getDomainForShare(resolved.share.id) : null;
   if (!row) return NextResponse.json({ configured, can_manage: resolved.isOwner, domain: null });
 
-  // An unverified domain serves NOTHING since MIN-337: verification is
-  // become the obligatory passage, so it is repeated at each opening of
-  // the screen, without waiting for a click on “Check Status”. The cost (a
-  // Vercel call) only concerns pending domains.
+  // Since MIN-337, an unverified domain serves nothing. Settings therefore
+  // recheck pending domains automatically; the shared reservation collapses
+  // parallel page loads into one provider call.
   const refresh = request.nextUrl.searchParams.get("refresh") === "1";
-  const domain =
-    configured && (refresh || row.status !== "verified")
-      ? await refreshDomainStatus(row)
-      : serializeDomainStatus(row);
+  let domain = serializeDomainStatus(row);
+  if (configured && (refresh || row.status !== "verified")) {
+    const result = await refreshDomainStatus(row, auth.user.id);
+    if (!result.ok) return providerOperationRefusal(result);
+    domain = result.domain;
+  }
   return NextResponse.json({ configured, can_manage: resolved.isOwner, domain });
 }
 
@@ -65,17 +83,6 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   }
   if (!isVercelDomainsConfigured()) {
     return NextResponse.json({ error: t("customDomainsNotConfigured") }, { status: 503 });
-  }
-
-  const rate = checkSessionRateLimit(auth.user.id, "custom-domain", { limit: 10 });
-  if (!rate.allowed) {
-    return NextResponse.json(
-      {
-        error: t("tooManyAttempts", { seconds: rate.retryAfter }),
-        retry_after: rate.retryAfter,
-      },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
-    );
   }
 
   let body: Record<string, unknown>;
@@ -103,15 +110,21 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ error: t("customDomainTaken") }, { status: 409 });
       case "api_error":
         return NextResponse.json({ error: t("customDomainApiError") }, { status: 502 });
+      case "rate_limited":
+      case "operation_in_progress":
+      case "provider_unavailable":
+        return providerOperationRefusal(result);
     }
   }
-  // Immediate refresh: reads the CNAME target recommended by Vercel for CE
-  // domain (vercel-dns-016 & co) and persists it — DNS instructions
-  // displayed at first rendering are the correct ones.
+  // The mutation reservation also covers the immediate status refresh and
+  // its domain-specific CNAME lookup.
+  const refreshed = await refreshDomainStatus(result.row, auth.user.id, {
+    mutationAlreadyReserved: true,
+  });
   return NextResponse.json({
     configured: true,
     can_manage: true,
-    domain: await refreshDomainStatus(result.row),
+    domain: refreshed.ok ? refreshed.domain : serializeDomainStatus(result.row),
   });
 }
 
@@ -138,8 +151,15 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       domain: null,
     });
 
-  const removed = await removeDomain(row);
-  if (!removed) {
+  const removed = await removeDomain(row, auth.user.id);
+  if (!removed.ok) {
+    if (
+      removed.error === "rate_limited" ||
+      removed.error === "operation_in_progress" ||
+      removed.error === "provider_unavailable"
+    ) {
+      return providerOperationRefusal(removed);
+    }
     return NextResponse.json({ error: t("customDomainApiError") }, { status: 502 });
   }
   return NextResponse.json({

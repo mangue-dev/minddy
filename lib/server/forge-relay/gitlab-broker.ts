@@ -42,6 +42,15 @@ export const RELAY_GITLAB_STATE_KIND = "forge-relay-gitlab-authorize";
 
 const USER_STATE_MAX_AGE_MS = 10 * 60_000;
 
+/** Non-reversible lookup key used to authenticate a hook before body parsing. */
+export function gitlabHookTokenDigest(secret: string): string {
+  return crypto
+    .createHmac("sha256", requireSecret("GIT_TOKEN_ENCRYPTION_SECRET"))
+    .update("forge-relay-gitlab-hook\0")
+    .update(secret)
+    .digest("hex");
+}
+
 // ── Instance side ───────────────────────────────────────────────────────────
 
 interface RelayGitlabStatePayload {
@@ -214,6 +223,7 @@ export async function registerGitlabHookSecret(input: {
       external_repo_id: input.repoId,
       repo_full_name: input.repo,
       webhook_secret_encrypted: encryptForgeToken(input.secret),
+      webhook_secret_digest: gitlabHookTokenDigest(input.secret),
       updated_at: new Date().toISOString(),
     },
     { onConflict: "instance_id,provider,external_repo_id" },
