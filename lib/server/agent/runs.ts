@@ -251,6 +251,10 @@ export interface AgentRun {
   /** CE run spending limit, in USD. Null = only the quota and the ceiling
    * of the bound chain. */
   budget_usd: number | null;
+  /** Managed-AI account budget reserved atomically when this run was created. */
+  managed_budget_usd?: number | null;
+  /** First accepted VM completion callback for the current running turn. */
+  rest_claimed_at?: string | null;
   /** What we ASKED for this run. Persisted since MIN-147: without it, the chain
    * can't know what the run that just finished was doing. */
   intent: AgentLaunchIntent | null;
@@ -382,6 +386,12 @@ export interface CreateRunInput {
   localWorktree?: boolean;
   /** Explicit acknowledgement required for issue-anchored local execution. */
   localIssueContextConfirmed?: boolean;
+  /** Required for platform-funded runs; omitted for BYOK. */
+  managedBudget?: {
+    periodStart: string;
+    accountCapUsd: number;
+    requestedUsd: number;
+  };
 }
 
 /**
@@ -392,6 +402,14 @@ export class ActiveRunExistsError extends Error {
   constructor() {
     super("An agent run is already active on this anchor");
     this.name = "ActiveRunExistsError";
+  }
+}
+
+/** The atomic reservation found no uncommitted managed-AI budget. */
+export class ManagedBudgetUnavailableError extends Error {
+  constructor() {
+    super("No managed-AI budget remains for this run");
+    this.name = "ManagedBudgetUnavailableError";
   }
 }
 
@@ -437,9 +455,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
    */
   const engine = AGENT_ENGINE;
   const loopInVm = true;
-  const { data, error } = await service
-    .from("agent_runs")
-    .insert({
+  const values = {
       project_id: input.projectId,
       issue_id: input.issueId,
       pull_request_id: input.pullRequestId ?? null,
@@ -507,11 +523,24 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
           issueId: input.issueId,
           localIssueContextConfirmed: input.localIssueContextConfirmed,
         }).ok,
-    })
-    .select("*")
-    .single();
+    };
+  const result = input.managedBudget
+    ? await service.rpc("create_agent_run_with_budget", {
+        p_user_id: input.createdBy,
+        p_usage_since: input.managedBudget.periodStart,
+        p_budget_cap: input.managedBudget.accountCapUsd,
+        p_requested_budget: input.managedBudget.requestedUsd,
+        p_values: values,
+      })
+    : await service.from("agent_runs").insert(values).select("*").single();
+  const error = result.error;
+  const reserved = input.managedBudget
+    ? (result.data as { run?: AgentRun | null } | null)?.run ?? null
+    : (result.data as AgentRun | null);
+  const data = reserved;
   if (error || !data) {
     if (error?.code === PG_UNIQUE_VIOLATION) throw new ActiveRunExistsError();
+    if (!error && input.managedBudget) throw new ManagedBudgetUnavailableError();
     throw new Error(error?.message ?? "Failed to create agent run");
   }
   // Analytics (MIN-78): the launch is also tracked on the client side, but it
@@ -544,7 +573,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   return data as AgentRun;
 }
 
-/** Claim CAS atomique (queued → running). Renvoie null si un autre l'a pris. */
+/** Atomic CAS claim (queued → running). Returns null when another worker won. */
 export async function claimRun(runId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data, error } = await service.rpc("claim_agent_run", { p_run_id: runId });
@@ -566,6 +595,22 @@ export async function claimRun(runId: string): Promise<AgentRun | null> {
     ...(run.local_exec ? { local_exec_gen: run.local_exec_gen + 1 } : {}),
   });
   return null;
+}
+
+/**
+ * Claims the one VM completion callback allowed to land the current turn.
+ * Charging, repository landing, events, and the terminal stamp all happen only
+ * after this compare-and-swap succeeds.
+ */
+export async function claimRunRest(runId: string): Promise<AgentRun | null> {
+  const { data, error } = await getServiceClient().rpc("claim_agent_run_rest", {
+    p_run_id: runId,
+  });
+  if (error) {
+    console.error("[agent-runs] rest claim failed:", error.message);
+    return null;
+  }
+  return ((data ?? []) as AgentRun[])[0] ?? null;
 }
 
 /**

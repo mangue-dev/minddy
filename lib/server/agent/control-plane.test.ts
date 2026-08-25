@@ -33,6 +33,7 @@ const h = vi.hoisted(() => ({
   /** The BASE refuses the write (null byte, failure) — not the transition guard. */
   stampFails: false,
   landed: 0,
+  restClaimed: false,
   /** Landing contexts passed to the shared implementation. */
   prLandings: [] as Array<{ workBranch: string; baseBranch: string }>,
   run: null as Record<string, unknown> | null,
@@ -217,6 +218,11 @@ vi.mock("./runs", async (importOriginal) => ({
     h.runReads++;
     return h.run;
   }),
+  claimRunRest: vi.fn(async () => {
+    if (h.restClaimed || h.run?.status !== "running") return null;
+    h.restClaimed = true;
+    return h.run;
+  }),
   appendEvent: vi.fn(async (runId: string, type: string) => {
     h.events.push({ runId, type });
   }),
@@ -327,6 +333,7 @@ beforeEach(() => {
   h.stampReturnsNull = false;
   h.stampFails = false;
   h.landed = 0;
+  h.restClaimed = false;
   h.prLandings.length = 0;
   h.runReads = 0;
   h.cleared.length = 0;
@@ -444,13 +451,7 @@ describe("active authority revocation", () => {
   });
 });
 
-/**
- * MIN-224 — the spending limit for a turn RELEASES midway through.
- *
- * A round of microVM lasts hours and its ceiling was frozen when launched.
- * But nothing reserves budget: two runs launched at the same second read the same
- * remaining and each take it as their ceiling, so they can spend double.
- */
+/** MIN-460 — a turn spends only its reservation, with a legacy fallback. */
 describe("le budget restant du tour", () => {
   it("rend le restant du COMPTE quand le run n'a pas de plafond propre", async () => {
     // The common case: only routines set a `budget_usd`.
@@ -486,6 +487,16 @@ describe("le budget restant du tour", () => {
     const res = await call("GET", "/budget");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ remainingUsd: null });
+  });
+
+  it("uses only the unspent atomic reservation for a new platform run", async () => {
+    h.run = { ...h.run!, managed_budget_usd: 1.5, cost_usd: 0.4 };
+    h.ledgerSpent = 0.6;
+    h.quota = { unlimited: false, remaining: 9, allowed: true, mode: "platform" };
+
+    expect(await call("GET", "/budget").then((response) => response.body)).toEqual({
+      remainingUsd: 0.9,
+    });
   });
 });
 
@@ -1024,14 +1035,14 @@ describe("la surface est fermée", () => {
   });
 });
 
-describe("la fin de tour n'atterrit qu'UNE fois", () => {
-  it("met la session au repos quand le run tourne encore", async () => {
+describe("turn completion lands exactly once", () => {
+  it("rests the session while the run is still active", async () => {
     const res = await call("POST", "/rest", { status: "completed", costUsd: 0.1 });
     expect(res.status).toBe(200);
     expect(h.landed).toBe(1);
   });
 
-  it("refuse en 409 un second rapport — le client ne le retente pas", async () => {
+  it("rejects a later report with 409 so the client does not retry", async () => {
     // The control plane client tries again on 5xx: without this guard, a report
     // whose response was lost in flight would be replayed. Duplicate events in the
     // thread, and a SECOND compute line to the ledger — the microVM half of the
@@ -1042,7 +1053,17 @@ describe("la fin de tour n'atterrit qu'UNE fois", () => {
     expect(h.landed).toBe(0);
   });
 
-  it("refuse un rapport sans statut plutôt que d'en inventer un", async () => {
+  it("allows only one of two concurrent completion callbacks to land", async () => {
+    const responses = await Promise.all([
+      call("POST", "/rest", { status: "completed", costUsd: 0.1 }),
+      call("POST", "/rest", { status: "completed", costUsd: 0.1 }),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    expect(h.landed).toBe(1);
+  });
+
+  it("rejects a report without a status instead of inventing one", async () => {
     expect((await call("POST", "/rest", { costUsd: 1 })).status).toBe(400);
     expect(h.landed).toBe(0);
   });
@@ -1274,6 +1295,17 @@ describe("le plan de contrôle vu depuis une machine", () => {
       h.run = { ...h.run!, provider_key_id: "hash-du-tour-davant" };
       await callLocal("POST", "/llm-key");
       expect(h.revoked).toEqual(["hash-du-tour-davant"]);
+    });
+
+    it("caps a local platform key at the run's unspent reservation", async () => {
+      h.run = { ...h.run!, managed_budget_usd: 1.2, cost_usd: 0.2 };
+      h.ledgerSpent = 0.4;
+      h.quota = { unlimited: false, remaining: 7, allowed: true, mode: "platform" };
+
+      const response = await callLocal("POST", "/llm-key");
+
+      expect(response.body).toEqual({ key: "sk-or-v1-clef-du-run", capUsd: 0.8 });
+      expect(h.minted).toEqual([{ runId: RUN_ID, capUsd: 0.8 }]);
     });
 
     it("n'en sert AUCUNE à une microVM", async () => {

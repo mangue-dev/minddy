@@ -19,6 +19,16 @@ import type { NormalizedUsage } from "@/lib/server/ai-usage";
 import type { RedactText } from "../redact";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 
+/** Maximum completion request buffered by the in-VM/local proxy. */
+export const MAX_LLM_PROXY_BODY_BYTES = 16 * 1024 * 1024;
+
+class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super("request body exceeds the proxy limit");
+    this.name = "RequestBodyTooLargeError";
+  }
+}
+
 /**
  * THE SUPERVISOR'S LOCAL PROXY (MIN-286, lot 2) — the forty lines that
  * rendent au ledger ce qu'opencode ne dit pas.
@@ -457,12 +467,26 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   }
 
   async function relayOnce(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const announcedLength = Number(req.headers["content-length"]);
+    if (Number.isFinite(announcedLength) && announcedLength > MAX_LLM_PROXY_BODY_BYTES) {
+      // Do not retain an announced oversized body. Draining the socket keeps the
+      // HTTP connection well-formed without allowing its bytes into memory.
+      req.resume();
+      bodyTooLarge(res);
+      return;
+    }
     const route = resolveProxyTarget(req.method, req.url, opts.relay?.baseUrl ?? job.baseUrl);
     if (!route.ok) {
-      // The body is READ ANYWAY before refusing: a client who has started to
-      // write and who is responded to without emptying the socket ends up with a
-      // connection half consumed, and opencode tries again on a broken pipe.
-      await readBody(req).catch(() => {});
+      // Drain rejected routes too, but under the same memory ceiling as the
+      // completion route.
+      try {
+        await readBody(req, MAX_LLM_PROXY_BODY_BYTES);
+      } catch (error) {
+        if (error instanceof RequestBodyTooLargeError) {
+          bodyTooLarge(res);
+          return;
+        }
+      }
       // A refusal here is never trivial: it is either an opencode that has changed
       // route, or someone trying to use the proxy. It can be read in a
       // log, bounded because the request-target comes from opposite.
@@ -471,7 +495,16 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       res.end(JSON.stringify({ error: { message: route.message } }));
       return;
     }
-    const raw = await readBody(req);
+    let raw: Buffer;
+    try {
+      raw = await readBody(req, MAX_LLM_PROXY_BODY_BYTES);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        bodyTooLarge(res);
+        return;
+      }
+      throw error;
+    }
 
     // There is only one road left: what happens here IS a completion,
     // and the three gestures that follow no longer have any conditions to carry.
@@ -616,11 +649,31 @@ async function optionalApiKey(fetchKey: () => Promise<string | null>): Promise<s
   return (await fetchKey())?.trim() || null;
 }
 
-function readBody(req: IncomingMessage): Promise<Buffer> {
+function bodyTooLarge(res: ServerResponse): void {
+  res.writeHead(413, { "content-type": "application/json" });
+  res.end(JSON.stringify({ error: { message: "proxy: request body too large" } }));
+}
+
+function readBody(req: IncomingMessage, maxBytes: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
-    req.on("end", () => resolve(Buffer.concat(chunks)));
+    let bytes = 0;
+    let rejected = false;
+    req.on("data", (chunk: Buffer | string) => {
+      if (rejected) return;
+      const buffered = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      bytes += buffered.byteLength;
+      if (bytes > maxBytes) {
+        rejected = true;
+        chunks.length = 0;
+        reject(new RequestBodyTooLargeError());
+        return;
+      }
+      chunks.push(buffered);
+    });
+    req.on("end", () => {
+      if (!rejected) resolve(Buffer.concat(chunks, bytes));
+    });
     req.on("error", reject);
   });
 }

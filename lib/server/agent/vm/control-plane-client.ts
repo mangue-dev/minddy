@@ -141,10 +141,9 @@ export interface ControlPlaneClient {
    * of the monthly remainder of the account and the run ceiling. `null` = unknown (read
    * broken) or no applicable limit: the caller keeps his current limit.
    *
-   * Exists because nothing reserves budget: two competing runs read the
-   * same remaining and each take it as a ceiling. The old form read back to
-   * each chunk, so at worst every five minutes; a round of microVM lasts
-   * hours, and without this surface his ceiling would be blind from start to finish.
+   * New managed-AI runs read their remaining atomic reservation; legacy and
+   * BYOK rows retain their compatibility behavior. Re-reading still matters
+   * because ledger charges reduce the available amount during a long turn.
    */
   budgetRemaining(): Promise<number | null>;
   syncPlan(steps: PlanStep[]): Promise<void>;

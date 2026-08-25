@@ -1131,9 +1131,8 @@ describe("le plafond de dépense", () => {
   });
 
   it("RELIT le plafond en cours de tour, il ne le snapshote pas", async () => {
-    // Nothing reserves budget: two competing runs read the same remaining
-    // and each take it as their ceiling. A microVM tour lasts for hours —
-    // a fixed ceiling at start-up would be blind from start to finish.
+    // Ledger charges reduce an atomic reservation while a microVM turn may run
+    // for hours, so a fixed launch snapshot would still become stale.
     h.remainingUsd = 0;
     // The clock advances by one minute per reading, to cross the cadence of
     // rereading without making the test wait.

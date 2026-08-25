@@ -42,6 +42,8 @@ export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 /** Cost tracking context for a forced call (feature + imputation). */
 export interface ForcedToolCallRecord {
   feature: AiFeature;
+  /** Stable ledger run id when this call belongs to a larger reserved action. */
+  runId?: string;
   /** Who pays — said by the caller, never deducted from the project (MIN-131). */
   billTo: AiUsageBillTo;
   projectId?: string | null;
@@ -161,7 +163,7 @@ export async function forcedToolCall(
     if (options?.record) {
       const u = parseOpenRouterUsage(data.usage);
       await recordAiUsage({
-        runId: newRunId(),
+        runId: options.record.runId ?? newRunId(),
         feature: options.record.feature,
         provider,
         keyMode: runtime?.mode ?? "platform",

@@ -32,7 +32,9 @@ import {
   ActiveRunExistsError,
   type AgentRun,
   type AgentRunTrigger,
+  type CreateRunInput,
 } from "./runs";
+import { requestedRunReservationUsd } from "./run-key";
 import { drainAgentRuns } from "./drain";
 import { localExecRequested } from "./local-exec";
 import { capability } from "@/lib/server/capabilities";
@@ -215,6 +217,37 @@ export function intentStartsWork(intent: AgentLaunchIntent | undefined): boolean
   return intent === undefined || intent === "implement";
 }
 
+function managedBudgetReservation(
+  quota: AgentQuota,
+  runBudgetUsd?: number | null,
+): CreateRunInput["managedBudget"] {
+  if (quota.mode !== "platform") return undefined;
+  if (quota.cap == null || !quota.periodStart) {
+    throw new Error("Managed-AI quota is missing its account cap or usage period");
+  }
+  return {
+    periodStart: quota.periodStart,
+    accountCapUsd: quota.cap,
+    requestedUsd: requestedRunReservationUsd({
+      runBudgetUsd,
+      accountCapUsd: quota.cap,
+    }),
+  };
+}
+
+function exhaustedReservationQuota(quota: AgentQuota): AgentQuota {
+  return {
+    ...quota,
+    allowed: false,
+    remaining: 0,
+    reason: "usage_budget_exceeded",
+  };
+}
+
+function isManagedBudgetUnavailableError(error: unknown): boolean {
+  return error instanceof Error && error.name === "ManagedBudgetUnavailableError";
+}
+
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
   const service = getServiceClient();
 
@@ -360,20 +393,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     return { ok: false, error: "localEndpointRequiresLocalRun" };
   }
 
-  // The title is only launched once the guards have passed — a refusal should not
-  // consume a model call — then it overlaps with model resolution
-  // and the branch. Above all, it NEVER becomes a barrier before the drain:
-  // the conversation starts under its fallback label and the title comes afterwards.
   const titleSource = agentRunTitleSource({ issueTitle, prompt: input.prompt });
-  const generatedTitle =
-    !input.routineId && titleSource
-      ? generateShortTitle({
-          text: titleSource,
-          kind: "note",
-          locale: "auto",
-          usage: { feature: "agent_code", userId: input.userId, projectId },
-        }).catch(() => null)
-      : null;
 
   let model: string;
   try {
@@ -476,6 +496,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       // forge and nowhere to push: the current-checkout mode is the only honest
       // shape, so the request is dropped rather than frozen into a dead end.
       localWorktree: localExec && !!link && input.localWorktree === true,
+      managedBudget: managedBudgetReservation(quota, input.budgetUsd),
     });
   } catch (err) {
     // Lost race against a concurrent launch (double-click, two tabs):
@@ -498,15 +519,40 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
         return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
       }
     }
+    if (isManagedBudgetUnavailableError(err)) {
+      return {
+        ok: false,
+        error: "quotaExceeded",
+        quota: exhaustedReservationQuota(quota),
+      };
+    }
     throw err;
   }
 
+  // The title is allowed to spend only after the run has atomically reserved
+  // managed-AI budget. It shares the run ledger id, so its cost reduces the same
+  // reservation used by the model key and the turn budget.
+  const generatedTitle =
+    !input.routineId && titleSource
+      ? generateShortTitle({
+          text: titleSource,
+          kind: "note",
+          locale: "auto",
+          usage: {
+            feature: "agent_code",
+            userId: input.userId,
+            projectId,
+            runId: run.run_id ?? run.id,
+          },
+        }).catch(() => null)
+      : null;
+
   /**
    * The title is an asynchronous enrichment, not a launch dependency.
-   * The promise has already started higher and has therefore covered the pre-flights; This
-   * callback does not wait for it so as not to serialize the kick of the drain behind
-   * She. The `is(title, null)` clause respects a manual renaming carried out in
-   * the interval — a slow response from the small model never regains control.
+   * It starts after the budget reservation and overlaps launch bookkeeping; this
+   * callback does not serialize the drain behind it. The `is(title, null)` clause
+   * respects a manual rename made in the meantime, so a slow title response never
+   * regains control.
    */
   if (!input.title?.trim() && generatedTitle) {
     after(() => {
@@ -706,12 +752,20 @@ async function launchPrReviewRun(
       intent: "review",
       // The base serves as a point of comparison to `git diff` in the sandbox.
       baseBranch: pr.baseBranch,
+      managedBudget: managedBudgetReservation(quota, input.budgetUsd),
     });
   } catch (err) {
     // Lost race against a competing launch: the unique index has decided.
     if (err instanceof ActiveRunExistsError) {
       const winner = await activeRunForPullRequest(pullRequestId);
       return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
+    }
+    if (isManagedBudgetUnavailableError(err)) {
+      return {
+        ok: false,
+        error: "quotaExceeded",
+        quota: exhaustedReservationQuota(quota),
+      };
     }
     throw err;
   }

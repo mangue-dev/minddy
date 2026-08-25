@@ -2116,12 +2116,9 @@ export async function runOpencodeTurn(
            * never disconnect a call in flight, we refuse the next one (policy
            * assumed from [usage.ts](../../usage.ts), as in Claude/ChatGPT).
            *
-           * It RELITS (`budgetRemaining`), it is not only snapshotted at
-           * launch: nothing reserves budget, two competing runs read
-           * the same remaining and each take it as the ceiling. What limits the
-           * case is the replay frequency — and a round of microVM lasts for
-           * hours, so a fixed ceiling at start-up would be blind from start to
-           * the end.
+           * It re-reads `budgetRemaining`, rather than relying only on the launch
+           * snapshot: ledger charges reduce the run's atomic reservation while
+           * a microVM turn is active, potentially for hours.
            */
           if (now() - lastBudgetAt >= BUDGET_REFRESH_INTERVAL_MS) {
             lastBudgetAt = now();

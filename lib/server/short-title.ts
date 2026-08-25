@@ -116,6 +116,8 @@ export interface ShortTitleUsage {
   userId: string;
   projectId?: string | null;
   conversationId?: string | null;
+  /** Stable ledger run id when the title is part of a reserved agent launch. */
+  runId?: string;
 }
 
 export interface ShortTitleInput {
@@ -210,6 +212,7 @@ Two or three words each. Nothing was lost that a reader needed.`;
       record: usage
         ? {
             feature: usage.feature,
+            runId: usage.runId,
             billTo: { userId: usage.userId },
             projectId: usage.projectId ?? null,
             conversationId: usage.conversationId ?? null,

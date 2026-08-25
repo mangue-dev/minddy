@@ -36,6 +36,8 @@ export interface AgentQuota {
   remaining?: number;
   /** ISO — end of window counted: the date the budget recharges. */
   resetsAt?: string;
+  /** ISO start of the ledger window used by atomic managed-AI reservations. */
+  periodStart?: string;
   /** Current plan, and the next one if there is one above (upgrade proposal). */
   planId?: BillingPlanId;
   nextPlanId?: BillingPlanId | null;
@@ -82,6 +84,7 @@ export async function checkAgentQuota(
     cap,
     remaining: Math.max(0, cap - spent),
     resetsAt: usage.period.end,
+    periodStart: usage.period.start,
     planId: plan.id,
     nextPlanId: nextBillingPlanId(plan.id),
     ...(allowed ? {} : { reason: "usage_budget_exceeded" as const }),

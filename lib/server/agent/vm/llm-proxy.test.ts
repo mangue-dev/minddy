@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   extraHeaders,
   GenerationSniffer,
+  MAX_LLM_PROXY_BODY_BYTES,
   patchCompletionBody,
   resolveProxyTarget,
   startLlmProxy,
@@ -219,6 +220,59 @@ describe("the self-hosted relay", () => {
       expect(requests[0].init.headers).toMatchObject({
         authorization: "Bearer server-control-token",
       });
+    } finally {
+      await proxy.close();
+    }
+  });
+});
+
+describe("request body bounds", () => {
+  it("rejects an oversized Content-Length before calling or buffering upstream", async () => {
+    let calls = 0;
+    const proxy = await startLlmProxy({
+      job: JOB,
+      fetchImpl: (async () => {
+        calls++;
+        return new Response("{}");
+      }) as typeof fetch,
+    });
+    try {
+      const response = await fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        body: Buffer.alloc(MAX_LLM_PROXY_BODY_BYTES + 1),
+      });
+      expect(response.status).toBe(413);
+      expect(calls).toBe(0);
+    } finally {
+      await proxy.close();
+    }
+  });
+
+  it("stops buffering a chunked body as soon as its streamed bytes cross the limit", async () => {
+    let calls = 0;
+    const proxy = await startLlmProxy({
+      job: JOB,
+      fetchImpl: (async () => {
+        calls++;
+        return new Response("{}");
+      }) as typeof fetch,
+    });
+    const half = Math.floor(MAX_LLM_PROXY_BODY_BYTES / 2);
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(half));
+        controller.enqueue(new Uint8Array(MAX_LLM_PROXY_BODY_BYTES - half + 1));
+        controller.close();
+      },
+    });
+    try {
+      const response = await fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        body: stream,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" });
+      expect(response.status).toBe(413);
+      expect(calls).toBe(0);
     } finally {
       await proxy.close();
     }

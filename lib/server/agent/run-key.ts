@@ -75,6 +75,21 @@ const UNKNOWN_REMAINING_CAP_USD = 1.5;
 /** Lifespan of a run key. Large in front of a turn, short in front of oblivion. */
 const KEY_TTL_MS = 24 * 60 * 60_000;
 
+/**
+ * Maximum managed-AI amount a new run asks the atomic launch transaction to
+ * reserve. A run-specific governor keeps its provider headroom; an ordinary
+ * run asks for the account cap and lets the database grant only what remains.
+ */
+export function requestedRunReservationUsd(opts: {
+  runBudgetUsd?: number | null;
+  accountCapUsd: number;
+}): number {
+  const accountCap = Math.max(0, Number(opts.accountCapUsd) || 0);
+  if (opts.runBudgetUsd == null) return accountCap;
+  const runRequest = Math.max(0, Number(opts.runBudgetUsd) || 0) * CAP_HEADROOM;
+  return Math.min(accountCap, Math.max(runRequest, MIN_CAP_USD));
+}
+
 export interface RunKey {
   /** The `sk-or-v1-…` secret. Only exits here to network policy. */
   key: string;
@@ -120,11 +135,20 @@ export function runKeyCapUsd(opts: {
   /** What remains of the ACCOUNT's monthly budget. `undefined` = unknown or
  * unlimited — but in BYOK (the only unlimited case) we do not mint. */
   accountRemainingUsd?: number;
+  /** Unspent amount atomically reserved for this managed-AI run. */
+  reservedBudgetUsd?: number | null;
 }): number {
-  const ceiling =
+  const reserved =
+    typeof opts.reservedBudgetUsd === "number" && Number.isFinite(opts.reservedBudgetUsd)
+      ? Math.max(0, opts.reservedBudgetUsd)
+      : undefined;
+  const account =
     typeof opts.accountRemainingUsd === "number" && Number.isFinite(opts.accountRemainingUsd)
       ? Math.max(0, opts.accountRemainingUsd)
       : undefined;
+  // New platform runs own a serialized reservation. Account snapshots remain
+  // only as a compatibility ceiling for legacy rows that predate the column.
+  const ceiling = reserved ?? account;
   const fromRun =
     opts.runBudgetUsd == null
       ? undefined

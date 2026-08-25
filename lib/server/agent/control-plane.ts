@@ -32,6 +32,7 @@ import {
   appendEvent,
   appendRunJournal,
   clearInterrupt,
+  claimRunRest,
   getRun,
   hasPendingRunMessages,
   insertRunMessage,
@@ -286,22 +287,15 @@ function liveFileStats(raw: unknown): AgentLiveFileStat[] | undefined {
 }
 
 /**
- * WHAT THIS TOUR STILL HAS THE RIGHT TO SPEND, re-read NOW.
+ * What this turn still has the right to spend, re-read from the ledger.
  *
- * The cap of a round is snapshotted at its launch, and nothing reserves
- * budget: two runs launched at the same second read the same remaining and the
- * take each as a ceiling — so they can spend double. The old
- * form was done by its very form, by rereading the quota for each chunk (five
- * minutes at worst); a round of microVM lasts for hours, and its ceiling would be
- * blind from start to finish without this surface.
+ * New platform runs use their atomically reserved account amount. Legacy rows
+ * without a reservation fall back to the live monthly remainder, while BYOK
+ * runs have no account ceiling. A run-specific budget (routines/chains) remains
+ * a separate governor, and the tighter remaining amount wins.
  *
- * The TIGHTER of the two ceilings, as at launch: the monthly remainder of the
- * account, and what remains of the budget placed on the run (the routines). Both
- * start from the LEDGER, not from a column — this is what makes proofreading useful,
- * since the ledger is written call by call, including by the other runs.
- *
- * `null` = no account or run cap, or reading out of order. The VM keeps
- * then its entry ceiling.
+ * `null` means no applicable ceiling or a failed read; the VM then keeps its
+ * previous limit rather than treating an infrastructure error as exhaustion.
  */
 async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
   try {
@@ -313,8 +307,12 @@ async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
       checkAgentQuota(run.created_by ?? ""),
       spentFromLedger(run.run_id ?? run.id),
     ]);
-    const account = quota.unlimited ? null : Math.max(0, quota.remaining ?? 0);
     const runSpent = Math.max(run.cost_usd, spent ?? 0);
+    const account = quota.unlimited
+      ? null
+      : run.managed_budget_usd == null
+        ? Math.max(0, quota.remaining ?? 0)
+        : Math.max(0, Number(run.managed_budget_usd) - runSpent);
     const fromRun =
       run.budget_usd == null ? null : Math.max(0, Number(run.budget_usd) - runSpent);
     const both = [account, fromRun].filter((v): v is number => v !== null);
@@ -829,6 +827,13 @@ export async function handleControlPlaneRequest(opts: {
       capUsd: runKeyCapUsd({
         runBudgetUsd: run.budget_usd,
         runSpentUsd: Math.max(run.cost_usd, ledgerSpent ?? 0),
+        reservedBudgetUsd:
+          run.managed_budget_usd == null
+            ? null
+            : Math.max(
+                0,
+                Number(run.managed_budget_usd) - Math.max(run.cost_usd, ledgerSpent ?? 0),
+              ),
         accountRemainingUsd:
           quota && !quota.unlimited ? Math.max(0, quota.remaining ?? 0) : undefined,
       }),
@@ -860,11 +865,12 @@ export async function handleControlPlaneRequest(opts: {
      * The 409 is not retried (see `retryable`), so the VM stops there, which
      * is exactly what we want: the round IS concluded.
      */
-    if (run.status !== "running") {
+    const claimed = await claimRunRest(run.id);
+    if (!claimed) {
       return { status: 409, body: { error: "run is no longer running" } };
     }
     const { landVmTurn } = await import("./vm-rest");
-    await landVmTurn(run, report);
+    await landVmTurn(claimed, report);
     return ok();
   }
 

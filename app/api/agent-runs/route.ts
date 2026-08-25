@@ -9,6 +9,7 @@ import { parseResourcesInput } from "@/lib/server/attachments";
 import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
+import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -38,6 +39,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const WORKING_STATUSES = ["queued", "running"];
+const AGENT_LAUNCH_RATE_LIMIT = { limit: 10 };
 
 type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled";
 
@@ -280,6 +282,12 @@ function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  const limited = rateLimitRefusal(
+    auth.user.id,
+    "agent-runs:launch",
+    AGENT_LAUNCH_RATE_LIMIT,
+  );
+  if (limited) return limited;
 
   let body: {
     projectId?: string;

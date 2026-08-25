@@ -98,7 +98,12 @@ vi.mock("@/lib/server/git/repo-links", () => ({
 }));
 
 vi.mock("./quota", () => ({
-  checkAgentQuota: vi.fn(async () => ({ allowed: true, mode: "platform" })),
+  checkAgentQuota: vi.fn(async () => ({
+    allowed: true,
+    mode: "platform",
+    cap: 5,
+    periodStart: "2026-08-01T00:00:00.000Z",
+  })),
 }));
 
 vi.mock("./model", () => ({

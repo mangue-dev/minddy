@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { runKeyCapUsd } from "./run-key";
+import { requestedRunReservationUsd, runKeyCapUsd } from "./run-key";
 
 /**
  * The ceiling of the run key holds TWO budgets which do not have the same status.
@@ -60,5 +60,31 @@ describe("runKeyCapUsd", () => {
     const cap = runKeyCapUsd({});
     expect(Number.isFinite(cap)).toBe(true);
     expect(cap).toBeGreaterThan(0.25);
+  });
+
+  it("uses the atomic reservation before a later account snapshot", () => {
+    expect(
+      runKeyCapUsd({
+        accountRemainingUsd: 8,
+        reservedBudgetUsd: 1.25,
+      }),
+    ).toBe(1.25);
+    expect(
+      runKeyCapUsd({
+        runBudgetUsd: 4,
+        reservedBudgetUsd: 0.5,
+      }),
+    ).toBe(0.5);
+  });
+});
+
+describe("requestedRunReservationUsd", () => {
+  it("asks for the account cap for an ordinary run", () => {
+    expect(requestedRunReservationUsd({ accountCapUsd: 5 })).toBe(5);
+  });
+
+  it("keeps run headroom without requesting more than the account cap", () => {
+    expect(requestedRunReservationUsd({ runBudgetUsd: 2, accountCapUsd: 10 })).toBe(3);
+    expect(requestedRunReservationUsd({ runBudgetUsd: 20, accountCapUsd: 5 })).toBe(5);
   });
 });
