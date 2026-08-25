@@ -117,12 +117,13 @@ export const HOME_TIPS: HomeTip[] = [
 
   // — What connects minddy to the rest: agent, deposit, entries, exits.
   tip("agentPr"),
-  tip("routines"),
+  tip("routines", "nav.routines"),
   tip("automations"),
   tip("mcp"),
   tip("webhooks"),
   tip("feedbackBoard"),
   tip("import"),
+  tip("accountTransfer"),
   tip("export"),
 
   // — Comfort: adjustments that we only look for if we know they exist.

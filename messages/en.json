@@ -1250,6 +1250,7 @@
       "webhooks": "Use a signed webhook to notify another service when an issue is created, updated, or moved.",
       "feedbackBoard": "Collect requests and votes on a public feedback board, then turn them into issues.",
       "import": "Import issues from Linear, Jira, Notion, Trello, or a CSV file.",
+      "accountTransfer": "Restore your account data from another minddy instance.",
       "export": "Export issues to CSV in the same format minddy can import.",
       "zenMode": "Zen mode hides the header and sidebar so you can focus on the board.",
       "sendShortcut": "Choose in account settings whether Enter sends or starts a new paragraph.",

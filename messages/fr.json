@@ -1250,6 +1250,7 @@
       "webhooks": "Utilisez un webhook signé pour notifier un autre service lorsqu'un ticket est créé, modifié ou déplacé.",
       "feedbackBoard": "Recueillez les demandes et les votes sur un board public, puis transformez-les en tickets.",
       "import": "Importez des tickets depuis Linear, Jira, Notion, Trello ou un fichier CSV.",
+      "accountTransfer": "Restaurez les données de votre compte depuis une autre instance minddy.",
       "export": "Exportez les tickets en CSV, dans le même format que minddy sait importer.",
       "zenMode": "Le mode zen masque l'en-tête et la barre latérale pour vous laisser vous concentrer sur le board.",
       "sendShortcut": "Choisissez dans les réglages du compte si Entrée envoie ou crée un nouveau paragraphe.",
