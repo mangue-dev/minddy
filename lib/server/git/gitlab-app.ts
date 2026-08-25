@@ -663,20 +663,17 @@ export async function ensureGitlabIssuesHook(
 }
 
 /**
- * Rotation of a hook remaining on the historical global secret (MIN-333).
+ * Migrates a hook that still uses the historical global secret.
  *
- * Triggered by the receiver, OFF the critical path, at the first event which
- * arrives with `GITLAB_WEBHOOK_SECRET`: this is the only moment when we know to the
- * once this repository is still on the old secret and is alive. She
- * mints a secret specific to the repository, rewrites the hook with it, and the fallback goes out
- * for that repository.
+ * The receiver schedules this after the first authenticated legacy delivery.
+ * Persisting the repository-specific secret happens before rewriting the hook
+ * and immediately revokes the old credential for this repository (MIN-435).
+ * Deliveries signed with the old token during that short update window are
+ * rejected rather than keeping the stale credential valid.
  *
- * THE ORDER is the bottom line: the secret is written in base BEFORE the hook.
- * The opposite would leave a window where GitLab signs with a secret that minddy doesn't know yet, so 401 denied events. Here the window is on the other side — the fallback covers in-flight events.
- *
- * Best-effort: a failed GitLab call leaves the hook on the old secret, and
- * the following event will retry. The basic secret is already set - it is
- * `ensureRepoWebhookSecret` which will take it as is, without generating a second one which would invalidate what we have just written at the forge.
+ * The operation is best-effort. A failed GitLab update leaves the dedicated
+ * secret stored, so a later provisioning attempt reuses the same value instead
+ * of generating a credential that the receiver and hook disagree about.
  */
 export async function rotateGitlabWebhookSecret(params: {
   externalRepoId: string;

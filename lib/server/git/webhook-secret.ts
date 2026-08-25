@@ -7,28 +7,17 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import { decryptForgeToken, encryptForgeToken } from "./token-crypto";
 
 /**
- * The GitLab webhook secret, BY REPOSITORY (MIN-333).
+ * GitLab webhook secrets, scoped per repository (MIN-333, MIN-435).
  *
- * Previously, `GITLAB_WEBHOOK_SECRET` was a unique secret, written in the hook of
- * each tenant. But GitLab SHOWS the token of a hook to anyone who can edit it:
- * any maintainer of a linked repository could read it at home, then forge
- * events for the repositories of others — merge a merge request, make
- * pass a ticket to "finished", in a project that does not concern it. A
- * secret shared between tenants is not a secret, it is a password
- * common.
+ * GitLab exposes a hook token to repository maintainers. A global token would
+ * therefore let a maintainer authenticate events for other tenants. Every link
+ * for the same `(provider, external_repo_id)` shares one encrypted secret because
+ * those links also share the same physical GitLab hook.
  *
- * BY REPOSITORY and not by link: at GitLab the hook lives ON the repository, and two
- * projects which link to the same repository physically share this hook, so its
- * token. The secret is therefore carried by all lines `project_git_links` of
- * same `(provider, external_repo_id)`, at the same value.
- *
- * Encrypted at rest with the envelope of the forge tokens — same secret of
- * derivation, same column service-role only.
- *
- * `GITLAB_WEBHOOK_SECRET` survives in FALLBACK, for already installed hooks which still carry it: without it, activating this version would cut all existing
- * syncs for one rotation. The receiver burps the hook at the
- * first event that arrives with (see `rotateGitlabWebhookSecret`), and the
- * fallback turns off by itself repository by repository.
+ * `GITLAB_WEBHOOK_SECRET` remains only as a migration credential for registered
+ * repositories that have no dedicated ciphertext yet. Persisting a dedicated
+ * secret is the repository's revocation marker: the global credential is never
+ * considered again for that repository, even if decryption later fails.
  */
 
 /** 32 bytes of entropy, in hexadecimal (GitLab accepts the verbatim token). */
@@ -47,7 +36,7 @@ export function webhookSecretMatches(
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** The historic fallback, if it is still deployed. */
+/** The historical migration credential, if it is still deployed. */
 export function legacyGitlabWebhookSecret(): string | null {
   return process.env.GITLAB_WEBHOOK_SECRET || null;
 }
@@ -55,10 +44,12 @@ export function legacyGitlabWebhookSecret(): string | null {
 interface LinkSecretRow {
   id: string;
   connection_id: string;
+  repo_full_name: string | null;
   webhook_secret_encrypted: string | null;
 }
 
-const SECRET_COLUMNS = "id, connection_id, webhook_secret_encrypted";
+const SECRET_COLUMNS =
+  "id, connection_id, repo_full_name, webhook_secret_encrypted";
 
 async function loadRepoLinks(
   provider: RepoProviderId,
@@ -78,12 +69,12 @@ async function loadRepoLinks(
 }
 
 /**
- * The secret of the repository, created and persisted if it does not already exist. Called at
- * POSE the hook — this is the value we write at GitLab.
+ * Returns the repository secret, creating and persisting it when absent. Hook
+ * provisioning writes this exact value to GitLab.
  *
- * All the bindings in the repository receive the same value: they describe the
- * same hook. If one of them already has one, that one wins — en
- * generating a second would invalidate the neighbor's hook.
+ * Every link for the repository receives the same value because the links
+ * describe one physical hook. An existing value wins; generating a second one
+ * would invalidate the shared hook.
  */
 export async function ensureRepoWebhookSecret(params: {
   provider: RepoProviderId;
@@ -98,9 +89,9 @@ export async function ensureRepoWebhookSecret(params: {
 }
 
 /**
- * Forces a NEW secret on all bindings in the repository and returns it. The hook
- * at GitLab must be rewritten with it, otherwise nothing passes the check —
- * the caller is responsible for this order (secret first, hook later).
+ * Replaces the secret on every link for a repository and returns the new value.
+ * The caller must then update the GitLab hook; until it does, deliveries signed
+ * with the previous value are intentionally rejected.
  */
 export async function rotateRepoWebhookSecret(params: {
   provider: RepoProviderId;
@@ -122,34 +113,49 @@ export async function rotateRepoWebhookSecret(params: {
 
 /** What a webhook check found as material to compare. */
 export interface WebhookSecretCandidates {
-  /** Repository-specific secrets (one, in practice — the list covers a
- * partial rotation between two bindings in the same repository). */
+  /** Repository-specific secrets; multiple values cover a partial rotation. */
   own: string[];
-  /** The global fallback, when it is still deployed. */
+  /** Migration credential, only while this repository has no dedicated secret. */
   legacy: string | null;
-  /** A connection by which we can rewrite the hook (rotation). */
+  /** A connection that can rewrite the hook during migration. */
   connectionId: string | null;
+  /** Registered names bound to the authenticated numeric repository id. */
+  repoFullNames: string[];
 }
 
-/** All the material for verifying a deposit, in one request. */
+/** All material needed to verify one repository delivery. */
 export async function loadWebhookSecrets(params: {
   provider: RepoProviderId;
   externalRepoId: string;
 }): Promise<WebhookSecretCandidates> {
   const links = await loadRepoLinks(params.provider, params.externalRepoId);
   const own: string[] = [];
+  const repoFullNames: string[] = [];
+  let hasDedicatedSecret = false;
   for (const link of links) {
+    hasDedicatedSecret ||= Boolean(link.webhook_secret_encrypted);
     const secret = decryptForgeToken(link.webhook_secret_encrypted);
     if (secret && !own.includes(secret)) own.push(secret);
+    if (link.repo_full_name && !repoFullNames.includes(link.repo_full_name)) {
+      repoFullNames.push(link.repo_full_name);
+    }
   }
   return {
     own,
-    legacy: legacyGitlabWebhookSecret(),
+    // The legacy credential is a migration path only. Persisting the first
+    // repository-specific secret is also the per-repository revocation marker:
+    // from that point on, the broadly scoped credential must never authenticate
+    // this repository again.
+    legacy:
+      links.length > 0 && !hasDedicatedSecret
+        ? legacyGitlabWebhookSecret()
+        : null,
     connectionId: links[0]?.connection_id ?? null,
+    repoFullNames,
   };
 }
 
-/** Verification verdict: how was the token recognized? */
+/** Describes which credential authenticated the delivery. */
 export type WebhookSecretVerdict = "own" | "legacy" | "rejected";
 
 export function verifyWebhookToken(

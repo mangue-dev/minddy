@@ -20,12 +20,10 @@ import {
 import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
-  legacyGitlabWebhookSecret,
   loadWebhookSecrets,
   verifyWebhookToken,
 } from "@/lib/server/git/webhook-secret";
 import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
-import { reconcileRepoRename } from "@/lib/server/git/repo-rename";
 import { isForgeTokenCryptoConfigured } from "@/lib/server/git/token-crypto";
 import { rotateGitlabWebhookSecret } from "@/lib/server/git/gitlab-app";
 import {
@@ -49,12 +47,13 @@ import { getServiceClient } from "@/lib/supabase-service";
  * We check the secret (`X-Gitlab-Token`, constant time comparison) then we
  * handles the `Merge Request Hook` (object_kind `merge_request`) hook:
  *
- * The secret is SPECIFIC TO THE DEPOSIT (MIN-333): it is taken from the connections whose
- * the `external_repo_id` is that of `project.id`, and of no other. A token
- * stolen from one tenant therefore does not sign anything with another - that is exactly what
- * that the global secret from before allowed, GitLab showing the token of a hook to
- * who can edit it. Fallback to `GITLAB_WEBHOOK_SECRET` only serves hooks
- * not yet burped, and triggers their rotation.
+ * The secret is repository-specific (MIN-333): it is loaded only from links
+ * whose `external_repo_id` matches `project.id`. The independently supplied
+ * `project.path_with_namespace` must also be one of the names registered for
+ * that id before any name-scoped handler runs (MIN-435). The legacy
+ * `GITLAB_WEBHOOK_SECRET` is accepted only until that repository receives its
+ * first dedicated secret; persisting the dedicated secret revokes the legacy
+ * credential for that repository.
  *
  * - any useful action → INGEST the MR in `pull_requests` (MIN-143: from Numo
  * or a human, it is the same fact of the deposit).
@@ -100,10 +99,9 @@ import { getServiceClient } from "@/lib/supabase-service";
  * handmade on gitlab.com by this same account is not traced — impossible to
  * distinguish from echo, same compromise as the GitHub bot filter.
  *
- * Fail-closed in full: invalid token → 401; no material to check
- * (neither secret encryption configured nor fallback) → 503 without processing anything, like
- * the GitHub receiver. A previously seen delivery (`X-Gitlab-Event-UUID`) is
- * acknowledged without being replayed.
+ * Fail-closed: an invalid token returns 401; missing token encryption returns
+ * 503 without processing, like the GitHub receiver. A previously seen delivery
+ * (`X-Gitlab-Event-UUID`) is acknowledged without being replayed.
  */
 
 interface GitlabUserPayload {
@@ -245,12 +243,14 @@ async function broadcastGitlabPr(
   });
 }
 
-async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
+async function handleMergeRequest(
+  payload: MergeRequestEvent,
+  repoFullName: string,
+): Promise<void> {
   const attrs = payload.object_attributes ?? {};
   const action = attrs.action ?? "";
   const iid = attrs.iid;
-  const repoFullName = payload.project?.path_with_namespace;
-  if (iid == null || !repoFullName) return;
+  if (iid == null) return;
 
   // Ingestion FIRST (MIN-143): MR exists in minddy, Numo or a
   // human. She must pass BEFORE the `runs.length === 0` guard lower down, who
@@ -390,11 +390,13 @@ interface NoteEvent {
  * adding would silence, forever, the comments of the one who linked the
  * deposit.
  */
-async function handleNote(payload: NoteEvent): Promise<void> {
+async function handleNote(
+  payload: NoteEvent,
+  repoFullName: string,
+): Promise<void> {
   const type = prActionForNote(payload.object_attributes ?? {});
   const iid = payload.merge_request?.iid;
-  const repoFullName = payload.project?.path_with_namespace;
-  if (!type || iid == null || !repoFullName) return;
+  if (!type || iid == null) return;
   // Direct: the note is anchored in the diff (line remark) or not (message
   // of thread) — this is exactly what `prActionForNote` just decided.
   await broadcastGitlabPr(repoFullName, iid, [
@@ -459,9 +461,12 @@ interface EmojiEvent {
   merge_request?: { iid?: number };
 }
 
-async function handleEmoji(payload: EmojiEvent): Promise<void> {
+async function handleEmoji(
+  payload: EmojiEvent,
+  repoFullName: string,
+): Promise<void> {
   await broadcastGitlabPr(
-    payload.project?.path_with_namespace,
+    repoFullName,
     payload.merge_request?.iid,
     ["conversation", "reviewComments"],
   );
@@ -480,9 +485,12 @@ interface PipelineEvent {
   merge_request?: { iid?: number };
 }
 
-async function handlePipeline(payload: PipelineEvent): Promise<void> {
+async function handlePipeline(
+  payload: PipelineEvent,
+  repoFullName: string,
+): Promise<void> {
   await broadcastGitlabPr(
-    payload.project?.path_with_namespace,
+    repoFullName,
     payload.merge_request?.iid,
     ["pr"],
   );
@@ -498,10 +506,16 @@ async function handlePipeline(payload: PipelineEvent): Promise<void> {
  */
 const SYNCED_ISSUE_ACTIONS = new Set(["open", "close", "reopen", "update"]);
 
-async function handleIssue(payload: unknown): Promise<void> {
+async function handleIssue(
+  payload: unknown,
+  repoId: string,
+  repoFullName: string,
+): Promise<void> {
   const remote = normalizeGitlabIssueEvent(payload);
   if (!remote || !SYNCED_ISSUE_ACTIONS.has(remote.action)) return;
-  await syncRemoteIssueEvent(remote);
+  // The normalizer reads repository identity from the provider payload. Replace
+  // it with the identity already bound to the verified token before routing.
+  await syncRemoteIssueEvent({ ...remote, repoId, repoFullName });
 }
 
 /**
@@ -519,10 +533,9 @@ function payloadRepoId(payload: unknown): string | null {
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
-  // The body is read BEFORE verification, and it is necessary: ​​the secret is
-  // specific to the depot (MIN-333), and the only place that says which depot it is
-  // This is the payload. We only get one identifier, none
-  // processing — the body remains unverified until `verifyWebhookToken`.
+  // Read only enough untrusted body data to locate the repository-specific
+  // credential. No payload field is trusted or processed before token and
+  // registered-name verification completes.
   let payload: MergeRequestEvent & NoteEvent & EmojiEvent & PipelineEvent;
   try {
     payload = JSON.parse(rawBody);
@@ -534,14 +547,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "unknown project" }, { status: 400 });
   }
 
-  // Full FAIL-CLOSED: this receiver MUTEs the state (pr_state, issue status,
-  // activity). Without material to verify, nothing is processed — except anyone
-  // knowing the path of a linked repository could forge a merge and pass a
-  // issue in done. 503 rather than 200, like the GitHub receiver and like
-  // SECURITY.md promises: GitLab will re-deliver once the configuration is in place.
-  if (!isForgeTokenCryptoConfigured() && !legacyGitlabWebhookSecret()) {
+  // Full fail-closed behavior: this receiver mutates PR state, issue status,
+  // and activity. Encryption is required for both dedicated secrets and legacy
+  // migration because accepting the global token without being able to rotate
+  // it would leave the broadly scoped credential valid indefinitely.
+  if (!isForgeTokenCryptoConfigured()) {
     console.error(
-      "[webhooks/gitlab] no webhook secret material configured — event refused",
+      "[webhooks/gitlab] token encryption is not configured — event refused",
     );
     return NextResponse.json(
       { error: "webhook secret not configured" },
@@ -557,13 +569,17 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-gitlab-token"),
     candidates,
   );
-  // A token recognized by the secret of ANOTHER deposit is not recognized here: the
-  // candidates are those of this repository, and of them alone.
+  // A token belonging to another repository is absent from this candidate set.
   if (verdict === "rejected") {
     return NextResponse.json({ error: "invalid token" }, { status: 401 });
   }
-  // Hook remained on the global historical secret: we burp it out of the way
-  // critical, and the fallback goes out for that repository.
+  const repoFullName = payload.project?.path_with_namespace;
+  if (!repoFullName || !candidates.repoFullNames.includes(repoFullName)) {
+    return NextResponse.json({ error: "invalid repository" }, { status: 401 });
+  }
+  // A hook still carries the historical global secret. Rotate it off the
+  // critical path; storing its dedicated secret revokes this fallback for the
+  // repository before the hook update begins.
   if (verdict === "legacy" && candidates.connectionId) {
     afterOrNow(() =>
       rotateGitlabWebhookSecret({
@@ -573,9 +589,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Replay: the same delivery, already processed. After verification — mark a
-  // delivery without a valid secret would amount to being able to silence the event
-  // real person who wears it.
+  // Check replay only after authentication. Reserving an unauthenticated
+  // delivery id would let an attacker silence the real delivery that uses it.
   if (
     await isReplayedForgeDelivery(
       "gitlab",
@@ -585,40 +600,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  // Repository RENAME reconciliation: the numeric `project.id` survives a
-  // rename, `path_with_namespace` does not. If a link still lives under the
-  // old path, migrate it before any handler reads a dead name. Fail-open:
-  // the event itself must keep being processed.
   try {
-    await reconcileRepoRename({
-      provider: "gitlab",
-      externalRepoId: repoId,
-      fullName: payload.project?.path_with_namespace ?? null,
-    });
-  } catch (err) {
-    console.error(
-      "[webhooks/gitlab] repo rename reconcile failed:",
-      (err as Error).message,
-    );
-  }
-
-  try {
-    // Merge Requests (agent), Notes (MR comments), Issues (synchronization of the
-    // linked repository), Emoji and Pipeline (direct only) — any other object_kind is
-    // acquitted without pay.
+    // Handle merge requests, notes, issues, emoji, and pipelines. Other event
+    // kinds are intentionally acknowledged without side effects.
     if (payload.object_kind === "merge_request") {
-      await handleMergeRequest(payload);
+      await handleMergeRequest(payload, repoFullName);
     } else if (payload.object_kind === "note") {
-      await handleNote(payload);
+      await handleNote(payload, repoFullName);
     } else if (payload.object_kind === "emoji") {
-      await handleEmoji(payload);
+      await handleEmoji(payload, repoFullName);
     } else if (payload.object_kind === "pipeline") {
-      await handlePipeline(payload);
+      await handlePipeline(payload, repoFullName);
     } else if (payload.object_kind === "issue") {
-      await handleIssue(payload);
+      await handleIssue(payload, repoId, repoFullName);
     }
   } catch (err) {
-    // Best effort: we still pay so that GitLab does not re-deliver.
+    // Handler failures remain best-effort to preserve the existing webhook contract.
     console.error("[webhooks/gitlab] handling failed:", (err as Error).message);
   }
 

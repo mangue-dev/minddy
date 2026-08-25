@@ -222,7 +222,17 @@ describe("POST /api/webhooks/gitlab", () => {
     expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
   });
 
-  it("le jeton d'un AUTRE dépôt → 401, rien traité", async () => {
+  it("does not use the legacy token without encryption for immediate rotation", async () => {
+    delete process.env.GIT_TOKEN_ENCRYPTION_SECRET;
+    process.env.GITLAB_WEBHOOK_SECRET = "legacy-global-secret";
+
+    const response = await gitlabPOST(gitlabRequest("legacy-global-secret"));
+    expect(response.status).toBe(503);
+    expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
+    expect(rotateGitlabWebhookSecret).not.toHaveBeenCalled();
+  });
+
+  it("a token from another repository returns 401 without processing", async () => {
     linkRows = [
       link({ id: "link-a", project_id: "project-a", external_repo_id: "1001" }),
       link({ id: "link-b", project_id: "project-b", external_repo_id: "2002" }),
@@ -250,7 +260,27 @@ describe("POST /api/webhooks/gitlab", () => {
     expect(rotateGitlabWebhookSecret).not.toHaveBeenCalled();
   });
 
-  it("un jeton absent → 401", async () => {
+  it("rejects a repository name that is not bound to the authenticated id", async () => {
+    const secret = await ensureRepoWebhookSecret({
+      provider: "gitlab",
+      externalRepoId: "1001",
+    });
+    const response = await gitlabPOST(
+      gitlabRequest(secret, {
+        body: {
+          ...GITLAB_ISSUE,
+          project: { id: 1001, path_with_namespace: "victim/private" },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "invalid repository" });
+    expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
+    expect(linkRows[0].repo_full_name).toBe("acme/app");
+  });
+
+  it("a missing token returns 401", async () => {
     await ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" });
     const response = await gitlabPOST(gitlabRequest(null));
     expect(response.status).toBe(401);
@@ -261,13 +291,23 @@ describe("POST /api/webhooks/gitlab", () => {
     process.env.GITLAB_WEBHOOK_SECRET = "legacy-global-secret";
     const response = await gitlabPOST(gitlabRequest("legacy-global-secret"));
     expect(response.status).toBe(200);
-    // The processing passes: refusing would cut the synchronization of the deposits linked before
-    // this version, time for a rotation that they haven't had yet.
+    // Process the migration delivery, then retire the legacy token for this
+    // repository by provisioning its dedicated secret.
     expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
     expect(rotateGitlabWebhookSecret).toHaveBeenCalledWith({
       externalRepoId: "1001",
       connectionId: "conn-1",
     });
+  });
+
+  it("rejects the global secret after a repository-specific secret is stored", async () => {
+    process.env.GITLAB_WEBHOOK_SECRET = "legacy-global-secret";
+    await ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" });
+
+    const response = await gitlabPOST(gitlabRequest("legacy-global-secret"));
+    expect(response.status).toBe(401);
+    expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
+    expect(rotateGitlabWebhookSecret).not.toHaveBeenCalled();
   });
 
   it("a delivery already seen is not replayed", async () => {

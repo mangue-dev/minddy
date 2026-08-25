@@ -17,10 +17,11 @@ import { pushRelayLinkEvent } from "@/lib/server/forge-relay/link-push";
  * repository that does not exist…", sweeps stop, and PRs ingested by webhook
  * under the NEW name become invisible (no link matches them).
  *
- * Every forge hook payload carries BOTH the stable id and the CURRENT name,
- * so the receivers call this before handling the event: when a link exists
- * for that id under another name, the stored names are migrated to match the
- * forge. Idempotent — a no-op costs one small select.
+ * Callers may use this only when both values are authenticated by the provider.
+ * GitHub's signed payload provides that guarantee. GitLab's visible shared-token
+ * hooks do not, so its receiver binds payload names to stored repository ids
+ * instead of reconciling directly from webhook input (MIN-435). Idempotent — a
+ * no-op costs one small select.
  */
 
 interface StaleLinkRow {

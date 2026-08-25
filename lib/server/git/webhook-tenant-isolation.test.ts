@@ -241,11 +241,40 @@ describe("webhook secret per repository", () => {
       provider: "gitlab",
       externalRepoId: "1001",
     });
-    // A hook placed before MIN-333 still carries the old token: refuse it
-    // would cut the sync for one rotation.
+    // A hook installed before MIN-333 may still need one authenticated delivery
+    // to trigger its migration.
     expect(verifyWebhookToken("legacy-global-secret", candidates)).toBe("legacy");
     expect(candidates.connectionId).toBe("conn-1");
     expect(verifyWebhookToken("n'importe quoi", candidates)).toBe("rejected");
+  });
+
+  it("revokes the global fallback once the repository has its own secret", async () => {
+    process.env.GITLAB_WEBHOOK_SECRET = "legacy-global-secret";
+    linkRows = [link()];
+    const dedicated = await ensureRepoWebhookSecret({
+      provider: "gitlab",
+      externalRepoId: "1001",
+    });
+
+    const candidates = await loadWebhookSecrets({
+      provider: "gitlab",
+      externalRepoId: "1001",
+    });
+    expect(candidates.legacy).toBeNull();
+    expect(verifyWebhookToken("legacy-global-secret", candidates)).toBe("rejected");
+    expect(verifyWebhookToken(dedicated, candidates)).toBe("own");
+  });
+
+  it("does not let the global fallback authenticate an unknown repository", async () => {
+    process.env.GITLAB_WEBHOOK_SECRET = "legacy-global-secret";
+
+    const candidates = await loadWebhookSecrets({
+      provider: "gitlab",
+      externalRepoId: "not-registered",
+    });
+    expect(candidates.repoFullNames).toEqual([]);
+    expect(candidates.legacy).toBeNull();
+    expect(verifyWebhookToken("legacy-global-secret", candidates)).toBe("rejected");
   });
 
   it("without a deployed fallback, a repository without a secret accepts nothing", async () => {
@@ -279,6 +308,7 @@ describe("webhook secret per repository", () => {
       externalRepoId: "1001",
     });
     expect(candidates.own).toEqual([after]);
+    expect(verifyWebhookToken(before, candidates)).toBe("rejected");
   });
 
   it("compares in constant time and rejects a prefix", () => {
