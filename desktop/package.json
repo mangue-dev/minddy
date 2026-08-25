@@ -20,7 +20,7 @@
     "dist:win:store": "npm run build && node ../scripts/build-windows-store.mjs"
   },
   "devDependencies": {
-    "electron": "^43.4.0",
+    "electron": "^43.4.1",
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
