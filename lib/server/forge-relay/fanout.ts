@@ -35,6 +35,27 @@ interface EnqueueRow {
   instance_id: string;
 }
 
+interface ActiveRelayDeliveryTarget {
+  webhook_url: string | null;
+  webhook_secret_encrypted: string | null;
+}
+
+async function getActiveRelayDeliveryTarget(
+  supabase: ReturnType<typeof getServiceClient>,
+  instanceId: string,
+): Promise<ActiveRelayDeliveryTarget | null> {
+  const { data, error } = await supabase
+    .from("forge_relay_instances")
+    .select("webhook_url, webhook_secret_encrypted")
+    .eq("id", instanceId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (error) {
+    throw new Error(`relay instance status lookup failed: ${error.message}`);
+  }
+  return data as ActiveRelayDeliveryTarget | null;
+}
+
 /**
  * Resolves the target instance(s) of a raw webhook payload from its
  * installation id and enqueues one delivery per claimed installation.
@@ -73,7 +94,9 @@ export async function enqueueRelayDeliveryForPayload(input: {
   const instances = (claims ?? []) as EnqueueRow[];
   if (instances.length === 0) return null;
 
+  let enqueuedInstanceId: string | null = null;
   for (const claim of instances) {
+    if (!(await getActiveRelayDeliveryTarget(supabase, claim.instance_id))) continue;
     const { error } = await supabase.from("forge_relay_deliveries").upsert(
       {
         instance_id: claim.instance_id,
@@ -87,8 +110,9 @@ export async function enqueueRelayDeliveryForPayload(input: {
     if (error) {
       throw new Error(`relay delivery enqueue failed: ${error.message}`);
     }
+    enqueuedInstanceId ??= claim.instance_id;
   }
-  return instances[0]?.instance_id ?? null;
+  return enqueuedInstanceId;
 }
 
 export interface FanoutOutcome {
@@ -109,7 +133,13 @@ export async function enqueueRelayDeliveryForProvider(input: {
   rawBody: string;
 }): Promise<boolean> {
   if (!input.deliveryGuid) return false;
-  const { error } = await getServiceClient()
+  const supabase = getServiceClient();
+  try {
+    if (!(await getActiveRelayDeliveryTarget(supabase, input.instanceId))) return false;
+  } catch {
+    return false;
+  }
+  const { error } = await supabase
     .from("forge_relay_deliveries")
     .upsert(
       {
@@ -172,7 +202,7 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
   const { data } = await supabase
     .from("forge_relay_deliveries")
     .select(
-      "id, instance_id, provider, delivery_guid, event, payload, status, attempts, forge_relay_instances(webhook_url, webhook_secret_encrypted)",
+      "id, instance_id, provider, delivery_guid, event, payload, status, attempts",
     )
     .eq("status", "pending")
     .lte("next_attempt_at", new Date().toISOString())
@@ -188,17 +218,31 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
     payload: string;
     status: string;
     attempts: number;
-    forge_relay_instances: {
-      webhook_url: string | null;
-      webhook_secret_encrypted: string | null;
-    } | null;
   }>;
 
   for (const row of rows) {
     outcome.processed += 1;
-    const endpoint = row.forge_relay_instances?.webhook_url ?? null;
-    const encryptedSecret =
-      row.forge_relay_instances?.webhook_secret_encrypted ?? null;
+    let target: ActiveRelayDeliveryTarget | null;
+    try {
+      // The queue row may have been selected before revocation. Read the
+      // instance again at the dispatch boundary and fail closed on lookup
+      // errors, so stale joined data can never authorize a POST.
+      target = await getActiveRelayDeliveryTarget(supabase, row.instance_id);
+    } catch (err) {
+      if (await backoffDelivery(supabase, row, (err as Error).message.slice(0, 500))) {
+        outcome.dead += 1;
+      }
+      continue;
+    }
+    if (!target) {
+      if (await invalidateDelivery(supabase, row.id, "relay instance revoked")) {
+        outcome.dead += 1;
+      }
+      continue;
+    }
+
+    const endpoint = target.webhook_url;
+    const encryptedSecret = target.webhook_secret_encrypted;
     const secret = encryptedSecret ? decryptForgeToken(encryptedSecret) : null;
 
     // Not registered (yet): this pass counts as an attempt on the same
@@ -254,6 +298,20 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
   }
 
   return outcome;
+}
+
+async function invalidateDelivery(
+  supabase: ReturnType<typeof getServiceClient>,
+  deliveryId: string,
+  error: string,
+): Promise<boolean> {
+  const { data: written } = await supabase
+    .from("forge_relay_deliveries")
+    .update({ status: "dead", last_error: error })
+    .eq("id", deliveryId)
+    .eq("status", "pending")
+    .select("id");
+  return Boolean(written?.length);
 }
 
 /**

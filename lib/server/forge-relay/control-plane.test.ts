@@ -98,6 +98,20 @@ function seedRelayWorld(): void {
   ]);
   setFakeTable("forge_relay_audit", []);
   setFakeTable("forge_relay_instances_public", []);
+  setFakeTable("forge_relay_deliveries", [
+    {
+      id: "delivery-pending",
+      instance_id: INSTANCE_ID,
+      status: "pending",
+      last_error: null,
+    },
+    {
+      id: "delivery-complete",
+      instance_id: INSTANCE_ID,
+      status: "delivered",
+      last_error: null,
+    },
+  ]);
 }
 
 function signedRequest(
@@ -333,12 +347,29 @@ describe("admin instance registry", () => {
     await expect(duplicate.json()).resolves.toMatchObject({ error: expect.stringContaining("already registered") });
   });
 
-  it("revokes an active instance and reports an unknown one", async () => {
+  it("revokes an active instance, invalidates its queue, and reports an unknown one", async () => {
     const response = await revokeInstance({} as never, {
       params: Promise.resolve({ id: INSTANCE_ID }),
     } as never);
     expect(response.status).toBe(200);
-    expect(fakeTables["forge_relay_instances"]?.[0]).toMatchObject({ status: "revoked" });
+    expect(fakeTables["forge_relay_instances"]?.[0]).toMatchObject({
+      status: "revoked",
+      webhook_url: null,
+      webhook_secret_encrypted: null,
+    });
+    expect(fakeTables["forge_relay_deliveries"]).toEqual([
+      expect.objectContaining({
+        id: "delivery-pending",
+        status: "dead",
+        last_error: "relay instance revoked",
+      }),
+      expect.objectContaining({ id: "delivery-complete", status: "delivered" }),
+    ]);
+
+    const retry = await revokeInstance({} as never, {
+      params: Promise.resolve({ id: INSTANCE_ID }),
+    } as never);
+    expect(retry.status).toBe(200);
 
     const missing = await revokeInstance({} as never, {
       params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000000" }),

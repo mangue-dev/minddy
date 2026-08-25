@@ -34,6 +34,14 @@ const WEBHOOK_SECRET = "instance-generated-webhook-secret-32ch";
 const ENDPOINT = "https://on-prem.example.com/api/webhooks/github";
 
 function seedWorld(overrides: Record<string, unknown> = {}): void {
+  setFakeTable("forge_relay_instances", [
+    {
+      id: INSTANCE_ID,
+      status: "active",
+      webhook_url: ENDPOINT,
+      webhook_secret_encrypted: encryptForgeToken(WEBHOOK_SECRET),
+    },
+  ]);
   setFakeTable("forge_relay_installations", [
     {
       id: "claim-1",
@@ -47,9 +55,11 @@ function seedWorld(overrides: Record<string, unknown> = {}): void {
 }
 
 const { encryptForgeToken } = await import("@/lib/server/git/token-crypto");
-const { enqueueRelayDeliveryForPayload, processDueRelayDeliveries } = await import(
-  "./fanout"
-);
+const {
+  enqueueRelayDeliveryForPayload,
+  enqueueRelayDeliveryForProvider,
+  processDueRelayDeliveries,
+} = await import("./fanout");
 
 type SafeFetchCall = {
   url: string;
@@ -125,6 +135,37 @@ describe("enqueueRelayDeliveryForPayload", () => {
     expect(fakeTables["forge_relay_deliveries"]).toHaveLength(1);
   });
 
+  it("does not enqueue for an instance that has been revoked", async () => {
+    const instance = fakeTables["forge_relay_instances"]?.[0];
+    if (instance) instance.status = "revoked";
+
+    const instanceId = await enqueueRelayDeliveryForPayload({
+      provider: "github",
+      event: "issues",
+      deliveryGuid: "guid-revoked",
+      rawBody: JSON.stringify({ installation: { id: 4242 } }),
+    });
+
+    expect(instanceId).toBeNull();
+    expect(fakeTables["forge_relay_deliveries"] ?? []).toHaveLength(0);
+  });
+
+  it("does not enqueue a provider delivery for a revoked known instance", async () => {
+    const instance = fakeTables["forge_relay_instances"]?.[0];
+    if (instance) instance.status = "revoked";
+
+    await expect(
+      enqueueRelayDeliveryForProvider({
+        provider: "gitlab",
+        instanceId: INSTANCE_ID,
+        event: "Push Hook",
+        deliveryGuid: "guid-gitlab-revoked",
+        rawBody: JSON.stringify({ project: { path_with_namespace: "acme/app" } }),
+      }),
+    ).resolves.toBe(false);
+    expect(fakeTables["forge_relay_deliveries"] ?? []).toHaveLength(0);
+  });
+
   it("THROWS when the enqueue write fails — the caller must answer 5xx", async () => {
     // A swallowed error would let the receiver answer 200 after the dedup
     // window: the forge would never re-deliver and the event would be lost.
@@ -194,6 +235,22 @@ describe("processDueRelayDeliveries", () => {
     });
   });
 
+  it("invalidates a queued delivery when revocation races with worker selection", async () => {
+    const delivery = dueDelivery();
+    seedWorld({ deliveries: [delivery] });
+    const instance = fakeTables["forge_relay_instances"]?.[0];
+    if (instance) instance.status = "revoked";
+
+    const outcome = await processDueRelayDeliveries();
+
+    expect(outcome).toEqual({ processed: 1, delivered: 0, dead: 1 });
+    expect(safeFetch).not.toHaveBeenCalled();
+    expect(fakeTables["forge_relay_deliveries"]?.[0]).toMatchObject({
+      status: "dead",
+      last_error: "relay instance revoked",
+    });
+  });
+
   it("backs off on failure and dead-letters after exhaustion", async () => {
     deliveryStatus = 500;
     const midWay = dueDelivery({ attempts: 3 });
@@ -219,14 +276,14 @@ describe("processDueRelayDeliveries", () => {
   it("backs off an unregistered endpoint on the attempt ladder and dead-letters it", async () => {
     // A delivery for an endpoint that never registers must not retry every
     // minute forever: same ladder, same exhaustion as a delivery failure.
-    const fresh = dueDelivery({
-      forge_relay_instances: { webhook_url: null, webhook_secret_encrypted: null },
-    });
-    const exhausted = dueDelivery({
-      attempts: 4,
-      forge_relay_instances: { webhook_url: null, webhook_secret_encrypted: null },
-    });
+    const fresh = dueDelivery();
+    const exhausted = dueDelivery({ attempts: 4 });
     seedWorld({ deliveries: [fresh, exhausted] });
+    const instance = fakeTables["forge_relay_instances"]?.[0];
+    if (instance) {
+      instance.webhook_url = null;
+      instance.webhook_secret_encrypted = null;
+    }
 
     const outcome = await processDueRelayDeliveries();
     expect(outcome).toEqual({ processed: 2, delivered: 0, dead: 1 });
@@ -249,13 +306,12 @@ describe("processDueRelayDeliveries", () => {
   });
 
   it("backs off when delivery-time target validation rejects a changed address", async () => {
-    const delivery = dueDelivery({
-      forge_relay_instances: {
-        webhook_url: "https://metadata.google.internal/latest/meta-data/",
-        webhook_secret_encrypted: encryptForgeToken(WEBHOOK_SECRET),
-      },
-    });
+    const delivery = dueDelivery();
     seedWorld({ deliveries: [delivery] });
+    const instance = fakeTables["forge_relay_instances"]?.[0];
+    if (instance) {
+      instance.webhook_url = "https://metadata.google.internal/latest/meta-data/";
+    }
     safeFetch.mockRejectedValueOnce(new Error("url"));
 
     const outcome = await processDueRelayDeliveries();

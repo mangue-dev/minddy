@@ -69,15 +69,43 @@ export type RevocationResult =
 
 export async function revokeRelayInstance(instanceId: string): Promise<RevocationResult> {
   const supabase = getServiceClient();
+  const revokedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from("forge_relay_instances")
-    .update({ status: "revoked", revoked_at: new Date().toISOString() })
+    .update({
+      status: "revoked",
+      revoked_at: revokedAt,
+      webhook_url: null,
+      webhook_secret_encrypted: null,
+    })
     .eq("id", instanceId)
     .eq("status", "active")
     .select("id, name, status, created_at, revoked_at")
     .maybeSingle();
   if (error) return { ok: false, status: 500, error: error.message };
-  const instance = data as RelayInstanceRecord | null;
-  if (!instance) return { ok: false, status: 404, error: "Relay instance not found (or already revoked)" };
+
+  let instance = data as RelayInstanceRecord | null;
+  if (!instance) {
+    // Revocation is idempotent so a retry can finish queue invalidation after
+    // the instance update succeeded but the delivery update failed.
+    const { data: existing, error: lookupError } = await supabase
+      .from("forge_relay_instances")
+      .select("id, name, status, created_at, revoked_at")
+      .eq("id", instanceId)
+      .eq("status", "revoked")
+      .maybeSingle();
+    if (lookupError) return { ok: false, status: 500, error: lookupError.message };
+    instance = existing as RelayInstanceRecord | null;
+  }
+  if (!instance) return { ok: false, status: 404, error: "Relay instance not found" };
+
+  const { error: deliveriesError } = await supabase
+    .from("forge_relay_deliveries")
+    .update({ status: "dead", last_error: "relay instance revoked" })
+    .eq("instance_id", instanceId)
+    .eq("status", "pending");
+  if (deliveriesError) {
+    return { ok: false, status: 500, error: deliveriesError.message };
+  }
   return { ok: true, instance };
 }
