@@ -223,9 +223,15 @@ test("the public release publishes a signed multi-platform OCI image", () => {
   assert.match(workflow, /major_tag=v\$major/);
   assert.match(workflow, /provenance: mode=max/);
   assert.match(workflow, /sbom: true/);
-  assert.match(workflow, /aquasecurity\/trivy-action@v0\.36\.0/);
+  assert.match(
+    workflow,
+    /aquasecurity\/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0\.36\.0/,
+  );
   assert.match(workflow, /severity: CRITICAL,HIGH/);
-  assert.match(workflow, /uses: actions\/attest@v4/);
+  assert.match(
+    workflow,
+    /uses: actions\/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4\.2\.2/,
+  );
   assert.match(workflow, /push-to-registry: true/);
   assert.match(workflow, /cosign sign --yes/);
   assert.match(workflow, /Reject an existing OCI release tag/);
