@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAccountSettings } from "@/lib/server/account-settings";
+import { getProjectAccess } from "@/lib/server/project-access";
 import { insertEvents } from "@/lib/server/issue-events";
 import { forgeActorValue } from "@/lib/pr-events";
 import { defaultLocale, type Locale } from "@/i18n/config";
@@ -11,7 +12,8 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import { notifyPullRequestOpened } from "./pr-opened-notify";
 import { prStateFromRef, upsertPullRequest } from "./pull-requests";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
-import { getRun, stampRun, type AgentRun } from "./runs";
+import { getRun, runRepoBindingIsCurrent, stampRun, type AgentRun } from "./runs";
+import { isValidGitBranchName } from "./branch-name";
 import { isForgeApiError } from "./forge";
 import type { EmitAgentEvent } from "./agent-contract";
 import type { Forge } from "./forge";
@@ -62,6 +64,53 @@ export interface PrLandingContext {
 
 /** Base seq of `sandbox_compute` lines (outside the LLM call band). */
 export const SANDBOX_USAGE_SEQ_BASE = 1_000_000_000;
+
+export class PrLandingAuthorityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PrLandingAuthorityError";
+  }
+}
+
+/**
+ * Re-read every mutable authority input immediately before a forge transition.
+ * The run snapshot supplies the immutable repository identity; the project link
+ * and membership supply current authorization. Both must still agree.
+ */
+export async function assertPrLandingAuthority(
+  ctx: PrLandingContext,
+  target: RepoCloneTarget = ctx.target,
+): Promise<AgentRun> {
+  const current = await getRun(ctx.run.id).catch(() => null);
+  if (!current || current.status !== "running" || !current.created_by) {
+    throw new PrLandingAuthorityError("run is no longer authorized to land");
+  }
+  const [access, bindingCurrent] = await Promise.all([
+    getProjectAccess(current.created_by, current.project_id).catch(() => null),
+    runRepoBindingIsCurrent(current).catch(() => false),
+  ]);
+  if (!access?.isMember) {
+    throw new PrLandingAuthorityError("run owner no longer has project access");
+  }
+  if (!bindingCurrent) {
+    throw new PrLandingAuthorityError("run repository binding has changed");
+  }
+  if (
+    target.linkId !== current.repo_link_id ||
+    target.connectionId !== current.connection_id ||
+    target.provider !== current.repo_provider ||
+    target.externalRepoId !== current.repo_external_id
+  ) {
+    throw new PrLandingAuthorityError("fresh repository target does not match the run");
+  }
+  if (!isValidGitBranchName(ctx.workBranch) || !isValidGitBranchName(ctx.baseBranch)) {
+    throw new PrLandingAuthorityError("invalid pull request branch");
+  }
+  if (current.branch_name && current.branch_name !== ctx.workBranch) {
+    throw new PrLandingAuthorityError("working branch does not match the run");
+  }
+  return current;
+}
 
 /** Thread note when end of turn push fails (visible in conversation). */
 export const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {
@@ -238,6 +287,7 @@ export async function registerPr(
   pr: PullRequestRef,
   kind: "opened" | "reopened",
 ): Promise<void> {
+  await assertPrLandingAuthority(ctx);
   const { run, target, issue, workBranch, baseBranch, locale, emit, prState } = ctx;
   prState.number = pr.number;
   prState.url = pr.url;
@@ -331,6 +381,7 @@ export async function reopenIfRejectedWorkPushed(
   if (!pushed?.remoteUpdated) return;
   await refreshPrStateFromDb(ctx);
   if (ctx.prState.number == null || ctx.prState.state !== "closed") return;
+  await assertPrLandingAuthority(ctx);
   const reopened = await ctx.forge
     .reopenPullRequest({
       token,
@@ -374,6 +425,7 @@ export async function openPullRequestAfterPush(
 ): Promise<{ result: unknown; success: boolean }> {
   const { forge, issue, workBranch, baseBranch, prState } = ctx;
   const { pushed, prTitle, body, fresh, jobsNote, noteBranchPushed } = opts;
+  await assertPrLandingAuthority(ctx, fresh);
   const andJobs = (text: string) => (jobsNote ? `${text} ${jobsNote}` : text);
   // Nothing committed above the base: we stop BEFORE touching the repository
   // (MIN-123). Pushing would create an empty branch for nothing — and the forge
@@ -389,11 +441,13 @@ export async function openPullRequestAfterPush(
     };
   }
   await noteBranchPushed(pushed);
+  await assertPrLandingAuthority(ctx, fresh);
   // `create_pr` on a PR that ALREADY exists: this push feeds it, it is traced
   // like the others. On a PR yet to be opened, `prState.number` is null and
   // nothing is traced — it is `registerPr` which will say “opened the PR”.
   await notePrCommits(ctx, pushed);
   if (prState.number != null) {
+    await assertPrLandingAuthority(ctx, fresh);
     const current = await forge
       .getPullRequest({
         token: fresh.token,
@@ -424,6 +478,7 @@ export async function openPullRequestAfterPush(
       };
     }
     if (current && current.state === "closed") {
+      await assertPrLandingAuthority(ctx, fresh);
       const reopened = await forge
         .reopenPullRequest({
           token: fresh.token,
@@ -451,6 +506,7 @@ export async function openPullRequestAfterPush(
   }
   const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · ${issue ? `issue ${issue.identifier}` : "note du carnet"}`;
   try {
+    await assertPrLandingAuthority(ctx, fresh);
     const pr = await forge.ensurePullRequest({
       token: fresh.token,
       repoFullName: fresh.repoFullName,
@@ -465,6 +521,7 @@ export async function openPullRequestAfterPush(
       success: true,
     };
   } catch (err) {
+    if (err instanceof PrLandingAuthorityError) throw err;
     if (isForgeApiError(err) && err.status === 422) {
       return {
         result: {

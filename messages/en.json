@@ -2298,7 +2298,7 @@
     "providerRetry": "The model provider isn't responding; waiting before trying again.",
     "localDeclined": "This agent is running in the cloud rather than on your machine.",
     "localDeclinedNoMint": "The agent is running in the cloud: spending can't be capped on your machine yet.",
-    "currentRepoOverlap": "{count, plural, one {# file you had also edited went into the pull request} other {# files you had also edited went into the pull request}}, your unfinished changes included.",
+    "currentRepoOverlap": "{count, plural, one {# file with your existing changes was left out} other {# files with your existing changes were left out}} of the pull request.",
     "quotaTitle": "You've reached 100% of your usage limit",
     "quotaWorkKept": "The agent stopped here; its work is pushed and the session picks up where it left off.",
     "quotaResetsOn": "Your budget refills on {date}.",

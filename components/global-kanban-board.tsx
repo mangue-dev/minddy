@@ -316,7 +316,7 @@ export function GlobalKanbanBoard({
   return (
     // Halo “agent in progress” on cross-project maps: provider in GLOBAL mode
     // (no projectId → endpoint /api/agent-activity, bounded by the RLS).
-    <AgentActivityProvider>
+    <AgentActivityProvider projectIds={[...projectMap.keys()]}>
     {/* “@” when hovering over a card (or on selection) opens Numo — even
  context as the Numo button of the selection pill (MIN-105). */}
     <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>

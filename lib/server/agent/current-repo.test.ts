@@ -108,13 +108,13 @@ describe("le périmètre du tour", () => {
     expect(turnPaths({ edited: [], before, after: before }).paths).toEqual([]);
   });
 
-  it("NOMME le fichier qu'il emporte à l'utilisateur", () => {
+  it("withholds a path that already contained user changes", () => {
     const scope = turnPaths({
       edited: ["partagé.ts"],
       before: state([["partagé.ts", " M"]]),
       after: state([["partagé.ts", " M"]]),
     });
-    expect(scope.paths).toEqual(["partagé.ts"]);
+    expect(scope.paths).toEqual([]);
     expect(scope.carried).toEqual(["partagé.ts"]);
   });
 
@@ -136,8 +136,19 @@ describe("le périmètre du tour", () => {
     expect(scope.carried).toEqual([]);
   });
 
-  it("ignore les chemins vides que rendrait une liste mal formée", () => {
+  it("ignores empty paths from a malformed edit list", () => {
     expect(turnPaths({ edited: ["", "  "], before: state([]), after: state([]) }).paths).toEqual([]);
+  });
+
+  it("rejects pathspec magic and paths outside the repository", () => {
+    const scope = turnPaths({
+      edited: ["../secret", "/tmp/file", "src\\file.ts", "src/*.ts", ":(glob)**"],
+      before: state([]),
+      after: state([]),
+    });
+    // Glob characters are valid filename characters and remain one literal path;
+    // traversal and platform separators are rejected.
+    expect(scope.paths).toEqual([":(glob)**", "src/*.ts"]);
   });
 });
 
@@ -453,12 +464,7 @@ describe("l'ancre du run", () => {
 });
 
 describe("ce que le push déclare avoir livré", () => {
-  /**
-   * `carried` triggers a note in the thread — “some work of yours has gone to the
-   * pull request”. Publishing it on a tour that has not committed anything would announce a
-   * damage that did not occur.
-   */
-  it("ne déclare rien quand aucun commit n'a été fait", async () => {
+  it("reports withheld user paths even when no agent commit was created", async () => {
     const { host } = fakeHost([
       [/rev-parse --verify/, { stdout: "anchor1\n" }],
       [/write-tree/, { stdout: "same\n" }],
@@ -475,7 +481,7 @@ describe("ce que le push déclare avoir livré", () => {
       scope: { paths: ["partagé.ts"], carried: ["partagé.ts"] },
     });
     expect(res.committed).toBe(false);
-    expect(res.carried).toEqual([]);
+    expect(res.carried).toEqual(["partagé.ts"]);
     expect(res.paths).toEqual([]);
   });
 });

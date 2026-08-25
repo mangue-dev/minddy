@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentActivity, type AgentRunRow, type IssuePrRow } from "./activity";
+import {
+  buildAgentActivity,
+  issuePullRequestsForBindings,
+  type AgentRunRow,
+  type IssuePrRow,
+  type ScopedIssuePrRow,
+} from "./activity";
 
 /**
  * Semantics of activity by outcome (CONVERSATIONAL model). The sensitive point:
@@ -138,5 +144,35 @@ describe("pullRequests", () => {
       "issue-A": { prId: "pr-a", prNumber: 1, state: "open" },
       "issue-B": { prId: "pr-b", prNumber: 2, state: "merged" },
     });
+  });
+});
+
+describe("global activity repository scope", () => {
+  it("requires the issue project and repository to match the same authorized link", () => {
+    const rows: ScopedIssuePrRow[] = [
+      {
+        ...prRow({ id: "allowed", issue_id: "issue-a" }),
+        provider: "github",
+        repo_full_name: "acme/app",
+        issue: { project_id: "project-a" },
+      },
+      {
+        ...prRow({ id: "cross-project", issue_id: "issue-b" }),
+        provider: "github",
+        repo_full_name: "acme/app",
+        issue: { project_id: "project-b" },
+      },
+      {
+        ...prRow({ id: "wrong-repo", issue_id: "issue-a" }),
+        provider: "github",
+        repo_full_name: "acme/other",
+        issue: { project_id: "project-a" },
+      },
+    ];
+    expect(
+      issuePullRequestsForBindings(rows, [
+        { project_id: "project-a", provider: "github", repo_full_name: "acme/app" },
+      ]).map((row) => row.id),
+    ).toEqual(["allowed"]);
   });
 });

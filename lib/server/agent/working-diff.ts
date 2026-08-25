@@ -354,6 +354,7 @@ export async function readWorkingDiff(
   baseRef: string,
   opts: { patches: boolean; scope?: readonly string[]; maxBytes?: number },
 ): Promise<WorkingDiff> {
+  if (opts.scope?.length === 0) return { files: [], truncated: false };
   const ref = sq(baseRef);
   const maxBytes = Math.max(1, Math.min(opts.maxBytes ?? WORKING_DIFF_MAX_BYTES, WORKING_DIFF_MAX_BYTES));
   const only = workingDiffPathspec(opts.scope);
@@ -399,8 +400,7 @@ export async function readWorkingDiff(
  * Git statement of the harness, but remain quoted like any data injected into the shell. */
 function workingDiffPathspec(scope: readonly string[] | undefined): string {
   if (scope === undefined) return "";
-  if (scope.length === 0) return ` -- ${sq(":(exclude)*")}`;
-  return ` -- ${scope.map(sq).join(" ")}`;
+  return ` -- ${scope.map((path) => sq(`:(literal)${path}`)).join(" ")}`;
 }
 
 type ShellOpts = { cwd: string; timeoutMs: number };

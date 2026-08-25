@@ -619,15 +619,7 @@ function buildFeed(
             createdAt: e.created_at,
           });
         }
-        /**
-         * MIN-358: The agent was working in the repository that the user has on
-         * its disk, and its commit took away files that it had
-         * also modified — so some work of his own goes into the pull request.
-         *
-         * No trick closes this case: two hands in the same file
-         * do not unravel afterwards. What we can do, and who is
-         * minimum, it's SAYING it instead of deciding in silence.
-         */
+        /** Pre-existing user work is withheld from the agent commit. */
         if (p.phase === "current_repo_overlap") {
           const files = typeof p.files === "number" ? p.files : 0;
           if (files > 0) {

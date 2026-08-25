@@ -7,10 +7,11 @@ import { rowMayRunLocally } from "@/lib/server/agent/local-exec-scope";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import {
   appendEvent,
-  claimRun,
+  claimLocalRun,
   declineQueuedLocalRun,
   findQueuedLocalRunForMachine,
   getRun,
+  stampRun,
 } from "@/lib/server/agent/runs";
 import { executeAgentRun } from "@/lib/server/agent/execute";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
@@ -129,12 +130,16 @@ type LocalTurnRequest = {
   projectIds?: unknown;
 };
 
-/** The pull only accepts a short list of unique UUIDs, never paths. */
-function claimProjects(body: LocalTurnRequest | null): string[] | null {
-  if (!DEVICE_ID.test(typeof body?.deviceId === "string" ? body.deviceId : "")) return null;
+/** The pull only accepts one desktop identity and a short list of UUIDs. */
+function claimRequest(body: LocalTurnRequest | null): {
+  deviceId: string;
+  projectIds: string[];
+} | null {
+  const deviceId = typeof body?.deviceId === "string" ? body.deviceId : "";
+  if (!DEVICE_ID.test(deviceId)) return null;
   if (!Array.isArray(body?.projectIds) || body.projectIds.length > MAX_CLAIM_PROJECTS) return null;
   if (body.projectIds.some((id) => typeof id !== "string" || !PROJECT_ID.test(id))) return null;
-  return [...new Set(body.projectIds as string[])];
+  return { deviceId, projectIds: [...new Set(body.projectIds as string[])] };
 }
 
 export async function POST(request: NextRequest) {
@@ -148,16 +153,16 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) as LocalTurnRequest | null;
   const runId = typeof body?.runId === "string" ? body.runId.trim() : "";
-  const claimProjectIds = runId ? null : claimProjects(body);
-  if (!runId && !claimProjectIds) {
-    return NextResponse.json({ error: "runId or valid machine claim required" }, { status: 400 });
+  const machine = claimRequest(body);
+  if (!machine) {
+    return NextResponse.json({ error: "valid machine claim required" }, { status: 400 });
   }
 
   const run = runId
     ? await getRun(runId)
     : await findQueuedLocalRunForMachine({
         userId: auth.user.id,
-        projectIds: claimProjectIds!,
+        projectIds: machine.projectIds,
         client: auth.supabase,
       });
   if (!run && !runId) {
@@ -220,7 +225,11 @@ export async function POST(request: NextRequest) {
    * is perhaps already running somewhere, and superimposing a second one on it would
    * enter the same checkpoint by two harnesses.
    */
-  const claimed = await claimRun(run.id);
+  const claimed = await claimLocalRun({
+    runId: run.id,
+    userId: auth.user.id,
+    deviceId: machine.deviceId,
+  });
   if (!claimed) {
     return NextResponse.json({ error: "run is not queued" }, { status: 409 });
   }
@@ -257,8 +266,19 @@ export async function POST(request: NextRequest) {
   // This identity must exist before issuing the lease: issue a token
   // increments its generation and revokes the previous one. Let's not do this
   // irreversible writing for an incomplete assignment.
-  const lease = await issueLocalExecToken(run.id);
+  const lease = await issueLocalExecToken({
+    runId: run.id,
+    userId: auth.user.id,
+    deviceId: machine.deviceId,
+  });
   if (!lease.ok) {
+    if (lease.error === "authority_revoked") {
+      await stampRun(run.id, {
+        status: "canceled",
+        interrupt_requested: true,
+        error_message: "Run authority was revoked before local lease issuance",
+      }).catch(() => null);
+    }
     console.error(`[desktop-local-turn] ${selectedRunId} : bail refusé (${lease.error})`);
     return NextResponse.json({ error: `lease refused: ${lease.error}` }, { status: 503 });
   }

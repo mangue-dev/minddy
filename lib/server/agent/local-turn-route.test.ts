@@ -32,6 +32,7 @@ const h = vi.hoisted(() => ({
   prepares: true,
   declined: true,
   calls: [] as string[],
+  claimedDevice: null as string | null,
 }));
 
 /**
@@ -57,9 +58,10 @@ vi.mock("@/lib/server/agent/runs", () => ({
     h.calls.push("find");
     return h.next ? h.run : null;
   }),
-  claimRun: vi.fn(async () => {
+  claimLocalRun: vi.fn(async (input: { userId: string; deviceId: string }) => {
     h.calls.push("claim");
-    return h.claimed ? h.run : null;
+    h.claimedDevice = input.deviceId;
+    return h.claimed && h.run?.created_by === input.userId ? h.run : null;
   }),
   declineQueuedLocalRun: vi.fn(async () => {
     h.calls.push("decline");
@@ -122,6 +124,9 @@ async function POST(body: unknown) {
   );
 }
 
+const DEVICE_ID = "0123456789abcdef0123456789abcdef";
+const direct = (runId = "run-1") => POST({ runId, deviceId: DEVICE_ID, projectIds: [] });
+
 function row(over: Record<string, unknown> = {}) {
   return {
     id: "run-1",
@@ -146,11 +151,12 @@ beforeEach(() => {
   h.prepares = true;
   h.declined = true;
   h.calls.length = 0;
+  h.claimedDevice = null;
 });
 
 describe("POST /api/desktop/local-turn", () => {
   it("rend l'affectation, bail compris, et dans le bon ordre", async () => {
-    const response = await POST({ runId: "run-1" });
+    const response = await direct();
     expect(response.status).toBe(200);
 
     const body = await response.json();
@@ -181,7 +187,7 @@ describe("POST /api/desktop/local-turn", () => {
      * diverged, the refusal said “update the app”.
      */
     const { parseLocalTurnAssignment } = await import("@/lib/desktop/local-turn");
-    const body = await (await POST({ runId: "run-1" })).json();
+    const body = await (await direct()).json();
     const parsed = parseLocalTurnAssignment(body);
 
     expect(parsed, "la coquille refuserait cette affectation").not.toBeNull();
@@ -192,7 +198,7 @@ describe("POST /api/desktop/local-turn", () => {
 
   it("refuse un run qui n'est pas local, SANS le claim", async () => {
     h.run = row({ local_exec: false });
-    expect((await POST({ runId: "run-1" })).status).toBe(409);
+    expect((await direct()).status).toBe(409);
     expect(h.calls).toEqual([]);
   });
 
@@ -209,14 +215,14 @@ describe("POST /api/desktop/local-turn", () => {
     ]) {
       h.calls.length = 0;
       h.run = row(over);
-      expect((await POST({ runId: "run-1" })).status).toBe(409);
+      expect((await direct()).status).toBe(409);
       expect(h.calls, JSON.stringify(over)).toEqual([]);
     }
   });
 
   it("joue un run BYOK sans plafond ni mint de la plateforme", async () => {
     h.run = row({ key_mode: "byok" });
-    expect((await POST({ runId: "run-1" })).status).toBe(200);
+    expect((await direct()).status).toBe(200);
     expect(h.calls).toEqual(["claim", "prepare", "lease"]);
   });
 
@@ -227,7 +233,7 @@ describe("POST /api/desktop/local-turn", () => {
     const saved = process.env.OPENROUTER_PROVISIONING_KEY;
     delete process.env.OPENROUTER_PROVISIONING_KEY;
     try {
-      const response = await POST({ runId: "run-1" });
+      const response = await direct();
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({
         status: "idle",
@@ -245,7 +251,7 @@ describe("POST /api/desktop/local-turn", () => {
     delete process.env.OPENROUTER_PROVISIONING_KEY;
     h.declined = false;
     try {
-      expect((await POST({ runId: "run-1" })).status).toBe(409);
+      expect((await direct()).status).toBe(409);
       expect(h.calls).toEqual(["decline"]);
     } finally {
       process.env.OPENROUTER_PROVISIONING_KEY = saved;
@@ -256,13 +262,13 @@ describe("POST /api/desktop/local-turn", () => {
     // The opposite would kill the previous turn of this run (to emit is to revoke)
     // to return a token that no one can use.
     h.prepares = false;
-    expect((await POST({ runId: "run-1" })).status).toBe(409);
+    expect((await direct()).status).toBe(409);
     expect(h.calls).toEqual(["claim", "prepare"]);
   });
 
   it("rend 409 quand le run n'était plus claimable — une autre machine a gagné", async () => {
     h.claimed = false;
-    expect((await POST({ runId: "run-1" })).status).toBe(409);
+    expect((await direct()).status).toBe(409);
     expect(h.calls).toEqual(["claim"]);
   });
 
@@ -274,6 +280,7 @@ describe("POST /api/desktop/local-turn", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).runId).toBe("run-1");
     expect(h.calls).toEqual(["find", "claim", "prepare", "lease"]);
+    expect(h.claimedDevice).toBe(DEVICE_ID);
   });
 
   it("rend un état idle quand aucun tour local n'attend cette machine", async () => {
@@ -303,11 +310,17 @@ describe("POST /api/desktop/local-turn", () => {
 
   it("rend 404 sur un run inconnu, sans dire qu'il est inconnu", async () => {
     h.run = null;
-    expect((await POST({ runId: "run-1" })).status).toBe(404);
+    expect((await direct()).status).toBe(404);
   });
 
   it("refuse un corps sans identifiant ni claim de machine", async () => {
     expect((await POST({})).status).toBe(400);
+  });
+
+  it("does not let a readable project colleague claim another member's local run", async () => {
+    h.run = row({ created_by: "user-2" });
+    expect((await direct()).status).toBe(409);
+    expect(h.calls).toEqual(["claim"]);
   });
 });
 

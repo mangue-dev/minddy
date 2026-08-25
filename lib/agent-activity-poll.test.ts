@@ -44,10 +44,10 @@ describe("fetchAgentActivity", () => {
   it("queries the global route without a project, and the project route otherwise", async () => {
     const fetchMock = vi.fn(async (_url: string) => okResponse({}));
     vi.stubGlobal("fetch", fetchMock);
-    await fetchAgentActivity(null);
+    await fetchAgentActivity(null, ["p2", "p1"]);
     await fetchAgentActivity("p1");
     expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
-      "/api/agent-activity",
+      "/api/agent-activity?projectId=p1&projectId=p2",
       "/api/projects/p1/agent-runs",
     ]);
   });
@@ -96,7 +96,16 @@ describe("agentActivityQueryKey", () => {
     expect(agentActivityQueryKey(null)).toEqual([
       "agent-active-issues",
       "__global__",
+      "",
     ]);
     expect(agentActivityQueryKey("p1")).toEqual(["agent-active-issues", "p1"]);
+  });
+
+  it("includes the authorized global project scope in the cache key", () => {
+    expect(agentActivityQueryKey(null, ["p2", "p1"])).toEqual([
+      "agent-active-issues",
+      "__global__",
+      "p1,p2",
+    ]);
   });
 });

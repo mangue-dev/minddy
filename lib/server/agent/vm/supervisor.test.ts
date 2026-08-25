@@ -2292,7 +2292,7 @@ describe("le mode dépôt courant", () => {
     );
   });
 
-  it("borne le diff aux écritures attribuées à CE run, même si un autre fichier bouge", async () => {
+  it("scopes the diff to this run's writes even when another file changes", async () => {
     // The fake repository announces `a.ts` in its global state. Only permission
     // writing code of `lib/agent.ts` belongs to this run: the Git fallback must not
     // no longer suck `a.ts` into the displayed diff.
@@ -2307,8 +2307,10 @@ describe("le mode dépôt courant", () => {
         command.startsWith("git diff --name-status") || command.startsWith("git diff --numstat"),
     );
     expect(displayedDiffReads.length).toBeGreaterThan(0);
-    expect(displayedDiffReads.every((command) => command.includes("'lib/agent.ts'"))).toBe(true);
-    expect(displayedDiffReads.every((command) => !command.includes("'a.ts'"))).toBe(true);
+    expect(
+      displayedDiffReads.every((command) => command.includes("':(literal)lib/agent.ts'")),
+    ).toBe(true);
+    expect(displayedDiffReads.every((command) => !command.includes("':(literal)a.ts'"))).toBe(true);
   });
 
   /**

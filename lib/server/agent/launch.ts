@@ -441,6 +441,8 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       // lineage columns stay empty and the run plays on the machine's folder.
       repoLinkId: link?.id ?? null,
       connectionId: link?.connection_id ?? null,
+      repoProvider: link?.provider ?? null,
+      repoExternalId: link?.external_repo_id ?? null,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
       promptMentions: input.promptMentions ?? null,
@@ -689,6 +691,8 @@ async function launchPrReviewRun(
       prHeadSha: pr.headSha,
       repoLinkId: link.linkId,
       connectionId: link.connectionId,
+      repoProvider: link.provider,
+      repoExternalId: link.externalRepoId,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
       // Session title: that of the pull request. No summary to generate —

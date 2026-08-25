@@ -120,6 +120,8 @@ export interface RepoCloneTarget {
   token: string;
   linkId: string;
   connectionId: string;
+  /** Stable forge repository identity; unlike owner/name, it survives renames. */
+  externalRepoId: string;
 }
 
 interface GitLinkRow {
@@ -189,6 +191,7 @@ export async function resolveRepoCloneTargetForRepo(opts: {
 export interface ResolvedRepoLink {
   linkId: string;
   connectionId: string;
+  externalRepoId: string;
   projectId: string;
   provider: RepoProvider;
   repoFullName: string;
@@ -227,6 +230,7 @@ export async function resolveProjectLinkForRepo(opts: {
     return {
       linkId: row.id,
       connectionId: row.connection_id,
+      externalRepoId: row.external_repo_id,
       projectId: row.project_id,
       provider: opts.provider,
       repoFullName: row.repo_full_name,
@@ -299,6 +303,7 @@ async function targetFromLink(
       token,
       linkId: row.id,
       connectionId: row.connection_id,
+      externalRepoId: row.external_repo_id,
     };
   }
 
@@ -324,6 +329,7 @@ async function targetFromLink(
       token,
       linkId: row.id,
       connectionId: row.connection_id,
+      externalRepoId: row.external_repo_id,
     };
   }
 

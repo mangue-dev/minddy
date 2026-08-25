@@ -20,6 +20,7 @@ import { durationBucket } from "@/lib/analytics-sanitize";
 import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
 import { notifyRoutineOfRunEnd, stampRoutineRunEnd } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
+import { getProjectAccess } from "@/lib/server/project-access";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 
@@ -188,6 +189,9 @@ export interface AgentRun {
   pr_head_sha: string | null;
   repo_link_id: string | null;
   connection_id: string | null;
+  /** Immutable repository identity selected when the run was created. */
+  repo_provider: RepoProviderId | null;
+  repo_external_id: string | null;
   status: AgentRunStatus;
   triggered_by: AgentRunTrigger;
   created_by: string | null;
@@ -320,6 +324,8 @@ export interface AgentRun {
    * que par convention.
    */
   local_exec_gen: number;
+  /** Desktop profile that won the atomic queued local-run claim. */
+  local_exec_device_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -335,6 +341,8 @@ export interface CreateRunInput {
   prHeadSha?: string | null;
   repoLinkId: string | null;
   connectionId: string | null;
+  repoProvider: RepoProviderId | null;
+  repoExternalId: string | null;
   createdBy: string;
   prompt?: string | null;
   promptMentions?: AssistantMention[] | null;
@@ -438,6 +446,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       pr_head_sha: input.prHeadSha ?? null,
       repo_link_id: input.repoLinkId,
       connection_id: input.connectionId,
+      repo_provider: input.repoProvider,
+      repo_external_id: input.repoExternalId,
       status: "queued",
       triggered_by: input.triggeredBy,
       created_by: input.createdBy,
@@ -543,7 +553,42 @@ export async function claimRun(runId: string): Promise<AgentRun | null> {
     return null;
   }
   const rows = (data ?? []) as AgentRun[];
-  return rows[0] ?? null;
+  const run = rows[0] ?? null;
+  if (!run) return null;
+  if (await runAuthorityIsCurrent(run)) return run;
+
+  // The generic claim RPC only arbitrates queued workers. Authorization can
+  // change after the run was queued, so close a stale claim before an executor
+  // can read project or repository context.
+  await stampRun(run.id, {
+    status: "canceled",
+    error_message: "Run authority was revoked before execution",
+    ...(run.local_exec ? { local_exec_gen: run.local_exec_gen + 1 } : {}),
+  });
+  return null;
+}
+
+/**
+ * Atomically assign a queued local run to its creator and one desktop profile.
+ * The service-side RPC repeats every predicate in the transition so a stale
+ * queue read cannot claim after membership, mode, user, or machine context has
+ * changed.
+ */
+export async function claimLocalRun(input: {
+  runId: string;
+  userId: string;
+  deviceId: string;
+}): Promise<AgentRun | null> {
+  const { data, error } = await getServiceClient().rpc("claim_local_agent_run", {
+    p_run_id: input.runId,
+    p_user_id: input.userId,
+    p_device_id: input.deviceId,
+  });
+  if (error) {
+    console.error("[agent-runs] local claim failed:", error.message);
+    return null;
+  }
+  return ((data ?? []) as AgentRun[])[0] ?? null;
 }
 
 export async function getRun(runId: string): Promise<AgentRun | null> {
@@ -554,6 +599,65 @@ export async function getRun(runId: string): Promise<AgentRun | null> {
     .eq("id", runId)
     .maybeSingle();
   return (data as AgentRun | null) ?? null;
+}
+
+export type RunRepoBinding = Pick<
+  AgentRun,
+  "repo_link_id" | "connection_id" | "repo_provider" | "repo_external_id"
+>;
+
+export interface CurrentRepoBinding {
+  id: string;
+  connection_id: string;
+  provider: string;
+  external_repo_id: string;
+}
+
+/** Pure comparison used at every privileged repository boundary. */
+export function repoBindingMatchesRun(
+  run: RunRepoBinding,
+  current: CurrentRepoBinding | null,
+): boolean {
+  const launchedWithoutRepository =
+    run.repo_link_id === null &&
+    run.connection_id === null &&
+    run.repo_provider === null &&
+    run.repo_external_id === null;
+  if (launchedWithoutRepository) return current === null;
+  if (!current) return false;
+  return (
+    current.id === run.repo_link_id &&
+    current.connection_id === run.connection_id &&
+    current.provider === run.repo_provider &&
+    current.external_repo_id === run.repo_external_id
+  );
+}
+
+/**
+ * Re-read the project's repository binding without minting a forge token.
+ * Failure is closed: a control-plane request must not inherit authority while
+ * the binding store is unavailable or being changed.
+ */
+export async function runRepoBindingIsCurrent(run: RunRepoBinding & { project_id: string }): Promise<boolean> {
+  const { data, error } = await getServiceClient()
+    .from("project_git_links")
+    .select("id, connection_id, provider, external_repo_id")
+    .eq("project_id", run.project_id)
+    .maybeSingle();
+  if (error) return false;
+  return repoBindingMatchesRun(run, (data as CurrentRepoBinding | null) ?? null);
+}
+
+/** Revalidate both the member and repository identities frozen on a run. */
+export async function runAuthorityIsCurrent(
+  run: RunRepoBinding & { project_id: string; created_by: string | null },
+): Promise<boolean> {
+  if (!run.created_by) return false;
+  const [access, repositoryMatches] = await Promise.all([
+    getProjectAccess(run.created_by, run.project_id),
+    runRepoBindingIsCurrent(run),
+  ]);
+  return access !== null && repositoryMatches;
 }
 
 /**
@@ -633,17 +737,24 @@ export async function declineQueuedLocalRun(runId: string): Promise<AgentRun | n
  * what he wants, and the lease will fail a little further anyway.
  */
 export async function runLocalExecScopeRow(runId: string): Promise<{
+  project_id: string;
+  repo_link_id: string | null;
+  connection_id: string | null;
+  repo_provider: RepoProviderId | null;
+  repo_external_id: string | null;
   triggered_by: string | null;
   routine_id: string | null;
   chain_id: string | null;
   pull_request_id: string | null;
   issue_id: string | null;
   local_issue_context_confirmed: boolean;
+  created_by: string | null;
+  local_exec_device_id: string | null;
 } | null> {
   const { data } = await getServiceClient()
     .from("agent_runs")
     .select(
-      "triggered_by, routine_id, chain_id, pull_request_id, issue_id, local_issue_context_confirmed",
+      "project_id, repo_link_id, connection_id, repo_provider, repo_external_id, triggered_by, routine_id, chain_id, pull_request_id, issue_id, local_issue_context_confirmed, created_by, local_exec_device_id",
     )
     .eq("id", runId)
     .maybeSingle();
@@ -670,13 +781,17 @@ export async function runLocalExecScopeRow(runId: string): Promise<{
  * disappeared. A microVM run has no lease to give, and giving it one would be
  * exactly the hot environment toggle that frozen mode prohibits.
  */
-export async function bumpLocalExecGen(runId: string): Promise<number | null> {
+export async function bumpLocalExecGen(input: {
+  runId: string;
+  userId: string;
+  deviceId: string;
+}): Promise<number | null> {
   const service = getServiceClient();
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data: current } = await service
       .from("agent_runs")
       .select("local_exec, local_exec_gen")
-      .eq("id", runId)
+      .eq("id", input.runId)
       .maybeSingle();
     const row = current as { local_exec?: boolean; local_exec_gen?: number } | null;
     if (!row?.local_exec) return null;
@@ -684,15 +799,17 @@ export async function bumpLocalExecGen(runId: string): Promise<number | null> {
     const { data } = await service
       .from("agent_runs")
       .update({ local_exec_gen: next })
-      .eq("id", runId)
+      .eq("id", input.runId)
       .eq("local_exec", true)
+      .eq("created_by", input.userId)
+      .eq("local_exec_device_id", input.deviceId)
       .eq("local_exec_gen", row.local_exec_gen ?? 0)
       .select("local_exec_gen")
       .maybeSingle();
     const written = (data as { local_exec_gen?: number } | null)?.local_exec_gen;
     if (typeof written === "number") return written;
   }
-  console.error(`[agent-runs] local exec lease contention on ${runId}`);
+  console.error(`[agent-runs] local exec lease contention on ${input.runId}`);
   return null;
 }
 
@@ -1062,6 +1179,8 @@ export interface StampFields {
   provider_key_id?: string | null;
   /** Command that carries the loop in the microVM (MIN-224). */
   loop_command_id?: string | null;
+  /** Incremented when authority is revoked so every local token dies immediately. */
+  local_exec_gen?: number;
 }
 
 /**

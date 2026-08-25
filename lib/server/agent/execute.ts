@@ -69,12 +69,31 @@ import {
   hasPendingRunMessages,
   loadRunJournal,
   notifyAgentRun,
+  runAuthorityIsCurrent,
   type AgentRun,
 } from "./runs";
 import { checkAgentQuota } from "./quota";
 import { generatedAgentBranchName } from "./branch-name";
 import { resolveServerExecSecret, signServerExecToken } from "./server-exec-token";
 import { resolveAgentExecutionTarget } from "@/lib/agent-execution-target";
+
+function repoTargetMatchesRun(run: AgentRun, target: RepoCloneTarget): boolean {
+  return (
+    target.linkId === run.repo_link_id &&
+    target.connectionId === run.connection_id &&
+    target.provider === run.repo_provider &&
+    target.externalRepoId === run.repo_external_id
+  );
+}
+
+function runWasLaunchedWithoutRepository(run: AgentRun): boolean {
+  return (
+    run.repo_link_id === null &&
+    run.connection_id === null &&
+    run.repo_provider === null &&
+    run.repo_external_id === null
+  );
+}
 
 /** The tightest of the provided ceilings (omitted values impose no limit). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
@@ -452,6 +471,18 @@ export async function executeAgentRun(
     ) => void;
   },
 ): Promise<ExecuteOutcome> {
+  // A claim is only a scheduling lock. Membership and repository attachment
+  // may have changed since it won, so reject the run before emitting an event,
+  // resolving issue context, minting credentials, or waking a sandbox.
+  if (!(await runAuthorityIsCurrent(run))) {
+    await stampRun(run.id, {
+      status: "canceled",
+      error_message: "Run authority was revoked before execution",
+      ...(run.local_exec ? { local_exec_gen: run.local_exec_gen + 1 } : {}),
+    });
+    return "failed";
+  }
+
   const callStart = Date.now();
   /**
    * Chunk events, SERIALIZED behind a promise chain (MIN-112).
@@ -631,6 +662,9 @@ export async function executeAgentRun(
     // `null` target = no linked repository: only a local turn can be here, and
     // everything forge-shaped below degrades to a no-repo session.
     const target = await targetPromise;
+    if (target ? !repoTargetMatchesRun(run, target) : !runWasLaunchedWithoutRepository(run)) {
+      throw new Error("Run repository binding changed during execution preparation");
+    }
     if (!target && !localTurn) throw new Error("No repository linked to this project");
     if (target) {
       secrets.addAuthUrl(target.authUrl);
@@ -682,6 +716,9 @@ export async function executeAgentRun(
           policy.repository === "read" ? "repo-read" : "repo-write",
         )
       : null;
+    if (target && (!vmTarget || !repoTargetMatchesRun(run, vmTarget))) {
+      throw new Error("Run repository binding changed before credential issuance");
+    }
     if (vmTarget) {
       secrets.addAuthUrl(vmTarget.authUrl);
       secrets.add(vmTarget.token);

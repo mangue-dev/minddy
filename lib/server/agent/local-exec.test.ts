@@ -12,17 +12,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   /** The line, reduced to what the lease looks at. `null` = run not found. */
   row: { local: true, gen: 0 } as { local: boolean; gen: number } | null,
+  authorized: true,
   /** WHERE THE CONTEXT OF THE RUN COMES FROM (MIN-360) — what the second curtain reads back. */
   scope: {
+    project_id: "project-1",
+    repo_link_id: "link-1",
+    connection_id: "connection-1",
+    repo_provider: "github",
+    repo_external_id: "9001",
     triggered_by: "button",
     routine_id: null,
     chain_id: null,
     pull_request_id: null,
+    created_by: "user-1",
+    local_exec_device_id: "0123456789abcdef0123456789abcdef",
   } as {
+    project_id: string;
+    repo_link_id: string | null;
+    connection_id: string | null;
+    repo_provider: "github" | "gitlab" | null;
+    repo_external_id: string | null;
     triggered_by: string | null;
     routine_id: string | null;
     chain_id: string | null;
     pull_request_id: string | null;
+    created_by?: string | null;
+    local_exec_device_id?: string | null;
   } | null,
 }));
 
@@ -33,22 +48,39 @@ vi.mock("./runs", () => ({
     return h.row.gen;
   }),
   runLocalExecScopeRow: vi.fn(async () => h.scope),
+  runAuthorityIsCurrent: vi.fn(async () => h.authorized),
 }));
 
 import { admitLocalRun, issueLocalExecToken } from "./local-exec";
 import { resolveLocalExecSecret, verifyLocalExecToken } from "./local-exec-token";
 
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
+const USER_ID = "user-1";
+const DEVICE_ID = "0123456789abcdef0123456789abcdef";
+const issue = () => issueLocalExecToken({ runId: RUN_ID, userId: USER_ID, deviceId: DEVICE_ID });
 
 beforeEach(() => {
   h.row = { local: true, gen: 0 };
-  h.scope = { triggered_by: "button", routine_id: null, chain_id: null, pull_request_id: null };
+  h.authorized = true;
+  h.scope = {
+    project_id: "project-1",
+    repo_link_id: "link-1",
+    connection_id: "connection-1",
+    repo_provider: "github",
+    repo_external_id: "9001",
+    triggered_by: "button",
+    routine_id: null,
+    chain_id: null,
+    pull_request_id: null,
+    created_by: USER_ID,
+    local_exec_device_id: DEVICE_ID,
+  };
   process.env.SUPABASE_SERVICE_ROLE_KEY ||= "service-role-key-de-test";
 });
 
 describe("le bail d'exécution locale", () => {
   it("rend un jeton que le plan de contrôle sait vérifier", async () => {
-    const issued = await issueLocalExecToken(RUN_ID);
+    const issued = await issue();
     expect(issued.ok).toBe(true);
     if (!issued.ok) return;
     const verified = verifyLocalExecToken(issued.token, resolveLocalExecSecret()!);
@@ -56,8 +88,8 @@ describe("le bail d'exécution locale", () => {
   });
 
   it("périme le jeton précédent en émettant le suivant", async () => {
-    const first = await issueLocalExecToken(RUN_ID);
-    const second = await issueLocalExecToken(RUN_ID);
+    const first = await issue();
+    const second = await issue();
     expect(first.ok && second.ok).toBe(true);
     if (!first.ok || !second.ok) return;
     // The generation of the first is no longer that of the line: the control plane
@@ -82,13 +114,14 @@ describe("le bail d'exécution locale", () => {
       { triggered_by: "mention" },
     ]) {
       h.scope = {
+        ...h.scope!,
         triggered_by: "button",
         routine_id: null,
         chain_id: null,
         pull_request_id: null,
         ...scope,
       };
-      expect(await issueLocalExecToken(RUN_ID)).toEqual({
+      expect(await issue()).toEqual({
         ok: false,
         error: "third_party_context",
       });
@@ -102,20 +135,36 @@ describe("le bail d'exécution locale", () => {
     // This would be the hot environment toggle that frozen mode prohibits —
     // each environment rereads ITS memory, and works on ITS repository.
     h.row = { local: false, gen: 0 };
-    expect(await issueLocalExecToken(RUN_ID)).toEqual({ ok: false, error: "not_local" });
+    expect(await issue()).toEqual({ ok: false, error: "not_local" });
   });
 
   it("ne délivre rien quand le déploiement ne sait pas signer", async () => {
     const saved = process.env.SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     try {
-      expect(await issueLocalExecToken(RUN_ID)).toEqual({ ok: false, error: "not_configured" });
+      expect(await issue()).toEqual({ ok: false, error: "not_configured" });
       // And the generation has not moved: we do not revoke the existing machine
       // for a token that we couldn't make.
       expect(h.row?.gen).toBe(0);
     } finally {
       process.env.SUPABASE_SERVICE_ROLE_KEY = saved;
     }
+  });
+
+  it("binds lease issuance to the run creator and claiming desktop", async () => {
+    await expect(
+      issueLocalExecToken({ runId: RUN_ID, userId: "user-2", deviceId: DEVICE_ID }),
+    ).resolves.toEqual({ ok: false, error: "wrong_member" });
+    await expect(
+      issueLocalExecToken({ runId: RUN_ID, userId: USER_ID, deviceId: "f".repeat(32) }),
+    ).resolves.toEqual({ ok: false, error: "wrong_machine" });
+    expect(h.row?.gen).toBe(0);
+  });
+
+  it("refuses a lease after membership or repository authority is revoked", async () => {
+    h.authorized = false;
+    await expect(issue()).resolves.toEqual({ ok: false, error: "authority_revoked" });
+    expect(h.row?.gen).toBe(1);
   });
 });
 

@@ -7,7 +7,7 @@ import {
 } from "./local-exec-token";
 import { rowMayRunLocally, localRunScope, type LocalRunContext } from "./local-exec-scope";
 import { runKeyMintingEnabled } from "./run-key";
-import { bumpLocalExecGen, runLocalExecScopeRow } from "./runs";
+import { bumpLocalExecGen, runAuthorityIsCurrent, runLocalExecScopeRow } from "./runs";
 
 /**
  * THE LOCAL EXECUTION LEASE (MIN-355) — the issuance of the token, half base.
@@ -104,6 +104,9 @@ export type IssueLocalExecTokenResult =
       error:
         | "not_configured"
         | "not_local"
+        | "wrong_member"
+        | "wrong_machine"
+        | "authority_revoked"
         | "third_party_context"
         | "issue_confirmation_required";
     };
@@ -116,7 +119,7 @@ export type IssueLocalExecTokenResult =
  * only wears what we give it, and asks for more when it expires.
  */
 export async function issueLocalExecToken(
-  runId: string,
+  input: { runId: string; userId: string; deviceId: string },
 ): Promise<IssueLocalExecTokenResult> {
   const secret = resolveLocalExecSecret();
   if (!secret) {
@@ -136,10 +139,11 @@ export async function issueLocalExecToken(
  * written by a migration, a back office or a future launch path is not
  * sufficient to open the door.
  */
-  const row = await runLocalExecScopeRow(runId);
+  const row = await runLocalExecScopeRow(input.runId);
+  if (!row) return { ok: false, error: "not_local" };
   const scope = row ? rowMayRunLocally(row) : null;
   if (scope && !scope.ok) {
-    console.error(`[agent-local-exec] run ${runId} : contexte tiers, aucun jeton local`);
+    console.error(`[agent-local-exec] run ${input.runId}: third-party context, no local token`);
     return {
       ok: false,
       error:
@@ -148,11 +152,22 @@ export async function issueLocalExecToken(
           : "third_party_context",
     };
   }
-  const gen = await bumpLocalExecGen(runId);
+  if (row?.created_by !== input.userId) return { ok: false, error: "wrong_member" };
+  if (row.local_exec_device_id !== input.deviceId) {
+    return { ok: false, error: "wrong_machine" };
+  }
+  if (!(await runAuthorityIsCurrent(row))) {
+    // This is a revocation, not an ordinary admission failure. Rotate the
+    // generation before returning so any lease already held by this desktop
+    // loses its live and control-plane access immediately.
+    await bumpLocalExecGen(input);
+    return { ok: false, error: "authority_revoked" };
+  }
+  const gen = await bumpLocalExecGen(input);
   if (gen === null) return { ok: false, error: "not_local" };
   return {
     ok: true,
-    token: signLocalExecToken({ runId, gen }, secret),
+    token: signLocalExecToken({ runId: input.runId, gen }, secret),
     gen,
     expiresInSeconds: LOCAL_EXEC_MAX_TTL_SECONDS,
   };

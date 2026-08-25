@@ -357,12 +357,24 @@ describe("readWorkingDiff", () => {
       scope: ["lib/a file.ts"],
       maxBytes: 240_000,
     });
-    expect(host.commands.every((command) => command.includes("'lib/a file.ts'") || !command.startsWith("git"))).toBe(true);
+    expect(
+      host.commands.every(
+        (command) => command.includes("':(literal)lib/a file.ts'") || !command.startsWith("git"),
+      ),
+    ).toBe(true);
     expect(host.commands.filter((command) => command.includes("head -c"))).toEqual(
       expect.arrayContaining([
         expect.stringContaining("head -c 240000"),
       ]),
     );
+  });
+
+  it("treats pathspec-looking filenames literally", async () => {
+    const host = fakeHost([]);
+    await readWorkingDiff(host, "abc123", { patches: false, scope: [":(glob)**", "src/*.ts"] });
+    expect(host.commands).toHaveLength(2);
+    expect(host.commands.every((command) => command.includes("':(literal):(glob)**'"))).toBe(true);
+    expect(host.commands.every((command) => command.includes("':(literal)src/*.ts'"))).toBe(true);
   });
 
   it("rend une liste vide plutôt que de lever quand la sandbox tombe", async () => {

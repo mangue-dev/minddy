@@ -31,6 +31,43 @@ export interface IssuePrRow {
   updated_at: string;
 }
 
+export interface ScopedIssuePrRow extends IssuePrRow {
+  provider: string;
+  repo_full_name: string;
+  issue: { project_id: string } | { project_id: string }[] | null;
+}
+
+export interface ProjectRepoBindingRow {
+  project_id: string;
+  provider: string;
+  repo_full_name: string | null;
+}
+
+/**
+ * A repository-level PR is visible only when its attached issue belongs to the
+ * same project↔repository pair that authorizes the poll. Repository-only RLS is
+ * insufficient when two projects link the same forge repository.
+ */
+export function issuePullRequestsForBindings(
+  rows: ScopedIssuePrRow[],
+  bindings: ProjectRepoBindingRow[],
+): IssuePrRow[] {
+  const allowed = new Set(
+    bindings.flatMap((binding) =>
+      binding.repo_full_name
+        ? [`${binding.project_id}\0${binding.provider}\0${binding.repo_full_name}`]
+        : [],
+    ),
+  );
+  return rows.filter((row) => {
+    const issue = Array.isArray(row.issue) ? row.issue[0] : row.issue;
+    return Boolean(
+      issue?.project_id &&
+      allowed.has(`${issue.project_id}\0${row.provider}\0${row.repo_full_name}`),
+    );
+  });
+}
+
 /** The pull request for a ticket, as the client receives it. */
 export interface IssuePrRef {
   /** Id minddy — the `?pr=` deep-link works regardless of the RA state. */

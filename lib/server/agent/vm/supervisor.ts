@@ -855,12 +855,7 @@ export async function runOpencodeTurn(
       fallbackParent: current.parent,
       scope: await turnScope(),
     });
-    /**
-     * THE CASE THAT NOTHING CLOSES, AND WHICH MUST THEREFORE BE SAYED: the agent delivered
-     * files that the user had also modified, therefore his work
-     * part in the pull request. This is the price of the current deposit mode — two hands
-     * in the same file — and what would be wrong would be to keep silent about it.
-     */
+    /** Tell the user which pre-existing worktree paths were withheld. */
     if (pushed.carried.length > 0) {
       await cp
         .emit("status", {

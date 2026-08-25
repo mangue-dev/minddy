@@ -2298,7 +2298,7 @@
     "providerRetry": "Le fournisseur du modèle ne répond pas; attente avant de réessayer.",
     "localDeclined": "Cet agent tourne dans le cloud, pas sur votre machine.",
     "localDeclinedNoMint": "L'agent tourne dans le cloud : la dépense ne peut pas encore être plafonnée sur votre machine.",
-    "currentRepoOverlap": "{count, plural, one {# fichier que vous aviez modifié est parti} other {# fichiers que vous aviez modifiés sont partis}} dans la pull request, vos changements en cours compris.",
+    "currentRepoOverlap": "{count, plural, one {# fichier contenant vos changements existants a été exclu} other {# fichiers contenant vos changements existants ont été exclus}} de la pull request.",
     "quotaTitle": "Vous avez atteint 100 % de votre limite d'usage",
     "quotaWorkKept": "L'agent s'est arrêté là; son travail est poussé, et la session reprendra où elle en est.",
     "quotaResetsOn": "Votre budget se recharge le {date}.",

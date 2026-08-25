@@ -431,14 +431,10 @@ export async function commitAndPush(
  */
 export type TurnScope = readonly string[] | undefined;
 
-/** The `-- <paths>` part of a git command, or "" when nothing bounds it.
- * `:(literal)` is not needed: these paths come from git itself, not the model. */
+/** The `-- <paths>` part of a git command, with every path forced literal. */
 function pathspec(scope: TurnScope): string {
   if (scope === undefined) return "";
-  // An impossible pathspec rather than no pathspec: `-- ` alone would be read as
-  // “everything”, the opposite of what an empty list requests.
-  if (scope.length === 0) return ` -- ${sq(":(exclude)*")}`;
-  return ` -- ${scope.map(sq).join(" ")}`;
+  return ` -- ${scope.map((path) => sq(`:(literal)${path}`)).join(" ")}`;
 }
 
 /** Maximum number of files listed in a `files_changed` event (bounded large turn). */
@@ -498,6 +494,7 @@ export async function turnDiff(
   fromSha: string,
   scope?: TurnScope,
 ): Promise<{ diff: string; porcelain: string }> {
+  if (scope?.length === 0) return { diff: "", porcelain: "" };
   const only = pathspec(scope);
   const [diff, porcelain] = await Promise.all([
     fromSha
@@ -536,6 +533,7 @@ export async function turnDiffStat(
   scope?: TurnScope,
 ): Promise<{ files: string[]; lines: number; untracked: number } | null> {
   if (!fromSha) return null;
+  if (scope?.length === 0) return { files: [], lines: 0, untracked: 0 };
   const only = pathspec(scope);
   try {
     const [numstat, names, porcelain] = await Promise.all([

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generatedAgentBranchName, slugForAgentBranch } from "./branch-name";
+import { generatedAgentBranchName, isValidGitBranchName, slugForAgentBranch } from "./branch-name";
 
 describe("generatedAgentBranchName", () => {
   it("uses the ticket identifier when the conversation is ticket-linked", () => {
@@ -29,5 +29,18 @@ describe("generatedAgentBranchName", () => {
       }),
     ).toBe("minddy/agent/ajouter-un-bouton-12345678");
     expect(slugForAgentBranch("   ")).toBe("agent");
+  });
+});
+
+describe("isValidGitBranchName", () => {
+  it("accepts generated and inherited branch names", () => {
+    expect(isValidGitBranchName("minddy/agent/min-457-abcd1234")).toBe(true);
+    expect(isValidGitBranchName("release/next")).toBe(true);
+  });
+
+  it("rejects ref escapes, pathspec characters, and option-like names", () => {
+    for (const branch of ["", "-main", "../main", ".hidden", "main..next", "main.lock", "a//b", "a b", "a~b", "a*b", "@{"]) {
+      expect(isValidGitBranchName(branch), branch).toBe(false);
+    }
   });
 });

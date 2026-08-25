@@ -46,8 +46,12 @@ type ActivityPayload = {
  * diverged without anything saying so, and the survey was sent to disk each time
  * tick (MIN-303).
  */
-export const agentActivityQueryKey = (projectId: string | null | undefined) =>
-  ["agent-active-issues", projectId ?? "__global__"] as const;
+export const agentActivityQueryKey = (
+  projectId: string | null | undefined,
+  projectIds: readonly string[] = [],
+) => projectId
+  ? (["agent-active-issues", projectId] as const)
+  : (["agent-active-issues", "__global__", [...projectIds].sort().join(",")] as const);
 
 /**
  * ⚠ A failed request RISES. It does not render empty lists.
@@ -64,10 +68,16 @@ export const agentActivityQueryKey = (projectId: string | null | undefined) =>
  */
 export async function fetchAgentActivity(
   projectId: string | null | undefined,
+  projectIds: readonly string[] = [],
 ): Promise<Required<ActivityPayload>> {
   const url = projectId
     ? `/api/projects/${projectId}/agent-runs`
-    : `/api/agent-activity`;
+    : (() => {
+        const params = new URLSearchParams();
+        for (const id of [...new Set(projectIds)].sort()) params.append("projectId", id);
+        const query = params.toString();
+        return `/api/agent-activity${query ? `?${query}` : ""}`;
+      })();
   const res = await fetch(url);
   if (!res.ok) throw new Error(`agent-activity ${res.status}`);
   const data = (await res.json()) as ActivityPayload;
@@ -80,15 +90,18 @@ export async function fetchAgentActivity(
 
 export function AgentActivityProvider({
   projectId,
+  projectIds = [],
   children,
 }: {
   /** Absent/null → GLOBAL mode (all projects accessible). */
   projectId?: string | null;
+  /** Projects currently represented by a global board. */
+  projectIds?: readonly string[];
   children: ReactNode;
 }) {
   const { data } = useQuery({
-    queryKey: agentActivityQueryKey(projectId),
-    queryFn: () => fetchAgentActivity(projectId),
+    queryKey: agentActivityQueryKey(projectId, projectIds),
+    queryFn: () => fetchAgentActivity(projectId, projectIds),
     // Fast as long as an agent is working; slow otherwise (idle sessions are
     // stable until a user action).
     refetchInterval: (query) =>

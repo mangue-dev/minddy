@@ -69,6 +69,7 @@ const h = vi.hoisted(() => ({
   stopped: [] as string[],
   /** Current project access of the creator, independently of launch-time access. */
   creatorHasAccess: true,
+  repoBindingCurrent: true,
   /** Active rows returned to the member-removal lifecycle revoker. */
   revocableRuns: [] as Array<Record<string, unknown>>,
   /** L'API de provisioning refuse (variable absente, panne) : `mintRunKey` → null. */
@@ -164,6 +165,9 @@ vi.mock("./repo-access", () => ({
       remoteUrl: "https://github.com/org/repo.git",
       authUrl: `https://x-access-token:tok-${access}@github.com/org/repo.git`,
       defaultBranch: "main",
+      linkId: "link-1",
+      connectionId: "connection-1",
+      externalRepoId: "9001",
     };
   }),
 }));
@@ -244,6 +248,7 @@ vi.mock("./runs", async (importOriginal) => ({
     },
   ),
   runSteeredByOther: vi.fn(async () => h.steeredByOther),
+  runRepoBindingIsCurrent: vi.fn(async () => h.repoBindingCurrent),
   readInterruptFlag: vi.fn(async () => true),
   clearInterrupt: vi.fn(async (runId: string) => {
     h.cleared.push(runId);
@@ -313,6 +318,7 @@ beforeEach(() => {
   h.revoked.length = 0;
   h.stopped.length = 0;
   h.creatorHasAccess = true;
+  h.repoBindingCurrent = true;
   h.revocableRuns.length = 0;
   h.mintFails = false;
   h.byokAvailable = true;
@@ -338,6 +344,10 @@ beforeEach(() => {
     pr_state: null,
     run_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     project_id: "proj-1",
+    repo_link_id: "link-1",
+    connection_id: "connection-1",
+    repo_provider: "github",
+    repo_external_id: "9001",
     issue_id: "issue-1",
     pull_request_id: null,
     created_by: "user-owner",
@@ -413,6 +423,25 @@ describe("active authority revocation", () => {
     expect(h.repoAccessAsked).toEqual([]);
     expect(h.forgeRefreshes).toEqual([]);
   });
+
+  it("stops live broadcast immediately after membership revocation", async () => {
+    h.creatorHasAccess = false;
+    expect((await call("POST", "/stream", { text: "stale" })).status).toBe(409);
+    expect(h.afterWork).toEqual([]);
+    expect(h.streams).toEqual([]);
+  });
+
+  it("stops repository operations after the project is rebound", async () => {
+    h.repoBindingCurrent = false;
+    expect((await call("POST", "/repo-auth")).status).toBe(409);
+    expect(h.repoAccessAsked).toEqual([]);
+    expect(h.stamped).toContainEqual(
+      expect.objectContaining({
+        status: "canceled",
+        error_message: "run repository binding has changed",
+      }),
+    );
+  });
 });
 
 /**
@@ -484,20 +513,17 @@ describe("le direct — le topic vient du run, pas du corps", () => {
     expect(h.streams).toHaveLength(1);
   });
 
-  it("ne LIT PAS la ligne du run — c'est le seul appel chaud de la surface", async () => {
-    // `emitLive` broadcasts ~4×/s for the entire duration of the round: a reading of
-    // `agent_runs` per tick is ~29,000 requests over a two-hour shift,
-    // for a surface that only needs OIDC `runId`. The surfaces which
-    // WRITE, they keep reading — the comparison is the test.
+  it("revalidates the run before every live broadcast", async () => {
     await call("POST", "/stream", { text: "salut" });
-    expect(h.runReads).toBe(0);
-    await call("POST", "/events", { type: "status" });
     expect(h.runReads).toBe(1);
+    await call("POST", "/events", { type: "status" });
+    expect(h.runReads).toBe(2);
   });
 
-  it("diffuse même si la ligne du run a disparu — rien à perdre, personne à atteindre", async () => {
+  it("does not broadcast after the run row disappears", async () => {
     h.run = null;
-    expect((await call("POST", "/stream", { text: "salut" })).status).toBe(200);
+    expect((await call("POST", "/stream", { text: "salut" })).status).toBe(404);
+    expect(h.afterWork).toEqual([]);
   });
 
   it("ne rediffuse pas la liste de fichiers telle quelle : chemins vides, statuts inventés et surplus tombent", async () => {
@@ -805,7 +831,7 @@ describe("les tools de plateforme", () => {
     // `agent_runs.branch_name` is only stamped after a first REAL push
     // (MIN-123) — but it is `create_pr` who has just done it. Read it on the line
     // of the run gave an EMPTY head to the forge, and stamped `branch_name: ""`.
-    const branch = "minddy/agent/min-42-abcd1234";
+    const branch = `minddy/agent/agent-${RUN_ID.slice(0, 8)}`;
     const res = await call("POST", "/tool/create_pr", {
       args: { title: "Ajoute le truc" },
       pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
@@ -831,6 +857,16 @@ describe("les tools de plateforme", () => {
   it("refusent un `create_pr` sans résultat de push — la VM seule sait si elle a poussé", async () => {
     expect((await call("POST", "/tool/create_pr", { args: { title: "x" } })).status).toBe(400);
     expect(h.prLandings).toHaveLength(0);
+  });
+
+  it("rejects a sandbox branch that is not the run's generated branch", async () => {
+    const res = await call("POST", "/tool/create_pr", {
+      args: { title: "x" },
+      pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
+      workBranch: "refs/heads/main:stolen",
+    });
+    expect(res.status).toBe(400);
+    expect(h.prLandings).toEqual([]);
   });
 
   it("ne servent PAS les tools de fichier — ils s'exécutent dans la VM", async () => {
@@ -967,9 +1003,9 @@ describe("le carnet se ferme dès qu'un tiers a parlé au run", () => {
     expect((await call("POST", "/tool/update_issue", { args: {} })).status).toBe(200);
   });
 
-  it("refuse le carnet d'un run sans propriétaire", async () => {
+  it("rejects a run with no authority-bearing owner", async () => {
     h.run = { ...h.run, created_by: null };
-    expect((await call("POST", "/tool/read_scratchpad", { args: {} })).status).toBe(403);
+    expect((await call("POST", "/tool/read_scratchpad", { args: {} })).status).toBe(409);
     expect(h.scratchpadCalls).toEqual([]);
   });
 });
@@ -1302,22 +1338,17 @@ describe("le plan de contrôle vu depuis une machine", () => {
     expect(h.scratchpadCalls).toHaveLength(4);
   });
 
-  it("laisse le DIRECT passer sans lire la ligne du run — le 13e cas, assumé", async () => {
-    // This is the only hot call (~4/s): imposing a lookup on him would be exactly
-    // the load that its short circuit exists to remove. What a stolen token there
-    // wins is ephemeral text on the thread of HIS run, fifteen minutes at most.
+  it("revokes live broadcasts with the local execution generation", async () => {
     const res = await callLocal("POST", "/stream", { text: "salut" }, LOCAL_GEN - 1);
-    expect(res.status).toBe(200);
-    expect(h.runReads).toBe(0);
+    expect(res.status).toBe(403);
+    expect(h.runReads).toBe(1);
+    expect(h.afterWork).toEqual([]);
   });
 
-  it("ne change RIEN au chemin de la microVM", async () => {
-    // The proof that the two refusals are well conditioned: the same calls,
-    // without `local`, behave as before — including on a completed run, that
-    // only the local road closes.
+  it("rejects completed cloud runs on every privileged surface", async () => {
     h.run = { ...h.run!, status: "completed", local_exec: true, local_exec_gen: LOCAL_GEN };
-    expect((await call("POST", "/repo-auth")).status).toBe(200);
-    expect((await call("POST", "/events", { type: "assistant_message" })).status).toBe(200);
+    expect((await call("POST", "/repo-auth")).status).toBe(409);
+    expect((await call("POST", "/events", { type: "assistant_message" })).status).toBe(409);
   });
 });
 

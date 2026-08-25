@@ -9,6 +9,7 @@ import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
 import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
+import { generatedAgentBranchName, isValidGitBranchName } from "./branch-name";
 import { localDiffPayload } from "./local-diff-payload";
 import {
   anchorForRun,
@@ -167,6 +168,23 @@ function billToFor(run: AgentRun): AiUsageBillTo {
     : { unattributed: `run ${run.id} sans created_by` };
 }
 
+function repoTargetMatchesRun(
+  run: AgentRun,
+  target: {
+    linkId: string;
+    connectionId: string;
+    provider: string;
+    externalRepoId: string;
+  },
+): boolean {
+  return (
+    target.linkId === run.repo_link_id &&
+    target.connectionId === run.connection_id &&
+    target.provider === run.repo_provider &&
+    target.externalRepoId === run.repo_external_id
+  );
+}
+
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
@@ -311,7 +329,7 @@ const ACTIVE_RUN_STATUSES: AgentRun["status"][] = ["queued", "running"];
 const ACCESS_REVOKED_ERROR = "run owner no longer has project access";
 type RevocableAgentRun = Pick<
   AgentRun,
-  "id" | "status" | "sandbox_id" | "provider_key_id"
+  "id" | "status" | "sandbox_id" | "provider_key_id" | "local_exec" | "local_exec_gen"
 >;
 
 /**
@@ -319,14 +337,18 @@ type RevocableAgentRun = Pick<
  * access to its project. The database transition happens first so another
  * worker cannot reclaim the run while external cleanup is in progress.
  */
-async function revokeRunAuthority(run: RevocableAgentRun): Promise<void> {
+async function revokeRunAuthority(
+  run: RevocableAgentRun,
+  reason = ACCESS_REVOKED_ERROR,
+): Promise<void> {
   if (ACTIVE_RUN_STATUSES.includes(run.status)) {
     await stampRun(
       run.id,
       {
         status: "canceled",
         interrupt_requested: true,
-        error_message: ACCESS_REVOKED_ERROR,
+        error_message: reason,
+        ...(run.local_exec ? { local_exec_gen: run.local_exec_gen + 1 } : {}),
       },
       { guard: [...ACTIVE_RUN_STATUSES] },
     ).catch(() => null);
@@ -356,7 +378,7 @@ export async function revokeMemberAgentAuthority(input: {
   const { getServiceClient } = await import("@/lib/supabase-service");
   const { data, error } = await getServiceClient()
     .from("agent_runs")
-    .select("id, status, sandbox_id, provider_key_id")
+    .select("id, status, sandbox_id, provider_key_id, local_exec, local_exec_gen")
     .eq("project_id", input.projectId)
     .eq("created_by", input.userId)
     .in("status", [...ACTIVE_RUN_STATUSES]);
@@ -401,62 +423,6 @@ export async function handleControlPlaneRequest(opts: {
   const { runId, method, surface } = opts;
   const body = opts.body ?? {};
 
-  /**
-   * THE LIVE GOES BEFORE THE PLAYBACK OF THE RUN, and it is the only surface that
-   * escapes. `emitLive` broadcasts ~4×/s for the entire duration of the round — on a
-   * two hour tour, a reading of `agent_runs` per tick would be ~29,000
-   * base queries for a surface which only needs the `runId`, of which it
-   * drifts its topic. It was pure load, on the only hot call of the plan
-   * of control.
-   *
-   * What we are not checking here: that there is still a line for this run.
-   * Without consequence - the live is not persisted anywhere, and broadcast on the
-   * topic of a deleted run does not reach anyone. The surfaces that WRITE, they
-   * keep reading below.
-   *
-   * THE TOPIC IS DERIVED FROM THE RUN, never received. This is the only line in this file
-   * which prevents one VM from broadcasting to another's thread.
-   *
-   * `afterOrNow` and NOT `broadcastRunStream`: this DETACHES its fetch
-   * (`void broadcast(…)`, live.ts). It suits the loop, which lives in a
-   * invocation which continues behind - not here: the response goes to the line
-   * next, the platform freezes the function, and the outgoing request dies in flight
-   * (“TypeError: fetch failed”, see lib/server/after-safe.ts). The live
-   * NO fallback — nothing is persisted, unlike events that the thread
-   * catches up in 2 s at the poll: losing it means losing the streamed rendering.
-   */
-  if (method === "POST" && surface === "/stream") {
-    const fileStats = liveFileStats(body.fileStats);
-    afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "stream", {
-        text: typeof body.text === "string" ? body.text : "",
-        tools: num(body.tools) ?? 0,
-        reasoningActive: body.reasoningActive === true,
-        reasoningMs: num(body.reasoningMs) ?? 0,
-        // The VM is OWN CODE, but it remains on the other side of a POST: we
-        // do not repost his list as is. Bounded like that at the end of the turn,
-        // and reduced to the two fields that the thread reads — otherwise a malformed payload (or
-        // simply big) would leave as is on the topic of all subscribers.
-        ...liveFiles(body.files, body.filesTruncated),
-        ...(fileStats ? { fileStats } : {}),
-        at: Date.now(),
-      }),
-    );
-    return ok();
-  }
-
-  // The complete diff is a SEPARATE message from the text stream: copy it into
-  // each snapshot (~4/s) would multiply the traffic unnecessarily. This surface
-  // only exists for the machine that owns the repository.
-  if (method === "POST" && surface === "/diff") {
-    if (!opts.local) return forbidden("local diff requires a local execution token");
-    const diff = localDiffPayload(body);
-    afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "diff", { ...diff, at: Date.now() }),
-    );
-    return ok();
-  }
-
   // The line of the run is the CONTEXT, and it is reread at each call: this is what
   // which makes the surface stateless, therefore safe to call from a VM which can
   // die between two requests. A deleted run (retention) or sandbox name
@@ -474,12 +440,20 @@ export async function handleControlPlaneRequest(opts: {
   // The run creator is the identity whose project and repository authority is
   // replayed by every surface below. Revalidate it on every stateful request:
   // launch-time membership is a past fact and cannot authorize a live run.
-  if (run.created_by) {
-    const access = await getProjectAccess(run.created_by, run.project_id).catch(() => null);
-    if (!access?.isMember) {
-      await revokeRunAuthority(run);
-      return { status: 409, body: { error: ACCESS_REVOKED_ERROR } };
-    }
+  const { runRepoBindingIsCurrent } = await import("./runs");
+  const [access, bindingCurrent] = await Promise.all([
+    run.created_by
+      ? getProjectAccess(run.created_by, run.project_id).catch(() => null)
+      : Promise.resolve(null),
+    runRepoBindingIsCurrent(run).catch(() => false),
+  ]);
+  if (!access?.isMember) {
+    await revokeRunAuthority(run);
+    return { status: 409, body: { error: ACCESS_REVOKED_ERROR } };
+  }
+  if (!bindingCurrent) {
+    await revokeRunAuthority(run, "run repository binding has changed");
+    return { status: 409, body: { error: "run repository binding has changed" } };
   }
 
   /**
@@ -519,6 +493,40 @@ export async function handleControlPlaneRequest(opts: {
     if (run.status !== "running") {
       return { status: 409, body: { error: "run is no longer running" } };
     }
+  }
+
+  if (run.status !== "running") {
+    return { status: 409, body: { error: "run is no longer running" } };
+  }
+
+  /**
+   * Live output is privileged control-plane output too. It stays behind the
+   * same current membership, repository, sandbox, status, and local generation
+   * checks as persisted surfaces, so revoking a lease also revokes broadcast.
+   */
+  if (method === "POST" && surface === "/stream") {
+    const fileStats = liveFileStats(body.fileStats);
+    afterOrNow(() =>
+      broadcastToTopic(agentRunTopic(runId), "stream", {
+        text: typeof body.text === "string" ? body.text : "",
+        tools: num(body.tools) ?? 0,
+        reasoningActive: body.reasoningActive === true,
+        reasoningMs: num(body.reasoningMs) ?? 0,
+        ...liveFiles(body.files, body.filesTruncated),
+        ...(fileStats ? { fileStats } : {}),
+        at: Date.now(),
+      }),
+    );
+    return ok();
+  }
+
+  if (method === "POST" && surface === "/diff") {
+    if (!opts.local) return forbidden("local diff requires a local execution token");
+    const diff = localDiffPayload(body);
+    afterOrNow(() =>
+      broadcastToTopic(agentRunTopic(runId), "diff", { ...diff, at: Date.now() }),
+    );
+    return ok();
   }
 
   if (method === "POST" && surface === "/events") {
@@ -736,6 +744,9 @@ export async function handleControlPlaneRequest(opts: {
     // `repo-write`, not `full`: the trusted relay uses it only for Git smart HTTP.
     const target = await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null);
     if (!target) return { status: 404, body: { error: "no repository linked" } };
+    if (!repoTargetMatchesRun(run, target)) {
+      return { status: 409, body: { error: "run repository binding has changed" } };
+    }
     const sandboxName = opts.sandboxName ?? run.sandbox_id ?? `agent-${run.id}`;
     await refreshAgentSandboxForgeAccess(sandboxName, target);
     return ok({ refreshed: true });
@@ -998,6 +1009,9 @@ async function runPrTool(
     resolveRepoCloneTarget(run.project_id),
   ]);
   if (!prRun || !target) return bad(`${name}: the pull request is no longer reachable`);
+  if (!repoTargetMatchesRun(run, target)) {
+    return { status: 409, body: { error: `${name}: repository binding changed` } };
+  }
 
   const forge = forgeFor(target.provider);
   const call = { token: target.token, repoFullName: target.repoFullName, number: prRun.number };
@@ -1065,6 +1079,7 @@ async function runProjectPrTool(
       repo: async () => {
         const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
         if (!target) return null;
+        if (!repoTargetMatchesRun(run, target)) return null;
         return {
           token: target.token,
           repoFullName: target.repoFullName,
@@ -1130,10 +1145,13 @@ async function runCreatePr(
   args: Record<string, unknown>,
   body: Record<string, unknown>,
 ): Promise<ControlPlaneResult> {
-  const [{ openPullRequestAfterPush }, { resolveRepoCloneTarget }, { forgeFor }] =
+  const [{ openPullRequestAfterPush, PrLandingAuthorityError }, { resolveRepoCloneTarget }, { forgeFor }] =
     await Promise.all([import("./pr-landing"), import("./repo-access"), import("./forge")]);
   const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
   if (!target) return bad("create_pr: no repository linked to this project");
+  if (!repoTargetMatchesRun(run, target)) {
+    return { status: 409, body: { error: "create_pr: repository binding changed" } };
+  }
 
   const pushed = body.pushed as
     | { pushed: boolean; remoteUpdated: boolean; headSha: string }
@@ -1151,36 +1169,61 @@ async function runCreatePr(
    * this first push in the normal case. Reading it alone here opened the pull request
    * on an empty head, and stamped `branch_name: ""` in passing.
    */
-  const workBranch =
-    (typeof body.workBranch === "string" ? body.workBranch.trim() : "") || run.branch_name || "";
+  const expectedBranch =
+    run.branch_name ??
+    generatedAgentBranchName({
+      runId: run.id,
+      issueIdentifier: identifier,
+      conversationTitle: run.title,
+      prompt: run.prompt,
+    });
+  const suppliedBranch = typeof body.workBranch === "string" ? body.workBranch.trim() : "";
+  const workBranch = suppliedBranch || expectedBranch;
+  if (!isValidGitBranchName(workBranch) || workBranch !== expectedBranch) {
+    return bad("create_pr: invalid or unexpected work branch");
+  }
+  const baseBranch = run.base_branch ?? target.defaultBranch;
+  if (!isValidGitBranchName(baseBranch)) return bad("create_pr: invalid base branch");
 
-  const outcome = await openPullRequestAfterPush(
-    {
-      run,
-      target,
-      forge: forgeFor(target.provider),
-      issue: identifier ? { identifier } : null,
-      workBranch,
-      baseBranch: run.base_branch ?? target.defaultBranch,
-      locale,
-      emit: (type, payload) => appendEvent(run.id, type, payload),
-      prState,
-    },
-    {
-      pushed,
-      prTitle: title || (identifier ? `${identifier}: agent work` : "Agent work"),
-      body: typeof args.body === "string" ? args.body : undefined,
-      fresh: target,
-      jobsNote: typeof body.jobsNote === "string" ? body.jobsNote : "",
-      // The branch exists on the repository as of this push: this is where we
-      // saves it, like the old form does on its first real push.
-      noteBranchPushed: async (p) => {
-        if (!p.pushed || run.branch_name || !workBranch) return;
-        await stampRun(run.id, { branch_name: workBranch }).catch(() => null);
+  try {
+    const outcome = await openPullRequestAfterPush(
+      {
+        run,
+        target,
+        forge: forgeFor(target.provider),
+        issue: identifier ? { identifier } : null,
+        workBranch,
+        baseBranch,
+        locale,
+        emit: (type, payload) => appendEvent(run.id, type, payload),
+        prState,
       },
-    },
-  );
-  return ok(outcome);
+      {
+        pushed,
+        prTitle: title || (identifier ? `${identifier}: agent work` : "Agent work"),
+        body: typeof args.body === "string" ? args.body : undefined,
+        fresh: target,
+        jobsNote: typeof body.jobsNote === "string" ? body.jobsNote : "",
+        noteBranchPushed: async (p) => {
+          if (!p.pushed || run.branch_name || !workBranch) return;
+          const stamped = await stampRun(
+            run.id,
+            { branch_name: workBranch },
+            { guard: ["running"] },
+          );
+          if (!stamped) {
+            throw new PrLandingAuthorityError("run stopped before branch binding");
+          }
+        },
+      },
+    );
+    return ok(outcome);
+  } catch (error) {
+    if (error instanceof PrLandingAuthorityError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
 }
 
 /** `MIN-42` of the given ticket, or null. */

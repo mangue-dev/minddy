@@ -253,19 +253,13 @@ describe("le tour qui a travaillé", () => {
     expect(await deliveredFiles()).toContain("A\tété noté.ts");
   });
 
-  /**
-   * THE CASE THAT NO TIP CLOSES: the agent edits a file that
-   * the user had already edited. The commit then takes its own work,
-   * and the only honest conduct is to NAME him — that is what the supervisor
-   * publie au fil.
-   */
-  it("nomme les fichiers dont il emporte le travail de l'utilisateur", async () => {
+  it("withholds files that already contained user work", async () => {
     await sh(`printf 'de agent aussi\n' >> f.txt`, repo);
     const res = await push("fix(MIN-358): touche au fichier de l'humain", ["f.txt"]);
 
     expect(res.carried).toEqual(["f.txt"]);
     const { stdout } = await sh(`git show ${runWorkRef(RUN_ID)}:f.txt`, repo);
-    expect(stdout).toBe("un\nmon WIP\nde agent aussi\n");
+    expect(stdout).toBe("un\n");
   });
 
   /**

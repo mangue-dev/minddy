@@ -56,9 +56,9 @@ import { gitIdentityFlags, sq, type RepoHost } from "./repo-host";
  * would make all of the agent's work appear as canceled in his
  * `git status`. He gets it from the remote, like any colleague.
  *
- * And a case that no trick closes, and which must therefore be SAYED rather than
- * decide silently: **the user edits a file that the agent edits
- * also.** `carriedPaths` names it, and the end of the round publishes it to the thread.
+ * If the user and agent touch the same pre-existing worktree path, the path is
+ * excluded from the agent commit. The end of the turn names those withheld
+ * paths in the thread instead of silently publishing user work.
  */
 
 /**
@@ -131,14 +131,22 @@ export interface TurnPaths {
   /** Paths to be staged, sorted — the union of the two sources, ignored paths excluded
    * by `dropIgnoredPaths` (who needs the deposit). */
   paths: string[];
-  /**
-   * The paths that the agent edited WHILE the user already had them
-   * modified — therefore those whose commit also carries its own work.
-   *
-   * This is not an error to be corrected, it is the price of the mode: two hands in
-   * the same file. What would be wrong would be not to say it.
-   */
+  /** Paths withheld because they already contained user work at turn start. */
   carried: string[];
+}
+
+/**
+ * A path received from the harness must remain one repository-relative path,
+ * never a Git pathspec or an escape from the attached checkout.
+ */
+export function safeRepoPath(raw: string): string | null {
+  if (!raw.trim() || raw.includes("\0") || raw.includes("\\")) return null;
+  let path = raw;
+  while (path.startsWith("./")) path = path.slice(2);
+  if (!path || path.startsWith("/") || /^[A-Za-z]:/.test(path)) return null;
+  const parts = path.split("/");
+  if (parts.some((part) => !part || part === "." || part === "..")) return null;
+  return path;
 }
 
 /**
@@ -173,19 +181,24 @@ export function turnPaths(opts: {
 }): TurnPaths {
   const paths = new Set<string>();
   for (const path of opts.edited) {
-    const clean = path.trim();
-    if (clean) paths.add(clean);
+    const safe = safeRepoPath(path);
+    if (safe) paths.add(safe);
   }
   for (const [path, code] of opts.after) {
-    if (opts.before.get(path) !== code) paths.add(path);
+    const safe = safeRepoPath(path);
+    if (safe && opts.before.get(path) !== code) paths.add(safe);
   }
   // A path disappeared from the end snapshot even though it was modified at the beginning
   // does NOT count: it is the user (or agent) who returned the file to their
   // original condition, there is nothing to deliver.
 
   const owned = new Set<string>();
-  for (const path of opts.owned ?? []) owned.add(path.trim());
+  for (const path of opts.owned ?? []) {
+    const safe = safeRepoPath(path);
+    if (safe) owned.add(safe);
+  }
   const carried = [...paths].filter((path) => opts.before.has(path) && !owned.has(path));
+  for (const path of carried) paths.delete(path);
 
   return { paths: [...paths].sort(), carried: carried.sort() };
 }
@@ -218,15 +231,19 @@ async function writePathList(host: RepoHost, name: string, paths: string[]): Pro
  * never returned as ignored, even if it matches a pattern: that's what we want.
  */
 export async function dropIgnoredPaths(host: RepoHost, paths: string[]): Promise<string[]> {
-  if (paths.length === 0) return paths;
+  const safePaths = paths.flatMap((path) => {
+    const safe = safeRepoPath(path);
+    return safe ? [safe] : [];
+  });
+  if (safePaths.length === 0) return safePaths;
   try {
-    const file = await writePathList(host, "ignore-probe", paths);
+    const file = await writePathList(host, "ignore-probe", safePaths);
     const res = await host.exec(`git check-ignore -z --stdin < ${sq(file)}`, { timeoutMs: 30_000 });
-    if (res.exitCode !== 0) return paths;
+    if (res.exitCode !== 0) return safePaths;
     const ignored = new Set(res.stdout.split("\0").filter(Boolean));
-    return paths.filter((path) => !ignored.has(path));
+    return safePaths.filter((path) => !ignored.has(path));
   } catch {
-    return paths;
+    return safePaths;
   }
 }
 
@@ -381,7 +398,7 @@ export interface CurrentRepoPush {
   pushed: boolean;
   /** The paths delivered by this commit. */
   paths: string[];
-  /** Those of them that the user had also modified (see `TurnPaths`). */
+  /** Paths withheld because the user had already modified them (see `TurnPaths`). */
   carried: string[];
 }
 
@@ -436,7 +453,7 @@ export async function commitTurnAndPush(
   const anchor = await revParse(host, ref);
   const parent = anchor || opts.fallbackParent;
   const indexFile = `${host.layout.root}/turn-index`;
-  const env = { GIT_INDEX_FILE: indexFile };
+  const env = { GIT_INDEX_FILE: indexFile, GIT_LITERAL_PATHSPECS: "1" };
 
   // The disposable index is REDONE at each call (`create_pr` then end of turn, or
   // two turns in the same run root): an index left by a call
@@ -493,14 +510,14 @@ export async function commitTurnAndPush(
   await host.exec(`rm -f ${sq(indexFile)}`).catch(() => {});
 
   /**
-   * WHAT THIS COMMIT DELIVERED — empty when there was no commit, and this is
-   * which counts: `carried` triggers a note in the thread (“work of yours is
-   * left in the pull request"), and publish it on a tour which has nothing
-   * committed would announce a damage which did not occur.
+   * Report committed paths separately from paths withheld to protect existing
+   * user work. A turn can legitimately withhold a path without creating a
+   * commit, and the thread still needs to explain why that path was omitted.
    */
-  const delivered = committed
-    ? { paths: opts.scope.paths, carried: opts.scope.carried }
-    : { paths: [], carried: [] };
+  const delivered = {
+    paths: committed ? opts.scope.paths : [],
+    carried: opts.scope.carried,
+  };
 
   // Nothing committed and nothing pushed before: no branch to create on the
   // user repository for a ride that didn't touch the code.
