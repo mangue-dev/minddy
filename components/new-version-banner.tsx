@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, X } from "lucide-react";
-import { Button, cn, transitions } from "mangue-ui";
+import { Button, cn } from "mangue-ui";
+import { transitions } from "@/lib/motion";
 import { useNewVersion } from "@/lib/use-new-version";
 
 /**
@@ -32,7 +33,7 @@ export function NewVersionBanner() {
       aria-live="polite"
       className={cn(
         // Re-anchors the headband to the corner of the shell centered on ultrawide
-        // (≥2200px) — voir globals.css `.ultrawide-canvas`.
+        // (≥2200px) — see globals.css `.ultrawide-canvas`.
         "new-version-anchor",
         // `w-max`: the card is cut on its sentence, which then fits on a
         // line. Bounded to a frame rather than a fixed `max-w-xs` — at 320 px the
@@ -59,8 +60,8 @@ export function NewVersionBanner() {
               Two signs of life, without which the button appears inert:
 
               — the overview. The `default` variant of mango-ui ONLY recolors
-                rendu en lien (`[a]:hover:bg-primary/80`, soit `:is(a):hover`
-                once compiled); on a real <button>, nothing happens.
+                buttons rendered as links (`[a]:hover:bg-primary/80`, or
+                `:is(a):hover` once compiled); on a real <button>, nothing happens.
                 We restore the color that the bookstore itself applies to its
                 solid buttons (`send-button-with-cost`), and the main cursor,
                 that Tailwind v4 no longer sets `button`.

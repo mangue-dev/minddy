@@ -3,17 +3,14 @@
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  cn,
-  transitions,
-  buttonTap,
-} from "mangue-ui";
+import { cn } from "mangue-ui";
 import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantBusy } from "@/lib/assistant-chat-context";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
+import { transitions } from "@/lib/motion";
 import { useZenMode } from "@/lib/zen-mode-context";
 import {
   Tooltip,
@@ -98,7 +95,7 @@ export function AssistantFab() {
                   onClick={() => toggle()}
                   aria-label={t("title")}
                   whileHover={{ y: -1, transition: transitions.snappy }}
-                  whileTap={buttonTap.whileTap}
+                  whileTap={{ scale: 0.97, transition: transitions.snappy }}
                   className={cn(
                     "relative inline-flex items-center justify-center rounded-full",
                     "h-10 w-10 md:h-11 md:w-11",
