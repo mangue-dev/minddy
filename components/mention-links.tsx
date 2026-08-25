@@ -21,11 +21,10 @@ export interface MentionLinks {
  */
   href: (type: MentionTargetType, id: string) => string | null;
   /**
- * Go there, in the current tab. Separated from `href` for the same reason as
- * in the subpage lookup: `href` gives the address — hence the ⌘-click, the
- * middle click and the browser context menu —, `navigate` does the
- * APP navigation from ordinary click. Without it, the anchor would reload
- * the entire page.
+ * Handle an ordinary click. Issues open in the app-wide side panel without
+ * leaving the current page; other linked entities use client-side routing.
+ * `href` remains separate so modified clicks and browser context menus keep a
+ * canonical destination.
  */
   navigate: (type: MentionTargetType, id: string) => void;
 }

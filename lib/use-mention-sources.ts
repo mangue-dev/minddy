@@ -19,13 +19,18 @@ import { useRouter } from "next/navigation";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { contentMentionScanner } from "@/lib/mention-scan";
-import { mentionProjectLookup, mentionTargetPath } from "@/lib/mention-target";
+import {
+  mentionNavigationTarget,
+  mentionProjectLookup,
+  mentionTargetPath,
+} from "@/lib/mention-target";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
+import { useIssuePanel } from "@/lib/issue-panel-context";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
@@ -139,12 +144,16 @@ export function useMentionSources(projectId?: string | null): MentionSources {
  * yet arrived, the ticket belongs to a project that we left — returns `null`
  * and rest of the text.
  */
-export function useMentionLinksFor(sources: {
-  issues: MentionIssue[];
-  objectives: MentionObjective[];
-  pages: MentionPage[];
-}): MentionLinks {
+export function useMentionLinksFor(
+  sources: {
+    issues: MentionIssue[];
+    objectives: MentionObjective[];
+    pages: MentionPage[];
+  },
+  onOpenIssue?: (projectId: string, issueId: string) => void,
+): MentionLinks {
   const router = useRouter();
+  const { openIssue, closeIssue } = useIssuePanel();
   const { issues, objectives, pages } = sources;
 
   const projectOf = useMemo(
@@ -158,11 +167,17 @@ export function useMentionLinksFor(sources: {
     return {
       href,
       navigate: (type, id) => {
-        const path = href(type, id);
-        if (path) router.push(path);
+        const target = mentionNavigationTarget(type, id, projectOf(type, id));
+        if (!target) return;
+        if (target.kind === "issue-panel") {
+          (onOpenIssue ?? openIssue)(target.projectId, target.issueId);
+        } else {
+          closeIssue();
+          router.push(target.href);
+        }
       },
     };
-  }, [projectOf, router]);
+  }, [projectOf, router, onOpenIssue, openIssue, closeIssue]);
 }
 
 /**
@@ -178,9 +193,10 @@ export function useMentionLinksFor(sources: {
 export function useDescriptionMentions(
   projectId: string | null | undefined,
   members: Member[],
+  onOpenIssue?: (projectId: string, issueId: string) => void,
 ): MarkdownEditorMentions {
   const { issues, objectives, pages, armNow } = useMentionSources(projectId);
-  const links = useMentionLinksFor({ issues, objectives, pages });
+  const links = useMentionLinksFor({ issues, objectives, pages }, onOpenIssue);
 
   const options = useMemo<MentionOption[]>(
     () => [

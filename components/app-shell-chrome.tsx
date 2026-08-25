@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
@@ -108,6 +115,7 @@ import type {
 import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
+import { useIssuePanel } from "@/lib/issue-panel-context";
 
 /**
  * How many rows from OTHER projects the mobile surfaces get, per data group.
@@ -162,6 +170,12 @@ const ExportIssuesDialog = dynamic(
 
 const CommandPalette = dynamic(
   () => import("@/components/command-palette").then((m) => m.CommandPalette),
+  { ssr: false },
+);
+
+const GlobalIssuePanel = dynamic(
+  () =>
+    import("@/components/global-issue-panel").then((module) => module.GlobalIssuePanel),
   { ssr: false },
 );
 
@@ -346,6 +360,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { openCreateIssue, openCreateObjective } = useCreate();
   const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
+  const {
+    target: issuePanelTarget,
+    openIssue: openIssuePanel,
+    closeIssue: closeIssuePanel,
+  } = useIssuePanel();
+  const previousPathname = useRef(pathname);
+  useEffect(() => {
+    if (previousPathname.current !== pathname) closeIssuePanel();
+    previousPathname.current = pathname;
+  }, [pathname, closeIssuePanel]);
   // The inbox badge also counts pending invitations: they are there
   // display, and nothing else reports them once you leave the home.
   const { invitations } = useMyInvitations();
@@ -1080,7 +1104,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 entityType: "issue",
                 contextId: i.project_id,
                 data: i,
-                onSelect: () => router.push(`/projects/${i.project_id}?issue=${i.id}`),
+                onSelect: () => openIssuePanel(i.project_id, i.id),
               },
             ];
           }),
@@ -1172,7 +1196,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
       return groups;
     },
-    [projectById, router, t, ti, tPages]
+    [projectById, router, openIssuePanel, t, ti, tPages]
   );
 
   // Desktop: the full list, built only while the palette is open — closed, it
@@ -1605,6 +1629,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           open={paletteOpen}
           onOpenChange={handlePaletteOpenChange}
           searchIndex={searchIndex}
+        />
+      ) : null}
+      {issuePanelTarget ? (
+        <GlobalIssuePanel
+          key={`${issuePanelTarget.projectId}:${issuePanelTarget.issueId}`}
+          projectId={issuePanelTarget.projectId}
+          issueId={issuePanelTarget.issueId}
+          onClose={closeIssuePanel}
         />
       ) : null}
       {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME

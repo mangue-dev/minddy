@@ -115,6 +115,7 @@ import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
+import { useIssuePanel } from "@/lib/issue-panel-context";
 import type {
   Category,
   CreateIssueInput,
@@ -183,6 +184,7 @@ export function IssueSidePanel({
   const tCommon = useTranslations("Common");
   const tPlan = useTranslations("Plan");
   const tAgent = useTranslations("Agent");
+  const { openIssue: openGlobalIssue } = useIssuePanel();
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();
@@ -655,10 +657,24 @@ export function IssueSidePanel({
     }
   };
 
+  const openMentionedIssue = useCallback(
+    (projectId: string, issueId: string) => {
+      if (projectId === issue?.project_id) {
+        onOpenIssue(issueId);
+      } else {
+        openGlobalIssue(projectId, issueId);
+      }
+    },
+    [issue?.project_id, onOpenIssue, openGlobalIssue],
+  );
+  const mentions = useDescriptionMentions(
+    issue?.project_id ?? null,
+    members,
+    openMentionedIssue,
+  );
+
   // Voice editing (Numo): dictated commands become immediate field updates.
   // The draft fallbacks are for type-safety only — the mic lives inside the
-  const mentions = useDescriptionMentions(issue?.project_id ?? null, members);
-
   // panel, so dictation never runs without an open issue.
   const {
     busy: numoBusy,

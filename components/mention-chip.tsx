@@ -96,8 +96,8 @@ export function MentionChip({
  * A person never has one (lib/mention-target.ts).
  */
   href?: string | null;
-  /** The REGULAR click: application navigation, so as not to reload the entire
- page. Without it, the anchor is tracked by the browser. */
+  /** Handles a regular click without a document reload. The destination may
+   * open in place or use client-side routing. */
   onNavigate?: () => void;
   className?: string;
 }) {
@@ -208,9 +208,8 @@ export function MentionChip({
     );
 
   return (
-    // A real anchor, not a clickable pill: ⌘-click, middle click and
-    // "open in new tab" come with it, and no `onClick` knows
-    // redo them. The ORDINARY click goes through the router.
+    // A real anchor preserves modified clicks, middle clicks, and the browser's
+    // "open in new tab" command. Only an ordinary click uses `onNavigate`.
     //
     // `NODE_LINK_CLASS`: in a publisher, this is the mark by which
     // l'extension Link laisse l'ancre tranquille — sans elle, un clic ouvrait un

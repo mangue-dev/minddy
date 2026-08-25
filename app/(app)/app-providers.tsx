@@ -20,6 +20,7 @@ import { ZenModeProvider } from "@/lib/zen-mode-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
 import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
+import { IssuePanelProvider } from "@/lib/issue-panel-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
@@ -73,6 +74,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <AppQueryProvider>
           <RealtimeProvider>
             <ProjectsProvider>
+              <IssuePanelProvider>
               {/* Reopens the creation wizard when returning from a git redirect
  (?setup=git): the project does not yet exist, the restart cannot therefore live in the layout of a project. */}
               <Suspense fallback={null}>
@@ -137,6 +139,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                   </ScratchpadProvider>
                 </AssistantChatProvider>
               </AssistantPanelProvider>
+              </IssuePanelProvider>
             </ProjectsProvider>
           </RealtimeProvider>
         </AppQueryProvider>

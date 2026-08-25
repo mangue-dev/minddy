@@ -1,17 +1,12 @@
-// Where a mention leads — the rule, in one place.
+// Central destination rules for mentions.
 //
-// A pill “@” DESIGNATES something: a ticket, an objective, a page of the
-// wiki, a project. Clicking on it should go there, just like a link from the
-// text. A person leads nowhere: minddy has no page of
-// profile, and a pill that clicks without opening anything lies about what it is.
+// A mention can retain a canonical URL for modified clicks and browser menus
+// while using a different ordinary-click interaction. Issues open in the
+// app-wide side panel; objectives and pages continue to navigate to their own
+// screens. People have no profile destination and therefore remain plain text.
 //
-// The paths are the same as those of a notification
-// (lib/notification-target.ts): a ticket opens as a panel on the board
-// your project, an objective is selected from the list of objectives. Two
-// entries to the same screens, only one form of URL.
-//
-// PUR module: no React, no `server-only` — enough to test it without anything
-// mount, and read it from any surface.
+// This module is intentionally pure so every mention surface can share and
+// test the same decision without mounting React.
 
 /** What a mention can designate (see components/mention-chip.tsx). */
 export type MentionTargetType =
@@ -53,6 +48,29 @@ export function mentionTargetPath(
       // member, numo, forge: no one has a screen to open.
       return null;
   }
+}
+
+export type MentionNavigationTarget =
+  | {
+      kind: "issue-panel";
+      projectId: string;
+      issueId: string;
+      href: string;
+    }
+  | { kind: "route"; href: string };
+
+/** Separates in-place issue opening from mentions that navigate to a screen. */
+export function mentionNavigationTarget(
+  type: MentionTargetType,
+  id: string,
+  projectId?: string | null,
+): MentionNavigationTarget | null {
+  const href = mentionTargetPath(type, id, projectId);
+  if (!href) return null;
+  if (type === "issue" && projectId) {
+    return { kind: "issue-panel", projectId, issueId: id, href };
+  }
+  return { kind: "route", href };
 }
 
 /** What you need to know about a quotable element to find your project. */
