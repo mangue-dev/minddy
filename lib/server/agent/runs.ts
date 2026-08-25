@@ -1116,11 +1116,17 @@ export async function stampRunResult(
   }
 
   // End of run (MIN-78). Tracked here and not in the execution loop: this is
-  // the MANDATORY transition to a terminal status, and the `.in(status, guard)`
-  // guarantees that only one update wins — so only one event per run,
-  // even if several chunks try to conclude.
+  // the mandatory transition to a terminal status, and the `.in(status, guard)`
+  // guarantees that only one update wins, even if several chunks try to finish.
+  //
+  // Check the requested status as well as the returned row. Some cleanup writes
+  // deliberately target an already-terminal run (for example, clearing its
+  // provider key). Treating those writes as fresh endings repeats analytics and
+  // routine notifications.
   const run = (data as AgentRun | null) ?? null;
-  if (run && TERMINAL_RUN_STATUSES.has(run.status)) {
+  const enteredTerminalStatus =
+    fields.status != null && TERMINAL_RUN_STATUSES.has(fields.status);
+  if (run && enteredTerminalStatus && TERMINAL_RUN_STATUSES.has(run.status)) {
     captureServerEvent({
       distinctId: run.created_by ?? "agent:system",
       event: run.status === "completed" ? "agent_run_completed" : "agent_run_failed",
@@ -1138,22 +1144,18 @@ export async function stampRunResult(
       },
       groups: { project: run.project_id },
     });
-    // Automations (MIN-147): the SAME obligatory passage serves as an ending hook
-    // de run. `execute.ts` a huit chemins de repos, pas quatre — fin de tour,
-    // budget exhausted, LLM error, interrupt ×2, anti-runaway guardrail, error
-    // seed ×2 — and all converge here. The transitional guard above
-    // ensures that only one wins, therefore only one chain advancement. The re-tail of
-    // steering (`queued`, non-terminal) is automatically excluded.
+    // Automations (MIN-147): the same mandatory transition serves as the run-end
+    // hook. Every completion path converges here, and the transition guard above
+    // ensures that only one wins, so a chain advances only once. Steering back to
+    // `queued` is non-terminal and therefore excluded.
     if (run.chain_id) notifyChainOfRunEnd(run);
-    // Same obligatory passage for a ROUTINE (MIN-185): its owner learns
-    // that a pull request is there or that the pass failed, and the routine
-    // itself retains the outcome of the last passage.
+    // The same mandatory transition handles routines (MIN-185): the owner learns
+    // that a pull request is ready or that the run failed, and the routine retains
+    // the outcome of its latest run.
     //
-    // `afterOrNow` and not a detached promise: the HTTP response can go
-    // before these two scriptures come to fruition, and a promise that no one
-    // retain dies with the invocation (see lib/server/after-safe.ts). What happens
-    // would lose here, it is the exhausted budget alert that we have just
-    // rendre visible.
+    // Use `afterOrNow`, not a detached promise: the HTTP response can finish before
+    // these writes, and an unretained promise can die with the invocation (see
+    // lib/server/after-safe.ts).
     if (run.routine_id) {
       afterOrNow(async () => {
         await notifyRoutineOfRunEnd(run);
@@ -1177,10 +1179,13 @@ export async function notifyAgentRun(
     project_id: string;
     issue_id: string | null;
     conversation_id: string;
+    routine_id?: string | null;
   },
   type: "agent_done" | "agent_question" | "agent_failed",
 ): Promise<void> {
-  if (!run.created_by) return;
+  // Routine endings have their own target and preference category. Sending the
+  // generic conversation notification as well creates a second inbox row and push.
+  if (!run.created_by || run.routine_id) return;
   try {
     await insertNotifications(
       getServiceClient(),
