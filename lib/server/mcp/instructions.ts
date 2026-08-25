@@ -1,12 +1,24 @@
 /**
- * The instructions that the MCP server sends back to its client, upon initialization.
+ * Compact server metadata sent during MCP initialization.
  *
- * Removed from `app/api/mcp/route.ts` (MIN-88) because it is now used twice: in the MCP handshake, and in `/llms.txt` — the file that the
- * code assistants read when asked to plug in minddy. Two copies
- * would have diverged at the first tool addition, and a `llms.txt` that describes a stale
- * API is worse than no `llms.txt` at all.
+ * Tool selection belongs in each tool's description. Detailed workflow guidance stays
+ * in `MCP_FULL_USAGE_GUIDE`, where clients can fetch it deliberately without making
+ * every cold-start catalog repeat the same manual.
  */
-export const MCP_SERVER_INSTRUCTIONS =
+export const MCP_DISCOVERY_INSTRUCTIONS =
+  "minddy is a stateless issue tracker MCP. Start with minddy_list_projects to " +
+  "discover project_id values, then choose a minddy_* tool by its action-specific " +
+  "description. Issue references accept a UUID, an identifier such as MIND-42, or a " +
+  "bare issue number. Read before writing; failures return stable error codes. The " +
+  "complete usage guide is available at /llms-full.txt.";
+
+/**
+ * Complete operating guide rendered by `/llms-full.txt`.
+ *
+ * Keep this separate from initialization metadata: it is intentionally detailed and
+ * remains the canonical workflow reference for agents that need more than discovery.
+ */
+export const MCP_FULL_USAGE_GUIDE =
 "minddy is a minimal issue tracker (Linear-like). Hierarchy: a project is the " +
       "workspace; issues belong to a project; an objective groups issues of a project " +
       "around a goal — minddy_list_objectives lists them, minddy_get_objective " +
@@ -157,3 +169,9 @@ export const MCP_SERVER_INSTRUCTIONS =
       "unprompted, and it can never ask a question — so its instruction has to " +
       "stand on its own. " +
       "Start with minddy_list_projects to discover project ids.";
+
+/**
+ * Compatibility alias for code and tests written before discovery metadata was split.
+ * New server initialization code must use `MCP_DISCOVERY_INSTRUCTIONS`.
+ */
+export const MCP_SERVER_INSTRUCTIONS = MCP_FULL_USAGE_GUIDE;

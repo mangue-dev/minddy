@@ -1,7 +1,7 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { registerMinddyTools } from "@/lib/server/mcp/tools";
 import { verifyMcpToken } from "@/lib/server/mcp/auth";
-import { MCP_SERVER_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
+import { MCP_DISCOVERY_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
 
 /**
  * minddy MCP server — stateless Streamable HTTP (a new McpServer per
@@ -19,7 +19,7 @@ const handler = createMcpHandler(
   (server) => registerMinddyTools(server),
   {
     serverInfo: { name: "minddy", version: "1.0.0" },
-    instructions: MCP_SERVER_INSTRUCTIONS,
+    instructions: MCP_DISCOVERY_INSTRUCTIONS,
   }
 );
 

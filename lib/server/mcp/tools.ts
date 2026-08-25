@@ -151,6 +151,10 @@ import {
 import { registerPageTools } from "@/lib/server/mcp/page-tools";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
+import {
+  compactToolDescription,
+  type DiscoveryAnnotations,
+} from "@/lib/server/mcp/discovery-metadata";
 
 /**
  * MCP tools from minddy — naming minddy_<verbe>_<nom>, voluntarily reduced surface
@@ -784,8 +788,56 @@ function withToolAnalytics(server: McpServer): McpServer {
   }) as McpServer;
 }
 
-export function registerMinddyTools(rawServer: McpServer): void {
-  const server = withToolAnalytics(rawServer);
+interface DiscoveryToolConfig {
+  description?: string;
+  annotations?: DiscoveryAnnotations;
+  [key: string]: unknown;
+}
+
+function withCompactDiscoveryMetadata(server: McpServer): McpServer {
+  const original = server.registerTool.bind(server) as (
+    name: string,
+    config: DiscoveryToolConfig,
+    handler: unknown
+  ) => unknown;
+
+  return new Proxy(server, {
+    get(target, prop, receiver) {
+      if (prop === "registerTool") {
+        return (name: string, config: DiscoveryToolConfig, handler: unknown) =>
+          original(
+            name,
+            {
+              ...config,
+              description: compactToolDescription(
+                config.description,
+                config.annotations
+              ),
+            },
+            handler
+          );
+      }
+      // oxlint-disable-next-line anti-slop/no-reflect-get
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as McpServer;
+}
+
+export interface RegisterMinddyToolsOptions {
+  /** Full descriptions are reserved for generated reference documentation. */
+  descriptions?: "compact" | "full";
+}
+
+export function registerMinddyTools(
+  rawServer: McpServer,
+  options: RegisterMinddyToolsOptions = {}
+): void {
+  const discoveryServer =
+    options.descriptions === "full"
+      ? rawServer
+      : withCompactDiscoveryMetadata(rawServer);
+  const server = withToolAnalytics(discoveryServer);
 
   // PAGES (MIN-273) live in their own module, but register here:
   // it is this call which gives them the analytics of the tools and their place in the

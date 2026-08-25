@@ -1,5 +1,5 @@
 import { mcpToolCatalog } from "@/lib/server/mcp/catalog";
-import { MCP_SERVER_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
+import { MCP_FULL_USAGE_GUIDE } from "@/lib/server/mcp/instructions";
 import { integrationWebhookDoc } from "@/lib/feedback/integration-contract";
 import { issuesCsvDoc } from "@/lib/export/issues-csv";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
@@ -8,8 +8,8 @@ import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
  * `/llms-full.txt` (MIN-88) — the complete MCP tools reference.
  *
  * Same bias as `/llms.txt` (see its header): this file is used to write
- * a fair integration, not to sell the product. He adds what the other
- * summarizes — the full instructions that the server sends back upon initialization,
+ * a fair integration, not to sell the product. It adds what the other
+ * summarizes: the full usage guide intentionally omitted from initialization,
  * and the signature of each tool, parameter by parameter.
  *
  * FULLY DERIVED from `lib/server/mcp/`: rename a tool or make a
@@ -26,9 +26,9 @@ Auth: OAuth 2.1 only (see ${SITE_URL}/llms.txt for the discovery flow).
 Generated from the server's own tool registrations, so it cannot describe an API
 minddy no longer exposes.
 
-## Server instructions
+## Full usage guide
 
-${MCP_SERVER_INSTRUCTIONS}
+${MCP_FULL_USAGE_GUIDE}
 
 ## Tools (${tools.length})
 

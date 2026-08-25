@@ -61,7 +61,7 @@ export function mcpToolCatalog(): CatalogTool[] {
     // a contract change that we want to see fail loudly, not ignore.
   } as unknown as McpServer;
 
-  registerMinddyTools(recorder);
+  registerMinddyTools(recorder, { descriptions: "full" });
   cached = tools;
   return tools;
 }
