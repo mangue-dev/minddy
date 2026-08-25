@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { canonicalSql, readBaseline, readMigration } from "@/test/sql-migrations";
+import {
+  canonicalSql,
+  migrationFiles,
+  readBaseline,
+  readMigration,
+} from "@/test/sql-migrations";
 
 import {
   keysForProjectEvent,
@@ -127,10 +132,13 @@ describe("keysForProjectEvent — pages", () => {
  type-check, nor at execution. The only way to see it happen again is to confront the switcher with the actual list of triggers. */
 
 const baselineSql = canonicalSql(readBaseline());
+const allMigrationsSql = canonicalSql(
+  migrationFiles().map((file) => readMigration(file)).join("\n"),
+);
 
 /** All tables for which a trigger emits on a `project:{id}` topic. */
 function projectBroadcastTables(): string[] {
-  const sql = baselineSql;
+  const sql = allMigrationsSql;
 
   const projectFns = new Set<string>();
   const fnRe =
@@ -215,5 +223,38 @@ describe("page body Realtime migration", () => {
     expect(sql).toContain("drop trigger if exists pages_broadcast_update on public.pages");
     expect(sql).toContain("old.content is distinct from new.content");
     expect(sql).toContain("execute function public.broadcast_page_row()");
+  });
+});
+
+describe("routine realtime", () => {
+  it("refreshes the routine list after an external edit", () => {
+    const keys = keysForProjectEvent(
+      change("agent_routines", {
+        operation: "UPDATE",
+        record: { id: "routine-1", project_id: PROJECT },
+      }),
+      PROJECT,
+    );
+
+    expect(hasKey(keys, ["routines"])).toBe(true);
+    expect(keys.find((key) => key.key[0] === "routines")?.refetch).toBe("active");
+  });
+
+  it("catches routine edits missed while the tab was disconnected", () => {
+    expect(hasKey(projectScopeKeys(PROJECT).map((key) => ({ key })), ["routines"])).toBe(
+      true,
+    );
+  });
+
+  it("broadcasts identifiers without exposing the routine instruction", () => {
+    const sql = canonicalSql(
+      readMigration("20270106230000_agent_routines_realtime.sql"),
+    );
+
+    expect(sql).toContain("create trigger agent_routines_broadcast");
+    expect(sql).toContain("after insert or update or delete on public.agent_routines");
+    expect(sql).toContain("execute function public.broadcast_agent_routine_row()");
+    expect(sql).not.toContain("to_jsonb(new)");
+    expect(sql).not.toContain("new.prompt");
   });
 });

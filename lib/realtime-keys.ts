@@ -414,6 +414,11 @@ export function keysForProjectEvent(
     // user topic: same treatment, other door (MIN-332).
     case "agent_runs":
       return keysForAgentRun(change);
+    // Routine writes may come from Numo, MCP, another tab, or a teammate. The
+    // broadcast deliberately carries identifiers only, so refetch the shared
+    // list that feeds both the sidebar and the open routine detail.
+    case "agent_routines":
+      return [active(["routines"])];
     // Automation chains (MIN-147). This is the only surface of the product where
     // the expiration is CERTAIN: a chain advances on its own during
     // several minutes, without anyone touching anything — without this
@@ -504,6 +509,9 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
   ["agent-runs"],
+  // Routines can be edited while this tab is asleep. Their project broadcast
+  // is ephemeral, so the persisted list needs the same resume catch-up.
+  ["routines"],
   // The automation chain of a ticket (MIN-147): in prefix, like the
   // runs — a tab that slept while a chain was running should
   // find your real stage, not the one before the cut.
