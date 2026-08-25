@@ -64,12 +64,28 @@ describe("POST /api/account/password/reset", () => {
 
   it("completes the reset with a verified AAL2 session", async () => {
     claims.aal = "aal2";
+    claims.amr = [
+      { method: "totp", timestamp: Math.floor(Date.now() / 1000) - 30 },
+    ];
 
     const response = await call({ password: VALID_PASSWORD });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(updateUser).toHaveBeenCalledWith({ password: VALID_PASSWORD });
+  });
+
+  it("rejects a stale AAL2 session before changing the password", async () => {
+    claims.aal = "aal2";
+    claims.amr = [
+      { method: "totp", timestamp: Math.floor(Date.now() / 1000) - 7200 },
+    ];
+
+    const response = await call({ password: VALID_PASSWORD });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: "reauth_required" });
+    expect(updateUser).not.toHaveBeenCalled();
   });
 
   it("keeps password reset available to accounts without MFA", async () => {

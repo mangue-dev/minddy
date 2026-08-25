@@ -7,6 +7,9 @@ import {
   REAUTH_REQUIRED_CODE,
   hasFreshAal2Verification,
 } from "@/lib/server/reauth";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+
+const REGENERATION_LIMIT = { limit: 3, windowMs: 60 * 60_000 };
 
 /**
  * Regenerates all ten recovery codes (MIN-132). The previous ones — consumed
@@ -24,6 +27,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: t("mfaReauthTooOld"), code: REAUTH_REQUIRED_CODE },
       { status: 403 }
+    );
+  }
+
+  const rate = checkSessionRateLimit(
+    auth.user.id,
+    "mfa-recovery-codes",
+    REGENERATION_LIMIT
+  );
+  if (!rate.allowed) {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json(
+      { error: t("tooManyAttempts", { seconds: rate.retryAfter }) },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
     );
   }
 

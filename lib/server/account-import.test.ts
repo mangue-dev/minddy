@@ -78,6 +78,7 @@ const OWNED_PROJECT = "33333333-3333-4333-8333-333333333333";
 const OTHER_PROJECT = "44444444-4444-4444-8444-444444444444";
 const OTHER_OWNER = "55555555-5555-4555-8555-555555555555";
 const ISSUE = "66666666-6666-4666-8666-666666666666";
+const OBJECTIVE = "77777777-7777-4777-8777-777777777777";
 
 function transfer(overrides: Partial<AccountTransferDocument> = {}): AccountTransferDocument {
   return {
@@ -161,6 +162,34 @@ describe("account import tenant isolation", () => {
             {
               id: ISSUE,
               project_id: OWNED_PROJECT,
+              number: 1,
+              title: "Imported issue",
+              created_by: SOURCE_USER,
+            },
+          ],
+        }),
+        USER,
+      ),
+    ).rejects.toBeInstanceOf(AccountImportScopeError);
+    expect(database.writes).toEqual([]);
+  });
+
+  it("rejects a cross-project reference before importing an otherwise owned graph", async () => {
+    await expect(
+      importAccountTransfer(
+        transfer({
+          owned_projects: [
+            { id: OWNED_PROJECT, key: "OWN", name: "Owned" },
+            { id: OTHER_PROJECT, key: "OTH", name: "Other" },
+          ],
+          objectives: [
+            { id: OBJECTIVE, project_id: OTHER_PROJECT, name: "Foreign objective" },
+          ],
+          issues: [
+            {
+              id: ISSUE,
+              project_id: OWNED_PROJECT,
+              objective_id: OBJECTIVE,
               number: 1,
               title: "Imported issue",
               created_by: SOURCE_USER,

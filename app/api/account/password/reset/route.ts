@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 
+import { hasMfaEnabled } from "@/lib/mfa";
 import { passwordMeetsPolicy } from "@/lib/password-policy";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import {
+  REAUTH_REQUIRED_CODE,
+  hasFreshAal2Verification,
+} from "@/lib/server/reauth";
 
 /**
  * Completes a password reset behind the same verified-session and MFA boundary
@@ -11,6 +17,16 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  if (
+    hasMfaEnabled(auth.claims.app_metadata) &&
+    !hasFreshAal2Verification(auth.claims)
+  ) {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json(
+      { error: t("mfaReauthTooOld"), code: REAUTH_REQUIRED_CODE },
+      { status: 403 }
+    );
+  }
 
   let password: string;
   try {

@@ -86,11 +86,13 @@ const getMfaStatus = vi.fn(async () => ({
   unusedRecoveryCodes: 10,
 }));
 let claims: Record<string, unknown> = {};
+let userId = "user-1";
+let userSequence = 0;
 
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({
     ok: true,
-    user: { id: "user-1" },
+    user: { id: userId },
     supabase: {},
     claims,
   }),
@@ -118,6 +120,7 @@ function request(path: string, method: "POST" | "DELETE" = "POST"): NextRequest 
 }
 
 beforeEach(() => {
+  userId = `user-${++userSequence}`;
   claims = {
     aal: "aal2",
     amr: [
@@ -192,9 +195,9 @@ describe("MFA mutations", () => {
 
     expect(activation.status).toBe(200);
     expect(await activation.json()).toEqual({ recoveryCodes: ["AAAA-BBBB-CCCC"] });
-    expect(enableMfa).toHaveBeenCalledWith("user-1");
+    expect(enableMfa).toHaveBeenCalledWith(userId);
     expect(revocation.status).toBe(200);
-    expect(disableMfa).toHaveBeenCalledWith("user-1");
+    expect(disableMfa).toHaveBeenCalledWith(userId);
   });
 
   it("replaces recovery codes after fresh AAL2", async () => {
@@ -204,6 +207,19 @@ describe("MFA mutations", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ recoveryCodes: ["AAAA-BBBB-CCCC"] });
-    expect(issueRecoveryCodes).toHaveBeenCalledWith("user-1");
+    expect(issueRecoveryCodes).toHaveBeenCalledWith(userId);
+  });
+
+  it("rate-limits burst recovery-code regeneration before issuing another set", async () => {
+    const responses = [];
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      responses.push(
+        await regenerateRecoveryCodes(request("/api/account/mfa/recovery-codes"))
+      );
+    }
+
+    expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 429]);
+    expect(Number(responses[3].headers.get("Retry-After"))).toBeGreaterThan(0);
+    expect(issueRecoveryCodes).toHaveBeenCalledTimes(3);
   });
 });
