@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,38 @@ function runRemoteCheck(cwd) {
     timeout: 30_000,
   });
 }
+
+function runStagedCheck(cwd) {
+  return spawnSync(process.execPath, [script, "--staged"], {
+    cwd,
+    encoding: "utf8",
+    timeout: 30_000,
+  });
+}
+
+test("staged check allows the public security probe but rejects cloud-only scripts", () => {
+  const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
+  try {
+    git(root, ["init", "--initial-branch=main"]);
+    mkdirSync(join(root, "scripts"));
+    writeFileSync(join(root, "scripts", "security-probe.mjs"), "// Public fixture-driven authorization probe.\n");
+    git(root, ["add", "scripts/security-probe.mjs"]);
+
+    const accepted = runStagedCheck(root);
+    assert.equal(accepted.status, 0, accepted.stderr);
+    assert.match(accepted.stdout, /Public repository check passed/);
+
+    writeFileSync(join(root, "scripts", "check-background-jobs.mjs"), "// Cloud operator tool.\n");
+    git(root, ["add", "scripts/check-background-jobs.mjs"]);
+
+    const rejected = runStagedCheck(root);
+    assert.equal(rejected.status, 1);
+    assert.match(rejected.stderr, /scripts\/check-background-jobs\.mjs: internal path is forbidden/);
+    assert.doesNotMatch(rejected.stderr, /scripts\/security-probe\.mjs/);
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+});
 
 test("remote check scans pull-request refs unavailable from the ordinary fetch", () => {
   const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));

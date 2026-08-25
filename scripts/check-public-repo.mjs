@@ -53,7 +53,9 @@ const privateSurfacePaths = [
   /^app\/feedback\/route\.ts$/,
   /^lib\/server\/brrr\./,
   /^lib\/open-feedback-board\./,
-  /^scripts\/(?:backfill-feedback-team-language|check-background-jobs|create-agent-snapshot|drop-avatars-bucket|extract-apns-secret|indexnow|security-probe|seed-inbox)\./,
+  // The fixture-driven security probe is intentionally public so self-hosters
+  // can verify the RLS and Storage boundaries documented in SECURITY.md.
+  /^scripts\/(?:backfill-feedback-team-language|check-background-jobs|create-agent-snapshot|drop-avatars-bucket|extract-apns-secret|indexnow|seed-inbox)\./,
 ];
 
 const forbiddenContent = [
