@@ -5,7 +5,10 @@ import {
   validateAccountTransfer,
 } from "@/lib/account-transfer";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { importAccountTransfer } from "@/lib/server/account-import";
+import {
+  AccountImportScopeError,
+  importAccountTransfer,
+} from "@/lib/server/account-import";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 export const maxDuration = 120;
@@ -58,6 +61,9 @@ export async function POST(request: NextRequest) {
     const result = await importAccountTransfer(validated.document, auth.user.id);
     return NextResponse.json({ result }, { status: 201 });
   } catch (error) {
+    if (error instanceof AccountImportScopeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("[api/account/import] failed:", (error as Error).message);
     return NextResponse.json({ error: "The transfer could not be completed" }, { status: 500 });
   }

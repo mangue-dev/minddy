@@ -23,6 +23,18 @@ export interface AccountImportResult {
   warnings: string[];
 }
 
+export class AccountImportScopeError extends Error {
+  constructor() {
+    super("Transfer data is not owned by the importing account");
+    this.name = "AccountImportScopeError";
+  }
+}
+
+interface AccountImportScope {
+  existingProjectIds: Set<string>;
+  memberProjectIds: Set<string>;
+}
+
 function stringValue(row: TransferRow, key: string): string | null {
   const value = row[key];
   return typeof value === "string" && value ? value : null;
@@ -42,6 +54,34 @@ function remapUser(value: unknown, sourceUserId: string, targetUserId: string): 
   return value === sourceUserId ? targetUserId : null;
 }
 
+function scopeError(): never {
+  throw new AccountImportScopeError();
+}
+
+function requiredUuid(row: TransferRow, key: string): string {
+  return uuidValue(row, key) ?? scopeError();
+}
+
+function optionalUuid(row: TransferRow, key: string): string | null {
+  if (row[key] === undefined || row[key] === null) return null;
+  return uuidValue(row, key) ?? scopeError();
+}
+
+function uniqueIds(rows: TransferRow[], key = "id"): Set<string> {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    const id = requiredUuid(row, key);
+    if (ids.has(id)) scopeError();
+    ids.add(id);
+  }
+  return ids;
+}
+
+function requireReference(row: TransferRow, key: string, ids: Set<string>): void {
+  const id = optionalUuid(row, key);
+  if (id && !ids.has(id)) scopeError();
+}
+
 async function existingById(
   service: Service,
   table: string,
@@ -57,6 +97,277 @@ async function existingById(
       return id ? [[id, row] as const] : [];
     }),
   );
+}
+
+async function validateExistingIds(
+  service: Service,
+  table: string,
+  rows: TransferRow[],
+  columns: string,
+  validate: (existing: TransferRow, source: TransferRow) => boolean,
+): Promise<void> {
+  const byId = new Map(rows.map((row) => [requiredUuid(row, "id"), row]));
+  const existing = await existingById(service, table, [...byId.keys()], columns);
+  for (const [id, existingRow] of existing) {
+    const source = byId.get(id);
+    if (!source || !validate(existingRow, source)) scopeError();
+  }
+}
+
+/**
+ * Validate the complete transfer graph before the service-role client mutates anything.
+ * Imported IDs may target only rows already owned by this account, while project
+ * references outside the archive must already be accessible to the account.
+ */
+async function validateAccountImportScope(
+  service: Service,
+  document: AccountTransferDocument,
+  userId: string,
+): Promise<AccountImportScope> {
+  const sourceUserId = requiredUuid(document.account, "id");
+  const ownedProjectIds = uniqueIds(document.owned_projects);
+  const issueIds = uniqueIds(document.issues);
+  const commentIds = uniqueIds(document.comments);
+  uniqueIds(document.attachments);
+  uniqueIds(document.page_files);
+  const pageIds = uniqueIds(document.pages);
+  const objectiveIds = uniqueIds(document.objectives);
+  const categoryIds = uniqueIds(document.categories ?? []);
+  uniqueIds(document.views);
+  const cycleIds = uniqueIds(document.cycles);
+  uniqueIds(document.assistant_conversations);
+  const codeConversationIds = uniqueIds(document.code_agent_conversations);
+  uniqueIds(document.notifications);
+
+  const byId = (rows: TransferRow[]) =>
+    new Map(rows.map((row) => [requiredUuid(row, "id"), row]));
+  const issuesById = byId(document.issues);
+  const commentsById = byId(document.comments);
+  const pagesById = byId(document.pages);
+  const objectivesById = byId(document.objectives);
+  const categoriesById = byId(document.categories ?? []);
+  const codeConversationsById = byId(document.code_agent_conversations);
+  const projectOf = (row: TransferRow) => requiredUuid(row, "project_id");
+  const referencedRow = (
+    row: TransferRow,
+    key: string,
+    rows: Map<string, TransferRow>,
+  ): TransferRow | null => {
+    const id = optionalUuid(row, key);
+    if (!id) return null;
+    return rows.get(id) ?? scopeError();
+  };
+  const requireSameProject = (row: TransferRow, reference: TransferRow | null) => {
+    if (reference && projectOf(row) !== projectOf(reference)) scopeError();
+  };
+
+  const codeTurns = document.code_agent_conversations.flatMap((conversation) =>
+    Array.isArray(conversation.turns)
+      ? (conversation.turns as unknown[]).map((turn) => {
+          if (!turn || typeof turn !== "object" || Array.isArray(turn)) scopeError();
+          const row = turn as TransferRow;
+          const conversationId = requiredUuid(conversation, "id");
+          const declaredConversationId = optionalUuid(row, "conversation_id");
+          if (declaredConversationId && declaredConversationId !== conversationId) scopeError();
+          return { ...row, conversation_id: conversationId };
+        })
+      : [],
+  );
+  const codeTurnIds = uniqueIds(codeTurns);
+  const codeTurnsById = byId(codeTurns);
+
+  const projectRows = [
+    ...document.memberships,
+    ...document.issues,
+    ...document.attachments,
+    ...document.page_files,
+    ...document.pages,
+    ...document.objectives,
+    ...(document.categories ?? []),
+    ...document.views,
+    ...document.assistant_conversations,
+    ...document.code_agent_conversations,
+    ...document.notifications,
+    ...document.statistics,
+  ];
+  const projectIds = new Set(ownedProjectIds);
+  for (const row of projectRows) {
+    const projectId = optionalUuid(row, "project_id");
+    if (projectId) projectIds.add(projectId);
+  }
+
+  for (const row of document.memberships) requiredUuid(row, "project_id");
+  for (const row of document.issues) {
+    requiredUuid(row, "project_id");
+    requireReference(row, "objective_id", objectiveIds);
+    requireReference(row, "parent_id", issueIds);
+    requireReference(row, "cycle_id", cycleIds);
+    requireSameProject(row, referencedRow(row, "objective_id", objectivesById));
+    requireSameProject(row, referencedRow(row, "parent_id", issuesById));
+  }
+  for (const row of document.comments) {
+    requireReference(row, "issue_id", issueIds);
+    requireReference(row, "parent_id", commentIds);
+    if (!optionalUuid(row, "issue_id")) scopeError();
+    const parent = referencedRow(row, "parent_id", commentsById);
+    if (parent && optionalUuid(parent, "issue_id") !== optionalUuid(row, "issue_id")) scopeError();
+  }
+  for (const row of document.attachments) {
+    requiredUuid(row, "project_id");
+    requireReference(row, "issue_id", issueIds);
+    requireReference(row, "comment_id", commentIds);
+    requireReference(row, "objective_id", objectiveIds);
+    requireReference(row, "page_id", pageIds);
+    if (!optionalUuid(row, "issue_id") && !optionalUuid(row, "objective_id")) scopeError();
+    requireSameProject(row, referencedRow(row, "issue_id", issuesById));
+    requireSameProject(row, referencedRow(row, "objective_id", objectivesById));
+    requireSameProject(row, referencedRow(row, "page_id", pagesById));
+    const comment = referencedRow(row, "comment_id", commentsById);
+    if (comment && optionalUuid(comment, "issue_id") !== optionalUuid(row, "issue_id")) scopeError();
+  }
+  for (const row of document.page_files) {
+    requiredUuid(row, "project_id");
+    requireReference(row, "page_id", pageIds);
+    if (!optionalUuid(row, "page_id")) scopeError();
+    requireSameProject(row, referencedRow(row, "page_id", pagesById));
+  }
+  for (const row of document.pages) {
+    requiredUuid(row, "project_id");
+    requireReference(row, "parent_id", pageIds);
+    requireSameProject(row, referencedRow(row, "parent_id", pagesById));
+  }
+  for (const row of document.objectives) requiredUuid(row, "project_id");
+  for (const row of document.categories ?? []) requiredUuid(row, "project_id");
+  for (const row of document.issue_categories ?? []) {
+    requireReference(row, "issue_id", issueIds);
+    requireReference(row, "category_id", categoryIds);
+    if (!optionalUuid(row, "issue_id") || !optionalUuid(row, "category_id")) scopeError();
+    const issue = referencedRow(row, "issue_id", issuesById);
+    const category = referencedRow(row, "category_id", categoriesById);
+    if (!issue || !category || projectOf(issue) !== projectOf(category)) scopeError();
+  }
+  for (const row of document.notifications) {
+    requireReference(row, "issue_id", issueIds);
+    requireReference(row, "comment_id", commentIds);
+    requireReference(row, "agent_conversation_id", codeConversationIds);
+  }
+  for (const row of document.statistics) requireReference(row, "issue_id", issueIds);
+  for (const conversation of document.code_agent_conversations) {
+    const conversationId = requiredUuid(conversation, "id");
+    if (Array.isArray(conversation.messages)) {
+      for (const message of conversation.messages as unknown[]) {
+        if (!message || typeof message !== "object" || Array.isArray(message)) scopeError();
+        const row = message as TransferRow;
+        requireReference(row, "turn_id", codeTurnIds);
+        const turn = referencedRow(row, "turn_id", codeTurnsById);
+        if (turn && stringValue(turn, "conversation_id") !== conversationId) scopeError();
+      }
+    }
+    if (Array.isArray(conversation.contexts)) {
+      for (const context of conversation.contexts as unknown[]) {
+        if (!context || typeof context !== "object" || Array.isArray(context)) scopeError();
+        const row = context as TransferRow;
+        const conversationProjectId = projectOf(codeConversationsById.get(conversationId) ?? scopeError());
+        if (row.kind === "issue") {
+          requireReference(row, "resource_id", issueIds);
+          if (projectOf(referencedRow(row, "resource_id", issuesById) ?? scopeError()) !== conversationProjectId) {
+            scopeError();
+          }
+        } else if (row.kind === "page") {
+          requireReference(row, "resource_id", pageIds);
+          if (projectOf(referencedRow(row, "resource_id", pagesById) ?? scopeError()) !== conversationProjectId) {
+            scopeError();
+          }
+        }
+        else scopeError();
+      }
+    }
+  }
+
+  const existingProjects = await existingById(
+    service,
+    "projects",
+    [...projectIds],
+    "id, owner_id",
+  );
+  const { data: memberships, error: membershipError } = projectIds.size
+    ? await service
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", userId)
+        .in("project_id", [...projectIds])
+    : { data: [], error: null };
+  if (membershipError) throw new Error(`project_members: ${membershipError.message}`);
+  const memberProjectIds = new Set(
+    ((memberships ?? []) as TransferRow[]).map((row) => requiredUuid(row, "project_id")),
+  );
+
+  for (const projectId of projectIds) {
+    const project = existingProjects.get(projectId);
+    if (ownedProjectIds.has(projectId)) {
+      if (project && stringValue(project, "owner_id") !== userId) scopeError();
+      continue;
+    }
+    if (!project) scopeError();
+    if (stringValue(project, "owner_id") !== userId && !memberProjectIds.has(projectId)) {
+      scopeError();
+    }
+  }
+
+  const ownsProject = (projectId: string) =>
+    ownedProjectIds.has(projectId) ||
+    stringValue(existingProjects.get(projectId) ?? {}, "owner_id") === userId;
+  const sameProject = (existing: TransferRow, source: TransferRow) =>
+    stringValue(existing, "project_id") === stringValue(source, "project_id");
+
+  for (const row of [...document.objectives, ...(document.categories ?? []), ...document.pages]) {
+    if (!ownsProject(requiredUuid(row, "project_id"))) scopeError();
+  }
+  for (const row of document.issues) {
+    const projectId = requiredUuid(row, "project_id");
+    if (!ownsProject(projectId) && sourceUserId !== stringValue(row, "created_by")) scopeError();
+  }
+
+  await Promise.all([
+    validateExistingIds(service, "objectives", document.objectives, "id, project_id", sameProject),
+    validateExistingIds(service, "categories", document.categories ?? [], "id, project_id", sameProject),
+    validateExistingIds(service, "pages", document.pages, "id, project_id", sameProject),
+    validateExistingIds(service, "issues", document.issues, "id, project_id, created_by", (row, source) => {
+      const projectId = requiredUuid(source, "project_id");
+      return sameProject(row, source) &&
+        (ownsProject(projectId) || stringValue(row, "created_by") === userId);
+    }),
+    validateExistingIds(service, "comments", document.comments, "id, issue_id, author_id", (row, source) =>
+      stringValue(row, "issue_id") === stringValue(source, "issue_id") &&
+      stringValue(row, "author_id") === userId,
+    ),
+    validateExistingIds(service, "attachments", document.attachments, "id, project_id, created_by", (row, source) =>
+      sameProject(row, source) && stringValue(row, "created_by") === userId,
+    ),
+    validateExistingIds(service, "page_files", document.page_files, "id, project_id, created_by", (row, source) =>
+      sameProject(row, source) && stringValue(row, "created_by") === userId,
+    ),
+    validateExistingIds(service, "cycles", document.cycles, "id, user_id", (row) =>
+      stringValue(row, "user_id") === userId,
+    ),
+    validateExistingIds(service, "views", document.views, "id, user_id", (row) =>
+      stringValue(row, "user_id") === userId,
+    ),
+    validateExistingIds(service, "conversations", document.assistant_conversations, "id, user_id", (row) =>
+      stringValue(row, "user_id") === userId,
+    ),
+    validateExistingIds(service, "agent_conversations", document.code_agent_conversations, "id, owner_id", (row) =>
+      stringValue(row, "owner_id") === userId,
+    ),
+    validateExistingIds(service, "agent_turns", codeTurns, "id, conversation_id", (row, source) =>
+      stringValue(row, "conversation_id") === stringValue(source, "conversation_id"),
+    ),
+    validateExistingIds(service, "notifications", document.notifications, "id, user_id", (row) =>
+      stringValue(row, "user_id") === userId,
+    ),
+  ]);
+
+  return { existingProjectIds: new Set(existingProjects.keys()), memberProjectIds };
 }
 
 async function upsertRows(
@@ -201,27 +512,12 @@ async function importProjects(
   return { projectIds, remapped };
 }
 
-async function addExistingProjectIds(
-  service: Service,
-  document: AccountTransferDocument,
+function addExistingProjectIds(
+  existingProjectIds: Set<string>,
   projectIds: Map<string, string>,
-): Promise<void> {
-  const candidates = new Set<string>();
-  for (const collection of [document.issues, document.memberships, document.views, document.pages]) {
-    for (const row of collection) {
-      const id = uuidValue(row, "project_id");
-      if (id && !projectIds.has(id)) candidates.add(id);
-    }
-  }
-  if (candidates.size === 0) return;
-  const { data, error } = await service
-    .from("projects")
-    .select("id")
-    .in("id", [...candidates]);
-  if (error) throw new Error(`projects: ${error.message}`);
-  for (const row of (data ?? []) as TransferRow[]) {
-    const id = stringValue(row, "id");
-    if (id) projectIds.set(id, id);
+): void {
+  for (const id of existingProjectIds) {
+    if (!projectIds.has(id)) projectIds.set(id, id);
   }
 }
 
@@ -262,6 +558,7 @@ export async function importAccountTransfer(
   userId: string,
 ): Promise<AccountImportResult> {
   const service = getServiceClient();
+  const scope = await validateAccountImportScope(service, document, userId);
   const sourceUserId = stringValue(document.account, "id") ?? "";
   const warnings: string[] = [];
   const result: AccountImportResult = {
@@ -281,7 +578,7 @@ export async function importAccountTransfer(
   const projects = await importProjects(service, document, userId, warnings);
   result.projects = document.owned_projects.length;
   result.remappedIds += projects.remapped;
-  await addExistingProjectIds(service, document, projects.projectIds);
+  addExistingProjectIds(scope.existingProjectIds, projects.projectIds);
 
   const objectiveIds = new Map<string, string>();
   result.objectives = await importSimpleEntity(
@@ -465,6 +762,7 @@ export async function importAccountTransfer(
       project_id: projectId,
       issue_id: issueId,
       objective_id: objectiveId,
+      comment_id: mapId(source.comment_id, commentIds),
       page_id: pageId,
       created_by: userId,
     }];
@@ -637,15 +935,10 @@ export async function importAccountTransfer(
 
   for (const membership of document.memberships) {
     const projectId = mapId(membership.project_id, projects.projectIds);
-    if (!projectId) {
+    if (!projectId || !scope.memberProjectIds.has(projectId)) {
       result.skippedMemberships += 1;
       continue;
     }
-    const { error } = await service.from("project_members").upsert(
-      { project_id: projectId, user_id: userId, role: membership.role ?? "member", created_at: membership.created_at },
-      { onConflict: "project_id,user_id" },
-    );
-    if (error) throw new Error(`project_members: ${error.message}`);
     result.membershipsRestored += 1;
   }
 
