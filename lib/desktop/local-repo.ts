@@ -2,8 +2,8 @@
  * THE LOCAL FOLDER OF A PROJECT (MIN-359) — the half that is decided without a disk.
  *
  * The desktop app attaches a machine folder to a project; it is this folder
- * that the agent will open when the conversation is local (D1 of
- * [docs/audits/agent-local-2026-08-14.md](../../docs/audits/agent-local-2026-08-14.md)).
+ * that the agent will open when the conversation uses the local environment
+ * selected at launch (MIN-359).
  * Everything that is decided here — is this a git repository, is this THE project repository,
  * what is the settings file allowed to contain — is written in
  * pure, tested functions, like navigation guard and micro guard.

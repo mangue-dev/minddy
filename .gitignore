@@ -49,9 +49,10 @@ yarn-error.log*
 .vercel
 
 assets/figma
-# Rendus PNG figés d'Icon Composer (iOS/watchOS) : aucun consommateur dans le
-# dépôt — la source, elle, est desktop/build/icon.icon.
+# Frozen Icon Composer PNG exports (iOS/watchOS) have no repository consumer;
+# the source of truth is desktop/build/icon.icon.
 assets/mac-desktop-icon-exports/
+/desktop/build/icon Exports/
 # supabase CLI link artifacts
 supabase/.temp/
 supabase/.branches/

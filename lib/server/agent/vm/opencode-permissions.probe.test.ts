@@ -38,11 +38,10 @@ import {
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY THIS EXISTS
  *
- * The 2026-08-14 audit ([docs/audits/agent-local-2026-08-14.md](../../../../docs/audits/agent-local-2026-08-14.md))
- * surveyed eighteen unknowns with disposable probes and recorded them in a
- * `.md` file. A `.md` file does not run again when
+ * A 2026-08-14 investigation surveyed eighteen unknowns with disposable
+ * probes. A written report does not run again when
  * [opencode-version.ts](opencode-version.ts) is bumped, so this file preserves
- * those measurements as executable checks. What it preserves determines real
+ * the durable measurements as executable checks. What it preserves determines real
  * lines of code — the `case "external_directory"` in
  * [opencode-permissions.ts](opencode-permissions.ts), the supervisor's policy
  * for pending requests, and what an opt-in screen is allowed to PROMISE.

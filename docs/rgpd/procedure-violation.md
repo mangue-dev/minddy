@@ -174,6 +174,6 @@ Once the incident is closed:
 ## Related documents
 
 - Internal register of processing activities
-- [Subcontractors and transfers](subcontractors.md)
-- [Register of violations](register-of-violations.md)
+- [Subcontractors and transfers](sous%2Dtraitants.md)
+- [Register of violations](registre-des-violations.md)
 - CNIL — [Notify a personal data violation](https://www.cnil.fr/fr/notifier-une-violation-de-donnees-personnelles)

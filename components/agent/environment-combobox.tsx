@@ -27,9 +27,8 @@ import {
  * WHERE THE CONVERSATION TURNS (MIN-359) — the fourth chip of the dialer, next to the
  * model, reasoning and branch.
  *
- * **Choose at the start of a conversation, frozen afterwards** (D1 of
- * [docs/audits/agent-local-2026-08-14.md](../../docs/audits/agent-local-2026-08-14.md)),
- * exactly like its three neighbors and for the reason written from MIN-286:
+ * **Choose at the start of a conversation, frozen afterwards** (MIN-359),
+ * exactly like its three neighbors and for the reason established in MIN-286:
  * each environment rereads ITS memory in the checkpoint. A conversation that
  * would change environment during life would not lose a setting, it
  * would lose its history. Hence the absence of hot fallback: a local run which does not

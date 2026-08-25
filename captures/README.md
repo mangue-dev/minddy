@@ -109,6 +109,29 @@ no missing data. Session is linked to origin: change target
 request to replay `node captures/lib/session.mjs` with the same
 `CAPTURE_BASE_URL`.
 
+### Locale and theme are part of the capture contract
+
+Use the canonical production origin, `https://www.minddy.app`, never the apex
+`https://minddy.app`. Production redirects the apex to `www`, but
+`NEXT_LOCALE` is a host-only cookie: the redirect drops the locale selected by
+the capture context and can revive a stale cookie from the saved authenticated
+session. The result is deceptively plausible—English demo data inside French
+application chrome. `canonicalCaptureBaseUrl()` normalizes this known alias,
+but commands and history entries should still record the canonical origin.
+
+Do not infer the variant language from seeded titles or issue descriptions;
+those are data and may intentionally remain English in every locale. Every shot
+must call `settle()` before `shoot()`. It verifies the rendered `<html lang>`
+against the requested variant and fails instead of writing a mislabeled file.
+
+The authenticated account theme also takes precedence over browser
+`localStorage` in the real application. `settle()` deliberately reasserts the
+requested capture theme after hydration and verifies it before the screenshot.
+This is why a new shot must use the shared browser helpers rather than calling
+Playwright's screenshot API directly. After a refresh, visually inspect at
+least one English image and confirm that each light/dark pair is distinct
+before publishing it.
+
 To deliver PNGs already produced, without restarting a single take:
 
 ```bash

@@ -77,8 +77,7 @@ export const AGENT_COMPACT_TOKEN_THRESHOLD = 70_000;
  * `caching.ts` are at the top of the history, so the block hidden remains frozen while
  * the history increases; the observed cost sticks to the full input rate to within 2%).
  *
- * 120,000 comes from the measurement on the 814 calls `ai_usage` from the agent
- * (docs/agent-harness-comparison.md §3.4):
+ * 120,000 comes from the MIN-101 measurement of 814 agent `ai_usage` calls:
  * • p90 of real context = 86,815 tokens → a normal session never sees it;
  * • max observed = 158,301 → a cap at 180k would NEVER trigger, this which
  * would reproduce the bug that we are correcting here;

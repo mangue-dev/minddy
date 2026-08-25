@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 // `typescript-api` is an alias to `typescript@5` (see package.json): from
 // MIN-180 the repository checks with `typescript@7`, which no longer ships the API
-// compiler. Same reason as in [subagent-runner-init.test.ts](subagent-runner-init.test.ts).
+// compiler. Source-structure tests use the TypeScript 5 API alias for this reason.
 import ts from "typescript-api";
 import { describe, expect, it } from "vitest";
 

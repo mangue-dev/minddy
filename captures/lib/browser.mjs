@@ -12,6 +12,8 @@ import { CAPTURE } from "./config.mjs";
 import { loadEnv, ROOT } from "./env.mjs";
 
 export const AUTH_STATE = resolve(ROOT, "captures/.auth/demo.json");
+const expectedPageLocales = new WeakMap();
+const expectedPageThemes = new WeakMap();
 
 /**
  * Opens a page ready to photograph.
@@ -93,6 +95,8 @@ export async function openPage({
   await alignStoredViewNames(context, locale);
 
   const page = await context.newPage();
+  expectedPageLocales.set(page, locale);
+  expectedPageThemes.set(page, theme);
   return { browser, context, page };
 }
 
@@ -146,27 +150,64 @@ async function alignStoredViewNames(context, locale) {
 }
 
 /**
- * Wait until the page is REALLY ready. Three layers, in that order.
+ * Wait until the page is REALLY ready. Five layers, in that order.
  * `networkidle` is deliberately absent: it never converges on an app
  * with Realtime permanently open, which is the case with minddy.
  */
 export async function settle(page, { expect } = {}) {
   await page.waitForLoadState("domcontentloaded");
 
-  // 1. The semantic anchor: an element which proves that the desired screen is there.
+  // 1. The requested locale must have survived navigation. In particular, a
+  // cross-origin redirect drops host-only cookies and can otherwise produce an
+  // `en-*` file whose application chrome is French.
+  const expectedLocale = expectedPageLocales.get(page);
+  const renderedLocale = await page.locator("html").getAttribute("lang");
+  if (expectedLocale && renderedLocale !== expectedLocale) {
+    throw new Error(
+      `captures: ${page.url()} rendered with lang="${renderedLocale ?? ""}" ` +
+        `for the "${expectedLocale}" variant. Check CAPTURE_BASE_URL and NEXT_LOCALE cookies.`,
+    );
+  }
+
+  // 2. The semantic anchor: an element which proves that the desired screen is there.
   if (expect) await page.locator(expect).first().waitFor({ state: "visible", timeout: 15_000 });
 
-  // 2. No visible charging indicator.
+  // 3. No visible charging indicator.
   await page
     .locator('[aria-busy="true"], [role="progressbar"], .animate-pulse')
     .first()
     .waitFor({ state: "hidden", timeout: 10_000 })
     .catch(() => {});
 
-  // 3. Loaded fonts: without this, the first capture of a session is output
+  // 4. Re-assert the requested visual theme after hydration. The application
+  // correctly gives an authenticated account theme priority over localStorage;
+  // a capture matrix deliberately needs to override that account preference.
+  const expectedTheme = expectedPageThemes.get(page);
+  if (expectedTheme) {
+    await page.evaluate((theme) => {
+      localStorage.setItem("mangue-ui-theme", theme);
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(theme);
+      document.documentElement.style.colorScheme = theme;
+    }, expectedTheme);
+  }
+
+  // 5. Loaded fonts: without this, the first capture of a session is output
   // with the fallback font and different footage.
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(150);
+
+  if (expectedTheme) {
+    const renderedTheme = await page.evaluate(() =>
+      document.documentElement.classList.contains("dark") ? "dark" : "light",
+    );
+    if (renderedTheme !== expectedTheme) {
+      throw new Error(
+        `captures: ${page.url()} rendered with theme="${renderedTheme}" ` +
+          `for the "${expectedTheme}" variant. Check the account theme override.`,
+      );
+    }
+  }
 }
 
 /** Saves a capture, building the tree as needed. */

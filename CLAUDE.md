@@ -126,9 +126,10 @@ Editor's red underline.
 
 `typescript@7` does not provide the compiler API either: its root export
 points to `lib/version.cjs`, the package only contains `bin/tsc` and the native
-binary. Hence the alias `typescript-api` (→ `typescript@5.9.3`) in `package.json`,
-including [the MIN-169 structural test](lib/server/agent/subagent-runner-init.test.ts)
-is the only consumer — it needs `createSourceFile` to read a tree.
+binary. Hence the alias `typescript-api` (→ `typescript@5.9.3`) in `package.json`:
+structural tests such as [pages-search-paths.test.ts](lib/server/pages-search-paths.test.ts)
+and [vm-bundle-secrets.test.ts](lib/server/agent/vm-bundle-secrets.test.ts) need
+`createSourceFile` to inspect source trees.
 This is not a typo: a `import ts from "typescript"` elsewhere in the
 repository would not compile.
 
@@ -198,14 +199,14 @@ for (const name of [...headers.keys()]) {
 ```
 
 This is the case that matters most, because the rule is **wrong** and the
-"fix" would introduce the bug. There are five in the repository, all commented:
-[proxy.ts](proxy.ts) and [lib/analytics.ts](lib/analytics.ts) (mutation during
-iteration), [lib/server/mcp/tools.ts](lib/server/mcp/tools.ts) (`Reflect.get`
-is the Proxy trap API, the only one to transmit `receiver`), and
-[captures/shots/issue-plan/shot.mjs](captures/shots/issue-plan/shot.mjs) — dont
-the `const RETIRED = true` is neither exported nor referenced because `publish.mjs`
-reads it **by regex on the source text**. “Cleaning” it would put this folder back
-in production, silently.
+"fix" would introduce the bug. The current exceptions are documented inline in
+[proxy.ts](proxy.ts) and [lib/analytics.ts](lib/analytics.ts), where spreading
+the keys prevents mutation from skipping entries during iteration.
+
+A separate deliberate lint exception lives in
+[captures/shots/issue-plan/shot.mjs](captures/shots/issue-plan/shot.mjs): its
+unreferenced `RETIRED` constant is read by `publish.mjs` through a source-text
+pattern. Removing it would silently make the historical capture publishable.
 
 ## Tests: new behavior comes with its own
 

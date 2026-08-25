@@ -232,9 +232,27 @@ export const AGENT_EVENT_TYPES = [
   "error", "summary", "user_message", "plan_update", "files_changed", "question",
 ];
 
+/**
+ * Resolve aliases before cookies are attached to the browser context.
+ *
+ * Production redirects the apex domain to `www`. A host-only `NEXT_LOCALE`
+ * cookie set on the apex does not survive that redirect, so authenticated
+ * captures would silently reuse the demo session's French cookie on `www`.
+ */
+export function canonicalCaptureBaseUrl(raw) {
+  const url = new URL(raw);
+  if (url.hostname === "minddy.app") {
+    url.protocol = "https:";
+    url.hostname = "www.minddy.app";
+  }
+  return url.origin;
+}
+
 /** Capture settings. */
 export const CAPTURE = {
-  baseUrl: process.env.CAPTURE_BASE_URL || "http://localhost:3000",
+  baseUrl: canonicalCaptureBaseUrl(
+    process.env.CAPTURE_BASE_URL || "http://localhost:3000",
+  ),
   viewport: { width: 1440, height: 900 },
   deviceScaleFactor: 2,
   /** Fixed instant: any relative date displayed is stable from one run to the next. */

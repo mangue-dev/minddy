@@ -8,8 +8,7 @@ import { sq, type RepoHost } from "./repo-host";
  *
  * OpenCode closes the loop IN the editing tool: each `edit` touches the
  * file on the LSP side and pastes the diagnostics into the result. We cannot copy
- * it as is, and the measurement says so (docs/agent-harness-comparison.md §3.3, section
- * “Cost of a type-check in the sandbox”): in our microVM, a `tsc --noEmit`
+ * it as is: the MIN-101 sandbox measurement found that a `tsc --noEmit`
  * incremental costs 4.9 s at floor, ~11 s in normal mode, 14.4 s when
  * affected file is a crossroads. By edition, the heaviest run of our
  * story would pay up to 290s — more than the soft-deadline of a chunk. And

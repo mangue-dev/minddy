@@ -310,13 +310,12 @@ almost none, and that’s what makes the project reasonable.
 > | **The pull request becomes a gesture** | Decision D2bis-B, taken on 2026-08-15 upon seeing the first real local tour: **the tour commits nothing and pushes nothing**, its deliverable is the working tree. It pushed a branch at the end of each round — by sha, from a disposable index, therefore not found in the user's `git branch`. Opening a pull request remains possible and remains `create_pr`; it’s just not the end of a round anymore. |
 > | **Containment no longer exists** | §4.4 below, and the audit §2 the figure: out of thirty commands targeting a non-repository file, **twenty only publish a `bash`** permission, which `command-guard` — which only targets git — lets pass. Opencode approvals are an accident proof, not a boundary. An “agent wants out of file” card plugged into `external_directory` alone would teach a false guarantee. |
 >
-> Two paragraphs of this §4 were written **before** these decisions and do not describe
-> plus the product: **§4.3** (the dedicated worktree — reversed by D2: the default is
-> the current repository, the worktree becomes an option) and **§4.5** (cloud fallback in
-> conversation class — canceled by D1: the environment is chosen before the
-> first round and does not change again). They are kept for the reasoning that they
-> carry; the authentic decision is that of
-> [audit §12](audits/agent-local-2026-08-14.md).
+> Two paragraphs in this section predate the final product decisions and no longer
+> describe the product: **§4.3** assumes a dedicated worktree, while the current
+> repository is now the default and the worktree is optional; **§4.5** assumes a
+> mid-conversation cloud fallback, while the environment is now selected before
+> the first turn and remains fixed. The paragraphs remain only as design history;
+> the decisions in this note are authoritative.
 
 ### 4.1 Lock 1 — prove which run you are on
 

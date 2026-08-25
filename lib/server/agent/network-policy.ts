@@ -14,8 +14,7 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  * - the Vercel Sandbox firewall terminates the TLS of the VM and **installs itself**
  * the `authorization` header on the completion request (`transform`), after
  * the exit of the VM. The key never enters its memory space; the loop
- * sends a placeholder and receives a real completion (measured, cf.
- *   docs/orchestrateur-process-long.md §1) ;
+ * sends a placeholder and receives a real completion (measured in MIN-223);
  * - the control plan (events, ledger, checkpoint, tools) goes through
  * `forwardURL`: the firewall forwards the request to our route in y
  * adding an OIDC signed by the platform, whose claim `sandbox_name` is worth

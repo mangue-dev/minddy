@@ -3,7 +3,7 @@ import { join, dirname, relative, resolve } from "node:path";
 
 // `typescript-api` is an alias for `typescript@5` (see package.json). Since
 // MIN-180 the repository checks with `typescript@7`, which no longer ships the
-// compiler API. As in `subagent-runner-init.test.ts`, this test therefore uses
+// compiler API. This source-structure test therefore uses
 // TypeScript from JavaScript to inspect a syntax tree.
 import ts from "typescript-api";
 import { describe, expect, it } from "vitest";

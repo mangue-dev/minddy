@@ -28,9 +28,8 @@
 > curl -s localhost:4211/doc # Full OpenAPI: 162 routes
 > ```
 >
-> **This document is not a comparison.** The “who is worth what” file is
-> [docs/harness-2026-08.md](harness-2026-08.md), and it is still relevant.
-> Here, the decision is made: we adopt opencode. The following is the **border**
+> **This document is not a comparison.** The decision is made: we adopt
+> opencode. The following is the **border**
 > and the **parity inventory** — what ceases to be our code, and what must
 > stay that way.
 
@@ -110,8 +109,8 @@ WIP branch pushed at end of turn.
 - **Two of them are conditional, and the condition is ours.**
   `apply_patch` replaces `edit`/`write` on `gpt-*` models — measured:
   `openai/gpt-5.5` receives `apply_patch` **without** `edit`/`write`, `deepseek-v4-flash`
-  receives the opposite. It's exactly `usesApplyPatch`
-  ([patch.ts](../lib/server/agent/patch.ts), MIN-115), already rendered.
+  receives the opposite. It preserves the `usesApplyPatch` behavior introduced
+  in MIN-115, already rendered by opencode.
 - **`websearch` is NOT served on `openrouter`** — measured: absent from all three games
   of tools rendered. The source confirms this (`webSearchEnabled`: provider `opencode`,
   or Exa / Parallel key). **Our `web_search` therefore does not disappear**: it must be
@@ -121,9 +120,8 @@ WIP branch pushed at end of turn.
   per line … with a trailing `/`"). `list_dir` therefore has a counterpart, unlike
   what we believed.
 - **`bash` is a PERSISTENT** shell (“a persistent bash session”), with `workdir`.
-  This is a **correction of a defect from us**: our `runShell` starts again from a
-  `sh -c` nine on each call, and 29 production commands prefix a `cd`
-  ([agent-harness-comparison.md](agent-harness-comparison.md) §3.6). Timeout by
+  This corrected a limitation of the former harness: `runShell` started a new
+  `sh -c` on each call, and 29 production commands prefixed a `cd` (MIN-101). Timeout by
   default 120 s (ours: `RUN_COMMAND_TIMEOUT_MS` = 180 s, to be reported in config).
   Truncation at 2,000 lines / 50 KB with switch to a rereadable file —
   adjustable by `tool_output.{max_lines, max_bytes}`.
@@ -274,8 +272,7 @@ pre-heated (`AGENT_SANDBOX_SNAPSHOT_ID`). **Recommendation: bake opencode in
 this snapshot**, and the cost of turning on the critical path drops to ~1.3 s per
 new microVM.
 
-**DONE on 2026-08-12**:
-[scripts/create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) installs
+**DONE on 2026-08-12**: the former `scripts/create-agent-snapshot.ts` installed
 opencode in `/vercel/oc` before freezing the image, and the question that remained
 open is decided by the measurement — **`/vercel/oc` survives well when taken
 image**, while it is outside `/vercel/sandbox`, the working directory of
@@ -471,8 +468,8 @@ so that the supervisor does not reimport the loop that batch 3 deletes), then
 a run that no longer has enough to pay for. **What remains to be measured**: what opencode
 invoice for a round cut in flight. If it places a `finish` on the aborted message, the
 line is written like an ordinary round; otherwise the expense comes out of the meters, and
-this is the fault that MIN-216 had closed on the home loop side
-([abandoned-spend.ts](../lib/server/agent/abandoned-spend.ts), kept for this).
+this is the fault that MIN-216 had closed on the former home loop side
+(`abandoned-spend.ts`, retained at that point for this purpose).
 
 The round → generation pairing is done by model, then by output tokens,
 otherwise in order of arrival: **exact sequentially**, only probable when
@@ -1036,8 +1033,8 @@ relit doesn't lift anything, doesn't type anything wrong, and is only seen on a 
 | **`webfetch` left without its URL.** No opposite house, therefore no case in `toolArgSummary`: the event left at `{}`. A web reading tour that is unreadable on replay. | a `case` |
 | **The reason for a local refusal no longer came up.** `forbidden_command` on a `run_background` died in the bridge: refusals ceased to be measurable on `agent_run_events`. | a reminder |
 
-And a fifteenth, excluding VM: the installation safeguard of
-[create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) could not be
+And a fifteenth, excluding VM: the installation safeguard of the former
+`create-agent-snapshot.ts` could not be
 trigger — `npm i … | tail -5` returns the exit code of `tail`, which succeeds
 always. A broken register would have been mistaken for a bad binary.
 version ten lines below.
@@ -1160,7 +1157,7 @@ Two ceilings, and the second was not visible:
    (one per tool, per event, per ledger line). A 333 KB newspaper was paid for there
    hundreds of times per turn, to no avail.
 
-Hence [`agent_run_journal`](../supabase/migrations/20261214090000_agent_run_journal.sql):
+Hence [`agent_run_journal`](../supabase/migrations/20270106090000_baseline.sql#L2777):
 the log is written in **append**, one batch per backup, and the run line does not
 keeps only the **pointer** (`{sessionId, seq}`, a few dozen bytes). The
 supervisor pushes its increments (`POST /journal`, cut to 1.5 MB to fit
@@ -1452,7 +1449,7 @@ divided into `CORE_TOOLS` (18), `MINDDY_TOOLS` (22), `PR_TOOLS` (3),
 | `read_file` | `read` | Same form: absolute `filePath`, `offset`/`limit`, numbered lines, images and PDF attachment. |
 | `list_dir` | `read` (on a directory) | No dedicated tool: it is `read` which lists, one name per line, the final `/` on the folders. |
 | `glob` | `glob` | `pattern` + `path`. |
-| `grep` | `grep` | `pattern` + `path` + `include`, ripgrep. Our [grep-pattern.ts](../lib/server/agent/grep-pattern.ts) / [grep-scope.ts](../lib/server/agent/grep-scope.ts) fall with it. |
+| `grep` | `grep` | `pattern` + `path` + `include`, ripgrep. Our [grep-pattern.ts](../lib/server/agent/grep-pattern.ts) and former `grep-scope.ts` fall with it. |
 | `edit_file` | `edit` | `oldString`/`newString`/`replaceAll`. Our cascade of [edit.ts](../lib/server/agent/edit.ts) is **borrowed from opencode**: we return the original. |
 | `write_file` | `write` | Same pair, same mutual exclusion with `apply_patch`. |
 | `apply_patch` | `apply_patch` | **Same toggle as ours** on `gpt-*` (measured §2.3). |
@@ -1539,7 +1536,7 @@ on `POST /permission/:id/reply` and in a **plugin** (`tool.execute.before/after`
 [plan-closure.ts](../lib/server/agent/plan-closure.ts) ·
 [network-policy.ts](../lib/server/agent/network-policy.ts) ·
 [quota.ts](../lib/server/agent/quota.ts) ·
-[abandoned-spend.ts](../lib/server/agent/abandoned-spend.ts).
+the former `abandoned-spend.ts`.
 
 **Their existing tests must pass unchanged.** This is the criterion: if one of these
 tests must move, it is because we moved a product rule without meaning to.

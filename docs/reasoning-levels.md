@@ -103,8 +103,8 @@ Gemini instead documents `reasoning_effort` and its translation to
 `thinking_level`/`thinking_budget`. You should not send the field directly
 native `thinkingConfig` on the OpenAI-compatible surface.
 
-The complete matrix, official sources and boundaries of these layers are
-held in [BYOK audit](audits/byok-provider-compatibility.md).
+The provider-specific contract and its compatibility boundaries are enforced in
+[`lib/ai-chat.ts`](../lib/ai-chat.ts) and covered by its tests.
 
 ## What each level means in concrete terms
 

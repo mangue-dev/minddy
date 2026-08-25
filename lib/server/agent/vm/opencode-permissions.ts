@@ -35,8 +35,7 @@ import { isSecretFile } from "../secret-scan";
  *    ten publish `external_directory`, twenty publish only `bash` — including
  *    `grep`, `find`, `sed`, `node`, and `curl`, which `checkCommand` (which only
  * targets git) lets through. **This module is an anti-accident, not a perimeter**;
- * the only perimeter that would hold is at the OS level (§2 of
- *    [the local audit](../../../../docs/audits/agent-local-2026-08-14.md)).
+ * the only boundary that would hold must be enforced at the OS level.
  * 2. **A write publishes `permission: "edit"`** with `metadata.filepath`
  * **ABSOLUTE** (and a `diff`), whatever the tool — `write`, `edit`,
  * `apply_patch`. A write OUTSIDE the repository publishes two: first

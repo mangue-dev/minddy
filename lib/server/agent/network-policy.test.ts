@@ -15,8 +15,8 @@ import {
 } from "./network-policy";
 
 /**
- * What this test keeps is not an object shape — it is the measured boundary
- * of 2026-08-07 (see docs/orchestrateur-process-long.md §1). A `startsWith` placed
+ * What this test keeps is not an object shape — it is the MIN-223 measured
+ * boundary. A `startsWith` placed
  * here "to make it simpler" would re-credit `/api/v1/key`, the OpenRouter provisioning route, and the microVM could issue its own keys.
  * Nothing in the product would say so; this file, if.
  */

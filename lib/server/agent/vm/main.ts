@@ -32,8 +32,8 @@ import { parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol
  *
  * IN A MICROVM, the process holds NO secrets. The firewall places the key of the
  * model after exiting the VM, and the control plane proves the identity of the run
- * by an OIDC of the platform: `env | grep -i key` does not return anything here, and it is
- * measured (docs/orchestrateur-process-long.md §1) There is no
+ * by an OIDC of the platform: `env | grep -i key` does not return anything here, as
+ * measured in MIN-223. There is no
  * firewall, so this process holds TWO things:
  *
  * 1. **a local execution token** (`controlToken`), carried by the job and placed

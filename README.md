@@ -1,4 +1,10 @@
-# minddy
+<p align="center">
+  <img src="public/logo.svg" alt="minddy logo" width="88">
+</p>
+
+<h1 align="center">minddy</h1>
+
+<p align="center"><strong>Issue tracking, product knowledge, and coding agents in one open-source workspace.</strong></p>
 
 minddy is an open-source issue tracker for small product teams. It keeps the
 daily work in one place: projects, issues, objectives, saved views, collaborative
@@ -8,6 +14,47 @@ with the same backlog as the team.
 The application is built with Next.js, React, Tailwind CSS, and Supabase. It
 also includes optional macOS, Linux, and Microsoft Store Windows desktop shells and integrations for GitHub,
 GitLab, Stripe, and OpenRouter.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/captures/heroBoard-en-dark.webp">
+  <img src="public/captures/heroBoard-en-light.webp" alt="A minddy project board with issues grouped by status" width="100%">
+</picture>
+
+## Product tour
+
+### Take work from an issue to a pull request
+
+Give a coding agent the issue, plan, repository context, and project knowledge it
+needs. Follow its work in minddy, then review the linked pull request and diff
+without losing the product context that started the change.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/captures/workflowAgent-en-dark.webp">
+  <img src="public/captures/workflowAgent-en-light.webp" alt="A coding agent implementing a minddy issue and reporting its changes" width="100%">
+</picture>
+
+### Keep durable knowledge beside the backlog
+
+Write specifications, decisions, runbooks, and meeting notes in a nested project
+wiki. Pages support rich Markdown, issue mentions, attachments, history, and
+read-only sharing, so both people and connected agents can work from the same
+source of truth.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/captures/pagesEditor-en-dark.webp">
+  <img src="public/captures/pagesEditor-en-light.webp" alt="The minddy page editor showing a release process document" width="100%">
+</picture>
+
+### Connect customer feedback to delivery
+
+Publish a feedback board where users can submit requests and vote. The team can
+triage posts, reply publicly, merge duplicates, and link feedback to issues so
+its public status follows the work through delivery.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/captures/feedbackBoard-en-dark.webp">
+  <img src="public/captures/feedbackBoard-en-light.webp" alt="A public minddy feedback board with requests, statuses, and vote counts" width="100%">
+</picture>
 
 ## Run locally
 
