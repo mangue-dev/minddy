@@ -214,8 +214,7 @@ interface IssueContext {
   projectName: string | null;
   projectKey: string;
   /** Resources of the issue (and its comments) — announced in the primer
-   * so the agent knows they exist: a file opens there via `read_resource`,
-   * and a link is read there directly. */
+   * so the agent knows they exist and opens files or links via `read_resource`. */
   resources: AgentResourceContext[];
 }
 
@@ -241,7 +240,7 @@ async function loadIssueContext(
       ? service
           .from("attachments")
           .select(
-            "id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(title)",
+            "id, kind, page_id, file_name, mime_type, size_bytes, page:pages(title)",
           )
           .eq("issue_id", issueId)
           .order("created_at", { ascending: true })
@@ -259,7 +258,6 @@ async function loadIssueContext(
     resources: ((attachmentRows ?? []) as Array<{
       id: string;
       kind: string | null;
-      url: string | null;
       page_id: string | null;
       file_name: string | null;
       mime_type: string | null;
@@ -271,7 +269,6 @@ async function loadIssueContext(
             id: a.id,
             kind: "link" as const,
             name: a.file_name ?? "link",
-            url: a.url,
           }
         : a.kind === "page"
         ? {

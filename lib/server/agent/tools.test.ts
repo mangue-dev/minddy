@@ -272,6 +272,13 @@ describe("agentToolsFor — read_resource et les images", () => {
       names({ anchor: "issue", webSearch: true }),
     );
   });
+
+  it("routes links through the outbound guard instead of shell fetching", () => {
+    expect(description(false)).toContain("fetched by this tool through the outbound-network guard");
+    expect(description(false)).toContain("unsafe/private targets and redirect hops are refused");
+    expect(description(false)).toContain("never fetch the link separately");
+    expect(description(false)).not.toContain("A LINK returns its url");
+  });
 });
 
 /**

@@ -135,7 +135,7 @@ export const OPENCODE_TOOL_NAMES: PromptToolNames = {
 /** The minddy tools — the SAME at both anchors (MIN-125): only the target par
  * default of the tools ticket changes, and the description of each tool says so. */
 export function minddyToolsBlock(opts: { images: boolean; routine: boolean }): string {
-  return `- \`search_issues\` — find a ticket of this project by subject, or resolve 'MIN-42' / a bare number. \`read_issue\` — the LIVE state of a ticket: every field, its plan parsed into tasks, resources, recent comments, sub-issues, relations. \`read_resource\` — open a resource of a ticket; a link comes back as its url and title, a page of the wiki as its id and title (read it with \`read_page\`), a file as text inline (${
+  return `- \`search_issues\` — find a ticket of this project by subject, or resolve 'MIN-42' / a bare number. \`read_issue\` — the LIVE state of a ticket: every field, its plan parsed into tasks, resources, recent comments, sub-issues, relations. \`read_resource\` — open a resource of a ticket; a link is fetched through the outbound-network guard and comes back as capped content, a page of the wiki as its id and title (read it with \`read_page\`), a file as text inline (${
     opts.images
       ? "an image comes back AS AN IMAGE you can actually look at — open the mockups a ticket carries BEFORE implementing them, and describe what you see so the user knows you looked; other binaries"
       : "binaries"
@@ -618,7 +618,7 @@ This is a CONVERSATION, not a one-shot pass. You read, you comment on the pull r
 - \`${n.read}\` — returns content with line numbers.
 - \`${n.shell}\` — read-only work in the repository: \`git diff\`, \`git log\`, the project's type-check, a targeted test. ${shellNote}
 - \`comment_pr_line\` — post one remark ANCHORED to a line of the diff. \`comment_pr\` — post your summary in the pull request's conversation. \`reply_pr_thread\` — reply inside an existing review thread.
-- \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_resource\` — open a resource of the ticket; a link comes back as its url and title, a page of the wiki as its id and title (read it with \`read_page\`), a file as text inline (${attachments} via a signed URL you can curl).
+- \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_resource\` — open a resource of the ticket; a link is fetched through the outbound-network guard and comes back as capped content, a page of the wiki as its id and title (read it with \`read_page\`), a file as text inline (${attachments} via a signed URL you can curl).
 - \`list_objectives\` / \`read_objective\` — the project's goals, and the one the ticket belongs to: what the change was ultimately for. Read-only in a review, like the wiki.
 - \`search_pages\` / \`list_pages\` / \`read_page\` — the project's WIKI, in markdown (search first when you are after a subject). Read it before calling a change wrong on style or structure: a convention written by the team is the standard here, and "ça ne suit pas la convention" is only a finding if the convention exists. Read-only in a review; pages are never written from here.
 
@@ -878,10 +878,9 @@ Everything above is context. Act on the user's message.`;
 }
 
 /**
- * Resource announced in the primer. A FILE is only named there — the agent
- * opens it via `read_resource`. A LINK is written in full: its url contains
- * in one line, and having it searched by a tool call would be a round trip
- * for information that we already have. A PAGE of the wiki is written in the same way, with its
+ * Resource announced in the primer. A FILE and LINK are only named there — the
+ * agent opens them via `read_resource`, which keeps link destinations behind
+ * the guarded server-side fetch. A PAGE of the wiki is written with its
  * id: the title is enough to know if the document is used, and `read_page` opens it without
  * go through `read_resource`.
  */
@@ -889,11 +888,9 @@ export interface AgentResourceContext {
   id: string;
   kind?: "file" | "link" | "page";
   name: string;
-  /** Lien seul. */
-  url?: string | null;
-  /** Page seule. */
+  /** Page resources only. */
   pageId?: string | null;
-  /** Fichier seul. */
+  /** File resources only. */
   mimeType?: string;
   sizeBytes?: number;
 }
@@ -959,10 +956,10 @@ export function buildAgentContextMessage(input: {
   const resources = input.resources ?? [];
   const resourcesBlock =
     resources.length > 0
-      ? `\n\n## Resources on the ticket (open a file with read_resource)\n${resources
+      ? `\n\n## Resources on the ticket (open with read_resource)\n${resources
           .map((a) => {
             if (a.kind === "link") {
-              return `- ${escapeUntrustedContext(a.name)} — ${escapeUntrustedContext(a.url ?? "")}`;
+              return `- ${escapeUntrustedContext(a.name)} — link resource id: ${escapeUntrustedContext(a.id)}; open it with read_resource`;
             }
             if (a.kind === "page") {
               return `- ${escapeUntrustedContext(a.name)} — a page of the project's wiki, read it with read_page id: ${escapeUntrustedContext(a.pageId ?? "")}`;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  type AgentResourceContext,
   buildAgentContextMessage,
   buildInheritedBranchMessage,
   buildInheritedPrMessage,
@@ -479,6 +480,27 @@ describe("buildAgentContextMessage — pièces jointes image", () => {
     const msg = buildAgentContextMessage(ticket);
     expect(msg).toContain("mock.png (image/png, 120 KB) — id: att-2");
     expect(msg).not.toContain("shows it to you");
+  });
+});
+
+describe("buildAgentContextMessage link resources", () => {
+  it("exposes only the resource id and routes reading through read_resource", () => {
+    const msg = buildAgentContextMessage({
+      issue: { identifier: "MIN-432", title: "Guard links", description: null, plan: null },
+      repo,
+      resources: [
+        {
+          id: "link-1",
+          kind: "link",
+          name: "Internal-looking target",
+          // Keep a legacy extra field in the fixture to prove it is not rendered.
+          url: "http://169.254.169.254/latest/meta-data",
+        } as AgentResourceContext & { url: string },
+      ],
+    });
+
+    expect(msg).toContain("link resource id: link-1; open it with read_resource");
+    expect(msg).not.toContain("169.254.169.254");
   });
 });
 /**

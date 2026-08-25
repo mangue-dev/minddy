@@ -27,10 +27,12 @@ import { displayName } from "@/lib/display-name";
 import { isEffort } from "@/lib/issue-validation";
 import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { MAX_PLAN_LENGTH, appendToPlan, parsePlan } from "@/lib/plan";
+import { SafeFetchError } from "@/lib/server/safe-fetch";
 import { executePageTool } from "./page-tools";
 import { executeObjectiveTool, resolveObjectiveRef } from "./objective-tools";
 import { headTail } from "./prune";
 import type { AgentToolImage } from "./agent-contract";
+import { fetchAgentLinkResource, withoutAgentLinkUrls } from "./link-resource";
 
 /**
  * Tools TICKET of the code agent: the PROJECT tickets of the run. Served at both
@@ -42,7 +44,7 @@ import type { AgentToolImage } from "./agent-contract";
  * with Numo/MCP).
  * - `read_issue` → whole ticket (getIssue) + plan parsed into tasks +
  * last comments.
- * - `read_resource` → one resource: the url and title for a LINK;
+ * - `read_resource` → one resource: guarded, capped content for a LINK;
  * the id and title for a wiki PAGE (the document
  * is then read as `read_page`); for a
  * FILE, inline text when it's readable, the IMAGE
@@ -245,14 +247,14 @@ async function readIssue(
   const total = detail.comments.length;
   const recent = includeAll ? detail.comments : detail.comments.slice(-COMMENTS_DEFAULT_LIMIT);
   const comments = recent.map((c) => ({
-    ...c,
+    ...withoutAgentLinkUrls(c),
     body: cap(String(c.body ?? ""), COMMENT_BODY_MAX_CHARS),
   }));
 
   return {
     result: {
       issue: {
-        ...detail.issue,
+        ...withoutAgentLinkUrls(detail.issue),
         // On an OTHER ticket than the run ticket, this is how the agent learns
         // how to name it (“MIN-7”) — never by its uuid.
         identifier: target.issue.identifier,
@@ -444,18 +446,31 @@ async function readResource(
     };
   }
 
-  // A link has no bytes: neither signed URL nor inline content.
+  // Link destinations stay server-side. The guarded client validates and pins
+  // every redirect hop before returning capped content to the model.
   if (row.kind === "link") {
-    return {
-      result: {
-        id: row.id,
-        kind: "link",
-        url: row.url,
-        title: row.file_name,
-        comment_id: row.comment_id ?? null,
-      },
-      success: true,
-    };
+    if (typeof row.url !== "string" || !row.url) {
+      return { result: { error: "Link resource has no destination." }, success: false };
+    }
+    try {
+      const fetched = await fetchAgentLinkResource(row.url);
+      return {
+        result: {
+          id: row.id,
+          kind: "link",
+          title: row.file_name,
+          comment_id: row.comment_id ?? null,
+          ...fetched,
+        },
+        success: true,
+      };
+    } catch (error) {
+      const message =
+        error instanceof SafeFetchError && error.reason === "url"
+          ? "Link target is blocked by the outbound network policy."
+          : "Link could not be fetched through the outbound network guard.";
+      return { result: { error: message }, success: false };
+    }
   }
 
   const fileName = (row.file_name as string) || "attachment";

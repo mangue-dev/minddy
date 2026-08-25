@@ -13,7 +13,7 @@ import {
 } from "@/lib/issue-constants";
 import { effortToPoints, statusCompletionCredit } from "@/lib/cycle";
 import { isObjectiveStatus } from "@/lib/objective-validation";
-import { resourceSummary } from "@/lib/server/resource-select";
+import { agentResourceSummary } from "./link-resource";
 
 /**
  * The OBJECTIVES for the code agent (MIN-287) — the purpose served by the ticket
@@ -284,7 +284,7 @@ async function readObjective(
 
   const total = (comments ?? []).length;
   const recent = (comments ?? []).slice(-COMMENTS_DEFAULT_LIMIT);
-  const resources = (attachmentRows ?? []).map((row) => resourceSummary(row));
+  const resources = (attachmentRows ?? []).map((row) => agentResourceSummary(row));
 
   return {
     result: {

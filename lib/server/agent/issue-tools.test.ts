@@ -119,6 +119,12 @@ vi.mock("@/lib/server/attachments", () => ({
   downloadAttachment: async () => downloaded,
 }));
 
+const { safeFetch } = vi.hoisted(() => ({ safeFetch: vi.fn() }));
+vi.mock("@/lib/server/safe-fetch", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/server/safe-fetch")>();
+  return { ...actual, safeFetch };
+});
+
 vi.mock("@/lib/server/auth-users", () => ({
   fetchAuthUsersById: async () => new Map(),
   toNamed: (u: unknown) => u,
@@ -128,8 +134,14 @@ vi.mock("@/lib/server/auth-users", () => ({
 const { getIssue, searchIssues, updateIssueFields, createIssueForProject } = vi.hoisted(
   () => ({
     getIssue: vi.fn(async () => ({
-      issue: { id: ANCHOR_ID, title: "Un ticket", plan: null, assignee_id: null },
-      comments: [],
+      issue: {
+        id: ANCHOR_ID,
+        title: "Un ticket",
+        plan: null,
+        assignee_id: null,
+        resources: [] as Array<Record<string, unknown>>,
+      },
+      comments: [] as Array<Record<string, unknown>>,
       sub_issues: [],
       relations: [],
     })),
@@ -154,6 +166,7 @@ vi.mock("@/lib/server/create-issue", () => ({ createIssueForProject }));
 
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
 import type { NumoDefaultStatus } from "@/lib/numo-default-status";
+import { SafeFetchError } from "@/lib/server/safe-fetch";
 
 const ctx = (over: Partial<IssueToolContext> = {}): IssueToolContext => ({
   anchorIssueId: ANCHOR_ID,
@@ -172,6 +185,97 @@ beforeEach(() => {
   attachment = { ...attachmentBase };
   downloaded = Buffer.from("PNGBYTES");
   vi.clearAllMocks();
+});
+
+describe("read_resource link network policy", () => {
+  const storedUrl = "https://public.example/spec";
+
+  beforeEach(() => {
+    attachment = {
+      ...attachmentBase,
+      kind: "link",
+      url: storedUrl,
+      file_name: "External specification",
+      storage_path: null,
+      mime_type: null,
+      size_bytes: 0,
+    };
+  });
+
+  it("fetches link content through the capped guarded client without exposing the URL", async () => {
+    safeFetch.mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+      url: new URL("https://redirect.example/spec"),
+      bytes: Buffer.from("<h1>Deployment guide</h1>"),
+      truncated: false,
+    });
+
+    const out = await read(false);
+
+    expect(out.success).toBe(true);
+    expect(out.result).toMatchObject({
+      kind: "link",
+      title: "External specification",
+      http_status: 200,
+      content_type: "text/html",
+      content: "<h1>Deployment guide</h1>",
+    });
+    expect(JSON.stringify(out.result)).not.toContain(storedUrl);
+    expect(JSON.stringify(out.result)).not.toContain("redirect.example");
+    expect(safeFetch).toHaveBeenCalledWith(
+      storedUrl,
+      expect.objectContaining({
+        maxBytes: 256 * 1024,
+        onOverflow: "truncate",
+        maxRedirects: 3,
+        timeoutMs: 10_000,
+      }),
+    );
+  });
+
+  it("fails closed when the destination or a redirect hop violates policy", async () => {
+    safeFetch.mockRejectedValue(new SafeFetchError("url"));
+
+    const out = await read(false);
+
+    expect(out.success).toBe(false);
+    expect(out.result).toEqual({ error: "Link target is blocked by the outbound network policy." });
+    expect(JSON.stringify(out.result)).not.toContain(storedUrl);
+  });
+
+  it("removes link destinations from live issue and comment resource summaries", async () => {
+    getIssue.mockResolvedValueOnce({
+      issue: {
+        id: ANCHOR_ID,
+        title: "Un ticket",
+        plan: null,
+        assignee_id: null,
+        resources: [{ id: "link-1", kind: "link", url: storedUrl, title: "Spec" }],
+      },
+      comments: [
+        {
+          id: "comment-1",
+          body: "See the resource.",
+          resources: [{ id: "link-2", kind: "link", url: storedUrl, title: "Spec" }],
+        },
+      ],
+      sub_issues: [],
+      relations: [],
+    });
+
+    const out = await executeIssueTool(ctx(), "read_issue", {});
+
+    expect(out.success).toBe(true);
+    expect(JSON.stringify(out.result)).not.toContain(storedUrl);
+    expect(out.result).toMatchObject({
+      issue: { resources: [{ id: "link-1", kind: "link", title: "Spec" }] },
+      comments: [
+        { resources: [{ id: "link-2", kind: "link", title: "Spec" }] },
+      ],
+    });
+  });
 });
 
 describe("read_resource sur une image", () => {

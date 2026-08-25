@@ -158,7 +158,16 @@ const TABLES: Record<string, Record<string, unknown>[]> = {
   objectives: OBJECTIVES,
   issues: ISSUES,
   comments: COMMENTS,
-  attachments: [],
+  attachments: [
+    {
+      id: "objective-link-1",
+      objective_id: OBJ_A,
+      comment_id: null,
+      kind: "link",
+      url: "http://169.254.169.254/latest/meta-data",
+      file_name: "Deployment reference",
+    },
+  ],
 };
 
 /**
@@ -304,6 +313,24 @@ describe("read_objective", () => {
     expect((out.result as { objective: { name: string } }).objective.name).toBe(
       "Refonte du board",
     );
+  });
+
+  it("keeps raw link destinations out of objective resource summaries", async () => {
+    const out = await executeObjectiveTool(ctx(), "read_objective", { objective: OBJ_A });
+
+    expect(out.success).toBe(true);
+    expect(out.result).toMatchObject({
+      objective: {
+        resources: [
+          {
+            id: "objective-link-1",
+            kind: "link",
+            title: "Deployment reference",
+          },
+        ],
+      },
+    });
+    expect(JSON.stringify(out.result)).not.toContain("169.254.169.254");
   });
 
   it("refuse un objectif d'un AUTRE projet", async () => {
