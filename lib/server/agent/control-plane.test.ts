@@ -65,6 +65,12 @@ const h = vi.hoisted(() => ({
   minted: [] as Array<{ runId: string; capUsd: number }>,
   /** Revoked keys — which must never survive the turn that requested it. */
   revoked: [] as string[],
+  /** Sandboxes stopped after their creator loses project access. */
+  stopped: [] as string[],
+  /** Current project access of the creator, independently of launch-time access. */
+  creatorHasAccess: true,
+  /** Active rows returned to the member-removal lifecycle revoker. */
+  revocableRuns: [] as Array<Record<string, unknown>>,
   /** L'API de provisioning refuse (variable absente, panne) : `mintRunKey` → null. */
   mintFails: false,
   byokAvailable: true,
@@ -166,6 +172,15 @@ vi.mock("./sandbox", () => ({
   refreshAgentSandboxForgeAccess: vi.fn(async (name: string, target: { token: string }) => {
     h.forgeRefreshes.push({ name, token: target.token });
   }),
+  stopSandboxByName: vi.fn(async (name: string) => {
+    h.stopped.push(name);
+  }),
+}));
+
+vi.mock("@/lib/server/project-access", () => ({
+  getProjectAccess: vi.fn(async () =>
+    h.creatorHasAccess ? { isMember: true, isOwner: false, project: {} } : null,
+  ),
 }));
 
 vi.mock("./forge", async (importOriginal) => ({
@@ -257,13 +272,25 @@ vi.mock("@/lib/server/account-settings", () => ({
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: () => ({
-      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { key: "MIN" } }) }) }),
-    }),
+    from: (table: string) => {
+      if (table === "agent_runs") {
+        const query = {
+          select: () => query,
+          eq: () => query,
+          in: () => query,
+          then: (resolve: (value: unknown) => unknown) =>
+            Promise.resolve({ data: h.revocableRuns, error: null }).then(resolve),
+        };
+        return query;
+      }
+      return {
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { key: "MIN" } }) }) }),
+      };
+    },
   }),
 }));
 
-import { handleControlPlaneRequest } from "./control-plane";
+import { handleControlPlaneRequest, revokeMemberAgentAuthority } from "./control-plane";
 import { CHANGED_FILES_CAP } from "./repo-host";
 
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
@@ -284,6 +311,9 @@ beforeEach(() => {
   h.forgeRefreshes.length = 0;
   h.minted.length = 0;
   h.revoked.length = 0;
+  h.stopped.length = 0;
+  h.creatorHasAccess = true;
+  h.revocableRuns.length = 0;
   h.mintFails = false;
   h.byokAvailable = true;
   h.steeredByOther = false;
@@ -327,6 +357,63 @@ const call = (
   body: Record<string, unknown> | null = null,
   runId = RUN_ID,
 ) => handleControlPlaneRequest({ runId, method, surface, body });
+
+describe("active authority revocation", () => {
+  it("proactively revokes active rows during the membership removal lifecycle", async () => {
+    h.revocableRuns.push({
+      ...h.run!,
+      sandbox_id: `agent-${RUN_ID}`,
+      provider_key_id: "key-from-active-turn",
+    });
+
+    await revokeMemberAgentAuthority({ projectId: "proj-1", userId: "user-owner" });
+
+    expect(h.stamped).toContainEqual({
+      status: "canceled",
+      interrupt_requested: true,
+      error_message: "run owner no longer has project access",
+    });
+    expect(h.revoked).toEqual(["key-from-active-turn"]);
+    expect(h.stopped).toEqual([`agent-${RUN_ID}`]);
+  });
+
+  it("stops and de-authorizes a running agent as soon as its creator is removed", async () => {
+    expect((await call("POST", "/tool/update_issue", { args: {} })).status).toBe(200);
+    expect(h.issueCalls).toHaveLength(1);
+
+    h.creatorHasAccess = false;
+    h.run = {
+      ...h.run!,
+      sandbox_id: `agent-${RUN_ID}`,
+      provider_key_id: "key-from-active-turn",
+    };
+
+    const denied = await call("POST", "/tool/update_issue", { args: {} });
+
+    expect(denied).toEqual({
+      status: 409,
+      body: { error: "run owner no longer has project access" },
+    });
+    expect(h.issueCalls).toHaveLength(1);
+    expect(h.stamped).toContainEqual({
+      status: "canceled",
+      interrupt_requested: true,
+      error_message: "run owner no longer has project access",
+    });
+    expect(h.revoked).toEqual(["key-from-active-turn"]);
+    expect(h.stopped).toEqual([`agent-${RUN_ID}`]);
+  });
+
+  it("denies repository credential refresh after access is removed", async () => {
+    h.creatorHasAccess = false;
+
+    const denied = await call("POST", "/repo-auth");
+
+    expect(denied.status).toBe(409);
+    expect(h.repoAccessAsked).toEqual([]);
+    expect(h.forgeRefreshes).toEqual([]);
+  });
+});
 
 /**
  * MIN-224 — the spending limit for a turn RELEASES midway through.

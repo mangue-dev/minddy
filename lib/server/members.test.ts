@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const revokeMemberAgentAuthority = vi.hoisted(() => vi.fn(async () => undefined));
+
+vi.mock("./agent/control-plane", () => ({
+  revokeMemberAgentAuthority,
+}));
+
 /**
  * MIN-197 — we invite an ADDRESS, not an account.
  *
@@ -210,6 +216,7 @@ import {
   attachPendingInvitations,
   claimPendingInvitationsLate,
   inviteMember,
+  removeMember,
 } from "./members";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -234,6 +241,26 @@ beforeEach(() => {
   adminLookups = 0;
   background = [];
   sendInvitationEmail.mockClear();
+  revokeMemberAgentAuthority.mockClear();
+});
+
+describe("member removal", () => {
+  it("revokes active agent authority after deleting the membership", async () => {
+    memberRows = [{ id: "member-row", project_id: PROJECT, user_id: MEMBER }];
+
+    const result = await removeMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      userId: MEMBER,
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(memberRows).toEqual([]);
+    expect(revokeMemberAgentAuthority).toHaveBeenCalledWith({
+      projectId: PROJECT,
+      userId: MEMBER,
+    });
+  });
 });
 
 describe("inviteMember — an address without an account", () => {

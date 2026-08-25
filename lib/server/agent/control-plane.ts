@@ -44,6 +44,7 @@ import type { AgentCheckpoint } from "./runs";
 import type { AgentEventType } from "./agent-contract";
 import { parseAgentMentions } from "@/lib/agent-mentions";
 import { surfaceForAgentRun } from "@/lib/ai-surfaces";
+import { getProjectAccess } from "@/lib/server/project-access";
 
 /**
  * microVM CONTROL PLANE (MIN-223) — the only surface through which a
@@ -306,6 +307,64 @@ async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
   }
 }
 
+const ACTIVE_RUN_STATUSES: AgentRun["status"][] = ["queued", "running"];
+const ACCESS_REVOKED_ERROR = "run owner no longer has project access";
+type RevocableAgentRun = Pick<
+  AgentRun,
+  "id" | "status" | "sandbox_id" | "provider_key_id"
+>;
+
+/**
+ * Remove every capability held by an active run whose creator no longer has
+ * access to its project. The database transition happens first so another
+ * worker cannot reclaim the run while external cleanup is in progress.
+ */
+async function revokeRunAuthority(run: RevocableAgentRun): Promise<void> {
+  if (ACTIVE_RUN_STATUSES.includes(run.status)) {
+    await stampRun(
+      run.id,
+      {
+        status: "canceled",
+        interrupt_requested: true,
+        error_message: ACCESS_REVOKED_ERROR,
+      },
+      { guard: [...ACTIVE_RUN_STATUSES] },
+    ).catch(() => null);
+  }
+
+  if (run.provider_key_id) {
+    const { revokeRunKey } = await import("./run-key");
+    await revokeRunKey(run.provider_key_id).catch(() => {});
+    await stampRun(run.id, { provider_key_id: null }, { guard: ["canceled"] }).catch(() => null);
+  }
+
+  if (run.sandbox_id) {
+    const { stopSandboxByName } = await import("./sandbox");
+    await stopSandboxByName(run.sandbox_id).catch(() => {});
+  }
+}
+
+/**
+ * Proactively revoke active runs immediately after a project membership is
+ * removed. Per-request admission below remains the authoritative backstop for
+ * removals performed outside the application lifecycle.
+ */
+export async function revokeMemberAgentAuthority(input: {
+  projectId: string;
+  userId: string;
+}): Promise<void> {
+  const { getServiceClient } = await import("@/lib/supabase-service");
+  const { data, error } = await getServiceClient()
+    .from("agent_runs")
+    .select("id, status, sandbox_id, provider_key_id")
+    .eq("project_id", input.projectId)
+    .eq("created_by", input.userId)
+    .in("status", [...ACTIVE_RUN_STATUSES]);
+  if (error) throw new Error(`active run lookup failed: ${error.message}`);
+
+  await Promise.all(((data ?? []) as RevocableAgentRun[]).map((run) => revokeRunAuthority(run)));
+}
+
 /**
  * A request from the control plane. `runId` comes from OIDC; `surface` is the
  * chemin sous `/api/agent-vm` (`/events`, `/tool/read_issue`…).
@@ -410,6 +469,17 @@ export async function handleControlPlaneRequest(opts: {
   // run whose VM is not yet registered, let it pass.
   if (opts.sandboxName && run.sandbox_id && run.sandbox_id !== opts.sandboxName) {
     return { status: 403, body: { error: "sandbox does not run this run" } };
+  }
+
+  // The run creator is the identity whose project and repository authority is
+  // replayed by every surface below. Revalidate it on every stateful request:
+  // launch-time membership is a past fact and cannot authorize a live run.
+  if (run.created_by) {
+    const access = await getProjectAccess(run.created_by, run.project_id).catch(() => null);
+    if (!access?.isMember) {
+      await revokeRunAuthority(run);
+      return { status: 409, body: { error: ACCESS_REVOKED_ERROR } };
+    }
   }
 
   /**

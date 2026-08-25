@@ -369,6 +369,14 @@ export async function removeMember({
     console.error("[members] remove failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+
+  // Membership is the authority behind every active agent run. Revoke it in
+  // the same lifecycle operation; the control plane also rechecks on each
+  // later request in case membership changed outside this path.
+  const { revokeMemberAgentAuthority } = await import("./agent/control-plane");
+  await revokeMemberAgentAuthority({ projectId, userId }).catch((revocationError) => {
+    console.error("[members] active agent authority revocation failed:", revocationError);
+  });
   return { ok: true };
 }
 
