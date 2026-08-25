@@ -2,7 +2,7 @@
 
 # The build stage contains the package manager and compiler. The final image
 # only contains the traced Next.js server and its production dependencies.
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS base
+FROM --platform=$BUILDPLATFORM node:24-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS base
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -28,7 +28,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm run build
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:24-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS runtime
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
