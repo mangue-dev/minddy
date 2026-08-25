@@ -22,7 +22,14 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, production]
+    # Promote production already requires a successful CI run for this exact
+    # commit on main. Running the same jobs again after the fast-forward would
+    # double the bill without testing different bytes.
+    branches: [main]
+    # The desktop release workflow generates this metadata only after all
+    # native packages have passed their protected publication jobs.
+    paths-ignore:
+      - desktop/released.json
   workflow_dispatch:
 
 permissions:
@@ -145,6 +152,62 @@ jobs:
           grep -F 'server → `api.stripe.com`: stripe is not enabled' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
           ! grep -F '/v1/customers' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
 
+      # Keep the edition coverage on this already-initialized runner. Seven
+      # separate matrix jobs repeated checkout, Node setup, and dependency
+      # installation, which consumed more billed minutes than the tests.
+      # Subshells prevent one fixture's exported values from leaking into the
+      # next scenario.
+      - name: Check all edition contracts
+        shell: bash
+        run: |
+          for edition in \
+            self-hosted-minimal \
+            self-hosted-byok \
+            minddy-cloud \
+            managed-forge \
+            partial-billing \
+            partial-ai \
+            implicit-identifiers
+          do
+            (
+              set -a
+              source "test/fixtures/editions/$edition.env"
+              set +a
+              pnpm exec vitest run lib/server/editions.integration.test.ts
+            )
+          done
+
+      # Deployable editions must compile and open an HTTP port with the exact
+      # fixture checked above. Partial variants remain covered by their contract
+      # diagnostics and intentionally cannot start.
+      - name: Build and start deployable editions
+        shell: bash
+        run: |
+          for edition in self-hosted-minimal minddy-cloud managed-forge; do
+            (
+              set -a
+              source "test/fixtures/editions/$edition.env"
+              set +a
+              pnpm run build
+              log_file="$RUNNER_TEMP/minddy-$edition-start.log"
+              pnpm exec next start -p 3100 > "$log_file" 2>&1 &
+              server_pid=$!
+              trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+              ready=0
+              for attempt in {1..30}; do
+                if curl --silent --show-error --output /dev/null http://127.0.0.1:3100/; then
+                  ready=1
+                  break
+                fi
+                sleep 1
+              done
+              if [ "$ready" -ne 1 ]; then
+                sed -n '1,240p' "$log_file"
+                exit 1
+              fi
+            )
+          done
+
       - name: Upload self-hosted egress reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -152,186 +215,6 @@ jobs:
           name: self-hosted-egress-reports
           path: ${{ runner.temp }}/self-hosted-egress-*.md
           if-no-files-found: error
-
-  linux-desktop-package:
-    name: Linux desktop packages
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
-        with:
-          version: 10.28.0
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-      - run: npm --prefix desktop ci --ignore-scripts
-      - name: Install RPM build tooling
-        run: sudo apt-get update && sudo apt-get install --yes rpm
-
-      - name: Build Linux AppImage, DEB, and RPM packages
-        env:
-          MINDDY_DESKTOP_FEED_URL: https://updates.invalid/desktop
-        run: npm --prefix desktop run dist:linux
-
-      - name: Verify desktop integration and update metadata
-        run: |
-          test -f desktop/release/latest-linux.yml
-          test -f desktop/release/latest-linux-arm64.yml
-          test -n "$(find desktop/release -maxdepth 1 -name '*.AppImage' -print -quit)"
-          deb_file="$(find desktop/release -maxdepth 1 -name '*.deb' -print -quit)"
-          test -n "$deb_file"
-          dpkg-deb --fsys-tarfile "$deb_file" | tar -xOf - ./usr/share/applications/minddy.desktop > "$RUNNER_TEMP/minddy.desktop"
-          grep -Fx 'MimeType=x-scheme-handler/minddy;' "$RUNNER_TEMP/minddy.desktop"
-          grep -Fx 'StartupWMClass=minddy' "$RUNNER_TEMP/minddy.desktop"
-
-  windows-desktop-package:
-    name: Windows desktop packages
-    runs-on: windows-2025
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
-        with:
-          version: 10.28.0
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-      - run: npm --prefix desktop ci --ignore-scripts
-
-      # Store signs production packages. CI uses a disposable local identity
-      # only so Add-AppxPackage can exercise install and uninstall before upload.
-      - name: Create disposable MSIX test identity
-        shell: pwsh
-        run: |
-          $password = ConvertTo-SecureString "minddy-ci-only" -AsPlainText -Force
-          $certificate = New-SelfSignedCertificate `
-            -Type Custom `
-            -Subject "CN=D5052B10-735B-4EF0-920F-642DFBDEB04F" `
-            -KeyUsage DigitalSignature `
-            -FriendlyName "minddy CI" `
-            -CertStoreLocation Cert:\CurrentUser\My `
-            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
-          Export-PfxCertificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.pfx" -Password $password
-          Export-Certificate -Cert $certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer"
-          # AppX deployment validates machine trust, even for a per-user install.
-          Import-Certificate -FilePath "$env:RUNNER_TEMP\minddy-ci.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-          "MINDDY_WINDOWS_STORE_IDENTITY_NAME=mangue-dev.minddy" >> $env:GITHUB_ENV
-          "MINDDY_WINDOWS_STORE_PUBLISHER=CN=D5052B10-735B-4EF0-920F-642DFBDEB04F" >> $env:GITHUB_ENV
-
-      - name: Build Store packages
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm --prefix desktop run dist:win
-
-      # Production submission packages remain unsigned for Partner Center.
-      # Sign the CI copies only, without timestamping, so Windows can install
-      # them for the clean-machine smoke test.
-      - name: Sign disposable CI packages
-        shell: pwsh
-        run: |
-          $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
-            Sort-Object FullName -Descending |
-            Select-Object -First 1
-          if (-not $signTool) { throw "signtool.exe was not found in the Windows SDK." }
-          Get-ChildItem desktop/release/windows-store/*.msix | ForEach-Object {
-            & $signTool.FullName sign /fd SHA256 /f "$env:RUNNER_TEMP\minddy-ci.pfx" /p "minddy-ci-only" $_.FullName | Out-Host
-            if ($LASTEXITCODE -ne 0) { throw "SignTool could not sign $($_.Name)." }
-          }
-
-      - name: Validate MSIX manifests, clean install, deep link, and uninstall
-        shell: pwsh
-        run: ./scripts/verify-windows-desktop.ps1 -InstallStore
-
-  editions:
-    name: Edition / ${{ matrix.edition }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - edition: self-hosted-minimal
-            smoke: true
-          - edition: self-hosted-byok
-            smoke: false
-          - edition: minddy-cloud
-            smoke: true
-          - edition: managed-forge
-            smoke: true
-          - edition: partial-billing
-            smoke: false
-          - edition: partial-ai
-            smoke: false
-          - edition: implicit-identifiers
-            smoke: false
-    env:
-      EDITION_FIXTURE: test/fixtures/editions/${{ matrix.edition }}.env
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
-        with:
-          version: 10.28.0
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      # Each scenario is a new process and only receives values
-      # versioned dummy. `source` also exports empty values: one
-      # absent variable and an empty opt-out therefore follow the production contract.
-      - name: Check the edition contract
-        shell: bash
-        run: |
-          set -a
-          source "$EDITION_FIXTURE"
-          set +a
-          pnpm exec vitest run lib/server/editions.integration.test.ts
-
-      #Both deployable editions must also compile and open a port
-      #HTTP with exactly the fixture tested. The partial variants are
-      #voluntarily unavailable and remain covered by the diagnosis.
-      - name: Build and ephemeral startup
-        if: matrix.smoke
-        shell: bash
-        run: |
-          set -a
-          source "$EDITION_FIXTURE"
-          set +a
-          pnpm run build
-          pnpm exec next start -p 3100 > "$RUNNER_TEMP/minddy-start.log" 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          for attempt in {1..30}; do
-            if curl --silent --show-error --output /dev/null http://127.0.0.1:3100/; then
-              exit 0
-            fi
-            sleep 1
-          done
-          sed -n '1,240p' "$RUNNER_TEMP/minddy-start.log"
-          exit 1
 
   audit:
     name: Dependencies audit

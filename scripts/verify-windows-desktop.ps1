@@ -1,9 +1,16 @@
 [CmdletBinding()]
-param([switch]$InstallStore)
+param(
+  [switch]$InstallStore,
+  [string]$StoreDirectory
+)
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$storeDirectory = Join-Path $root "desktop/release/windows-store"
+$resolvedStoreDirectory = if ([string]::IsNullOrWhiteSpace($StoreDirectory)) {
+  Join-Path $root "desktop/release/windows-store"
+} else {
+  $StoreDirectory
+}
 $identityName = $env:MINDDY_WINDOWS_STORE_IDENTITY_NAME
 $publisher = $env:MINDDY_WINDOWS_STORE_PUBLISHER
 $temporaryDirectory = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
@@ -12,7 +19,7 @@ if ([string]::IsNullOrWhiteSpace($identityName) -or [string]::IsNullOrWhiteSpace
   throw "MINDDY_WINDOWS_STORE_IDENTITY_NAME and MINDDY_WINDOWS_STORE_PUBLISHER are required."
 }
 
-$msixPackages = @(Get-ChildItem $storeDirectory -Filter "*.msix")
+$msixPackages = @(Get-ChildItem $resolvedStoreDirectory -Filter "*.msix")
 if ($msixPackages.Count -ne 2) {
   throw "Expected exactly two Store MSIX packages, found $($msixPackages.Count)."
 }

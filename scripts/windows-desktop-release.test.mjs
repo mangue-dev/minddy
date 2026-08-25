@@ -65,17 +65,20 @@ test("keeps generated release output out of subsequent packages", async () => {
   assert.match(buildScript, /await rm\(output, \{ recursive: true, force: true \}\);/);
 });
 
-test("Windows CI builds and validates the Store distribution", async () => {
-  const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
-  assert.match(workflow, /name: Windows desktop packages/);
-  assert.match(workflow, /npm --prefix desktop run dist:win/);
-  assert.match(workflow, /CSC_IDENTITY_AUTO_DISCOVERY: "false"/);
-  assert.match(workflow, /name: Sign disposable CI packages/);
-  assert.match(workflow, /Windows Kits\\10\\bin\\\*\\x64\\signtool\.exe/);
-  assert.match(workflow, /Cert:\\LocalMachine\\TrustedPeople/);
-  assert.doesNotMatch(workflow, /Cert:\\CurrentUser\\TrustedPeople/);
-  assert.doesNotMatch(workflow, /CSC_LINK=\$env:RUNNER_TEMP\\minddy-ci\.pfx/);
-  assert.match(workflow, /verify-windows-desktop\.ps1/);
+test("Windows packaging runs only in the public desktop release", async () => {
+  const ci = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const release = await readFile(
+    new URL("../.github/workflows/desktop-release.yml", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(ci, /runs-on: windows-/);
+  assert.match(release, /runs-on: windows-2025/);
+  assert.match(release, /npm --prefix desktop run dist:win:store/);
+  assert.match(release, /CSC_IDENTITY_AUTO_DISCOVERY: "false"/);
+  assert.match(release, /name: Sign and install disposable MSIX copies/);
+  assert.match(release, /Cert:\\LocalMachine\\TrustedPeople/);
+  assert.match(release, /-InstallStore -StoreDirectory \$testDirectory/);
+  assert.match(release, /verify-windows-desktop\.ps1/);
 });
 
 test("Windows packaging cannot enter an electron-updater channel", async () => {

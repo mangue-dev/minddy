@@ -98,9 +98,10 @@ the operator's sender configuration, and Vercel Analytics needs an explicit
 public flag. The executable catalog in `lib/capabilities.ts` classifies each
 capability and reports missing configuration.
 
-The CI edition matrix tests the minimal self-hosted, BYOK, Cloud, partial
-configuration, and implicit-identifier scenarios without real provider
-credentials. See `test/fixtures/editions/` and
+CI tests the minimal self-hosted, BYOK, Cloud, partial-configuration, and
+implicit-identifier scenarios without real provider credentials. The scenarios
+run sequentially on the existing checks runner so checkout, Node setup, and
+dependency installation are paid only once. See `test/fixtures/editions/` and
 `lib/server/editions.integration.test.ts`.
 
 ## Distribution boundary

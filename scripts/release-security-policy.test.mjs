@@ -133,6 +133,32 @@ test("the deployment and workflow require the current version and three attestat
   assert.ok(securityGate < push, "the review blocks before pushing the candidate");
 });
 
+test("daily CI reuses the checks runner for every edition", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  assert.doesNotMatch(workflow, /^  editions:/m);
+  assert.doesNotMatch(workflow, /matrix\.edition/);
+  assert.match(workflow, /name: Check all edition contracts/);
+  assert.match(workflow, /name: Build and start deployable editions/);
+  for (const edition of [
+    "self-hosted-minimal",
+    "self-hosted-byok",
+    "minddy-cloud",
+    "managed-forge",
+    "partial-billing",
+    "partial-ai",
+    "implicit-identifiers",
+  ]) {
+    assert.match(workflow, new RegExp(edition));
+  }
+});
+
+test("daily CI does not repeat an already verified production SHA", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  assert.match(workflow, /^    branches: \[main\]$/m);
+  assert.doesNotMatch(workflow, /branches: \[main, production\]/);
+  assert.match(workflow, /^      - desktop\/released\.json$/m);
+});
+
 test("the public release authenticates every protected fetch", () => {
   const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
   const authenticatedRemote =

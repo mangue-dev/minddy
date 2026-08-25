@@ -203,7 +203,9 @@ so the `cmd`, pnpm, Supabase, and Next.js child processes are closed together.
    `MINDDY_WINDOWS_STORE_PUBLISHER` during packaging.
 3. Run **Public desktop release** for an already published core version. The
    Windows job creates one x64 and one ARM64 MSIX, unpacks both with the Windows
-   SDK, and verifies identity, publisher, `minddy://`, and `runFullTrust`.
+   SDK, and verifies identity, publisher, `minddy://`, and `runFullTrust`. It
+   signs disposable copies with a temporary certificate to test installation,
+   protocol activation, and uninstall; the submission packages remain unsigned.
 4. Download the attested `.msix` assets from the GitHub Release and add both to
    the same Partner Center submission. These artifacts are intentionally
    unsigned: Partner Center applies the production signature and distributes

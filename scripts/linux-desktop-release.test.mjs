@@ -91,11 +91,16 @@ test("accepts a configured primary key when GPG signs through its subkey", () =>
   assert.equal(signatureStatusMatchesFingerprint(status, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), false);
 });
 
-test("Linux packaging CI builds both configured architectures", async () => {
-  const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
-  assert.match(workflow, /run: npm --prefix desktop run dist:linux\s*$/m);
-  assert.doesNotMatch(workflow, /dist:linux\s+--\s+--x64/);
-  assert.match(workflow, /test -f desktop\/release\/latest-linux-arm64\.yml/);
+test("Linux packaging runs only in the public desktop release", async () => {
+  const ci = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const release = await readFile(
+    new URL("../.github/workflows/desktop-release.yml", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(ci, /run: npm --prefix desktop run dist:linux\s*$/m);
+  assert.match(release, /run: npm --prefix desktop run dist:linux\s*$/m);
+  assert.doesNotMatch(release, /dist:linux\s+--\s+--x64/);
+  assert.match(release, /test -f desktop\/release\/latest-linux-arm64\.yml/);
 });
 
 test("native Linux packages declare Electron's direct ALSA runtime dependency", async () => {

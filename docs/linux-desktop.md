@@ -139,6 +139,8 @@ to their original GitHub Releases. If a key is compromised, publish its
 revocation certificate and fingerprint before trusting a replacement; do not
 use the compromised key for a transition signature.
 
-CI also runs the packaging and pure release-helper tests before a public
-release. The key is not a commercial code-signing certificate: GPG ownership
-and the published fingerprint are the trust anchor.
+Daily CI runs the pure release-helper tests without rebuilding native packages.
+The protected public desktop release workflow performs the Linux package build
+and integration checks before publication. The key is not a commercial
+code-signing certificate: GPG ownership and the published fingerprint are the
+trust anchor.

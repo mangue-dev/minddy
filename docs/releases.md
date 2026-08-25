@@ -238,13 +238,20 @@ attaches `.dmg`, `.zip`, blockmaps and `latest-mac.yml`. In parallel, it builds
 Linux AppImage, DEB, and RPM packages on Ubuntu for `x64` and `arm64`, signs
 every Linux package and each architecture-specific update manifest with GPG,
 verifies each signature, and attaches the public key, checksums, signatures, and
-attestations. A third job builds Windows x64 and ARM64 Store MSIX packages and
-validates their manifests. Microsoft Store is the exclusive Windows signing,
-distribution, and update channel. The workflow records the desktop fingerprint
-only after all three jobs succeed. See
+attestations. A third job builds Windows x64 and ARM64 Store MSIX packages,
+validates their manifests, and exercises installation with disposable signed
+copies while leaving the Store submissions unsigned. Microsoft Store is the
+exclusive Windows signing, distribution, and update channel. The workflow
+records the desktop fingerprint only after all three jobs succeed. See
 [linux-desktop.md](linux-desktop.md) for the Linux verification contract and
 [desktop-release.md](desktop-release.md#windows-microsoft-store) for the Windows
 release contract.
+
+Native desktop packages are built only by this publication workflow. Daily CI
+still bundles the Electron sources and tests the release helpers, but it does
+not spend Windows or Linux runner minutes producing packages that will be
+discarded. The generated `desktop/released.json` record does not start another
+daily CI run after the protected desktop workflow completes.
 
 The following secrets belong to the GitHub environment
 `public-release`, not to an account or a personal keychain:
