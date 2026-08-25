@@ -1,4 +1,8 @@
-import type { IssueStatus, IssuePriority, IssueEffort } from "./issue-constants";
+import type {
+  IssueStatus,
+  IssuePriority,
+  IssueEffort,
+} from "./issue-constants";
 import type { ObjectiveStatus } from "./objective-constants";
 import type { CycleIntensity } from "./cycle-prefs";
 import type { RepoProviderId } from "./repo-providers";
@@ -106,18 +110,16 @@ export interface PageResourceInput {
 
 /** Any of the three forms of a resource, as the registration routes accept it. */
 export type ResourceInput =
-  | FileResourceInput
-  | LinkResourceInput
-  | PageResourceInput;
+  FileResourceInput | LinkResourceInput | PageResourceInput;
 
 export function isLinkResource(
-  input: ResourceInput
+  input: ResourceInput,
 ): input is LinkResourceInput {
   return input.kind === "link";
 }
 
 export function isPageResource(
-  input: ResourceInput
+  input: ResourceInput,
 ): input is PageResourceInput {
   return input.kind === "page";
 }
@@ -298,15 +300,30 @@ export interface StatsTotals {
   completed: number;
   projects: number;
   /** Tasks checked in the notebook, cumulative: the notebook being a free note
- * (we check it then we delete), this total comes from the ledger, not the note. */
+   * (we check it then we delete), this total comes from the ledger, not the note. */
   tasksCompleted: number;
 }
 
 export interface StatProjectBucket {
-  name: string | null;
+  id: string;
+  name: string;
   color: string | null;
-  deleted: boolean;
-  created: number;
+  iconUrl: string | null;
+  orbSeed: string | null;
+  completed: number;
+}
+
+export interface StatCategoryBucket {
+  name: string;
+  color: string;
+  completed: number;
+}
+
+export interface StatObjectiveBucket {
+  id: string;
+  projectId: string;
+  name: string;
+  color: string | null;
   completed: number;
 }
 
@@ -356,8 +373,8 @@ export interface StatsWeek {
 export interface StatsCycleEffort {
   effort: "xs" | "s" | "m" | "l" | "xl";
   /** Median of the “cycle time” (first in_progress → done), in seconds: one
- * ticket left open three weeks shifts it by one rank, not three
- * weeks — which the average cannot do on a long tail. */
+   * ticket left open three weeks shifts it by one rank, not three
+   * weeks — which the average cannot do on a long tail. */
   medianSeconds: number;
   /** Number of tickets completed in this median. */
   sample: number;
@@ -366,7 +383,7 @@ export interface StatsCycleEffort {
 /** Statistics related to cycles (MIN-58), all scoped to the user. */
 export interface StatsCycles {
   /** Average completion↔deadline gap, in days; negative = early, positive =
- * late. null if there are no completed tickets with a deadline. */
+   * late. null if there are no completed tickets with a deadline. */
   avgCompletionOffsetDays: number | null;
   /** Number of tickets in the average rate. */
   completionOffsetSample: number;
@@ -375,13 +392,17 @@ export interface StatsCycles {
   /** Number of started cycles taken into account. */
   cycleCount: number;
   /** Median completion time per effort (xs→xl), efforts without sample
- * omitted. */
+   * omitted. */
   byEffort: StatsCycleEffort[];
 }
 
 export interface UserStats {
   totals: StatsTotals;
+  /** Live, non-deleted issues represented by the named breakdowns below. */
+  breakdownTotal: number;
   perProject: StatProjectBucket[];
+  perCategory: StatCategoryBucket[];
+  perObjective: StatObjectiveBucket[];
   heatmap: StatsHeatmap;
   workload: StatsWorkload;
   week: StatsWeek;
@@ -663,32 +684,32 @@ export interface TriageCountsResponse {
 /** Response from GET /api/me/summary — the dashboard payload. */
 export interface HomeSummaryResponse {
   /**
- * Aggregated counter, calculated in SQL: no lines cross the network. All
- * statuses combined — onboarding asks “have you already created a ticket?” »,
- * not “do you have one open?” .
- */
+   * Aggregated counter, calculated in SQL: no lines cross the network. All
+   * statuses combined — onboarding asks “have you already created a ticket?” »,
+   * not “do you have one open?” .
+   */
   counts: { total: number };
   cycles: BoardCycles;
   /** Tickets in the current cycle (empty when there is no active cycle). */
   cycleIssues: HomeSummaryIssue[];
   /**
- * Open tickets whose deadline is approaching (MIN-96), already sorted from most urgent
- * to least urgent. The window depends on the effort — lib/due-soon.ts — and the
- * sort is done here because "days remaining" is counted in the user's timezone, which only the server knows (`tz` parameter).
- */
+   * Open tickets whose deadline is approaching (MIN-96), already sorted from most urgent
+   * to least urgent. The window depends on the effort — lib/due-soon.ts — and the
+   * sort is done here because "days remaining" is counted in the user's timezone, which only the server knows (`tz` parameter).
+   */
   dueSoon: HomeSummaryIssue[];
   /**
- * “To be sorted” file (MIN-104), first half: tickets in triage status,
- * all projects combined, the oldest first. Truncated — `triageTotal`
- * gives the actual count, hence the “+N others” in the section.
- */
+   * “To be sorted” file (MIN-104), first half: tickets in triage status,
+   * all projects combined, the oldest first. Truncated — `triageTotal`
+   * gives the actual count, hence the “+N others” in the section.
+   */
   triage: HomeSummaryIssue[];
   triageTotal: number;
   /**
- * “To be sorted” queue, second half: returns that the team has not yet decided (`status = 'open'`), oldest first. Two lists rather
- * than a single scrum: the section reserves a floor of lines for returns,
- * otherwise a late sorting — always older — would bury them all.
- */
+   * “To be sorted” queue, second half: returns that the team has not yet decided (`status = 'open'`), oldest first. Two lists rather
+   * than a single scrum: the section reserves a floor of lines for returns,
+   * otherwise a late sorting — always older — would bury them all.
+   */
   newFeedback: HomeSummaryFeedback[];
   newFeedbackTotal: number;
   /** Relations touching a cycle ticket — the recommendation order accounts for blockers. */
@@ -805,7 +826,7 @@ export interface SearchIndexResponse {
   objectives: SearchIndexObjective[];
   pages: SearchIndexPage[];
   /** Members by project id — the ⌘; “assigned” picker needs the members of the
- *ticket's* project, which may not be the project the user is looking at. */
+   *ticket's* project, which may not be the project the user is looking at. */
   members: Record<string, Member[]>;
   /** Categories by project id — “copy prompt” lists category names. */
   categories: Record<string, Category[]>;
@@ -1044,9 +1065,7 @@ export interface CreateIssueRelationInput {
 }
 
 export type IntegrationWebhookEvent =
-  | "issue.created"
-  | "issue.status_changed"
-  | "issue.updated";
+  "issue.created" | "issue.status_changed" | "issue.updated";
 export type IntegrationWebhookScope = "integration" | "all";
 /** Dedicated use of an mdy_ key: creation of issues or submission of feedback. */
 export type IntegrationKind = "issues" | "feedback";
@@ -1088,15 +1107,15 @@ export interface CreateIssueInput {
 . */
   recurrence?: RecurrenceCadence | null;
   /**
- * Smart-fill (MIN-260): the server reads the title and description and fills
- * itself priority, effort, categories and objective BEFORE inserting the line
- * — what is placed by hand always wins. Sent by the sole modal of
- * creation, when the account toggle is armed and the author has not cut it for this ticket.
- *
- * It also changes the way the card arrives on the screen: no card
- * optimistic (it would be empty during filling), a toast instead.
- * See `createIssue` in [use-issues-query](use-issues-query.ts).
- */
+   * Smart-fill (MIN-260): the server reads the title and description and fills
+   * itself priority, effort, categories and objective BEFORE inserting the line
+   * — what is placed by hand always wins. Sent by the sole modal of
+   * creation, when the account toggle is armed and the author has not cut it for this ticket.
+   *
+   * It also changes the way the card arrives on the screen: no card
+   * optimistic (it would be empty during filling), a toast instead.
+   * See `createIssue` in [use-issues-query](use-issues-query.ts).
+   */
   smart_fill?: boolean;
   category_ids?: string[];
   /** Cross-project creation carries category NAMES, not IDs (a category ID is
@@ -1286,11 +1305,11 @@ export interface GitIdentity {
   account_avatar_url: string | null;
   created_at: string;
   /**
- * Where does this account come from. `identity` = its own line, which disconnects here
- * (GitHub). `connection` = the OAuth connection of the account, which IS already
- * identity (GitLab): disconnecting it would unlink the project repositories, so
- * this is done in “Connected git accounts”, not here.
- */
+   * Where does this account come from. `identity` = its own line, which disconnects here
+   * (GitHub). `connection` = the OAuth connection of the account, which IS already
+   * identity (GitLab): disconnecting it would unlink the project repositories, so
+   * this is done in “Connected git accounts”, not here.
+   */
   source: "identity" | "connection";
 }
 
@@ -1390,9 +1409,9 @@ export interface AdminUserRow {
   lastActivityAt: string | null;
   emailConfirmed: boolean;
   /**
- * INTERNAL account (team, demo, bot): it remains listed and administrable here,
- * but does not count in any overview statistics.
- */
+   * INTERNAL account (team, demo, bot): it remains listed and administrable here,
+   * but does not count in any overview statistics.
+   */
   internal: boolean;
   /** Projects owned + projects joined. */
   projects: number;
@@ -1432,8 +1451,8 @@ export interface AdminUserRow {
     calls: number;
     blocked: boolean;
     /** The LAST admin reset, if there is one: it sets the
- * start of the counted window. The full period register reads
- * `GET /api/admin/agent-quota?userId=`. */
+     * start of the counted window. The full period register reads
+     * `GET /api/admin/agent-quota?userId=`. */
     resetAt: string | null;
   };
 }

@@ -1,18 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { getUserStats } from "@/lib/server/stats";
-import { canonicalSql, readBaseline } from "@/test/sql-migrations";
+import {
+  canonicalSql,
+  readBaseline,
+  readMigration,
+} from "@/test/sql-migrations";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * DURATIONS PER EFFORT ARE MEDIANS, ON BOTH SIDES OF THE RPC.
- *
- * The metric lives in two pieces — the SQL function `get_cycle_stats` that calculates it, and the mapping that reads it here — and each is just on its own: a
- * average on the base side remains a perfectly valid average, and a reader of
- * `median_seconds` remains a perfectly valid reader. The fault would only exist
- * BETWEEN the two, and it would not be seen: plausible bars, a
- * labeled “median”, and averages behind it. Hence the two halves tested
- * here, including SQL.
- */
+/** Durations by effort must be medians on both sides of the RPC contract. */
 
 /** Raw output of the RPC cycles, with only the keys that the mapping reads. */
 type RawEffort = Record<string, unknown>;
@@ -39,13 +34,58 @@ function fakeSupabase(byEffort: RawEffort[]) {
     rpc: async (name: string) =>
       name === "get_cycle_stats"
         ? { data: cycleStats, error: null }
-        : { data: { totals: {}, per_project: [], days: [] }, error: null },
+        : {
+            data: {
+              totals: {},
+              breakdown_total: 3,
+              per_project: [
+                {
+                  id: "project-1",
+                  name: "minddy",
+                  color: "#8b5cf6",
+                  icon_url: null,
+                  orb_seed: "orb-1",
+                  completed: 3,
+                },
+              ],
+              per_category: [
+                {
+                  id: "category-1",
+                  project_id: "project-1",
+                  name: "Design",
+                  color: "#f59e0b",
+                  completed: 2,
+                },
+                {
+                  id: "category-2",
+                  project_id: "project-2",
+                  name: "Design",
+                  color: "#f59e0b",
+                  completed: 1,
+                },
+              ],
+              per_objective: [
+                {
+                  id: "objective-1",
+                  project_id: "project-1",
+                  name: "Launch",
+                  color: "#ec4899",
+                  completed: 3,
+                },
+              ],
+              days: [],
+            },
+            error: null,
+          },
     from: () => workload,
   } as unknown as SupabaseClient;
 }
 
 const call = (byEffort: RawEffort[]) =>
-  getUserStats(fakeSupabase(byEffort), { tz: "Europe/Paris", userId: "user-1" });
+  getUserStats(fakeSupabase(byEffort), {
+    tz: "Europe/Paris",
+    userId: "user-1",
+  });
 
 describe("getUserStats — durations by effort", () => {
   it("reads RPC medians in xs→xl order", async () => {
@@ -75,12 +115,14 @@ describe("getUserStats — durations by effort", () => {
     // Function before migration: it only returns `avg_seconds`. Display
     // this value under the label “median” would be a false and silent figure;
     // the section is erased while the base catches up with the code.
-    const stats = await call([{ effort: "m", avg_seconds: 999_999, sample: 9 }]);
+    const stats = await call([
+      { effort: "m", avg_seconds: 999_999, sample: 9 },
+    ]);
 
     expect(stats.cycles.byEffort).toEqual([]);
   });
 
-  it("garde les moyennes des deux autres mesures, qui n'ont pas cette traîne", async () => {
+  it("keeps averages for the other two measures, which do not have that long tail", async () => {
     const stats = await call([]);
 
     expect(stats.cycles.avgCompletionOffsetDays).toBe(-1.5);
@@ -88,7 +130,33 @@ describe("getUserStats — durations by effort", () => {
   });
 });
 
-describe("get_cycle_stats (SQL) — l'autre moitié du contrat", () => {
+describe("getUserStats — work landscape", () => {
+  it("maps project artwork, categories, objectives, and their shared total", async () => {
+    const stats = await call([]);
+
+    expect(stats.breakdownTotal).toBe(3);
+    expect(stats.perProject).toEqual([
+      {
+        id: "project-1",
+        name: "minddy",
+        color: "#8b5cf6",
+        iconUrl: null,
+        orbSeed: "orb-1",
+        completed: 3,
+      },
+    ]);
+    expect(stats.perCategory).toEqual([
+      { name: "Design", color: "#f59e0b", completed: 3 },
+    ]);
+    expect(stats.perObjective[0]).toMatchObject({
+      id: "objective-1",
+      projectId: "project-1",
+      completed: 3,
+    });
+  });
+});
+
+describe("get_cycle_stats (SQL) — the other half of the contract", () => {
   const sql = canonicalSql(readBaseline());
 
   it("aggregates durations with percentile_cont(0.5), not avg", () => {
@@ -99,5 +167,37 @@ describe("get_cycle_stats (SQL) — l'autre moitié du contrat", () => {
   it("exposes the median_seconds key read by the mapping", () => {
     expect(sql).toContain("'median_seconds'");
     expect(sql).not.toContain("'avg_seconds'");
+  });
+});
+
+describe("get_user_stats (SQL) — current named breakdowns", () => {
+  const sql = canonicalSql(
+    readMigration("20270106250000_stats_story_breakdowns.sql"),
+  );
+
+  it("filters current breakdowns through live projects and live issues", () => {
+    expect(sql).toContain("where deleted_at is null");
+    expect(sql).toContain("and i.deleted_at is null");
+    expect(sql).toContain("join active_projects p on p.id = i.project_id");
+  });
+
+  it("also removes deleted projects from live cycle and duration metrics", () => {
+    expect(sql).toContain("create or replace function public.get_cycle_stats");
+    expect(sql).toContain("count(p.id) as n");
+    expect(sql.match(/p\.deleted_at is null/g)?.length).toBeGreaterThanOrEqual(
+      3,
+    );
+  });
+
+  it("returns project, category, and objective buckets on one total", () => {
+    expect(sql).toContain("'breakdown_total'");
+    expect(sql).toContain("'per_project'");
+    expect(sql).toContain("'per_category'");
+    expect(sql).toContain("'per_objective'");
+  });
+
+  it("deduplicates categories by their visible name and color", () => {
+    expect(sql).toContain("group by c.name, c.color");
+    expect(sql).not.toContain("group by c.id, c.project_id, c.name, c.color");
   });
 });

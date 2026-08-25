@@ -1,4 +1,4 @@
-import type { HeatmapDay, StatProjectBucket } from "./types";
+import type { HeatmapDay } from "./types";
 
 /** Number → localized string (FR comma, EN period), 1 decimal place by default. */
 export function fmtNum(value: number, locale: string, digits = 1): string {
@@ -64,16 +64,10 @@ export function heatmapTotals(days: HeatmapDay[]): {
   return { total, issues, tasks, activeDays };
 }
 
-/** Share of a project in the total completed tickets, in whole % (0 if the
- * total is zero). Serves the label, not the bar width — this compares to the larger project to remain readable when everything is small. */
-export function projectShare(bucket: StatProjectBucket, total: number): number {
+/** Whole-number share of completed issues, on a true 0–100% scale. */
+export function completionShare(completed: number, total: number): number {
   if (total <= 0) return 0;
-  return Math.round((bucket.completed / total) * 100);
-}
-
-/** Total tickets completed for all projects combined (share basis). */
-export function projectsTotal(buckets: StatProjectBucket[]): number {
-  return buckets.reduce((sum, b) => sum + b.completed, 0);
+  return Math.min(100, Math.round((completed / total) * 100));
 }
 
 /**

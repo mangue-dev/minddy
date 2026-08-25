@@ -20,11 +20,25 @@ interface RawStats {
     projects: number;
     tasks_completed: number;
   };
+  breakdown_total: number;
   per_project: Array<{
-    name: string | null;
+    id: string;
+    name: string;
     color: string | null;
-    deleted: boolean;
-    created: number;
+    icon_url: string | null;
+    orb_seed: string | null;
+    completed: number;
+  }>;
+  per_category: Array<{
+    name: string;
+    color: string;
+    completed: number;
+  }>;
+  per_objective: Array<{
+    id: string;
+    project_id: string;
+    name: string;
+    color: string | null;
     completed: number;
   }>;
   days: Array<{ date: string; count: number; issues: number; tasks: number }>;
@@ -67,10 +81,11 @@ function toCycles(raw: RawCycleStats | null): StatsCycles {
     .flatMap<StatsCycleEffort>((r) => {
       const medianSeconds = num(r.median_seconds);
       const sample = num(r.sample) ?? 0;
-      if (medianSeconds === null || sample <= 0 || !EFFORT_ORDER.has(r.effort)) return [];
+      if (medianSeconds === null || sample <= 0 || !EFFORT_ORDER.has(r.effort))
+        return [];
       return [{ effort: r.effort, medianSeconds, sample }];
     })
-    .sort((a, b) => (EFFORT_ORDER.get(a.effort)! - EFFORT_ORDER.get(b.effort)!));
+    .sort((a, b) => EFFORT_ORDER.get(a.effort)! - EFFORT_ORDER.get(b.effort)!);
   return {
     avgCompletionOffsetDays: num(raw?.avg_completion_offset_days),
     completionOffsetSample: num(raw?.completion_offset_sample) ?? 0,
@@ -96,27 +111,47 @@ function ymd(date: Date): string {
  * We calculate “today-in-tz” via Intl, then we manipulate bare dates in
  * UTC (no time zone drift since we only think in calendar days).
  */
-function heatmapWindow(tz: string): { start: string; end: string; since: string } {
+function heatmapWindow(tz: string): {
+  start: string;
+  end: string;
+  since: string;
+} {
   let todayStr: string;
   try {
-    todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+    todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(
+      new Date(),
+    );
   } catch {
-    todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date());
+    todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(
+      new Date(),
+    );
   }
   const today = new Date(`${todayStr}T00:00:00Z`);
   // 52 weeks back, then rewind to Sunday of this week.
   const anchor = new Date(today.getTime() - 364 * DAY_MS);
   const startSunday = new Date(anchor.getTime() - anchor.getUTCDay() * DAY_MS);
   const since = new Date(startSunday.getTime() - DAY_MS);
-  return { start: ymd(startSunday), end: ymd(today), since: since.toISOString() };
+  return {
+    start: ymd(startSunday),
+    end: ymd(today),
+    since: since.toISOString(),
+  };
 }
 
 /** Densifies the sparse RPC series to one point per day from `start` to `end`. */
-function densify(start: string, end: string, sparse: RawStats["days"]): HeatmapDay[] {
+function densify(
+  start: string,
+  end: string,
+  sparse: RawStats["days"],
+): HeatmapDay[] {
   const byDate = new Map(sparse.map((d) => [d.date, d]));
   const days: HeatmapDay[] = [];
   const endDate = new Date(`${end}T00:00:00Z`);
-  for (let t = new Date(`${start}T00:00:00Z`).getTime(); t <= endDate.getTime(); t += DAY_MS) {
+  for (
+    let t = new Date(`${start}T00:00:00Z`).getTime();
+    t <= endDate.getTime();
+    t += DAY_MS
+  ) {
     const date = ymd(new Date(t));
     const hit = byDate.get(date);
     days.push({
@@ -154,7 +189,7 @@ function weekTotals(days: HeatmapDay[]): StatsWeek {
  */
 export async function getUserStats(
   supabase: SupabaseClient,
-  { tz, userId }: { tz: string; userId: string }
+  { tz, userId }: { tz: string; userId: string },
 ): Promise<UserStats> {
   const { start, end, since } = heatmapWindow(tz);
 
@@ -185,7 +220,7 @@ export async function getUserStats(
     console.error("[api/stats] cycle stats failed:", cycleRes.error.message);
   }
   const cycles = toCycles(
-    cycleRes.error ? null : ((cycleRes.data ?? null) as RawCycleStats | null)
+    cycleRes.error ? null : ((cycleRes.data ?? null) as RawCycleStats | null),
   );
 
   const days = densify(start, end, raw.days ?? []);
@@ -204,13 +239,65 @@ export async function getUserStats(
       projects: raw.totals?.projects ?? 0,
       tasksCompleted: raw.totals?.tasks_completed ?? 0,
     },
-    perProject: (raw.per_project ?? []).map((p) => ({
-      name: p.name,
-      color: p.color,
-      deleted: p.deleted,
-      created: p.created,
-      completed: p.completed,
-    })),
+    breakdownTotal: num(raw.breakdown_total) ?? 0,
+    // During a rolling deploy, the previous RPC may still return its old
+    // project shape. Drop incomplete rows instead of rendering false links.
+    perProject: (raw.per_project ?? []).flatMap((project) =>
+      typeof project.id === "string" && typeof project.name === "string"
+        ? [
+            {
+              id: project.id,
+              name: project.name,
+              color: project.color,
+              iconUrl: project.icon_url,
+              orbSeed: project.orb_seed,
+              completed: num(project.completed) ?? 0,
+            },
+          ]
+        : [],
+    ),
+    // Keep the application-side merge during rolling deploys, when the old
+    // RPC can still return one row per project for the same category identity.
+    perCategory: Array.from(
+      (raw.per_category ?? []).reduce((categories, category) => {
+        if (
+          typeof category.name !== "string" ||
+          typeof category.color !== "string"
+        ) {
+          return categories;
+        }
+        const key = JSON.stringify([category.name, category.color]);
+        const previous = categories.get(key);
+        categories.set(key, {
+          name: category.name,
+          color: category.color,
+          completed:
+            (previous?.completed ?? 0) + (num(category.completed) ?? 0),
+        });
+        return categories;
+      }, new Map<string, { name: string; color: string; completed: number }>()),
+    )
+      .map(([, category]) => category)
+      .sort(
+        (left, right) =>
+          right.completed - left.completed ||
+          left.name.localeCompare(right.name),
+      ),
+    perObjective: (raw.per_objective ?? []).flatMap((objective) =>
+      typeof objective.id === "string" &&
+      typeof objective.project_id === "string" &&
+      typeof objective.name === "string"
+        ? [
+            {
+              id: objective.id,
+              projectId: objective.project_id,
+              name: objective.name,
+              color: objective.color,
+              completed: num(objective.completed) ?? 0,
+            },
+          ]
+        : [],
+    ),
     heatmap: { tz, start, end, max, days },
     workload,
     week: weekTotals(days),

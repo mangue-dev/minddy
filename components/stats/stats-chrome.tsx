@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "mangue-ui";
-import { Info, ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -144,23 +144,11 @@ export function Metric({
         {value}
       </div>
       {hint ? (
-        <div className="text-xs leading-relaxed text-muted-foreground">{hint}</div>
+        <div className="text-xs leading-relaxed text-muted-foreground">
+          {hint}
+        </div>
       ) : null}
     </div>
-  );
-}
-
-/**
- * Difference vs. previous period. Deliberately neutral in color: a
- * quiet week is not an error — the arrow carries the meaning, not an alert.
- */
-export function Delta({ value, label }: { value: number; label: string }) {
-  const Icon = value === 0 ? Minus : value > 0 ? ArrowUpRight : ArrowDownRight;
-  return (
-    <span className="inline-flex items-center gap-1">
-      <Icon className="size-3.5 shrink-0" />
-      {label}
-    </span>
   );
 }
 

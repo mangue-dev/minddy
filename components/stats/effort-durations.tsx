@@ -1,50 +1,137 @@
 "use client";
 
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "mangue-ui";
+import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { EFFORT_MAP } from "@/lib/issue-constants";
 import { durationParts, fmtNum } from "@/lib/stats-derive";
 import type { StatsCycleEffort } from "@/lib/types";
+import { StatsSectionHeader } from "./stats-chrome";
 
-/**
- * Median completion time per effort (MIN-85).
- *
- * Formerly five juxtaposed boxes, each with its own scale
- * implied: we couldn't see that an L takes six times more than an S. Here,
- * a bar per effort on a scale common (the longest = 100%), so the
- * comparison is immediate — that's the whole point of the measurement.
- *
- * These durations are medians, not averages: on a sample of ten
- * tickets, a single one started before a vacation is enough to make the average say
- * that an M takes three weeks. A bar that no longer describes the current case no longer compares to anything.
- */
-export function EffortDurations({ byEffort }: { byEffort: StatsCycleEffort[] }) {
+type EffortView = "duration" | "quantity";
+
+/** Compare median cycle time or its underlying ticket count on one shared scale. */
+export function EffortDurations({
+  byEffort,
+}: {
+  byEffort: StatsCycleEffort[];
+}) {
+  const t = useTranslations("Stats");
+  const [view, setView] = useState<EffortView>("duration");
+
+  return (
+    <div>
+      <StatsSectionHeader
+        title={t("effortBreakdown")}
+        info={
+          view === "duration"
+            ? t("effortDurationInfo")
+            : t("effortQuantityInfo")
+        }
+      />
+      <Tabs
+        value={view}
+        onValueChange={(value) => setView(value as EffortView)}
+        className="gap-0"
+      >
+        <TabsList
+          variant="line"
+          className={TAB_LIST_DENSE}
+          aria-label={t("effortBreakdown")}
+        >
+          <TabsTrigger value="duration" className={TAB_TRIGGER_DENSE}>
+            {t("effortDurationTab")}
+          </TabsTrigger>
+          <TabsTrigger value="quantity" className={TAB_TRIGGER_DENSE}>
+            {t("effortQuantityTab")}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="duration" className="mt-4">
+          <DurationRows byEffort={byEffort} />
+        </TabsContent>
+        <TabsContent value="quantity" className="mt-4">
+          <QuantityRows byEffort={byEffort} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function DurationRows({ byEffort }: { byEffort: StatsCycleEffort[] }) {
   const t = useTranslations("Stats");
   const locale = useLocale();
-
-  const max = byEffort.reduce((m, e) => Math.max(m, e.medianSeconds), 0);
+  const max = byEffort.reduce((value, effort) => {
+    return Math.max(value, effort.medianSeconds);
+  }, 0);
 
   return (
     <div className="flex flex-col gap-3">
-      {byEffort.map((e) => {
-        const parts = durationParts(e.medianSeconds);
-        const width = max > 0 ? (e.medianSeconds / max) * 100 : 0;
+      {byEffort.map((effort) => {
+        const parts = durationParts(effort.medianSeconds);
+        const duration = t(parts.key, { value: fmtNum(parts.value, locale) });
+        const width = max > 0 ? (effort.medianSeconds / max) * 100 : 0;
+        const label = EFFORT_MAP[effort.effort].label;
         return (
-          <div key={e.effort} className="flex items-center gap-3">
-            <span className="w-7 shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-center text-xs font-semibold text-muted-foreground">
-              {EFFORT_MAP[e.effort].label}
+          <div key={effort.effort} className="flex items-center gap-3">
+            <span className="w-7 shrink-0 text-center text-xs font-semibold text-muted-foreground">
+              {label}
             </span>
-            <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-              {/* Neutral tint derived from text: These bars measure TIME, not completion — giving them the brand accent or the green "done" would make them say something else. */}
+            <div
+              className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+              role="img"
+              aria-label={t("effortDurationBarLabel", {
+                effort: label,
+                duration,
+              })}
+            >
               <div
                 className="h-full rounded-full bg-foreground/30 transition-all"
                 style={{ width: `${Math.max(width, 3)}%` }}
               />
             </div>
             <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">
-              {t(parts.key, { value: fmtNum(parts.value, locale) })}
+              {duration}
             </span>
-            <span className="w-8 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-              {t("effortSample", { count: e.sample })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuantityRows({ byEffort }: { byEffort: StatsCycleEffort[] }) {
+  const t = useTranslations("Stats");
+  const max = byEffort.reduce((value, effort) => {
+    return Math.max(value, effort.sample);
+  }, 0);
+
+  return (
+    <div className="flex flex-col gap-3">
+      {byEffort.map((effort) => {
+        const width = max > 0 ? (effort.sample / max) * 100 : 0;
+        const label = EFFORT_MAP[effort.effort].label;
+        return (
+          <div key={effort.effort} className="flex items-center gap-3">
+            <span className="w-7 shrink-0 text-center text-xs font-semibold text-muted-foreground">
+              {label}
+            </span>
+            <div
+              className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+              role="img"
+              aria-label={t("effortQuantityBarLabel", {
+                effort: label,
+                count: effort.sample,
+              })}
+            >
+              <div
+                className="h-full rounded-full bg-foreground/30 transition-all"
+                style={{ width: `${Math.max(width, 3)}%` }}
+              />
+            </div>
+            <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">
+              {effort.sample}
             </span>
           </div>
         );

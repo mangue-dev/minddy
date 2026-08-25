@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  completionShare,
   computeStreaks,
   dayInZone,
   durationParts,
   heatmapTotals,
-  projectShare,
-  projectsTotal,
 } from "./stats-derive";
-import type { HeatmapDay, StatProjectBucket } from "./types";
+import type { HeatmapDay } from "./types";
 
 /** Dense series from daily accounts — the date does not matter here,
  * only the position (the last element = today) carries meaning. */
@@ -18,15 +17,6 @@ const days = (counts: number[]): HeatmapDay[] =>
     issues: count,
     tasks: 0,
   }));
-
-const bucket = (over: Partial<StatProjectBucket>): StatProjectBucket => ({
-  name: "p",
-  color: null,
-  deleted: false,
-  created: 0,
-  completed: 0,
-  ...over,
-});
 
 describe("computeStreaks", () => {
   it("counts the run ending today", () => {
@@ -94,13 +84,17 @@ describe("heatmapTotals", () => {
   });
 });
 
-describe("projectShare", () => {
+describe("completionShare", () => {
   it("returns a whole percentage of the total", () => {
-    expect(projectShare(bucket({ completed: 25 }), 100)).toBe(25);
+    expect(completionShare(25, 100)).toBe(25);
   });
 
   it("returns 0 when nothing was completed anywhere", () => {
-    expect(projectShare(bucket({ completed: 0 }), 0)).toBe(0);
+    expect(completionShare(0, 0)).toBe(0);
+  });
+
+  it("caps inconsistent inputs at a full bar", () => {
+    expect(completionShare(12, 10)).toBe(100);
   });
 });
 
@@ -124,16 +118,5 @@ describe("dayInZone", () => {
 
   it("falls back to UTC on an unknown zone", () => {
     expect(dayInZone("2026-05-17T12:00:00Z", "Not/AZone")).toBe("2026-05-17");
-  });
-});
-
-describe("projectsTotal", () => {
-  it("sums completed across buckets, deleted projects included", () => {
-    expect(
-      projectsTotal([
-        bucket({ completed: 4 }),
-        bucket({ completed: 6, deleted: true }),
-      ]),
-    ).toBe(10);
   });
 });
