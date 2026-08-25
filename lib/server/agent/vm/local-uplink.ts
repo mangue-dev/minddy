@@ -137,12 +137,52 @@ export function scrubPaths(text: string, repoDir: string): string {
   return withoutRepo.replace(HOME_HEAD, HOME_MARK);
 }
 
+/**
+ * Whether a shell command can resolve text that is absent from its persisted
+ * summary. Local runs do not offer a shell tool, but this remains a final
+ * uplink boundary if a future adapter or malformed event reintroduces one.
+ */
+export function hasShellIndirection(command: string): boolean {
+  let quote: "single" | "double" | null = null;
+  let escaped = false;
+
+  for (let index = 0; index < command.length; index++) {
+    const char = command[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\" && quote !== "single") {
+      escaped = true;
+      continue;
+    }
+    if (char === "'" && quote !== "double") {
+      quote = quote === "single" ? null : "single";
+      continue;
+    }
+    if (char === '"' && quote !== "single") {
+      quote = quote === "double" ? null : "double";
+      continue;
+    }
+    if (quote === "single") continue;
+
+    const next = command[index + 1] ?? "";
+    if (char === "`" || ((char === "<" || char === ">") && next === "(")) return true;
+    if (char === "$" && /[({A-Za-z_0-9*?#@!$-]/.test(next)) return true;
+  }
+
+  return /(?:^|[\s;&|()])(?:eval|source|\.|command|env|bash|dash|ksh|sh|zsh)(?:$|[\s;&|()])/.test(
+    command,
+  );
+}
+
 /** The preview that replaces a held output. In English, like the others
  * messages that the harness writes in a `tool_result` (permission denials,
  * `assertNotGit`): it is read by the model as much as by a human. */
 export function withheldOutput(chars: number, paths: number): string {
   return (
-    `[minddy kept this output on this machine: it mentions ${paths} path(s) outside the ` +
+    `[minddy kept this output on this machine: it contains ${paths} sensitive path or ` +
+    `shell-indirection reference(s) outside the ` +
     `repository, and this turn runs on someone's own computer. ${chars} characters were ` +
     `not uploaded — you saw the output when the tool ran, it is only absent from the thread.]`
   );
@@ -169,7 +209,19 @@ export function filterLocalPayload(
   payload: Record<string, unknown>,
   repoDir: string,
 ): LocalPayloadFilter {
-  let foreignCount = 0;
+  const name = typeof payload.name === "string" ? payload.name : "";
+  const command =
+    typeof payload.command === "string"
+      ? payload.command
+      : payload.state &&
+          typeof payload.state === "object" &&
+          typeof (payload.state as Record<string, unknown>).command === "string"
+        ? String((payload.state as Record<string, unknown>).command)
+        : "";
+  const shellIndirection =
+    (name === "run_command" || name === "run_background") &&
+    (payload.shell_indirection === true || hasShellIndirection(command));
+  let foreignCount = shellIndirection ? 1 : 0;
   const walk = (value: unknown): unknown => {
     if (typeof value === "string") {
       foreignCount += foreignPaths(value, repoDir).length;

@@ -80,6 +80,12 @@ export interface RepoHost {
    * `resolveWithin` and `assertNotGit` compare.
    */
   readonly layout: HarnessLayout;
+  /**
+   * Whether a model-controlled child process is contained by a disposable
+   * sandbox. Trusted harness commands still use `exec` on both host kinds, but
+   * background jobs must never cross onto a user's workstation.
+   */
+  readonly processIsolation: "sandbox" | "host";
   /** `sh -c <command>`. `cwd` is `layout.repoDir` by default (the tools operate in the repository). */
   exec(command: string, opts?: ShellOptions): Promise<ShellResult>;
   /** UTF8 content, or null if the file does not exist. */
@@ -874,6 +880,11 @@ export async function startBackground(
   host: RepoHost,
   opts: { jobId: string; invocation: BackgroundInvocation; cwd?: string },
 ): Promise<{ pid: number; logPath: string }> {
+  if (host.processIsolation !== "sandbox") {
+    throw new Error(
+      "Background jobs are unavailable on a host-backed repository because model-controlled processes require sandbox isolation.",
+    );
+  }
   // Defense in depth at the host boundary: internal callers cannot bypass the
   // public tool's parser and smuggle a shell interpreter or forbidden Git argv.
   const verdict = checkBackgroundInvocation(opts.invocation, { local: false });

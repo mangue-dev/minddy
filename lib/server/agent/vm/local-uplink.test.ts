@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { toolArgSummary } from "../tool-summary";
+
 import {
   filterLocalPayload,
   foreignPaths,
+  hasShellIndirection,
   homeOf,
   scrubPaths,
   withheldOutput,
@@ -158,13 +161,49 @@ describe("filterLocalPayload", () => {
     );
     expect(payload).toEqual({ n: 3, ok: true, nothing: null, when: undefined });
   });
+
+  it("withholds shell expansions and indirection before they can conceal a host path", () => {
+    for (const command of [
+      'cat "$HOME/.ssh/id_rsa"',
+      "cat ${HOME}/.aws/credentials",
+      "cat $(printf /Users/clement/.netrc)",
+      "cat <(printenv)",
+      "eval 'cat $HOME/.config/token'",
+    ]) {
+      const filtered = filterLocalPayload({ name: "run_command", command }, REPO);
+      expect(filtered.foreign, command).toBe(true);
+    }
+  });
+
+  it("uses the full-command marker when the persisted command preview is truncated", () => {
+    const summary = toolArgSummary("run_command", {
+      command: `${"x".repeat(150)} && cat $HOME/.ssh/id_rsa`,
+    });
+    expect(summary.command).not.toContain("$HOME");
+    expect(summary.shell_indirection).toBe(true);
+    const filtered = filterLocalPayload(
+      {
+        name: "run_command",
+        ...summary,
+      },
+      REPO,
+    );
+    expect(filtered.foreign).toBe(true);
+  });
+});
+
+describe("hasShellIndirection", () => {
+  it("does not mistake escaped or single-quoted dollar signs for expansion", () => {
+    expect(hasShellIndirection(String.raw`printf \$HOME`)).toBe(false);
+    expect(hasShellIndirection("printf '$HOME'")).toBe(false);
+  });
 });
 
 describe("withheldOutput", () => {
   it("dit ce qui manque, et pourquoi — au modèle autant qu'à l'humain", () => {
     const text = withheldOutput(4312, 2);
     expect(text).toContain("4312");
-    expect(text).toContain("2 path(s)");
+    expect(text).toContain("2 sensitive path or shell-indirection reference(s)");
     // The model SAW the output when the tool turned: without this sentence, it
     // reread a gap and repeat the gesture.
     expect(text).toContain("you saw the output when the tool ran");

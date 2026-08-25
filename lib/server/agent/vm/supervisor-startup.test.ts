@@ -29,9 +29,9 @@ describe("amorçage opencode", () => {
     expect(served).toContain("paths.map(async (path)");
   });
 
-  it("lance les conventions avant l'initialisation du pont", () => {
+  it("starts repository convention discovery before bridge initialization", () => {
     const discovery = source.indexOf(
-      "const servedInstructionsPromise = servedInstructionsFile(host, deps.writeFile);",
+      "const servedInstructionsPromise = servedInstructionsFile(\n    host,\n    deps.writeFile,\n    instructionSource,\n  );",
     );
     const bridge = source.indexOf("const bridge = await (deps.startToolBridge ?? startToolBridge)({");
 

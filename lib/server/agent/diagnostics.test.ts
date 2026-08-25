@@ -341,6 +341,7 @@ describe("testRunnerBin", () => {
 function hostWith(pkg: string | null, binPresent = true): RepoHost {
   return {
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     exec: async () => ({ exitCode: binPresent ? 0 : 1, stdout: "", stderr: "" }),
     readFile: async () => pkg,
     writeFile: async () => {},

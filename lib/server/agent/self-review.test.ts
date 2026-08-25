@@ -162,6 +162,7 @@ function hunk(lines: string[], startLine = 1, file = "a.ts"): string {
 function hostReturning(stdout: string, exitCode = 0): RepoHost {
   return {
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     exec: async () => ({ exitCode, stdout, stderr: "" }),
     readFile: async () => null,
     writeFile: async () => {},
@@ -293,6 +294,7 @@ describe("overwriteSitesForTurn", () => {
   it("ne fait pas échouer un tour quand le grep tombe", async () => {
     const host: RepoHost = {
       layout: cloudLayout(),
+      processIsolation: "sandbox",
       exec: async () => {
         throw new Error("sandbox morte");
       },

@@ -62,6 +62,7 @@ import { cloudLayout } from "./harness-layout";
 function fakeHost(): RepoHost {
   return {
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     exec: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     readFile: async () => null,
     writeFile: async () => {},

@@ -6,7 +6,7 @@ import { reservePort } from "./free-port";
 import { localHost } from "./local-host";
 import { opencodeSupervisorDeps } from "./opencode-host";
 import { runOpencodeTurn } from "./supervisor";
-import { parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol";
+import { isLocalJob, parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol";
 
 /**
  * HARNESS ENTRANCE (MIN-224) — the point the caster starts at
@@ -118,7 +118,11 @@ async function main(): Promise<void> {
   let report: VmTurnReport;
   try {
     job = parseVmJob(raw);
-    report = await runOpencodeTurnHere(job, cp, localHost(job.layout));
+    report = await runOpencodeTurnHere(
+      job,
+      cp,
+      localHost(job.layout, isLocalJob(job) ? "host" : "sandbox"),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[agent-vm] turn crashed:", message);

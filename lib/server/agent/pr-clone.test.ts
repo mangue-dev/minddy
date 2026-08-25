@@ -23,6 +23,7 @@ function fakeHost(opts: { fails?: (cmd: string) => boolean } = {}) {
   const commands: string[] = [];
   const host: RepoHost = {
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     async exec(command) {
       commands.push(command);
       const bad = opts.fails?.(command) === true;

@@ -285,6 +285,7 @@ describe("run_background — static command boundary", () => {
     let executions = 0;
     const host: RepoHost = {
       layout: layoutForRoot("/run/background-boundary", "/opt/opencode"),
+      processIsolation: "sandbox",
       exec: async () => {
         executions++;
         return { exitCode: 0, stdout: "", stderr: "" };
@@ -299,6 +300,28 @@ describe("run_background — static command boundary", () => {
         invocation: { executable: "sh", args: ["-c", "git push origin HEAD"], env: {} },
       }),
     ).rejects.toThrow(/only literal, non-shell programs/i);
+    expect(executions).toBe(0);
+  });
+
+  it("refuses model-controlled background processes on a host-backed repository", async () => {
+    let executions = 0;
+    const host: RepoHost = {
+      layout: layoutForRoot("/Users/example/project", "/opt/opencode"),
+      processIsolation: "host",
+      exec: async () => {
+        executions++;
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+      readFile: async () => null,
+      writeFile: async () => {},
+      mkdir: async () => {},
+    };
+    await expect(
+      startBackground(host, {
+        jobId: "bg-host",
+        invocation: { executable: "npm", args: ["run", "dev"], env: {} },
+      }),
+    ).rejects.toThrow(/require sandbox isolation/i);
     expect(executions).toBe(0);
   });
 });

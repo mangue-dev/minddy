@@ -252,6 +252,7 @@ function fakeHost(replies: [RegExp, string][]): RepoHost & { commands: string[] 
   return {
     commands,
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     exec: async (command: string): Promise<ShellResult> => {
       commands.push(command);
       for (const [pattern, stdout] of replies) {
@@ -367,6 +368,7 @@ describe("readWorkingDiff", () => {
   it("rend une liste vide plutôt que de lever quand la sandbox tombe", async () => {
     const host: RepoHost = {
       layout: cloudLayout(),
+      processIsolation: "sandbox",
       exec: vi.fn().mockRejectedValue(new Error("sandbox unreachable")),
       readFile: async () => null,
       writeFile: async () => {},

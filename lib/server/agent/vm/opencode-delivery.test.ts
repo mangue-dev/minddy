@@ -56,6 +56,7 @@ const REPO_DIR = cloudLayout().repoDir;
 function fakeHost(): RepoHost {
   return {
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     exec: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     readFile: async () => null,
     writeFile: async () => {},

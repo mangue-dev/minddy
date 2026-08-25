@@ -670,18 +670,18 @@ export async function executeAgentRun(
       unattended: run.routine_id !== null,
     });
     /**
-     * The credential held by trusted sandbox infrastructure (MIN-421).
-     * `target` remains the function token for forge API operations. This second
-     * token is repository-scoped and read-only for reviews, but it never enters
-     * the VM: Vercel's firewall or the self-hosted runner injects it only into
-     * Git smart-HTTP requests for the linked repository.
+     * The credential held by the execution transport (MIN-421, MIN-458).
+     * `target` remains the full function token for forge API operations. This
+     * second token is repository-scoped and read-only for reviews. Cloud runs
+     * keep it in the firewall; local runs receive only this narrowed credential,
+     * never the account-wide GitLab token.
      */
-    const vmTarget = localTurn
-      ? target
-      : (await resolveRepoCloneTarget(
+    const vmTarget = target
+      ? await resolveRepoCloneTarget(
           run.project_id,
           policy.repository === "read" ? "repo-read" : "repo-write",
-        ).catch(() => null)) ?? target;
+        )
+      : null;
     if (vmTarget) {
       secrets.addAuthUrl(vmTarget.authUrl);
       secrets.add(vmTarget.token);

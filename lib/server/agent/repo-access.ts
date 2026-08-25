@@ -3,7 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { forgeProviderForConnection } from "@/lib/server/git/forge-provider";
-import { GITLAB_HOST } from "@/lib/server/git/gitlab-rest";
+import { GITLAB_API_BASE, GITLAB_HOST, gitlabHeaders } from "@/lib/server/git/gitlab-rest";
 
 /**
  * Resolve access to the repository linked to a project (MIN-46 + MIN-69).
@@ -30,10 +30,9 @@ export type RepoProvider = "github" | "gitlab";
  *   trusted network infrastructure.
  * - `repo-read` grants GitHub `contents: read` for pull-request review clones.
  *
- * GitLab cannot down-scope an OAuth token at use time. Its account-wide `api`
- * token therefore remains entirely outside the sandbox and is injected only by
- * the trusted repository-scoped transport. The profile has no effect on GitLab
- * authority, but it still documents the caller's intended operation.
+ * GitLab `repo-read` and `repo-write` profiles mint a short-lived project access
+ * token. Only `full`, used by trusted server-side forge API operations, retains
+ * the connection's account OAuth token.
  */
 export type RepoTokenAccess = "full" | "repo-write" | "repo-read";
 
@@ -48,6 +47,64 @@ const GITHUB_PERMISSIONS_BY_ACCESS: Record<
   "repo-write": { contents: "write" },
   "repo-read": { contents: "read" },
 };
+
+const GITLAB_PROJECT_ACCESS_BY_PROFILE = {
+  "repo-read": { scopes: ["read_repository"], accessLevel: 20 },
+  "repo-write": { scopes: ["write_repository"], accessLevel: 30 },
+} as const;
+
+function gitlabTokenExpiry(now = new Date()): string {
+  const expiry = new Date(now);
+  expiry.setUTCDate(expiry.getUTCDate() + 1);
+  return expiry.toISOString().slice(0, 10);
+}
+
+interface GitlabProjectTokenResponse {
+  token?: unknown;
+}
+
+/**
+ * Exchange an account credential inside trusted server code for a repository-
+ * scoped GitLab token. The account token is never returned on failure.
+ */
+export async function mintGitlabProjectToken(input: {
+  accountToken: string;
+  projectId: string;
+  access: Exclude<RepoTokenAccess, "full">;
+  now?: Date;
+  fetcher?: typeof fetch;
+}): Promise<string> {
+  if (!/^[1-9]\d*$/.test(input.projectId)) {
+    throw new Error("GitLab link is missing a stable repository id");
+  }
+  const authority = GITLAB_PROJECT_ACCESS_BY_PROFILE[input.access];
+  const response = await (input.fetcher ?? fetch)(
+    `${GITLAB_API_BASE}/projects/${encodeURIComponent(input.projectId)}/access_tokens`,
+    {
+      method: "POST",
+      headers: {
+        ...gitlabHeaders(input.accountToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: `minddy-agent-${input.access}`,
+        description: "Short-lived repository credential for a Minddy agent sandbox",
+        scopes: authority.scopes,
+        access_level: authority.accessLevel,
+        expires_at: gitlabTokenExpiry(input.now),
+      }),
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`GitLab project token mint failed (${response.status})`);
+  }
+  const data = (await response.json()) as GitlabProjectTokenResponse;
+  if (typeof data.token !== "string" || !data.token.trim()) {
+    throw new Error("GitLab project token mint returned no token");
+  }
+  return data.token;
+}
 
 export interface RepoCloneTarget {
   provider: RepoProvider;
@@ -195,15 +252,10 @@ export async function resolveProjectLinkForRepo(opts: {
  * ([lib/server/git/forge-actor.ts](lib/server/git/forge-actor.ts)) and the token
  * of the git account of who clicks. Never by the token from here.
  *
- * **The known transgression (MIN-146).** GitLab has no bot identity: the
- * token below is the OAuth access token of the connection carried by the LINK,
- * that is, from the account of the person who linked the deposit. On the forge, it is
- * so she who opens Numo's MR and posts her comments - a gesture
- * automated under a human name, the exact mirror of the bug fixed by MIN-144.
- * The COMMITS are correct (`resolveCommitterIdentity` in execute.ts
- * configure `minddy agent <agent@minddy.app>`): this is the author at the level of
- * the API which is wrong. While waiting for a GitLab service identity, binding
- * says it in the UI (`gitAgentActsAs`) rather than keeping it quiet.
+ * GitLab `full` operations still act as the linked account because its REST API
+ * calls need the connection OAuth token. Sandbox Git transport is different:
+ * it receives a project access token whose bot identity and repository scope
+ * are created by GitLab for this linked project.
  */
 async function targetFromLink(
   row: GitLinkRow,
@@ -251,16 +303,24 @@ async function targetFromLink(
   }
 
   if (row.provider === "gitlab") {
-    const token = await provider.getGitlabAccessToken(row.connection_id);
-    // GitLab OAuth clone authentication uses `oauth2` as the username and the
-    // access token as the password.
+    const accountToken = await provider.getGitlabAccessToken(row.connection_id);
+    const token =
+      access === "full"
+        ? accountToken
+        : await mintGitlabProjectToken({
+            accountToken,
+            projectId: row.external_repo_id,
+            access,
+          });
+    // GitLab accepts any non-empty username for access-token Git over HTTPS;
+    // `oauth2` keeps the credential URL stable across OAuth and project tokens.
     const host = new URL(GITLAB_HOST).host;
     return {
       provider: "gitlab",
       repoFullName: row.repo_full_name,
       defaultBranch: row.default_branch ?? "main",
       remoteUrl: `${GITLAB_HOST.replace(/\/+$/, "")}/${row.repo_full_name}.git`,
-      authUrl: `https://oauth2:${token}@${host}/${row.repo_full_name}.git`,
+      authUrl: `https://oauth2:${encodeURIComponent(token)}@${host}/${row.repo_full_name}.git`,
       token,
       linkId: row.id,
       connectionId: row.connection_id,

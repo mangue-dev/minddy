@@ -242,6 +242,7 @@ function host(layout = LAYOUT) {
     // repository (relative paths of editions) and the tools output folder
     // (the three files of a background job).
     layout,
+    processIsolation: "sandbox",
     exec: vi.fn(async (command: string) => {
       h.exec.push(command);
       // MIN-361: the opencode SQLite database probe, on the local path —

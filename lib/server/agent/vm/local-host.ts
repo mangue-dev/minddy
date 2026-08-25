@@ -149,9 +149,13 @@ function execLocal(defaultCwd: string, command: string, opts?: ShellOptions): Pr
  * works, it learns it — and two runs on the same machine have two layouts
  * disjoint, therefore two repositories, two output folders and two harness.
  */
-export function localHost(layout: HarnessLayout): RepoHost {
+export function localHost(
+  layout: HarnessLayout,
+  processIsolation: RepoHost["processIsolation"] = "host",
+): RepoHost {
   return {
     layout,
+    processIsolation,
     exec: (command, opts) => execLocal(layout.repoDir, command, opts),
     readFile: async (absPath: string): Promise<string | null> => {
       try {

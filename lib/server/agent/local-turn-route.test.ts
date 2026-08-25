@@ -394,11 +394,12 @@ describe("la préparation locale d'`execute.ts`", () => {
     expect(source).toContain("const [issue, prRun, prefs, quotaAndLedger, endpoint] = await Promise.all([");
   });
 
-  it("réutilise le jeton de la cible pour un tour local", () => {
-    // Local runs cannot be replays: their scope is validated
-    // before the claim. A second token resolution therefore does not change their
-    // rights and only adds a wait at launch.
-    expect(source).toContain("const vmTarget = localTurn\n      ? target");
+  it("mints a least-privilege repository token for a local turn", () => {
+    // The full target remains server-side for forge API operations. The local
+    // execution transport receives only the read/write profile required by the
+    // run, just like the cloud firewall.
+    expect(source).toContain("const vmTarget = target\n      ? await resolveRepoCloneTarget(");
+    expect(source).toContain('policy.repository === "read" ? "repo-read" : "repo-write"');
   });
 
   it("ne minte pas de clé fournisseur avant de rendre un job local", () => {

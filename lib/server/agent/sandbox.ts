@@ -109,6 +109,7 @@ export type Sandbox = AgentSandbox;
 export function sandboxHost(sandbox: AgentSandbox, layout: HarnessLayout): RepoHost {
   return {
     layout,
+    processIsolation: "sandbox",
     exec: async (command: string, opts?: ShellOptions): Promise<ShellResult> => {
       const res = await sandbox.runCommand({
         cmd: "sh",

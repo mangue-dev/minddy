@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { NetworkPolicyRule } from "@vercel/sandbox";
 
 import {
+  AGENT_DENIED_EGRESS_SUBNETS,
   AGENT_LLM_PLACEHOLDER_KEY,
+  AGENT_PACKAGE_EGRESS_HOSTS,
   AGENT_VM_PATH_PREFIX,
   admitSandboxCaller,
   agentForgeRemoteUrl,
@@ -123,16 +125,27 @@ describe("buildAgentNetworkPolicy — le plan de contrôle", () => {
   });
 });
 
-describe("buildAgentNetworkPolicy — le reste d'Internet", () => {
-  it("garde le catch-all ouvert et SANS injection", () => {
+describe("buildAgentNetworkPolicy — deny-by-default egress", () => {
+  it("has no wildcard or repository-controlled destination", () => {
     const allow = policy().allow;
     if (!allow || Array.isArray(allow)) throw new Error("expected a record-form allow list");
-    // `npm install` on a user's deposit must pass: we close the
-    // path to secrets, not that of data (framing §1).
-    expect(allow["*"]).toEqual([]);
+    expect(allow["*"]).toBeUndefined();
+    expect(allow["attacker.example"]).toBeUndefined();
   });
 
-  it("n'est jamais une politique de chaîne (allow-all / deny-all)", () => {
+  it("allows the fixed public package registries without secret transforms", () => {
+    const allow = policy().allow;
+    if (!allow || Array.isArray(allow)) throw new Error("expected a record-form allow list");
+    for (const host of AGENT_PACKAGE_EGRESS_HOSTS) expect(allow[host]).toEqual([]);
+  });
+
+  it("denies private and link-local destinations even after DNS resolution", () => {
+    const subnets = policy().subnets;
+    expect(subnets?.deny).toEqual(AGENT_DENIED_EGRESS_SUBNETS);
+    expect(subnets?.allow).toBeUndefined();
+  });
+
+  it("is never an allow-all or deny-all string policy", () => {
     expect(typeof policy()).toBe("object");
   });
 });
@@ -231,9 +244,27 @@ describe("forge authentication stays in trusted network policy", () => {
       throw new Error("expected a record-form allow list");
     }
     const allow = rotated.allow;
-    expect(allow["github.com"]).toEqual([]);
+    expect(allow["github.com"]).toBeUndefined();
     expect(JSON.stringify(rotated)).not.toContain("/acme/old-app.git/");
     expect(allow["gitlab.com"]).toHaveLength(3);
+  });
+
+  it("cannot route injected credentials to an attacker-controlled host", () => {
+    const built = policy({
+      forge: {
+        provider: "github",
+        repoFullName: "acme/private-app",
+        token: "repository-scoped-secret",
+      },
+    });
+    if (!built.allow || Array.isArray(built.allow)) {
+      throw new Error("expected a record-form allow list");
+    }
+    expect(built.allow["attacker.example"]).toBeUndefined();
+    expect(JSON.stringify(built.allow["github.com"])).toContain(
+      Buffer.from("x-access-token:repository-scoped-secret").toString("base64"),
+    );
+    expect(JSON.stringify(built)).not.toContain("repository-scoped-secret");
   });
 });
 

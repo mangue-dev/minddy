@@ -14,6 +14,8 @@
  * PUR module: neither IO nor server-only import. It goes into the microVM bundle.
  */
 
+import { hasShellIndirection } from "./vm/local-uplink";
+
 /** `str` bounded to `max` characters, marked when it was cut. */
 export function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -73,6 +75,7 @@ export function toolArgSummary(name: string, args: Record<string, unknown>): Rec
       // in live view as in `agent_run_events` (MIN-109).
       return {
         command: cap(String(args.command ?? ""), 100),
+        ...(hasShellIndirection(String(args.command ?? "")) ? { shell_indirection: true } : {}),
         ...(args.workdir ? { workdir: String(args.workdir) } : {}),
       };
     case "run_background":
@@ -81,6 +84,7 @@ export function toolArgSummary(name: string, args: Record<string, unknown>): Rec
       return {
         action: String(args.action ?? ""),
         ...(args.command ? { command: cap(String(args.command), 100) } : {}),
+        ...(hasShellIndirection(String(args.command ?? "")) ? { shell_indirection: true } : {}),
         ...(args.job_id ? { job_id: String(args.job_id) } : {}),
       };
     case "create_pr":

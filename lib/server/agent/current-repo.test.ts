@@ -43,6 +43,7 @@ function fakeHost(replies: Array<[RegExp, Partial<ShellResult>]> = []): {
   const files = new Map<string, string>();
   const host: RepoHost = {
     layout: LAYOUT,
+    processIsolation: "sandbox",
     exec: async (command: string, opts?: ShellOptions): Promise<ShellResult> => {
       commands.push(command);
       envs.push(opts?.env);

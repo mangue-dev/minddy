@@ -30,6 +30,7 @@ function reviewHost(opts: {
   return {
     commands,
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     exec: async (command: string) => {
       commands.push(command);
       const at = /^git show '([^']+):([^']+)'$/.exec(command.trim());

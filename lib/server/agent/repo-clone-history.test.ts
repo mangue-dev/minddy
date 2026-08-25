@@ -37,6 +37,7 @@ function fakeHost() {
   const commands: string[] = [];
   const host: RepoHost = {
     layout: cloudLayout(),
+    processIsolation: "sandbox",
     async exec(command) {
       commands.push(command);
       return { exitCode: 0, stdout: "", stderr: "" };
@@ -108,6 +109,7 @@ describe("cloneRepo — ce que git en fait vraiment", () => {
     const layout = layoutForRoot(root, join(root, "oc"));
     return {
       layout,
+      processIsolation: "host",
       async exec(command, opts) {
         try {
           const { stdout, stderr } = await exec("sh", ["-c", command], {

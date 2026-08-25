@@ -23,10 +23,9 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  *
  * FORGE CREDENTIALS DO NOT ENTER THE VM (MIN-421). Git uses a credential-free
  * remote. The firewall injects HTTP Basic authentication only for the linked
- * repository's smart-HTTP path. The unrestricted catch-all below therefore
- * cannot carry a reusable GitHub or GitLab credential to another destination.
- * A long-running writer can ask the control plane to rotate this firewall rule,
- * but the response still contains only the credential-free remote URL.
+ * repository's smart-HTTP path. A long-running writer can ask the control
+ * plane to rotate this firewall rule, but the response still contains only the
+ * credential-free remote URL.
  *
  * AND ALL OF THE ABOVE IS ONLY WORTH ONE MICROVM (MIN-355, MIN-357). This file
  * describes a policy imposed by the Vercel Sandbox firewall: a trick that plays
@@ -53,13 +52,10 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  * own keys. **The LLM proxy now has the same word** (`resolveProxyTarget`,
  * strict equality on `pathname`): on a machine, it is he who sets the
  * key, so it is he who holds what this line here holds.
- * 2. The catch-all `"*": []` remains: the rest of the Internet is OPEN, without
- * injection. We close the path to **secret**, not that of **data** —
- * exfiltration of repository contents is already possible today
- * (`run_command` + open network) and a strict whitelist would break
- * `npm install` on our users' deposits, the details of which are unknown
- * private registers or mirrors. Treat both as one problem,
- * it's not resolving any of them.
+ * 2. Egress is deny-by-default. Package managers can reach a fixed set of
+ * public registries, while the run-specific provider, control plane, and forge
+ * hosts are added explicitly. Repository-controlled mirrors and URLs cannot
+ * silently expand this boundary.
  *
  * WHAT REMAINS POSSIBLE, AND WHICH IS BOUNDED ELSEWHERE: a hostile model can
  * call the credited route outside the loop (a `curl` is enough). It's not
@@ -88,6 +84,47 @@ export const AGENT_LLM_PLACEHOLDER_KEY = "minddy-placeholder";
 /** Prefix of the microVM name of a run. The name IS the identity: it is he who
  * platform sign in the OIDC claim `sandbox_name`. */
 const AGENT_SANDBOX_PREFIX = "agent-";
+
+/** Public package registries supported inside the agent sandbox. */
+export const AGENT_PACKAGE_EGRESS_HOSTS = [
+  "registry.npmjs.org",
+  "registry.yarnpkg.com",
+  "pypi.org",
+  "files.pythonhosted.org",
+  "proxy.golang.org",
+  "sum.golang.org",
+  "crates.io",
+  "index.crates.io",
+  "static.crates.io",
+  "rubygems.org",
+  "repo.maven.apache.org",
+  "repo1.maven.org",
+  "plugins.gradle.org",
+  "services.gradle.org",
+  "api.nuget.org",
+  "globalcdn.nuget.org",
+  "packagist.org",
+  "repo.packagist.org",
+] as const;
+
+/** Addresses that a public hostname must never route sandbox traffic to. */
+export const AGENT_DENIED_EGRESS_SUBNETS = [
+  "0.0.0.0/8",
+  "10.0.0.0/8",
+  "100.64.0.0/10",
+  "127.0.0.0/8",
+  "169.254.0.0/16",
+  "172.16.0.0/12",
+  "192.168.0.0/16",
+  "198.18.0.0/15",
+  "224.0.0.0/4",
+  "240.0.0.0/4",
+  "::/128",
+  "::1/128",
+  "fc00::/7",
+  "fe80::/10",
+  "ff00::/8",
+] as const;
 
 /** Deterministic name of the microVM of a run (persisted in `agent_runs.sandbox_id`). */
 export function agentSandboxName(runId: string): string {
@@ -258,10 +295,11 @@ function splitUrl(raw: string, label: string): { host: string; path: string } {
 /**
  * The policy to put on the microVM of a run.
  *
- * Three entries, and the reading order is that of their importance:
+ * The entries, in order of importance:
  * 1. the LLM provider — a single credited route, in POST, EXACT path;
  * 2. our own origin — the control plane, forwarded with OIDC;
- * 3. `"*"` — everything else, open and without injection.
+ * 3. the linked forge host — credentials only on exact smart-HTTP paths;
+ * 4. fixed public package registries. Everything else is denied.
  *
  * A request to a listed domain that does not match ANY rules still passes,
  * simply not transformed (measured: `GET /api/v1/key` springs at 401 side
@@ -290,7 +328,9 @@ export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): Network
   // The provider and the control plane can share a host (generic BYOK
   // hosted with us, never seen but not prohibited): their rules add up
   // then on the same input, they do not overwrite each other.
-  const allow: Record<string, NetworkPolicyRule[]> = { "*": [] };
+  const allow: Record<string, NetworkPolicyRule[]> = Object.fromEntries(
+    AGENT_PACKAGE_EGRESS_HOSTS.map((host) => [host, []]),
+  );
   for (const [host, rule] of [
     [llm.host, llmRule],
     [app.host, controlRule],
@@ -304,7 +344,7 @@ export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): Network
     const forge = forgeRules(input.forge);
     (allow[forge.host] ??= []).push(...forge.rules);
   }
-  return { allow };
+  return { allow, subnets: { deny: [...AGENT_DENIED_EGRESS_SUBNETS] } };
 }
 
 /**
@@ -335,10 +375,12 @@ export function rotateAgentForgeCredential(
     );
   };
   const allow = Object.fromEntries(
-    Object.entries(policy.allow).map(([host, rules]) => [
-      host,
-      rules.filter((rule) => !isForgeRule(rule)),
-    ]),
+    Object.entries(policy.allow).flatMap(([host, rules]) => {
+      const remaining = rules.filter((rule) => !isForgeRule(rule));
+      return remaining.length > 0 || AGENT_PACKAGE_EGRESS_HOSTS.some((allowed) => allowed === host)
+        ? [[host, remaining]]
+        : [];
+    }),
   );
   return {
     ...policy,
