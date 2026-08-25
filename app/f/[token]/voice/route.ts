@@ -13,8 +13,8 @@ import {
 } from "@/lib/server/feedback/voice";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import { ownerHasUsageBudget } from "@/lib/server/usage";
-import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getClientIp } from "@/lib/server/request-ip";
+import { consumeFeedbackVoiceLimit } from "@/lib/server/feedback/voice-limits";
 
 /**
  * LISTENING to dictated feedback, on the public board side.
@@ -43,8 +43,8 @@ export const maxDuration = 300;
  * here: this counter limits what ONE person can spend on the board,
  * while the one by IP limits what accounts a machine can open.
  */
-const USER_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 } as const;
-const IP_RATE_LIMIT = { limit: 40, windowMs: 60 * 60 * 1000 } as const;
+const USER_RATE_LIMIT = 20;
+const IP_RATE_LIMIT = 40;
 
 export async function POST(
   request: NextRequest,
@@ -69,21 +69,18 @@ export async function POST(
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 
-  const ipRate = checkSessionRateLimit(
-    `ip:${getClientIp(request)}`,
-    `feedback-voice:${ctx.board.id}`,
-    IP_RATE_LIMIT
-  );
-  const userRate = checkSessionRateLimit(
-    session.user.id,
-    "feedback-voice",
-    USER_RATE_LIMIT
-  );
-  if (!ipRate.allowed || !userRate.allowed) {
-    const retryAfter = Math.max(ipRate.retryAfter, userRate.retryAfter);
+  const rate = await consumeFeedbackVoiceLimit({
+    boardId: ctx.board.id,
+    feedbackUserId: session.user.id,
+    operation: "transcribe",
+    userLimit: USER_RATE_LIMIT,
+    ip: getClientIp(request),
+    ipLimit: IP_RATE_LIMIT,
+  });
+  if (!rate.allowed) {
     return NextResponse.json(
-      { error: "rateLimited", retry_after: retryAfter },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      { error: "rateLimited", retry_after: rate.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
     );
   }
 

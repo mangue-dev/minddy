@@ -33,8 +33,8 @@ interface PostWithAuthor extends FeedbackPostRow {
   feedback_users: { pseudonym: string } | null;
 }
 
-// Hint !author_id obligatoire : PostgREST voit aussi un chemin many-to-many
-// posts↔users via feedback_votes, l'embed nu serait ambigu (PGRST201).
+// The !author_id hint is required because PostgREST also sees the many-to-many
+// posts-to-users path through feedback_votes; an unqualified embed is ambiguous.
 const PUBLIC_POST_SELECT = `${FEEDBACK_POST_SELECT}, feedback_users!author_id (pseudonym)`;
 
 function toPublicPost(
@@ -196,6 +196,9 @@ export async function getPublicPostDetail(params: {
       .select("title")
       .is("deleted_at", null)
       .eq("merged_into_id", row.id)
+      .eq("is_public", true)
+      .eq("review_state", "published")
+      .neq("status", "spam")
       .order("created_at", { ascending: true }),
     listPublicComments({ postId: row.id, viewerId: params.viewerId }),
   ]);
@@ -335,8 +338,8 @@ export async function listMyFeedback(params: {
     // The votes already follow the merge (moved to the canonical); A
     // voted tombstone should not exist, we ignore it for safety.
     if (!row || row.merged_into_id !== null || seen.has(row.id)) continue;
-    // Voted then passed privately by the team: it leaves the list as it is
-    // sorti du board.
+    // If the team made a voted post private, it leaves this list just as it
+    // leaves the public board.
     if (!readable(row)) continue;
     seen.add(row.id);
     entries.push({ row, relation: "voted", mergedFromTitle: null });

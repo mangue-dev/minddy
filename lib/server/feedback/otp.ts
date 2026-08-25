@@ -74,52 +74,32 @@ export async function requestFeedbackOtp(params: {
   });
   if (!rate.allowed) return { ok: false, error: "rateLimited" };
 
-  // Resend cooldown: generic “sent” response without resending (not
-  // from oracle on the existence of a previous request).
-  const { data: last } = await service
-    .from("feedback_otp_codes")
-    .select("created_at")
-    .eq("board_id", params.boardId)
-    .eq("email", email)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (last && Date.now() - new Date(last.created_at as string).getTime() < OTP_RESEND_COOLDOWN_MS) {
-    return { ok: true };
-  }
-
   const ipHash = hashIp(ip);
-  const since = new Date(Date.now() - OTP_COUNTER_WINDOW_MS).toISOString();
-  const [byEmail, byIp] = await Promise.all([
-    service
-      .from("feedback_otp_codes")
-      .select("id", { count: "exact", head: true })
-      .eq("email", email)
-      .gte("created_at", since),
-    service
-      .from("feedback_otp_codes")
-      .select("id", { count: "exact", head: true })
-      .eq("ip_hash", ipHash)
-      .gte("created_at", since),
-  ]);
-  if ((byEmail.count ?? 0) >= OTP_MAX_PER_EMAIL || (byIp.count ?? 0) >= OTP_MAX_PER_IP) {
-    return { ok: false, error: "rateLimited" };
-  }
-
   const id = randomUUID();
   const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
-  const { error } = await service.from("feedback_otp_codes").insert({
-    id,
-    board_id: params.boardId,
-    email,
-    ip_hash: ipHash,
-    code_hash: sha256Hex(`${id}:${code}`),
-    expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+  const now = new Date();
+  const { data: issued, error } = await service.rpc("issue_feedback_otp_code", {
+    p_id: id,
+    p_board_id: params.boardId,
+    p_email: email,
+    p_ip_hash: ipHash,
+    p_code_hash: sha256Hex(`${id}:${code}`),
+    p_expires_at: new Date(now.getTime() + OTP_TTL_MS).toISOString(),
+    p_now: now.toISOString(),
+    p_window_seconds: Math.floor(OTP_COUNTER_WINDOW_MS / 1000),
+    p_cooldown_seconds: Math.floor(OTP_RESEND_COOLDOWN_MS / 1000),
+    p_email_limit: OTP_MAX_PER_EMAIL,
+    p_ip_limit: OTP_MAX_PER_IP,
   });
   if (error) {
-    console.error("[feedback-otp] insert failed:", error.message);
+    console.error("[feedback-otp] atomic issuance failed:", error.message);
     return { ok: false, error: "sendFailed" };
   }
+  if (issued === "rate_limited") return { ok: false, error: "rateLimited" };
+  // A cooldown deliberately has the same response as a send so this endpoint
+  // cannot reveal whether a recipient requested a code recently.
+  if (issued === "cooldown") return { ok: true };
+  if (issued !== "issued") return { ok: false, error: "sendFailed" };
 
   const sent = await sendOtpEmail({ to: email, code, locale: params.locale });
   return sent ? { ok: true } : { ok: false, error: "sendFailed" };
@@ -138,36 +118,43 @@ export async function verifyFeedbackOtp(params: {
   const email = params.email.trim().toLowerCase();
   const code = params.code.trim();
 
-  const { data: row } = await service
-    .from("feedback_otp_codes")
-    .select("id, code_hash, expires_at, attempts")
-    .eq("board_id", params.boardId)
-    .eq("email", email)
-    .is("consumed_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!row) return { ok: false, error: "invalidCode" };
-  if (new Date(row.expires_at as string) <= new Date()) return { ok: false, error: "expired" };
-  if ((row.attempts as number) >= OTP_MAX_ATTEMPTS) {
+  const { data, error } = await service.rpc("claim_feedback_otp_attempt", {
+    p_board_id: params.boardId,
+    p_email: email,
+    p_now: new Date().toISOString(),
+    p_max_attempts: OTP_MAX_ATTEMPTS,
+  });
+  if (error) {
+    console.error("[feedback-otp] atomic attempt claim failed:", error.message);
+    return { ok: false, error: "invalidCode" };
+  }
+  const row = (
+    data as { status: string; id: string | null; code_hash: string | null }[] | null
+  )?.[0];
+  if (!row || row.status === "invalid") return { ok: false, error: "invalidCode" };
+  if (row.status === "expired") return { ok: false, error: "expired" };
+  if (row.status === "too_many_attempts") {
     return { ok: false, error: "tooManyAttempts" };
   }
-
-  // Burn an attempt BEFORE comparing: no brute force in parallel.
-  await service
-    .from("feedback_otp_codes")
-    .update({ attempts: (row.attempts as number) + 1 })
-    .eq("id", row.id as string);
+  if (row.status !== "claimed" || !row.id || !row.code_hash) {
+    return { ok: false, error: "invalidCode" };
+  }
 
   const expected = Buffer.from(sha256Hex(`${row.id}:${code}`), "hex");
-  const stored = Buffer.from(row.code_hash as string, "hex");
+  const stored = Buffer.from(row.code_hash, "hex");
   const match = expected.length === stored.length && timingSafeEqual(expected, stored);
   if (!match) return { ok: false, error: "invalidCode" };
 
-  await service
-    .from("feedback_otp_codes")
-    .update({ consumed_at: new Date().toISOString() })
-    .eq("id", row.id as string);
+  const { data: consumed, error: consumeError } = await service.rpc(
+    "consume_feedback_otp_code",
+    { p_id: row.id, p_now: new Date().toISOString() }
+  );
+  if (consumeError) {
+    console.error("[feedback-otp] atomic consumption failed:", consumeError.message);
+  }
+  // Competing correct submissions may both claim an attempt, but only one can
+  // transition the code from unconsumed to consumed.
+  if (consumeError || consumed !== true) return { ok: false, error: "invalidCode" };
 
   return { ok: true, email };
 }

@@ -267,23 +267,17 @@ export async function deletePublicComment(params: {
   commentId: string;
   feedbackUserId: string;
 }): Promise<boolean> {
-  const service = getServiceClient();
-  const { count: replyCount } = await service
-    .from("comments")
-    .select("id", { count: "exact", head: true })
-    .eq("parent_id", params.commentId);
-  if ((replyCount ?? 0) > 0) return false;
-
-  const { error, count } = await service
-    .from("comments")
-    .delete({ count: "exact" })
-    .eq("id", params.commentId)
-    .eq("feedback_post_id", params.postId)
-    .eq("visibility", "public")
-    .eq("feedback_user_id", params.feedbackUserId);
+  const { data, error } = await getServiceClient().rpc(
+    "delete_public_feedback_comment",
+    {
+      p_post_id: params.postId,
+      p_comment_id: params.commentId,
+      p_feedback_user_id: params.feedbackUserId,
+    }
+  );
   if (error) {
     console.error("[feedback-comments] delete failed:", error.message);
     return false;
   }
-  return (count ?? 0) > 0;
+  return data === true;
 }

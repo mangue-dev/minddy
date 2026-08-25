@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 
 /**
  * MIN-342 — what an ANONYMOUS (or a visitor from another board) achieves.
@@ -82,7 +83,7 @@ function query(rows: () => Row[], onInsert?: (values: Row) => void) {
       voteUpserts.push(values);
       return { error: null };
     },
-    // Un `select(..., { head: true, count: 'exact' })` s'attend directement.
+    // A head/count select is directly awaitable in Supabase's query builder.
     then: (
       resolve: (value: { data: Row[] | null; count: number; error: null }) => unknown
     ) => {
@@ -99,13 +100,89 @@ vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (name: string) => {
       if (name === "feedback_posts") return query(() => posts);
-      if (name === "feedback_otp_codes") {
-        return query(
-          () => otpRows,
-          (values) => otpRows.push({ ...values, created_at: new Date().toISOString() })
-        );
-      }
+      if (name === "feedback_otp_codes") return query(() => otpRows);
       return query(() => []);
+    },
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name === "issue_feedback_otp_code") {
+        const now = String(args.p_now);
+        const windowStart = new Date(
+          new Date(now).getTime() - Number(args.p_window_seconds) * 1000
+        ).toISOString();
+        const cooldownStart = new Date(
+          new Date(now).getTime() - Number(args.p_cooldown_seconds) * 1000
+        ).toISOString();
+        const email = String(args.p_email);
+        const ipHash = String(args.p_ip_hash);
+        if (
+          otpRows.some(
+            (row) =>
+              row.board_id === args.p_board_id &&
+              row.email === email &&
+              String(row.created_at) > cooldownStart
+          )
+        ) {
+          return { data: "cooldown", error: null };
+        }
+        const emailCount = otpRows.filter(
+          (row) => row.email === email && String(row.created_at) >= windowStart
+        ).length;
+        const ipCount = otpRows.filter(
+          (row) => row.ip_hash === ipHash && String(row.created_at) >= windowStart
+        ).length;
+        if (
+          emailCount >= Number(args.p_email_limit) ||
+          ipCount >= Number(args.p_ip_limit)
+        ) {
+          return { data: "rate_limited", error: null };
+        }
+        otpRows.push({
+          id: args.p_id,
+          board_id: args.p_board_id,
+          email,
+          ip_hash: ipHash,
+          code_hash: args.p_code_hash,
+          expires_at: args.p_expires_at,
+          created_at: now,
+          attempts: 0,
+          consumed_at: null,
+        });
+        return { data: "issued", error: null };
+      }
+      if (name === "claim_feedback_otp_attempt") {
+        const row = otpRows
+          .filter(
+            (candidate) =>
+              candidate.board_id === args.p_board_id &&
+              candidate.email === args.p_email &&
+              candidate.consumed_at === null
+          )
+          .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+        if (!row) return { data: [{ status: "invalid", id: null, code_hash: null }], error: null };
+        if (String(row.expires_at) <= String(args.p_now)) {
+          return { data: [{ status: "expired", id: row.id, code_hash: null }], error: null };
+        }
+        if (Number(row.attempts) >= Number(args.p_max_attempts)) {
+          return {
+            data: [{ status: "too_many_attempts", id: row.id, code_hash: null }],
+            error: null,
+          };
+        }
+        row.attempts = Number(row.attempts) + 1;
+        return {
+          data: [{ status: "claimed", id: row.id, code_hash: row.code_hash }],
+          error: null,
+        };
+      }
+      if (name === "consume_feedback_otp_code") {
+        const row = otpRows.find((candidate) => candidate.id === args.p_id);
+        if (!row || row.consumed_at !== null || String(row.expires_at) <= String(args.p_now)) {
+          return { data: false, error: null };
+        }
+        row.consumed_at = args.p_now;
+        return { data: true, error: null };
+      }
+      return { data: null, error: { message: `Unexpected RPC: ${name}` } };
     },
   }),
 }));
@@ -120,7 +197,9 @@ vi.mock("@/lib/server/feedback/otp-email", () => ({
 }));
 
 const { votePost } = await import("@/lib/server/feedback/votes");
-const { requestFeedbackOtp } = await import("@/lib/server/feedback/otp");
+const { requestFeedbackOtp, verifyFeedbackOtp } = await import(
+  "@/lib/server/feedback/otp"
+);
 
 beforeEach(() => {
   vi.unstubAllEnvs();
@@ -134,14 +213,14 @@ beforeEach(() => {
 });
 
 describe("votePost", () => {
-  it("accepte un post du projet du visiteur", async () => {
+  it("accepts a post from the visitor's project", async () => {
     expect(
       await votePost({ postId: "post-mine", userId: "u1", projectId: "proj-a" })
     ).toBe(true);
     expect(voteUpserts).toEqual([{ post_id: "post-mine", user_id: "u1" }]);
   });
 
-  it("refuse un post d'un AUTRE board, même avec une session valide", async () => {
+  it("rejects a post from another board even with a valid session", async () => {
     expect(
       await votePost({ postId: "post-theirs", userId: "u1", projectId: "proj-a" })
     ).toBe(false);
@@ -154,10 +233,10 @@ describe("votePost", () => {
 describe("requestFeedbackOtp", () => {
   // One IP per case: the first barrier remains a shared IN-MEMORY counter
   // through the entire test module — reusing it would pass off a case for the
-  // mauvaise raison.
+  // wrong reason.
   const base = { boardId: "board-1", locale: "fr" as const };
 
-  it("s'arrête avant la base quand l'e-mail applicatif est absent", async () => {
+  it("stops before storage when transactional email is unavailable", async () => {
     vi.stubEnv("EMAIL_PROVIDER", "");
 
     expect(
@@ -167,7 +246,7 @@ describe("requestFeedbackOtp", () => {
     expect(sentEmails).toHaveLength(0);
   });
 
-  it("envoie un code, et le corps ne porte AUCUN texte de tiers", async () => {
+  it("sends a code without accepting third-party email content", async () => {
     expect(
       await requestFeedbackOtp({ ...base, ip: "10.0.0.1", email: "Someone@Example.com " })
     ).toEqual({ ok: true });
@@ -178,7 +257,7 @@ describe("requestFeedbackOtp", () => {
     expect(Object.keys(sentEmails[0]).sort()).toEqual(["code", "locale", "to"]);
   });
 
-  it("bloque le second envoi dans la fenêtre de cooldown, sans le dire", async () => {
+  it("silently suppresses a second send during the cooldown", async () => {
     const p = { ...base, ip: "10.0.0.2", email: "a@b.com" };
     await requestFeedbackOtp(p);
     expect(await requestFeedbackOtp(p)).toEqual({ ok: true });
@@ -186,10 +265,10 @@ describe("requestFeedbackOtp", () => {
     expect(sentEmails).toHaveLength(1);
   });
 
-  it("refuse d'arroser une adresse via PLUSIEURS boards", async () => {
+  it("refuses to target one address through multiple boards", async () => {
     // Five requests already submitted within the hour, on five different boards:
     // the limit per recipient counts them all. This is the relay lever
-    // ouvert — un compteur par board ne l'aurait jamais vu.
+    // a board-scoped counter would never catch.
     otpRows = recent(5, (i) => ({ board_id: `board-${i}`, email: "victim@example.com" }));
     expect(
       await requestFeedbackOtp({
@@ -202,7 +281,7 @@ describe("requestFeedbackOtp", () => {
     expect(sentEmails).toHaveLength(0);
   });
 
-  it("refuse une origine qui arrose des adresses ARBITRAIRES", async () => {
+  it("refuses an origin that targets arbitrary addresses", async () => {
     const ip = "10.0.0.4";
     // We learn the fingerprint of the origin by letting a request pass.
     await requestFeedbackOtp({ ...base, ip, email: "first@example.com" });
@@ -221,6 +300,87 @@ describe("requestFeedbackOtp", () => {
       { ok: false, error: "rateLimited" }
     );
     expect(sentEmails).toHaveLength(0);
+  });
+
+  it("does not exceed the email quota under parallel issuance", async () => {
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, index) =>
+        requestFeedbackOtp({
+          boardId: `parallel-board-${index}`,
+          locale: "en",
+          ip: `198.51.100.${index}`,
+          email: "parallel-victim@example.com",
+        })
+      )
+    );
+    expect(results.filter((result) => result.ok)).toHaveLength(5);
+    expect(sentEmails).toHaveLength(5);
+    expect(otpRows.filter((row) => row.email === "parallel-victim@example.com")).toHaveLength(5);
+  });
+});
+
+describe("verifyFeedbackOtp", () => {
+  function otpHash(id: string, code: string): string {
+    return createHash("sha256").update(`${id}:${code}`).digest("hex");
+  }
+
+  it("atomically caps parallel verification attempts", async () => {
+    const id = "00000000-0000-4000-8000-000000000461";
+    otpRows = [
+      {
+        id,
+        board_id: "board-verify",
+        email: "verify@example.com",
+        code_hash: otpHash(id, "123456"),
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+        created_at: new Date().toISOString(),
+        attempts: 0,
+        consumed_at: null,
+      },
+    ];
+
+    const results = await Promise.all(
+      Array.from({ length: 12 }, () =>
+        verifyFeedbackOtp({
+          boardId: "board-verify",
+          email: "verify@example.com",
+          code: "000000",
+        })
+      )
+    );
+    expect(otpRows[0].attempts).toBe(5);
+    expect(results.filter((result) => !result.ok && result.error === "invalidCode")).toHaveLength(5);
+    expect(
+      results.filter((result) => !result.ok && result.error === "tooManyAttempts")
+    ).toHaveLength(7);
+  });
+
+  it("allows only one parallel submission to consume a correct code", async () => {
+    const id = "00000000-0000-4000-8000-000000000462";
+    otpRows = [
+      {
+        id,
+        board_id: "board-consume",
+        email: "consume@example.com",
+        code_hash: otpHash(id, "654321"),
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+        created_at: new Date().toISOString(),
+        attempts: 0,
+        consumed_at: null,
+      },
+    ];
+
+    const results = await Promise.all(
+      Array.from({ length: 2 }, () =>
+        verifyFeedbackOtp({
+          boardId: "board-consume",
+          email: "consume@example.com",
+          code: "654321",
+        })
+      )
+    );
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(otpRows[0].consumed_at).not.toBeNull();
   });
 });
 

@@ -1,34 +1,13 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
- * Verification of the JWT SSO of the feedback board (MIN-37). The client backend
- * signs a short HS256 (exp ≤ 10 min) with the sso_secret of the board (distinct from
- * mdy_ keys) and redirects the user to /f/<token>?sso=<jwt>.
- * Claims : sub = external_id (obligatoire), email?, name?.
+ * Verify feedback-board SSO JWTs (MIN-37). The publisher's backend signs a
+ * short-lived HS256 token with the board's dedicated SSO secret and redirects
+ * the visitor to `/f/<token>?sso=<jwt>`.
  *
- * Pure node:crypto implementation (no jose dependency): only HS256 is
- * accepted (no possible algorithm confusion), time comparison
- * constant, exp obligatoire.
- *
- * ## Two guardrails who only lived in the signer (MIN-345)
- *
- * **The lifetime cap.** `SSO_MAX_TTL_SECONDS` was applied by
- * `signFeedbackSsoJwt`, that is to say by code that the client DOES NOT EXECUTE:
- * it is HIS backend which signs, with the JWT library of his choice. A `exp`
- * to one year was therefore perfectly accepted here — and an SSO token is a
- * full identity bearer, which traverses a URL, logs and a
- * browsing history. The ceiling is now imposed on VERIFICATION,
- * seul endroit qui tourne chez nous.
- *
- * **Consumption.** A token remained replayable throughout its window:
- * the leaked URL (Referer, shared history, proxy log) opened a
- * board session. `tokenId` is the unique identifier to consume — see
- * `consumeSsoToken` (lib/server/feedback/sso-replay.ts), called by route.
- * It derives from the SIGNATURE, not from a declared claim: the signature is already
- * unique per token and unfalsifiable without the secret, therefore nothing to require from the
- * customer. The `jti` that our signer poses only serves to avoid the collision of the
- * double-click — two tokens to the same claims signed in the same second
- * would otherwise be the SAME token, and the second would be considered a replay.
+ * Verification accepts only HS256, requires `sub` and `exp`, caps the lifetime,
+ * and compares the MAC in constant time. `tokenId` is derived from canonical
+ * signature bytes so alternate base64 spellings cannot bypass replay tracking.
  */
 
 export interface FeedbackSsoClaims {
@@ -100,9 +79,8 @@ export function verifyFeedbackSsoJwt(
   const exp = payload.exp;
   if (typeof exp !== "number" || !Number.isFinite(exp)) return { ok: false, error: "expired" };
   if (exp <= nowSeconds) return { ok: false, error: "expired" };
-  // The ceiling, verification side (MIN-345). The tolerance covers the clock of
-  // signer, which is not ours: without it, a backend in advance of
-  // a few seconds would see his perfectly legitimate tokens refused.
+  // Enforce the lifetime at verification time. The tolerance covers a signer
+  // whose clock is slightly ahead of ours.
   if (exp > nowSeconds + SSO_MAX_TTL_SECONDS + SSO_CLOCK_SKEW_SECONDS) {
     return { ok: false, error: "ttl_too_long" };
   }
@@ -117,10 +95,11 @@ export function verifyFeedbackSsoJwt(
   const name =
     typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : null;
 
+  const canonicalSignature = provided.toString("base64url");
   return {
     ok: true,
     claims: { externalId: sub.trim(), email, name },
-    tokenId: createHash("sha256").update(signatureB64).digest("hex"),
+    tokenId: createHash("sha256").update(canonicalSignature).digest("hex"),
     expiresAt: exp,
   };
 }
@@ -128,11 +107,11 @@ export function verifyFeedbackSsoJwt(
 /** Maximum lifetime of JWT SSO: it is only used for immediate redirection. */
 export const SSO_MAX_TTL_SECONDS = 600;
 
-/** Clock deviation tolerated between the signing backend and us, upon verification. */
+/** Clock skew tolerated between the signing backend and this verifier. */
 export const SSO_CLOCK_SKEW_SECONDS = 60;
 
 export interface SignFeedbackSsoInput {
-  /** Stable user identifier at the client → claim `sub` (required). */
+  /** Stable publisher-side user identifier mapped to the required `sub` claim. */
   sub: string;
   email?: string | null;
   name?: string | null;
@@ -161,10 +140,8 @@ export function signFeedbackSsoJwt(
   const headerB64 = encodeSegment({ alg: "HS256", typ: "JWT" });
   const payload: Record<string, unknown> = {
     sub: input.sub,
-    // The only role of `jti`: return two tokens to the same claims, signed in
-    // the same second, DIFFERENT. Without it, double-clicking on “Share a
-    // return” produces the same token twice, and consumption takes the
-    // second for a replay (MIN-345).
+    // `jti` makes two tokens for the same claims distinct. Without
+    // it, a double click could produce identical tokens and look like a replay.
     jti: randomBytes(12).toString("base64url"),
     iat: nowSeconds,
     exp: nowSeconds + ttl,

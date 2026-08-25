@@ -6,7 +6,7 @@ import {
   disableBoardForProject,
   enableBoardForProject,
   getBoardForProject,
-  rotateSsoSecret,
+  getOrCreateSsoSecret,
   setBoardAllowComments,
   setBoardShowCategories,
   setBoardShowPages,
@@ -191,7 +191,9 @@ export async function configureFeedbackBoard(input: {
     // edge of a secrecy request.
     const board = await getBoardForProject(projectId);
     if (!board) return { ok: false, errorKey: "boardNotFound" };
-    ssoSecret = board.sso_secret ?? (await rotateSsoSecret(projectId));
+    // The database row lock makes simultaneous setup calls converge on the
+    // same stored secret instead of returning a value another call overwrote.
+    ssoSecret = await getOrCreateSsoSecret(projectId);
     if (!ssoSecret) return { ok: false, errorKey: "databaseError" };
   }
 

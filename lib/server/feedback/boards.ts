@@ -17,8 +17,8 @@ import {
  * deny-all: everything goes through customer service, access checks on the road side.
  *
  * The SSO secret is encrypted at rest (MIN-119): this module is the ONLY
- * place that sees it pass, and it always returns clarity to its callers —
- * `hydrateBoard` decrypts when reading, `rotateSsoSecret` encrypts when writing.
+ * place that sees it pass, and it always returns plaintext to its callers —
+ * `hydrateBoard` decrypts reads, and the secret writers encrypt before storage.
  * So no caller has to know that the column carries an envelope.
  */
 
@@ -335,8 +335,10 @@ export async function rotateBoardToken(projectId: string): Promise<FeedbackBoard
  * deliberately blocking: delivering an SSO secret that we cannot protect
  * would be worse than not delivering it.
  */
-export async function rotateSsoSecret(projectId: string): Promise<string | null> {
-  const service = getServiceClient();
+async function writeSsoSecret(
+  projectId: string,
+  onlyIfAbsent: boolean
+): Promise<string | null> {
   const secret = "fbsso_" + randomBytes(24).toString("base64url");
 
   let sealed: string;
@@ -351,22 +353,39 @@ export async function rotateSsoSecret(projectId: string): Promise<string | null>
     return null;
   }
 
-  const { error } = await service
-    .from("feedback_boards")
-    .update({ sso_secret: sealed })
-    .eq("project_id", projectId);
+  const { data, error } = await getServiceClient().rpc(
+    "write_feedback_sso_secret",
+    {
+      p_project_id: projectId,
+      p_sso_secret: sealed,
+      p_only_if_absent: onlyIfAbsent,
+    }
+  );
   if (error) {
-    console.error("[feedback-boards] sso rotate failed:", error.message);
+    console.error("[feedback-boards] serialized SSO write failed:", error.message);
     return null;
   }
-  return secret;
+  if (typeof data !== "string") return null;
+  return readBoardSsoSecret(data).plain;
+}
+
+/** Rotate the SSO secret while holding the board row lock in PostgreSQL. */
+export async function rotateSsoSecret(projectId: string): Promise<string | null> {
+  return writeSsoSecret(projectId, false);
+}
+
+/** Return the existing SSO secret or initialize it exactly once. */
+export async function getOrCreateSsoSecret(
+  projectId: string
+): Promise<string | null> {
+  return writeSsoSecret(projectId, true);
 }
 
 export async function clearSsoSecret(projectId: string): Promise<boolean> {
-  const service = getServiceClient();
-  const { error } = await service
-    .from("feedback_boards")
-    .update({ sso_secret: null })
-    .eq("project_id", projectId);
+  const { error } = await getServiceClient().rpc("write_feedback_sso_secret", {
+    p_project_id: projectId,
+    p_sso_secret: null,
+    p_only_if_absent: false,
+  });
   return !error;
 }

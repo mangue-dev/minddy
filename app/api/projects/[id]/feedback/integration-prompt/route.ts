@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
 import {
   enableBoardForProject,
-  rotateSsoSecret,
+  getOrCreateSsoSecret,
 } from "@/lib/server/feedback/boards";
 import { createIntegration } from "@/lib/server/integrations";
 import {
@@ -17,18 +17,14 @@ type RouteContext = { params: Promise<{ id: string }> };
 const PLACEMENT_MAX = 500;
 
 /**
- * POST { mode: 'board'|'api', sso?, placement? } — generates the prompt
- * all-in-one integration tool (MIN-37). Owner-only: the generation provisions this
- * which is missing — activates the board (board mode), generates the SSO secret if it does not exist
- * not yet (without ever rotating an existing secret), creates a key
- * new feedback integration (api mode — the only way to have the key in
- * clair).
+ * POST { mode: 'board'|'api', sso?, placement? } generates the all-in-one
+ * integration prompt (MIN-37). Owner-only generation provisions what is
+ * missing: it enables the board, initializes SSO without rotating an existing
+ * secret, or creates a new feedback integration key.
  *
- * The credentials return APART from the prompt (`sso_secret`, `api_key`), because
- * that they are no longer there: the prompt names the environment variable,
- * the interface shows the line to paste into the `.env`. The two prompts are
- * thus texts without secrets - this is what allows them to be entrusted to Numo with a
- * click, in one mode or the other.
+ * Credentials are returned separately from the prompt. The prompt names the
+ * environment variable while the interface shows the line to paste into
+ * `.env`, so either prompt can be handed to Numo without exposing a secret.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -70,7 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (sso) {
       // NEVER rotate an existing secret here: an SSO integration already
       // installed at the customer's premises would break silently.
-      ssoSecret = board.sso_secret ?? (await rotateSsoSecret(id));
+      ssoSecret = await getOrCreateSsoSecret(id);
       if (!ssoSecret) {
         return NextResponse.json({ error: t("databaseError") }, { status: 500 });
       }

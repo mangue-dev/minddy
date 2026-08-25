@@ -8,8 +8,7 @@ import { clientIpFromHeaders } from "@/lib/server/request-ip";
 import { isCustomPublicHost, publicCookiePath } from "@/lib/server/custom-domains";
 import {
   clearShareUnlockFailures,
-  recordShareUnlockFailure,
-  shareUnlockAttemptsLeft,
+  consumeShareUnlockAttempt,
 } from "@/lib/server/share-unlock-attempts";
 import {
   SHARE_UNLOCK_COOKIE,
@@ -65,8 +64,8 @@ export async function unlockShareWithPassword({
   /** Cookie path on primary host: `/share/<token>` or `/p/<token>`. A single cookie name therefore serves any number of shares. */
   cookiePath: string;
 }): Promise<ShareUnlockResult> {
-  // Porte anonyme : on limite par IP visiteur — celle du dernier relais de
-  // trust, never the head of `x-forwarded-for` (chosen by the caller).
+  // Use the visitor IP supplied by the last trusted proxy, never the caller-
+  // controlled first entry in x-forwarded-for.
   const ip = clientIpFromHeaders(await headers());
   const { allowed } = checkSessionRateLimit(ip, `share-unlock:${token}`, {
     limit: 10,
@@ -77,16 +76,14 @@ export async function unlockShareWithPassword({
   if (!target) return { ok: false, error: "wrongPassword" };
   const { share } = target;
 
-  // Switched to “public” in the meantime: there is nothing more to unlock, the
-  // page se re-rend telle quelle.
+  // If the share became public in the meantime, there is nothing left to unlock.
   if (share.level !== "password" || !share.password_salt || !share.password_hash) {
     return { ok: true };
   }
 
-  // Second line, the one that survives deployment: failures listed in
-  // base. It is read AFTER the resolution of the division — without division, there is no
-  // nothing to count — but BEFORE scrypt, which is what we refuse to pay.
-  if (!(await shareUnlockAttemptsLeft(share.id, ip))) {
+  // Reserve the attempt in shared storage before scrypt. The reservation RPC
+  // serializes both counters, so parallel requests cannot all pass a stale read.
+  if (!(await consumeShareUnlockAttempt(share.id, ip))) {
     return { ok: false, error: "tooManyAttempts" };
   }
 
@@ -95,10 +92,9 @@ export async function unlockShareWithPassword({
     password.length > MAX_PASSWORD_LENGTH ||
     !verifySharePassword(password, share.password_salt, share.password_hash)
   ) {
-    recordShareUnlockFailure(share.id, ip);
     return { ok: false, error: "wrongPassword" };
   }
-  clearShareUnlockFailures(share.id, ip);
+  await clearShareUnlockFailures(share.id, ip);
 
   (await cookies()).set(
     SHARE_UNLOCK_COOKIE,

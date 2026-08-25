@@ -37,14 +37,15 @@ vi.mock("@/lib/server/session-rate-limit", () => ({
   checkSessionRateLimit: () => ({ allowed: rateAllowed }),
 }));
 
-let attemptsLeft = true;
-const recordFailure = vi.fn();
-const clearFailures = vi.fn();
+let attemptAllowed = true;
+const consumeAttempt = vi.fn(async (_shareId: string, _ip: string) => attemptAllowed);
+const clearFailures = vi.fn((_shareId: string, _ip: string) => undefined);
 
 vi.mock("@/lib/server/share-unlock-attempts", () => ({
-  shareUnlockAttemptsLeft: async () => attemptsLeft,
-  recordShareUnlockFailure: (...args: unknown[]) => recordFailure(...args),
-  clearShareUnlockFailures: (...args: unknown[]) => clearFailures(...args),
+  consumeShareUnlockAttempt: (shareId: string, ip: string) =>
+    consumeAttempt(shareId, ip),
+  clearShareUnlockFailures: (shareId: string, ip: string) =>
+    clearFailures(shareId, ip),
 }));
 
 vi.mock("@/lib/server/custom-domains", () => ({
@@ -80,14 +81,14 @@ beforeEach(() => {
   cookieJar.clear();
   setCookie.mockClear();
   rateAllowed = true;
-  attemptsLeft = true;
-  recordFailure.mockClear();
+  attemptAllowed = true;
+  consumeAttempt.mockClear();
   clearFailures.mockClear();
   target.current = passwordShare();
 });
 
 describe("unlockShareWithPassword", () => {
-  it("refuse un mauvais mot de passe sans rien poser", async () => {
+  it("rejects a wrong password without setting a cookie", async () => {
     const result = await unlockShareWithPassword({
       token: "tok",
       password: "au-hasard",
@@ -95,12 +96,12 @@ describe("unlockShareWithPassword", () => {
     });
     expect(result).toEqual({ ok: false, error: "wrongPassword" });
     expect(setCookie).not.toHaveBeenCalled();
-    // The failure is placed in the base: it is the one that survives the next deployment.
-    expect(recordFailure).toHaveBeenCalledWith("share-1", "203.0.113.7");
+    // The shared reservation is already durable before password verification.
+    expect(consumeAttempt).toHaveBeenCalledWith("share-1", "203.0.113.7");
   });
 
-  it("s'arrête sur le compteur PERSISTANT, avant de dériver quoi que ce soit", async () => {
-    attemptsLeft = false;
+  it("stops on the persistent counter before deriving the password", async () => {
+    attemptAllowed = false;
     const result = await unlockShareWithPassword({
       token: "tok",
       password: "ouvre-toi",
@@ -110,7 +111,7 @@ describe("unlockShareWithPassword", () => {
     expect(setCookie).not.toHaveBeenCalled();
   });
 
-  it("refuse un token inconnu comme un mauvais mot de passe", async () => {
+  it("rejects an unknown token like a wrong password", async () => {
     target.current = null;
     const result = await unlockShareWithPassword({
       token: "inconnu",
@@ -121,7 +122,7 @@ describe("unlockShareWithPassword", () => {
     expect(result).toEqual({ ok: false, error: "wrongPassword" });
   });
 
-  it("s'arrête sur la limite de tentatives avant même de dériver", async () => {
+  it("stops on the in-memory brake before deriving the password", async () => {
     rateAllowed = false;
     const result = await unlockShareWithPassword({
       token: "tok",
@@ -131,7 +132,7 @@ describe("unlockShareWithPassword", () => {
     expect(result).toEqual({ ok: false, error: "tooManyAttempts" });
   });
 
-  it("pose le cookie du partage sur le bon mot de passe", async () => {
+  it("sets the share cookie for the correct password", async () => {
     const result = await unlockShareWithPassword({
       token: "tok",
       password: "ouvre-toi",
@@ -147,7 +148,7 @@ describe("unlockShareWithPassword", () => {
     expect(clearFailures).toHaveBeenCalledWith("share-1", "203.0.113.7");
   });
 
-  it("laisse passer un partage devenu public : il n'y a plus rien à ouvrir", async () => {
+  it("allows a share that became public because nothing remains to unlock", async () => {
     target.current = {
       kind: "page" as const,
       share: {
@@ -166,19 +167,19 @@ describe("unlockShareWithPassword", () => {
 });
 
 describe("isShareUnlocked", () => {
-  it("ouvre un partage public sans cookie", async () => {
+  it("opens a public share without a cookie", async () => {
     expect(
       await isShareUnlocked({ level: "public", token: "tok", password_hash: null })
     ).toBe(true);
   });
 
-  it("ferme un partage à mot de passe tant que le cookie ne correspond pas", async () => {
+  it("keeps a password share closed until the cookie matches", async () => {
     expect(await isShareUnlocked(passwordShare().share)).toBe(false);
     cookieJar.set("mdy_share_unlock", "n'importe quoi");
     expect(await isShareUnlocked(passwordShare().share)).toBe(false);
   });
 
-  it("invalide les cookies en circulation quand le mot de passe change", async () => {
+  it("invalidates existing cookies when the password changes", async () => {
     cookieJar.set("mdy_share_unlock", unlockCookieValue("tok", hash));
     expect(await isShareUnlocked(passwordShare().share)).toBe(true);
     const next = hashSharePassword("un-autre");
@@ -192,8 +193,8 @@ describe("isShareUnlocked", () => {
   });
 });
 
-describe("la comparaison du cookie", () => {
-  it("ne passe plus par un `===` sur le secret", () => {
+describe("cookie comparison", () => {
+  it("does not compare the secret with `===`", () => {
     // Structural test: the constant time comparison is not visible
     // execution, only the code says if it is there. What is kept is
     // that no `===` ever changes the value of the cookie.
@@ -202,7 +203,7 @@ describe("la comparaison du cookie", () => {
     expect(source).toContain("unlockCookieMatches");
   });
 
-  it("refuse une valeur de la bonne longueur mais fausse, et une trop courte", async () => {
+  it("rejects both a same-length wrong value and a short value", async () => {
     const { share } = passwordShare();
     const good = unlockCookieValue("tok", hash);
     cookieJar.set("mdy_share_unlock", `${good.slice(0, -1)}${good.at(-1) === "0" ? "1" : "0"}`);

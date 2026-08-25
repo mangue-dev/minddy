@@ -125,6 +125,19 @@ describe("verifyFeedbackSsoJwt", () => {
     expect(first.tokenId).not.toBe(second.tokenId);
   });
 
+  it("canonicalizes equivalent signature encodings before replay tracking", () => {
+    const token = sign({ sub: "user-1", exp: NOW + 60 });
+    const [header, payload, signature] = token.split(".");
+    const alternateSignature = `${signature.replaceAll("-", "+").replaceAll("_", "/") }=`;
+    const alternate = `${header}.${payload}.${alternateSignature}`;
+    const canonicalResult = verifyFeedbackSsoJwt(token, SECRET, NOW);
+    const alternateResult = verifyFeedbackSsoJwt(alternate, SECRET, NOW);
+    if (!canonicalResult.ok || !alternateResult.ok) {
+      throw new Error("expected equivalent signatures to verify");
+    }
+    expect(alternateResult.tokenId).toBe(canonicalResult.tokenId);
+  });
+
   it("rejects malformed input", () => {
     expect(verifyFeedbackSsoJwt("not-a-jwt", SECRET, NOW)).toEqual({
       ok: false,

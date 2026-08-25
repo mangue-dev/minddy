@@ -34,6 +34,7 @@ import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { clientIpFromHeaders } from "@/lib/server/request-ip";
+import { consumeFeedbackVoiceLimit } from "@/lib/server/feedback/voice-limits";
 import type { FeedbackVoicePatch, SimilarPost } from "@/lib/feedback/types";
 
 /**
@@ -300,9 +301,11 @@ export async function dictateFeedbackAction(
 
   if (!(await feedbackVoiceEnabled())) return { ok: false, error: "unavailable" };
 
-  const rate = checkSessionRateLimit(session.user.id, "feedback:dictate", {
-    limit: 40,
-    windowMs: 60 * 60 * 1000,
+  const rate = await consumeFeedbackVoiceLimit({
+    boardId: ctx.board.id,
+    feedbackUserId: session.user.id,
+    operation: "dictate",
+    userLimit: 40,
   });
   if (!rate.allowed) return { ok: false, error: "rateLimited" };
 
