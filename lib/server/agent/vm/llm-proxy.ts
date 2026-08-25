@@ -17,7 +17,7 @@ import {
 } from "@/lib/server/ai-usage-shape";
 import type { NormalizedUsage } from "@/lib/server/ai-usage";
 import type { RedactText } from "../redact";
-import { safeFetchResponse } from "@/lib/server/safe-fetch";
+import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 
 /**
  * THE SUPERVISOR'S LOCAL PROXY (MIN-286, lot 2) — the forty lines that
@@ -407,7 +407,10 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   // that pins validated DNS answers across redirects.
   const http =
     opts.fetchImpl ??
-    (opts.relay || isLocalAgentProvider(job.provider) ? fetch : safeFetchResponse);
+    (opts.relay || isLocalAgentProvider(job.provider)
+      ? fetch
+      : (url: string | URL | Request, init?: RequestInit) =>
+          fetchAiProvider(job.provider, url instanceof Request ? url.url : url, init));
   /**
    * The COMMON queue, powered by a PER REQUEST reader. A shared drive
    * would mix two responses in flight — and two girls in parallel, that's

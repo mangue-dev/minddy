@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/server/ai-provider-request", () => ({
+  fetchAiProvider: (_provider: string, url: string, init: RequestInit) => fetch(url, init),
+}));
+
 /**
  * `forcedToolCall` is the primitive shared by five AI passes (smart-fill,
  * conversation title, import match, brief cut, review of

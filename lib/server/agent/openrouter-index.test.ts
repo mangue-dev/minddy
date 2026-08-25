@@ -2,6 +2,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { modelCostMultiplier } from "@/lib/model-multiplier";
 
+vi.mock("@/lib/server/ai-provider-request", () => ({
+  fetchAiProviderBytes: async (
+    _provider: string,
+    url: string,
+    options: { headers?: Record<string, string> },
+  ) => {
+    const response = await fetch(url, { headers: options.headers });
+    return {
+      ok: response.ok,
+      status: response.status,
+      bytes: Buffer.from(await response.arrayBuffer()),
+    };
+  },
+}));
+
 /**
  * Reading the OpenRouter index — the only source of prices, hence the displayed multiplier and plan cap. What matters: that the real form
  * of `/models` (prices in CHAINS, per TOKEN) comes out in USD at

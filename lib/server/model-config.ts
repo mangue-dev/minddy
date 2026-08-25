@@ -101,12 +101,13 @@ export async function fetchOpenRouterWithSuffixFallback(
   model: string,
   request: (model: string) => RequestInit,
   logPrefix: string,
+  http: (url: string, init: RequestInit) => Promise<Response> = fetch,
 ): Promise<{ response: Response; model: string }> {
-  const response = await fetch(url, request(model));
+  const response = await http(url, request(model));
   const base = stripModelSuffix(model);
   if (response.ok || base === model) return { response, model };
   console.warn(`${logPrefix} ${model} refused (${response.status}), retrying on ${base}`);
-  return { response: await fetch(url, request(base)), model: base };
+  return { response: await http(url, request(base)), model: base };
 }
 
 /**

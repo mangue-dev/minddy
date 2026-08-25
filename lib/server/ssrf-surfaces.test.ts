@@ -68,6 +68,7 @@ function anyChain(data: unknown): unknown {
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
+    rpc: () => anyChain({}),
     from: (table: string) =>
       table === "integrations" ? integrationsTable() : (anyChain({}) as never),
   }),

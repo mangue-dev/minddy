@@ -9,7 +9,10 @@ import {
   keyPrefix,
   LOCAL_ENDPOINT_WITHOUT_API_KEY,
 } from "@/lib/server/agent/byok-credentials";
-import { probeByokKey } from "@/lib/server/agent/byok-validate";
+import {
+  BYOK_PROBE_RETRY_AFTER_SECONDS,
+  probeByokKey,
+} from "@/lib/server/agent/byok-validate";
 import {
   getAgentProvider,
   isLocalAgentProvider,
@@ -155,8 +158,25 @@ export async function POST(request: NextRequest) {
   const verdict = localProvider
     ? "valid"
     : effectiveBaseUrl
-      ? await probeByokKey({ provider, apiKey: key, baseUrl: effectiveBaseUrl })
+      ? await probeByokKey({
+          provider,
+          apiKey: key,
+          baseUrl: effectiveBaseUrl,
+          rateLimitKey: auth.user.id,
+        })
       : "unknown";
+  if (verdict === "rate_limited") {
+    return NextResponse.json(
+      {
+        error: "Too many provider validation requests",
+        retry_after: BYOK_PROBE_RETRY_AFTER_SECONDS,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(BYOK_PROBE_RETRY_AFTER_SECONDS) },
+      },
+    );
+  }
   if (verdict === "invalid") {
     const t = await getTranslations("ApiErrors");
     return NextResponse.json({ error: t("aiKeyRejected") }, { status: 400 });
@@ -178,35 +198,15 @@ export async function POST(request: NextRequest) {
 
   const service = getServiceClient();
 
-  // Current active provider (to know whether to reset the model fault).
-  const { data: existing } = await service
-    .from("user_ai_keys")
-    .select("provider")
-    .eq("user_id", auth.user.id)
-    .maybeSingle();
-  const previousProvider = (existing as { provider: string } | null)?.provider ?? null;
-
-  // Only one active BYOK: we delete the other providers before the upsert.
-  await service
-    .from("user_ai_keys")
-    .delete()
-    .eq("user_id", auth.user.id)
-    .neq("provider", provider);
-
   const { data, error } = await service
-    .from("user_ai_keys")
-    .upsert(
-      {
-        user_id: auth.user.id,
-        provider,
-        key_encrypted: encrypted,
-        key_prefix: key ? keyPrefix(key) : null,
-        base_url: baseUrl,
-        validated_at: verdict === "valid" ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,provider" },
-    )
+    .rpc("replace_user_ai_key", {
+      p_user_id: auth.user.id,
+      p_provider: provider,
+      p_key_encrypted: encrypted,
+      p_key_prefix: key ? keyPrefix(key) : null,
+      p_base_url: baseUrl,
+      p_validated_at: verdict === "valid" ? new Date().toISOString() : null,
+    })
     .select(SANITIZED)
     .single();
   if (error || !data) {
@@ -214,8 +214,6 @@ export async function POST(request: NextRequest) {
     const t = await getTranslations("ApiErrors");
     return NextResponse.json({ error: t("aiKeySaveFailed") }, { status: 500 });
   }
-
-  if (previousProvider !== provider) await clearDefaultModel(service, auth.user.id);
 
   return NextResponse.json({ key: data });
 }
@@ -283,12 +281,12 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { data, error } = await service
-    .from("user_ai_keys")
-    .update(update)
-    .eq("user_id", auth.user.id)
-    // Bind validation and write to the same row. A concurrent provider change
-    // must not apply cloud-only surfaces to a newly stored local endpoint.
-    .eq("provider", activeProvider)
+    .rpc("update_user_ai_key_preferences", {
+      p_user_id: auth.user.id,
+      p_expected_provider: activeProvider,
+      p_enabled_surfaces: update.enabled_surfaces ?? null,
+      p_feature_models: update.feature_models ?? null,
+    })
     .select(SANITIZED)
     .maybeSingle();
   if (error) {

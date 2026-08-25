@@ -142,7 +142,6 @@ export async function POST(request: NextRequest) {
           title: "minddy Dictate",
           providerId: runtime.provider,
           baseUrl: runtime.baseUrl,
-          secureEndpoint: runtime.mode === "byok",
         });
       },
       { logPrefix: "[/api/transcribe]" },

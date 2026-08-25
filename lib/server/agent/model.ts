@@ -334,7 +334,7 @@ async function confirmsUnvalidatedKey(params: {
   if (lastFailure && Date.now() - lastFailure < UNVALIDATED_TTL_MS) return false;
 
   const { probeByokKey } = await import("./byok-validate");
-  const verdict = await probeByokKey(params);
+  const verdict = await probeByokKey({ ...params, rateLimitKey: params.userId });
   if (verdict !== "valid") {
     unvalidatedProbes.set(params.userId, Date.now());
     return false;
@@ -384,6 +384,10 @@ export async function getUserByok(
     : DEFAULT_BYOK_SURFACES;
   if (surface && !enabledSurfaces.includes(surface)) return null;
   const localProvider = isLocalAgentProvider(row.provider);
+  // Only the agent surface has an explicit local-execution handoff. Every
+  // other surface runs on the server and must ignore a legacy or corrupted
+  // local-provider assignment even if it bypassed the database constraint.
+  if (localProvider && surface && surface !== "agent") return null;
   const apiKey =
     row.key_encrypted === LOCAL_ENDPOINT_WITHOUT_API_KEY
       ? ""

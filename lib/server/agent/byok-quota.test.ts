@@ -131,6 +131,19 @@ describe("getUserByok — la validation gouverne", () => {
     });
   });
 
+  it("ignores a local provider assigned to a server-executed surface", async () => {
+    keyRow = {
+      provider: "local_openai",
+      key_encrypted: "chiffré",
+      base_url: "http://127.0.0.1:1234/v1",
+      validated_at: "2026-08-01T00:00:00.000Z",
+      enabled_surfaces: ["agent", "assistant"],
+    };
+
+    await expect(getUserByok(USER, "assistant")).resolves.toBeNull();
+    expect(probeByokKey).not.toHaveBeenCalled();
+  });
+
   it("accepte un endpoint local sans clé, sans jamais retomber sur la plateforme", async () => {
     keyRow = {
       provider: "ollama",

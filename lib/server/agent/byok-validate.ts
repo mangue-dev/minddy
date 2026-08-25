@@ -5,7 +5,8 @@ import {
   isLocalAgentProvider,
   type AgentProviderId,
 } from "@/lib/agent-providers";
-import { safeFetch } from "@/lib/server/safe-fetch";
+import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
  * PROBE A BYOK KEY (MIN-344) — does the provider recognize this key?
@@ -28,10 +29,12 @@ import { safeFetch } from "@/lib/server/safe-fetch";
  * seen working.
  */
 
-export type ByokProbeVerdict = "valid" | "invalid" | "unknown";
+export type ByokProbeVerdict = "valid" | "invalid" | "unknown" | "rate_limited";
 
 /** Beyond that, we don't know — and we don't make you wait for the settings screen. */
 const PROBE_TIMEOUT_MS = 8000;
+const PROBE_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 } as const;
+export const BYOK_PROBE_RETRY_AFTER_SECONDS = PROBE_RATE_LIMIT.windowMs / 1000;
 
 interface ProbeRequest {
   url: string;
@@ -75,17 +78,26 @@ export async function probeByokKey(params: {
   provider: AgentProviderId;
   apiKey: string;
   baseUrl: string;
+  /** Shares one outbound-probe budget across registration and runtime validation. */
+  rateLimitKey?: string;
 }): Promise<ByokProbeVerdict> {
-  const { provider, apiKey, baseUrl } = params;
+  const { provider, apiKey, baseUrl, rateLimitKey } = params;
   if (!apiKey || !baseUrl) return "invalid";
   if (!getAgentProvider(provider)) return "invalid";
   // A probe from the cloud deployment would precisely cancel the promise of
   // local provider. Its state is established by the first call to the local proxy.
   if (isLocalAgentProvider(provider)) return "unknown";
 
+  if (
+    rateLimitKey &&
+    !checkSessionRateLimit(rateLimitKey, "byok-provider-probe", PROBE_RATE_LIMIT).allowed
+  ) {
+    return "rate_limited";
+  }
+
   const { url, headers } = probeRequestFor(provider, baseUrl.replace(/\/+$/, ""), apiKey);
   try {
-    const res = await safeFetch(url, {
+    const res = await fetchAiProviderBytes(provider, url, {
       headers,
       maxBytes: 1,
       onOverflow: "truncate",

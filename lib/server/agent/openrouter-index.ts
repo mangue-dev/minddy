@@ -2,6 +2,7 @@ import "server-only";
 
 import type { ModelPricing } from "@/lib/model-multiplier";
 import { isReasoningLevel, type ModelReasoning, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 
 /**
  * The OpenRouter index: A reading of `/models`, cached at the
@@ -26,6 +27,7 @@ import { isReasoningLevel, type ModelReasoning, type ReasoningLevel } from "@/li
  */
 
 const MODELS_URL = "https://openrouter.ai/api/v1/models";
+const MAX_MODELS_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 /** Same duration as the old catalog cache: the list moves slowly. */
 const TTL_MS = 60 * 60 * 1000;
@@ -123,9 +125,12 @@ function parseReasoning(raw: {
 async function fetchIndex(apiKey?: string): Promise<void> {
   const headers: Record<string, string> = {};
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  const res = await fetch(MODELS_URL, { headers });
+  const res = await fetchAiProviderBytes("openrouter", MODELS_URL, {
+    headers,
+    maxBytes: MAX_MODELS_RESPONSE_BYTES,
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = (await res.json()) as {
+  const body = JSON.parse(res.bytes.toString("utf8")) as {
     data?: Array<{
       id?: string;
       name?: string;

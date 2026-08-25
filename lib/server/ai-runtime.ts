@@ -3,6 +3,7 @@ import "server-only";
 import {
   DEFAULT_AGENT_PROVIDER,
   getAgentProvider,
+  isLocalAgentProvider,
   resolveProviderBaseUrl,
   type AgentProviderId,
   type ProviderRequestProfile,
@@ -16,7 +17,11 @@ import {
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
-import { getUserByok, resolveProviderDefaultModel } from "@/lib/server/agent/model";
+import {
+  getUserByok,
+  LocalEndpointRequiresLocalRunError,
+  resolveProviderDefaultModel,
+} from "@/lib/server/agent/model";
 import { chatCompletionsUrl } from "@/lib/agent-providers";
 import {
   aiChatProviderHeaders,
@@ -26,7 +31,7 @@ import {
 } from "@/lib/ai-chat";
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 import { isManagedAiEnabled } from "@/lib/managed-services";
-import { safeFetchResponse } from "@/lib/server/safe-fetch";
+import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 
 export type AiKeyMode = "platform" | "byok";
 
@@ -106,6 +111,9 @@ export async function resolveAiRuntime(params: {
   ]);
 
   if (byok) {
+    if (isLocalAgentProvider(byok.provider)) {
+      throw new LocalEndpointRequiresLocalRunError();
+    }
     const chosen = byok.featureModels[params.modelKey]?.trim();
     const model =
       chosen ||
@@ -202,9 +210,16 @@ export async function fetchAiChat(
     };
   };
   if (runtime.provider === "openrouter") {
-    return fetchOpenRouterWithSuffixFallback(endpoint, model, request, logPrefix);
+    return fetchOpenRouterWithSuffixFallback(
+      endpoint,
+      model,
+      request,
+      logPrefix,
+      (url, options) => fetchAiProvider(runtime.provider, url, options),
+    );
   }
-  const http = runtime.mode === "byok" ? safeFetchResponse : fetch;
+  const http = (url: string, options: RequestInit) =>
+    fetchAiProvider(runtime.provider, url, options);
   const firstRequest = request(model);
   const firstResponse = await http(endpoint, firstRequest);
   return {

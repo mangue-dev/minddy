@@ -27,7 +27,7 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import { isManagedAiEnabled } from "@/lib/managed-services";
-import { safeFetch } from "@/lib/server/safe-fetch";
+import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 
 /**
  * Code agent template catalog (MIN-46), resolved according to the provider
@@ -150,8 +150,12 @@ async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
 }
 
 /** OpenAI-compatible `/models` endpoint (OpenAI, Google, generic). */
-async function listOpenAICompat(baseUrl: string, apiKey: string): Promise<AgentModelEntry[]> {
-  const res = await safeFetch(`${baseUrl}/models`, {
+async function listOpenAICompat(
+  provider: AgentProviderId,
+  baseUrl: string,
+  apiKey: string,
+): Promise<AgentModelEntry[]> {
+  const res = await fetchAiProviderBytes(provider, `${baseUrl}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` },
     maxBytes: MAX_MODELS_RESPONSE_BYTES,
   });
@@ -166,7 +170,7 @@ async function listOpenAICompat(baseUrl: string, apiKey: string): Promise<AgentM
 
 /** Native Anthropic `/v1/models` endpoint (`x-api-key` + `anthropic-version`). */
 async function listAnthropic(baseUrl: string, apiKey: string): Promise<AgentModelEntry[]> {
-  const res = await safeFetch(`${baseUrl}/models?limit=1000`, {
+  const res = await fetchAiProviderBytes("anthropic", `${baseUrl}/models?limit=1000`, {
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
     maxBytes: MAX_MODELS_RESPONSE_BYTES,
   });
@@ -192,10 +196,10 @@ async function loadModels(
     case "anthropic":
       return listAnthropic(baseUrl, apiKey);
     case "openai":
-      return listOpenAICompat(baseUrl, apiKey);
+      return listOpenAICompat(provider, baseUrl, apiKey);
     case "generic":
       // Arbitrary endpoint: may not expose /models → failure is tolerated.
-      return listOpenAICompat(baseUrl, apiKey);
+      return listOpenAICompat(provider, baseUrl, apiKey);
     case "none":
       // Local endpoints are never reached from the cloud. The field of
       // model remains free in the picker: the user enters the id exposed by

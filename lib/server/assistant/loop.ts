@@ -12,6 +12,7 @@ import type { AssistantToolDef } from "./tools";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { stripModelSuffix } from "@/lib/ai-model-config";
 import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
+import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import {
   getToolResultCharLimit,
   serializeToolResult,
@@ -57,15 +58,21 @@ const modelIndexCache = new Map<
   { caching: boolean; modalities: string[] }
 >();
 let modelIndexLoaded = false;
+const MAX_MODEL_INDEX_BYTES = 5 * 1024 * 1024;
 
 async function loadModelIndex(apiKey: string): Promise<void> {
   if (modelIndexLoaded) return;
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/models", {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
+    const res = await fetchAiProviderBytes(
+      "openrouter",
+      "https://openrouter.ai/api/v1/models",
+      {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        maxBytes: MAX_MODEL_INDEX_BYTES,
+      },
+    );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const body = (await res.json()) as {
+    const body = JSON.parse(res.bytes.toString("utf8")) as {
       data?: Array<{
         id: string;
         pricing?: { input_cache_read?: string | number };

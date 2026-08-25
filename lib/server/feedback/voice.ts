@@ -261,7 +261,6 @@ export async function transcribeFeedbackAudio({
         title: "minddy Feedback voice",
         providerId: runtime?.provider,
         baseUrl: runtime?.baseUrl,
-        secureEndpoint: runtime?.mode === "byok",
       });
     },
     { logPrefix: "[feedback-voice]" },

@@ -14,7 +14,8 @@ import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-import { safeFetchResponse } from "@/lib/server/safe-fetch";
+import { fetchAiProvider } from "@/lib/server/ai-provider-request";
+import type { AgentProviderId } from "@/lib/agent-providers";
 
 /**
  * Cost tracking context for an embeddings call (one call = one run).
@@ -81,12 +82,11 @@ export async function embedTexts(
   const endpoint = runtime
     ? `${runtime.baseUrl.replace(/\/+$/, "")}/embeddings`
     : OPENROUTER_EMBEDDINGS_URL;
-  const provider = runtime?.provider ?? "openrouter";
+  const provider: AgentProviderId = runtime?.provider ?? "openrouter";
 
   const input = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
   const attempt = async (model: string): Promise<(number[] | null)[]> => {
-    const http = runtime?.mode === "byok" ? safeFetchResponse : fetch;
-    const response = await http(endpoint, {
+    const response = await fetchAiProvider(provider, endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

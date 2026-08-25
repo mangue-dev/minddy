@@ -1,5 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/server/ai-provider-request", () => ({
+  fetchAiProviderBytes: async (
+    _provider: string,
+    url: string,
+    options: { headers?: Record<string, string> },
+  ) => {
+    const response = await fetch(url, { headers: options.headers });
+    return {
+      ok: response.ok,
+      status: response.status,
+      bytes: Buffer.from(await response.arrayBuffer()),
+    };
+  },
+}));
+
 /**
  * MIN-111: what decides that a run SEES the mocks is a read of the index
  * OpenRouter — Does `architecture.input_modalities` contain `image`. The rest of the

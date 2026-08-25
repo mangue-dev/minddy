@@ -1,6 +1,7 @@
 import "server-only";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-import { safeFetchResponse } from "@/lib/server/safe-fetch";
+import { fetchAiProvider } from "@/lib/server/ai-provider-request";
+import type { AgentProviderId } from "@/lib/agent-providers";
 
 /**
  * OpenRouter speech-to-text helper (ported from AutoKap).
@@ -42,10 +43,8 @@ export interface TranscribeAudioOptions {
   temperature?: number;
   provider?: Record<string, unknown>;
   title?: string;
-  providerId?: string;
+  providerId?: AgentProviderId;
   baseUrl?: string;
-  /** Route a user-configured cloud endpoint through DNS validation and pinning. */
-  secureEndpoint?: boolean;
 }
 
 export interface TranscribeAudioResult {
@@ -89,8 +88,7 @@ export async function transcribeAudio(
     }
   }
 
-  const http = options?.secureEndpoint ? safeFetchResponse : fetch;
-  const res = await http(`${baseUrl}/audio/transcriptions`, {
+  const res = await fetchAiProvider(providerId, `${baseUrl}/audio/transcriptions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
