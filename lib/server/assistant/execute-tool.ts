@@ -54,6 +54,10 @@ import {
   updateRoutine,
 } from "@/lib/server/routines";
 import {
+  routineForAssistantTool,
+  routinesForAssistantTool,
+} from "@/lib/server/assistant/routine-tool-result";
+import {
   cancelInvitation,
   inviteMember,
   listPendingInvitations,
@@ -327,44 +331,6 @@ function numberList(value: unknown): number[] {
   return Array.isArray(value)
     ? value.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
     : [];
-}
-
-/** A routine, as Numo reads it back and reports it — cadence in plain language. */
-function routineForTool(routine: {
-  id: string;
-  title: string;
-  prompt: string;
-  model: string | null;
-  max_spend_percent: number;
-  frequency: string;
-  hour: number;
-  minute: number;
-  weekdays: number[];
-  days_of_month: number[];
-  timezone: string;
-  enabled: boolean;
-  next_run_at: string | null;
-  last_run_at: string | null;
-  last_error: string | null;
-}) {
-  return {
-    id: routine.id,
-    title: routine.title,
-    prompt: routine.prompt,
-    model: routine.model,
-    /** What ONE passage can spend, as a % of the owner's monthly budget. */
-    max_spend_percent: routine.max_spend_percent,
-    frequency: routine.frequency,
-    hour: routine.hour,
-    minute: routine.minute,
-    weekdays: routine.weekdays,
-    days_of_month: routine.days_of_month,
-    timezone: routine.timezone,
-    enabled: routine.enabled,
-    next_run_at: routine.next_run_at,
-    last_run_at: routine.last_run_at,
-    last_error: routine.last_error,
-  };
 }
 
 /** Readable messages for the settings cores' errorKeys — the assistant does not
@@ -1444,14 +1410,23 @@ export async function executeTool(
           timezone: typeof args.timezone === "string" ? args.timezone : "",
         });
         if (!result.ok) return toolError(routineErrorMessage(result));
-        return { result: { routine: routineForTool(result.routine) }, success: true };
+        return {
+          result: { routine: routineForAssistantTool(result.routine) },
+          success: true,
+        };
       }
 
       case "list_routines": {
         const rows = (await listRoutinesForUser(ctx.userId)).filter(
           (r) => r.project_id === projectId,
         );
-        return { result: { routines: rows.map(routineForTool) }, success: true };
+        const routineId = typeof args.routine_id === "string" ? args.routine_id : "";
+        const routines = routinesForAssistantTool(rows, routineId);
+        if (!routines) return toolError("No routine with that id in this project.");
+        return {
+          result: { routines },
+          success: true,
+        };
       }
 
       case "update_routine": {
@@ -1480,7 +1455,10 @@ export async function executeTool(
           ...(typeof args.timezone === "string" ? { timezone: args.timezone } : {}),
         });
         if (!result.ok) return toolError(routineErrorMessage(result));
-        return { result: { routine: routineForTool(result.routine) }, success: true };
+        return {
+          result: { routine: routineForAssistantTool(result.routine) },
+          success: true,
+        };
       }
 
       case "read_pull_request": {

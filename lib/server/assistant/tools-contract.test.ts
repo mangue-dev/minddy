@@ -42,6 +42,14 @@ describe("Numo tool contracts", () => {
     expect(tool("propose_backlog")?.function.description).toMatch(/OWNER ONLY/i);
   });
 
+  it("loads routine instructions only when a routine is targeted", () => {
+    const listRoutines = tool("list_routines");
+
+    expect(listRoutines?.function.parameters.properties).toHaveProperty("routine_id");
+    expect(listRoutines?.function.description).toMatch(/compact list/i);
+    expect(listRoutines?.function.description).toMatch(/full instruction/i);
+  });
+
   it("keeps feedback comment guidance aligned with the comment service", () => {
     const comment = tool("add_feedback_comment");
 

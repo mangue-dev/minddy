@@ -870,7 +870,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
   } else if (ctx.routineId) {
     lines.push(
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
-      `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction, its cadence, its model), call list_routines${ctx.projectId ? ` on project ${ctx.projectId}` : ""} and match that id; do not ask the user to repeat it.`,
+      `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction, its cadence, its model), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; do not ask the user to repeat it.`,
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`
     );
   }

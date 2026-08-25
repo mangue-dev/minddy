@@ -54,11 +54,14 @@ export const UPDATE_ROUTINE_DESCRIPTION =
   "NEXT occurrence, not at the one already scheduled. Get the id from list_routines.";
 
 export const LIST_ROUTINES_DESCRIPTION =
-  "List the routines of a project: id, title (written by minddy from the " +
-  "instruction), instruction, cadence in plain fields, " +
+  "List the routines of a project without loading every instruction: id, title " +
+  "(written by minddy from the instruction), cadence in plain fields, " +
   "model, the spending cap of one run, whether it is enabled, when it last ran " +
   "and when it runs next, and the " +
   "code of the last missed run (an exhausted usage budget, an unlinked repository). " +
+  "The compact list deliberately omits instructions so a project with many long " +
+  "routines still fits in one tool result. Pass `routine_id` after finding the " +
+  "routine to read that routine again with its full instruction. " +
   "Call it before creating one, to reuse or adjust what is already scheduled instead " +
   "of stacking a second routine that does the same job.";
 

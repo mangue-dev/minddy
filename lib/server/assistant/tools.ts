@@ -1951,7 +1951,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_routines",
       description: LIST_ROUTINES_DESCRIPTION,
-      parameters: { type: "object", properties: {} },
+      parameters: {
+        type: "object",
+        properties: {
+          routine_id: {
+            type: "string",
+            description:
+              "Optional routine id from a previous compact list. Pass it to read that routine with its full instruction.",
+          },
+        },
+      },
     },
   },
   {
