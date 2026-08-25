@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.svg" alt="minddy logo" width="88">
+  <img src="public/web-app-manifest-192x192.png" alt="minddy app icon" width="88">
 </p>
 
 <h1 align="center">minddy</h1>
