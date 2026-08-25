@@ -130,12 +130,12 @@ export async function deletePushDeviceApi(deviceId: string): Promise<void> {
   trackEvent("push_device_removed", {});
 }
 
-export async function testPushDeviceApi(endpoint: string): Promise<void> {
+export async function testPushDeviceApi(deviceId: string): Promise<void> {
   await parseJson(
     await fetch("/api/account/push-subscriptions/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint }),
+      body: JSON.stringify({ deviceId }),
     })
   );
   trackEvent("push_test_sent", {});

@@ -89,6 +89,22 @@ describe("POST /api/relay/webhook-secret", () => {
     });
   });
 
+  it("persists the normalized URL that passed public-address validation", async () => {
+    const response = await route(
+      signedRequest(
+        JSON.stringify({
+          webhookUrl: "https://ON-PREM.example.com:443/api/webhooks/github#ignored",
+          secret: SECRET,
+        }),
+      ) as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(fakeTables["forge_relay_instances"]?.[0]).toMatchObject({
+      webhook_url: "https://on-prem.example.com/api/webhooks/github",
+    });
+  });
+
   it.each([
     "http://on-prem.example.com/api/webhooks/github",
     "http://localhost:3000/api/webhooks/github",
@@ -109,6 +125,7 @@ describe("POST /api/relay/webhook-secret", () => {
     "https://169.254.169.254/latest/meta-data/",
     "https://[::1]/api/webhooks/github",
     "https://0x7f000001/api/webhooks/github",
+    "https://user:secret@on-prem.example.com/api/webhooks/github",
   ])("refuses a private or provider-internal address: %s", async (webhookUrl) => {
     const response = await route(
       signedRequest(JSON.stringify({ webhookUrl, secret: SECRET })) as never,

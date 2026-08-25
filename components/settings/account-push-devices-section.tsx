@@ -192,7 +192,7 @@ export function AccountPushDevicesSection() {
   const sendTest = async (device: PushDevice) => {
     setTestingId(device.id);
     try {
-      await testPushDeviceApi(device.endpoint);
+      await testPushDeviceApi(device.id);
       toast.success(t("testSentToast"));
     } catch (e) {
       toast.error((e as Error).message);

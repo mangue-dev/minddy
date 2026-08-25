@@ -151,6 +151,12 @@ function ipv4Payload(groups: number[]): string | null {
   ) {
     return embeddedIpv4(g6, g7);
   }
+  // ISATAP stores IPv4 in the final 32 bits of an interface identifier whose
+  // marker is 0000:5efe or 0200:5efe. The routing prefix before it is chosen by
+  // the deployment, so checking only named translation prefixes misses it.
+  if ((g4 === 0 || g4 === 0x0200) && g5 === 0x5efe) {
+    return embeddedIpv4(g6, g7);
+  }
   // 6to4 stores IPv4 in the 32 bits immediately after 2002::/16.
   if (g0 === 0x2002) return embeddedIpv4(g1, g2);
   return null;

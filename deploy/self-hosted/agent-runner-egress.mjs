@@ -92,6 +92,11 @@ function ipv4Payload(groups) {
   if (g0 === 0x0064 && g1 === 0xff9b && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0) {
     return embeddedIpv4(g6, g7);
   }
+  // ISATAP uses an arbitrary routing prefix followed by 0000:5efe or
+  // 0200:5efe and an embedded IPv4 address.
+  if ((g4 === 0 || g4 === 0x0200) && g5 === 0x5efe) {
+    return embeddedIpv4(g6, g7);
+  }
   if (g0 === 0x2002) return embeddedIpv4(g1, g2);
   return null;
 }

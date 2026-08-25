@@ -29,12 +29,15 @@ test("the relay address filter blocks private and disguised private destinations
     "fd00::1",
     "::ffff:a9fe:a9fe",
     "64:ff9b::a9fe:a9fe",
+    "2606:4700::5efe:a9fe:a9fe",
+    "2606:4700:1:2:200:5efe:a00:1",
     "2002:a9fe:a9fe::1",
   ]) {
     assert.equal(isPrivateAddress(address), true, address);
   }
   assert.equal(isPrivateAddress("1.1.1.1"), false);
   assert.equal(isPrivateAddress("2606:4700:4700::1111"), false);
+  assert.equal(isPrivateAddress("2606:4700::5efe:5db8:d822"), false);
 });
 
 test("the relay rejects a direct private URL and a mixed public-private DNS answer", async () => {

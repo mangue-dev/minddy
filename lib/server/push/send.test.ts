@@ -208,7 +208,7 @@ describe("sendPushToUser", () => {
     expect(payloadFor.mock.calls.map((c) => c[0]).sort()).toEqual(["en", "fr"]);
   });
 
-  it("sends only to the device selected by `onlyEndpoint`", async () => {
+  it("sends only to the device selected by its persisted id", async () => {
     H.send.mockResolvedValue(undefined);
     const { service } = stubService([
       { id: "d1", endpoint: "https://push.example/1", p256dh: "k", auth: "a", locale: "fr" },
@@ -216,7 +216,7 @@ describe("sendPushToUser", () => {
     ]);
 
     const tally = await sendPushToUser(service, "u1", () => PAYLOAD, {
-      onlyEndpoint: "https://push.example/2",
+      onlyDeviceId: "d2",
     });
 
     expect(tally.sent).toBe(1);

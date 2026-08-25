@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -10,6 +10,8 @@ const { agentResourceSummary, fetchAgentLinkResource, withoutAgentLinkUrls } = a
 );
 
 describe("agent link resource isolation", () => {
+  beforeEach(() => safeFetch.mockReset());
+
   it("removes raw destinations from standalone summaries and containers", () => {
     const raw = {
       id: "link-1",
@@ -44,5 +46,30 @@ describe("agent link resource isolation", () => {
     });
     expect(JSON.stringify(result)).not.toContain("redirect.example");
     expect(JSON.stringify(result)).not.toContain("binary payload");
+    expect(safeFetch).toHaveBeenCalledWith(
+      "https://public.example/document",
+      expect.objectContaining({
+        maxBytes: 256 * 1024,
+        maxRedirects: 3,
+        onOverflow: "truncate",
+        timeoutMs: 10_000,
+      }),
+    );
+  });
+
+  it("returns only bounded text even when the guarded response was truncated", async () => {
+    safeFetch.mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers({ "content-type": "text/plain" }),
+      url: new URL("https://public.example/document"),
+      bytes: Buffer.from(`start-${"x".repeat(12_000)}-end`),
+      truncated: true,
+    });
+
+    const result = await fetchAgentLinkResource("https://public.example/document");
+
+    expect(String(result.content).length).toBeLessThanOrEqual(6000);
+    expect(result.content_note).toMatch(/Truncated/);
   });
 });

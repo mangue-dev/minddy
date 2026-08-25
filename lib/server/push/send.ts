@@ -197,12 +197,12 @@ export async function sendPushToUser(
   service: SupabaseClient,
   userId: string,
   payloadFor: (locale: PushLocale) => PushPayload | null,
-  opts: { onlyEndpoint?: string } = {}
+  opts: { onlyDeviceId?: string } = {}
 ): Promise<{ sent: number; gone: number; failed: number }> {
   const tally = { sent: 0, gone: 0, failed: 0 };
   let subs = await activeSubscriptionsOf(service, userId);
-  if (opts.onlyEndpoint) {
-    subs = subs.filter((s) => s.endpoint === opts.onlyEndpoint);
+  if (opts.onlyDeviceId) {
+    subs = subs.filter((subscription) => subscription.id === opts.onlyDeviceId);
   }
   if (subs.length === 0) return tally;
 

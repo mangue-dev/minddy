@@ -22,19 +22,24 @@ import { getServiceClient } from "@/lib/supabase-service";
  * persisted while it resolves to a private network or cloud metadata service.
  * Delivery resolves it again because DNS may change after registration.
  */
-async function isAcceptableWebhookUrl(value: string): Promise<boolean> {
+async function validatedWebhookUrl(value: string): Promise<string | null> {
   let url: URL;
   try {
     url = new URL(value);
   } catch {
-    return false;
+    return null;
   }
-  if (url.protocol !== "https:") return false;
+  if (url.protocol !== "https:" || url.username || url.password) return null;
+  // Fragments are never sent in HTTP requests and should not make two stored
+  // destinations appear different.
+  url.hash = "";
   try {
-    await assertPublicHttpUrl(url);
-    return true;
+    const target = await assertPublicHttpUrl(url);
+    // Persist the exact normalized URL that passed validation. Delivery still
+    // resolves it again and pins that fresh result before opening a socket.
+    return target.url.toString();
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -60,11 +65,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   const webhookUrl = typeof body.webhookUrl === "string" ? body.webhookUrl : null;
-  const acceptableWebhookUrl =
-    webhookUrl !== null && (await isAcceptableWebhookUrl(webhookUrl));
+  const acceptedWebhookUrl =
+    webhookUrl === null ? null : await validatedWebhookUrl(webhookUrl);
   const secret =
     typeof body.secret === "string" && body.secret.length >= 32 ? body.secret : null;
-  if (!webhookUrl || !acceptableWebhookUrl || !secret) {
+  if (!acceptedWebhookUrl || !secret) {
     return NextResponse.json(
       {
         error:
@@ -77,7 +82,7 @@ export async function POST(request: NextRequest) {
   const { error } = await getServiceClient()
     .from("forge_relay_instances")
     .update({
-      webhook_url: webhookUrl,
+      webhook_url: acceptedWebhookUrl,
       webhook_secret_encrypted: encryptForgeToken(secret),
     })
     .eq("id", verification.instance.id);
@@ -88,7 +93,7 @@ export async function POST(request: NextRequest) {
   await getServiceClient().from("forge_relay_audit").insert({
     instance_id: verification.instance.id,
     action: "webhook_secret_registered",
-    detail: { webhookUrl },
+    detail: { webhookUrl: acceptedWebhookUrl },
   });
   return NextResponse.json({ ok: true });
 }

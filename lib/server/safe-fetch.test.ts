@@ -62,6 +62,8 @@ describe("isPrivateAddress — blocked", () => {
     ["::ffff:0:a9fe:a9fe", "IPv4-translated hexadecimal form"],
     ["64:ff9b::a00:1", "NAT64 — 10.0.0.1"],
     ["64:ff9b:1:a9fe:a9:fe00::", "local-use translation — 169.254.169.254"],
+    ["2606:4700::5efe:a9fe:a9fe", "ISATAP — 169.254.169.254"],
+    ["2606:4700:1:2:200:5efe:a00:1", "ISATAP with U/L bit — 10.0.0.1"],
     ["2002:a9fe:a9fe::1", "6to4 — 169.254.169.254"],
     ["fe80::1%eth0", "link-local with a zone identifier"],
     // MIN-341 — the forgotten ranges, and the old writings of an IPv4.
@@ -98,6 +100,7 @@ describe("isPrivateAddress — allowed", () => {
     ["::ffff:0:5db8:d822", "public IPv4-translated — 93.184.216.34"],
     ["64:ff9b::5db8:d822", "public NAT64 payload — 93.184.216.34"],
     ["2002:5db8:d822::1", "6to4 over a public IPv4 address"],
+    ["2606:4700::5efe:5db8:d822", "ISATAP over a public IPv4 address"],
     ["1568489506", "93.184.216.34 in decimal — a legacy form remains valid"],
     ["example.com", "a hostname is not an address"],
     ["0x", "not an address either"],
