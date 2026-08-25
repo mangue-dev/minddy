@@ -135,7 +135,7 @@ async function capture({ locale, theme }) {
 
     const path = `${OUT}/${locale}-${theme}.png`;
     await shoot(page, path);
-    return { path, locale, theme, editsLabel: editsLabels.find((label) => check.hasEdits) };
+    return { path, locale, theme, editsLabel: editsLabels.find(() => check.hasEdits) };
   } finally {
     await browser.close();
   }
