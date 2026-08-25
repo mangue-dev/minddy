@@ -101,83 +101,53 @@ export function MentionChip({
   onNavigate?: () => void;
   className?: string;
 }) {
-  // An IMAGE (a portrait, an orb) is an object in the line; a GLYPH
-  // is text — it lives in the margin of the label and follows its color. Hence
-  // two gutters on the left, and only one on the right.
-  //
-  // Both images are ROUND and the size of a glyph (14px), not the
-  // height of the line: a mention is first read by its wording, the figure
-  // is only there to say who it is when two people have the same
-  // first name. At 16px it weighed more than the name it accompanies. Round, y
-  // understood the orb of the project: at this size a softened square is only one
-  // bumpy round, and the pill already has the rectangular shape for two.
+  // Images use the narrower left gutter; glyphs use the wider one. Every
+  // measurement is relative to the label so the whole chip scales with its
+  // surrounding text, including when a mention appears in a heading.
   const hasImage = type === "member" || type === "forge" || type === "project";
 
-  // The figure is an object placed IN the text line of the pill, and not a
-  // brother of the wording in a flex box: this is what allows the pill
-  // to have a baseline (see `shape`). It therefore focuses on the height
-  // d'x of the label (`align-middle`), like an emoticon would do.
-  //
-  // …and then goes up a tenth of an em, because it is NOT on the
-  // height of x as the eye wants it. `align-middle` aims for the middle of the “x”;
-  // but a mention wording is made up of capitals and stems (“Clément”,
-  // “PRTF-2”), whose optical medium is that of the height of the capital,
-  // higher by approximately (cap − x) / 2 — or ~0.1em for Inter. Without this
-  // shift the figure appears to fall under its own text, inside the
-  // pill. In `em` and not in pixels: the pill follows the body of the text which
-  // door, its timing must follow it too.
+  // The figure stays inline with the label so the chip keeps a text baseline.
+  // `align-middle` targets the x-height; the small upward offset aligns it with
+  // the capitals and stems that dominate mention labels.
   const figure = (
-    <span className="relative -top-[0.1em] mr-1 inline-flex size-3.5 items-center justify-center align-middle">
+    <span className="relative -top-[0.1em] mr-[0.3em] inline-flex size-[1.05em] items-center justify-center align-middle">
       {type === "member" ? (
-        <UserAvatar seed={avatarSeed ?? id} className="size-3.5" />
+        <UserAvatar seed={avatarSeed ?? id} className="size-full" />
       ) : type === "forge" ? (
         // The forge account bears HIS portrait (that of github.com), not one
         // minddy avatar generated: it's him we're quoting, and he doesn't have
         // account here. `seed` remains the fallback when the forge is not in use.
-        <UserAvatar url={avatarUrl} seed={id} className="size-3.5" />
+        <UserAvatar url={avatarUrl} seed={id} className="size-full" />
       ) : type === "project" ? (
         <ProjectOrb
           seed={avatarSeed ?? id}
           iconUrl={iconUrl}
-          className="size-3.5 rounded-full"
+          className="size-full rounded-full"
         />
       ) : type === "numo" ? (
         // The face of the assistant, exactly the one who signs his answers —
         // nude, in pill ink, which is the brand color here.
-        <NumoFace className="size-3.5" />
+        <NumoFace className="size-full" />
       ) : type === "issue" ? (
-        <FileText className="size-3.5" />
+        <FileText className="size-full" />
       ) : type === "page" ? (
         // The EMOJI of the page takes the place of the glyph when it has one:
         // it's her own face, and she wears her own colors.
         icon ? (
           <span className="text-[0.85em] leading-none">{icon}</span>
         ) : (
-          <BookText className="size-3.5" />
+          <BookText className="size-full" />
         )
       ) : (
-        <Target className="size-3.5" />
+        <Target className="size-full" />
       )}
     </span>
   );
 
-  // Geometry of the pill, in the order in which it is deduced:
-  // it is the LABEL which gives the height (leading-4, i.e. 16px), and not more
-  // the figure, which is now smaller: + 1px margin at the top and
-  //   en bas → 18px ;
-  // radius 5px, and not half the height: a barely softened RECTANGLE,
-  // not a capsule. This is what makes it look like text highlighting
-  // rather than an object placed on it — a mention is of the cited text, it
-  // has no reason to break away from it in form.
-  //
-  // The vertical margin is no longer worth the 3px of a pill with a neutral background: one
-  // TINTED pill can be seen on its own, it no longer needs to deviate from the
-  // text to exist. 18px high on a 14px body, that's a line of
-  // barely thickened text — what a mention should be.
-  //
-  // `leading-4` is not cosmetic: without it the wording keeps the line spacing
-  // text surrounding it (leading-relaxed, ~23px) and the pill grows in size
-  // height ONLY — the bottom and top 1px would then appear 4px.
+  // The chip uses its own compact, proportional line-height instead of
+  // inheriting the surrounding paragraph or heading line-height. Padding and
+  // radius are also expressed in em so the background grows with the label
+  // without turning into a capsule.
   //
   // `inline-block align-baseline`, and above all NOT `inline-flex align-middle`:
   // a flex box does not have the baseline of its text (it takes that of
@@ -190,10 +160,8 @@ export function MentionChip({
   // the space between the figure and the label must not become a point of
   // hyphenation, which the flex box prevented on its own.
   const shape = cn(
-    "mx-0.5 inline-block whitespace-nowrap rounded-[5px] py-px pr-1.5 align-baseline text-[0.95em] font-medium leading-4",
-    // An image no longer goes down to the edge: at 14px in a box of 16,
-    // it no longer fills the gutter, a 1px would stick it to the corner.
-    hasImage ? "pl-1" : "pl-1.5",
+    "mx-[0.14em] inline-block whitespace-nowrap rounded-[0.35em] py-[0.07em] pr-[0.43em] align-baseline text-[0.95em] leading-[1.15] font-medium",
+    hasImage ? "pl-[0.29em]" : "pl-[0.43em]",
     "bg-(--mention-chip) text-(--mention-chip-ink)",
   );
 
