@@ -42,6 +42,7 @@ function readVersion(): string {
 
 const bridge: DesktopBridge = {
   version: readVersion(),
+  platform: process.platform,
 
   openExternal(url: string) {
     ipcRenderer.send("minddy:open-external", url);

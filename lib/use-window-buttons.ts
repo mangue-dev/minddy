@@ -31,6 +31,11 @@ const holds = new Set<string>();
 
 let flush = 0;
 
+function macDesktopBridge() {
+  const bridge = getDesktopBridge();
+  return bridge?.platform === "darwin" ? bridge : null;
+}
+
 /**
  * We announce the state of the reasons **once the pile is down**, not every time
  * movement — and this is what stops the buttons from FLASHING.
@@ -68,7 +73,7 @@ function pushToBridge(): void {
     // actually sent that it must describe, and several calls of the same
     // image n'en produisent qu'un.
     trace("wb:push", { wanted, holds: [...holds].join("|") || "—" });
-    getDesktopBridge()?.setWindowButtonsVisible(wanted);
+    macDesktopBridge()?.setWindowButtonsVisible(wanted);
   }, 0);
 }
 
@@ -82,7 +87,7 @@ function pushToBridge(): void {
  */
 export function useHoldWindowButtons(reason: string, active: boolean): void {
   useEffect(() => {
-    if (!active) return;
+    if (!active || !macDesktopBridge()) return;
     watchContradiction();
     holds.add(reason);
     pushToBridge();
@@ -120,7 +125,7 @@ let contradictionWatcher: (() => void) | null = null;
 function watchContradiction(): void {
   if (contradictionWatcher) return;
   contradictionWatcher =
-    getDesktopBridge()?.onWindowButtons((visible) => {
+    macDesktopBridge()?.onWindowButtons((visible) => {
       if (visible && holds.size > 0) pushToBridge();
     }) ?? null;
 }
@@ -246,7 +251,7 @@ function readModalOpen(): void {
 
 function subscribeModal(listener: () => void): () => void {
   // Outside of the shell, there are no native buttons to remove: nothing to observe.
-  if (!getDesktopBridge()) return () => {};
+  if (!macDesktopBridge()) return () => {};
 
   modalListeners.add(listener);
   if (!observer) {
@@ -393,7 +398,7 @@ export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   }, [modal, settling, visible]);
 
   useEffect(() => {
-    const bridge = getDesktopBridge();
+    const bridge = macDesktopBridge();
     if (!bridge) return;
     // The current state is replayed upon subscription: the window can be in full
     // screen when loading, and then no one would have anything to announce.

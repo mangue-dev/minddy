@@ -48,6 +48,10 @@ import {
   staleSessionCookies,
 } from "@/lib/desktop/session-carry";
 import { routeDisposition } from "@/lib/desktop/window-routes";
+import {
+  desktopWindowFrameOptions,
+  MACOS_TRAFFIC_LIGHT_POSITION,
+} from "@/lib/desktop/window-frame";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import {
   nativePushAllowed,
@@ -365,7 +369,7 @@ function applyWindowButtons(target?: BrowserWindow): void {
       // recreate the standard buttons, and they return to their original corner if
       // we don't say it again — that is, over the sidebar instead
       // from in its brand line.
-      window.setWindowButtonPosition(TRAFFIC_LIGHTS);
+      window.setWindowButtonPosition(MACOS_TRAFFIC_LIGHT_POSITION);
     }
   }
 
@@ -403,8 +407,6 @@ function publishWindowButtons(
  * runs through the app. These two numbers and the `padding-left` of `.sidebar-brand-row`
  * (app/globals.css) read together, or not at all.
  */
-const TRAFFIC_LIGHTS = { x: 19, y: 22 };
-
 /**
  * macOS delivers the deep link by `open-url`, and it often does it BEFORE the
  * window exists: clicking on the email link LAUNCHES the app. We therefore keep it, and
@@ -550,25 +552,10 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
     // Numo keeps its thread above its composer.
     minWidth: 960,
     minHeight: 640,
-    // No title bar: the app already has its own, and a gray band at the
-    // above would bring nothing. **Two counterparts, namely rather than
-    // discover.** macOS no longer knows where to enter the window, and it's the PAGE
-    // who should say it (`-webkit-app-region`, app/globals.css, “app de
-    // desk ") ; and the buttons do not exist on their own, they light up when
-    // main (`applyWindowButtons`).
-    //
-    // `titleBarStyle: "hidden"` and NOT `frame: false`. Tried, and discarded: without
-    // frame, `trafficLightPosition` no longer counts from the same origin — it
-    // there is no longer a title bar to fit under — and the buttons
-    // come up to stick in the corner, instead of being centered on the line of
-    // marque.
-    //
-    // The detour was worth making once: we thought for a moment that the line
-    // clear one pixel at the top of the window came from the title bar
-    // hidden. **It's not ours** — macOS draws it on all
-    // windows, it's its border, and there is nothing to correct. Do not reopen.
-    titleBarStyle: "hidden",
-    trafficLightPosition: TRAFFIC_LIGHTS,
+    // macOS integrates its traffic lights into the app header. Windows and Linux
+    // keep the native frame so their title-bar controls and application menu stay
+    // visible and follow each platform's window-manager conventions.
+    ...desktopWindowFrameOptions(process.platform),
     backgroundColor: "#000000",
     show: false,
     webPreferences: {

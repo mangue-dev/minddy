@@ -46,6 +46,8 @@ const PACKAGING_INPUTS = [
   "desktop/build/fr.lproj",
   // Microsoft Store tile assets are injected directly by electron-builder.
   "desktop/build/appx",
+  // The Windows executable icon is injected directly by electron-builder.
+  "desktop/build/icon-windows.png",
   // The Icon Composer source is a FILE (`icon.json` + the SVG): it is
   // unfolded file by file, cf. `expandDirectories`.
   "desktop/build/icon.icon",

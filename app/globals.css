@@ -1923,7 +1923,7 @@ nav[aria-label="Navigation"]
 .desktop-drag-band {
   display: none;
 }
-html[data-desktop-app] .desktop-drag-band {
+html[data-desktop-platform="darwin"] .desktop-drag-band {
   display: block;
   position: fixed;
   inset: 0 0 auto 0;
@@ -1950,7 +1950,7 @@ html[data-desktop-app] .desktop-drag-band {
    that of the sheet: Chromium traverses the layout tree and a
    `no-drag` digs the `drag` encountered before it. This is why the band is
    rendered before `{children}` in app/layout.tsx. */
-html[data-desktop-app]
+html[data-desktop-platform="darwin"]
   :is(
     a,
     button,
@@ -1979,13 +1979,13 @@ html[data-desktop-app]
    this strip allows the Search, Filter and Add buttons to receive
    their events; interactive descendants explicitly remain out
    of the travel area. */
-html[data-desktop-app] .secondary-sidebar-header {
+html[data-desktop-platform="darwin"] .secondary-sidebar-header {
   position: relative;
   z-index: 31;
   -webkit-app-region: drag;
 }
 
-html[data-desktop-app] .secondary-sidebar-header
+html[data-desktop-platform="darwin"] .secondary-sidebar-header
   :is(
     a,
     button,
@@ -2022,7 +2022,7 @@ html[data-desktop-app] .secondary-sidebar-header
    Assumed counterpart: sail open, the strip no longer moves the window.
    This is the same choice as that already made for the band itself (`z-index: 30`,
    under sail at 50) — a catch where the app says “answer first”. */
-html[data-desktop-app]
+html[data-desktop-platform="darwin"]
   :is(
     [data-slot="dialog-overlay"],
     [data-slot="alert-dialog-overlay"],
@@ -2096,11 +2096,11 @@ html[data-desktop-app]
    — `container-type: inline-size` makes this line a container whose
    width comes to life with each hover, i.e. exactly the moving rectangle of which
    MIN-309 explains that the map of the regions is outdated image after image. */
-html[data-desktop-app] .sidebar-brand-row {
+html[data-desktop-platform="darwin"] .sidebar-brand-row {
   container-type: inline-size;
 }
 
-html[data-desktop-app] .sidebar-brand-row[data-window-buttons] .sidebar-brand-mark {
+html[data-desktop-platform="darwin"] .sidebar-brand-row[data-window-buttons] .sidebar-brand-mark {
   transform: translateX(calc(100cqw - 100%));
 }
 
@@ -2118,14 +2118,14 @@ html[data-desktop-app] .sidebar-brand-row[data-window-buttons] .sidebar-brand-ma
 
    `data-rail` is set by components/app-sidebar.tsx when the bar is in
    rail mode, that is to say in the only state where its width changes. */
-html[data-desktop-app]
+html[data-desktop-platform="darwin"]
   .sidebar-brand-row[data-window-buttons-ready]:not([data-rail])
   .sidebar-brand-mark {
   transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-desktop-app] .sidebar-brand-row .sidebar-brand-mark {
+  html[data-desktop-platform="darwin"] .sidebar-brand-row .sidebar-brand-mark {
     transition: none;
   }
 }

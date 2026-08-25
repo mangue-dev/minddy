@@ -30,6 +30,8 @@ import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 export interface DesktopBridge {
   /** The version of the shell (`app.getVersion()`), to display it. */
   readonly version: string;
+  /** The host platform, used only for platform-specific desktop chrome. */
+  readonly platform: NodeJS.Platform;
   /**
    * Opens a URL in the system browser. This is where the trick goes
    * authentication, and it is the main process which refuses everything that is not

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 
 import {
   requireWindowsStoreArtifacts,
@@ -29,6 +31,19 @@ test("writes the literal Partner Center identity into the AppX configuration", a
   assert.match(config, /^  publisher: CN=D5052B10-735B-4EF0-920F-642DFBDEB04F$/m);
   assert.doesNotMatch(config, /identityName: \$\{env\./);
   assert.doesNotMatch(config, /publisher: \$\{env\./);
+});
+
+test("uses an opaque square icon for the Windows package", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  const fingerprint = await readFile(new URL("./desktop-fingerprint.mjs", import.meta.url), "utf8");
+  assert.match(config, /^  icon: build\/icon-windows\.png$/m);
+  assert.match(fingerprint, /^  "desktop\/build\/icon-windows\.png",$/m);
+
+  const icon = sharp(fileURLToPath(new URL("../desktop/build/icon-windows.png", import.meta.url)));
+  const { width, height, hasAlpha } = await icon.metadata();
+  assert.equal(width, 1024);
+  assert.equal(height, 1024);
+  assert.equal(hasAlpha, false);
 });
 
 test("requires one MSIX package for each Windows architecture", () => {

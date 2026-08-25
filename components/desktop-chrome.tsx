@@ -31,10 +31,15 @@ export function DesktopChrome() {
   useAffirmWindowButtons();
 
   useEffect(() => {
-    if (!getDesktopBridge()) return;
+    const bridge = getDesktopBridge();
+    if (!bridge) return;
     const root = document.documentElement;
     root.setAttribute("data-desktop-app", "");
-    return () => root.removeAttribute("data-desktop-app");
+    root.setAttribute("data-desktop-platform", bridge.platform);
+    return () => {
+      root.removeAttribute("data-desktop-app");
+      root.removeAttribute("data-desktop-platform");
+    };
   }, []);
 
   // The trace of MIN-307, turned off by default: it is only installed with
