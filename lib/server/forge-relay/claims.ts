@@ -10,12 +10,12 @@ import { getInstallationAccount } from "@/lib/server/git/github-app";
  * GitHub installation claim flow, Cloud side
  * (docs/managed-forge-relay-plan.md, "Installation claim").
  *
- * Three beats: (1) the instance hands the operator's browser a claim URL on
- * Cloud carrying a random single-use code; (2) Cloud redirects to the standard
- * GitHub App installation page with a signed `state` (10 min TTL) that carries
- * the instance + code; (3) the GitHub setup URL lands back on Cloud, which
- * binds `(installation_id, account)` to the claiming instance. The instance
- * then polls the signed relay channel to learn the result and store its local
+ * The instance first registers a pending, single-use code over its signed
+ * relay channel. Cloud carries that pending setup through the GitHub App
+ * installation page, reserves the callback's installation id, and requires a
+ * GitHub user authorization that proves a stable repository identity for that
+ * installation. Only then is the installation bound to the instance. The
+ * instance polls the signed relay channel for the result and stores its local
  * connection flagged `source: "relay"`.
  *
  * The code is stored only as a SHA-256 hash: a database leak must not expose
@@ -29,6 +29,7 @@ const CLOCK_SKEW_TOLERANCE_MS = 60_000;
 const CLAIM_RESULT_TTL_MS = 60 * 60_000;
 
 const CLAIM_CODE_PATTERN = /^[0-9a-f]{64}$/;
+const FULL_REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
 export function isValidClaimCode(code: string | null | undefined): code is string {
   return typeof code === "string" && CLAIM_CODE_PATTERN.test(code);
@@ -46,6 +47,14 @@ interface RelayClaimStatePayload {
   kind: "forge-relay-claim";
   instanceId: string;
   code: string;
+  iat: number;
+}
+
+interface RelayClaimAuthorizationStatePayload {
+  kind: "forge-relay-claim-authorize";
+  instanceId: string;
+  code: string;
+  installationId: number;
   iat: number;
 }
 
@@ -114,25 +123,174 @@ export function verifyRelayClaimState(
   return { instanceId: payload.instanceId, code: payload.code };
 }
 
+/** OAuth state used to authenticate the GitHub user who completed setup. */
+export function signRelayClaimAuthorizationState(input: {
+  instanceId: string;
+  code: string;
+  installationId: number;
+  now?: number;
+}): string {
+  const payload: RelayClaimAuthorizationStatePayload = {
+    kind: "forge-relay-claim-authorize",
+    instanceId: input.instanceId,
+    code: input.code,
+    installationId: input.installationId,
+    iat: input.now ?? Date.now(),
+  };
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${body}.${signState(body)}`;
+}
+
+/** Verifies the OAuth confirmation state, or null on any anomaly. */
+export function verifyRelayClaimAuthorizationState(
+  token: string | null | undefined,
+): { instanceId: string; code: string; installationId: number } | null {
+  if (!token) return null;
+  const dotIndex = token.indexOf(".");
+  if (dotIndex <= 0 || dotIndex === token.length - 1) return null;
+  const body = token.slice(0, dotIndex);
+  const provided = Buffer.from(token.slice(dotIndex + 1));
+  let computed: Buffer;
+  try {
+    computed = Buffer.from(signState(body));
+  } catch {
+    return null;
+  }
+  if (provided.length !== computed.length) return null;
+  if (!crypto.timingSafeEqual(provided, computed)) return null;
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(body, "base64url").toString("utf8"),
+    ) as RelayClaimAuthorizationStatePayload;
+    const now = Date.now();
+    if (
+      payload.kind !== "forge-relay-claim-authorize" ||
+      typeof payload.instanceId !== "string" ||
+      !isValidClaimCode(payload.code) ||
+      !Number.isSafeInteger(payload.installationId) ||
+      payload.installationId <= 0 ||
+      typeof payload.iat !== "number" ||
+      now - payload.iat > CLAIM_STATE_MAX_AGE_MS ||
+      payload.iat - now > CLOCK_SKEW_TOLERANCE_MS
+    ) {
+      return null;
+    }
+    return {
+      instanceId: payload.instanceId,
+      code: payload.code,
+      installationId: payload.installationId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Creates the server-side, authenticated pending setup before browser use. */
+export async function createPendingRelayClaim(input: {
+  instanceId: string;
+  code: string;
+}): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (!isValidClaimCode(input.code)) {
+    return { ok: false, status: 400, error: "Invalid claim code" };
+  }
+  const { error } = await getServiceClient().from("forge_relay_claims").insert({
+    instance_id: input.instanceId,
+    code_hash: hashClaimCode(input.code),
+    status: "pending",
+    installation_id: null,
+    account_login: null,
+    created_at: new Date().toISOString(),
+    claimed_at: null,
+    consumed_at: null,
+  });
+  if (error) {
+    return {
+      ok: false,
+      status: (error as { code?: string }).code === "23505" ? 409 : 500,
+      error: (error as { message?: string }).message ?? "Failed to create pending claim",
+    };
+  }
+  return { ok: true };
+}
+
+/** A browser claim URL is useful only after its instance registered it. */
+export async function hasPendingRelayClaim(input: {
+  instanceId: string;
+  code: string;
+}): Promise<boolean> {
+  const { data } = await getServiceClient()
+    .from("forge_relay_claims")
+    .select("id")
+    .eq("instance_id", input.instanceId)
+    .eq("code_hash", hashClaimCode(input.code))
+    .eq("status", "pending")
+    .gte("created_at", new Date(Date.now() - CLAIM_STATE_MAX_AGE_MS).toISOString())
+    .maybeSingle();
+  return Boolean(data);
+}
+
+/**
+ * Reserves exactly one callback installation for a pending setup. The status
+ * predicate makes two callbacks unable to select different installations.
+ */
+export async function reserveRelayClaimInstallation(input: {
+  instanceId: string;
+  code: string;
+  installationId: number;
+}): Promise<boolean> {
+  if (!Number.isSafeInteger(input.installationId) || input.installationId <= 0) {
+    return false;
+  }
+  const supabase = getServiceClient();
+  const { data: instance } = await supabase
+    .from("forge_relay_instances")
+    .select("id")
+    .eq("id", input.instanceId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!instance) return false;
+  const { data } = await supabase
+    .from("forge_relay_claims")
+    .update({ status: "verifying", installation_id: input.installationId })
+    .eq("instance_id", input.instanceId)
+    .eq("code_hash", hashClaimCode(input.code))
+    .eq("status", "pending")
+    .gte("created_at", new Date(Date.now() - CLAIM_STATE_MAX_AGE_MS).toISOString())
+    .select("id")
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export type ClaimBinding =
   | { ok: true; installationId: number; accountLogin: string | null }
   | { ok: false; error: string; status: number };
 
 /**
- * Binds an installation to the claiming instance: the setup-URL landing.
- * Idempotent on the (installation, instance) pair; an installation already
- * bound to ANOTHER instance is refused — the blast radius of a claim never
+ * Binds a user-verified installation and repository to the claiming instance.
+ * Completion is single-use for the pending setup; an installation already
+ * bound to ANOTHER instance is refused, so the blast radius of a claim never
  * crosses instances.
  */
 export async function bindRelayClaim(input: {
   instanceId: string;
   code: string;
   installationId: number;
+  repositoryId: number;
+  repositoryFullName: string;
 }): Promise<ClaimBinding> {
   if (!Number.isSafeInteger(input.installationId) || input.installationId <= 0) {
     return { ok: false, status: 400, error: "Invalid installation id" };
   }
   const supabase = getServiceClient();
+
+  if (
+    !Number.isSafeInteger(input.repositoryId) ||
+    input.repositoryId <= 0 ||
+    !FULL_REPOSITORY_NAME_PATTERN.test(input.repositoryFullName)
+  ) {
+    return { ok: false, status: 400, error: "Invalid repository identity" };
+  }
 
   const { data: instance } = await supabase
     .from("forge_relay_instances")
@@ -142,6 +300,21 @@ export async function bindRelayClaim(input: {
   const instanceRow = instance as { id: string; status: string } | null;
   if (!instanceRow || instanceRow.status !== "active") {
     return { ok: false, status: 403, error: "Relay instance is unknown or revoked" };
+  }
+
+  // The browser callback may suggest an installation, but only the pending
+  // setup reserved before OAuth may authorize the final binding.
+  const { data: pending } = await supabase
+    .from("forge_relay_claims")
+    .select("id")
+    .eq("instance_id", input.instanceId)
+    .eq("code_hash", hashClaimCode(input.code))
+    .eq("status", "verifying")
+    .eq("installation_id", input.installationId)
+    .gte("created_at", new Date(Date.now() - CLAIM_STATE_MAX_AGE_MS).toISOString())
+    .maybeSingle();
+  if (!pending) {
+    return { ok: false, status: 409, error: "Pending installation setup does not match" };
   }
 
   const { data: existing } = await supabase
@@ -191,6 +364,17 @@ export async function bindRelayClaim(input: {
       error: "GitHub did not confirm the installation account — restart the connection",
     };
   }
+  const repositoryOwner = input.repositoryFullName.slice(
+    0,
+    input.repositoryFullName.indexOf("/"),
+  );
+  if (repositoryOwner.toLowerCase() !== login.toLowerCase()) {
+    return {
+      ok: false,
+      status: 409,
+      error: "Verified repository does not belong to the installation account",
+    };
+  }
 
   if (existingRow) {
     await supabase
@@ -206,21 +390,26 @@ export async function bindRelayClaim(input: {
     if (error) return { ok: false, status: 500, error: error.message };
   }
 
-  // The claim row is the handoff the instance polls. Upsert: re-completing the
-  // same claim (operator retried) refreshes it instead of duplicating.
-  const { error: claimError } = await supabase.from("forge_relay_claims").upsert(
-    {
-      instance_id: input.instanceId,
-      code_hash: hashClaimCode(input.code),
+  // The claim row is the handoff the instance polls. The status predicate
+  // makes completion single-use even if two OAuth callbacks race.
+  const { data: completed, error: claimError } = await supabase
+    .from("forge_relay_claims")
+    .update({
       status: "claimed",
-      installation_id: input.installationId,
       account_login: login,
+      repository_id: input.repositoryId,
+      repository_full_name: input.repositoryFullName,
       claimed_at: new Date().toISOString(),
       consumed_at: null,
-    },
-    { onConflict: "code_hash" },
-  );
+    })
+    .eq("id", (pending as { id: string }).id)
+    .eq("status", "verifying")
+    .select("id")
+    .maybeSingle();
   if (claimError) return { ok: false, status: 500, error: claimError.message };
+  if (!completed) {
+    return { ok: false, status: 409, error: "Pending installation setup was already used" };
+  }
 
   return { ok: true, installationId: input.installationId, accountLogin: login };
 }
@@ -249,11 +438,18 @@ export async function consumeRelayClaim(input: {
   const claim = data as {
     id: string;
     status: string;
-    installation_id: number;
+    installation_id: number | null;
     account_login: string | null;
-    claimed_at: string;
+    claimed_at: string | null;
   } | null;
-  if (!claim) return { status: "pending" };
+  if (
+    !claim ||
+    (claim.status !== "claimed" && claim.status !== "consumed") ||
+    claim.installation_id == null ||
+    !claim.claimed_at
+  ) {
+    return { status: "pending" };
+  }
 
   if (
     Date.now() - Date.parse(claim.claimed_at) > CLAIM_RESULT_TTL_MS ||
@@ -289,8 +485,14 @@ export async function consumeRelayClaim(input: {
  */
 export async function pruneStaleRelayClaims(): Promise<void> {
   if (Math.random() >= 0.01) return;
-  await getServiceClient()
+  const supabase = getServiceClient();
+  await supabase
     .from("forge_relay_claims")
     .delete()
     .lt("claimed_at", new Date(Date.now() - CLAIM_RESULT_TTL_MS).toISOString());
+  await supabase
+    .from("forge_relay_claims")
+    .delete()
+    .in("status", ["pending", "verifying"])
+    .lt("created_at", new Date(Date.now() - CLAIM_STATE_MAX_AGE_MS).toISOString());
 }

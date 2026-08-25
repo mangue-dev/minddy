@@ -21,7 +21,10 @@ import {
   isLocalGitlabOAuthConfigured,
 } from "@/lib/server/git/gitlab-app";
 import { isLocalGithubAppConfigured } from "@/lib/server/git/github-app";
-import { forgeRelayConfig } from "@/lib/server/forge-relay/client";
+import {
+  forgeRelayConfig,
+  startGithubRelayClaim,
+} from "@/lib/server/forge-relay/client";
 import { ensureForgeRelayProvisioned } from "@/lib/server/forge-relay/provisioning";
 import { signRelayGitlabState } from "@/lib/server/forge-relay/gitlab-broker";
 import { generateClaimCode } from "@/lib/server/forge-relay/claims";
@@ -72,7 +75,7 @@ async function backfillRepoPullRequests(projectId: string): Promise<void> {
     });
     if (truncated) {
       console.warn(
-        `[git-link] ${target.repoFullName}: ${count} PR ingérées, pagination coupée`,
+        `[git-link] ${target.repoFullName}: ${count} pull requests ingested; pagination stopped`,
       );
     }
   } catch (err) {
@@ -240,9 +243,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ mode: "reuse", connectionId: existing.id });
     }
 
-    // Always from the project settings: the creation wizard,
-    // se connecte au niveau compte (/api/account/git-connections), parce qu'il
-    // does not yet have a project to attach the install to.
+    // Always from project settings. The creation wizard connects at account
+    // level (/api/account/git-connections) because it does not yet have a
+    // project to attach the installation to.
     if (provider === "github") {
       // RELAY-ONLY instance: claim the official minddy App through the relay
       // instead of an operator-owned app (same contract as the account route).
@@ -257,8 +260,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           );
         }
         const code = generateClaimCode();
-        const url = `${config.url.replace(/\/$/, "")}/api/relay/github/claim?instance=${encodeURIComponent(config.instanceId)}&code=${code}`;
-        return NextResponse.json({ mode: "claim", url, code });
+        try {
+          const url = await startGithubRelayClaim(code);
+          return NextResponse.json({ mode: "claim", url, code });
+        } catch (err) {
+          console.error("[projects/git-link] relay claim start failed:", err);
+          return NextResponse.json(
+            { error: t("gitProviderNotConfigured") },
+            { status: 502 },
+          );
+        }
       }
       const state = signGitLinkState({
         projectId: id,
@@ -337,9 +348,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  // Unidirectional synchronization of depot exits → minddy (MIN-97). The toggle
-  // does NOT touch tickets already imported: cutting it stops the arrival of
-  // nouveaux, il ne supprime rien.
+  // One-way repository → minddy issue synchronization (MIN-97). The toggle
+  // does not touch tickets already imported: disabling it stops new arrivals
+  // without deleting anything.
   if (action === "issue_sync") {
     const enabled = (body as { enabled?: unknown }).enabled;
     if (typeof enabled !== "boolean") {

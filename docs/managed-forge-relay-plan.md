@@ -149,13 +149,17 @@ Cloud side (control plane only, never the open core):
 The official minddy GitHub App keeps its setup URL pointed at Cloud:
 
 1. Operator clicks "Connect GitHub" on their self-hosted instance.
-2. Instance opens Cloud with a short-lived claim code (single use, 10 min TTL).
+2. The instance registers a short-lived claim code (single use, 10 min TTL)
+   over its signed relay channel, then opens Cloud.
 3. Cloud redirects the operator to the standard GitHub App installation page.
-4. After install, the GitHub setup URL lands on Cloud; Cloud binds
-   `(installation_id, account)` to the claiming instance and shows a
-   confirmation.
-5. Instance polls (or receives via relay) the binding result and stores the
-   connection via the existing `upsertGithubConnection` path
+4. After install, the GitHub setup URL lands on Cloud and reserves the returned
+   installation for that pending claim. Because GitHub documents
+   `installation_id` on setup URLs as spoofable, Cloud completes a GitHub user
+   authorization and verifies a stable repository identity through the
+   user-scoped installation endpoint before it binds
+   `(installation_id, repository, account)` to the claiming instance.
+5. The instance polls (or receives via relay) the verified binding result and
+   stores the connection via the existing `upsertGithubConnection` path
    (`app/api/git/github/setup/route.ts`), flagged as `source: "relay"`.
 
 Existing local-app installations remain supported. Precedence is

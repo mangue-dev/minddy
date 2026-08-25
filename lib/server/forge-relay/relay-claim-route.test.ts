@@ -38,6 +38,10 @@ vi.mock("@/lib/server/forge-relay/client", () => ({
     relayCalls.push({ path, body });
     return claimResult;
   },
+  startGithubRelayClaim: async (code: string) => {
+    relayCalls.push({ path: "/api/relay/github/claim-start", body: { code } });
+    return `https://relay.example.com/api/relay/github/claim?instance=0f0e0d0c-0b0a-4948-8272-6d6f64656c79&code=${code}`;
+  },
 }));
 
 const upsertGithubConnection = vi.fn();
@@ -73,6 +77,9 @@ describe("POST /api/git/github/relay-claim", () => {
     expect(code).toMatch(/^[0-9a-f]{64}$/);
     expect(claimUrl).toContain("https://relay.example.com/api/relay/github/claim?instance=");
     expect(claimUrl).toContain(`code=${code}`);
+    expect(relayCalls).toEqual([
+      { path: "/api/relay/github/claim-start", body: { code } },
+    ]);
   });
 
   it("refuses to start when the relay is not configured", async () => {

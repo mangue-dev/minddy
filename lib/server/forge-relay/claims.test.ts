@@ -19,6 +19,10 @@ import {
 const INSTANCE_ID = "0f0e0d0c-0b0a-4948-8272-6d6f64656c79";
 const CODE = "a".repeat(64);
 const STATE_SECRET = "state-secret-0123456789abcdef0123456789abcdef";
+const VERIFIED_REPOSITORY = {
+  repositoryId: 991,
+  repositoryFullName: "acme/app",
+};
 
 vi.stubEnv("GIT_STATE_SECRET", STATE_SECRET);
 
@@ -57,12 +61,29 @@ function seedInstance(status = "active"): void {
 
 const {
   signRelayClaimState,
+  signRelayClaimAuthorizationState,
+  verifyRelayClaimAuthorizationState,
   verifyRelayClaimState,
   isValidClaimCode,
   generateClaimCode,
+  createPendingRelayClaim,
+  reserveRelayClaimInstallation,
   bindRelayClaim,
   consumeRelayClaim,
 } = await import("./claims");
+
+async function prepareClaim(installationId = 4242): Promise<void> {
+  await expect(
+    createPendingRelayClaim({ instanceId: INSTANCE_ID, code: CODE }),
+  ).resolves.toEqual({ ok: true });
+  await expect(
+    reserveRelayClaimInstallation({
+      instanceId: INSTANCE_ID,
+      code: CODE,
+      installationId,
+    }),
+  ).resolves.toBe(true);
+}
 
 beforeEach(() => {
   installationAccount = { login: "acme", type: "Organization", repositorySelection: "selected" };
@@ -104,14 +125,30 @@ describe("claim state", () => {
     expect(isValidClaimCode(`${"g".repeat(64)}`)).toBe(false);
     expect(generateClaimCode()).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  it("binds the authorization state to the reserved installation", () => {
+    const token = signRelayClaimAuthorizationState({
+      instanceId: INSTANCE_ID,
+      code: CODE,
+      installationId: 4242,
+    });
+    expect(verifyRelayClaimAuthorizationState(token)).toEqual({
+      instanceId: INSTANCE_ID,
+      code: CODE,
+      installationId: 4242,
+    });
+    expect(verifyRelayClaimAuthorizationState(`${token}x`)).toBeNull();
+  });
 });
 
 describe("bindRelayClaim", () => {
   it("binds the installation and records the claim handoff", async () => {
+    await prepareClaim();
     const binding = await bindRelayClaim({
       instanceId: INSTANCE_ID,
       code: CODE,
       installationId: 4242,
+      ...VERIFIED_REPOSITORY,
     });
     expect(binding).toEqual({ ok: true, installationId: 4242, accountLogin: "acme" });
     expect(fakeTables["forge_relay_installations"]).toHaveLength(1);
@@ -123,11 +160,16 @@ describe("bindRelayClaim", () => {
     // The code itself is never stored — only its hash.
     const claim = fakeTables["forge_relay_claims"]?.[0] as Record<string, unknown>;
     expect(claim).toMatchObject({ status: "claimed", installation_id: 4242 });
+    expect(claim).toMatchObject({
+      repository_id: VERIFIED_REPOSITORY.repositoryId,
+      repository_full_name: VERIFIED_REPOSITORY.repositoryFullName,
+    });
     expect(claim.code_hash).not.toBe(CODE);
     expect(String(claim.code_hash)).toHaveLength(64);
   });
 
   it("refuses an installation already claimed by ANOTHER instance", async () => {
+    await prepareClaim();
     setFakeTable("forge_relay_installations", [
       {
         id: "other-binding",
@@ -141,11 +183,13 @@ describe("bindRelayClaim", () => {
       instanceId: INSTANCE_ID,
       code: CODE,
       installationId: 4242,
+      ...VERIFIED_REPOSITORY,
     });
     expect(binding).toMatchObject({ ok: false, status: 409 });
   });
 
   it("refuses an installation already connected to a Cloud account", async () => {
+    await prepareClaim();
     // The webhook receiver routes claimed installations to their instance and
     // skips local handlers: claiming a Cloud-connected installation would cut
     // every Cloud project linked to it off its events.
@@ -156,40 +200,69 @@ describe("bindRelayClaim", () => {
       instanceId: INSTANCE_ID,
       code: CODE,
       installationId: 4242,
+      ...VERIFIED_REPOSITORY,
     });
     expect(binding).toMatchObject({ ok: false, status: 409 });
     expect(fakeTables["forge_relay_installations"]).toHaveLength(0);
-    expect(fakeTables["forge_relay_claims"]).toHaveLength(0);
+    expect(fakeTables["forge_relay_claims"]?.[0]).toMatchObject({
+      status: "verifying",
+      installation_id: 4242,
+    });
   });
 
   it("reports a missing installation account as a retryable failure, not a 500", async () => {
     // A transient GitHub failure during the setup landing must not hit the
     // NOT NULL column as a 23502 — and nothing is written.
     installationAccount = null;
+    await prepareClaim();
     const binding = await bindRelayClaim({
       instanceId: INSTANCE_ID,
       code: CODE,
       installationId: 4242,
+      ...VERIFIED_REPOSITORY,
     });
     expect(binding).toMatchObject({ ok: false, status: 502 });
     expect(String(binding.ok ? "" : binding.error)).toContain("restart");
     expect(fakeTables["forge_relay_installations"]).toHaveLength(0);
-    expect(fakeTables["forge_relay_claims"]).toHaveLength(0);
+    expect(fakeTables["forge_relay_claims"]?.[0]).toMatchObject({
+      status: "verifying",
+      installation_id: 4242,
+    });
+  });
+
+  it("refuses a repository identity from another installation account", async () => {
+    await prepareClaim();
+    const binding = await bindRelayClaim({
+      instanceId: INSTANCE_ID,
+      code: CODE,
+      installationId: 4242,
+      repositoryId: 992,
+      repositoryFullName: "other-org/app",
+    });
+    expect(binding).toMatchObject({ ok: false, status: 409 });
+    expect(String(binding.ok ? "" : binding.error)).toContain(
+      "installation account",
+    );
+    expect(fakeTables["forge_relay_installations"]).toHaveLength(0);
+    expect(fakeTables["forge_relay_claims"]?.[0]).toMatchObject({
+      status: "verifying",
+      installation_id: 4242,
+    });
   });
 
   it("refuses an unknown or revoked instance and an invalid installation id", async () => {
     await expect(
-      bindRelayClaim({ instanceId: "00000000-0000-4000-8000-000000000000", code: CODE, installationId: 4242 }),
+      bindRelayClaim({ instanceId: "00000000-0000-4000-8000-000000000000", code: CODE, installationId: 4242, ...VERIFIED_REPOSITORY }),
     ).resolves.toMatchObject({ ok: false, status: 403 });
 
     seedInstance("revoked");
     await expect(
-      bindRelayClaim({ instanceId: INSTANCE_ID, code: CODE, installationId: 4242 }),
+      bindRelayClaim({ instanceId: INSTANCE_ID, code: CODE, installationId: 4242, ...VERIFIED_REPOSITORY }),
     ).resolves.toMatchObject({ ok: false, status: 403 });
 
     seedInstance();
     await expect(
-      bindRelayClaim({ instanceId: INSTANCE_ID, code: CODE, installationId: -1 }),
+      bindRelayClaim({ instanceId: INSTANCE_ID, code: CODE, installationId: -1, ...VERIFIED_REPOSITORY }),
     ).resolves.toMatchObject({ ok: false, status: 400 });
   });
 });
@@ -202,7 +275,13 @@ describe("consumeRelayClaim", () => {
   });
 
   it("returns the binding and marks the claim consumed; re-reads stay idempotent", async () => {
-    await bindRelayClaim({ instanceId: INSTANCE_ID, code: CODE, installationId: 4242 });
+    await prepareClaim();
+    await bindRelayClaim({
+      instanceId: INSTANCE_ID,
+      code: CODE,
+      installationId: 4242,
+      ...VERIFIED_REPOSITORY,
+    });
 
     const first = await consumeRelayClaim({ instanceId: INSTANCE_ID, code: CODE });
     expect(first).toEqual({ status: "claimed", installationId: 4242, accountLogin: "acme" });

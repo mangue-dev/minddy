@@ -94,3 +94,16 @@ export async function relayRequest<T>(
     error: response.ok ? null : (data?.error ?? `Relay request failed (${response.status})`),
   };
 }
+
+/** Registers a GitHub setup before exposing its browser claim URL. */
+export async function startGithubRelayClaim(code: string): Promise<string> {
+  const result = await relayRequest<{ ok: true }>(
+    "/api/relay/github/claim-start",
+    { code },
+  );
+  if (!result.ok) {
+    throw new Error(result.error ?? "Failed to register GitHub relay claim");
+  }
+  const config = relayEnv();
+  return `${config.url.replace(/\/$/, "")}/api/relay/github/claim?instance=${encodeURIComponent(config.instanceId)}&code=${encodeURIComponent(code)}`;
+}

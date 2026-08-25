@@ -21,7 +21,10 @@ import {
   isGitlabConfigured,
   isLocalGitlabOAuthConfigured,
 } from "@/lib/server/git/gitlab-app";
-import { forgeRelayConfig } from "@/lib/server/forge-relay/client";
+import {
+  forgeRelayConfig,
+  startGithubRelayClaim,
+} from "@/lib/server/forge-relay/client";
 import { ensureForgeRelayProvisioned } from "@/lib/server/forge-relay/provisioning";
 import { signRelayGitlabState } from "@/lib/server/forge-relay/gitlab-broker";
 import { generateClaimCode } from "@/lib/server/forge-relay/claims";
@@ -159,8 +162,16 @@ export async function POST(request: NextRequest) {
         );
       }
       const code = generateClaimCode();
-      const url = `${config.url.replace(/\/$/, "")}/api/relay/github/claim?instance=${encodeURIComponent(config.instanceId)}&code=${code}`;
-      return NextResponse.json({ mode: "claim", url, code });
+      try {
+        const url = await startGithubRelayClaim(code);
+        return NextResponse.json({ mode: "claim", url, code });
+      } catch (err) {
+        console.error("[account/git-connections] relay claim start failed:", err);
+        return NextResponse.json(
+          { error: t("gitProviderNotConfigured") },
+          { status: 502 },
+        );
+      }
     }
     const state = signGitLinkState({
       projectId: ACCOUNT_CONNECT_PROJECT,

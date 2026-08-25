@@ -6,6 +6,7 @@ import {
   forgeRelayConfig,
   isForgeRelayClientConfigured,
   relayRequest,
+  startGithubRelayClaim,
 } from "@/lib/server/forge-relay/client";
 import { upsertGithubConnection } from "@/lib/server/git/connections";
 
@@ -31,10 +32,17 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
-  const config = forgeRelayConfig();
   const code = generateClaimCode();
-  const claimUrl = `${config!.url.replace(/\/$/, "")}/api/relay/github/claim?instance=${encodeURIComponent(config!.instanceId)}&code=${code}`;
-  return NextResponse.json({ claimUrl, code });
+  try {
+    const claimUrl = await startGithubRelayClaim(code);
+    return NextResponse.json({ claimUrl, code });
+  } catch (err) {
+    console.error("[git/github/relay-claim] claim start failed:", err);
+    return NextResponse.json(
+      { error: "Failed to register the GitHub installation setup" },
+      { status: 502 },
+    );
+  }
 }
 
 export async function GET(request: NextRequest) {

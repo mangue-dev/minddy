@@ -5,7 +5,12 @@ import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import {
   exchangeGithubUserCode,
   getGithubUserAccount,
+  getGithubUserInstallationRepository,
 } from "@/lib/server/git/github-user-auth";
+import {
+  bindRelayClaim,
+  verifyRelayClaimAuthorizationState,
+} from "@/lib/server/forge-relay/claims";
 import {
   createUserDelivery,
   pruneExpiredUserDeliveries,
@@ -25,6 +30,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Managed forge relay is not configured" }, { status: 503 });
   }
   const { searchParams } = request.nextUrl;
+  const claimState = verifyRelayClaimAuthorizationState(searchParams.get("state"));
   const state = verifyCloudUserState(searchParams.get("state"));
   const code = searchParams.get("code");
 
@@ -42,13 +48,41 @@ export async function GET(request: NextRequest) {
       status,
     );
 
-  if (!state || !code) return fail("This authorization request is invalid or expired.");
+  if ((!state && !claimState) || !code) {
+    return fail("This authorization request is invalid or expired.");
+  }
 
   try {
     const tokens = await exchangeGithubUserCode({
       code,
       redirectUri: `${canonicalAppOrigin()}/api/relay/github/user-callback`,
     });
+    if (claimState) {
+      const repository = await getGithubUserInstallationRepository(
+        tokens.accessToken,
+        claimState.installationId,
+      );
+      if (!repository) {
+        return fail(
+          "GitHub did not confirm a repository for this installation.",
+          403,
+        );
+      }
+      const binding = await bindRelayClaim({
+        instanceId: claimState.instanceId,
+        code: claimState.code,
+        installationId: claimState.installationId,
+        repositoryId: repository.id,
+        repositoryFullName: repository.fullName,
+      });
+      if (!binding.ok) return fail(binding.error, binding.status);
+      return page(
+        "GitHub connected",
+        `<p>The installation <code>${binding.installationId}</code>${binding.accountLogin ? ` (${binding.accountLogin})` : ""} is now bound to your minddy instance. You can close this page and return to your instance.</p>`,
+        200,
+      );
+    }
+    if (!state) return fail("This authorization request is invalid or expired.");
     const account = await getGithubUserAccount(tokens.accessToken);
     const deliveryId = await createUserDelivery({
       instanceId: state.instanceId,

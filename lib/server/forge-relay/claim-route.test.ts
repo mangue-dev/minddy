@@ -29,6 +29,7 @@ vi.mock("@/lib/server/git/github-app", () => ({
 }));
 
 const { GET: claim } = await import("@/app/api/relay/github/claim/route");
+const { createPendingRelayClaim } = await import("@/lib/server/forge-relay/claims");
 
 function claimRequest() {
   return new Request(
@@ -45,15 +46,23 @@ beforeEach(() => {
       status: "active",
     },
   ]);
+  setFakeTable("forge_relay_claims", []);
 });
 
 describe("GET /api/relay/github/claim", () => {
   it("redirects an active instance's claim to the GitHub App installation page", async () => {
+    await createPendingRelayClaim({ instanceId: INSTANCE_ID, code: CODE });
     const response = await claim(claimRequest());
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain(
       "https://github.com/apps/minddy/installations/new",
     );
+  });
+
+  it("refuses a syntactically valid code that the instance did not register", async () => {
+    const response = await claim(claimRequest());
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("not registered");
   });
 
   it("stays closed by the kill switch (GA runbook commitment)", async () => {

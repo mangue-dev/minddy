@@ -6,26 +6,25 @@ import { isForgeTokenCryptoConfigured } from "./token-crypto";
 import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 
 /**
- * GitHub App USER authorization (MIN-144) — tokens
- * *user-to-server*, distincts du token d'installation.
+ * GitHub App USER authorization (MIN-144) — user-to-server tokens, distinct
+ * from installation tokens.
  *
- * Un token d'installation parle au nom de l'App (`minddy-app[bot]`) ; un token
- * user-to-server speaks on behalf of the PERSON, with the intersection of their rights
- * and those of the installation. This is what it takes to approve a PR
- * since minddy really checks the green box on GitHub.
+ * An installation token acts as the App (`minddy-app[bot]`); a user-to-server
+ * token acts on behalf of the PERSON, with the intersection of their rights
+ * and those of the installation. This is required to approve a pull request
+ * because minddy performs that action as the user on GitHub.
  *
  * We reuse the ALREADY INSTALLED App — we only add a client id /
  * secret and a *User authorization callback URL*. We do NOT activate “Request
  * user authorization (OAuth) during installation”: it would only authorize the
- * person who installs (and each member must authorize THEIR account, so the
- * explicit button remains necessary anyway) and it would change the
- * post-installation redirect, so `/api/git/github/setup` — the only path
- * depot link that works.
+ * installer, while every member still needs to authorize their own account.
+ * It would also replace the post-installation redirect and bypass
+ * `/api/git/github/setup`, which completes repository connection setup.
  *
- * Trap: the refresh at 8 a.m. ONLY exists if the App has “Expires user authorization
- * tokens” enabled. Otherwise the exchange returns neither `expires_in` nor
- * `refresh_token`, and the token is PERMANENT — `expiresAt` and `refreshToken`
- * are then null, which is not a degraded state.
+ * Refreshing after eight hours is available only when the App enables
+ * “Expires user authorization tokens.” Otherwise the exchange returns neither
+ * `expires_in` nor `refresh_token`, and the token is permanent; `expiresAt`
+ * and `refreshToken` are then null, which is not a degraded state.
  */
 
 const GITHUB_OAUTH_BASE = "https://github.com";
@@ -98,9 +97,9 @@ export function getGithubUserAuthorizeUrl(opts: {
 
 export interface GithubUserTokenSet {
   accessToken: string;
-  /** Expiry absolu (ISO), ou null quand l'App n'expire pas ses tokens. */
+  /** Absolute expiry (ISO), or null when the App does not expire its tokens. */
   expiresAt: string | null;
-  /** Absent (null) quand l'App n'expire pas ses tokens. */
+  /** Null when the App does not expire its tokens. */
   refreshToken: string | null;
   scope: string | null;
 }
@@ -207,4 +206,46 @@ export async function getGithubUserAccount(
     login: data.login ?? "",
     avatarUrl: data.avatar_url ?? null,
   };
+}
+
+export interface GithubUserInstallationRepository {
+  id: number;
+  fullName: string;
+}
+
+/**
+ * Returns one stable repository identity that the authorized user can access
+ * through a specific installation. GitHub documents this user-scoped endpoint
+ * as the setup-URL defense: a spoofed installation id cannot cross the user's
+ * explicit installation access boundary.
+ */
+export async function getGithubUserInstallationRepository(
+  token: string,
+  installationId: number,
+): Promise<GithubUserInstallationRepository | null> {
+  requireCapability("github");
+  const response = await fetch(
+    `${GITHUB_API_BASE}/user/installations/${installationId}/repositories?per_page=1`,
+    { headers: githubHeaders(token) },
+  );
+  const data = (await response.json().catch(() => ({}))) as {
+    repositories?: Array<{ id?: number; full_name?: string }>;
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(
+      data.message || `GitHub user installation lookup failed (${response.status})`,
+    );
+  }
+  const repository = data.repositories?.[0];
+  if (
+    !repository ||
+    typeof repository.id !== "number" ||
+    !Number.isSafeInteger(repository.id) ||
+    typeof repository.full_name !== "string" ||
+    !repository.full_name
+  ) {
+    return null;
+  }
+  return { id: repository.id, fullName: repository.full_name };
 }

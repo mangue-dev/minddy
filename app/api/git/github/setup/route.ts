@@ -6,28 +6,32 @@ import {
 } from "@/lib/server/git/callback-session";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getInstallationAccount } from "@/lib/server/git/github-app";
+import { getGithubUserAuthorizeUrl } from "@/lib/server/git/github-user-auth";
 import { upsertGithubConnection } from "@/lib/server/git/connections";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
 import {
-  bindRelayClaim,
+  reserveRelayClaimInstallation,
+  signRelayClaimAuthorizationState,
   verifyRelayClaimState,
 } from "@/lib/server/forge-relay/claims";
 
 /**
- * GET /api/git/github/setup — Setup URL de l'app GitHub (MIN-47).
+ * GET /api/git/github/setup — GitHub App setup URL (MIN-47).
  *
  * After the user installs the minddy app on an account/repository, GitHub
- * redirects here with `installation_id`, `setup_action` and our signed `state`. THE
- * `state` says which project to return to; it is the SESSION which says under what
- * compte enregistrer l'installation (MIN-324 — cf. callback-session.ts). On
- * checks both, we save the connection at account level, then we return
+ * redirects here with `installation_id`, `setup_action` and our signed `state`. The
+ * `state` says which project to return to; the SESSION says which account owns
+ * the installation (MIN-324 — see callback-session.ts). After checking both,
+ * we save the connection at account level, then return
  * the user to the project settings to choose a repository.
  *
  * RELAY claims (docs/managed-forge-relay-plan.md): when the state is a
- * forge-relay claim state, the installation is bound to the claiming INSTANCE
- * (not to a Cloud user account) and the operator gets a plain confirmation
- * page — no session applies, the operator's account lives on the instance.
+ * forge-relay claim state, the callback reserves one installation for the
+ * pending setup. A GitHub user authorization must then verify that installation
+ * and one stable repository identity before it is bound to the claiming
+ * INSTANCE. No Cloud session applies; the operator's account lives on the
+ * instance.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -52,26 +56,45 @@ export async function GET(request: NextRequest) {
       );
     }
     const installationId = Number(searchParams.get("installation_id"));
-    const binding = Number.isFinite(installationId) && installationId > 0
-      ? await bindRelayClaim({
-          instanceId: relayClaim.instanceId,
-          code: relayClaim.code,
-          installationId,
-        })
-      : { ok: false as const, status: 400, error: "Missing installation id" };
-    const title = binding.ok ? "GitHub connected" : "GitHub claim failed";
-    const detail = binding.ok
-      ? `<p>The installation <code>${binding.installationId}</code>${binding.accountLogin ? ` (${binding.accountLogin})` : ""} is now bound to your minddy instance. You can close this page and return to your instance.</p>`
-      : `<p>${binding.error}</p><p>Go back to your minddy instance and restart the connection.</p>`;
-    return new NextResponse(
-      `<!doctype html><html><body style="font-family:system-ui;max-width:32rem;margin:4rem auto">
-        <h1>${title}</h1>${detail}
-      </body></html>`,
-      {
-        status: binding.ok ? 200 : binding.status,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      },
-    );
+    if (!Number.isSafeInteger(installationId) || installationId <= 0) {
+      return failPage(
+        "GitHub claim failed",
+        "<p>Missing installation id.</p><p>Go back to your minddy instance and restart the connection.</p>",
+        400,
+      );
+    }
+    const reserved = await reserveRelayClaimInstallation({
+      instanceId: relayClaim.instanceId,
+      code: relayClaim.code,
+      installationId,
+    });
+    if (!reserved) {
+      return failPage(
+        "GitHub claim failed",
+        "<p>This pending setup is expired, already used, or does not match.</p><p>Go back to your minddy instance and restart the connection.</p>",
+        409,
+      );
+    }
+    try {
+      const state = signRelayClaimAuthorizationState({
+        instanceId: relayClaim.instanceId,
+        code: relayClaim.code,
+        installationId,
+      });
+      return NextResponse.redirect(
+        getGithubUserAuthorizeUrl({
+          redirectUri: `${origin}/api/relay/github/user-callback`,
+          state,
+        }),
+      );
+    } catch (err) {
+      console.error("[git/github/setup] claim authorization failed:", err);
+      return failPage(
+        "GitHub claim failed",
+        "<p>GitHub user authorization is not configured.</p><p>Go back to your minddy instance and restart the connection.</p>",
+        503,
+      );
+    }
   }
 
   const { userId: sessionUserId, applyCookies } =

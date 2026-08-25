@@ -4,6 +4,7 @@ import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import {
+  hasPendingRelayClaim,
   isValidClaimCode,
   signRelayClaimState,
 } from "@/lib/server/forge-relay/claims";
@@ -49,6 +50,9 @@ export async function GET(request: NextRequest) {
   const instanceRow = instance as { id: string; name: string; status: string } | null;
   if (!instanceRow || instanceRow.status !== "active") {
     return fail("This minddy instance is not a registered relay instance (or was revoked).");
+  }
+  if (!(await hasPendingRelayClaim({ instanceId, code }))) {
+    return fail("This claim was not registered, has expired, or was already used.");
   }
 
   let slug: string;
