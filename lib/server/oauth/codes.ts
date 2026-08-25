@@ -59,9 +59,19 @@ export async function createAuthorizationCode({
   return value;
 }
 
-/** Atomic Claim: marks the code used and returns it — or null if it is unknown, expired, or already consumed. */
+export interface AuthorizationCodeExchange {
+  clientId: string;
+  redirectUri: string;
+  codeChallenge: string;
+}
+
+/**
+ * Atomically consumes a code only when the public client proves every value
+ * bound during authorization, including PKCE. Invalid attempts leave it usable.
+ */
 export async function claimAuthorizationCode(
-  code: string
+  code: string,
+  exchange: AuthorizationCodeExchange
 ): Promise<AuthorizationCode | null> {
   const now = new Date().toISOString();
   const { data, error } = await getServiceClient()
@@ -70,6 +80,9 @@ export async function claimAuthorizationCode(
     .eq("code_hash", sha256Hex(code))
     .is("used_at", null)
     .gt("expires_at", now)
+    .eq("client_id", exchange.clientId)
+    .eq("redirect_uri", exchange.redirectUri)
+    .eq("code_challenge", exchange.codeChallenge)
     .select("code_hash, client_id, user_id, grant_id, redirect_uri, code_challenge, scope, resource")
     .maybeSingle();
   if (error) {
@@ -79,14 +92,22 @@ export async function claimAuthorizationCode(
   return (data as unknown as AuthorizationCode) ?? null;
 }
 
-/** The code exists but has already been consumed → replay (RFC 6749 §4.1.2):
- returns the grant to be revoked. */
-export async function findReplayedCode(code: string): Promise<string | null> {
+/**
+ * Returns the grant for a consumed code only after the caller proves the same
+ * exchange binding. A guessed code cannot revoke somebody else's grant.
+ */
+export async function findReplayedCode(
+  code: string,
+  exchange: AuthorizationCodeExchange
+): Promise<string | null> {
   const { data } = await getServiceClient()
     .from("oauth_authorization_codes")
     .select("grant_id")
     .eq("code_hash", sha256Hex(code))
     .not("used_at", "is", null)
+    .eq("client_id", exchange.clientId)
+    .eq("redirect_uri", exchange.redirectUri)
+    .eq("code_challenge", exchange.codeChallenge)
     .maybeSingle();
   return (data?.grant_id as string) ?? null;
 }

@@ -20,7 +20,7 @@ let board: Record<string, unknown> | null = null;
 let filters: [string, unknown][] = [];
 
 vi.mock("@/lib/server/feedback/boards", () => ({
-  getBoardForProject: async () => board,
+  getPublicBoardForProject: async () => board,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({

@@ -48,11 +48,14 @@ export interface FeedbackBoardRow {
   updated_at: string;
 }
 
-const BOARD_SELECT =
-  "id, project_id, token, enabled, show_views, visible_view_ids, show_pages, visible_page_ids, show_categories, allow_comments, accent_light, accent_dark, sso_secret, created_at, updated_at";
+const PUBLIC_BOARD_SELECT =
+  "id, project_id, token, enabled, show_views, visible_view_ids, show_pages, visible_page_ids, show_categories, allow_comments, accent_light, accent_dark, created_at, updated_at";
+const BOARD_SELECT = `${PUBLIC_BOARD_SELECT}, sso_secret`;
+
+export type PublicFeedbackBoardRow = Omit<FeedbackBoardRow, "sso_secret">;
 
 export interface PublicBoardContext {
-  board: FeedbackBoardRow;
+  board: PublicFeedbackBoardRow;
   project: {
     id: string;
     key: string;
@@ -100,6 +103,40 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
   const service = getServiceClient();
   const { data: board } = await service
     .from("feedback_boards")
+    .select(PUBLIC_BOARD_SELECT)
+    .eq("token", token)
+    .maybeSingle();
+  if (!board) return null;
+
+  const { data: project } = await service
+    .from("projects")
+    .select("id, key, name, icon_url, orb_seed")
+    .eq("id", board.project_id as string)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!project) return null;
+
+  return {
+    board: board as PublicFeedbackBoardRow,
+    project: project as PublicBoardContext["project"],
+  };
+}
+
+export interface SsoBoardContext extends PublicBoardContext {
+  board: FeedbackBoardRow;
+}
+
+/**
+ * Resolves and decrypts SSO material only for the rate-limited SSO landing.
+ * General public board reads must use `getBoardByToken` instead.
+ */
+export async function getBoardWithSsoSecretByToken(
+  token: string
+): Promise<SsoBoardContext | null> {
+  if (!token) return null;
+  const service = getServiceClient();
+  const { data: board } = await service
+    .from("feedback_boards")
     .select(BOARD_SELECT)
     .eq("token", token)
     .maybeSingle();
@@ -117,6 +154,18 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
     board: hydrateBoard(board as FeedbackBoardRow) as FeedbackBoardRow,
     project: project as PublicBoardContext["project"],
   };
+}
+
+/** Public project lookup that never reads or decrypts the SSO secret. */
+export async function getPublicBoardForProject(
+  projectId: string
+): Promise<PublicFeedbackBoardRow | null> {
+  const { data } = await getServiceClient()
+    .from("feedback_boards")
+    .select(PUBLIC_BOARD_SELECT)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  return (data as PublicFeedbackBoardRow | null) ?? null;
 }
 
 export async function getBoardForProject(projectId: string): Promise<FeedbackBoardRow | null> {

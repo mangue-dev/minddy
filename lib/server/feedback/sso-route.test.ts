@@ -46,7 +46,7 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 
 vi.mock("@/lib/server/feedback/boards", () => ({
-  getBoardByToken: async () => ({ board, project: { id: "proj-1" } }),
+  getBoardWithSsoSecretByToken: async () => ({ board, project: { id: "proj-1" } }),
 }));
 
 vi.mock("@/lib/server/custom-domains", () => ({

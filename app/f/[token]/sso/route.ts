@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { verifyFeedbackSsoJwt } from "@/lib/feedback/sso-jwt";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 import { feedbackBasePath, getRequestDomainTarget } from "@/lib/server/custom-domains";
-import { getBoardByToken } from "@/lib/server/feedback/boards";
+import { getBoardWithSsoSecretByToken } from "@/lib/server/feedback/boards";
 import {
   FEEDBACK_SESSION_COOKIE,
   createFeedbackSession,
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   });
   if (!rate.allowed) return NextResponse.redirect(failureUrl);
 
-  const ctx = await getBoardByToken(token);
+  const ctx = await getBoardWithSsoSecretByToken(token);
   if (!ctx || !ctx.board.enabled || !ctx.board.sso_secret) {
     return NextResponse.redirect(failureUrl);
   }

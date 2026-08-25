@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { getBoardForProject } from "@/lib/server/feedback/boards";
+import { getPublicBoardForProject } from "@/lib/server/feedback/boards";
 import type { DomainTarget } from "@/lib/custom-domain-lookup";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
@@ -30,7 +30,7 @@ export async function getPublicSiteTabs(params: {
 }): Promise<PublicSiteTab[]> {
   const service = getServiceClient();
 
-  const board = await getBoardForProject(params.projectId);
+  const board = await getPublicBoardForProject(params.projectId);
   // Opt-in coupling (feedback settings) for each family: without it, each
   // public surface remains isolated — no tabs on the board, no links from
   // views or pages.
