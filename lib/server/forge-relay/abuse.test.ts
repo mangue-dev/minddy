@@ -63,6 +63,7 @@ function seedWorld(): void {
     {
       instance_id: INSTANCE_ID,
       provider: "github",
+      external_repo_id: "9001",
       repo_full_name: "acme/app",
       updated_at: new Date().toISOString(),
     },
@@ -83,7 +84,7 @@ beforeEach(() => {
 
 describe("signature fuzzing", () => {
   it("rejects every forged signature without consuming relay state", async () => {
-    const rawBody = JSON.stringify({ installationId: 4242, repositories: ["app"] });
+    const rawBody = JSON.stringify({ installationId: 4242, repositoryIds: [9001] });
     let rejected = 0;
     for (let i = 0; i < 25; i += 1) {
       const signature = signRelayRequest({
@@ -162,7 +163,7 @@ describe("signature fuzzing", () => {
 
 describe("mint quota and payload constraints", () => {
   it("refuses AT the quota boundary, not after it", async () => {
-    const payload = { installationId: 4242, repositories: ["app"], profile: "repo-write" };
+    const payload = { installationId: 4242, repositoryIds: [9001], profile: "repo-write" };
     expect(parseInstallationTokenMintPayload(payload).ok).toBe(true);
 
     // The quota check itself lives in mintRelayedInstallationToken over the
@@ -174,7 +175,7 @@ describe("mint quota and payload constraints", () => {
       () =>
         parseInstallationTokenMintPayload({
           installationId: 4242,
-          repositories: ["../etc/passwd"],
+          repositoryIds: [-1],
           profile: "repo-write",
         }),
     );
@@ -184,7 +185,7 @@ describe("mint quota and payload constraints", () => {
   it("caps repositories per mint", () => {
     const oversized = parseInstallationTokenMintPayload({
       installationId: 4242,
-      repositories: Array.from({ length: 11 }, (_, i) => `repo-${i}`),
+      repositoryIds: Array.from({ length: 11 }, (_, i) => i + 1),
       profile: "repo-write",
     });
     expect(oversized.ok).toBe(false);
@@ -194,13 +195,13 @@ describe("mint quota and payload constraints", () => {
     // An empty or absent permission object would silently mint ALL of the
     // app's declared permissions; only the named `full` profile may.
     for (const body of [
-      { installationId: 4242, repositories: ["app"] },
-      { installationId: 4242, repositories: ["app"], permissions: {} },
-      { installationId: 4242, repositories: ["app"], profile: "" },
-      { installationId: 4242, repositories: ["app"], profile: "admin" },
+      { installationId: 4242, repositoryIds: [9001] },
+      { installationId: 4242, repositoryIds: [9001], permissions: {} },
+      { installationId: 4242, repositoryIds: [9001], profile: "" },
+      { installationId: 4242, repositoryIds: [9001], profile: "admin" },
       {
         installationId: 4242,
-        repositories: ["app"],
+        repositoryIds: [9001],
         permissions: { contents: "read", issues: "write" },
       },
     ]) {
@@ -211,7 +212,7 @@ describe("mint quota and payload constraints", () => {
       expect(
         parseInstallationTokenMintPayload({
           installationId: 4242,
-          repositories: ["app"],
+          repositoryIds: [9001],
           profile,
         }).ok,
       ).toBe(true);

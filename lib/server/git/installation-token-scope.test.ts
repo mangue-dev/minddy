@@ -52,6 +52,7 @@ beforeEach(() => {
     provider: "github",
     connection_id: "conn-1",
     installation_id: 4242,
+    external_repo_id: "1288848861",
     repo_full_name: "mangue-dev/minddy",
     default_branch: "main",
   };
@@ -130,12 +131,10 @@ describe("le mint d'un token d'installation", () => {
   });
 });
 
-describe("la cible de clone d'un projet", () => {
-  it("ALWAYS scopes the token to the linked repository by its short name", async () => {
+describe("project clone target", () => {
+  it("always scopes the token to the linked stable repository id", async () => {
     await resolveRepoCloneTarget("proj-1");
-    // `mangue-dev/minddy` and not `minddy` would be worth 422 at GitHub: that's the name
-    // court que `repositories` attend.
-    expect(h.minted[0]).toMatchObject({ repositories: ["minddy"] });
+    expect(h.minted[0]).toMatchObject({ repository_ids: [1288848861] });
   });
 
   it("does not narrow the permissions of the token that remains in the function", async () => {
@@ -146,20 +145,20 @@ describe("la cible de clone d'un projet", () => {
     expect(h.minted[0]).not.toHaveProperty("permissions");
   });
 
-  it("donne `contents: write` à la microVM d'un run qui pousse", async () => {
+  it("gives a pushing run `contents: write`", async () => {
     await resolveRepoCloneTarget("proj-1", "repo-write");
     expect(h.minted[0]).toMatchObject({
-      repositories: ["minddy"],
+      repository_ids: [1288848861],
       permissions: { contents: "write" },
     });
   });
 
-  it("donne `contents: read` à la microVM d'une relecture", async () => {
+  it("gives a review run `contents: read`", async () => {
     // The heart of the ticket: a proofread is the only anchor from which the content comes
     // from an unknown fork, and it doesn't write anything to the repository.
     await resolveRepoCloneTarget("proj-1", "repo-read");
     expect(h.minted[0]).toMatchObject({
-      repositories: ["minddy"],
+      repository_ids: [1288848861],
       permissions: { contents: "read" },
     });
   });

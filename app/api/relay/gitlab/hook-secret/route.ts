@@ -33,16 +33,18 @@ export async function POST(request: NextRequest) {
   if (!body) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+  const repoId = typeof body.repoId === "string" ? body.repoId : "";
   const repo = typeof body.repo === "string" ? body.repo : "";
   const secret = typeof body.secret === "string" ? body.secret : "";
   const ok = await registerGitlabHookSecret({
     instanceId: verification.instance.id,
+    repoId,
     repo,
     secret,
   });
   if (!ok) {
     return NextResponse.json(
-      { error: "repo must be owner/name and secret at least 32 characters" },
+      { error: "repoId, owner/name repo, and a secret of at least 32 characters are required" },
       { status: 400 },
     );
   }
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
   await getServiceClient().from("forge_relay_audit").insert({
     instance_id: verification.instance.id,
     action: "gitlab_hook_secret_registered",
-    detail: { repo },
+    detail: { repoId },
   });
   return NextResponse.json({ ok: true });
 }

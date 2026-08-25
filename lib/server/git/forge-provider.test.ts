@@ -16,14 +16,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let installationTokenCalls: {
   installationId: number | string;
-  scope?: { repositories?: string[]; permissions?: Record<string, string> };
+  scope?: {
+    repositories?: string[];
+    repositoryIds?: number[];
+    permissions?: Record<string, string>;
+  };
 }[] = [];
 let gitlabTokenCalls: string[] = [];
 
 vi.mock("@/lib/server/git/github-app", () => ({
   getInstallationToken: async (
     installationId: number | string,
-    scope?: { repositories?: string[]; permissions?: Record<string, string> },
+    scope?: {
+      repositories?: string[];
+      repositoryIds?: number[];
+      permissions?: Record<string, string>;
+    },
   ) => {
     installationTokenCalls.push({ installationId, scope });
     return { token: "installation-token", expiresAt: "2026-08-21T12:00:00Z" };
@@ -138,7 +146,7 @@ describe("RelayForgeProvider", () => {
   it("mints GitHub tokens through the control plane, scoped per request", async () => {
     const result = await relayForgeProvider.getInstallationToken({
       installationId: 4242,
-      scope: { repositories: ["app"], permissions: { contents: "write" } },
+      scope: { repositoryIds: [9001], permissions: { contents: "write" } },
     });
     expect(result).toEqual({
       token: "relayed-token",
@@ -149,7 +157,7 @@ describe("RelayForgeProvider", () => {
         path: "/api/relay/github/installation-token",
         body: {
           installationId: 4242,
-          repositories: ["app"],
+          repositoryIds: [9001],
           profile: "repo-write",
         },
       },
@@ -181,6 +189,7 @@ describe("repo-access through the seam", () => {
       provider: "github",
       connection_id: "conn-1",
       installation_id: 42,
+      external_repo_id: "9001",
       repo_full_name: "acme/app",
       default_branch: "trunk",
     };
@@ -188,7 +197,7 @@ describe("repo-access through the seam", () => {
     expect(installationTokenCalls).toEqual([
       {
         installationId: 42,
-        scope: { repositories: ["app"], permissions: { contents: "write" } },
+        scope: { repositoryIds: [9001], permissions: { contents: "write" } },
       },
     ]);
     expect(target).toMatchObject({
@@ -209,6 +218,7 @@ describe("repo-access through the seam", () => {
       provider: "github",
       connection_id: "conn-3",
       installation_id: 4242,
+      external_repo_id: "9001",
       repo_full_name: "acme/app",
       default_branch: "main",
       git_connections: { source: "relay" },
@@ -219,7 +229,7 @@ describe("repo-access through the seam", () => {
         path: "/api/relay/github/installation-token",
         body: {
           installationId: 4242,
-          repositories: ["app"],
+          repositoryIds: [9001],
           profile: "repo-read",
         },
       },

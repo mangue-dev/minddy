@@ -181,7 +181,7 @@ describe("POST /api/relay/gitlab/delivery", () => {
 
 describe("POST /api/relay/gitlab/hook-secret", () => {
   it("records the per-repo secret for the signing instance", async () => {
-    const rawBody = JSON.stringify({ repo: "acme/app", secret: HOOK_SECRET });
+    const rawBody = JSON.stringify({ repoId: "1001", repo: "acme/app", secret: HOOK_SECRET });
     const signature = signRelayRequest({
       method: "POST",
       path: "/api/relay/gitlab/hook-secret",
@@ -199,6 +199,7 @@ describe("POST /api/relay/gitlab/hook-secret", () => {
     expect(response.status).toBe(200);
     expect(fakeTables["forge_relay_link_mirror"]?.[0]).toMatchObject({
       provider: "gitlab",
+      external_repo_id: "1001",
       repo_full_name: "acme/app",
     });
   });
@@ -215,7 +216,10 @@ describe("POST /api/relay/gitlab/webhook", () => {
       headers,
       body: JSON.stringify({
         object_kind: "merge_request",
-        project: { path_with_namespace: repo },
+        project: {
+          id: repo === "other/repo" ? 2002 : 1001,
+          path_with_namespace: repo,
+        },
       }),
     }) as never;
   }
@@ -243,6 +247,7 @@ describe("POST /api/relay/gitlab/webhook", () => {
     const { registerGitlabHookSecret } = await import("@/lib/server/forge-relay/gitlab-broker");
     await registerGitlabHookSecret({
       instanceId: INSTANCE_ID,
+      repoId: "1001",
       repo: "acme/app",
       secret: HOOK_SECRET,
     });

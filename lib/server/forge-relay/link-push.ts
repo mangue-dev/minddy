@@ -22,26 +22,29 @@ import { relayRequest } from "./client";
 interface LinkEventInput {
   event: "linked" | "unlinked";
   provider: string;
+  repoId: string;
   repo: string;
   connectionId: string | null;
 }
 
 async function currentRelayedLinks(): Promise<
-  { provider: string; repo: string; connectionId: string | null }[]
+  { provider: string; repoId: string; repo: string; connectionId: string | null }[]
 > {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("project_git_links")
-    .select("provider, repo_full_name, connection_id, git_connections(source)")
+    .select("provider, external_repo_id, repo_full_name, connection_id, git_connections(source)")
     .eq("git_connections.source", "relay");
   return ((data ?? []) as unknown as Array<{
     provider: string;
+    external_repo_id: string;
     repo_full_name: string | null;
     connection_id: string;
   }>)
     .filter((row) => row.repo_full_name)
     .map((row) => ({
       provider: row.provider,
+      repoId: row.external_repo_id,
       repo: row.repo_full_name as string,
       connectionId: row.connection_id,
     }));
@@ -56,12 +59,14 @@ export async function pushRelayLinkEvent(input: LinkEventInput): Promise<void> {
     const links = await currentRelayedLinks();
     const snapshot = links.map((link) => ({
       provider: link.provider,
+      repoId: link.repoId,
       repo: link.repo,
       connectionId: link.connectionId ?? undefined,
     }));
     const event = {
       event: input.event,
       provider: input.provider,
+      repoId: input.repoId,
       repo: input.repo,
       connectionId: input.connectionId ?? undefined,
     };

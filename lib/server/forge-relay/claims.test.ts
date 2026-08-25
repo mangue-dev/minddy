@@ -70,6 +70,8 @@ const {
   reserveRelayClaimInstallation,
   bindRelayClaim,
   consumeRelayClaim,
+  claimCodeBelongsToAccount,
+  generateAccountBoundClaimCode,
 } = await import("./claims");
 
 async function prepareClaim(installationId = 4242): Promise<void> {
@@ -124,6 +126,18 @@ describe("claim state", () => {
     expect(isValidClaimCode("short")).toBe(false);
     expect(isValidClaimCode(`${"g".repeat(64)}`)).toBe(false);
     expect(generateClaimCode()).toMatch(/^[0-9a-f]{64}$/);
+    const bound = generateAccountBoundClaimCode({
+      userId: "user-a",
+      secret: "instance-secret",
+    });
+    expect(bound).toMatch(/^[0-9a-f]{64}\.[0-9a-f]{64}$/);
+    expect(isValidClaimCode(bound)).toBe(true);
+    expect(
+      claimCodeBelongsToAccount(bound, "user-a", "instance-secret"),
+    ).toBe(true);
+    expect(
+      claimCodeBelongsToAccount(bound, "user-b", "instance-secret"),
+    ).toBe(false);
   });
 
   it("binds the authorization state to the reserved installation", () => {
@@ -274,7 +288,7 @@ describe("consumeRelayClaim", () => {
     });
   });
 
-  it("returns the binding and marks the claim consumed; re-reads stay idempotent", async () => {
+  it("returns the binding once and rejects a replay", async () => {
     await prepareClaim();
     await bindRelayClaim({
       instanceId: INSTANCE_ID,
@@ -287,8 +301,8 @@ describe("consumeRelayClaim", () => {
     expect(first).toEqual({ status: "claimed", installationId: 4242, accountLogin: "acme" });
     expect(fakeTables["forge_relay_claims"]?.[0]).toMatchObject({ status: "consumed" });
 
-    // A retry after a network failure must not lose the binding: only the
-    // claiming instance can ask (signed channel), so the answer is stable.
-    await expect(consumeRelayClaim({ instanceId: INSTANCE_ID, code: CODE })).resolves.toEqual(first);
+    await expect(consumeRelayClaim({ instanceId: INSTANCE_ID, code: CODE })).resolves.toEqual({
+      status: "pending",
+    });
   });
 });

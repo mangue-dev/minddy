@@ -116,11 +116,12 @@ function relayTokenCacheKey(
   scope?: InstallationTokenScope,
 ): string {
   const repos = [...(scope?.repositories ?? [])].sort().join(",");
+  const repoIds = [...(scope?.repositoryIds ?? [])].sort((a, b) => a - b).join(",");
   const perms = Object.entries(scope?.permissions ?? {})
     .map(([name, level]) => `${name}:${level}`)
     .sort()
     .join(",");
-  return `${installationId}|${repos}|${perms}`;
+  return `${installationId}|${repos}|${repoIds}|${perms}`;
 }
 
 /**
@@ -144,7 +145,7 @@ export const relayForgeProvider: ForgeProvider = {
       expiresAt: string;
     }>("/api/relay/github/installation-token", {
       installationId: typeof installationId === "string" ? Number(installationId) : installationId,
-      repositories: scope?.repositories ?? [],
+      repositoryIds: scope?.repositoryIds ?? [],
       profile: mintProfileFromScope(scope?.permissions),
     });
     if (!response.ok || !response.data?.token) {

@@ -34,6 +34,7 @@ function linksTable() {
   };
   query.is = () => query;
   query.in = () => query;
+  query.limit = () => query;
   query.update = (values: Record<string, unknown>) => {
     patch = values;
     return query;
@@ -206,7 +207,16 @@ beforeEach(() => {
   verifyGithubSignature.mockReturnValue(true);
   managedForge = false;
   enqueueRelayDeliveryForPayload.mockResolvedValue(null);
-  linkRows = [link()];
+  linkRows = [
+    link(),
+    link({
+      id: "link-github",
+      project_id: "project-github",
+      provider: "github",
+      connection_id: "conn-github",
+      external_repo_id: "9001",
+    }),
+  ];
   deliveries = [];
   process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
   delete process.env.GITLAB_WEBHOOK_SECRET;
@@ -344,6 +354,20 @@ describe("POST /api/webhooks/github", () => {
     verifyGithubSignature.mockReturnValue(false);
     const response = await githubPOST(githubRequest());
     expect(response.status).toBe(401);
+    expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
+  });
+
+  it("ignores a reused repository name whose stable GitHub id is not linked", async () => {
+    const response = await githubPOST(
+      githubRequest({
+        body: {
+          ...GITHUB_ISSUE,
+          repository: { id: 9002, full_name: "acme/app" },
+        },
+      }),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, ignored: true });
     expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
   });
 

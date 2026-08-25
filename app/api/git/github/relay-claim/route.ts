@@ -1,9 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { generateClaimCode, isValidClaimCode } from "@/lib/server/forge-relay/claims";
+import {
+  claimCodeBelongsToAccount,
+  generateAccountBoundClaimCode,
+} from "@/lib/server/forge-relay/claims";
 import {
   forgeRelayConfig,
+  forgeRelaySigningKey,
   isForgeRelayClientConfigured,
   relayRequest,
   startGithubRelayClaim,
@@ -32,7 +36,10 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
-  const code = generateClaimCode();
+  const code = generateAccountBoundClaimCode({
+    userId: auth.user.id,
+    secret: forgeRelaySigningKey(),
+  });
   try {
     const claimUrl = await startGithubRelayClaim(code);
     return NextResponse.json({ claimUrl, code });
@@ -56,7 +63,13 @@ export async function GET(request: NextRequest) {
   }
 
   const code = request.nextUrl.searchParams.get("code");
-  if (!isValidClaimCode(code)) {
+  if (
+    !claimCodeBelongsToAccount(
+      code,
+      auth.user.id,
+      forgeRelaySigningKey(),
+    )
+  ) {
     return NextResponse.json({ error: "Invalid claim code" }, { status: 400 });
   }
 

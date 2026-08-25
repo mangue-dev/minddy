@@ -160,6 +160,7 @@ export async function reconcileRepoRename(opts: {
       await pushRelayLinkEvent({
         event: "linked",
         provider: opts.provider,
+        repoId: opts.externalRepoId,
         repo: opts.fullName,
         connectionId: link.connection_id,
       });

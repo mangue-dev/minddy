@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { getServiceClient } from "@/lib/supabase-service";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { enqueueRelayDeliveryForPayload } from "@/lib/server/forge-relay/fanout";
@@ -728,37 +729,70 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Replay: the same delivery, already processed (MIN-333). After verification —
-  // marking a delivery without a valid signature would mean being able to
-  // silence the real event which carries it.
-  if (
-    await isReplayedForgeDelivery("github", request.headers.get("x-github-delivery"))
-  ) {
-    return NextResponse.json({ ok: true, duplicate: true });
-  }
-
   const event = request.headers.get("x-github-event");
-  // Repository RENAME reconciliation: every payload carries the stable
-  // `repository.id` and the CURRENT `full_name`; if a link still lives under
-  // the old name, migrate it before any handler reads a dead name. Fail-open:
-  // the event itself must keep being processed.
+  // Repository rename reconciliation: every repository payload carries the
+  // stable `repository.id` and current `full_name`. Reconcile that pair, then
+  // require a link with the same stable id and name before any name-scoped
+  // handler runs. This prevents a reused owner/name from inheriting the old
+  // repository's projects.
+  let repositoryIdentity: { id: string; fullName: string } | null = null;
   try {
     const payload = JSON.parse(rawBody) as {
       repository?: { id?: number; full_name?: string };
     };
+    if (
+      typeof payload.repository?.id === "number" &&
+      Number.isSafeInteger(payload.repository.id) &&
+      payload.repository.id > 0 &&
+      typeof payload.repository.full_name === "string"
+    ) {
+      repositoryIdentity = {
+        id: String(payload.repository.id),
+        fullName: payload.repository.full_name,
+      };
+    }
     await reconcileRepoRename({
       provider: "github",
-      externalRepoId:
-        typeof payload.repository?.id === "number"
-          ? String(payload.repository.id)
-          : null,
-      fullName: payload.repository?.full_name ?? null,
+      externalRepoId: repositoryIdentity?.id,
+      fullName: repositoryIdentity?.fullName,
     });
   } catch (err) {
     console.error(
       "[webhooks/github] repo rename reconcile failed:",
       (err as Error).message,
     );
+    return NextResponse.json(
+      { error: "repository identity unavailable" },
+      { status: 503 },
+    );
+  }
+  if (repositoryIdentity) {
+    const { data: registered, error: repositoryError } = await getServiceClient()
+      .from("project_git_links")
+      .select("id")
+      .eq("provider", "github")
+      .eq("external_repo_id", repositoryIdentity.id)
+      .eq("repo_full_name", repositoryIdentity.fullName)
+      .limit(1)
+      .maybeSingle();
+    if (repositoryError) {
+      return NextResponse.json(
+        { error: "repository identity unavailable" },
+        { status: 503 },
+      );
+    }
+    if (!registered) {
+      return NextResponse.json({ ok: true, ignored: true });
+    }
+  }
+
+  // Replay is reserved only after signature, relay routing, and stable
+  // repository identity checks. A transient identity lookup failure must leave
+  // the delivery unmarked so GitHub can retry it.
+  if (
+    await isReplayedForgeDelivery("github", request.headers.get("x-github-delivery"))
+  ) {
+    return NextResponse.json({ ok: true, duplicate: true });
   }
   try {
     if (event === "pull_request") {

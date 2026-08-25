@@ -199,21 +199,24 @@ export async function consumeGitlabTokenDelivery(input: {
  */
 export async function registerGitlabHookSecret(input: {
   instanceId: string;
+  repoId: string;
   repo: string;
   secret: string;
 }): Promise<boolean> {
-  if (!/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(input.repo)) return false;
+  if (!/^[1-9][0-9]*$/.test(input.repoId)) return false;
+  if (!/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+$/.test(input.repo)) return false;
   if (input.secret.length < 32) return false;
   const supabase = getServiceClient();
   const { error } = await supabase.from("forge_relay_link_mirror").upsert(
     {
       instance_id: input.instanceId,
       provider: "gitlab",
+      external_repo_id: input.repoId,
       repo_full_name: input.repo,
       webhook_secret_encrypted: encryptForgeToken(input.secret),
       updated_at: new Date().toISOString(),
     },
-    { onConflict: "instance_id,provider,repo_full_name" },
+    { onConflict: "instance_id,provider,external_repo_id" },
   );
   return !error;
 }

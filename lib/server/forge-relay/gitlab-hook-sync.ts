@@ -26,14 +26,15 @@ export async function pushGitlabHookSecret(
     const supabase = getServiceClient();
     const { data } = await supabase
       .from("project_git_links")
-      .select("repo_full_name")
+      .select("external_repo_id, repo_full_name")
       .eq("provider", "gitlab")
       .eq("external_repo_id", externalProjectId)
       .limit(1)
       .maybeSingle();
-    const row = data as { repo_full_name: string | null } | null;
+    const row = data as { external_repo_id: string; repo_full_name: string | null } | null;
     if (!row?.repo_full_name) return;
     const response = await relayRequest("/api/relay/gitlab/hook-secret", {
+      repoId: row.external_repo_id,
       repo: row.repo_full_name,
       secret,
     });

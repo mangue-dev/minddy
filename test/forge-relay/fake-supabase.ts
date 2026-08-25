@@ -22,6 +22,41 @@ export function setFakeInsertError(error: { code: string; message: string } | nu
   fakeInsertError = error;
 }
 
+/** Minimal RPC behavior used by relay tests with database-side arbitration. */
+export async function fakeRpc(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<{ data: unknown; error: unknown }> {
+  if (name !== "reserve_forge_relay_mint") {
+    return { data: null, error: { message: `Unknown fake RPC: ${name}` } };
+  }
+  const instanceId = args.p_instance_id;
+  const limit = args.p_limit;
+  const active = (fakeTables.forge_relay_instances ?? []).some(
+    (row) => row.id === instanceId && row.status === "active",
+  );
+  if (!active) return { data: "instance_inactive", error: null };
+  if (typeof limit !== "number") {
+    return { data: null, error: { message: "Invalid mint limit" } };
+  }
+  const windowStart = Date.now() - 60 * 60_000;
+  const recent = (fakeTables.forge_relay_audit ?? []).filter(
+    (row) =>
+      row.instance_id === instanceId &&
+      row.action === "mint_installation_token" &&
+      Date.parse(String(row.created_at)) >= windowStart,
+  ).length;
+  if (recent >= limit) return { data: "quota_exceeded", error: null };
+  (fakeTables.forge_relay_audit ??= []).push({
+    id: crypto.randomUUID(),
+    instance_id: instanceId,
+    action: "mint_installation_token",
+    detail: { state: "reserved" },
+    created_at: new Date().toISOString(),
+  });
+  return { data: "reserved", error: null };
+}
+
 export class FakeQuery {
   private filters: ((row: FakeRow) => boolean)[] = [];
   private mode: "select" | "insert" | "update" | "delete" | "upsert" = "select";

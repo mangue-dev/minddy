@@ -1,25 +1,21 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import {
-  getInstallationAccount,
-  getInstallationToken,
-} from "@/lib/server/git/github-app";
+import { getInstallationToken } from "@/lib/server/git/github-app";
 
 /**
  * Control-plane side of `POST /relay/github/installation-token`
  * (docs/managed-forge-relay-plan.md, "Token minting").
  *
- * The wire schema mirrors GitHub's API and the local behavior: `repositories`
- * takes SHORT names only, and `profile` is one of the fixed permission
+ * The wire schema carries stable numeric GitHub repository ids, and `profile`
+ * is one of the fixed permission
  * profiles of MIN-327 (`RepoTokenAccess`) — the relay enforces server-side the
  * same narrowing the instance already applies client-side. Two authorization
  * checks, both required, fail-closed:
  *
  * 1. the installation is CLAIMED by the authenticated instance;
- * 2. every requested repo is mirrored as linked to that instance
- *    (short names are resolved against the installation's account so the
- *    mirror always operates on full names).
+ * 2. every requested stable repository id is mirrored as linked to that
+ *    instance. Mutable owner/name values never authorize a mint.
  *
  * The profile is REQUIRED on the wire. A bare `{}` or an absent permissions
  * object would silently mint a token with ALL the app's declared permissions;
@@ -30,7 +26,6 @@ import {
 
 export const FORGE_RELAY_MINT_QUOTA_PER_HOUR = 120;
 const MAX_REPOSITORIES_PER_MINT = 10;
-const SHORT_REPO_NAME = /^[A-Za-z0-9._-]+$/;
 
 /** Same three profiles as `RepoTokenAccess` (lib/server/agent/repo-access.ts). */
 export type MintProfile = "full" | "repo-write" | "repo-read";
@@ -53,7 +48,7 @@ export const MINT_PERMISSIONS_BY_PROFILE: Record<
 
 export interface InstallationTokenMintPayload {
   installationId: number;
-  repositories: string[];
+  repositoryIds: number[];
   profile: MintProfile;
 }
 
@@ -72,18 +67,19 @@ export function parseInstallationTokenMintPayload(raw: unknown): ParsedMintPaylo
     return { ok: false, error: "Invalid installationId" };
   }
 
-  const repositories = body.repositories;
+  const repositoryIds = body.repositoryIds;
   if (
-    !Array.isArray(repositories) ||
-    repositories.length === 0 ||
-    repositories.length > MAX_REPOSITORIES_PER_MINT ||
-    !repositories.every(
-      (repo) => typeof repo === "string" && repo.length > 0 && !repo.includes("/") && SHORT_REPO_NAME.test(repo),
-    )
+    !Array.isArray(repositoryIds) ||
+    repositoryIds.length === 0 ||
+    repositoryIds.length > MAX_REPOSITORIES_PER_MINT ||
+    !repositoryIds.every(
+      (repoId) => typeof repoId === "number" && Number.isSafeInteger(repoId) && repoId > 0,
+    ) ||
+    new Set(repositoryIds).size !== repositoryIds.length
   ) {
     return {
       ok: false,
-      error: "repositories must be 1-10 SHORT repository names (no owner/ prefix)",
+      error: "repositoryIds must contain 1-10 unique positive repository ids",
     };
   }
 
@@ -97,7 +93,7 @@ export function parseInstallationTokenMintPayload(raw: unknown): ParsedMintPaylo
       error: "profile must be one of: full, repo-write, repo-read",
     };
   }
-  return { ok: true, payload: { installationId, repositories, profile } };
+  return { ok: true, payload: { installationId, repositoryIds, profile } };
 }
 
 export type MintResult =
@@ -127,6 +123,16 @@ export async function mintRelayedInstallationToken(input: {
   const supabase = getServiceClient();
   const { instanceId, payload } = input;
 
+  const { data: activeInstance } = await supabase
+    .from("forge_relay_instances")
+    .select("id")
+    .eq("id", instanceId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!activeInstance) {
+    return { ok: false, status: 403, error: "Relay mint is not authorized" };
+  }
+
   // Check 1 — the installation belongs to THIS instance.
   const { data: claim } = await supabase
     .from("forge_relay_installations")
@@ -140,63 +146,68 @@ export async function mintRelayedInstallationToken(input: {
       reason: "installation_not_claimed",
       installationId: payload.installationId,
     });
-    return { ok: false, status: 403, error: "Installation is not claimed by this instance" };
+    return { ok: false, status: 403, error: "Relay mint is not authorized" };
   }
 
-  // Check 2 — every requested repo is mirrored as linked. The short names are
-  // resolved against the installation's account so the mirror check always
-  // operates on full names (the wire format does not carry the owner).
-  const installationAccount = await getInstallationAccount(payload.installationId);
-  const owner = installationAccount?.login;
-  if (!owner) {
-    // Fail-closed: without the account login we cannot resolve short names to
-    // the full names the mirror stores, so no mint can be authorized.
-    await recordRelayAudit(instanceId, "mint_refused", {
-      reason: "installation_account_unresolved",
-      installationId: payload.installationId,
-    });
-    return { ok: false, status: 403, error: "Installation account could not be resolved" };
-  }
-  const fullNames = payload.repositories.map((repo) => `${owner}/${repo}`);
+  // Check 2 — every requested stable repository id is mirrored as linked.
+  const requestedIds = payload.repositoryIds.map(String);
   const { data: mirrored } = await supabase
     .from("forge_relay_link_mirror")
-    .select("repo_full_name")
+    .select("external_repo_id")
     .eq("instance_id", instanceId)
     .eq("provider", "github")
-    .in("repo_full_name", fullNames);
-  const mirroredNames = new Set(
-    ((mirrored ?? []) as { repo_full_name: string }[]).map((row) => row.repo_full_name),
+    .in("external_repo_id", requestedIds);
+  const mirroredIds = new Set(
+    ((mirrored ?? []) as { external_repo_id: string }[]).map((row) => row.external_repo_id),
   );
-  const unlinked = fullNames.filter((name) => !mirroredNames.has(name));
-  if (unlinked.length > 0) {
+  if (requestedIds.some((repoId) => !mirroredIds.has(repoId))) {
     await recordRelayAudit(instanceId, "mint_refused", {
       reason: "repository_not_linked",
-      repositories: unlinked,
     });
-    return { ok: false, status: 403, error: `Repository not linked to this instance: ${unlinked.join(", ")}` };
+    return { ok: false, status: 403, error: "Relay mint is not authorized" };
   }
 
-  // Abuse control — per-instance quota over the audit ledger.
-  const windowStart = new Date(Date.now() - 60 * 60_000).toISOString();
-  const { count } = await supabase
-    .from("forge_relay_audit")
-    .select("id", { count: "exact", head: true })
-    .eq("instance_id", instanceId)
-    .eq("action", "mint_installation_token")
-    .gte("created_at", windowStart);
-  if ((count ?? 0) >= FORGE_RELAY_MINT_QUOTA_PER_HOUR) {
+  // Abuse control — one database function serializes count + reservation for
+  // this instance, so concurrent requests cannot all pass the same count.
+  const { data: reservation, error: reservationError } = await supabase.rpc(
+    "reserve_forge_relay_mint",
+    {
+      p_instance_id: instanceId,
+      p_limit: FORGE_RELAY_MINT_QUOTA_PER_HOUR,
+    },
+  );
+  if (reservationError) {
+    return { ok: false, status: 503, error: "Relay mint authorization unavailable" };
+  }
+  if (reservation === "instance_inactive") {
+    return { ok: false, status: 403, error: "Relay mint is not authorized" };
+  }
+  if (reservation !== "reserved") {
     await recordRelayAudit(instanceId, "mint_refused", { reason: "quota_exceeded" });
     return { ok: false, status: 429, error: "Relay mint quota exceeded for this instance" };
   }
 
+  // Revocation may race with the earlier authorization reads. Recheck at the
+  // external side-effect boundary, after the serialized quota reservation and
+  // immediately before asking GitHub to mint or return a cached token.
+  const { data: stillActive } = await supabase
+    .from("forge_relay_instances")
+    .select("id")
+    .eq("id", instanceId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!stillActive) {
+    return { ok: false, status: 403, error: "Relay mint is not authorized" };
+  }
+
   try {
     const { token, expiresAt } = await getInstallationToken(payload.installationId, {
-      repositories: payload.repositories,
+      repositoryIds: payload.repositoryIds,
       permissions: MINT_PERMISSIONS_BY_PROFILE[payload.profile],
     });
-    await recordRelayAudit(instanceId, "mint_installation_token", {
+    await recordRelayAudit(instanceId, "mint_installation_token_completed", {
       installationId: payload.installationId,
-      repositories: payload.repositories,
+      repositoryIds: payload.repositoryIds,
       profile: payload.profile,
     });
     return { ok: true, token, expiresAt };

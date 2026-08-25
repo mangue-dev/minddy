@@ -7,9 +7,9 @@ import { consumeRelayClaim, isValidClaimCode } from "@/lib/server/forge-relay/cl
 
 /**
  * `POST /api/relay/github/claim-result` — the instance polls the outcome of
- * its installation claim over the signed relay channel. Reads are idempotent
- * for the claiming instance (retry-friendly); the first successful read marks
- * the claim consumed on the Cloud side.
+ * its installation claim over the signed relay channel. The first successful
+ * read atomically consumes the result; concurrent or replayed reads receive no
+ * installation identity.
  */
 export async function POST(request: NextRequest) {
   if (!isManagedForgeEnabled()) {

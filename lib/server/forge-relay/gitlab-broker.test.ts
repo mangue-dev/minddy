@@ -192,6 +192,7 @@ describe("registerGitlabHookSecret", () => {
   it("stores the per-repo secret ENCRYPTED in the mirror, upserting a minimal row", async () => {
     const ok = await registerGitlabHookSecret({
       instanceId: INSTANCE_ID,
+      repoId: "1001",
       repo: "acme/app",
       secret: "per-repo-hook-secret-0123456789abcdef",
     });
@@ -200,6 +201,7 @@ describe("registerGitlabHookSecret", () => {
     expect(row).toMatchObject({
       instance_id: INSTANCE_ID,
       provider: "gitlab",
+      external_repo_id: "1001",
       repo_full_name: "acme/app",
     });
     expect(String(row.webhook_secret_encrypted)).not.toContain("per-repo-hook-secret");
@@ -207,6 +209,7 @@ describe("registerGitlabHookSecret", () => {
     // Lost link event: the minimal row still authorizes verification.
     const again = await registerGitlabHookSecret({
       instanceId: INSTANCE_ID,
+      repoId: "1002",
       repo: "acme/other",
       secret: "per-repo-hook-secret-0123456789abcdef",
     });
@@ -216,10 +219,13 @@ describe("registerGitlabHookSecret", () => {
 
   it("refuses a malformed repo or a weak secret", async () => {
     expect(
-      await registerGitlabHookSecret({ instanceId: INSTANCE_ID, repo: "no-slash", secret: "x".repeat(40) }),
+      await registerGitlabHookSecret({ instanceId: INSTANCE_ID, repoId: "1001", repo: "no-slash", secret: "x".repeat(40) }),
     ).toBe(false);
     expect(
-      await registerGitlabHookSecret({ instanceId: INSTANCE_ID, repo: "acme/app", secret: "short" }),
+      await registerGitlabHookSecret({ instanceId: INSTANCE_ID, repoId: "1001", repo: "acme/app", secret: "short" }),
+    ).toBe(false);
+    expect(
+      await registerGitlabHookSecret({ instanceId: INSTANCE_ID, repoId: "invalid", repo: "acme/app", secret: "x".repeat(40) }),
     ).toBe(false);
     expect(fakeTables["forge_relay_link_mirror"] ?? []).toHaveLength(0);
   });

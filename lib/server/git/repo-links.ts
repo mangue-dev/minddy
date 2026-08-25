@@ -175,6 +175,7 @@ export async function bindRepo(params: {
     await pushRelayLinkEvent({
       event: "linked",
       provider: link.provider,
+      repoId: link.external_repo_id,
       repo: link.repo_full_name,
       connectionId: link.connection_id,
     });
@@ -191,7 +192,7 @@ export async function unlinkProject(projectId: string): Promise<boolean> {
     .delete()
     .eq("project_id", projectId)
     .select(
-      "id, provider, repo_full_name, connection_id, git_connections(source)",
+      "id, provider, external_repo_id, repo_full_name, connection_id, git_connections(source)",
     )
     .maybeSingle();
   if (!data) return false;
@@ -199,6 +200,7 @@ export async function unlinkProject(projectId: string): Promise<boolean> {
   const removed = data as unknown as {
     id: string;
     provider: string;
+    external_repo_id: string;
     repo_full_name: string | null;
     connection_id: string;
     git_connections: { source: string | null } | null;
@@ -215,6 +217,7 @@ export async function unlinkProject(projectId: string): Promise<boolean> {
     await pushRelayLinkEvent({
       event: "unlinked",
       provider: removed.provider,
+      repoId: removed.external_repo_id,
       repo: removed.repo_full_name,
       connectionId: removed.connection_id,
     });

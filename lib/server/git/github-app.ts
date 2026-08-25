@@ -152,6 +152,8 @@ export interface InstallationToken {
 export interface InstallationTokenScope {
   /** SHORT repository names (`name`), never `owner/name`. */
   repositories?: string[];
+  /** Stable GitHub repository ids. Prefer these at security boundaries. */
+  repositoryIds?: number[];
   /** Sous-ensemble des permissions de l'installation (voir ci-dessus). */
   permissions?: Record<string, "read" | "write">;
 }
@@ -181,11 +183,12 @@ function installationTokenCacheKey(
   scope: InstallationTokenScope | undefined,
 ): string {
   const repos = [...(scope?.repositories ?? [])].sort().join(",");
+  const repoIds = [...(scope?.repositoryIds ?? [])].sort((a, b) => a - b).join(",");
   const perms = Object.entries(scope?.permissions ?? {})
     .map(([name, level]) => `${name}:${level}`)
     .sort()
     .join(",");
-  return `${installationId}|${repos}|${perms}`;
+  return `${installationId}|${repos}|${repoIds}|${perms}`;
 }
 
 /**
@@ -207,6 +210,7 @@ export async function getInstallationToken(
 
   const payload: Record<string, unknown> = {};
   if (scope?.repositories?.length) payload.repositories = scope.repositories;
+  if (scope?.repositoryIds?.length) payload.repository_ids = scope.repositoryIds;
   if (scope?.permissions && Object.keys(scope.permissions).length > 0) {
     payload.permissions = scope.permissions;
   }

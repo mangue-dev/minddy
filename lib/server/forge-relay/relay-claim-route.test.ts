@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import crypto from "node:crypto";
 
 /**
  * Instance side of the installation claim
@@ -9,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 let relayConfigured = true;
+let authUserId = "operator-user-id";
 const relayCalls: { path: string; body: Record<string, unknown> }[] = [];
 let claimResult: { ok: boolean; error: string | null; data: unknown } = {
   ok: true,
@@ -19,13 +21,14 @@ let claimResult: { ok: boolean; error: string | null; data: unknown } = {
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({
     ok: true as const,
-    user: { id: "operator-user-id" },
+    user: { id: authUserId },
     supabase: {},
     response: null,
   }),
 }));
 vi.mock("@/lib/server/forge-relay/client", () => ({
   isForgeRelayClientConfigured: () => relayConfigured,
+  forgeRelaySigningKey: () => "relay-claim-secret",
   forgeRelayConfig: () =>
     relayConfigured
       ? {
@@ -53,10 +56,17 @@ const { POST: startClaim, GET: pollClaim } = await import(
   "@/app/api/git/github/relay-claim/route"
 );
 
-const CODE = "c".repeat(64);
+const NONCE = "c".repeat(64);
+const codeFor = (userId: string) =>
+  `${NONCE}.${crypto
+    .createHmac("sha256", "relay-claim-secret")
+    .update(`${userId}\0${NONCE}`, "utf8")
+    .digest("hex")}`;
+const CODE = codeFor("operator-user-id");
 
 beforeEach(() => {
   relayConfigured = true;
+  authUserId = "operator-user-id";
   relayCalls.length = 0;
   claimResult = { ok: true, error: null, data: { status: "pending" } };
   upsertGithubConnection.mockReset();
@@ -74,7 +84,7 @@ describe("POST /api/git/github/relay-claim", () => {
     );
     expect(response.status).toBe(200);
     const { claimUrl, code } = (await response.json()) as { claimUrl: string; code: string };
-    expect(code).toMatch(/^[0-9a-f]{64}$/);
+    expect(code).toMatch(/^[0-9a-f]{64}\.[0-9a-f]{64}$/);
     expect(claimUrl).toContain("https://relay.example.com/api/relay/github/claim?instance=");
     expect(claimUrl).toContain(`code=${code}`);
     expect(relayCalls).toEqual([
@@ -133,6 +143,16 @@ describe("GET /api/git/github/relay-claim", () => {
     claimResult = { ok: false, error: "Relay instance is revoked", data: null };
     const response = await pollClaim(getRequest(`http://localhost/api/git/github/relay-claim?code=${CODE}`));
     expect(response.status).toBe(502);
+    expect(upsertGithubConnection).not.toHaveBeenCalled();
+  });
+
+  it("refuses a claim code started by another local account", async () => {
+    authUserId = "other-user-id";
+    const response = await pollClaim(
+      getRequest(`http://localhost/api/git/github/relay-claim?code=${CODE}`),
+    );
+    expect(response.status).toBe(400);
+    expect(relayCalls).toHaveLength(0);
     expect(upsertGithubConnection).not.toHaveBeenCalled();
   });
 

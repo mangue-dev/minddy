@@ -6,6 +6,7 @@ import {
   fakeTables,
   setFakeTable,
   setFakeInsertError,
+  fakeRpc,
 } from "../../../test/forge-relay/fake-supabase";
 
 /**
@@ -20,7 +21,10 @@ let forgeEnabled = true;
 let admin = true;
 
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: (name: string) => new FakeQuery(name) }),
+  getServiceClient: () => ({
+    from: (name: string) => new FakeQuery(name),
+    rpc: fakeRpc,
+  }),
 }));
 vi.mock("@/lib/managed-services", () => ({
   isManagedForgeEnabled: () => forgeEnabled,
@@ -39,13 +43,13 @@ vi.mock("@/lib/server/admin", () => ({
 
 const mintCalls: {
   installationId: number | string;
-  scope?: { repositories?: string[]; permissions?: Record<string, string> };
+  scope?: { repositoryIds?: number[]; permissions?: Record<string, string> };
 }[] = [];
 
 vi.mock("@/lib/server/git/github-app", () => ({
   getInstallationToken: async (
     installationId: number | string,
-    scope?: { repositories?: string[]; permissions?: Record<string, string> },
+    scope?: { repositoryIds?: number[]; permissions?: Record<string, string> },
   ) => {
     mintCalls.push({ installationId, scope });
     return { token: "minted-token", expiresAt: "2026-08-21T13:00:00Z" };
@@ -91,6 +95,7 @@ function seedRelayWorld(): void {
     {
       instance_id: INSTANCE_ID,
       provider: "github",
+      external_repo_id: "9001",
       repo_full_name: "acme/app",
       connection_id: "conn-1",
       updated_at: new Date().toISOString(),
@@ -155,7 +160,7 @@ describe("POST /api/relay/github/installation-token", () => {
   const path = "/api/relay/github/installation-token";
   const body = JSON.stringify({
     installationId: 4242,
-    repositories: ["app"],
+    repositoryIds: [9001],
     profile: "repo-write",
   });
 
@@ -174,17 +179,17 @@ describe("POST /api/relay/github/installation-token", () => {
 
   it("refuses a payload that does not respect the wire constraints", async () => {
     const response = await mintToken(
-      signedRequest(path, JSON.stringify({ installationId: 4242, repositories: ["acme/app"] })) as never,
+      signedRequest(path, JSON.stringify({ installationId: 4242, repositoryIds: [0] })) as never,
     );
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("SHORT") });
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("repositoryIds") });
   });
 
   it("refuses a payload without a known permission profile", async () => {
     // An empty permissions object used to mint ALL of the app's permissions.
     for (const payload of [
-      { installationId: 4242, repositories: ["app"] },
-      { installationId: 4242, repositories: ["app"], profile: "sudo" },
+      { installationId: 4242, repositoryIds: [9001] },
+      { installationId: 4242, repositoryIds: [9001], profile: "sudo" },
     ]) {
       const response = await mintToken(signedRequest(path, JSON.stringify(payload)) as never);
       expect(response.status).toBe(400);
@@ -198,22 +203,22 @@ describe("POST /api/relay/github/installation-token", () => {
     const response = await mintToken(
       signedRequest(
         path,
-        JSON.stringify({ installationId: 9999, repositories: ["app"], profile: "repo-write" }),
+        JSON.stringify({ installationId: 9999, repositoryIds: [9001], profile: "repo-write" }),
       ) as never,
     );
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("not claimed") });
+    await expect(response.json()).resolves.toEqual({ error: "Relay mint is not authorized" });
   });
 
   it("refuses a repository that is not mirrored as linked (fail-closed)", async () => {
     const response = await mintToken(
       signedRequest(
         path,
-        JSON.stringify({ installationId: 4242, repositories: ["other"], profile: "repo-write" }),
+        JSON.stringify({ installationId: 4242, repositoryIds: [9002], profile: "repo-write" }),
       ) as never,
     );
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("not linked") });
+    await expect(response.json()).resolves.toEqual({ error: "Relay mint is not authorized" });
   });
 
   it("mints a scoped token for a claimed installation and a linked repository", async () => {
@@ -226,7 +231,7 @@ describe("POST /api/relay/github/installation-token", () => {
     expect(mintCalls).toEqual([
       {
         installationId: 4242,
-        scope: { repositories: ["app"], permissions: { contents: "write" } },
+        scope: { repositoryIds: [9001], permissions: { contents: "write" } },
       },
     ]);
   });
@@ -235,12 +240,12 @@ describe("POST /api/relay/github/installation-token", () => {
     const response = await mintToken(
       signedRequest(
         path,
-        JSON.stringify({ installationId: 4242, repositories: ["app"], profile: "full" }),
+        JSON.stringify({ installationId: 4242, repositoryIds: [9001], profile: "full" }),
       ) as never,
     );
     expect(response.status).toBe(200);
     expect(mintCalls).toEqual([
-      { installationId: 4242, scope: { repositories: ["app"], permissions: undefined } },
+      { installationId: 4242, scope: { repositoryIds: [9001], permissions: undefined } },
     ]);
   });
 
@@ -257,6 +262,36 @@ describe("POST /api/relay/github/installation-token", () => {
     );
     const response = await mintToken(signedRequest(path, body) as never);
     expect(response.status).toBe(429);
+    expect(mintCalls).toHaveLength(0);
+  });
+
+  it("reserves the final quota slot atomically across concurrent mints", async () => {
+    setFakeTable(
+      "forge_relay_audit",
+      Array.from({ length: 119 }, (_, index) => ({
+        id: index + 1,
+        instance_id: INSTANCE_ID,
+        action: "mint_installation_token",
+        detail: {},
+        created_at: new Date().toISOString(),
+      })),
+    );
+    const responses = await Promise.all([
+      mintToken(signedRequest(path, body) as never),
+      mintToken(signedRequest(path, body) as never),
+    ]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 429]);
+    expect(mintCalls).toHaveLength(1);
+  });
+
+  it("does not authorize a reused repository name with a different provider id", async () => {
+    const response = await mintToken(
+      signedRequest(
+        path,
+        JSON.stringify({ installationId: 4242, repositoryIds: [9002], profile: "repo-read" }),
+      ) as never,
+    );
+    expect(response.status).toBe(403);
     expect(mintCalls).toHaveLength(0);
   });
 });
@@ -277,12 +312,12 @@ describe("POST /api/relay/links", () => {
         path,
         JSON.stringify({
           events: [
-            { event: "linked", provider: "gitlab", repo: "acme/gitlab-app", connectionId: "conn-9" },
-            { event: "unlinked", provider: "github", repo: "acme/app" },
+            { event: "linked", provider: "gitlab", repoId: "8001", repo: "acme/gitlab-app", connectionId: "conn-9" },
+            { event: "unlinked", provider: "github", repoId: "9001", repo: "acme/app" },
           ],
           snapshot: [
-            { provider: "github", repo: "acme/kept", connectionId: "conn-2" },
-            { provider: "gitlab", repo: "acme/gitlab-app", connectionId: "conn-9" },
+            { provider: "github", repoId: "9003", repo: "acme/kept", connectionId: "conn-2" },
+            { provider: "gitlab", repoId: "8001", repo: "acme/gitlab-app", connectionId: "conn-9" },
           ],
         }),
       ) as never,
@@ -365,6 +400,19 @@ describe("admin instance registry", () => {
       }),
       expect.objectContaining({ id: "delivery-complete", status: "delivered" }),
     ]);
+
+    const mintAfterRevocation = await mintToken(
+      signedRequest(
+        "/api/relay/github/installation-token",
+        JSON.stringify({
+          installationId: 4242,
+          repositoryIds: [9001],
+          profile: "repo-read",
+        }),
+      ) as never,
+    );
+    expect(mintAfterRevocation.status).toBe(403);
+    expect(mintCalls).toHaveLength(0);
 
     const retry = await revokeInstance({} as never, {
       params: Promise.resolve({ id: INSTANCE_ID }),

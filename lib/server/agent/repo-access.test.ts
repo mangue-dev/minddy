@@ -48,6 +48,7 @@ describe("sandbox repository credentials", () => {
       provider: "github",
       connection_id: "connection-1",
       installation_id: 42,
+      external_repo_id: "9001",
       repo_full_name: "acme/private-app",
       default_branch: "main",
       git_connections: { source: "local" },
@@ -57,7 +58,7 @@ describe("sandbox repository credentials", () => {
     expect(h.installationCalls).toEqual([
       {
         installationId: 42,
-        scope: { repositories: ["private-app"], permissions },
+        scope: { repositoryIds: [9001], permissions },
       },
     ]);
     expect(target?.remoteUrl).toBe("https://github.com/acme/private-app.git");

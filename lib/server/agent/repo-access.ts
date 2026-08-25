@@ -70,6 +70,7 @@ interface GitLinkRow {
   provider: string;
   connection_id: string;
   installation_id: number | null;
+  external_repo_id: string;
   repo_full_name: string | null;
   default_branch: string | null;
   project_id?: string;
@@ -85,7 +86,7 @@ function linkConnectionSource(row: GitLinkRow): string | null {
 }
 
 const GIT_LINK_COLUMNS =
-  "id, provider, connection_id, installation_id, repo_full_name, default_branch, git_connections(source)";
+  "id, provider, connection_id, installation_id, external_repo_id, repo_full_name, default_branch, git_connections(source)";
 
 /**
  * Clone target of the project, or null if it has no repository linked to it. Raise if the link
@@ -221,18 +222,19 @@ async function targetFromLink(
     if (row.installation_id == null) {
       throw new Error("GitHub link is missing its installation id");
     }
+    const repositoryId = Number(row.external_repo_id);
+    if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) {
+      throw new Error("GitHub link is missing a stable repository id");
+    }
     /**
-     * THE SCOPE BY DEPOSIT IS ASKED IN ALL CASES (MIN-327), profile included.
-     *
-     * The SHORT name, not `owner/name`: that's what `repositories` expects, and a
-     * slash y is 422. We get it from the link itself — the project linked a repository,
-     * there is nothing to guess.
+     * Every token is repository-scoped (MIN-327), including the profile. The
+     * provider id survives renames and cannot authorize a different repository
+     * if an old owner/name is reused.
      */
-    const repoName = row.repo_full_name.split("/").pop() ?? row.repo_full_name;
     const { token } = await provider.getInstallationToken({
       installationId: row.installation_id,
       scope: {
-        repositories: [repoName],
+        repositoryIds: [repositoryId],
         permissions: GITHUB_PERMISSIONS_BY_ACCESS[access],
       },
     });

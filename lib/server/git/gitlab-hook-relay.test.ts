@@ -94,7 +94,11 @@ describe("ensureGitlabIssuesHook — relay mode", () => {
     expect(relayCalls).toEqual([
       {
         path: "/api/relay/gitlab/hook-secret",
-        body: { repo: "acme/app", secret: "per-repo-hook-secret-0123456789abcdef" },
+        body: {
+          repoId: "1001",
+          repo: "acme/app",
+          secret: "per-repo-hook-secret-0123456789abcdef",
+        },
       },
     ]);
   });

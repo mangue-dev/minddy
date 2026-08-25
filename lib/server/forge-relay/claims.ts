@@ -25,10 +25,11 @@ import { getInstallationAccount } from "@/lib/server/git/github-app";
 
 const CLAIM_STATE_MAX_AGE_MS = 10 * 60_000;
 const CLOCK_SKEW_TOLERANCE_MS = 60_000;
-/** How long a consumed claim stays readable by the polling instance. */
+/** How long a completed claim remains available for one successful poll. */
 const CLAIM_RESULT_TTL_MS = 60 * 60_000;
 
-const CLAIM_CODE_PATTERN = /^[0-9a-f]{64}$/;
+const CLAIM_NONCE_PATTERN = /^[0-9a-f]{64}$/;
+const CLAIM_CODE_PATTERN = /^[0-9a-f]{64}(?:\.[0-9a-f]{64})?$/;
 const FULL_REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
 export function isValidClaimCode(code: string | null | undefined): code is string {
@@ -37,6 +38,41 @@ export function isValidClaimCode(code: string | null | undefined): code is strin
 
 export function generateClaimCode(): string {
   return crypto.randomBytes(32).toString("hex");
+}
+
+/**
+ * Creates an opaque claim code that only the initiating local account can
+ * present back to the instance. Cloud treats the value as an opaque nonce and
+ * stores only its hash; the account id never leaves the instance.
+ */
+export function generateAccountBoundClaimCode(input: {
+  userId: string;
+  secret: string;
+}): string {
+  const nonce = generateClaimCode();
+  const binding = crypto
+    .createHmac("sha256", input.secret)
+    .update(`${input.userId}\0${nonce}`, "utf8")
+    .digest("hex");
+  return `${nonce}.${binding}`;
+}
+
+/** Verifies the local account binding without disclosing which part differed. */
+export function claimCodeBelongsToAccount(
+  code: string | null | undefined,
+  userId: string,
+  secret: string,
+): code is string {
+  if (!code || !CLAIM_CODE_PATTERN.test(code)) return false;
+  const [nonce, providedBinding] = code.split(".");
+  if (!CLAIM_NONCE_PATTERN.test(nonce) || !providedBinding) return false;
+  const expectedBinding = crypto
+    .createHmac("sha256", secret)
+    .update(`${userId}\0${nonce}`, "utf8")
+    .digest("hex");
+  const provided = Buffer.from(providedBinding);
+  const expected = Buffer.from(expectedBinding);
+  return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
 }
 
 export function hashClaimCode(code: string): string {
@@ -419,9 +455,9 @@ export type ClaimResult =
   | { status: "claimed"; installationId: number; accountLogin: string | null };
 
 /**
- * The instance's poll. Reads are idempotent for the SAME instance (a network
- * retry after a successful consume must not lose the binding); the first
- * successful read marks the claim consumed.
+ * The instance's poll. The conditional update is the one-time consumption
+ * boundary: concurrent polls and later replays see `pending` and receive no
+ * installation identity.
  */
 export async function consumeRelayClaim(input: {
   instanceId: string;
@@ -431,43 +467,21 @@ export async function consumeRelayClaim(input: {
   const codeHash = hashClaimCode(input.code);
   const { data } = await supabase
     .from("forge_relay_claims")
-    .select("id, status, installation_id, account_login, claimed_at")
+    .update({ status: "consumed", consumed_at: new Date().toISOString() })
     .eq("instance_id", input.instanceId)
     .eq("code_hash", codeHash)
+    .eq("status", "claimed")
+    .gte("claimed_at", new Date(Date.now() - CLAIM_RESULT_TTL_MS).toISOString())
+    .select("id, installation_id, account_login")
     .maybeSingle();
   const claim = data as {
     id: string;
-    status: string;
     installation_id: number | null;
     account_login: string | null;
-    claimed_at: string | null;
   } | null;
-  if (
-    !claim ||
-    (claim.status !== "claimed" && claim.status !== "consumed") ||
-    claim.installation_id == null ||
-    !claim.claimed_at
-  ) {
+  if (!claim || claim.installation_id == null) {
     return { status: "pending" };
   }
-
-  if (
-    Date.now() - Date.parse(claim.claimed_at) > CLAIM_RESULT_TTL_MS ||
-    claim.status === "consumed"
-  ) {
-    // Still returned: only the claiming instance can ask (signed channel), so
-    // replaying the answer to its author is safe and retry-friendly.
-    return {
-      status: "claimed",
-      installationId: claim.installation_id,
-      accountLogin: claim.account_login,
-    };
-  }
-
-  await supabase
-    .from("forge_relay_claims")
-    .update({ status: "consumed", consumed_at: new Date().toISOString() })
-    .eq("id", claim.id);
 
   void pruneStaleRelayClaims();
 

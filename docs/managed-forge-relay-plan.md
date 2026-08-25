@@ -149,8 +149,9 @@ Cloud side (control plane only, never the open core):
 The official minddy GitHub App keeps its setup URL pointed at Cloud:
 
 1. Operator clicks "Connect GitHub" on their self-hosted instance.
-2. The instance registers a short-lived claim code (single use, 10 min TTL)
-   over its signed relay channel, then opens Cloud.
+2. The instance creates a claim code bound to the initiating local account,
+   registers it over its signed relay channel (single use, 10 min TTL), then
+   opens Cloud.
 3. Cloud redirects the operator to the standard GitHub App installation page.
 4. After install, the GitHub setup URL lands on Cloud and reserves the returned
    installation for that pending claim. Because GitHub documents
@@ -177,26 +178,22 @@ New control-plane endpoint, mirroring the existing local scoping rules from
 POST /relay/github/installation-token
 {
   "installationId": ...,
-  "repositories": ["repo"],          // required, short names only — same
-                                     // constraint as the local path
-                                     // (github-app.ts:128-131)
-  "permissions": { ... }             // one of the fixed profiles
+  "repositoryIds": [123456],         // required, stable provider ids
+  "profile": "repo-write"           // one of the fixed profiles
 }
 ```
 
-Note the schema matches GitHub's API and the local behavior: `repositories`
-takes short names only. Cloud resolves each short name against the
-installation's account (`owner/repo`) when checking the link mirror, so the
-mirror check always operates on full names even though the wire format does
-not carry the owner.
+Cloud authorizes and scopes the mint with GitHub's numeric `repository_ids`.
+Mutable owner/name values never make an authorization decision, so a renamed
+repository cannot transfer access when its old name is reused.
 
 - Cloud verifies the instance owns the claimed installation **and** that the
   requested repo is linked to that instance (`project_git_links` equivalent on
   the Cloud side, mirrored from instance link events — see "Link lifecycle
   sync" below).
-- Cloud enforces per-instance rate limits, records every mint in an audit log,
-  and returns a short-lived token (~1h, as today). The instance-side in-process
-  cache behavior is preserved.
+- Cloud reserves per-instance rate-limit slots atomically, records every mint
+  attempt in an audit log, and returns a short-lived token (~1h, as today). The
+  instance-side in-process cache behavior is preserved.
 - The private key never leaves Cloud.
 
 ### Link lifecycle sync
@@ -208,8 +205,8 @@ unlinked (over-grant) or refuse valid mints.
 
 - **Event channel**: the instance pushes signed link events to
   `POST /relay/links` over the authenticated relay channel:
-  `{ event: "linked" | "unlinked", connectionId, repo }`. Cloud applies them
-  to its mirror idempotently (last-write-wins by timestamp).
+  `{ event: "linked" | "unlinked", connectionId, repoId, repo }`. Cloud keys
+  its mirror by the stable `repoId` and treats `repo` as mutable metadata.
 - **Reconciliation**: on instance startup and on a periodic heartbeat, the
   instance pushes a full snapshot of its current links; Cloud diffs and
   repairs its mirror. This heals any lost events (at-least-once delivery means

@@ -19,19 +19,21 @@ import { getServiceClient } from "@/lib/supabase-service";
  * only ever over-grants protection here, never under-grants it).
  */
 
-const FULL_REPO_NAME = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+const FULL_REPO_NAME = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+$/;
 const MAX_EVENTS_PER_SYNC = 200;
 const MAX_SNAPSHOT_ENTRIES = 500;
 
 export interface RelayLinkEvent {
   event: "linked" | "unlinked";
   provider: "github" | "gitlab";
+  repoId: string;
   repo: string;
   connectionId?: string;
 }
 
 export interface RelayLinkSnapshotEntry {
   provider: "github" | "gitlab";
+  repoId: string;
   repo: string;
   connectionId?: string;
 }
@@ -49,12 +51,15 @@ function parseEntry(raw: unknown): RelayLinkSnapshotEntry | null {
   if (typeof raw !== "object" || raw === null) return null;
   const entry = raw as Record<string, unknown>;
   const provider = entry.provider;
+  const repoId = entry.repoId;
   const repo = entry.repo;
   if (provider !== "github" && provider !== "gitlab") return null;
+  if (typeof repoId !== "string" || !/^[1-9][0-9]*$/.test(repoId)) return null;
   if (typeof repo !== "string" || !FULL_REPO_NAME.test(repo)) return null;
   const connectionId = entry.connectionId;
   return {
     provider,
+    repoId,
     repo,
     ...(typeof connectionId === "string" && connectionId ? { connectionId } : {}),
   };
@@ -118,11 +123,12 @@ export async function applyRelayLinkSync(input: {
         {
           instance_id: input.instanceId,
           provider: event.provider,
+          external_repo_id: event.repoId,
           repo_full_name: event.repo,
           connection_id: event.connectionId ?? null,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "instance_id,provider,repo_full_name" },
+        { onConflict: "instance_id,provider,external_repo_id" },
       );
       if (error) return { ok: false, error: error.message };
     } else {
@@ -131,7 +137,7 @@ export async function applyRelayLinkSync(input: {
         .delete()
         .eq("instance_id", input.instanceId)
         .eq("provider", event.provider)
-        .eq("repo_full_name", event.repo);
+        .eq("external_repo_id", event.repoId);
       if (error) return { ok: false, error: error.message };
     }
     applied += 1;
@@ -140,14 +146,14 @@ export async function applyRelayLinkSync(input: {
   if (input.payload.snapshot) {
     // Reconcile: drop mirror rows this instance no longer claims, then upsert
     // the full current set. Last write wins — the snapshot IS the truth.
-    const keep = new Set(input.payload.snapshot.map((e) => `${e.provider}:${e.repo}`));
+    const keep = new Set(input.payload.snapshot.map((e) => `${e.provider}:${e.repoId}`));
     const { data: current, error: readError } = await supabase
       .from("forge_relay_link_mirror")
-      .select("provider, repo_full_name")
+      .select("provider, external_repo_id")
       .eq("instance_id", input.instanceId);
     if (readError) return { ok: false, error: readError.message };
-    const stale = ((current ?? []) as { provider: string; repo_full_name: string }[]).filter(
-      (row) => !keep.has(`${row.provider}:${row.repo_full_name}`),
+    const stale = ((current ?? []) as { provider: string; external_repo_id: string }[]).filter(
+      (row) => !keep.has(`${row.provider}:${row.external_repo_id}`),
     );
     for (const row of stale) {
       const { error } = await supabase
@@ -155,7 +161,7 @@ export async function applyRelayLinkSync(input: {
         .delete()
         .eq("instance_id", input.instanceId)
         .eq("provider", row.provider)
-        .eq("repo_full_name", row.repo_full_name);
+        .eq("external_repo_id", row.external_repo_id);
       if (error) return { ok: false, error: error.message };
       applied += 1;
     }
@@ -164,11 +170,12 @@ export async function applyRelayLinkSync(input: {
         {
           instance_id: input.instanceId,
           provider: entry.provider,
+          external_repo_id: entry.repoId,
           repo_full_name: entry.repo,
           connection_id: entry.connectionId ?? null,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "instance_id,provider,repo_full_name" },
+        { onConflict: "instance_id,provider,external_repo_id" },
       );
       if (error) return { ok: false, error: error.message };
       applied += 1;
