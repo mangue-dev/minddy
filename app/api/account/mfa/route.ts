@@ -1,8 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { disableMfa, enableMfa, getMfaStatus, issueRecoveryCodes } from "@/lib/server/mfa";
 import { captureServerEvent } from "@/lib/server/posthog";
+import {
+  REAUTH_REQUIRED_CODE,
+  hasFreshAal2Verification,
+  hasFreshPrimaryAuthentication,
+} from "@/lib/server/reauth";
 
 /**
  * Account second factor (MIN-132).
@@ -34,6 +40,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  if (
+    !hasFreshAal2Verification(auth.claims) ||
+    !hasFreshPrimaryAuthentication(auth.claims)
+  ) {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json(
+      { error: t("mfaReauthTooOld"), code: REAUTH_REQUIRED_CODE },
+      { status: 403 }
+    );
+  }
 
   try {
     const activated = await enableMfa(auth.user.id);
@@ -53,13 +69,20 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Disable everything. No password confirmation: the session is
- * necessarily `aal2` to get here (this is the safeguard of `getAuthedUser`), and
- * a fresh TOTP code is better than a copied password.
+ * Disable everything. The global auth guard requires AAL2, and the explicit
+ * freshness check below ensures that the second factor was presented again
+ * within the reauthentication window.
  */
 export async function DELETE(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  if (!hasFreshAal2Verification(auth.claims)) {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json(
+      { error: t("mfaReauthTooOld"), code: REAUTH_REQUIRED_CODE },
+      { status: 403 }
+    );
+  }
 
   try {
     await disableMfa(auth.user.id);

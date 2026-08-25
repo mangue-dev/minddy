@@ -26,6 +26,17 @@ export const REAUTH_MAX_AGE_SECONDS = 15 * 60;
 /** Code returned to the caller: “reconnect, then try again”. */
 export const REAUTH_REQUIRED_CODE = "reauth_required";
 
+const AAL2_METHODS = new Set(["totp", "mfa/totp", "mfa/phone", "mfa/webauthn"]);
+const PRIMARY_AUTH_METHODS = new Set([
+  "password",
+  "otp",
+  "oauth",
+  "sso/saml",
+  "magiclink",
+  "web3",
+  "oauth_provider/authorization_code",
+]);
+
 /**
  * Does the account have a password identity? `providers` lists everything that
  * can log on to; `provider` only is the form of accounts which
@@ -74,6 +85,71 @@ export function isRecentlyAuthenticated(
   const at = lastAuthenticationAt(claims);
   if (at === null) return false;
   return nowSeconds - at <= REAUTH_MAX_AGE_SECONDS;
+}
+
+/**
+ * When was the session last elevated with a second factor?
+ *
+ * Access-token refreshes preserve the AAL while minting a new `iat`, so neither
+ * value alone proves that the user recently presented a factor. The signed AMR
+ * timestamp is the proof, and only methods that can produce AAL2 count here.
+ */
+export function lastAal2VerificationAt(
+  claims: { aal?: unknown; amr?: unknown; iat?: unknown } | null | undefined
+): number | null {
+  if (claims?.aal !== "aal2" || !Array.isArray(claims.amr)) return null;
+
+  const timestamps = claims.amr
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const { method, timestamp } = entry as { method?: unknown; timestamp?: unknown };
+      return typeof method === "string" &&
+        AAL2_METHODS.has(method) &&
+        typeof timestamp === "number" &&
+        Number.isFinite(timestamp)
+        ? timestamp
+        : null;
+    })
+    .filter((value): value is number => value !== null);
+
+  return timestamps.length > 0 ? Math.max(...timestamps) : null;
+}
+
+/** Require a second-factor verification within the normal reauthentication window. */
+export function hasFreshAal2Verification(
+  claims: { aal?: unknown; amr?: unknown; iat?: unknown } | null | undefined,
+  nowSeconds: number = Math.floor(Date.now() / 1000)
+): boolean {
+  const verifiedAt = lastAal2VerificationAt(claims);
+  if (verifiedAt === null) return false;
+  const age = nowSeconds - verifiedAt;
+  return age >= 0 && age <= REAUTH_MAX_AGE_SECONDS;
+}
+
+/**
+ * Require a recent primary sign-in before activating a newly enrolled factor.
+ * A TOTP that was just enrolled cannot reauthenticate the owner of a stolen
+ * AAL1 session; only the primary credential or identity provider can do that.
+ */
+export function hasFreshPrimaryAuthentication(
+  claims: { amr?: unknown; iat?: unknown } | null | undefined,
+  nowSeconds: number = Math.floor(Date.now() / 1000)
+): boolean {
+  if (!Array.isArray(claims?.amr)) return false;
+  return claims.amr.some((entry) => {
+    if (!entry || typeof entry !== "object") return false;
+    const { method, timestamp } = entry as { method?: unknown; timestamp?: unknown };
+    if (
+      typeof method !== "string" ||
+      !PRIMARY_AUTH_METHODS.has(method) ||
+      typeof timestamp !== "number" ||
+      !Number.isFinite(timestamp)
+    ) {
+      return false;
+    }
+    const age = nowSeconds - timestamp;
+    return age >= 0 && age <= REAUTH_MAX_AGE_SECONDS;
+  });
 }
 
 /**

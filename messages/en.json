@@ -255,6 +255,7 @@
     "tooManyAttempts": "Too many attempts. Try again in {seconds}s.",
     "unexpected": "An unexpected error occurred.",
     "mfaRequired": "Two-factor authentication is required for this account.",
+    "mfaReauthTooOld": "Sign in or verify with your second factor again, then try again.",
     "invalidRecoveryCode": "That recovery code isn't valid, or has already been used.",
     "gitAccountRequired": "Connect your git account to act on this pull request under your own name.",
     "gitAccountExpired": "Your git authorization has expired. Reauthorize your account to act on this pull request under your own name.",
