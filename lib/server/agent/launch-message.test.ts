@@ -71,14 +71,15 @@ describe("isAgentLaunchMode", () => {
 });
 
 describe("buildAgentLaunchMessage", () => {
-  it("reprend TELS QUELS les textes des boutons, en-tête compris", async () => {
+  it("keeps the native button instruction without copying the untrusted issue title", async () => {
     const message = await buildAgentLaunchMessage({
       mode: "verify",
       issue: planned,
       projectKey: "MIN",
       locale: "en",
     });
-    expect(message).toContain("Work on MIN-42: Rendre la palette navigable au clavier.");
+    expect(message).toContain("Work on MIN-42.");
+    expect(message).not.toContain(issue.title);
     expect(message).toContain(en.Agent.launchPrompt.verifyImplementation);
   });
 

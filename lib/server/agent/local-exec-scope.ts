@@ -7,7 +7,9 @@
  * WHAT IT SAYS, AND WHY IT DOES NOT TRADE
  *
  * **A run whose context has not been written by the person running it never leaves
- * on a local machine.** The `pr` anchor, a forge webhook, a
+ * on a local machine without a deliberate trust decision.** Issue launches require
+ * a separate acknowledgement; contexts that cannot be reviewed interactively stay
+ * excluded. The `pr` anchor, a forge webhook, a
  * mention external, a routine, a string, the public feedback board: in
  * all these cases, the text that the model reads is **potential attacker text**.
  *
@@ -36,10 +38,19 @@ export interface LocalRunContext {
   chainId?: string | null;
   /** The `pr` anchor — a replay reads a diff and fork comments. */
   pullRequestId?: string | null;
+  /** An issue can contain text supplied by an external or anonymous author. */
+  issueId?: string | null;
+  /** Explicit acknowledgement made by the signed-in local user for this launch. */
+  localIssueContextConfirmed?: boolean | null;
 }
 
 /** Why can't this run play on a local machine. */
-export type LocalRunScopeRefusal = "pull_request" | "routine" | "chain" | "trigger";
+export type LocalRunScopeRefusal =
+  | "pull_request"
+  | "routine"
+  | "chain"
+  | "trigger"
+  | "issue_confirmation";
 
 export type LocalRunScope = { ok: true } | { ok: false; reason: LocalRunScopeRefusal };
 
@@ -53,6 +64,9 @@ export type LocalRunScope = { ok: true } | { ok: false; reason: LocalRunScopeRef
  * `mention` is excluded voluntarily, and this is not an excess of caution: a
  * mention may come from a forge comment copied by a webhook, and nothing in
  * this place does not distinguish the two.
+ *
+ * An issue is the one admitted exception: the authenticated local UI shows the
+ * risk and records a per-run acknowledgement before this predicate returns true.
  */
 export function localRunScope(ctx: LocalRunContext): LocalRunScope {
   if (ctx.pullRequestId) return { ok: false, reason: "pull_request" };
@@ -60,6 +74,9 @@ export function localRunScope(ctx: LocalRunContext): LocalRunScope {
   if (ctx.chainId) return { ok: false, reason: "chain" };
   if (ctx.triggeredBy !== "button" && ctx.triggeredBy !== "chat") {
     return { ok: false, reason: "trigger" };
+  }
+  if (ctx.issueId && ctx.localIssueContextConfirmed !== true) {
+    return { ok: false, reason: "issue_confirmation" };
   }
   return { ok: true };
 }
@@ -71,11 +88,15 @@ export function rowMayRunLocally(row: {
   routine_id?: string | null;
   chain_id?: string | null;
   pull_request_id?: string | null;
+  issue_id?: string | null;
+  local_issue_context_confirmed?: boolean | null;
 }): LocalRunScope {
   return localRunScope({
     triggeredBy: row.triggered_by ?? "",
     routineId: row.routine_id,
     chainId: row.chain_id,
     pullRequestId: row.pull_request_id,
+    issueId: row.issue_id,
+    localIssueContextConfirmed: row.local_issue_context_confirmed,
   });
 }

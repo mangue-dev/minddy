@@ -1108,7 +1108,7 @@ export const IssueCard = memo(function IssueCard({
     // from the user's perspective, the same menu entry filled the composer only
     // every other time, without explaining the difference.
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`
+      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`
     );
   };
   // A plan already exists → the “plan” entries (⋯ menu, copied prompt, agent)
@@ -1120,7 +1120,7 @@ export const IssueCard = memo(function IssueCard({
   // "plan"`: the ticket does not go "in progress", framing is not starting.
   const writePlanWithAgent = () => {
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
+      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
       "plan"
     );
   };
@@ -1130,7 +1130,7 @@ export const IssueCard = memo(function IssueCard({
   // is not the start, and a review ticket must remain there.
   const verifyWithAgent = () => {
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
+      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
       "verify"
     );
   };
@@ -1253,7 +1253,7 @@ export const IssueCard = memo(function IssueCard({
   ) => {
     if (target === "launch") {
       composeAgentSession(
-        `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${instructions}`,
+        `${tAgent("launchPrompt.head", { identifier })}\n\n${instructions}`,
         "custom"
       );
       return;

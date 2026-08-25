@@ -99,7 +99,14 @@ export function localExecRequested(
  * between “this run is not local” and “this deployment cannot sign”. */
 export type IssueLocalExecTokenResult =
   | { ok: true; token: string; gen: number; expiresInSeconds: number }
-  | { ok: false; error: "not_configured" | "not_local" | "third_party_context" };
+  | {
+      ok: false;
+      error:
+        | "not_configured"
+        | "not_local"
+        | "third_party_context"
+        | "issue_confirmation_required";
+    };
 
 /**
  * Issues the token for the next local round of a run — 15 minutes rolling.
@@ -130,9 +137,16 @@ export async function issueLocalExecToken(
  * sufficient to open the door.
  */
   const row = await runLocalExecScopeRow(runId);
-  if (row && !rowMayRunLocally(row).ok) {
+  const scope = row ? rowMayRunLocally(row) : null;
+  if (scope && !scope.ok) {
     console.error(`[agent-local-exec] run ${runId} : contexte tiers, aucun jeton local`);
-    return { ok: false, error: "third_party_context" };
+    return {
+      ok: false,
+      error:
+        scope.reason === "issue_confirmation"
+          ? "issue_confirmation_required"
+          : "third_party_context",
+    };
   }
   const gen = await bumpLocalExecGen(runId);
   if (gen === null) return { ok: false, error: "not_local" };

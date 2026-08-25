@@ -103,7 +103,7 @@ interface ChatInputProps {
     mentions: AssistantMention[],
     /** The “/” command placed at the top of the message, when there is one. */
     command?: AssistantCommandId,
-  ) => void;
+  ) => void | boolean;
   onAbort?: () => void;
   disabled?: boolean;
   isStreaming?: boolean;
@@ -535,7 +535,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
       if (!value || disabled || sendDisabled || uploads.uploading) return;
-      onSend(value, uploads.inputs, collectMentions(), collectCommand());
+      const accepted = onSend(value, uploads.inputs, collectMentions(), collectCommand());
+      if (accepted === false) return;
       clearEditor();
       uploads.clear();
       // The caret remains in the composer after sending. Without that the focus escapes

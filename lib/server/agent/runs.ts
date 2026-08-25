@@ -308,6 +308,8 @@ export interface AgentRun {
   local_exec: boolean;
   /** The local run uses an isolated worktree rather than the attached checkout. */
   local_worktree: boolean;
+  /** The local user explicitly accepted the untrusted issue context for this run. */
+  local_issue_context_confirmed: boolean;
   /**
    * GENERATION of local execution lease (MIN-355) — the only revocation
    * possible d'un jeton auto-porteur.
@@ -370,6 +372,8 @@ export interface CreateRunInput {
   localExec?: boolean;
   /** Isolates the local run in a worktree from the machine running it. */
   localWorktree?: boolean;
+  /** Explicit acknowledgement required for issue-anchored local execution. */
+  localIssueContextConfirmed?: boolean;
 }
 
 /**
@@ -464,12 +468,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
        * doctrine than the two lines above. The lease generation leaves
        * to zero: it only becomes something when the first token is issued.
        *
-       * AND THE INVARIANT OF RUNS WITH THIRD PARTY CONTENT, APPLIED HERE (MIN-360). It is
-       * the only writer of the column: laying the rule there is what makes it
-       * true of all front doors, including the one that no one has
-       * still written. A replay, routine, chain, or trigger run
-       * a mention reads text that minddy did not write — in microVM a
-       * injection costs a disposable VM, on someone's Mac it's a shell.
+       * The third-party-content invariant is applied at the only writer of the
+       * column. Automated sources remain excluded; an issue can run locally only
+       * after the signed-in user acknowledges its untrusted context (MIN-439).
        */
       local_exec:
         input.localExec === true &&
@@ -478,7 +479,11 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
           routineId: input.routineId,
           chainId: input.chainId,
           pullRequestId: input.pullRequestId,
+          issueId: input.issueId,
+          localIssueContextConfirmed: input.localIssueContextConfirmed,
         }).ok,
+      local_issue_context_confirmed:
+        input.issueId !== null && input.localIssueContextConfirmed === true,
       // This option only makes sense for a truly local run. The same
       // keeps `local_exec` closes automated/third-party entries.
       local_worktree:
@@ -489,6 +494,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
           routineId: input.routineId,
           chainId: input.chainId,
           pullRequestId: input.pullRequestId,
+          issueId: input.issueId,
+          localIssueContextConfirmed: input.localIssueContextConfirmed,
         }).ok,
     })
     .select("*")
@@ -630,10 +637,14 @@ export async function runLocalExecScopeRow(runId: string): Promise<{
   routine_id: string | null;
   chain_id: string | null;
   pull_request_id: string | null;
+  issue_id: string | null;
+  local_issue_context_confirmed: boolean;
 } | null> {
   const { data } = await getServiceClient()
     .from("agent_runs")
-    .select("triggered_by, routine_id, chain_id, pull_request_id")
+    .select(
+      "triggered_by, routine_id, chain_id, pull_request_id, issue_id, local_issue_context_confirmed",
+    )
     .eq("id", runId)
     .maybeSingle();
   return (data as Awaited<ReturnType<typeof runLocalExecScopeRow>>) ?? null;

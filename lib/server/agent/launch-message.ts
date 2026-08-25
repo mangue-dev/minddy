@@ -122,7 +122,6 @@ export async function buildAgentLaunchMessage(input: {
 
   const head = t("head", {
     identifier: issueIdentifier(input.projectKey, input.issue.number),
-    title: input.issue.title,
   });
   const body = t(
     launchPromptVariantForMode(input.mode, input.issue, input.fromChain === true)

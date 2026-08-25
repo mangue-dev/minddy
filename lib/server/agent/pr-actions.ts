@@ -1645,6 +1645,8 @@ export interface PrActionBody {
   localExec?: boolean;
   /** Request the Git checkout isolated from this local restart. */
   localWorktree?: boolean;
+  /** Explicit acknowledgement of untrusted issue and PR context for local execution. */
+  localIssueContextConfirmed?: boolean;
   /**
    * Post the VERDICT on the forge? Default `true` (the historic gesture).
    *
@@ -1971,6 +1973,7 @@ export async function prReviewResponse(
       reasoningLevel,
       localExec: body.localExec === true,
       localWorktree: body.localWorktree === true,
+      localIssueContextConfirmed: body.localIssueContextConfirmed === true,
     });
     if (!result.ok) return launchErrorResponse(result);
     launchedRunId = result.run.id;

@@ -72,6 +72,13 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
+import { LocalIssueRunConfirmation } from "./local-issue-run-confirmation";
+
+interface PendingLocalIssueLaunch {
+  message: string;
+  attachments: ResourceInput[];
+  mentions: AssistantMention[];
+}
 
 /**
  * Code Agent Conversation Reusable Core (MIN-46 + MIN-68), extract
@@ -227,6 +234,9 @@ export function AgentConversation({
   // local folder to never show “Opening sandbox” during
   // that a local tour is being prepared.
   const [launchLocalExec, setLaunchLocalExec] = useState(false);
+  const [pendingLocalIssueLaunch, setPendingLocalIssueLaunch] =
+    useState<PendingLocalIssueLaunch | null>(null);
+  const [composeInputRevision, setComposeInputRevision] = useState(0);
   // “Create PR” request sent: deactivates the button while the agent
   // starts again (working) or RA appears. Reset by lower effect.
   const [requestingPr, setRequestingPr] = useState(false);
@@ -569,6 +579,7 @@ export function AgentConversation({
     message: string,
     attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
+    localIssueContextConfirmed = false,
   ) => {
     // The compose phase only exists for an ISSUE anchor (that of sessions
     // without a ticket lives in SessionCompose, before any run): no exit, nothing
@@ -623,6 +634,7 @@ export function AgentConversation({
         // the file may have disappeared.
         localExec,
         localWorktree,
+        localIssueContextConfirmed,
       });
       // The new session becomes the open session → immediate live switch. Her
       // `prompt` carries the same text: the thread displays the SAME bubble, without interruption.
@@ -641,6 +653,28 @@ export function AgentConversation({
     } finally {
       setLaunching(false);
     }
+  };
+
+  const submitLaunch = (
+    message: string,
+    attachments: ResourceInput[] = [],
+    mentions: AssistantMention[] = [],
+  ): boolean => {
+    const localExec = environment !== "cloud" && localRepo.ready;
+    if (issueId && localExec) {
+      setPendingLocalIssueLaunch({ message, attachments, mentions });
+      return false;
+    }
+    void launch(message, attachments, mentions);
+    return true;
+  };
+
+  const confirmLocalIssueLaunch = () => {
+    const pending = pendingLocalIssueLaunch;
+    if (!pending) return;
+    setPendingLocalIssueLaunch(null);
+    setComposeInputRevision((revision) => revision + 1);
+    void launch(pending.message, pending.attachments, pending.mentions, true);
   };
 
   // Message at rest: continues the conversation (new turn in the same context).
@@ -944,16 +978,16 @@ export function AgentConversation({
             </div>
           ) : (
             <ChatInput
-              key="compose"
+              key={`compose-${composeInputRevision}`}
               onSend={(message, attachments, mentions) =>
-                void launch(message, attachments, mentions)
+                submitLaunch(message, attachments, mentions)
               }
               mentionables={mentionables}
               onMentionQuery={onMentionQuery}
               disabled={launching}
               sendDisabled={environment === "cloud" && !cloudExecutionConfigured}
               sendDisabledTooltip={t("errorExecutionBackendUnavailable")}
-              initialValue={initialComposeText}
+              initialValue={composeInputRevision === 0 ? initialComposeText : undefined}
               placeholder={t("composePlaceholder")}
               contextSlot={
                 <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
@@ -1049,6 +1083,14 @@ export function AgentConversation({
           localTruncated={localDiff.truncated}
         />
       ) : null}
+      <LocalIssueRunConfirmation
+        open={pendingLocalIssueLaunch !== null}
+        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : ""}
+        onOpenChange={(open) => {
+          if (!open) setPendingLocalIssueLaunch(null);
+        }}
+        onConfirm={confirmLocalIssueLaunch}
+      />
       </div>
     </MentionLinksProvider>
   );

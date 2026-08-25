@@ -145,6 +145,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
      * request, which `localExecRequested` validates on the server side. */
     localExec?: unknown;
     localWorktree?: unknown;
+    /** Explicit acknowledgement shown only by the trusted local UI. */
+    localIssueContextConfirmed?: unknown;
   };
   let body: LaunchBody = {};
   try {
@@ -197,6 +199,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     promptMentions: parseAgentMentions(body.mentions),
     localExec: body.localExec === true,
     localWorktree: body.localWorktree === true,
+    localIssueContextConfirmed: body.localIssueContextConfirmed === true,
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

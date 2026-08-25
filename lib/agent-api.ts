@@ -259,6 +259,8 @@ export async function launchAgentRunApi(
     localExec?: boolean;
     /** Creates an isolated worktree on the local machine. */
     localWorktree?: boolean;
+    /** The signed-in user accepted the untrusted issue context for this local run. */
+    localIssueContextConfirmed?: boolean;
   },
 ): Promise<{ run: AgentRunSummary }> {
   // The prompt is NEVER sent — only its presence and length.
@@ -788,6 +790,8 @@ export async function submitPullRequestReviewApi(
     localExec?: boolean;
     /** Isolate this local launch in its worktree. */
     localWorktree?: boolean;
+    /** The signed-in user accepted untrusted issue and PR context for this local run. */
+    localIssueContextConfirmed?: boolean;
   },
 ): Promise<{
   ok: true;

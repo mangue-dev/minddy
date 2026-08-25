@@ -108,6 +108,7 @@ import { usePrReviewSession } from "@/lib/use-pr-review-session";
 import { usePrLive } from "@/lib/use-pr-live";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
+import { LocalIssueRunConfirmation } from "@/components/agent/local-issue-run-confirmation";
 import {
   groupTimelineCommits,
   groupTimelineReviews,
@@ -831,10 +832,16 @@ export function PrDetail({
         ? t("sendToNumo")
         : t("reviewSubmit");
 
-  const submitReview = async () => {
+  const [confirmLocalRelaunch, setConfirmLocalRelaunch] = useState(false);
+
+  const submitReview = async (localIssueContextConfirmed = false) => {
     if (!reviewVerdict || submitting || reviewHasNoEffect) return;
     if (relaunchBackendUnavailable) {
       toast.error(tAgent("errorExecutionBackendUnavailable"));
+      return;
+    }
+    if (relaunching && relaunchUsesLocal && !localIssueContextConfirmed) {
+      setConfirmLocalRelaunch(true);
       return;
     }
     const message = reviewMessage.trim();
@@ -852,6 +859,7 @@ export function PrDetail({
         reasoningLevel: relaunching ? reasoningLevel : undefined,
         localExec: relaunching && relaunchUsesLocal,
         localWorktree: relaunching && environment === "worktree" && localRepo.ready,
+        localIssueContextConfirmed,
       });
       // Three outcomes, three messages: the verdict has passed, the forge has folded it
       // in comments (an App cannot approve its own PR — say so,
@@ -2001,6 +2009,15 @@ export function PrDetail({
           ) : null}
 
       </FormDialog>
+      <LocalIssueRunConfirmation
+        open={confirmLocalRelaunch}
+        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : ""}
+        onOpenChange={setConfirmLocalRelaunch}
+        onConfirm={() => {
+          setConfirmLocalRelaunch(false);
+          void submitReview(true);
+        }}
+      />
     </div>
     </PrEndpointProvider>
   );

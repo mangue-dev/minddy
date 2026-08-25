@@ -71,6 +71,7 @@ export type LaunchError =
   | "executionBackendUnavailable"
   | "noModelForProvider"
   | "localEndpointRequiresLocalRun"
+  | "localIssueConfirmationRequired"
   | "modelAbovePlan"
   | "promptRequired";
 
@@ -192,6 +193,8 @@ export interface LaunchAgentInput {
   localExec?: boolean;
   /** Request an isolated local worktree, if the run is allowed locally. */
   localWorktree?: boolean;
+  /** Explicit acknowledgement of untrusted issue content for a local launch. */
+  localIssueContextConfirmed?: boolean;
 }
 
 /**
@@ -300,9 +303,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // Read BEFORE the link gate: a local run is the only one allowed to launch
   // without a linked repository (see below), so the request must be resolved
   // first. `localExecRequested` folds in the third-party-content scope
-  // (button/chat only, no PR/routine/chain anchor) — a no-repository run is
-  // therefore always an interactive one, never an automation.
+  // (button/chat only, no PR/routine/chain anchor, and explicit confirmation
+  // for issue content) — a no-repository run is therefore always an
+  // interactive one, never an automation.
   const localExec = localExecRequested(input);
+  if (input.localExec === true && issueId && input.localIssueContextConfirmed !== true) {
+    return { ok: false, error: "localIssueConfirmationRequired" };
+  }
   const link = await linkPromise;
   // A LOCAL run can do without a linked repository: it plays on the folder
   // attached to the machine, which carries no remote identity to honor. The
@@ -462,6 +469,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       // leaves, and this is how “a replay run does not start locally”
       // is a property of the code rather than a `if` to remember.
       localExec,
+      localIssueContextConfirmed: input.localIssueContextConfirmed === true,
       // A worktree without a linked repository has nothing to branch from the
       // forge and nowhere to push: the current-checkout mode is the only honest
       // shape, so the request is dropped rather than frozen into a dead end.

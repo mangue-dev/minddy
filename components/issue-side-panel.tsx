@@ -398,7 +398,7 @@ export function IssueSidePanel({
     // out of two, without anything announcing the difference.
     const identifier = issueIdentifier(projectKey, issue.number);
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
+      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 
@@ -413,7 +413,7 @@ export function IssueSidePanel({
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
+      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
       "plan"
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
@@ -426,7 +426,7 @@ export function IssueSidePanel({
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
+      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
       "verify"
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
@@ -561,7 +561,7 @@ export function IssueSidePanel({
       if (target === "launch") {
         const identifier = issueIdentifier(projectKey, issue.number);
         composeAgentSession(
-          `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${instructions}`,
+          `${tAgent("launchPrompt.head", { identifier })}\n\n${instructions}`,
           "custom"
         );
         return;

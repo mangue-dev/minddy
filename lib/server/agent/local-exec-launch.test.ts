@@ -4,10 +4,9 @@ import { localExecRequested } from "./local-exec";
 
 /**
  * MIN-359 — the `localExec` flag arrives in the body of a POST: it is a
- * REQUEST. These cases say what transforms it in fact, and especially what does not transform it. The rule they protect, in one sentence: **a run whose
- * context has not been written by the person running it never leaves on his
- * machine** — in a disposable microVM, a prompt injection costs one VM;
- * on a Mac, it's a shell.
+ * REQUEST. These cases say what transforms it into a fact. Automated or
+ * externally-triggered context never reaches the user's machine; issue context
+ * additionally requires the explicit acknowledgement covered by MIN-439.
  */
 describe("localExecRequested", () => {
   const base = { triggeredBy: "button" } as const;
