@@ -177,7 +177,7 @@ export function IssuePlan({
                     {t("copyPlanPrompt")}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-64 text-center">
+                <TooltipContent className="max-w-64">
                   {t("copyPlanPromptHint")}
                 </TooltipContent>
               </Tooltip>

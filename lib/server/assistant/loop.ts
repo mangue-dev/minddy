@@ -12,6 +12,10 @@ import type { AssistantToolDef } from "./tools";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { stripModelSuffix } from "@/lib/ai-model-config";
 import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
+import {
+  getToolResultCharLimit,
+  serializeToolResult,
+} from "./tool-result-serialization";
 
 // ── OpenRouter streaming agent loop (ported from AutoKap's assistant) ───
 
@@ -108,32 +112,6 @@ export async function getModelInputModalities(
   // Same: without the bare id, a suffixed model would pass as text alone and the
   // attachments would be degraded to notes.
   return new Set(modelIndexCache.get(stripModelSuffix(model))?.modalities ?? ["text"]);
-}
-
-/** Cap tool result JSON sent to the LLM. The full result is already persisted in DB. */
-export function serializeToolResult(result: unknown, maxChars = 4000): string {
-  const full = JSON.stringify(result);
-  if (full.length <= maxChars) return full;
-  return full.slice(0, maxChars) + "... [truncated]";
-}
-
-function getToolResultCharLimit(toolName: string): number {
-  switch (toolName) {
-    // Issue lists must never reach the LLM truncated mid-array — a partial id
-    // list makes the model hallucinate issue ids on the next write.
-    case "list_issues":
-    case "search_issues":
-    case "get_issue":
-      return 12000;
-    // A web search is paid for: truncating it to 4,000 characters would throw away
-    // half of the extracts we just bought.
-    case "web_search":
-      return 10000;
-    case "get_help":
-      return 24000;
-    default:
-      return 4000;
-  }
 }
 
 export interface ProcessChatContext extends ToolContext {
@@ -454,7 +432,7 @@ export async function processChat(
           tool_call_id: acc.id,
           content: serializeToolResult(
             forModel,
-            getToolResultCharLimit(acc.name)
+            getToolResultCharLimit(acc.name, args)
           ),
         });
       }

@@ -46,10 +46,10 @@ import {
 import { recordAiUsage, newRunId, type AiUsageInput } from "@/lib/server/ai-usage";
 import {
   getModelInputModalities,
-  serializeToolResult,
   type ChatContentPart,
   type ChatMessage,
 } from "./loop";
+import { serializeToolResult } from "./tool-result-serialization";
 
 // ── @Numo in comments (fire and forget, Linear-style) ───────────────────
 // A comment mentioning @numo spawns this agent AFTER the HTTP response (via

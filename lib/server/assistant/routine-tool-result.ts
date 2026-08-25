@@ -16,6 +16,15 @@ export type RoutineToolSource = {
   last_error: string | null;
 };
 
+/**
+ * Enough for a maximum-length instruction plus routine metadata and JSON
+ * escaping. The general tool ceiling is intentionally much smaller.
+ */
+export const ROUTINE_TOOL_RESULT_CHAR_LIMIT = 48_000;
+
+/** Enough for dozens of routine summaries without spending room on instructions. */
+export const ROUTINE_LIST_RESULT_CHAR_LIMIT = 24_000;
+
 /** Serialize a routine for Numo, optionally omitting its potentially long instruction. */
 export function routineForAssistantTool(
   routine: RoutineToolSource,

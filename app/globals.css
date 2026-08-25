@@ -68,6 +68,11 @@ html[data-desktop-app] .zen-nav-hotzone {
   }
 }
 
+/* Keep tooltip copy aligned to a consistent reading edge. */
+[data-slot="tooltip-content"] {
+  text-align: left;
+}
+
 /* ── Inter arrows, which Google does not serve ──────────────────────────────
    `next/font/google` only loads from Inter the subsets published by
    Google, and NONE covers the arrow block: the Latin range puts “↑” there
@@ -2168,7 +2173,31 @@ html[data-desktop-platform="darwin"]
 
 [data-sonner-toaster]
   [data-sonner-toast][data-styled="true"] {
+  padding-right: 48px;
   border-radius: 14px;
+}
+
+/* Keep the dismiss control inside the toast at the right edge. */
+[data-sonner-toaster][data-y-position]
+  [data-sonner-toast][data-styled="true"]
+  [data-close-button] {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  left: auto;
+  width: 24px;
+  height: 24px;
+  color: currentColor;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  transform: translateY(-50%);
+}
+
+[data-sonner-toaster][data-y-position]
+  [data-sonner-toast][data-styled="true"]
+  [data-close-button]:hover {
+  background: rgb(255 255 255 / 16%);
 }
 
 [data-sonner-toaster]

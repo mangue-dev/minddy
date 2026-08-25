@@ -23,5 +23,5 @@ const Toaster = dynamic(
 );
 
 export function LazyToaster() {
-  return <Toaster />;
+  return <Toaster closeButton />;
 }
