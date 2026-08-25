@@ -55,6 +55,17 @@ export type ObjectiveResult =
 const MAX_NAME_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 65_536;
 
+function objectiveGuardError(message: string):
+  | "forbidden"
+  | "notFound"
+  | "leadForbidden"
+  | null {
+  if (message.includes("tenant_guard_forbidden")) return "forbidden";
+  if (message.includes("objective_not_found")) return "notFound";
+  if (message.includes("objective_lead_forbidden")) return "leadForbidden";
+  return null;
+}
+
 export async function createObjective({
   projectId,
   actorId,
@@ -76,7 +87,6 @@ export async function createObjective({
   }
 
   const row: Record<string, unknown> = {
-    project_id: projectId,
     name: name.slice(0, MAX_NAME_LENGTH),
   };
   if (typeof input.description === "string") {
@@ -140,16 +150,31 @@ export async function createObjective({
     }
   }
 
-  const { data, error } = await service
-    .from("objectives")
-    .insert(row)
-    .select("*")
-    .single();
+  // The service role bypasses RLS. The RPC locks the project, re-checks the
+  // actor and lead membership, and inserts before that authorization can be
+  // revoked by a concurrent membership write.
+  const { data, error } = await service.rpc("create_objective_guarded", {
+    p_project_id: projectId,
+    p_actor_id: actorId,
+    p_values: row,
+  });
 
   if (error) {
+    const guard = objectiveGuardError(error.message);
+    if (guard === "forbidden") {
+      return { ok: false, status: 404, errorKey: "projectNotFound" };
+    }
+    if (guard === "leadForbidden") {
+      return { ok: false, status: 400, errorKey: "notAProjectMember" };
+    }
     console.error("[objectives] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  const createdObjective = data as Record<string, unknown>;
 
   // Resource rows — the objective exists from here on, so a failure must not
   // fail the request (the resources just don't get registered).
@@ -161,7 +186,7 @@ export async function createObjective({
     });
     await insertAttachments(service, {
       projectId,
-      objectiveId: data.id as string,
+      objectiveId: createdObjective.id as string,
       commentId: null,
       createdBy: actorId,
       resources: [...parsedResources, ...copied],
@@ -171,7 +196,11 @@ export async function createObjective({
   }
 
   const created: EventRow[] = [
-    { objective_id: data.id as string, actor_id: actorId, type: "created" },
+    {
+      objective_id: createdObjective.id as string,
+      actor_id: actorId,
+      type: "created",
+    },
   ];
   await insertEvents(
     service,
@@ -182,8 +211,8 @@ export async function createObjective({
   await notifyDescriptionMentions(service, {
     projectId,
     actorId,
-    description: data.description as string | null,
-    objectiveId: data.id as string,
+    description: createdObjective.description as string | null,
+    objectiveId: createdObjective.id as string,
     mcpKeyId,
     viaAssistant,
   });
@@ -191,11 +220,11 @@ export async function createObjective({
   // And the pages she cites (MIN-279).
   queuePageLinks(
     service,
-    { kind: "objective", id: data.id as string, projectId },
-    data.description as string | null
+    { kind: "objective", id: createdObjective.id as string, projectId },
+    createdObjective.description as string | null
   );
 
-  return { ok: true, objective: data };
+  return { ok: true, objective: createdObjective };
 }
 
 export async function updateObjective({
@@ -290,26 +319,44 @@ export async function updateObjective({
     }
   }
 
-  const { data, error } = await service
-    .from("objectives")
-    .update(updates)
-    .is("deleted_at", null)
-    .eq("id", objectiveId)
-    .select("*")
-    .maybeSingle();
+  // The snapshot and write come back from one database transaction. The RPC
+  // locks the project before re-checking membership, so a concurrent revocation
+  // is ordered entirely before or after this mutation.
+  const { data, error } = await service.rpc("update_objective_guarded", {
+    p_objective_id: objectiveId,
+    p_actor_id: actorId,
+    p_updates: updates,
+  });
 
   if (error) {
+    const guard = objectiveGuardError(error.message);
+    if (guard === "forbidden" || guard === "notFound") {
+      return { ok: false, status: 404, errorKey: "objectiveNotFound" };
+    }
+    if (guard === "leadForbidden") {
+      return { ok: false, status: 400, errorKey: "notAProjectMember" };
+    }
     console.error("[objectives] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  if (!data) {
-    return { ok: false, status: 404, errorKey: "objectiveNotFound" };
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { ok: false, status: 500, errorKey: "databaseError" };
   }
+
+  const mutation = data as {
+    previous?: Record<string, unknown>;
+    objective?: Record<string, unknown>;
+  };
+  if (!mutation.previous || !mutation.objective) {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const previous = mutation.previous;
+  const updatedObjective = mutation.objective;
 
   const events = buildObjectiveFieldChangeEvents(
     objectiveId,
     actorId,
-    objective,
+    previous,
     updates
   );
   await insertEvents(
@@ -321,10 +368,10 @@ export async function updateObjective({
   // serves as a reference: rereading a description does not repeat the old ones.
   if ("description" in updates) {
     await notifyDescriptionMentions(service, {
-      projectId: objective.project_id as string,
+      projectId: updatedObjective.project_id as string,
       actorId,
       description: updates.description as string | null,
-      previousDescription: objective.description as string | null,
+      previousDescription: previous.description as string | null,
       objectiveId,
       mcpKeyId,
       viaAssistant,
@@ -335,11 +382,11 @@ export async function updateObjective({
       {
         kind: "objective",
         id: objectiveId,
-        projectId: objective.project_id as string,
+        projectId: updatedObjective.project_id as string,
       },
       updates.description as string | null
     );
   }
 
-  return { ok: true, objective: data };
+  return { ok: true, objective: updatedObjective };
 }

@@ -12,8 +12,7 @@ import {
   toNamed,
 } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
-import { ensureMemberSlotAvailable } from "@/lib/server/entitlements";
-import { isPlanLimitError } from "@/lib/server/plan-limit-error";
+import { getMemberLimit } from "@/lib/server/entitlements";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { isPushConfigured } from "@/lib/server/push/vapid";
 import { isApnsConfigured } from "@/lib/server/push/apns";
@@ -81,22 +80,6 @@ export async function inviteMember({
     return { ok: false, status: 403, errorKey: "ownerOnlyInvite" };
   }
 
-  // The plan's guest cap, members + pending invitations (MIN-199).
-  // The actor IS the owner: the `isOwner` branch above has already established this.
-  try {
-    await ensureMemberSlotAvailable(actorId, projectId);
-  } catch (err) {
-    if (isPlanLimitError(err)) {
-      return {
-        ok: false,
-        status: err.status,
-        errorKey: "memberLimitReached",
-        errorParams: err.params,
-      };
-    }
-    throw err;
-  }
-
   const normalized =
     typeof email === "string" ? email.trim().toLowerCase() : "";
   // 254 = maximum length of an address (RFC 5321) — beyond that, it is not
@@ -127,39 +110,47 @@ export async function inviteMember({
     }
   }
 
-  // An outdated invitation for this address still holds its place in the index
-  // unique partiel `(project_id, invited_email) where status = 'pending'` : sans
-  //this household, inserting below would make 409 “invitation already pending”
-  // for an invitation that no one can see or accept anymore — the address
-  // would be banned from the project until the 90 day purge (`retention.ts`).
-  // Deleted rather than passed to `cancelled`: the line no longer has a reader, and
-  // `RETENTION_DAYS.pendingInvitations` already says that an address which has never
-  // joined is not kept “without purpose”.
-  await service
-    .from("project_invitations")
-    .delete()
-    .eq("project_id", projectId)
-    .eq("invited_email", normalized)
-    .eq("status", "pending")
-    .lte("expires_at", new Date().toISOString());
+  const memberLimit = await getMemberLimit(actorId);
 
-  const { data: invitation, error } = await service
-    .from("project_invitations")
-    .insert({
-      project_id: projectId,
-      invited_email: normalized,
-      invited_user_id: memberUser?.id ?? null,
-      invited_by: actorId,
-      status: "pending",
-    })
-    .select("id, project_id, invited_email, status, created_at, token")
-    .single();
+  // The RPC locks the project before re-checking ownership, deleting an expired
+  // invitation for this address, counting occupied slots, and inserting. Two
+  // concurrent requests therefore cannot consume the same final slot.
+  const { data: invitation, error } = await service.rpc(
+    "create_project_invitation_guarded",
+    {
+      p_project_id: projectId,
+      p_actor_id: actorId,
+      p_invited_email: normalized,
+      p_invited_user_id: memberUser?.id ?? null,
+      p_member_limit: memberLimit,
+    }
+  );
 
   if (error) {
+    if (error.message.includes("tenant_guard_forbidden")) {
+      return { ok: false, status: 404, errorKey: "projectNotFound" };
+    }
+    if (error.message.includes("member_limit_reached")) {
+      return {
+        ok: false,
+        status: 403,
+        errorKey: "memberLimitReached",
+        errorParams: { limit: memberLimit ?? 0 },
+      };
+    }
+    if (error.message.includes("invitation_already_owner")) {
+      return { ok: false, status: 409, errorKey: "alreadyOwner" };
+    }
+    if (error.message.includes("invitation_already_member")) {
+      return { ok: false, status: 409, errorKey: "alreadyMember" };
+    }
     if (error.code === "23505") {
       return { ok: false, status: 409, errorKey: "invitationAlreadyPending" };
     }
     console.error("[members] invite failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  if (!invitation || typeof invitation !== "object" || Array.isArray(invitation)) {
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 

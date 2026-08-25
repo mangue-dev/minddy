@@ -20,6 +20,7 @@ let db: Record<string, Row[]> = {};
 let updateLog: Array<{ table: string; values: Row }> = [];
 /** The INSERTs actually left. */
 let insertLog: Array<{ table: string; rows: Row[] }> = [];
+let objectiveRpcError: { message: string; code?: string } | null = null;
 
 function makeQuery(table: string) {
   const filters: Array<(r: Row) => boolean> = [];
@@ -104,7 +105,37 @@ function makeQuery(table: string) {
 
 const service = {
   from: (table: string) => makeQuery(table),
-  rpc: async () => ({ data: 7, error: null }),
+  rpc: async (name: string, args: Record<string, unknown>) => {
+    if (name.includes("objective_guarded") && objectiveRpcError) {
+      return { data: null, error: objectiveRpcError };
+    }
+    if (name === "create_objective_guarded") {
+      const values = args.p_values as Row;
+      const row = {
+        id: "objectives-new-0",
+        project_id: args.p_project_id,
+        created_at: "2026-08-14T10:00:00+00:00",
+        ...values,
+      };
+      insertLog.push({ table: "objectives", rows: [row] });
+      (db.objectives ??= []).push(row);
+      return { data: row, error: null };
+    }
+    if (name === "update_objective_guarded") {
+      const row = (db.objectives ?? []).find(
+        (objective) => objective.id === args.p_objective_id
+      );
+      if (!row) {
+        return { data: null, error: { message: "objective_not_found" } };
+      }
+      const previous = { ...row };
+      const updates = args.p_updates as Row;
+      updateLog.push({ table: "objectives", values: updates });
+      Object.assign(row, updates);
+      return { data: { previous, objective: { ...row } }, error: null };
+    }
+    return { data: 7, error: null };
+  },
   auth: { admin: { getUserById: async () => ({ data: { user: null } }) } },
 };
 
@@ -160,6 +191,7 @@ const STRANGER = "user-stranger";
 beforeEach(() => {
   updateLog = [];
   insertLog = [];
+  objectiveRpcError = null;
   db = {
     projects: [
       { id: MINE, name: "Le mien", owner_id: "user-owner", deleted_at: null },
@@ -347,5 +379,39 @@ describe("objectives — le responsable est membre du projet", () => {
 
     expect(result.ok).toBe(true);
     expect(updateLog[0].values).toMatchObject({ lead_user_id: MEMBER });
+  });
+
+  it("fails closed when membership is revoked after the preliminary read", async () => {
+    objectiveRpcError = { code: "42501", message: "tenant_guard_forbidden" };
+
+    const result = await updateObjective({
+      objectiveId: "objective-mine",
+      actorId: ME,
+      input: { name: "Revoked write" },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 404,
+      errorKey: "objectiveNotFound",
+    });
+    expect(updateLog).toEqual([]);
+  });
+
+  it("fails closed when a proposed lead loses membership before the write", async () => {
+    objectiveRpcError = { code: "23503", message: "objective_lead_forbidden" };
+
+    const result = await updateObjective({
+      objectiveId: "objective-mine",
+      actorId: ME,
+      input: { lead_user_id: MEMBER },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      errorKey: "notAProjectMember",
+    });
+    expect(updateLog).toEqual([]);
   });
 });

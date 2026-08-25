@@ -43,11 +43,10 @@ export function ProjectMembers({
   const tb = useTranslations("Billing");
   const { members, invitations, isOwner, loading, invite, cancelInvitation, removeMember } =
     useMembersQuery(projectId, enabled);
-  // The plan caps the number of GUESTS in a project, it no longer closes the door
-  // (MIN-199): the form is therefore still there, with its counter, and is not
-  // disarms only once the last place is taken. The account follows that of
-  // server (`ensureMemberSlotAvailable`): members other than owner, plus
-  // invitations still pending.
+  // The plan caps project guests rather than collaboration itself (MIN-199),
+  // so the form remains visible with a counter and disables only when the last
+  // slot is occupied. This mirrors the server RPC: non-owner members plus live
+  // pending invitations.
   const { maxMembersPerProject } = usePlanGates();
   const guestsUsed =
     members.filter((m) => !m.is_owner).length + invitations.length;

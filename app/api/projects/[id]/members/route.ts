@@ -46,10 +46,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .select("id, project_id, invited_email, status, created_at")
         .eq("project_id", id)
         .eq("status", "pending")
-        // Expired items leave the list as they leave the counting of
-        // `ensureMemberSlotAvailable`: the guest counter on the screen is
-        // calculates on THIS list (`project-members.tsx`), both must
-        // count the same thing or the form disarms for nothing.
+        // Expired items are excluded from both this list and the atomic RPC's
+        // occupied-slot count. The UI counter uses this list, so both views of
+        // capacity must stay aligned.
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false }),
     ]);

@@ -34,6 +34,7 @@ interface Row extends Record<string, unknown> {
 let projectRows: Row[] = [];
 let memberRows: Row[] = [];
 let invitationRows: Row[] = [];
+let memberLimit: number | null = null;
 /** Comptes minddy existants, par email — ce que `findAuthUserByEmail` voit. */
 let accounts = new Map<string, { id: string }>();
 /** Scheduled background jobs to wait for explicitly. */
@@ -41,6 +42,28 @@ let background: Promise<unknown>[] = [];
 
 let nextId = 0;
 const newId = () => `row-${++nextId}`;
+
+function insertInvitationRow(payload: Record<string, unknown>) {
+  if (
+    invitationRows.some(
+      (row) =>
+        row.project_id === payload.project_id &&
+        row.invited_email === payload.invited_email &&
+        row.status === "pending"
+    )
+  ) {
+    return { data: null, error: { code: "23505", message: "duplicate key" } };
+  }
+  const row: Row = {
+    id: newId(),
+    created_at: new Date().toISOString(),
+    token: `tok-${newId()}`,
+    expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+    ...payload,
+  };
+  invitationRows.push(row);
+  return { data: row, error: null };
+}
 
 /** PostgREST string double: accumulate filters, then read/insert/modify. */
 function table(name: string, rows: () => Row[]) {
@@ -101,17 +124,7 @@ function table(name: string, rows: () => Row[]) {
 
   /** The insertion, with the partial unique index of `project_invitations`. */
   const runInsert = (payload: Payload) => {
-    if (
-      name === "project_invitations" &&
-      invitationRows.some(
-        (r) =>
-          r.project_id === payload.project_id &&
-          r.invited_email === payload.invited_email &&
-          r.status === "pending"
-      )
-    ) {
-      return { data: null, error: { code: "23505", message: "duplicate key" } };
-    }
+    if (name === "project_invitations") return insertInvitationRow(payload);
     // The defects of the MIN-197 migration, posed by the base.
     const row: Row = {
       id: newId(),
@@ -162,6 +175,50 @@ const TABLES: Record<string, () => Row[]> = {
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (name: string) => table(name, TABLES[name] ?? (() => [])),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name !== "create_project_invitation_guarded") {
+        return { data: null, error: { message: "unknown RPC" } };
+      }
+      const project = projectRows.find(
+        (row) => row.id === args.p_project_id && row.deleted_at == null
+      );
+      if (!project || project.owner_id !== args.p_actor_id) {
+        return {
+          data: null,
+          error: { code: "42501", message: "tenant_guard_forbidden" },
+        };
+      }
+      invitationRows = invitationRows.filter(
+        (row) =>
+          !(
+            row.project_id === args.p_project_id &&
+            row.invited_email === args.p_invited_email &&
+            row.status === "pending" &&
+            Date.parse(String(row.expires_at)) <= Date.now()
+          )
+      );
+      const used =
+        memberRows.filter((row) => row.project_id === args.p_project_id).length +
+        invitationRows.filter(
+          (row) =>
+            row.project_id === args.p_project_id &&
+            row.status === "pending" &&
+            Date.parse(String(row.expires_at)) > Date.now()
+        ).length;
+      if (typeof args.p_member_limit === "number" && used >= args.p_member_limit) {
+        return {
+          data: null,
+          error: { code: "P0001", message: "member_limit_reached" },
+        };
+      }
+      return insertInvitationRow({
+        project_id: args.p_project_id,
+        invited_email: args.p_invited_email,
+        invited_user_id: args.p_invited_user_id,
+        invited_by: args.p_actor_id,
+        status: "pending",
+      });
+    },
   }),
 }));
 
@@ -192,7 +249,7 @@ vi.mock("@/lib/server/auth-users", () => ({
 }));
 
 vi.mock("@/lib/server/entitlements", () => ({
-  ensureMemberSlotAvailable: async () => undefined,
+  getMemberLimit: async () => memberLimit,
 }));
 
 // Push notification is off topic here: cut, `pushInvitation` does nothing.
@@ -236,6 +293,7 @@ beforeEach(() => {
   ];
   memberRows = [];
   invitationRows = [];
+  memberLimit = null;
   accounts = new Map();
   adminAccounts = new Map();
   adminLookups = 0;
@@ -367,6 +425,24 @@ describe("inviteMember — an address without an account", () => {
       ok: false,
       status: 409,
       errorKey: "invitationAlreadyPending",
+    });
+    expect(invitationRows).toHaveLength(1);
+  });
+
+  it("allows only one concurrent invitation to consume the final guest slot", async () => {
+    memberLimit = 1;
+
+    const results = await Promise.all([
+      inviteMember({ projectId: PROJECT, actorId: OWNER, email: "a@example.test" }),
+      inviteMember({ projectId: PROJECT, actorId: OWNER, email: "b@example.test" }),
+    ]);
+
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(results.find((result) => !result.ok)).toMatchObject({
+      ok: false,
+      status: 403,
+      errorKey: "memberLimitReached",
+      errorParams: { limit: 1 },
     });
     expect(invitationRows).toHaveLength(1);
   });

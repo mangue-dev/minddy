@@ -107,8 +107,8 @@ vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => true }));
 import {
   countAccessibleProjects,
   ensureIssueLimit,
-  ensureMemberSlotAvailable,
   ensureProjectLimit,
+  getMemberLimit,
 } from "./entitlements";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -185,90 +185,19 @@ describe("ticket limit per project", () => {
   });
 });
 
-describe("guest cap per project (MIN-199)", () => {
-  const member = (n: number): Row => ({
-    id: `m${n}`,
-    project_id: PROJECT,
-    user_id: `u${n}`,
-  });
-  // `expires_at` is NOT NULL in base (MIN-197): double models it, otherwise
-  // it would test for a line that cannot exist.
-  const LIVE = new Date(Date.now() + 30 * 86_400_000).toISOString();
-  const DEAD = new Date(Date.now() - 86_400_000).toISOString();
-  const invitation = (n: number, status: string, expires = LIVE): Row => ({
-    id: `inv${n}`,
-    project_id: PROJECT,
-    status,
-    expires_at: expires,
+describe("guest cap resolution (MIN-463)", () => {
+  it("returns the owner's configured guest cap for the atomic database guard", async () => {
+    await expect(getMemberLimit(OWNER)).resolves.toBe(3);
   });
 
-  it("allows the first three guests on the free plan", async () => {
-    await expect(
-      ensureMemberSlotAvailable(OWNER, PROJECT)
-    ).resolves.toBeUndefined();
-
-    memberRows = [member(1)];
-    await expect(
-      ensureMemberSlotAvailable(OWNER, PROJECT)
-    ).resolves.toBeUndefined();
-
-    memberRows = [member(1), member(2)];
-    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).resolves.toBeUndefined();
-
-    memberRows = [member(1), member(2), member(3)];
-    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
-  });
-
-  it("counts a PENDING invitation as an occupied slot", async () => {
-    memberRows = [member(1), member(2)];
-    invitationRows = [invitation(1, "pending")];
-    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
-  });
-
-  it("frees a slot for a cancelled or accepted invitation", async () => {
-    memberRows = [member(1)];
-    invitationRows = [invitation(1, "cancelled"), invitation(2, "accepted")];
-    await expect(
-      ensureMemberSlotAvailable(OWNER, PROJECT)
-    ).resolves.toBeUndefined();
-  });
-
-  // Nothing reverts an expired invitation to another status: it remains
-  // `pending` until the 90 days have been purged. If it counted, a place in the plan
-  // would remain taken for two months by an invitation that no one can anymore
-  // accept — the trap of MIN-133 (the expensive trash) in another form.
-  it("frees a slot for an EXPIRED invitation that remained pending", async () => {
-    memberRows = [member(1)];
-    invitationRows = [invitation(1, "pending", DEAD)];
-    await expect(
-      ensureMemberSlotAvailable(OWNER, PROJECT)
-    ).resolves.toBeUndefined();
-  });
-
-  it("counts only the targeted project", async () => {
-    memberRows = [
-      { id: "m1", project_id: "autre-projet", user_id: "u1" },
-      { id: "m2", project_id: "autre-projet", user_id: "u2" },
-    ];
-    await expect(
-      ensureMemberSlotAvailable(OWNER, PROJECT)
-    ).resolves.toBeUndefined();
-  });
-
-  it("never counts anything when the plan is unlimited (Go and Pro)", async () => {
+  it("returns null for an unlimited managed plan", async () => {
     plan.maxMembersPerProject = null;
-    memberRows = Array.from({ length: 50 }, (_, i) => member(i));
-    await expect(
-      ensureMemberSlotAvailable(OWNER, PROJECT)
-    ).resolves.toBeUndefined();
+    await expect(getMemberLimit(OWNER)).resolves.toBeNull();
   });
 
-  it("does not downgrade a project already above its cap", async () => {
-    // An expired subscription leaves four guests in place; only the next
-    // invitation is refused. Enforcement happens on invitation, never
-    // retroactively.
-    memberRows = [member(1), member(2), member(3), member(4)];
-    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
-    expect(memberRows).toHaveLength(4);
+  it("returns null when managed billing is disabled", async () => {
+    process.env.MINDDY_EDITION = "self-hosted";
+    process.env.MINDDY_MANAGED_BILLING = "";
+    await expect(getMemberLimit(OWNER)).resolves.toBeNull();
   });
 });

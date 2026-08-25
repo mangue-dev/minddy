@@ -205,6 +205,27 @@ export async function softDeleteItem(
     return result.ok ? { ok: true } : toTrashResult(result);
   }
 
+  // Objective deletion is a service-role write, so the authorization and
+  // mutation must remain in one database transaction. The RPC locks the
+  // project scope and re-checks current membership before soft-deleting.
+  if (type === "objective") {
+    const { error } = await service.rpc("soft_delete_objective_guarded", {
+      p_objective_id: id,
+      p_actor_id: actorId,
+    });
+    if (error) {
+      if (
+        error.message.includes("tenant_guard_forbidden") ||
+        error.message.includes("objective_not_found")
+      ) {
+        return { ok: false, status: 404, errorKey: "objectiveNotFound" };
+      }
+      console.error("[trash] soft delete objective failed:", error.message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    return { ok: true };
+  }
+
   const refusal = await authorize(service, type, id, actorId, false);
   if (refusal) return refusal;
 

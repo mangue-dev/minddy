@@ -100,52 +100,15 @@ export async function ensureIssueLimit(projectId: string): Promise<void> {
 }
 
 /**
- * Invitation guard: the guest cap of the owner's plan (MIN-199). The owner
- * does not count — they have no `project_members` row — so “3 guests” means
- * three people in addition to yourself.
- *
- * An invitation still PENDING occupies its place: without that, we send
- * fifty at once and the ceiling no longer wants anything say.
- *
- * Checked at the invitation, never retroactively: a project which already exceeds
- * its ceiling (expired subscription, downgraded plan) keeps all its members,
- * only the next invitation is refused. No data migration.
+ * Resolve the guest cap from the project owner's plan (MIN-199). The database
+ * invitation RPC counts members and live pending invitations while holding the
+ * project lock, then inserts in the same transaction. Keeping the count here
+ * would allow concurrent requests to observe the same free slot.
  */
-export async function ensureMemberSlotAvailable(
-  ownerId: string,
-  projectId: string
-): Promise<void> {
-  if (!isManagedBillingEnabled()) return;
+export async function getMemberLimit(ownerId: string): Promise<number | null> {
+  if (!isManagedBillingEnabled()) return null;
   const { plan } = await getResolvedBilling(ownerId);
-  if (plan.maxMembersPerProject == null) return;
-
-  const service = getServiceClient();
-  const [members, invitations] = await Promise.all([
-    service
-      .from("project_members")
-      .select("user_id", { count: "exact", head: true })
-      .eq("project_id", projectId),
-    service
-      .from("project_invitations")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("status", "pending")
-      // An EXPOSURE invitation no longer promises anything: it can no longer be
-      // attached nor accepted (MIN-197). Counting it would eat up a place in the plan
-      // during the sixty days which separate the expiration (30 days) of the purge
-      // (`RETENTION_DAYS.pendingInvitations`, 90 days) — this is the same trap as
-      // MIN-133 with the trash can, in another form.
-      .gt("expires_at", new Date().toISOString()),
-  ]);
-  if (members.error) throw new Error(members.error.message);
-  if (invitations.error) throw new Error(invitations.error.message);
-
-  const used = (members.count ?? 0) + (invitations.count ?? 0);
-  if (used >= plan.maxMembersPerProject) {
-    throw new PlanLimitError("member_limit_reached", {
-      limit: plan.maxMembersPerProject,
-    });
-  }
+  return plan.maxMembersPerProject;
 }
 
 /** Agent launch guard: the plan must include agents. */
