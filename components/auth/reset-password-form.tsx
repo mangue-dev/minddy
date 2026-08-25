@@ -24,22 +24,21 @@ const AFTER_RESET = "/home";
 /**
  * The end of the “forgotten password” route (MIN-297): we choose the new one.
  *
- * We only arrive here with a SESSION — the one opened by `/auth/confirm` in
- * consuming the received link token. Hence the shape of the screen: no field
- * “old password” (it is precisely what we lost), and no token
- * in the URL either. Without a session, there is nothing to do here, and the screen
- * said instead of displaying a form that would fail on submission.
+ * We only arrive here with a session — the one opened by `/auth/confirm` after
+ * consuming the received link token. Hence the shape of the screen: no old
+ * password field (it is precisely what was lost), and no token in the URL.
+ * Without a session, the screen explains the expiry instead of displaying a
+ * form that would fail on submission.
  *
- * **The second factor remains required** (MIN-132). A reset link opens
- * a `aal1` session: without this step, a compromised mailbox would be enough to
- * take back an account protected by 2FA, and the postman would no longer be of any use
- * precisely the day he serves. The same component as the connection
- * charge, with the same net “I no longer have my phone”.
+ * **The second factor remains required** (MIN-132). A reset link opens an
+ * `aal1` session: without this step, a compromised mailbox would be enough to
+ * take over an account protected by MFA. This uses the same challenge and
+ * recovery-code escape hatch as sign-in.
  */
 export function ResetPasswordForm() {
   const t = useTranslations("Auth");
   const router = useRouter();
-  const { user, loading, updateUser, needsMfaChallenge, refreshUser } = useAuth();
+  const { user, loading, needsMfaChallenge, refreshUser } = useAuth();
   const { track } = useAnalytics();
   const inDesktopApp = useInDesktopApp();
 
@@ -49,9 +48,9 @@ export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * `unknown` = we have not yet looked, so we neither display the form nor
-   * the challenge: showing one then the other would cause the screen to flash each time
-   * arrival. Same bias as the login screen.
+   * `unknown` means the MFA state has not been resolved yet, so neither the
+   * form nor the challenge is displayed. This avoids flashing one before the
+   * other, matching the login screen.
    */
   const [mfaStep, setMfaStep] = useState<"unknown" | "none" | "required">("unknown");
   useEffect(() => {
@@ -71,9 +70,8 @@ export function ResetPasswordForm() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // The policy first: it is DISPLAYED, rule by rule, under the field.
-    // Comparing the two entries before holding it would bring up “do not
-    // do not match” on a password that the server would refuse.
+    // Check the displayed policy first. Comparing entries before this would
+    // report a mismatch for a password the server would reject anyway.
     if (!passwordMeetsPolicy(password)) {
       setError(t("passwordPolicy"));
       return;
@@ -85,16 +83,31 @@ export function ResetPasswordForm() {
     setError(null);
     setBusy(true);
     try {
-      await updateUser({ password });
+      const response = await fetch("/api/account/password/reset", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const result: unknown = await response.json();
+      if (!response.ok) {
+        const payload =
+          result && typeof result === "object"
+            ? (result as { error?: unknown; code?: unknown })
+            : {};
+        const resetError = new Error(
+          typeof payload.error === "string" ? payload.error : "Password reset failed"
+        ) as Error & { code?: string; status?: number };
+        if (typeof payload.code === "string") resetError.code = payload.code;
+        resetError.status = response.status;
+        throw resetError;
+      }
       track("password_reset_completed", {});
       toast.success(t("resetDone"));
       router.replace(AFTER_RESET);
     } catch (err) {
-      // Raw refusal in the console: the call goes from the browser to
-      // Supabase, there is nothing to read on the Vercel side. The two expected refusals
-      // here are `weak_password` (known leaked password — the check
-      // HIBP is active on the server side) and `same_password`.
-      console.error("[reset-password] refus de Supabase Auth:", err);
+      // Keep the raw refusal in the console. Expected cases include
+      // `weak_password` (the server-side HIBP check) and `same_password`.
+      console.error("[reset-password] Supabase Auth rejected the reset:", err);
       track("password_reset_failed", { reason: errorReason(err) });
       setError(authErrorMessage(err, t));
     } finally {
@@ -112,9 +125,8 @@ export function ResetPasswordForm() {
     );
   }
 
-  // No session: the link has already been used, or too much time has passed. The exit
-  // is a NEW link, not the login page — that's what we came for
-  // chercher.
+  // No session means the link was already used or expired. Offer a new link,
+  // not the login page, because password recovery is still the user's goal.
   if (!user) {
     return (
       <AuthColumn inDesktopApp={inDesktopApp}>
@@ -141,8 +153,8 @@ export function ResetPasswordForm() {
         <MfaChallenge
           onVerified={() => setMfaStep("none")}
           onRecovered={async () => {
-            // 2FA has just been cut: refresh the token before
-            // continue, otherwise the rest of the screen still reads the old flag.
+            // MFA was just disabled: refresh the token before continuing so
+            // the rest of the screen no longer reads the old flag.
             await refreshUser();
             toast.success(t("mfaDisabledNotice"));
             setMfaStep("none");
