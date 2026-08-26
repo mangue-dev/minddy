@@ -158,7 +158,8 @@ signature. Run and verification instructions are in
 - `minddy-vX.Y.Z-migrations.tar.gz`, migrations, bootstrap and runbooks useful for
   installation or update;
 - `release-manifest.json`, which links version, tag, SHA, previous release,
-  added migrations and archive hashes;
+  added migrations, archive hashes, and the exact self-hosting compatibility
+  row and file checksum;
 - `UPDATE.md` and a link to the public changelog;
 - `SHA256SUMS`.
 

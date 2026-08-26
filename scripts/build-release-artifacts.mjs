@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertVersion, sha256 } from "./release-lib.mjs";
+import { assertReleaseCompatibility, assertVersion, sha256 } from "./release-lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -12,12 +12,15 @@ if (args[0] === "--") args.shift();
 const output = path.resolve(args[0] ?? path.join(root, ".release"));
 const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const desktopPkg = JSON.parse(await readFile(path.join(root, "desktop/package.json"), "utf8"));
+const compatibilityPath = path.join(root, "deploy/self-hosted/compatibility.json");
+const compatibility = JSON.parse(await readFile(compatibilityPath, "utf8"));
 const version = assertVersion(process.env.RELEASE_VERSION ?? pkg.version);
 const tag = `v${version}`;
 
 if (pkg.version !== version || desktopPkg.version !== version) {
   throw new Error(`package.json (${pkg.version}), desktop/package.json (${desktopPkg.version}), and release (${version}) must match`);
 }
+const compatibilityEntry = assertReleaseCompatibility(compatibility, version);
 
 function git(args, options = {}) {
   return execFileSync("git", args, { cwd: root, encoding: options.encoding ?? "utf8", maxBuffer: 512 * 1024 * 1024 });
@@ -76,6 +79,13 @@ const manifest = {
   scopes: { core: tag, cloud: null, marketing: null, desktop: "optional" },
   migrations,
   artifacts: archives,
+  compatibility: {
+    file: "deploy/self-hosted/compatibility.json",
+    sha256: await sha256(compatibilityPath),
+    minddyRelease: compatibilityEntry.minddyRelease,
+    tag: compatibilityEntry.tag,
+    supportedTopologies: compatibilityEntry.supportedTopologies,
+  },
   rollback: "backup-restore-required-after-incompatible-migrations",
 };
 await writeFile(path.join(output, "release-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
