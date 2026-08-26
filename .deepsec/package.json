@@ -6,7 +6,12 @@
   "type": "module",
   "workspaces": [],
   "packageManager": "pnpm@9.15.4",
+  "pnpm": {
+    "overrides": {
+      "undici": "8.9.0"
+    }
+  },
   "dependencies": {
-    "deepsec": "2.3.6"
+    "deepsec": "2.3.7"
   }
 }
