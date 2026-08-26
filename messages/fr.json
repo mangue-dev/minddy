@@ -1358,7 +1358,14 @@
     "unsupportedHint": "Ce navigateur ne gère pas les notifications push.",
     "notConfiguredHint": "Les notifications push ne sont pas configurées sur ce serveur.",
     "iosInstallHint": "Sur iPhone et iPad, ajoutez d'abord minddy à l'écran d'accueil : bouton Partager, puis « Sur l'écran d'accueil ». Les notifications ne fonctionnent que depuis l'app installée.",
-    "desktopLocalHint": "L'app de bureau vous prévient tant que minddy fonctionne, même masqué. Les notifications après avoir quitté l'app ne sont pas encore disponibles sur cette plateforme.",
+    "desktopLocalHint": "L'app de bureau utilise les notifications du système tant que minddy fonctionne, même si sa fenêtre est masquée. Choisir Quitter les arrête.",
+    "linuxBackgroundLabel": "Démarrer en arrière-plan à la connexion",
+    "linuxBackgroundEnabledHint": "minddy démarre masqué à votre connexion à Linux. Fermer sa fenêtre maintient les notifications ; choisir Quitter les arrête jusqu'à la prochaine ouverture de minddy.",
+    "linuxBackgroundDisabledHint": "Désactivé. Fermer la fenêtre actuelle garde cette session disponible, mais minddy ne démarrera pas automatiquement à votre prochaine connexion au bureau.",
+    "linuxNativeUnavailableHint": "Aucun serveur de notifications Freedesktop n'est disponible ; minddy ne peut pas afficher de notifications système pendant cette session.",
+    "linuxAutostartErrorHint": "Les notifications en arrière-plan sont activées, mais l'entrée de démarrage automatique XDG n'a pas pu être installée. Désactivez puis réactivez ce réglage pour réessayer.",
+    "linuxBackgroundEnabledToast": "minddy démarrera masqué à votre prochaine connexion à Linux.",
+    "linuxBackgroundDisabledToast": "minddy ne démarrera pas automatiquement à la connexion à Linux.",
     "desktopHint": "Cette version de l'app de bureau ne peut pas activer les notifications sur cet appareil. Mettez minddy à jour pour rétablir les notifications."
   },
   "Issue": {

@@ -35,6 +35,7 @@ import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
  */
 const VERSION_FLAG = "--minddy-version=";
 const PACKAGED_FLAG = "--minddy-packaged=";
+const NATIVE_NOTIFICATIONS_FLAG = "--minddy-native-notifications=";
 
 function readVersion(): string {
   const flag = process.argv.find((arg) => arg.startsWith(VERSION_FLAG));
@@ -43,9 +44,13 @@ function readVersion(): string {
 }
 
 const packaged = process.argv.some((arg) => arg === `${PACKAGED_FLAG}1`);
+const nativeNotificationsAvailable = process.argv.some(
+  (arg) => arg === `${NATIVE_NOTIFICATIONS_FLAG}1`
+);
 const notificationCapabilities = notificationCapabilitiesForPlatform(
   process.platform,
-  packaged
+  packaged,
+  nativeNotificationsAvailable
 );
 
 const nativePushBridge: Partial<DesktopBridge> =
@@ -105,6 +110,40 @@ const bridge: DesktopBridge = {
 
   dismissLocalNotification(id) {
     ipcRenderer.send("minddy:notification:dismiss", id);
+  },
+
+  getLinuxBackgroundNotifications() {
+    return ipcRenderer.invoke("minddy:linux-background:get") as ReturnType<
+      NonNullable<DesktopBridge["getLinuxBackgroundNotifications"]>
+    >;
+  },
+
+  setLinuxBackgroundNotifications(enabled) {
+    return ipcRenderer.invoke(
+      "minddy:linux-background:set",
+      enabled
+    ) as ReturnType<
+      NonNullable<DesktopBridge["setLinuxBackgroundNotifications"]>
+    >;
+  },
+
+  onLinuxBackgroundNotificationsChanged(handler) {
+    const listener = (
+      _event: unknown,
+      state: Parameters<typeof handler>[0]
+    ) => handler(state);
+    ipcRenderer.on("minddy:linux-background:changed", listener);
+    return () => {
+      ipcRenderer.removeListener("minddy:linux-background:changed", listener);
+    };
+  },
+
+  onNotificationTransportWake(handler) {
+    const listener = () => handler();
+    ipcRenderer.on("minddy:notification:wake", listener);
+    return () => {
+      ipcRenderer.removeListener("minddy:notification:wake", listener);
+    };
   },
 
   setWindowButtonsVisible(visible: boolean) {

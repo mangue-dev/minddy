@@ -33,10 +33,11 @@ test("writes the literal Partner Center identity into the AppX configuration", a
   assert.doesNotMatch(config, /publisher: \$\{env\./);
 });
 
-test("uses an opaque square icon for the Windows package", async () => {
+test("uses opaque icons for the Windows executable and AppX shell surfaces", async () => {
   const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
   const fingerprint = await readFile(new URL("./desktop-fingerprint.mjs", import.meta.url), "utf8");
   assert.match(config, /^  icon: build\/icon-windows\.png$/m);
+  assert.match(fingerprint, /^  "desktop\/build\/appx",$/m);
   assert.match(fingerprint, /^  "desktop\/build\/icon-windows\.png",$/m);
 
   const icon = sharp(fileURLToPath(new URL("../desktop/build/icon-windows.png", import.meta.url)));
@@ -44,6 +45,25 @@ test("uses an opaque square icon for the Windows package", async () => {
   assert.equal(width, 1024);
   assert.equal(height, 1024);
   assert.equal(hasAlpha, false);
+
+  const appxAssets = [
+    ["Square44x44Logo.png", 44, 44],
+    ["Square150x150Logo.png", 150, 150],
+    ["StoreLogo.png", 50, 50],
+    ["Wide310x150Logo.png", 310, 150],
+  ];
+  for (const [fileName, expectedWidth, expectedHeight] of appxAssets) {
+    const asset = sharp(
+      fileURLToPath(new URL(`../desktop/build/appx/${fileName}`, import.meta.url)),
+    );
+    const metadata = await asset.metadata();
+    assert.equal(metadata.width, expectedWidth, `${fileName} width`);
+    assert.equal(metadata.height, expectedHeight, `${fileName} height`);
+    assert.equal(metadata.hasAlpha, false, `${fileName} must be opaque`);
+
+    const corner = await asset.extract({ left: 0, top: 0, width: 1, height: 1 }).raw().toBuffer();
+    assert.deepEqual([...corner], [255, 255, 255], `${fileName} must have a white corner`);
+  }
 });
 
 test("requires one MSIX package for each Windows architecture", () => {

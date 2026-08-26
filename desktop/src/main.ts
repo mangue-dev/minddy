@@ -45,6 +45,13 @@ import {
   parseDesktopLocalNotification,
   parseDesktopLocalNotificationId,
 } from "@/lib/desktop/local-notification";
+import {
+  isLinuxBackgroundLaunch,
+  readLinuxBackgroundPreference,
+  syncLinuxBackgroundAutostart,
+  writeLinuxBackgroundPreference,
+  type LinuxBackgroundNotificationState,
+} from "@/lib/desktop/linux-background";
 import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
 import {
@@ -120,6 +127,11 @@ let stopClaimingLocalRuns: (() => void) | null = null;
 let quittingForUpdate = false;
 /** Only one APNs registration at a time, shared between site mounts. */
 let apnsRegistration: Promise<string> | null = null;
+const backgroundLaunchRequested =
+  process.platform === "linux" && isLinuxBackgroundLaunch(process.argv);
+let linuxBackgroundEnabled = false;
+let linuxAutostartInstalled = false;
+let nativeNotificationsAvailable = true;
 
 /**
  * THE CHANNEL, and the origin that results from it (MIN-352).
@@ -136,6 +148,24 @@ let apnsRegistration: Promise<string> | null = null;
 let channel: DesktopChannel = "stable";
 let origin: string = DESKTOP_ORIGIN;
 let customServerOrigin: string | null = null;
+
+function currentLinuxBackgroundState(): LinuxBackgroundNotificationState | null {
+  if (process.platform !== "linux" || !app.isPackaged) return null;
+  return {
+    enabled: linuxBackgroundEnabled,
+    autostartInstalled: linuxAutostartInstalled,
+    nativeBannersAvailable: nativeNotificationsAvailable,
+  };
+}
+
+function setNativeNotificationsAvailable(available: boolean): void {
+  if (nativeNotificationsAvailable === available) return;
+  nativeNotificationsAvailable = available;
+  const state = currentLinuxBackgroundState();
+  if (state && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("minddy:linux-background:changed", state);
+  }
+}
 
 function rebuildAppMenu(): void {
   if (!mainWindow) return;
@@ -555,7 +585,10 @@ function guardNavigation(window: BrowserWindow): void {
   });
 }
 
-function createWindow(loadInitialOrigin = true): BrowserWindow {
+function createWindow(
+  loadInitialOrigin = true,
+  showWhenReady = true
+): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -593,6 +626,7 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
       additionalArguments: [
         `--minddy-version=${app.getVersion()}`,
         `--minddy-packaged=${app.isPackaged ? "1" : "0"}`,
+        `--minddy-native-notifications=${nativeNotificationsAvailable ? "1" : "0"}`,
       ],
       // The spell checker goes through `NSSpellChecker` on macOS, at
       // each text modification, on the UI thread of the browser process —
@@ -609,7 +643,7 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
   });
 
   guardNavigation(window);
-  window.once("ready-to-show", () => window.show());
+  if (showWhenReady) window.once("ready-to-show", () => window.show());
   // A frameless window has no buttons: they light up here, where they belong
   // place in the mark line, before the first display.
   applyWindowButtons(window);
@@ -680,7 +714,10 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
   // `npm --prefix desktop run typecheck`, and the only other outcome would be a cast,
   // that is, turn off the only check that checks these names.
   powerMonitor.on("suspend", () => trace("power:suspend"));
-  powerMonitor.on("resume", () => trace("power:resume"));
+  powerMonitor.on("resume", () => {
+    trace("power:resume");
+    window.webContents.send("minddy:notification:wake");
+  });
   powerMonitor.on("lock-screen", () => trace("power:lock-screen"));
   powerMonitor.on("unlock-screen", () => trace("power:unlock-screen"));
 
@@ -691,7 +728,8 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
 function registerIpc(): void {
   const notificationCapabilities = notificationCapabilitiesForPlatform(
     process.platform,
-    app.isPackaged
+    app.isPackaged,
+    nativeNotificationsAvailable
   );
 
   ipcMain.on("minddy:version", (event) => {
@@ -734,14 +772,37 @@ function registerIpc(): void {
       localNotifications.dismiss(payload.id);
       revealLocalNotificationTarget(payload.target);
     });
+    notification.on("show", () => setNativeNotificationsAvailable(true));
     notification.on("close", () => localNotifications.forget(payload.id));
-    notification.on("failed", () => localNotifications.forget(payload.id));
+    notification.on("failed", () => {
+      localNotifications.forget(payload.id);
+      setNativeNotificationsAvailable(false);
+    });
     notification.show();
   });
 
   ipcMain.on("minddy:notification:dismiss", (_event, input: unknown) => {
     const id = parseDesktopLocalNotificationId(input);
     if (id) localNotifications.dismiss(id);
+  });
+
+  ipcMain.handle("minddy:linux-background:get", () =>
+    currentLinuxBackgroundState()
+  );
+
+  ipcMain.handle("minddy:linux-background:set", (_event, input: unknown) => {
+    if (process.platform !== "linux" || !app.isPackaged || typeof input !== "boolean") {
+      return null;
+    }
+    writeLinuxBackgroundPreference(app.getPath("userData"), input);
+    linuxBackgroundEnabled = input;
+    linuxAutostartInstalled = syncLinuxBackgroundAutostart({
+      enabled: input,
+      environment: process.env,
+      home: os.homedir(),
+      execPath: process.execPath,
+    });
+    return currentLinuxBackgroundState();
   });
 
   ipcMain.handle("minddy:push:register", async (_event, options: unknown) => {
@@ -1041,6 +1102,22 @@ if (process.platform === "linux") {
   app.setPath("sessionData", xdg.userData);
   app.commandLine.appendSwitch("disk-cache-dir", xdg.cache);
   app.setAppLogsPath(xdg.logs);
+  if (app.isPackaged) {
+    linuxBackgroundEnabled = readLinuxBackgroundPreference(xdg.userData);
+    try {
+      linuxAutostartInstalled = syncLinuxBackgroundAutostart({
+        enabled: linuxBackgroundEnabled,
+        environment: process.env,
+        home: os.homedir(),
+        execPath: process.execPath,
+      });
+    } catch (error) {
+      linuxAutostartInstalled = false;
+      trace("linux-background:autostart-error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 }
 
 // Electron test bench only: allows Playwright to launch a second
@@ -1065,7 +1142,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on("second-instance", (_event, argv) => {
     for (const arg of desktopProtocolArguments(argv)) receiveDeepLink(arg);
-    if (mainWindow) {
+    if (mainWindow && !isLinuxBackgroundLaunch(argv)) {
       mainWindow.show();
       mainWindow.focus();
     }
@@ -1085,6 +1162,7 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   void app.whenReady().then(() => {
+    nativeNotificationsAvailable = NativeNotification.isSupported();
     // The suffix is ​​ADDED, it does not replace: falsify the user agent to
     // passing a login screen is fragile and against policy
     // which we would pretend to circumvent (§2). It is there so that the server and the UI
@@ -1125,7 +1203,7 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     const localSelected = customServerOrigin === LOCAL_SELF_HOST_ORIGIN;
     const localRoot = localSelected ? readLocalRuntimeRoot() : null;
-    mainWindow = createWindow(!localSelected);
+    mainWindow = createWindow(!localSelected, !backgroundLaunchRequested);
     if (localRoot) {
       showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
       void startLocalRuntime(localRoot)

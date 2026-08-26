@@ -30,6 +30,7 @@ import {
 } from "@/lib/push/client";
 import { trackEvent } from "@/lib/analytics";
 import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
+import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import { isMobileDeviceLabel } from "@/lib/device-label";
 import {
   SettingsEmpty,
@@ -76,6 +77,10 @@ export function AccountPushDevicesSection() {
   const [nativeDesktopPush, setNativeDesktopPush] = useState(false);
   const [localDesktopBanners, setLocalDesktopBanners] = useState(false);
   const [nativeNotificationSettings, setNativeNotificationSettings] = useState(false);
+  const [linuxBackground, setLinuxBackground] = useState<
+    LinuxBackgroundNotificationState | null | undefined
+  >(undefined);
+  const [linuxBackgroundBusy, setLinuxBackgroundBusy] = useState(false);
   const [thisEndpoint, setThisEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -99,7 +104,15 @@ export function AccountPushDevicesSection() {
       desktop?.notificationCapabilities?.settings === "macos" &&
         !!desktop.openNotificationSettings
     );
+    if (desktop?.notificationCapabilities?.backgroundSession === "linux") {
+      void desktop.getLinuxBackgroundNotifications?.().then(setLinuxBackground);
+    } else {
+      setLinuxBackground(null);
+    }
+    const stopLinuxBackground =
+      desktop?.onLinuxBackgroundNotificationsChanged?.(setLinuxBackground);
     if (isPushSupported()) void currentEndpoint().then(setThisEndpoint);
+    return () => stopLinuxBackground?.();
   }, []);
 
   const refresh = useCallback(
@@ -213,6 +226,23 @@ export function AccountPushDevicesSection() {
     }
   };
 
+  const toggleLinuxBackground = async (enabled: boolean) => {
+    const desktop = getDesktopBridge();
+    if (!desktop?.setLinuxBackgroundNotifications) return;
+    setLinuxBackgroundBusy(true);
+    try {
+      const state = await desktop.setLinuxBackgroundNotifications(enabled);
+      setLinuxBackground(state);
+      toast.success(
+        t(enabled ? "linuxBackgroundEnabledToast" : "linuxBackgroundDisabledToast")
+      );
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLinuxBackgroundBusy(false);
+    }
+  };
+
   const deviceName = (d: PushDevice) => d.device_label || t("unknownDevice");
 
   const subtitleOf = (d: PushDevice) => {
@@ -241,7 +271,12 @@ export function AccountPushDevicesSection() {
     // A desktop shell without a background transport must not expose a switch
     // that can never create a server-side push subscription.
     inDesktopApp && !nativeDesktopPush
-      ? t(localDesktopBanners ? "desktopLocalHint" : "desktopHint")
+      ? t(
+          (linuxBackground && !linuxBackground.nativeBannersAvailable) ||
+            (!localDesktopBanners && linuxBackground !== null)
+            ? "linuxNativeUnavailableHint"
+            : "desktopLocalHint"
+        )
       : capabilities && !(nativeDesktopPush ? capabilities.apns : capabilities.web)
         ? t("notConfiguredHint")
         : permission === "unsupported"
@@ -293,6 +328,37 @@ export function AccountPushDevicesSection() {
             )
           }
         />
+
+        {linuxBackground && (
+          <SettingsRow
+            htmlFor="linux-background-notifications"
+            label={t("linuxBackgroundLabel")}
+            hint={t(
+              !linuxBackground.nativeBannersAvailable
+                ? "linuxNativeUnavailableHint"
+                : linuxBackground.enabled && !linuxBackground.autostartInstalled
+                  ? "linuxAutostartErrorHint"
+                  : linuxBackground.enabled
+                    ? "linuxBackgroundEnabledHint"
+                    : "linuxBackgroundDisabledHint"
+            )}
+            control={
+              <>
+                {linuxBackgroundBusy && <Spinner />}
+                <Switch
+                  id="linux-background-notifications"
+                  checked={linuxBackground.enabled}
+                  disabled={
+                    linuxBackgroundBusy ||
+                    (!linuxBackground.nativeBannersAvailable &&
+                      !linuxBackground.enabled)
+                  }
+                  onCheckedChange={(value) => void toggleLinuxBackground(value)}
+                />
+              </>
+            }
+          />
+        )}
 
         {loading ? (
           <SettingsEmpty>{tc("loading")}</SettingsEmpty>

@@ -1358,7 +1358,14 @@
     "unsupportedHint": "This browser doesn't support push notifications.",
     "notConfiguredHint": "Push notifications aren't configured on this server.",
     "iosInstallHint": "On iPhone and iPad, add minddy to your home screen first: tap Share, then “Add to Home Screen”. Notifications only work from the installed app.",
-    "desktopLocalHint": "The desktop app notifies you while minddy is running or hidden. Notifications after you quit aren't available on this platform yet.",
+    "desktopLocalHint": "The desktop app uses system banners while minddy is running or its window is hidden. Choosing Quit stops them.",
+    "linuxBackgroundLabel": "Start in the background at login",
+    "linuxBackgroundEnabledHint": "minddy starts hidden when you sign in to Linux. Closing its window keeps notifications active; choosing Quit stops them until you open minddy again.",
+    "linuxBackgroundDisabledHint": "Off. Closing the current window still keeps this session available, but minddy won't start automatically after your next desktop login.",
+    "linuxNativeUnavailableHint": "Linux has no Freedesktop notification server available, so minddy can't show system banners in this desktop session.",
+    "linuxAutostartErrorHint": "Background notifications are on, but the XDG autostart entry could not be installed. Turn this setting off and on to retry.",
+    "linuxBackgroundEnabledToast": "minddy will start hidden at your next Linux login.",
+    "linuxBackgroundDisabledToast": "minddy won't start automatically at Linux login.",
     "desktopHint": "This version of the desktop app can't enable notifications on this device. Update minddy to restore notification support."
   },
   "Issue": {

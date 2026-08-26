@@ -26,6 +26,7 @@ import type {
 } from "@/lib/desktop/local-models";
 import type { LocalRepoState } from "@/lib/desktop/local-repo";
 import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notification";
+import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
@@ -55,6 +56,18 @@ export interface DesktopBridge {
   showLocalNotification?(payload: DesktopLocalNotificationPayload): void;
   /** Close a native banner after its inbox row is read or removed. */
   dismissLocalNotification?(id: string): void;
+  /** Read the Linux resident-session and XDG autostart state. */
+  getLinuxBackgroundNotifications?(): Promise<LinuxBackgroundNotificationState | null>;
+  /** Persist Linux background consent and synchronize its XDG autostart entry. */
+  setLinuxBackgroundNotifications?(
+    enabled: boolean
+  ): Promise<LinuxBackgroundNotificationState | null>;
+  /** Follow Linux notification-server failures and recoveries observed by Electron. */
+  onLinuxBackgroundNotificationsChanged?(
+    handler: (state: LinuxBackgroundNotificationState) => void
+  ): () => void;
+  /** Wake the renderer's realtime connection after the desktop resumes. */
+  onNotificationTransportWake?(handler: () => void): () => void;
   /**
    * Registers the signed bundle with APNs and makes its token current. Optional
    * so that the deployed site remains compatible with the old shells.

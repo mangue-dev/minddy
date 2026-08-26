@@ -1,4 +1,5 @@
 export type DesktopBackgroundNotificationTransport = "apns" | null;
+export type DesktopBackgroundNotificationSession = "linux" | null;
 export type DesktopNotificationSettings = "macos" | null;
 export type DesktopNotificationBadge = "dock" | null;
 
@@ -6,6 +7,7 @@ export type DesktopNotificationBadge = "dock" | null;
 export interface DesktopNotificationCapabilities {
   readonly localNativeBanners: boolean;
   readonly backgroundTransport: DesktopBackgroundNotificationTransport;
+  readonly backgroundSession: DesktopBackgroundNotificationSession;
   readonly settings: DesktopNotificationSettings;
   readonly badge: DesktopNotificationBadge;
 }
@@ -13,6 +15,7 @@ export interface DesktopNotificationCapabilities {
 const UNSUPPORTED: DesktopNotificationCapabilities = Object.freeze({
   localNativeBanners: false,
   backgroundTransport: null,
+  backgroundSession: null,
   settings: null,
   badge: null,
 });
@@ -23,20 +26,23 @@ const UNSUPPORTED: DesktopNotificationCapabilities = Object.freeze({
  */
 export function notificationCapabilitiesForPlatform(
   platform: NodeJS.Platform,
-  packaged: boolean
+  packaged: boolean,
+  nativeBannersAvailable = true
 ): DesktopNotificationCapabilities {
   if (platform === "darwin") {
     return {
-      localNativeBanners: true,
+      localNativeBanners: nativeBannersAvailable,
       backgroundTransport: packaged ? "apns" : null,
+      backgroundSession: null,
       settings: "macos",
       badge: "dock",
     };
   }
   if (platform === "win32" || platform === "linux") {
     return {
-      localNativeBanners: true,
+      localNativeBanners: nativeBannersAvailable,
       backgroundTransport: null,
+      backgroundSession: platform === "linux" && packaged ? "linux" : null,
       settings: null,
       badge: null,
     };

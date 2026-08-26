@@ -41,6 +41,36 @@ class for GNOME and KDE. The portable AppImage carries the same desktop entry;
 an integration tool such as AppImageLauncher may install it into the desktop
 menu.
 
+## Background notifications
+
+Linux notifications use the desktop's Freedesktop notification server. Linux
+does not provide a universal vendor push service, so a lightweight authenticated
+minddy session must remain running to receive future events. Closing the minddy
+window hides it and keeps that session available; choosing **Quit** from the
+application menu stops the process and its notifications.
+
+Account → Notifications shows the notification server's current availability.
+The optional **Start in the background at login** setting creates
+`$XDG_CONFIG_HOME/autostart/minddy-background.desktop` (or
+`~/.config/autostart/minddy-background.desktop`) and starts minddy with
+`--background` after desktop login. The window stays hidden until minddy is
+opened normally or a notification is clicked. Turning the setting off removes
+the per-user entry.
+
+For AppImage, the autostart entry targets the outer path exposed through
+`APPIMAGE`, so it survives the temporary mount path and is refreshed whenever
+minddy starts after a move or update. DEB and RPM installations use their stable
+installed executable. Notification clicks restore the existing single window
+and navigate to the relevant issue or page. Launcher unread badges remain
+best-effort: minddy does not promise a count on Linux desktops that do not expose
+that capability.
+
+If Account → Notifications reports that no Freedesktop notification server is
+available, starting in the background cannot produce banners. Install or enable
+the notification service provided by the desktop environment, then restart
+minddy. A tray icon is deliberately not required because common GNOME setups do
+not display application tray icons.
+
 ## Verify a release
 
 Every Linux release contains the following files alongside the packages:

@@ -38,6 +38,7 @@ import { createCatchUpQueue, type CatchUpQueue } from "./realtime-catch-up";
 import { refreshGlobalIssueSnapshot } from "./global-issues-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { trace } from "./desktop/trace";
+import { getDesktopBridge } from "./desktop/bridge";
 import type { Project } from "./types";
 
 /**
@@ -374,16 +375,22 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted) resume(Number.POSITIVE_INFINITY);
     };
+    const onTransportWake = () => resume(Number.POSITIVE_INFINITY);
+    const stopDesktopWake =
+      getDesktopBridge()?.onNotificationTransportWake?.(onTransportWake);
 
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
     window.addEventListener("focus", onFocus);
     window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("online", onTransportWake);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("online", onTransportWake);
+      stopDesktopWake?.();
       if (probe) clearTimeout(probe);
     };
   }, [userId, topicIds, catchUp]);
