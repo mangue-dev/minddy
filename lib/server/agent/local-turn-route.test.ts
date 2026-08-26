@@ -45,7 +45,36 @@ const h = vi.hoisted(() => ({
 process.env.OPENROUTER_PROVISIONING_KEY ||= "cle-de-provisioning-de-test";
 
 vi.mock("@/lib/server/api-auth", () => ({
-  getAuthedUser: vi.fn(async () => ({ ok: true as const, user: { id: "user-1" } })),
+  getAuthedUser: vi.fn(async () => ({
+    ok: true as const,
+    user: { id: "user-1" },
+    supabase: {
+      from: (table: string) =>
+        table === "projects"
+          ? {
+              select: () => ({
+                is: () => ({
+                  order: async () => ({
+                    data: [{ id: "proj-1", name: "Minddy", key: "MIN" }],
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          : {
+              select: async () => ({
+                data: [
+                  {
+                    project_id: "proj-1",
+                    repo_full_name: "mangue-dev/minddy",
+                    repo_previous_names: ["mangue-dev/minddy-issues"],
+                  },
+                ],
+                error: null,
+              }),
+            },
+    },
+  })),
 }));
 
 vi.mock("@/lib/server/agent/run-access", () => ({
@@ -164,6 +193,7 @@ describe("POST /api/desktop/local-turn", () => {
       runId: "run-1",
       projectId: "proj-1",
       repoFullName: "mangue-dev/minddy",
+      repoPreviousNames: ["mangue-dev/minddy-issues"],
     });
     // The lease travels IN the job, never next to it: a local job IS a job that
     // carries a token (`isLocalJob`), and a second truth would eventually diverge.
@@ -193,6 +223,7 @@ describe("POST /api/desktop/local-turn", () => {
     expect(parsed, "la coquille refuserait cette affectation").not.toBeNull();
     expect(parsed?.runId).toBe("run-1");
     expect(parsed?.repoFullName).toBe("mangue-dev/minddy");
+    expect(parsed?.repoPreviousNames).toEqual(["mangue-dev/minddy-issues"]);
     expect(parsed?.job.controlToken).toBe("bail.hs256");
   });
 

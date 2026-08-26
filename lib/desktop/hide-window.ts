@@ -1,13 +1,15 @@
 /**
- * Make the window disappear, when it is in FULL SCREEN (MIN-353).
+ * Make the window disappear, including when it is in FULL SCREEN (MIN-353).
  *
- * The app only has one window, and it does not die: ⌘W and the red light la
- * HIDE, so that the app remains alive and the notifications continue
- * to arrive (§3). Hiding a windowed window poses no problem.
+ * The app only has one window, and it does not die: ⌘W and the red light
+ * HIDE it, so that the app remains alive and notifications continue to arrive
+ * (§3). Hiding a windowed window poses no problem.
  *
- * **Full screen, yes.** macOS has given this window a *Space* of its own — an entire
- * desktop, with its entry animation and its place in Mission Control.
- * `hide()` removes the window from this Space **without close it**: there remains an empty, black desk in the foreground, and there is nothing left in it to get out of. What we then see is "the app went black and did not close" — both halves of the symptom, and they say the same thing.
+ * **Full screen is different.** macOS has given this window a *Space* of its own
+ * — an entire desktop, with its entry animation and its place in Mission
+ * Control. `hide()` removes the window from this Space **without closing it**:
+ * an empty, black desktop remains in the foreground, with no window available
+ * to leave it. The result looks like "the app went black and did not close".
  *
  * Hence the TWO-step order: we exit the full screen, which closes the Space
  * and returns the screen to what was there before, and **it's only once out**
@@ -15,7 +17,7 @@
  * `setFullScreen(false)` is asynchronous (AppKit animates the transition), and an already hidden
  * window does not animate anything at all — it remains in its Space.
  *
- * PUR module: the rule is tested here, `desktop/src/hide-window.ts` just
+ * PURE module: the rule is tested here; `desktop/src/hide-window.ts` only
  * wires it to `leave-full-screen`.
  */
 
@@ -25,6 +27,13 @@ export interface HideWindowState {
   platform: string;
   /** `window.isFullScreen()`. */
   fullScreen: boolean;
+}
+
+/** What a request to close the main window means to the desktop shell. */
+export function windowCloseAction(
+  quittingForUpdate: boolean
+): "close" | "hide" {
+  return quittingForUpdate ? "close" : "hide";
 }
 
 /**

@@ -52,6 +52,8 @@ export interface LocalRepoFacts {
 export interface ExpectedRepo {
   /** `owner/name` (GitHub) or `group/subgroup/project` (GitLab). */
   readonly fullName: string;
+  /** Previous forge names retained after a rename of the same stable repository. */
+  readonly aliases?: readonly string[];
 }
 
 /**
@@ -143,9 +145,11 @@ function safeUrlPath(url: string): string | null {
 export function remoteMatchesRepo(url: string, expected: ExpectedRepo): boolean {
   const path = remoteRepoPath(url);
   if (!path) return false;
-  const wanted = expected.fullName.trim().replace(/^\/+|\/+$/g, "").replace(/\.git$/i, "");
-  if (!wanted) return false;
-  return path.toLowerCase() === wanted.toLowerCase();
+  const candidate = path.toLowerCase();
+  return [expected.fullName, ...(expected.aliases ?? [])].some((name) => {
+    const wanted = name.trim().replace(/^\/+|\/+$/g, "").replace(/\.git$/i, "");
+    return wanted.length > 0 && candidate === wanted.toLowerCase();
+  });
 }
 
 /** Can the folder be used as a local repository for this project?

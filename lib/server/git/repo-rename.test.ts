@@ -100,6 +100,7 @@ beforeEach(() => {
       provider: "github",
       external_repo_id: "1288848861",
       repo_full_name: "mangue-dev/minddy-issues",
+      repo_previous_names: [],
       repo_owner: "mangue-dev",
       repo_name: "minddy-issues",
       git_connections: { source: "local" },
@@ -151,6 +152,7 @@ describe("reconcileRepoRename", () => {
     expect(result).toEqual({ renamed: true });
     expect(db.project_git_links[0]).toMatchObject({
       repo_full_name: "mangue-dev/minddy",
+      repo_previous_names: ["mangue-dev/minddy-issues"],
       repo_owner: "mangue-dev",
       repo_name: "minddy",
     });
@@ -160,6 +162,21 @@ describe("reconcileRepoRename", () => {
     ]);
     expect(db.pull_request_syncs).toHaveLength(0);
     expect(relayPushes).toHaveLength(0); // local connection: no mirror
+  });
+
+  it("keeps every previous name across successive renames", async () => {
+    db.project_git_links[0].repo_previous_names = ["mangue-dev/first-name"];
+
+    await reconcileRepoRename({
+      provider: "github",
+      externalRepoId: "1288848861",
+      fullName: "mangue-dev/minddy",
+    });
+
+    expect(db.project_git_links[0].repo_previous_names).toEqual([
+      "mangue-dev/first-name",
+      "mangue-dev/minddy-issues",
+    ]);
   });
 
   it("collapses new-name twins into their fresh row, carrying the ticket link over", async () => {

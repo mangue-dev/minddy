@@ -23,6 +23,7 @@ type LocalProjectCatalogRow = {
   name: string;
   key: string;
   repoFullName: string | null;
+  repoPreviousNames: string[];
 };
 
 /**
@@ -42,7 +43,9 @@ async function localProjectCatalog(
           .select("id, name, key")
           .is("deleted_at", null)
           .order("created_at", { ascending: true }),
-        supabase.from("project_git_links").select("project_id, repo_full_name"),
+        supabase
+          .from("project_git_links")
+          .select("project_id, repo_full_name, repo_previous_names"),
       ]);
     if (projectsError || linksError) {
       console.error(
@@ -54,7 +57,17 @@ async function localProjectCatalog(
     const repoByProject = new Map(
       (links ?? []).flatMap((link) =>
         typeof link.project_id === "string" && typeof link.repo_full_name === "string"
-          ? [[link.project_id, link.repo_full_name] as const]
+          ? [[
+              link.project_id,
+              {
+                fullName: link.repo_full_name,
+                previousNames: Array.isArray(link.repo_previous_names)
+                  ? link.repo_previous_names.filter(
+                      (name): name is string => typeof name === "string",
+                    )
+                  : [],
+              },
+            ] as const]
           : [],
       ),
     );
@@ -64,7 +77,8 @@ async function localProjectCatalog(
             id: project.id,
             name: project.name,
             key: project.key,
-            repoFullName: repoByProject.get(project.id) ?? null,
+            repoFullName: repoByProject.get(project.id)?.fullName ?? null,
+            repoPreviousNames: repoByProject.get(project.id)?.previousNames ?? [],
           }]
         : [],
     );
@@ -284,6 +298,8 @@ export async function POST(request: NextRequest) {
   }
   mark("leased");
   const projects = await projectsPromise;
+  const repoPreviousNames =
+    projects.find((project) => project.id === run.project_id)?.repoPreviousNames ?? [];
 
   /**
    * The `owner/repo` of the project leaves with the assignment: it is against him that the
@@ -300,6 +316,7 @@ export async function POST(request: NextRequest) {
       runId: run.id,
       projectId: run.project_id,
       repoFullName: prepared.repoFullName,
+      repoPreviousNames,
       localWorktree: run.local_worktree === true,
       projects,
       diagnostics: { ...timings, total: Date.now() - startedAt },

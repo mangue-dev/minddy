@@ -42,6 +42,7 @@ import {
   CycleFutureNotice,
 } from "@/components/cycle/cycle-empty-states";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
+import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 import type {
   Category,
   Issue,
@@ -101,6 +102,7 @@ function GlobalBoardInner() {
   // Deep-link (e.g. the home cycle preview, MIN-67): /all?issue=<id> opens
   // that issue's side panel once the board's data has loaded.
   const issueParam = searchParams.get("issue");
+  const boardScrollPosition = useRef(0);
   const {
     issues,
     membersByProject,
@@ -451,15 +453,7 @@ function GlobalBoardInner() {
   const openProject = openIssue ? projectMap.get(openPid) : undefined;
 
   if (loading || viewsLoading || projectsLoading) {
-    return (
-      <div className="min-h-0 flex-1 px-6 pt-4">
-        <div className="flex gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 w-72 shrink-0 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
+    return <BoardLoadingSkeleton position={boardScrollPosition} />;
   }
 
   const boardHandlers = {
@@ -615,6 +609,7 @@ function GlobalBoardInner() {
                 categoryMapByProject={categoryMapByProject}
                 objectiveMapByProject={objectiveMapByProject}
                 {...boardHandlers}
+                horizontalScroll={boardScrollPosition}
               />
             </div>
           </div>
@@ -670,6 +665,7 @@ function GlobalBoardInner() {
             onCreateIssue={(status) => openCreateIssue({ status })}
             onAddRelation={handleAddRelation}
             {...boardHandlers}
+            horizontalScroll={boardScrollPosition}
           />
         </div>
       )}

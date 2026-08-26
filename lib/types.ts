@@ -1322,6 +1322,8 @@ export interface ProjectGitLink {
   repo_owner: string | null;
   repo_name: string | null;
   repo_full_name: string | null;
+  /** Former owner/name values for the same stable forge repository. */
+  repo_previous_names?: string[];
   default_branch: string | null;
   account_login: string | null;
   /** Unidirectional synchronization of depot exits → minddy (MIN-97). */

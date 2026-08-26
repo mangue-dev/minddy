@@ -24,6 +24,7 @@ interface LinkRow {
   repo_owner: string | null;
   repo_name: string | null;
   repo_full_name: string | null;
+  repo_previous_names: string[] | null;
   default_branch: string | null;
   issue_sync_enabled: boolean | null;
   issue_sync_backfilled_at: string | null;
@@ -38,7 +39,7 @@ export async function getProjectLink(
   const { data } = await supabase
     .from("project_git_links")
     .select(
-      "id, provider, connection_id, external_repo_id, repo_owner, repo_name, repo_full_name, default_branch, issue_sync_enabled, issue_sync_backfilled_at, created_at, git_connections(account_login)",
+      "id, provider, connection_id, external_repo_id, repo_owner, repo_name, repo_full_name, repo_previous_names, default_branch, issue_sync_enabled, issue_sync_backfilled_at, created_at, git_connections(account_login)",
     )
     .eq("project_id", projectId)
     .maybeSingle();
@@ -55,6 +56,7 @@ export async function getProjectLink(
     repo_owner: row.repo_owner,
     repo_name: row.repo_name,
     repo_full_name: row.repo_full_name,
+    repo_previous_names: row.repo_previous_names ?? [],
     default_branch: row.default_branch,
     account_login: row.git_connections?.account_login ?? null,
     issue_sync_enabled: row.issue_sync_enabled === true,
@@ -160,6 +162,7 @@ export async function bindRepo(params: {
   }
 
   const supabase = getServiceClient();
+  const previousLink = await getProjectLink(params.projectId);
   const nowIso = new Date().toISOString();
   const values = {
     project_id: params.projectId,
@@ -170,6 +173,11 @@ export async function bindRepo(params: {
     repo_owner: repo.owner,
     repo_name: repo.name,
     repo_full_name: repo.full_name,
+    repo_previous_names:
+      previousLink?.provider === connection.provider &&
+      previousLink.external_repo_id === repo.external_repo_id
+        ? previousLink.repo_previous_names
+        : [],
     default_branch: repo.default_branch,
     created_by: params.userId,
     updated_at: nowIso,

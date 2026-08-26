@@ -115,6 +115,15 @@ describe("remoteMatchesRepo", () => {
     ).toBe(true);
   });
 
+  it("accepts a previous name retained after a repository rename", () => {
+    expect(
+      remoteMatchesRepo("git@github.com:mangue-dev/minddy-issues.git", {
+        fullName: "mangue-dev/minddy",
+        aliases: ["mangue-dev/minddy-issues"],
+      }),
+    ).toBe(true);
+  });
+
   it("rejects another repository", () => {
     expect(remoteMatchesRepo("git@github.com:mangue-dev/autre.git", expected)).toBe(false);
     expect(remoteMatchesRepo("git@github.com:autre/minddy.git", expected)).toBe(false);
@@ -132,6 +141,22 @@ describe("localRepoVerdict", () => {
     expect(localRepoVerdict({ isDirectory: true, gitConfig: CONFIG }, expected)).toEqual({
       ok: true,
     });
+  });
+
+  it("keeps an attached checkout valid when its remote uses a previous name", () => {
+    expect(
+      localRepoVerdict(
+        {
+          isDirectory: true,
+          gitConfig:
+            '[remote "origin"]\n\turl = git@github.com:mangue-dev/minddy-issues.git\n',
+        },
+        {
+          fullName: "mangue-dev/minddy",
+          aliases: ["mangue-dev/minddy-issues"],
+        },
+      ),
+    ).toEqual({ ok: true });
   });
 
   it("suffit qu'UN remote corresponde", () => {

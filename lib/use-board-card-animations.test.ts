@@ -126,5 +126,10 @@ describe("useBoardCardAnimations", () => {
     expect(document.body.querySelectorAll("[aria-hidden='true']")).toHaveLength(
       1
     );
+    const clone = document.body.querySelector<HTMLElement>(
+      "[aria-hidden='true']"
+    );
+    expect(clone?.parentElement?.style.overflow).toBe("hidden");
+    expect(clone?.parentElement?.style.zIndex).toBe("20");
   });
 });

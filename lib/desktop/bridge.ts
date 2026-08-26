@@ -142,7 +142,11 @@ export interface DesktopBridge {
    * `null` for a project with no linked repository: the folder is validated as a
    * plain git repository, without remote comparison.
    */
-  localRepo(input: { projectId: string; fullName: string | null }): Promise<LocalRepoState>;
+  localRepo(input: {
+    projectId: string;
+    fullName: string | null;
+    aliases?: string[];
+  }): Promise<LocalRepoState>;
   /**
    * Open the system panel and attach the chosen folder to this project.
    *
@@ -154,6 +158,7 @@ export interface DesktopBridge {
   chooseLocalRepo(input: {
     projectId: string;
     fullName: string | null;
+    aliases?: string[];
   }): Promise<LocalRepoState>;
   /** Forget the folder attached to this project. Returns the following state. */
   forgetLocalRepo(input: { projectId: string }): Promise<LocalRepoState>;
@@ -161,6 +166,7 @@ export interface DesktopBridge {
   localRepoBranches?(input: {
     projectId: string;
     fullName: string | null;
+    aliases?: string[];
   }): Promise<string[]>;
   /**
    * Reads models exposed by Ollama or an OpenAI-compatible endpoint on the

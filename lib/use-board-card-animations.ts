@@ -63,10 +63,10 @@ function removeDuplicateIds(root: HTMLElement) {
 /**
  * Animate every card whose viewport position changed between two board layouts.
  *
- * Every moved card uses a fixed clone under `document.body`, where neither
- * column can clip it. A single FLIP path keeps source shifts, destination
- * shifts, and cross-column moves on the same timeline. Scroll and resize
- * tracking remains idle-debounced to avoid measuring on every scroll frame.
+ * Every moved card uses a clone in one fixed layer clipped to the visible board
+ * rectangle. Columns cannot crop a cross-column journey, while the board layer
+ * prevents cards from painting over app chrome such as either sidebar. A single
+ * FLIP path keeps every move on the same timeline.
  */
 export function useBoardCardAnimations(
   root: RefObject<HTMLElement | null>,
@@ -128,6 +128,19 @@ export function useBoardCardAnimations(
     const viewport = board.getBoundingClientRect();
 
     if (!reducedMotion.current && previous.size > 0) {
+      const layer = document.createElement("div");
+      Object.assign(layer.style, {
+        position: "fixed",
+        left: `${viewport.left}px`,
+        top: `${viewport.top}px`,
+        width: `${viewport.width}px`,
+        height: `${viewport.height}px`,
+        overflow: "hidden",
+        pointerEvents: "none",
+        isolation: "isolate",
+        contain: "layout paint style",
+        zIndex: "20",
+      });
       const fragment = document.createDocumentFragment();
       const now = performance.now();
       const moves: Array<{
@@ -164,9 +177,9 @@ export function useBoardCardAnimations(
         clone.removeAttribute("data-issue-id");
         clone.setAttribute("aria-hidden", "true");
         Object.assign(clone.style, {
-          position: "fixed",
-          left: `${to.rect.left}px`,
-          top: `${to.rect.top}px`,
+          position: "absolute",
+          left: `${to.rect.left - viewport.left}px`,
+          top: `${to.rect.top - viewport.top}px`,
           width: `${to.rect.width}px`,
           height: `${to.rect.height}px`,
           margin: "0",
@@ -175,7 +188,7 @@ export function useBoardCardAnimations(
           transformOrigin: "top left",
           transition: "none",
           visibility: "visible",
-          zIndex: "998",
+          zIndex: "0",
         });
         const previousVisibility = to.node.style.visibility;
         to.node.style.visibility = "hidden";
@@ -190,8 +203,12 @@ export function useBoardCardAnimations(
         });
       }
 
-      // One insertion avoids a style recalculation for every crossing card.
-      if (moves.length > 0) document.body.appendChild(fragment);
+      // One layer insertion avoids a style recalculation per crossing card and
+      // forms a stacking context below both app sidebars (z-31 and z-40).
+      if (moves.length > 0) {
+        layer.appendChild(fragment);
+        document.body.appendChild(layer);
+      }
       for (const move of moves) {
         const animation = move.clone.animate(
           [
@@ -207,6 +224,7 @@ export function useBoardCardAnimations(
         register(move.id, animation, () => {
           move.target.style.visibility = move.previousVisibility;
           move.clone.remove();
+          if (layer.childElementCount === 0) layer.remove();
         });
       }
     }

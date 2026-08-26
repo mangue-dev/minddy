@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   DndContext,
   DragOverlay,
@@ -49,6 +55,10 @@ import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
+import {
+  restoreBoardScroll,
+  type BoardScrollPosition,
+} from "@/lib/board-scroll";
 
 const EMPTY_MEMBERS: Map<string, Member> = new Map();
 const EMPTY_CATEGORIES: Map<string, Category> = new Map();
@@ -87,6 +97,7 @@ export function GlobalKanbanBoard({
   bulkCycleId,
   onSetCycle,
   readOnly = false,
+  horizontalScroll,
 }: {
   issues: Issue[];
   /** Every board issue (unfiltered, all projects) — resolves relation targets
@@ -141,6 +152,8 @@ export function GlobalKanbanBoard({
   onSetCycle?: (issue: Issue, cycleId: string | null) => void;
   /** Past/future cycles are read-only: no drag at all. */
   readOnly?: boolean;
+  /** Shared with the loading shell so replacing it does not reset the board. */
+  horizontalScroll?: BoardScrollPosition;
 }) {
   const issueMap = useMemo(
     () => new Map(issues.map((i) => [i.id, i])),
@@ -299,6 +312,8 @@ export function GlobalKanbanBoard({
   // The edge fade and lasso want the same knot. Memorized fusion: one
   // new identity with each render would cause them to detach and then reattach.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const localHorizontalScroll = useRef(0);
+  const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
   const cardAnimations = useBoardCardAnimations(scrollerRef, columns);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -308,6 +323,11 @@ export function GlobalKanbanBoard({
     },
     [fadeRef, marqueeRef]
   );
+
+  useLayoutEffect(() => {
+    const node = scrollerRef.current;
+    if (node) restoreBoardScroll(node, preservedHorizontalScroll);
+  }, [columns, preservedHorizontalScroll]);
 
   const handleDragStart = (event: DragStartEvent) => {
     cardAnimations.measure();
@@ -368,7 +388,10 @@ export function GlobalKanbanBoard({
       <div className="relative flex h-full min-h-0 flex-col">
         <div
           ref={setScrollerRef}
-          onScroll={scrollProps.onScroll}
+          onScroll={(event) => {
+            preservedHorizontalScroll.current = event.currentTarget.scrollLeft;
+            scrollProps.onScroll();
+          }}
           onPointerDown={onMarqueePointerDown}
           className={cn("h-full min-h-0", BOARD_SCROLLER_CLASS)}
         >
@@ -408,7 +431,7 @@ export function GlobalKanbanBoard({
 
       <MarqueeOverlay overlayRef={marqueeOverlayRef} />
 
-      <DragOverlay dropAnimation={BOARD_DROP_ANIMATION}>
+      <DragOverlay dropAnimation={BOARD_DROP_ANIMATION} zIndex={20}>
         {activeIssue ? (
           <div className="relative w-[21rem]">
             {/* The package is not visible on the cursor: the account says so. */}

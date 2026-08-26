@@ -4,6 +4,7 @@ import {
   BrowserWindow,
   Notification as NativeNotification,
   app,
+  autoUpdater as nativeAutoUpdater,
   dialog,
   ipcMain,
   powerMonitor,
@@ -31,6 +32,7 @@ import {
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
 import { deviceIdForUserData } from "@/lib/desktop/device-id";
+import { windowCloseAction } from "@/lib/desktop/hide-window";
 import {
   linuxDesktopPaths,
   prepareLinuxDesktopPaths,
@@ -106,6 +108,8 @@ let pendingAuthLink: DesktopAuthLink | null = null;
 let pendingOpenPath: string | null = null;
 let mainWindow: BrowserWindow | null = null;
 let stopClaimingLocalRuns: (() => void) | null = null;
+/** Electron closes windows before `before-quit` during an updater relaunch. */
+let quittingForUpdate = false;
 /** Only one APNs registration at a time, shared between site mounts. */
 let apnsRegistration: Promise<string> | null = null;
 
@@ -638,6 +642,7 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
   // exiting Space leaves a black and empty office in the foreground (MIN-353).
   window.on("close", (event) => {
     if (mainWindow !== window) return;
+    if (windowCloseAction(quittingForUpdate) === "close") return;
     event.preventDefault();
     hideWindow(window);
   });
@@ -771,7 +776,10 @@ function registerIpc(): void {
   ipcMain.handle("minddy:local-repo:read", (_event, input: unknown) => {
     const parsed = localRepoRequest(input);
     if (!parsed) return { status: "none" };
-    return describeLocalRepo(parsed.projectId, parsed.fullName ? { fullName: parsed.fullName } : null);
+    return describeLocalRepo(
+      parsed.projectId,
+      parsed.fullName ? { fullName: parsed.fullName, aliases: parsed.aliases } : null,
+    );
   });
 
   ipcMain.handle("minddy:local-repo:choose", async (_event, input: unknown) => {
@@ -779,7 +787,7 @@ function registerIpc(): void {
     if (!parsed) return { status: "none" };
     return attachLocalRepo(
       parsed.projectId,
-      parsed.fullName ? { fullName: parsed.fullName } : null,
+      parsed.fullName ? { fullName: parsed.fullName, aliases: parsed.aliases } : null,
       mainWindow,
     );
   });
@@ -793,7 +801,10 @@ function registerIpc(): void {
   ipcMain.handle("minddy:local-repo:branches", (_event, input: unknown) => {
     const parsed = localRepoRequest(input);
     return parsed
-      ? localBranches(parsed.projectId, parsed.fullName ? { fullName: parsed.fullName } : null)
+      ? localBranches(
+          parsed.projectId,
+          parsed.fullName ? { fullName: parsed.fullName, aliases: parsed.aliases } : null,
+        )
       : [];
   });
 
@@ -820,12 +831,26 @@ function readString(value: unknown): string | null {
  * `fullName` is optional: a project with no linked repository has no remote
  * identity to validate against, and the attachment still makes sense — the
  * folder is then validated as a plain git repository. */
-function localRepoRequest(input: unknown): { projectId: string; fullName: string | null } | null {
+function localRepoRequest(input: unknown): {
+  projectId: string;
+  fullName: string | null;
+  aliases: string[];
+} | null {
   if (typeof input !== "object" || input === null) return null;
-  const { projectId, fullName } = input as { projectId?: unknown; fullName?: unknown };
+  const { projectId, fullName, aliases } = input as {
+    projectId?: unknown;
+    fullName?: unknown;
+    aliases?: unknown;
+  };
   const id = readString(projectId);
   if (!id) return null;
-  return { projectId: id, fullName: readString(fullName) };
+  const parsedAliases = Array.isArray(aliases)
+    ? aliases.slice(0, 20).flatMap((alias) => {
+        const parsed = readString(alias);
+        return parsed ? [parsed] : [];
+      })
+    : [];
+  return { projectId: id, fullName: readString(fullName), aliases: parsedAliases };
 }
 
 /**
@@ -977,6 +1002,13 @@ if (!app.isPackaged && process.env.MINDDY_DESKTOP_TEST_USER_DATA?.trim()) {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  // Unlike a regular app quit, the updater closes every window before emitting
+  // `before-quit`. Remember that intent so the ordinary hide-on-close behavior
+  // does not cancel the install-and-relaunch sequence.
+  nativeAutoUpdater.on("before-quit-for-update", () => {
+    quittingForUpdate = true;
+  });
+
   app.on("second-instance", (_event, argv) => {
     for (const arg of desktopProtocolArguments(argv)) receiveDeepLink(arg);
     if (mainWindow) {
@@ -1133,7 +1165,7 @@ if (!app.requestSingleInstanceLock()) {
  * The turn dies with the app, and the box says where the session starts again.
  */
   app.on("before-quit", (event) => {
-    const prompt = quitPrompt(runningTurns());
+    const prompt = quittingForUpdate ? null : quitPrompt(runningTurns());
     if (prompt) {
       // ⚠ `showMessageBoxSync`, and this is the only synchronous call to this file.
       // `before-quit` can only be canceled DURING its handler: a box

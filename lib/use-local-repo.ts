@@ -6,6 +6,8 @@ import { getDesktopBridge } from "@/lib/desktop/bridge";
 import type { LocalRepoState } from "@/lib/desktop/local-repo";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 
+const NO_REPO_ALIASES: string[] = [];
+
 /**
  * THE LOCAL FILE OF A PROJECT, SEEN FROM THE PAGE (MIN-359).
  *
@@ -26,6 +28,7 @@ import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 export function useLocalRepo(projectId: string | null) {
   const { link, loading: linkLoading } = useProjectGitLinkQuery(projectId);
   const fullName = link?.repo_full_name ?? null;
+  const aliases = link?.repo_previous_names ?? NO_REPO_ALIASES;
   const [state, setState] = useState<LocalRepoState | null>(null);
   const [busy, setBusy] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
@@ -35,8 +38,8 @@ export function useLocalRepo(projectId: string | null) {
   // new listing, rather than failing the entire attachment read.
   const readBranches = useCallback((bridge: NonNullable<ReturnType<typeof getDesktopBridge>>) => {
     if (!projectId || !bridge.localRepoBranches) return Promise.resolve([]);
-    return bridge.localRepoBranches({ projectId, fullName });
-  }, [projectId, fullName]);
+    return bridge.localRepoBranches({ projectId, fullName, aliases });
+  }, [projectId, fullName, aliases]);
 
   useEffect(() => {
     const bridge = getDesktopBridge();
@@ -49,7 +52,7 @@ export function useLocalRepo(projectId: string | null) {
     // the next one: the next montage starts from `null`, this one goes silent.
     let alive = true;
     void bridge
-      .localRepo({ projectId, fullName })
+      .localRepo({ projectId, fullName, aliases })
       .then((next) => {
         if (!alive) return;
         setState(next);
@@ -72,7 +75,7 @@ export function useLocalRepo(projectId: string | null) {
     return () => {
       alive = false;
     };
-  }, [projectId, fullName, readBranches]);
+  }, [projectId, fullName, aliases, readBranches]);
 
   /** Opens the system panel. Gives the verdict, for the appellant to say. */
   const attach = useCallback(async (): Promise<LocalRepoState | null> => {
@@ -80,7 +83,7 @@ export function useLocalRepo(projectId: string | null) {
     if (!bridge || !projectId || busy) return null;
     setBusy(true);
     try {
-      const next = await bridge.chooseLocalRepo({ projectId, fullName });
+      const next = await bridge.chooseLocalRepo({ projectId, fullName, aliases });
       // A REFUSED folder is not stored on the app side: we therefore do not display it
       // like the current state, we return it to the caller who will make a message.
       if (next.status === "ready") {
@@ -93,7 +96,7 @@ export function useLocalRepo(projectId: string | null) {
     } finally {
       setBusy(false);
     }
-  }, [projectId, fullName, busy, readBranches]);
+  }, [projectId, fullName, aliases, busy, readBranches]);
 
   const detach = useCallback(async () => {
     const bridge = getDesktopBridge();

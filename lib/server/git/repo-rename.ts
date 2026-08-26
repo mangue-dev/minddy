@@ -28,6 +28,7 @@ interface StaleLinkRow {
   id: string;
   connection_id: string;
   repo_full_name: string | null;
+  repo_previous_names: string[] | null;
   /** Embedded from git_connections; array in PostgREST typing, object at runtime. */
   git_connections?: { source: string | null } | { source: string | null }[] | null;
 }
@@ -115,7 +116,7 @@ export async function reconcileRepoRename(opts: {
 
   const { data: links, error } = await supabase
     .from("project_git_links")
-    .select("id, connection_id, repo_full_name, git_connections(source)")
+    .select("id, connection_id, repo_full_name, repo_previous_names, git_connections(source)")
     .eq("provider", opts.provider)
     .eq("external_repo_id", opts.externalRepoId);
   if (error) throw new Error(`project_git_links read failed: ${error.message}`);
@@ -128,6 +129,9 @@ export async function reconcileRepoRename(opts: {
   const { owner, name } = splitFullName(opts.fullName);
   for (const link of stale) {
     const oldName = link.repo_full_name as string;
+    const previousNames = [...new Set([...(link.repo_previous_names ?? []), oldName])].slice(
+      -20,
+    );
     await migratePullRequests(supabase, opts.provider, oldName, opts.fullName);
 
     // The stamp dies rather than moving: right after a rename a fresh sweep
@@ -143,6 +147,7 @@ export async function reconcileRepoRename(opts: {
       .from("project_git_links")
       .update({
         repo_full_name: opts.fullName,
+        repo_previous_names: previousNames,
         repo_owner: owner,
         repo_name: name,
         updated_at: new Date().toISOString(),

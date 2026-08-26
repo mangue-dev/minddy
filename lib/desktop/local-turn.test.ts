@@ -66,6 +66,17 @@ describe("parseLocalTurnAssignment", () => {
     const parsed = parseLocalTurnAssignment(assignment());
     expect(parsed?.runId).toBe(RUN_ID);
     expect(parsed?.repoFullName).toBe("mangue-dev/minddy");
+    expect(parsed?.repoPreviousNames).toEqual([]);
+  });
+
+  it("accepts bounded previous repository names", () => {
+    const parsed = parseLocalTurnAssignment(
+      assignment({ repoPreviousNames: ["mangue-dev/minddy-issues"] }),
+    );
+    expect(parsed?.repoPreviousNames).toEqual(["mangue-dev/minddy-issues"]);
+    expect(
+      parseLocalTurnAssignment(assignment({ repoPreviousNames: ["/Users/x"] })),
+    ).toBeNull();
   });
 
   it("accepts a NULL repoFullName — project with no linked repository", () => {
@@ -86,7 +97,13 @@ describe("parseLocalTurnAssignment", () => {
       }),
     );
     expect(parsed?.projects).toEqual([
-      { id: "proj-1", name: "Minddy", key: "MIN", repoFullName: "mangue-dev/minddy" },
+      {
+        id: "proj-1",
+        name: "Minddy",
+        key: "MIN",
+        repoFullName: "mangue-dev/minddy",
+        repoPreviousNames: [],
+      },
     ]);
     expect(
       parseLocalTurnAssignment(

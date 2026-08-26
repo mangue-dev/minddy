@@ -342,7 +342,9 @@ export async function runAssignment(
   // as a plain git checkout (remote optional).
   const repo = describeLocalRepo(
     assignment.projectId,
-    assignment.repoFullName ? { fullName: assignment.repoFullName } : null,
+    assignment.repoFullName
+      ? { fullName: assignment.repoFullName, aliases: assignment.repoPreviousNames ?? [] }
+      : null,
   );
   if (repo.status !== "ready") {
     const reason: LocalTurnRefusal = repo.status === "none" ? "no_repo" : "repo_invalid";

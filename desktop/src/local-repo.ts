@@ -70,7 +70,9 @@ export function localProjectsFor(projects: readonly LocalTurnProject[]): LocalPr
   return projects.map((project) => {
     const state = describeLocalRepo(
       project.id,
-      project.repoFullName ? { fullName: project.repoFullName } : null,
+      project.repoFullName
+        ? { fullName: project.repoFullName, aliases: project.repoPreviousNames ?? [] }
+        : null,
     );
     return {
       ...project,

@@ -46,6 +46,7 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
+import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 // Deferred: the import wizard (and its papaparse CSV machinery) only runs from
 // ?setup=import — a one-time gesture that must not tax every board navigation.
 const ProjectImportDialog = dynamic(
@@ -95,6 +96,7 @@ function ProjectBoard() {
   const newParam = searchParams.get("new");
   const viewParam = searchParams.get("view");
   const setupParam = searchParams.get("setup");
+  const boardScrollPosition = useRef(0);
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -526,13 +528,7 @@ function ProjectBoard() {
   return (
     <div className="flex h-full flex-col">
       {issuesLoading ? (
-        <div className="min-h-0 flex-1 px-6 pt-4">
-          <div className="flex gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 w-72 shrink-0 rounded-xl" />
-            ))}
-          </div>
-        </div>
+        <BoardLoadingSkeleton position={boardScrollPosition} />
       ) : issues.length === 0 ? (
         /* Empty board: the THREE ways to put something on it, in order
  of what we do most — a ticket in hand (the shortcut se
@@ -683,6 +679,7 @@ function ProjectBoard() {
               }
               onDeleteIssue={deleteIssue}
               onMove={moveIssue}
+              horizontalScroll={boardScrollPosition}
             />
           </div>
         </>

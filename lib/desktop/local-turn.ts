@@ -134,6 +134,8 @@ export interface LocalTurnAssignment {
    * exists and is a repository, there is just no remote identity to compare against.
    */
   readonly repoFullName: string | null;
+  /** Previous names of the same stable forge repository. */
+  readonly repoPreviousNames?: readonly string[];
   /** The isolated checkout is a decision fixed at the start of the session. */
   readonly localWorktree: boolean;
   /**
@@ -154,6 +156,8 @@ export interface LocalTurnProject {
   readonly key: string;
   /** Necessary to revalidate the file that the machine has retained. */
   readonly repoFullName: string | null;
+  /** Previous names of the same stable forge repository. */
+  readonly repoPreviousNames?: readonly string[];
 }
 
 /** Project handed over to local harness; only this type can carry a disk path. */
@@ -197,11 +201,21 @@ export type LocalTurnRefusal =
  */
 export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const { runId, projectId, repoFullName, localWorktree, projects, job } = raw as Record<string, unknown>;
+  const {
+    runId,
+    projectId,
+    repoFullName,
+    repoPreviousNames,
+    localWorktree,
+    projects,
+    job,
+  } = raw as Record<string, unknown>;
   if (!isNonEmptyString(runId) || !isNonEmptyString(projectId)) return null;
   // `null` = project without a linked repository: the folder is validated as a
   // plain git checkout, without remote comparison (see `LocalTurnAssignment`).
   if (repoFullName !== null && !isRepoFullName(repoFullName)) return null;
+  const parsedPreviousNames = parseRepoPreviousNames(repoPreviousNames);
+  if (!parsedPreviousNames) return null;
   // A server deployed just before migration does not yet know this field.
   // Its absence falls on historical, safe behavior (current checkout);
   // only a value present but poorly formed is an inconsistent contract.
@@ -232,6 +246,7 @@ export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | nu
     runId,
     projectId,
     repoFullName,
+    repoPreviousNames: parsedPreviousNames,
     localWorktree: localWorktree === true,
     projects: parsedProjects,
     job: job as AssignedJob,
@@ -251,14 +266,24 @@ function parseLocalTurnProjects(value: unknown): readonly LocalTurnProject[] | n
       return null;
     }
     if (row.repoFullName !== null && !isRepoFullName(row.repoFullName)) return null;
+    const repoPreviousNames = parseRepoPreviousNames(row.repoPreviousNames);
+    if (!repoPreviousNames) return null;
     projects.push({
       id: row.id,
       name: row.name,
       key: row.key,
       repoFullName: row.repoFullName ?? null,
+      repoPreviousNames,
     });
   }
   return projects;
+}
+
+/** Parses a bounded list while keeping compatibility with pre-alias servers. */
+function parseRepoPreviousNames(value: unknown): readonly string[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 20) return null;
+  return value.every(isRepoFullName) ? [...new Set(value)] : null;
 }
 
 /** The folder that has the roots of run — the only one the household browses. */

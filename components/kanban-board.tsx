@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -49,6 +55,10 @@ import {
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
+import {
+  restoreBoardScroll,
+  type BoardScrollPosition,
+} from "@/lib/board-scroll";
 
 export function KanbanBoard({
   issues,
@@ -74,6 +84,7 @@ export function KanbanBoard({
   buildMenuActions,
   currentCycleId,
   onSetCycle,
+  horizontalScroll,
 }: {
   issues: Issue[];
   /** Every project issue (unfiltered) — resolves relation targets that a view
@@ -111,6 +122,8 @@ export function KanbanBoard({
   /** Moves one issue in/out of the cycle — same handler as the right-click
       action, reused by the selection's bulk cycle rows. */
   onSetCycle?: (issue: Issue, cycleId: string | null) => void;
+  /** Shared with the loading shell so replacing it does not reset the board. */
+  horizontalScroll?: BoardScrollPosition;
 }) {
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.user_id, m])),
@@ -252,6 +265,8 @@ export function KanbanBoard({
 
   // Mobile: track which column is snapped into view to drive the dot indicator.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const localHorizontalScroll = useRef(0);
+  const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
   const cardAnimations = useBoardCardAnimations(scrollerRef, columns);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -263,6 +278,11 @@ export function KanbanBoard({
   );
   const [activeColumn, setActiveColumn] = useState(0);
   const columnCount = columns.length;
+
+  useLayoutEffect(() => {
+    const node = scrollerRef.current;
+    if (node) restoreBoardScroll(node, preservedHorizontalScroll);
+  }, [columns, preservedHorizontalScroll]);
 
   const updateActiveColumn = useCallback(
     (el: HTMLDivElement) => {
@@ -374,6 +394,7 @@ export function KanbanBoard({
           <div
             ref={setScrollerRef}
             onScroll={(e) => {
+              preservedHorizontalScroll.current = e.currentTarget.scrollLeft;
               scrollProps.onScroll();
               updateActiveColumn(e.currentTarget);
             }}
@@ -421,7 +442,7 @@ export function KanbanBoard({
       {/* The custom animation measures the optimistic destination after the
           move, then lands this fixed overlay there. The journey therefore stays
           visible between columns instead of being clipped by either scroller. */}
-      <DragOverlay dropAnimation={BOARD_DROP_ANIMATION}>
+      <DragOverlay dropAnimation={BOARD_DROP_ANIMATION} zIndex={20}>
         {activeIssue ? (
           <div className="relative w-[21rem]">
             {/* The package is not visible in the cursor: the account says so. */}
