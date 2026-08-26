@@ -8,31 +8,31 @@ import {
   WINDOWS_STORE_DEEP_LINK,
   type InstallPlatform,
 } from "@/lib/desktop/install-prompt";
-import { TrackedCta } from "./tracked-cta";
+import { TrackedDownloadLink } from "./tracked-download-link";
 import { usePwaInstall } from "./use-pwa-install";
 
 type NavigatorWithUserAgentData = Navigator & {
   userAgentData?: { platform?: string };
 };
 
-export function HeroPlatformCta({
-  downloadHref,
+export function DownloadPlatformCta({
   macLabel,
+  macIntelLabel,
   linuxLabel,
+  linuxArmLabel,
   windowsLabel,
   androidLabel,
   iosLabel,
-  browserLabel,
 }: {
-  downloadHref: string;
   macLabel: string;
+  macIntelLabel: string;
   linuxLabel: string;
+  linuxArmLabel: string;
   windowsLabel: string;
   androidLabel: string;
   iosLabel: string;
-  browserLabel: string;
 }) {
-  const [platform, setPlatform] = useState<InstallPlatform>("unsupported");
+  const [platform, setPlatform] = useState<InstallPlatform>("macos");
   const { canPrompt, promptInstall } = usePwaInstall();
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export function HeroPlatformCta({
 
     return (
       <Button asChild size="lg">
-        <a href={`${downloadHref}#mobile-install-guide`}>
+        <a href="#mobile-install-guide">
           <Smartphone data-icon="inline-start" />
           {androidLabel}
         </a>
@@ -69,7 +69,7 @@ export function HeroPlatformCta({
   if (platform === "ios") {
     return (
       <Button asChild size="lg">
-        <a href={`${downloadHref}#mobile-install-guide`}>
+        <a href="#mobile-install-guide">
           <Smartphone data-icon="inline-start" />
           {iosLabel}
         </a>
@@ -88,22 +88,50 @@ export function HeroPlatformCta({
     );
   }
 
-  if (platform === "macos" || platform === "linux") {
+  if (platform === "linux") {
     return (
-      <Button asChild size="lg">
-        <a href={downloadHref}>
-          <Download data-icon="inline-start" />
-          {platform === "macos" ? macLabel : linuxLabel}
-        </a>
-      </Button>
+      <>
+        <Button asChild size="lg">
+          <TrackedDownloadLink
+            platform="linux"
+            format="AppImage"
+            arch="x64"
+            href="/api/desktop/download?platform=linux&format=AppImage&arch=x64"
+          >
+            <Download data-icon="inline-start" />
+            {linuxLabel}
+          </TrackedDownloadLink>
+        </Button>
+        <TrackedDownloadLink
+          platform="linux"
+          format="AppImage"
+          arch="arm64"
+          href="/api/desktop/download?platform=linux&format=AppImage&arch=arm64"
+          className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          {linuxArmLabel}
+        </TrackedDownloadLink>
+      </>
     );
   }
 
   return (
-    <Button asChild size="lg">
-      <TrackedCta href="/signup" location="hero">
-        {browserLabel}
-      </TrackedCta>
-    </Button>
+    <>
+      <Button asChild size="lg">
+        <TrackedDownloadLink platform="macos" format="dmg" arch="arm64" href="/api/desktop/download">
+          <Download data-icon="inline-start" />
+          {macLabel}
+        </TrackedDownloadLink>
+      </Button>
+      <TrackedDownloadLink
+        platform="macos"
+        format="dmg"
+        arch="x64"
+        href="/api/desktop/download?arch=x64"
+        className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+      >
+        {macIntelLabel}
+      </TrackedDownloadLink>
+    </>
   );
 }

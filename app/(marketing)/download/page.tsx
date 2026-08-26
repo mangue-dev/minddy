@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Download } from "lucide-react";
-import { Button } from "mangue-ui/components/ui/button";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import {
@@ -16,10 +14,15 @@ import { Reveal, RevealGroup, RevealHeading } from "@/components/marketing/revea
 import { DesktopShowcase } from "@/components/marketing/desktop-showcase";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { TrackedDownloadLink } from "@/components/marketing/tracked-download-link";
+import { DownloadPlatformCta } from "@/components/marketing/download-platform-cta";
+import {
+  MobilePwaInstallGuide,
+  type MobileInstallGuideCopy,
+} from "@/components/marketing/mobile-pwa-install-guide";
 import { IsoTile, type IsoTileName } from "@/components/marketing/iso-tile";
 
 /**
- * `/download` — minddy desktop applications (MIN-292, MIN-418).
+ * `/download` — minddy desktop and mobile installation (MIN-292, MIN-418, MIN-473).
  *
  * **A PAGE and not a button on the landing**, because there is something here
  * honest thing to say that doesn't fit under a button: app left, no more
@@ -115,6 +118,35 @@ export default async function DownloadPage() {
     { key: "signed", label: t("specSigned"), value: t("specSignedValue") },
   ];
 
+  const mobileInstallGuideCopy = {
+    iosEyebrow: t("iosGuideEyebrow"),
+    iosTitle: t("iosGuideTitle"),
+    iosBody: t("iosGuideBody"),
+    iosStepShareTitle: t("iosStepShareTitle"),
+    iosStepShareBody: t("iosStepShareBody"),
+    iosStepHomeTitle: t("iosStepHomeTitle"),
+    iosStepHomeBody: t("iosStepHomeBody"),
+    iosStepAddTitle: t("iosStepAddTitle"),
+    iosStepAddBody: t("iosStepAddBody"),
+    androidEyebrow: t("androidGuideEyebrow"),
+    androidTitle: t("androidGuideTitle"),
+    androidBody: t("androidGuideBody"),
+    androidStepPromptTitle: t("androidStepPromptTitle"),
+    androidStepPromptBody: t("androidStepPromptBody"),
+    androidStepMenuTitle: t("androidStepMenuTitle"),
+    androidStepMenuBody: t("androidStepMenuBody"),
+    uiShare: t("installUiShare"),
+    uiAddToHome: t("installUiAddToHome"),
+    uiOpenAsWebApp: t("installUiOpenAsWebApp"),
+    uiAdd: t("installUiAdd"),
+    uiCancel: t("installUiCancel"),
+    uiInstallApp: t("installUiInstallApp"),
+    uiInstall: t("installUiInstall"),
+    uiNotNow: t("installUiNotNow"),
+    uiCopy: t("installUiCopy"),
+    uiSettings: t("installUiSettings"),
+  } satisfies MobileInstallGuideCopy;
+
   return (
     <>
       {/* ── The download, and the object ────────────────────────────────── */}
@@ -153,37 +185,30 @@ export default async function DownloadPage() {
                 {t("heroSubtitle")}
               </Reveal>
 
-              {/* A `<a>` and not a `<Link>`: the target is not a page but
- a redirection to a one hundred and twenty megabyte file. A
- route preload would make no sense. */}
+              {/* The client-side CTA resolves the visitor's platform without
+                  making this public page dynamic. Direct package links remain
+                  real anchors, and Windows opens the native Store listing. */}
               <Reveal
                 delay={0.26}
                 className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3"
               >
-                <Button asChild size="lg">
-                  <TrackedDownloadLink platform="macos" format="dmg" arch="arm64" href="/api/desktop/download">
-                    <Download data-icon="inline-start" />
-                    {t("downloadButton")}
-                  </TrackedDownloadLink>
-                </Button>
-                <TrackedDownloadLink
-                  platform="macos"
-                  format="dmg"
-                  arch="x64"
-                  href="/api/desktop/download?arch=x64"
-                  className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-                >
-                  {t("downloadIntel")}
-                </TrackedDownloadLink>
+                <DownloadPlatformCta
+                  macLabel={t("downloadButtonMac")}
+                  macIntelLabel={t("downloadIntel")}
+                  linuxLabel={t("downloadButtonLinux")}
+                  linuxArmLabel={t("linuxAppImageArm64")}
+                  windowsLabel={t("downloadButtonWindows")}
+                  androidLabel={t("downloadButtonAndroid")}
+                  iosLabel={t("downloadButtonIos")}
+                />
               </Reveal>
 
               <Reveal as="p" delay={0.32} className="mt-4 text-xs text-muted-foreground">
                 {t("requirements")}
               </Reveal>
 
-              {/* macOS remains the primary hero, while the Linux AppImage is
- placed directly beside it. Visitors on every platform can immediately see
- which native download applies and retain a browser fallback. */}
+              {/* Keep every distribution visible below the adaptive primary
+                  action so visitors can still download for another machine. */}
               <Reveal as="p" delay={0.36} className="mt-1.5 text-xs text-muted-foreground">
                 {t("platformNote")}
               </Reveal>
@@ -271,6 +296,8 @@ export default async function DownloadPage() {
           </div>
         </div>
       </section>
+
+      <MobilePwaInstallGuide copy={mobileInstallGuideCopy} />
 
       {/* ── The facts ──────────────────────────── ────────────────────────────
  A strip of four boxes separated by one-pixel lines, in the

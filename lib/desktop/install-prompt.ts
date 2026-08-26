@@ -26,6 +26,18 @@
  */
 export const DESKTOP_PROMPT_DISMISSED_META_KEY = "desktop_prompt_dismissed";
 
+/** The immutable Partner Center product link for the minddy Store listing. */
+export const WINDOWS_STORE_DEEP_LINK =
+  "ms-windows-store://pdp/?ProductId=9P181CDLRFBC";
+
+export type InstallPlatform =
+  | "macos"
+  | "windows"
+  | "linux"
+  | "ios"
+  | "android"
+  | "unsupported";
+
 /** Have we already ruled out the proposal? False by default. */
 export function resolveDesktopPromptDismissed(
   meta: Record<string, unknown> | null | undefined
@@ -56,6 +68,8 @@ export interface PlatformProbe {
 export function isMacPlatform(probe: PlatformProbe): boolean {
   const { uaDataPlatform, platform, userAgent, maxTouchPoints } = probe;
 
+  if (/\b(?:iPhone|iPad|iPod)\b/i.test(userAgent ?? "")) return false;
+
   // A touchscreen Mac does not exist: beyond a point of contact, it is an iPad
   // disguised. We cut before watching anything else.
   if ((maxTouchPoints ?? 0) > 1) return false;
@@ -65,13 +79,50 @@ export function isMacPlatform(probe: PlatformProbe): boolean {
   return /Mac OS X|Macintosh/i.test(userAgent ?? "");
 }
 
+/** Is the browser running on iPhone or iPad, including iPad's Mac disguise? */
+export function isIosPlatform(probe: PlatformProbe): boolean {
+  const { uaDataPlatform, platform, userAgent, maxTouchPoints } = probe;
+
+  if (uaDataPlatform === "iOS") return true;
+  if (/\b(?:iPhone|iPad|iPod)\b/i.test(userAgent ?? "")) return true;
+  return /^Mac/i.test(platform ?? "") && (maxTouchPoints ?? 0) > 1;
+}
+
+/** Is the browser running on Android rather than desktop Linux? */
+export function isAndroidPlatform(probe: PlatformProbe): boolean {
+  const { uaDataPlatform, userAgent } = probe;
+
+  if (/\bAndroid\b/i.test(userAgent ?? "")) return true;
+  return uaDataPlatform === "Android";
+}
+
 /** Is the browser running on a Linux desktop platform? */
 export function isLinuxPlatform(probe: PlatformProbe): boolean {
   const { uaDataPlatform, platform, userAgent } = probe;
 
+  if (/\bAndroid\b/i.test(userAgent ?? "")) return false;
   if (uaDataPlatform) return uaDataPlatform === "Linux";
   if (platform) return /^Linux/i.test(platform);
   return /\bLinux\b/i.test(userAgent ?? "");
+}
+
+/** Is the browser running on Windows? */
+export function isWindowsPlatform(probe: PlatformProbe): boolean {
+  const { uaDataPlatform, platform, userAgent } = probe;
+
+  if (uaDataPlatform) return uaDataPlatform === "Windows";
+  if (platform) return /^Win/i.test(platform);
+  return /\bWindows\b/i.test(userAgent ?? "");
+}
+
+/** Resolve the install path that matches the current browser platform. */
+export function resolveInstallPlatform(probe: PlatformProbe): InstallPlatform {
+  if (isIosPlatform(probe)) return "ios";
+  if (isAndroidPlatform(probe)) return "android";
+  if (isMacPlatform(probe)) return "macos";
+  if (isWindowsPlatform(probe)) return "windows";
+  if (isLinuxPlatform(probe)) return "linux";
+  return "unsupported";
 }
 
 /** Should the signed desktop application be offered from the browser? */

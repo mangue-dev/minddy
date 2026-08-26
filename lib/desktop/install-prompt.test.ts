@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   DESKTOP_PROMPT_DISMISSED_META_KEY,
+  isAndroidPlatform,
+  isIosPlatform,
   isLinuxPlatform,
   isMacPlatform,
+  isWindowsPlatform,
+  resolveInstallPlatform,
   resolveDesktopPromptDismissed,
   shouldOfferDesktopApp,
+  WINDOWS_STORE_DEEP_LINK,
 } from "./install-prompt";
 
 describe("resolveDesktopPromptDismissed", () => {
@@ -72,6 +77,60 @@ describe("isLinuxPlatform", () => {
     expect(isLinuxPlatform({ platform: "Linux x86_64" })).toBe(true);
     expect(isLinuxPlatform({ userAgent: "Mozilla/5.0 (X11; Linux x86_64)" })).toBe(true);
     expect(isLinuxPlatform({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" })).toBe(false);
+  });
+});
+
+describe("isWindowsPlatform", () => {
+  it("recognizes Windows from user-agent client hints", () => {
+    expect(isWindowsPlatform({ uaDataPlatform: "Windows" })).toBe(true);
+    expect(isWindowsPlatform({ uaDataPlatform: "macOS" })).toBe(false);
+  });
+
+  it("falls back to navigator.platform and the user agent", () => {
+    expect(isWindowsPlatform({ platform: "Win32" })).toBe(true);
+    expect(isWindowsPlatform({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" })).toBe(true);
+    expect(isWindowsPlatform({ userAgent: "Mozilla/5.0 (X11; Linux x86_64)" })).toBe(false);
+  });
+});
+
+describe("mobile platforms", () => {
+  it("recognizes iPhone and iPad without confusing desktop Macs", () => {
+    expect(isIosPlatform({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)" })).toBe(true);
+    expect(isIosPlatform({ platform: "MacIntel", maxTouchPoints: 5 })).toBe(true);
+    expect(isIosPlatform({ platform: "MacIntel", maxTouchPoints: 0 })).toBe(false);
+  });
+
+  it("recognizes Android without confusing desktop Linux", () => {
+    expect(isAndroidPlatform({ uaDataPlatform: "Android" })).toBe(true);
+    expect(isAndroidPlatform({ platform: "Linux armv8l", userAgent: "Mozilla/5.0 (Linux; Android 15)" })).toBe(true);
+    expect(isAndroidPlatform({ platform: "Linux x86_64" })).toBe(false);
+  });
+});
+
+describe("resolveInstallPlatform", () => {
+  it.each([
+    [{ uaDataPlatform: "macOS", maxTouchPoints: 0 }, "macos"],
+    [{ uaDataPlatform: "Windows" }, "windows"],
+    [{ uaDataPlatform: "Linux" }, "linux"],
+    [{ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)" }, "ios"],
+    [{ platform: "Linux armv8l", userAgent: "Mozilla/5.0 (Linux; Android 15)" }, "android"],
+    [{}, "unsupported"],
+  ] as const)("resolves %o as %s", (probe, expected) => {
+    expect(resolveInstallPlatform(probe)).toBe(expected);
+  });
+
+  it("keeps an iPad out of the macOS download path", () => {
+    expect(
+      resolveInstallPlatform({
+        platform: "MacIntel",
+        userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+        maxTouchPoints: 5,
+      }),
+    ).toBe("ios");
+  });
+
+  it("uses the immutable Microsoft Store product deep link", () => {
+    expect(WINDOWS_STORE_DEEP_LINK).toBe("ms-windows-store://pdp/?ProductId=9P181CDLRFBC");
   });
 });
 

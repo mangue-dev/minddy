@@ -20,6 +20,15 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/pwa-install-narrow.png",
+      "sizes": "720x1200",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "A minddy board and an agent working through an issue"
+    }
+  ],
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
   "display": "standalone"

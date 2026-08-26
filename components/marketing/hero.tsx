@@ -116,11 +116,11 @@ export async function Hero() {
             style={{ "--hero-d": afterTitle + 0.12 } as CSSProperties}
             className="hero-reveal mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
           >
-            {/* THE PRIMARY ACTION MATCHES THE PLATFORM (MIN-292).
+            {/* THE PRIMARY ACTION MATCHES THE PLATFORM (MIN-292, MIN-473).
 
-                On macOS, the desktop app is primary. Elsewhere, browser signup is
-                primary, so visitors are never offered a download they cannot use.
-                Both flows lead to account creation.
+                macOS and Linux lead to their downloads, Windows opens the
+                Microsoft Store listing, and unsupported clients keep browser
+                signup as the primary action.
 
                 The Mac link targets the PAGE and not `/api/desktop/download`: release 120 MB
                 on the click of someone who has just read a title would be
@@ -129,7 +129,11 @@ export async function Hero() {
                 stop when you exit the app. */}
             <HeroPlatformCta
               downloadHref={href("/download")}
-              downloadLabel={t("heroCtaDownload")}
+              macLabel={t("heroCtaDownloadMac")}
+              linuxLabel={t("heroCtaDownloadLinux")}
+              windowsLabel={t("heroCtaDownloadWindows")}
+              androidLabel={t("heroCtaInstallAndroid")}
+              iosLabel={t("heroCtaInstallIos")}
               browserLabel={t("ctaButton")}
             />
             {/* The secondary action now makes the hosting choice visible before a
