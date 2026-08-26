@@ -37,6 +37,35 @@ export const RESUME_AFTER_HIDDEN_MS = 15_000;
 /** Delay before concluding that an unanswered heartbeat will never come. */
 export const ZOMBIE_PROBE_MS = 3_000;
 
+export interface WindowAwayTracker {
+  /** Record the first signal that the window is no longer being observed. */
+  mark(now: number): void;
+  /** Consume the absence once the window is both visible and focused again. */
+  consume(now: number): number | null;
+}
+
+/**
+ * Coalesce `blur` and `visibilitychange` into one absence interval. Browsers
+ * commonly emit both for the same gesture, while a desktop window can emit
+ * only `blur` and remain `visible` throughout.
+ */
+export function createWindowAwayTracker(
+  initialAwayAt: number | null = null
+): WindowAwayTracker {
+  let awayAt = initialAwayAt;
+  return {
+    mark(now) {
+      awayAt ??= now;
+    },
+    consume(now) {
+      if (awayAt === null) return null;
+      const duration = Math.max(0, now - awayAt);
+      awayAt = null;
+      return duration;
+    },
+  };
+}
+
 /**
  * Should we catch the caches on return?
  *

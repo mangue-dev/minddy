@@ -87,6 +87,7 @@ const PERSIST_BUSTER = "v1";
  */
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["me", "search-index"],
+  ["me", "board-issues"], // short-lived resume snapshot; duplicates full issue rows
   ["agent-run"], // ["agent-run", runId]
   ["agent-runs"], // ["agent-runs", "issue", issueId]
   ["agent-run-events"],

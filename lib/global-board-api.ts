@@ -1,6 +1,8 @@
 "use client";
 
 import { applyPendingBoard } from "./optimistic/issue-writes";
+import { fresherGlobalIssueSnapshot, mergeIssueSnapshot } from "./global-issues-api";
+import type { QueryClient } from "@tanstack/react-query";
 import type { GlobalBoardResponse } from "./types";
 
 export function browserTimeZone(): string {
@@ -47,7 +49,22 @@ export async function fetchGlobalBoardApi(
  */
 export async function globalBoardQueryFn({
   signal,
-}: { signal?: AbortSignal } = {}): Promise<GlobalBoardResponse> {
+  client,
+}: { signal?: AbortSignal; client?: QueryClient } = {}): Promise<GlobalBoardResponse> {
   const startedAt = Date.now();
-  return applyPendingBoard(await fetchGlobalBoardApi(signal), startedAt);
+  const board = await fetchGlobalBoardApi(signal);
+  const snapshot = fresherGlobalIssueSnapshot(client, startedAt);
+  return applyPendingBoard(
+    snapshot
+      ? {
+          ...board,
+          issues: mergeIssueSnapshot(
+            board.issues,
+            snapshot.issues,
+            snapshot.startedAt
+          ),
+        }
+      : board,
+    startedAt
+  );
 }

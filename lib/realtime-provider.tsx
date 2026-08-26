@@ -29,8 +29,14 @@ import {
   type BroadcastChange,
   type Invalidation,
 } from "./realtime-keys";
-import { shouldCatchUpOnResume, wakeRealtime } from "./realtime-resume";
+import {
+  createWindowAwayTracker,
+  shouldCatchUpOnResume,
+  wakeRealtime,
+} from "./realtime-resume";
 import { createCatchUpQueue, type CatchUpQueue } from "./realtime-catch-up";
+import { refreshGlobalIssueSnapshot } from "./global-issues-api";
+import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { trace } from "./desktop/trace";
 import type { Project } from "./types";
 
@@ -100,6 +106,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const userId = user?.id ?? null;
   const pathname = usePathname();
   const activeProjectId = projectIdFromPath(pathname ?? "");
+  const displaysAllProjects = pathname === "/all";
   const queryClient = useQueryClient();
 
   // The project list drives which topics to join. ProjectsProvider owns that
@@ -124,7 +131,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   // Identity-stable while the ids don't change, so the reconciliation effect
   // below doesn't re-run on every refetch of the project list.
-  const topicKey = projectTopicIds(projects, activeProjectId).join(",");
+  const topicKey = projectTopicIds(
+    projects,
+    activeProjectId,
+    displaysAllProjects
+  ).join(",");
   const topicIds = useMemo(
     () => (topicKey ? topicKey.split(",") : []),
     [topicKey]
@@ -190,6 +201,20 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         keys: keys.length,
         cache: queryClient.getQueryCache().getAll().length,
       });
+      const coversGlobalBoard = keys.some(
+        (key) =>
+          key.length === GLOBAL_BOARD_KEY.length &&
+          key.every((part, index) => part === GLOBAL_BOARD_KEY[index])
+      );
+      const globalBoard = queryClient.getQueryCache().find({
+        queryKey: GLOBAL_BOARD_KEY,
+        exact: true,
+      });
+      if (coversGlobalBoard && (globalBoard?.getObserversCount() ?? 0) > 0) {
+        void refreshGlobalIssueSnapshot(queryClient).catch(() => {
+          // The normal aggregate refetch remains the fallback.
+        });
+      }
       catchUpQueue.current?.push(keys);
     },
     [queryClient]
@@ -206,44 +231,60 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       const supabase = getSupabase();
       let cancelled = false;
       let channel: RealtimeChannel | null = null;
-      let dropped = false;
+      // The first join closes the snapshot→subscription gap too. Without this,
+      // a write committed between the initial GET and SUBSCRIBED is never seen.
+      let needsCatchUp = true;
+      let authRetry: ReturnType<typeof setTimeout> | null = null;
+      let authAttempts = 0;
 
       // Deterministically push the session token to the socket before joining:
       // supabase-js only re-sends it on SIGNED_IN/TOKEN_REFRESHED, never on
       // INITIAL_SESSION, and a join carrying the anon token is refused on
       // private channels.
-      void supabase.realtime.setAuth().then(() => {
-        if (cancelled) return;
-        channel = supabase.channel(topic, { config: { private: true } });
-        for (const event of BROADCAST_EVENTS) {
-          channel.on("broadcast", { event }, ({ payload }) => {
-            const change = payload as BroadcastChange;
-            // The line first (it's in the payload, that's what
-            // the user sees), the refresh then.
-            apply?.(change);
-            for (const invalidation of keysFor(change)) {
-              invalidateCoalesced(invalidation);
+      const connect = () => {
+        void supabase.realtime.setAuth().then(() => {
+          if (cancelled) return;
+          authAttempts = 0;
+          channel = supabase.channel(topic, { config: { private: true } });
+          for (const event of BROADCAST_EVENTS) {
+            channel.on("broadcast", { event }, ({ payload }) => {
+              const change = payload as BroadcastChange;
+              // The line first (it's in the payload, that's what
+              // the user sees), the refresh then.
+              apply?.(change);
+              for (const invalidation of keysFor(change)) {
+                invalidateCoalesced(invalidation);
+              }
+            });
+          }
+          channel.subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              if (needsCatchUp) {
+                needsCatchUp = false;
+                catchUp(scopeKeys);
+              }
+            } else if (
+              status === "CHANNEL_ERROR" ||
+              status === "TIMED_OUT" ||
+              status === "CLOSED"
+            ) {
+              needsCatchUp = true;
             }
           });
-        }
-        channel.subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            if (dropped) {
-              dropped = false;
-              catchUp(scopeKeys);
-            }
-          } else if (
-            status === "CHANNEL_ERROR" ||
-            status === "TIMED_OUT" ||
-            status === "CLOSED"
-          ) {
-            dropped = true;
-          }
+        }).catch(() => {
+          if (cancelled) return;
+          needsCatchUp = true;
+          catchUp(scopeKeys);
+          authAttempts += 1;
+          const delay = Math.min(1_000 * 2 ** (authAttempts - 1), 10_000);
+          authRetry = setTimeout(connect, delay);
         });
-      });
+      };
+      connect();
 
       return () => {
         cancelled = true;
+        if (authRetry) clearTimeout(authRetry);
         if (channel) void getSupabase().removeChannel(channel);
       };
     },
@@ -297,8 +338,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
  */
   useEffect(() => {
     if (!userId) return;
-    let hiddenSince: number | null =
-      document.visibilityState === "hidden" ? Date.now() : null;
+    const initiallyAway =
+      document.visibilityState === "hidden" || !document.hasFocus();
+    const away = createWindowAwayTracker(initiallyAway ? Date.now() : null);
     let probe: ReturnType<typeof setTimeout> | null = null;
 
     const resume = (hiddenForMs: number) => {
@@ -311,12 +353,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
-        hiddenSince = Date.now();
+        away.mark(Date.now());
         return;
       }
-      const hiddenForMs = hiddenSince === null ? 0 : Date.now() - hiddenSince;
-      hiddenSince = null;
-      resume(hiddenForMs);
+      if (!document.hasFocus()) return;
+      const awayForMs = away.consume(Date.now());
+      if (awayForMs !== null) resume(awayForMs);
+    };
+
+    const onBlur = () => away.mark(Date.now());
+    const onFocus = () => {
+      if (document.visibilityState === "hidden") return;
+      const awayForMs = away.consume(Date.now());
+      if (awayForMs !== null) resume(awayForMs);
     };
 
     // Return via the browser round-trip cache (Safari especially): the page
@@ -327,9 +376,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     };
 
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
     window.addEventListener("pageshow", onPageShow);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
       window.removeEventListener("pageshow", onPageShow);
       if (probe) clearTimeout(probe);
     };

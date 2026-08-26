@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
 import { globalBoardQueryFn } from "./global-board-api";
+import { refreshGlobalIssueSnapshot } from "./global-issues-api";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import {
   createIssueApi,
@@ -44,6 +45,8 @@ import type {
  everything else in the app will fetch it. */
 export { GLOBAL_BOARD_KEY };
 
+const BOARD_CACHE_STALE_MS = 5 * 60_000;
+
 /**
  * The cross-project "My/All" kanban's data + writes. Edits go through the
  * by-id issue APIs (which are project-agnostic) and patch this aggregate cache
@@ -59,6 +62,15 @@ export function useGlobalBoardQuery() {
   // successful user write; undo/redo replays bypass the hook entirely.
   const { record } = useUndoHistory();
 
+  const fastSyncOnMount = useRef<boolean | null>(null);
+  if (fastSyncOnMount.current === null) {
+    const state = queryClient.getQueryState<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+    fastSyncOnMount.current =
+      !!state?.data &&
+      (state.isInvalidated ||
+        Date.now() - state.dataUpdatedAt >= BOARD_CACHE_STALE_MS);
+  }
+
   const { data, isPending } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
     queryFn: globalBoardQueryFn,
@@ -67,6 +79,14 @@ export function useGlobalBoardQuery() {
     // only subscribed to the project URL, hence this clock catch-up).
     // We therefore keep the global default of 5 min — the event carries freshness.
   });
+
+  useEffect(() => {
+    if (!fastSyncOnMount.current) return;
+    fastSyncOnMount.current = false;
+    void refreshGlobalIssueSnapshot(queryClient).catch(() => {
+      // The aggregate query mounted above remains the fallback.
+    });
+  }, [queryClient]);
 
   const invalidate = useCallback(
     (projectId?: string) => {

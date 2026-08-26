@@ -1,9 +1,11 @@
 "use client";
 
+import type { QueryClient } from "@tanstack/react-query";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import { rememberCreateProject } from "./last-create-project";
 import { applyPendingIssues } from "./optimistic/issue-writes";
+import { reconcileProjectIssuesInGlobalCache } from "./global-issues-api";
 import type {
   CreateIssueInput,
   Issue,
@@ -52,13 +54,18 @@ export async function fetchIssuesApi(
  * can no longer undo it, whatever its order of arrival.
  */
 export function issuesQueryFn(projectId: string) {
-  return async ({ signal }: { signal?: AbortSignal } = {}): Promise<Issue[]> => {
+  return async ({
+    signal,
+    client,
+  }: { signal?: AbortSignal; client?: QueryClient } = {}): Promise<Issue[]> => {
     const startedAt = Date.now();
-    return applyPendingIssues(
+    const issues = applyPendingIssues(
       await fetchIssuesApi(projectId, signal),
       startedAt,
       projectId
     );
+    if (client) reconcileProjectIssuesInGlobalCache(client, projectId, issues);
+    return issues;
   };
 }
 
