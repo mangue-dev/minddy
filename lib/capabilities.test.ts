@@ -229,18 +229,25 @@ describe("resolveCapabilities", () => {
       expect(capabilities[id].diagnostic).toContain("managed forge relay");
     }
 
-    // Without the token encryption secret the GitLab relay path is
-    // INCOMPLETE: brokered tokens could not be stored at handoff.
+    // Without usable token encryption neither relay path is ready: GitHub
+    // user grants and GitLab connection grants are both stored at handoff.
     const withoutEncryption = resolveCapabilities({
       ...core,
       ...relay,
       GIT_TOKEN_ENCRYPTION_SECRET: undefined,
     });
-    expect(withoutEncryption.github).toMatchObject({ state: "ready" });
-    expect(withoutEncryption.gitlab).toMatchObject({
-      state: "incomplete",
-      missing: ["GIT_TOKEN_ENCRYPTION_SECRET"],
+    for (const id of ["github", "gitlab"] as const) {
+      expect(withoutEncryption[id]).toMatchObject({ state: "incomplete" });
+      expect(withoutEncryption[id].missing[0]).toContain("GIT_TOKEN_ENCRYPTION_SECRET");
+    }
+
+    const weakEncryption = resolveCapabilities({
+      ...core,
+      ...relay,
+      GIT_TOKEN_ENCRYPTION_SECRET: "too-short",
     });
+    expect(weakEncryption.github.state).toBe("incomplete");
+    expect(weakEncryption.gitlab.state).toBe("incomplete");
   });
 
   it("keeps the operator-owned app ahead of the relay and provisions automatically by default", () => {
@@ -295,6 +302,7 @@ describe("resolveCapabilities", () => {
       ...core,
       MINDDY_FORGE_RELAY_URL: "https://forge-relay.minddy.app",
       GIT_STATE_SECRET: "state-secret",
+      GIT_TOKEN_ENCRYPTION_SECRET: "x".repeat(32),
     });
     // Partial explicit variables do not select a pinned control plane
     // (all three are required); the instance stays on the automatic default.
@@ -308,7 +316,10 @@ describe("resolveCapabilities", () => {
     });
     expect(missingState.github).toMatchObject({
       state: "incomplete",
-      missing: ["GIT_STATE_SECRET"],
+      missing: [
+        "GIT_STATE_SECRET",
+        "GIT_TOKEN_ENCRYPTION_SECRET (at least 32 characters)",
+      ],
     });
   });
 });

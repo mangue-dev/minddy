@@ -179,7 +179,10 @@ describe("POST /api/relay/github/installation-token", () => {
 
   it("refuses a payload that does not respect the wire constraints", async () => {
     const response = await mintToken(
-      signedRequest(path, JSON.stringify({ installationId: 4242, repositoryIds: [0] })) as never,
+      signedRequest(
+        path,
+        JSON.stringify({ installationId: 4242, repositoryIds: [0], profile: "repo-read" }),
+      ) as never,
     );
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("repositoryIds") });
@@ -246,6 +249,24 @@ describe("POST /api/relay/github/installation-token", () => {
     expect(response.status).toBe(200);
     expect(mintCalls).toEqual([
       { installationId: 4242, scope: { repositoryIds: [9001], permissions: undefined } },
+    ]);
+  });
+
+  it("mints a metadata-only token to list a claimed installation before linking", async () => {
+    setFakeTable("forge_relay_link_mirror", []);
+    const response = await mintToken(
+      signedRequest(
+        path,
+        JSON.stringify({
+          installationId: 4242,
+          repositoryIds: [],
+          profile: "repository-list",
+        }),
+      ) as never,
+    );
+    expect(response.status).toBe(200);
+    expect(mintCalls).toEqual([
+      { installationId: 4242, scope: { permissions: { metadata: "read" } } },
     ]);
   });
 

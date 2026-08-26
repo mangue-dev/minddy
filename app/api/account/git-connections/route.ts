@@ -35,6 +35,7 @@ import {
 import { listCandidateRepos } from "@/lib/server/git/repo-links";
 import { refreshForgeAccountNames } from "@/lib/server/git/account-refresh";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { reserveProviderOperation } from "@/lib/server/provider-operation-guard";
 
 function isProviderConfigured(provider: RepoProviderId): boolean {
   return provider === "github" ? isGithubAppConfigured() : isGitlabConfigured();
@@ -62,6 +63,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: t("gitConnectionNotFound") },
         { status: 404 },
+      );
+    }
+    const reservation = await reserveProviderOperation({
+      actorId: auth.user.id,
+      provider: connection.provider,
+      operation: "repository_enumeration",
+      resourceKey: `connection:${connection.id}`,
+      limit: 30,
+      windowSeconds: 60,
+      dedupeSeconds: 2,
+    });
+    if (reservation.state !== "reserved") {
+      const unavailable = reservation.state === "unavailable";
+      return NextResponse.json(
+        { error: unavailable ? t("databaseError") : "Too many requests" },
+        {
+          status: unavailable ? 503 : 429,
+          ...(reservation.retryAfter > 0
+            ? { headers: { "Retry-After": String(reservation.retryAfter) } }
+            : {}),
+        },
       );
     }
     try {

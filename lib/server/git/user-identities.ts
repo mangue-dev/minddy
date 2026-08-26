@@ -9,6 +9,11 @@ import {
   type GithubUserTokenSet,
 } from "./github-user-auth";
 import { refreshGithubUserTokensViaRelay } from "@/lib/server/forge-relay/token-refresh";
+import {
+  claimForgeOAuthRefresh,
+  releaseForgeOAuthRefreshClaim,
+  waitForForgeOAuthRefresh,
+} from "./oauth-refresh-claim";
 
 /**
  * The PERSONAL git account of a minddy user (MIN-144), table
@@ -129,6 +134,10 @@ export async function upsertUserIdentity(params: {
         token_expires_at: params.tokens.expiresAt,
         oauth_scopes: params.tokens.scope,
         source: params.source ?? "local",
+        // Reauthorization starts a new lineage. Clearing an older refresh
+        // claim prevents that worker from overwriting the newly delivered pair.
+        oauth_refresh_claim: null,
+        oauth_refresh_claimed_at: null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,provider" },
@@ -221,6 +230,7 @@ interface TokenRow {
   access_token_encrypted: string | null;
   refresh_token_encrypted: string | null;
   token_expires_at: string | null;
+  oauth_refresh_claim: string | null;
 }
 
 async function loadTokenRow(
@@ -232,7 +242,7 @@ async function loadTokenRow(
     .from("git_user_identities")
     .select(
       "id, source, account_login, account_avatar_url, access_token_encrypted, " +
-        "refresh_token_encrypted, token_expires_at",
+        "refresh_token_encrypted, token_expires_at, oauth_refresh_claim",
     )
     .eq("user_id", userId)
     .eq("provider", provider)
@@ -328,6 +338,38 @@ async function mintGithubUserToken(
   const refreshToken = decryptForgeToken(row.refresh_token_encrypted);
   if (!refreshToken) return null;
 
+  let claimId: string | null;
+  try {
+    claimId = await claimForgeOAuthRefresh({
+      kind: "identity",
+      rowId: row.id,
+      expectedExpiresAt: row.token_expires_at,
+      expectedRefreshTokenEncrypted: row.refresh_token_encrypted,
+    });
+  } catch (err) {
+    console.warn(`[user-identities] GitHub token refresh claim failed: ${(err as Error).message}`);
+    return null;
+  }
+  if (!claimId) {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      await waitForForgeOAuthRefresh();
+      const recovered = await loadTokenRow(userId, "github");
+      if (!recovered) break;
+      if (recovered.oauth_refresh_claim == null) {
+        const advanced =
+          recovered.token_expires_at !== row.token_expires_at ||
+          recovered.refresh_token_encrypted !== row.refresh_token_encrypted;
+        if (advanced) {
+          const token = decryptForgeToken(recovered.access_token_encrypted);
+          if (token) return withToken(token);
+        }
+        return mintGithubUserToken(userId, force);
+      }
+    }
+    console.warn("[user-identities] GitHub token refresh is still in progress");
+    return null;
+  }
+
   let refreshed: GithubUserTokenSet;
   try {
     // The refresh grant only works with the client that issued the
@@ -339,17 +381,7 @@ async function mintGithubUserToken(
         ? await refreshGithubUserTokensViaRelay(refreshToken)
         : await refreshGithubUserToken(refreshToken);
   } catch (err) {
-    // Single-use rotation race: another worker refreshed first. We
-    // rereads; if the stored expiry has ADVANCED, its token is fresh — we take it back.
-    const recovered = await loadTokenRow(userId, "github");
-    if (
-      recovered &&
-      recovered.token_expires_at != null &&
-      recovered.token_expires_at !== row.token_expires_at
-    ) {
-      const token = decryptForgeToken(recovered.access_token_encrypted);
-      if (token) return withToken(token);
-    }
+    await releaseForgeOAuthRefreshClaim("identity", row.id, claimId);
     console.warn(
       `[user-identities] GitHub token refresh failed: ${(err as Error).message}`,
     );
@@ -365,24 +397,18 @@ async function mintGithubUserToken(
         ? encryptForgeToken(refreshed.refreshToken)
         : null,
       token_expires_at: refreshed.expiresAt,
+      oauth_refresh_claim: null,
+      oauth_refresh_claimed_at: null,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", row.id);
-  // The compare-and-set no longer makes sense on a FORCED rotation: it leaves
-  // precisely from a stored expiry that the forge denied, and it is our token
-  // which is authentic. Without it, we only rewrite if no one has moved.
-  const { data: written } = await (force
-    ? persist
-    : persist.eq("token_expires_at", row.token_expires_at)
-  ).select("id");
-  // Losing the compare-and-set is NOT trivial: the line keeps the token of
-  // winner, which our own rotation may have just invalidated at GitHub.
-  // It is said - it is the only trace which names this race, and the probe 401 of
-  // `forge-actor.ts` is what catches her.
-  if (!force && !written?.length) {
+    .eq("id", row.id)
+    .eq("oauth_refresh_claim", claimId);
+  const { data: written, error: persistError } = await persist.select("id");
+  if (persistError || !written?.length) {
     console.warn(
-      "[user-identities] concurrent GitHub token rotation: our refresh was not persisted",
+      `[user-identities] GitHub refresh persistence failed: ${persistError?.message ?? "claim lost"}`,
     );
+    return null;
   }
   return { token: refreshed.accessToken, ...account };
 }

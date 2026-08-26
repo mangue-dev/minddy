@@ -27,6 +27,33 @@ export async function fakeRpc(
   name: string,
   args: Record<string, unknown>,
 ): Promise<{ data: unknown; error: unknown }> {
+  if (name === "claim_forge_oauth_refresh") {
+    const table = args.p_kind === "connection" ? "git_connections" : "git_user_identities";
+    const row = (fakeTables[table] ?? []).find((candidate) => candidate.id === args.p_row_id);
+    if (!row || row.oauth_refresh_claim) return { data: false, error: null };
+    if (row.token_expires_at !== args.p_expected_expires_at) {
+      return { data: false, error: null };
+    }
+    if (row.refresh_token_encrypted !== args.p_expected_refresh_token_encrypted) {
+      return { data: false, error: null };
+    }
+    row.oauth_refresh_claim = args.p_claim_id;
+    row.oauth_refresh_claimed_at = new Date().toISOString();
+    return { data: true, error: null };
+  }
+  if (name === "claim_forge_relay_refresh_lineage") {
+    const row = (fakeTables.forge_relay_refresh_lineage ?? []).find(
+      (candidate) =>
+        candidate.instance_id === args.p_instance_id &&
+        candidate.provider === args.p_provider &&
+        candidate.refresh_token_hash === args.p_refresh_token_hash &&
+        !candidate.refresh_claim_id,
+    );
+    if (!row) return { data: null, error: null };
+    row.refresh_claim_id = args.p_claim_id;
+    row.refresh_claimed_at = new Date().toISOString();
+    return { data: row.id, error: null };
+  }
   if (name !== "reserve_forge_relay_mint") {
     return { data: null, error: { message: `Unknown fake RPC: ${name}` } };
   }

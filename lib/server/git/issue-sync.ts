@@ -20,6 +20,7 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import {
   listGithubIssueComments,
   listRepoOpenIssues,
+  type InstallationTokenMinter,
   type RemoteGithubIssueComment,
 } from "./github-app";
 import { forgeProviderForConnection } from "./forge-provider";
@@ -62,6 +63,22 @@ import {
 
 /** Hard backfill ceiling: beyond that, we do not import the history of a deposit. */
 export const REMOTE_BACKFILL_MAX = 500;
+
+function githubIssueMinter(target: IssueSyncTarget): InstallationTokenMinter {
+  const repositoryId = Number(target.externalRepoId);
+  if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) {
+    throw new Error("GitHub issue sync requires a stable repository id");
+  }
+  const forge = forgeProviderForConnection(target.connectionSource);
+  return ({ installationId, scope }) =>
+    forge.getInstallationToken({
+      installationId,
+      scope: {
+        ...scope,
+        repositoryIds: [repositoryId],
+      },
+    });
+}
 
 /** A link whose outcome synchronization is active. */
 export interface IssueSyncTarget {
@@ -738,14 +755,14 @@ async function backfillGithubIssueComments(
   // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED connection
   // mints its listing tokens through the Cloud control plane, like every other
   // GitHub call site.
-  const forge = forgeProviderForConnection(target.connectionSource);
+  const mint = githubIssueMinter(target);
   for (const issue of issues) {
     try {
       const comments = await listGithubIssueComments(
         target.installationId,
         target.repoFullName,
         issue.number,
-        forge.getInstallationToken,
+        mint,
       );
       for (const comment of comments) {
         await applyGithubIssueComment(
@@ -947,9 +964,22 @@ function toImportedIssue(
  * the toggle is already written when this function runs (in `after()`), a
  * failure here does not reset it to false — subsequent events will pass.
  */
+const issueBackfills = new Map<string, Promise<number>>();
+
 export async function backfillRemoteIssues(
   target: IssueSyncTarget,
 ): Promise<number> {
+  const key = `${target.projectId}:${target.provider}:${target.externalRepoId}`;
+  const running = issueBackfills.get(key);
+  if (running) return running;
+  const backfill = runRemoteIssueBackfill(target).finally(() => {
+    if (issueBackfills.get(key) === backfill) issueBackfills.delete(key);
+  });
+  issueBackfills.set(key, backfill);
+  return backfill;
+}
+
+async function runRemoteIssueBackfill(target: IssueSyncTarget): Promise<number> {
   if (!target.createdBy) return 0;
 
   // Only one quota check for the entire batch: the limit is one
@@ -972,12 +1002,12 @@ export async function backfillRemoteIssues(
     // ForgeProvider seam (docs/managed-forge-relay-plan.md): a RELAYED
     // connection mints through the Cloud control plane — the local mint would
     // throw without a local app key, or hit the wrong App in a mixed setup.
-    const forge = forgeProviderForConnection(target.connectionSource);
+    const mint = githubIssueMinter(target);
     const issues = await listRepoOpenIssues(
       target.installationId,
       target.repoFullName,
       REMOTE_BACKFILL_MAX,
-      forge.getInstallationToken,
+      mint,
     );
     remoteIssues = issues.map((i) => ({
       number: i.number,

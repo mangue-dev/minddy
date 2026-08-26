@@ -62,8 +62,7 @@ async function loadRepoLinks(
     .eq("provider", provider)
     .eq("external_repo_id", externalRepoId);
   if (error) {
-    console.error("[webhook-secret] links lookup failed:", error.message);
-    return [];
+    throw new Error(`Webhook-secret link lookup failed: ${error.message}`);
   }
   return (data ?? []) as LinkSecretRow[];
 }
@@ -81,11 +80,56 @@ export async function ensureRepoWebhookSecret(params: {
   externalRepoId: string;
 }): Promise<string> {
   const links = await loadRepoLinks(params.provider, params.externalRepoId);
+  if (links.length === 0) {
+    throw new Error("Cannot initialize a webhook secret for an unlinked repository");
+  }
+  let existingSecret: string | null = null;
   for (const link of links) {
     const existing = decryptForgeToken(link.webhook_secret_encrypted);
-    if (existing) return existing;
+    if (existing) existingSecret ??= existing;
+    if (link.webhook_secret_encrypted) {
+      if (!existing) throw new Error("Stored webhook secret cannot be decrypted");
+    }
   }
-  return rotateRepoWebhookSecret(params);
+  if (existingSecret) {
+    const { error } = await getServiceClient()
+      .from("project_git_links")
+      .update({
+        webhook_secret_encrypted: encryptForgeToken(existingSecret),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("provider", params.provider)
+      .eq("external_repo_id", params.externalRepoId)
+      .is("webhook_secret_encrypted", null);
+    if (error) throw new Error(error.message);
+    return existingSecret;
+  }
+
+  // The conditional update is the cross-instance initialization claim. When
+  // two workers generate concurrently, only the first can replace NULL; every
+  // loser reloads and returns that persisted winner instead of configuring a
+  // hook with a secret the receiver will never accept.
+  const secret = generateWebhookSecret();
+  const service = getServiceClient();
+  const { data: written, error } = await service
+    .from("project_git_links")
+    .update({
+      webhook_secret_encrypted: encryptForgeToken(secret),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("provider", params.provider)
+    .eq("external_repo_id", params.externalRepoId)
+    .is("webhook_secret_encrypted", null)
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (written?.length) return secret;
+
+  const raced = await loadRepoLinks(params.provider, params.externalRepoId);
+  for (const link of raced) {
+    const winner = decryptForgeToken(link.webhook_secret_encrypted);
+    if (winner) return winner;
+  }
+  throw new Error("Webhook-secret initialization lost without a persisted winner");
 }
 
 /**

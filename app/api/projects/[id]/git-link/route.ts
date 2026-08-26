@@ -48,6 +48,7 @@ import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { syncRepoPullRequests } from "@/lib/server/agent/pull-requests";
 import type { ProjectGitLink } from "@/lib/types";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { reserveProviderOperation } from "@/lib/server/provider-operation-guard";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -81,6 +82,27 @@ async function backfillRepoPullRequests(projectId: string): Promise<void> {
   } catch (err) {
     console.error("[git-link] pull request backfill failed:", (err as Error).message);
   }
+}
+
+async function reserveBackfill(params: {
+  actorId: string;
+  provider: RepoProviderId;
+  projectId: string;
+  kind: "issues" | "pull_requests";
+}): Promise<boolean> {
+  const reservation = await reserveProviderOperation({
+    actorId: params.actorId,
+    provider: params.provider,
+    operation: `${params.kind}_backfill`,
+    resourceKey: `project:${params.projectId}:${params.kind}`,
+    limit: 10,
+    windowSeconds: 3600,
+    dedupeSeconds: 120,
+  });
+  if (reservation.state === "unavailable") {
+    console.error(`[git-link] ${params.kind} backfill admission unavailable`);
+  }
+  return reservation.state === "reserved";
 }
 
 /** The GitHub page where to grant permission to an installation. */
@@ -152,6 +174,27 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json(
         { error: t("gitConnectionNotFound") },
         { status: 404 },
+      );
+    }
+    const reservation = await reserveProviderOperation({
+      actorId: auth.user.id,
+      provider: connection.provider,
+      operation: "repository_enumeration",
+      resourceKey: `connection:${connection.id}`,
+      limit: 30,
+      windowSeconds: 60,
+      dedupeSeconds: 2,
+    });
+    if (reservation.state !== "reserved") {
+      const unavailable = reservation.state === "unavailable";
+      return NextResponse.json(
+        { error: unavailable ? t("databaseError") : "Too many requests" },
+        {
+          status: unavailable ? 503 : 429,
+          ...(reservation.retryAfter > 0
+            ? { headers: { "Retry-After": String(reservation.retryAfter) } }
+            : {}),
+        },
       );
     }
     try {
@@ -341,7 +384,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // without this scan the Pull Requests page would open empty on a repository which
       // has dozens of them. Outside the critical path: the answer starts from
       // continuation, and the list fills up behind.
-      after(() => backfillRepoPullRequests(id));
+      if (
+        await reserveBackfill({
+          actorId: auth.user.id,
+          provider: result.link.provider,
+          projectId: id,
+          kind: "pull_requests",
+        })
+      ) {
+        after(() => backfillRepoPullRequests(id));
+      }
       return NextResponse.json({ link: result.link });
     } catch (err) {
       return NextResponse.json({ error: (err as Error).message }, { status: 502 });
@@ -427,11 +479,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // Backfill of open issues outside the critical path: the response leaves
     // straight away, the tickets then arrive via realtime.
     if (enabled) {
-      after(() =>
-        backfillRemoteIssues(link).catch((err) =>
-          console.error("[git-link] backfill failed:", (err as Error).message),
-        ),
-      );
+      if (
+        await reserveBackfill({
+          actorId: auth.user.id,
+          provider: link.provider,
+          projectId: id,
+          kind: "issues",
+        })
+      ) {
+        after(() =>
+          backfillRemoteIssues(link).catch((err) =>
+            console.error("[git-link] backfill failed:", (err as Error).message),
+          ),
+        );
+      }
     }
 
     return NextResponse.json({

@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 
 import {
   FakeQuery,
+  fakeRpc,
   fakeTables,
   setFakeTable,
 } from "../../../test/forge-relay/fake-supabase";
@@ -24,7 +25,10 @@ vi.mock("@/lib/managed-services", () => ({
   isManagedForgeEnabled: () => forgeEnabled,
 }));
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: (name: string) => new FakeQuery(name) }),
+  getServiceClient: () => ({
+    from: (name: string) => new FakeQuery(name),
+    rpc: fakeRpc,
+  }),
 }));
 
 const INSTANCE_ID = "0f0e0d0c-0b0a-4948-8272-6d6f64656c79";
@@ -180,6 +184,35 @@ describe("brokerTokenRefresh", () => {
       unknown
     >;
     expect(lineage.refresh_token_hash).toBe(hashRefreshToken("doomed-refresh"));
+  });
+
+  it("admits only one provider refresh for a token lineage", async () => {
+    seedLineage("single-use-refresh");
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    fetchImpl = async (url) => {
+      await gate;
+      return DEFAULT_FETCH(url);
+    };
+
+    const winner = brokerTokenRefresh({
+      instanceId: INSTANCE_ID,
+      provider: "gitlab",
+      refreshToken: "single-use-refresh",
+    });
+    await vi.waitFor(() => expect(fetchCalls).toHaveLength(1));
+    const duplicate = await brokerTokenRefresh({
+      instanceId: INSTANCE_ID,
+      provider: "gitlab",
+      refreshToken: "single-use-refresh",
+    });
+    expect(duplicate).toMatchObject({ ok: false, status: 409 });
+    expect(fetchCalls).toHaveLength(1);
+
+    release();
+    await expect(winner).resolves.toMatchObject({ ok: true });
   });
 });
 

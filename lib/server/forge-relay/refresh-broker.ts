@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   hashRefreshToken,
@@ -52,7 +54,7 @@ export async function brokerTokenRefresh(input: {
   const presentedHash = hashRefreshToken(input.refreshToken);
 
   const supabase = getServiceClient();
-  const { data } = await supabase
+  const { data: knownLineage, error: lookupError } = await supabase
     .from("forge_relay_refresh_lineage")
     .select("id")
     .eq("instance_id", instanceId)
@@ -60,8 +62,11 @@ export async function brokerTokenRefresh(input: {
     .eq("refresh_token_hash", presentedHash)
     .limit(1)
     .maybeSingle();
-  const lineage = data as { id: string } | null;
-  if (!lineage) {
+  if (lookupError) {
+    console.error("[forge-relay] refresh lineage lookup failed:", lookupError.message);
+    return { ok: false, status: 503, error: "Refresh lineage is unavailable" };
+  }
+  if (!knownLineage) {
     await recordRelayAudit(instanceId, "token_refresh_refused", {
       provider,
       reason: "unknown_refresh_token",
@@ -73,6 +78,32 @@ export async function brokerTokenRefresh(input: {
     };
   }
 
+  const claimId = randomUUID();
+  const { data: lineageId, error: claimError } = await supabase.rpc(
+    "claim_forge_relay_refresh_lineage",
+    {
+      p_instance_id: instanceId,
+      p_provider: provider,
+      p_refresh_token_hash: presentedHash,
+      p_claim_id: claimId,
+    },
+  );
+  if (claimError) {
+    console.error("[forge-relay] refresh lineage claim failed:", claimError.message);
+    return { ok: false, status: 503, error: "Refresh lineage is unavailable" };
+  }
+  if (typeof lineageId !== "string") {
+    await recordRelayAudit(instanceId, "token_refresh_refused", {
+      provider,
+      reason: "refresh_in_progress",
+    });
+    return {
+      ok: false,
+      status: 409,
+      error: "This refresh token is already used or being refreshed",
+    };
+  }
+
   let tokens: BrokeredTokenSet;
   try {
     tokens =
@@ -80,8 +111,11 @@ export async function brokerTokenRefresh(input: {
         ? await refreshGitlabTokensWithManagedApp(input.refreshToken)
         : await refreshGithubUserTokensWithManagedApp(input.refreshToken);
   } catch (err) {
-    // Includes the single-use rotation race: the instance's own recovery path
-    // re-reads its stored row, where the winning worker persisted the fresh set.
+    await supabase
+      .from("forge_relay_refresh_lineage")
+      .update({ refresh_claim_id: null, refresh_claimed_at: null })
+      .eq("id", lineageId)
+      .eq("refresh_claim_id", claimId);
     await recordRelayAudit(instanceId, "token_refresh_failed", {
       provider,
       error: (err as Error).message,
@@ -93,19 +127,30 @@ export async function brokerTokenRefresh(input: {
     // Advance the lineage to the rotated token. On the concurrent-rotation
     // race the unique constraint rejects the loser's write — correct outcome:
     // the winner's hash is the only live one.
-    const { error: updateError } = await supabase
+    const { data: updated, error: updateError } = await supabase
       .from("forge_relay_refresh_lineage")
       .update({
         refresh_token_hash: hashRefreshToken(tokens.refreshToken),
+        refresh_claim_id: null,
+        refresh_claimed_at: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", lineage.id);
-    if (updateError) {
-      console.warn(
-        "[forge-relay] refresh lineage update rejected (concurrent rotation?):",
-        updateError.message ?? String(updateError),
+      .eq("id", lineageId)
+      .eq("refresh_claim_id", claimId)
+      .select("id");
+    if (updateError || !updated?.length) {
+      console.error(
+        "[forge-relay] refresh lineage update failed:",
+        updateError?.message ?? "claim lost",
       );
+      return { ok: false, status: 503, error: "Refreshed token lineage could not be stored" };
     }
+  } else {
+    await supabase
+      .from("forge_relay_refresh_lineage")
+      .update({ refresh_claim_id: null, refresh_claimed_at: null })
+      .eq("id", lineageId)
+      .eq("refresh_claim_id", claimId);
   }
 
   await recordRelayAudit(instanceId, "token_refresh", { provider });
@@ -125,16 +170,17 @@ export async function recordRefreshLineage(input: {
 }): Promise<void> {
   if (!input.refreshToken) return;
   const supabase = getServiceClient();
-  await supabase
-    .from("forge_relay_refresh_lineage")
-    .delete()
-    .eq("instance_id", input.instanceId)
-    .eq("provider", input.provider)
-    .eq("provider_account_id", input.providerAccountId);
-  await supabase.from("forge_relay_refresh_lineage").insert({
-    instance_id: input.instanceId,
-    provider: input.provider,
-    provider_account_id: input.providerAccountId,
-    refresh_token_hash: hashRefreshToken(input.refreshToken),
-  });
+  const { error } = await supabase.from("forge_relay_refresh_lineage").upsert(
+    {
+      instance_id: input.instanceId,
+      provider: input.provider,
+      provider_account_id: input.providerAccountId,
+      refresh_token_hash: hashRefreshToken(input.refreshToken),
+      refresh_claim_id: null,
+      refresh_claimed_at: null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "instance_id,provider,provider_account_id" },
+  );
+  if (error) throw new Error(`Refresh lineage write failed: ${error.message}`);
 }

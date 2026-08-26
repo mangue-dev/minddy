@@ -27,6 +27,7 @@ import type { RemoteIssueIdentity } from "@/lib/server/git/issue-push";
 interface Row extends Record<string, unknown> {}
 
 let linkRows: Row[] = [];
+let issueRows: Row[] = [];
 /** Outgoing HTTP calls, in order — probe this entire file. */
 let calls: { url: string; method: string; body: Record<string, unknown>; auth: string }[] =
   [];
@@ -38,12 +39,23 @@ let actor: { kind: "actor"; token: string; capability: string } | { kind: "none"
 };
 /** Response from the forge: `null` = 200, otherwise the error code to return. */
 let httpError: number | null = null;
+let httpGate: Promise<void> | null = null;
 
 function table(rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
   const query: Record<string, unknown> = {};
+  let patch: Row | null = null;
   query.select = () => query;
+  query.update = (values: Row) => {
+    patch = values;
+    return query;
+  };
+  query.delete = () => query;
   query.eq = (column: string, value: unknown) => {
+    filters.push((row) => row[column] === value);
+    return query;
+  };
+  query.is = (column: string, value: unknown) => {
     filters.push((row) => row[column] === value);
     return query;
   };
@@ -51,11 +63,22 @@ function table(rows: () => Row[]) {
     data: rows().filter((row) => filters.every((f) => f(row)))[0] ?? null,
     error: null,
   });
+  query.then = (resolve: (value: unknown) => void) => {
+    if (patch) {
+      for (const row of rows().filter((candidate) => filters.every((f) => f(candidate)))) {
+        Object.assign(row, patch);
+      }
+    }
+    resolve({ data: null, error: null });
+  };
   return query;
 }
 
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: () => table(() => linkRows) }),
+  getServiceClient: () => ({
+    from: (name: string) => table(() => (name === "issues" ? issueRows : linkRows)),
+    rpc: async () => ({ data: true, error: null }),
+  }),
 }));
 
 // The background hook executes immediately AND returns its promise to the test: without
@@ -96,6 +119,7 @@ function link(overrides: Row = {}): void {
 
 /** The ticket imported from a repository — one that has a remote identity. */
 const IMPORTED: RemoteIssueIdentity = {
+  id: "issue-1",
   projectId: PROJECT,
   provider: "github",
   repoId: "9001",
@@ -104,6 +128,16 @@ const IMPORTED: RemoteIssueIdentity = {
 
 /** Schedule the repercussion and WAIT for the background work it has done. */
 async function push(issue: RemoteIssueIdentity, status: string): Promise<void> {
+  issueRows = [{
+    id: issue.id,
+    project_id: issue.projectId,
+    status,
+    remote_provider: issue.provider,
+    remote_repo_id: issue.repoId,
+    remote_number: issue.number,
+    deleted_at: null,
+    remote_status_push_claim: null,
+  }];
   scheduleRemoteStatusPush({
     issue,
     status: status as never,
@@ -114,10 +148,12 @@ async function push(issue: RemoteIssueIdentity, status: string): Promise<void> {
 
 beforeEach(() => {
   linkRows = [];
+  issueRows = [];
   calls = [];
   background = [];
   actor = { kind: "none" };
   httpError = null;
+  httpGate = null;
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
@@ -128,6 +164,7 @@ beforeEach(() => {
       body: JSON.parse(String(init.body ?? "{}")),
       auth: headers.Authorization,
     });
+    if (httpGate) await httpGate;
     return httpError
       ? {
           ok: false,
@@ -210,6 +247,37 @@ describe("scheduleRemoteStatusPush — GitHub", () => {
     httpError = 403; // “Resource not accessible by integration”: Issues (Write) refused.
     await expect(push(IMPORTED, "done")).resolves.toBeUndefined();
     expect(calls).toHaveLength(1);
+  });
+
+  it("serializes a newer status behind an in-flight push", async () => {
+    let release!: () => void;
+    httpGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    issueRows = [{
+      id: IMPORTED.id,
+      project_id: PROJECT,
+      status: "done",
+      remote_provider: "github",
+      remote_repo_id: "9001",
+      remote_number: 7,
+      deleted_at: null,
+      remote_status_push_claim: null,
+    }];
+
+    scheduleRemoteStatusPush({ issue: IMPORTED, status: "done" as never, actorId: "user-1" });
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    issueRows[0].status = "in_progress";
+    scheduleRemoteStatusPush({
+      issue: IMPORTED,
+      status: "in_progress" as never,
+      actorId: "user-1",
+    });
+    httpGate = null;
+    release();
+    await Promise.all(background);
+
+    expect(calls.map((call) => call.body.state)).toEqual(["closed", "open"]);
   });
 });
 

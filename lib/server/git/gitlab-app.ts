@@ -20,6 +20,11 @@ import {
 } from "@/lib/server/forge-relay/client";
 import { refreshGitlabTokensViaRelay } from "@/lib/server/forge-relay/token-refresh";
 import { pushGitlabHookSecret } from "@/lib/server/forge-relay/gitlab-hook-sync";
+import {
+  claimForgeOAuthRefresh,
+  releaseForgeOAuthRefreshClaim,
+  waitForForgeOAuthRefresh,
+} from "./oauth-refresh-claim";
 
 /** Stable hook identity (docs/managed-forge-relay-plan.md): set as the
  * description at creation and on every update, so the hook is found by MARKER
@@ -228,6 +233,7 @@ interface AccountTokenRow {
   access_token_encrypted: string | null;
   refresh_token_encrypted: string | null;
   token_expires_at: string | null;
+  oauth_refresh_claim: string | null;
 }
 
 async function loadAccountTokenRow(
@@ -237,7 +243,7 @@ async function loadAccountTokenRow(
   const { data } = await supabase
     .from("git_connections")
     .select(
-      "id, provider, source, access_token_encrypted, refresh_token_encrypted, token_expires_at",
+      "id, provider, source, access_token_encrypted, refresh_token_encrypted, token_expires_at, oauth_refresh_claim",
     )
     .eq("id", connectionId)
     .maybeSingle();
@@ -319,6 +325,33 @@ async function mintGitlabAccessToken(
     );
   }
 
+  const claimId = await claimForgeOAuthRefresh({
+    kind: "connection",
+    rowId: row.id,
+    expectedExpiresAt: row.token_expires_at,
+    expectedRefreshTokenEncrypted: row.refresh_token_encrypted,
+  });
+  if (!claimId) {
+    // A different instance already owns this single-use grant. Wait for its
+    // persisted successor instead of presenting the same refresh token twice.
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      await waitForForgeOAuthRefresh();
+      const recovered = await loadAccountTokenRow(connectionId);
+      if (!recovered) break;
+      if (recovered.oauth_refresh_claim == null) {
+        const advanced =
+          recovered.token_expires_at !== row.token_expires_at ||
+          recovered.refresh_token_encrypted !== row.refresh_token_encrypted;
+        if (advanced) {
+          const token = decryptForgeToken(recovered.access_token_encrypted);
+          if (token) return token;
+        }
+        return mintGitlabAccessToken(connectionId, force);
+      }
+    }
+    throw new Error(`GitLab connection ${connectionId} refresh is still in progress`);
+  }
+
   let refreshed: GitlabTokenSet;
   try {
     refreshed =
@@ -329,18 +362,7 @@ async function mintGitlabAccessToken(
             nowMs,
           );
   } catch (err) {
-    // Single-use rotation race: another worker refreshed first.
-    // We reread; if the winner has ADVANCED the stored expiry beyond what was read,
-    // its token is fresh — we reuse it.
-    const recovered = await loadAccountTokenRow(connectionId);
-    if (
-      recovered &&
-      recovered.token_expires_at != null &&
-      recovered.token_expires_at !== row.token_expires_at
-    ) {
-      const token = decryptForgeToken(recovered.access_token_encrypted);
-      if (token) return token;
-    }
+    await releaseForgeOAuthRefreshClaim("connection", row.id, claimId);
     throw err;
   }
 
@@ -357,19 +379,15 @@ async function mintGitlabAccessToken(
       access_token_encrypted: encryptForgeToken(refreshed.accessToken),
       refresh_token_encrypted: encryptForgeToken(refreshed.refreshToken),
       token_expires_at: refreshed.expiresAt,
+      oauth_refresh_claim: null,
+      oauth_refresh_claimed_at: null,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", connectionId);
-  const guarded = force
-    ? persist
-    : row.token_expires_at == null
-      ? persist.is("token_expires_at", null)
-      : persist.eq("token_expires_at", row.token_expires_at);
-  const { data: written } = await guarded.select("id");
-  if (!force && !written?.length) {
-    console.warn(
-      "[gitlab-app] concurrent GitLab token rotation: our refresh was not persisted",
-    );
+    .eq("id", connectionId)
+    .eq("oauth_refresh_claim", claimId);
+  const { data: written, error: persistError } = await persist.select("id");
+  if (persistError || !written?.length) {
+    throw new Error(persistError?.message || "GitLab refresh claim was lost before persistence");
   }
   return refreshed.accessToken;
 }

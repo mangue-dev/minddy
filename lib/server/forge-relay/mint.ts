@@ -15,7 +15,9 @@ import { getInstallationToken } from "@/lib/server/git/github-app";
  *
  * 1. the installation is CLAIMED by the authenticated instance;
  * 2. every requested stable repository id is mirrored as linked to that
- *    instance. Mutable owner/name values never authorize a mint.
+ *    instance. The narrow `repository-list` profile is the sole pre-link
+ *    exception: a claimed installation may enumerate the repositories that
+ *    GitHub already exposes to that installation.
  *
  * The profile is REQUIRED on the wire. A bare `{}` or an absent permissions
  * object would silently mint a token with ALL the app's declared permissions;
@@ -27,8 +29,8 @@ import { getInstallationToken } from "@/lib/server/git/github-app";
 export const FORGE_RELAY_MINT_QUOTA_PER_HOUR = 120;
 const MAX_REPOSITORIES_PER_MINT = 10;
 
-/** Same three profiles as `RepoTokenAccess` (lib/server/agent/repo-access.ts). */
-export type MintProfile = "full" | "repo-write" | "repo-read";
+/** Linked-repository profiles plus the pre-link repository selector. */
+export type MintProfile = "full" | "repo-write" | "repo-read" | "repository-list";
 
 function isMintProfile(value: unknown): value is MintProfile {
   return typeof value === "string" && value in MINT_PERMISSIONS_BY_PROFILE;
@@ -44,6 +46,7 @@ export const MINT_PERMISSIONS_BY_PROFILE: Record<
   full: undefined,
   "repo-write": { contents: "write" },
   "repo-read": { contents: "read" },
+  "repository-list": { metadata: "read" },
 };
 
 export interface InstallationTokenMintPayload {
@@ -67,10 +70,20 @@ export function parseInstallationTokenMintPayload(raw: unknown): ParsedMintPaylo
     return { ok: false, error: "Invalid installationId" };
   }
 
+  const profile = body.profile;
+  if (!isMintProfile(profile)) {
+    return {
+      ok: false,
+      error: "profile must be one of: full, repo-write, repo-read, repository-list",
+    };
+  }
+
   const repositoryIds = body.repositoryIds;
   if (
     !Array.isArray(repositoryIds) ||
-    repositoryIds.length === 0 ||
+    (profile === "repository-list"
+      ? repositoryIds.length !== 0
+      : repositoryIds.length === 0) ||
     repositoryIds.length > MAX_REPOSITORIES_PER_MINT ||
     !repositoryIds.every(
       (repoId) => typeof repoId === "number" && Number.isSafeInteger(repoId) && repoId > 0,
@@ -79,20 +92,16 @@ export function parseInstallationTokenMintPayload(raw: unknown): ParsedMintPaylo
   ) {
     return {
       ok: false,
-      error: "repositoryIds must contain 1-10 unique positive repository ids",
+      error:
+        profile === "repository-list"
+          ? "repository-list requires an empty repositoryIds array"
+          : "repositoryIds must contain 1-10 unique positive repository ids",
     };
   }
 
   // Fixed permission profiles: the relay never forwards an arbitrary
   // permission object, and an empty one would mint the app's FULL power set —
   // so the profile is mandatory and must name a known profile.
-  const profile = body.profile;
-  if (!isMintProfile(profile)) {
-    return {
-      ok: false,
-      error: "profile must be one of: full, repo-write, repo-read",
-    };
-  }
   return { ok: true, payload: { installationId, repositoryIds, profile } };
 }
 
@@ -149,7 +158,9 @@ export async function mintRelayedInstallationToken(input: {
     return { ok: false, status: 403, error: "Relay mint is not authorized" };
   }
 
-  // Check 2 — every requested stable repository id is mirrored as linked.
+  // Check 2 — every post-link repository id is mirrored as linked. The
+  // repository-list profile deliberately has no ids yet; installation
+  // ownership and GitHub's own installation selection are its boundary.
   const requestedIds = payload.repositoryIds.map(String);
   const { data: mirrored } = await supabase
     .from("forge_relay_link_mirror")
@@ -201,10 +212,15 @@ export async function mintRelayedInstallationToken(input: {
   }
 
   try {
-    const { token, expiresAt } = await getInstallationToken(payload.installationId, {
-      repositoryIds: payload.repositoryIds,
-      permissions: MINT_PERMISSIONS_BY_PROFILE[payload.profile],
-    });
+    const { token, expiresAt } = await getInstallationToken(
+      payload.installationId,
+      payload.profile === "repository-list"
+        ? { permissions: MINT_PERMISSIONS_BY_PROFILE[payload.profile] }
+        : {
+            repositoryIds: payload.repositoryIds,
+            permissions: MINT_PERMISSIONS_BY_PROFILE[payload.profile],
+          },
+    );
     await recordRelayAudit(instanceId, "mint_installation_token_completed", {
       installationId: payload.installationId,
       repositoryIds: payload.repositoryIds,

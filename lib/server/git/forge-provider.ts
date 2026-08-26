@@ -73,6 +73,18 @@ const RELAY_TOKEN_SAFETY_WINDOW_MS = 5 * 60_000;
 // forever (entries are evicted expired-first, then oldest-insertion).
 const RELAY_TOKEN_CACHE_MAX_ENTRIES = 500;
 const relayTokenCache = new Map<string, InstallationToken>();
+const relayTokenMints = new Map<string, Promise<InstallationToken>>();
+
+/** Clears relay token state between tests. */
+export function __clearRelayTokenCacheForTests(): void {
+  relayTokenCache.clear();
+  relayTokenMints.clear();
+}
+
+/** Reports the bounded cache size for eviction tests. */
+export function __relayTokenCacheSizeForTests(): number {
+  return relayTokenCache.size;
+}
 
 function cacheRelayToken(key: string, token: InstallationToken): void {
   if (relayTokenCache.size >= RELAY_TOKEN_CACHE_MAX_ENTRIES) {
@@ -98,8 +110,10 @@ function cacheRelayToken(key: string, token: InstallationToken): void {
  * accidental over-mint the profile field exists to prevent.
  */
 function mintProfileFromScope(
-  permissions?: Record<string, "read" | "write">,
+  scope?: InstallationTokenScope,
 ): MintProfile {
+  if (!scope) return "repository-list";
+  const permissions = scope.permissions;
   const entries = Object.entries(permissions ?? {});
   if (entries.length === 0) return "full";
   if (entries.length === 1 && entries[0][0] === "contents") {
@@ -140,25 +154,35 @@ export const relayForgeProvider: ForgeProvider = {
     if (cached && Date.parse(cached.expiresAt) - Date.now() > RELAY_TOKEN_SAFETY_WINDOW_MS) {
       return cached;
     }
-    const response = await relayRequest<{
-      token: string;
-      expiresAt: string;
-    }>("/api/relay/github/installation-token", {
-      installationId: typeof installationId === "string" ? Number(installationId) : installationId,
-      repositoryIds: scope?.repositoryIds ?? [],
-      profile: mintProfileFromScope(scope?.permissions),
+    const existingMint = relayTokenMints.get(key);
+    if (existingMint) return existingMint;
+
+    const mint = (async () => {
+      const response = await relayRequest<{
+        token: string;
+        expiresAt: string;
+      }>("/api/relay/github/installation-token", {
+        installationId:
+          typeof installationId === "string" ? Number(installationId) : installationId,
+        repositoryIds: scope?.repositoryIds ?? [],
+        profile: mintProfileFromScope(scope),
+      });
+      if (!response.ok || !response.data?.token) {
+        throw new Error(response.error || "Relayed installation token mint failed");
+      }
+      const minted: InstallationToken = {
+        token: response.data.token,
+        expiresAt: response.data.expiresAt ?? "",
+      };
+      if (minted.expiresAt && !Number.isNaN(Date.parse(minted.expiresAt))) {
+        cacheRelayToken(key, minted);
+      }
+      return minted;
+    })().finally(() => {
+      if (relayTokenMints.get(key) === mint) relayTokenMints.delete(key);
     });
-    if (!response.ok || !response.data?.token) {
-      throw new Error(response.error || "Relayed installation token mint failed");
-    }
-    const minted: InstallationToken = {
-      token: response.data.token,
-      expiresAt: response.data.expiresAt ?? "",
-    };
-    if (minted.expiresAt && !Number.isNaN(Date.parse(minted.expiresAt))) {
-      cacheRelayToken(key, minted);
-    }
-    return minted;
+    relayTokenMints.set(key, mint);
+    return mint;
   },
   getGitlabAccessToken: (connectionId) => getGitlabAccessToken(connectionId),
 };

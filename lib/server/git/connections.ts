@@ -61,13 +61,17 @@ export async function listUserConnections(
   if (rows.length === 0) return [];
 
   // Projects linked by connection (for disconnection warning).
-  const { data: links } = await supabase
+  const { data: links, error: linksError } = await supabase
     .from("project_git_links")
     .select("connection_id, projects(id, name)")
     .in(
       "connection_id",
       rows.map((r) => r.id),
     );
+  if (linksError) {
+    console.error("[git-connections] linked-project lookup failed:", linksError.message);
+    return null;
+  }
   const byConnection = new Map<string, GitConnection["projects"]>();
   // Supabase infers the embedded to-one relation like a table; at execution
   // it's an object (FK many-to-one). We cast via unknown to reflect the runtime.
@@ -234,53 +238,23 @@ export async function upsertGithubConnection(params: {
   source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
-  const nowIso = new Date().toISOString();
-
-  const { data: existing } = await supabase
-    .from("git_connections")
-    .select("id, user_id")
-    .eq("installation_id", params.installationId)
-    .maybeSingle();
-
-  if (existing) {
-    if (existing.user_id !== params.userId) {
-      throw new GithubInstallationOwnedByAnotherUserError();
-    }
-    await supabase
-      .from("git_connections")
-      .update({
-        provider: "github",
-        account_login: params.accountLogin,
-        account_type: params.accountType,
-        repository_selection: params.repositorySelection,
-        // The latest successful connection establishment defines the source:
-        // re-claiming a locally-connected installation through the relay (or
-        // the reverse) must flip the marker, or token mints keep routing to a
-        // provider the instance no longer owns.
-        source: params.source ?? "local",
-        updated_at: nowIso,
-      })
-      .eq("id", existing.id);
-    return existing.id as string;
+  const { data, error } = await supabase.rpc("upsert_github_connection_atomic", {
+    p_user_id: params.userId,
+    p_installation_id: params.installationId,
+    p_account_login: params.accountLogin,
+    p_account_type: params.accountType,
+    p_repository_selection: params.repositorySelection,
+    p_source: params.source ?? "local",
+  });
+  if (error) throw new Error(error.message || "Failed to store GitHub connection");
+  const result = data as { state?: unknown; id?: unknown } | null;
+  if (result?.state === "owned_by_another") {
+    throw new GithubInstallationOwnedByAnotherUserError();
   }
-
-  const { data, error } = await supabase
-    .from("git_connections")
-    .insert({
-      user_id: params.userId,
-      provider: "github",
-      installation_id: params.installationId,
-      account_login: params.accountLogin,
-      account_type: params.accountType,
-      repository_selection: params.repositorySelection,
-      source: params.source ?? "local",
-    })
-    .select("id")
-    .single();
-  if (error || !data) {
-    throw new Error(error?.message || "Failed to store GitHub connection");
+  if (result?.state !== "stored" || typeof result.id !== "string") {
+    throw new Error("Invalid atomic GitHub connection response");
   }
-  return data.id as string;
+  return result.id;
 }
 
 /**
@@ -304,53 +278,20 @@ export async function upsertGitlabConnection(params: {
   source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
-  const nowIso = new Date().toISOString();
-  const tokenFields = {
-    access_token_encrypted: encryptForgeToken(params.tokens.accessToken),
-    refresh_token_encrypted: encryptForgeToken(params.tokens.refreshToken),
-    token_expires_at: params.tokens.expiresAt,
-    oauth_scopes: params.tokens.scope,
-  };
-
-  const { data: existing } = await supabase
-    .from("git_connections")
-    .select("id")
-    .eq("user_id", params.userId)
-    .eq("provider", "gitlab")
-    .eq("provider_account_id", params.providerAccountId)
-    .maybeSingle();
-
-  if (existing) {
-    await supabase
-      .from("git_connections")
-      .update({
-        account_login: params.accountLogin,
-        // Same rule as the GitHub upsert: the latest connection
-        // establishment defines which app owns the stored grant.
-        source: params.source ?? "local",
-        ...tokenFields,
-        updated_at: nowIso,
-      })
-      .eq("id", existing.id);
-    return existing.id as string;
-  }
-
-  const { data, error } = await supabase
-    .from("git_connections")
-    .insert({
-      user_id: params.userId,
-      provider: "gitlab",
-      provider_account_id: params.providerAccountId,
-      account_login: params.accountLogin,
-      source: params.source ?? "local",
-      ...tokenFields,
-    })
-    .select("id")
-    .single();
-  if (error || !data) {
+  const { data, error } = await supabase.rpc("upsert_gitlab_connection_atomic", {
+    p_user_id: params.userId,
+    p_provider_account_id: params.providerAccountId,
+    p_account_login: params.accountLogin,
+    p_source: params.source ?? "local",
+    p_access_token_encrypted: encryptForgeToken(params.tokens.accessToken),
+    p_refresh_token_encrypted: encryptForgeToken(params.tokens.refreshToken),
+    p_token_expires_at: params.tokens.expiresAt,
+    p_oauth_scopes: params.tokens.scope,
+  });
+  if (error || typeof data !== "string") {
     throw new Error(error?.message || "Failed to store GitLab connection");
   }
-  return data.id as string;
+  return data;
 }
 
 /**

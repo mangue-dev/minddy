@@ -50,11 +50,13 @@ let relayResponse: { ok: boolean; error: string | null; data: unknown } = {
   error: null,
   data: { token: "relayed-token", expiresAt: "2026-08-21T12:00:00Z" },
 };
+let relayGate: Promise<void> | null = null;
 
 vi.mock("@/lib/server/forge-relay/client", () => ({
   isForgeRelayClientConfigured: () => true,
   relayRequest: async (path: string, body: Record<string, unknown>) => {
     relayRequestCalls.push({ path, body });
+    if (relayGate) await relayGate;
     return relayResponse;
   },
 }));
@@ -75,12 +77,19 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 
-const { localForgeProvider, relayForgeProvider, forgeProviderForConnection } = await import(
+const {
+  __clearRelayTokenCacheForTests,
+  __relayTokenCacheSizeForTests,
+  localForgeProvider,
+  relayForgeProvider,
+  forgeProviderForConnection,
+} = await import(
   "@/lib/server/git/forge-provider"
 );
 const { resolveRepoCloneTarget } = await import("@/lib/server/agent/repo-access");
 
 beforeEach(() => {
+  __clearRelayTokenCacheForTests();
   installationTokenCalls = [];
   gitlabTokenCalls = [];
   relayRequestCalls.length = 0;
@@ -89,6 +98,7 @@ beforeEach(() => {
     error: null,
     data: { token: "relayed-token", expiresAt: "2026-08-21T12:00:00Z" },
   };
+  relayGate = null;
   linkRow = null;
 });
 
@@ -165,6 +175,20 @@ describe("RelayForgeProvider", () => {
     expect(installationTokenCalls).toHaveLength(0);
   });
 
+  it("uses the narrow pre-link profile for repository enumeration", async () => {
+    await relayForgeProvider.getInstallationToken({ installationId: 5252 });
+    expect(relayRequestCalls).toEqual([
+      {
+        path: "/api/relay/github/installation-token",
+        body: {
+          installationId: 5252,
+          repositoryIds: [],
+          profile: "repository-list",
+        },
+      },
+    ]);
+  });
+
   it("keeps GitLab tokens instance-side — the relay never sees them", async () => {
     await expect(
       relayForgeProvider.getGitlabAccessToken("conn-1"),
@@ -179,6 +203,36 @@ describe("RelayForgeProvider", () => {
       relayForgeProvider.getInstallationToken({ installationId: 4242 }),
     ).rejects.toThrow(/not linked/);
     expect(installationTokenCalls).toHaveLength(0);
+  });
+
+  it("coalesces concurrent mints for the same installation and scope", async () => {
+    let release!: () => void;
+    relayGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const input = {
+      installationId: 7777,
+      scope: { repositoryIds: [123], permissions: { contents: "read" as const } },
+    };
+
+    const first = relayForgeProvider.getInstallationToken(input);
+    const second = relayForgeProvider.getInstallationToken(input);
+    await vi.waitFor(() => expect(relayRequestCalls).toHaveLength(1));
+    release();
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      expect.objectContaining({ token: "relayed-token" }),
+      expect.objectContaining({ token: "relayed-token" }),
+    ]);
+    expect(relayRequestCalls).toHaveLength(1);
+  });
+
+  it("bounds the resolved relay-token cache", async () => {
+    for (let installationId = 10_000; installationId <= 10_500; installationId += 1) {
+      await relayForgeProvider.getInstallationToken({ installationId });
+    }
+    expect(__relayTokenCacheSizeForTests()).toBeGreaterThan(0);
+    expect(__relayTokenCacheSizeForTests()).toBeLessThanOrEqual(500);
   });
 });
 

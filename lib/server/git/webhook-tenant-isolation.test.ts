@@ -186,6 +186,26 @@ describe("webhook secret per repository", () => {
     ).resolves.toBe(secret);
   });
 
+  it("returns one persisted secret to concurrent initializers", async () => {
+    linkRows = [link()];
+    const [first, second] = await Promise.all([
+      ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" }),
+      ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" }),
+    ]);
+
+    expect(second).toBe(first);
+    await expect(
+      ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" }),
+    ).resolves.toBe(first);
+  });
+
+  it("fails closed when a stored secret cannot be decrypted", async () => {
+    linkRows = [link({ webhook_secret_encrypted: "not-an-envelope" })];
+    await expect(
+      ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" }),
+    ).rejects.toThrow(/cannot be decrypted/);
+  });
+
   it("two repositories, two secrets — neither one signs for the other", async () => {
     linkRows = [
       link({ id: "link-a", project_id: "project-a", external_repo_id: "1001" }),

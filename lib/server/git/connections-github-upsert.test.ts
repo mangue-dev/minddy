@@ -3,38 +3,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * MIN-324 — the conflict key of `upsertGithubConnection` is the only
  * `installation_id`, and its `update` was rewriting `user_id`: a caller who
- * was enumerating these identifiers (small integers sequential) reassigned to itself the
- * installations of other tenants, therefore their private repositories.
+ * enumerated these small sequential identifiers could reassign installations
+ * belonging to other tenants and gain access to their private repositories.
  *
  * What this test holds: an existing line no longer changes hands, and it
  * is also not modified in passing.
  */
 
-const updates: { payload: Record<string, unknown>; id: unknown }[] = [];
-const inserts: Record<string, unknown>[] = [];
 let existing: { id: string; user_id: string } | null = null;
+const rpcCalls: Record<string, unknown>[] = [];
+let rpcError: { message: string } | null = null;
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({ maybeSingle: async () => ({ data: existing }) }),
-      }),
-      update: (payload: Record<string, unknown>) => ({
-        eq: async (_col: string, id: unknown) => {
-          updates.push({ payload, id });
-          return {};
-        },
-      }),
-      insert: (payload: Record<string, unknown>) => ({
-        select: () => ({
-          single: async () => {
-            inserts.push(payload);
-            return { data: { id: "new-connection" }, error: null };
-          },
-        }),
-      }),
-    }),
+    rpc: async (_name: string, args: Record<string, unknown>) => {
+      rpcCalls.push(args);
+      if (rpcError) return { data: null, error: rpcError };
+      if (existing?.user_id && existing.user_id !== args.p_user_id) {
+        return { data: { state: "owned_by_another" }, error: null };
+      }
+      return {
+        data: { state: "stored", id: existing?.id ?? "new-connection" },
+        error: null,
+      };
+    },
   }),
 }));
 
@@ -50,42 +42,46 @@ const PARAMS = {
 };
 
 beforeEach(() => {
-  updates.length = 0;
-  inserts.length = 0;
+  rpcCalls.length = 0;
   existing = null;
+  rpcError = null;
 });
 
 describe("upsertGithubConnection", () => {
-  it("insère quand l'installation est inconnue", async () => {
+  it("inserts an unknown installation atomically", async () => {
     const id = await upsertGithubConnection(PARAMS);
     expect(id).toBe("new-connection");
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]).toMatchObject({ user_id: "owner", installation_id: 4242 });
+    expect(rpcCalls).toHaveLength(1);
+    expect(rpcCalls[0]).toMatchObject({ p_user_id: "owner", p_installation_id: 4242 });
   });
 
-  it("met à jour la ligne de son propre détenteur", async () => {
+  it("updates the current owner's row through the same atomic operation", async () => {
     existing = { id: "conn-1", user_id: "owner" };
     const id = await upsertGithubConnection(PARAMS);
     expect(id).toBe("conn-1");
-    expect(updates).toHaveLength(1);
-    expect(updates[0].payload).toMatchObject({ account_login: "acme" });
-    // And above all: no more `user_id` in the payload, even for the correct account.
-    expect(updates[0].payload).not.toHaveProperty("user_id");
+    expect(rpcCalls).toHaveLength(1);
+    expect(rpcCalls[0]).toMatchObject({ p_account_login: "acme" });
   });
 
-  it("lève, sans rien écrire, quand la ligne appartient à quelqu'un d'autre", async () => {
-    existing = { id: "conn-1", user_id: "victime" };
+  it("rejects an installation owned by another account", async () => {
+    existing = { id: "conn-1", user_id: "victim" };
     await expect(upsertGithubConnection(PARAMS)).rejects.toBeInstanceOf(
       GithubInstallationOwnedByAnotherUserError,
     );
-    expect(updates).toHaveLength(0);
-    expect(inserts).toHaveLength(0);
+    expect(rpcCalls).toHaveLength(1);
   });
 
-  it("ne dit pas à qui appartient l'installation", async () => {
-    existing = { id: "conn-1", user_id: "victime" };
+  it("does not disclose who owns the installation", async () => {
+    existing = { id: "conn-1", user_id: "victim" };
     const err = await upsertGithubConnection(PARAMS).catch((e: Error) => e);
-    expect((err as Error).message).not.toContain("victime");
+    expect((err as Error).message).not.toContain("victim");
     expect((err as Error).message).not.toContain("conn-1");
+  });
+
+  it("surfaces an atomic provisioning failure", async () => {
+    rpcError = { message: "injected transaction failure" };
+    await expect(upsertGithubConnection(PARAMS)).rejects.toThrow(
+      /injected transaction failure/,
+    );
   });
 });

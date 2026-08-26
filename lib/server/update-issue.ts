@@ -642,6 +642,7 @@ export async function updateIssueFields({
     if (!forgeSync) {
       scheduleRemoteStatusPush({
         issue: {
+          id: issueId,
           projectId: before.project_id as string,
           provider: (before.remote_provider as string | null) ?? null,
           repoId: (before.remote_repo_id as string | null) ?? null,

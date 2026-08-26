@@ -310,8 +310,14 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     "GITHUB_APP_PRIVATE_KEY",
     "GIT_STATE_SECRET",
   ]);
-  const gitlabSecret = present(env, "GIT_TOKEN_ENCRYPTION_SECRET") ||
-    present(env, "GITLAB_TOKEN_ENCRYPTION_SECRET");
+  const forgeTokenSecret = (
+    env.GIT_TOKEN_ENCRYPTION_SECRET ?? env.GITLAB_TOKEN_ENCRYPTION_SECRET
+  )?.trim();
+  const gitlabSecret = Boolean(forgeTokenSecret && forgeTokenSecret.length >= 32);
+  const relayMissing = [
+    ...gitStateMissing,
+    ...(gitlabSecret ? [] : ["GIT_TOKEN_ENCRYPTION_SECRET (at least 32 characters)"]),
+  ];
   const gitlabMissing = [
     ...missing(env, ["GITLAB_OAUTH_CLIENT_ID", "GITLAB_OAUTH_CLIENT_SECRET", "GIT_STATE_SECRET"]),
     ...(gitlabSecret ? [] : ["GIT_TOKEN_ENCRYPTION_SECRET"]),
@@ -471,7 +477,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     github: gitProvider(
       "github",
       githubMissing,
-      gitStateMissing,
+      relayMissing,
       "GitHub App integration is configured (operator-owned app).",
       "GitHub integration is hidden because its configuration is absent or incomplete.",
       "GitHub integration is served by the managed forge relay.",
@@ -484,7 +490,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       // relay path requires the same encryption secret as the local one —
       // without it the connect flow would fail at encrypt time after Cloud
       // had already consumed the brokered delivery.
-      [...gitStateMissing, ...(gitlabSecret ? [] : ["GIT_TOKEN_ENCRYPTION_SECRET"])],
+      relayMissing,
       "GitLab OAuth integration is configured (operator-owned app).",
       "GitLab integration is hidden because its configuration is absent or incomplete.",
       "GitLab integration is served by the managed forge relay.",

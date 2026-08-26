@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { IssueStatus } from "@/lib/issue-constants";
@@ -59,6 +61,7 @@ interface PushTarget {
 
 /** The ticket that is pushed — the distant identity that he already carries. */
 export interface RemoteIssueIdentity {
+  id: string;
   projectId: string;
   provider: string | null;
   repoId: string | null;
@@ -77,40 +80,119 @@ export function scheduleRemoteStatusPush(params: {
 }): void {
   const { provider, repoId, number } = params.issue;
   if (!provider || !repoId || number == null) return;
-  const state = remoteStateForStatus(params.status);
-  afterOrNow(() =>
-    pushRemoteState({
-      projectId: params.issue.projectId,
-      provider: provider as RepoProviderId,
-      repoId,
-      number,
-      state,
-      actorId: params.actorId,
-    }),
-  );
+  enqueueRemoteStatusPush({ issueId: params.issue.id, actorId: params.actorId });
 }
 
-async function pushRemoteState(params: {
-  projectId: string;
-  provider: RepoProviderId;
-  repoId: string;
-  number: number;
-  state: RemoteState;
+interface QueuedRemotePush {
+  issueId: string;
   actorId: string;
-}): Promise<void> {
+}
+
+interface RemotePushQueueEntry {
+  latest: QueuedRemotePush | null;
+}
+
+const remotePushQueue = new Map<string, RemotePushQueueEntry>();
+
+function enqueueRemoteStatusPush(push: QueuedRemotePush): void {
+  const existing = remotePushQueue.get(push.issueId);
+  if (existing) {
+    existing.latest = push;
+    return;
+  }
+
+  const entry: RemotePushQueueEntry = { latest: push };
+  remotePushQueue.set(push.issueId, entry);
+  afterOrNow(async () => {
+    try {
+      while (entry.latest) {
+        const latest = entry.latest;
+        entry.latest = null;
+        await pushLatestRemoteState(latest);
+      }
+    } finally {
+      if (remotePushQueue.get(push.issueId) === entry) {
+        remotePushQueue.delete(push.issueId);
+      }
+    }
+  });
+}
+
+async function pushLatestRemoteState(params: QueuedRemotePush): Promise<void> {
   const service = getServiceClient();
-  const { data } = await service
+  const claimId = randomUUID();
+  let claimed = false;
+  for (let attempt = 0; attempt < 300; attempt += 1) {
+    const { data, error } = await service.rpc("claim_issue_remote_status_push", {
+      p_issue_id: params.issueId,
+      p_claim_id: claimId,
+    });
+    if (error) {
+      console.error("[issue-push] remote-status claim failed:", error.message);
+      return;
+    }
+    if (data === true) {
+      claimed = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (!claimed) {
+    console.warn(`[issue-push] remote-status claim timed out for issue ${params.issueId}`);
+    return;
+  }
+
+  try {
+    await pushLatestRemoteStateWithClaim(service, params);
+  } finally {
+    const { error } = await service.rpc("release_issue_remote_status_push", {
+      p_issue_id: params.issueId,
+      p_claim_id: claimId,
+    });
+    if (error) console.error("[issue-push] remote-status claim release failed:", error.message);
+  }
+}
+
+async function pushLatestRemoteStateWithClaim(
+  service: ReturnType<typeof getServiceClient>,
+  params: QueuedRemotePush,
+): Promise<void> {
+  const { data: issue, error: issueError } = await service
+    .from("issues")
+    .select("project_id, status, remote_provider, remote_repo_id, remote_number")
+    .eq("id", params.issueId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (issueError) {
+    console.error("[issue-push] current issue lookup failed:", issueError.message);
+    return;
+  }
+  if (
+    !issue ||
+    typeof issue.remote_provider !== "string" ||
+    typeof issue.remote_repo_id !== "string" ||
+    typeof issue.remote_number !== "number"
+  ) {
+    return;
+  }
+  const state = remoteStateForStatus(issue.status as IssueStatus);
+
+  const { data, error: linkError } = await service
     .from("project_git_links")
     .select(
       "provider, connection_id, installation_id, repo_full_name, external_repo_id, git_connections(source)",
     )
-    .eq("project_id", params.projectId)
-    .eq("provider", params.provider)
-    .eq("external_repo_id", params.repoId)
+    .eq("project_id", issue.project_id)
+    .eq("provider", issue.remote_provider)
+    .eq("external_repo_id", issue.remote_repo_id)
     // Cutting the sync cuts BOTH directions: the toggle is the only one
     // switch, and it would be incomprehensible if it only switches off one.
     .eq("issue_sync_enabled", true)
     .maybeSingle();
+  if (linkError) {
+    console.error("[issue-push] linked repository lookup failed:", linkError.message);
+    return;
+  }
   if (!data) return;
 
   // Embedded to-one relationship: object at runtime, cast via unknown.
@@ -137,21 +219,21 @@ async function pushRemoteState(params: {
   const token = await resolveWriteToken(target, params.actorId);
   if (!token) {
     console.warn(
-      `[issue-push] no writable token for project ${params.projectId} — skipped`,
+      `[issue-push] no writable token for project ${issue.project_id} — skipped`,
     );
     return;
   }
 
   try {
     if (target.provider === "github") {
-      await pushGithubState(token, target, params.number, params.state);
+      await pushGithubState(token, target, issue.remote_number, state);
     } else {
-      await pushGitlabState(token, target, params.number, params.state);
+      await pushGitlabState(token, target, issue.remote_number, state);
     }
   } catch (err) {
     console.error(
-      `[issue-push] ${target.provider} #${params.number} → ` +
-        `${params.state.open ? "open" : "closed"} failed:`,
+      `[issue-push] ${target.provider} #${issue.remote_number} → ` +
+        `${state.open ? "open" : "closed"} failed:`,
       (err as Error).message,
     );
   }
@@ -186,8 +268,11 @@ async function resolveWriteToken(
       // App than the installation (mixed setup). GitLab stays instance-side:
       // `getGitlabAccessToken` already routes the refresh grant by source.
       const forge = forgeProviderForConnection(target.connectionSource);
+      const repositoryId = Number(target.externalRepoId);
+      if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) return null;
       const { token } = await forge.getInstallationToken({
         installationId: target.installationId,
+        scope: { repositoryIds: [repositoryId] },
       });
       return token;
     }

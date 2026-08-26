@@ -72,7 +72,28 @@ export async function getProjectLink(
  * minting locally would fail on a relay-only instance (no local app key) and hit the
  * wrong App in a mixed setup.
  */
+const candidateRepoEnumerations = new Map<string, Promise<CandidateRepo[]>>();
+
 export async function listCandidateRepos(
+  connection: {
+    id: string;
+    provider: RepoProviderId;
+    installation_id: number | null;
+    source?: string | null;
+  },
+): Promise<CandidateRepo[]> {
+  const running = candidateRepoEnumerations.get(connection.id);
+  if (running) return running;
+  const enumeration = enumerateCandidateRepos(connection).finally(() => {
+    if (candidateRepoEnumerations.get(connection.id) === enumeration) {
+      candidateRepoEnumerations.delete(connection.id);
+    }
+  });
+  candidateRepoEnumerations.set(connection.id, enumeration);
+  return enumeration;
+}
+
+async function enumerateCandidateRepos(
   connection: {
     id: string;
     provider: RepoProviderId;

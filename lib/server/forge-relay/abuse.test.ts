@@ -207,7 +207,7 @@ describe("mint quota and payload constraints", () => {
     ]) {
       expect(parseInstallationTokenMintPayload(body).ok).toBe(false);
     }
-    // The three fixed profiles are accepted.
+    // Linked operations require a repository id.
     for (const profile of ["full", "repo-write", "repo-read"]) {
       expect(
         parseInstallationTokenMintPayload({
@@ -217,6 +217,21 @@ describe("mint quota and payload constraints", () => {
         }).ok,
       ).toBe(true);
     }
+    // Repository enumeration is the sole pre-link profile and carries no ids.
+    expect(
+      parseInstallationTokenMintPayload({
+        installationId: 4242,
+        repositoryIds: [],
+        profile: "repository-list",
+      }).ok,
+    ).toBe(true);
+    expect(
+      parseInstallationTokenMintPayload({
+        installationId: 4242,
+        repositoryIds: [9001],
+        profile: "repository-list",
+      }).ok,
+    ).toBe(false);
   });
 });
 
