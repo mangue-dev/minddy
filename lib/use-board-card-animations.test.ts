@@ -18,22 +18,33 @@ function columns(issue: Issue): BoardColumn[] {
   return [{ status, items: [issue] }];
 }
 
-function Harness({ boardColumns }: { boardColumns: BoardColumn[] }) {
+function Harness({
+  boardColumns,
+  cardLeft = 0,
+}: {
+  boardColumns: BoardColumn[];
+  cardLeft?: number;
+}) {
   const boardRef = useRef<HTMLDivElement>(null);
   useBoardCardAnimations(boardRef, boardColumns);
   return createElement(
     "div",
     { ref: boardRef, "data-board": true },
-    boardColumns.flatMap((column) =>
-      column.items.map((issue) =>
-        createElement(
-          "div",
-          {
-            key: issue.id,
-            "data-issue-id": issue.id,
-            "data-top": issue.position,
-          },
-          issue.title
+    createElement(
+      "div",
+      { "data-board-column-scroller": true },
+      boardColumns.flatMap((column) =>
+        column.items.map((issue) =>
+          createElement(
+            "div",
+            {
+              key: issue.id,
+              "data-issue-id": issue.id,
+              "data-left": cardLeft,
+              "data-top": issue.position,
+            },
+            issue.title
+          )
         )
       )
     )
@@ -65,15 +76,21 @@ describe("useBoardCardAnimations", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
       function (this: HTMLElement) {
         const top = Number(this.dataset.top ?? 0);
+        const left = Number(this.dataset.left ?? 0);
+        const isViewport =
+          this.hasAttribute("data-board") ||
+          this.hasAttribute("data-board-column-scroller");
+        const width = isViewport ? 600 : 100;
+        const height = isViewport ? 600 : 80;
         return {
-          x: 0,
+          x: left,
           y: top,
           top,
-          left: 0,
-          right: 100,
-          bottom: top + 80,
-          width: 100,
-          height: 80,
+          left,
+          right: left + width,
+          bottom: top + height,
+          width,
+          height,
           toJSON: () => ({}),
         } as DOMRect;
       }
@@ -131,5 +148,85 @@ describe("useBoardCardAnimations", () => {
     );
     expect(clone?.parentElement?.style.overflow).toBe("hidden");
     expect(clone?.parentElement?.style.zIndex).toBe("20");
+  });
+
+  it("starts an off-screen origin at the closest visible edge", () => {
+    const original = {
+      id: "issue",
+      title: "Original",
+      status: "todo",
+      position: -10_000,
+    } as Issue;
+    act(() =>
+      root.render(createElement(Harness, { boardColumns: columns(original) }))
+    );
+
+    const moved = { ...original, position: 20 };
+    act(() =>
+      root.render(createElement(Harness, { boardColumns: columns(moved) }))
+    );
+
+    const keyframes = vi.mocked(HTMLElement.prototype.animate).mock
+      .calls[0][0] as Keyframe[];
+    expect(keyframes[0]).toMatchObject({
+      opacity: "0",
+      transform: "translate3d(0px, -20px, 0)",
+    });
+    expect(keyframes[1]).toMatchObject({ opacity: "1" });
+  });
+
+  it("ends an off-screen destination at the closest horizontal edge", () => {
+    const original = {
+      id: "issue",
+      title: "Original",
+      status: "todo",
+      position: 20,
+    } as Issue;
+    act(() =>
+      root.render(
+        createElement(Harness, {
+          boardColumns: columns(original),
+          cardLeft: 100,
+        })
+      )
+    );
+
+    const moved = { ...original, title: "Moved" };
+    act(() =>
+      root.render(
+        createElement(Harness, {
+          boardColumns: columns(moved),
+          cardLeft: 10_000,
+        })
+      )
+    );
+
+    const keyframes = vi.mocked(HTMLElement.prototype.animate).mock
+      .calls[0][0] as Keyframe[];
+    expect(keyframes[0]).toMatchObject({
+      opacity: "1",
+      transform: "translate3d(-400px, 0px, 0)",
+    });
+    expect(keyframes[1]).toMatchObject({ opacity: "0" });
+  });
+
+  it("does not animate when both endpoints are off-screen", () => {
+    const original = {
+      id: "issue",
+      title: "Original",
+      status: "todo",
+      position: -10_000,
+    } as Issue;
+    act(() =>
+      root.render(createElement(Harness, { boardColumns: columns(original) }))
+    );
+
+    const moved = { ...original, position: 10_000 };
+    act(() =>
+      root.render(createElement(Harness, { boardColumns: columns(moved) }))
+    );
+
+    expect(HTMLElement.prototype.animate).not.toHaveBeenCalled();
+    expect(document.body.querySelector("[aria-hidden='true']")).toBeNull();
   });
 });

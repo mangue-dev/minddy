@@ -54,6 +54,16 @@ export interface ChangelogEntry {
 
 /** Newest to oldest — this is the display order AND the order of the feed. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
+  { id: "open-source", date: "2026-08-26" },
+  { id: "desktop-app", date: "2026-08-26" },
+  { id: "activity-breakdowns", date: "2026-08-25" },
+  { id: "custom-avatar", date: "2026-08-25" },
+  { id: "feedback-page-tabs", date: "2026-08-22" },
+  { id: "account-transfer", date: "2026-08-20" },
+  { id: "own-ai-everywhere", date: "2026-08-20" },
+  { id: "github-dependencies", date: "2026-08-19" },
+  { id: "live-page-edits", date: "2026-08-19" },
+  { id: "local-agent", date: "2026-08-15" },
   { id: "pages", date: "2026-08-11" },
   { id: "smart-fill", date: "2026-08-10" },
   { id: "board-multi-select", date: "2026-08-09" },

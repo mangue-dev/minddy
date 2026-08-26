@@ -10,12 +10,21 @@ import {
 import type { BoardColumn } from "@/lib/board-columns";
 
 const CARD_SELECTOR = "[data-issue-id]";
+const COLUMN_SCROLLER_SELECTOR = "[data-board-column-scroller]";
 const MOVE_DURATION_MS = 180;
 const SCROLL_IDLE_MS = 100;
 const SKIP_WINDOW_MS = 500;
 
 type CardSnapshot = {
   rect: DOMRect;
+  clip: CardClip;
+};
+
+type CardClip = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
 };
 
 type CurrentCard = CardSnapshot & { node: HTMLElement };
@@ -25,14 +34,37 @@ type RunningAnimation = {
   cleanup: () => void;
 };
 
+function cardClip(
+  node: HTMLElement,
+  boardRect: DOMRect,
+  columnRects: Map<HTMLElement, DOMRect>
+): CardClip {
+  const columnScroller = node.closest<HTMLElement>(COLUMN_SCROLLER_SELECTOR);
+  let columnRect = columnScroller ? columnRects.get(columnScroller) : undefined;
+  if (columnScroller && !columnRect) {
+    columnRect = columnScroller.getBoundingClientRect();
+    columnRects.set(columnScroller, columnRect);
+  }
+  return {
+    left: boardRect.left,
+    right: boardRect.right,
+    top: Math.max(boardRect.top, columnRect?.top ?? boardRect.top),
+    bottom: Math.min(boardRect.bottom, columnRect?.bottom ?? boardRect.bottom),
+  };
+}
+
 function readCards(root: HTMLElement | null) {
   const cards = new Map<string, CurrentCard>();
+  if (!root) return cards;
+  const boardRect = root.getBoundingClientRect();
+  const columnRects = new Map<HTMLElement, DOMRect>();
   for (const node of root?.querySelectorAll<HTMLElement>(CARD_SELECTOR) ?? []) {
     const id = node.dataset.issueId;
     if (!id) continue;
     cards.set(id, {
       node,
       rect: node.getBoundingClientRect(),
+      clip: cardClip(node, boardRect, columnRects),
     });
   }
   return cards;
@@ -40,17 +72,30 @@ function readCards(root: HTMLElement | null) {
 
 function snapshots(cards: Map<string, CurrentCard>) {
   const result = new Map<string, CardSnapshot>();
-  for (const [id, { rect }] of cards) result.set(id, { rect });
+  for (const [id, { rect, clip }] of cards) result.set(id, { rect, clip });
   return result;
 }
 
-function intersectsViewport(rect: DOMRect, viewport: DOMRect) {
+function intersectsClip(rect: DOMRect, clip: CardClip) {
   return (
-    rect.right > viewport.left &&
-    rect.left < viewport.right &&
-    rect.bottom > viewport.top &&
-    rect.top < viewport.bottom
+    rect.right > clip.left &&
+    rect.left < clip.right &&
+    rect.bottom > clip.top &&
+    rect.top < clip.bottom
   );
+}
+
+function clampToClip(rect: DOMRect, clip: CardClip) {
+  return {
+    left: Math.min(
+      Math.max(rect.left, clip.left),
+      Math.max(clip.left, clip.right - rect.width)
+    ),
+    top: Math.min(
+      Math.max(rect.top, clip.top),
+      Math.max(clip.top, clip.bottom - rect.height)
+    ),
+  };
 }
 
 function removeDuplicateIds(root: HTMLElement) {
@@ -149,6 +194,8 @@ export function useBoardCardAnimations(
         target: HTMLElement;
         x: number;
         y: number;
+        fromOpacity: string;
+        toOpacity: string;
         previousVisibility: string;
       }> = [];
 
@@ -156,12 +203,27 @@ export function useBoardCardAnimations(
         if ((skippedOnce.current.get(id) ?? 0) >= now) continue;
         const from = previous.get(id);
         if (!from) continue;
-        const x = from.rect.left - to.rect.left;
-        const y = from.rect.top - to.rect.top;
-        if (Math.abs(x) < 0.5 && Math.abs(y) < 0.5) continue;
+        const fromVisible = intersectsClip(from.rect, from.clip);
+        const toVisible = intersectsClip(to.rect, to.clip);
+        if (!fromVisible && !toVisible) continue;
+
+        // Never animate from the real coordinates of an off-screen card. A
+        // long column or a distant horizontal status can put that rectangle
+        // thousands of pixels away, forcing the compositor to allocate an
+        // enormous transient surface. Enter or leave at the closest visible
+        // edge instead, with opacity hiding the artificial endpoint.
+        const fromPoint = fromVisible
+          ? { left: from.rect.left, top: from.rect.top }
+          : clampToClip(from.rect, from.clip);
+        const toPoint = toVisible
+          ? { left: to.rect.left, top: to.rect.top }
+          : clampToClip(to.rect, to.clip);
+        const x = fromPoint.left - toPoint.left;
+        const y = fromPoint.top - toPoint.top;
         if (
-          !intersectsViewport(from.rect, viewport) &&
-          !intersectsViewport(to.rect, viewport)
+          Math.abs(x) < 0.5 &&
+          Math.abs(y) < 0.5 &&
+          fromVisible === toVisible
         ) {
           continue;
         }
@@ -178,8 +240,8 @@ export function useBoardCardAnimations(
         clone.setAttribute("aria-hidden", "true");
         Object.assign(clone.style, {
           position: "absolute",
-          left: `${to.rect.left - viewport.left}px`,
-          top: `${to.rect.top - viewport.top}px`,
+          left: `${toPoint.left - viewport.left}px`,
+          top: `${toPoint.top - viewport.top}px`,
           width: `${to.rect.width}px`,
           height: `${to.rect.height}px`,
           margin: "0",
@@ -199,6 +261,8 @@ export function useBoardCardAnimations(
           target: to.node,
           x,
           y,
+          fromOpacity: fromVisible ? "1" : "0",
+          toOpacity: toVisible ? "1" : "0",
           previousVisibility,
         });
       }
@@ -212,8 +276,11 @@ export function useBoardCardAnimations(
       for (const move of moves) {
         const animation = move.clone.animate(
           [
-            { transform: `translate3d(${move.x}px, ${move.y}px, 0)` },
-            { transform: "translate3d(0, 0, 0)" },
+            {
+              opacity: move.fromOpacity,
+              transform: `translate3d(${move.x}px, ${move.y}px, 0)`,
+            },
+            { opacity: move.toOpacity, transform: "translate3d(0, 0, 0)" },
           ],
           {
             duration: MOVE_DURATION_MS,

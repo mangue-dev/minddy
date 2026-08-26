@@ -199,6 +199,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
       >
         <div
           ref={setScrollRef}
+          data-board-column-scroller
           onScroll={scrollProps.onScroll}
           className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2"
         >
