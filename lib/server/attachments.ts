@@ -662,7 +662,9 @@ export async function removeStorageObjects(
   service: SupabaseClient,
   paths: (string | null | undefined)[]
 ): Promise<void> {
-  const cleaned = paths.filter((p): p is string => typeof p === "string" && p !== "");
+  const cleaned = [
+    ...new Set(paths.filter((p): p is string => typeof p === "string" && p !== "")),
+  ];
   if (cleaned.length === 0) return;
   const orphans = await unreferencedPaths(service, cleaned);
   if (orphans.length === 0) return;
@@ -674,6 +676,23 @@ export async function removeStorageObjects(
   } catch (e) {
     console.error("[attachments] storage cleanup failed:", (e as Error).message);
   }
+}
+
+/** Remove pre-uploaded file objects whose resource rows could not be retained.
+ * Shared-reference checks inside removeStorageObjects make this safe when a
+ * descriptor points at an object that another live row still owns. */
+export async function removeUnretainedResources(
+  service: SupabaseClient,
+  resources: ResourceInput[],
+): Promise<void> {
+  await removeStorageObjects(
+    service,
+    resources.map((resource) =>
+      isLinkResource(resource) || isPageResource(resource)
+        ? null
+        : resource.storage_path,
+    ),
+  );
 }
 
 /** The grace period for an orphaned object in the `attachments` bucket (MIN-348).

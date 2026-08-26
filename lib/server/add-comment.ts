@@ -5,6 +5,7 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import {
   insertAttachments,
   parseResourcesInput,
+  removeUnretainedResources,
 } from "@/lib/server/attachments";
 import {
   insertNotifications,
@@ -119,6 +120,7 @@ export async function addCommentToIssue({
       .eq("id", parentId)
       .maybeSingle();
     if (!parent || parent.issue_id !== issueId) {
+      await removeUnretainedResources(service, parsedAttachments);
       return { ok: false, status: 404, errorKey: "commentNotFound" };
     }
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
@@ -149,6 +151,7 @@ export async function addCommentToIssue({
 
   if (error) {
     console.error("[add-comment] create failed:", error.message);
+    await removeUnretainedResources(service, parsedAttachments);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
@@ -165,6 +168,7 @@ export async function addCommentToIssue({
     });
   } catch (e) {
     console.error("[add-comment] attachments failed:", (e as Error).message);
+    await removeUnretainedResources(service, parsedAttachments);
   }
 
   // Notifications: @mentions + "comment on an issue I own/am assigned" +
@@ -281,6 +285,7 @@ export async function addCommentToObjective({
       .eq("id", parentId)
       .maybeSingle();
     if (!parent || parent.objective_id !== objectiveId) {
+      await removeUnretainedResources(service, parsedAttachments);
       return { ok: false, status: 404, errorKey: "commentNotFound" };
     }
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
@@ -311,6 +316,7 @@ export async function addCommentToObjective({
 
   if (error) {
     console.error("[add-comment] objective create failed:", error.message);
+    await removeUnretainedResources(service, parsedAttachments);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
@@ -325,6 +331,7 @@ export async function addCommentToObjective({
     });
   } catch (e) {
     console.error("[add-comment] objective attachments failed:", (e as Error).message);
+    await removeUnretainedResources(service, parsedAttachments);
   }
 
   // Notifications: @mentions + the objective's lead + the thread authors —
@@ -463,6 +470,7 @@ export async function addCommentToFeedbackPost({
       .eq("id", parentId)
       .maybeSingle();
     if (!parent || parent.feedback_post_id !== postId) {
+      await removeUnretainedResources(service, parsedAttachments);
       return { ok: false, status: 404, errorKey: "commentNotFound" };
     }
     effectiveVisibility = isCommentVisibility(parent.visibility)
@@ -497,6 +505,7 @@ export async function addCommentToFeedbackPost({
 
   if (error) {
     console.error("[add-comment] feedback create failed:", error.message);
+    await removeUnretainedResources(service, parsedAttachments);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
@@ -511,6 +520,7 @@ export async function addCommentToFeedbackPost({
     });
   } catch (e) {
     console.error("[add-comment] feedback attachments failed:", (e as Error).message);
+    await removeUnretainedResources(service, parsedAttachments);
   }
 
   // Notifications: @mentions + the thread authors — never the requester

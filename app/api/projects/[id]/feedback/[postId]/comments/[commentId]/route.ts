@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { removeStorageObjects } from "@/lib/server/attachments";
+import { deleteCommentThreadAtomic } from "@/lib/server/comment-lifecycle";
 import {
   getProjectFeedbackPost,
   requireProjectMember,
@@ -95,30 +96,17 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
   }
 
-  // Snapshot storage paths first — the root's replies cascade with it. A
-  // LINK resource has no object (`storage_path` null, MIN-184): discard it
-  // here, otherwise the list would carry a null which `storage.remove()` refuses EN
-  // BLOCK — just one link on the thread, and no more files would be deleted.
-  const { data: replies } = await service
-    .from("comments")
-    .select("id")
-    .eq("parent_id", commentId);
-  const commentIds = [commentId, ...(replies ?? []).map((r) => r.id as string)];
-  const { data: attachmentRows } = await service
-    .from("attachments")
-    .select("storage_path")
-    .in("comment_id", commentIds)
-    .not("storage_path", "is", null);
-
-  const { error } = await service.from("comments").delete().eq("id", commentId);
-  if (error) {
-    console.error("[api/feedback/comments/:id] delete failed:", error.message);
+  let deleted;
+  try {
+    deleted = await deleteCommentThreadAtomic(service, commentId);
+  } catch (error) {
+    console.error("[api/feedback/comments/:id] delete failed:", (error as Error).message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
+  if (deleted.status === "not_found") {
+    return NextResponse.json({ error: t("commentNotFound") }, { status: 404 });
+  }
 
-  await removeStorageObjects(
-    service,
-    (attachmentRows ?? []).map((a) => a.storage_path as string)
-  );
+  await removeStorageObjects(service, deleted.storagePaths);
   return NextResponse.json({ ok: true });
 }

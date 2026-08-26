@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -54,7 +54,7 @@ test("bootstrap always generates the forge secrets; optional secrets follow capa
 
 test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {
   const migrations = listMigrations();
-  assert.equal(migrations.length, 15);
+  assert.equal(migrations.length, 33);
   assert.deepEqual([...migrations].sort(), migrations);
   assert.equal(migrations[0], "20270106090000_baseline.sql");
   assert.equal(migrations[1], "20270106091000_initial_data.sql");
@@ -73,6 +73,7 @@ test("migrations are sorted, include the vector extension, and repair Realtime p
   );
   assert.equal(migrations[13], "20270106180000_page_viewers.sql");
   assert.equal(migrations[14], "20270106190000_feedback_board_page_tabs.sql");
+  assert.equal(migrations.at(-1), "20270106370000_atomic_comment_attachment_cleanup.sql");
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 
@@ -94,6 +95,38 @@ test("the environment file is completed without replacing existing values", () =
     assert.equal(parsed.get("CRON_SECRET"), "existing-secret");
     assert.equal(parsed.get("GIT_STATE_SECRET"), "new-secret");
     assert.equal(parsed.get("MINDDY_PUBLIC_SUPABASE_URL"), "http://127.0.0.1:54321");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("adding secrets repairs an unsafe existing environment-file mode", () => {
+  const directory = mkdtempSync(join(tmpdir(), "minddy-bootstrap-mode-"));
+  const file = join(directory, ".env.local");
+  try {
+    writeFileSync(file, "CRON_SECRET=existing-secret\n", { mode: 0o644 });
+    // The process umask may have made creation stricter; force the unsafe mode
+    // whose repair this regression exercises.
+    chmodSync(file, 0o644);
+
+    assert.deepEqual(appendMissingEnv(file, { GIT_STATE_SECRET: "new-secret" }), [
+      "GIT_STATE_SECRET",
+    ]);
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("a no-op completion does not change an existing environment-file mode", () => {
+  const directory = mkdtempSync(join(tmpdir(), "minddy-bootstrap-noop-mode-"));
+  const file = join(directory, ".env.local");
+  try {
+    writeFileSync(file, "CRON_SECRET=existing-secret\n", { mode: 0o644 });
+    chmodSync(file, 0o644);
+
+    assert.deepEqual(appendMissingEnv(file, { CRON_SECRET: "must-not-replace" }), []);
+    assert.equal(statSync(file).mode & 0o777, 0o644);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
