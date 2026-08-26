@@ -65,8 +65,11 @@ is enough to keep things moving: it is safe and speaks to nothing.
 
 ## CI is the pipeline
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) plays, on each pull
-request and each push on `main`/`production`:
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs for every pull request
+and every push to `main`. Short-lived work branches must target `main`; there is
+no `develop` branch or long-running release branch. The protected
+`Promote production` workflow is the only writer to `production`, which is an
+automation-only pointer to the approved and deployed `main` SHA:
 
 - `pnpm run check:public-repo`
 - `pnpm run lint`
@@ -87,13 +90,15 @@ should not run PR code.
 modified perimeters, automatically offers public core, web Cloud and macOS,
 or allows “all” and a manual choice. It orchestrates repeatable workflows
 described in [docs/releases.md](docs/releases.md), awaits approval of the
-promotion and the verdict of each perimeter. Only the protected workflow advances
-`production` ; only its SHA can receive a public tag. The command does not read
-never `.env`, and the above CI remains the common versioned pipeline.
+promotion and the verdict of each perimeter. Only the protected workflow
+fast-forwards `production`; only its successfully deployed SHA can receive a
+public tag. The command never reads `.env`, and the above CI remains the common
+versioned pipeline.
 
 ## Prepare a pull request
 
-1. Start from an up-to-date branch and keep a single goal per pull request.
+1. Create a short-lived branch from an up-to-date `main`, target `main` in the
+   pull request, and keep a single goal per pull request.
 2. Add or adapt tests, documentation, and language catalogs.
 3. Run `pnpm lint`, `pnpm typecheck` and `pnpm test` in an environment
    without secrets.

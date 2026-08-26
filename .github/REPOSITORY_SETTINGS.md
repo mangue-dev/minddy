@@ -1,64 +1,101 @@
-# Public repository GitHub settings
+# GitHub and Vercel repository settings
 
-This file is the reproducible reference for non-versionable settings. He doesn't
-does not replace GitHub controls: after each modification, a maintainer
-Check the Settings screen and update the date below.
+This file is the reproducible reference for settings that cannot be versioned.
+After changing either provider, a maintainer must verify the corresponding API
+or settings page and update the date and status below.
 
-Last checked: August 18, 2026, repository still private on GitHub plan
-free. Industry protections and environmental approvals are
-voluntarily deferred to MIN-388 until GitHub makes them applicable.
-The workflows already describe the target path; no publication should be
-announced before the settings below have been activated and tested.
+Last checked: August 26, 2026.
 
-## Settings already applicable
+## Delivery topology
 
-- Issues and Discussions activated; automatic deletion of branches after
-  merger.
-- **Squash merge only**; merge commits and rebase merge disabled.
-- Actions limited to GitHub actions and `pnpm/action-setup@*`, with token in
-read-only in pull request workflows.
-- Dependency graph, Dependabot alerts and Dependabot security updates enabled.
-- Labels: `bug`, `enhancement`, `documentation`, `dependencies`, `security`,
-  `needs reproduction`, `breaking change`, `status: blocked`, `good first
-issue` and `help wanted`.
+The required path is:
 
-## To be applied when publishing (MIN-388)
+`feature/*` → pull request → `main` → `Promote production` → `production` →
+Vercel GitHub Deployment `Production` → optional public `vX.Y.Z` tag
 
-1. Enable **Private vulnerability reporting**, **Secret scanning** and **Push
-protection** in Security → Code security and analysis.
-2. In Actions → General, choose **Require approval for all external
-contributors**. Never use `pull_request_target` to run the
-code of a PR.
-3. Protect `main`, administrators included:
-- mandatory pull request, owner code approval and review;
-- invalidate obsolete approvals, require approval from last push
-by another person and resolve all conversations;
-- prohibit deletion, force-push and circumvention;
-- require a linear history;
-- require `CI / Tests & typecheck`, `CI / Dependency audit` and
-`DCO / Developer Certificate of Origin` updated before merging.
-4. Protect `production` against deletion, force-push and human writing.
-Keep the linear history and require the two SHA CI checks; TEA
-workflow `Promote production` is the only direct write exception.
-5. Create two GitHub environments:
-- `cloud-production`, with approvers required, only allowed from
-`main`, and the `Promote production` workflow as the only write path
-to `production`. The approver opens the journal reference produced with
-     [`docs/security-release-checklist.md`](../docs/security-release-checklist.md),
-checks exceptions/residual risks and pentest decision before
-to authorize the job;
-- `public-release`, with approvers required, only allowed from
-`production` and the protected tags `v*`, containing Apple secrets and
-desktop flows described in `docs/releases.md`.
-6. Verify that Vercel integration only follows `production` for the project
-public and creates a GitHub Deployment named `Production` with its immutable URL.
-7. Open a test pull request from a fork without trust history:
-verify that the workflow is awaiting approval, that no secrets are exposed,
-that a commit without sign-off fails and a maintainer cannot merge
-until each rule is satisfied.
-8. Check the form links, the **Report a vulnerability** button, the
-Discussion categories and the creation of the first Dependabot PRs.
+- `main` is the default branch and the only pull request target. CI and DCO must
+  pass before a pull request can be squash-merged.
+- `production` is not a development branch. It must reject human pushes,
+  deletion, force-pushes, and history rewrites. The `Promote production`
+  workflow is its only writer and only fast-forwards it to a green `main` SHA
+  after approval in the `cloud-production` environment.
+- `Public core release` runs from `production` and can tag only its exact SHA.
+- Vercel treats only `production` as a production branch. `main` feeds
+  `preview.minddy.app`; other work branches receive disposable previews.
 
-An emergency may require a temporary exemption. It is limited to
-primary maintainer, documented in an issue or safety notice as soon as the
-privacy permits, then the rules are reactivated immediately.
+## Verified live settings
+
+The following settings were verified through the GitHub and Vercel APIs on the
+date above:
+
+- GitHub default branch: `main`.
+- GitHub merge policy: squash merge enabled; merge commits and rebase merges
+  disabled; merged branches are deleted automatically.
+- GitHub Actions: enabled and restricted to selected actions.
+- GitHub environments exist with the exact names `cloud-production`,
+  `public-release`, `Preview`, and `Production`.
+- Vercel project `mangue-dev/minddy` uses `production` as its sole production
+  branch.
+- `www.minddy.app` points to a successful production deployment whose Git ref
+  is `production`.
+- `preview.minddy.app` points to a preview deployment whose Git ref is `main`.
+- Vercel creates GitHub Deployments named exactly `Production` and `Preview`.
+  The promotion workflow polls the case-sensitive `Production` name.
+- `VERCEL_DEEP_CLONE=1` is configured for both preview and production builds.
+
+## Current GitHub plan prerequisite
+
+The repository is currently private under a user-owned GitHub account without
+GitHub Pro. GitHub returns HTTP 403 for both branch protection and repository
+rulesets in this configuration. Environment protection rules also have no
+required reviewers. Therefore, the branch and approval gates below are the
+required target state but are **not yet enforceable**.
+
+Do not claim the protected promotion path is active until the repository is
+made public or the account is upgraded, the controls below are configured, and
+the verification scenario passes. Changing repository visibility is a separate
+owner decision; this runbook does not authorize it.
+
+## Required GitHub controls once available
+
+1. Protect `main`, including administrators:
+   - require a pull request and one Code Owner approval;
+   - dismiss stale approvals, require approval of the latest push by someone
+     other than its author, and require all conversations to be resolved;
+   - require a linear history and prohibit deletion, force-push, and bypass;
+   - require current `CI / Tests & typecheck`, `CI / Dependency audit`, and
+     `DCO / Developer Certificate of Origin` checks before merging.
+2. Protect `production`, including administrators:
+   - prohibit pull requests, direct human pushes, deletion, and force-push;
+   - require a linear history;
+   - grant the narrow write exception needed by `Promote production` only.
+3. Protect the `cloud-production` environment:
+   - require maintainer approval and disallow administrator bypass;
+   - allow deployments only from `main`;
+   - review the stable security-report reference, residual risks, and pentest
+     decision before approving the workflow.
+4. Protect the `public-release` environment:
+   - require maintainer approval and disallow administrator bypass;
+   - allow deployments only from `production` and protected `v*` tags;
+   - keep publication credentials only in this environment.
+5. In Actions → General, require approval for all external contributors. Never
+   use `pull_request_target` to execute pull request code.
+6. Enable private vulnerability reporting, secret scanning, and push
+   protection when the repository plan or public visibility supports them.
+
+## Verification after enabling the controls
+
+1. Open a temporary pull request from a short-lived branch into `main`.
+2. Confirm that an unsigned commit fails DCO and that merging stays blocked
+   until CI, DCO, review, and conversation requirements pass.
+3. Confirm that direct and force pushes to `production` fail for a maintainer.
+4. Dispatch `Promote production` for a selected green `main` SHA. Confirm that
+   approval is required, `production` advances by fast-forward to that exact
+   SHA, and the workflow observes a successful GitHub Deployment named
+   `Production` for the same SHA.
+5. Confirm that `preview.minddy.app` still follows `main` and `www.minddy.app`
+   follows `production`.
+
+Any emergency exemption must be temporary, limited to the primary maintainer,
+documented in an issue or security notice as soon as confidentiality permits,
+and removed immediately after the incident.

@@ -108,19 +108,26 @@ pnpm desktop:dev  # run the optional desktop shell
 
 ## Architecture and deployment
 
+Development follows a trunk-based branch contract: short-lived work branches
+merge by pull request into `main`, the integration branch and preview candidate.
+After CI and explicit production approval, automation fast-forwards
+`production` to the selected `main` SHA. There is no long-lived `develop` or
+release branch, and no human writes directly to `production`.
+
 - **Web app:** Next.js App Router, React, Tailwind CSS, and `mangue-ui`.
 - **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
 - **Agent integration:** OAuth 2.1 MCP endpoint and an optional Vercel Sandbox
   code agent.
 - **Deployment:** `pnpm deploy` is the interactive maintainer entry point. It
   detects whether to release the public core, deploy the Minddy Cloud web app,
-and publish desktop applications for macOS, Linux, and Windows, with automatic, all,
-custom, and Windows-only modes. The Windows-only mode reuses an existing core
-release and avoids starting macOS or Linux runners. The assistant waits for CI, requests an approved fast-forward from
-  `main` to `production`, verifies the Vercel deployment, and only tags that
-  deployed SHA. Builds and production secrets never come from the maintainer's
-  machine. Self-hosters should adapt its `production`/Vercel conventions to
-  their own hosting.
+  and publish desktop applications for macOS, Linux, and Windows, with
+  automatic, all, custom, and Windows-only modes. The Windows-only mode reuses
+  an existing core release and avoids starting macOS or Linux runners. The
+  assistant waits for CI, requests an approved fast-forward from
+  `main` to `production`, verifies the Vercel Production deployment, and only
+  tags that deployed SHA. Builds and production secrets never come from the
+  maintainer's machine. Self-hosters should adapt its `production`/Vercel
+  conventions to their own hosting.
 
 Public releases are distinct from deployments. Their SemVer/tag policy,
 artifacts, checksums, migrations, CI provenance, desktop distribution, and

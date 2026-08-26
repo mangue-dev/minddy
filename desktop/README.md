@@ -83,8 +83,12 @@ When minddy Cloud is selected, the shell loads one of two cloud origins:
 
 | Channel | Origin | What it is |
 | --- | --- | --- |
-| `stable` | `www.minddy.app` | production — the defect |
-| `preview` | `preview.minddy.app` | the last commit of `main`, before promotion |
+| `stable` | `www.minddy.app` | the Vercel Production deployment for the SHA referenced by `production` |
+| `preview` | `preview.minddy.app` | the latest `main` preview candidate, before production approval and promotion |
+
+Short-lived work branches can have disposable preview deployments, but neither
+desktop cloud channel follows them. The preview channel follows `main`; the
+stable channel follows only the automation-managed `production` pointer.
 
 **Both serve the same Supabase project**: same accounts, same projects,
 same tickets. Switching doesn't duplicate anything. The only thing that doesn't follow is the

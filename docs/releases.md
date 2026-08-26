@@ -1,4 +1,4 @@
-# Releases publiques
+# Public releases
 
 This document is the release contract for minddy's **public heart**.
 `npm run deploy` is the single entry for the maintainer: his assistant chooses
@@ -35,11 +35,27 @@ in the GitHub run of the promoted SHA.
 | Minddy Cloud | SHA Git + immutable identifier of the Vercel deployment | workflow `Promote production`, after green CI and approval | Same SHA on `main` and `production`, URL and status of GitHub Deployment Vercel |
 | Marketing website | SHA Git + deployment identifier | site hosting pipeline | deployment ; no bump or tag from the heart if only the marketing content changes |
 
-The deposit remains simple: the contributions converge on `main`, the branches
-work goes through pull request, and `production` only denotes what
-serves Minddy Cloud. There is no long-running release branch. A
-patch of an old major part exceptionally from a branch
-`release/X.x`, then receives a normal SemVer tag.
+## Branch contract
+
+The delivery flow is deliberately short:
+
+`feature/*` → pull request → `main` → approved fast-forward → `production` →
+Vercel Production deployment → `vX.Y.Z`
+
+- `main` is the default integration branch, the target of pull requests, and
+  the candidate for the Minddy Cloud preview channel. It may contain changes
+  that have passed CI but have not yet been approved or deployed to production.
+- `production` is an automation-only pointer to the exact SHA currently served
+  by Minddy Cloud. Humans do not commit or merge into it. The protected
+  `Promote production` workflow is its only writer and may only fast-forward it
+  from a green `main` SHA after `cloud-production` approval.
+- A public `vX.Y.Z` tag can only be created from the promoted `production` SHA
+  after Vercel has reported a successful GitHub Deployment named `Production`.
+
+There is no `develop` branch and no long-running release branch. Work stays on
+short-lived branches and converges on `main` through pull requests. A patch for
+an older major version may exceptionally use a temporary `release/X.x` branch,
+then receives a normal SemVer tag.
 
 ## Versioning and release notes
 
@@ -59,7 +75,7 @@ changes remain in their respective journals.
 
 ## The single order
 
-Depuis un `main` propre :
+From a clean `main` checkout:
 
 ```bash
 npm run deploy
@@ -196,36 +212,37 @@ the incident.
 
 An emergency follows the same simple path as any Cloud patch:
 
-1. create the correction from the `main` head, with non-regression test;
-2. commit the correction to `main`, then run `npm run deploy`;
-3. check the SHA of `production` and the associated Vercel deployment.
+1. create a short-lived hotfix branch from the current `main` head and add a
+   regression test;
+2. merge it into `main` through the normal reviewed pull request and green CI;
+3. run `npm run deploy`, approve the fast-forward, and verify that `production`
+   and the Vercel Production deployment both use the selected `main` SHA.
 
-Never correct only `production`, even temporarily: the next
-fast-forward would lose the fix and make the served state impossible to
-reproduce from `main`.
+Never patch `production` directly, even temporarily. It is a deployed-SHA
+pointer, not a development branch; a direct change would break the guarantee
+that every served commit was reviewed and tested on `main`.
 
 ### Rollback Cloud without rewriting
 
-Find the `STABLE_SHA` in the last successful Vercel deployment. Don't
-force `production` to this old commit. Restore your tree on `main`
-current, then produce a **new** rollback commit:
+Find `STABLE_SHA` in the last successful Vercel deployment. Do not move
+`production` backward or force-push it. From the current `main`, create a
+short-lived rollback branch and produce a **new** rollback commit:
 
 ```bash
 git fetch origin main
-git switch main
-git merge --ff-only origin/main
+git switch -c rollback/cloud-$STABLE_SHA origin/main
 git restore --source "$STABLE_SHA" --staged --worktree -- .
 git commit -s -m "revert(cloud): restore $STABLE_SHA"
-npm run deploy -- custom
 ```
 
 Before deployment, check compatibility with migrations already applied:
 they remain forward-only and are never canceled by this restoration of
-code. In the menu, select only the web Cloud. The new commit is
-pushed to `main`, tested, then `production` points to this same SHA by
-fast-forward. Its application tree restores the stable version without rewriting
-the history. The background correction then starts from this restored `main` and receives
-a new deployment; she never lives only on `production`.
+code. Merge the rollback through a reviewed pull request, then run
+`npm run deploy -- custom` from the updated `main` and select only Minddy Cloud.
+The new commit is tested on `main`, then `production` fast-forwards to the same
+SHA. Its application tree restores the stable version without rewriting
+history. Any follow-up fix also starts from `main`; it never exists only on
+`production`.
 
 ## Public desktop applications
 

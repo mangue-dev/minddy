@@ -25,7 +25,8 @@ function git(args) {
  * number of times the code has moved since the last public release.
  *
  * The result separates preview and production on its own, without knowing anything about
- * the environment: the public workflow tags `v<version>` to `main`. A
+ * the environment: the public workflow tags `v<version>` on the promoted
+ * `production` SHA. A
  * Cloud deployment can be placed on this tag (→ 0) or on more recent commits (→ 1, 2, 3…). It's the history of the built commit that responds, not
  * `VERCEL_ENV`.
  *

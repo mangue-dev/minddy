@@ -159,6 +159,38 @@ test("daily CI does not repeat an already verified production SHA", () => {
   assert.match(workflow, /^      - desktop\/released\.json$/m);
 });
 
+test("promotion only fast-forwards a green main SHA and waits for Vercel Production", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/promote-production.yml", import.meta.url),
+    "utf8",
+  );
+
+  const validateMainRef = workflow.indexOf('test "$GITHUB_REF" = "refs/heads/main"');
+  const validateMainSha = workflow.indexOf(
+    'test "$(git rev-parse origin/main)" = "$TARGET_SHA"',
+  );
+  const validateFastForward = workflow.indexOf(
+    'git merge-base --is-ancestor origin/production "$TARGET_SHA"',
+  );
+  const pushProduction = workflow.indexOf(
+    'git push origin "$TARGET_SHA:refs/heads/production"',
+  );
+  const verifyRemote = workflow.indexOf(
+    'git ls-remote origin refs/heads/production | cut -f1',
+  );
+  const findVercelDeployment = workflow.indexOf(
+    'deployments?sha=$TARGET_SHA&environment=Production&per_page=10',
+  );
+
+  assert.ok(validateMainRef !== -1, "promotion must be dispatched from main");
+  assert.ok(validateMainRef < validateMainSha, "the workflow validates the main candidate");
+  assert.ok(validateMainSha < validateFastForward, "the exact main SHA is checked first");
+  assert.ok(validateFastForward < pushProduction, "non-fast-forward promotion is rejected");
+  assert.ok(pushProduction < verifyRemote, "the remote production SHA is verified after push");
+  assert.ok(verifyRemote < findVercelDeployment, "deployment verification follows promotion");
+  assert.match(workflow, /case "\$state" in[\s\S]*success\) break/);
+});
+
 test("the public release authenticates every protected fetch", () => {
   const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
   const authenticatedRemote =
