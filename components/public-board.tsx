@@ -87,7 +87,9 @@ export function PublicBoard({
           <div className="mb-2 flex items-center gap-2 px-1">
             <StatusIndicator status={status.value} className="size-4" />
             <h2 className="text-sm font-semibold">{ts(status.value)}</h2>
-            <span className="text-xs text-muted-foreground">{items.length}</span>
+            <span className="relative top-px text-xs text-muted-foreground">
+              {items.length}
+            </span>
           </div>
 
           <div className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2">

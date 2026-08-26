@@ -120,7 +120,9 @@ export const KanbanColumn = memo(function KanbanColumn({
       <div className="mb-2 flex items-center gap-2 px-1">
         <StatusIndicator status={status.value} className="size-4" />
         <h2 className="text-sm font-semibold">{ts(status.value)}</h2>
-        <span className="text-xs text-muted-foreground">{issues.length}</span>
+        <span className="relative top-px text-xs text-muted-foreground">
+          {issues.length}
+        </span>
       </div>
 
       {/* The edge fade is drawn NEXT to the scroller, never on it: a
