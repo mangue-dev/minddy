@@ -1358,7 +1358,8 @@
     "unsupportedHint": "This browser doesn't support push notifications.",
     "notConfiguredHint": "Push notifications aren't configured on this server.",
     "iosInstallHint": "On iPhone and iPad, add minddy to your home screen first: tap Share, then “Add to Home Screen”. Notifications only work from the installed app.",
-    "desktopHint": "This version of the desktop app only notifies you while it is open. Update minddy to enable notifications after you quit it."
+    "desktopLocalHint": "The desktop app notifies you while minddy is running or hidden. Notifications after you quit aren't available on this platform yet.",
+    "desktopHint": "This version of the desktop app can't enable notifications on this device. Update minddy to restore notification support."
   },
   "Issue": {
     "entity": "Issue",

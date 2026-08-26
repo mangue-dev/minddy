@@ -22,13 +22,30 @@
  */
 
 import { saveNativePushDeviceApi, savePushDeviceApi } from "@/lib/push-devices-api";
-import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
 import { browserRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { PushDevice } from "@/lib/types";
 
+function nativePushBridge(): DesktopNativePushBridge | null {
+  const bridge = getDesktopBridge();
+  if (
+    bridge?.notificationCapabilities?.backgroundTransport !== "apns" ||
+    !bridge.registerForPushNotifications
+  ) {
+    return null;
+  }
+  return bridge as DesktopNativePushBridge;
+}
+
+type DesktopNativePushBridge = DesktopBridge & {
+  registerForPushNotifications: NonNullable<
+    DesktopBridge["registerForPushNotifications"]
+  >;
+};
+
 /** Does the browser know how to push? (Private Firefox, old Safari, no.) */
 export function isPushSupported(): boolean {
-  if (getDesktopBridge()?.registerForPushNotifications) return true;
+  if (getDesktopBridge()) return nativePushBridge() !== null;
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
@@ -93,9 +110,9 @@ export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistra
 /** The subscription endpoint of THIS device, or null if there is none. Serves
  * to recognize “this device” in the list rendered by the server. */
 export async function currentEndpoint(): Promise<string | null> {
-  const native = getDesktopBridge()?.registerForPushNotifications;
+  const native = nativePushBridge();
   if (native) {
-    const registration = await native();
+    const registration = await native.registerForPushNotifications();
     return registration ? `apns:${registration.token}` : null;
   }
   if (!isPushSupported()) return null;
@@ -193,10 +210,10 @@ export type SubscribeResult =
  * permission request (see file header).
  */
 export async function subscribeThisDevice(locale: string): Promise<SubscribeResult> {
-  const native = getDesktopBridge()?.registerForPushNotifications;
+  const native = nativePushBridge();
   if (native) {
     try {
-      const registration = await native({ activate: true });
+      const registration = await native.registerForPushNotifications({ activate: true });
       if (!registration) return { ok: false, reason: "failed" };
       const device = await saveNativePushDeviceApi(
         registration.token,
@@ -245,9 +262,9 @@ export async function subscribeThisDevice(locale: string): Promise<SubscribeResu
 export async function refreshThisDeviceSubscription(
   locale: string
 ): Promise<PushDevice | null> {
-  const native = getDesktopBridge()?.registerForPushNotifications;
+  const native = nativePushBridge();
   if (native) {
-    const registration = await native();
+    const registration = await native.registerForPushNotifications();
     if (!registration) return null;
     return saveNativePushDeviceApi(registration.token, registration.installationId, locale, {
       refresh: true,
@@ -283,8 +300,8 @@ export async function refreshThisDeviceSubscription(
  * a device that can no longer receive anything.
  */
 export async function unsubscribeThisDevice(): Promise<string | null> {
-  const bridge = getDesktopBridge();
-  if (bridge?.registerForPushNotifications) {
+  const bridge = nativePushBridge();
+  if (bridge) {
     const registration = await bridge.registerForPushNotifications();
     await bridge.unregisterForPushNotifications?.();
     return registration ? `apns:${registration.token}` : null;

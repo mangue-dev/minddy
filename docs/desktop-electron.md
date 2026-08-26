@@ -74,7 +74,7 @@ change of host, with **three locks** (§4) and a waiver (§4.4).
 | | PWA installed | Electron Wrapper |
 | --- | --- | --- |
 | Dedicated window, dock icon | yes | yes |
-| Notifications **app closed** | **yes** (Web Push) | **yes** (APNs, MIN-356) |
+| Notifications **app closed** | **yes** (Web Push) | **macOS:** yes (APNs); **Windows/Linux:** pending platform transport |
 | Open app notifications | yes | yes, native |
 | Global shortcut (⌥ Space) | no | yes |
 | Native menu, encrypted dock badge | partial | yes |
@@ -255,19 +255,23 @@ first real connection by external link is verified there.
 
 ## 3. Notifications: Web Push and APNs
 
-MIN-291 used real time then `new Notification()` as the renderer
-was turning. MIN-356 keeps this path as compatibility for an old shell,
-but current versions register with APNs at launch. The token of
-signed bundle goes through the Electron bridge, then through the authenticated web session,
-and joins `push_subscriptions` with `transport = 'apns'`.
+MIN-291 used the real-time inbox feed and renderer notifications. MIN-474 moves
+native banners behind a validated main-process IPC and exposes an explicit
+capability contract. Windows and Linux use that relay while the process is
+running or hidden; they do not advertise a background push transport, notification
+settings action, or unread badge until their platform transports provide one.
+
+Packaged macOS builds register with APNs at launch. The signed bundle token goes
+through the Electron bridge, then through the authenticated web session, and
+joins `push_subscriptions` with `transport = 'apns'`.
 
 When inserting an inbox line, the server always constructs a single
 wording. `sendPushToUser` then chooses VAPID for a browser or APNs
 for the macOS app. APNs displays the alert when no minddy process is running; if
 the app runs, `received-apns-notification` transforms it into a native banner and
-its click opens the transported route. The realtime relay is then cut so as not to
-do not display the same thing twice. The dock badge remains powered by the
-real-time list: represents an exact state, not an APNs event.
+its click opens the transported route. The real-time relay is disabled on that
+platform so the same event cannot display twice. The macOS Dock badge remains
+powered by the real-time list: it represents an exact state, not an APNs event.
 
 What it opens on the other hand, and which does not exist on the web: clicking on a
 notification wakes up the window on the correct ticket, the badge is an exact number,

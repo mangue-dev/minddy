@@ -39,6 +39,13 @@ import {
 } from "@/lib/desktop/linux-paths";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
+import {
+  DesktopLocalNotificationRegistry,
+  desktopLocalNotificationUrl,
+  parseDesktopLocalNotification,
+  parseDesktopLocalNotificationId,
+} from "@/lib/desktop/local-notification";
+import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
 import {
   nativeNotificationSettingsUrl,
@@ -107,6 +114,7 @@ import { trace } from "./trace";
 let pendingAuthLink: DesktopAuthLink | null = null;
 let pendingOpenPath: string | null = null;
 let mainWindow: BrowserWindow | null = null;
+const localNotifications = new DesktopLocalNotificationRegistry();
 let stopClaimingLocalRuns: (() => void) | null = null;
 /** Electron closes windows before `before-quit` during an updater relaunch. */
 let quittingForUpdate = false;
@@ -460,6 +468,14 @@ function goHome(window: BrowserWindow): void {
   void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
 }
 
+function revealLocalNotificationTarget(target: string | null): void {
+  if (!mainWindow) return;
+  const url = desktopLocalNotificationUrl(origin, target);
+  if (url) void mainWindow.loadURL(url);
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 /**
  * The navigation guard. Without it, a link to a third-party site opens this site
  * IN minddy, with our `preload` loaded — that is, with the bridge.
@@ -574,7 +590,10 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
       // (MIN-322): `sendSync` stops the renderer for the round trip, at
       // start — that is, right during the first render. The preload reads
       // `process.argv`, which is already there when it runs.
-      additionalArguments: [`--minddy-version=${app.getVersion()}`],
+      additionalArguments: [
+        `--minddy-version=${app.getVersion()}`,
+        `--minddy-packaged=${app.isPackaged ? "1" : "0"}`,
+      ],
       // The spell checker goes through `NSSpellChecker` on macOS, at
       // each text modification, on the UI thread of the browser process —
       // and none of its suggestions are reachable: `menu.ts` does not build
@@ -670,6 +689,11 @@ function createWindow(loadInitialOrigin = true): BrowserWindow {
 }
 
 function registerIpc(): void {
+  const notificationCapabilities = notificationCapabilitiesForPlatform(
+    process.platform,
+    app.isPackaged
+  );
+
   ipcMain.on("minddy:version", (event) => {
     event.returnValue = app.getVersion();
   });
@@ -686,8 +710,38 @@ function registerIpc(): void {
   ipcMain.on("minddy:auth-link-ready", () => flushAuthLink());
 
   ipcMain.on("minddy:set-badge", (_event, count: unknown) => {
+    if (notificationCapabilities.badge !== "dock") return;
     const n = typeof count === "number" && Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
     app.dock?.setBadge(n > 0 ? String(n) : "");
+  });
+
+  ipcMain.on("minddy:notification:show", (_event, input: unknown) => {
+    if (
+      !notificationCapabilities.localNativeBanners ||
+      !NativeNotification.isSupported()
+    ) {
+      return;
+    }
+    const payload = parseDesktopLocalNotification(input);
+    if (!payload) return;
+    const notification = new NativeNotification({
+      id: payload.id,
+      title: payload.title,
+      body: payload.body,
+    });
+    if (!localNotifications.track(payload, notification)) return;
+    notification.on("click", () => {
+      localNotifications.dismiss(payload.id);
+      revealLocalNotificationTarget(payload.target);
+    });
+    notification.on("close", () => localNotifications.forget(payload.id));
+    notification.on("failed", () => localNotifications.forget(payload.id));
+    notification.show();
+  });
+
+  ipcMain.on("minddy:notification:dismiss", (_event, input: unknown) => {
+    const id = parseDesktopLocalNotificationId(input);
+    if (id) localNotifications.dismiss(id);
   });
 
   ipcMain.handle("minddy:push:register", async (_event, options: unknown) => {
@@ -724,7 +778,7 @@ function registerIpc(): void {
   });
 
   ipcMain.on("minddy:push:open-settings", () => {
-    if (process.platform !== "darwin") return;
+    if (notificationCapabilities.settings !== "macos") return;
     // No URL from the remote page passes through this channel: the main
     // process constructs the system destination itself and targets this app.
     void shell.openExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
@@ -1089,21 +1143,21 @@ if (!app.requestSingleInstanceLock()) {
     // When the app is running, macOS puts the load back on the process instead of displaying
     // the banner itself. We make it native here; when the app is exited,
     // APNs and macOS display it without any minddy process — the heart of the ticket.
-    pushNotifications.on("received-apns-notification", (_event, payload) => {
-      const content = nativePushContent(payload);
-      if (!content || !NativeNotification.isSupported()) return;
-      const notification = new NativeNotification({
-        title: content.title,
-        body: content.body,
+    if (
+      notificationCapabilitiesForPlatform(process.platform, app.isPackaged)
+        .backgroundTransport === "apns"
+    ) {
+      pushNotifications.on("received-apns-notification", (_event, payload) => {
+        const content = nativePushContent(payload);
+        if (!content || !NativeNotification.isSupported()) return;
+        const notification = new NativeNotification({
+          title: content.title,
+          body: content.body,
+        });
+        notification.on("click", () => revealLocalNotificationTarget(content.url));
+        notification.show();
       });
-      notification.on("click", () => {
-        if (!mainWindow) return;
-        if (content.url) void mainWindow.loadURL(`${origin}${content.url}`);
-        mainWindow.show();
-        mainWindow.focus();
-      });
-      notification.show();
-    });
+    }
     rebuildAppMenu();
     // Possible installation of opencode and harness cache begins
     // while the window is open. No secrets or deposits are affected.

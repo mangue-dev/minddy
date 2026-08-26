@@ -25,6 +25,8 @@ import type {
   LocalModelDiscoveryResult,
 } from "@/lib/desktop/local-models";
 import type { LocalRepoState } from "@/lib/desktop/local-repo";
+import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notification";
+import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 export interface DesktopBridge {
@@ -32,6 +34,8 @@ export interface DesktopBridge {
   readonly version: string;
   /** The host platform, used only for platform-specific desktop chrome. */
   readonly platform: NodeJS.Platform;
+  /** Explicit notification support. Optional only for older installed shells. */
+  readonly notificationCapabilities?: DesktopNotificationCapabilities;
   /**
    * Opens a URL in the system browser. This is where the trick goes
    * authentication, and it is the main process which refuses everything that is not
@@ -45,8 +49,12 @@ export interface DesktopBridge {
    * its deep link long before React was built.
    */
   onAuthLink(handler: (link: DesktopAuthLink) => void): () => void;
-  /** The dock counter. `0` removes the tablet. */
+  /** The Dock counter. `0` removes the badge. */
   setBadgeCount(count: number): void;
+  /** Ask the main process to show one validated native banner. */
+  showLocalNotification?(payload: DesktopLocalNotificationPayload): void;
+  /** Close a native banner after its inbox row is read or removed. */
+  dismissLocalNotification?(id: string): void;
   /**
    * Registers the signed bundle with APNs and makes its token current. Optional
    * so that the deployed site remains compatible with the old shells.
@@ -55,7 +63,7 @@ export interface DesktopBridge {
     token: string;
     installationId: string;
   } | null>;
-  /** Retire l'inscription APNs de cette installation. */
+  /** Remove this installation's APNs registration. */
   unregisterForPushNotifications?(): Promise<void>;
   /** Directly opens minddy's Notifications sheet in System Settings. */
   openNotificationSettings?(): void;

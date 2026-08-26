@@ -183,8 +183,9 @@ The server provider uses a token-based APNs key `.p8`. Ask
 not). The private key never goes into the app. A complete delivery of MIN-356
 therefore requires the three pieces together: Supabase migration, server variables,
 then signed/notarized binary republished. Without server configuration, the inbox remains
-functional but APNs is a no-op; an old shell keeps the relay
-real time as long as it is running.
+functional but APNs is a no-op. Windows and Linux use the validated native banner
+relay while the desktop process is running or hidden; background delivery belongs
+to their platform-specific transports.
 
 **The `.zip` accompanies the `.dmg` and is not decorative**: the `.dmg` is used to
 first download, Squirrel.Mac can only read `.zip`. Publish one

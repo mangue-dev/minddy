@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 import type { DesktopBridge } from "@/lib/desktop/bridge";
 import type { DesktopChannel } from "@/lib/desktop/channel";
+import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 /**
@@ -33,6 +34,7 @@ import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
  * empty version would be displayed in the settings without anything saying so.
  */
 const VERSION_FLAG = "--minddy-version=";
+const PACKAGED_FLAG = "--minddy-packaged=";
 
 function readVersion(): string {
   const flag = process.argv.find((arg) => arg.startsWith(VERSION_FLAG));
@@ -40,9 +42,41 @@ function readVersion(): string {
   return ipcRenderer.sendSync("minddy:version") as string;
 }
 
+const packaged = process.argv.some((arg) => arg === `${PACKAGED_FLAG}1`);
+const notificationCapabilities = notificationCapabilitiesForPlatform(
+  process.platform,
+  packaged
+);
+
+const nativePushBridge: Partial<DesktopBridge> =
+  notificationCapabilities.backgroundTransport === "apns"
+    ? {
+        registerForPushNotifications(options) {
+          return ipcRenderer.invoke("minddy:push:register", options) as ReturnType<
+            NonNullable<DesktopBridge["registerForPushNotifications"]>
+          >;
+        },
+        unregisterForPushNotifications() {
+          return ipcRenderer.invoke("minddy:push:unregister") as Promise<void>;
+        },
+      }
+    : {};
+
+const notificationSettingsBridge: Partial<DesktopBridge> =
+  notificationCapabilities.settings === "macos"
+    ? {
+        openNotificationSettings() {
+          ipcRenderer.send("minddy:push:open-settings");
+        },
+      }
+    : {};
+
 const bridge: DesktopBridge = {
   version: readVersion(),
   platform: process.platform,
+  notificationCapabilities,
+  ...nativePushBridge,
+  ...notificationSettingsBridge,
 
   openExternal(url: string) {
     ipcRenderer.send("minddy:open-external", url);
@@ -65,18 +99,12 @@ const bridge: DesktopBridge = {
     ipcRenderer.send("minddy:set-badge", count);
   },
 
-  registerForPushNotifications(options) {
-    return ipcRenderer.invoke("minddy:push:register", options) as ReturnType<
-      NonNullable<DesktopBridge["registerForPushNotifications"]>
-    >;
+  showLocalNotification(payload) {
+    ipcRenderer.send("minddy:notification:show", payload);
   },
 
-  unregisterForPushNotifications() {
-    return ipcRenderer.invoke("minddy:push:unregister") as Promise<void>;
-  },
-
-  openNotificationSettings() {
-    ipcRenderer.send("minddy:push:open-settings");
+  dismissLocalNotification(id) {
+    ipcRenderer.send("minddy:notification:dismiss", id);
   },
 
   setWindowButtonsVisible(visible: boolean) {

@@ -1358,7 +1358,8 @@
     "unsupportedHint": "Ce navigateur ne gère pas les notifications push.",
     "notConfiguredHint": "Les notifications push ne sont pas configurées sur ce serveur.",
     "iosInstallHint": "Sur iPhone et iPad, ajoutez d'abord minddy à l'écran d'accueil : bouton Partager, puis « Sur l'écran d'accueil ». Les notifications ne fonctionnent que depuis l'app installée.",
-    "desktopHint": "Cette version de l'app de bureau ne vous prévient que lorsqu'elle est ouverte. Mettez minddy à jour pour recevoir les notifications après l'avoir quittée."
+    "desktopLocalHint": "L'app de bureau vous prévient tant que minddy fonctionne, même masqué. Les notifications après avoir quitté l'app ne sont pas encore disponibles sur cette plateforme.",
+    "desktopHint": "Cette version de l'app de bureau ne peut pas activer les notifications sur cet appareil. Mettez minddy à jour pour rétablir les notifications."
   },
   "Issue": {
     "entity": "Ticket",

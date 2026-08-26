@@ -74,6 +74,7 @@ export function AccountPushDevicesSection() {
   /** Like browser capabilities, read after editing (see effect). */
   const [inDesktopApp, setInDesktopApp] = useState(false);
   const [nativeDesktopPush, setNativeDesktopPush] = useState(false);
+  const [localDesktopBanners, setLocalDesktopBanners] = useState(false);
   const [nativeNotificationSettings, setNativeNotificationSettings] = useState(false);
   const [thisEndpoint, setThisEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -87,8 +88,17 @@ export function AccountPushDevicesSection() {
     setNeedsInstall(isIOS() && !isStandalone());
     setInDesktopApp(isDesktop());
     const desktop = getDesktopBridge();
-    setNativeDesktopPush(!!desktop?.registerForPushNotifications);
-    setNativeNotificationSettings(!!desktop?.openNotificationSettings);
+    setNativeDesktopPush(
+      desktop?.notificationCapabilities?.backgroundTransport === "apns" &&
+        !!desktop.registerForPushNotifications
+    );
+    setLocalDesktopBanners(
+      desktop?.notificationCapabilities?.localNativeBanners === true
+    );
+    setNativeNotificationSettings(
+      desktop?.notificationCapabilities?.settings === "macos" &&
+        !!desktop.openNotificationSettings
+    );
     if (isPushSupported()) void currentEndpoint().then(setThisEndpoint);
   }, []);
 
@@ -228,14 +238,12 @@ export function AccountPushDevicesSection() {
   // elsewhere we put the clue in its place: saying why is better than offering a
   // gesture that will fail.
   const blocked =
-    capabilities && !(nativeDesktopPush ? capabilities.apns : capabilities.web)
-      ? t("notConfiguredHint")
-      : // L'app de bureau (MIN-291) : Electron n'embarque pas l'API Push, donc
-        // `permission` is equal to `unsupported` — but “this browser does not manage
-        // push notifications” reads like an outage, when it is actually a
-        // assumed renunciation, and that there is a way out (keeping the web open). Say it.
-        inDesktopApp && !nativeDesktopPush
-        ? t("desktopHint")
+    // A desktop shell without a background transport must not expose a switch
+    // that can never create a server-side push subscription.
+    inDesktopApp && !nativeDesktopPush
+      ? t(localDesktopBanners ? "desktopLocalHint" : "desktopHint")
+      : capabilities && !(nativeDesktopPush ? capabilities.apns : capabilities.web)
+        ? t("notConfiguredHint")
         : permission === "unsupported"
           ? t("unsupportedHint")
           : permission === "denied"
