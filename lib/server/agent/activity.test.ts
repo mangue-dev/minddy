@@ -28,27 +28,27 @@ function row(over: Partial<AgentRunRow> & { status: string }): AgentRunRow {
 }
 
 describe("buildAgentActivity", () => {
-  it("une session au repos (completed) reste une conversation ouvrable", () => {
+  it("keeps a completed session available as a conversation", () => {
     const out = buildAgentActivity([row({ status: "completed" })]);
     expect(out.sessionIssueIds).toEqual(["issue-1"]);
     expect(out.workingIssueIds).toEqual([]);
   });
 
-  it("compte les sessions au travail comme au repos", () => {
+  it("includes both active and resting sessions", () => {
     for (const status of ["queued", "running", "completed", "canceled"]) {
       const out = buildAgentActivity([row({ status })]);
       expect(out.sessionIssueIds, status).toEqual(["issue-1"]);
     }
   });
 
-  it("ne signale « travaille » que pour queued/running", () => {
+  it("marks only queued and running sessions as working", () => {
     expect(buildAgentActivity([row({ status: "completed" })]).workingIssueIds).toEqual([]);
     expect(buildAgentActivity([row({ status: "canceled" })]).workingIssueIds).toEqual([]);
     expect(buildAgentActivity([row({ status: "queued" })]).workingIssueIds).toEqual(["issue-1"]);
     expect(buildAgentActivity([row({ status: "running" })]).workingIssueIds).toEqual(["issue-1"]);
   });
 
-  it("une run active plus ancienne fait travailler l'issue même sous une run terminée", () => {
+  it("keeps an issue working when an older run remains active", () => {
     // Real case: several successive runs, sorted created_at DESC by the caller.
     const out = buildAgentActivity([
       row({ id: "run-2", status: "completed", created_at: "2026-07-15T12:00:00Z" }),
@@ -58,13 +58,22 @@ describe("buildAgentActivity", () => {
     expect(out.workingIssueIds).toEqual(["issue-1"]);
   });
 
-  it("dédoublonne les sessions par issue", () => {
+  it("deduplicates sessions by issue", () => {
     const out = buildAgentActivity([
       row({ issue_id: "issue-A", id: "a1", status: "running" }),
       row({ issue_id: "issue-B", id: "b1", status: "completed" }),
     ]);
     expect(out.workingIssueIds).toEqual(["issue-A"]);
     expect(out.sessionIssueIds).toEqual(["issue-A", "issue-B"]);
+  });
+
+  it("excludes notebook runs that have no issue", () => {
+    const out = buildAgentActivity([
+      row({ issue_id: null, status: "running" }),
+      row({ issue_id: "issue-1", status: "completed" }),
+    ]);
+    expect(out.workingIssueIds).toEqual([]);
+    expect(out.sessionIssueIds).toEqual(["issue-1"]);
   });
 });
 
@@ -88,7 +97,7 @@ function prRow(over: Partial<IssuePrRow> = {}): IssuePrRow {
 }
 
 describe("pullRequests", () => {
-  it("expose la PR du ticket, sans qu'aucun run ne la porte", () => {
+  it("exposes an issue PR even when no run carries it", () => {
     // The missing case: human PR (or attached to the hand), zero runs.
     const out = buildAgentActivity([], [prRow()]);
     expect(out.sessionIssueIds).toEqual([]);
@@ -99,14 +108,14 @@ describe("pullRequests", () => {
     });
   });
 
-  it("expose aussi une PR FERMÉE — le lien y mène quel que soit l'état", () => {
+  it("also exposes a closed PR so the link remains available", () => {
     const out = buildAgentActivity([], [prRow({ state: "closed" })]);
     expect(out.pullRequests["issue-1"]?.state).toBe("closed");
   });
 
-  it("une PR VIVANTE l'emporte sur une PR terminale plus récente", () => {
+  it("prefers a live PR over a newer terminal PR", () => {
     // Real case: the closed PR has just been affected (a comment), the one we
-    // wants to reread is the open. Freshness must not win against it.
+    // want to reopen is the live one. Freshness must not win against it.
     const out = buildAgentActivity(
       [],
       [
@@ -117,7 +126,7 @@ describe("pullRequests", () => {
     expect(out.pullRequests["issue-1"]?.prId).toBe("pr-open");
   });
 
-  it("à défaut de PR vivante, la plus récemment touchée gagne", () => {
+  it("uses the most recently updated PR when none are live", () => {
     const out = buildAgentActivity(
       [],
       [
@@ -128,11 +137,11 @@ describe("pullRequests", () => {
     expect(out.pullRequests["issue-1"]?.prId).toBe("pr-recent");
   });
 
-  it("une PR sans ticket n'entre nulle part", () => {
+  it("excludes a PR without an issue", () => {
     expect(buildAgentActivity([], [prRow({ issue_id: null })]).pullRequests).toEqual({});
   });
 
-  it("chaque ticket a sa PR", () => {
+  it("maps each issue to its PR", () => {
     const out = buildAgentActivity(
       [],
       [

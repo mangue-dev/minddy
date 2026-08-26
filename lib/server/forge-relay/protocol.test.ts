@@ -72,7 +72,7 @@ describe("verifyRelayRequest", () => {
         headers: new Headers(signature),
         rawBody: '{"events":[]}',
       }),
-    ).resolves.toEqual({ ok: true, instance: { id: INSTANCE_ID, name: "on-prem" } });
+    ).resolves.toMatchObject({ ok: true, instance: { id: INSTANCE_ID, name: "on-prem" } });
   });
 
   it("rejects a tampered body — the signature covers the exact raw bytes", async () => {

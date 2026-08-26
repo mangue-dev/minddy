@@ -504,6 +504,22 @@ describe("POST /api/webhooks/github — relayed deliveries", () => {
     expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores a reused repository name while any link has a different stable id", async () => {
+    linkRows.push({
+      id: "stale-link",
+      provider: "github",
+      external_repo_id: "8000",
+      repo_full_name: "acme/app",
+    });
+
+    const response = await githubPOST(githubRequest());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, ignored: true });
+    expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
+    expect(deliveries).toHaveLength(0);
+  });
+
   it("triggers the @numo review from a verified relayed mention (end-to-end chain)", async () => {
     // The full Phase-4 promise: a relayed `@numo` mention reaches the instance
     // receiver and triggers the agent exactly like a direct delivery.

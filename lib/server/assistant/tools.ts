@@ -472,7 +472,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_plan_tasks",
       description:
-        "Flip the state of one or several tasks of an issue's implementation plan, leaving every other byte of the plan untouched. task_index comes from get_issue's plan_tasks (0-based, document order) — read it right before calling. This is how a task gets ticked off: never rewrite the whole plan for a state change.",
+        "Flip the state of one or several tasks of an issue's implementation plan, leaving every other byte of the plan untouched. task_index and expected_rev come from get_issue — read it right before calling. This is how a task gets ticked off: never rewrite the whole plan for a state change.",
       parameters: {
         type: "object",
         properties: {
@@ -497,8 +497,13 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               required: ["task_index", "state"],
             },
           },
+          expected_rev: {
+            type: "string",
+            description:
+              "The plan_rev from the get_issue response whose plan_tasks indices are being used. A concurrent plan edit rejects the call.",
+          },
         },
-        required: ["issue_id", "tasks"],
+        required: ["issue_id", "tasks", "expected_rev"],
       },
     },
   },

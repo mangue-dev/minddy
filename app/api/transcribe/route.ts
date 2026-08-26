@@ -1,4 +1,4 @@
-import { NextRequest, after } from "next/server";
+import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import {
@@ -17,6 +17,10 @@ import {
   isPlanLimitError,
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
+import {
+  releaseProviderOperation,
+  reserveProviderOperation,
+} from "@/lib/server/provider-operation-guard";
 
 // A long dictation takes longer to come back than a short one: the road
 // takes the maximum budget of the platform, under which the timeout of
@@ -54,14 +58,6 @@ export async function POST(request: NextRequest) {
         headers: { "Retry-After": String(rateLimit.retryAfter) },
       },
     );
-  }
-
-  // Plan usage budget (MIN-72) — pre-flight before transcription call.
-  try {
-    await ensureUsageBudget(user.id, "voice");
-  } catch (err) {
-    if (isPlanLimitError(err)) return planLimitResponse(err);
-    throw err;
   }
 
   let formData: FormData;
@@ -131,6 +127,43 @@ export async function POST(request: NextRequest) {
   const runId = newRunId();
   const feature = resolveFeature(formData.get("feature"));
 
+  // Budget pre-flight happens before the shared lease. The lease then admits
+  // only one managed transcription per account until its usage row is written,
+  // so concurrent requests cannot all spend against the same stale remainder.
+  try {
+    await ensureUsageBudget(user.id, "voice");
+  } catch (err) {
+    if (isPlanLimitError(err)) return planLimitResponse(err);
+    throw err;
+  }
+
+  const lease = {
+    actorId: user.id,
+    provider: "managed-ai",
+    operation: "transcription",
+    resourceKey: `transcription:${user.id}`,
+  };
+  if (runtime.mode === "platform") {
+    const reservation = await reserveProviderOperation({
+      ...lease,
+      limit: RATE_LIMIT.limit,
+      windowSeconds: RATE_LIMIT.windowMs / 1000,
+      dedupeSeconds: maxDuration,
+    });
+    if (reservation.state !== "reserved") {
+      const unavailable = reservation.state === "unavailable";
+      return Response.json(
+        { error: unavailable ? "Transcription admission unavailable" : "Too many requests" },
+        {
+          status: unavailable ? 503 : 429,
+          ...(reservation.retryAfter > 0
+            ? { headers: { "Retry-After": String(reservation.retryAfter) } }
+            : {}),
+        },
+      );
+    }
+  }
+
   try {
     const result = await withModelSuffixFallback(
       model,
@@ -147,22 +180,21 @@ export async function POST(request: NextRequest) {
       { logPrefix: "[/api/transcribe]" },
     );
 
-    // Cost tracking: single call (one run of a single call). Best-effort.
-    after(() =>
-      recordAiUsage({
-        runId,
-        feature,
-        provider: runtime.provider,
-        keyMode: runtime.mode,
-        model: usedModel,
-        promptTokens: result.inputTokens || null,
-        completionTokens: result.outputTokens || null,
-        totalTokens:
-          (result.inputTokens || 0) + (result.outputTokens || 0) || null,
-        cost: result.cost || null,
-        billTo: { userId: user.id },
-      }),
-    );
+    // Persist usage before releasing the shared lease so the next request's
+    // budget pre-flight observes this call.
+    await recordAiUsage({
+      runId,
+      feature,
+      provider: runtime.provider,
+      keyMode: runtime.mode,
+      model: usedModel,
+      promptTokens: result.inputTokens || null,
+      completionTokens: result.outputTokens || null,
+      totalTokens:
+        (result.inputTokens || 0) + (result.outputTokens || 0) || null,
+      cost: result.cost || null,
+      billTo: { userId: user.id },
+    });
 
     return Response.json({
       text: result.text,
@@ -174,5 +206,7 @@ export async function POST(request: NextRequest) {
     const message = e instanceof Error ? e.message : "Transcription failed";
     console.error("[/api/transcribe]", message);
     return Response.json({ error: message }, { status: 500 });
+  } finally {
+    if (runtime.mode === "platform") await releaseProviderOperation(lease);
   }
 }

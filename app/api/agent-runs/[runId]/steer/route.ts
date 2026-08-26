@@ -14,6 +14,8 @@ import {
 } from "@/lib/server/agent/runs";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
+import type { AgentQuota } from "@/lib/server/agent/quota";
+import { requestedRunReservationUsd } from "@/lib/server/agent/run-key";
 import { syncIssueStatusOnAgentStart } from "@/lib/server/agent/issue-status-sync";
 import { getServiceClient } from "@/lib/supabase-service";
 import { parseAgentMentions } from "@/lib/agent-mentions";
@@ -63,6 +65,42 @@ const RESUME_FROM: AgentRunStatus[] = ["completed", "canceled"];
 const MAX_LEN = 4000;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function queueResumableRun(input: {
+  runId: string;
+  ownerId: string;
+  keyMode: string;
+  runBudgetUsd: number | null;
+  quota: AgentQuota;
+}): Promise<"queued" | "no_budget" | "conflict"> {
+  const notBefore = new Date().toISOString();
+  if (input.keyMode !== "platform" || input.quota.mode !== "platform") {
+    const stamped = await stampRun(
+      input.runId,
+      { status: "queued", not_before: notBefore },
+      { guard: RESUME_FROM, expected: { sandbox_reap_claim: null } },
+    );
+    return stamped ? "queued" : "conflict";
+  }
+  if (input.quota.cap == null || !input.quota.periodStart) return "no_budget";
+  const { data, error } = await getServiceClient().rpc(
+    "resume_agent_run_with_budget",
+    {
+      p_run_id: input.runId,
+      p_user_id: input.ownerId,
+      p_usage_since: input.quota.periodStart,
+      p_budget_cap: input.quota.cap,
+      p_requested_budget: requestedRunReservationUsd({
+        runBudgetUsd: input.runBudgetUsd,
+        accountCapUsd: input.quota.cap,
+      }),
+      p_not_before: notBefore,
+    },
+  );
+  if (error) throw new Error(error.message);
+  const state = (data as { state?: unknown } | null)?.state;
+  return state === "queued" || state === "no_budget" ? state : "conflict";
+}
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { runId } = await params;
@@ -143,7 +181,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
    * (checked on the recovery path, below).
    */
   const callerQuota = await checkAgentQuota(auth.user.id);
-  if (callerQuota.reason === "agents_not_in_plan") {
+  if (!callerQuota.allowed) {
     return NextResponse.json(
       { error: "quotaExceeded", code: "quotaExceeded", quota: callerQuota },
       { status: 402 },
@@ -164,6 +202,26 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   let resumed = false;
   if (RESUME_FROM.includes(run.status)) {
+    if (run.sandbox_reap_claim) {
+      const claimedAt = Date.parse(run.sandbox_reap_claimed_at ?? "");
+      const stale = Number.isFinite(claimedAt) && Date.now() - claimedAt > 10 * 60_000;
+      const released = stale
+        ? await stampRun(
+            runId,
+            { sandbox_reap_claim: null, sandbox_reap_claimed_at: null },
+            {
+              guard: RESUME_FROM,
+              expected: { sandbox_reap_claim: run.sandbox_reap_claim },
+            },
+          )
+        : null;
+      if (!released) {
+        return NextResponse.json(
+          { error: "sandboxReaping", code: "sandboxReaping" },
+          { status: 409, headers: { "Retry-After": "2" } },
+        );
+      }
+    }
     // The conversation has its workspace: another exchange quoting the same
     // ticket never supplants it. Only routines keep a lock between
     // their planned occurrences.
@@ -214,12 +272,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // Query BEFORE saving the message: if the guard does not match (race
     // lost), we decide with full knowledge of the facts instead of accepting a message
     // that no one would drain. New round on the same branch/PR.
-    const stamped = await stampRun(
+    const queued = await queueResumableRun({
       runId,
-      { status: "queued", not_before: new Date().toISOString() },
-      { guard: RESUME_FROM },
-    );
-    if (!stamped) {
+      ownerId,
+      keyMode: run.key_mode,
+      runBudgetUsd: run.budget_usd,
+      quota,
+    });
+    if (queued === "no_budget") {
+      return NextResponse.json(
+        { error: "quotaExceeded", code: "quotaExceeded", quota },
+        { status: 402 },
+      );
+    }
+    if (queued === "conflict") {
       // Race: the run is no longer at rest. If it was HE who (re)became active
       // (quick double-send, another tab which just woke it up), the message
       // is legitimate — he joins the turn that starts, as for a run that
@@ -280,12 +346,19 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!resumed) {
     const now = await getRun(runId);
     if (now && RESUME_FROM.includes(now.status)) {
-      const stamped = await stampRun(
-        runId,
-        { status: "queued", not_before: new Date().toISOString() },
-        { guard: RESUME_FROM },
-      );
-      if (stamped) resumed = true;
+      const ownerId = now.created_by ?? auth.user.id;
+      const ownerQuota =
+        ownerId === auth.user.id ? callerQuota : await checkAgentQuota(ownerId);
+      if (ownerQuota.allowed) {
+        const queued = await queueResumableRun({
+          runId,
+          ownerId,
+          keyMode: now.key_mode,
+          runBudgetUsd: now.budget_usd,
+          quota: ownerQuota,
+        });
+        if (queued === "queued") resumed = true;
+      }
     }
   }
 

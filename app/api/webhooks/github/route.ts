@@ -781,9 +781,9 @@ export async function POST(request: NextRequest) {
   const event = request.headers.get("x-github-event");
   // Repository rename reconciliation: every repository payload carries the
   // stable `repository.id` and current `full_name`. Reconcile that pair, then
-  // require a link with the same stable id and name before any name-scoped
-  // handler runs. This prevents a reused owner/name from inheriting the old
-  // repository's projects.
+  // require every link with the current name to carry that same stable ID.
+  // Downstream PR records are still name-scoped, so a single stale link with a
+  // different ID makes the name ambiguous and the entire delivery is ignored.
   let repositoryIdentity: { id: string; fullName: string } | null = null;
   try {
     const payload = JSON.parse(rawBody) as {
@@ -819,19 +819,23 @@ export async function POST(request: NextRequest) {
     const { data: registered, error: repositoryError } =
       await getServiceClient()
         .from("project_git_links")
-        .select("id")
+        .select("id, external_repo_id")
         .eq("provider", "github")
-        .eq("external_repo_id", repositoryIdentity.id)
-        .eq("repo_full_name", repositoryIdentity.fullName)
-        .limit(1)
-        .maybeSingle();
+        .eq("repo_full_name", repositoryIdentity.fullName);
     if (repositoryError) {
       return NextResponse.json(
         { error: "repository identity unavailable" },
         { status: 503 },
       );
     }
-    if (!registered) {
+    const links = (registered ?? []) as Array<{
+      id: string;
+      external_repo_id: string | null;
+    }>;
+    if (
+      links.length === 0 ||
+      links.some((link) => link.external_repo_id !== repositoryIdentity.id)
+    ) {
       return NextResponse.json({ ok: true, ignored: true });
     }
   }

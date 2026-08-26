@@ -412,39 +412,29 @@ export async function bindRelayClaim(input: {
     };
   }
 
-  if (existingRow) {
-    await supabase
-      .from("forge_relay_installations")
-      .update({ account_login: login })
-      .eq("id", existingRow.id);
-  } else {
-    const { error } = await supabase.from("forge_relay_installations").insert({
-      instance_id: input.instanceId,
-      installation_id: input.installationId,
-      account_login: login,
-    });
-    if (error) return { ok: false, status: 500, error: error.message };
-  }
-
-  // The claim row is the handoff the instance polls. The status predicate
-  // makes completion single-use even if two OAuth callbacks race.
-  const { data: completed, error: claimError } = await supabase
-    .from("forge_relay_claims")
-    .update({
-      status: "claimed",
-      account_login: login,
-      repository_id: input.repositoryId,
-      repository_full_name: input.repositoryFullName,
-      claimed_at: new Date().toISOString(),
-      consumed_at: null,
-    })
-    .eq("id", (pending as { id: string }).id)
-    .eq("status", "verifying")
-    .select("id")
-    .maybeSingle();
+  // The final ownership checks, relay upsert, and claim completion share the
+  // same installation advisory lock as Cloud connection provisioning.
+  const { data: completed, error: claimError } = await supabase.rpc(
+    "complete_forge_relay_claim",
+    {
+      p_instance_id: input.instanceId,
+      p_claim_id: (pending as { id: string }).id,
+      p_installation_id: input.installationId,
+      p_account_login: login,
+      p_repository_id: input.repositoryId,
+      p_repository_full_name: input.repositoryFullName,
+    },
+  );
   if (claimError) return { ok: false, status: 500, error: claimError.message };
-  if (!completed) {
-    return { ok: false, status: 409, error: "Pending installation setup was already used" };
+  const state = (completed as { state?: unknown } | null)?.state;
+  if (state !== "claimed") {
+    const error =
+      state === "cloud_owned"
+        ? "This installation is already connected to a minddy Cloud account; disconnect it there first"
+        : state === "relay_owned"
+          ? "Installation is already claimed by another instance"
+          : "Pending installation setup was already used";
+    return { ok: false, status: 409, error };
   }
 
   return { ok: true, installationId: input.installationId, accountLogin: login };

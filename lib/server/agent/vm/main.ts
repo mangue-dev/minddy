@@ -107,7 +107,7 @@ async function main(): Promise<void> {
    * file true — the trick ALWAYS returns a report, including when that report says
    * "I refuse this job."
    */
-  const source = await readFile(jobPathFromArgv(), "utf8");
+  let source = "";
   // These two routing hints are recoverable even when a truncated or otherwise
   // malformed JSON document cannot be validated. They let the failure travel
   // through the same terminal report path as every other rejected job.
@@ -124,10 +124,10 @@ async function main(): Promise<void> {
     }
   };
   let raw: { appOrigin?: string; controlToken?: string } = {
-    appOrigin: hinted("appOrigin"),
-    controlToken: hinted("controlToken"),
+    appOrigin: process.argv[3]?.trim() || undefined,
+    controlToken: process.argv[4]?.trim() || undefined,
   };
-  const cp = createControlPlaneClient(
+  let cp = createControlPlaneClient(
     raw.appOrigin ?? "",
     // A getter, because the token lasts fifteen minutes and one round of hours:
     // this is where the renewal will be connected (MIN-294), without touching the
@@ -139,6 +139,15 @@ async function main(): Promise<void> {
   let job: VmJob | null = null;
   let report: VmTurnReport;
   try {
+    source = await readFile(jobPathFromArgv(), "utf8");
+    raw = {
+      appOrigin: hinted("appOrigin") || raw.appOrigin,
+      controlToken: hinted("controlToken") || raw.controlToken,
+    };
+    cp = createControlPlaneClient(
+      raw.appOrigin ?? "",
+      () => raw.controlToken ?? null,
+    );
     const parsed = JSON.parse(source) as unknown;
     if (typeof parsed !== "object" || parsed === null) {
       throw new Error("job must be a JSON object");

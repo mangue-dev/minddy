@@ -1,6 +1,5 @@
 import "server-only";
 
-import { isForgeRelayConfigured, type ForgeRelayEnvironment } from "@/lib/forge-relay";
 import {
   getInstallationToken,
   type InstallationToken,
@@ -23,7 +22,7 @@ import type { MintProfile } from "@/lib/server/forge-relay/mint";
  *
  * - `LocalForgeProvider` — the current behavior: the instance owns its GitHub
  *   App and GitLab OAuth app credentials and mints tokens itself. Default.
- * - `RelayForgeProvider` — active only when the relay is configured AND the
+ * - `RelayForgeProvider` — active only when the relay client is configured and the
  *   connection was created through it (`source: "relay"`). GitHub tokens are
  *   minted by the Cloud control plane; GitLab tokens stay instance-side (the
  *   broker hands them over at connect time, and their REFRESH grant runs
@@ -195,10 +194,9 @@ export const relayForgeProvider: ForgeProvider = {
  */
 export function forgeProviderForConnection(
   source?: string | null,
-  env: ForgeRelayEnvironment = process.env,
 ): ForgeProvider {
   if (source === "relay") {
-    if (isForgeRelayConfigured(env) && isForgeRelayClientConfigured()) {
+    if (isForgeRelayClientConfigured()) {
       return relayForgeProvider;
     }
     throw new Error(

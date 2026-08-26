@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { recordSandboxUsage } from "@/lib/server/usage";
@@ -86,9 +88,14 @@ export async function reapIdleSandboxes(
     // CASE BEFORE stopping: we reserve the cut (sandbox_stopped_at) under guard. If
     // the run has been resumed (steer) or re-activated (heartbeat) from SELECT, keeps it
     // do not match → we DO NOT stop a microVM in use.
+    const reapClaim = randomUUID();
     const { data: claimed } = await service
       .from("agent_runs")
-      .update({ sandbox_stopped_at: new Date().toISOString() })
+      .update({
+        sandbox_stopped_at: new Date().toISOString(),
+        sandbox_reap_claim: reapClaim,
+        sandbox_reap_claimed_at: new Date().toISOString(),
+      })
       .eq("id", row.id)
       .in("status", RESTING_STATUSES)
       .is("sandbox_stopped_at", null)
@@ -96,18 +103,28 @@ export async function reapIdleSandboxes(
       .select("id")
       .maybeSingle();
     if (!claimed) continue; // resumption/competing activity → we leave the VM alone
-    await stopSandboxByName(row.sandbox_id);
+    try {
+      await stopSandboxByName(row.sandbox_id);
     // VM first, key second: in that order, a revocation that fails
     // leaves a capped key without a machine to use it. The reverse order
     // would open a window where the VM is still running with a dead key, and that's it
     // during recovery would die on 401s.
-    if (row.provider_key_id) {
-      await revokeRunKey(row.provider_key_id);
+      if (row.provider_key_id) {
+        await revokeRunKey(row.provider_key_id);
+        await service
+          .from("agent_runs")
+          .update({ provider_key_id: null })
+          .eq("id", row.id)
+          .eq("provider_key_id", row.provider_key_id);
+      }
+    } finally {
+      // A resume requires this persisted lease to be absent. Release it only
+      // after the old sandbox stop has completed, and only if we still own it.
       await service
         .from("agent_runs")
-        .update({ provider_key_id: null })
+        .update({ sandbox_reap_claim: null, sandbox_reap_claimed_at: null })
         .eq("id", row.id)
-        .eq("provider_key_id", row.provider_key_id);
+        .eq("sandbox_reap_claim", reapClaim);
     }
     reaped++;
   }

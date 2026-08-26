@@ -51,9 +51,10 @@ let relayResponse: { ok: boolean; error: string | null; data: unknown } = {
   data: { token: "relayed-token", expiresAt: "2026-08-21T12:00:00Z" },
 };
 let relayGate: Promise<void> | null = null;
+let relayClientConfigured = true;
 
 vi.mock("@/lib/server/forge-relay/client", () => ({
-  isForgeRelayClientConfigured: () => true,
+  isForgeRelayClientConfigured: () => relayClientConfigured,
   relayRequest: async (path: string, body: Record<string, unknown>) => {
     relayRequestCalls.push({ path, body });
     if (relayGate) await relayGate;
@@ -99,6 +100,7 @@ beforeEach(() => {
     data: { token: "relayed-token", expiresAt: "2026-08-21T12:00:00Z" },
   };
   relayGate = null;
+  relayClientConfigured = true;
   linkRow = null;
 });
 
@@ -135,18 +137,13 @@ describe("forgeProviderForConnection", () => {
     expect(forgeProviderForConnection("local")).toBe(localForgeProvider);
   });
 
-  it("resolves relayed connections to the relay provider when the relay is configured", () => {
-    expect(
-      forgeProviderForConnection("relay", {
-        MINDDY_FORGE_RELAY_URL: "https://relay.example.com",
-        MINDDY_FORGE_RELAY_INSTANCE_ID: "instance",
-        MINDDY_FORGE_RELAY_SECRET: "secret",
-      }),
-    ).toBe(relayForgeProvider);
+  it("resolves relayed connections when provisioned client configuration is available", () => {
+    expect(forgeProviderForConnection("relay")).toBe(relayForgeProvider);
   });
 
   it("never falls back to the local provider for a relayed connection", () => {
-    expect(() => forgeProviderForConnection("relay", {})).toThrow(
+    relayClientConfigured = false;
+    expect(() => forgeProviderForConnection("relay")).toThrow(
       /MINDDY_FORGE_RELAY_/,
     );
   });

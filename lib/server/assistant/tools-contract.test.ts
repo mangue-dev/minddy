@@ -67,4 +67,12 @@ describe("Numo tool contracts", () => {
 
     expect(global?.function.parameters.properties).not.toHaveProperty("project_id");
   });
+
+  it("requires the get_issue revision when updating plan task indices", () => {
+    const updatePlanTasks = tool("update_plan_tasks");
+    expect(updatePlanTasks?.function.parameters.required).toContain("expected_rev");
+    expect(updatePlanTasks?.function.parameters.properties).toHaveProperty(
+      "expected_rev",
+    );
+  });
 });

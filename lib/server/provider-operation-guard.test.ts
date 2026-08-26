@@ -6,7 +6,9 @@ vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ rpc }),
 }));
 
-const { reserveProviderOperation } = await import("./provider-operation-guard");
+const { releaseProviderOperation, reserveProviderOperation } = await import(
+  "./provider-operation-guard"
+);
 
 const input = {
   actorId: "11111111-1111-4111-8111-111111111111",
@@ -77,5 +79,25 @@ describe("reserveProviderOperation", () => {
       retryAfter: 0,
     });
     consoleError.mockRestore();
+  });
+});
+
+describe("releaseProviderOperation", () => {
+  it("releases the matching lease without deleting its quota row", async () => {
+    rpc.mockResolvedValue({ data: true, error: null });
+
+    await expect(releaseProviderOperation(input)).resolves.toBe(true);
+    expect(rpc).toHaveBeenCalledWith("release_provider_operation", {
+      p_actor_id: input.actorId,
+      p_provider: input.provider,
+      p_operation: input.operation,
+      p_resource_key: input.resourceKey,
+    });
+  });
+
+  it("reports a release failure without throwing from cleanup", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    rpc.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
+    await expect(releaseProviderOperation(input)).resolves.toBe(false);
   });
 });

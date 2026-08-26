@@ -52,3 +52,23 @@ export async function reserveProviderOperation(input: {
   console.error("[provider-operation-guard] invalid reservation response");
   return { state: "unavailable", retryAfter: 0 };
 }
+
+/** Releases an active resource lease while retaining its row for window quotas. */
+export async function releaseProviderOperation(input: {
+  actorId: string;
+  provider: string;
+  operation: string;
+  resourceKey: string;
+}): Promise<boolean> {
+  const { data, error } = await getServiceClient().rpc("release_provider_operation", {
+    p_actor_id: input.actorId,
+    p_provider: input.provider,
+    p_operation: input.operation,
+    p_resource_key: input.resourceKey,
+  });
+  if (error) {
+    console.error("[provider-operation-guard] lease release failed:", error.message);
+    return false;
+  }
+  return data === true;
+}

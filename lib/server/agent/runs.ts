@@ -229,6 +229,8 @@ export interface AgentRun {
   interrupt_requested: boolean;
   /** microVM cut by the reaper (null = alive/unknown). */
   sandbox_stopped_at: string | null;
+  sandbox_reap_claim: string | null;
+  sandbox_reap_claimed_at: string | null;
   /** Deployment which has the right to drain this run (MIN-165). Null = queue
    * municipality (prod + local); otherwise the `VERCEL_URL` of a preview, only it
    *  reprendre — cf. `deployment.ts`. */
@@ -1332,6 +1334,8 @@ export interface StampFields {
   last_activity_at?: string;
   interrupt_requested?: boolean;
   sandbox_stopped_at?: string | null;
+  sandbox_reap_claim?: string | null;
+  sandbox_reap_claimed_at?: string | null;
   awaiting_input?: boolean;
   /** Verdict of a string verification step (tool `report_verdict`). */
   verdict?: AgentRunVerdict | null;
@@ -1359,7 +1363,11 @@ export async function stampRun(
     guard?: AgentRunStatus[];
     expected?: Partial<
       Record<
-        "started_at" | "last_activity_at" | "loop_command_id" | "sandbox_id",
+        | "started_at"
+        | "last_activity_at"
+        | "loop_command_id"
+        | "sandbox_id"
+        | "sandbox_reap_claim",
         string | null
       >
     >;
@@ -1386,7 +1394,11 @@ export async function stampRunResult(
     guard?: AgentRunStatus[];
     expected?: Partial<
       Record<
-        "started_at" | "last_activity_at" | "loop_command_id" | "sandbox_id",
+        | "started_at"
+        | "last_activity_at"
+        | "loop_command_id"
+        | "sandbox_id"
+        | "sandbox_reap_claim",
         string | null
       >
     >;

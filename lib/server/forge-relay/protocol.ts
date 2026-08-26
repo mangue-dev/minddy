@@ -88,7 +88,7 @@ export interface RelayInstanceIdentity {
 }
 
 export type RelayRequestVerification =
-  | { ok: true; instance: RelayInstanceIdentity }
+  | { ok: true; instance: RelayInstanceIdentity; timestamp: number }
   | { ok: false; status: number; error: string };
 
 /**
@@ -171,7 +171,7 @@ export async function verifyRelayRequest(input: {
       .lt("expires_at", new Date(now).toISOString());
   }
 
-  return { ok: true, instance: { id: row.id, name: row.name } };
+  return { ok: true, instance: { id: row.id, name: row.name }, timestamp };
 }
 
 /**

@@ -817,6 +817,14 @@ export async function executeAgentRun(
             runSpentUsd: Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
             accountRemainingUsd:
               quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
+            reservedBudgetUsd:
+              run.managed_budget_usd == null
+                ? null
+                : Math.max(
+                    0,
+                    Number(run.managed_budget_usd) -
+                      Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
+                  ),
           }),
         });
         if (minted) {

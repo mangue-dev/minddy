@@ -97,6 +97,44 @@ const TABLES: Record<string, () => Row[]> = {
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (name: string) => table(TABLES[name] ?? (() => []), name),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name !== "sync_github_issue_comment_atomic") {
+        return { data: null, error: { message: `Unexpected RPC: ${name}` } };
+      }
+      const synced = githubCommentSyncRows.find(
+        (row) =>
+          row.remote_comment_id === args.p_remote_comment_id &&
+          row.issue_id === args.p_issue_id,
+      );
+      let commentId = synced?.comment_id as string | undefined;
+      if (!commentId) {
+        commentId = `inserted-${commentRows.length + 1}`;
+        commentRows.push({
+          id: commentId,
+          issue_id: args.p_issue_id,
+          author_id: args.p_author_id,
+          body: args.p_body,
+          created_at: args.p_created_at_remote,
+        });
+      } else {
+        const comment = commentRows.find((row) => row.id === commentId);
+        if (comment) comment.body = args.p_body;
+      }
+      const values = {
+        remote_comment_id: args.p_remote_comment_id,
+        issue_id: args.p_issue_id,
+        comment_id: commentId,
+        author_login: args.p_author_login,
+        author_association: args.p_author_association,
+        html_url: args.p_html_url,
+        created_at_remote: args.p_created_at_remote,
+        updated_at_remote: args.p_updated_at_remote,
+        deleted_at_remote: args.p_deleted_at_remote,
+      };
+      if (synced) Object.assign(synced, values);
+      else githubCommentSyncRows.push(values);
+      return { data: { state: "synced", comment_id: commentId }, error: null };
+    },
   }),
 }));
 

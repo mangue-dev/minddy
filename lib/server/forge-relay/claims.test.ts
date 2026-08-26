@@ -27,7 +27,56 @@ const VERIFIED_REPOSITORY = {
 vi.stubEnv("GIT_STATE_SECRET", STATE_SECRET);
 
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: (name: string) => new FakeQuery(name) }),
+  getServiceClient: () => ({
+    from: (name: string) => new FakeQuery(name),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name !== "complete_forge_relay_claim") {
+        return { data: null, error: { message: `Unexpected RPC: ${name}` } };
+      }
+      const installationId = args.p_installation_id;
+      if (
+        (fakeTables.git_connections ?? []).some(
+          (row) => row.installation_id === installationId,
+        )
+      ) {
+        return { data: { state: "cloud_owned" }, error: null };
+      }
+      const relay = (fakeTables.forge_relay_installations ?? []).find(
+        (row) => row.installation_id === installationId,
+      );
+      if (relay && relay.instance_id !== args.p_instance_id) {
+        return { data: { state: "relay_owned" }, error: null };
+      }
+      const claim = (fakeTables.forge_relay_claims ?? []).find(
+        (row) =>
+          row.id === args.p_claim_id &&
+          row.instance_id === args.p_instance_id &&
+          row.installation_id === installationId &&
+          row.status === "verifying",
+      );
+      if (!claim) return { data: { state: "claim_stale" }, error: null };
+
+      if (relay) {
+        relay.account_login = args.p_account_login;
+      } else {
+        (fakeTables.forge_relay_installations ??= []).push({
+          id: "relay-binding",
+          instance_id: args.p_instance_id,
+          installation_id: installationId,
+          account_login: args.p_account_login,
+        });
+      }
+      Object.assign(claim, {
+        status: "claimed",
+        account_login: args.p_account_login,
+        repository_id: args.p_repository_id,
+        repository_full_name: args.p_repository_full_name,
+        claimed_at: new Date().toISOString(),
+        consumed_at: null,
+      });
+      return { data: { state: "claimed" }, error: null };
+    },
+  }),
 }));
 /** Overridden by the missing-login test. */
 let installationAccount: {

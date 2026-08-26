@@ -798,14 +798,17 @@ export async function executeTool(
           typeof r.issue.plan === "string" ? r.issue.plan : null,
         );
         return {
-          result:
-            parsed.tasks.length > 0
+          result: {
+            ...r,
+            plan_rev:
+              typeof r.issue.updated_at === "string" ? r.issue.updated_at : "",
+            ...(parsed.tasks.length > 0
               ? {
-                  ...r,
                   plan_tasks: planTaskList(parsed),
                   plan_progress: parsed.progress,
                 }
-              : r,
+              : {}),
+          },
           success: true,
         };
       }
@@ -1138,6 +1141,13 @@ export async function executeTool(
         }
         const current = await readIssueText(ctx, issueId);
         if ("error" in current) return toolError(current.error);
+        const expectedRev =
+          typeof args.expected_rev === "string" ? args.expected_rev : "";
+        if (!expectedRev || expectedRev !== current.updatedAt) {
+          return toolError(
+            "The plan changed since get_issue. Read the issue again for fresh plan_tasks and plan_rev, then retry.",
+          );
+        }
         const parsed = parsePlan(current.plan);
         // All or nothing: a stale index points at another task, so refuse the
         // whole call rather than flip the wrong checkbox.

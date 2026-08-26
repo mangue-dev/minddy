@@ -112,75 +112,21 @@ export type LinkSyncResult = { ok: true; applied: number } | { ok: false; error:
 
 export async function applyRelayLinkSync(input: {
   instanceId: string;
+  generation: number;
   payload: RelayLinkSyncPayload;
 }): Promise<LinkSyncResult> {
   const supabase = getServiceClient();
-  let applied = 0;
-
-  for (const event of input.payload.events ?? []) {
-    if (event.event === "linked") {
-      const { error } = await supabase.from("forge_relay_link_mirror").upsert(
-        {
-          instance_id: input.instanceId,
-          provider: event.provider,
-          external_repo_id: event.repoId,
-          repo_full_name: event.repo,
-          connection_id: event.connectionId ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "instance_id,provider,external_repo_id" },
-      );
-      if (error) return { ok: false, error: error.message };
-    } else {
-      const { error } = await supabase
-        .from("forge_relay_link_mirror")
-        .delete()
-        .eq("instance_id", input.instanceId)
-        .eq("provider", event.provider)
-        .eq("external_repo_id", event.repoId);
-      if (error) return { ok: false, error: error.message };
-    }
-    applied += 1;
+  const { data, error } = await supabase.rpc("apply_forge_relay_link_sync", {
+    p_instance_id: input.instanceId,
+    p_generation: input.generation,
+    p_events: input.payload.events ?? [],
+    p_snapshot: input.payload.snapshot ?? null,
+  });
+  if (error) return { ok: false, error: error.message };
+  const result = data as { state?: unknown; applied?: unknown } | null;
+  if (result?.state === "stale") return { ok: true, applied: 0 };
+  if (result?.state !== "applied" || typeof result.applied !== "number") {
+    return { ok: false, error: "Invalid link sync result" };
   }
-
-  if (input.payload.snapshot) {
-    // Reconcile: drop mirror rows this instance no longer claims, then upsert
-    // the full current set. Last write wins — the snapshot IS the truth.
-    const keep = new Set(input.payload.snapshot.map((e) => `${e.provider}:${e.repoId}`));
-    const { data: current, error: readError } = await supabase
-      .from("forge_relay_link_mirror")
-      .select("provider, external_repo_id")
-      .eq("instance_id", input.instanceId);
-    if (readError) return { ok: false, error: readError.message };
-    const stale = ((current ?? []) as { provider: string; external_repo_id: string }[]).filter(
-      (row) => !keep.has(`${row.provider}:${row.external_repo_id}`),
-    );
-    for (const row of stale) {
-      const { error } = await supabase
-        .from("forge_relay_link_mirror")
-        .delete()
-        .eq("instance_id", input.instanceId)
-        .eq("provider", row.provider)
-        .eq("external_repo_id", row.external_repo_id);
-      if (error) return { ok: false, error: error.message };
-      applied += 1;
-    }
-    for (const entry of input.payload.snapshot) {
-      const { error } = await supabase.from("forge_relay_link_mirror").upsert(
-        {
-          instance_id: input.instanceId,
-          provider: entry.provider,
-          external_repo_id: entry.repoId,
-          repo_full_name: entry.repo,
-          connection_id: entry.connectionId ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "instance_id,provider,external_repo_id" },
-      );
-      if (error) return { ok: false, error: error.message };
-      applied += 1;
-    }
-  }
-
-  return { ok: true, applied };
+  return { ok: true, applied: result.applied };
 }

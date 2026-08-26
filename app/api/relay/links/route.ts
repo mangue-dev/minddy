@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
 
   const result = await applyRelayLinkSync({
     instanceId: verification.instance.id,
+    generation: verification.timestamp,
     payload: parsed.payload,
   });
   if (!result.ok) {

@@ -48,7 +48,10 @@ import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { syncRepoPullRequests } from "@/lib/server/agent/pull-requests";
 import type { ProjectGitLink } from "@/lib/types";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
-import { reserveProviderOperation } from "@/lib/server/provider-operation-guard";
+import {
+  releaseProviderOperation,
+  reserveProviderOperation,
+} from "@/lib/server/provider-operation-guard";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -365,6 +368,34 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     ) {
       return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
     }
+    const connection = await getUserConnection(auth.user.id, connectionId);
+    if (!connection) {
+      return NextResponse.json({ error: t("gitConnectionNotFound") }, { status: 404 });
+    }
+    const bindLease = {
+      actorId: auth.user.id,
+      provider: connection.provider,
+      operation: "repository_bind",
+      resourceKey: `connection:${connection.id}:repo:${externalRepoId}`,
+    };
+    const bindReservation = await reserveProviderOperation({
+      ...bindLease,
+      limit: 30,
+      windowSeconds: 3600,
+      dedupeSeconds: 120,
+    });
+    if (bindReservation.state !== "reserved") {
+      const unavailable = bindReservation.state === "unavailable";
+      return NextResponse.json(
+        { error: unavailable ? t("databaseError") : "Too many requests" },
+        {
+          status: unavailable ? 503 : 429,
+          ...(bindReservation.retryAfter > 0
+            ? { headers: { "Retry-After": String(bindReservation.retryAfter) } }
+            : {}),
+        },
+      );
+    }
     try {
       const result = await bindRepo({
         projectId: id,
@@ -397,6 +428,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ link: result.link });
     } catch (err) {
       return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    } finally {
+      await releaseProviderOperation(bindLease);
     }
   }
 
@@ -445,6 +478,30 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // GitLab: the hook lives on the repository, we provision/switch it here. Her
       // secret is specific to THIS deposit (MIN-333) and minted before the call: the
       // receiver will only recognize the hook by this secret.
+      const hookLease = {
+        actorId: auth.user.id,
+        provider: "gitlab",
+        operation: "issues_hook",
+        resourceKey: `repo:${link.externalRepoId}:issues-hook`,
+      };
+      const hookReservation = await reserveProviderOperation({
+        ...hookLease,
+        limit: 20,
+        windowSeconds: 3600,
+        dedupeSeconds: 120,
+      });
+      if (hookReservation.state !== "reserved") {
+        const unavailable = hookReservation.state === "unavailable";
+        return NextResponse.json(
+          { error: unavailable ? t("databaseError") : "Too many requests" },
+          {
+            status: unavailable ? 503 : 429,
+            ...(hookReservation.retryAfter > 0
+              ? { headers: { "Retry-After": String(hookReservation.retryAfter) } }
+              : {}),
+          },
+        );
+      }
       try {
         const secret = await ensureRepoWebhookSecret({
           provider: "gitlab",
@@ -466,6 +523,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         if (enabled) {
           return NextResponse.json({ error: t("gitHookFailed") }, { status: 502 });
         }
+      } finally {
+        await releaseProviderOperation(hookLease);
       }
     }
 

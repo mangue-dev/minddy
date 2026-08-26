@@ -27,6 +27,99 @@ export async function fakeRpc(
   name: string,
   args: Record<string, unknown>,
 ): Promise<{ data: unknown; error: unknown }> {
+  if (name === "complete_forge_relay_claim") {
+    const installationId = args.p_installation_id;
+    if (
+      (fakeTables.git_connections ?? []).some(
+        (row) => row.provider === "github" && row.installation_id === installationId,
+      )
+    ) {
+      return { data: { state: "cloud_owned" }, error: null };
+    }
+    const existingRelay = (fakeTables.forge_relay_installations ?? []).find(
+      (row) => row.installation_id === installationId,
+    );
+    if (existingRelay && existingRelay.instance_id !== args.p_instance_id) {
+      return { data: { state: "relay_owned" }, error: null };
+    }
+    const claim = (fakeTables.forge_relay_claims ?? []).find(
+      (row) =>
+        row.id === args.p_claim_id &&
+        row.instance_id === args.p_instance_id &&
+        row.installation_id === installationId &&
+        row.status === "verifying",
+    );
+    if (!claim) return { data: { state: "claim_stale" }, error: null };
+    if (!existingRelay) {
+      (fakeTables.forge_relay_installations ??= []).push({
+        id: crypto.randomUUID(),
+        instance_id: args.p_instance_id,
+        installation_id: installationId,
+        account_login: args.p_account_login,
+      });
+    } else {
+      existingRelay.account_login = args.p_account_login;
+    }
+    Object.assign(claim, {
+      status: "claimed",
+      account_login: args.p_account_login,
+      repository_id: args.p_repository_id,
+      repository_full_name: args.p_repository_full_name,
+      claimed_at: new Date().toISOString(),
+      consumed_at: null,
+    });
+    return { data: { state: "claimed" }, error: null };
+  }
+  if (name === "apply_forge_relay_link_sync") {
+    const instance = (fakeTables.forge_relay_instances ?? []).find(
+      (row) => row.id === args.p_instance_id && row.status === "active",
+    );
+    if (!instance) return { data: { state: "instance_inactive" }, error: null };
+    const generation = Number(args.p_generation);
+    if (generation <= Number(instance.last_link_snapshot_generation ?? 0)) {
+      return { data: { state: "stale", applied: 0 }, error: null };
+    }
+    const snapshot = args.p_snapshot as Array<Record<string, unknown>> | null;
+    const events = args.p_events as Array<Record<string, unknown>>;
+    const other = (fakeTables.forge_relay_link_mirror ?? []).filter(
+      (row) => row.instance_id !== args.p_instance_id,
+    );
+    const current = (fakeTables.forge_relay_link_mirror ?? []).filter(
+      (row) => row.instance_id === args.p_instance_id,
+    );
+    const next = snapshot
+      ? snapshot.map((entry) => ({
+          instance_id: args.p_instance_id,
+          provider: entry.provider,
+          external_repo_id: entry.repoId,
+          repo_full_name: entry.repo,
+          connection_id: entry.connectionId ?? null,
+          updated_at: new Date().toISOString(),
+        }))
+      : events.reduce<FakeRow[]>((rows, event) => {
+          const without = rows.filter(
+            (row) =>
+              row.provider !== event.provider || row.external_repo_id !== event.repoId,
+          );
+          return event.event === "linked"
+            ? [
+                ...without,
+                {
+                  instance_id: args.p_instance_id,
+                  provider: event.provider,
+                  external_repo_id: event.repoId,
+                  repo_full_name: event.repo,
+                  connection_id: event.connectionId ?? null,
+                  updated_at: new Date().toISOString(),
+                },
+              ]
+            : without;
+        }, current);
+    const previous = current.length;
+    fakeTables.forge_relay_link_mirror = [...other, ...next];
+    instance.last_link_snapshot_generation = generation;
+    return { data: { state: "applied", applied: previous + next.length }, error: null };
+  }
   if (name === "claim_forge_oauth_refresh") {
     const table = args.p_kind === "connection" ? "git_connections" : "git_user_identities";
     const row = (fakeTables[table] ?? []).find((candidate) => candidate.id === args.p_row_id);

@@ -683,44 +683,21 @@ async function applyGithubIssueComment(
   }
 
   const body = remote.action === "deleted" ? "[Deleted on GitHub]" : remote.body;
-  let commentId = synced?.comment_id as string | undefined;
-  if (commentId) {
-    const { error } = await service
-      .from("comments")
-      .update({ body })
-      .eq("id", commentId)
-      .eq("issue_id", issueId);
-    if (error) throw new Error(error.message);
-  } else {
-    const { data, error } = await service
-      .from("comments")
-      .insert({
-        issue_id: issueId,
-        author_id: target.createdBy,
-        body,
-        created_at: remote.createdAt ?? new Date().toISOString(),
-      })
-      .select("id")
-      .single();
-    if (error || !data) throw new Error(error?.message ?? "comment insert returned no id");
-    commentId = data.id as string;
-  }
-
-  const { error: writeError } = await service.from("github_issue_comment_syncs").upsert(
-    {
-      remote_comment_id: remote.remoteCommentId,
-      issue_id: issueId,
-      comment_id: commentId,
-      author_login: remote.authorLogin,
-      author_association: remote.authorAssociation,
-      html_url: remote.htmlUrl,
-      created_at_remote: remote.createdAt,
-      updated_at_remote: remote.updatedAt,
-      deleted_at_remote: remote.action === "deleted" ? remote.updatedAt ?? new Date().toISOString() : null,
-      synced_at: new Date().toISOString(),
-    },
-    { onConflict: "remote_comment_id,issue_id" },
-  );
+  const { error: writeError } = await service.rpc("sync_github_issue_comment_atomic", {
+    p_issue_id: issueId,
+    p_remote_comment_id: remote.remoteCommentId,
+    p_author_id: target.createdBy,
+    p_body: body,
+    p_author_login: remote.authorLogin,
+    p_author_association: remote.authorAssociation,
+    p_html_url: remote.htmlUrl,
+    p_created_at_remote: remote.createdAt,
+    p_updated_at_remote: remote.updatedAt,
+    p_deleted_at_remote:
+      remote.action === "deleted"
+        ? remote.updatedAt ?? new Date().toISOString()
+        : null,
+  });
   if (writeError) throw new Error(writeError.message);
 }
 

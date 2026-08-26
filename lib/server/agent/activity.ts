@@ -1,20 +1,14 @@
-// PURE derivation (without DB, without server-only import): testable in node/vitest,
-// comme prune.ts / caching.ts.
+// Pure derivation without database or server-only imports, testable in Node/Vitest.
 
 /**
- * Shared construction of the "agent activity by issue" response (MIN-46),
- * used by the project endpoint AND the global endpoint. Takes the runs of the agent
- * (sorted created_at DESC, excluding `failed`) and derives three views.
+ * Builds the shared agent-activity response used by project and global endpoints.
  *
- * The PR no longer comes from the runs. It came from there, and it made the
- * ticket say "I don't have a pull request" in two cases where it had one:
- * when no one had launched Numo on it (human PR attached by convention,
- * or attached by hand from the header — MIN-163), and when the PR was
- * CLOSED. Since MIN-143 the pull request is an entity: that's what we read.
+ * Pull requests come from their own rows so human-attached and closed PRs are
+ * represented even when no agent run references them.
  */
 
 export interface AgentRunRow {
-  issue_id: string;
+  issue_id: string | null;
   status: string;
   id: string;
   pr_number: number | null;
@@ -22,7 +16,7 @@ export interface AgentRunRow {
   created_at: string;
 }
 
-/** Line `pull_requests` attached to a ticket, sorted `updated_at` DESC. */
+/** A pull request attached to an issue, sorted by `updated_at` descending. */
 export interface IssuePrRow {
   id: string;
   issue_id: string | null;
@@ -68,28 +62,23 @@ export function issuePullRequestsForBindings(
   });
 }
 
-/** The pull request for a ticket, as the client receives it. */
+/** The pull request reference returned to the client. */
 export interface IssuePrRef {
-  /** Id minddy — the `?pr=` deep-link works regardless of the RA state. */
+  /** Minddy ID used by the `?pr=` deep link regardless of PR state. */
   prId: string;
   prNumber: number;
   state: "draft" | "open" | "merged" | "closed";
 }
 
 export interface AgentActivityResponse {
-  /** The agent is WORKING (queued/running) → animated halo on the map. */
+  /** Issues with a queued or running agent. */
   workingIssueIds: string[];
   /**
- * An agent CONVERSATION exists on the outcome (at least one run not `failed`,
- * at work or at rest) → card entry OPENS the conversation instead of
- * starting a new one (conversational model: an at-rest session se
- * continues from its composer).
+   * Issues with an agent conversation, whether active or at rest.
  */
   sessionIssueIds: string[];
   /**
- * PR of the ticket, ALL STATES COMBINED — the “View pull request” entry in the
- * menus must lead there even when closed. The chip of the card is only displayed
- * on an unclosed PR: it is the client who does this sorting, with `state`.
+   * Pull requests in every state; clients decide which states receive a chip.
  */
   pullRequests: Record<string, IssuePrRef>;
 }
@@ -101,15 +90,12 @@ function prState(raw: string): IssuePrRef["state"] {
 }
 
 /**
- * The PR of a ticket which carries several (successive runs: a refused PR,
- * then the one which replaces it). A LIVING PR always wins — it’s the one we
- * will reread; failing that, the most recently touched at the forge.
+ * Selects a live PR over terminal PRs, then keeps the most recently updated row.
  */
 export function pickIssuePullRequests(rows: IssuePrRow[]): Record<string, IssuePrRef> {
   const picked: Record<string, IssuePrRef> = {};
   const pickedLive = new Set<string>();
-  // `rows` arrives sorted updated_at DESC: the first seen of a ticket is the most
-  // fresh, and we only replace it with a living PR.
+  // Rows are sorted by updated_at descending; only a live PR can replace the first row.
   for (const row of rows) {
     if (!row.issue_id) continue;
     const live = LIVE_STATES.has(row.state);
@@ -131,12 +117,17 @@ export function buildAgentActivity(
   const workingIssueIds = [
     ...new Set(
       rows
-        .filter((r) => r.status === "queued" || r.status === "running")
+        .filter(
+          (r): r is AgentRunRow & { issue_id: string } =>
+            Boolean(r.issue_id) && (r.status === "queued" || r.status === "running"),
+        )
         .map((r) => r.issue_id),
     ),
   ];
   // `rows` already excludes `failed` runs (contract of calling endpoints).
-  const sessionIssueIds = [...new Set(rows.map((r) => r.issue_id))];
+  const sessionIssueIds = [
+    ...new Set(rows.flatMap((r) => (r.issue_id ? [r.issue_id] : []))),
+  ];
   return {
     workingIssueIds,
     sessionIssueIds,

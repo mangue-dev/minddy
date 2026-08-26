@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   FakeQuery,
+  fakeRpc,
   fakeTables,
   setFakeTable,
 } from "../../../test/forge-relay/fake-supabase";
@@ -25,7 +26,10 @@ vi.mock("@/lib/managed-services", () => ({
   isManagedForgeEnabled: () => forgeEnabled,
 }));
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: (name: string) => new FakeQuery(name) }),
+  getServiceClient: () => ({
+    from: (name: string) => new FakeQuery(name),
+    rpc: fakeRpc,
+  }),
 }));
 vi.mock("@/lib/server/git/link-state", () => ({
   verifyGitLinkState: () => null,

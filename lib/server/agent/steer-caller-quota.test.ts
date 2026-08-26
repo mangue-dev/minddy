@@ -1,18 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-344 — `/steer` charged the creator of the run and only controlled him.
+ * MIN-344 — `/steer` charged the run creator and checked only that account.
  *
- * Talking to an agent means making him work: the message extends the round in
- * course, or reopens a completed one. The “agents” right and the ceiling were only checked on the CREATOR of the run. However, three runs on four anchors
- * are readable by the whole team (routine, chain, PR rereading,
- * cf. `canReadAgentRun`): a member whose plan does not include agents had
- * an agent, paid by the next account, and with no limit on his side to him.
+ * A message extends an active round or reopens a completed one. Team-readable
+ * runs must therefore enforce the caller's plan and budget on every message.
  *
- * What these tests fix: the caller must HAVE the agents in his plan, whatever
- * whatever the state of the run; and a recovery looks at BOTH budgets — that of
- * the caller, who triggers the expense, and that of the owner, whose key
- * executes it (the ledger charges to `created_by`, deliberately).
+ * A resume also checks the owner's budget because the owner's key executes it
+ * and the ledger deliberately charges `created_by`.
  */
 
 const quotas = new Map<string, Record<string, unknown>>();
@@ -92,7 +87,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/agent-runs/[runId]/steer", () => {
-  it("refuse un membre dont le plan n'inclut pas les agents", async () => {
+  it("rejects a member whose plan does not include agents", async () => {
     quotas.set(MEMBER, {
       allowed: false,
       mode: "platform",
@@ -104,7 +99,7 @@ describe("POST /api/agent-runs/[runId]/steer", () => {
     expect(stamped).toHaveLength(0);
   });
 
-  it("le refuse AUSSI sur un run qui tourne — un message le fait travailler", async () => {
+  it("also rejects that member on an active run", async () => {
     run!.status = "running";
     quotas.set(MEMBER, {
       allowed: false,
@@ -116,7 +111,7 @@ describe("POST /api/agent-runs/[runId]/steer", () => {
     expect(messages).toHaveLength(0);
   });
 
-  it("refuse une reprise quand l'appelant a épuisé SON budget", async () => {
+  it("rejects a resume when the caller has exhausted their budget", async () => {
     quotas.set(MEMBER, {
       allowed: false,
       mode: "platform",
@@ -127,7 +122,19 @@ describe("POST /api/agent-runs/[runId]/steer", () => {
     expect(await res.json()).toMatchObject({ code: "quotaExceeded" });
   });
 
-  it("refuse encore quand c'est le propriétaire qui n'a plus rien — c'est sa clé qui exécute", async () => {
+  it("rejects an active-run message when the caller has exhausted their budget", async () => {
+    run!.status = "running";
+    quotas.set(MEMBER, {
+      allowed: false,
+      mode: "platform",
+      reason: "usage_budget_exceeded",
+    });
+    const res = await POST(request(), params);
+    expect(res.status).toBe(402);
+    expect(messages).toHaveLength(0);
+  });
+
+  it("rejects a resume when the owner has exhausted their budget", async () => {
     quotas.set(OWNER, {
       allowed: false,
       mode: "platform",
@@ -138,14 +145,14 @@ describe("POST /api/agent-runs/[runId]/steer", () => {
     expect(stamped).toHaveLength(0);
   });
 
-  it("laisse passer quand les deux comptes sont en règle", async () => {
+  it("accepts a resume when both accounts are within budget", async () => {
     const res = await POST(request(), params);
     expect(res.status).toBe(200);
     expect(checkAgentQuota.mock.calls.map(([id]) => id)).toEqual([MEMBER, OWNER]);
     expect(messages).toHaveLength(1);
   });
 
-  it("ne demande qu'une fois le quota quand l'appelant EST le propriétaire", async () => {
+  it("checks quota once when the caller is the owner", async () => {
     caller = OWNER;
     const res = await POST(request(), params);
     expect(res.status).toBe(200);

@@ -31,10 +31,11 @@ async function currentRelayedLinks(): Promise<
   { provider: string; repoId: string; repo: string; connectionId: string | null }[]
 > {
   const supabase = getServiceClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("project_git_links")
     .select("provider, external_repo_id, repo_full_name, connection_id, git_connections(source)")
     .eq("git_connections.source", "relay");
+  if (error) throw error;
   return ((data ?? []) as unknown as Array<{
     provider: string;
     external_repo_id: string;

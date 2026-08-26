@@ -112,11 +112,17 @@ export async function startVmLoop(
   // and it is for him that `harnessDir` is out of the repository.
   await sandbox.writeFiles([{ path: jobPath, content: JSON.stringify(withBootstrap) }]);
 
+  const routingHints =
+    withBootstrap.appOrigin && withBootstrap.controlToken
+      ? [withBootstrap.appOrigin, withBootstrap.controlToken]
+      : [];
   const command = await sandbox.runCommand({
     cmd: "node",
     // The path to the job in ARGUMENT: it's the only thing that the harness cannot
     // not learn from the job itself (see `vmJobPath`).
-    args: [bundlePath, jobPath],
+    // Routing hints remain available if the job file becomes unreadable after
+    // launch. The harness can then report the terminal failure immediately.
+    args: [bundlePath, jobPath, ...routingHints],
     cwd: harnessDir,
     detached: true,
   });

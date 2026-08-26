@@ -222,4 +222,16 @@ describe("MFA mutations", () => {
     expect(Number(responses[3].headers.get("Retry-After"))).toBeGreaterThan(0);
     expect(issueRecoveryCodes).toHaveBeenCalledTimes(3);
   });
+
+  it("rate-limits burst enrollment activation before issuing more recovery codes", async () => {
+    const responses = [];
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      responses.push(await activateMfa(request("/api/account/mfa")));
+    }
+
+    expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 429]);
+    expect(Number(responses[3].headers.get("Retry-After"))).toBeGreaterThan(0);
+    expect(enableMfa).toHaveBeenCalledTimes(3);
+    expect(issueRecoveryCodes).toHaveBeenCalledTimes(3);
+  });
 });

@@ -9,6 +9,9 @@ import {
   hasFreshAal2Verification,
   hasFreshPrimaryAuthentication,
 } from "@/lib/server/reauth";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+
+const ACTIVATION_LIMIT = { limit: 3, windowMs: 60 * 60_000 };
 
 /**
  * Account second factor (MIN-132).
@@ -48,6 +51,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: t("mfaReauthTooOld"), code: REAUTH_REQUIRED_CODE },
       { status: 403 }
+    );
+  }
+
+  const rate = checkSessionRateLimit(auth.user.id, "mfa-activation", ACTIVATION_LIMIT);
+  if (!rate.allowed) {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json(
+      { error: t("tooManyAttempts", { seconds: rate.retryAfter }) },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
     );
   }
 
