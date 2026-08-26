@@ -97,6 +97,8 @@ export interface ProjectPrToolContext {
    * one PR or out of five.
    */
   inline: { used: number };
+  reserveInline?: () => Promise<number | null>;
+  releaseInline?: () => Promise<number | null>;
 }
 
 // ── Limits of what we return to the model ───────────────────────────────────────
@@ -158,7 +160,12 @@ async function refreshIfStale(target: ProjectRepoTarget): Promise<void> {
     const states = await readRepoSyncStates([
       { provider: target.provider, repoFullName: target.repoFullName },
     ]);
-    if (!needsRepoSync(states.get(repoSyncKey(target.provider, target.repoFullName)))) return;
+    if (
+      !needsRepoSync(
+        states.get(repoSyncKey(target.provider, target.repoFullName)),
+      )
+    )
+      return;
     await syncRepoPullRequests({
       provider: target.provider,
       repoFullName: target.repoFullName,
@@ -180,7 +187,11 @@ interface ListedRow {
   opened_at: string | null;
   merged_at: string | null;
   updated_at: string;
-  issue: { number: number; title: string; project: { key: string } | null } | null;
+  issue: {
+    number: number;
+    title: string;
+    project: { key: string } | null;
+  } | null;
 }
 
 async function listPullRequests(
@@ -279,21 +290,30 @@ async function readPullRequest(
   const target = await ctx.repo();
   if (!target) return noRepo();
   const forge = forgeFor(target.provider);
-  const call = { token: target.token, repoFullName: target.repoFullName, number };
+  const call = {
+    token: target.token,
+    repoFullName: target.repoFullName,
+    number,
+  };
   const includeDiff = args.include_diff === true;
 
   const pr = await forge.getPullRequest(call);
   // Everything else is BEST-EFFORT: a repository without CI, an App without permission
   // checks or a forge that does not have a review object should not prevent
   // read the pull request. `null` means “not readable”, never “nothing”.
-  const [diff, reviewComments, reviewThreads, comments, reviews, checks] = await Promise.all([
-    forge.listPullRequestFiles(call).catch(() => ({ files: [], truncated: false })),
-    forge.listPullRequestReviewComments(call).catch(() => []),
-    forge.listReviewThreads(call).catch(() => []),
-    forge.listPullRequestComments(call).catch(() => []),
-    forge.listReviews(call).catch(() => null),
-    pr.headSha ? forge.listChecks({ ...call, sha: pr.headSha }).catch(() => null) : null,
-  ]);
+  const [diff, reviewComments, reviewThreads, comments, reviews, checks] =
+    await Promise.all([
+      forge
+        .listPullRequestFiles(call)
+        .catch(() => ({ files: [], truncated: false })),
+      forge.listPullRequestReviewComments(call).catch(() => []),
+      forge.listReviewThreads(call).catch(() => []),
+      forge.listPullRequestComments(call).catch(() => []),
+      forge.listReviews(call).catch(() => null),
+      pr.headSha
+        ? forge.listChecks({ ...call, sha: pr.headSha }).catch(() => null)
+        : null,
+    ]);
 
   const threads = groupReviewThreads(reviewComments, reviewThreads);
   const files = diff.files.slice(0, MAX_FILES);
@@ -324,23 +344,37 @@ async function readPullRequest(
             total: checks.total,
             failing: checks.checks
               .filter((c) => c.state === "failure")
-              .map((c) => ({ name: c.name, url: c.url, description: c.description })),
+              .map((c) => ({
+                name: c.name,
+                url: c.url,
+                description: c.description,
+              })),
           }
         : null,
       reviews: reviews
-        ? { approvals: reviews.approvals, changes_requested: reviews.changesRequested }
+        ? {
+            approvals: reviews.approvals,
+            changes_requested: reviews.changesRequested,
+          }
         : null,
       files: files.map((f) => ({
         filename: f.filename,
         status: f.status,
         additions: f.additions,
         deletions: f.deletions,
-        ...(includeDiff ? { patch: cap(f.patch ?? null, MAX_PATCH_CHARS) } : {}),
+        ...(includeDiff
+          ? { patch: cap(f.patch ?? null, MAX_PATCH_CHARS) }
+          : {}),
       })),
       files_truncated: diff.truncated || diff.files.length > files.length,
       // Without the diff, say it: a model that reads a list of files without
       // patch must know that the content is obtained, not that it does not exist.
-      ...(includeDiff ? {} : { diff_omitted: "call again with include_diff: true to get the patches" }),
+      ...(includeDiff
+        ? {}
+        : {
+            diff_omitted:
+              "call again with include_diff: true to get the patches",
+          }),
       review_comments: threads.slice(0, MAX_THREADS).map((thread) => ({
         id: thread.id,
         path: thread.root.path,
@@ -379,7 +413,10 @@ async function commentPullRequest(
   const target = await ctx.repo();
   if (!target) return noRepo();
 
-  const signed = signReviewBody(body, ctx.model, ctx.locale).slice(0, MAX_BODY_LENGTH);
+  const signed = signReviewBody(body, ctx.model, ctx.locale).slice(
+    0,
+    MAX_BODY_LENGTH,
+  );
   const comment = await forgeFor(target.provider).createPullRequestComment({
     token: target.token,
     repoFullName: target.repoFullName,
@@ -402,7 +439,10 @@ async function commentPullRequestLine(
   if (!body) return { result: { error: "body is required." }, success: false };
   if (!path) return { result: { error: "path is required." }, success: false };
   if (line == null || line < 1) {
-    return { result: { error: "line must be a positive integer." }, success: false };
+    return {
+      result: { error: "line must be a positive integer." },
+      success: false,
+    };
   }
 
   // The ceiling BEFORE any call for forging: exceeded, there is nothing to try.
@@ -420,7 +460,11 @@ async function commentPullRequestLine(
   const target = await ctx.repo();
   if (!target) return noRepo();
   const forge = forgeFor(target.provider);
-  const call = { token: target.token, repoFullName: target.repoFullName, number };
+  const call = {
+    token: target.token,
+    repoFullName: target.repoFullName,
+    number,
+  };
 
   // Same anchor validation as the replay session: one commentable line
   // is a line of the DIFF, and a refusal makes the RANGES which are.
@@ -428,7 +472,18 @@ async function commentPullRequestLine(
   const anchor = resolvePrCommentAnchor(files, { path, line, side });
   if (!anchor.ok) return { result: { error: anchor.error }, success: false };
 
-  return await forgeCall(async () => {
+  const reserved = ctx.reserveInline ? await ctx.reserveInline() : null;
+  if (ctx.reserveInline && reserved === null) {
+    return {
+      result: {
+        error: `You have already posted the ${AI_REVIEW_MAX_INLINE_COMMENTS} line comments this run allows, across every pull request. Say the rest in a pull request comment (comment_pull_request), most serious first.`,
+      },
+      success: false,
+    };
+  }
+  if (reserved !== null) ctx.inline.used = reserved;
+
+  const outcome = await forgeCall(async () => {
     const comment = await forge.createPullRequestReviewComment({
       ...call,
       body: body.slice(0, MAX_BODY_LENGTH),
@@ -436,7 +491,7 @@ async function commentPullRequestLine(
       line,
       side,
     });
-    ctx.inline.used++;
+    if (reserved === null) ctx.inline.used++;
     return {
       result: {
         id: comment.id,
@@ -449,6 +504,10 @@ async function commentPullRequestLine(
       success: true,
     };
   }, "The head may have moved since you read the diff — put the point in a pull request comment.");
+  if (!outcome.success && reserved !== null && ctx.releaseInline) {
+    ctx.inline.used = (await ctx.releaseInline()) ?? ctx.inline.used;
+  }
+  return outcome;
 }
 
 async function replyPullRequestThread(
@@ -473,7 +532,9 @@ async function replyPullRequestThread(
   if (!target) return noRepo();
 
   return await forgeCall(async () => {
-    const reply = await forgeFor(target.provider).replyToPullRequestReviewComment({
+    const reply = await forgeFor(
+      target.provider,
+    ).replyToPullRequestReviewComment({
       token: target.token,
       repoFullName: target.repoFullName,
       number,
@@ -496,11 +557,17 @@ async function reviewPullRequest(
   const verdict = str(args.verdict) as Verdict;
   const body = str(args.body);
   if (!VERDICTS.includes(verdict)) {
-    return { result: { error: `verdict must be one of: ${VERDICTS.join(", ")}.` }, success: false };
+    return {
+      result: { error: `verdict must be one of: ${VERDICTS.join(", ")}.` },
+      success: false,
+    };
   }
   if (!body) {
     return {
-      result: { error: "body is required: a verdict without its reasons is not a review." },
+      result: {
+        error:
+          "body is required: a verdict without its reasons is not a review.",
+      },
       success: false,
     };
   }
@@ -513,7 +580,10 @@ async function reviewPullRequest(
       repoFullName: target.repoFullName,
       number,
       verdict,
-      body: signReviewBody(body, ctx.model, ctx.locale).slice(0, MAX_BODY_LENGTH),
+      body: signReviewBody(body, ctx.model, ctx.locale).slice(
+        0,
+        MAX_BODY_LENGTH,
+      ),
     });
     return {
       result: {
@@ -546,12 +616,19 @@ async function setPullRequestState(
   if (typeof number !== "number") return { result: number, success: false };
   const state = str(args.state) as TargetState;
   if (!STATES.includes(state)) {
-    return { result: { error: `state must be one of: ${STATES.join(", ")}.` }, success: false };
+    return {
+      result: { error: `state must be one of: ${STATES.join(", ")}.` },
+      success: false,
+    };
   }
   const target = await ctx.repo();
   if (!target) return noRepo();
   const forge = forgeFor(target.provider);
-  const call = { token: target.token, repoFullName: target.repoFullName, number };
+  const call = {
+    token: target.token,
+    repoFullName: target.repoFullName,
+    number,
+  };
 
   if (state === "merged") {
     const method = str(args.merge_method) as MergeMethod;
@@ -565,7 +642,10 @@ async function setPullRequestState(
     }
     return await forgeCall(async () => {
       await forge.mergePullRequest({ ...call, ...(method ? { method } : {}) });
-      return { result: { number, state: "merged", method: method || null }, success: true };
+      return {
+        result: { number, state: "merged", method: method || null },
+        success: true,
+      };
     }, "A merge is refused when the branch is protected, the checks are red, the approvals are missing or the branch conflicts — read_pull_request shows mergeable_state.");
   }
 
@@ -579,7 +659,10 @@ async function setPullRequestState(
   if (state === "open") {
     return await forgeCall(async () => {
       const pr = await forge.reopenPullRequest(call);
-      return { result: { number, state: pr.merged ? "merged" : pr.state }, success: true };
+      return {
+        result: { number, state: pr.merged ? "merged" : pr.state },
+        success: true,
+      };
     }, "A merged pull request cannot be reopened.");
   }
 
@@ -589,11 +672,18 @@ async function setPullRequestState(
     const pr = await forge.getPullRequest(call);
     if (!pr.draft) {
       return {
-        result: { number, state: "open", note: "This pull request was not a draft — nothing to do." },
+        result: {
+          number,
+          state: "open",
+          note: "This pull request was not a draft — nothing to do.",
+        },
         success: true,
       };
     }
-    await forge.markReadyForReview({ ...call, ...(pr.nodeId ? { nodeId: pr.nodeId } : {}) });
+    await forge.markReadyForReview({
+      ...call,
+      ...(pr.nodeId ? { nodeId: pr.nodeId } : {}),
+    });
     return { result: { number, state: "open" }, success: true };
   }, "");
 }
@@ -657,15 +747,23 @@ export async function executeProjectPrTool(
       case "set_pull_request_state":
         return await setPullRequestState(ctx, args);
       default:
-        return { result: { error: `Unknown pull request tool: ${name}` }, success: false };
+        return {
+          result: { error: `Unknown pull request tool: ${name}` },
+          success: false,
+        };
     }
   } catch (err) {
     if (isForgeApiError(err)) {
       return {
-        result: { error: `The forge refused this (${err.status}): ${err.message}` },
+        result: {
+          error: `The forge refused this (${err.status}): ${err.message}`,
+        },
         success: false,
       };
     }
-    return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };
+    return {
+      result: { error: err instanceof Error ? err.message : String(err) },
+      success: false,
+    };
   }
 }

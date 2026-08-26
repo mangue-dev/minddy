@@ -10,17 +10,19 @@ import { describe, expect, it } from "vitest";
  */
 const source = readFileSync(join(__dirname, "supervisor.ts"), "utf8");
 
-describe("amorçage opencode", () => {
-  it("écrit l'ancrage et les tools en parallèle avant de démarrer le serveur", () => {
+describe("OpenCode startup", () => {
+  it("writes the anchor and tools concurrently before starting the server", () => {
     const decoration = source.indexOf("await Promise.all([\n    deps.writeFile(opencodeAnchorFile");
     const server = source.indexOf("server = await deps.startServer(env);");
 
     expect(decoration).toBeGreaterThan(-1);
-    expect(source).toContain("...opencodeToolFiles(job).map((file) => deps.writeFile(file.path, file.content))");
+    expect(source).toMatch(
+      /\.\.\.opencodeToolFiles\(job\)\.map\(\(file\) =>\s+deps\.writeFile\(file\.path, file\.content\)/,
+    );
     expect(server).toBeGreaterThan(decoration);
   });
 
-  it("lit les conventions du dépôt sans sérialiser les chemins indépendants", () => {
+  it("reads repository conventions without serializing independent paths", () => {
     const functionStart = source.indexOf("async function servedInstructionsFile(");
     const functionEnd = source.indexOf("\n}\n\n/**\n * JOUE LE TOUR", functionStart);
     const served = source.slice(functionStart, functionEnd);

@@ -3,7 +3,10 @@
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
-import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-session";
+import type {
+  PrReviewRunSummary,
+  PrReviewSession,
+} from "@/lib/pr-review-session";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { CommitAuthor } from "@/lib/commit-authors";
 import type {
@@ -34,7 +37,11 @@ export class ApiError extends Error {
    * plan), which the screen needs to tell which one and how far.
    */
   details?: Record<string, unknown>;
-  constructor(message: string, code?: string, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    code?: string,
+    details?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = "ApiError";
     this.code = code;
@@ -51,16 +58,19 @@ async function parseJson<T>(response: Response): Promise<T> {
     data = null;
   }
   if (!response.ok) {
-    const payload = data as
-      | { error?: string; code?: string; modelLimit?: Record<string, unknown> }
-      | null;
+    const payload = data as {
+      error?: string;
+      code?: string;
+      modelLimit?: Record<string, unknown>;
+    } | null;
     const message = payload?.error || text.trim() || "Request failed";
     throw new ApiError(message, payload?.code, payload?.modelLimit);
   }
   return data as T;
 }
 
-export type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled";
+export type AgentRunStatus =
+  "queued" | "running" | "completed" | "failed" | "canceled";
 
 export interface AgentRunSummary {
   id: string;
@@ -183,7 +193,13 @@ export async function fetchIssueAgentRunsApi(
     the expenditure, only the account quota limits (see lib/automations). */
 export interface IssueChainState {
   id: string;
-  status: "pending" | "running" | "awaiting_human" | "stopped" | "completed" | "failed";
+  status:
+    | "pending"
+    | "running"
+    | "awaiting_human"
+    | "stopped"
+    | "completed"
+    | "failed";
   preset: string | null;
   step: number;
   retries: number;
@@ -398,7 +414,9 @@ export async function setAgentConversationPinnedApi(
  * laquelle.
  */
 export async function deleteAgentRunApi(runId: string): Promise<{ ok: true }> {
-  return parseJson(await fetch(`/api/agent-runs/${runId}`, { method: "DELETE" }));
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}`, { method: "DELETE" }),
+  );
 }
 
 // ── Run detail / events / stop / PR ───────────────────── ─────────────────────
@@ -429,7 +447,8 @@ export interface AgentRunEvent {
 }
 
 /** Nature d'un changement de fichier d'un tour (git name-status → 4 cas affichables). */
-export type AgentFileChangeStatus = "added" | "modified" | "deleted" | "renamed";
+export type AgentFileChangeStatus =
+  "added" | "modified" | "deleted" | "renamed";
 
 /**
  * A file changed during an agent turn (MIN-46, note “diff per turn”).
@@ -457,7 +476,9 @@ export interface AgentFilesChangedPayload {
 export function parseFilesChangedPayload(
   payload: Record<string, unknown> | null,
 ): AgentFilesChangedPayload {
-  const rawFiles = Array.isArray(payload?.files) ? (payload!.files as unknown[]) : [];
+  const rawFiles = Array.isArray(payload?.files)
+    ? (payload!.files as unknown[])
+    : [];
   const files: AgentFileChange[] = [];
   for (const raw of rawFiles) {
     if (typeof raw !== "object" || raw === null) continue;
@@ -473,7 +494,9 @@ export function parseFilesChangedPayload(
       status,
       additions: typeof r.additions === "number" ? r.additions : 0,
       deletions: typeof r.deletions === "number" ? r.deletions : 0,
-      ...(typeof r.previousPath === "string" ? { previousPath: r.previousPath } : {}),
+      ...(typeof r.previousPath === "string"
+        ? { previousPath: r.previousPath }
+        : {}),
     });
   }
   return { files, truncated: payload?.truncated === true };
@@ -495,7 +518,9 @@ export async function fetchAgentRunEventsApi(
  */
 export async function interruptAgentRunApi(runId: string): Promise<void> {
   trackEvent("agent_stopped", {});
-  await parseJson(await fetch(`/api/agent-runs/${runId}/stop`, { method: "POST" }));
+  await parseJson(
+    await fetch(`/api/agent-runs/${runId}/stop`, { method: "POST" }),
+  );
 }
 
 /**
@@ -520,7 +545,8 @@ export async function steerAgentRunApi(
   message: string,
   mentions: AssistantMention[] = [],
   attachments: ResourceInput[] = [],
-): Promise<{ ok: true; status: AgentRunStatus }> {
+  messageId = crypto.randomUUID(),
+): Promise<{ ok: true; status: AgentRunStatus; messageId: string }> {
   trackEvent("agent_steered", { length_bucket: lengthBucket(message) });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/steer`, {
@@ -528,6 +554,7 @@ export async function steerAgentRunApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         message,
+        messageId,
         ...(mentions.length ? { mentions } : {}),
         ...(attachments.length ? { attachments } : {}),
       }),
@@ -648,7 +675,9 @@ export interface PullRequestFile {
   previous_filename?: string;
 }
 
-export async function fetchPullRequestApi(prId: string): Promise<AgentRunPrResponse> {
+export async function fetchPullRequestApi(
+  prId: string,
+): Promise<AgentRunPrResponse> {
   return parseJson(await fetch(`/api/pull-requests/${prId}`));
 }
 
@@ -705,7 +734,9 @@ export async function fetchPrFileSourceApi(
   endpoint: PrEndpoint,
   path: string,
 ): Promise<{ content: string }> {
-  return parseJson(await fetch(`${endpoint}/file?path=${encodeURIComponent(path)}`));
+  return parseJson(
+    await fetch(`${endpoint}/file?path=${encodeURIComponent(path)}`),
+  );
 }
 
 /**
@@ -846,7 +877,9 @@ export async function requestPullRequestAiReviewApi(
 
 export type { PrReviewRunSummary, PrReviewSession };
 
-export async function fetchPullRequestAiReviewApi(prId: string): Promise<PrReviewSession> {
+export async function fetchPullRequestAiReviewApi(
+  prId: string,
+): Promise<PrReviewSession> {
   return parseJson(await fetch(`${prEndpoint(prId)}/ai-review`));
 }
 
@@ -921,7 +954,10 @@ export async function fetchAllPullRequestsApi(input: {
   limit: number;
   pin?: { pr?: string | null; run?: string | null };
 }): Promise<PullRequestListResponse> {
-  const params = new URLSearchParams({ state: input.state, limit: String(input.limit) });
+  const params = new URLSearchParams({
+    state: input.state,
+    limit: String(input.limit),
+  });
   if (input.pin?.pr) params.set("pr", input.pin.pr);
   if (input.pin?.run) params.set("run", input.pin.run);
   return parseJson(await fetch(`/api/pull-requests?${params}`));
@@ -1105,9 +1141,7 @@ export interface PullRequestReviewComment {
  * exist — the forge was unable to tell the state, and the UI then does not offer
  * “Resolve” button rather than announcing “open” blindly.
  */
-export async function fetchPrReviewCommentsApi(
-  endpoint: PrEndpoint,
-): Promise<{
+export async function fetchPrReviewCommentsApi(endpoint: PrEndpoint): Promise<{
   comments: PullRequestReviewComment[];
   threads: ReviewThreadState[];
   reactions: ReviewCommentReaction[];
@@ -1146,7 +1180,10 @@ export async function setPrReviewThreadResolvedApi(
     await fetch(`${endpoint}/review-comments`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thread_id: input.threadId, resolved: input.resolved }),
+      body: JSON.stringify({
+        thread_id: input.threadId,
+        resolved: input.resolved,
+      }),
     }),
   );
 }
@@ -1175,7 +1212,9 @@ export async function postPrReviewCommentApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...rest,
-        ...(startLine != null ? { start_line: startLine, start_side: startSide } : {}),
+        ...(startLine != null
+          ? { start_line: startLine, start_side: startSide }
+          : {}),
       }),
     }),
   );
@@ -1223,7 +1262,12 @@ export interface AgentSessionListItem {
   issue: { id: string; number: number; title: string } | null;
   /** The pull request that this conversation RELITS (MIN-168) — badge “Analysis of
    * PR.” Distinct from `pr_number`, which is the PR that a code run has OPENED. */
-  pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
+  pullRequest: {
+    id: string;
+    number: number;
+    title: string | null;
+    url: string | null;
+  } | null;
   project: {
     id: string;
     key: string;
@@ -1264,7 +1308,9 @@ export async function fetchAgentReadsApi(): Promise<{
 }
 
 /** Mark a conversation as read NOW. */
-export async function markAgentSessionReadApi(conversationId: string): Promise<void> {
+export async function markAgentSessionReadApi(
+  conversationId: string,
+): Promise<void> {
   await parseJson(
     await fetch(`/api/agent-reads`, {
       method: "POST",
@@ -1281,7 +1327,10 @@ export async function markAgentSessionReadApi(conversationId: string): Promise<v
  * “Done” bubble only appears once the agent is at rest.
  */
 export function isAgentSessionUnread(
-  session: Pick<AgentSessionListItem, "conversationId" | "working" | "lastCompletedAt">,
+  session: Pick<
+    AgentSessionListItem,
+    "conversationId" | "working" | "lastCompletedAt"
+  >,
   reads: Record<string, string>,
 ): boolean {
   if (session.working || !session.lastCompletedAt) return false;
@@ -1289,7 +1338,9 @@ export function isAgentSessionUnread(
   // NUMERICAL comparison: `completed_at` (Postgres, `…+00:00`) and `last_read_at`
   // (client, `…Z`) do not have the same string format → a lexical `>` would be false.
   if (!lastRead) return true;
-  return new Date(session.lastCompletedAt).getTime() > new Date(lastRead).getTime();
+  return (
+    new Date(session.lastCompletedAt).getTime() > new Date(lastRead).getTime()
+  );
 }
 
 /**
@@ -1329,7 +1380,10 @@ export function isAgentRunAwaitingInput(
 export async function postPullRequestCommentApi(
   prId: string,
   body: string,
-): Promise<{ comment: PullRequestComment; review?: PrReviewRunSummary | null }> {
+): Promise<{
+  comment: PullRequestComment;
+  review?: PrReviewRunSummary | null;
+}> {
   return parseJson(
     await fetch(`${prEndpoint(prId)}/comments`, {
       method: "POST",

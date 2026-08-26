@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-access";
+import {
+  getProjectAccess,
+  type ProjectAccess,
+} from "@/lib/server/project-access";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import {
   MAX_DESCRIPTION_LENGTH,
@@ -43,7 +46,10 @@ import {
   findIssueRelation,
   removeIssueRelation,
 } from "@/lib/server/issue-relations";
-import { RELATION_TYPE_VALUES, isRelationType } from "@/lib/relation-validation";
+import {
+  RELATION_TYPE_VALUES,
+  isRelationType,
+} from "@/lib/relation-validation";
 import { createView, updateView } from "@/lib/server/views";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
 import { createCategory, updateCategory } from "@/lib/server/categories";
@@ -129,7 +135,10 @@ import {
   TRASH_TYPES,
 } from "@/lib/server/trash";
 import { getProjectFeedbackPost } from "@/lib/server/feedback/team-guard";
-import { listTeamFeedback, getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
+import {
+  listTeamFeedback,
+  getTeamFeedbackDetail,
+} from "@/lib/server/feedback/team-queries";
 import { isFeedbackPostStatus } from "@/lib/feedback/types";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
@@ -191,10 +200,10 @@ export interface ToolContext {
   /** Where a launch_code_agent call comes from (chat vs @numo comment). */
   triggerSource?: "chat" | "mention";
   /**
- * Web search for the current tour: the run of the ledger to which to attach its lines
- * `web_search`, and the counter (MUTED) which caps searches for the same
- * tour. Absent = surface does not open web search.
- */
+   * Web search for the current tour: the run of the ledger to which to attach its lines
+   * `web_search`, and the counter (MUTED) which caps searches for the same
+   * tour. Absent = surface does not open web search.
+   */
   webSearch?: WebSearchTurn;
   /** Conversation for the turn (ledger drill-down). Null outside chat. */
   conversationId?: string | null;
@@ -211,33 +220,33 @@ export interface ToolExecution {
   result: unknown;
   success: boolean;
   /**
- * What the MODEL reads back, when it's not what the screen shows. A
- * seed proposal (MIN-173) makes forty titles with their
- * descriptions: the thread must display them, the model has just written them and
- * has nothing more to do with them. `result` then goes to the browser and to the
- * message metadata, `modelResult` in the conversation history.
- */
+   * What the MODEL reads back, when it's not what the screen shows. A
+   * seed proposal (MIN-173) makes forty titles with their
+   * descriptions: the thread must display them, the model has just written them and
+   * has nothing more to do with them. `result` then goes to the browser and to the
+   * message metadata, `modelResult` in the conversation history.
+   */
   modelResult?: unknown;
   /**
- * The LIVE IDENTIFIERS that `result` carries — a freshly created `mdy_` * key, the SSO secret of a board (MIN-343).
- *
- * They go to the browser with the result, live, and will not NOWHERE
- * elsewhere: the loop substitutes them before writing `assistant_messages` and
- * before returning control to the model. A secret left in the history would be
- * replayed to the supplier each turn, rereadable in base, and would start again in
- * account export — three leaks for a value which is only used once,
- * under the eyes of its owner.
- *
- * Corollary assumed: the model never sees the value, so cannot copy the
- * into its response. It's the screen that shows it (`SecretCallout`), and
- * the prompt tells it.
- */
+   * The LIVE IDENTIFIERS that `result` carries — a freshly created `mdy_` * key, the SSO secret of a board (MIN-343).
+   *
+   * They go to the browser with the result, live, and will not NOWHERE
+   * elsewhere: the loop substitutes them before writing `assistant_messages` and
+   * before returning control to the model. A secret left in the history would be
+   * replayed to the supplier each turn, rereadable in base, and would start again in
+   * account export — three leaks for a value which is only used once,
+   * under the eyes of its owner.
+   *
+   * Corollary assumed: the model never sees the value, so cannot copy the
+   * into its response. It's the screen that shows it (`SecretCallout`), and
+   * the prompt tells it.
+   */
   secrets?: string[];
   /**
- * The turn ends here: the hand passes to the user, as on `ask_user`.
- * What the loop would chain would be of no use until he has
- * responded to what this result puts in front of him.
- */
+   * The turn ends here: the hand passes to the user, as on `ask_user`.
+   * What the loop would chain would be of no use until he has
+   * responded to what this result puts in front of him.
+   */
   pause?: boolean;
 }
 
@@ -246,7 +255,10 @@ function toolError(message: string): ToolExecution {
 }
 
 /** Map a lib/server/* failure into a readable tool error. */
-function libError(r: { errorKey?: string; rawMessage?: string }): ToolExecution {
+function libError(r: {
+  errorKey?: string;
+  rawMessage?: string;
+}): ToolExecution {
   return toolError(r.rawMessage ?? r.errorKey ?? "Request failed");
 }
 
@@ -298,7 +310,12 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
  */
 function routineErrorMessage(r: {
   errorKey: string;
-  modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
+  modelLimit?: {
+    model: string;
+    multiplier: number;
+    limit: number;
+    planId: string;
+  };
 }): string {
   switch (r.errorKey) {
     case "ownerOnly":
@@ -329,7 +346,9 @@ function routineErrorMessage(r: {
 /** The days of a cadence, such as a model sends them (often in bulk). */
 function numberList(value: unknown): number[] {
   return Array.isArray(value)
-    ? value.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
+    ? value.filter(
+        (v): v is number => typeof v === "number" && Number.isFinite(v),
+      )
     : [];
 }
 
@@ -341,12 +360,14 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   projectNotFound: "Project not found or not accessible.",
   nameRequired: "A name is required.",
   invalidProjectKey: "The project key must be 2 to 5 letters (A–Z).",
-  projectKeyAlreadyUsed: "That project key is already used by another of your projects.",
+  projectKeyAlreadyUsed:
+    "That project key is already used by another of your projects.",
   noFieldsToUpdate: "No fields to update.",
   invalidEmail: "That email address is invalid.",
   alreadyOwner: "That person is the project owner.",
   alreadyMember: "That person is already a member of the project.",
-  invitationAlreadyPending: "There is already a pending invitation for that email.",
+  invitationAlreadyPending:
+    "There is already a pending invitation for that email.",
   memberLimitReached:
     "This project has reached the number of guests the owner's plan allows (members plus pending invitations). Relay that as-is.",
   cannotRemoveOwner: "The project owner cannot be removed.",
@@ -383,7 +404,7 @@ function settingsError(errorKey: string): ToolExecution {
 function readCtx(
   ctx: ToolContext,
   projectId: string,
-  access: ProjectAccess
+  access: ProjectAccess,
 ): ReadContext {
   return {
     db: ctx.supabase,
@@ -419,18 +440,22 @@ const planTaskList = (parsed: ParsedPlan) =>
 /** The issue's plan and description as stored ("" when it has none). */
 async function readIssueText(
   ctx: ToolContext,
-  issueId: string
-): Promise<{ plan: string; description: string } | { error: string }> {
+  issueId: string,
+): Promise<
+  { plan: string; description: string; updatedAt: string } | { error: string }
+> {
   const { data, error } = await ctx.supabase
     .from("issues")
-    .select("plan, description")
+    .select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (error) return { error: error.message };
+  if (!data) return { error: "Issue not found." };
   return {
     plan: typeof data?.plan === "string" ? data.plan : "",
     description: typeof data?.description === "string" ? data.description : "",
+    updatedAt: typeof data.updated_at === "string" ? data.updated_at : "",
   };
 }
 
@@ -439,13 +464,15 @@ async function writePlan(
   ctx: ToolContext,
   issueId: string,
   plan: string,
-  updated?: number
+  updated?: number,
+  expectedUpdatedAt?: string,
 ): Promise<ToolExecution> {
   const result = await updateIssueFields({
     issueId,
     actorId: ctx.userId,
     input: { plan },
     viaAssistant: true,
+    expectedUpdatedAt,
   });
   if (!result.ok) return libError(result);
   const parsed = parsePlan((result.issue.plan as string) ?? "");
@@ -465,7 +492,7 @@ async function writePlan(
 async function executeViewTool(
   toolName: "create_view" | "update_view",
   args: Record<string, unknown>,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolExecution> {
   const shape = (r: {
     view: Record<string, unknown>;
@@ -502,14 +529,13 @@ async function executeViewTool(
     both — a global view is only ever visible to its owner. */
 async function listViews(
   ctx: ToolContext,
-  projectId: string | null
+  projectId: string | null,
 ): Promise<ToolExecution> {
   const base = ctx.supabase
     .from("views")
     .select("id, name, kind, user_id, filters, sort, display");
-  const { data, error } = await (projectId
-    ? base.eq("project_id", projectId)
-    : base.is("project_id", null)
+  const { data, error } = await (
+    projectId ? base.eq("project_id", projectId) : base.is("project_id", null)
   ).order("position", { ascending: true });
   if (error) return toolError(error.message);
   const views = (data ?? []).map((v) => ({
@@ -528,7 +554,7 @@ async function listViews(
     filters — grouped by name so the same label across projects collapses into
     one entry carrying every matching id. */
 async function listGlobalFilterOptions(
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolExecution> {
   const { data: projectRows, error: pErr } = await ctx.supabase
     .from("projects")
@@ -567,9 +593,7 @@ async function listGlobalFilterOptions(
     result: {
       categories: group((catsRes.data ?? []) as { id: string; name: string }[]),
       objectives: group((objsRes.data ?? []) as { id: string; name: string }[]),
-      integrations: group(
-        (intRows ?? []) as { id: string; name: string }[]
-      ),
+      integrations: group((intRows ?? []) as { id: string; name: string }[]),
     },
     success: true,
   };
@@ -583,7 +607,7 @@ async function listGlobalFilterOptions(
  */
 async function executeWebSearch(
   args: Record<string, unknown>,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolExecution> {
   const query = typeof args.query === "string" ? args.query.trim() : "";
   if (!query) return toolError("query is required");
@@ -594,7 +618,7 @@ async function executeWebSearch(
   }
   if (turn.used >= MAX_WEB_SEARCHES_PER_TURN) {
     return toolError(
-      `Web search limit reached for this turn (${MAX_WEB_SEARCHES_PER_TURN} searches). Answer with what you already found.`
+      `Web search limit reached for this turn (${MAX_WEB_SEARCHES_PER_TURN} searches). Answer with what you already found.`,
     );
   }
 
@@ -615,7 +639,7 @@ async function executeWebSearch(
 export async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolExecution> {
   try {
     if (toolName === "get_help") {
@@ -623,7 +647,13 @@ export async function executeTool(
       const article = getKnowledgeArticle(topic);
       return article
         ? { result: article, success: true }
-        : { result: { error: `No knowledge article found for "${topic}".`, topics: getKnowledgeTopicList() }, success: false };
+        : {
+            result: {
+              error: `No knowledge article found for "${topic}".`,
+              topics: getKnowledgeTopicList(),
+            },
+            success: false,
+          };
     }
 
     // ── Global-only tools ───────────────────────────────────────────────
@@ -664,7 +694,10 @@ export async function executeTool(
         : toolError(r.error);
     }
     if (toolName === "update_account_settings") {
-      const r = await updateAccountSettings({ userId: ctx.userId, input: args });
+      const r = await updateAccountSettings({
+        userId: ctx.userId,
+        input: args,
+      });
       return r.ok
         ? { result: { settings: r.settings }, success: true }
         : toolError(r.error);
@@ -682,11 +715,13 @@ export async function executeTool(
     // ── Agent model catalog (per-account: resolved by the active provider) ──
     if (toolName === "list_agent_models") {
       const catalog = await getAgentModelsForUser(ctx.userId);
-      const q = typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
+      const q =
+        typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
       const matched = q
         ? catalog.models.filter(
             (m) =>
-              m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)
+              m.id.toLowerCase().includes(q) ||
+              m.name.toLowerCase().includes(q),
           )
         : catalog.models;
       // Keep Numo's context lean: a provider catalog can hold hundreds of ids.
@@ -735,7 +770,7 @@ export async function executeTool(
       (typeof args.project_id === "string" ? args.project_id : null);
     if (!projectId) {
       return toolError(
-        "No project in scope. Pass project_id (use list_projects to discover projects)."
+        "No project in scope. Pass project_id (use list_projects to discover projects).",
       );
     }
     const access = await getProjectAccess(ctx.userId, projectId);
@@ -760,12 +795,16 @@ export async function executeTool(
         // update_plan_tasks addresses — without them the only way to tick a
         // task off would be to resend a whole rewritten plan.
         const parsed = parsePlan(
-          typeof r.issue.plan === "string" ? r.issue.plan : null
+          typeof r.issue.plan === "string" ? r.issue.plan : null,
         );
         return {
           result:
             parsed.tasks.length > 0
-              ? { ...r, plan_tasks: planTaskList(parsed), plan_progress: parsed.progress }
+              ? {
+                  ...r,
+                  plan_tasks: planTaskList(parsed),
+                  plan_progress: parsed.progress,
+                }
               : r,
           success: true,
         };
@@ -773,7 +812,7 @@ export async function executeTool(
       case "list_members": {
         const r = await listMembers(
           readCtx(ctx, projectId, access),
-          access.project.owner_id
+          access.project.owner_id,
         );
         if ("error" in r) return toolError(r.error);
         // Owners also see pending invitations (for cancel_invitation).
@@ -805,7 +844,7 @@ export async function executeTool(
           ctx.supabase
             .from("attachments")
             .select(
-              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)"
+              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
             )
             .eq("project_id", projectId)
             .not("objective_id", "is", null)
@@ -817,7 +856,10 @@ export async function executeTool(
         ]);
         if (error) return toolError(error.message);
 
-        const resourcesByObjective = new Map<string, Record<string, unknown>[]>();
+        const resourcesByObjective = new Map<
+          string,
+          Record<string, unknown>[]
+        >();
         for (const row of attachmentRows ?? []) {
           const id = row.objective_id as string;
           const list = resourcesByObjective.get(id) ?? [];
@@ -828,7 +870,9 @@ export async function executeTool(
         return {
           result: {
             objectives: (data ?? []).map((objective) => {
-              const resources = resourcesByObjective.get(objective.id as string);
+              const resources = resourcesByObjective.get(
+                objective.id as string,
+              );
               return resources ? { ...objective, resources } : objective;
             }),
           },
@@ -850,7 +894,7 @@ export async function executeTool(
           // A single literal string: `select` types its columns as READ
           // this text, and a concatenation makes the result opaque.
           .select(
-            "id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at"
+            "id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
           )
           .eq("project_id", projectId)
           .order("name", { ascending: true });
@@ -869,7 +913,9 @@ export async function executeTool(
                     url: row.webhook_url,
                     events: row.webhook_events,
                     scope: row.webhook_scope,
-                    last_status: normalizeWebhookStatus(row.webhook_last_status),
+                    last_status: normalizeWebhookStatus(
+                      row.webhook_last_status,
+                    ),
                     last_at: row.webhook_last_at,
                   }
                 : null,
@@ -901,7 +947,7 @@ export async function executeTool(
               ...result.issue,
               identifier: issueIdentifier(
                 access.project.key,
-                result.issue.number as number
+                result.issue.number as number,
               ),
             },
           },
@@ -919,13 +965,13 @@ export async function executeTool(
         // the call, and it's a batch of tickets all at once in HIS project.
         if (!access.isOwner) {
           return toolError(
-            "Only the project owner can seed the backlog of this project."
+            "Only the project owner can seed the backlog of this project.",
           );
         }
         const brief = typeof args.brief === "string" ? args.brief.trim() : "";
         if (brief.length < MIN_BRIEF_CHARS) {
           return toolError(
-            "The brief is too short to cut up. Frame the project with the user first, then send back everything the conversation established."
+            "The brief is too short to cut up. Frame the project with the user first, then send back everything the conversation established.",
           );
         }
         const proposal = await proposeBacklogFromBrief({
@@ -936,7 +982,7 @@ export async function executeTool(
         });
         if (!proposal) {
           return toolError(
-            "The pass returned nothing usable. Tell the user, and offer to try again."
+            "The pass returned nothing usable. Tell the user, and offer to try again.",
           );
         }
         const counts = {
@@ -946,7 +992,12 @@ export async function executeTool(
         return {
           // `proposal` is only used on the screen: it is the thread card
           // show, uncheck and send to write.
-          result: { status: "awaiting_user_review", project_id: projectId, ...counts, proposal },
+          result: {
+            status: "awaiting_user_review",
+            project_id: projectId,
+            ...counts,
+            proposal,
+          },
           modelResult: {
             status: "awaiting_user_review",
             ...counts,
@@ -962,7 +1013,9 @@ export async function executeTool(
           ? args.issue_ids.filter((v): v is string => typeof v === "string")
           : [];
         if (issueIds.length === 0 || issueIds.length > 50) {
-          return toolError("issue_ids must contain between 1 and 50 issue ids.");
+          return toolError(
+            "issue_ids must contain between 1 and 50 issue ids.",
+          );
         }
         const fields =
           args.fields && typeof args.fields === "object"
@@ -975,7 +1028,11 @@ export async function executeTool(
         const failed: Array<{ id: string; error: string }> = [];
         let updated = 0;
         for (const issueId of issueIds) {
-          const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+          const scoped = await assertIssueInProject(
+            ctx.supabase,
+            issueId,
+            projectId,
+          );
           if (!scoped.ok) {
             failed.push({ id: issueId, error: scoped.error });
             continue;
@@ -1015,11 +1072,17 @@ export async function executeTool(
 
       case "append_to_plan": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        const scoped = await assertIssueInProject(
+          ctx.supabase,
+          issueId,
+          projectId,
+        );
         if (!scoped.ok) return toolError(scoped.error);
         const markdown = typeof args.markdown === "string" ? args.markdown : "";
         if (!markdown.trim()) {
-          return toolError("markdown must contain the block to add to the plan.");
+          return toolError(
+            "markdown must contain the block to add to the plan.",
+          );
         }
         const section =
           typeof args.section === "string" && args.section.trim()
@@ -1030,33 +1093,45 @@ export async function executeTool(
         const next = appendToPlan(current.plan, markdown, section);
         if (next === null) {
           return toolError(
-            `This plan has no "${section}" heading. Read the plan with get_issue to see its headings, or omit "section" to append at the end.`
+            `This plan has no "${section}" heading. Read the plan with get_issue to see its headings, or omit "section" to append at the end.`,
           );
         }
         if (next.length > MAX_PLAN_LENGTH) {
-          return toolError(`The plan is capped at ${MAX_PLAN_LENGTH} characters.`);
+          return toolError(
+            `The plan is capped at ${MAX_PLAN_LENGTH} characters.`,
+          );
         }
-        return writePlan(ctx, issueId, next);
+        return writePlan(ctx, issueId, next, undefined, current.updatedAt || undefined);
       }
 
       case "update_plan_tasks": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        const scoped = await assertIssueInProject(
+          ctx.supabase,
+          issueId,
+          projectId,
+        );
         if (!scoped.ok) return toolError(scoped.error);
         const raw = Array.isArray(args.tasks) ? args.tasks : null;
         if (!raw || raw.length === 0 || raw.length > 50) {
-          return toolError("tasks must be a list of 1 to 50 task-state changes.");
+          return toolError(
+            "tasks must be a list of 1 to 50 task-state changes.",
+          );
         }
         const changes: { index: number; state: PlanTaskState }[] = [];
         for (const item of raw) {
           const row = item as Record<string, unknown>;
           const index = row.task_index;
-          if (typeof index !== "number" || !Number.isInteger(index) || index < 0) {
+          if (
+            typeof index !== "number" ||
+            !Number.isInteger(index) ||
+            index < 0
+          ) {
             return toolError("task_index must be a non-negative integer.");
           }
           if (!isPlanTaskState(row.state)) {
             return toolError(
-              `Invalid task state "${String(row.state)}" — use pending, in_progress, completed or cancelled.`
+              `Invalid task state "${String(row.state)}" — use pending, in_progress, completed or cancelled.`,
             );
           }
           changes.push({ index, state: row.state });
@@ -1071,19 +1146,33 @@ export async function executeTool(
           .filter((i) => !parsed.tasks[i]);
         if (invalid.length > 0) {
           return toolError(
-            `No plan task at index(es) ${[...new Set(invalid)].join(", ")} — this plan has ${parsed.tasks.length} task(s). Call get_issue again for fresh plan_tasks.`
+            `No plan task at index(es) ${[...new Set(invalid)].join(", ")} — this plan has ${parsed.tasks.length} task(s). Call get_issue again for fresh plan_tasks.`,
           );
         }
         let next = current.plan;
         for (const change of changes) {
-          next = setTaskState(next, parsed.tasks[change.index].line, change.state);
+          next = setTaskState(
+            next,
+            parsed.tasks[change.index].line,
+            change.state,
+          );
         }
-        return writePlan(ctx, issueId, next, changes.length);
+        return writePlan(
+          ctx,
+          issueId,
+          next,
+          changes.length,
+          current.updatedAt || undefined,
+        );
       }
 
       case "edit_issue_text": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        const scoped = await assertIssueInProject(
+          ctx.supabase,
+          issueId,
+          projectId,
+        );
         if (!scoped.ok) return toolError(scoped.error);
         const field = args.field === "description" ? "description" : "plan";
         if (args.field !== "plan" && args.field !== "description") {
@@ -1106,13 +1195,21 @@ export async function executeTool(
         // rendered, so the indexes remain usable immediately afterwards.
         if (field === "plan") {
           if (edit.content.length > MAX_PLAN_LENGTH) {
-            return toolError(`The plan is capped at ${MAX_PLAN_LENGTH} characters.`);
+            return toolError(
+              `The plan is capped at ${MAX_PLAN_LENGTH} characters.`,
+            );
           }
-          return writePlan(ctx, issueId, edit.content);
+          return writePlan(
+            ctx,
+            issueId,
+            edit.content,
+            undefined,
+            current.updatedAt || undefined,
+          );
         }
         if (edit.content.length > MAX_DESCRIPTION_LENGTH) {
           return toolError(
-            `The description is capped at ${MAX_DESCRIPTION_LENGTH} characters.`
+            `The description is capped at ${MAX_DESCRIPTION_LENGTH} characters.`,
           );
         }
         const result = await updateIssueFields({
@@ -1120,6 +1217,7 @@ export async function executeTool(
           actorId: ctx.userId,
           input: { description: edit.content },
           viaAssistant: true,
+          expectedUpdatedAt: current.updatedAt || undefined,
         });
         if (!result.ok) return libError(result);
         return {
@@ -1135,7 +1233,11 @@ export async function executeTool(
 
       case "set_issue_categories": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        const scoped = await assertIssueInProject(
+          ctx.supabase,
+          issueId,
+          projectId,
+        );
         if (!scoped.ok) return toolError(scoped.error);
         const categoryIds = Array.isArray(args.category_ids)
           ? args.category_ids.filter((v): v is string => typeof v === "string")
@@ -1161,19 +1263,28 @@ export async function executeTool(
         const relation = isRelationType(args.relation) ? args.relation : null;
         if (!relation) {
           return toolError(
-            `relation must be one of: ${RELATION_TYPE_VALUES.join(", ")}.`
+            `relation must be one of: ${RELATION_TYPE_VALUES.join(", ")}.`,
           );
         }
         if (issueId === targetId) {
           return toolError("An issue cannot be related to itself.");
         }
         for (const id of [issueId, targetId]) {
-          const scoped = await assertIssueInProject(ctx.supabase, id, projectId);
+          const scoped = await assertIssueInProject(
+            ctx.supabase,
+            id,
+            projectId,
+          );
           if (!scoped.ok) return toolError(scoped.error);
         }
 
         if (args.remove === true) {
-          const existing = await findIssueRelation(projectId, issueId, relation, targetId);
+          const existing = await findIssueRelation(
+            projectId,
+            issueId,
+            relation,
+            targetId,
+          );
           // Idempotent, like the MCP tool: removing what is not there is not
           // not an error, this is already the requested state.
           if (!existing) {
@@ -1202,7 +1313,11 @@ export async function executeTool(
 
       case "add_comment": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        const scoped = await assertIssueInProject(
+          ctx.supabase,
+          issueId,
+          projectId,
+        );
         if (!scoped.ok) return toolError(scoped.error);
         const body = typeof args.body === "string" ? args.body : "";
         const result = await addCommentToIssue({
@@ -1216,19 +1331,20 @@ export async function executeTool(
       }
 
       /**
- * Numo has no file to send: its half of the resource is the
- * LINK. The target is a ticket OR a goal, never both — a
- * `insertAttachments` with two parents would violate attachments_parent_ck.
- */
+       * Numo has no file to send: its half of the resource is the
+       * LINK. The target is a ticket OR a goal, never both — a
+       * `insertAttachments` with two parents would violate attachments_parent_ck.
+       */
       case "add_resource": {
         const url = typeof args.url === "string" ? args.url.trim() : "";
-        const pageId = typeof args.page_id === "string" ? args.page_id.trim() : "";
+        const pageId =
+          typeof args.page_id === "string" ? args.page_id.trim() : "";
         if (!!url === !!pageId) {
           return toolError(
             url
               ? "A resource is a link OR a page: send url, or page_id, not both."
               : "Nothing to attach: send url for a link, or page_id for a page " +
-                  "of the wiki (list_pages)."
+                  "of the wiki (list_pages).",
           );
         }
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
@@ -1236,12 +1352,16 @@ export async function executeTool(
           typeof args.objective_id === "string" ? args.objective_id : "";
         if (!!issueId === !!objectiveId) {
           return toolError(
-            "Pass issue_id OR objective_id — a resource hangs from one parent."
+            "Pass issue_id OR objective_id — a resource hangs from one parent.",
           );
         }
 
         if (issueId) {
-          const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+          const scoped = await assertIssueInProject(
+            ctx.supabase,
+            issueId,
+            projectId,
+          );
           if (!scoped.ok) return toolError(scoped.error);
         } else {
           const { data: objective } = await ctx.supabase
@@ -1279,7 +1399,7 @@ export async function executeTool(
           } catch (e) {
             if (e instanceof FaviconError) {
               return toolError(
-                "That url can't be reached — it must be a public http(s) address."
+                "That url can't be reached — it must be a public http(s) address.",
               );
             }
             return toolError((e as Error).message);
@@ -1321,13 +1441,21 @@ export async function executeTool(
       case "launch_code_agent": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         if (issueId) {
-          const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+          const scoped = await assertIssueInProject(
+            ctx.supabase,
+            issueId,
+            projectId,
+          );
           if (!scoped.ok) return toolError(scoped.error);
         }
         const model =
-          typeof args.model === "string" && args.model.trim() ? args.model.trim() : undefined;
+          typeof args.model === "string" && args.model.trim()
+            ? args.model.trim()
+            : undefined;
         const prompt =
-          typeof args.prompt === "string" && args.prompt.trim() ? args.prompt.trim() : undefined;
+          typeof args.prompt === "string" && args.prompt.trim()
+            ? args.prompt.trim()
+            : undefined;
 
         // Three NATIVE modes (frame / implement / check implementation):
         // the message sent is exactly that of the app buttons, constructed
@@ -1337,7 +1465,9 @@ export async function executeTool(
         // original behavior: the helper prompt IS the request.
         const mode = isAgentLaunchMode(args.mode) ? args.mode : null;
         if (mode && !issueId) {
-          return toolError("issue_id is required for plan, implement and verify.");
+          return toolError(
+            "issue_id is required for plan, implement and verify.",
+          );
         }
         let message = prompt;
         if (mode) {
@@ -1396,10 +1526,15 @@ export async function executeTool(
           prompt: typeof args.prompt === "string" ? args.prompt : "",
           model: typeof args.model === "string" ? args.model : null,
           reasoningLevel:
-            typeof args.reasoning_level === "string" ? args.reasoning_level : null,
-          baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
+            typeof args.reasoning_level === "string"
+              ? args.reasoning_level
+              : null,
+          baseBranch:
+            typeof args.base_branch === "string" ? args.base_branch : null,
           maxSpendPercent:
-            typeof args.max_spend_percent === "number" ? args.max_spend_percent : null,
+            typeof args.max_spend_percent === "number"
+              ? args.max_spend_percent
+              : null,
           frequency: typeof args.frequency === "string" ? args.frequency : "",
           hour: typeof args.hour === "number" ? args.hour : 9,
           minute: typeof args.minute === "number" ? args.minute : 0,
@@ -1420,9 +1555,11 @@ export async function executeTool(
         const rows = (await listRoutinesForUser(ctx.userId)).filter(
           (r) => r.project_id === projectId,
         );
-        const routineId = typeof args.routine_id === "string" ? args.routine_id : "";
+        const routineId =
+          typeof args.routine_id === "string" ? args.routine_id : "";
         const routines = routinesForAssistantTool(rows, routineId);
-        if (!routines) return toolError("No routine with that id in this project.");
+        if (!routines)
+          return toolError("No routine with that id in this project.");
         return {
           result: { routines },
           success: true,
@@ -1430,29 +1567,43 @@ export async function executeTool(
       }
 
       case "update_routine": {
-        const routineId = typeof args.routine_id === "string" ? args.routine_id : "";
-        if (!routineId) return toolError("routine_id is required (see list_routines).");
+        const routineId =
+          typeof args.routine_id === "string" ? args.routine_id : "";
+        if (!routineId)
+          return toolError("routine_id is required (see list_routines).");
         const result = await updateRoutine({
           routineId,
           actorId: ctx.userId,
           ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
-          ...(typeof args.enabled === "boolean" ? { enabled: args.enabled } : {}),
-          ...("model" in args ? { model: typeof args.model === "string" ? args.model : null } : {}),
+          ...(typeof args.enabled === "boolean"
+            ? { enabled: args.enabled }
+            : {}),
+          ...("model" in args
+            ? { model: typeof args.model === "string" ? args.model : null }
+            : {}),
           ...(typeof args.reasoning_level === "string"
             ? { reasoningLevel: args.reasoning_level }
             : {}),
-          ...(typeof args.base_branch === "string" ? { baseBranch: args.base_branch } : {}),
+          ...(typeof args.base_branch === "string"
+            ? { baseBranch: args.base_branch }
+            : {}),
           ...(typeof args.max_spend_percent === "number"
             ? { maxSpendPercent: args.max_spend_percent }
             : {}),
-          ...(typeof args.frequency === "string" ? { frequency: args.frequency } : {}),
+          ...(typeof args.frequency === "string"
+            ? { frequency: args.frequency }
+            : {}),
           ...(typeof args.hour === "number" ? { hour: args.hour } : {}),
           ...(typeof args.minute === "number" ? { minute: args.minute } : {}),
-          ...(Array.isArray(args.weekdays) ? { weekdays: numberList(args.weekdays) } : {}),
+          ...(Array.isArray(args.weekdays)
+            ? { weekdays: numberList(args.weekdays) }
+            : {}),
           ...(Array.isArray(args.days_of_month)
             ? { daysOfMonth: numberList(args.days_of_month) }
             : {}),
-          ...(typeof args.timezone === "string" ? { timezone: args.timezone } : {}),
+          ...(typeof args.timezone === "string"
+            ? { timezone: args.timezone }
+            : {}),
         });
         if (!result.ok) return toolError(routineErrorMessage(result));
         return {
@@ -1463,7 +1614,11 @@ export async function executeTool(
 
       case "read_pull_request": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        const scoped = await assertIssueInProject(
+          ctx.supabase,
+          issueId,
+          projectId,
+        );
         if (!scoped.ok) return toolError(scoped.error);
 
         // The PR of the ticket comes from `pull_requests`, source of truth since
@@ -1486,9 +1641,12 @@ export async function executeTool(
             .eq("issue_id", issueId)
             .not("pr_number", "is", null)
             .order("created_at", { ascending: false });
-          const rows = (runs ?? []) as { pr_number: number; pr_state: string | null }[];
+          const rows = (runs ?? []) as {
+            pr_number: number;
+            pr_state: string | null;
+          }[];
           const live = rows.find(
-            (r) => r.pr_state === "draft" || r.pr_state === "open"
+            (r) => r.pr_state === "draft" || r.pr_state === "open",
           );
           prNumber = (live ?? rows[0])?.pr_number ?? null;
         }
@@ -1501,8 +1659,16 @@ export async function executeTool(
         const forge = forgeFor(target.provider);
 
         const [pr, diff, reviewComments, reviewThreads] = await Promise.all([
-          forge.getPullRequest({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
-          forge.listPullRequestFiles({ token: target.token, repoFullName: target.repoFullName, number: prNumber }),
+          forge.getPullRequest({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }),
+          forge.listPullRequestFiles({
+            token: target.token,
+            repoFullName: target.repoFullName,
+            number: prNumber,
+          }),
           forge
             .listPullRequestReviewComments({
               token: target.token,
@@ -1565,7 +1731,7 @@ export async function executeTool(
               patch:
                 f.patch && f.patch.length > PATCH_CAP
                   ? f.patch.slice(0, PATCH_CAP) + "\n… (diff truncated)"
-                  : f.patch ?? null,
+                  : (f.patch ?? null),
             })),
             // The pagination of the forge cut the list: say it rather than
             // let conclude on what has been seen.
@@ -1573,7 +1739,10 @@ export async function executeTool(
             // Comments anchored to the code, grouped into threads. `line: null` = the
             // target code has changed since: the anchor is no longer worth, only the hunk says
             // what the discussion was about.
-            review_comments: groupReviewThreads(reviewComments, reviewThreads).map((thread) => ({
+            review_comments: groupReviewThreads(
+              reviewComments,
+              reviewThreads,
+            ).map((thread) => ({
               path: thread.root.path,
               line: thread.root.line,
               original_line: thread.root.original_line,
@@ -1597,13 +1766,17 @@ export async function executeTool(
       }
 
       /**
- * Reattach to the hand an orphaned PR (MIN-163bis). The rule and
- * its refusals live in `linkPullRequestToIssue`, shared with the app and
- * the MCP; here, we only do gatekeeping and translation.
- */
+       * Reattach to the hand an orphaned PR (MIN-163bis). The rule and
+       * its refusals live in `linkPullRequestToIssue`, shared with the app and
+       * the MCP; here, we only do gatekeeping and translation.
+       */
       case "link_pull_request": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        const scoped = await assertIssueInProject(
+          ctx.supabase,
+          issueId,
+          projectId,
+        );
         if (!scoped.ok) return toolError(scoped.error);
 
         const found = await resolveProjectPullRequest({
@@ -1617,7 +1790,7 @@ export async function executeTool(
               ? "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge."
               : found.error === "no_repository"
                 ? "This project has no linked repository."
-                : "No pull request with that number in the repository linked to this project."
+                : "No pull request with that number in the repository linked to this project.",
           );
         }
 
@@ -1709,11 +1882,16 @@ export async function executeTool(
         if (!issue) return toolError("Issue not found in this project.");
         if (issue.status !== "triage") {
           return toolError(
-            `This issue is not in triage (current status: ${issue.status}).`
+            `This issue is not in triage (current status: ${issue.status}).`,
           );
         }
-        if (decision === "duplicate" && typeof args.duplicate_of_id !== "string") {
-          return toolError("duplicate_of_id is required for decision='duplicate'.");
+        if (
+          decision === "duplicate" &&
+          typeof args.duplicate_of_id !== "string"
+        ) {
+          return toolError(
+            "duplicate_of_id is required for decision='duplicate'.",
+          );
         }
 
         // Mirror the triage page: optional comment first, then the status change.
@@ -1768,16 +1946,26 @@ export async function executeTool(
           enabled: typeof args.enabled === "boolean" ? args.enabled : undefined,
           generateSso: args.generate_sso_secret === true,
           showCategories:
-            typeof args.show_categories === "boolean" ? args.show_categories : undefined,
-          showViews: typeof args.show_views === "boolean" ? args.show_views : undefined,
+            typeof args.show_categories === "boolean"
+              ? args.show_categories
+              : undefined,
+          showViews:
+            typeof args.show_views === "boolean" ? args.show_views : undefined,
           allowComments:
-            typeof args.allow_comments === "boolean" ? args.allow_comments : undefined,
+            typeof args.allow_comments === "boolean"
+              ? args.allow_comments
+              : undefined,
           visibleViewIds: Array.isArray(args.visible_view_ids)
-            ? args.visible_view_ids.filter((v): v is string => typeof v === "string")
+            ? args.visible_view_ids.filter(
+                (v): v is string => typeof v === "string",
+              )
             : undefined,
-          showPages: typeof args.show_pages === "boolean" ? args.show_pages : undefined,
+          showPages:
+            typeof args.show_pages === "boolean" ? args.show_pages : undefined,
           visiblePageIds: Array.isArray(args.visible_page_ids)
-            ? args.visible_page_ids.filter((v): v is string => typeof v === "string")
+            ? args.visible_page_ids.filter(
+                (v): v is string => typeof v === "string",
+              )
             : undefined,
           origin: SITE_URL,
         });
@@ -1803,33 +1991,35 @@ export async function executeTool(
           : undefined;
         const posts = await listTeamFeedback(projectId, { statuses });
         const limit =
-          typeof args.limit === "number" ? Math.min(Math.max(1, args.limit), 200) : 50;
-        const rows = posts
-          .slice(0, limit)
-          .map((p) => ({
-            id: p.id,
-            title: p.title,
-            status: p.status,
-            vote_count: p.vote_count,
-            is_public: p.is_public,
-            source: p.source,
-            linked_issue_id: p.issue_id,
-          }));
+          typeof args.limit === "number"
+            ? Math.min(Math.max(1, args.limit), 200)
+            : 50;
+        const rows = posts.slice(0, limit).map((p) => ({
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          vote_count: p.vote_count,
+          is_public: p.is_public,
+          source: p.source,
+          linked_issue_id: p.issue_id,
+        }));
         return { result: { feedback: rows }, success: true };
       }
 
       case "get_feedback": {
         const postId =
-          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          (typeof args.feedback_post_id === "string" &&
+            args.feedback_post_id) ||
           ctx.feedbackPostId ||
           "";
         if (!postId) return toolError("feedback_post_id is required.");
         const detail = await getTeamFeedbackDetail(projectId, postId);
-        if (!detail) return toolError("Feedback post not found in this project.");
+        if (!detail)
+          return toolError("Feedback post not found in this project.");
         const { data: comments } = await ctx.service
           .from("comments")
           .select(
-            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)"
+            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
           )
           .eq("feedback_post_id", postId)
           .order("created_at", { ascending: true });
@@ -1838,10 +2028,13 @@ export async function executeTool(
           ...new Set(
             (comments ?? [])
               .map((c) => c.author_id as string | null)
-              .filter((v): v is string => !!v)
+              .filter((v): v is string => !!v),
           ),
         ];
-        const commentUsers = await fetchAuthUsersById(ctx.service, commentAuthorIds);
+        const commentUsers = await fetchAuthUsersById(
+          ctx.service,
+          commentAuthorIds,
+        );
         return {
           result: {
             feedback: {
@@ -1860,7 +2053,10 @@ export async function executeTool(
               linked_issue: detail.issue
                 ? {
                     id: detail.issue.id,
-                    identifier: issueIdentifier(access.project.key, detail.issue.number),
+                    identifier: issueIdentifier(
+                      access.project.key,
+                      detail.issue.number,
+                    ),
                     status: detail.issue.status,
                   }
                 : null,
@@ -1874,14 +2070,18 @@ export async function executeTool(
                 } | null;
                 return {
                   author: visitor
-                    ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+                    ? visitor.name?.trim() ||
+                      visitor.email?.trim() ||
+                      visitor.pseudonym
                     : c.via_assistant
                       ? "Numo"
                       : displayName(
                           toNamed(
-                            c.author_id ? commentUsers.get(c.author_id as string) : null
+                            c.author_id
+                              ? commentUsers.get(c.author_id as string)
+                              : null,
                           ),
-                          "User"
+                          "User",
                         ),
                   visibility: (c.visibility as string) ?? "internal",
                   body: c.body,
@@ -1896,12 +2096,14 @@ export async function executeTool(
 
       case "promote_feedback_to_issue": {
         const postId =
-          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          (typeof args.feedback_post_id === "string" &&
+            args.feedback_post_id) ||
           ctx.feedbackPostId ||
           "";
         if (!postId) return toolError("feedback_post_id is required.");
         const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped) return toolError("Feedback post not found in this project.");
+        if (!scoped)
+          return toolError("Feedback post not found in this project.");
         const result = await promoteFeedbackPost({
           postId,
           actorId: ctx.userId,
@@ -1914,7 +2116,7 @@ export async function executeTool(
               ...result.issue,
               identifier: issueIdentifier(
                 access.project.key,
-                result.issue.number as number
+                result.issue.number as number,
               ),
             },
           },
@@ -1924,45 +2126,58 @@ export async function executeTool(
 
       case "link_feedback_to_issue": {
         const postId =
-          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          (typeof args.feedback_post_id === "string" &&
+            args.feedback_post_id) ||
           ctx.feedbackPostId ||
           "";
         if (!postId) return toolError("feedback_post_id is required.");
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         if (!issueId) return toolError("issue_id is required.");
         const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped) return toolError("Feedback post not found in this project.");
+        if (!scoped)
+          return toolError("Feedback post not found in this project.");
         const result = await linkFeedbackIssue({
           postId,
           issueId,
           actorId: ctx.userId,
         });
         if (!result.ok) return libError(result);
-        return { result: { linked: true, feedback_post_id: postId, issue_id: issueId }, success: true };
+        return {
+          result: { linked: true, feedback_post_id: postId, issue_id: issueId },
+          success: true,
+        };
       }
 
       case "unlink_feedback": {
         const postId =
-          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          (typeof args.feedback_post_id === "string" &&
+            args.feedback_post_id) ||
           ctx.feedbackPostId ||
           "";
         if (!postId) return toolError("feedback_post_id is required.");
         const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped) return toolError("Feedback post not found in this project.");
+        if (!scoped)
+          return toolError("Feedback post not found in this project.");
         const ok = await unlinkFeedbackIssue(postId, ctx.userId);
         if (!ok) return toolError("Could not unlink the feedback post.");
-        return { result: { unlinked: true, feedback_post_id: postId }, success: true };
+        return {
+          result: { unlinked: true, feedback_post_id: postId },
+          success: true,
+        };
       }
 
       case "add_feedback_comment": {
         const postId =
-          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          (typeof args.feedback_post_id === "string" &&
+            args.feedback_post_id) ||
           ctx.feedbackPostId ||
           "";
         if (!postId) return toolError("feedback_post_id is required.");
-        if (typeof args.body !== "string") return toolError("body must be a string.");
+        if (typeof args.body !== "string")
+          return toolError("body must be a string.");
         const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped) return toolError("Feedback post not found in this project.");
+        if (!scoped)
+          return toolError("Feedback post not found in this project.");
         const result = await addCommentToFeedbackPost({
           postId,
           actorId: ctx.userId,
@@ -1979,7 +2194,8 @@ export async function executeTool(
 
       case "respond_to_feedback": {
         const postId =
-          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          (typeof args.feedback_post_id === "string" &&
+            args.feedback_post_id) ||
           ctx.feedbackPostId ||
           "";
         if (!postId) return toolError("feedback_post_id is required.");
@@ -1987,7 +2203,8 @@ export async function executeTool(
           return toolError("response must be a string.");
         }
         const scoped = await getProjectFeedbackPost(projectId, postId);
-        if (!scoped) return toolError("Feedback post not found in this project.");
+        if (!scoped)
+          return toolError("Feedback post not found in this project.");
         // The team response is a PUBLIC comment from the feedback thread
         // (MIN-196), plus a return field. Signed “Team <project>” on the
         // board — never in the name of who wrote it, including Numo.
@@ -2087,7 +2304,8 @@ export async function executeTool(
           actorId: ctx.userId,
           input: args,
         });
-        if (!result.ok) return settingsError(result.errorKey ?? "databaseError");
+        if (!result.ok)
+          return settingsError(result.errorKey ?? "databaseError");
         return { result: { category: result.category }, success: true };
       }
 
@@ -2168,7 +2386,9 @@ export async function executeTool(
     }
   } catch (err) {
     console.error(`[assistant] tool ${toolName} threw:`, err);
-    return toolError(err instanceof Error ? err.message : "Tool execution failed");
+    return toolError(
+      err instanceof Error ? err.message : "Tool execution failed",
+    );
   }
 }
 
@@ -2179,15 +2399,20 @@ export async function executeTool(
 // events and the SQL invariant apply exactly like the UI path.
 
 function parseFillWeights(args: Record<string, unknown>): FillWeights {
-  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
-  const boostMap = (v: unknown, idKey: string): Record<string, number> | undefined => {
+  const num = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? v : undefined;
+  const boostMap = (
+    v: unknown,
+    idKey: string,
+  ): Record<string, number> | undefined => {
     if (!Array.isArray(v)) return undefined;
     const out: Record<string, number> = {};
     for (const item of v) {
       const row = item as Record<string, unknown>;
       const id = row?.[idKey];
       const weight = num(row?.weight);
-      if (typeof id === "string" && id && weight !== undefined) out[id] = weight;
+      if (typeof id === "string" && id && weight !== undefined)
+        out[id] = weight;
     }
     return Object.keys(out).length ? out : undefined;
   };
@@ -2212,7 +2437,9 @@ function parseFillWeights(args: Record<string, unknown>): FillWeights {
 function parseIssueIds(args: Record<string, unknown>): string[] | null {
   const raw = args.issue_ids;
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 50) return null;
-  const ids = raw.filter((v): v is string => typeof v === "string" && v.length > 0);
+  const ids = raw.filter(
+    (v): v is string => typeof v === "string" && v.length > 0,
+  );
   return ids.length === raw.length ? ids : null;
 }
 
@@ -2230,10 +2457,12 @@ function parseIssueIds(args: Record<string, unknown>): string[] | null {
 const TRASH_ERROR_MESSAGES: Record<string, string> = {
   issueNotFound: "Issue not found, or not in a project you can access.",
   objectiveNotFound: "Objective not found, or not in a project you can access.",
-  feedbackNotFound: "Feedback post not found, or not in a project you can access.",
+  feedbackNotFound:
+    "Feedback post not found, or not in a project you can access.",
   routineNotFound: "Routine not found, or not in a project you can access.",
   projectNotFound: "Project not found, or not accessible.",
-  ownerOnly: "Only the project's owner can trash or restore a project or a routine.",
+  ownerOnly:
+    "Only the project's owner can trash or restore a project or a routine.",
   projectKeyAlreadyUsed:
     "Its key is now used by another project — restoring it would collide. Rename that other project's key first.",
   databaseError: "A database error occurred.",
@@ -2242,13 +2471,18 @@ const TRASH_ERROR_MESSAGES: Record<string, string> = {
 async function executeTrashTool(
   toolName: string,
   args: Record<string, unknown>,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolExecution> {
   if (toolName === "list_trash") {
     const items = await listTrash(ctx.userId, ctx.supabase);
-    const type = typeof args.type === "string" && isTrashType(args.type) ? args.type : null;
+    const type =
+      typeof args.type === "string" && isTrashType(args.type)
+        ? args.type
+        : null;
     const limit =
-      typeof args.limit === "number" ? Math.min(Math.max(1, args.limit), 200) : 50;
+      typeof args.limit === "number"
+        ? Math.min(Math.max(1, args.limit), 200)
+        : 50;
     const rows = items
       .filter((i) => !type || i.type === type)
       .slice(0, limit)
@@ -2267,11 +2501,12 @@ async function executeTrashTool(
     };
   }
 
-  const type = typeof args.type === "string" && isTrashType(args.type) ? args.type : null;
+  const type =
+    typeof args.type === "string" && isTrashType(args.type) ? args.type : null;
   const id = typeof args.id === "string" ? args.id.trim() : "";
   if (!type || !id) {
     return toolError(
-      `Pass both type (${TRASH_TYPES.join(", ")}) and the item's id.`
+      `Pass both type (${TRASH_TYPES.join(", ")}) and the item's id.`,
     );
   }
 
@@ -2298,12 +2533,12 @@ async function executeTrashTool(
 async function executeCycleTool(
   toolName: string,
   args: Record<string, unknown>,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolExecution> {
   const prefs = await getCyclePrefsForUser(ctx.service, ctx.userId);
   if (!prefs.enabled) {
     return toolError(
-      "Cycles are not enabled for this account. The user can enable them in Account → Cycles (or via update_account_settings with cycles_enabled: true)."
+      "Cycles are not enabled for this account. The user can enable them in Account → Cycles (or via update_account_settings with cycles_enabled: true).",
     );
   }
   const ensured = await ensureCycles({
@@ -2316,7 +2551,9 @@ async function executeCycleTool(
 
   if (toolName === "get_cycle") {
     const which =
-      args.which === "next" || args.which === "previous" ? args.which : "current";
+      args.which === "next" || args.which === "previous"
+        ? args.which
+        : "current";
     const r = await getCycleOverview({
       service: ctx.service,
       userId: ctx.userId,
@@ -2356,7 +2593,10 @@ async function executeCycleTool(
     };
   }
 
-  if (toolName === "add_issues_to_cycle" || toolName === "remove_issues_from_cycle") {
+  if (
+    toolName === "add_issues_to_cycle" ||
+    toolName === "remove_issues_from_cycle"
+  ) {
     const ids = parseIssueIds(args);
     if (!ids) return toolError("issue_ids must be 1–50 issue ids.");
     const removing = toolName === "remove_issues_from_cycle";
@@ -2373,7 +2613,10 @@ async function executeCycleTool(
           .eq("id", issueId)
           .maybeSingle();
         if (!row || row.cycle_id !== current.id) {
-          failed.push({ id: issueId, error: "Not in the user's current cycle." });
+          failed.push({
+            id: issueId,
+            error: "Not in the user's current cycle.",
+          });
           continue;
         }
       }
@@ -2384,7 +2627,11 @@ async function executeCycleTool(
         viaAssistant: true,
       });
       if (r.ok) done.push(issueId);
-      else failed.push({ id: issueId, error: r.rawMessage ?? r.errorKey ?? "failed" });
+      else
+        failed.push({
+          id: issueId,
+          error: r.rawMessage ?? r.errorKey ?? "failed",
+        });
     }
     return {
       result: removing
@@ -2443,20 +2690,25 @@ async function executePageTool(
   toolName: string,
   args: Record<string, unknown>,
   ctx: ToolContext,
-  projectId: string
+  projectId: string,
 ): Promise<ToolExecution> {
   const actorId = ctx.userId;
   const pageId = typeof args.page_id === "string" ? args.page_id : "";
   const str = (value: unknown): string | undefined =>
     typeof value === "string" ? value : undefined;
 
-  const render = <T,>(result: PageToolResult<T>): ToolExecution =>
-    result.ok ? { result: result.data, success: true } : toolError(result.message);
+  const render = <T>(result: PageToolResult<T>): ToolExecution =>
+    result.ok
+      ? { result: result.data, success: true }
+      : toolError(result.message);
 
   if (toolName === "list_pages") {
     const result = await listPagesForAgent({ projectId, actorId });
     return result.ok
-      ? { result: { count: result.data.pages.length, pages: result.data.pages }, success: true }
+      ? {
+          result: { count: result.data.pages.length, pages: result.data.pages },
+          success: true,
+        }
       : toolError(result.message);
   }
 
@@ -2479,7 +2731,8 @@ async function executePageTool(
       : toolError(result.message);
   }
 
-  if (!pageId) return toolError("page_id is required (use list_pages to find it).");
+  if (!pageId)
+    return toolError("page_id is required (use list_pages to find it).");
 
   switch (toolName) {
     case "get_page":
@@ -2494,7 +2747,7 @@ async function executePageTool(
           icon: "icon" in args ? (str(args.icon) ?? null) : undefined,
           markdown: str(args.markdown),
           version: typeof args.version === "number" ? args.version : undefined,
-        })
+        }),
       );
     case "append_to_page":
       return render(
@@ -2503,7 +2756,7 @@ async function executePageTool(
           projectId,
           actorId,
           markdown: str(args.markdown) ?? "",
-        })
+        }),
       );
     case "edit_page_text":
       return render(
@@ -2515,7 +2768,7 @@ async function executePageTool(
           newString: str(args.new_string) ?? "",
           replaceAll: args.replace_all === true,
           tools: { read: "get_page", replaceWhole: "update_page { markdown }" },
-        })
+        }),
       );
     default:
       return toolError(`Unknown page tool: ${toolName}`);
@@ -2526,7 +2779,7 @@ async function executePageTool(
 async function executeCreatePage(
   args: Record<string, unknown>,
   ctx: ToolContext,
-  projectId: string
+  projectId: string,
 ): Promise<ToolExecution> {
   const result = await createPageForAgent({
     projectId,
@@ -2548,7 +2801,7 @@ const CONCURRENT_EDIT =
 async function executeScratchpadTool(
   toolName: string,
   args: Record<string, unknown>,
-  ctx: ToolContext
+  ctx: ToolContext,
 ): Promise<ToolExecution> {
   const db = ctx.service;
 
@@ -2580,7 +2833,7 @@ async function executeScratchpadTool(
       const state = row.state;
       if (state !== undefined && !isPlanTaskState(state)) {
         return toolError(
-          `Invalid task state "${String(state)}" — use pending, in_progress, completed or cancelled.`
+          `Invalid task state "${String(state)}" — use pending, in_progress, completed or cancelled.`,
         );
       }
       const depth = row.depth;
@@ -2588,7 +2841,9 @@ async function executeScratchpadTool(
         depth !== undefined &&
         (typeof depth !== "number" || !Number.isInteger(depth) || depth < 0)
       ) {
-        return toolError("depth must be a non-negative integer (0 = top level).");
+        return toolError(
+          "depth must be a non-negative integer (0 = top level).",
+        );
       }
       tasks.push({
         text: text.slice(0, 2000),
@@ -2604,13 +2859,13 @@ async function executeScratchpadTool(
     // Appending is position-independent: mutateScratchpad re-reads and re-appends
     // under CAS on conflict, so the tasks land on top of the user's latest text.
     const result = await mutateScratchpad(db, ctx.userId, (content) =>
-      appendScratchpadTasks(content, tasks, section)
+      appendScratchpadTasks(content, tasks, section),
     );
     if (result.status === "aborted") {
       const current = await getScratchpad(db, ctx.userId);
       const known = scratchpadSections(current.content);
       return toolError(
-        `Section "${section}" was not found. ${known.length > 0 ? `Existing sections: ${known.join(", ")}.` : "The notebook has no sections yet."} Omit "section" to add at the end, or create the heading with set_scratchpad first.`
+        `Section "${section}" was not found. ${known.length > 0 ? `Existing sections: ${known.join(", ")}.` : "The notebook has no sections yet."} Omit "section" to add at the end, or create the heading with set_scratchpad first.`,
       );
     }
     if (result.status === "conflict") return toolError(CONCURRENT_EDIT);
@@ -2640,7 +2895,7 @@ async function executeScratchpadTool(
       const state = row.state;
       if (!isPlanTaskState(state)) {
         return toolError(
-          `Invalid task state "${String(state)}" — use pending, in_progress, completed or cancelled.`
+          `Invalid task state "${String(state)}" — use pending, in_progress, completed or cancelled.`,
         );
       }
       changes.push({ index, state });
@@ -2656,7 +2911,7 @@ async function executeScratchpadTool(
     for (const change of changes) {
       if (change.index >= parsed.tasks.length) {
         return toolError(
-          `task_index ${change.index} is out of range — the notebook has ${parsed.tasks.length} task(s)${parsed.tasks.length > 0 ? ` (valid indices 0..${parsed.tasks.length - 1})` : ""}.`
+          `task_index ${change.index} is out of range — the notebook has ${parsed.tasks.length} task(s)${parsed.tasks.length > 0 ? ` (valid indices 0..${parsed.tasks.length - 1})` : ""}.`,
         );
       }
     }
@@ -2681,12 +2936,12 @@ async function executeScratchpadTool(
   const content = typeof args.content === "string" ? args.content : null;
   if (content === null) {
     return toolError(
-      "content must be a string — the FULL new notebook markdown (call get_scratchpad first and keep what you are not changing)."
+      "content must be a string — the FULL new notebook markdown (call get_scratchpad first and keep what you are not changing).",
     );
   }
   if (content.length > MAX_SCRATCHPAD_LENGTH) {
     return toolError(
-      `The notebook is capped at ${MAX_SCRATCHPAD_LENGTH} characters.`
+      `The notebook is capped at ${MAX_SCRATCHPAD_LENGTH} characters.`,
     );
   }
   const expectedRev = parseExpectedRev(args.expected_rev);

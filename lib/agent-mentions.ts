@@ -33,7 +33,9 @@ export function parseAgentMentions(raw: unknown): AssistantMention[] {
       ...(typeof v.color === "string" && v.color.length <= 32
         ? { color: v.color }
         : {}),
-      ...(typeof v.icon === "string" && v.icon.length <= 32 ? { icon: v.icon } : {}),
+      ...(typeof v.icon === "string" && v.icon.length <= 32
+        ? { icon: v.icon }
+        : {}),
     }));
 }
 
@@ -42,7 +44,8 @@ export function mentionsNote(raw: unknown): string {
   const list = parseAgentMentions(raw);
   if (list.length === 0) return "";
   const parts = list.map((m) => {
-    if (m.type === "member") return `@${m.label} = team member (user id: ${m.id})`;
+    if (m.type === "member")
+      return `@${m.label} = team member (user id: ${m.id})`;
     if (m.type === "project") return `@${m.label} = project (id: ${m.id})`;
     if (m.type === "issue") return `@${m.label} = issue (id: ${m.id})`;
     if (m.type === "page") {
@@ -58,14 +61,22 @@ export function promptWithMentions(text: string, mentions?: unknown): string {
 }
 
 export interface AgentUserMessage {
+  /** Durable queue identity used to correlate optimistic bubbles and retries. */
+  id?: string;
   text: string;
   mentions?: AssistantMention[];
 }
 
 export type AgentMessageInput = AgentUserMessage | string;
 
-export function parseAgentUserMessage(raw: AgentMessageInput): AgentUserMessage {
+export function parseAgentUserMessage(
+  raw: AgentMessageInput,
+): AgentUserMessage {
   if (typeof raw === "string") return { text: raw };
   const mentions = parseAgentMentions(raw.mentions);
-  return mentions.length > 0 ? { text: raw.text, mentions } : { text: raw.text };
+  return {
+    ...(raw.id ? { id: raw.id } : {}),
+    text: raw.text,
+    ...(mentions.length > 0 ? { mentions } : {}),
+  };
 }

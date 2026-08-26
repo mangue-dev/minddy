@@ -40,8 +40,8 @@ import {
   findPullRequestByNumber,
   findPullRequestsByHeadSha,
   resolveIssueForPr,
-  upsertPullRequest,
-  type PullRequestRow,
+  upsertPullRequestWithOutcome,
+  type PullRequestUpsertOutcome,
 } from "@/lib/server/agent/pull-requests";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import {
@@ -191,7 +191,7 @@ async function ingestPullRequest(
   repoFullName: string,
   number: number,
   pr: PullRequestPayload,
-): Promise<PullRequestRow | null> {
+): Promise<PullRequestUpsertOutcome | null> {
   const issueId = await resolveIssueForPr({
     provider: "github",
     repoFullName,
@@ -199,7 +199,7 @@ async function ingestPullRequest(
     title: pr.title,
     body: pr.body,
   });
-  return upsertPullRequest({
+  return upsertPullRequestWithOutcome({
     provider: "github",
     repoFullName,
     number,
@@ -260,10 +260,15 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // runs — only talk about the agent's lifecycle, and a human PR doesn't have any
   // not. This is also what makes the connection to the ticket READABLE lower:
   // `applyForgePrToIssue` rereads the line just written.
-  const ingested =
+  const ingestion =
     payload.pull_request && INGESTED_PR_ACTIONS.has(action)
       ? await ingestPullRequest(repoFullName, number, payload.pull_request)
       : null;
+  const ingested = ingestion?.row ?? null;
+
+  // An older or replayed delivery must not drive runs, issue status,
+  // notifications, or activity after the PR row refused its stale snapshot.
+  if (ingestion && !ingestion.applied) return;
 
   // Inbox: The project learns that a pull request is waiting for eyes. Here, right
   // after ingestion, and not lower with the other notifications: these
@@ -327,7 +332,22 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
         prUrl: payload.pull_request?.html_url ?? null,
         provider: "github",
       })
-    : await findRunsForPr({ repoFullName, prNumber: number, provider: "github" });
+    : await findRunsForPr({
+        repoFullName,
+        prNumber: number,
+        provider: "github",
+      });
+  const currentPrState =
+    runs[0]?.prState ??
+    (
+      await findPullRequestByNumber({
+        provider: "github",
+        repoFullName,
+        number,
+      })
+    )?.state ??
+    ingested?.state ??
+    prState;
 
   const byHuman = !isBot(payload.sender);
 
@@ -340,7 +360,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       provider: "github",
       repoFullName,
       prNumber: number,
-      prState,
+      prState: currentPrState,
       actionType: byHuman ? actionType : null,
       accountId: actorAccountId(payload.sender),
       login: payload.sender?.login ?? null,
@@ -350,11 +370,15 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
 
   // Aligns the status of the issues with the new PR state (MIN-46):
   // merged→done, closed→todo, ouverte→in_review, brouillon→in_progress.
-  if (prState) {
+  if (currentPrState) {
     for (const run of runs) {
       // `issueId` null = run notebook (MIN-84): no issue to align.
       if (run.createdBy && run.issueId) {
-        await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
+        await syncIssueStatusFromPr({
+          issueId: run.issueId,
+          actorId: run.createdBy,
+          prState: currentPrState,
+        });
       }
     }
   }
@@ -381,7 +405,11 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       login: payload.sender?.login ?? null,
     });
     // Inbox: the author of the run learns that his PR has been merged (MIN-138).
-    await notifyForgePrAction({ runs, type: actionType, actorLogin: payload.sender?.login ?? null });
+    await notifyForgePrAction({
+      runs,
+      type: actionType,
+      actorLogin: payload.sender?.login ?? null,
+    });
   }
 }
 
@@ -399,7 +427,13 @@ async function recordGithubGesture(opts: {
   repoFullName: string | undefined;
   actor: GithubActor | undefined | null;
 }): Promise<void> {
-  if (!opts.type || opts.number == null || !opts.repoFullName || isBot(opts.actor)) return;
+  if (
+    !opts.type ||
+    opts.number == null ||
+    !opts.repoFullName ||
+    isBot(opts.actor)
+  )
+    return;
   await recordForgePrGesture({
     provider: "github",
     repoFullName: opts.repoFullName,
@@ -420,10 +454,17 @@ async function broadcastGithubPr(
   parts: PrLivePart[],
 ): Promise<void> {
   if (!repoFullName || number == null) return;
-  await broadcastPrChangedByNumber({ provider: "github", repoFullName, number, parts });
+  await broadcastPrChangedByNumber({
+    provider: "github",
+    repoFullName,
+    number,
+    parts,
+  });
 }
 
-async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise<void> {
+async function handlePullRequestReview(
+  payload: PullRequestReviewEvent,
+): Promise<void> {
   // A review moves THREE surfaces: its message goes in the thread, its remarks
   // in the diff, and its verdict changes the approval counter that
   // `prDetailResponse` is used with the header.
@@ -434,11 +475,11 @@ async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise
   // ask, and puts a `review_dismissed` in the thread; `edited` rewrites it
   // body. The ACTIVITY only traces the submitted review — denouncing its
   // own review is not a gesture to be written on the ticket.
-  await broadcastGithubPr(payload.repository?.full_name, payload.pull_request?.number, [
-    "conversation",
-    "reviewComments",
-    "pr",
-  ]);
+  await broadcastGithubPr(
+    payload.repository?.full_name,
+    payload.pull_request?.number,
+    ["conversation", "reviewComments", "pr"],
+  );
   if (payload.action !== "submitted") return;
   await recordGithubGesture({
     type: prActionForReview(payload.review ?? {}),
@@ -461,7 +502,12 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
 
   // Direct: posted, edited or deleted, thread has changed.
   await broadcastGithubPr(repoFullName, number, ["conversation"]);
-  await recordGithubGesture({ type: "pr_commented", number, repoFullName, actor });
+  await recordGithubGesture({
+    type: "pr_commented",
+    number,
+    repoFullName,
+    actor,
+  });
 
   // `@numo` written FROM github.com (MIN-162). Two guards before touching it:
   // · the App bot is Numo itself — letting it call itself would loop
@@ -683,7 +729,10 @@ export async function POST(request: NextRequest) {
         ? "[webhooks/github] MINDDY_FORGE_RELAY_WEBHOOK_SECRET is not set — relayed event refused"
         : "[webhooks/github] GITHUB_WEBHOOK_SECRET is not set — event refused",
     );
-    return NextResponse.json({ error: "webhook secret not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "webhook secret not configured" },
+      { status: 503 },
+    );
   }
 
   const ok = verifyGithubSignature(
@@ -767,14 +816,15 @@ export async function POST(request: NextRequest) {
     );
   }
   if (repositoryIdentity) {
-    const { data: registered, error: repositoryError } = await getServiceClient()
-      .from("project_git_links")
-      .select("id")
-      .eq("provider", "github")
-      .eq("external_repo_id", repositoryIdentity.id)
-      .eq("repo_full_name", repositoryIdentity.fullName)
-      .limit(1)
-      .maybeSingle();
+    const { data: registered, error: repositoryError } =
+      await getServiceClient()
+        .from("project_git_links")
+        .select("id")
+        .eq("provider", "github")
+        .eq("external_repo_id", repositoryIdentity.id)
+        .eq("repo_full_name", repositoryIdentity.fullName)
+        .limit(1)
+        .maybeSingle();
     if (repositoryError) {
       return NextResponse.json(
         { error: "repository identity unavailable" },
@@ -790,7 +840,10 @@ export async function POST(request: NextRequest) {
   // repository identity checks. A transient identity lookup failure must leave
   // the delivery unmarked so GitHub can retry it.
   if (
-    await isReplayedForgeDelivery("github", request.headers.get("x-github-delivery"))
+    await isReplayedForgeDelivery(
+      "github",
+      request.headers.get("x-github-delivery"),
+    )
   ) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
@@ -798,7 +851,9 @@ export async function POST(request: NextRequest) {
     if (event === "pull_request") {
       await handlePullRequest(JSON.parse(rawBody) as PullRequestEvent);
     } else if (event === "pull_request_review") {
-      await handlePullRequestReview(JSON.parse(rawBody) as PullRequestReviewEvent);
+      await handlePullRequestReview(
+        JSON.parse(rawBody) as PullRequestReviewEvent,
+      );
     } else if (event === "pull_request_review_comment") {
       await handlePullRequestReviewComment(
         JSON.parse(rawBody) as PullRequestReviewCommentEvent,
@@ -820,7 +875,10 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     // Best effort: we still pay so that GitHub does not re-deliver.
-    console.error(`[webhooks/github] ${event} handling failed:`, (err as Error).message);
+    console.error(
+      `[webhooks/github] ${event} handling failed:`,
+      (err as Error).message,
+    );
   }
 
   return NextResponse.json({ ok: true });

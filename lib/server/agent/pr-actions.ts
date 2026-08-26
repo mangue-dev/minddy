@@ -1622,15 +1622,21 @@ async function propagatePrState(
     number: scope.pr.number,
     state,
     mergedAt: state === "merged" ? new Date().toISOString() : scope.pr.merged_at,
+    issueId: scope.pr.issue_id ?? undefined,
   });
-  await syncPrState({
+  const runs = await syncPrState({
     repoFullName: scope.target.repoFullName,
     prNumber: scope.pr.number,
     prState: state,
     provider: scope.target.provider,
   });
+  const currentState = runs[0]?.prState ?? state;
   if (scope.pr.issue_id) {
-    await syncIssueStatusFromPr({ issueId: scope.pr.issue_id, actorId, prState: state });
+    await syncIssueStatusFromPr({
+      issueId: scope.pr.issue_id,
+      actorId,
+      prState: currentState,
+    });
   }
 }
 

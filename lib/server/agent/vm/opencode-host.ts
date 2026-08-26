@@ -3,7 +3,12 @@ import { access, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { HarnessLayout } from "../harness-layout";
-import { forgetHarnessChild, noteHarnessChild } from "./child-registry";
+import { withOpencodeInstallLock } from "@/lib/desktop/opencode-install-lock";
+import {
+  forgetHarnessChild,
+  noteHarnessChild,
+  processBirthMarker,
+} from "./child-registry";
 import { OpencodeClient } from "./opencode-client";
 import {
   OPENCODE_INSTALL_MANIFEST,
@@ -98,77 +103,100 @@ async function packageVersion(manifestPath: string): Promise<string | null> {
  * number written on the disk, and a discrepancy reinstalls (ten seconds, one
  * time, until the snapshot is replayed).
  */
-async function ensureInstalled(installDir: string): Promise<void> {
-  const [found, plugin] = await Promise.all([
-    packageVersion(opencodePackageManifestPath(installDir)),
-    packageVersion(opencodePluginManifestPath(installDir)),
-  ]);
-  if (
-    found === OPENCODE_VERSION &&
-    plugin === OPENCODE_VERSION &&
-    (await exists(opencodeBin(installDir)))
-  ) {
-    return;
-  }
-  if (found && found !== OPENCODE_VERSION) {
-    console.log(
-      `[opencode] version ${found} installée, ${OPENCODE_VERSION} attendue — réinstallation ` +
-        `(snapshot AGENT_SANDBOX_SNAPSHOT_ID à rejouer : scripts/create-agent-snapshot.ts)`,
-    );
-  }
-  await mkdir(installDir, { recursive: true });
-  /**
- * ⚠ **THE `package.json` BEFORE INSTALLING, AND IT IS NOT DECORATIVE** (MIN-293).
- *
- * Without it, `npm` BACKSUP the tree to the first `package.json` that it
- * finds and installs IN — returning 0. Measured on a Mac: 144 MB placed
- * in `~/node_modules`, `opencode-ai` added to home dependencies, and this
- * folder left empty. The detail and the two guardrails are in
- * [opencode-version.ts](opencode-version.ts).
- */
-  await writeFile(opencodeInstallManifestPath(installDir), OPENCODE_INSTALL_MANIFEST, "utf8");
-  await new Promise<void>((resolve, reject) => {
-    const npm = opencodeNpmProgram(process.env);
-    const installEnv = npm.electronRunAsNode
-      ? { ...process.env, ELECTRON_RUN_AS_NODE: "1" }
-      : process.env;
-    const runtimeBin = process.env[MINDDY_RUNTIME_BIN_ENV]?.trim();
-    if (npm.electronRunAsNode && runtimeBin) {
-      installEnv.PATH = `${runtimeBin}:${installEnv.PATH ?? ""}`;
-    }
-    const child = spawn(
-      npm.executable,
-      [...npm.argsPrefix, ...opencodeInstallArgs(installDir)],
-      {
-        cwd: installDir,
-        stdio: ["ignore", "ignore", "pipe"],
-        env: installEnv,
-      },
-    );
-    let err = "";
-    child.stderr?.on("data", (chunk: Buffer) => {
-      err += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("exit", (code) =>
-      code === 0
-        ? resolve()
-        : reject(new Error(`opencode install failed (exit ${code}): ${err.slice(-500)}`)),
-    );
-  });
+const activeInstalls = new Map<string, Promise<void>>();
 
-  /**
- * **A `npm` THAT RETURNS 0 DOES NOT PROVE THAT THE BINARY IS THERE** (MIN-293) — this is
- * exactly what happened. So we reread the disk, and we raise here rather
- * than letting `spawn` fail in `ENOENT` three lines later, where the
- * message no longer names the cause.
- */
-  if (!(await exists(opencodeBin(installDir)))) {
-    throw new Error(
-      `opencode install reported success but ${opencodeBin(installDir)} is missing — ` +
-        `check that npm installed into ${installDir} and not into a parent package`,
+async function installOpencodeIfNeeded(installDir: string): Promise<void> {
+  await withOpencodeInstallLock(installDir, async () => {
+    const [found, plugin] = await Promise.all([
+      packageVersion(opencodePackageManifestPath(installDir)),
+      packageVersion(opencodePluginManifestPath(installDir)),
+    ]);
+    if (
+      found === OPENCODE_VERSION &&
+      plugin === OPENCODE_VERSION &&
+      (await exists(opencodeBin(installDir)))
+    ) {
+      return;
+    }
+    if (found && found !== OPENCODE_VERSION) {
+      console.log(
+        `[opencode] version ${found} installée, ${OPENCODE_VERSION} attendue — réinstallation ` +
+          `(snapshot AGENT_SANDBOX_SNAPSHOT_ID à rejouer : scripts/create-agent-snapshot.ts)`,
+      );
+    }
+    await mkdir(installDir, { recursive: true });
+    /**
+     * ⚠ **THE `package.json` BEFORE INSTALLING, AND IT IS NOT DECORATIVE** (MIN-293).
+     *
+     * Without it, `npm` BACKSUP the tree to the first `package.json` that it
+     * finds and installs IN — returning 0. Measured on a Mac: 144 MB placed
+     * in `~/node_modules`, `opencode-ai` added to home dependencies, and this
+     * folder left empty. The detail and the two guardrails are in
+     * [opencode-version.ts](opencode-version.ts).
+     */
+    await writeFile(
+      opencodeInstallManifestPath(installDir),
+      OPENCODE_INSTALL_MANIFEST,
+      "utf8",
     );
-  }
+    await new Promise<void>((resolve, reject) => {
+      const npm = opencodeNpmProgram(process.env);
+      const installEnv = npm.electronRunAsNode
+        ? { ...process.env, ELECTRON_RUN_AS_NODE: "1" }
+        : process.env;
+      const runtimeBin = process.env[MINDDY_RUNTIME_BIN_ENV]?.trim();
+      if (npm.electronRunAsNode && runtimeBin) {
+        installEnv.PATH = `${runtimeBin}:${installEnv.PATH ?? ""}`;
+      }
+      const child = spawn(
+        npm.executable,
+        [...npm.argsPrefix, ...opencodeInstallArgs(installDir)],
+        {
+          cwd: installDir,
+          stdio: ["ignore", "ignore", "pipe"],
+          env: installEnv,
+        },
+      );
+      let err = "";
+      child.stderr?.on("data", (chunk: Buffer) => {
+        err += chunk.toString();
+      });
+      child.on("error", reject);
+      child.on("exit", (code) =>
+        code === 0
+          ? resolve()
+          : reject(
+              new Error(
+                `opencode install failed (exit ${code}): ${err.slice(-500)}`,
+              ),
+            ),
+      );
+    });
+
+    /**
+     * **A `npm` THAT RETURNS 0 DOES NOT PROVE THAT THE BINARY IS THERE** (MIN-293) — this is
+     * exactly what happened. So we reread the disk, and we raise here rather
+     * than letting `spawn` fail in `ENOENT` three lines later, where the
+     * message no longer names the cause.
+     */
+    if (!(await exists(opencodeBin(installDir)))) {
+      throw new Error(
+        `opencode install reported success but ${opencodeBin(installDir)} is missing — ` +
+          `check that npm installed into ${installDir} and not into a parent package`,
+      );
+    }
+  });
+}
+
+async function ensureInstalled(installDir: string): Promise<void> {
+  const active = activeInstalls.get(installDir);
+  if (active) return active;
+  const install = installOpencodeIfNeeded(installDir).finally(() => {
+    if (activeInstalls.get(installDir) === install)
+      activeInstalls.delete(installDir);
+  });
+  activeInstalls.set(installDir, install);
+  return install;
 }
 
 async function prepareToolRuntime(layout: HarnessLayout): Promise<void> {
@@ -185,7 +213,11 @@ async function prepareToolRuntime(layout: HarnessLayout): Promise<void> {
     ["node_modules", "dir"],
   ] as const) {
     try {
-      await symlink(`${layout.opencodeDir}/${name}`, `${runtimeDir}/${name}`, type);
+      await symlink(
+        `${layout.opencodeDir}/${name}`,
+        `${runtimeDir}/${name}`,
+        type,
+      );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
     }
@@ -203,41 +235,53 @@ async function prepareToolRuntime(layout: HarnessLayout): Promise<void> {
  * `layout` gives the two things that this module cannot guess: where the
  * binary is installed, and what repository the client declares in `directory`.
  */
-export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayout }): Pick<
-  SupervisorDeps,
-  "startServer" | "writeFile" | "client"
-> {
+export function opencodeSupervisorDeps(opts: {
+  port: number;
+  layout: HarnessLayout;
+}): Pick<SupervisorDeps, "startServer" | "writeFile" | "client"> {
   const { port, layout } = opts;
   return {
     startServer: async (env) => {
       await ensureInstalled(layout.opencodeDir);
       await prepareToolRuntime(layout);
       const bin = opencodeBin(layout.opencodeDir);
-      const child = spawn(bin, ["serve", "--port", String(port), "--hostname", "127.0.0.1"], {
-        // L'environnement du harness PLUS celui du tour : `opencodeServerEnv` ne
-        // carries only the config and the folders, but the binary still needs a
-        // `PATH` and a `HOME` to launch the tools shell.
-        env: { ...process.env, ...env },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+      const child = spawn(
+        bin,
+        ["serve", "--port", String(port), "--hostname", "127.0.0.1"],
+        {
+          // L'environnement du harness PLUS celui du tour : `opencodeServerEnv` ne
+          // carries only the config and the folders, but the binary still needs a
+          // `PATH` and a `HOME` to launch the tools shell.
+          env: { ...process.env, ...env },
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
       /**
- * REGISTERED BEFORE SERVING (MIN-293), and it is the order which provides the guarantee:
- * a process killed between its `spawn` and its registration is exactly
- * the orphan that we are trying to no longer produce. No effect in microVM — the
- * launcher that rereads this file is that of the Mac, and a disposable VM has nothing
- * to clean.
- */
+       * REGISTERED BEFORE SERVING (MIN-293), and it is the order which provides the guarantee:
+       * a process killed between its `spawn` and its registration is exactly
+       * the orphan that we are trying to no longer produce. No effect in microVM — the
+       * launcher that rereads this file is that of the Mac, and a disposable VM has nothing
+       * to clean.
+       */
       if (child.pid) {
+        const birth = processBirthMarker(child.pid);
+        if (!birth) {
+          child.kill("SIGKILL");
+          throw new Error(
+            `opencode process identity could not be recorded for pid ${child.pid}`,
+          );
+        }
         noteHarnessChild(layout.harnessDir, {
           pid: child.pid,
+          birth,
           kind: "opencode",
           label: `opencode serve --port ${port}`,
         });
       }
       /**
- * BOTH PIPES ARE READ, and not out of curiosity: a child whose output no one reads ends up blocking on a full pipe — a server that logs for hours gets there. We prefix them and let them
- * go into our own output, which is the one that the microVM keeps.
- */
+       * BOTH PIPES ARE READ, and not out of curiosity: a child whose output no one reads ends up blocking on a full pipe — a server that logs for hours gets there. We prefix them and let them
+       * go into our own output, which is the one that the microVM keeps.
+       */
       const log = (prefix: string) => (chunk: Buffer) => {
         const text = chunk.toString().trimEnd();
         if (text) console.log(`[opencode:${prefix}] ${text.slice(0, 2000)}`);
@@ -246,25 +290,29 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
       child.stderr?.on("data", log("err"));
 
       /**
- * ⚠ **A SPAWN THAT FAILS IS A FACT, NOT A SLOWNESS** (MIN-293).
- *
- * Before, the failure was only one line of `console.error` and the function
- * still returned its `stop`: the supervisor then left to wait for a
- * server which would never exist, announcing “still waiting for the
- * server (15 s… 30 s… 45 s)” up to its ceiling. The only message that
- * the user saw therefore spoke of SLOWNESS, for an absent binary.
- *
- * `spawn` and `error` are exclusive and exactly one of the two arrives:
- * we wait for the one that comes, and we RAISE on failure. The round ends
- * then in error, with the real cause, in the second.
- */
+       * ⚠ **A SPAWN THAT FAILS IS A FACT, NOT A SLOWNESS** (MIN-293).
+       *
+       * Before, the failure was only one line of `console.error` and the function
+       * still returned its `stop`: the supervisor then left to wait for a
+       * server which would never exist, announcing “still waiting for the
+       * server (15 s… 30 s… 45 s)” up to its ceiling. The only message that
+       * the user saw therefore spoke of SLOWNESS, for an absent binary.
+       *
+       * `spawn` and `error` are exclusive and exactly one of the two arrives:
+       * we wait for the one that comes, and we RAISE on failure. The round ends
+       * then in error, with the real cause, in the second.
+       */
       await new Promise<void>((resolve, reject) => {
         child.once("spawn", resolve);
         child.once("error", (err) =>
-          reject(new Error(`opencode could not start (${bin}): ${err.message}`)),
+          reject(
+            new Error(`opencode could not start (${bin}): ${err.message}`),
+          ),
         );
       });
-      child.on("error", (err) => console.error("[opencode] runtime error:", err.message));
+      child.on("error", (err) =>
+        console.error("[opencode] runtime error:", err.message),
+      );
       return {
         stop: async () => {
           // Unregister first, regardless of state: from here on, this pid is
@@ -273,10 +321,10 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
           if (child.pid) forgetHarnessChild(layout.harnessDir, child.pid);
           if (child.exitCode !== null || child.signalCode !== null) return;
           /**
- * `SIGTERM` then, if it hangs, `SIGKILL`. The server holds a base
- * SQLite: giving it a second to close it properly avoids a bulk
- * WAL log that the next round would replay.
- */
+           * `SIGTERM` then, if it hangs, `SIGKILL`. The server holds a base
+           * SQLite: giving it a second to close it properly avoids a bulk
+           * WAL log that the next round would replay.
+           */
           child.kill("SIGTERM");
           await new Promise<void>((resolve) => {
             const timer = setTimeout(() => {

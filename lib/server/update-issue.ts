@@ -2,7 +2,12 @@ import "server-only";
 
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
-import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
+import {
+  isEffort,
+  isPriority,
+  isStatus,
+  isDateOrNull,
+} from "@/lib/issue-validation";
 import {
   isRecurrenceCadence,
   isRecurrenceOrNull,
@@ -103,6 +108,7 @@ export async function updateIssueFields({
   viaAgentRun = false,
   mcpKeyId = null,
   forgeSync = null,
+  expectedUpdatedAt = null,
 }: {
   issueId: string;
   actorId: string;
@@ -126,6 +132,8 @@ export async function updateIssueFields({
  comes from the synchronization of the outputs of the linked repository (MIN-97): the `actorId` remains
  the member which technically carries the write, the timeline displays GitHub. */
   forgeSync?: RepoProviderId | null;
+  /** Compare-and-swap base for read-modify-write callers such as plan tools. */
+  expectedUpdatedAt?: string | null;
 }): Promise<UpdateIssueResult> {
   const updates: Record<string, unknown> = {};
 
@@ -155,7 +163,8 @@ export async function updateIssueFields({
     }
     updates.status = input.status;
     // Keep completed_at in sync with the done state.
-    updates.completed_at = input.status === "done" ? new Date().toISOString() : null;
+    updates.completed_at =
+      input.status === "done" ? new Date().toISOString() : null;
   }
   if ("priority" in input) {
     if (!isPriority(input.priority)) {
@@ -203,7 +212,10 @@ export async function updateIssueFields({
     updates.recurrence = input.recurrence;
   }
   if ("position" in input) {
-    if (typeof input.position !== "number" || !Number.isFinite(input.position)) {
+    if (
+      typeof input.position !== "number" ||
+      !Number.isFinite(input.position)
+    ) {
       return { ok: false, status: 400, errorKey: "invalidPosition" };
     }
     updates.position = input.position;
@@ -247,9 +259,19 @@ export async function updateIssueFields({
   if (!before) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
-  const beforeProject = before.projects as
-    | { name?: string | null; owner_id?: string; deleted_at?: string | null }
-    | null;
+  if (expectedUpdatedAt && before.updated_at !== expectedUpdatedAt) {
+    return {
+      ok: false,
+      status: 409,
+      rawMessage:
+        "The issue changed while this update was being prepared. Read it again and reapply the change.",
+    };
+  }
+  const beforeProject = before.projects as {
+    name?: string | null;
+    owner_id?: string;
+    deleted_at?: string | null;
+  } | null;
   // Access = living project AND (owner OR member). Same rule as
   // getProjectAccess/can_access_project; RLS invisibility becomes a 404.
   let hasAccess = !!beforeProject && !beforeProject.deleted_at;
@@ -267,15 +289,15 @@ export async function updateIssueFields({
   }
 
   /**
- * OUTGOING REFERENCES, LIMITED TO THEIR SCOPE (MIN-339).
- *
- * Here and no higher: each resolves against the ticket's project, which we
- * only knows after the snapshot above. All fall into 400 — an out-of-scope reference is an invalid load, not a ticket not found.
- *
- * They are checked on EVERY write, even when the value doesn't change:
- * the only thing that matters is what the line will carry when it returns, and a
- * ticket which was already pointing elsewhere (line inherited from before this check) does not gain the right to continue.
- */
+   * OUTGOING REFERENCES, LIMITED TO THEIR SCOPE (MIN-339).
+   *
+   * Here and no higher: each resolves against the ticket's project, which we
+   * only knows after the snapshot above. All fall into 400 — an out-of-scope reference is an invalid load, not a ticket not found.
+   *
+   * They are checked on EVERY write, even when the value doesn't change:
+   * the only thing that matters is what the line will carry when it returns, and a
+   * ticket which was already pointing elsewhere (line inherited from before this check) does not gain the right to continue.
+   */
   const projectId = before.project_id as string;
   if (typeof updates.objective_id === "string") {
     // A foreign objective is not just a crooked join: the trigger
@@ -299,7 +321,7 @@ export async function updateIssueFields({
       service,
       updates.assignee_id as string,
       projectId,
-      beforeProject!.owner_id ?? null
+      beforeProject!.owner_id ?? null,
     );
     if (!isMember) {
       return { ok: false, status: 400, errorKey: "notAProjectMember" };
@@ -328,9 +350,9 @@ export async function updateIssueFields({
   // occurrence. Setting a pace without a deadline is refused; clear the deadline
   // of a recurring ticket cuts the recurrence (and the activity event
   // said), rather than leaving a series without a starting point.
-  const dueDateAfter = ("due_date" in updates ? updates.due_date : before.due_date) as
-    | string
-    | null;
+  const dueDateAfter = (
+    "due_date" in updates ? updates.due_date : before.due_date
+  ) as string | null;
   const recurrenceAfter = (
     "recurrence" in updates ? updates.recurrence : before.recurrence
   ) as string | null;
@@ -395,6 +417,9 @@ export async function updateIssueFields({
     .update(updates)
     .is("deleted_at", null)
     .eq("id", issueId)
+    // Every mutation is a CAS, including callers that did not bring an older
+    // base: validation and side-effect diffing above use this exact snapshot.
+    .eq("updated_at", expectedUpdatedAt ?? (before.updated_at as string))
     .select(ISSUE_SELECT)
     .maybeSingle();
 
@@ -407,7 +432,12 @@ export async function updateIssueFields({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   if (!data) {
-    return { ok: false, status: 404, errorKey: "issueNotFound" };
+    return {
+      ok: false,
+      status: 409,
+      rawMessage:
+        "The issue changed while this update was being prepared. Read it again and reapply the change.",
+    };
   }
 
   // THE MOMENT OF THE GESTURE, frozen here: the line has just been written. Events
@@ -430,11 +460,14 @@ export async function updateIssueFields({
           issueId,
           actorId,
           (before.plan as string) ?? null,
-          (updates.plan as string) ?? null
-        )
+          (updates.plan as string) ?? null,
+        ),
       );
     }
-    if ("parent_id" in updates && (updates.parent_id ?? null) !== (before.parent_id ?? null)) {
+    if (
+      "parent_id" in updates &&
+      (updates.parent_id ?? null) !== (before.parent_id ?? null)
+    ) {
       events.push({
         issue_id: issueId,
         actor_id: actorId,
@@ -467,22 +500,25 @@ export async function updateIssueFields({
           stampMcpKey(
             stampViaAutomation(
               stampViaAssistant(events as EventRow[], viaAssistant),
-              viaAutomation
+              viaAutomation,
             ),
-            mcpKeyId
+            mcpKeyId,
           ),
-          forgeSync
+          forgeSync,
         ),
-        occurredAt
-      )
+        occurredAt,
+      ),
     );
 
     // Cycle membership changed → touch the affected cycle row(s). Issue writes
     // broadcast on the project topic only; the cycles UPDATE rides the owner's
     // user topic so an open /all board refetches live (MIN-32).
-    if ("cycle_id" in updates && (updates.cycle_id ?? null) !== (before.cycle_id ?? null)) {
+    if (
+      "cycle_id" in updates &&
+      (updates.cycle_id ?? null) !== (before.cycle_id ?? null)
+    ) {
       const touched = [updates.cycle_id, before.cycle_id].filter(
-        (id): id is string => typeof id === "string"
+        (id): id is string => typeof id === "string",
       );
       for (const cycleId of new Set(touched)) {
         await service
@@ -505,7 +541,8 @@ export async function updateIssueFields({
       const statRow: StatEventRow = {
         user_id: actorId,
         kind: "issue_completed",
-        occurred_at: (updates.completed_at as string) ?? new Date().toISOString(),
+        occurred_at:
+          (updates.completed_at as string) ?? new Date().toISOString(),
         project_id: (before.project_id as string) ?? null,
         project_name: projectName,
         issue_id: issueId,
@@ -518,12 +555,17 @@ export async function updateIssueFields({
     // Recurring ticket completed (MIN-136): the next occurrence is born here, in
     // backlog, at the deadline shifted by one cadence. After the response like
     // other effects — realtime makes it appear on open tables.
-    if (updates.status === "done" && before.status !== "done" && before.recurrence) {
+    if (
+      updates.status === "done" &&
+      before.status !== "done" &&
+      before.recurrence
+    ) {
       await spawnNextOccurrence({
         service,
         completed: before,
         actorId,
-        projectName: (before.projects as { name?: string | null } | null)?.name ?? null,
+        projectName:
+          (before.projects as { name?: string | null } | null)?.name ?? null,
       });
     }
 
@@ -573,13 +615,16 @@ export async function updateIssueFields({
           id: issueId,
           projectId: before.project_id as string,
         },
-        updates.description as string | null
+        updates.description as string | null,
       );
     }
   };
   const deferSideEffects = () =>
     runSideEffects().catch((e) =>
-      console.error("[update-issue] side-effects failed:", (e as Error).message)
+      console.error(
+        "[update-issue] side-effects failed:",
+        (e as Error).message,
+      ),
     );
   try {
     after(deferSideEffects);
@@ -611,7 +656,11 @@ export async function updateIssueFields({
   // Cycle auto-capture (MIN-32): an uncycled issue whose assignee has cycles
   // enabled joins their current cycle when it starts or completes (opt-out
   // per-user toggles; the run re-checks everything after the response).
-  if ("status" in updates && !("cycle_id" in updates) && before.cycle_id == null) {
+  if (
+    "status" in updates &&
+    !("cycle_id" in updates) &&
+    before.cycle_id == null
+  ) {
     const transition =
       updates.status === "in_progress" && before.status !== "in_progress"
         ? ("started" as const)
@@ -665,7 +714,12 @@ export async function updateIssueFields({
       // also accept an agent. Same resolver as the analytical source — one
       // second taxonomy would diverge the day one of the two moves.
       source: automationSourceOf({
-        raw: resolveIssueSource({ viaAssistant, mcpKeyId, forge: forgeSync, actorId }),
+        raw: resolveIssueSource({
+          viaAssistant,
+          mcpKeyId,
+          forge: forgeSync,
+          actorId,
+        }),
         viaAutomation,
         viaAgentRun,
       }),
@@ -679,11 +733,18 @@ export async function updateIssueFields({
     distinctId: actorId,
     event: "issue_updated_server",
     properties: {
-      source: resolveIssueSource({ viaAssistant, mcpKeyId, forge: forgeSync, actorId }),
+      source: resolveIssueSource({
+        viaAssistant,
+        mcpKeyId,
+        forge: forgeSync,
+        actorId,
+      }),
       fields: Object.keys(updates).sort().join(","),
       field_count: Object.keys(updates).length,
       ...(typeof updates.status === "string" ? { status: updates.status } : {}),
-      ...(typeof updates.priority === "string" ? { priority: updates.priority } : {}),
+      ...(typeof updates.priority === "string"
+        ? { priority: updates.priority }
+        : {}),
       project_id: data.project_id as string,
     },
     groups: { project: data.project_id as string },
@@ -694,7 +755,7 @@ export async function updateIssueFields({
   return {
     ok: true,
     issue: mapIssueRow(
-      smartAssignee ? { ...data, assignee_id: smartAssignee } : data
+      smartAssignee ? { ...data, assignee_id: smartAssignee } : data,
     ),
   };
 }

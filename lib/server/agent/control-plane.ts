@@ -1,6 +1,10 @@
 import "server-only";
 
-import { recordAiUsage, type AiUsageBillTo, type AiFeature } from "@/lib/server/ai-usage";
+import {
+  recordAiUsage,
+  type AiUsageBillTo,
+  type AiFeature,
+} from "@/lib/server/ai-usage";
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { defaultLocale } from "@/i18n/config";
@@ -26,7 +30,10 @@ import {
   type UsageModelPricing,
 } from "./usage-claim";
 import type { VmTurnReport } from "./vm/protocol";
-import { executeScratchpadTool, type ScratchpadToolContext } from "./scratchpad-tools";
+import {
+  executeScratchpadTool,
+  type ScratchpadToolContext,
+} from "./scratchpad-tools";
 import { agentRunTopic, broadcastToTopic } from "./live";
 import {
   appendEvent,
@@ -35,9 +42,11 @@ import {
   claimRunRest,
   getRun,
   hasPendingRunMessages,
-  insertRunMessage,
   pullPendingMessages,
   readInterruptFlag,
+  requeueRunMessage,
+  releaseRunInlineComment,
+  reserveRunInlineComment,
   stampRun,
   stampRunResult,
   type AgentRun,
@@ -47,6 +56,7 @@ import type { AgentEventType } from "./agent-contract";
 import { parseAgentMentions } from "@/lib/agent-mentions";
 import { surfaceForAgentRun } from "@/lib/ai-surfaces";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { AI_REVIEW_MAX_INLINE_COMMENTS } from "./tools";
 
 /**
  * microVM CONTROL PLANE (MIN-223) — the only surface through which a
@@ -115,8 +125,14 @@ export interface ControlPlaneResult {
   body: unknown;
 }
 
-const ok = (body: unknown = { ok: true }): ControlPlaneResult => ({ status: 200, body });
-const bad = (message: string): ControlPlaneResult => ({ status: 400, body: { error: message } });
+const ok = (body: unknown = { ok: true }): ControlPlaneResult => ({
+  status: 200,
+  body,
+});
+const bad = (message: string): ControlPlaneResult => ({
+  status: 400,
+  body: { error: message },
+});
 /**
  * THIS RUN IS NOT ALLOWED, and it is a 403 — never a 404 (MIN-326). The 404 says
  * “it doesn’t exist”, which is false from one tool perfectly alive on another
@@ -216,14 +232,18 @@ async function usagePricingFor(
   model: string | null,
   cost: unknown,
 ): Promise<UsageModelPricing | null> {
-  if (!model || typeof cost !== "number" || !(cost > USAGE_COST_FLOOR_USD)) return null;
+  if (!model || typeof cost !== "number" || !(cost > USAGE_COST_FLOOR_USD))
+    return null;
   try {
     const { getOpenRouterModelInfo } = await import("./openrouter-index");
     return await getOpenRouterModelInfo(model);
   } catch (err) {
     // An unreachable index must not cause the line to be lost: without a tariff, only
     // hard bounds apply — that's exactly what `null` renders.
-    console.error("[agent-control-plane] pricing read failed:", (err as Error).message);
+    console.error(
+      "[agent-control-plane] pricing read failed:",
+      (err as Error).message,
+    );
     return null;
   }
 }
@@ -250,7 +270,9 @@ function liveFiles(
       status: (typeof r.status === "string" && LIVE_FILE_STATUSES.has(r.status)
         ? r.status
         : "modified") as AgentLiveEdit["status"],
-      ...(typeof r.previousPath === "string" ? { previousPath: r.previousPath } : {}),
+      ...(typeof r.previousPath === "string"
+        ? { previousPath: r.previousPath }
+        : {}),
     });
     if (files.length === CHANGED_FILES_CAP) break;
   }
@@ -260,7 +282,10 @@ function liveFiles(
   // Without the second term, a list cut UPSTREAM arrived with `raw.length ===
   // files.length` — so without truncation to declare, and the thread read a list
   // bounded as a complete list.
-  return { files, filesTruncated: raw.length > files.length || claimedTruncated === true };
+  return {
+    files,
+    filesTruncated: raw.length > files.length || claimedTruncated === true,
+  };
 }
 
 /** Exact meters provided by local harness. They remain validated and narrow-minded
@@ -279,7 +304,9 @@ function liveFileStats(raw: unknown): AgentLiveFileStat[] | undefined {
         : "modified") as AgentLiveFileStat["status"],
       additions: Math.max(0, Math.round(num(r.additions) ?? 0)),
       deletions: Math.max(0, Math.round(num(r.deletions) ?? 0)),
-      ...(typeof r.previousPath === "string" ? { previousPath: r.previousPath } : {}),
+      ...(typeof r.previousPath === "string"
+        ? { previousPath: r.previousPath }
+        : {}),
     });
     if (files.length === CHANGED_FILES_CAP) break;
   }
@@ -314,11 +341,16 @@ async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
         ? Math.max(0, quota.remaining ?? 0)
         : Math.max(0, Number(run.managed_budget_usd) - runSpent);
     const fromRun =
-      run.budget_usd == null ? null : Math.max(0, Number(run.budget_usd) - runSpent);
+      run.budget_usd == null
+        ? null
+        : Math.max(0, Number(run.budget_usd) - runSpent);
     const both = [account, fromRun].filter((v): v is number => v !== null);
     return both.length ? Math.min(...both) : null;
   } catch (err) {
-    console.error("[agent-control-plane] budget read failed:", (err as Error).message);
+    console.error(
+      "[agent-control-plane] budget read failed:",
+      (err as Error).message,
+    );
     return null;
   }
 }
@@ -327,7 +359,12 @@ const ACTIVE_RUN_STATUSES: AgentRun["status"][] = ["queued", "running"];
 const ACCESS_REVOKED_ERROR = "run owner no longer has project access";
 type RevocableAgentRun = Pick<
   AgentRun,
-  "id" | "status" | "sandbox_id" | "provider_key_id" | "local_exec" | "local_exec_gen"
+  | "id"
+  | "status"
+  | "sandbox_id"
+  | "provider_key_id"
+  | "local_exec"
+  | "local_exec_gen"
 >;
 
 /**
@@ -355,7 +392,11 @@ async function revokeRunAuthority(
   if (run.provider_key_id) {
     const { revokeRunKey } = await import("./run-key");
     await revokeRunKey(run.provider_key_id).catch(() => {});
-    await stampRun(run.id, { provider_key_id: null }, { guard: ["canceled"] }).catch(() => null);
+    await stampRun(
+      run.id,
+      { provider_key_id: null },
+      { guard: ["canceled"] },
+    ).catch(() => null);
   }
 
   if (run.sandbox_id) {
@@ -376,13 +417,17 @@ export async function revokeMemberAgentAuthority(input: {
   const { getServiceClient } = await import("@/lib/supabase-service");
   const { data, error } = await getServiceClient()
     .from("agent_runs")
-    .select("id, status, sandbox_id, provider_key_id, local_exec, local_exec_gen")
+    .select(
+      "id, status, sandbox_id, provider_key_id, local_exec, local_exec_gen",
+    )
     .eq("project_id", input.projectId)
     .eq("created_by", input.userId)
     .in("status", [...ACTIVE_RUN_STATUSES]);
   if (error) throw new Error(`active run lookup failed: ${error.message}`);
 
-  await Promise.all(((data ?? []) as RevocableAgentRun[]).map((run) => revokeRunAuthority(run)));
+  await Promise.all(
+    ((data ?? []) as RevocableAgentRun[]).map((run) => revokeRunAuthority(run)),
+  );
 }
 
 /**
@@ -431,7 +476,11 @@ export async function handleControlPlaneRequest(opts: {
   // The microVM of the run is named once and for all and persisted: another
   // has nothing to write here, even signed by the platform (MIN-331). `null` =
   // run whose VM is not yet registered, let it pass.
-  if (opts.sandboxName && run.sandbox_id && run.sandbox_id !== opts.sandboxName) {
+  if (
+    opts.sandboxName &&
+    run.sandbox_id &&
+    run.sandbox_id !== opts.sandboxName
+  ) {
     return { status: 403, body: { error: "sandbox does not run this run" } };
   }
 
@@ -451,7 +500,10 @@ export async function handleControlPlaneRequest(opts: {
   }
   if (!bindingCurrent) {
     await revokeRunAuthority(run, "run repository binding has changed");
-    return { status: 409, body: { error: "run repository binding has changed" } };
+    return {
+      status: 409,
+      body: { error: "run repository binding has changed" },
+    };
   }
 
   /**
@@ -480,14 +532,19 @@ export async function handleControlPlaneRequest(opts: {
   if (opts.local) {
     if (!run.local_exec) return forbidden("this run does not execute locally");
     if (run.local_exec_gen !== opts.local.gen) {
-      return forbidden("local execution token superseded — ask the app for a fresh one");
+      return forbidden(
+        "local execution token superseded — ask the app for a fresh one",
+      );
     }
     if (run.status !== "running") {
       return { status: 409, body: { error: "run is no longer running" } };
     }
   }
   if (opts.server) {
-    if (run.local_exec) return forbidden("a desktop-local run cannot execute in the server sandbox");
+    if (run.local_exec)
+      return forbidden(
+        "a desktop-local run cannot execute in the server sandbox",
+      );
     if (run.status !== "running") {
       return { status: 409, body: { error: "run is no longer running" } };
     }
@@ -519,10 +576,14 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "POST" && surface === "/diff") {
-    if (!opts.local) return forbidden("local diff requires a local execution token");
+    if (!opts.local)
+      return forbidden("local diff requires a local execution token");
     const diff = localDiffPayload(body);
     afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "diff", { ...diff, at: Date.now() }),
+      broadcastToTopic(agentRunTopic(runId), "diff", {
+        ...diff,
+        at: Date.now(),
+      }),
     );
     return ok();
   }
@@ -539,21 +600,30 @@ export async function handleControlPlaneRequest(opts: {
 
   if (method === "POST" && surface === "/usage") {
     const feature = body.feature as AiFeature;
-    if (!VM_ALLOWED_FEATURES.has(feature)) return bad(`usage: feature not allowed (${feature})`);
+    if (!VM_ALLOWED_FEATURES.has(feature))
+      return bad(`usage: feature not allowed (${feature})`);
     const model = typeof body.model === "string" ? body.model : run.model;
     /**
      * THE AMOUNT IS NOT A DECLARATION (MIN-329): limited, then capped by
      * what the reported tokens may cost at the model price. A `cost`
      * negative reset the month's consumption to nine, for the entire account.
      */
-    const claim = checkUsageClaim(body, await usagePricingFor(model, body.cost));
+    const claim = checkUsageClaim(
+      body,
+      await usagePricingFor(model, body.cost),
+    );
     if (!claim.ok) {
       // THIS IS TRACKED, and not only in the logs: a refused line is a
       // expense which does not enter anywhere, and this hole must be readable on the
       // run where it was done — this is what distinguishes “the VM lied” from a
       // meter that drifts for no apparent reason.
-      console.error(`[agent-control-plane] usage refusée sur ${runId} — ${claim.reason}`);
-      await appendEvent(runId, "error", { code: "usageRejected", reason: claim.reason });
+      console.error(
+        `[agent-control-plane] usage refusée sur ${runId} — ${claim.reason}`,
+      );
+      await appendEvent(runId, "error", {
+        code: "usageRejected",
+        reason: claim.reason,
+      });
       return bad(`usage: ${claim.reason}`);
     }
     if (claim.clampedFrom !== undefined) {
@@ -573,7 +643,8 @@ export async function handleControlPlaneRequest(opts: {
       model,
       ...(typeof body.provider === "string" ? { provider: body.provider } : {}),
       keyMode: run.key_mode,
-      generationId: typeof body.generationId === "string" ? body.generationId : null,
+      generationId:
+        typeof body.generationId === "string" ? body.generationId : null,
       promptTokens: claim.promptTokens,
       completionTokens: claim.completionTokens,
       totalTokens: claim.totalTokens,
@@ -607,12 +678,16 @@ export async function handleControlPlaneRequest(opts: {
        * Control plane client retries, and the round continues.
        */
       if (stamped.failed) {
-        return { status: 503, body: { error: "checkpoint save failed — retry" } };
+        return {
+          status: 503,
+          body: { error: "checkpoint save failed — retry" },
+        };
       }
       // The guard of `stampRun` (`status in ('running')`) did not match: the run
       // been canceled, or another executor concluded. It’s SAID — a VM that believes
       // having saved and continuing works for a conversation that is over.
-      if (!stamped.run) return { status: 409, body: { error: "run is no longer running" } };
+      if (!stamped.run)
+        return { status: 409, body: { error: "run is no longer running" } };
       return ok();
     }
   }
@@ -674,6 +749,11 @@ export async function handleControlPlaneRequest(opts: {
         // and everyone then returned in the prompt of the next round.
         return [
           {
+            ...(message &&
+            typeof message === "object" &&
+            typeof (message as { id?: unknown }).id === "string"
+              ? { id: (message as { id: string }).id }
+              : {}),
             text: text.slice(0, MAX_MESSAGE_LEN),
             mentions: (message as { mentions?: unknown })?.mentions,
           },
@@ -681,7 +761,13 @@ export async function handleControlPlaneRequest(opts: {
       })
       .slice(0, MAX_REQUEUED_MESSAGES);
     for (const message of messages) {
-      await insertRunMessage(runId, null, message.text, parseAgentMentions(message.mentions));
+      await requeueRunMessage(runId, {
+        ...(typeof message === "object" && typeof message.id === "string"
+          ? { id: message.id }
+          : {}),
+        text: message.text,
+        mentions: parseAgentMentions(message.mentions),
+      });
     }
     return ok({ requeued: messages.length });
   }
@@ -695,7 +781,8 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (surface === "/interrupt") {
-    if (method === "GET") return ok({ interrupted: await readInterruptFlag(runId) });
+    if (method === "GET")
+      return ok({ interrupted: await readInterruptFlag(runId) });
     // The loop CONSUMES the flag when the “stop” it has just read
     // arrived with a message: the tour then continues with the instruction to
     // instead of going out to be re-queued by this message left in queue. This is the
@@ -716,7 +803,10 @@ export async function handleControlPlaneRequest(opts: {
     if (run.issue_id) {
       const { syncIssuePlanStates } = await import("./plan-sync");
       const steps = Array.isArray(body.steps) ? body.steps : [];
-      await syncIssuePlanStates(run.issue_id, steps as Parameters<typeof syncIssuePlanStates>[1]);
+      await syncIssuePlanStates(
+        run.issue_id,
+        steps as Parameters<typeof syncIssuePlanStates>[1],
+      );
     }
     return ok();
   }
@@ -725,7 +815,9 @@ export async function handleControlPlaneRequest(opts: {
     /** Desktop-local execution refreshes repository access through the signed-in
      * app, not through its readable execution token (MIN-355). */
     if (opts.local) {
-      return forbidden("a local run renews its repository token through the app, not here");
+      return forbidden(
+        "a local run renews its repository token through the app, not here",
+      );
     }
     // Mint a fresh repository credential for trusted infrastructure. The
     // requesting process receives only an acknowledgement; the credential is
@@ -733,17 +825,24 @@ export async function handleControlPlaneRequest(opts: {
     /** A review never pushes, so it cannot rotate infrastructure to write access.
      * The refusal is explicit because this is an authorization boundary. */
     if (anchorForRun(run) === "pr") {
-      return forbidden("a review session never pushes, so it gets no repository token");
+      return forbidden(
+        "a review session never pushes, so it gets no repository token",
+      );
     }
-    const [{ resolveRepoCloneTarget }, { refreshAgentSandboxForgeAccess }] = await Promise.all([
-      import("./repo-access"),
-      import("./sandbox"),
-    ]);
+    const [{ resolveRepoCloneTarget }, { refreshAgentSandboxForgeAccess }] =
+      await Promise.all([import("./repo-access"), import("./sandbox")]);
     // `repo-write`, not `full`: the trusted relay uses it only for Git smart HTTP.
-    const target = await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null);
-    if (!target) return { status: 404, body: { error: "no repository linked" } };
+    const target = await resolveRepoCloneTarget(
+      run.project_id,
+      "repo-write",
+    ).catch(() => null);
+    if (!target)
+      return { status: 404, body: { error: "no repository linked" } };
     if (!repoTargetMatchesRun(run, target)) {
-      return { status: 409, body: { error: "run repository binding has changed" } };
+      return {
+        status: 409,
+        body: { error: "run repository binding has changed" },
+      };
     }
     const sandboxName = opts.sandboxName ?? run.sandbox_id ?? `agent-${run.id}`;
     await refreshAgentSandboxForgeAccess(sandboxName, target);
@@ -782,10 +881,14 @@ export async function handleControlPlaneRequest(opts: {
      *   [local-exec.ts](local-exec.ts)) ; ici, on refuse.
      */
     if (opts.server) {
-      return forbidden("a server sandbox gets model access through the runner relay");
+      return forbidden(
+        "a server sandbox gets model access through the runner relay",
+      );
     }
     if (!opts.local) {
-      return forbidden("a microVM gets its model key from the firewall, not from here");
+      return forbidden(
+        "a microVM gets its model key from the firewall, not from here",
+      );
     }
     if (run.key_mode === "byok") {
       const { resolveAgentApiKey } = await import("./model");
@@ -793,27 +896,36 @@ export async function handleControlPlaneRequest(opts: {
         run.created_by ?? "",
         run.chain_id || run.routine_id ? "automations" : "agent",
         {
-        allowLocal: true,
-        requireByok: true,
+          allowLocal: true,
+          requireByok: true,
         },
       ).catch(() => null);
       // The key could have been removed after launch. Never substitute then
       // the platform key to a fixed BYOK run: this would mean changing payer and
       // download a shared secret to a user device.
       if (!endpoint || endpoint.mode !== "byok") {
-        return { status: 409, body: { error: "the BYOK credential used by this run is no longer available" } };
+        return {
+          status: 409,
+          body: {
+            error:
+              "the BYOK credential used by this run is no longer available",
+          },
+        };
       }
       // A local provider can voluntarily not request any key (Ollama,
       // LM Studio…). `null` is distinct from an incomplete response: the proxy
       // will then remove its placeholder instead of inventing an empty Bearer.
       return ok({ key: endpoint.apiKey || null });
     }
-    const [{ mintRunKey, revokeRunKey, runKeyCapUsd }, { checkAgentQuota }, { spentFromLedger }] =
-      await Promise.all([
-        import("./run-key"),
-        import("./quota"),
-        import("@/lib/server/ai-usage"),
-      ]);
+    const [
+      { mintRunKey, revokeRunKey, runKeyCapUsd },
+      { checkAgentQuota },
+      { spentFromLedger },
+    ] = await Promise.all([
+      import("./run-key"),
+      import("./quota"),
+      import("@/lib/server/ai-usage"),
+    ]);
     // Same arithmetic as when launching a microVM chunk (`execute.ts`), and
     // on the same entries: the budget of the run is a governor, the remainder of the
     // has a hard ceiling. Reading it here rather than taking it on a journey is what
@@ -832,14 +944,20 @@ export async function handleControlPlaneRequest(opts: {
             ? null
             : Math.max(
                 0,
-                Number(run.managed_budget_usd) - Math.max(run.cost_usd, ledgerSpent ?? 0),
+                Number(run.managed_budget_usd) -
+                  Math.max(run.cost_usd, ledgerSpent ?? 0),
               ),
         accountRemainingUsd:
-          quota && !quota.unlimited ? Math.max(0, quota.remaining ?? 0) : undefined,
+          quota && !quota.unlimited
+            ? Math.max(0, quota.remaining ?? 0)
+            : undefined,
       }),
     });
     if (!minted) {
-      return { status: 503, body: { error: "no capped model key could be minted for this run" } };
+      return {
+        status: 503,
+        body: { error: "no capped model key could be minted for this run" },
+      };
     }
     /**
      * THE HASH BEFORE THE RESPONSE, and the previous revoked one behind. This is what
@@ -849,7 +967,8 @@ export async function handleControlPlaneRequest(opts: {
      */
     const previous = run.provider_key_id;
     await stampRun(run.id, { provider_key_id: minted.hash });
-    if (previous && previous !== minted.hash) await revokeRunKey(previous).catch(() => {});
+    if (previous && previous !== minted.hash)
+      await revokeRunKey(previous).catch(() => {});
     return ok({ key: minted.key, capUsd: minted.capUsd });
   }
 
@@ -900,7 +1019,10 @@ export async function handleControlPlaneRequest(opts: {
     return await runPlatformTool(run, surface.slice("/tool/".length), body);
   }
 
-  return { status: 404, body: { error: `unknown surface: ${method} ${surface}` } };
+  return {
+    status: 404,
+    body: { error: `unknown surface: ${method} ${surface}` },
+  };
 }
 
 /**
@@ -929,7 +1051,9 @@ async function runPlatformTool(
 
   const anchor = anchorForRun(run);
   if (!PLATFORM_TOOLS_BY_ANCHOR[anchor].has(name)) {
-    return forbidden(`${name} is not available in this session (anchor: ${anchor})`);
+    return forbidden(
+      `${name} is not available in this session (anchor: ${anchor})`,
+    );
   }
 
   if (SCRATCHPAD_TOOL_NAMES.has(name)) {
@@ -943,7 +1067,8 @@ async function runPlatformTool(
      * remains in history and governs subsequent turns. A run hit by
      * someone other than its creator therefore loses his notebook all the way.
      */
-    if (!run.created_by) return forbidden(`${name}: this run has no owner, so it has no notebook`);
+    if (!run.created_by)
+      return forbidden(`${name}: this run has no owner, so it has no notebook`);
     const { runSteeredByOther } = await import("./runs");
     if (await runSteeredByOther(run.id, run.created_by)) {
       return forbidden(
@@ -981,7 +1106,10 @@ async function runPlatformTool(
    * don't wear it. We only get here by adding a name to the table without wiring it
    * of executor — a fault on OUR side, which must be seen as such.
    */
-  return { status: 500, body: { error: `platform tool allowed but not routed: ${name}` } };
+  return {
+    status: 500,
+    body: { error: `platform tool allowed but not routed: ${name}` },
+  };
 }
 
 /**
@@ -1000,13 +1128,17 @@ async function runPrTool(
   args: Record<string, unknown>,
   body: Record<string, unknown>,
 ): Promise<ControlPlaneResult> {
-  const [{ executePrTool }, { loadPrRunContext }, { resolveRepoCloneTarget }, { forgeFor }] =
-    await Promise.all([
-      import("./pr-tools"),
-      import("./pr-run"),
-      import("./repo-access"),
-      import("./forge"),
-    ]);
+  const [
+    { executePrTool },
+    { loadPrRunContext },
+    { resolveRepoCloneTarget },
+    { forgeFor },
+  ] = await Promise.all([
+    import("./pr-tools"),
+    import("./pr-run"),
+    import("./repo-access"),
+    import("./forge"),
+  ]);
   if (!run.pull_request_id) {
     return bad(`${name} is only available in a pull request review session`);
   }
@@ -1014,13 +1146,21 @@ async function runPrTool(
     loadPrRunContext(run.pull_request_id),
     resolveRepoCloneTarget(run.project_id),
   ]);
-  if (!prRun || !target) return bad(`${name}: the pull request is no longer reachable`);
+  if (!prRun || !target)
+    return bad(`${name}: the pull request is no longer reachable`);
   if (!repoTargetMatchesRun(run, target)) {
-    return { status: 409, body: { error: `${name}: repository binding changed` } };
+    return {
+      status: 409,
+      body: { error: `${name}: repository binding changed` },
+    };
   }
 
   const forge = forgeFor(target.provider);
-  const call = { token: target.token, repoFullName: target.repoFullName, number: prRun.number };
+  const call = {
+    token: target.token,
+    repoFullName: target.repoFullName,
+    number: prRun.number,
+  };
   const inline = { used: seqField(body.prInlineComments) };
   const { locale } = await runPrefsFor(run);
   const outcome = await executePrTool(
@@ -1033,6 +1173,9 @@ async function runPrTool(
       model: run.model ?? "",
       locale,
       inline,
+      reserveInline: () =>
+        reserveRunInlineComment(run.id, AI_REVIEW_MAX_INLINE_COMMENTS),
+      releaseInline: () => releaseRunInlineComment(run.id),
     },
     name,
     args,
@@ -1071,10 +1214,8 @@ async function runProjectPrTool(
   if (run.pull_request_id) {
     return bad(`${name} is not available in a pull request review session`);
   }
-  const [{ executeProjectPrTool }, { resolveRepoCloneTarget }] = await Promise.all([
-    import("./project-pr-tools"),
-    import("./repo-access"),
-  ]);
+  const [{ executeProjectPrTool }, { resolveRepoCloneTarget }] =
+    await Promise.all([import("./project-pr-tools"), import("./repo-access")]);
   const { locale } = await runPrefsFor(run);
   const inline = { used: seqField(body.prInlineComments) };
   const outcome = await executeProjectPrTool(
@@ -1083,7 +1224,9 @@ async function runProjectPrTool(
       // Un token FRAIS par appel : un tour de VM dure plus longtemps que celui
       // who cloned the repository.
       repo: async () => {
-        const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
+        const target = await resolveRepoCloneTarget(run.project_id).catch(
+          () => null,
+        );
         if (!target) return null;
         if (!repoTargetMatchesRun(run, target)) return null;
         return {
@@ -1095,6 +1238,9 @@ async function runProjectPrTool(
       model: run.model ?? "",
       locale,
       inline,
+      reserveInline: () =>
+        reserveRunInlineComment(run.id, AI_REVIEW_MAX_INLINE_COMMENTS),
+      releaseInline: () => releaseRunInlineComment(run.id),
     },
     name,
     args,
@@ -1151,23 +1297,36 @@ async function runCreatePr(
   args: Record<string, unknown>,
   body: Record<string, unknown>,
 ): Promise<ControlPlaneResult> {
-  const [{ openPullRequestAfterPush, PrLandingAuthorityError }, { resolveRepoCloneTarget }, { forgeFor }] =
-    await Promise.all([import("./pr-landing"), import("./repo-access"), import("./forge")]);
+  const [
+    { openPullRequestAfterPush, PrLandingAuthorityError },
+    { resolveRepoCloneTarget },
+    { forgeFor },
+  ] = await Promise.all([
+    import("./pr-landing"),
+    import("./repo-access"),
+    import("./forge"),
+  ]);
   const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
   if (!target) return bad("create_pr: no repository linked to this project");
   if (!repoTargetMatchesRun(run, target)) {
-    return { status: 409, body: { error: "create_pr: repository binding changed" } };
+    return {
+      status: 409,
+      body: { error: "create_pr: repository binding changed" },
+    };
   }
 
   const pushed = body.pushed as
-    | { pushed: boolean; remoteUpdated: boolean; headSha: string }
-    | undefined;
+    { pushed: boolean; remoteUpdated: boolean; headSha: string } | undefined;
   if (!pushed) return bad("create_pr: missing push result");
 
   const anchorId = await anchorIssueIdFor(run);
   const identifier = anchorId ? await issueIdentifier(anchorId) : null;
   const { locale } = await runPrefsFor(run);
-  const prState = { number: run.pr_number, url: run.pr_url, state: run.pr_state };
+  const prState = {
+    number: run.pr_number,
+    url: run.pr_url,
+    state: run.pr_state,
+  };
   const title = String(args.title ?? "").trim();
   /**
    * THE HEAD BRANCH, sent by the VM. `agent_runs.branch_name` is not worth
@@ -1183,13 +1342,15 @@ async function runCreatePr(
       conversationTitle: run.title,
       prompt: run.prompt,
     });
-  const suppliedBranch = typeof body.workBranch === "string" ? body.workBranch.trim() : "";
+  const suppliedBranch =
+    typeof body.workBranch === "string" ? body.workBranch.trim() : "";
   const workBranch = suppliedBranch || expectedBranch;
   if (!isValidGitBranchName(workBranch) || workBranch !== expectedBranch) {
     return bad("create_pr: invalid or unexpected work branch");
   }
   const baseBranch = run.base_branch ?? target.defaultBranch;
-  if (!isValidGitBranchName(baseBranch)) return bad("create_pr: invalid base branch");
+  if (!isValidGitBranchName(baseBranch))
+    return bad("create_pr: invalid base branch");
 
   try {
     const outcome = await openPullRequestAfterPush(
@@ -1206,7 +1367,8 @@ async function runCreatePr(
       },
       {
         pushed,
-        prTitle: title || (identifier ? `${identifier}: agent work` : "Agent work"),
+        prTitle:
+          title || (identifier ? `${identifier}: agent work` : "Agent work"),
         body: typeof args.body === "string" ? args.body : undefined,
         fresh: target,
         jobsNote: typeof body.jobsNote === "string" ? body.jobsNote : "",
@@ -1218,7 +1380,9 @@ async function runCreatePr(
             { guard: ["running"] },
           );
           if (!stamped) {
-            throw new PrLandingAuthorityError("run stopped before branch binding");
+            throw new PrLandingAuthorityError(
+              "run stopped before branch binding",
+            );
           }
         },
       },
@@ -1240,8 +1404,13 @@ async function issueIdentifier(issueId: string): Promise<string | null> {
     .select("number, projects(key)")
     .eq("id", issueId)
     .maybeSingle();
-  const row = data as { number?: number; projects?: { key?: string } | null } | null;
-  return row?.projects?.key && row.number ? `${row.projects.key}-${row.number}` : null;
+  const row = data as {
+    number?: number;
+    projects?: { key?: string } | null;
+  } | null;
+  return row?.projects?.key && row.number
+    ? `${row.projects.key}-${row.number}`
+    : null;
 }
 
 /**
@@ -1315,7 +1484,10 @@ async function runPrefsFor(run: AgentRun) {
   if (run.created_by) {
     const r = await getAccountSettings({ userId: run.created_by });
     if (r.ok) {
-      return { locale: r.settings.locale, numoDefaultStatus: r.settings.numo_default_status };
+      return {
+        locale: r.settings.locale,
+        numoDefaultStatus: r.settings.numo_default_status,
+      };
     }
   }
   return { locale: defaultLocale, numoDefaultStatus: DEFAULT_NUMO_STATUS };

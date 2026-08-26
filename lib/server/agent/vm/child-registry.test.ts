@@ -16,14 +16,14 @@ import {
 /**
  * MIN-293 — THE RECORD OF WHAT SURVIVES THE HARNESS.
  *
- * The case it deals with is the one where no one speaks anymore: a harness killed net
- * (⌘Q, hand crash, `SIGKILL`) leaves behind an opencode server which
- * holds a port — and the next round fails on a refused `listen`, in a place
- * which in no way resembles its cause.
+ * The case it handles is the one where no one speaks anymore: a harness
+ * killed abruptly (⌘Q, host crash, `SIGKILL`) leaves behind an OpenCode
+ * server holding a port, so the next round fails on a refused `listen` far
+ * away from the real cause.
  *
- * The tests that count are therefore those of the DAMAGED file (this is the usual here)
- * and those of the killer: a `process.kill` on the wrong number kills something in
- * someone's session, and it doesn't recover.
+ * The important tests therefore cover damaged files (the normal case here)
+ * and kill authorization: a `process.kill` on the wrong number kills another
+ * process in the user's session, which cannot be repaired.
  */
 
 let dir: string;
@@ -37,105 +37,148 @@ afterEach(() => {
 });
 
 describe("parseChildRegistry", () => {
-  it("relit ce qu'on a écrit", () => {
-    expect(
-      parseChildRegistry({ children: [{ pid: 4242, kind: "opencode", label: "serve" }] }),
-    ).toEqual([{ pid: 4242, kind: "opencode", label: "serve" }]);
-  });
-
-  it("ÉCARTE 0, 1 et les négatifs avant qu'ils atteignent le tueur", () => {
-    // `0` reports the entire caller group, `1` is launchd, a negative
-    // report an entire group. None can come from a legitimate `spawn`, and
-    // chacun serait catastrophique.
-    for (const pid of [0, 1, -1, -4242, 1.5, "4242"]) {
-      expect(parseChildRegistry({ children: [{ pid, kind: "opencode" }] })).toEqual([]);
-    }
-  });
-
-  it("ignore un genre inconnu — une version future ne doit rien faire tuer ici", () => {
-    expect(parseChildRegistry({ children: [{ pid: 42, kind: "sidecar" }] })).toEqual([]);
-  });
-
-  it("dédoublonne par pid", () => {
+  it("reads back a valid entry", () => {
     expect(
       parseChildRegistry({
         children: [
-          { pid: 42, kind: "opencode" },
-          { pid: 42, kind: "background" },
+          { pid: 4242, birth: "b4242", kind: "opencode", label: "serve" },
+        ],
+      }),
+    ).toEqual([
+      { pid: 4242, birth: "b4242", kind: "opencode", label: "serve" },
+    ]);
+  });
+
+  it("rejects zero, one, and negative PIDs before cleanup", () => {
+    // `0` signals the caller's entire group, `1` is launchd, and a negative
+    // PID signals an entire group. None can come from a legitimate `spawn`.
+    for (const pid of [0, 1, -1, -4242, 1.5, "4242"]) {
+      expect(
+        parseChildRegistry({
+          children: [{ pid, birth: "invalid", kind: "opencode" }],
+        }),
+      ).toEqual([]);
+    }
+  });
+
+  it("ignores an unknown kind so a future version cannot authorize cleanup", () => {
+    expect(
+      parseChildRegistry({
+        children: [{ pid: 42, birth: "b42", kind: "sidecar" }],
+      }),
+    ).toEqual([]);
+  });
+
+  it("deduplicates by PID", () => {
+    expect(
+      parseChildRegistry({
+        children: [
+          { pid: 42, birth: "b42", kind: "opencode" },
+          { pid: 42, birth: "b42", kind: "background" },
         ],
       }),
     ).toHaveLength(1);
   });
 
-  it("rend une liste vide sur tout ce qui n'a pas la forme — c'est l'ordinaire ici", () => {
+  it("returns an empty list for malformed and legacy entries", () => {
     expect(parseChildRegistry(null)).toEqual([]);
-    expect(parseChildRegistry("{tronqué")).toEqual([]);
+    expect(parseChildRegistry("{truncated")).toEqual([]);
     expect(parseChildRegistry({ children: "42" })).toEqual([]);
+    expect(
+      parseChildRegistry({ children: [{ pid: 42, kind: "opencode" }] }),
+    ).toEqual([]);
     expect(parseChildRegistry({})).toEqual([]);
   });
 });
 
-describe("le fichier sur le disque", () => {
-  it("inscrit, relit, oublie", () => {
-    noteHarnessChild(dir, { pid: 111, kind: "opencode", label: "serve --port 51234" });
-    noteHarnessChild(dir, { pid: 222, kind: "background", label: "npm run dev" });
+describe("registry file", () => {
+  it("registers, reads, and forgets children", () => {
+    noteHarnessChild(dir, {
+      pid: 111,
+      birth: "b111",
+      kind: "opencode",
+      label: "serve --port 51234",
+    });
+    noteHarnessChild(dir, {
+      pid: 222,
+      birth: "b222",
+      kind: "background",
+      label: "npm run dev",
+    });
     expect(readHarnessChildren(dir).map((c) => c.pid)).toEqual([111, 222]);
 
     forgetHarnessChild(dir, 111);
     expect(readHarnessChildren(dir).map((c) => c.pid)).toEqual([222]);
   });
 
-  it("remplace une inscription au même pid plutôt que de la doubler", () => {
-    noteHarnessChild(dir, { pid: 111, kind: "opencode" });
-    noteHarnessChild(dir, { pid: 111, kind: "opencode", label: "relancé" });
-    expect(readHarnessChildren(dir)).toEqual([{ pid: 111, kind: "opencode", label: "relancé" }]);
+  it("replaces an entry for the same PID", () => {
+    noteHarnessChild(dir, { pid: 111, birth: "old", kind: "opencode" });
+    noteHarnessChild(dir, {
+      pid: 111,
+      birth: "new",
+      kind: "opencode",
+      label: "restarted",
+    });
+    expect(readHarnessChildren(dir)).toEqual([
+      { pid: 111, birth: "new", kind: "opencode", label: "restarted" },
+    ]);
   });
 
-  it("crée le dossier au besoin — le harness inscrit avant tout le reste", () => {
-    const deep = join(dir, "pas", "encore", "la");
-    noteHarnessChild(deep, { pid: 333, kind: "opencode" });
+  it("creates the directory before registering", () => {
+    const deep = join(dir, "not", "there", "yet");
+    noteHarnessChild(deep, { pid: 333, birth: "b333", kind: "opencode" });
     expect(readHarnessChildren(deep)).toHaveLength(1);
   });
 
-  it("rend une liste vide sur un fichier tronqué, sans lever", () => {
+  it("returns an empty list for a truncated file without throwing", () => {
     writeFileSync(childRegistryPath(dir), '{"children": [{"pid": 1', "utf8");
     expect(() => readHarnessChildren(dir)).not.toThrow();
     expect(readHarnessChildren(dir)).toEqual([]);
   });
 
-  it("rend une liste vide quand rien n'a jamais été inscrit", () => {
+  it("returns an empty list when nothing was registered", () => {
     expect(readHarnessChildren(dir)).toEqual([]);
   });
 });
 
 describe("killTargets", () => {
   const children = [
-    { pid: 500, kind: "opencode" as const, label: "serve" },
-    { pid: 600, kind: "background" as const, label: "npm run dev" },
+    { pid: 500, birth: "b500", kind: "opencode" as const, label: "serve" },
+    {
+      pid: 600,
+      birth: "b600",
+      kind: "background" as const,
+      label: "npm run dev",
+    },
   ];
+  const birthOf = (pid: number) => `b${pid}`;
 
-  it("signale un job de fond à son GROUPE, le serveur opencode à son pid", () => {
-    // A background job goes to `setsid`: he is head of his own session. Kill
-    // the only leader would leave the `npm run dev` he launched, port 3000 held.
-    expect(killTargets(children, { pid: 1 })).toEqual([
+  it("signals a background group and the OpenCode server PID", () => {
+    // A background job uses `setsid` and leads its own session. Killing only
+    // the leader would leave the `npm run dev` process holding port 3000.
+    expect(killTargets(children, { pid: 1 }, birthOf)).toEqual([
       { signalTo: -600, kind: "background", label: "npm run dev" },
       { signalTo: 500, kind: "opencode", label: "serve" },
     ]);
   });
 
-  it("tue les jobs de fond AVANT le serveur opencode", () => {
-    const order = killTargets(children, { pid: 1 }).map((t) => t.kind);
+  it("orders background jobs before the OpenCode server", () => {
+    const order = killTargets(children, { pid: 1 }, birthOf).map((t) => t.kind);
     expect(order).toEqual(["background", "opencode"]);
   });
 
-  it("ne se tue JAMAIS lui-même, ni son parent", () => {
-    // A corrupt register which carries the pid of the main process will cause
-    // the app while thinking it's cleaning.
-    const targets = killTargets(children, { pid: 500, ppid: 600 });
+  it("never signals itself or its parent", () => {
+    // A corrupt registry containing the main process PID must not terminate
+    // the app while it believes it is cleaning up.
+    const targets = killTargets(children, { pid: 500, ppid: 600 }, birthOf);
     expect(targets).toEqual([]);
   });
 
-  it("rend une liste vide sur un registre vide", () => {
+  it("rejects a PID whose birth identity no longer matches", () => {
+    expect(killTargets(children, { pid: 1 }, () => "recycled")).toEqual([]);
+  });
+
+  it("returns an empty list for an empty registry", () => {
     expect(killTargets([], { pid: 42 })).toEqual([]);
   });
 });

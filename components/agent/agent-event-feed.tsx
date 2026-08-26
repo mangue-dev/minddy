@@ -39,8 +39,15 @@ import {
   type AgentRunEvent,
   type AgentRunStatus,
 } from "@/lib/agent-api";
-import { mergeLiveFileStats, type LiveDiffStat } from "@/lib/agent-changed-files";
-import type { AssistantMessage, AssistantToolCall, AssistantMention } from "@/lib/assistant-types";
+import {
+  mergeLiveFileStats,
+  type LiveDiffStat,
+} from "@/lib/agent-changed-files";
+import type {
+  AssistantMessage,
+  AssistantToolCall,
+  AssistantMention,
+} from "@/lib/assistant-types";
 import type { AttachmentInput } from "@/lib/types";
 
 /**
@@ -55,7 +62,11 @@ import type { AttachmentInput } from "@/lib/types";
  * visible; the CURRENT round remains unfolded.
  */
 
-type ToolResult = { status: "running" | "complete"; result?: unknown; success?: boolean };
+type ToolResult = {
+  status: "running" | "complete";
+  result?: unknown;
+  success?: boolean;
+};
 
 export type MessageItem = {
   kind: "message";
@@ -295,7 +306,7 @@ function buildFeed(
 ): {
   items: FeedItem[];
   results: Map<string, ToolResult>;
-  userTexts: string[];
+  userTexts: Array<string | { text: string; id?: string; ids?: string[] }>;
   sandboxReady: boolean;
 } {
   const ordered = [...events].sort((a, b) => a.seq - b.seq);
@@ -310,7 +321,9 @@ function buildFeed(
   // ALL user texts received (bubbles AND answers absorbed by a question) —
   // is used to deduplication of optimistic bubbles, which can no longer be read since
   // the items alone.
-  const userTexts: string[] = [];
+  const userTexts: Array<
+    string | { text: string; id?: string; ids?: string[] }
+  > = [];
   let current: MessageItem | null = null;
   // Last pending ask_user question: next user_message is his
   // response (absorbed in the line, no bubble).
@@ -326,13 +339,13 @@ function buildFeed(
     userTexts.push(prompt);
     items.push({
       kind: "message",
-       message: makeMessage(
-         "initial-prompt",
-         displayed.content,
-         "user",
-         initialPromptMentions ?? undefined,
-         displayed.attachments,
-       ),
+      message: makeMessage(
+        "initial-prompt",
+        displayed.content,
+        "user",
+        initialPromptMentions ?? undefined,
+        displayed.attachments,
+      ),
       createdAt: "",
     });
   }
@@ -345,7 +358,10 @@ function buildFeed(
   // Subagents encountered (MIN-112): one folded block per girl, created on her FIRST
   // event — so just after the `spawn_agent` line which launched it, since this one
   // necessarily precedes. The following events of the same girl are added to it.
-  const subagentBlocks = new Map<string, Extract<FeedItem, { kind: "subagent" }>>();
+  const subagentBlocks = new Map<
+    string,
+    Extract<FeedItem, { kind: "subagent" }>
+  >();
   const subagentBlock = (
     subagentId: string,
     e: AgentRunEvent,
@@ -354,7 +370,11 @@ function buildFeed(
     const existing = subagentBlocks.get(subagentId);
     if (existing) return existing;
     const mode: "explore" | "implement" | null =
-      p.subagent_mode === "implement" ? "implement" : p.subagent_mode === "explore" ? "explore" : null;
+      p.subagent_mode === "implement"
+        ? "implement"
+        : p.subagent_mode === "explore"
+          ? "explore"
+          : null;
     const block = {
       kind: "subagent" as const,
       id: `subagent-${subagentId}`,
@@ -393,7 +413,11 @@ function buildFeed(
     }
     // The parent announces that a report has been given to him: this is what distinguishes a
     // daughter CUT (delivered unrelated) from a girl still at work.
-    if (e.type === "status" && p.phase === "subagent_report" && typeof p.id === "string") {
+    if (
+      e.type === "status" &&
+      p.phase === "subagent_report" &&
+      typeof p.id === "string"
+    ) {
       const block = subagentBlocks.get(p.id);
       if (block) {
         block.delivered = true;
@@ -406,7 +430,9 @@ function buildFeed(
     }
     // “The next user_message answers the question” window does not survive
     // only to neutral events — any content event (new turn) closes it.
-    if (!["user_message", "question", "tool_result", "status"].includes(e.type)) {
+    if (
+      !["user_message", "question", "tool_result", "status"].includes(e.type)
+    ) {
       lastQuestion = null;
     }
     switch (e.type) {
@@ -438,7 +464,11 @@ function buildFeed(
           break;
         }
         if (!text.trim()) break;
-        openMessage({ kind: "message", message: makeMessage(e.id, text), createdAt: e.created_at });
+        openMessage({
+          kind: "message",
+          message: makeMessage(e.id, text),
+          createdAt: e.created_at,
+        });
         break;
       }
       case "summary": {
@@ -447,7 +477,10 @@ function buildFeed(
         // The round terminal often emits thinking THEN summary with the same text:
         // we do not duplicate, we MARK the last bubble as the final summary.
         const last = items[items.length - 1];
-        if (last?.kind === "message" && (last.message.content ?? "").trim() === text.trim()) {
+        if (
+          last?.kind === "message" &&
+          (last.message.content ?? "").trim() === text.trim()
+        ) {
           last.isSummary = true;
           last.endedAt = e.created_at;
           current = null;
@@ -470,7 +503,17 @@ function buildFeed(
         const mentions = Array.isArray(p.mentions)
           ? (p.mentions as AssistantMention[])
           : undefined;
-        userTexts.push(text.trim());
+        userTexts.push({
+          text: text.trim(),
+          ...(typeof p.messageId === "string" ? { id: p.messageId } : {}),
+          ...(Array.isArray(p.messageIds)
+            ? {
+                ids: p.messageIds.filter(
+                  (id): id is string => typeof id === "string",
+                ),
+              }
+            : {}),
+        });
         current = null;
         // Response to an ask_user: ABSORBED by the question line (details
         // on click) — no bubbles, the reading flow remains clean.
@@ -483,7 +526,13 @@ function buildFeed(
         // tool-calls suivants (ils appartiennent au prochain tour de l'agent).
         items.push({
           kind: "message",
-          message: makeMessage(e.id, displayed.content, "user", mentions, displayed.attachments),
+          message: makeMessage(
+            e.id,
+            displayed.content,
+            "user",
+            mentions,
+            displayed.attachments,
+          ),
           createdAt: e.created_at,
         });
         break;
@@ -498,15 +547,24 @@ function buildFeed(
           function: { name, arguments: toolArguments(p) },
         };
         if (!current) {
-          openMessage({ kind: "message", message: makeMessage(e.id, null), createdAt: e.created_at });
+          openMessage({
+            kind: "message",
+            message: makeMessage(e.id, null),
+            createdAt: e.created_at,
+          });
         }
-        current!.message.tool_calls = [...(current!.message.tool_calls ?? []), tc];
-        if (!results.has(id)) results.set(id, { status: "running", success: true });
+        current!.message.tool_calls = [
+          ...(current!.message.tool_calls ?? []),
+          tc,
+        ];
+        if (!results.has(id))
+          results.set(id, { status: "running", success: true });
         break;
       }
       case "tool_result": {
         const id = str(p.id);
-        if (id) results.set(id, { status: "complete", success: p.success !== false });
+        if (id)
+          results.set(id, { status: "complete", success: p.success !== false });
         break;
       }
       case "question": {
@@ -522,7 +580,10 @@ function buildFeed(
           {
             id,
             type: "function",
-            function: { name: "ask_user", arguments: JSON.stringify({ questions }) },
+            function: {
+              name: "ask_user",
+              arguments: JSON.stringify({ questions }),
+            },
           },
         ];
         results.set(id, { status: "complete", success: true });
@@ -547,7 +608,13 @@ function buildFeed(
       }
       case "commit": {
         current = null;
-        items.push({ kind: "note", id: e.id, variant: "commit", text: "", createdAt: e.created_at });
+        items.push({
+          kind: "note",
+          id: e.id,
+          variant: "commit",
+          text: "",
+          createdAt: e.created_at,
+        });
         break;
       }
       case "files_changed": {
@@ -556,7 +623,13 @@ function buildFeed(
         const { files, truncated } = parseFilesChangedPayload(p);
         current = null;
         if (files.length > 0) {
-          items.push({ kind: "files", id: e.id, files, truncated, createdAt: e.created_at });
+          items.push({
+            kind: "files",
+            id: e.id,
+            files,
+            truncated,
+            createdAt: e.created_at,
+          });
         }
         break;
       }
@@ -673,7 +746,6 @@ function buildFeed(
   return { items, results, userTexts, sandboxReady: sandboxSeq > runningSeq };
 }
 
-
 interface RenderContext {
   results: Map<string, ToolResult>;
   copyableIds: Set<string>;
@@ -702,7 +774,9 @@ function FilesRow({
   // The CURRENT turn block keeps its provisional list, but its counters are
   // enriched by the live Git diff as soon as it responds. It leads to diff
   // ALIVE, not in an advanced state; the wording and shimmer indicate this.
-  const files = item.live ? mergeLiveFileStats(item.files, liveDiffFiles) : item.files;
+  const files = item.live
+    ? mergeLiveFileStats(item.files, liveDiffFiles)
+    : item.files;
   return (
     <ChangedFilesBlock
       files={files}
@@ -713,7 +787,11 @@ function FilesRow({
   );
 }
 
-function renderItem(it: FeedItem, ctx: RenderContext, afterContent?: ReactNode): ReactNode {
+function renderItem(
+  it: FeedItem,
+  ctx: RenderContext,
+  afterContent?: ReactNode,
+): ReactNode {
   if (it.kind === "message") {
     // ACTIVE question: the live map is displayed by the conversation at the
     // place du composer — sa bulle du fil ne se rend pas du tout.
@@ -748,7 +826,12 @@ function renderItem(it: FeedItem, ctx: RenderContext, afterContent?: ReactNode):
   // without this branch a line of reflection would go there.
   if (it.kind === "reasoning") {
     return (
-      <ReasoningBlock key={it.id} active={it.active} durationMs={it.durationMs} text={it.text} />
+      <ReasoningBlock
+        key={it.id}
+        active={it.active}
+        durationMs={it.durationMs}
+        text={it.text}
+      />
     );
   }
   if (it.kind === "subagent") {
@@ -806,20 +889,22 @@ function TurnGroup({
   interrupted?: boolean;
   ctx: RenderContext;
 }) {
-  const filesContent = files.length > 0 ? (
-    <>
-      {files.map((it) => renderItem(it, ctx))}
-    </>
-  ) : null;
+  const filesContent =
+    files.length > 0 ? <>{files.map((it) => renderItem(it, ctx))}</> : null;
   const attachFilesToSummary =
-    !!summary && summary.kind === "message" && !!summary.message.content && filesContent;
+    !!summary &&
+    summary.kind === "message" &&
+    !!summary.message.content &&
+    filesContent;
 
   return (
     <div className="flex flex-col gap-3">
       <WorkAccordion startedAt={startedAt} endedAt={endedAt} active={active}>
         {work.map((it) => renderItem(it, ctx))}
       </WorkAccordion>
-      {summary ? renderItem(summary, ctx, attachFilesToSummary || undefined) : null}
+      {summary
+        ? renderItem(summary, ctx, attachFilesToSummary || undefined)
+        : null}
       {/* Files changed from round: under the response, outside the working accordion. */}
       {!attachFilesToSummary ? filesContent : null}
       {interrupted ? <InterruptedRow /> : null}
@@ -992,7 +1077,11 @@ export function AgentEventFeed({
    * drains it — sandbox wake-up included, i.e. several seconds. Without them, we
    * would hit the void: the bubble would only appear once the agent had left.
    */
-  pendingUserMessages?: Array<{ text: string; mentions?: AssistantMention[] }>;
+  pendingUserMessages?: Array<{
+    id?: string;
+    text: string;
+    mentions?: AssistantMention[];
+  }>;
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
@@ -1106,7 +1195,11 @@ export function AgentEventFeed({
   }, [live, stopping]);
 
   const blocks = useMemo(
-    () => buildBlocks(liveItems.length ? [...displayItems, ...liveItems] : displayItems, active),
+    () =>
+      buildBlocks(
+        liveItems.length ? [...displayItems, ...liveItems] : displayItems,
+        active,
+      ),
     [displayItems, liveItems, active],
   );
 
@@ -1123,7 +1216,12 @@ export function AgentEventFeed({
     const ids = new Set<string>();
     let lastAssistant: string | null = null;
     for (const it of items) {
-      if (it.kind !== "message" || it.message.role !== "assistant" || !it.message.content) continue;
+      if (
+        it.kind !== "message" ||
+        it.message.role !== "assistant" ||
+        !it.message.content
+      )
+        continue;
       lastAssistant = it.message.id;
       if (it.isSummary) ids.add(it.message.id);
     }
@@ -1170,15 +1268,16 @@ export function AgentEventFeed({
     // of diff. The harness then publishes its own Git counters directly;
     // they are cooler than HTTP fallback and cause `+ / −` to appear in
     // the block of the tour from the edition.
-    liveDiffFiles:
-      live?.fileStats.length
-        ? live.fileStats.map((file) => ({
-            filename: file.path,
-            additions: file.additions,
-            deletions: file.deletions,
-            ...(file.previousPath ? { previous_filename: file.previousPath } : {}),
-          }))
-        : liveDiffFiles ?? [],
+    liveDiffFiles: live?.fileStats.length
+      ? live.fileStats.map((file) => ({
+          filename: file.path,
+          additions: file.additions,
+          deletions: file.deletions,
+          ...(file.previousPath
+            ? { previous_filename: file.previousPath }
+            : {}),
+        }))
+      : (liveDiffFiles ?? []),
     onOpenFile,
     onOpenDiff,
     hiddenQuestionEventId,
@@ -1219,7 +1318,10 @@ export function AgentEventFeed({
     <div
       ref={setScrollNode}
       {...scrollProps}
-      className={cn("flex flex-col overflow-y-auto overscroll-contain", className)}
+      className={cn(
+        "flex flex-col overflow-y-auto overscroll-contain",
+        className,
+      )}
     >
       {/* The thread starts from the TOP, under the conversation header, and goes down to
  the input — like a page that fills up.
@@ -1255,7 +1357,12 @@ export function AgentEventFeed({
             /* The mentions come from THIS post, not from a namesake: two
  “ok” following which only one cites a ticket should not
  exchange their pills. */
-            message={makeMessage(`pending-${i}`, pending.text, "user", pending.mentions)}
+            message={makeMessage(
+              `pending-${i}`,
+              pending.text,
+              "user",
+              pending.mentions,
+            )}
             toolCallResults={results}
           />
         ))}
@@ -1264,7 +1371,10 @@ export function AgentEventFeed({
  is therefore displayed exactly where the work will be written, and the succession does not move anything. */}
         {startingSandbox || workingSilently ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
+            <NumoIcon
+              state="thinking"
+              className="size-4 shrink-0 text-muted-foreground"
+            />
             <span className="text-shimmer">
               {startingSandbox
                 ? // A local turn does not open ANY sandbox (MIN-293): between the

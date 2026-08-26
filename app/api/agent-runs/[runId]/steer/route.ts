@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import {
   activeRunForRoutine,
   getRun,
-  insertRunMessage,
+  insertLatestRunMessage,
+  runIsLatestOnAnchor,
   stampRun,
   bumpRunActivity,
   type AgentRunStatus,
@@ -50,42 +52,79 @@ export const maxDuration = 300;
 type RouteContext = { params: Promise<{ runId: string }> };
 
 /** Resumable = everything except `failed` (repo/template bootstrap error). */
-const RESUMABLE: AgentRunStatus[] = ["queued", "running", "completed", "canceled"];
+const RESUMABLE: AgentRunStatus[] = [
+  "queued",
+  "running",
+  "completed",
+  "canceled",
+];
 /** Idle/completed statuses that require a restart (re-queue + kick). */
 const RESUME_FROM: AgentRunStatus[] = ["completed", "canceled"];
 const MAX_LEN = 4000;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { runId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  let payload: { message?: string; mentions?: unknown; attachments?: unknown };
+  let payload: {
+    message?: string;
+    messageId?: string;
+    mentions?: unknown;
+    attachments?: unknown;
+  };
   try {
     payload = (await request.json()) as { message?: string };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   // `?.`: a JSON body `null` is valid on the parser side but has no fields.
-  const message = (typeof payload?.message === "string" ? payload.message : "").trim().slice(0, MAX_LEN);
-  if (!message) return NextResponse.json({ error: "Message required" }, { status: 400 });
+  const message = (typeof payload?.message === "string" ? payload.message : "")
+    .trim()
+    .slice(0, MAX_LEN);
+  if (!message)
+    return NextResponse.json({ error: "Message required" }, { status: 400 });
+  const providedMessageId =
+    typeof payload.messageId === "string" ? payload.messageId : null;
+  if (providedMessageId !== null && !UUID_RE.test(providedMessageId)) {
+    return NextResponse.json({ error: "Invalid message id" }, { status: 400 });
+  }
+  const messageId = providedMessageId ?? randomUUID();
 
-  const resources = parseResourcesInput(payload?.attachments, `chat/${auth.user.id}/`, 5);
+  const resources = parseResourcesInput(
+    payload?.attachments,
+    `chat/${auth.user.id}/`,
+    5,
+  );
   if (resources === null) {
     return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
   }
-  const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
+  const attachments = resources.filter(
+    (resource): resource is AttachmentInput => resource.kind !== "link",
+  );
   const messageWithFiles = await promptWithAttachments(message, attachments);
 
   const run = await getRun(runId);
-  if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!run)
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
   if (!RESUMABLE.includes(run.status)) {
-    return NextResponse.json({ error: "Run is not resumable" }, { status: 409 });
+    return NextResponse.json(
+      { error: "Run is not resumable" },
+      { status: 409 },
+    );
+  }
+  if (!(await runIsLatestOnAnchor(run))) {
+    return NextResponse.json(
+      { error: "supersededRun", code: "supersededRun" },
+      { status: 409 },
+    );
   }
 
   /**
@@ -117,7 +156,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // will start from a new branch — the ticket context no longer determines the branch
   // of a merged lineage).
   if (run.pr_state === "merged") {
-    return NextResponse.json({ error: "prMerged", code: "prMerged" }, { status: 409 });
+    return NextResponse.json(
+      { error: "prMerged", code: "prMerged" },
+      { status: 409 },
+    );
   }
 
   let resumed = false;
@@ -159,7 +201,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const ownerId = run.created_by ?? auth.user.id;
     const ownerQuota =
       ownerId === auth.user.id ? null : await checkAgentQuota(ownerId);
-    const quota = !callerQuota.allowed ? callerQuota : (ownerQuota ?? callerQuota);
+    const quota = !callerQuota.allowed
+      ? callerQuota
+      : (ownerQuota ?? callerQuota);
     if (!quota.allowed) {
       return NextResponse.json(
         { error: "quotaExceeded", code: "quotaExceeded", quota },
@@ -196,12 +240,35 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // `todo`) returns to class; `merged` is already refused above.
       // Run notebook: no tickets to synchronize.
       if (run.issue_id && run.pr_state !== "open" && run.pr_state !== "draft") {
-        await syncIssueStatusOnAgentStart({ issueId: run.issue_id, actorId: auth.user.id });
+        await syncIssueStatusOnAgentStart({
+          issueId: run.issue_id,
+          actorId: auth.user.id,
+        });
       }
     }
   }
 
-  await insertRunMessage(runId, auth.user.id, messageWithFiles, parseAgentMentions(payload?.mentions));
+  // Repeat the latest-run check immediately before the durable write. The UI
+  // has the same guard for affordance; the server owns the restriction.
+  if (!(await runIsLatestOnAnchor(run))) {
+    return NextResponse.json(
+      { error: "supersededRun", code: "supersededRun" },
+      { status: 409 },
+    );
+  }
+  const inserted = await insertLatestRunMessage(
+    runId,
+    auth.user.id,
+    messageWithFiles,
+    parseAgentMentions(payload?.mentions),
+    messageId,
+  );
+  if (inserted === "superseded") {
+    return NextResponse.json(
+      { error: "supersededRun", code: "supersededRun" },
+      { status: 409 },
+    );
+  }
   // A message restarts the idle timer (prevents imminent reaping).
   await bumpRunActivity(runId);
 
@@ -224,5 +291,5 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   if (resumed) kickAgentDrain(getServiceClient());
 
-  return NextResponse.json({ ok: true, status: run.status });
+  return NextResponse.json({ ok: true, status: run.status, messageId });
 }

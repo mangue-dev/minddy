@@ -4,10 +4,12 @@ import type { SyncableIssueStatus } from "@/lib/pr-issue-status";
 import { resolveRepoCloneTargetForRepo } from "./repo-access";
 import { parsePullRequestRef } from "./pr-ingest-core";
 import { broadcastPrChanged } from "./pr-live";
-import { issueStatusForPrState, syncIssueStatusFromPr } from "./issue-status-sync";
+import {
+  issueStatusForPrState,
+  syncIssueStatusFromPr,
+} from "./issue-status-sync";
 import {
   findPullRequestByNumber,
-  hasLivePullRequest,
   projectsForRepo,
   repoForProject,
   rowProvider,
@@ -47,11 +49,11 @@ export type PrLinkResult =
       /** True when the PR ALREADY pointed to this ticket: nothing was written. */
       already: boolean;
       /**
- * Status where the attachment has issued the ticket. `null` stays in type
- * (`issueStatusForPrState` makes it in an unknown state) but not in
- * facts: the four states in a `pull_requests` line all imply a
- * status.
- */
+       * Status where the attachment has issued the ticket. `null` stays in type
+       * (`issueStatusForPrState` makes it in an unknown state) but not in
+       * facts: the four states in a `pull_requests` line all imply a
+       * status.
+       */
       status: SyncableIssueStatus | null;
     }
   | { ok: false; code: PrLinkRefusal };
@@ -83,20 +85,25 @@ export async function linkPullRequestToIssue(opts: {
     return { ok: false, code: "issue_outside_repo" };
   }
 
-  if (await hasLivePullRequest(issue.id)) {
+  // The database locks the target issue and PR together. This closes both
+  // races: another request attaching this PR and another live PR winning this
+  // issue between the preflight reads and the write.
+  const linked = await setPullRequestIssue(pr.id, issue.id);
+  if (linked === "already") return { ok: true, already: true, status };
+  if (linked === "issue_already_linked") {
     return { ok: false, code: "issue_already_linked" };
   }
-
-  // This is the BASE that decides: `false` = the PR has been attached in the meantime.
-  if (!(await setPullRequestIssue(pr.id, issue.id))) {
-    return { ok: false, code: "pr_already_linked" };
-  }
+  if (linked !== "linked") return { ok: false, code: "pr_already_linked" };
 
   // The list and the ticket panel pass through the broadcast trigger
   // (`issue_id` is one of the columns that broadcast); the OPEN sign on the
   // PR shows the ticket in a header served by the forge.
   broadcastPrChanged(pr.id, ["pr"]);
-  await syncIssueStatusFromPr({ issueId: issue.id, actorId, prState: pr.state });
+  await syncIssueStatusFromPr({
+    issueId: issue.id,
+    actorId,
+    prState: pr.state,
+  });
 
   return { ok: true, already: false, status };
 }

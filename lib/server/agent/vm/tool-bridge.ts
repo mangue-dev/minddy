@@ -1,4 +1,9 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 
 import type { ControlPlaneClient } from "./control-plane-client";
 import {
@@ -101,7 +106,12 @@ export interface ToolBridge {
  */
 export type SupervisorTool = (
   args: Record<string, unknown>,
-) => Promise<{ result: unknown; success: boolean; followUp?: string; reason?: string }>;
+) => Promise<{
+  result: unknown;
+  success: boolean;
+  followUp?: string;
+  reason?: string;
+}>;
 
 /**
  * What a call returns to the bridge. `images` is the only output that is not
@@ -170,7 +180,9 @@ const SUPERVISOR_ONLY = new Set([
 ]);
 
 /** Starts the bridge. The supervisor opens it BEFORE the opencode server. */
-export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBridge> {
+export async function startToolBridge(
+  opts: ToolBridgeOptions,
+): Promise<ToolBridge> {
   const { job, cp } = opts;
   const allowedTools = bridgedToolNamesFor(job);
 
@@ -181,6 +193,21 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
    */
   let webSearchesUsed = 0;
   let prInlineComments = job.prInlineComments;
+  let quotaTail: Promise<void> = Promise.resolve();
+
+  const withQuotaLock = async <T>(task: () => Promise<T>): Promise<T> => {
+    const previous = quotaTail;
+    let release!: () => void;
+    quotaTail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await task();
+    } finally {
+      release();
+    }
+  };
 
   /**
    * THE RESEARCH CEILING, and the refusal it gives.
@@ -198,7 +225,10 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
       // The tool is not generated in this case (`agentToolsFor` removes it outside
       // OpenRouter): getting there anyway means that a previous round has
       // left his file behind. We refuse, we do not pay.
-      return { result: { error: "Web search is not available on this run." }, success: false };
+      return {
+        result: { error: "Web search is not available on this run." },
+        success: false,
+      };
     }
     if (webSearchesUsed >= job.webSearchMax) {
       return {
@@ -209,7 +239,9 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
       };
     }
     const seq = webSearchesUsed++;
-    const res = await cp.callTool("web_search", { args: { query: args.query, seq } });
+    const res = await cp.callTool("web_search", {
+      args: { query: args.query, seq },
+    });
     return { result: res.result, success: res.success };
   }
 
@@ -218,7 +250,11 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     name: string,
     args: Record<string, unknown>,
   ): Promise<ToolOutcome> {
-    const res = await cp.callTool(name, { args, imageInput: job.imageInput, prInlineComments });
+    const res = await cp.callTool(name, {
+      args,
+      imageInput: job.imageInput,
+      prInlineComments,
+    });
     // The anchor counter goes back and forth: it is the function which opposes it
     // at the ceiling of 5 and which returns the one it has reached (`runPrTool`).
     if (typeof res.inlineUsed === "number") prInlineComments = res.inlineUsed;
@@ -249,13 +285,17 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
    * startup — wrapping it by call would make a new plan sink each time
    * times, therefore a control that never speaks.
    */
-  const forward = opts.delivery ? opts.delivery.wrapDomainTool(forwardRaw) : forwardRaw;
+  const forward = opts.delivery
+    ? opts.delivery.wrapDomainTool(forwardRaw)
+    : forwardRaw;
 
   /**
    * `create_pr` is a supervisor-only publishing operation. `validate_changes` is
    * wrapped separately so the explicit preflight cannot be mistaken for publication.
    */
-  const supervisorTools: Record<string, SupervisorTool> = { ...opts.supervisorTools };
+  const supervisorTools: Record<string, SupervisorTool> = {
+    ...opts.supervisorTools,
+  };
   if (opts.delivery && supervisorTools.validate_changes) {
     supervisorTools.validate_changes = opts.delivery.wrapValidateChanges(
       supervisorTools.validate_changes,
@@ -283,8 +323,12 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
         success: false,
       };
     }
-    if (name === "web_search") return await runWebSearch(args);
+    if (name === "web_search")
+      return await withQuotaLock(() => runWebSearch(args));
     if (!DOMAIN_TOOL_NAMES.has(name)) return null;
+    if (name === "comment_pr_line" || name === "comment_pull_request_line") {
+      return await withQuotaLock(() => forward(name, args));
+    }
     return await forward(name, args);
   }
 
@@ -298,14 +342,24 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
       // A failure of the bridge itself (unreadable body, cut socket): it is said
       // to the model as a tool error, never by crashing the process
       // which holds all the way around.
-      if (!res.headersSent) res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ error: `minddy tool bridge: ${(err as Error).message}` }));
+      if (!res.headersSent)
+        res.writeHead(200, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: `minddy tool bridge: ${(err as Error).message}`,
+        }),
+      );
     });
   });
 
-  async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  async function handle(
+    req: IncomingMessage,
+    res: ServerResponse,
+  ): Promise<void> {
     const path = (req.url ?? "/").split("?")[0];
-    const name = path.startsWith("/tool/") ? decodeURIComponent(path.slice("/tool/".length)) : "";
+    const name = path.startsWith("/tool/")
+      ? decodeURIComponent(path.slice("/tool/".length))
+      : "";
     if (req.method !== "POST" || !name) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "not found" }));
@@ -315,10 +369,14 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     const raw = await readBody(req);
     let body: ToolCallBody = {};
     try {
-      body = raw.length ? (JSON.parse(raw.toString("utf8")) as ToolCallBody) : {};
+      body = raw.length
+        ? (JSON.parse(raw.toString("utf8")) as ToolCallBody)
+        : {};
     } catch {
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ error: "minddy tool bridge: malformed request body" }));
+      res.end(
+        JSON.stringify({ error: "minddy tool bridge: malformed request body" }),
+      );
       return;
     }
 
@@ -328,11 +386,15 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
       // The reason for the refusal goes to the supervisor, who alone writes on the wire: the bridge, itself,
       // only knows HTTP. `callID` is that of opencode, therefore the one that carries
       // l'event `tool_result` de cet appel.
-      if (outcome?.reason && body.callID) opts.onToolRefused?.(body.callID, outcome.reason);
+      if (outcome?.reason && body.callID)
+        opts.onToolRefused?.(body.callID, outcome.reason);
     } catch (err) {
       // The control plane failed (409, failure, timeout). The model must
       // read: a tool in error tries again, a cut round pays for itself.
-      outcome = { result: { error: `${name} failed: ${(err as Error).message}` }, success: false };
+      outcome = {
+        result: { error: `${name} failed: ${(err as Error).message}` },
+        success: false,
+      };
     }
     if (!outcome) {
       // A tool served to the model and routed nowhere: this is our default, and it
@@ -350,7 +412,9 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     const rendered = JSON.stringify(
       outcome.result ?? (outcome.success ? {} : { error: "no result" }),
     );
-    const output = outcome.followUp ? `${rendered}\n\n${outcome.followUp}` : rendered;
+    const output = outcome.followUp
+      ? `${rendered}\n\n${outcome.followUp}`
+      : rendered;
 
     /**
      * AN IMAGE → THE ENVELOPE, and it is announced by its header (cf.
@@ -384,7 +448,9 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     }
 
     res.writeHead(200, {
-      "content-type": outcome.followUp ? "text/plain; charset=utf-8" : "application/json",
+      "content-type": outcome.followUp
+        ? "text/plain; charset=utf-8"
+        : "application/json",
     });
     res.end(output);
   }

@@ -45,6 +45,7 @@ import {
   type LocalTurnRefusal,
 } from "@/lib/desktop/local-turn";
 import { opencodeInstallNote, opencodeRefusalMessage } from "@/lib/desktop/opencode-install";
+import { withOpencodeInstallLock } from "@/lib/desktop/opencode-install-lock";
 import { quitLogNote, type RunningTurn } from "@/lib/desktop/quit-guard";
 import { killTargets, readHarnessChildren } from "@/lib/server/agent/vm/child-registry";
 import { OPENCODE_VERSION } from "@/lib/server/agent/vm/opencode-version";
@@ -700,23 +701,31 @@ async function ensureOpencodeOnce(
   | { ok: true; note: string | null }
   | { ok: false; reason: "no_npm" | "install_failed"; message: string }
 > {
-  const { decision, npm, env } = readOpencodeFacts(installDir);
-  if (decision.action === "ready") return { ok: true, note: null };
-  if (decision.action === "refuse") {
-    return { ok: false, reason: "no_npm", message: opencodeRefusalMessage("no_npm") };
-  }
-  try {
-    mkdirSync(installDir, { recursive: true });
-  } catch (error) {
-    return {
-      ok: false,
-      reason: "install_failed",
-      message: `Could not create ${installDir}: ${(error as Error).message}`,
-    };
-  }
-  const failure = await installOpencode({ installDir, npm: npm!, env });
-  if (failure) return { ok: false, reason: "install_failed", message: failure };
-  return { ok: true, note: opencodeInstallNote(decision.why) };
+  return withOpencodeInstallLock(installDir, async () => {
+    // Re-read after acquiring the process-wide lock: another launcher or
+    // harness may have completed the installation while this one waited.
+    const { decision, npm, env } = readOpencodeFacts(installDir);
+    if (decision.action === "ready") return { ok: true, note: null };
+    if (decision.action === "refuse") {
+      return {
+        ok: false,
+        reason: "no_npm",
+        message: opencodeRefusalMessage("no_npm"),
+      };
+    }
+    try {
+      mkdirSync(installDir, { recursive: true });
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "install_failed",
+        message: `Could not create ${installDir}: ${(error as Error).message}`,
+      };
+    }
+    const failure = await installOpencode({ installDir, npm: npm!, env });
+    if (failure) return { ok: false, reason: "install_failed", message: failure };
+    return { ok: true, note: opencodeInstallNote(decision.why) };
+  });
 }
 
 // ── Children who survive ─────────────────────── ────────────────────────

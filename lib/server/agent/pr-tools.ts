@@ -67,11 +67,13 @@ export interface PrToolContext {
   /** Signature language: that of the launcher. */
   locale: string;
   /**
- * Counter of anchors placed by THIS RUN. MUTATED object here and persisted by
- * `execute.ts` in the checkpoint: this is what makes the cap insensitive to
- * the restart and the next turn.
- */
+   * Counter of anchors placed by THIS RUN. MUTATED object here and persisted by
+   * `execute.ts` in the checkpoint: this is what makes the cap insensitive to
+   * the restart and the next turn.
+   */
   inline: { used: number };
+  reserveInline?: () => Promise<number | null>;
+  releaseInline?: () => Promise<number | null>;
 }
 
 // ── Anchoring ────────────────────────────────────────────────────────────────
@@ -89,7 +91,11 @@ export interface PrToolContext {
  * this repository) is found by the first pass and never sees this cleanup.
  */
 export function normalizeFindingPath(raw: string): string {
-  const unquoted = raw.trim().replace(/^[`"']+/, "").replace(/[`"']+$/, "").trim();
+  const unquoted = raw
+    .trim()
+    .replace(/^[`"']+/, "")
+    .replace(/[`"']+$/, "")
+    .trim();
   const cut = [" — ", " ("].reduce((min, marker) => {
     const at = unquoted.indexOf(marker);
     return at === -1 ? min : Math.min(min, at);
@@ -178,8 +184,7 @@ export function formatRanges(ranges: Array<[number, number]>): string {
 }
 
 export type PrAnchorResult =
-  | { ok: true; path: string }
-  | { ok: false; error: string };
+  { ok: true; path: string } | { ok: false; error: string };
 
 /**
  * Validates a line-comment anchor BEFORE calling the forge.
@@ -251,14 +256,19 @@ const SIGNATURE: Record<string, (model: string) => string> = {
  * useful if it writes one anyway: a body that already bears the `🤖` signature
  * marker is returned unchanged.
  */
-export function signReviewBody(body: string, model: string, locale: string): string {
+export function signReviewBody(
+  body: string,
+  model: string,
+  locale: string,
+): string {
   const trimmed = body.trim();
   const sign = SIGNATURE[locale] ?? SIGNATURE.en;
   const line = sign(model);
   if (trimmed.includes(line)) return trimmed;
   // A signature in ANOTHER language or from another model counts too: we avoid a
   // duplicate footer, not one particular string.
-  if (/🤖\s*(Relu par|Reviewed by) Numo \(minddy\)/.test(trimmed)) return trimmed;
+  if (/🤖\s*(Relu par|Reviewed by) Numo \(minddy\)/.test(trimmed))
+    return trimmed;
   return `${trimmed}\n\n---\n${line}`;
 }
 
@@ -283,7 +293,10 @@ async function commentPrLine(
   if (!body) return { result: { error: "body is required." }, success: false };
   if (!path) return { result: { error: "path is required." }, success: false };
   if (!Number.isInteger(rawLine) || rawLine < 1) {
-    return { result: { error: "line must be a positive integer." }, success: false };
+    return {
+      result: { error: "line must be a positive integer." },
+      success: false,
+    };
   }
 
   // Enforce the ceiling BEFORE any forge call: once exceeded, there is nothing to try.
@@ -299,8 +312,23 @@ async function commentPrLine(
     };
   }
 
-  const anchor = resolvePrCommentAnchor(await ctx.files(), { path, line: rawLine, side });
+  const anchor = resolvePrCommentAnchor(await ctx.files(), {
+    path,
+    line: rawLine,
+    side,
+  });
   if (!anchor.ok) return { result: { error: anchor.error }, success: false };
+
+  const reserved = ctx.reserveInline ? await ctx.reserveInline() : null;
+  if (ctx.reserveInline && reserved === null) {
+    return {
+      result: {
+        error: `You have already posted the ${AI_REVIEW_MAX_INLINE_COMMENTS} line comments this review allows. Everything else goes in your summary comment (comment_pr), most serious first.`,
+      },
+      success: false,
+    };
+  }
+  if (reserved !== null) ctx.inline.used = reserved;
 
   try {
     const comment = await ctx.forge.createPullRequestReviewComment({
@@ -310,7 +338,7 @@ async function commentPrLine(
       line: rawLine,
       side,
     });
-    ctx.inline.used++;
+    if (reserved === null) ctx.inline.used++;
     return {
       result: {
         id: comment.id,
@@ -326,6 +354,9 @@ async function commentPrLine(
     // A forge rejection does NOT consume the ceiling: nothing was posted. The
     // expected case is 422 (the head moved between reading the diff and sending).
     if (isForgeApiError(err)) {
+      if (reserved !== null && ctx.releaseInline) {
+        ctx.inline.used = (await ctx.releaseInline()) ?? ctx.inline.used;
+      }
       return {
         result: {
           error:
@@ -345,8 +376,14 @@ async function commentPr(
 ): Promise<ToolOutcome> {
   const body = str(args.body);
   if (!body) return { result: { error: "body is required." }, success: false };
-  const signed = signReviewBody(body, ctx.model, ctx.locale).slice(0, MAX_BODY_LENGTH);
-  const comment = await ctx.forge.createPullRequestComment({ ...ctx.call, body: signed });
+  const signed = signReviewBody(body, ctx.model, ctx.locale).slice(
+    0,
+    MAX_BODY_LENGTH,
+  );
+  const comment = await ctx.forge.createPullRequestComment({
+    ...ctx.call,
+    body: signed,
+  });
   return { result: { id: comment.id, url: comment.html_url }, success: true };
 }
 
@@ -356,7 +393,9 @@ async function replyPrThread(
 ): Promise<ToolOutcome> {
   const body = str(args.body);
   const commentId =
-    typeof args.comment_id === "number" ? args.comment_id : Number(args.comment_id);
+    typeof args.comment_id === "number"
+      ? args.comment_id
+      : Number(args.comment_id);
   if (!body) return { result: { error: "body is required." }, success: false };
   if (!Number.isInteger(commentId) || commentId <= 0) {
     return {
@@ -409,9 +448,15 @@ export async function executePrTool(
       case "reply_pr_thread":
         return await replyPrThread(ctx, args);
       default:
-        return { result: { error: `Unknown pull request tool: ${name}` }, success: false };
+        return {
+          result: { error: `Unknown pull request tool: ${name}` },
+          success: false,
+        };
     }
   } catch (err) {
-    return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };
+    return {
+      result: { error: err instanceof Error ? err.message : String(err) },
+      success: false,
+    };
   }
 }

@@ -80,10 +80,16 @@ export interface PullRequestUpsert {
   /** Last update CHEZ LA FORGE — sorting the list (default: now). */
   updatedAt?: string | null;
   /**
- * Attachment to the ticket. `undefined` = DO NOT TOUCH: a webhook that does not resolve the ticket must not delete an already established attachment (by
- * a run, or by a scan that had read a branch since deleted).
- */
+   * Attachment to the ticket. `undefined` = DO NOT TOUCH: a webhook that does not resolve the ticket must not delete an already established attachment (by
+   * a run, or by a scan that had read a branch since deleted).
+   */
   issueId?: string | null;
+}
+
+export interface PullRequestUpsertOutcome {
+  row: PullRequestRow;
+  /** False means an equal or newer forge observation was already stored. */
+  applied: boolean;
 }
 
 /**
@@ -129,24 +135,33 @@ function toRow(input: PullRequestUpsert): Record<string, unknown> {
  * the write failed (best-effort: ingestion should never drop a
  * webhook).
  */
-export async function upsertPullRequest(
+export async function upsertPullRequestWithOutcome(
   input: PullRequestUpsert,
-): Promise<PullRequestRow | null> {
+): Promise<PullRequestUpsertOutcome | null> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("pull_requests")
-    .upsert(toRow(input), { onConflict: "provider,repo_full_name,number" })
-    .select(PR_COLUMNS)
-    .maybeSingle();
+  const { data, error } = await service.rpc("upsert_pull_request_monotonic", {
+    p_values: toRow(input),
+  });
   if (error) {
     console.error("[pull-requests] upsert failed:", error.message);
     return null;
   }
-  return (data as PullRequestRow | null) ?? null;
+  const result = data as { row?: PullRequestRow; applied?: boolean } | null;
+  return result?.row
+    ? { row: result.row, applied: result.applied === true }
+    : null;
+}
+
+export async function upsertPullRequest(
+  input: PullRequestUpsert,
+): Promise<PullRequestRow | null> {
+  return (await upsertPullRequestWithOutcome(input))?.row ?? null;
 }
 
 /** Pull request par son id minddy (service client — l'appelant authentifie). */
-export async function findPullRequest(prId: string): Promise<PullRequestRow | null> {
+export async function findPullRequest(
+  prId: string,
+): Promise<PullRequestRow | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("pull_requests")
@@ -205,7 +220,10 @@ export interface RepoRef {
 /** Connection line → repository, or null if it is incomplete (unknown provider,
  repository never chosen: the connection exists before the repository is designated). */
 function repoFromLink(data: unknown): RepoRef | null {
-  const row = data as { provider: string; repo_full_name: string | null } | null;
+  const row = data as {
+    provider: string;
+    repo_full_name: string | null;
+  } | null;
   if (!row?.repo_full_name || !isRepoProviderId(row.provider)) return null;
   return { provider: row.provider, repoFullName: row.repo_full_name };
 }
@@ -215,7 +233,9 @@ function repoFromLink(data: unknown): RepoRef | null {
  * unique). The opposite is multiple: several projects can link the same
  * repository, which `projectsForRepo` serves.
  */
-export async function repoForProject(projectId: string): Promise<RepoRef | null> {
+export async function repoForProject(
+  projectId: string,
+): Promise<RepoRef | null> {
   const { data } = await getServiceClient()
     .from("project_git_links")
     .select("provider, repo_full_name")
@@ -262,7 +282,10 @@ export async function resolvePrForRun(run: {
   if (run.pr_number == null) return null;
   const repo = await repoForRun(run);
   if (!repo) return null;
-  const existing = await findPullRequestByNumber({ ...repo, number: run.pr_number });
+  const existing = await findPullRequestByNumber({
+    ...repo,
+    number: run.pr_number,
+  });
   if (existing) return existing;
   return upsertPullRequest({
     provider: repo.provider,
@@ -290,20 +313,31 @@ export async function resolvePrForRun(run: {
 export async function setPullRequestIssue(
   prId: string,
   issueId: string,
-): Promise<boolean> {
+): Promise<
+  | "linked"
+  | "already"
+  | "pr_already_linked"
+  | "issue_already_linked"
+  | "pr_not_found"
+> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("pull_requests")
-    .update({ issue_id: issueId })
-    .eq("id", prId)
-    .is("issue_id", null)
-    .select("id")
-    .maybeSingle();
+  const { data, error } = await service.rpc(
+    "link_pull_request_to_issue_atomic",
+    {
+      p_pr_id: prId,
+      p_issue_id: issueId,
+    },
+  );
   if (error) {
     console.error("[pull-requests] issue link failed:", error.message);
-    return false;
+    return "pr_not_found";
   }
-  return !!data;
+  return data as
+    | "linked"
+    | "already"
+    | "pr_already_linked"
+    | "issue_already_linked"
+    | "pr_not_found";
 }
 
 /**
@@ -349,7 +383,11 @@ export async function findPullRequestForIssue(
     .eq("issue_id", issueId)
     .order("updated_at", { ascending: false });
   const rows = (data ?? []) as unknown as PullRequestRow[];
-  return rows.find((r) => r.state === "draft" || r.state === "open") ?? rows[0] ?? null;
+  return (
+    rows.find((r) => r.state === "draft" || r.state === "open") ??
+    rows[0] ??
+    null
+  );
 }
 
 // ── Rattachement au ticket ───────────────────────────────────────────────────
@@ -392,7 +430,8 @@ export async function resolveIssueForPr(opts: {
   /** Projects from the repository, when the caller already has them (scan: once and for all). */
   projects?: RepoProject[];
 }): Promise<string | null> {
-  const projects = opts.projects ?? (await projectsForRepo(opts.provider, opts.repoFullName));
+  const projects =
+    opts.projects ?? (await projectsForRepo(opts.provider, opts.repoFullName));
   if (projects.length === 0) return null;
   const ref = issueRefFromPr({
     projectKeys: projects.map((p) => p.key),
@@ -448,13 +487,19 @@ async function reconcileDriftedPr(
       prState: state,
       provider,
     });
+    const currentState =
+      runs[0]?.prState ??
+      (
+        await findPullRequestByNumber({ provider, repoFullName, number })
+      )?.state ??
+      state;
     if (runs.length === 0) {
       const { applyForgePrToIssue } = await import("./pr-activity");
       await applyForgePrToIssue({
         provider,
         repoFullName,
         prNumber: number,
-        prState: state,
+        prState: currentState,
         actionType: null,
         accountId: null,
         login: null,
@@ -468,12 +513,15 @@ async function reconcileDriftedPr(
         await syncIssueStatusFromPr({
           issueId: run.issueId,
           actorId: run.createdBy,
-          prState: state,
+          prState: currentState,
         });
       }
     }
   } catch (err) {
-    console.error("[pull-requests] state reconcile failed:", (err as Error).message);
+    console.error(
+      "[pull-requests] state reconcile failed:",
+      (err as Error).message,
+    );
   }
 }
 
@@ -509,7 +557,10 @@ export async function readRepoSyncStates(
   return map;
 }
 
-export function repoSyncKey(provider: RepoProviderId, repoFullName: string): string {
+export function repoSyncKey(
+  provider: RepoProviderId,
+  repoFullName: string,
+): string {
   return `${provider}:${repoFullName}`;
 }
 
@@ -529,10 +580,16 @@ export async function stampRepoSync(
   repoFullName: string,
 ): Promise<void> {
   const service = getServiceClient();
-  const { error } = await service.from("pull_request_syncs").upsert(
-    { provider, repo_full_name: repoFullName, synced_at: new Date().toISOString() },
-    { onConflict: "provider,repo_full_name" },
-  );
+  const { error } = await service
+    .from("pull_request_syncs")
+    .upsert(
+      {
+        provider,
+        repo_full_name: repoFullName,
+        synced_at: new Date().toISOString(),
+      },
+      { onConflict: "provider,repo_full_name" },
+    );
   if (error) console.error("[pull-requests] sync stamp failed:", error.message);
 }
 
@@ -583,23 +640,25 @@ export async function syncRepoPullRequests(opts: {
   );
 
   const projects = await projectsForRepo(opts.provider, opts.repoFullName);
-  const rows: Record<string, unknown>[] = [];
+  const observations: Array<{
+    input: PullRequestUpsert;
+    before: { state: PullRequestState } | undefined;
+    state: PullRequestState;
+    at: number;
+  }> = [];
   /** PR whose state has CHANGED since the last reading — the hole of a webhook.
  `at` = its last activity at the forge, the replay key (see below). */
-  const drifted: Array<{ number: number; state: PullRequestState; at: number }> = [];
+  const drifted: Array<{
+    number: number;
+    state: PullRequestState;
+    at: number;
+  }> = [];
   for (const pull of pulls) {
     const before = knownByNumber.get(pull.number);
     const state = prStateFromRef(pull);
     // Only lines ALREADY known: on the first scan of a repository that we
     // just linked, everything is new, and nothing happened there before
     // minddy ne doit bouger un ticket.
-    if (before && before.state !== state) {
-      drifted.push({
-        number: pull.number,
-        state,
-        at: Date.parse(pull.updatedAt ?? pull.createdAt ?? "") || 0,
-      });
-    }
     const issueId =
       before?.issue_id ??
       (await resolveIssueForPr({
@@ -610,8 +669,8 @@ export async function syncRepoPullRequests(opts: {
         body: pull.body,
         projects,
       }));
-    rows.push(
-      toRow({
+    observations.push({
+      input: {
         provider: opts.provider,
         repoFullName: opts.repoFullName,
         number: pull.number,
@@ -627,15 +686,34 @@ export async function syncRepoPullRequests(opts: {
         mergedAt: pull.mergedAt ?? null,
         updatedAt: pull.updatedAt ?? pull.createdAt,
         issueId,
-      }),
-    );
+      },
+      before,
+      state,
+      at: Date.parse(pull.updatedAt ?? pull.createdAt ?? "") || 0,
+    });
   }
 
-  if (rows.length > 0) {
-    const { error } = await service
-      .from("pull_requests")
-      .upsert(rows, { onConflict: "provider,repo_full_name,number" });
-    if (error) console.error("[pull-requests] sweep upsert failed:", error.message);
+  // A sweep and a webhook can observe the same PR in opposite orders. Route
+  // both through the same monotonic database primitive and only reconcile an
+  // issue when this observation actually won.
+  const applied = await Promise.all(
+    observations.map(async (observation) => ({
+      observation,
+      outcome: await upsertPullRequestWithOutcome(observation.input),
+    })),
+  );
+  for (const { observation, outcome } of applied) {
+    if (
+      outcome?.applied &&
+      observation.before &&
+      observation.before.state !== observation.state
+    ) {
+      drifted.push({
+        number: observation.input.number,
+        state: observation.state,
+        at: observation.at,
+      });
+    }
   }
 
   const { error: stampError } = await service.from("pull_request_syncs").upsert(
@@ -647,7 +725,8 @@ export async function syncRepoPullRequests(opts: {
     },
     { onConflict: "provider,repo_full_name" },
   );
-  if (stampError) console.error("[pull-requests] sweep stamp failed:", stampError.message);
+  if (stampError)
+    console.error("[pull-requests] sweep stamp failed:", stampError.message);
 
   // AFTER writing the lines: reconciliation rereads the PR by its key
   // natural, and must find the up-to-date state there, not the one we just
@@ -699,11 +778,13 @@ export async function listVisibleRepos(
     .select(
       "provider, repo_full_name, project:projects(id, key, name, icon_url, orb_seed, deleted_at)",
     );
-  return ((data ?? []) as unknown as Array<{
-    provider: string;
-    repo_full_name: string | null;
-    project: (VisibleRepo["project"] & { deleted_at: string | null }) | null;
-  }>)
+  return (
+    (data ?? []) as unknown as Array<{
+      provider: string;
+      repo_full_name: string | null;
+      project: (VisibleRepo["project"] & { deleted_at: string | null }) | null;
+    }>
+  )
     .filter(
       (r) =>
         !!r.repo_full_name &&
@@ -725,7 +806,12 @@ export async function listVisibleRepos(
 
 /** A PR of the list, with its ticket and the project of this ticket (RLS joins). */
 export interface PullRequestWithIssue extends PullRequestRow {
-  issue: { id: string; number: number; title: string; project_id: string } | null;
+  issue: {
+    id: string;
+    number: number;
+    title: string;
+    project_id: string;
+  } | null;
 }
 
 /**
@@ -743,7 +829,9 @@ export async function listPullRequestsForUser(
 ): Promise<PullRequestWithIssue[]> {
   if (repos.length === 0) return [];
   const names = [...new Set(repos.map((r) => r.repoFullName))];
-  const pairs = new Set(repos.map((r) => repoSyncKey(r.provider, r.repoFullName)));
+  const pairs = new Set(
+    repos.map((r) => repoSyncKey(r.provider, r.repoFullName)),
+  );
 
   let query = supabase
     .from("pull_requests")

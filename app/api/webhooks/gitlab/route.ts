@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { afterOrNow } from "@/lib/server/after-safe";
-import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent/runs";
+import {
+  syncPrState,
+  findRunsForPr,
+  type SyncedPrRun,
+} from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import {
   applyForgePrToIssue,
@@ -29,8 +33,8 @@ import { rotateGitlabWebhookSecret } from "@/lib/server/git/gitlab-app";
 import {
   findPullRequestByNumber,
   resolveIssueForPr,
-  upsertPullRequest,
-  type PullRequestRow,
+  upsertPullRequestWithOutcome,
+  type PullRequestUpsertOutcome,
 } from "@/lib/server/agent/pull-requests";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import {
@@ -110,7 +114,9 @@ interface GitlabUserPayload {
 }
 
 /** The actor's forge account ID as text (column `provider_account_id`). */
-function actorAccountId(user: GitlabUserPayload | undefined | null): string | null {
+function actorAccountId(
+  user: GitlabUserPayload | undefined | null,
+): string | null {
   return user?.id != null ? String(user.id) : null;
 }
 
@@ -148,7 +154,13 @@ interface MergeRequestEvent {
  * ticket. `update` is one of them: at GitLab it is also what carries a
  * new push, a title change or the draft toggle.
  */
-const INGESTED_MR_ACTIONS = new Set(["open", "reopen", "close", "merge", "update"]);
+const INGESTED_MR_ACTIONS = new Set([
+  "open",
+  "reopen",
+  "close",
+  "merge",
+  "update",
+]);
 
 /**
  * Records the MR at minddy — from Numo or a human, it's the same fact of
@@ -165,7 +177,7 @@ async function ingestMergeRequest(
   iid: number,
   attrs: MergeRequestAttributes,
   actor: GitlabUserPayload | undefined,
-): Promise<PullRequestRow | null> {
+): Promise<PullRequestUpsertOutcome | null> {
   const issueId = await resolveIssueForPr({
     provider: "gitlab",
     repoFullName,
@@ -174,7 +186,7 @@ async function ingestMergeRequest(
     body: attrs.description,
   });
   const isOpen = attrs.action === "open";
-  return upsertPullRequest({
+  return upsertPullRequestWithOutcome({
     provider: "gitlab",
     repoFullName,
     number: iid,
@@ -214,9 +226,14 @@ async function isServiceAccount(
     .eq("repo_full_name", repoFullName)
     .eq("provider", "gitlab");
   // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
-  const connections = ((data ?? []) as unknown as Array<{
-    git_connections: { provider_account_id: string | null; account_login: string | null } | null;
-  }>).map((r) => r.git_connections);
+  const connections = (
+    (data ?? []) as unknown as Array<{
+      git_connections: {
+        provider_account_id: string | null;
+        account_login: string | null;
+      } | null;
+    }>
+  ).map((r) => r.git_connections);
   return connections.some(
     (c) =>
       c &&
@@ -256,16 +273,24 @@ async function handleMergeRequest(
   // human. She must pass BEFORE the `runs.length === 0` guard lower down, who
   // exists precisely to ignore human MRs — it is this guard who
   // rendait invisibles.
-  const ingested = INGESTED_MR_ACTIONS.has(action)
+  const ingestion = INGESTED_MR_ACTIONS.has(action)
     ? await ingestMergeRequest(repoFullName, iid, attrs, payload.user)
     : null;
+  const ingested = ingestion?.row ?? null;
+
+  // Ignore an older or replayed delivery consistently across the PR row,
+  // run state, issue status, activity, and notifications.
+  if (ingestion && !ingestion.applied) return;
 
   // Inbox: The project learns that a merge request is waiting for eyes. Here, right
   // after ingestion, and not lower with the other notifications: these
   // leave to the author of a RUN, but a human MR does not have one - it is precisely
   // the one that no one knew about. The service account is discarded: when
   // he opens, it's Numo, and the ad has already gone out on the agent side.
-  if (action === "open" && !(await isServiceAccount(repoFullName, payload.user))) {
+  if (
+    action === "open" &&
+    !(await isServiceAccount(repoFullName, payload.user))
+  ) {
     await notifyPullRequestOpened(ingested, {
       actor: {
         accountId: actorAccountId(payload.user),
@@ -305,6 +330,17 @@ async function handleMergeRequest(
         provider: "gitlab",
       })
     : await findRunsForPr({ repoFullName, prNumber: iid, provider: "gitlab" });
+  const currentPrState =
+    runs[0]?.prState ??
+    (
+      await findPullRequestByNumber({
+        provider: "gitlab",
+        repoFullName,
+        number: iid,
+      })
+    )?.state ??
+    ingested?.state ??
+    prState;
 
   // NO run: it's a human MR (MIN-143). This guard was dismissive — it's
   // he who made them ineffective on the tickets. However, she can wear it
@@ -319,7 +355,7 @@ async function handleMergeRequest(
       provider: "gitlab",
       repoFullName,
       prNumber: iid,
-      prState,
+      prState: currentPrState,
       actionType: echoed ? null : actionType,
       accountId: actorAccountId(payload.user),
       login: payload.user?.username ?? null,
@@ -329,11 +365,15 @@ async function handleMergeRequest(
 
   // Aligns the status of the exits with the new MR state (MIN-46):
   // merged→done, closed→todo, open/reopen→in_review.
-  if (prState) {
+  if (currentPrState) {
     for (const run of runs) {
       // `issueId` null = run notebook (MIN-84): no issue to align.
       if (run.createdBy && run.issueId) {
-        await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
+        await syncIssueStatusFromPr({
+          issueId: run.issueId,
+          actorId: run.createdBy,
+          prState: currentPrState,
+        });
       }
     }
   }
@@ -365,7 +405,11 @@ async function handleMergeRequest(
     login: payload.user?.username ?? null,
   });
   // Inbox: the author of the run learns that his MR (MIN-138) has been approved or merged.
-  await notifyForgePrAction({ runs, type: actionType, actorLogin: payload.user?.username ?? null });
+  await notifyForgePrAction({
+    runs,
+    type: actionType,
+    actorLogin: payload.user?.username ?? null,
+  });
 }
 
 /** A note (comment) as GitLab delivers it — `Note Hook`. */
@@ -375,7 +419,11 @@ interface NoteEvent {
   project?: { path_with_namespace?: string };
   /** `note` carries the body of the message: it is the only signal of a written `@numo`
       depuis GitLab (MIN-162). */
-  object_attributes?: { noteable_type?: string; position?: unknown; note?: string | null };
+  object_attributes?: {
+    noteable_type?: string;
+    position?: unknown;
+    note?: string | null;
+  };
   /** Present when the note concerns a merge request. */
   merge_request?: { iid?: number };
 }
@@ -465,11 +513,10 @@ async function handleEmoji(
   payload: EmojiEvent,
   repoFullName: string,
 ): Promise<void> {
-  await broadcastGitlabPr(
-    repoFullName,
-    payload.merge_request?.iid,
-    ["conversation", "reviewComments"],
-  );
+  await broadcastGitlabPr(repoFullName, payload.merge_request?.iid, [
+    "conversation",
+    "reviewComments",
+  ]);
 }
 
 /**
@@ -489,11 +536,7 @@ async function handlePipeline(
   payload: PipelineEvent,
   repoFullName: string,
 ): Promise<void> {
-  await broadcastGitlabPr(
-    repoFullName,
-    payload.merge_request?.iid,
-    ["pr"],
-  );
+  await broadcastGitlabPr(repoFullName, payload.merge_request?.iid, ["pr"]);
 }
 
 /**

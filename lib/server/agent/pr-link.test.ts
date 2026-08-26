@@ -124,7 +124,29 @@ vi.mock("@/lib/supabase-service", () => {
       Promise.resolve({ data: patch ? applyUpdate() : rows(), error: null }).then(resolve);
     return query;
   };
-  return { getServiceClient: () => ({ from }) };
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name !== "link_pull_request_to_issue_atomic") {
+      return { data: null, error: { message: `unexpected RPC ${name}` } };
+    }
+    const pr = world.prs.find((row) => row.id === args.p_pr_id);
+    if (!pr) return { data: "pr_not_found", error: null };
+    if (pr.issue_id === args.p_issue_id) {
+      return { data: "already", error: null };
+    }
+    if (pr.issue_id !== null) {
+      return { data: "pr_already_linked", error: null };
+    }
+    const occupied = world.prs.some(
+      (row) =>
+        row.id !== pr.id &&
+        row.issue_id === args.p_issue_id &&
+        (row.state === "draft" || row.state === "open"),
+    );
+    if (occupied) return { data: "issue_already_linked", error: null };
+    pr.issue_id = args.p_issue_id as string;
+    return { data: "linked", error: null };
+  };
+  return { getServiceClient: () => ({ from, rpc }) };
 });
 
 const broadcast = vi.fn();
@@ -235,6 +257,26 @@ describe("linkPullRequestToIssue", () => {
     world.prs = [makePr(), makePr({ id: "pr-2", number: 7, state: "merged", issue_id: ISSUE_ID })];
 
     await expect(link({ pr: world.prs[0] })).resolves.toMatchObject({ ok: true });
+  });
+
+  it("allows exactly one concurrent live PR link to win for an issue", async () => {
+    world.prs = [makePr(), makePr({ id: "pr-2", number: 7 })];
+
+    const outcomes = await Promise.all(
+      world.prs.map((pr) => link({ pr })),
+    );
+
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([
+      { ok: false, code: "issue_already_linked" },
+    ]);
+    expect(
+      world.prs.filter(
+        (pr) =>
+          pr.issue_id === ISSUE_ID &&
+          (pr.state === "draft" || pr.state === "open"),
+      ),
+    ).toHaveLength(1);
   });
 });
 

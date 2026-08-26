@@ -32,16 +32,34 @@
  * @param echoed texts of the `user` messages already present in the thread (echoes
  * server AND launch prompt).
  */
-export function unechoedMessages<T extends string | { text: string }>(
-  pending: readonly T[],
-  echoed: readonly string[],
-): T[] {
+type EchoedMessage = string | { text: string; id?: string; ids?: string[] };
+
+export function unechoedMessages<
+  T extends string | { text: string; id?: string },
+>(pending: readonly T[], echoed: readonly EchoedMessage[]): T[] {
+  const echoedIds = new Set(
+    echoed.flatMap((message) =>
+      typeof message !== "string"
+        ? [...(message.id ? [message.id] : []), ...(message.ids ?? [])]
+        : [],
+    ),
+  );
   const counts = new Map<string, number>();
-  for (const text of echoed) {
+  for (const message of echoed) {
+    if (typeof message !== "string" && (message.id || message.ids?.length))
+      continue;
+    const text = typeof message === "string" ? message : message.text;
     const key = text.trim();
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return pending.filter((message) => {
+    if (
+      typeof message !== "string" &&
+      message.id &&
+      echoedIds.has(message.id)
+    ) {
+      return false;
+    }
     const key = (typeof message === "string" ? message : message.text).trim();
     const left = counts.get(key) ?? 0;
     if (left > 0) {

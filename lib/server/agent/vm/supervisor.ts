@@ -34,10 +34,7 @@ import {
   type RepoState,
   type TurnPaths,
 } from "../current-repo";
-import {
-  BackgroundJobs,
-  OPENCODE_BACKGROUND_LOG_NOTES,
-} from "../background";
+import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
 // The SAME normalization as the home loop: `update_plan` is a tool for
 // control, and both engines must derive the same event `plan_update`.
 import { normalizePlan } from "../agent-contract";
@@ -70,8 +67,16 @@ import {
   SUPERVISOR_TOKEN_ENV,
   SUPERVISOR_URL_ENV,
 } from "./opencode-tools";
-import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
-import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
+import {
+  startToolBridge,
+  type SupervisorTool,
+  type ToolBridge,
+} from "./tool-bridge";
+import {
+  makeOpencodeDelivery,
+  repoRelative,
+  type OpencodeDelivery,
+} from "./opencode-delivery";
 import { newLiveEditLog } from "../live-edits";
 import { decidePermission, editTargets } from "./opencode-permissions";
 import { refineLocalVerdict } from "./local-guard";
@@ -87,7 +92,11 @@ import {
   type VmPushResult,
   type VmTurnReport,
 } from "./protocol";
-import { parseAgentUserMessage, promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
+import {
+  parseAgentUserMessage,
+  promptWithMentions,
+  type AgentUserMessage,
+} from "@/lib/agent-mentions";
 import { matchAskUserAnswers, type AskUserQuestion } from "@/lib/ask-user";
 import {
   LOCAL_WORKING_DIFF_MAX_BYTES,
@@ -247,7 +256,9 @@ export interface OpencodeCheckpointState {
 }
 
 /** A checkpoint of this engine: our tower state, plus the opencode log. */
-export type OpencodeCheckpoint = AgentCheckpoint & { opencode?: OpencodeCheckpointState };
+export type OpencodeCheckpoint = AgentCheckpoint & {
+  opencode?: OpencodeCheckpointState;
+};
 
 /** What the supervisor needs to know how to do, and that we inject into him. */
 export interface SupervisorDeps {
@@ -345,7 +356,9 @@ async function findInstructionFiles(
   source: InstructionSource,
 ): Promise<string[]> {
   const names = REPO_INSTRUCTION_FILES;
-  const prune = INSTRUCTION_SEARCH_PRUNED.map((dir) => `-name ${sq(dir)}`).join(" -o ");
+  const prune = INSTRUCTION_SEARCH_PRUNED.map((dir) => `-name ${sq(dir)}`).join(
+    " -o ",
+  );
   const wanted = names.map((name) => `-name ${sq(name)}`).join(" -o ");
   const refFilter = names.map((name) => `$NF == "${name}"`).join(" || ");
   try {
@@ -410,9 +423,10 @@ async function servedInstructionsFile(
   const files = (
     await Promise.all(
       paths.map(async (path): Promise<RepoInstructionFile | null> => {
-        const content = await (source === "pr-base"
-          ? readFileAtRef(host, PR_BASE_TAG, path)
-          : readWorkFile(host, path)
+        const content = await (
+          source === "pr-base"
+            ? readFileAtRef(host, PR_BASE_TAG, path)
+            : readWorkFile(host, path)
         ).catch(() => null);
         return content?.trim() ? { path, content } : null;
       }),
@@ -513,10 +527,12 @@ export async function runOpencodeTurn(
    * ([local-uplink.ts](local-uplink.ts)). A single bracket rather than a `if` to
    * each output: the text outputs of a round are five (the final word,
    * live, commit message, session error, failure report),
- * and just one forgotten one is enough to raise `/Users/<first last name>/…`.
+   * and just one forgotten one is enough to raise `/Users/<first last name>/…`.
    */
   const outward = (text: string): string =>
-    local ? scrubPaths(secrets.redact(text), job.layout.repoDir) : secrets.redact(text);
+    local
+      ? scrubPaths(secrets.redact(text), job.layout.repoDir)
+      : secrets.redact(text);
 
   /** What we return when the tour could not start (or was broken in flight). */
   const failed = (message: string, costUsd = 0): VmTurnReport => ({
@@ -587,14 +603,18 @@ export async function runOpencodeTurn(
   // opencode, without adding 32 disk/RPC waits before the first token.
   await Promise.all([
     deps.writeFile(opencodeAnchorFile(job.layout), input.anchorInstructions),
-    ...opencodeToolFiles(job).map((file) => deps.writeFile(file.path, file.content)),
+    ...opencodeToolFiles(job).map((file) =>
+      deps.writeFile(file.path, file.content),
+    ),
   ]);
   timing("harness-files-ready");
   // Repository conventions are independent of the proxy and bridge. Start their
   // discovery now, then await the complete document immediately before server
   // startup. A read-only PR review is checked out at an untrusted head, so its
   // only authoritative instruction source is the trusted base ref (MIN-427).
-  const instructionSource: InstructionSource = job.writesToRepo ? "worktree" : "pr-base";
+  const instructionSource: InstructionSource = job.writesToRepo
+    ? "worktree"
+    : "pr-base";
   const servedInstructionsPromise = servedInstructionsFile(
     host,
     deps.writeFile,
@@ -604,7 +624,8 @@ export async function runOpencodeTurn(
   // The local key mint is a round trip to the control plane. He
   // does not depend on the bridge: it is covered with the construction of the rest of the
   // supervisor instead of putting it on the server's critical path.
-  const proxyPromise = (deps.startProxy ??
+  const proxyPromise = (
+    deps.startProxy ??
     ((j: VmJob) =>
       startLlmProxy({
         job: j,
@@ -621,7 +642,8 @@ export async function runOpencodeTurn(
               },
             }
           : {}),
-      })))(job);
+      }))
+  )(job);
 
   // The proxy BEFORE the server: its `baseURL` enters the tour config, so
   // it must be known before opencode reads its environment.
@@ -641,7 +663,7 @@ export async function runOpencodeTurn(
    * The tools bridge, opened BEFORE the server for the same reason as the proxy:
    * its address falls into the opencode environment, so it must exist
    * before he reads it. He’s the one who keeps the TOUR counters — ceiling
- * web searches and review anchors ([tool-bridge.ts](tool-bridge.ts)).
+   * web searches and review anchors ([tool-bridge.ts](tool-bridge.ts)).
    */
   /**
    * THE PERIMETER OF THE TOUR (MIN-358) — what this turn, and it alone, has the right to
@@ -704,7 +726,7 @@ export async function runOpencodeTurn(
    * therefore rereads its own diff and attaches it to the real-time stream. The deadline leaves
    * the OpenCode tool finishes writing before `git diff`; we only launch one
    * batch reading for a burst of edits.
-  */
+   */
   let liveStatsTimer: ReturnType<typeof setTimeout> | null = null;
   let refreshLocalLiveStats = () => {};
 
@@ -792,7 +814,9 @@ export async function runOpencodeTurn(
   async function assertNoSecretsPushed(): Promise<void> {
     const scope = current ? (await turnScope()).paths : undefined;
     const { diff, porcelain } = await turnDiff(host, filesFromSha, scope);
-    const findings: SecretFinding[] = scanDiff(diff.slice(0, SECRET_SCAN_MAX_BYTES));
+    const findings: SecretFinding[] = scanDiff(
+      diff.slice(0, SECRET_SCAN_MAX_BYTES),
+    );
 
     const untracked = porcelain
       .split("\n")
@@ -812,7 +836,10 @@ export async function runOpencodeTurn(
         continue;
       }
       const content = await readWorkFile(host, path).catch(() => null);
-      if (content) findings.push(...scanSecrets(content.slice(0, SECRET_SCAN_MAX_BYTES), path));
+      if (content)
+        findings.push(
+          ...scanSecrets(content.slice(0, SECRET_SCAN_MAX_BYTES), path),
+        );
     }
 
     if (findings.length > 0) throw new Error(formatSecretFindings(findings));
@@ -827,7 +854,9 @@ export async function runOpencodeTurn(
     // requires `job.authUrl`), so reaching this line is a contract breach —
     // said plainly rather than passed to `git push` as `undefined`.
     if (!authUrl) {
-      throw new Error("no repository is linked to this project: there is nowhere to push");
+      throw new Error(
+        "no repository is linked to this project: there is nowhere to push",
+      );
     }
     if (!current) {
       return await commitAndPush(host, {
@@ -895,43 +924,45 @@ export async function runOpencodeTurn(
   const createPr: SupervisorTool | null =
     job.writesToRepo && job.authUrl
       ? async (args) => {
-        const writing = subagents.runningImplementId();
-        if (writing) {
-          return {
-            result: {
-              error:
-                `Sub-agent ${writing} is editing the repository right now, and this sandbox is SHARED — ` +
-                `committing now would capture its work half-written. Wait for its report: it is handed to ` +
-                `you on its own, you have nothing to call.`,
-            },
-            success: false,
-          };
+          const writing = subagents.runningImplementId();
+          if (writing) {
+            return {
+              result: {
+                error:
+                  `Sub-agent ${writing} is editing the repository right now, and this sandbox is SHARED — ` +
+                  `committing now would capture its work half-written. Wait for its report: it is handed to ` +
+                  `you on its own, you have nothing to call.`,
+              },
+              success: false,
+            };
+          }
+          const title = typeof args.title === "string" ? args.title.trim() : "";
+          // Nothing should be written to the repository during `git add -A`: a watcher
+          // who regenerates a file in the middle of staging gets committed halfway.
+          const jobsNote = await stopJobsForStaging();
+          let pushed: VmPushResult;
+          try {
+            pushed = await pushWork(
+              title || `wip(${job.commitRef}): agent update`,
+            );
+          } catch (err) {
+            // A failed push is a TOOL error: the model reads it and decides. THE
+            // the message may echo the push URL, including the token (MIN-239).
+            const detail = `push failed: ${outward((err as Error).message)}`;
+            return {
+              result: { error: jobsNote ? `${detail} ${jobsNote}` : detail },
+              success: false,
+            };
+          }
+          const res = await cp.callTool("create_pr", {
+            args,
+            pushed,
+            ...(jobsNote ? { jobsNote } : {}),
+            workBranch: job.workBranch,
+          });
+          return { result: res.result, success: res.success };
         }
-        const title = typeof args.title === "string" ? args.title.trim() : "";
-        // Nothing should be written to the repository during `git add -A`: a watcher
-        // who regenerates a file in the middle of staging gets committed halfway.
-        const jobsNote = await stopJobsForStaging();
-        let pushed: VmPushResult;
-        try {
-          pushed = await pushWork(title || `wip(${job.commitRef}): agent update`);
-        } catch (err) {
-          // A failed push is a TOOL error: the model reads it and decides. THE
-          // the message may echo the push URL, including the token (MIN-239).
-          const detail = `push failed: ${outward((err as Error).message)}`;
-          return {
-            result: { error: jobsNote ? `${detail} ${jobsNote}` : detail },
-            success: false,
-          };
-        }
-        const res = await cp.callTool("create_pr", {
-          args,
-          pushed,
-          ...(jobsNote ? { jobsNote } : {}),
-          workBranch: job.workBranch,
-        });
-        return { result: res.result, success: res.success };
-      }
-    : null;
+      : null;
 
   /** Explicit preflight checks. Publishing a pull request must stay fast and side-effect focused. */
   const validateChanges: SupervisorTool | null = job.writesToRepo
@@ -959,7 +990,7 @@ export async function runOpencodeTurn(
 
   /**
    * TOOL CALLS WHO TALKED ABOUT OTHER THAN THE DEPOSIT, by `callId` and with
- * their path count (MIN-361). Local path only.
+   * their path count (MIN-361). Local path only.
    *
    * Twin of `refusedCalls`, and for the same reason of form: what we
    * learns at the CALL must still be known at the RESULT, which arrives later and
@@ -1047,7 +1078,7 @@ export async function runOpencodeTurn(
                 })),
               },
               success: true,
-            })
+            }),
           }
         : {}),
     },
@@ -1074,7 +1105,10 @@ export async function runOpencodeTurn(
    * his `listen` and would die from that, not from its cause.
    */
   let server: { stop(): Promise<void> } | null = null;
-  const client = deps.client(`http://127.0.0.1:${deps.opencodePort}`, opencodeAuth);
+  const client = deps.client(
+    `http://127.0.0.1:${deps.opencodePort}`,
+    opencodeAuth,
+  );
 
   /**
    * THE LEDGER OF THE TOUR, DECLARED OUTSIDE THE `try` — so that the EXCEPTIONAL path
@@ -1108,7 +1142,10 @@ export async function runOpencodeTurn(
       .warmTools(job.model)
       .then(() => timing("opencode-tools-ready"))
       .catch((err) => {
-        console.warn("[supervisor] opencode tool warm-up failed:", (err as Error).message);
+        console.warn(
+          "[supervisor] opencode tool warm-up failed:",
+          (err as Error).message,
+        );
       });
 
     // ── The session: resumed by the journal, or new ────────────────────────
@@ -1139,22 +1176,33 @@ export async function runOpencodeTurn(
      */
     if (local && sessionId) {
       const probe = await host
-        .exec(`test -f ${sq(opencodeDbPath(job.layout))}`, { timeoutMs: 10_000 })
+        .exec(`test -f ${sq(opencodeDbPath(job.layout))}`, {
+          timeoutMs: 10_000,
+        })
         .catch(() => null);
       if (!probe || probe.exitCode !== 0) {
-        console.log("[supervisor] no local opencode store — starting a fresh session");
+        console.log(
+          "[supervisor] no local opencode store — starting a fresh session",
+        );
         sessionId = "";
       }
     }
     if (!sessionId) {
       sessionId = (await client.createSession(`minddy ${job.commitRef}`)).id;
     }
-    timing(previous?.sessionId ? "opencode-session-resumed" : "opencode-session-created");
+    timing(
+      previous?.sessionId
+        ? "opencode-session-resumed"
+        : "opencode-session-created",
+    );
 
     // The server and session were booted during mint. We keep the
     // refusal BEFORE the prompt — no supplier call goes out without a key — but
     // a slow key no longer serializes all OpenCode startup behind it.
-    await Promise.all([warmToolsPromise, ...(authenticatedLlmKeyPromise ? [authenticatedLlmKeyPromise] : [])]);
+    await Promise.all([
+      warmToolsPromise,
+      ...(authenticatedLlmKeyPromise ? [authenticatedLlmKeyPromise] : []),
+    ]);
 
     // ── The flow, translated as the water goes by ─────────────────────────────────────
     const state = newTurnStreamState();
@@ -1207,36 +1255,39 @@ export async function runOpencodeTurn(
       if (!local || liveStatsTimer || !filesFromSha) return;
       let attempt = 0;
       const schedule = () => {
-        liveStatsTimer = setTimeout(() => {
-          liveStatsTimer = null;
-          void (async () => {
-            const scope = current ? await attributedScope() : undefined;
-            const diff = await readWorkingDiff(host, filesFromSha, {
-              patches: true,
-              scope,
-              maxBytes: LOCAL_WORKING_DIFF_MAX_BYTES,
-            }).catch(() => null);
-            // The permission comes BEFORE the tool has finished writing. A big one
-            // patch may therefore not be visible at the first reading: twice
-            // Short ones are better than an empty diff until the end of the round.
-            if (!diff || diff.files.length === 0) {
-              if (attempt < 2) {
-                attempt += 1;
-                schedule();
+        liveStatsTimer = setTimeout(
+          () => {
+            liveStatsTimer = null;
+            void (async () => {
+              const scope = current ? await attributedScope() : undefined;
+              const diff = await readWorkingDiff(host, filesFromSha, {
+                patches: true,
+                scope,
+                maxBytes: LOCAL_WORKING_DIFF_MAX_BYTES,
+              }).catch(() => null);
+              // The permission comes BEFORE the tool has finished writing. A big one
+              // patch may therefore not be visible at the first reading: twice
+              // Short ones are better than an empty diff until the end of the round.
+              if (!diff || diff.files.length === 0) {
+                if (attempt < 2) {
+                  attempt += 1;
+                  schedule();
+                }
+                return;
               }
-              return;
-            }
-            liveEdits.noteStats(diff.files.map(localDiffStat));
-            publishLive({
-              text: "",
-              tools: toolsSeen,
-              reasoningActive: false,
-              reasoningMs: 0,
-              ...liveEdits.payload(),
-            });
-            cp.emitDiff({ ...diff, ...(current ? { snapshot: true } : {}) });
-          })();
-        }, attempt === 0 ? 350 : 650);
+              liveEdits.noteStats(diff.files.map(localDiffStat));
+              publishLive({
+                text: "",
+                tools: toolsSeen,
+                reasoningActive: false,
+                reasoningMs: 0,
+                ...liveEdits.payload(),
+              });
+              cp.emitDiff({ ...diff, ...(current ? { snapshot: true } : {}) });
+            })();
+          },
+          attempt === 0 ? 350 : 650,
+        );
       };
       schedule();
     };
@@ -1266,7 +1317,8 @@ export async function runOpencodeTurn(
      * the UI only returns a composed text: `matchAskUserAnswers` does the path
      * reverse, and he needs the list.
      */
-    let pendingQuestion: { id: string; questions: AskUserQuestion[] } | null = null;
+    let pendingQuestion: { id: string; questions: AskUserQuestion[] } | null =
+      null;
     /** The non-deposit files already announced in the thread — one per turn, not one per access. */
     const outsideDirs = new Set<string>();
     /**
@@ -1319,7 +1371,8 @@ export async function runOpencodeTurn(
      * post behind. A message drained and not posted would be lost — no one will.
      * re-queues, and the control plane only re-queues the run on the queue.
      */
-    let pendingPrompt: Array<{ message: AgentUserMessage; steered: boolean }> = [];
+    let pendingPrompt: Array<{ message: AgentUserMessage; steered: boolean }> =
+      [];
     let interrupted = false;
     let lastSteerAt = now();
 
@@ -1362,7 +1415,7 @@ export async function runOpencodeTurn(
      * a tour independent of the microVM which preceded it” (cf. the resumption of
      * session above). A microVM is destroyed at the end of the round; a
      * machine, no. The opencode SQLite database lives under `harnessDir`
- * ([opencode-config.ts](opencode-config.ts)), so under the RUN root
+     * ([opencode-config.ts](opencode-config.ts)), so under the RUN root
      * ([harness-layout.ts](../harness-layout.ts)) and step of the turn: the session
      * is still there in the next round, and the export would only provide a service already
      * returned — at the cost of the only non-repairable point in the file.
@@ -1395,7 +1448,10 @@ export async function runOpencodeTurn(
          * in the next round: a secret that enters it is persisted in the base AND returned
          * in front of the model. The events thread was there since MIN-239, not him.
          */
-        const event = redactDeep(raw, secrets.redact) as Record<string, unknown>;
+        const event = redactDeep(raw, secrets.redact) as Record<
+          string,
+          unknown
+        >;
         const size = JSON.stringify(event).length;
         // An event larger than the lot goes ALONE: cutting it out would mean breaking it.
         if (bytes > 0 && bytes + size > JOURNAL_BATCH_BYTES) await flush();
@@ -1445,14 +1501,21 @@ export async function runOpencodeTurn(
         const opencode = await syncJournal();
         // `lastFilesSha` remains at the start: nothing is pushed before the end
         // of the lap, so the baseline of the diff has not moved.
-        if (!(await cp.saveCheckpointQuietly(turnCheckpoint(filesFromSha, opencode)))) {
+        if (
+          !(await cp.saveCheckpointQuietly(
+            turnCheckpoint(filesFromSha, opencode),
+          ))
+        ) {
           runClosed = true;
         }
       } catch (err) {
         // A failed save does not break the round: it costs the restart, and
         // the next pass will try again. What she should not do is
         // pushing back the deadline in silence — hence the trace.
-        console.error("[supervisor] periodic checkpoint failed:", (err as Error).message);
+        console.error(
+          "[supervisor] periodic checkpoint failed:",
+          (err as Error).message,
+        );
       }
     };
 
@@ -1481,11 +1544,16 @@ export async function runOpencodeTurn(
          */
         usageSeq: turnLedger.nextParentSeq,
         lastFilesSha,
-        instructions: { paths: [...job.instructions.paths], bytes: job.instructions.bytes },
+        instructions: {
+          paths: [...job.instructions.paths],
+          bytes: job.instructions.bytes,
+        },
         // The ceiling of the 5 replay anchors is counted over the life of the RUN, not the
         // turn: the count returns from the function at each call, and it is the
         // checkpoint which carries it until the next round (mirror of `turn.ts`).
-        ...(bridge.prInlineComments > 0 ? { prInlineComments: bridge.prInlineComments } : {}),
+        ...(bridge.prInlineComments > 0
+          ? { prInlineComments: bridge.prInlineComments }
+          : {}),
         /**
          * THE STATE OF THE DELIVERY DOOR, which relates to the TOUR and therefore travels
          * sown. Without it, a tour resumed after cutting the VM is considered blank:
@@ -1516,21 +1584,33 @@ export async function runOpencodeTurn(
      * the user would have no trace in the conversation (she lives in the
      * result of the tool, which the thread does not show as human speech).
      */
-    const answerPendingQuestion = async (messages: AgentUserMessage[]): Promise<void> => {
+    const answerPendingQuestion = async (
+      messages: AgentUserMessage[],
+    ): Promise<void> => {
       const asked = pendingQuestion;
       if (!asked) return;
       // Multiple messages should not arrive (the card replaces the
       // compose), but if they arrive they are all the answer: lose one
       // would lose a sentence that the user wrote.
-      const text = messages.map((m) => m.text.trim()).filter(Boolean).join("\n\n");
+      const text = messages
+        .map((m) => m.text.trim())
+        .filter(Boolean)
+        .join("\n\n");
       const mentions = messages.flatMap((m) => m.mentions ?? []);
       pendingQuestion = null;
       await cp.emit("user_message", {
         text: cap(text, 4000),
+        ...(messages.some((message) => message.id)
+          ? {
+              messageIds: messages.flatMap((message) =>
+                message.id ? [message.id] : [],
+              ),
+            }
+          : {}),
         ...(mentions.length > 0 ? { mentions } : {}),
       });
       /**
-      * THE REVERSE OF THE CARD: it composes `question → answer` per line, we
+       * THE REVERSE OF THE CARD: it composes `question → answer` per line, we
        * re-associate. An answer that we can't match to anything — free text
        * typed off-card, “I pass” — FULL part on the first question
        * rather than “Unanswered”: opencode copies the labels as they are
@@ -1545,7 +1625,10 @@ export async function runOpencodeTurn(
         // A response that does not arrive leaves the tool hanging until the
         // deadline. To say - but not to bring down the trick, as for the
         // permissions: the model will see its tool never render.
-        console.error("[supervisor] question reply failed:", (err as Error).message);
+        console.error(
+          "[supervisor] question reply failed:",
+          (err as Error).message,
+        );
       });
     };
 
@@ -1598,38 +1681,45 @@ export async function runOpencodeTurn(
        */
       toolsSeen = 0;
       sessionError = undefined;
-       for (const part of parts) {
-         if (part.steered) {
-           await cp.emit("user_message", {
-             text: cap(part.message.text, 4000),
-             ...(part.message.mentions?.length ? { mentions: part.message.mentions } : {}),
-           });
-         }
-       }
-       await client.promptAsync(
-         sessionId,
-         parts.map((part) => promptWithMentions(part.message.text, part.message.mentions)).join("\n\n"),
-       );
-       awaitingFirstModelSignal = true;
-       timing("prompt-accepted");
-       /**
-        * A provider can first stream the reasoning or arguments of a
-        * tool that OpenCode only transforms into an event once the block is finished.
-        * GPT-OSS-20B did this for 48 s while OpenRouter had delivered its
-        * first token in less than a second. At this point the prompt IS accepted
-        * and the round actually works: exit “session start”
-        * for the reflection indicator therefore describes reality, without inventing
-        * text nor double the final stream.
-        */
-       if (reasoningSince === null) reasoningSince = now();
-       publishLive({
-         text: "",
-         tools: toolsSeen,
-         reasoningActive: true,
-         // Not zero: it is no longer the “start” state, the round has started.
-         reasoningMs: 1,
-         ...liveEdits.payload(),
-       });
+      for (const part of parts) {
+        if (part.steered) {
+          await cp.emit("user_message", {
+            text: cap(part.message.text, 4000),
+            ...(part.message.id ? { messageId: part.message.id } : {}),
+            ...(part.message.mentions?.length
+              ? { mentions: part.message.mentions }
+              : {}),
+          });
+        }
+      }
+      await client.promptAsync(
+        sessionId,
+        parts
+          .map((part) =>
+            promptWithMentions(part.message.text, part.message.mentions),
+          )
+          .join("\n\n"),
+      );
+      awaitingFirstModelSignal = true;
+      timing("prompt-accepted");
+      /**
+       * A provider can first stream the reasoning or arguments of a
+       * tool that OpenCode only transforms into an event once the block is finished.
+       * GPT-OSS-20B did this for 48 s while OpenRouter had delivered its
+       * first token in less than a second. At this point the prompt IS accepted
+       * and the round actually works: exit “session start”
+       * for the reflection indicator therefore describes reality, without inventing
+       * text nor double the final stream.
+       */
+      if (reasoningSince === null) reasoningSince = now();
+      publishLive({
+        text: "",
+        tools: toolsSeen,
+        reasoningActive: true,
+        // Not zero: it is no longer the “start” state, the round has started.
+        reasoningMs: 1,
+        ...liveEdits.payload(),
+      });
     };
 
     /**
@@ -1639,10 +1729,10 @@ export async function runOpencodeTurn(
      * and the “and now do this instead” written while the VM was sleeping.
      */
     pendingPrompt = [
-       ...(input.prompt.trim()
-         ? [{ message: { text: input.prompt.trim() }, steered: false }]
-         : []),
-       ...(await takeSteering()).map((message) => ({ message, steered: true })),
+      ...(input.prompt.trim()
+        ? [{ message: { text: input.prompt.trim() }, steered: false }]
+        : []),
+      ...(await takeSteering()).map((message) => ({ message, steered: true })),
     ];
     if (pendingPrompt.length === 0) {
       /**
@@ -1730,11 +1820,15 @@ export async function runOpencodeTurn(
             return true;
           }
           await cp.clearInterrupt().catch(() => {});
-          pendingPrompt.push(...steered.map((message) => ({ message, steered: true })));
+          pendingPrompt.push(
+            ...steered.map((message) => ({ message, steered: true })),
+          );
           await closePendingQuestion();
           await abortSession();
         } else if (steered.length > 0) {
-          pendingPrompt.push(...steered.map((message) => ({ message, steered: true })));
+          pendingPrompt.push(
+            ...steered.map((message) => ({ message, steered: true })),
+          );
           await closePendingQuestion();
           await abortSession();
         }
@@ -1787,7 +1881,11 @@ export async function runOpencodeTurn(
         const out = translateEvent(raw, state);
         if (
           awaitingFirstModelSignal &&
-          (out.reasoning || out.liveText || out.permission || out.question || out.events.length > 0)
+          (out.reasoning ||
+            out.liveText ||
+            out.permission ||
+            out.question ||
+            out.events.length > 0)
         ) {
           awaitingFirstModelSignal = false;
           timing("first-model-signal");
@@ -1797,7 +1895,11 @@ export async function runOpencodeTurn(
         // is counted and billed — but in her own gang, and without ever
         // speak on behalf of the mother (see `Translation.sessionId`).
         const child = !!out.sessionId && out.sessionId !== sessionId;
-        if (!child && !firstVisibleTextSignal && liveTextOf(state, sessionId).trim().length > 0) {
+        if (
+          !child &&
+          !firstVisibleTextSignal &&
+          liveTextOf(state, sessionId).trim().length > 0
+        ) {
           firstVisibleTextSignal = true;
           timing("first-visible-text-signal");
         }
@@ -1831,7 +1933,11 @@ export async function runOpencodeTurn(
           );
           /** Resolve filesystem targets before any allowed local read or write. */
           if (local) {
-            verdict = await refineLocalVerdict(out.permission, verdict, job.layout.repoDir);
+            verdict = await refineLocalVerdict(
+              out.permission,
+              verdict,
+              job.layout.repoDir,
+            );
           }
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
@@ -1877,10 +1983,15 @@ export async function runOpencodeTurn(
              * identical: the thread would become illegible, so the trace would not be
              * no longer read — which would mean not having it.
              */
-            const outside = scrubPaths(out.permission.filepath ?? "", job.layout.repoDir);
+            const outside = scrubPaths(
+              out.permission.filepath ?? "",
+              job.layout.repoDir,
+            );
             if (outside && !outsideDirs.has(outside)) {
               outsideDirs.add(outside);
-              await cp.emit("status", { phase: "outside_repo", path: outside }).catch(() => {});
+              await cp
+                .emit("status", { phase: "outside_repo", path: outside })
+                .catch(() => {});
             }
           }
           /**
@@ -1890,7 +2001,10 @@ export async function runOpencodeTurn(
            * come the targeted type-check of the delivery door, the mode
            * `related` of the test runner, and the “repository has been hit” lock.
            */
-          if (out.permission.permission === "edit" && verdict.reply === "once") {
+          if (
+            out.permission.permission === "edit" &&
+            verdict.reply === "once"
+          ) {
             /**
              * ONE PATCH TOUCHES N FILES AND ONLY REQUESTS ONCE. `editPaths`
              * returns the real list (`metadata.files`) rather than the `filepath`
@@ -1905,7 +2019,10 @@ export async function runOpencodeTurn(
             // round (neither text nor reflection), so nothing else would make
             // a direct charge before the next round.
             const live = targets
-              .map(({ path, status }) => ({ path: repoRelative(job.layout.repoDir, path), status }))
+              .map(({ path, status }) => ({
+                path: repoRelative(job.layout.repoDir, path),
+                status,
+              }))
               .filter((edit) => edit.path);
             if (live.length > 0 && !child) {
               liveEdits.note(live);
@@ -1928,7 +2045,10 @@ export async function runOpencodeTurn(
               // A verdict that does not arrive leaves the tool hanging until the
               // deadline of the round. To say, therefore – but not to bring down the trick:
               // the model will see its tool never render, and that is already a signal.
-              console.error("[supervisor] permission reply failed:", (err as Error).message);
+              console.error(
+                "[supervisor] permission reply failed:",
+                (err as Error).message,
+              );
             });
         }
 
@@ -1958,7 +2078,10 @@ export async function runOpencodeTurn(
          */
         if (out.question && !child) {
           if (questionsSuspend) {
-            pendingQuestion = { id: out.question.id, questions: out.question.questions };
+            pendingQuestion = {
+              id: out.question.id,
+              questions: out.question.questions,
+            };
           } else {
             askedUser = true;
             await client.rejectQuestion(out.question.id);
@@ -1996,7 +2119,10 @@ export async function runOpencodeTurn(
           // A `task` which ends without having made a girl (error, refusal)
           // would make its credit eternally open: the ceiling would close
           // on a tour that no longer delegates anything.
-          if (event.type === "tool_result" && event.payload.name === "spawn_agent") {
+          if (
+            event.type === "tool_result" &&
+            event.payload.name === "spawn_agent"
+          ) {
             pendingTasks.delete(String(event.payload.id ?? ""));
           }
           const reason =
@@ -2053,7 +2179,11 @@ export async function runOpencodeTurn(
                 // The size of the output AS IT WAS: this is what the
                 // account must say, not that of the rewritten version.
                 const chars = String(event.payload.preview ?? "").length;
-                payload = { ...payload, preview: withheldOutput(chars, paths), withheld: paths };
+                payload = {
+                  ...payload,
+                  preview: withheldOutput(chars, paths),
+                  withheld: paths,
+                };
                 withheldOutputs += 1;
               }
               foreignCalls.delete(callId);
@@ -2061,11 +2191,14 @@ export async function runOpencodeTurn(
           }
           // A `spawn_agent` only carries the NAME of the agent: we return the mode to it
           // and the pattern that the thread displays since MIN-112.
-          if (payload.name === "spawn_agent") payload = describeSpawn(payload, agentTable);
+          if (payload.name === "spawn_agent")
+            payload = describeSpawn(payload, agentTable);
           // What comes from a girl is said UNDER her call of `task`: without this
           // marking, the thread would attribute to the main agent the gestures of
           // someone else, and would unfold them on the first level.
-          const entry = child ? subagents.entry(out.sessionId ?? "") : undefined;
+          const entry = child
+            ? subagents.entry(out.sessionId ?? "")
+            : undefined;
           if (entry) payload = markChildPayload(payload, entry);
           await cp.emit(event.type, {
             ...payload,
@@ -2149,12 +2282,18 @@ export async function runOpencodeTurn(
         // pushes it by itself — a model who thinks three minutes before writing
         // its first word does not emit any `liveText`, and the thread would remain silent.
         if (!child && out.reasoning) {
-          reasoningSince = out.reasoning.active ? (out.reasoning.startedAt || now()) : null;
+          reasoningSince = out.reasoning.active
+            ? out.reasoning.startedAt || now()
+            : null;
         }
         // The optimistic signal placed upon acceptance of the prompt must not remain
         // lit under the text of a model which does not publish any part of
         // explicit reasoning. As soon as he writes, writing is the right state.
-        if (!child && out.liveText !== undefined && out.reasoning === undefined) {
+        if (
+          !child &&
+          out.liveText !== undefined &&
+          out.reasoning === undefined
+        ) {
           reasoningSince = null;
         }
         const liveDue =
@@ -2167,7 +2306,8 @@ export async function runOpencodeTurn(
             text: outward(liveTextOf(state, sessionId)),
             tools: toolsSeen,
             reasoningActive: reasoningSince !== null,
-            reasoningMs: reasoningSince === null ? 0 : Math.max(0, now() - reasoningSince),
+            reasoningMs:
+              reasoningSince === null ? 0 : Math.max(0, now() - reasoningSince),
             // The list goes with EACH load: the wire erases what a load
             // was silent, so emitting it separately would make it disappear on the next one.
             ...liveEdits.payload(),
@@ -2201,7 +2341,8 @@ export async function runOpencodeTurn(
           if (abortsRequested > 0) {
             abortsRequested -= 1;
           } else {
-            sessionError = "The model round was cut short before it produced anything.";
+            sessionError =
+              "The model round was cut short before it produced anything.";
             await cp.emit("error", { message: sessionError });
             break;
           }
@@ -2230,7 +2371,8 @@ export async function runOpencodeTurn(
               markChildPayload({ text: cap(outward(report), 4000) }, entry),
             );
           }
-          if (entry) await cp.emit("status", { phase: "subagent_report", id: entry.id });
+          if (entry)
+            await cp.emit("status", { phase: "subagent_report", id: entry.id });
           subagents.finish(childSession);
         }
         if (out.idle && !child) {
@@ -2333,9 +2475,9 @@ export async function runOpencodeTurn(
        *
        * The happy path does not go this way: `postPending` has already emptied the bag.
        */
-       const unposted = pendingPrompt
-         .filter((part) => part.steered)
-         .map((part) => part.message);
+      const unposted = pendingPrompt
+        .filter((part) => part.steered)
+        .map((part) => part.message);
       pendingPrompt = [];
       if (unposted.length > 0) await cp.pushSteering(unposted).catch(() => {});
     }
@@ -2364,9 +2506,14 @@ export async function runOpencodeTurn(
      * that he read there. Best-effort: a lost account does not cost the tour.
      */
     if (withheldOutputs > 0) {
-      console.log(`[supervisor] ${withheldOutputs} tool output(s) stayed on this machine`);
+      console.log(
+        `[supervisor] ${withheldOutputs} tool output(s) stayed on this machine`,
+      );
       await cp
-        .emit("status", { phase: "local_output_withheld", outputs: withheldOutputs })
+        .emit("status", {
+          phase: "local_output_withheld",
+          outputs: withheldOutputs,
+        })
         .catch(() => {});
     }
 
@@ -2380,7 +2527,10 @@ export async function runOpencodeTurn(
       // A newspaper that we have not been able to export does not lose the trick: it loses the
       // RESUME, and the next round will start with a new session. To say, therefore,
       // and not to swallow in silence.
-      console.error("[supervisor] history export failed:", (err as Error).message);
+      console.error(
+        "[supervisor] history export failed:",
+        (err as Error).message,
+      );
     }
 
     // ── The push, the diff, the report ──────────────────── ─────────────────────
@@ -2414,7 +2564,8 @@ export async function runOpencodeTurn(
      * may fail (push, forge, log export), and the agent response does not
      * must not get lost with it.
      */
-    const endedWell = !budgetExhausted && !interrupted && !sessionError && !timedOut;
+    const endedWell =
+      !budgetExhausted && !interrupted && !sessionError && !timedOut;
     if (reply.trim() && endedWell) {
       await cp.emit("summary", { text: cap(reply, 8000) });
     }
@@ -2510,14 +2661,21 @@ export async function runOpencodeTurn(
       status !== "completed"
         ? null
         : localDiff && localDiff.files.length > 0
-          ? { files: localDiff.files.map(localDiffStat), truncated: localDiff.truncated }
-        : current
-          ? await workingTreeChangedFiles(host, filesFromSha, await attributedScope()).catch(
-              () => null,
-            )
-          : pushed?.headSha && pushed.headSha !== filesFromSha
-            ? await changedFiles(host, filesFromSha, pushed.headSha).catch(() => null)
-            : null;
+          ? {
+              files: localDiff.files.map(localDiffStat),
+              truncated: localDiff.truncated,
+            }
+          : current
+            ? await workingTreeChangedFiles(
+                host,
+                filesFromSha,
+                await attributedScope(),
+              ).catch(() => null)
+            : pushed?.headSha && pushed.headSha !== filesFromSha
+              ? await changedFiles(host, filesFromSha, pushed.headSha).catch(
+                  () => null,
+                )
+              : null;
 
     // The SAME constructor as the periodic backup: only the sha of
     // files changes, and it only changes here (it was the push that moved it).
@@ -2533,7 +2691,9 @@ export async function runOpencodeTurn(
       // `agent_question` rather than `agent_done` ([vm-rest.ts](../vm-rest.ts)).
       ...(askedUser ? { askedUser: true } : {}),
       ...(timedOut ? { errorCode: "turnTooLong" as const } : {}),
-      ...(sessionError ? { errorMessage: cap(outward(sessionError), 1000) } : {}),
+      ...(sessionError
+        ? { errorMessage: cap(outward(sessionError), 1000) }
+        : {}),
       costUsd,
       checkpoint,
       // Nothing is let go: the newspaper no longer passes through the checkpoint,
@@ -2562,7 +2722,9 @@ export async function runOpencodeTurn(
      * Best effort and without lifting: we return the lathe in error, not the breakdown of the
      * with the ledger on top.
      */
-    const salvaged = ledger ? await ledger.recordOrphans(cp, proxy).catch(() => 0) : 0;
+    const salvaged = ledger
+      ? await ledger.recordOrphans(cp, proxy).catch(() => 0)
+      : 0;
     return failed((err as Error).message, salvaged);
   } finally {
     // Net: a round that exits through an exception has not passed through the stop
@@ -2579,7 +2741,7 @@ export async function runOpencodeTurn(
 function localDiffStat(file: WorkingDiff["files"][number]) {
   return {
     path: file.filename,
-    status: file.status === "removed" ? "deleted" as const : file.status,
+    status: file.status === "removed" ? ("deleted" as const) : file.status,
     additions: file.additions,
     deletions: file.deletions,
     ...(file.previous_filename ? { previousPath: file.previous_filename } : {}),
@@ -2644,7 +2806,10 @@ class TurnLedger {
     usage: RoundUsage,
     proxy: LlmProxy,
   ): Promise<{ cost: number }> {
-    const generation = proxy.take({ model: usage.model, outputTokens: usage.outputTokens });
+    const generation = proxy.take({
+      model: usage.model,
+      outputTokens: usage.outputTokens,
+    });
     const cost = generation?.costUsd ?? usage.costUsd;
     /**
      * `prompt_tokens` IN THE SENSE OF THE SUPPLIER, including cache — and not `input`
@@ -2657,7 +2822,8 @@ class TurnLedger {
      * is the switching criterion of lot 3 — the house loop, for its part, writes the
      * OpenRouter's `prompt_tokens`, like `recordOrphans` immediately below.
      */
-    const promptTokens = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
+    const promptTokens =
+      usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
     await cp.recordUsage({
       runId: this.job.ledgerRunId,
       seq: this.seqFor(usage.sessionId),
@@ -2694,7 +2860,10 @@ class TurnLedger {
    * came the request — he sees HTTP, not sessions — and a row
    * under the mother is infinitely better than an expense that does not exist anywhere.
    */
-  async recordOrphans(cp: ControlPlaneClient, proxy: LlmProxy): Promise<number> {
+  async recordOrphans(
+    cp: ControlPlaneClient,
+    proxy: LlmProxy,
+  ): Promise<number> {
     // The race: the upstream finishes AFTER the customer (1.2 seconds measured). Drain without
     // waiting would find nothing.
     await proxy.settle(ORPHAN_SETTLE_MS);
@@ -2770,7 +2939,13 @@ class TurnLedger {
 export class SubagentRegistry {
   private readonly bySession = new Map<
     string,
-    { index: number; id: string; callId: string; mode: "explore" | "implement"; done: boolean }
+    {
+      index: number;
+      id: string;
+      callId: string;
+      mode: "explore" | "implement";
+      done: boolean;
+    }
   >();
 
   constructor(
@@ -2871,7 +3046,10 @@ export function markChildPayload(
  */
 export function describeSpawn(
   payload: Record<string, unknown>,
-  agents: ReadonlyMap<string, { mode: "explore" | "implement"; modelId?: string; label?: string }>,
+  agents: ReadonlyMap<
+    string,
+    { mode: "explore" | "implement"; modelId?: string; label?: string }
+  >,
 ): Record<string, unknown> {
   const entry = agents.get(String(payload.mode ?? ""));
   if (!entry) return payload;

@@ -18,7 +18,10 @@ import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
 import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
-import { notifyRoutineOfRunEnd, stampRoutineRunEnd } from "@/lib/server/routine-hooks";
+import {
+  notifyRoutineOfRunEnd,
+  stampRoutineRunEnd,
+} from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { getProjectAccess } from "@/lib/server/project-access";
 import type { AssistantMention } from "@/lib/assistant-types";
@@ -37,11 +40,7 @@ import type { AgentUserMessage } from "@/lib/agent-mentions";
  * a question from the agent is an answer like any other.)
  */
 export type AgentRunStatus =
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "canceled";
+  "queued" | "running" | "completed" | "failed" | "canceled";
 
 /** Statuts dont on ne repart pas — ceux qui closent un run (analytics). */
 const TERMINAL_RUN_STATUSES: ReadonlySet<AgentRunStatus> = new Set([
@@ -58,11 +57,7 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<AgentRunStatus> = new Set([
  * was not in front of the screen, not even to change a status.
  */
 export type AgentRunTrigger =
-  | "button"
-  | "chat"
-  | "mention"
-  | "automation"
-  | "routine";
+  "button" | "chat" | "mention" | "automation" | "routine";
 
 /**
  * What the agent responded to tool `report_verdict` (MIN-147), used only for
@@ -211,6 +206,8 @@ export interface AgentRun {
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
+  /** Atomically reserved successful/in-flight inline PR comments for this run. */
+  pr_inline_comments_used?: number;
   sandbox_id: string | null;
   checkpoint: AgentCheckpoint | null;
   continuations: number;
@@ -456,74 +453,74 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const engine = AGENT_ENGINE;
   const loopInVm = true;
   const values = {
-      project_id: input.projectId,
-      issue_id: input.issueId,
-      pull_request_id: input.pullRequestId ?? null,
-      pr_head_sha: input.prHeadSha ?? null,
-      repo_link_id: input.repoLinkId,
-      connection_id: input.connectionId,
-      repo_provider: input.repoProvider,
-      repo_external_id: input.repoExternalId,
-      status: "queued",
-      triggered_by: input.triggeredBy,
-      created_by: input.createdBy,
-      prompt: input.prompt ?? null,
-      prompt_mentions: input.promptMentions ?? null,
-      title: input.title ?? null,
-      model: input.model,
-      model_forced: input.modelForced,
-      reasoning_level: input.reasoningLevel,
-      key_mode: input.keyMode,
-      base_branch: input.baseBranch ?? null,
-      branch_name: input.branchName ?? null,
-      pr_number: input.prNumber ?? null,
-      pr_url: input.prUrl ?? null,
-      pr_state: input.prState ?? null,
-      run_id: randomUUID(),
-      chain_id: input.chainId ?? null,
-      budget_usd: input.budgetUsd ?? null,
-      routine_id: input.routineId ?? null,
-      intent: input.intent ?? null,
-      // Deployment affinity (MIN-165): set ONCE, at creation. All
-      // the chunks of a run launched from a preview remain on this deployment.
-      deployment_url: currentDeploymentScope(),
-      loop_in_vm: loopInVm,
-      agent_engine: engine,
-      /**
-       * THE EXECUTION ENVIRONMENT (MIN-355), placed here and never elsewhere — even
-       * doctrine than the two lines above. The lease generation leaves
-       * to zero: it only becomes something when the first token is issued.
-       *
-       * The third-party-content invariant is applied at the only writer of the
-       * column. Automated sources remain excluded; an issue can run locally only
-       * after the signed-in user acknowledges its untrusted context (MIN-439).
-       */
-      local_exec:
-        input.localExec === true &&
-        localRunScope({
-          triggeredBy: input.triggeredBy,
-          routineId: input.routineId,
-          chainId: input.chainId,
-          pullRequestId: input.pullRequestId,
-          issueId: input.issueId,
-          localIssueContextConfirmed: input.localIssueContextConfirmed,
-        }).ok,
-      local_issue_context_confirmed:
-        input.issueId !== null && input.localIssueContextConfirmed === true,
-      // This option only makes sense for a truly local run. The same
-      // keeps `local_exec` closes automated/third-party entries.
-      local_worktree:
-        input.localWorktree === true &&
-        input.localExec === true &&
-        localRunScope({
-          triggeredBy: input.triggeredBy,
-          routineId: input.routineId,
-          chainId: input.chainId,
-          pullRequestId: input.pullRequestId,
-          issueId: input.issueId,
-          localIssueContextConfirmed: input.localIssueContextConfirmed,
-        }).ok,
-    };
+    project_id: input.projectId,
+    issue_id: input.issueId,
+    pull_request_id: input.pullRequestId ?? null,
+    pr_head_sha: input.prHeadSha ?? null,
+    repo_link_id: input.repoLinkId,
+    connection_id: input.connectionId,
+    repo_provider: input.repoProvider,
+    repo_external_id: input.repoExternalId,
+    status: "queued",
+    triggered_by: input.triggeredBy,
+    created_by: input.createdBy,
+    prompt: input.prompt ?? null,
+    prompt_mentions: input.promptMentions ?? null,
+    title: input.title ?? null,
+    model: input.model,
+    model_forced: input.modelForced,
+    reasoning_level: input.reasoningLevel,
+    key_mode: input.keyMode,
+    base_branch: input.baseBranch ?? null,
+    branch_name: input.branchName ?? null,
+    pr_number: input.prNumber ?? null,
+    pr_url: input.prUrl ?? null,
+    pr_state: input.prState ?? null,
+    run_id: randomUUID(),
+    chain_id: input.chainId ?? null,
+    budget_usd: input.budgetUsd ?? null,
+    routine_id: input.routineId ?? null,
+    intent: input.intent ?? null,
+    // Deployment affinity (MIN-165): set ONCE, at creation. All
+    // the chunks of a run launched from a preview remain on this deployment.
+    deployment_url: currentDeploymentScope(),
+    loop_in_vm: loopInVm,
+    agent_engine: engine,
+    /**
+     * THE EXECUTION ENVIRONMENT (MIN-355), placed here and never elsewhere — even
+     * doctrine than the two lines above. The lease generation leaves
+     * to zero: it only becomes something when the first token is issued.
+     *
+     * The third-party-content invariant is applied at the only writer of the
+     * column. Automated sources remain excluded; an issue can run locally only
+     * after the signed-in user acknowledges its untrusted context (MIN-439).
+     */
+    local_exec:
+      input.localExec === true &&
+      localRunScope({
+        triggeredBy: input.triggeredBy,
+        routineId: input.routineId,
+        chainId: input.chainId,
+        pullRequestId: input.pullRequestId,
+        issueId: input.issueId,
+        localIssueContextConfirmed: input.localIssueContextConfirmed,
+      }).ok,
+    local_issue_context_confirmed:
+      input.issueId !== null && input.localIssueContextConfirmed === true,
+    // This option only makes sense for a truly local run. The same
+    // keeps `local_exec` closes automated/third-party entries.
+    local_worktree:
+      input.localWorktree === true &&
+      input.localExec === true &&
+      localRunScope({
+        triggeredBy: input.triggeredBy,
+        routineId: input.routineId,
+        chainId: input.chainId,
+        pullRequestId: input.pullRequestId,
+        issueId: input.issueId,
+        localIssueContextConfirmed: input.localIssueContextConfirmed,
+      }).ok,
+  };
   const result = input.managedBudget
     ? await service.rpc("create_agent_run_with_budget", {
         p_user_id: input.createdBy,
@@ -535,12 +532,13 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     : await service.from("agent_runs").insert(values).select("*").single();
   const error = result.error;
   const reserved = input.managedBudget
-    ? (result.data as { run?: AgentRun | null } | null)?.run ?? null
+    ? ((result.data as { run?: AgentRun | null } | null)?.run ?? null)
     : (result.data as AgentRun | null);
   const data = reserved;
   if (error || !data) {
     if (error?.code === PG_UNIQUE_VIOLATION) throw new ActiveRunExistsError();
-    if (!error && input.managedBudget) throw new ManagedBudgetUnavailableError();
+    if (!error && input.managedBudget)
+      throw new ManagedBudgetUnavailableError();
     throw new Error(error?.message ?? "Failed to create agent run");
   }
   // Analytics (MIN-78): the launch is also tracked on the client side, but it
@@ -576,7 +574,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
 export async function claimRun(runId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
-  const { data, error } = await service.rpc("claim_agent_run", { p_run_id: runId });
+  const { data, error } = await service.rpc("claim_agent_run", {
+    p_run_id: runId,
+  });
   if (error) {
     console.error("[agent-runs] claim failed:", error.message);
     return null;
@@ -624,11 +624,14 @@ export async function claimLocalRun(input: {
   userId: string;
   deviceId: string;
 }): Promise<AgentRun | null> {
-  const { data, error } = await getServiceClient().rpc("claim_local_agent_run", {
-    p_run_id: input.runId,
-    p_user_id: input.userId,
-    p_device_id: input.deviceId,
-  });
+  const { data, error } = await getServiceClient().rpc(
+    "claim_local_agent_run",
+    {
+      p_run_id: input.runId,
+      p_user_id: input.userId,
+      p_device_id: input.deviceId,
+    },
+  );
   if (error) {
     console.error("[agent-runs] local claim failed:", error.message);
     return null;
@@ -644,6 +647,91 @@ export async function getRun(runId: string): Promise<AgentRun | null> {
     .eq("id", runId)
     .maybeSingle();
   return (data as AgentRun | null) ?? null;
+}
+
+/** True when no newer run exists on the anchor whose history this run shares. */
+export async function runIsLatestOnAnchor(run: AgentRun): Promise<boolean> {
+  const service = getServiceClient();
+  let query = service
+    .from("agent_runs")
+    .select("id")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1);
+  if (run.issue_id) query = query.eq("issue_id", run.issue_id);
+  else if (run.pull_request_id)
+    query = query.eq("pull_request_id", run.pull_request_id);
+  else if (run.routine_id) query = query.eq("routine_id", run.routine_id);
+  else query = query.eq("conversation_id", run.conversation_id);
+  const { data, error } = await query;
+  if (error) {
+    console.error("[agent-runs] latest-anchor check failed:", error.message);
+    return false;
+  }
+  return ((data ?? [])[0] as { id?: string } | undefined)?.id === run.id;
+}
+
+export async function insertLatestRunMessage(
+  runId: string,
+  userId: string,
+  content: string,
+  mentions: AssistantMention[] | null,
+  messageId: string,
+): Promise<"inserted" | "already" | "superseded"> {
+  const { data, error } = await getServiceClient().rpc(
+    "insert_latest_agent_run_message",
+    {
+      p_run_id: runId,
+      p_message_id: messageId,
+      p_user_id: userId,
+      p_content: stripUnstorable(content),
+      p_mentions: mentions?.length ? stripUnstorable(mentions) : null,
+    },
+  );
+  if (error) throw new Error(`agent_run_messages insert failed: ${error.message}`);
+  if (data === "inserted" || data === "already" || data === "superseded") {
+    return data;
+  }
+  throw new Error(`agent_run_messages insert refused: ${String(data)}`);
+}
+
+export async function reserveRunInlineComment(
+  runId: string,
+  limit: number,
+): Promise<number | null> {
+  const { data, error } = await getServiceClient().rpc(
+    "reserve_agent_pr_inline_comment",
+    {
+      p_run_id: runId,
+      p_limit: limit,
+    },
+  );
+  if (error) {
+    console.error(
+      "[agent-runs] inline comment reservation failed:",
+      error.message,
+    );
+    return null;
+  }
+  const value = Array.isArray(data) ? data[0] : data;
+  return typeof value === "number" ? value : null;
+}
+
+export async function releaseRunInlineComment(
+  runId: string,
+): Promise<number | null> {
+  const { data, error } = await getServiceClient().rpc(
+    "release_agent_pr_inline_comment",
+    {
+      p_run_id: runId,
+    },
+  );
+  if (error) {
+    console.error("[agent-runs] inline comment release failed:", error.message);
+    return null;
+  }
+  const value = Array.isArray(data) ? data[0] : data;
+  return typeof value === "number" ? value : null;
 }
 
 export type RunRepoBinding = Pick<
@@ -683,14 +771,19 @@ export function repoBindingMatchesRun(
  * Failure is closed: a control-plane request must not inherit authority while
  * the binding store is unavailable or being changed.
  */
-export async function runRepoBindingIsCurrent(run: RunRepoBinding & { project_id: string }): Promise<boolean> {
+export async function runRepoBindingIsCurrent(
+  run: RunRepoBinding & { project_id: string },
+): Promise<boolean> {
   const { data, error } = await getServiceClient()
     .from("project_git_links")
     .select("id, connection_id, provider, external_repo_id")
     .eq("project_id", run.project_id)
     .maybeSingle();
   if (error) return false;
-  return repoBindingMatchesRun(run, (data as CurrentRepoBinding | null) ?? null);
+  return repoBindingMatchesRun(
+    run,
+    (data as CurrentRepoBinding | null) ?? null,
+  );
 }
 
 /** Revalidate both the member and repository identities frozen on a run. */
@@ -734,9 +827,10 @@ export async function findQueuedLocalRunForMachine(input: {
     .in("project_id", [...input.projectIds])
     .lte("not_before", new Date().toISOString());
   const scope = currentDeploymentScope();
-  query = scope === null
-    ? query.is("deployment_url", null)
-    : query.eq("deployment_url", scope);
+  query =
+    scope === null
+      ? query.is("deployment_url", null)
+      : query.eq("deployment_url", scope);
 
   const { data, error } = await query
     .order("not_before", { ascending: true })
@@ -757,7 +851,9 @@ export async function findQueuedLocalRunForMachine(input: {
  * this transition, another shell may have claimed it. In this case she has
  * won and we certainly do not change the environment under an already prepared turn.
  */
-export async function declineQueuedLocalRun(runId: string): Promise<AgentRun | null> {
+export async function declineQueuedLocalRun(
+  runId: string,
+): Promise<AgentRun | null> {
   const { data, error } = await getServiceClient()
     .from("agent_runs")
     .update({ local_exec: false, local_worktree: false })
@@ -767,7 +863,10 @@ export async function declineQueuedLocalRun(runId: string): Promise<AgentRun | n
     .select("*")
     .maybeSingle();
   if (error) {
-    console.error(`[agent-runs] local fallback failed on ${runId}:`, error.message);
+    console.error(
+      `[agent-runs] local fallback failed on ${runId}:`,
+      error.message,
+    );
     return null;
   }
   return (data as AgentRun | null) ?? null;
@@ -838,7 +937,10 @@ export async function bumpLocalExecGen(input: {
       .select("local_exec, local_exec_gen")
       .eq("id", input.runId)
       .maybeSingle();
-    const row = current as { local_exec?: boolean; local_exec_gen?: number } | null;
+    const row = current as {
+      local_exec?: boolean;
+      local_exec_gen?: number;
+    } | null;
     if (!row?.local_exec) return null;
     const next = (row.local_exec_gen ?? 0) + 1;
     const { data } = await service
@@ -851,7 +953,8 @@ export async function bumpLocalExecGen(input: {
       .eq("local_exec_gen", row.local_exec_gen ?? 0)
       .select("local_exec_gen")
       .maybeSingle();
-    const written = (data as { local_exec_gen?: number } | null)?.local_exec_gen;
+    const written = (data as { local_exec_gen?: number } | null)
+      ?.local_exec_gen;
     if (typeof written === "number") return written;
   }
   console.error(`[agent-runs] local exec lease contention on ${input.runId}`);
@@ -864,7 +967,9 @@ export async function bumpLocalExecGen(input: {
  * Historical readers who only want to paint “Numo is working on
  * this ticket” use this light representative.
  */
-export async function activeRunForIssue(issueId: string): Promise<AgentRun | null> {
+export async function activeRunForIssue(
+  issueId: string,
+): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
@@ -880,7 +985,9 @@ export async function activeRunForIssue(issueId: string): Promise<AgentRun | nul
 /** Run ACTIVE of an automation chain. The ticket is no longer a lock:
  * several conversations can cite it, while a chain must follow
  * and interrupt only the execution that belongs to it. */
-export async function activeRunForChain(chainId: string): Promise<AgentRun | null> {
+export async function activeRunForChain(
+  chainId: string,
+): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
@@ -924,7 +1031,9 @@ export async function activeRunForPullRequest(
  * and potentially two pull requests. The unique partial index
  * `idx_agent_runs_active_routine` en garantit au plus un.
  */
-export async function activeRunForRoutine(routineId: string): Promise<AgentRun | null> {
+export async function activeRunForRoutine(
+  routineId: string,
+): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
@@ -942,7 +1051,10 @@ export async function activeRunForRoutine(routineId: string): Promise<AgentRun |
  * head. This is THE only place where the runs of a routine can be read: they are
  * excluded from `/api/agent-runs`, therefore from the conversations column.
  */
-export async function runsForRoutine(routineId: string, limit = 50): Promise<AgentRun[]> {
+export async function runsForRoutine(
+  routineId: string,
+  limit = 50,
+): Promise<AgentRun[]> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
@@ -1186,10 +1298,13 @@ export function stripUnstorable<T>(value: T): T {
     // skip every other character from one string to another.
     return value.replace(NUL_AND_LONE_SURROGATES, "") as T;
   }
-  if (Array.isArray(value)) return value.map((item) => stripUnstorable(item)) as T;
+  if (Array.isArray(value))
+    return value.map((item) => stripUnstorable(item)) as T;
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
-    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    for (const [key, item] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
       out[key] = stripUnstorable(item);
     }
     return out as T;
@@ -1240,7 +1355,15 @@ export interface StampFields {
 export async function stampRun(
   runId: string,
   fields: StampFields,
-  opts?: { guard?: AgentRunStatus[] },
+  opts?: {
+    guard?: AgentRunStatus[];
+    expected?: Partial<
+      Record<
+        "started_at" | "last_activity_at" | "loop_command_id" | "sandbox_id",
+        string | null
+      >
+    >;
+  },
 ): Promise<AgentRun | null> {
   return (await stampRunResult(runId, fields, opts)).run;
 }
@@ -1259,19 +1382,30 @@ export async function stampRun(
 export async function stampRunResult(
   runId: string,
   fields: StampFields,
-  opts?: { guard?: AgentRunStatus[] },
+  opts?: {
+    guard?: AgentRunStatus[];
+    expected?: Partial<
+      Record<
+        "started_at" | "last_activity_at" | "loop_command_id" | "sandbox_id",
+        string | null
+      >
+    >;
+  },
 ): Promise<{ run: AgentRun | null; failed: boolean }> {
   const service = getServiceClient();
   const guard = opts?.guard ?? ["running"];
-  const { data, error } = await service
+  let query = service
     .from("agent_runs")
     // What we write here comes from the model and its shell (checkpoint, summary,
     // error message): a null byte in it would cause the ENTIRE line to be refused.
     .update(stripUnstorable(fields))
     .eq("id", runId)
-    .in("status", guard)
-    .select("*")
-    .maybeSingle();
+    .in("status", guard);
+  for (const [column, expected] of Object.entries(opts?.expected ?? {})) {
+    query =
+      expected === null ? query.is(column, null) : query.eq(column, expected);
+  }
+  const { data, error } = await query.select("*").maybeSingle();
   if (error) {
     console.error(
       `[agent-runs] stampRun ${runId} → ${fields.status ?? "(fields)"} failed:`,
@@ -1293,7 +1427,8 @@ export async function stampRunResult(
   if (run && enteredTerminalStatus && TERMINAL_RUN_STATUSES.has(run.status)) {
     captureServerEvent({
       distinctId: run.created_by ?? "agent:system",
-      event: run.status === "completed" ? "agent_run_completed" : "agent_run_failed",
+      event:
+        run.status === "completed" ? "agent_run_completed" : "agent_run_failed",
       properties: {
         status: run.status,
         model: run.model ?? "default",
@@ -1370,7 +1505,6 @@ export async function notifyAgentRun(
   }
 }
 
-
 /** Run affected by a PR sync (to align the issue status on the calling side).
     `issueId` null = run notebook: no issue to align. */
 export interface SyncedPrRun {
@@ -1379,17 +1513,21 @@ export interface SyncedPrRun {
   createdBy: string | null;
   /** Supporting project — the inbox notification needs it to tidy up the line. */
   projectId: string;
+  /** PR state copied atomically from the current pull_requests row. */
+  prState: AgentRun["pr_state"];
 }
 
 /** Columns read by the two run resolutions of a PR (`findRunsForPr` and
     `syncPrState`) — to keep aligned with `SyncedPrRun`. */
-const SYNCED_PR_RUN_COLUMNS = "id, issue_id, created_by, project_id";
+const SYNCED_PR_RUN_COLUMNS =
+  "id, issue_id, created_by, project_id, pr_state";
 
 interface RawSyncedPrRun {
   id: string;
   issue_id: string | null;
   created_by: string | null;
   project_id: string;
+  pr_state: AgentRun["pr_state"];
 }
 
 function toSyncedPrRun(r: RawSyncedPrRun): SyncedPrRun {
@@ -1398,6 +1536,7 @@ function toSyncedPrRun(r: RawSyncedPrRun): SyncedPrRun {
     issueId: r.issue_id,
     createdBy: r.created_by,
     projectId: r.project_id,
+    prState: r.pr_state,
   };
 }
 
@@ -1456,16 +1595,20 @@ export async function syncPrState(opts: {
   const service = getServiceClient();
   const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
   if (linkIds.length === 0) return [];
+  // Read and copy the PR row inside one database transaction. A delayed caller
+  // can never write the state it observed earlier over a newer webhook/action.
+  const { error } = await service.rpc("sync_agent_runs_from_pull_request", {
+    p_provider: opts.provider,
+    p_repo_full_name: opts.repoFullName,
+    p_number: opts.prNumber,
+  });
+  if (error) {
+    console.error("[agent-runs] PR state sync failed:", error.message);
+    return [];
+  }
   const { data: runs } = await service
     .from("agent_runs")
     .select(SYNCED_PR_RUN_COLUMNS)
-    .eq("pr_number", opts.prNumber)
-    .in("repo_link_id", linkIds);
-  const update: Record<string, unknown> = { pr_state: opts.prState };
-  if (opts.prUrl) update.pr_url = opts.prUrl;
-  await service
-    .from("agent_runs")
-    .update(update)
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds);
   return ((runs ?? []) as RawSyncedPrRun[]).map(toSyncedPrRun);
@@ -1480,11 +1623,12 @@ export async function insertRunMessage(
   userId: string | null,
   content: string,
   mentions?: AssistantMention[] | null,
-): Promise<void> {
+  messageId: string = randomUUID(),
+): Promise<string> {
   const service = getServiceClient();
-  const { error } = await service
-    .from("agent_run_messages")
-    .insert({
+  const { error } = await service.from("agent_run_messages").upsert(
+    {
+      id: messageId,
       run_id: runId,
       created_by: userId,
       content: stripUnstorable(content),
@@ -1492,13 +1636,17 @@ export async function insertRunMessage(
       // the same filter as the text, otherwise a null byte in it would cause it to be refused
       // the jsonb insert — and the message with it.
       ...(mentions?.length ? { mentions: stripUnstorable(mentions) } : {}),
-    });
+    },
+    { onConflict: "id", ignoreDuplicates: true },
+  );
   // A refused insert (RLS, constraint, null byte) returns in `{ error }` without
   // raise: without this check, the route responded `ok` on a message that
   // NO ONE had lined up — accepted on screen, never played, disappeared at
   // reloading. The caller makes an HTTP error, so a bubble removed and
   // a pattern on the screen.
-  if (error) throw new Error(`agent_run_messages insert failed: ${error.message}`);
+  if (error)
+    throw new Error(`agent_run_messages insert failed: ${error.message}`);
+  return messageId;
 }
 
 /**
@@ -1506,14 +1654,16 @@ export async function insertRunMessage(
  * mark consumed and returns their content, chronological order. Called to the SUMMIT
  * of each round of the loop. A run has only ONE writer at a time (the claimer).
  */
-export async function pullPendingMessages(runId: string): Promise<AgentUserMessage[]> {
+export async function pullPendingMessages(
+  runId: string,
+): Promise<AgentUserMessage[]> {
   const service = getServiceClient();
   const { data, error } = await service
     .from("agent_run_messages")
     .update({ consumed_at: new Date().toISOString() })
     .eq("run_id", runId)
     .is("consumed_at", null)
-    .select("content, mentions, created_at");
+    .select("id, content, mentions, created_at");
   /**
    * A DRAIN THAT FAILS IS SAYING. This `return []` means “no one has anything for you
    * written » to the calling turn: a missing column (migration not yet
@@ -1527,12 +1677,46 @@ export async function pullPendingMessages(runId: string): Promise<AgentUserMessa
     return [];
   }
   if (!data) return [];
-  return (data as Array<{ content: string; mentions?: AssistantMention[] | null; created_at: string }>)
+  return (
+    data as Array<{
+      id: string;
+      content: string;
+      mentions?: AssistantMention[] | null;
+      created_at: string;
+    }>
+  )
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((r) => ({
+      id: r.id,
       text: r.content,
       ...(r.mentions?.length ? { mentions: r.mentions } : {}),
     }));
+}
+
+/** Restores a message drained by a supervisor that could not deliver it. */
+export async function requeueRunMessage(
+  runId: string,
+  message: AgentUserMessage,
+): Promise<void> {
+  if (message.id) {
+    const { data, error } = await getServiceClient()
+      .from("agent_run_messages")
+      .update({ consumed_at: null })
+      .eq("id", message.id)
+      .eq("run_id", runId)
+      .select("id")
+      .maybeSingle();
+    if (error)
+      throw new Error(`agent_run_messages requeue failed: ${error.message}`);
+    if (data) return;
+  }
+  await insertRunMessage(
+    runId,
+    null,
+    message.text,
+    message.mentions,
+    message.id,
+  );
 }
 
 /**
@@ -1562,7 +1746,10 @@ export async function bumpRunActivity(runId: string): Promise<void> {
       .eq("id", runId)
       .neq("status", "running");
   } catch (err) {
-    console.error("[agent-runs] bumpRunActivity failed:", (err as Error).message);
+    console.error(
+      "[agent-runs] bumpRunActivity failed:",
+      (err as Error).message,
+    );
   }
 }
 
@@ -1582,7 +1769,10 @@ export async function bumpRunActivity(runId: string): Promise<void> {
  * on a doubt. This is the only sure meaning: the worst case is a tool which refuses, not
  * someone's private note rewritten by a colleague's agent.
  */
-export async function runSteeredByOther(runId: string, ownerId: string): Promise<boolean> {
+export async function runSteeredByOther(
+  runId: string,
+  ownerId: string,
+): Promise<boolean> {
   const service = getServiceClient();
   const { data, error } = await service
     .from("agent_run_messages")
@@ -1620,7 +1810,9 @@ export async function readInterruptFlag(runId: string): Promise<boolean> {
     .select("interrupt_requested")
     .eq("id", runId)
     .maybeSingle();
-  return Boolean((data as { interrupt_requested?: boolean } | null)?.interrupt_requested);
+  return Boolean(
+    (data as { interrupt_requested?: boolean } | null)?.interrupt_requested,
+  );
 }
 
 /** Resets the interrupt flag (once consumed by the executor). */
@@ -1700,7 +1892,12 @@ export async function appendEvent(
         .from("agent_run_events")
         // Same guard as `stampRun`: the payload of a `tool_result` carries the
         // output of a model command, where a null byte slips in by itself.
-        .insert({ run_id: runId, seq: nextSeq, type, payload: stripUnstorable(payload) })
+        .insert({
+          run_id: runId,
+          seq: nextSeq,
+          type,
+          payload: stripUnstorable(payload),
+        })
         .select("id, seq, type, payload, created_at")
         .single();
       if (error) {
@@ -1713,11 +1910,17 @@ export async function appendEvent(
         ) {
           continue;
         }
-        console.error(`[agent-runs] appendEvent(${type}) rejected:`, error.message);
+        console.error(
+          `[agent-runs] appendEvent(${type}) rejected:`,
+          error.message,
+        );
         return;
       }
       if (row) {
-        broadcastRunEvent(runId, row as Parameters<typeof broadcastRunEvent>[1]);
+        broadcastRunEvent(
+          runId,
+          row as Parameters<typeof broadcastRunEvent>[1],
+        );
       }
       return;
     }
@@ -1741,10 +1944,13 @@ export async function appendRunJournal(
 ): Promise<void> {
   if (!sessionId || events.length === 0) return;
   const service = getServiceClient();
-  const { error } = await service
-    .from("agent_run_journal")
-    .insert({ run_id: runId, session_id: sessionId, events: stripUnstorable(events) });
-  if (error) throw new Error(`agent_run_journal insert failed: ${error.message}`);
+  const { error } = await service.from("agent_run_journal").insert({
+    run_id: runId,
+    session_id: sessionId,
+    events: stripUnstorable(events),
+  });
+  if (error)
+    throw new Error(`agent_run_journal insert failed: ${error.message}`);
 }
 
 /**

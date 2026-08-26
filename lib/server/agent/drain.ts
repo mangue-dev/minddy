@@ -103,7 +103,11 @@ export async function reapIdleSandboxes(
     // during recovery would die on 401s.
     if (row.provider_key_id) {
       await revokeRunKey(row.provider_key_id);
-      await service.from("agent_runs").update({ provider_key_id: null }).eq("id", row.id);
+      await service
+        .from("agent_runs")
+        .update({ provider_key_id: null })
+        .eq("id", row.id)
+        .eq("provider_key_id", row.provider_key_id);
     }
     reaped++;
   }
@@ -183,7 +187,9 @@ const VM_LOOP_UNLAUNCHED_AFTER_MS = 15 * 60_000;
  * distinguishes “the agent has stopped and this is why” from “the agent has not responded
  * for twenty minutes”.
  */
-export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped: number }> {
+export async function reapDeadVmRuns(
+  service: SupabaseClient,
+): Promise<{ reaped: number }> {
   const cutoff = new Date(Date.now() - VM_LOOP_PROBE_AFTER_MS).toISOString();
   const { data } = await service
     .from("agent_runs")
@@ -212,11 +218,11 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   }>;
 
   /**
- * PROBES IN PARALLEL, pipes in series.
- *
- * Observe that a VIT process costs the entire delay of `isLoopCommandAlive`
- * (5 s: it is the absence of response which makes the response). In series, a queue of twenty healthy runs would eat up a minute and a half of the drain's budget before it claimed anything. The probes do not touch each other — placing them abreast reduces the cost to that of ONE.
- */
+   * PROBES IN PARALLEL, pipes in series.
+   *
+   * Observe that a VIT process costs the entire delay of `isLoopCommandAlive`
+   * (5 s: it is the absence of response which makes the response). In series, a queue of twenty healthy runs would eat up a minute and a half of the drain's budget before it claimed anything. The probes do not touch each other — placing them abreast reduces the cost to that of ONE.
+   */
   const verdicts = await Promise.all(
     rows.map(async (row) => ({
       row,
@@ -228,11 +234,11 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   );
 
   /**
- * How long has this tower not given any sign of life, and since
- * how long has it been claimed? `null` (date absent) = we do not know, and
- * we then limit nothing: the two temporal folds below only serve to
- * close a case that we have OBSERVED to be open, never to conclude on ignorance.
- */
+   * How long has this tower not given any sign of life, and since
+   * how long has it been claimed? `null` (date absent) = we do not know, and
+   * we then limit nothing: the two temporal folds below only serve to
+   * close a case that we have OBSERVED to be open, never to conclude on ignorance.
+   */
   const agedMs = (at: string | null): number | null => {
     const ms = at ? Date.parse(at) : NaN;
     return Number.isFinite(ms) ? Date.now() - ms : null;
@@ -243,30 +249,30 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     if (alive === true) continue; // the process lives: we don’t touch anything.
     if (alive === null) {
       /**
- * We don't KNOW — and there are now three ways to not know.
- *
- * **Without a command identifier**, there is nothing to query: the loop
- * was never started, and after the boot timeout it's a fact, not a
- * presumption. **With an identifier**, it is the platform that does not respond
- *: we give it two hours before drawing a conclusion.
- *
- * **AND ON A MACHINE, WE WILL NEVER KNOW (MIN-355).** A local run has neither
- * microVM nor command — there is no one to whom ask the question. It fell
- * therefore in the first branch, that of "never launched", which is only based
- * because a microVM boot lasts twenty seconds: three minutes of
- * silence (the threshold of the request above) on a run a quarter of an hour old
- * was enough to declare it dead, to publish “the agent has stopped”
- * and to charge compute. A Mac that sleeps for four minutes loses its turn,
- * where a cloud run whose API does not respond is entitled to two hours.
- *
- * We therefore give it the SAME limit as this case, and for the same reason: this
- * which is missing is not a more daring verdict, it is a terminal. The harness
- * writes `last_activity_at` every two minutes
- * (`SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS`); two hours is sixty
- * missed beats — and a turn that would come back afterwards, if it comes back,
- * finds its session idle at its last checkpoint rather than a run
- * `running` that no one plays.
- */
+       * We don't KNOW — and there are now three ways to not know.
+       *
+       * **Without a command identifier**, there is nothing to query: the loop
+       * was never started, and after the boot timeout it's a fact, not a
+       * presumption. **With an identifier**, it is the platform that does not respond
+       *: we give it two hours before drawing a conclusion.
+       *
+       * **AND ON A MACHINE, WE WILL NEVER KNOW (MIN-355).** A local run has neither
+       * microVM nor command — there is no one to whom ask the question. It fell
+       * therefore in the first branch, that of "never launched", which is only based
+       * because a microVM boot lasts twenty seconds: three minutes of
+       * silence (the threshold of the request above) on a run a quarter of an hour old
+       * was enough to declare it dead, to publish “the agent has stopped”
+       * and to charge compute. A Mac that sleeps for four minutes loses its turn,
+       * where a cloud run whose API does not respond is entitled to two hours.
+       *
+       * We therefore give it the SAME limit as this case, and for the same reason: this
+       * which is missing is not a more daring verdict, it is a terminal. The harness
+       * writes `last_activity_at` every two minutes
+       * (`SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS`); two hours is sixty
+       * missed beats — and a turn that would come back afterwards, if it comes back,
+       * finds its session idle at its last checkpoint rather than a run
+       * `running` that no one plays.
+       */
       // There is someone to question, or no one by nature: in both cases
       // silence is what decides, and it has two hours. There remains the only case where
       // a response was DUE and never came — a microVM without a command.
@@ -279,34 +285,45 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     }
 
     /**
- * STAMP FIRST, THREAD THEN — the reverse order of the original, and
- * it's a production lesson.
- *
- * The argument before was: "if the stamp fails behind, the user
- * will still have read why for his turn stopped.” But the only way
- * this stamp fails is by keeping it `status in ('running')`, that is:
- * **someone finished this run in the meantime**. The round then didn't stop
- * at all — it just ended. So we wrote a failure message
- * in a conversation that ended well, and that's what we read
- * on the run of PR 51.
- *
- * What we lose is a case that doesn't exist: a refused stamp left, in
- * the old order, an orphan error; in this one, the following passage of the
- * drain will see the run again if it really remained `running`.
- *
- * The CHECKPOINT IS NOT TOUCHED: the one at the base is the last
- * saved periodically by the loop, at a boundary of safe round.
- * This is exactly what the next round should start from.
- */
-    const stamped = await stampRun(row.id, {
-      status: "completed",
-      error_message: "The agent process stopped unexpectedly",
-      continuations: 0,
-      attempts: 0,
-      last_activity_at: new Date().toISOString(),
-      interrupt_requested: false,
-      loop_command_id: null,
-    });
+     * STAMP FIRST, THREAD THEN — the reverse order of the original, and
+     * it's a production lesson.
+     *
+     * The argument before was: "if the stamp fails behind, the user
+     * will still have read why for his turn stopped.” But the only way
+     * this stamp fails is by keeping it `status in ('running')`, that is:
+     * **someone finished this run in the meantime**. The round then didn't stop
+     * at all — it just ended. So we wrote a failure message
+     * in a conversation that ended well, and that's what we read
+     * on the run of PR 51.
+     *
+     * What we lose is a case that doesn't exist: a refused stamp left, in
+     * the old order, an orphan error; in this one, the following passage of the
+     * drain will see the run again if it really remained `running`.
+     *
+     * The CHECKPOINT IS NOT TOUCHED: the one at the base is the last
+     * saved periodically by the loop, at a boundary of safe round.
+     * This is exactly what the next round should start from.
+     */
+    const stamped = await stampRun(
+      row.id,
+      {
+        status: "completed",
+        error_message: "The agent process stopped unexpectedly",
+        continuations: 0,
+        attempts: 0,
+        last_activity_at: new Date().toISOString(),
+        interrupt_requested: false,
+        loop_command_id: null,
+      },
+      {
+        expected: {
+          started_at: row.started_at,
+          last_activity_at: row.last_activity_at,
+          loop_command_id: row.loop_command_id,
+          sandbox_id: row.sandbox_id,
+        },
+      },
+    );
     if (!stamped) continue; // course : quelqu'un a conclu entre-temps.
 
     await appendEvent(row.id, "error", {
@@ -316,39 +333,40 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     }).catch(() => {});
 
     /**
- * THE COMPUTE OF THE MICROVM, AND THIS IS WHERE NOBODY WOULD CHARGE IT.
- *
- * In the new form, the wall-clock of the VM is held by the loop and
- * reported in its end-of-turn report (`vm-rest.ts`) — and the function ne
- * charges nothing more on its side.
- * A round whose process dies never returns this report: without this line,
- * wake-up, clone and microVM hours exit all counters
- * silently. This is the computed half of the bill, on the only path where
- * one would not notice.
- *
- * NO DOUBLE COUNTING WITH THE END OF TURN REPORT, and it is the ORDER of the
- * two gestures which guarantees it, not luck. Here we stamp THEN we invoice
- * (`if (!stamped) continue`, just above); `landVmTurn` does the opposite.
- * A turn which returns its report while we believe it to be dead therefore fails
- * our guard (`status in ('running')`) and we write nothing. And the symmetrical case
- * does not arise: our verdict IS "the process has rendered", or a
- * process which has rendered no longer posts.
- *
- * From `started_at` to NOW, and it is a MINORANT despite appearances :
- * the microVM SESSION survives its loop process, and will only be cut by
- * by the inactivity reaper — ~5 min after this stamp, which has just finished
- * making the run idle. We therefore charge less than what the
- * platform charges us, which is the common sense of the error.
- *
- * AND NOTHING AT ALL FOR A LOCAL RUN (MIN-355): there was no microVM.
- * Charge here for `sandbox_compute` on Mac minutes would amount to making
- * paying the user for a machine that he himself provided - and making it
- * paying precisely on the path to the incident, the one that we do not reread.
- * The terminal is SERVER, never a figure that the harness would give: it is the
- * same principle as `sandboxMs`, and it is all the more valid here if the machine
- * is the one we suspect.
- */
-    const startedMs = row.started_at && !row.local_exec ? Date.parse(row.started_at) : NaN;
+     * THE COMPUTE OF THE MICROVM, AND THIS IS WHERE NOBODY WOULD CHARGE IT.
+     *
+     * In the new form, the wall-clock of the VM is held by the loop and
+     * reported in its end-of-turn report (`vm-rest.ts`) — and the function ne
+     * charges nothing more on its side.
+     * A round whose process dies never returns this report: without this line,
+     * wake-up, clone and microVM hours exit all counters
+     * silently. This is the computed half of the bill, on the only path where
+     * one would not notice.
+     *
+     * NO DOUBLE COUNTING WITH THE END OF TURN REPORT, and it is the ORDER of the
+     * two gestures which guarantees it, not luck. Here we stamp THEN we invoice
+     * (`if (!stamped) continue`, just above); `landVmTurn` does the opposite.
+     * A turn which returns its report while we believe it to be dead therefore fails
+     * our guard (`status in ('running')`) and we write nothing. And the symmetrical case
+     * does not arise: our verdict IS "the process has rendered", or a
+     * process which has rendered no longer posts.
+     *
+     * From `started_at` to NOW, and it is a MINORANT despite appearances :
+     * the microVM SESSION survives its loop process, and will only be cut by
+     * by the inactivity reaper — ~5 min after this stamp, which has just finished
+     * making the run idle. We therefore charge less than what the
+     * platform charges us, which is the common sense of the error.
+     *
+     * AND NOTHING AT ALL FOR A LOCAL RUN (MIN-355): there was no microVM.
+     * Charge here for `sandbox_compute` on Mac minutes would amount to making
+     * paying the user for a machine that he himself provided - and making it
+     * paying precisely on the path to the incident, the one that we do not reread.
+     * The terminal is SERVER, never a figure that the harness would give: it is the
+     * same principle as `sandboxMs`, and it is all the more valid here if the machine
+     * is the one we suspect.
+     */
+    const startedMs =
+      row.started_at && !row.local_exec ? Date.parse(row.started_at) : NaN;
     if (Number.isFinite(startedMs) && Date.now() > startedMs) {
       const billTo: AiUsageBillTo = row.created_by
         ? { userId: row.created_by }
@@ -363,37 +381,48 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
         projectId: row.project_id,
         durationMs: Date.now() - startedMs,
       }).catch((err) =>
-        console.error("[agent-drain] vm compute metering failed:", (err as Error).message),
+        console.error(
+          "[agent-drain] vm compute metering failed:",
+          (err as Error).message,
+        ),
       );
     }
 
     /**
- * THE SPEND COLUMN, PACKED TO THE LEDGER — what `landVmTurn` does on the
- * healthy path (`vm-rest.ts`, the `Math.max` of the end-of-turn report) and that
- * no one did here. `cost_usd` is only written by healthy outputs:
- * a round whose process dies therefore leaves the line at what it was worth
- * before the round, that is to say **zero** on a first round — while the
- * ledger carries each round billed before the accident.
- *
- * Measured in production on the opencode observation window (MIN-286):
- * three runs harvested, `cost_usd = 0` on the three, **$0.159** to the ledger.
- * Nothing was lost for the bill (`finance.ts` reads the ledger) nor for the
- * ceilings (`control-plane.ts` and `execute.ts` already take the MAX of the two),
- * but the run line — what a human rereads after an incident — announced
- * free a round which does not was not.
- *
- * AFTER `recordSandboxUsage`, so that the sum read also carries the compute
- * that we have just written. And a MAX, not an allocation: the ledger and the
- * column are two lower bounds, a displayed expense never goes backwards.
- */
+     * THE SPEND COLUMN, PACKED TO THE LEDGER — what `landVmTurn` does on the
+     * healthy path (`vm-rest.ts`, the `Math.max` of the end-of-turn report) and that
+     * no one did here. `cost_usd` is only written by healthy outputs:
+     * a round whose process dies therefore leaves the line at what it was worth
+     * before the round, that is to say **zero** on a first round — while the
+     * ledger carries each round billed before the accident.
+     *
+     * Measured in production on the opencode observation window (MIN-286):
+     * three runs harvested, `cost_usd = 0` on the three, **$0.159** to the ledger.
+     * Nothing was lost for the bill (`finance.ts` reads the ledger) nor for the
+     * ceilings (`control-plane.ts` and `execute.ts` already take the MAX of the two),
+     * but the run line — what a human rereads after an incident — announced
+     * free a round which does not was not.
+     *
+     * AFTER `recordSandboxUsage`, so that the sum read also carries the compute
+     * that we have just written. And a MAX, not an allocation: the ledger and the
+     * column are two lower bounds, a displayed expense never goes backwards.
+     */
     const spent = await spentFromLedger(row.run_id ?? row.id).catch(() => null);
     if (spent != null && spent > row.cost_usd) {
-      await service.from("agent_runs").update({ cost_usd: spent }).eq("id", row.id);
+      await service
+        .from("agent_runs")
+        .update({ cost_usd: spent })
+        .eq("id", row.id)
+        .lt("cost_usd", spent);
     }
 
     if (row.provider_key_id) {
       await revokeRunKey(row.provider_key_id);
-      await service.from("agent_runs").update({ provider_key_id: null }).eq("id", row.id);
+      await service
+        .from("agent_runs")
+        .update({ provider_key_id: null })
+        .eq("id", row.id)
+        .eq("provider_key_id", row.provider_key_id);
     }
     await notifyAgentRun(row, "agent_failed").catch(() => {});
     reaped++;
@@ -415,17 +444,18 @@ function scopeToDeployment<Q>(query: Q, scope: string | null): Q {
     is(column: string, value: null): unknown;
     eq(column: string, value: string): unknown;
   };
-  return (scope === null
-    ? q.is("deployment_url", null)
-    : q.eq("deployment_url", scope)) as Q;
+  return (
+    scope === null
+      ? q.is("deployment_url", null)
+      : q.eq("deployment_url", scope)
+  ) as Q;
 }
-
 
 export async function drainAgentRuns(
   service: SupabaseClient,
   opts?: {
     /** CE drain wall budget. Must remain under the `maxDuration` of the route which
- * calls it: it is the caller, and he alone, who knows his own duration. */
+     * calls it: it is the caller, and he alone, who knows his own duration. */
     budgetMs?: number;
   },
 ): Promise<{ claimed: number }> {
@@ -454,21 +484,21 @@ export async function drainAgentRuns(
 
   while (deadline - Date.now() >= MIN_LAUNCH_BUDGET_MS) {
     /**
- * ⚠ **DRAIN NEVER TAKES A LOCAL RUN** (MIN-293).
- *
- * `agent_runs.local_exec` is frozen on launch and says "this trick is playing on someone's
- * machine" ([local-exec-scope.ts](local-exec-scope.ts)). Without
- * this line, the drain claims it like the others and runs it in a
- * microVM: the user requested his machine, he obtains the cloud, **and
- * nothing tells him**. This is the exact fault that this site is fighting everywhere
- * elsewhere — something that is deteriorating without us knowing it.
- *
- * The corollary is assumed and it belongs to MIN-294: as long as the presence
- * and the claim do not exist, a local run that no machine claims remains
- * `queued`. It's a pending run, not a betrayed run — and the fallback to the
- * cloud, when it exists, will be decided BEFORE the first turn (D1 decision),
- * never by playing it in the wrong place silently.
- */
+     * ⚠ **DRAIN NEVER TAKES A LOCAL RUN** (MIN-293).
+     *
+     * `agent_runs.local_exec` is frozen on launch and says "this trick is playing on someone's
+     * machine" ([local-exec-scope.ts](local-exec-scope.ts)). Without
+     * this line, the drain claims it like the others and runs it in a
+     * microVM: the user requested his machine, he obtains the cloud, **and
+     * nothing tells him**. This is the exact fault that this site is fighting everywhere
+     * elsewhere — something that is deteriorating without us knowing it.
+     *
+     * The corollary is assumed and it belongs to MIN-294: as long as the presence
+     * and the claim do not exist, a local run that no machine claims remains
+     * `queued`. It's a pending run, not a betrayed run — and the fallback to the
+     * cloud, when it exists, will be decided BEFORE the first turn (D1 decision),
+     * never by playing it in the wrong place silently.
+     */
     const { data } = await scopeToDeployment(
       service
         .from("agent_runs")

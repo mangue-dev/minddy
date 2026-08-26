@@ -6,7 +6,13 @@ import { reservePort } from "./free-port";
 import { localHost } from "./local-host";
 import { opencodeSupervisorDeps } from "./opencode-host";
 import { runOpencodeTurn } from "./supervisor";
-import { isLocalJob, parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol";
+import {
+  isLocalJob,
+  parseVmJob,
+  vmJobPath,
+  type VmJob,
+  type VmTurnReport,
+} from "./protocol";
 
 /**
  * HARNESS ENTRANCE (MIN-224) — the point the caster starts at
@@ -64,11 +70,11 @@ async function runOpencodeTurnHere(
 ): Promise<VmTurnReport> {
   if (!job.opencodeInput) throw new Error("job carries no opencodeInput");
   /**
- * THE OPENCODE PORT, REQUESTED TO THE SYSTEM (MIN-354) — 4096 hard as long as the
- * microVM was ours alone, reserved here since a machine can carry
- * two runs (cf. [free-port.ts](free-port.ts)). The tools bridge listens to
- * on an ephemeral port of itself and returns its URL.
- */
+   * THE OPENCODE PORT, REQUESTED TO THE SYSTEM (MIN-354) — 4096 hard as long as the
+   * microVM was ours alone, reserved here since a machine can carry
+   * two runs (cf. [free-port.ts](free-port.ts)). The tools bridge listens to
+   * on an ephemeral port of itself and returns its URL.
+   */
   const opencodePort = await reservePort();
   return await runOpencodeTurn(job, job.opencodeInput, cp, host, {
     ...opencodeSupervisorDeps({ port: opencodePort, layout: job.layout }),
@@ -87,23 +93,39 @@ function jobPathFromArgv(): string {
 
 async function main(): Promise<void> {
   /**
- * THE JOB IS READ RAW, THEN VALIDATED IN THE `try` (MIN-354) — and not before.
- *
- * The refusal of an unknown contract (`parseVmJob`) is an end of turn like a
- * other: it must exit by the same ratio as the rest, otherwise an expired harness
- * leaves a run `running` that only the watchdog will end up seeing as dead. Only `appOrigin` is read outside of validation, because you need
- * an address to say that you are refusing — it is the oldest field in the
- * contract, and the only one about which you cannot do anything else.
- *
- * SINCE MIN-355, THERE HAS BEEN AT ONE SECOND, and for exactly the same reason: on
- * the user's machine, an address is not enough to speak, you also need
- * the token. Reading it out of validation is what keeps the promise of this
- * file true — the trick ALWAYS returns a report, including when that report says
- * "I refuse this job."
- */
-  const raw = JSON.parse(await readFile(jobPathFromArgv(), "utf8")) as {
-    appOrigin?: string;
-    controlToken?: string;
+   * THE JOB IS READ RAW, THEN VALIDATED IN THE `try` (MIN-354) — and not before.
+   *
+   * The refusal of an unknown contract (`parseVmJob`) is an end of turn like a
+   * other: it must exit by the same ratio as the rest, otherwise an expired harness
+   * leaves a run `running` that only the watchdog will end up seeing as dead. Only `appOrigin` is read outside of validation, because you need
+   * an address to say that you are refusing — it is the oldest field in the
+   * contract, and the only one about which you cannot do anything else.
+   *
+   * SINCE MIN-355, THERE HAS BEEN AT ONE SECOND, and for exactly the same reason: on
+   * the user's machine, an address is not enough to speak, you also need
+   * the token. Reading it out of validation is what keeps the promise of this
+   * file true — the trick ALWAYS returns a report, including when that report says
+   * "I refuse this job."
+   */
+  const source = await readFile(jobPathFromArgv(), "utf8");
+  // These two routing hints are recoverable even when a truncated or otherwise
+  // malformed JSON document cannot be validated. They let the failure travel
+  // through the same terminal report path as every other rejected job.
+  const hinted = (field: "appOrigin" | "controlToken"): string => {
+    const match = source.match(
+      new RegExp(`"${field}"\\s*:\\s*("(?:\\\\.|[^"\\\\])*")`),
+    );
+    if (!match) return "";
+    try {
+      const value = JSON.parse(match[1]);
+      return typeof value === "string" ? value : "";
+    } catch {
+      return "";
+    }
+  };
+  let raw: { appOrigin?: string; controlToken?: string } = {
+    appOrigin: hinted("appOrigin"),
+    controlToken: hinted("controlToken"),
   };
   const cp = createControlPlaneClient(
     raw.appOrigin ?? "",
@@ -117,6 +139,11 @@ async function main(): Promise<void> {
   let job: VmJob | null = null;
   let report: VmTurnReport;
   try {
+    const parsed = JSON.parse(source) as unknown;
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("job must be a JSON object");
+    }
+    raw = parsed as { appOrigin?: string; controlToken?: string };
     job = parseVmJob(raw);
     report = await runOpencodeTurnHere(
       job,
@@ -128,16 +155,16 @@ async function main(): Promise<void> {
     console.error("[agent-vm] turn crashed:", message);
     await cp.emit("error", { message }).catch(() => {});
     /**
- * THE EMERGENCY REPORT, and it carries NO checkpoint. The supervisor has
- * raised, so we have no reason to believe its log pointer is up to date —
- * and a pointer ahead of what has been written would restart the next round
- * of a session that it cannot replay.
- *
- * The last PERIODIC checkpoint, itself, was written to a safe round
- * boundary. The function keeps it as is (see `VmTurnReport.checkpoint`): this
- * report does not replace it, it only says that the round is finished and
- * why.
- */
+     * THE EMERGENCY REPORT, and it carries NO checkpoint. The supervisor has
+     * raised, so we have no reason to believe its log pointer is up to date —
+     * and a pointer ahead of what has been written would restart the next round
+     * of a session that it cannot replay.
+     *
+     * The last PERIODIC checkpoint, itself, was written to a safe round
+     * boundary. The function keeps it as is (see `VmTurnReport.checkpoint`): this
+     * report does not replace it, it only says that the round is finished and
+     * why.
+     */
     report = {
       status: "error",
       errorMessage: message.slice(0, 1000),
@@ -164,7 +191,10 @@ main().then(
     // control unreachable, or job unreadable. Nothing to save from the VM: the
     // watchdog will note the death and put the session to rest on its
     // last checkpoint. The non-zero exit code is what it will read.
-    console.error("[agent-vm] fatal:", err instanceof Error ? err.message : String(err));
+    console.error(
+      "[agent-vm] fatal:",
+      err instanceof Error ? err.message : String(err),
+    );
     process.exit(1);
   },
 );

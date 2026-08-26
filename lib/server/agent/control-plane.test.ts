@@ -248,6 +248,19 @@ vi.mock("./runs", async (importOriginal) => ({
       h.requeued.push({ runId, userId, content, mentions: mentions ?? null });
     },
   ),
+  requeueRunMessage: vi.fn(
+    async (
+      runId: string,
+      message: { id?: string; text: string; mentions?: unknown[] },
+    ) => {
+      h.requeued.push({
+        runId,
+        userId: null,
+        content: message.text,
+        mentions: message.mentions ?? null,
+      });
+    },
+  ),
   appendRunJournal: vi.fn(
     async (runId: string, sessionId: string, events: Record<string, unknown>[]) => {
       h.journal.push({ runId, sessionId, events });

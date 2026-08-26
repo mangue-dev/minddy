@@ -37,11 +37,22 @@ const ISSUE_ROWS = [
     id: ANCHOR_ID,
     number: 42,
     project_id: "proj-1",
+    updated_at: "2026-08-26T00:00:00.000Z",
     plan: STORED_PLAN,
     description: "Une description de départ, à patcher.",
   },
-  { id: OTHER_ID, number: 7, project_id: "proj-1" },
-  { id: FOREIGN_ID, number: 3, project_id: "proj-2" },
+  {
+    id: OTHER_ID,
+    number: 7,
+    project_id: "proj-1",
+    updated_at: "2026-08-26T00:00:00.000Z",
+  },
+  {
+    id: FOREIGN_ID,
+    number: 3,
+    project_id: "proj-2",
+    updated_at: "2026-08-26T00:00:00.000Z",
+  },
   // MIN-133: same project, but in the trash — the agent should not see it.
   {
     id: TRASHED_ID,
@@ -639,7 +650,10 @@ describe("write_issue_plan — ciblable", () => {
     });
     expect(out.success).toBe(true);
     expect(updateIssueFields).toHaveBeenCalledWith(
-      expect.objectContaining({ issueId: OTHER_ID }),
+      expect.objectContaining({
+        issueId: OTHER_ID,
+        expectedUpdatedAt: "2026-08-26T00:00:00.000Z",
+      }),
     );
     expect(out.result).toMatchObject({ identifier: "MIN-7", tasks: 1 });
   });

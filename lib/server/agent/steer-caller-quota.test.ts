@@ -41,8 +41,10 @@ vi.mock("@/lib/server/agent/runs", () => ({
   activeRunForIssue: async () => null,
   activeRunForRoutine: async () => null,
   newerRunExistsForIssue: async () => false,
-  insertRunMessage: async (...args: unknown[]) => {
+  runIsLatestOnAnchor: async () => true,
+  insertLatestRunMessage: async (...args: unknown[]) => {
     messages.push(args);
+    return "inserted";
   },
   bumpRunActivity: async () => {},
   stampRun: async (...args: unknown[]) => {

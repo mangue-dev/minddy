@@ -96,7 +96,7 @@ function fakeService() {
     limit: async () => ({ data: h.rows }),
     update: (fields: Record<string, unknown>) => {
       h.updates.push(fields);
-      return { eq: async () => ({}) };
+      return builder;
     },
   };
   return { from: () => builder } as never;

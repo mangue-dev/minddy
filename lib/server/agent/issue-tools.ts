@@ -8,7 +8,10 @@ import {
   searchIssues,
   type ResolvedIssueRef,
 } from "@/lib/server/issue-reads";
-import { signedAttachmentUrl, downloadAttachment } from "@/lib/server/attachments";
+import {
+  signedAttachmentUrl,
+  downloadAttachment,
+} from "@/lib/server/attachments";
 import { joinedPage } from "@/lib/server/resource-select";
 import {
   MAX_DESCRIPTION_LENGTH,
@@ -75,22 +78,22 @@ import { fetchAgentLinkResource, withoutAgentLinkUrls } from "./link-resource";
 
 export interface IssueToolContext {
   /** Run ticket — DEFAULT target of ticket tools. Null on a notebook run:
- * `issue` then becomes mandatory. */
+   * `issue` then becomes mandatory. */
   anchorIssueId: string | null;
   projectId: string;
   projectKey: string;
   /** Run owner — writing actor (plan, fields, creation). */
   actorId: string | null;
   /** Landing status of a created ticket, LAUNCHER account setting
- * (`user_metadata.numo_default_status`) — never a template parameter. */
+   * (`user_metadata.numo_default_status`) — never a template parameter. */
   numoDefaultStatus: NumoDefaultStatus;
   /** Does the run model accept an image as input? (see `supportsImageInput`).
- * False → `read_resource` behaves exactly as before MIN-111. */
+   * False → `read_resource` behaves exactly as before MIN-111. */
   imageInput?: boolean;
   /** Run CURRENT — the line on which `report_verdict` writes its verdict. */
   runId?: string | null;
   /** Run automation chain (MIN-147). It is she who decides whether
- * `report_verdict` is served: outside the chain, no one reads a verdict. */
+   * `report_verdict` is served: outside the chain, no one reads a verdict. */
   chainId?: string | null;
 }
 
@@ -116,7 +119,12 @@ const ATTACHMENT_INLINE_MAX_BYTES = 256 * 1024;
  * that multimodal providers all accept. An SVG is text, it goes through
  * inline reading; a TIFF or HEIC does not show — URL signed, as before.
  */
-const VIEWABLE_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+const VIEWABLE_IMAGE_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
 /**
  * Max size of an image shown to the model, in SOURCE bytes. Base64 weighs 4/3 —
  * 750 KB of PNG is ~1 MB in the message, and the history IS the checkpoint
@@ -156,7 +164,11 @@ function isTextMime(mime: string): boolean {
   );
 }
 
-type ToolOutcome = { result: unknown; success: boolean; images?: AgentToolImage[] };
+type ToolOutcome = {
+  result: unknown;
+  success: boolean;
+  images?: AgentToolImage[];
+};
 
 /**
  * Ticket TARGETED by a tool: the one that `args.issue` designates, otherwise the one in the run.
@@ -191,10 +203,16 @@ async function searchIssuesTool(
 ): Promise<ToolOutcome> {
   const service = getServiceClient();
   const found = await searchIssues(
-    { db: service, service, projectId: ctx.projectId, projectKey: ctx.projectKey },
+    {
+      db: service,
+      service,
+      projectId: ctx.projectId,
+      projectKey: ctx.projectKey,
+    },
     args,
   );
-  if ("error" in found) return { result: { error: found.error }, success: false };
+  if ("error" in found)
+    return { result: { error: found.error }, success: false };
   return { result: found, success: true };
 }
 
@@ -203,21 +221,31 @@ async function readIssue(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const target = await resolveTarget(ctx, args.issue);
-  if ("error" in target) return { result: { error: target.error }, success: false };
+  if ("error" in target)
+    return { result: { error: target.error }, success: false };
 
   const service = getServiceClient();
   const detail = await getIssue(
-    { db: service, service, projectId: ctx.projectId, projectKey: ctx.projectKey },
+    {
+      db: service,
+      service,
+      projectId: ctx.projectId,
+      projectKey: ctx.projectKey,
+    },
     { issue_id: target.issue.id },
   );
-  if ("error" in detail) return { result: { error: detail.error }, success: false };
+  if ("error" in detail)
+    return { result: { error: detail.error }, success: false };
 
   // Assigned as display name (never the raw email) — the uuid alone is silent.
   const assigneeId = (detail.issue.assignee_id as string | null) ?? null;
   let assigneeName: string | null = null;
   if (assigneeId) {
-    const users = await fetchAuthUsersById(service, [assigneeId]).catch(() => null);
-    if (users) assigneeName = displayName(toNamed(users.get(assigneeId)), "User");
+    const users = await fetchAuthUsersById(service, [assigneeId]).catch(
+      () => null,
+    );
+    if (users)
+      assigneeName = displayName(toNamed(users.get(assigneeId)), "User");
   }
 
   // The PURPOSE of the ticket (MIN-287): `objective_id` alone is a silent uuid, and
@@ -234,7 +262,11 @@ async function readIssue(
       .eq("id", objectiveId)
       .maybeSingle();
     if (row) {
-      objective = { id: row.id as string, name: row.name as string, status: row.status };
+      objective = {
+        id: row.id as string,
+        name: row.name as string,
+        status: row.status,
+      };
     }
   }
 
@@ -245,7 +277,9 @@ async function readIssue(
 
   const includeAll = args.include_all_comments === true;
   const total = detail.comments.length;
-  const recent = includeAll ? detail.comments : detail.comments.slice(-COMMENTS_DEFAULT_LIMIT);
+  const recent = includeAll
+    ? detail.comments
+    : detail.comments.slice(-COMMENTS_DEFAULT_LIMIT);
   const comments = recent.map((c) => ({
     ...withoutAgentLinkUrls(c),
     body: cap(String(c.body ?? ""), COMMENT_BODY_MAX_CHARS),
@@ -280,12 +314,17 @@ async function readIssue(
       comments,
       comments_total: total,
       ...(total > comments.length
-        ? { comments_note: "Older comments omitted — pass include_all_comments=true for the full thread." }
+        ? {
+            comments_note:
+              "Older comments omitted — pass include_all_comments=true for the full thread.",
+          }
         : {}),
       sub_issues: detail.sub_issues,
       relations: detail.relations,
       ...(detail.duplicate_of ? { duplicate_of: detail.duplicate_of } : {}),
-      ...(detail.linked_feedback ? { linked_feedback: detail.linked_feedback } : {}),
+      ...(detail.linked_feedback
+        ? { linked_feedback: detail.linked_feedback }
+        : {}),
     },
     success: true,
   };
@@ -310,10 +349,14 @@ async function readFeedback(
   ctx: IssueToolContext,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const postId = typeof args.feedback_post_id === "string" ? args.feedback_post_id : "";
+  const postId =
+    typeof args.feedback_post_id === "string" ? args.feedback_post_id : "";
   if (!postId) {
     return {
-      result: { error: "feedback_post_id is required (get it from read_issue's linked_feedback)." },
+      result: {
+        error:
+          "feedback_post_id is required (get it from read_issue's linked_feedback).",
+      },
       success: false,
     };
   }
@@ -352,7 +395,9 @@ async function readFeedback(
         : c.via_assistant
           ? "Numo"
           : displayName(
-              toNamed(c.author_id && users ? users.get(c.author_id as string) : null),
+              toNamed(
+                c.author_id && users ? users.get(c.author_id as string) : null,
+              ),
               "User",
             ),
       // “board visitor” = someone OUTSIDE the team. This is what distinguishes
@@ -373,7 +418,10 @@ async function readFeedback(
         // title and body, and the original is what the person typed.
         body: cap(String(detail.body ?? ""), FEEDBACK_BODY_MAX_CHARS),
         submitted_title: detail.submitted_title,
-        submitted_body: cap(String(detail.submitted_body ?? ""), FEEDBACK_BODY_MAX_CHARS),
+        submitted_body: cap(
+          String(detail.submitted_body ?? ""),
+          FEEDBACK_BODY_MAX_CHARS,
+        ),
         status: detail.status,
         vote_count: detail.vote_count,
         is_public: detail.is_public,
@@ -398,7 +446,10 @@ async function readResource(
         ? args.attachment_id
         : "";
   if (!resourceId) {
-    return { result: { error: "resource_id is required (get it from read_issue)." }, success: false };
+    return {
+      result: { error: "resource_id is required (get it from read_issue)." },
+      success: false,
+    };
   }
 
   const service = getServiceClient();
@@ -420,10 +471,19 @@ async function readResource(
   // `assertIssueInProject` (which also checks that it is not in the trash),
   // the objective by the `project_id` that the line itself carries.
   const inProject = row.issue_id
-    ? (await assertIssueInProject(service, row.issue_id as string, ctx.projectId)).ok
+    ? (
+        await assertIssueInProject(
+          service,
+          row.issue_id as string,
+          ctx.projectId,
+        )
+      ).ok
     : row.project_id === ctx.projectId;
   if (!inProject) {
-    return { result: { error: "Resource not found in this project." }, success: false };
+    return {
+      result: { error: "Resource not found in this project." },
+      success: false,
+    };
   }
 
   // A page from the wiki (MIN-275): its body reads `read_page`, which renders
@@ -450,7 +510,10 @@ async function readResource(
   // every redirect hop before returning capped content to the model.
   if (row.kind === "link") {
     if (typeof row.url !== "string" || !row.url) {
-      return { result: { error: "Link resource has no destination." }, success: false };
+      return {
+        result: { error: "Link resource has no destination." },
+        success: false,
+      };
     }
     try {
       const fetched = await fetchAgentLinkResource(row.url);
@@ -509,9 +572,17 @@ async function readResource(
     const buf = await downloadAttachment(service, row.storage_path as string);
     if (buf && buf.length <= ATTACHMENT_IMAGE_MAX_BYTES) {
       return {
-        result: { ...meta, image: "The image itself is attached to this result — look at it." },
+        result: {
+          ...meta,
+          image: "The image itself is attached to this result — look at it.",
+        },
         success: true,
-        images: [{ url: `data:${mime};base64,${buf.toString("base64")}`, name: fileName }],
+        images: [
+          {
+            url: `data:${mime};base64,${buf.toString("base64")}`,
+            name: fileName,
+          },
+        ],
       };
     }
     // Failed download or real size above the cap → we fall back on
@@ -575,25 +646,31 @@ async function updateIssue(
       return { result: { error: message }, success: false };
     }
   }
-  if (!ctx.actorId) return { result: { error: "Run has no owner." }, success: false };
+  if (!ctx.actorId)
+    return { result: { error: "Run has no owner." }, success: false };
 
   const input: Record<string, unknown> = {};
   const changed: string[] = [];
   if (args.title !== undefined) {
     const title = typeof args.title === "string" ? args.title.trim() : "";
-    if (!title) return { result: { error: "title cannot be empty." }, success: false };
+    if (!title)
+      return { result: { error: "title cannot be empty." }, success: false };
     input.title = title;
     changed.push("title");
   }
   if (args.description !== undefined) {
-    input.description = typeof args.description === "string" ? args.description : null;
+    input.description =
+      typeof args.description === "string" ? args.description : null;
     changed.push("description");
   }
   if (args.effort !== undefined) {
     // `null` clears the estimate — this is the only way to remove it.
     if (args.effort !== null && !isEffort(args.effort)) {
       return {
-        result: { error: "effort must be one of: xs, s, m, l, xl (or null to clear it)." },
+        result: {
+          error:
+            "effort must be one of: xs, s, m, l, xl (or null to clear it).",
+        },
         success: false,
       };
     }
@@ -607,7 +684,10 @@ async function updateIssue(
     if (args.objective === null) {
       input.objective_id = null;
     } else {
-      const objective = await resolveObjectiveRef(ctx.projectId, args.objective);
+      const objective = await resolveObjectiveRef(
+        ctx.projectId,
+        args.objective,
+      );
       if ("error" in objective) {
         return { result: { error: objective.error }, success: false };
       }
@@ -626,7 +706,8 @@ async function updateIssue(
   }
 
   const target = await resolveTarget(ctx, args.issue);
-  if ("error" in target) return { result: { error: target.error }, success: false };
+  if ("error" in target)
+    return { result: { error: target.error }, success: false };
 
   const result = await updateIssueFields({
     issueId: target.issue.id,
@@ -636,7 +717,9 @@ async function updateIssue(
   });
   if (!result.ok) {
     return {
-      result: { error: result.errorKey ?? result.rawMessage ?? "Issue update refused." },
+      result: {
+        error: result.errorKey ?? result.rawMessage ?? "Issue update refused.",
+      },
       success: false,
     };
   }
@@ -651,21 +734,34 @@ async function writeIssuePlan(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const plan = typeof args.plan === "string" ? args.plan.trim() : "";
-  if (!plan) return { result: { error: "plan (markdown) is required." }, success: false };
-  if (!ctx.actorId) return { result: { error: "Run has no owner." }, success: false };
+  if (!plan)
+    return {
+      result: { error: "plan (markdown) is required." },
+      success: false,
+    };
+  if (!ctx.actorId)
+    return { result: { error: "Run has no owner." }, success: false };
 
   const target = await resolveTarget(ctx, args.issue);
-  if ("error" in target) return { result: { error: target.error }, success: false };
+  if ("error" in target)
+    return { result: { error: target.error }, success: false };
+
+  const current = await readIssueText(target.issue.id);
+  if ("error" in current)
+    return { result: { error: current.error }, success: false };
 
   const result = await updateIssueFields({
     issueId: target.issue.id,
     actorId: ctx.actorId,
     input: { plan },
     viaAssistant: true,
+    expectedUpdatedAt: current.updatedAt || undefined,
   });
   if (!result.ok) {
     return {
-      result: { error: result.errorKey ?? result.rawMessage ?? "Plan update refused." },
+      result: {
+        error: result.errorKey ?? result.rawMessage ?? "Plan update refused.",
+      },
       success: false,
     };
   }
@@ -695,17 +791,21 @@ async function writeIssuePlan(
  */
 async function readIssueText(
   issueId: string,
-): Promise<{ plan: string; description: string } | { error: string }> {
+): Promise<
+  { plan: string; description: string; updatedAt: string } | { error: string }
+> {
   const { data, error } = await getServiceClient()
     .from("issues")
-    .select("plan, description")
+    .select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (error) return { error: error.message };
+  if (!data) return { error: "Issue not found." };
   return {
     plan: typeof data?.plan === "string" ? data.plan : "",
     description: typeof data?.description === "string" ? data.description : "",
+    updatedAt: typeof data.updated_at === "string" ? data.updated_at : "",
   };
 }
 
@@ -715,17 +815,25 @@ async function appendToIssuePlan(
 ): Promise<ToolOutcome> {
   const markdown = typeof args.markdown === "string" ? args.markdown : "";
   if (!markdown.trim()) {
-    return { result: { error: "markdown (the block to add) is required." }, success: false };
+    return {
+      result: { error: "markdown (the block to add) is required." },
+      success: false,
+    };
   }
-  if (!ctx.actorId) return { result: { error: "Run has no owner." }, success: false };
+  if (!ctx.actorId)
+    return { result: { error: "Run has no owner." }, success: false };
   const section =
-    typeof args.section === "string" && args.section.trim() ? args.section.trim() : null;
+    typeof args.section === "string" && args.section.trim()
+      ? args.section.trim()
+      : null;
 
   const target = await resolveTarget(ctx, args.issue);
-  if ("error" in target) return { result: { error: target.error }, success: false };
+  if ("error" in target)
+    return { result: { error: target.error }, success: false };
 
   const current = await readIssueText(target.issue.id);
-  if ("error" in current) return { result: { error: current.error }, success: false };
+  if ("error" in current)
+    return { result: { error: current.error }, success: false };
 
   const next = appendToPlan(current.plan, markdown, section);
   if (next === null) {
@@ -748,10 +856,13 @@ async function appendToIssuePlan(
     actorId: ctx.actorId,
     input: { plan: next },
     viaAssistant: true,
+    expectedUpdatedAt: current.updatedAt || undefined,
   });
   if (!result.ok) {
     return {
-      result: { error: result.errorKey ?? result.rawMessage ?? "Plan update refused." },
+      result: {
+        error: result.errorKey ?? result.rawMessage ?? "Plan update refused.",
+      },
       success: false,
     };
   }
@@ -777,16 +888,22 @@ async function editIssueTextTool(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   if (args.field !== "plan" && args.field !== "description") {
-    return { result: { error: 'field must be "plan" or "description".' }, success: false };
+    return {
+      result: { error: 'field must be "plan" or "description".' },
+      success: false,
+    };
   }
   const field: IssueTextField = args.field;
-  if (!ctx.actorId) return { result: { error: "Run has no owner." }, success: false };
+  if (!ctx.actorId)
+    return { result: { error: "Run has no owner." }, success: false };
 
   const target = await resolveTarget(ctx, args.issue);
-  if ("error" in target) return { result: { error: target.error }, success: false };
+  if ("error" in target)
+    return { result: { error: target.error }, success: false };
 
   const current = await readIssueText(target.issue.id);
-  if ("error" in current) return { result: { error: current.error }, success: false };
+  if ("error" in current)
+    return { result: { error: current.error }, success: false };
 
   const edit = editIssueText({
     field,
@@ -813,10 +930,13 @@ async function editIssueTextTool(
     actorId: ctx.actorId,
     input: { [field]: edit.content },
     viaAssistant: true,
+    expectedUpdatedAt: current.updatedAt || undefined,
   });
   if (!result.ok) {
     return {
-      result: { error: result.errorKey ?? result.rawMessage ?? "Issue update refused." },
+      result: {
+        error: result.errorKey ?? result.rawMessage ?? "Issue update refused.",
+      },
       success: false,
     };
   }
@@ -850,7 +970,8 @@ async function createIssue(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const title = typeof args.title === "string" ? args.title.trim() : "";
-  if (!title) return { result: { error: "title is required." }, success: false };
+  if (!title)
+    return { result: { error: "title is required." }, success: false };
 
   // A ticket created without any objective is a ticket that a human will have to
   // put away: the connection is made HERE, at creation (MIN-287).
@@ -882,7 +1003,10 @@ async function createIssue(
   });
   if (!result.ok) {
     return {
-      result: { error: result.errorKey ?? result.rawMessage ?? "Issue creation refused." },
+      result: {
+        error:
+          result.errorKey ?? result.rawMessage ?? "Issue creation refused.",
+      },
       success: false,
     };
   }
@@ -892,7 +1016,8 @@ async function createIssue(
       ok: true,
       issue: {
         id: (result.issue as { id?: string }).id,
-        identifier: typeof number === "number" ? `${ctx.projectKey}-${number}` : null,
+        identifier:
+          typeof number === "number" ? `${ctx.projectKey}-${number}` : null,
         title,
         status: ctx.numoDefaultStatus,
         objective_id: objectiveId,
@@ -935,10 +1060,13 @@ async function createRoutineTool(
     actorId: ctx.actorId,
     prompt: typeof args.prompt === "string" ? args.prompt : "",
     model: typeof args.model === "string" ? args.model : null,
-    reasoningLevel: typeof args.reasoning_level === "string" ? args.reasoning_level : null,
+    reasoningLevel:
+      typeof args.reasoning_level === "string" ? args.reasoning_level : null,
     baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
     maxSpendPercent:
-      typeof args.max_spend_percent === "number" ? args.max_spend_percent : null,
+      typeof args.max_spend_percent === "number"
+        ? args.max_spend_percent
+        : null,
     frequency: typeof args.frequency === "string" ? args.frequency : "",
     hour: typeof args.hour === "number" ? args.hour : 9,
     minute: typeof args.minute === "number" ? args.minute : 0,
@@ -976,7 +1104,12 @@ async function createRoutineTool(
 /** Refusal from the factory, said in clear so that the agent reports it as is. */
 function routineToolError(r: {
   errorKey: string;
-  modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
+  modelLimit?: {
+    model: string;
+    multiplier: number;
+    limit: number;
+    planId: string;
+  };
 }): string {
   switch (r.errorKey) {
     case "ownerOnly":
@@ -1031,7 +1164,12 @@ async function reportVerdict(
   }
   const summary = typeof args.summary === "string" ? args.summary.trim() : "";
   if (!summary) {
-    return { result: { error: "summary (what you checked and concluded) is required." }, success: false };
+    return {
+      result: {
+        error: "summary (what you checked and concluded) is required.",
+      },
+      success: false,
+    };
   }
   const blockers = (Array.isArray(args.blockers) ? args.blockers : [])
     .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
@@ -1042,13 +1180,23 @@ async function reportVerdict(
   const { error } = await service
     .from("agent_runs")
     .update({
-      verdict: { ok: args.ok, summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS), blockers },
+      verdict: {
+        ok: args.ok,
+        summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS),
+        blockers,
+      },
     })
     .eq("id", ctx.runId);
   if (error) {
-    return { result: { error: `Verdict not saved: ${error.message}` }, success: false };
+    return {
+      result: { error: `Verdict not saved: ${error.message}` },
+      success: false,
+    };
   }
-  return { result: { ok: true, recorded: args.ok ? "pass" : "fail" }, success: true };
+  return {
+    result: { ok: true, recorded: args.ok ? "pass" : "fail" },
+    success: true,
+  };
 }
 
 /** Runs a tool ticket. The caller has already routed to `ISSUE_TOOL_NAMES`. */
@@ -1106,14 +1254,24 @@ export async function executeIssueTool(
       case "update_objective":
       case "comment_objective":
         return await executeObjectiveTool(
-          { projectId: ctx.projectId, projectKey: ctx.projectKey, actorId: ctx.actorId },
+          {
+            projectId: ctx.projectId,
+            projectKey: ctx.projectKey,
+            actorId: ctx.actorId,
+          },
           name,
           args,
         );
       default:
-        return { result: { error: `Unknown issue tool: ${name}` }, success: false };
+        return {
+          result: { error: `Unknown issue tool: ${name}` },
+          success: false,
+        };
     }
   } catch (err) {
-    return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };
+    return {
+      result: { error: err instanceof Error ? err.message : String(err) },
+      success: false,
+    };
   }
 }

@@ -103,9 +103,7 @@ import {
   updateRoutine,
   type Routine,
 } from "@/lib/server/routines";
-import {
-  forgeFor,
-} from "@/lib/server/agent/forge";
+import { forgeFor } from "@/lib/server/agent/forge";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
@@ -163,7 +161,6 @@ import {
  * Each tool re-authenticates (requireUser) and re-verifies project access —
  * there is no session state between two calls (stateless transport).
  */
-
 
 /** Above this, minddy_get_resource never embeds bytes inline (base64 would
     swamp the model's context) — the signed download_url is the way in. */
@@ -272,18 +269,23 @@ function coreFail(r: CoreFailure): ToolResult {
  * a concatenation makes the result opaque).
  */
 async function readIssueText(
-  issueId: string
-): Promise<{ plan: string; description: string } | { error: ToolResult }> {
+  issueId: string,
+): Promise<
+  | { plan: string; description: string; updatedAt: string }
+  | { error: ToolResult }
+> {
   const { data, error } = await getServiceClient()
     .from("issues")
-    .select("plan, description")
+    .select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (error) return { error: fail("database_error", error.message) };
+  if (!data) return { error: fail("not_found", "Issue not found.") };
   return {
     plan: typeof data?.plan === "string" ? data.plan : "",
     description: typeof data?.description === "string" ? data.description : "",
+    updatedAt: typeof data.updated_at === "string" ? data.updated_at : "",
   };
 }
 
@@ -340,7 +342,7 @@ const PLAN_FIELD = z
       "a block, minddy_edit_issue_text rewrites a passage (old_string → " +
       "new_string), minddy_update_plan_task flips a task's state. All three cost " +
       "a few tokens instead of the whole document, and leave what you did not " +
-      "touch exactly as it was."
+      "touch exactly as it was.",
   );
 
 const PROJECT_ID = z
@@ -378,13 +380,18 @@ function mcpRoutine(routine: Routine) {
 /** Refusal of the routine factory → MCP error, with the code which is fine. */
 function routineFailure(r: {
   errorKey: string;
-  modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
+  modelLimit?: {
+    model: string;
+    multiplier: number;
+    limit: number;
+    planId: string;
+  };
 }): ToolResult {
   switch (r.errorKey) {
     case "ownerOnly":
       return fail(
         "forbidden",
-        "Only the project's OWNER can create or change a routine — it is their AI usage budget that runs on every occurrence. There is no way around it."
+        "Only the project's OWNER can create or change a routine — it is their AI usage budget that runs on every occurrence. There is no way around it.",
       );
     case "projectNotFound":
       return fail("not_found", "Project not found or not accessible.");
@@ -393,26 +400,29 @@ function routineFailure(r: {
     case "noRepo":
       return fail(
         "invalid_params",
-        "This project has no linked repository, so a routine would have nothing to clone. Link one first."
+        "This project has no linked repository, so a routine would have nothing to clone. Link one first.",
       );
     case "promptRequired":
-      return fail("invalid_params", "prompt is required — it is the instruction each run receives.");
+      return fail(
+        "invalid_params",
+        "prompt is required — it is the instruction each run receives.",
+      );
     case "unknownTimezone":
       return fail(
         "invalid_params",
-        "timezone must be a valid IANA name (e.g. 'Europe/Paris'). Pass the user's own timezone; never guess and never fall back to UTC."
+        "timezone must be a valid IANA name (e.g. 'Europe/Paris'). Pass the user's own timezone; never guess and never fall back to UTC.",
       );
     case "invalidSchedule":
       return fail(
         "invalid_params",
-        "The cadence does not hold together: 'weekly' takes at least one day in weekdays (0=Sunday…6=Saturday) and no days_of_month; 'monthly' takes at least one day in days_of_month (1–31) and no weekdays."
+        "The cadence does not hold together: 'weekly' takes at least one day in weekdays (0=Sunday…6=Saturday) and no days_of_month; 'monthly' takes at least one day in days_of_month (1–31) and no weekdays.",
       );
     case "modelAbovePlan":
       return fail(
         "forbidden",
         r.modelLimit
           ? `The model ${r.modelLimit.model} costs ${r.modelLimit.multiplier}x minddy's default model, above the ${r.modelLimit.limit}x ceiling of the ${r.modelLimit.planId} plan. Omit model to use the account default.`
-          : "That model is above the plan's model ceiling. Omit model to use the account default."
+          : "That model is above the plan's model ceiling. Omit model to use the account default.",
       );
     case "noFieldsToUpdate":
       return fail("invalid_params", "Pass at least one field to change.");
@@ -424,7 +434,7 @@ function routineFailure(r: {
 const ISSUE_REF = z
   .string()
   .describe(
-    "Issue reference: UUID, identifier like 'MIND-42', or bare issue number."
+    "Issue reference: UUID, identifier like 'MIND-42', or bare issue number.",
   );
 
 const RECURRENCE_FIELD = z
@@ -438,7 +448,7 @@ const RECURRENCE_FIELD = z
       "completing it (status 'done') creates the next occurrence in 'backlog' " +
       "one cadence later and carries the recurrence over — only ever ONE live " +
       "issue per series, so never create the next occurrence yourself. Clear it " +
-      "(null, via minddy_update_issues) to stop the series."
+      "(null, via minddy_update_issues) to stop the series.",
   );
 
 function mcpReadCtx(access: ProjectAccess): ReadContext {
@@ -455,19 +465,27 @@ function mcpReadCtx(access: ProjectAccess): ReadContext {
  resolveIssueRef for feedback (no KEY-N identifier, only the id). */
 async function resolveFeedbackPost(
   access: ProjectAccess,
-  postId: unknown
-): Promise<{ post: { id: string; title: string; issue_id: string | null } } | { error: ToolResult }> {
+  postId: unknown,
+): Promise<
+  | { post: { id: string; title: string; issue_id: string | null } }
+  | { error: ToolResult }
+> {
   if (typeof postId !== "string" || !postId) {
     return {
       error: fail(
         "invalid_params",
-        "feedback_post_id is required: a feedback post UUID (from minddy_list_feedback)."
+        "feedback_post_id is required: a feedback post UUID (from minddy_list_feedback).",
       ),
     };
   }
   const post = await getProjectFeedbackPost(access.project.id, postId);
   if (!post) {
-    return { error: fail("feedback_not_found", "Feedback post not found in this project.") };
+    return {
+      error: fail(
+        "feedback_not_found",
+        "Feedback post not found in this project.",
+      ),
+    };
   }
   return { post: { id: post.id, title: post.title, issue_id: post.issue_id } };
 }
@@ -479,13 +497,13 @@ async function resolveFeedbackPost(
  (20260728091000_objective_activity.sql): a line hangs from a ticket or an objective
 , never from both. */
 async function recentActivity(
-  parent: { issue_id: string } | { objective_id: string }
+  parent: { issue_id: string } | { objective_id: string },
 ): Promise<Array<Record<string, unknown>>> {
   const service = getServiceClient();
   const query = service
     .from("issue_events")
     .select(
-      "type, field, from_value, to_value, actor_id, via_assistant, via_mcp, api_key_id, integration_id, created_at"
+      "type, field, from_value, to_value, actor_id, via_assistant, via_mcp, api_key_id, integration_id, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(20);
@@ -499,7 +517,9 @@ async function recentActivity(
   const [users, keyActors, { data: integrations }] = await Promise.all([
     fetchAuthUsersById(
       service,
-      events.map((e) => e.actor_id).filter((v): v is string => typeof v === "string")
+      events
+        .map((e) => e.actor_id)
+        .filter((v): v is string => typeof v === "string"),
     ),
     resolveApiKeyActors(events.map((e) => e.api_key_id as string | null)),
     service
@@ -509,11 +529,13 @@ async function recentActivity(
         ...new Set(
           events
             .map((e) => e.integration_id)
-            .filter((v): v is string => typeof v === "string")
+            .filter((v): v is string => typeof v === "string"),
         ),
       ]),
   ]);
-  const integrationNames = new Map((integrations ?? []).map((i) => [i.id, i.name]));
+  const integrationNames = new Map(
+    (integrations ?? []).map((i) => [i.id, i.name]),
+  );
 
   return events.map((e) => {
     // PR/MR action from a webhook provider: no minddy actor — the login
@@ -545,17 +567,28 @@ async function recentActivity(
  next to UUIDs — “human-readable identifiers” principle. */
 async function withNames(
   rows: Array<Record<string, unknown>>,
-  access: ProjectAccess
+  access: ProjectAccess,
 ): Promise<Array<Record<string, unknown>>> {
   const service = getServiceClient();
-  const [users, { data: objectives }, { data: categories }] = await Promise.all([
-    fetchAuthUsersById(
-      service,
-      rows.map((r) => r.assignee_id).filter((v): v is string => typeof v === "string")
-    ),
-    service.from("objectives").select("id, name").eq("project_id", access.project.id).is("deleted_at", null),
-    service.from("categories").select("id, name").eq("project_id", access.project.id),
-  ]);
+  const [users, { data: objectives }, { data: categories }] = await Promise.all(
+    [
+      fetchAuthUsersById(
+        service,
+        rows
+          .map((r) => r.assignee_id)
+          .filter((v): v is string => typeof v === "string"),
+      ),
+      service
+        .from("objectives")
+        .select("id, name")
+        .eq("project_id", access.project.id)
+        .is("deleted_at", null),
+      service
+        .from("categories")
+        .select("id, name")
+        .eq("project_id", access.project.id),
+    ],
+  );
   const objectiveNames = new Map((objectives ?? []).map((o) => [o.id, o.name]));
   const categoryNames = new Map((categories ?? []).map((c) => [c.id, c.name]));
 
@@ -591,7 +624,7 @@ async function withNames(
 async function resolveCategoryRefs(
   projectId: string,
   ids: string[] | undefined,
-  names: string[] | undefined
+  names: string[] | undefined,
 ): Promise<{ ids: string[]; unmatched: string[] } | { error: ToolResult }> {
   if (!ids?.length && !names?.length) return { ids: [], unmatched: [] };
   const { data, error } = await getServiceClient()
@@ -602,7 +635,7 @@ async function resolveCategoryRefs(
   const rows = data ?? [];
   const knownIds = new Set(rows.map((c) => c.id as string));
   const byName = new Map(
-    rows.map((c) => [(c.name as string).trim().toLowerCase(), c.id as string])
+    rows.map((c) => [(c.name as string).trim().toLowerCase(), c.id as string]),
   );
 
   const resolved = new Set<string>();
@@ -631,7 +664,7 @@ const RELATION_INPUT = z.object({
       "The other issue: UUID, identifier ('MIND-42'), bare number, or 'sub:N' " +
         "— the Nth sub-issue of this same call, 1-based. 'sub:N' is what lets a " +
         "breakdown wire its own dependencies in one pass, before the sub-issues " +
-        "have identifiers."
+        "have identifiers.",
     ),
 });
 
@@ -648,13 +681,22 @@ type RelationInput = z.infer<typeof RELATION_INPUT>;
  */
 async function applyCreatedRelations(
   scope: { userId: string; keyId: string | null; access: ProjectAccess },
-  requests: Array<{ source: { id: string; identifier: string }; input: RelationInput }>,
-  subsByIndex: Map<number, { id: string; identifier: string }>
+  requests: Array<{
+    source: { id: string; identifier: string };
+    input: RelationInput;
+  }>,
+  subsByIndex: Map<number, { id: string; identifier: string }>,
 ): Promise<{
   applied: Array<{ issue: string; relation: string; target: string }>;
-  failed: Array<{ issue: string; relation: string; target: string; error: string }>;
+  failed: Array<{
+    issue: string;
+    relation: string;
+    target: string;
+    error: string;
+  }>;
 }> {
-  const applied: Array<{ issue: string; relation: string; target: string }> = [];
+  const applied: Array<{ issue: string; relation: string; target: string }> =
+    [];
   const failed: Array<{
     issue: string;
     relation: string;
@@ -749,9 +791,9 @@ function withToolAnalytics(server: McpServer): McpServer {
       const startedAt = Date.now();
       let outcome = "ok";
       try {
-        const result = (await (handler as (...a: unknown[]) => Promise<ToolResult>)(
-          ...args
-        )) as ToolResult;
+        const result = (await (
+          handler as (...a: unknown[]) => Promise<ToolResult>
+        )(...args)) as ToolResult;
         // The tools do not raise: they return `fail(...)`, marked isError.
         if (result?.isError) outcome = "error";
         return result;
@@ -798,7 +840,7 @@ function withCompactDiscoveryMetadata(server: McpServer): McpServer {
   const original = server.registerTool.bind(server) as (
     name: string,
     config: DiscoveryToolConfig,
-    handler: unknown
+    handler: unknown,
   ) => unknown;
 
   return new Proxy(server, {
@@ -811,10 +853,10 @@ function withCompactDiscoveryMetadata(server: McpServer): McpServer {
               ...config,
               description: compactToolDescription(
                 config.description,
-                config.annotations
+                config.annotations,
               ),
             },
-            handler
+            handler,
           );
       }
       // oxlint-disable-next-line anti-slop/no-reflect-get
@@ -831,7 +873,7 @@ export interface RegisterMinddyToolsOptions {
 
 export function registerMinddyTools(
   rawServer: McpServer,
-  options: RegisterMinddyToolsOptions = {}
+  options: RegisterMinddyToolsOptions = {},
 ): void {
   const discoveryServer =
     options.descriptions === "full"
@@ -889,7 +931,7 @@ export function registerMinddyTools(
           role: p.owner_id === auth.userId ? "owner" : "member",
         })),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -926,7 +968,7 @@ export function registerMinddyTools(
           created_at: project.created_at,
         },
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -946,11 +988,15 @@ export function registerMinddyTools(
         query: z
           .string()
           .optional()
-          .describe("Text search (title/description) or exact identifier/number."),
+          .describe(
+            "Text search (title/description) or exact identifier/number.",
+          ),
         status: z
           .array(z.enum(ISSUE_STATUSES))
           .optional()
-          .describe("Only these statuses (overrides the closed-issues default)."),
+          .describe(
+            "Only these statuses (overrides the closed-issues default).",
+          ),
         assignee_id: z
           .string()
           .nullable()
@@ -959,7 +1005,13 @@ export function registerMinddyTools(
         objective_id: z.string().uuid().optional(),
         category_id: z.string().uuid().optional(),
         include_done: z.boolean().optional(),
-        limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Default 50."),
         offset: z.number().int().min(0).optional(),
         response_format: z.enum(["concise", "detailed"]).optional(),
       }),
@@ -972,17 +1024,27 @@ export function registerMinddyTools(
       const detailed = args.response_format === "detailed";
 
       if (typeof args.query === "string" && args.query.trim()) {
-        const r = await searchIssues(ctx, { query: args.query, limit: args.limit });
+        const r = await searchIssues(ctx, {
+          query: args.query,
+          limit: args.limit,
+        });
         if ("error" in r) return fail("invalid_params", r.error);
-        const issues = detailed ? await withNames(r.issues, scope.access) : r.issues;
+        const issues = detailed
+          ? await withNames(r.issues, scope.access)
+          : r.issues;
         return ok({ issues, has_more: false });
       }
 
-      const r = await listIssues(ctx, { ...args, include_description: detailed });
+      const r = await listIssues(ctx, {
+        ...args,
+        include_description: detailed,
+      });
       if ("error" in r) return fail("database_error", r.error);
-      const issues = detailed ? await withNames(r.issues, scope.access) : r.issues;
+      const issues = detailed
+        ? await withNames(r.issues, scope.access)
+        : r.issues;
       return ok({ issues, has_more: r.has_more });
-    }
+    },
   );
 
   server.registerTool(
@@ -1018,7 +1080,9 @@ export function registerMinddyTools(
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      const r = await getIssue(mcpReadCtx(scope.access), { issue_id: ref.issue.id });
+      const r = await getIssue(mcpReadCtx(scope.access), {
+        issue_id: ref.issue.id,
+      });
       if ("error" in r) return fail("issue_not_found", r.error);
 
       const activity = await recentActivity({ issue_id: ref.issue.id });
@@ -1039,7 +1103,7 @@ export function registerMinddyTools(
             }
           : {}),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -1087,7 +1151,7 @@ export function registerMinddyTools(
       if (prNumber == null) {
         return fail(
           "pull_request_not_found",
-          `Issue '${ref.issue.identifier}' has no pull request opened by the code agent yet.`
+          `Issue '${ref.issue.identifier}' has no pull request opened by the code agent yet.`,
         );
       }
 
@@ -1162,7 +1226,11 @@ export function registerMinddyTools(
                     .filter((c) => c.state === "failure")
                     // `description` = what the forge says about failure, when it
                     // formulate it: enough to know WHAT to correct without opening the link.
-                    .map((c) => ({ name: c.name, url: c.url, description: c.description })),
+                    .map((c) => ({
+                      name: c.name,
+                      url: c.url,
+                      description: c.description,
+                    })),
                 }
               : null,
             repository: target.repoFullName,
@@ -1176,14 +1244,17 @@ export function registerMinddyTools(
               patch:
                 f.patch && f.patch.length > MAX_PATCH_CHARS
                   ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
-                  : f.patch ?? null,
+                  : (f.patch ?? null),
             })),
             // The pagination of the forge cut the list: say it rather than
             // let conclude on what has been seen.
             files_truncated: diff.truncated,
             // Review threads anchored to the code. An expired thread (`outdated`) no longer has
             // reliable anchor — its `diff_hunk` is the only trace of the targeted code.
-            review_comments: groupReviewThreads(reviewComments, reviewThreads).map((thread) => ({
+            review_comments: groupReviewThreads(
+              reviewComments,
+              reviewThreads,
+            ).map((thread) => ({
               id: thread.id,
               path: thread.root.path,
               line: thread.root.line,
@@ -1210,7 +1281,7 @@ export function registerMinddyTools(
       } catch (e) {
         return fail("github_error", (e as Error).message);
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -1238,7 +1309,7 @@ export function registerMinddyTools(
           .union([z.string(), z.number()])
           .describe(
             "The pull request to attach: its number (42), '#42', '!42' for a GitLab " +
-              "merge request, or its full URL on the forge."
+              "merge request, or its full URL on the forge.",
           ),
       }),
       annotations: WRITE_IDEMPOTENT,
@@ -1258,15 +1329,18 @@ export function registerMinddyTools(
         if (found.error === "invalid_ref") {
           return fail(
             "invalid_params",
-            "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge."
+            "pull_request must be a pull request number (42, '#42', '!42') or its URL on the forge.",
           );
         }
         if (found.error === "no_repository") {
-          return fail("no_repository", "This project has no linked repository.");
+          return fail(
+            "no_repository",
+            "This project has no linked repository.",
+          );
         }
         return fail(
           "pull_request_not_found",
-          "No pull request with that number in the repository linked to this project."
+          "No pull request with that number in the repository linked to this project.",
         );
       }
 
@@ -1290,7 +1364,7 @@ export function registerMinddyTools(
         issue: { id: ref.issue.id, identifier: ref.issue.identifier },
         issue_status: result.status,
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -1308,11 +1382,11 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
       const r = await listMembers(
         mcpReadCtx(scope.access),
-        scope.access.project.owner_id
+        scope.access.project.owner_id,
       );
       if ("error" in r) return fail("database_error", r.error);
       return ok(r);
-    }
+    },
   );
 
   server.registerTool(
@@ -1335,7 +1409,7 @@ export function registerMinddyTools(
         .order("name", { ascending: true });
       if (error) return fail("database_error", error.message);
       return ok({ categories: data ?? [] });
-    }
+    },
   );
 
   server.registerTool(
@@ -1367,7 +1441,9 @@ export function registerMinddyTools(
       ] = await Promise.all([
         service
           .from("objectives")
-          .select("id, name, description, status, lead_user_id, target_date, color")
+          .select(
+            "id, name, description, status, lead_user_id, target_date, color",
+          )
           .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .order("created_at", { ascending: true }),
@@ -1382,7 +1458,7 @@ export function registerMinddyTools(
         service
           .from("attachments")
           .select(
-            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)"
+            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
           )
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null)
@@ -1408,17 +1484,27 @@ export function registerMinddyTools(
       // percentage which already credits them at 100%: a canceled ticket is settled.
       const progress = new Map<
         string,
-        { done: number; total: number; totalPoints: number; earnedPoints: number }
+        {
+          done: number;
+          total: number;
+          totalPoints: number;
+          earnedPoints: number;
+        }
       >();
       for (const issue of linkedIssues ?? []) {
         const id = issue.objective_id as string;
-        const entry =
-          progress.get(id) ?? { done: 0, total: 0, totalPoints: 0, earnedPoints: 0 };
+        const entry = progress.get(id) ?? {
+          done: 0,
+          total: 0,
+          totalPoints: 0,
+          earnedPoints: 0,
+        };
         entry.total += 1;
         if (isClosedStatus(issue.status as IssueStatus)) entry.done += 1;
         const points = effortToPoints(issue.effort as IssueEffort | null);
         entry.totalPoints += points;
-        entry.earnedPoints += points * statusCompletionCredit(issue.status as IssueStatus);
+        entry.earnedPoints +=
+          points * statusCompletionCredit(issue.status as IssueStatus);
         progress.set(id, entry);
       }
 
@@ -1426,20 +1512,26 @@ export function registerMinddyTools(
         service,
         (data ?? [])
           .map((o) => o.lead_user_id)
-          .filter((v): v is string => typeof v === "string")
+          .filter((v): v is string => typeof v === "string"),
       );
       return ok({
         objectives: (data ?? []).map((o) => {
-          const p =
-            progress.get(o.id as string) ??
-            { done: 0, total: 0, totalPoints: 0, earnedPoints: 0 };
+          const p = progress.get(o.id as string) ?? {
+            done: 0,
+            total: 0,
+            totalPoints: 0,
+            earnedPoints: 0,
+          };
           const atts = resourcesByObjective.get(o.id as string);
           return {
             ...o,
             // Truncated: a list is used to CHOOSE. The entire document is in
             // minddy_get_objective, and twenty complete descriptions would drown
             // the answer for the only one that interests the caller.
-            description: truncate(o.description as string | null, MAX_LIST_DESCRIPTION_CHARS),
+            description: truncate(
+              o.description as string | null,
+              MAX_LIST_DESCRIPTION_CHARS,
+            ),
             lead_name: o.lead_user_id
               ? displayName(toNamed(leads.get(o.lead_user_id)), "User")
               : null,
@@ -1455,7 +1547,7 @@ export function registerMinddyTools(
           };
         }),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -1499,34 +1591,41 @@ export function registerMinddyTools(
         return fail("not_found", "Objective not found in this project.");
       }
 
-      const [{ data: issues }, { data: comments }, { data: attachmentRows }, activity] =
-        await Promise.all([
-          service
-            .from("issues")
-            .select("id, number, title, status, priority, effort, assignee_id")
-            .is("deleted_at", null)
-            .eq("objective_id", objective.id)
-            .order("number", { ascending: true }),
-          service
-            .from("comments")
-            .select(
-              "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at"
-            )
-            .eq("objective_id", objective.id)
-            .order("created_at", { ascending: true }),
-          service
-            .from("attachments")
-            .select(
-              "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)"
-            )
-            .eq("objective_id", objective.id)
-            .order("created_at", { ascending: true }),
-          recentActivity({ objective_id: objective.id as string }),
-        ]);
+      const [
+        { data: issues },
+        { data: comments },
+        { data: attachmentRows },
+        activity,
+      ] = await Promise.all([
+        service
+          .from("issues")
+          .select("id, number, title, status, priority, effort, assignee_id")
+          .is("deleted_at", null)
+          .eq("objective_id", objective.id)
+          .order("number", { ascending: true }),
+        service
+          .from("comments")
+          .select(
+            "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at",
+          )
+          .eq("objective_id", objective.id)
+          .order("created_at", { ascending: true }),
+        service
+          .from("attachments")
+          .select(
+            "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
+          )
+          .eq("objective_id", objective.id)
+          .order("created_at", { ascending: true }),
+        recentActivity({ objective_id: objective.id as string }),
+      ]);
 
       // Resources: `comment_id` null = carried by the objective itself, otherwise
       // by one of his comments — same cut as minddy_get_issue.
-      const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
+      const resourcesByComment = new Map<
+        string | null,
+        Record<string, unknown>[]
+      >();
       for (const row of attachmentRows ?? []) {
         const key = (row.comment_id as string | null) ?? null;
         const list = resourcesByComment.get(key) ?? [];
@@ -1542,9 +1641,13 @@ export function registerMinddyTools(
           ...(issues ?? [])
             .map((i) => i.assignee_id)
             .filter((v): v is string => typeof v === "string"),
-          ...(typeof objective.lead_user_id === "string" ? [objective.lead_user_id] : []),
+          ...(typeof objective.lead_user_id === "string"
+            ? [objective.lead_user_id]
+            : []),
         ]),
-        resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
+        resolveApiKeyActors(
+          (comments ?? []).map((c) => c.api_key_id as string | null),
+        ),
       ]);
 
       // Progression: same accounts and same weighting by effort as
@@ -1556,7 +1659,8 @@ export function registerMinddyTools(
         if (isClosedStatus(issue.status as IssueStatus)) done += 1;
         const points = effortToPoints(issue.effort as IssueEffort | null);
         totalPoints += points;
-        earnedPoints += points * statusCompletionCredit(issue.status as IssueStatus);
+        earnedPoints +=
+          points * statusCompletionCredit(issue.status as IssueStatus);
       }
 
       return ok({
@@ -1570,13 +1674,18 @@ export function registerMinddyTools(
             done,
             total: (issues ?? []).length,
             percent:
-              totalPoints === 0 ? 0 : Math.round((earnedPoints / totalPoints) * 100),
+              totalPoints === 0
+                ? 0
+                : Math.round((earnedPoints / totalPoints) * 100),
           },
           resources: resourcesByComment.get(null) ?? [],
         },
         issues: (issues ?? []).map((i) => ({
           id: i.id,
-          identifier: issueIdentifier(scope.access.project.key, i.number as number),
+          identifier: issueIdentifier(
+            scope.access.project.key,
+            i.number as number,
+          ),
           title: i.title,
           status: i.status,
           priority: i.priority,
@@ -1595,7 +1704,10 @@ export function registerMinddyTools(
               ? "Numo"
               : c.via_mcp
                 ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
-                : displayName(toNamed(users.get(c.author_id as string)), "User"),
+                : displayName(
+                    toNamed(users.get(c.author_id as string)),
+                    "User",
+                  ),
             body: c.body,
             parent_id: c.parent_id,
             created_at: c.created_at,
@@ -1604,7 +1716,7 @@ export function registerMinddyTools(
         }),
         activity,
       });
-    }
+    },
   );
 
   // ── Writes (no deletions) ───────────────────────────────────
@@ -1647,7 +1759,9 @@ export function registerMinddyTools(
         description: z
           .string()
           .optional()
-          .describe("Markdown. WHAT and WHY — write one on every issue you create."),
+          .describe(
+            "Markdown. WHAT and WHY — write one on every issue you create.",
+          ),
         plan: PLAN_FIELD.optional(),
         status: z.enum(ISSUE_STATUSES).optional().describe("Default: backlog."),
         priority: z
@@ -1655,21 +1769,21 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "ALWAYS pass one, estimated from the work when the human did not say. " +
-              "Default 'none' means 'nobody has judged this yet'."
+              "Default 'none' means 'nobody has judged this yet'.",
           ),
         effort: z
           .enum(ISSUE_EFFORTS)
           .optional()
           .describe(
             "ALWAYS pass one, estimated from the work (t-shirt size). It is what " +
-              "weights the objective's progress bar and fills a cycle."
+              "weights the objective's progress bar and fills a cycle.",
           ),
         assignee_id: z
           .string()
           .optional()
           .describe(
             "Member user_id (minddy_list_members). The person the human named; " +
-              "on a single-member project, the owner. Never a colleague nobody chose."
+              "on a single-member project, the owner. Never a colleague nobody chose.",
           ),
         objective_id: z
           .string()
@@ -1677,29 +1791,33 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "The objective this work belongs to (minddy_list_objectives). Attach " +
-              "it whenever one covers the ticket."
+              "it whenever one covers the ticket.",
           ),
-        parent: ISSUE_REF.optional().describe("Parent issue → creates a sub-issue."),
+        parent: ISSUE_REF.optional().describe(
+          "Parent issue → creates a sub-issue.",
+        ),
         due_date: z.string().optional().describe("ISO 8601 date or datetime."),
         recurrence: RECURRENCE_FIELD.optional(),
         category_ids: z
           .array(z.string().uuid())
           .optional()
-          .describe("Category UUIDs (minddy_list_categories). Combines with category_names."),
+          .describe(
+            "Category UUIDs (minddy_list_categories). Combines with category_names.",
+          ),
         category_names: z
           .array(z.string().min(1))
           .optional()
           .describe(
             "Categories BY NAME, case-insensitive — the cheap way to label an " +
               "issue without a lookup first. Names matching nothing come back in " +
-              "`categories_unmatched` (this tool never creates a category)."
+              "`categories_unmatched` (this tool never creates a category).",
           ),
         relations: RELATION_INPUT.array()
           .max(50)
           .optional()
           .describe(
             "Relations of the NEW issue, applied once everything exists. Targets " +
-              "are existing issues, or 'sub:N' for a sub-issue of this same call."
+              "are existing issues, or 'sub:N' for a sub-issue of this same call.",
           ),
         sub_issues: z
           .array(
@@ -1721,9 +1839,9 @@ export function registerMinddyTools(
                   "Relations of THIS sub-issue. 'sub:N' targets a sibling of the " +
                     "same call (1-based, in the order of this array), so a " +
                     "breakdown states its own order of work: step 2 is " +
-                    "blocked_by 'sub:1'."
+                    "blocked_by 'sub:1'.",
                 ),
-            })
+            }),
           )
           .min(1)
           .max(50)
@@ -1732,7 +1850,7 @@ export function registerMinddyTools(
             "Sub-issues created under the new issue, in order. They inherit its " +
               "objective. Fill them like the parent — priority, effort, " +
               "categories, and the relations that order them. Incompatible with " +
-              "parent (nesting is one level max)."
+              "parent (nesting is one level max).",
           ),
       }),
       annotations: WRITE,
@@ -1746,7 +1864,7 @@ export function registerMinddyTools(
         if (args.sub_issues?.length) {
           return fail(
             "invalid_params",
-            "sub_issues can't be combined with parent: nesting is limited to one level."
+            "sub_issues can't be combined with parent: nesting is limited to one level.",
           );
         }
         const parent = await resolveIssueRef(scope.access, args.parent);
@@ -1769,7 +1887,7 @@ export function registerMinddyTools(
       const cats = await resolveCategoryRefs(
         scope.access.project.id,
         categoryIds,
-        categoryNames
+        categoryNames,
       );
       if ("error" in cats) return cats.error;
       unmatchedCategories.push(...cats.unmatched);
@@ -1788,7 +1906,7 @@ export function registerMinddyTools(
       if (!result.ok) return coreFail(result);
       const identifier = issueIdentifier(
         scope.access.project.key,
-        result.issue.number as number
+        result.issue.number as number,
       );
       const created = { id: result.issue.id as string, identifier };
 
@@ -1815,7 +1933,7 @@ export function registerMinddyTools(
         const subCats = await resolveCategoryRefs(
           scope.access.project.id,
           subCategoryIds,
-          subCategoryNames
+          subCategoryNames,
         );
         if ("error" in subCats) return subCats.error;
         unmatchedCategories.push(...subCats.unmatched);
@@ -1836,7 +1954,7 @@ export function registerMinddyTools(
             id: subResult.issue.id as string,
             identifier: issueIdentifier(
               scope.access.project.key,
-              subResult.issue.number as number
+              subResult.issue.number as number,
             ),
           };
           subsByIndex.set(index + 1, subCreated);
@@ -1857,7 +1975,7 @@ export function registerMinddyTools(
       const relations = await applyCreatedRelations(
         scope,
         relationRequests,
-        subsByIndex
+        subsByIndex,
       );
 
       return ok({
@@ -1872,7 +1990,7 @@ export function registerMinddyTools(
           ? { categories_unmatched: [...new Set(unmatchedCategories)] }
           : {}),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -1909,8 +2027,11 @@ export function registerMinddyTools(
             assignee_id: z.string().nullable().optional(),
             objective_id: z.string().uuid().nullable().optional(),
             parent: ISSUE_REF.nullable().optional(),
-            duplicate_of: ISSUE_REF.nullable().optional()
-              .describe("With status 'duplicate': the issue this one duplicates."),
+            duplicate_of: ISSUE_REF.nullable()
+              .optional()
+              .describe(
+                "With status 'duplicate': the issue this one duplicates.",
+              ),
             due_date: z.string().nullable().optional(),
             recurrence: RECURRENCE_FIELD.nullable().optional(),
             category_ids: z
@@ -1918,7 +2039,7 @@ export function registerMinddyTools(
               .optional()
               .describe(
                 "REPLACES the whole category set. Combines with category_names; " +
-                  "an empty array clears every category."
+                  "an empty array clears every category.",
               ),
             category_names: z
               .array(z.string().min(1))
@@ -1926,7 +2047,7 @@ export function registerMinddyTools(
               .describe(
                 "Same replacement, BY NAME (case-insensitive) — no " +
                   "minddy_list_categories round trip. Names matching nothing come " +
-                  "back in `categories_unmatched`."
+                  "back in `categories_unmatched`.",
               ),
           })
           .describe("At least one field."),
@@ -1938,18 +2059,13 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
 
       // Resolve field issue references BEFORE the loop.
-      const {
-        category_ids,
-        category_names,
-        parent,
-        duplicate_of,
-        ...fields
-      } = args.fields as Record<string, unknown> & {
-        category_ids?: string[];
-        category_names?: string[];
-        parent?: string | null;
-        duplicate_of?: string | null;
-      };
+      const { category_ids, category_names, parent, duplicate_of, ...fields } =
+        args.fields as Record<string, unknown> & {
+          category_ids?: string[];
+          category_names?: string[];
+          parent?: string | null;
+          duplicate_of?: string | null;
+        };
       // The two keys are a REPLACEMENT of the set of categories: their PRESENCE
       // decides, not their content — `category_ids: []` erases everything.
       const setsCategories =
@@ -1960,7 +2076,7 @@ export function registerMinddyTools(
         const cats = await resolveCategoryRefs(
           scope.access.project.id,
           category_ids,
-          category_names
+          category_names,
         );
         if ("error" in cats) return cats.error;
         resolvedCategoryIds = cats.ids;
@@ -1981,7 +2097,10 @@ export function registerMinddyTools(
         } else fields.duplicate_of_id = null;
       }
       if (Object.keys(fields).length === 0 && !setsCategories) {
-        return fail("invalid_params", "fields must contain at least one field.");
+        return fail(
+          "invalid_params",
+          "fields must contain at least one field.",
+        );
       }
 
       const updated: string[] = [];
@@ -1989,7 +2108,10 @@ export function registerMinddyTools(
       for (const ref of args.issues) {
         const resolved = await resolveIssueRef(scope.access, ref);
         if ("error" in resolved) {
-          failed.push({ issue: ref, error: `Issue '${ref}' not found in this project.` });
+          failed.push({
+            issue: ref,
+            error: `Issue '${ref}' not found in this project.`,
+          });
           continue;
         }
         if (Object.keys(fields).length > 0) {
@@ -2032,7 +2154,7 @@ export function registerMinddyTools(
           ? { categories_unmatched: unmatchedCategories }
           : {}),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -2056,7 +2178,7 @@ export function registerMinddyTools(
             z.object({
               task_index: z.number().int().min(0),
               state: z.enum(PLAN_TASK_STATES),
-            })
+            }),
           )
           .min(1)
           .max(50),
@@ -2083,7 +2205,7 @@ export function registerMinddyTools(
           "plan_task_not_found",
           `No plan task at index(es) ${[...new Set(invalid)].join(", ")}: ` +
             `${ref.issue.identifier} has ${parsed.tasks.length} task(s). ` +
-            "Fetch minddy_get_issue for plan_tasks."
+            "Fetch minddy_get_issue for plan_tasks.",
         );
       }
 
@@ -2091,7 +2213,11 @@ export function registerMinddyTools(
       // state marker, never the document structure.
       let nextPlan = plan;
       for (const t of args.tasks) {
-        nextPlan = setTaskState(nextPlan, parsed.tasks[t.task_index].line, t.state);
+        nextPlan = setTaskState(
+          nextPlan,
+          parsed.tasks[t.task_index].line,
+          t.state,
+        );
       }
 
       const result = await updateIssueFields({
@@ -2099,6 +2225,7 @@ export function registerMinddyTools(
         actorId: scope.userId,
         input: { plan: nextPlan },
         mcpKeyId: scope.keyId,
+        expectedUpdatedAt: current.updatedAt || undefined,
       });
       if (!result.ok) return coreFail(result);
 
@@ -2106,7 +2233,7 @@ export function registerMinddyTools(
         issue: ref.issue.identifier,
         ...planTaskSummary(result.issue.plan as string | null),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -2133,7 +2260,7 @@ export function registerMinddyTools(
           .describe(
             "The block to ADD, markdown: checkbox task lines ('- [ ] …') and/or a " +
               "short paragraph. ONLY what is new — everything already in the plan " +
-              "is kept as-is, so never repeat it here."
+              "is kept as-is, so never repeat it here.",
           ),
         section: z
           .string()
@@ -2142,7 +2269,7 @@ export function registerMinddyTools(
             "Exact text of an existing heading to append under (e.g. 'Questions' " +
               "to park an open question). Omit to append at the end of the plan. " +
               "An unknown heading is an error, not a new section — read the plan " +
-              "with minddy_get_issue first."
+              "with minddy_get_issue first.",
           ),
       }),
       annotations: WRITE,
@@ -2167,14 +2294,14 @@ export function registerMinddyTools(
           "plan_section_not_found",
           `The plan of ${ref.issue.identifier} has no "${section}" heading. ` +
             "Read it with minddy_get_issue to see its headings, or omit " +
-            '"section" to append at the end of the plan.'
+            '"section" to append at the end of the plan.',
         );
       }
       if (next.length > MAX_PLAN_LENGTH) {
         return fail(
           "invalid_params",
           `The plan is capped at ${MAX_PLAN_LENGTH} characters; this block would ` +
-            `take it to ${next.length}.`
+            `take it to ${next.length}.`,
         );
       }
 
@@ -2183,6 +2310,7 @@ export function registerMinddyTools(
         actorId: scope.userId,
         input: { plan: next },
         mcpKeyId: scope.keyId,
+        expectedUpdatedAt: current.updatedAt || undefined,
       });
       if (!result.ok) return coreFail(result);
 
@@ -2190,7 +2318,7 @@ export function registerMinddyTools(
         issue: ref.issue.identifier,
         ...planTaskSummary(result.issue.plan as string | null),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -2219,7 +2347,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "The exact passage to replace, copied VERBATIM from what " +
-              "minddy_get_issue returned — whitespace and line breaks included."
+              "minddy_get_issue returned — whitespace and line breaks included.",
           ),
         new_string: z
           .string()
@@ -2229,7 +2357,7 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "Replace EVERY occurrence instead of requiring a unique match " +
-              "(default false). Use it for a term repeated throughout the text."
+              "(default false). Use it for a term repeated throughout the text.",
           ),
       }),
       annotations: WRITE,
@@ -2261,7 +2389,7 @@ export function registerMinddyTools(
         return fail(
           "invalid_params",
           `The ${field} is capped at ${cap} characters; this edit would take it ` +
-            `to ${edit.content.length}.`
+            `to ${edit.content.length}.`,
         );
       }
 
@@ -2270,6 +2398,7 @@ export function registerMinddyTools(
         actorId: scope.userId,
         input: { [field]: edit.content },
         mcpKeyId: scope.keyId,
+        expectedUpdatedAt: current.updatedAt || undefined,
       });
       if (!result.ok) return coreFail(result);
 
@@ -2280,13 +2409,15 @@ export function registerMinddyTools(
         additions: edit.additions,
         deletions: edit.deletions,
         length: edit.content.length,
-        diff: truncated ? `${edit.diff.slice(0, MAX_EDIT_DIFF_CHARS)}\n…` : edit.diff,
+        diff: truncated
+          ? `${edit.diff.slice(0, MAX_EDIT_DIFF_CHARS)}\n…`
+          : edit.diff,
         ...(truncated ? { diff_truncated: true } : {}),
         ...(field === "plan"
           ? planTaskSummary(result.issue.plan as string | null)
           : {}),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -2316,7 +2447,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
-              "at most, no headings."
+              "at most, no headings.",
           ),
       }),
       annotations: WRITE,
@@ -2335,7 +2466,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return coreFail(result);
       return ok({ comment: result.comment });
-    }
+    },
   );
 
   server.registerTool(
@@ -2360,7 +2491,7 @@ export function registerMinddyTools(
           .uuid()
           .optional()
           .describe(
-            "Attach to this comment of the issue instead of the issue itself."
+            "Attach to this comment of the issue instead of the issue itself.",
           ),
         url: z
           .string()
@@ -2369,7 +2500,7 @@ export function registerMinddyTools(
           .describe(
             "A LINK resource: the http(s) address to attach. Its title and " +
               "favicon are resolved server-side, so send nothing else. Leave out " +
-              "when attaching a file."
+              "when attaching a file.",
           ),
         file_name: z
           .string()
@@ -2378,20 +2509,22 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "A FILE resource: display name, extension included (e.g. " +
-              "'screenshot.png'). Required with content_base64."
+              "'screenshot.png'). Required with content_base64.",
           ),
         mime_type: z
           .string()
           .max(120)
           .optional()
-          .describe("MIME type of the file; defaults to application/octet-stream."),
+          .describe(
+            "MIME type of the file; defaults to application/octet-stream.",
+          ),
         content_base64: z
           .string()
           .min(1)
           .max(14_000_000)
           .optional()
           .describe(
-            "A FILE resource: its content, base64-encoded (no 'data:' prefix)."
+            "A FILE resource: its content, base64-encoded (no 'data:' prefix).",
           ),
         page_id: z
           .string()
@@ -2400,7 +2533,7 @@ export function registerMinddyTools(
           .describe(
             "A PAGE resource: the id of a page of THIS project's wiki " +
               "(minddy_list_pages). Its title is read server-side and stays in " +
-              "sync when the page is renamed. Leave out for a file or a link."
+              "sync when the page is renamed. Leave out for a file or a link.",
           ),
       }),
       annotations: WRITE,
@@ -2424,7 +2557,7 @@ export function registerMinddyTools(
             ? "Nothing to attach: send url for a link, page_id for a page of " +
                 "the wiki, or content_base64 + file_name for a file."
             : "A resource is a file, a link OR a page: send exactly one of " +
-                "content_base64, url and page_id."
+                "content_base64, url and page_id.",
         );
       }
 
@@ -2490,7 +2623,7 @@ export function registerMinddyTools(
           if (e instanceof FaviconError) {
             return fail(
               "invalid_params",
-              "That url can't be reached: it must be a public http(s) address."
+              "That url can't be reached: it must be a public http(s) address.",
             );
           }
           return fail("database_error", (e as Error).message);
@@ -2518,7 +2651,10 @@ export function registerMinddyTools(
       }
 
       if (!args.file_name?.trim()) {
-        return fail("invalid_params", "file_name is required with content_base64.");
+        return fail(
+          "invalid_params",
+          "file_name is required with content_base64.",
+        );
       }
       const normalized = (args.content_base64 as string).replace(/\s/g, "");
       if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
@@ -2555,7 +2691,7 @@ export function registerMinddyTools(
       } catch (e) {
         return fail("database_error", (e as Error).message);
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -2579,13 +2715,15 @@ export function registerMinddyTools(
         resource_id: z
           .string()
           .uuid()
-          .describe("Resource id from minddy_get_issue / minddy_list_objectives."),
+          .describe(
+            "Resource id from minddy_get_issue / minddy_list_objectives.",
+          ),
         include_content: z
           .boolean()
           .optional()
           .describe(
             "Embed the file bytes in the result (base64), not just the URL. " +
-              "Default false. Ignored for links and for files over 10 MB."
+              "Default false. Ignored for links and for files over 10 MB.",
           ),
       }),
       annotations: READ_ONLY,
@@ -2600,7 +2738,7 @@ export function registerMinddyTools(
       const { data: row, error } = await service
         .from("attachments")
         .select(
-          "id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id, page:pages(id, title, deleted_at)"
+          "id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id, page:pages(id, title, deleted_at)",
         )
         .eq("id", args.resource_id)
         .eq("project_id", scope.access.project.id)
@@ -2645,10 +2783,14 @@ export function registerMinddyTools(
       const mime = (row.mime_type as string) || "application/octet-stream";
       const size = typeof row.size_bytes === "number" ? row.size_bytes : 0;
 
-      const url = await signedAttachmentUrl(service, row.storage_path as string, {
-        download: fileName,
-        expiresIn: 600,
-      });
+      const url = await signedAttachmentUrl(
+        service,
+        row.storage_path as string,
+        {
+          download: fileName,
+          expiresIn: 600,
+        },
+      );
 
       const meta: Record<string, unknown> = {
         id: row.id,
@@ -2673,16 +2815,26 @@ export function registerMinddyTools(
         });
       }
 
-      const data = await downloadAttachment(service, row.storage_path as string);
+      const data = await downloadAttachment(
+        service,
+        row.storage_path as string,
+      );
       if (!data) {
-        return ok({ ...meta, content_omitted: "The stored file could not be read." });
+        return ok({
+          ...meta,
+          content_omitted: "The stored file could not be read.",
+        });
       }
 
       const content: Array<Record<string, unknown>> = [
         { type: "text", text: JSON.stringify(meta, null, 2) },
       ];
       if (mime.startsWith("image/")) {
-        content.push({ type: "image", data: data.toString("base64"), mimeType: mime });
+        content.push({
+          type: "image",
+          data: data.toString("base64"),
+          mimeType: mime,
+        });
       } else if (isTextMime(mime)) {
         content.push({
           type: "resource",
@@ -2703,7 +2855,7 @@ export function registerMinddyTools(
         });
       }
       return { content } as unknown as ToolResult;
-    }
+    },
   );
 
   server.registerTool(
@@ -2750,10 +2902,14 @@ export function registerMinddyTools(
           scope.access.project.id,
           src.issue.id,
           args.relation,
-          tgt.issue.id
+          tgt.issue.id,
         );
         if (!existing) {
-          return ok({ removed: false, issue: src.issue.identifier, target: tgt.issue.identifier });
+          return ok({
+            removed: false,
+            issue: src.issue.identifier,
+            target: tgt.issue.identifier,
+          });
         }
         const result = await removeIssueRelation({
           relationId: existing.id,
@@ -2784,7 +2940,7 @@ export function registerMinddyTools(
         relation: args.relation,
         target: tgt.issue.identifier,
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -2813,18 +2969,20 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "Markdown. The goal, what counts as done, what is out of scope — " +
-              "write one on every objective you create."
+              "write one on every objective you create.",
           ),
         status: z
           .enum(OBJECTIVE_STATUS_VALUES)
           .optional()
-          .describe("Default: planned. Pass 'in_progress' when the work is already under way."),
+          .describe(
+            "Default: planned. Pass 'in_progress' when the work is already under way.",
+          ),
         lead_user_id: z
           .string()
           .optional()
           .describe(
             "Member user_id (minddy_list_members). The person the human named; " +
-              "on a single-member project, the owner."
+              "on a single-member project, the owner.",
           ),
         target_date: z.string().optional().describe("ISO 8601 date."),
         color: z.string().optional().describe("Hex color, e.g. '#6b7280'."),
@@ -2842,7 +3000,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return coreFail(result);
       return ok({ objective: result.objective });
-    }
+    },
   );
 
   server.registerTool(
@@ -2876,7 +3034,8 @@ export function registerMinddyTools(
         .eq("id", args.objective_id)
         .eq("project_id", scope.access.project.id)
         .maybeSingle();
-      if (!obj) return fail("not_found", "Objective not found in this project.");
+      if (!obj)
+        return fail("not_found", "Objective not found in this project.");
 
       const result = await updateObjective({
         objectiveId: args.objective_id,
@@ -2886,7 +3045,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return coreFail(result);
       return ok({ objective: result.objective });
-    }
+    },
   );
 
   server.registerTool(
@@ -2920,7 +3079,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
-              "at most, no headings."
+              "at most, no headings.",
           ),
       }),
       annotations: WRITE,
@@ -2939,7 +3098,8 @@ export function registerMinddyTools(
         .eq("id", args.objective_id)
         .eq("project_id", scope.access.project.id)
         .maybeSingle();
-      if (!obj) return fail("not_found", "Objective not found in this project.");
+      if (!obj)
+        return fail("not_found", "Objective not found in this project.");
 
       const result = await addCommentToObjective({
         objectiveId: args.objective_id,
@@ -2949,7 +3109,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return coreFail(result);
       return ok({ comment: result.comment });
-    }
+    },
   );
 
   // ── Scratchpad (Notes) — the UNIQUE personal note of the key owner:
@@ -2999,7 +3159,7 @@ export function registerMinddyTools(
       } catch (err) {
         return fail("database_error", (err as Error).message);
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -3020,7 +3180,7 @@ export function registerMinddyTools(
           .string()
           .max(MAX_SCRATCHPAD_LENGTH)
           .describe(
-            "The full new scratchpad markdown (replaces everything currently there)."
+            "The full new scratchpad markdown (replaces everything currently there).",
           ),
         expected_rev: z
           .number()
@@ -3030,7 +3190,7 @@ export function registerMinddyTools(
           .describe(
             "The `rev` from the minddy_get_scratchpad you based this on. If it no " +
               "longer matches (the user edited meanwhile) the write is rejected; " +
-              "re-read and reapply. Omit only for an unconditional overwrite."
+              "re-read and reapply. Omit only for an unconditional overwrite.",
           ),
       }),
       annotations: WRITE_IDEMPOTENT,
@@ -3048,12 +3208,12 @@ export function registerMinddyTools(
             service,
             auth.userId,
             args.content,
-            args.expected_rev
+            args.expected_rev,
           );
           if (write.conflicted) {
             return fail(
               "conflict",
-              `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${write.rev}). The user likely edited it in the app. Call minddy_get_scratchpad again, reapply your change onto the fresh content, and set it with the new rev.`
+              `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${write.rev}). The user likely edited it in the app. Call minddy_get_scratchpad again, reapply your change onto the fresh content, and set it with the new rev.`,
             );
           }
           return ok({
@@ -3066,12 +3226,12 @@ export function registerMinddyTools(
         const result = await mutateScratchpad(
           service,
           auth.userId,
-          () => args.content
+          () => args.content,
         );
         if (result.status !== "ok") {
           return fail(
             "conflict",
-            "The scratchpad is being edited concurrently; read it again and retry."
+            "The scratchpad is being edited concurrently; read it again and retry.",
           );
         }
         return ok({
@@ -3083,7 +3243,7 @@ export function registerMinddyTools(
       } catch (err) {
         return fail("database_error", (err as Error).message);
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -3110,7 +3270,7 @@ export function registerMinddyTools(
                 .min(0)
                 .describe("0-based task index, in document order."),
               state: z.enum(PLAN_TASK_STATES),
-            })
+            }),
           )
           .min(1)
           .max(50)
@@ -3123,7 +3283,7 @@ export function registerMinddyTools(
           .describe(
             "The `rev` from the minddy_get_scratchpad whose task indices you are " +
               "using. If the note changed since, the indices may point elsewhere, " +
-              "so the call is rejected; re-read for fresh indices and retry."
+              "so the call is rejected; re-read for fresh indices and retry.",
           ),
       }),
       annotations: WRITE_IDEMPOTENT,
@@ -3138,24 +3298,24 @@ export function registerMinddyTools(
           getServiceClient(),
           auth.userId,
           args.tasks,
-          args.expected_rev
+          args.expected_rev,
         );
         if (result.status === "stale_rev") {
           return fail(
             "conflict",
-            `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${result.rev}), so your task indices may no longer match. Call minddy_get_scratchpad again for fresh indices and retry.`
+            `The scratchpad changed since rev ${args.expected_rev} (it is now at rev ${result.rev}), so your task indices may no longer match. Call minddy_get_scratchpad again for fresh indices and retry.`,
           );
         }
         if (result.status === "out_of_range") {
           return fail(
             "invalid_params",
-            `task_index ${result.index} is out of range: the scratchpad has ${result.total} task(s) (valid indices 0..${Math.max(0, result.total - 1)}).`
+            `task_index ${result.index} is out of range: the scratchpad has ${result.total} task(s) (valid indices 0..${Math.max(0, result.total - 1)}).`,
           );
         }
         if (result.status === "conflict") {
           return fail(
             "conflict",
-            "The scratchpad was edited concurrently while applying your change. Call minddy_get_scratchpad again for fresh indices and retry."
+            "The scratchpad was edited concurrently while applying your change. Call minddy_get_scratchpad again for fresh indices and retry.",
           );
         }
         return ok({
@@ -3171,7 +3331,7 @@ export function registerMinddyTools(
       } catch (err) {
         return fail("database_error", (err as Error).message);
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -3207,9 +3367,9 @@ export function registerMinddyTools(
                 .max(10)
                 .optional()
                 .describe(
-                  "Nesting depth: 0 (default) for a top-level task, 1 to make it a sub-task of the task right before it, and so on."
+                  "Nesting depth: 0 (default) for a top-level task, 1 to make it a sub-task of the task right before it, and so on.",
                 ),
-            })
+            }),
           )
           .min(1)
           .max(50)
@@ -3218,7 +3378,7 @@ export function registerMinddyTools(
           .string()
           .optional()
           .describe(
-            "Exact text of a '##' section heading to append under. Omit to add at the end of the note."
+            "Exact text of a '##' section heading to append under. Omit to add at the end of the note.",
           ),
       }),
       annotations: WRITE,
@@ -3239,19 +3399,19 @@ export function registerMinddyTools(
               state: task.state ?? "pending",
               depth: task.depth ?? 0,
             })),
-            args.section
-          )
+            args.section,
+          ),
         );
         if (result.status === "aborted") {
           return fail(
             "invalid_params",
-            `Section "${args.section}" was not found. Omit "section" to add at the end, or create the heading first with minddy_set_scratchpad.`
+            `Section "${args.section}" was not found. Omit "section" to add at the end, or create the heading first with minddy_set_scratchpad.`,
           );
         }
         if (result.status === "conflict") {
           return fail(
             "conflict",
-            "The scratchpad is being edited concurrently; read it again and retry."
+            "The scratchpad is being edited concurrently; read it again and retry.",
           );
         }
         const saved = result.state;
@@ -3269,7 +3429,7 @@ export function registerMinddyTools(
       } catch (err) {
         return fail("database_error", (err as Error).message);
       }
-    }
+    },
   );
 
   // ── Cycles (MIN-32) — the personal cross-project cycle of the owner of
@@ -3280,9 +3440,13 @@ export function registerMinddyTools(
 
   /** Common guard of cycle tools: auth + prefs (activated cycles). */
   async function requireCycle(
-    extra: ToolExtra
+    extra: ToolExtra,
   ): Promise<
-    | { userId: string; keyId: string | null; prefs: Awaited<ReturnType<typeof getCyclePrefsForUser>> }
+    | {
+        userId: string;
+        keyId: string | null;
+        prefs: Awaited<ReturnType<typeof getCyclePrefsForUser>>;
+      }
     | { error: ToolResult }
   > {
     const auth = requireUser(extra);
@@ -3292,7 +3456,7 @@ export function registerMinddyTools(
       return {
         error: fail(
           "cycles_disabled",
-          "Cycles are not enabled for this account. The owner can enable them in Account → Cycles."
+          "Cycles are not enabled for this account. The owner can enable them in Account → Cycles.",
         ),
       };
     }
@@ -3331,7 +3495,7 @@ export function registerMinddyTools(
       });
       if (!r.ok) return fail("not_found", r.error);
       return ok(r.overview);
-    }
+    },
   );
 
   server.registerTool(
@@ -3363,17 +3527,23 @@ export function registerMinddyTools(
           .optional()
           .describe("Multiplier on the smallest-first component (default 1)."),
         project_boosts: z
-          .array(z.object({ project_id: z.string().uuid(), weight: z.number() }))
+          .array(
+            z.object({ project_id: z.string().uuid(), weight: z.number() }),
+          )
           .optional()
           .describe("Additive boost per project id."),
         category_boosts: z
-          .array(z.object({ category_id: z.string().uuid(), weight: z.number() }))
+          .array(
+            z.object({ category_id: z.string().uuid(), weight: z.number() }),
+          )
           .optional()
           .describe("Additive boost per category id."),
         keyword_boosts: z
           .array(z.object({ keyword: z.string().min(1), weight: z.number() }))
           .optional()
-          .describe("Additive boost when the issue title contains the keyword."),
+          .describe(
+            "Additive boost when the issue title contains the keyword.",
+          ),
       }),
       annotations: WRITE,
     },
@@ -3387,14 +3557,17 @@ export function registerMinddyTools(
         prefs: scope.prefs,
         today: todayISO(),
       });
-      if (!ensured.current) return fail("not_found", "No current cycle exists yet.");
+      if (!ensured.current)
+        return fail("not_found", "No current cycle exists yet.");
 
       const toBoostMap = (
         rows: Array<Record<string, unknown>> | undefined,
-        idKey: string
+        idKey: string,
       ): Record<string, number> | undefined => {
         if (!rows?.length) return undefined;
-        return Object.fromEntries(rows.map((r) => [r[idKey] as string, r.weight as number]));
+        return Object.fromEntries(
+          rows.map((r) => [r[idKey] as string, r.weight as number]),
+        );
       };
       const { pickedIds, points } = await fillCycleForUser({
         service,
@@ -3416,7 +3589,7 @@ export function registerMinddyTools(
         added_points: points,
         cycle_id: ensured.current.id,
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -3449,14 +3622,18 @@ export function registerMinddyTools(
         prefs: scope.prefs,
         today: todayISO(),
       });
-      if (!ensured.current) return fail("not_found", "No current cycle exists yet.");
+      if (!ensured.current)
+        return fail("not_found", "No current cycle exists yet.");
 
       const added: string[] = [];
       const failed: Array<{ issue: string; error: string }> = [];
       for (const ref of args.issues) {
         const resolved = await resolveIssueRef(project.access, ref);
         if ("error" in resolved) {
-          failed.push({ issue: ref, error: `Issue '${ref}' not found in this project.` });
+          failed.push({
+            issue: ref,
+            error: `Issue '${ref}' not found in this project.`,
+          });
           continue;
         }
         const r = await updateIssueFields({
@@ -3473,7 +3650,7 @@ export function registerMinddyTools(
           });
       }
       return ok({ added, failed, cycle_id: ensured.current.id });
-    }
+    },
   );
 
   server.registerTool(
@@ -3502,14 +3679,18 @@ export function registerMinddyTools(
         prefs: scope.prefs,
         today: todayISO(),
       });
-      if (!ensured.current) return fail("not_found", "No current cycle exists yet.");
+      if (!ensured.current)
+        return fail("not_found", "No current cycle exists yet.");
 
       const removed: string[] = [];
       const failed: Array<{ issue: string; error: string }> = [];
       for (const ref of args.issues) {
         const resolved = await resolveIssueRef(project.access, ref);
         if ("error" in resolved) {
-          failed.push({ issue: ref, error: `Issue '${ref}' not found in this project.` });
+          failed.push({
+            issue: ref,
+            error: `Issue '${ref}' not found in this project.`,
+          });
           continue;
         }
         // Only pull issues out of the owner's OWN current cycle — project
@@ -3541,7 +3722,7 @@ export function registerMinddyTools(
           });
       }
       return ok({ removed, failed });
-    }
+    },
   );
 
   // ── Feedback (user requests collected on the project's board / API) ──────
@@ -3566,7 +3747,13 @@ export function registerMinddyTools(
           .array(z.enum(FEEDBACK_POST_STATUSES))
           .optional()
           .describe("Only these public statuses. Omit for all."),
-        limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Default 50."),
       }),
       annotations: READ_ONLY,
     },
@@ -3580,24 +3767,22 @@ export function registerMinddyTools(
       const posts = await listTeamFeedback(scope.access.project.id, {
         statuses: args.status,
       });
-      const rows = posts
-        .slice(0, args.limit ?? 50)
-        .map((p) => ({
-          id: p.id,
-          title: p.title,
-          status: p.status,
-          vote_count: p.vote_count,
-          is_public: p.is_public,
-          // Without it, a return still in the AI ​​review queue is
-          // indistinguishable from a published return (see the visibility rule
-          // announced in the description).
-          review_state: p.review_state,
-          source: p.source,
-          category_ids: p.category_ids,
-          linked_issue_id: p.issue_id,
-        }));
+      const rows = posts.slice(0, args.limit ?? 50).map((p) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        vote_count: p.vote_count,
+        is_public: p.is_public,
+        // Without it, a return still in the AI ​​review queue is
+        // indistinguishable from a published return (see the visibility rule
+        // announced in the description).
+        review_state: p.review_state,
+        source: p.source,
+        category_ids: p.category_ids,
+        linked_issue_id: p.issue_id,
+      }));
       return ok({ feedback: rows });
-    }
+    },
   );
 
   server.registerTool(
@@ -3616,7 +3801,10 @@ export function registerMinddyTools(
         "`translated_language` says which language they are in — read the " +
         "translation when it matches the team's, exactly as the team's own view " +
         "does. `source_language` is the language of the request itself.",
-      inputSchema: z.object({ project_id: PROJECT_ID, feedback_post_id: z.string().uuid() }),
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        feedback_post_id: z.string().uuid(),
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -3624,15 +3812,19 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
       const detail = await getTeamFeedbackDetail(
         scope.access.project.id,
-        args.feedback_post_id
+        args.feedback_post_id,
       );
-      if (!detail) return fail("feedback_not_found", "Feedback post not found in this project.");
+      if (!detail)
+        return fail(
+          "feedback_not_found",
+          "Feedback post not found in this project.",
+        );
 
       const service = getServiceClient();
       const { data: comments } = await service
         .from("comments")
         .select(
-          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)"
+          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
         )
         .eq("feedback_post_id", args.feedback_post_id)
         .order("created_at", { ascending: true });
@@ -3640,7 +3832,7 @@ export function registerMinddyTools(
         service,
         (comments ?? [])
           .map((c) => c.author_id as string | null)
-          .filter((v): v is string => !!v)
+          .filter((v): v is string => !!v),
       );
 
       return ok({
@@ -3670,7 +3862,10 @@ export function registerMinddyTools(
           linked_issue: detail.issue
             ? {
                 id: detail.issue.id,
-                identifier: issueIdentifier(scope.access.project.key, detail.issue.number),
+                identifier: issueIdentifier(
+                  scope.access.project.key,
+                  detail.issue.number,
+                ),
                 status: detail.issue.status,
               }
             : null,
@@ -3685,12 +3880,16 @@ export function registerMinddyTools(
               // real identity (the agent is on the team side, like the team view);
               // the board only ever shows the avatar.
               author: visitor
-                ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+                ? visitor.name?.trim() ||
+                  visitor.email?.trim() ||
+                  visitor.pseudonym
                 : c.via_assistant
                   ? "Numo"
                   : displayName(
-                      toNamed(c.author_id ? users.get(c.author_id as string) : null),
-                      "User"
+                      toNamed(
+                        c.author_id ? users.get(c.author_id as string) : null,
+                      ),
+                      "User",
                     ),
               visibility: (c.visibility as string) ?? "internal",
               body: c.body,
@@ -3699,7 +3898,7 @@ export function registerMinddyTools(
           }),
         },
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -3723,7 +3922,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: two or three sentences, 1000 characters at most, " +
-              "no headings."
+              "no headings.",
           ),
       }),
       annotations: WRITE,
@@ -3731,7 +3930,10 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      const ref = await resolveFeedbackPost(
+        scope.access,
+        args.feedback_post_id,
+      );
       if ("error" in ref) return ref.error;
 
       const result = await addCommentToFeedbackPost({
@@ -3742,7 +3944,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return coreFail(result);
       return ok({ comment: result.comment });
-    }
+    },
   );
 
   server.registerTool(
@@ -3781,17 +3983,21 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      const ref = await resolveFeedbackPost(
+        scope.access,
+        args.feedback_post_id,
+      );
       if ("error" in ref) return ref.error;
 
       const input: Record<string, unknown> = {};
       if (args.status !== undefined) input.status = args.status;
       if (args.is_public !== undefined) input.is_public = args.is_public;
-      if (args.review_state !== undefined) input.review_state = args.review_state;
+      if (args.review_state !== undefined)
+        input.review_state = args.review_state;
       if (Object.keys(input).length === 0) {
         return fail(
           "invalid_params",
-          "Pass at least one of status, is_public, review_state."
+          "Pass at least one of status, is_public, review_state.",
         );
       }
 
@@ -3804,7 +4010,7 @@ export function registerMinddyTools(
           "This feedback post is linked to an issue: its public status is copied " +
             "from that issue on every transition, so it can't be set directly. " +
             "Move the issue instead (minddy_update_issues), or detach the post " +
-            "with minddy_unlink_feedback first."
+            "with minddy_unlink_feedback first.",
         );
       }
 
@@ -3824,7 +4030,7 @@ export function registerMinddyTools(
           review_state: result.post.review_state,
         },
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -3837,13 +4043,19 @@ export function registerMinddyTools(
         "follows that issue automatically. Fails if the post is already linked or is " +
         "a merged duplicate. Use minddy_link_feedback instead when an issue already " +
         "tracks the request.",
-      inputSchema: z.object({ project_id: PROJECT_ID, feedback_post_id: z.string().uuid() }),
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        feedback_post_id: z.string().uuid(),
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      const ref = await resolveFeedbackPost(
+        scope.access,
+        args.feedback_post_id,
+      );
       if ("error" in ref) return ref.error;
 
       const result = await promoteFeedbackPost({
@@ -3858,11 +4070,11 @@ export function registerMinddyTools(
           ...result.issue,
           identifier: issueIdentifier(
             scope.access.project.key,
-            result.issue.number as number
+            result.issue.number as number,
           ),
         },
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -3883,7 +4095,10 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      const ref = await resolveFeedbackPost(
+        scope.access,
+        args.feedback_post_id,
+      );
       if ("error" in ref) return ref.error;
       const issueRef = await resolveIssueRef(scope.access, args.issue);
       if ("error" in issueRef) return issueRef.error;
@@ -3900,7 +4115,7 @@ export function registerMinddyTools(
         feedback_post_id: ref.post.id,
         issue: issueRef.issue.identifier,
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -3910,19 +4125,30 @@ export function registerMinddyTools(
       description:
         "Detach the issue currently linked to a feedback post (the post keeps its " +
         "last public status).",
-      inputSchema: z.object({ project_id: PROJECT_ID, feedback_post_id: z.string().uuid() }),
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        feedback_post_id: z.string().uuid(),
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      const ref = await resolveFeedbackPost(
+        scope.access,
+        args.feedback_post_id,
+      );
       if ("error" in ref) return ref.error;
 
-      const okDone = await unlinkFeedbackIssue(ref.post.id, scope.userId, scope.keyId);
-      if (!okDone) return fail("database_error", "Could not unlink the feedback post.");
+      const okDone = await unlinkFeedbackIssue(
+        ref.post.id,
+        scope.userId,
+        scope.keyId,
+      );
+      if (!okDone)
+        return fail("database_error", "Could not unlink the feedback post.");
       return ok({ unlinked: true, feedback_post_id: ref.post.id });
-    }
+    },
   );
 
   server.registerTool(
@@ -3948,7 +4174,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Public reply, shown on the board. SHORT: two or three sentences, " +
-              "no headings."
+              "no headings.",
           ),
       }),
       annotations: WRITE,
@@ -3956,7 +4182,10 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      const ref = await resolveFeedbackPost(
+        scope.access,
+        args.feedback_post_id,
+      );
       if ("error" in ref) return ref.error;
 
       const result = await addCommentToFeedbackPost({
@@ -3968,7 +4197,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return coreFail(result);
       return ok({ feedback_post_id: ref.post.id, comment: result.comment });
-    }
+    },
   );
 
   // ── Setup: the public board and the integration keys (MIN-106) ──────────
@@ -3994,8 +4223,10 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      return ok({ board: await getFeedbackBoardConfig(scope.access.project.id) });
-    }
+      return ok({
+        board: await getFeedbackBoardConfig(scope.access.project.id),
+      });
+    },
   );
 
   server.registerTool(
@@ -4021,14 +4252,16 @@ export function registerMinddyTools(
         generate_sso_secret: z
           .boolean()
           .optional()
-          .describe("true returns the SSO secret, creating it if there is none."),
+          .describe(
+            "true returns the SSO secret, creating it if there is none.",
+          ),
         allow_comments: z
           .boolean()
           .optional()
           .describe(
             "Let signed-in visitors reply publicly on a request. false leaves the " +
               "existing thread readable but closes it to new comments; the team can " +
-              "still reply publicly. Needs an existing board."
+              "still reply publicly. Needs an existing board.",
           ),
         show_categories: z
           .boolean()
@@ -4037,20 +4270,22 @@ export function registerMinddyTools(
         show_views: z
           .boolean()
           .optional()
-          .describe("Show the project's shared views as tabs on the public site."),
+          .describe(
+            "Show the project's shared views as tabs on the public site.",
+          ),
         visible_view_ids: z
           .array(z.string().uuid())
           .max(50)
           .optional()
           .describe(
             "Which shared view ids appear as tabs. The list replaces the current " +
-            "selection; non-shared or foreign-project views are ignored."
+              "selection; non-shared or foreign-project views are ignored.",
           ),
         show_pages: z
           .boolean()
           .optional()
           .describe(
-            "Show the project's published wiki pages as tabs on the public site."
+            "Show the project's published wiki pages as tabs on the public site.",
           ),
         visible_page_ids: z
           .array(z.string().uuid())
@@ -4058,8 +4293,8 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "Which published page ids (from list_pages) appear as tabs. A page " +
-            "must be published to show up. The list replaces the current " +
-            "selection; unpublished or foreign-project pages are ignored."
+              "must be published to show up. The list replaces the current " +
+              "selection; unpublished or foreign-project pages are ignored.",
           ),
       }),
       annotations: WRITE_IDEMPOTENT,
@@ -4068,7 +4303,10 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       if (!scope.access.isOwner) {
-        return fail("forbidden", "Only the project owner can configure the feedback board.");
+        return fail(
+          "forbidden",
+          "Only the project owner can configure the feedback board.",
+        );
       }
       let visibleViewIds = args.visible_view_ids;
       if (visibleViewIds !== undefined) {
@@ -4080,7 +4318,7 @@ export function registerMinddyTools(
         const known = new Set(
           (sharedViews ?? [])
             .map((row) => (row.views as { id?: string } | null)?.id)
-            .filter((id): id is string => typeof id === "string")
+            .filter((id): id is string => typeof id === "string"),
         );
         visibleViewIds = visibleViewIds.filter((id) => known.has(id));
       }
@@ -4095,7 +4333,7 @@ export function registerMinddyTools(
         const known = new Set(
           (publishedPages ?? [])
             .map((row) => (row.pages as { id?: string } | null)?.id)
-            .filter((id): id is string => typeof id === "string")
+            .filter((id): id is string => typeof id === "string"),
         );
         visiblePageIds = visiblePageIds.filter((id) => known.has(id));
       }
@@ -4118,22 +4356,25 @@ export function registerMinddyTools(
               "invalid_params",
               "Pass enabled, show_categories, show_views, visible_view_ids, " +
                 "show_pages, visible_page_ids, allow_comments and/or " +
-                "generate_sso_secret."
+                "generate_sso_secret.",
             );
           case "boardNotFound":
             return fail(
               "not_found",
-              "This project has no feedback board yet — pass enabled: true to create it."
+              "This project has no feedback board yet — pass enabled: true to create it.",
             );
           default:
-            return fail("database_error", "Could not configure the feedback board.");
+            return fail(
+              "database_error",
+              "Could not configure the feedback board.",
+            );
         }
       }
       return ok({
         board: result.config,
         ...(result.sso_secret ? { sso_secret: result.sso_secret } : {}),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -4180,7 +4421,7 @@ export function registerMinddyTools(
             : null,
         })),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -4208,12 +4449,14 @@ export function registerMinddyTools(
           .string()
           .min(1)
           .max(60)
-          .describe("Identifies the integration in the project's settings, e.g. 'Acme web app'."),
+          .describe(
+            "Identifies the integration in the project's settings, e.g. 'Acme web app'.",
+          ),
         kind: z
           .enum(["issues", "feedback"])
           .describe(
             "'feedback' = submit user requests to the feedback board; " +
-              "'issues' = create issues in triage."
+              "'issues' = create issues in triage.",
           ),
       }),
       annotations: WRITE,
@@ -4222,7 +4465,10 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       if (!scope.access.isOwner) {
-        return fail("forbidden", "Only the project owner can create an integration.");
+        return fail(
+          "forbidden",
+          "Only the project owner can create an integration.",
+        );
       }
       const created = await createIntegration({
         projectId: scope.access.project.id,
@@ -4244,7 +4490,7 @@ export function registerMinddyTools(
         key: created.key,
         usage: integrationUsage(args.kind, SITE_URL),
       });
-    }
+    },
   );
 
   server.registerTool(
@@ -4267,7 +4513,10 @@ export function registerMinddyTools(
         "minddy_list_integrations.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
-        integration_id: z.string().uuid().describe("From minddy_list_integrations."),
+        integration_id: z
+          .string()
+          .uuid()
+          .describe("From minddy_list_integrations."),
         url: z
           .string()
           .nullable()
@@ -4275,7 +4524,7 @@ export function registerMinddyTools(
             "The endpoint ALREADY configured (read it with " +
               "minddy_list_integrations), or null to turn the webhook off. A new " +
               "or different destination is refused: the user sets it themselves in " +
-              "Settings → Integrations."
+              "Settings → Integrations.",
           ),
         events: z
           .array(z.enum(WEBHOOK_EVENTS))
@@ -4283,14 +4532,14 @@ export function registerMinddyTools(
           .describe(
             "Which events to deliver: 'issue.created', 'issue.status_changed', " +
               "'issue.updated'. Ask for what the app actually reacts to — every " +
-              "unused delivery is a request your endpoint has to answer anyway."
+              "unused delivery is a request your endpoint has to answer anyway.",
           ),
         scope: z
           .enum(WEBHOOK_SCOPES)
           .describe(
             "'integration' = only the issues this key created (the usual choice " +
               "for an app that pushes its own reports); 'all' = every issue of the " +
-              "project. A 'feedback' key creates no issue, so it needs 'all'."
+              "project. A 'feedback' key creates no issue, so it needs 'all'.",
           ),
       }),
       annotations: WRITE,
@@ -4299,7 +4548,10 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       if (!scope.access.isOwner) {
-        return fail("forbidden", "Only the project owner can configure a webhook.");
+        return fail(
+          "forbidden",
+          "Only the project owner can configure a webhook.",
+        );
       }
       const result = await updateIntegrationWebhook({
         projectId: scope.access.project.id,
@@ -4316,7 +4568,7 @@ export function registerMinddyTools(
           case "webhookInvalidUrl":
             return fail(
               "invalid_params",
-              "url must be an http(s) URL on a publicly reachable host, or null."
+              "url must be an http(s) URL on a publicly reachable host, or null.",
             );
           case "webhookHumanOnly":
             return fail(
@@ -4325,7 +4577,7 @@ export function registerMinddyTools(
                 "in Settings → Integrations — a destination cannot be set or moved " +
                 "through this API. Relay that to the user as-is. Passing url: null " +
                 "to turn the webhook off, or changing the events and scope of the " +
-                "destination already in place, is still allowed."
+                "destination already in place, is still allowed.",
             );
           case "webhookInvalidConfig":
             return fail("invalid_params", "Unknown event or scope.");
@@ -4333,12 +4585,12 @@ export function registerMinddyTools(
             return fail(
               "invalid_params",
               "That is a 'feedback' key: it creates no issue, so it has no " +
-                "webhook. Only an 'issues' key can have one."
+                "webhook. Only an 'issues' key can have one.",
             );
           case "integrationNotFound":
             return fail(
               "not_found",
-              "No active integration with that id in this project."
+              "No active integration with that id in this project.",
             );
           default:
             return fail("database_error", "Could not configure the webhook.");
@@ -4356,7 +4608,7 @@ export function registerMinddyTools(
             : {}),
         },
       });
-    }
+    },
   );
 
   // ── Routines (MIN-185) ──────────────────────────────────────────────
@@ -4386,10 +4638,10 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       const rows = (await listRoutinesForUser(scope.userId)).filter(
-        (r) => r.project_id === scope.access.project.id
+        (r) => r.project_id === scope.access.project.id,
       );
       return ok({ routines: rows.map(mcpRoutine) });
-    }
+    },
   );
 
   server.registerTool(
@@ -4427,12 +4679,12 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "The INSTRUCTION the agent receives at every occurrence, in the user's " +
-              "language. It must stand on its own — nobody will be there to clarify it."
+              "language. It must stand on its own — nobody will be there to clarify it.",
           ),
         frequency: z
           .enum(["daily", "weekly", "monthly"])
           .describe(
-            "'daily', 'weekly' (then pass weekdays) or 'monthly' (then pass days_of_month)."
+            "'daily', 'weekly' (then pass weekdays) or 'monthly' (then pass days_of_month).",
           ),
         hour: z
           .number()
@@ -4447,9 +4699,15 @@ export function registerMinddyTools(
               "'America/New_York'). REQUIRED, and it must be the USER'S timezone: " +
               "pass the one their machine reports, never guess, never default to " +
               "UTC — a wrong timezone runs the routine hours off, every single " +
-              "time, and nothing on screen says so. An unknown name is refused."
+              "time, and nothing on screen says so. An unknown name is refused.",
           ),
-        minute: z.number().int().min(0).max(59).optional().describe("Minute, 0–59. Default 0."),
+        minute: z
+          .number()
+          .int()
+          .min(0)
+          .max(59)
+          .optional()
+          .describe("Minute, 0–59. Default 0."),
         weekdays: z
           .array(z.number().int().min(0).max(6))
           .optional()
@@ -4457,7 +4715,7 @@ export function registerMinddyTools(
             "Days of the week a 'weekly' routine runs on: 0 = Sunday, 1 = Monday … " +
               "6 = Saturday. SEVERAL are allowed — [1, 4] means every Monday AND " +
               "Thursday. At least one is required for 'weekly'; REFUSED on other " +
-              "cadences."
+              "cadences.",
           ),
         days_of_month: z
           .array(z.number().int().min(1).max(31))
@@ -4467,23 +4725,27 @@ export function registerMinddyTools(
               "allowed — [1, 15] means the 1st AND the 15th. On a shorter month a " +
               "day falls back to that month's last day (31 in February = the 28th), " +
               "never skipping a month. At least one is required for 'monthly'; " +
-              "REFUSED on other cadences."
+              "REFUSED on other cadences.",
           ),
         model: z
           .string()
           .optional()
           .describe(
             "Exact model id to freeze on this routine. Omit for the owner's default. " +
-              "A model above the plan's ceiling is refused here, at creation."
+              "A model above the plan's ceiling is refused here, at creation.",
           ),
         reasoning_level: z
           .enum(REASONING_LEVELS_TUPLE)
           .optional()
-          .describe("Reasoning effort of the runs. Omit for the owner's default."),
+          .describe(
+            "Reasoning effort of the runs. Omit for the owner's default.",
+          ),
         base_branch: z
           .string()
           .optional()
-          .describe("Branch the runs start from. Omit for the repository's default branch."),
+          .describe(
+            "Branch the runs start from. Omit for the repository's default branch.",
+          ),
         max_spend_percent: z
           .number()
           .int()
@@ -4497,7 +4759,7 @@ export function registerMinddyTools(
               "budget, and 100 removes the cap. Raise it for a routine that runs " +
               "rarely and must finish its job (a monthly security review at 50); " +
               "lower it for one that runs every day (an inventory at 5). It " +
-              "does not apply to owners running on their own API key."
+              "does not apply to owners running on their own API key.",
           ),
       }),
       annotations: WRITE,
@@ -4522,7 +4784,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return routineFailure(result);
       return ok({ routine: mcpRoutine(result.routine) });
-    }
+    },
   );
 
   server.registerTool(
@@ -4546,12 +4808,14 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "REPLACES the current instruction. The title is rewritten from it — " +
-              "there is no name to pass."
+              "there is no name to pass.",
           ),
         enabled: z
           .boolean()
           .optional()
-          .describe("false pauses the routine; true re-arms it on its next occurrence."),
+          .describe(
+            "false pauses the routine; true re-arms it on its next occurrence.",
+          ),
         frequency: z.enum(["daily", "weekly", "monthly"]).optional(),
         hour: z.number().int().min(0).max(23).optional(),
         minute: z.number().int().min(0).max(59).optional(),
@@ -4563,7 +4827,9 @@ export function registerMinddyTools(
         timezone: z
           .string()
           .optional()
-          .describe("IANA timezone of the hour. Pass the user's, never a guess."),
+          .describe(
+            "IANA timezone of the hour. Pass the user's, never a guess.",
+          ),
         model: z.string().optional(),
         reasoning_level: z.enum(REASONING_LEVELS_TUPLE).optional(),
         base_branch: z.string().optional(),
@@ -4577,7 +4843,7 @@ export function registerMinddyTools(
             "New cap on what ONE run may spend, as a percentage of the owner's " +
               "monthly usage budget (100 = no cap of its own). This is what to " +
               "change when a run stopped on its cap and the user wants it to go " +
-              "further — not the plan."
+              "further — not the plan.",
           ),
       }),
       annotations: WRITE_IDEMPOTENT,
@@ -4594,7 +4860,9 @@ export function registerMinddyTools(
         ...(args.reasoning_level !== undefined
           ? { reasoningLevel: args.reasoning_level }
           : {}),
-        ...(args.base_branch !== undefined ? { baseBranch: args.base_branch } : {}),
+        ...(args.base_branch !== undefined
+          ? { baseBranch: args.base_branch }
+          : {}),
         ...(args.max_spend_percent !== undefined
           ? { maxSpendPercent: args.max_spend_percent }
           : {}),
@@ -4602,12 +4870,14 @@ export function registerMinddyTools(
         ...(args.hour !== undefined ? { hour: args.hour } : {}),
         ...(args.minute !== undefined ? { minute: args.minute } : {}),
         ...(args.weekdays !== undefined ? { weekdays: args.weekdays } : {}),
-        ...(args.days_of_month !== undefined ? { daysOfMonth: args.days_of_month } : {}),
+        ...(args.days_of_month !== undefined
+          ? { daysOfMonth: args.days_of_month }
+          : {}),
         ...(args.timezone !== undefined ? { timezone: args.timezone } : {}),
       });
       if (!result.ok) return routineFailure(result);
       return ok({ routine: mcpRoutine(result.routine) });
-    }
+    },
   );
 
   server.registerTool(
@@ -4638,7 +4908,7 @@ export function registerMinddyTools(
       });
       if (!result.ok) return routineFailure(result);
       return ok({ deleted: true, routine_id: args.routine_id });
-    }
+    },
   );
 
   server.registerTool(
@@ -4653,7 +4923,10 @@ export function registerMinddyTools(
         "first. Get the id from minddy_list_integrations.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
-        integration_id: z.string().uuid().describe("From minddy_list_integrations."),
+        integration_id: z
+          .string()
+          .uuid()
+          .describe("From minddy_list_integrations."),
       }),
       annotations: { ...WRITE, destructiveHint: true },
     },
@@ -4661,7 +4934,10 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       if (!scope.access.isOwner) {
-        return fail("forbidden", "Only the project owner can revoke an integration.");
+        return fail(
+          "forbidden",
+          "Only the project owner can revoke an integration.",
+        );
       }
       const result = await revokeIntegration({
         projectId: scope.access.project.id,
@@ -4669,10 +4945,13 @@ export function registerMinddyTools(
       });
       if (!result.ok) {
         return result.errorKey === "integrationNotFound"
-          ? fail("not_found", "No active integration with that id in this project.")
+          ? fail(
+              "not_found",
+              "No active integration with that id in this project.",
+            )
           : fail("database_error", "Could not revoke the integration.");
       }
       return ok({ revoked: true, integration_id: args.integration_id });
-    }
+    },
   );
 }

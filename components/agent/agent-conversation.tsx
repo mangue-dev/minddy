@@ -11,12 +11,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  cn,
-  Spinner,
-  toast,
-} from "mangue-ui";
+import { Button, cn, Spinner, toast } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
 import { cumulativeBranchFiles, changeTotals } from "@/lib/agent-changed-files";
 import { NumoIcon } from "@/components/numo-icon";
@@ -46,9 +41,15 @@ import {
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
-import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
+import {
+  useAgentModelsQuery,
+  useReasoningLevelsFor,
+} from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import {
+  nearestReasoningLevel,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
 import { isLocalAgentProvider } from "@/lib/agent-providers";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
@@ -60,8 +61,14 @@ import {
   type AgentEnvironment,
 } from "./environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
-import { useAgentRunLive, useAgentRunLocalDiff } from "@/lib/use-agent-run-live";
-import { mergeAgentLocalDiff, settledAgentLocalDiff } from "@/lib/agent-local-diff";
+import {
+  useAgentRunLive,
+  useAgentRunLocalDiff,
+} from "@/lib/use-agent-run-live";
+import {
+  mergeAgentLocalDiff,
+  settledAgentLocalDiff,
+} from "@/lib/agent-local-diff";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 import { AgentActivityPill } from "./agent-activity-pill";
@@ -177,7 +184,8 @@ export function AgentConversation({
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
+  const { mentionables, links, onMentionQuery } =
+    useNumoMentionables(projectId);
 
   /**
    * Numo's FAB fades as long as this conversation is on screen: his
@@ -201,10 +209,14 @@ export function AgentConversation({
   const refreshRuns = async (): Promise<void> => {
     await Promise.all([
       issueId
-        ? queryClient.invalidateQueries({ queryKey: issueAgentRunsQueryKey(issueId) })
+        ? queryClient.invalidateQueries({
+            queryKey: issueAgentRunsQueryKey(issueId),
+          })
         : Promise.resolve(),
       noteRunId
-        ? queryClient.invalidateQueries({ queryKey: agentRunQueryKey(noteRunId) })
+        ? queryClient.invalidateQueries({
+            queryKey: agentRunQueryKey(noteRunId),
+          })
         : Promise.resolve(),
       queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey }),
     ]);
@@ -221,7 +233,7 @@ export function AgentConversation({
   const [composing, setComposing] = useState(initialCompose);
   // Messages sent for which the server echo has not yet arrived (optimistic bubbles).
   const [pendingMessages, setPendingMessages] = useState<
-    Array<{ text: string; mentions: AssistantMention[] }>
+    Array<{ id: string; text: string; mentions: AssistantMention[] }>
   >([]);
   // 1st message of a session being created: the launch POST does the
   // pre-checks (deposit, quota, model) before rendering the session, and during this
@@ -268,7 +280,9 @@ export function AgentConversation({
   // The run just launched is active but not yet in `runs`: without it, we
   // would suggest “launch a new agent” on an already occupied issue (→ 409).
   const knownRuns =
-    launched && !runs.some((r) => r.id === launched.id) ? [launched, ...runs] : runs;
+    launched && !runs.some((r) => r.id === launched.id)
+      ? [launched, ...runs]
+      : runs;
 
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
   // Resolution of the run displayed: the one designated, otherwise the one working,
@@ -281,8 +295,8 @@ export function AgentConversation({
   const liveRun = composing
     ? null
     : selectedId
-      ? knownRuns.find((r) => r.id === selectedId) ?? null
-      : activeRun ?? knownRuns.find((r) => r.status !== "failed") ?? null;
+      ? (knownRuns.find((r) => r.id === selectedId) ?? null)
+      : (activeRun ?? knownRuns.find((r) => r.status !== "failed") ?? null);
   /**
    * What the SERVER does — the truth of the requests (thread polling, diff,
    * decision to discontinue). To be distinguished from `working`, which is what
@@ -321,7 +335,7 @@ export function AgentConversation({
   // the feed (shared key) → no additional request.
   const { events: liveEvents } = useAgentRunEventsQuery(
     liveRun?.id ?? null,
-    serverWorking
+    serverWorking,
   );
   // The feed has its own reading to make the queue lively. This second
   // subscriber shares the same channel, but also makes Git counters local
@@ -340,7 +354,8 @@ export function AgentConversation({
     () => mergeAgentLocalDiff(settledLocalDiff, streamedLocalDiff),
     [settledLocalDiff, streamedLocalDiff],
   );
-  const useLocalDiff = liveRun?.local_exec === true && (!liveRun.local_worktree || serverWorking);
+  const useLocalDiff =
+    liveRun?.local_exec === true && (!liveRun.local_worktree || serverWorking);
 
   /**
    * What THIS session changed in the deposit, cumulative over all its turns (union
@@ -367,7 +382,10 @@ export function AgentConversation({
    * It only turns during the turn; at rest the events take control again,
    * and they are already loaded.
    */
-  const { files: liveDiffFiles } = useAgentRunDiffStatQuery(liveRun?.id ?? null, working);
+  const { files: liveDiffFiles } = useAgentRunDiffStatQuery(
+    liveRun?.id ?? null,
+    working,
+  );
   const liveHeaderFiles = useMemo(() => {
     if (runLive?.fileStats.length) {
       // Events describe rounds that have already been completed; the local statement replaces
@@ -427,11 +445,25 @@ export function AgentConversation({
     // (cf. lib/agent-pending.ts — multi-set subtraction depends on it): we do not
     // account that sendings WITHOUT server echo, otherwise the first steering of the
     // session would delete the map until the page reloads.
-    const echoed = ordered
+    const echoed: Array<
+      string | { text: string; id?: string; ids?: string[] }
+    > = ordered
       .filter((e) => e.type === "user_message")
-      .map((e) => (typeof e.payload?.text === "string" ? e.payload.text : ""));
+      .map((e) => ({
+        text: typeof e.payload?.text === "string" ? e.payload.text : "",
+        ...(typeof e.payload?.messageId === "string"
+          ? { id: e.payload.messageId }
+          : {}),
+        ...(Array.isArray(e.payload?.messageIds)
+          ? {
+              ids: e.payload.messageIds.filter(
+                (id): id is string => typeof id === "string",
+              ),
+            }
+          : {}),
+      }));
     if (liveRun.prompt?.trim()) echoed.push(liveRun.prompt);
-    if (unechoedMessages(pendingMessages.map((message) => message.text), echoed).length > 0) {
+    if (unechoedMessages(pendingMessages, echoed).length > 0) {
       return null;
     }
     for (let i = ordered.length - 1; i >= 0; i--) {
@@ -439,7 +471,7 @@ export function AgentConversation({
       if (e.type === "user_message" || e.type === "summary") return null;
       if (e.type === "question") {
         const questions = parseAskUserQuestions(
-          (e.payload ?? {}) as Record<string, unknown>
+          (e.payload ?? {}) as Record<string, unknown>,
         );
         if (questions.length === 0) return null;
         const blocking = e.payload?.blocking === true;
@@ -517,8 +549,12 @@ export function AgentConversation({
   useEffect(() => {
     const runId = liveRun?.id;
     if (wasWorkingRef.current && !serverWorking && runId) {
-      void queryClient.invalidateQueries({ queryKey: ["agent-run-events", runId] });
-      void queryClient.invalidateQueries({ queryKey: agentRunDiffQueryKey(runId) });
+      void queryClient.invalidateQueries({
+        queryKey: ["agent-run-events", runId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: agentRunDiffQueryKey(runId),
+      });
     }
     wasWorkingRef.current = serverWorking;
   }, [serverWorking, liveRun?.id, queryClient]);
@@ -547,11 +583,14 @@ export function AgentConversation({
   const [baseBranch, setBaseBranch] = useState("");
   // Level of reasoning (MIN-122), also frozen at launch. `null` = not
   // still touched → we follow the personal fault, which can occur after assembly.
-  const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
+  const [reasoningOverride, setReasoningOverride] =
+    useState<ReasoningLevel | null>(null);
   // The bearings of the MODEL which will rotate (override chosen, otherwise personal default,
   // otherwise default of the provider): what the list selector depends on it, and the
   // displayed level is lowered to what it accepts.
-  const reasoningLevels = useReasoningLevelsFor(model || defaultModel || providerDefaultModel);
+  const reasoningLevels = useReasoningLevelsFor(
+    model || defaultModel || providerDefaultModel,
+  );
   const reasoningLevel = nearestReasoningLevel(
     reasoningOverride ?? defaultReasoningLevel,
     reasoningLevels,
@@ -560,7 +599,8 @@ export function AgentConversation({
   // Generic and local endpoints have no reliable fault: the id of the
   // model is a decision of their owner, never a cloud fallback.
   const localEndpoint = isLocalAgentProvider(provider);
-  const modelRequired = (provider === "generic" || localEndpoint) && !defaultModel && !model;
+  const modelRequired =
+    (provider === "generic" || localEndpoint) && !defaultModel && !model;
 
   // WHERE THE CONVERSATION TURNS (MIN-359), frozen at launch like its three
   // neighbors. The chip only exists in the desktop app AND when a folder is
@@ -686,23 +726,32 @@ export function AgentConversation({
     if (!liveRun) return;
     const text = message.trim();
     if (!text) return;
+    const messageId = crypto.randomUUID();
     // OPTIMISTIC display: the bubble would only return from the server when the
     // loop (including sandbox wake-up, several seconds) — until then the user
     // would have the impression of having hit a void. The feed removes it as soon as its
     // echo arrives. If this fails, we remove it ourselves (the message does not exist).
-    setPendingMessages((p) => [...p, { text, mentions }]);
+    setPendingMessages((p) => [...p, { id: messageId, text, mentions }]);
     try {
-      await steerAgentRunApi(liveRun.id, text, mentions, attachments);
+      await steerAgentRunApi(
+        liveRun.id,
+        text,
+        mentions,
+        attachments,
+        messageId,
+      );
       await Promise.all([
         refreshRuns(),
-        queryClient.invalidateQueries({ queryKey: ["agent-run-events", liveRun.id] }),
+        queryClient.invalidateQueries({
+          queryKey: ["agent-run-events", liveRun.id],
+        }),
       ]);
     } catch (err) {
       // Refused (PR merged, run exceeded, race with a more recent run started
       // in another tab…): the message does not exist anywhere → we remove its bubble
       // rather than letting people believe he's gone.
       setPendingMessages((p) => {
-        const i = p.findIndex((message) => message.text === text);
+        const i = p.findIndex((message) => message.id === messageId);
         return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)];
       });
       toast.error(agentErrorMessage(err));
@@ -803,294 +852,321 @@ export function AgentConversation({
   return (
     <MentionLinksProvider value={links}>
       <div className="flex h-full flex-col overflow-hidden">
-      {/* Header: left block provided by the host (default: session template in
+        {/* Header: left block provided by the host (default: session template in
           live / targeted issue in composite) + actions on the right. Without border: the wire
           breathes all the way to the top, and the header doesn't read as a separate bar.
           Bottom deliberately tighter than the top (`pb-2.5`): the space under the
           title is already given by the `pt-3` of the sessions bar just below. */}
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
-        {headerTitle ??
-          (liveRun ? (
-            <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
-          ) : (
-            <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
-              <NumoIcon className="size-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">
-                {t("sectionTitle")}
-                <span className="text-muted-foreground">
-                  {" · "}
-                  {issueIdentifier}
+        <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
+          {headerTitle ??
+            (liveRun ? (
+              <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
+            ) : (
+              <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                <NumoIcon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">
+                  {t("sectionTitle")}
+                  <span className="text-muted-foreground">
+                    {" · "}
+                    {issueIdentifier}
+                  </span>
                 </span>
               </span>
-            </span>
-          ))}
+            ))}
 
-        {sessionActions || headerActions ? (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {sessionActions}
-            {headerActions}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Feed: event stream (live), in-flight launch, spinner or intro. */}
-      <div className="min-h-0 flex-1">
-        {phase === "live" && liveRun ? (
-          <AgentEventFeed
-            runId={liveRun.id}
-            status={liveRun.status}
-            stopping={stopping}
-            prompt={liveRun.prompt}
-            promptMentions={liveRun.prompt_mentions}
-            pendingUserMessages={pendingMessages}
-            onOpenFile={openDiff}
-            onOpenDiff={openDiffSheet}
-            liveDiffFiles={liveDiffFiles}
-            hiddenQuestionEventId={activeQuestion?.eventId}
-            localExec={liveRun.local_exec === true}
-            className="h-full py-4"
-          />
-        ) : launchText ? (
-          // Session being created: no session to query yet, but
-          // the SAME thread, which only displays the bubble of the 1st message + “works”.
-          // Reusing the feed (rather than an ad hoc bubble) ensures that when
-          // the session takes over, the bubble does not move a pixel.
-          <AgentEventFeed
-            runId={null}
-            status="queued"
-            pendingUserMessages={[{ text: launchText, mentions: launchMentions }]}
-            localExec={launchLocalExec}
-            className="h-full py-4"
-          />
-        ) : phase === "loading" ? (
-          <div className="flex h-full items-center justify-center">
-            <Spinner className="size-5 text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card">
-              <NumoIcon className="size-6 text-muted-foreground" />
+          {sessionActions || headerActions ? (
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {sessionActions}
+              {headerActions}
             </div>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {t("dialogDescription")}
-            </p>
-          </div>
-        )}
-      </div>
+          ) : null}
+        </div>
 
-      {/* Compose: steering/interruption (live) or pre-written launch (compose).
+        {/* Feed: event stream (live), in-flight launch, spinner or intro. */}
+        <div className="min-h-0 flex-1">
+          {phase === "live" && liveRun ? (
+            <AgentEventFeed
+              runId={liveRun.id}
+              status={liveRun.status}
+              stopping={stopping}
+              prompt={liveRun.prompt}
+              promptMentions={liveRun.prompt_mentions}
+              pendingUserMessages={pendingMessages}
+              onOpenFile={openDiff}
+              onOpenDiff={openDiffSheet}
+              liveDiffFiles={liveDiffFiles}
+              hiddenQuestionEventId={activeQuestion?.eventId}
+              localExec={liveRun.local_exec === true}
+              className="h-full py-4"
+            />
+          ) : launchText ? (
+            // Session being created: no session to query yet, but
+            // the SAME thread, which only displays the bubble of the 1st message + “works”.
+            // Reusing the feed (rather than an ad hoc bubble) ensures that when
+            // the session takes over, the bubble does not move a pixel.
+            <AgentEventFeed
+              runId={null}
+              status="queued"
+              pendingUserMessages={[
+                { text: launchText, mentions: launchMentions },
+              ]}
+              localExec={launchLocalExec}
+              className="h-full py-4"
+            />
+          ) : phase === "loading" ? (
+            <div className="flex h-full items-center justify-center">
+              <Spinner className="size-5 text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card">
+                <NumoIcon className="size-6 text-muted-foreground" />
+              </div>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {t("dialogDescription")}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Compose: steering/interruption (live) or pre-written launch (compose).
           Terminaled to the same max width as the wire and centered. On the Agents PAGE it
           sits just above the mobile navigation bar, so in the
           gradient that it projects: `dock-above-nav` outputs it (see globals.css).
           In the modal, the class costs nothing — the Sheet is its own
           contexte d'empilement. */}
-      {phase !== "loading" && (
-        <div className="dock-above-nav shrink-0">
-          <div className="mx-auto w-full max-w-[800px]">
-          {/* The living summary remains on a single line and at the width of its
+        {phase !== "loading" && (
+          <div className="dock-above-nav shrink-0">
+            <div className="mx-auto w-full max-w-[800px]">
+              {/* The living summary remains on a single line and at the width of its
               content: plan, files and subagents share a pill instead
               to push the dial to each additional detail. */}
-          {liveRun ? (
-            <AgentActivityPill
-              planSteps={planSteps}
-              fileCount={changedFileCount}
-              additions={sessionTotals.additions}
-              deletions={sessionTotals.deletions}
-              subagents={subagents}
-              onOpenDiff={openDiffSheet}
-            />
-          ) : null}
-          {/* Active question: the card takes the PLACE of the composer (pattern
+              {liveRun ? (
+                <AgentActivityPill
+                  planSteps={planSteps}
+                  fileCount={changedFileCount}
+                  additions={sessionTotals.additions}
+                  deletions={sessionTotals.deletions}
+                  subagents={subagents}
+                  onOpenDiff={openDiffSheet}
+                />
+              ) : null}
+              {/* Active question: the card takes the PLACE of the composer (pattern
               Claude Code/Codex). The ChatInput remains MOUNTED, hidden in CSS — the
               The user's draft survives and reappears after the response. */}
-          {liveRun && activeQuestion ? (
-            <div className="pb-3">
-              <AskUserCard
-                key={activeQuestion.eventId}
-                questions={activeQuestion.questions}
-                onAnswer={(text) =>
-                  void sendLive(text, [], [], {
-                    answersBlockingQuestion: activeQuestion.blocking,
-                  })
-                }
-                onSkip={() =>
-                  void sendLive(tToolCall("skippedQuestions"), [], [], {
-                    answersBlockingQuestion: activeQuestion.blocking,
-                  })
-                }
-              />
-            </div>
-          ) : null}
-          {liveRun ? (
-            <div className={cn(activeQuestion && "hidden")}>
-              <ChatInput
-              key={liveRun.id}
-                onSend={(message, attachments, mentions) =>
-                  void sendLive(message, attachments, mentions)
-                }
-              onAbort={() => void interrupt()}
-              isStreaming={working}
-              sendWhileStreaming
-                beam={working}
-                disabled={!steerable}
-                mentionables={mentionables}
-                onMentionQuery={onMentionQuery}
-              placeholder={
-                steerable
-                  ? working
-                    ? t("livePlaceholder")
-                    : t("restPlaceholder")
-                  : delivered
-                    ? // Work delivered: we do not reopen a PR cycle on it.
-                      t("mergedRunPlaceholder")
-                    : // Past run: consultation only (a more recent run has
-                      // took over the branch). Otherwise: run `failed`, nothing to restart.
-                      isLatest
-                      ? t("endedPlaceholder")
-                      : t("pastRunPlaceholder")
-              }
-              leadingControls={
-                <>
-                  {/* Fixed model for the session: locked picker + tooltip. */}
-                  <ModelCombobox
-                    variant="compact"
-                    value={liveRun.model ?? ""}
-                    onChange={() => {}}
-                    defaultLabel={t("modelDefault")}
-                    defaultModelId={liveRun.model}
-                    placeholder={t("modelSearchPlaceholder")}
-                    emptyLabel={t("modelSearchEmpty")}
-                    loadingLabel={t("modelSearchLoading")}
-                    freeTextLabel={(q) => t("modelUseCustom", { model: q })}
-                    disabled
-                    disabledTooltip={t("modelLocked")}
+              {liveRun && activeQuestion ? (
+                <div className="pb-3">
+                  <AskUserCard
+                    key={activeQuestion.eventId}
+                    questions={activeQuestion.questions}
+                    onAnswer={(text) =>
+                      void sendLive(text, [], [], {
+                        answersBlockingQuestion: activeQuestion.blocking,
+                      })
+                    }
+                    onSkip={() =>
+                      void sendLive(tToolCall("skippedQuestions"), [], [], {
+                        answersBlockingQuestion: activeQuestion.blocking,
+                      })
+                    }
                   />
-                  {/* Level of reasoning, frozen at launch like the model. */}
-                  <ReasoningCombobox
-                    value={liveRun.reasoning_level ?? "off"}
-                    onChange={() => {}}
-                    disabled
-                    disabledTooltip={t("reasoningLocked")}
-                  />
-                </>
-              }
-              />
-            </div>
-          ) : (
-            <ChatInput
-              key={`compose-${composeInputRevision}`}
-              onSend={(message, attachments, mentions) =>
-                submitLaunch(message, attachments, mentions)
-              }
-              mentionables={mentionables}
-              onMentionQuery={onMentionQuery}
-              disabled={launching}
-              sendDisabled={environment === "cloud" && !cloudExecutionConfigured}
-              sendDisabledTooltip={t("errorExecutionBackendUnavailable")}
-              initialValue={composeInputRevision === 0 ? initialComposeText : undefined}
-              placeholder={t("composePlaceholder")}
-              contextSlot={
-                <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-                  <BranchCombobox
-                    issueId={issueId}
-                    value={baseBranch}
-                    onChange={setBaseBranch}
-                    defaultLabel={t("branchDefault")}
-                    defaultHint={t("branchDefaultHint")}
-                    placeholder={t("branchSearchPlaceholder")}
-                    emptyLabel={t("branchSearchEmpty")}
-                    loadingLabel={t("branchSearchLoading")}
-                    disabled={launching}
-                    localBranches={environment !== "cloud" ? localRepo.branches : undefined}
-                    localLabel={t("branchLocalGroup")}
-                    cloudLabel={t("branchCloudGroup")}
-                    bare
-                  />
-                  {/* Desktop: the chip always exists (local choice). Browser:
-                      only for a linked project, where it offers the cloud. */}
-                  {localRepo.available || localRepo.linked ? (
-                    <EnvironmentCombobox
-                      value={environment}
-                      onChange={setEnvironment}
-                      localAvailable={localRepo.available}
-                      cloudAvailable={!localEndpoint && cloudExecutionConfigured}
-                      // No linked repository → the sandbox has nothing to clone:
-                      // the cloud entry is greyed and reopens the link panel.
-                      cloudNeedsRepo={!localRepo.linked}
-                      onLinkRepo={() => router.push(`/projects/${projectId}/settings?tab=git`)}
-                      executionBackend={executionBackend}
-                      folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
-                      needsAttach={localRepo.state?.status !== "ready"}
-                      onAttach={() => {
-                        void localRepo.attach().then((next) => {
-                          if (next?.status === "ready") setEnvironment("local");
-                          else if (next && next.status === "invalid") {
-                            toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
-                          }
-                        });
-                      }}
-                      disabled={launching || localRepo.busy}
-                      bare
-                    />
-                  ) : null}
                 </div>
-              }
-              contextPlacement="above"
-              leadingControls={
-                <>
-                  <ModelCombobox
-                    variant="compact"
-                    value={model}
-                    onChange={setModel}
-                    defaultLabel={t("modelDefault")}
-                    defaultModelId={defaultModel ?? providerDefaultModel}
-                    placeholder={t("modelSearchPlaceholder")}
-                    emptyLabel={t("modelSearchEmpty")}
-                    loadingLabel={t("modelSearchLoading")}
-                    freeTextLabel={(q) => t("modelUseCustom", { model: q })}
-                    disabled={launching}
+              ) : null}
+              {liveRun ? (
+                <div className={cn(activeQuestion && "hidden")}>
+                  <ChatInput
+                    key={liveRun.id}
+                    onSend={(message, attachments, mentions) =>
+                      void sendLive(message, attachments, mentions)
+                    }
+                    onAbort={() => void interrupt()}
+                    isStreaming={working}
+                    sendWhileStreaming
+                    beam={working}
+                    disabled={!steerable}
+                    mentionables={mentionables}
+                    onMentionQuery={onMentionQuery}
+                    placeholder={
+                      steerable
+                        ? working
+                          ? t("livePlaceholder")
+                          : t("restPlaceholder")
+                        : delivered
+                          ? // Work delivered: we do not reopen a PR cycle on it.
+                            t("mergedRunPlaceholder")
+                          : // Past run: consultation only (a more recent run has
+                            // took over the branch). Otherwise: run `failed`, nothing to restart.
+                            isLatest
+                            ? t("endedPlaceholder")
+                            : t("pastRunPlaceholder")
+                    }
+                    leadingControls={
+                      <>
+                        {/* Fixed model for the session: locked picker + tooltip. */}
+                        <ModelCombobox
+                          variant="compact"
+                          value={liveRun.model ?? ""}
+                          onChange={() => {}}
+                          defaultLabel={t("modelDefault")}
+                          defaultModelId={liveRun.model}
+                          placeholder={t("modelSearchPlaceholder")}
+                          emptyLabel={t("modelSearchEmpty")}
+                          loadingLabel={t("modelSearchLoading")}
+                          freeTextLabel={(q) =>
+                            t("modelUseCustom", { model: q })
+                          }
+                          disabled
+                          disabledTooltip={t("modelLocked")}
+                        />
+                        {/* Level of reasoning, frozen at launch like the model. */}
+                        <ReasoningCombobox
+                          value={liveRun.reasoning_level ?? "off"}
+                          onChange={() => {}}
+                          disabled
+                          disabledTooltip={t("reasoningLocked")}
+                        />
+                      </>
+                    }
                   />
-                  <ReasoningCombobox
-                    value={reasoningLevel}
-                    onChange={setReasoningOverride}
-                    disabled={launching}
-                    levels={reasoningLevels}
-                  />
-                </>
-              }
-            />
-          )}
+                </div>
+              ) : (
+                <ChatInput
+                  key={`compose-${composeInputRevision}`}
+                  onSend={(message, attachments, mentions) =>
+                    submitLaunch(message, attachments, mentions)
+                  }
+                  mentionables={mentionables}
+                  onMentionQuery={onMentionQuery}
+                  disabled={launching}
+                  sendDisabled={
+                    environment === "cloud" && !cloudExecutionConfigured
+                  }
+                  sendDisabledTooltip={t("errorExecutionBackendUnavailable")}
+                  initialValue={
+                    composeInputRevision === 0 ? initialComposeText : undefined
+                  }
+                  placeholder={t("composePlaceholder")}
+                  contextSlot={
+                    <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+                      <BranchCombobox
+                        issueId={issueId}
+                        value={baseBranch}
+                        onChange={setBaseBranch}
+                        defaultLabel={t("branchDefault")}
+                        defaultHint={t("branchDefaultHint")}
+                        placeholder={t("branchSearchPlaceholder")}
+                        emptyLabel={t("branchSearchEmpty")}
+                        loadingLabel={t("branchSearchLoading")}
+                        disabled={launching}
+                        localBranches={
+                          environment !== "cloud"
+                            ? localRepo.branches
+                            : undefined
+                        }
+                        localLabel={t("branchLocalGroup")}
+                        cloudLabel={t("branchCloudGroup")}
+                        bare
+                      />
+                      {/* Desktop: the chip always exists (local choice). Browser:
+                      only for a linked project, where it offers the cloud. */}
+                      {localRepo.available || localRepo.linked ? (
+                        <EnvironmentCombobox
+                          value={environment}
+                          onChange={setEnvironment}
+                          localAvailable={localRepo.available}
+                          cloudAvailable={
+                            !localEndpoint && cloudExecutionConfigured
+                          }
+                          // No linked repository → the sandbox has nothing to clone:
+                          // the cloud entry is greyed and reopens the link panel.
+                          cloudNeedsRepo={!localRepo.linked}
+                          onLinkRepo={() =>
+                            router.push(
+                              `/projects/${projectId}/settings?tab=git`,
+                            )
+                          }
+                          executionBackend={executionBackend}
+                          folder={
+                            localRepo.state?.status === "ready"
+                              ? localRepo.state.folder
+                              : null
+                          }
+                          needsAttach={localRepo.state?.status !== "ready"}
+                          onAttach={() => {
+                            void localRepo.attach().then((next) => {
+                              if (next?.status === "ready")
+                                setEnvironment("local");
+                              else if (next && next.status === "invalid") {
+                                toast.error(
+                                  t(LOCAL_REPO_ERROR_KEYS[next.reason]),
+                                );
+                              }
+                            });
+                          }}
+                          disabled={launching || localRepo.busy}
+                          bare
+                        />
+                      ) : null}
+                    </div>
+                  }
+                  contextPlacement="above"
+                  leadingControls={
+                    <>
+                      <ModelCombobox
+                        variant="compact"
+                        value={model}
+                        onChange={setModel}
+                        defaultLabel={t("modelDefault")}
+                        defaultModelId={defaultModel ?? providerDefaultModel}
+                        placeholder={t("modelSearchPlaceholder")}
+                        emptyLabel={t("modelSearchEmpty")}
+                        loadingLabel={t("modelSearchLoading")}
+                        freeTextLabel={(q) => t("modelUseCustom", { model: q })}
+                        disabled={launching}
+                      />
+                      <ReasoningCombobox
+                        value={reasoningLevel}
+                        onChange={setReasoningOverride}
+                        disabled={launching}
+                        levels={reasoningLevels}
+                      />
+                    </>
+                  }
+                />
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Session diff view: Sheet over the conversation, powered by
+        {/* Session diff view: Sheet over the conversation, powered by
           the live diff of the run (PR or branch comparison). Rise as soon as a
           session is open — the query only starts when opened. */}
-      {liveRun ? (
-        <AgentDiffSheet
-          runId={liveRun.id}
-          open={diffOpen}
-          onOpenChange={setDiffOpen}
-          focusPath={diffFocus}
-          // The real status: it is this which sets the pace for the refresh of the diff, and
-          // the lathe continues to push during the seconds following the requested stop.
-          working={serverWorking}
-          baseBranch={liveRun.base_branch}
-          branchName={liveRun.branch_name}
-          local={useLocalDiff}
-          localFiles={localDiff.files}
-          localTruncated={localDiff.truncated}
+        {liveRun ? (
+          <AgentDiffSheet
+            runId={liveRun.id}
+            open={diffOpen}
+            onOpenChange={setDiffOpen}
+            focusPath={diffFocus}
+            // The real status: it is this which sets the pace for the refresh of the diff, and
+            // the lathe continues to push during the seconds following the requested stop.
+            working={serverWorking}
+            baseBranch={liveRun.base_branch}
+            branchName={liveRun.branch_name}
+            local={useLocalDiff}
+            localFiles={localDiff.files}
+            localTruncated={localDiff.truncated}
+          />
+        ) : null}
+        <LocalIssueRunConfirmation
+          open={pendingLocalIssueLaunch !== null}
+          folder={
+            localRepo.state?.status === "ready" ? localRepo.state.folder : ""
+          }
+          onOpenChange={(open) => {
+            if (!open) setPendingLocalIssueLaunch(null);
+          }}
+          onConfirm={confirmLocalIssueLaunch}
         />
-      ) : null}
-      <LocalIssueRunConfirmation
-        open={pendingLocalIssueLaunch !== null}
-        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : ""}
-        onOpenChange={(open) => {
-          if (!open) setPendingLocalIssueLaunch(null);
-        }}
-        onConfirm={confirmLocalIssueLaunch}
-      />
       </div>
     </MentionLinksProvider>
   );
