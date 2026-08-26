@@ -219,6 +219,13 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.upsert_github_connection_atomic(
+  uuid, bigint, text, text, text, text
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.upsert_github_connection_atomic(
+  uuid, bigint, text, text, text, text
+) TO service_role;
+
 CREATE OR REPLACE FUNCTION public.upsert_gitlab_connection_atomic(
   p_user_id uuid,
   p_provider_account_id text,
@@ -277,13 +284,6 @@ BEGIN
   RETURN v_id;
 END;
 $$;
-
-REVOKE ALL ON FUNCTION public.upsert_github_connection_atomic(
-  uuid, bigint, text, text, text, text
-) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.upsert_github_connection_atomic(
-  uuid, bigint, text, text, text, text
-) TO service_role;
 
 REVOKE ALL ON FUNCTION public.upsert_gitlab_connection_atomic(
   uuid, text, text, text, text, text, timestamptz, text

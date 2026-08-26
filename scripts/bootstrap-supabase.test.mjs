@@ -54,7 +54,7 @@ test("bootstrap always generates the forge secrets; optional secrets follow capa
 
 test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {
   const migrations = listMigrations();
-  assert.equal(migrations.length, 33);
+  assert.equal(migrations.length, 39);
   assert.deepEqual([...migrations].sort(), migrations);
   assert.equal(migrations[0], "20270106090000_baseline.sql");
   assert.equal(migrations[1], "20270106091000_initial_data.sql");
@@ -73,7 +73,7 @@ test("migrations are sorted, include the vector extension, and repair Realtime p
   );
   assert.equal(migrations[13], "20270106180000_page_viewers.sql");
   assert.equal(migrations[14], "20270106190000_feedback_board_page_tabs.sql");
-  assert.equal(migrations.at(-1), "20270106370000_atomic_comment_attachment_cleanup.sql");
+  assert.equal(migrations.at(-1), "20270106430000_atomic_agent_resume_budget.sql");
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 
