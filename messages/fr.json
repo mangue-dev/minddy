@@ -1527,7 +1527,7 @@
     "workloadInProgress": "{count, plural, =0 {aucun en cours} one {# en cours} other {# en cours}}",
     "workloadInfo": "Tickets ouverts qui vous sont assignés, tous projets confondus.",
     "streakRecord": "Record : {count, plural, one {# jour} other {# jours}}",
-    "activityBreakdown": "{issues, plural, one {# ticket} other {# tickets}} · {tasks, plural, one {# tâche} other {# tâches}} · {days, plural, one {# jour actif} other {# jours actifs}}",
+    "activityBreakdown": "{issues, plural, one {# ticket} other {# tickets}}\n{tasks, plural, one {# tâche} other {# tâches}}\n{days, plural, one {# jour actif} other {# jours actifs}}",
     "less": "Moins",
     "more": "Plus",
     "dayIssues": "{count, plural, one {# ticket} other {# tickets}}",

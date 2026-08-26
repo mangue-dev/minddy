@@ -44,7 +44,7 @@ export function StatsHero({
                 {total}
               </button>
             </TooltipTrigger>
-            <TooltipContent>{breakdown}</TooltipContent>
+            <TooltipContent className="whitespace-pre-line">{breakdown}</TooltipContent>
           </Tooltip>{" "}
           <span className="text-muted-foreground">
             {t("heroTotalLabel", { count: total })}

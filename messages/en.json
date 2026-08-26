@@ -1527,7 +1527,7 @@
     "workloadInProgress": "{count, plural, =0 {none in progress} one {# in progress} other {# in progress}}",
     "workloadInfo": "Open issues assigned to you, across all your projects.",
     "streakRecord": "Record: {count, plural, one {# day} other {# days}}",
-    "activityBreakdown": "{issues, plural, one {# issue} other {# issues}} · {tasks, plural, one {# task} other {# tasks}} · {days, plural, one {# active day} other {# active days}}",
+    "activityBreakdown": "{issues, plural, one {# issue} other {# issues}}\n{tasks, plural, one {# task} other {# tasks}}\n{days, plural, one {# active day} other {# active days}}",
     "less": "Less",
     "more": "More",
     "dayIssues": "{count, plural, one {# issue} other {# issues}}",
