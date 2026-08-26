@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
+import { InheritedIntlProvider } from "@/components/browser-intl-provider";
 
 /**
  * Serves the FULL i18n catalog to the client subtree of a segment (MIN-100).
@@ -18,5 +18,5 @@ import { getMessages } from "next-intl/server";
  * received before.
  */
 export async function FullCatalogMessages({ children }: { children: ReactNode }) {
-  return <NextIntlClientProvider messages={await getMessages()}>{children}</NextIntlClientProvider>;
+  return <InheritedIntlProvider messages={await getMessages()}>{children}</InheritedIntlProvider>;
 }

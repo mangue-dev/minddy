@@ -1,9 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Inter, Instrument_Serif } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import {
+  getLocale,
+  getMessages,
+  getNow,
+  getTimeZone,
+  getTranslations,
+} from "next-intl/server";
 import { ThemeProvider } from "mangue-ui/components/theme-provider";
+import { BrowserIntlProvider } from "@/components/browser-intl-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DesktopChrome } from "@/components/desktop-chrome";
 import { LazyToaster } from "@/components/lazy-toaster";
@@ -113,10 +119,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [locale, messages, headerList] = await Promise.all([
+  const [locale, messages, headerList, now, initialTimeZone] = await Promise.all([
     getLocale(),
     getMessages(),
     headers(),
+    getNow(),
+    getTimeZone(),
   ]);
   const runtimeConfig = getRuntimeConfig().public;
 
@@ -168,7 +176,12 @@ export default async function RootLayout({
       >
         <ThemeProvider defaultTheme={defaultTheme}>
           <RuntimeConfigProvider config={runtimeConfig}>
-          <NextIntlClientProvider messages={clientMessages}>
+          <BrowserIntlProvider
+            locale={locale}
+            messages={clientMessages}
+            now={now}
+            initialTimeZone={initialTimeZone}
+          >
             {/* The strip by which you move the desktop app window
                 (MIN-292). Here, and not in a shell: this is the only position of
                 repository from where it covers ALL configurations. An audit in
@@ -202,7 +215,7 @@ export default async function RootLayout({
                 initial (MIN-94). The init is deferred and cookieless as long as the
                 headband has not been sliced ​​— see component. */}
             <PostHogInit />
-          </NextIntlClientProvider>
+          </BrowserIntlProvider>
           </RuntimeConfigProvider>
         </ThemeProvider>
       </body>
