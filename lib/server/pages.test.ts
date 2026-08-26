@@ -46,6 +46,8 @@ const h = vi.hoisted(() => ({
   versions: [] as Record<string, unknown>[],
   /** Projects to which the actor has access. Empty = everything is “not found”. */
   access: new Set<string>(),
+  /** Optional edit injected between discardPage's initial read and its RPC. */
+  beforeDiscard: null as (() => void) | null,
   seq: 0,
 }));
 
@@ -199,7 +201,48 @@ vi.mock("@/lib/supabase-service", () => {
     return query;
   };
 
-  return { getServiceClient: () => ({ from }) };
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name !== "discard_blank_page_guarded") {
+      return { data: null, error: new Error(`unexpected RPC: ${name}`) };
+    }
+    h.beforeDiscard?.();
+    h.beforeDiscard = null;
+    const row = h.rows.find(
+      (candidate) =>
+        candidate.id === args.p_page_id && candidate.deleted_at === null,
+    );
+    if (!row) return { data: { status: "not_found" }, error: null };
+
+    const blocks = (row.content as { content?: unknown[] } | null)?.content;
+    const only = Array.isArray(blocks) ? blocks[0] as {
+      type?: string;
+      content?: unknown[];
+    } : null;
+    const blank =
+      !Array.isArray(blocks) ||
+      blocks.length === 0 ||
+      (blocks.length === 1 && only?.type === "paragraph" && !only.content?.length);
+    const hasChildren = h.rows.some(
+      (candidate) =>
+        candidate.parent_id === row.id && candidate.deleted_at === null,
+    );
+    if (
+      String(row.title).trim() !== "" ||
+      Boolean(row.icon) ||
+      !blank ||
+      hasChildren
+    ) {
+      return { data: { status: "not_empty" }, error: null };
+    }
+
+    h.rows = h.rows.filter((candidate) => candidate !== row);
+    return {
+      data: { status: "discarded", parent_id: row.parent_id },
+      error: null,
+    };
+  };
+
+  return { getServiceClient: () => ({ from, rpc }) };
 });
 
 /**
@@ -301,7 +344,7 @@ async function create(title: string, parentId: string | null = null) {
     actorId: ACTOR,
     input: { title, parent_id: parentId },
   });
-  if (!result.ok) throw new Error(`création refusée : ${result.errorKey}`);
+  if (!result.ok) throw new Error(`page creation refused: ${result.errorKey}`);
   return result.page.id;
 }
 
@@ -311,6 +354,7 @@ beforeEach(() => {
   h.rows = [];
   h.versions = [];
   h.seq = 0;
+  h.beforeDiscard = null;
   h.access = new Set([PROJECT]);
   announce.recordPageEvent.mockClear();
   announce.notifyAgentPageWrite.mockClear();
@@ -623,7 +667,7 @@ describe("trashPage", () => {
 });
 
 describe("discardPage", () => {
-  it("DÉTRUIT une page restée vide, sans passer par la corbeille", async () => {
+  it("permanently deletes a page that remained blank", async () => {
     const id = await create("");
 
     expect(await discardPage(id, ACTOR)).toEqual({ ok: true });
@@ -633,7 +677,7 @@ describe("discardPage", () => {
     expect(h.rows.find((row) => row.id === id)).toBeUndefined();
   });
 
-  it("refuse une page qui porte un titre", async () => {
+  it("rejects a page with a title", async () => {
     const id = await create("Cadrage");
     expect(await discardPage(id, ACTOR)).toMatchObject({
       ok: false,
@@ -643,7 +687,7 @@ describe("discardPage", () => {
     expect(rowOf(id).deleted_at).toBeNull();
   });
 
-  it("refuse une page qui porte du texte", async () => {
+  it("rejects a page with body text", async () => {
     const id = await create("");
     await updatePage({
       pageId: id,
@@ -665,7 +709,7 @@ describe("discardPage", () => {
     expect(rowOf(id)).toBeDefined();
   });
 
-  it("refuse une page vide qui porte une sous-page", async () => {
+  it("rejects a blank page that has a child", async () => {
     const parent = await create("");
     const child = await create("Dedans", parent);
 
@@ -677,7 +721,7 @@ describe("discardPage", () => {
     expect(rowOf(child)).toBeDefined();
   });
 
-  it("laisse passer le paragraphe vide d'une page neuve", async () => {
+  it("accepts the empty paragraph rendered for a new page", async () => {
     const id = await create("");
     await updatePage({
       pageId: id,
@@ -688,7 +732,7 @@ describe("discardPage", () => {
     expect(await discardPage(id, ACTOR)).toEqual({ ok: true });
   });
 
-  it("emporte le bloc sous-page du corps du parent", async () => {
+  it("removes the subpage block from the parent body", async () => {
     const parent = await create("Parent");
     const child = await create("", parent);
     await updatePage({
@@ -709,7 +753,7 @@ describe("discardPage", () => {
     expect(JSON.stringify(rowOf(parent).content)).not.toContain(child);
   });
 
-  it("répond 404 hors du projet, et ne détruit rien", async () => {
+  it("returns 404 outside the project without deleting anything", async () => {
     const id = await create("");
     h.access = new Set();
     expect(await discardPage(id, ACTOR)).toMatchObject({
@@ -717,6 +761,28 @@ describe("discardPage", () => {
       status: 404,
     });
     expect(h.rows.find((row) => row.id === id)).toBeDefined();
+  });
+
+  it("preserves an edit committed after the initial blank-page read", async () => {
+    const id = await create("");
+    h.beforeDiscard = () => {
+      Object.assign(rowOf(id), {
+        content: {
+          type: "doc",
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: "Newer" }] },
+          ],
+        },
+        version: 2,
+      });
+    };
+
+    expect(await discardPage(id, ACTOR)).toMatchObject({
+      ok: false,
+      status: 409,
+      errorKey: "pageNotEmpty",
+    });
+    expect(JSON.stringify(rowOf(id).content)).toContain("Newer");
   });
 });
 

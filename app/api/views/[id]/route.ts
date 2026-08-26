@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import {
   detachDomainFromVercelOnly,
   getDomainForShare,
+  reserveCustomDomainMutation,
 } from "@/lib/server/custom-domains";
 import { updateView } from "@/lib/server/views";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -57,8 +58,16 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("systemViewLocked") }, { status: 400 });
   }
 
-  // The cascade views → view_shares → custom_domains takes the domain line
-  // but not the Vercel attachment (MIN-36) — captured before, detached after.
+  // The cascade removes the database mapping but not the Vercel attachment.
+  // Share/domain routes use this same stable lease, so none can attach a newer
+  // resource between the capture and provider cleanup.
+  const reservation = await reserveCustomDomainMutation(`view:${id}`, auth.user.id);
+  if (reservation) {
+    return NextResponse.json(
+      { error: t("customDomainApiError") },
+      { status: reservation.error === "provider_unavailable" ? 503 : 409 },
+    );
+  }
   const service = getServiceClient();
   const { data: shareRow } = await service
     .from("view_shares")
@@ -79,6 +88,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: t("viewNotFound") }, { status: 404 });
-  if (domainRow) await detachDomainFromVercelOnly(domainRow);
+  if (domainRow) {
+    await detachDomainFromVercelOnly(domainRow, auth.user.id, {
+      mutationAlreadyReserved: true,
+    });
+  }
   return NextResponse.json({ ok: true });
 }

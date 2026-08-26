@@ -28,9 +28,13 @@ vi.mock("@/lib/public-hosts", () => ({
 }));
 vi.mock("@/lib/site", () => ({ SITE_URL: "https://www.minddy.app" }));
 
-const { refreshDomainStatus, removeDomain, serializeDomainStatus, setDomain } = await import(
-  "./custom-domains"
-);
+const {
+  detachDomainFromVercelOnly,
+  refreshDomainStatus,
+  removeDomain,
+  serializeDomainStatus,
+  setDomain,
+} = await import("./custom-domains");
 
 const ACTOR = "11111111-1111-4111-8111-111111111111";
 const ROW = {
@@ -106,5 +110,38 @@ describe("custom-domain provider admission", () => {
 
     expect(results.every((result) => result.ok)).toBe(true);
     expect(getVercelDomainState).toHaveBeenCalledTimes(1);
+  });
+
+  it("serializes the same hostname across different target leases", async () => {
+    reserveProviderOperation
+      .mockResolvedValueOnce({ state: "reserved", retryAfter: 0 })
+      .mockResolvedValueOnce({ state: "deduplicated", retryAfter: 8 });
+
+    await expect(
+      setDomain({ boardId: "board-1" }, "feedback.example.com", ACTOR),
+    ).resolves.toEqual({
+      ok: false,
+      error: "operation_in_progress",
+      retryAfter: 8,
+    });
+    expect(addDomainToVercel).not.toHaveBeenCalled();
+    expect(removeDomainFromVercel).not.toHaveBeenCalled();
+  });
+
+  it("does not detach a hostname retained by a newer database mapping", async () => {
+    reserveProviderOperation.mockResolvedValue({ state: "reserved", retryAfter: 0 });
+    setFakeTable("custom_domains", [
+      {
+        ...ROW,
+        id: "domain-new",
+        board_id: "board-new",
+      },
+    ]);
+
+    await detachDomainFromVercelOnly(ROW, ACTOR, {
+      mutationAlreadyReserved: true,
+    });
+
+    expect(removeDomainFromVercel).not.toHaveBeenCalled();
   });
 });

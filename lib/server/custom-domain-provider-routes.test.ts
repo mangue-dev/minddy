@@ -16,7 +16,8 @@ describe("custom-domain provider routes", () => {
     expect(feedbackRoute).toContain("refreshDomainStatus(row, guard.userId)");
     expect(feedbackRoute).toContain("removeDomain(row, guard.userId)");
     expect(shareRoute).toContain("refreshDomainStatus(row, auth.user.id)");
-    expect(shareRoute).toContain("removeDomain(row, auth.user.id)");
+    expect(shareRoute).toContain("removeDomain(row, auth.user.id, {");
+    expect(shareRoute).toContain("resourceKey: `view:${id}`");
   });
 
   it("uses the shared database guard instead of the process-local limiter", () => {

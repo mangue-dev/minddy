@@ -6,19 +6,18 @@ type RouteContext = {
   params: Promise<{ id: string; pageId: string; commentId: string }>;
 };
 
-/** Same ceiling as writing (lib/server/page-comments.ts). */
+/** Same limit as comment creation in lib/server/page-comments.ts. */
 const MAX_COMMENT_LENGTH = 65_536;
 
 /**
  * PATCH — edit your own comment (MIN-282).
  *
- * SESSION client, like /api/comments/[id]: the "only author" rule
- * rewritten” is not here, it is in the policy. A writing of another
- * does not raise, it does not touch ANY line — hence the 404, which is also the signal
- * what does RLS invisibility give.
+ * The session client enforces author ownership and live-page membership through
+ * RLS. An invisible comment updates no row and returns the same 404 as a missing
+ * comment.
  */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
-  const { commentId } = await params;
+  const { pageId, commentId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
@@ -40,10 +39,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { data, error } = await auth.supabase
     .from("page_comments")
     .update({ body: text })
-    // The author, in addition to the policy (`page_comments_update`, tightened on him
-    // en 20261208090000): the rule is valid whatever the path, and the filter
-    // here is what makes it readable from the road.
+    // Keep ownership and route scope explicit in addition to the policy. The
+    // filters make the route's behavior readable and preserve a uniform 404.
     .eq("id", commentId)
+    .eq("page_id", pageId)
     .eq("author_id", auth.user.id)
     .select("*")
     .maybeSingle();
@@ -58,12 +57,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(data);
 }
 
-/** DELETE — remove your own comment; a root carries its answers
- (cascade `parent_id`). The author alone — by the policy AND by the filter, like
- the `PATCH` just above: he did not have it, and the rule therefore only read
- in the migration (MIN-351). */
+/**
+ * DELETE removes the caller's own comment. A root carries its replies through
+ * the `parent_id` cascade. RLS and the explicit filters both enforce ownership,
+ * page identity, and the live-page guard.
+ */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
-  const { commentId } = await params;
+  const { pageId, commentId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
@@ -72,6 +72,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     .from("page_comments")
     .delete()
     .eq("id", commentId)
+    .eq("page_id", pageId)
     .eq("author_id", auth.user.id)
     .select("id")
     .maybeSingle();

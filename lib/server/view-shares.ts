@@ -4,7 +4,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   detachDomainFromVercelOnly,
-  getDomainForShare,
+  reserveCustomDomainMutation,
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
@@ -234,20 +234,9 @@ export async function upsertViewShare({
   const resolved = await resolveShareView(viewId, actorId);
   if (!resolved.ok) return resolved;
 
-  const service = getServiceClient();
-  const { data: existingRow, error: readError } = await service
-    .from("view_shares")
-    .select(SHARE_SELECT)
-    .eq("view_id", viewId)
-    .maybeSingle();
-  if (readError) {
-    console.error("[view-shares] read failed:", readError.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
-  }
-  const existing = existingRow as ShareRow | null;
-
-  // "password" needs a password only when none is stored yet; providing one
-  // always re-hashes (that's the "change password" path).
+  // A provided password is prepared outside the transaction because scrypt is
+  // deliberately expensive. If it is omitted, the RPC preserves credentials
+  // from the row it locks, rather than credentials from a stale application read.
   let password_salt: string | null = null;
   let password_hash: string | null = null;
   if (level === "password") {
@@ -257,34 +246,32 @@ export async function upsertViewShare({
         return { ok: false, status: 400, errorKey: "passwordTooShort" };
       }
       ({ salt: password_salt, hash: password_hash } = hashSharePassword(trimmed));
-    } else if (existing?.password_hash && existing.password_salt) {
-      ({ password_salt, password_hash } = existing);
-    } else {
-      return { ok: false, status: 400, errorKey: "passwordRequired" };
     }
   }
 
-  // Keep the token across password↔public toggles; only a revoke (delete)
-  // followed by a re-share mints a new URL.
-  const token = existing?.token ?? randomBytes(16).toString("base64url");
-  const { error } = existing
-    ? await service
-        .from("view_shares")
-        .update({ level, password_salt, password_hash })
-        .eq("id", existing.id)
-    : await service.from("view_shares").insert({
-        view_id: viewId,
-        level,
-        token,
-        password_salt,
-        password_hash,
-        created_by: actorId,
-      });
+  const token = randomBytes(16).toString("base64url");
+  const { data, error } = await getServiceClient().rpc("upsert_view_share_guarded", {
+    p_view_id: viewId,
+    p_level: level,
+    p_token: token,
+    p_password_salt: password_salt,
+    p_password_hash: password_hash,
+    p_created_by: actorId,
+  });
   if (error) {
     console.error("[view-shares] upsert failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, share: { level, token } };
+  const result = data as { status?: unknown; share?: unknown } | null;
+  if (result?.status === "password_required") {
+    return { ok: false, status: 400, errorKey: "passwordRequired" };
+  }
+  const row = result?.share as ShareRow | undefined;
+  if (result?.status !== "ok" || !row?.token || !row.level) {
+    console.error("[view-shares] invalid guarded upsert response");
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  return { ok: true, share: { level: row.level, token: row.token } };
 }
 
 export async function deleteViewShare(
@@ -294,22 +281,36 @@ export async function deleteViewShare(
   const resolved = await resolveShareView(viewId, actorId);
   if (!resolved.ok) return resolved;
 
-  const service = getServiceClient();
-  // The DB cascade carries the possible custom_domains line but not
-  // the Vercel attachment (MIN-36) — captured before, detached after.
-  const { data: shareRow } = await service
-    .from("view_shares")
-    .select("id")
-    .eq("view_id", viewId)
-    .maybeSingle();
-  const domainRow = shareRow ? await getDomainForShare(shareRow.id as string) : null;
+  // Use the same durable provider lease as the domain route. A re-created share
+  // can commit after this guarded revoke, but it cannot attach its domain until
+  // cleanup of the revoked share has finished.
+  const reservation = await reserveCustomDomainMutation(`view:${viewId}`, actorId);
+  if (reservation) {
+    return {
+      ok: false,
+      status: reservation.error === "provider_unavailable" ? 503 : 409,
+      errorKey: "databaseError",
+    };
+  }
 
-  const { error } = await service.from("view_shares").delete().eq("view_id", viewId);
+  const { data, error } = await getServiceClient().rpc("revoke_view_share_guarded", {
+    p_view_id: viewId,
+  });
   if (error) {
     console.error("[view-shares] delete failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  if (domainRow) await detachDomainFromVercelOnly(domainRow);
+  const result = data as { status?: unknown; domain?: unknown } | null;
+  if (result?.status !== "absent" && result?.status !== "revoked") {
+    console.error("[view-shares] invalid guarded revoke response");
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const domainRow = result?.domain as Parameters<typeof detachDomainFromVercelOnly>[0] | null;
+  if (domainRow) {
+    await detachDomainFromVercelOnly(domainRow, actorId, {
+      mutationAlreadyReserved: true,
+    });
+  }
   return { ok: true, share: null };
 }
 

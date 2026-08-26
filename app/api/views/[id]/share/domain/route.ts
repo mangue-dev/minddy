@@ -98,7 +98,12 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
-  const result = await setDomain({ shareId: resolved.share.id }, body.domain, auth.user.id);
+  const result = await setDomain(
+    { shareId: resolved.share.id },
+    body.domain,
+    auth.user.id,
+    { resourceKey: `view:${id}` },
+  );
   if (!result.ok) {
     switch (result.error) {
       case "apex":
@@ -151,7 +156,9 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       domain: null,
     });
 
-  const removed = await removeDomain(row, auth.user.id);
+  const removed = await removeDomain(row, auth.user.id, {
+    resourceKey: `view:${id}`,
+  });
   if (!removed.ok) {
     if (
       removed.error === "rate_limited" ||

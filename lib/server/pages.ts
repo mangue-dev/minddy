@@ -1106,31 +1106,16 @@ export async function trashPage(
 }
 
 /**
- * A body that can be considered NEVER WRITTEN: empty, or reduced to
- * empty paragraph rendered by a page that has just been created.
- */
-function isBlankDoc(content: unknown): boolean {
-  const blocks = (content as { content?: unknown[] } | null)?.content;
-  if (!Array.isArray(blocks) || blocks.length === 0) return true;
-  if (blocks.length > 1) return false;
-  const only = blocks[0] as { type?: string; content?: unknown[] };
-  return only?.type === "paragraph" && !only.content?.length;
-}
-
-/**
- * DESTROYS a page that remains empty - the only gesture of the module which does not pass through
- * the trash (MIN-270).
+ * Destroys a page that is still blank, the only page removal that bypasses the
+ * trash (MIN-270).
  *
- * It only serves one thing: create a page then leave without writing a
- * letter there must leave nothing behind. Going through the trash would fill
- * it with untitled pages that no one wanted, which is exactly
- * the noise we are trying to avoid.
+ * This exists for a page that was created and abandoned before any content was
+ * written. Sending those pages through the trash would fill it with drafts that
+ * nobody intended to keep.
  *
- * What makes destruction acceptable is CUSTODY, and it is checked
- * HERE instead only to the client: without title, without icon, without body, without
- * subpage. A page that fails this test responds 409 and is not touched —
- * so the client has no way of making content disappear via this
- * path, even by lying about what it believes to be empty.
+ * The database locks the page and rechecks its title, icon, body, and children
+ * in the deleting transaction. A concurrent edit that wins the lock therefore
+ * turns this into a 409 instead of losing the newer document.
  */
 export async function discardPage(
   pageId: string,
@@ -1143,21 +1128,28 @@ export async function discardPage(
     return { ok: false, status: 404, errorKey: "pageNotFound" };
   }
 
-  if (page.title.trim() !== "" || page.icon || !isBlankDoc(page.content)) {
-    return { ok: false, status: 409, errorKey: "pageNotEmpty" };
+  const { data, error } = await service.rpc("discard_blank_page_guarded", {
+    p_page_id: pageId,
+  });
+  if (error) {
+    console.error("[pages] discard failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  const all = await loadProjectPages(service, page.project_id);
-  const hasChildren = all.some(
-    (p) => p.parent_id === pageId && !p.deleted_at
-  );
-  if (hasChildren) return { ok: false, status: 409, errorKey: "pageNotEmpty" };
+  const result = data as { status?: unknown; parent_id?: unknown } | null;
+  if (result?.status === "not_empty") {
+    return { ok: false, status: 409, errorKey: "pageNotEmpty" };
+  }
+  if (result?.status !== "discarded") {
+    return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
 
-  // The block of the parent's body leaves BEFORE the line: it is the same direction as the
-  // trash (MIN-272), and the order counts — a destroyed line whose block
-  // survive leaves a dead link in the parent document.
-  if (page.parent_id) {
-    await syncParentBody(service, page.parent_id, actorId, (doc) => {
+  // Only remove the mirror after the guarded delete succeeds. Previously this
+  // happened first, so a concurrent edit could preserve the page while still
+  // losing its parent block.
+  const parentId = typeof result.parent_id === "string" ? result.parent_id : null;
+  if (parentId) {
+    await syncParentBody(service, parentId, actorId, (doc) => {
       const { doc: next, removed } = removeSubpages(doc, [pageId]);
       return {
         doc: (next ?? { type: "doc", content: [] }) as PageDocJSON,
@@ -1166,11 +1158,6 @@ export async function discardPage(
     });
   }
 
-  const { error } = await service.from("pages").delete().eq("id", pageId);
-  if (error) {
-    console.error("[pages] discard failed:", error.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
-  }
   return { ok: true };
 }
 

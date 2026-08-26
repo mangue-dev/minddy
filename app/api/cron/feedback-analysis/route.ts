@@ -5,13 +5,11 @@ import { runFeedbackReview } from "@/lib/server/feedback/review";
 import { getAppConfigValue } from "@/lib/server/app-config";
 
 /**
- * Cron horaire (Vercel Cron, vercel.json) : passe de revue IA du feedback
- * (MIN-87 — deduplication + categorization + moderation in one call), purge of
- * pranks ruled out, and cleaning of expired sessions/OTPs. Since MIN-87 the review
- * is mainly triggered on submission (`after()`): this cron is the NET OF
- * SECURITY (LLM down at time of post, AI budget returned since, backfill).
- * Vercel automatically sends `Authorization: Bearer ${CRON_SECRET}` when the
- * variable is configured; the road is unusable without this secret.
+ * Hourly Vercel cron: review feedback with AI, purge rejected junk, and remove
+ * expired sessions and OTPs. Submission normally triggers the review; this job
+ * is the safety net for temporary model failures, restored budgets, and backfill.
+ * Vercel sends `Authorization: Bearer ${CRON_SECRET}` when configured, and the
+ * route is unavailable without that secret.
  */
 
 export const maxDuration = 300;
@@ -41,12 +39,10 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Permanent removal of pranks (MIN-87). A post removed by moderation
- * does not have to drag on indefinitely, but we ONLY delete what no one
- * seized: no linked issue, no support beyond the voice of its
- * author, and past the retention period (the team can republish it until then).
- * All dependencies cascade (votes, comments, events,
- * notifications, attachments).
+ * Permanently removes old junk (MIN-87), but only when no one protected it:
+ * no linked issue, no extra vote, and no merged post that depends on it. The
+ * guarded RPC repeats every condition in the deleting transaction, so a stale
+ * candidate scan cannot erase a post that was protected concurrently.
  */
 async function purgeJunk(): Promise<number> {
   const days = Number.parseFloat(
@@ -74,26 +70,10 @@ async function purgeJunk(): Promise<number> {
   const ids = (candidates ?? []).map((p) => p.id as string);
   if (ids.length === 0) return 0;
 
-  // A spam post may have absorbed duplicates (mergers before the
-  // moderation). Deleting it would reset its tombstones to `merged_into_id`
-  // null — they would be resurrected as standalone posts on the board. We keep it.
-  const { data: absorbers } = await service
-    .from("feedback_posts")
-    .select("merged_into_id")
-    .is("deleted_at", null)
-    .in("merged_into_id", ids);
-  const referenced = new Set(
-    (absorbers ?? []).map((p) => p.merged_into_id as string)
-  );
-  const deletable = ids.filter((id) => !referenced.has(id));
-  if (deletable.length === 0) return 0;
-
-  const { data, error } = await service
-    .from("feedback_posts")
-    .delete()
-    .is("deleted_at", null)
-    .in("id", deletable)
-    .select("id");
+  const { data, error } = await service.rpc("purge_feedback_junk_guarded", {
+    p_ids: ids,
+    p_cutoff: cutoff,
+  });
   if (error) {
     console.error("[feedback-cron] junk purge failed:", error.message);
     return 0;

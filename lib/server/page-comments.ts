@@ -84,9 +84,10 @@ export async function addPageComment({
 
   const service = getServiceClient();
 
-  // The page resolves the project for access control, and carries the author that we
-  // warns below. Trashed, it is no longer commented on: it is the counterpart
-  // of the RLS, which already hides its sons.
+  // The page resolves the project for access control and identifies the author
+  // notified below. The database trigger repeats the live-page check while
+  // locking the page, so trashing and commenting cannot cross between this read
+  // and the insert.
   const { data: page } = await service
     .from("pages")
     .select("project_id, created_by")
@@ -150,6 +151,9 @@ export async function addPageComment({
     .single();
 
   if (error) {
+    if (error.code === "P0001" && error.message.includes("page_not_live")) {
+      return { ok: false, status: 404, errorKey: "pageNotFound" };
+    }
     console.error("[page-comments] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }

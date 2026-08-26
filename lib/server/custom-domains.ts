@@ -125,6 +125,11 @@ const DOMAIN_PROVIDER_WINDOW_SECONDS = 60;
 const DOMAIN_MUTATION_DEDUPE_SECONDS = 10;
 const DOMAIN_REFRESH_DEDUPE_SECONDS = 15;
 
+type DomainMutationOptions = {
+  resourceKey?: string;
+  mutationAlreadyReserved?: boolean;
+};
+
 function targetResourceKey(target: DomainTargetRef): string {
   return "boardId" in target ? `board:${target.boardId}` : `share:${target.shareId}`;
 }
@@ -160,23 +165,70 @@ async function reserveDomainProviderOperation(input: {
   }
 }
 
+/** Reserves the stable target key shared by share revocation and domain routes. */
+export async function reserveCustomDomainMutation(
+  resourceKey: string,
+  actorId: string,
+): Promise<DomainProviderOperationError | null> {
+  return reserveDomainProviderOperation({
+    actorId,
+    operation: "mutation",
+    resourceKey,
+    dedupeSeconds: DOMAIN_MUTATION_DEDUPE_SECONDS,
+  });
+}
+
+/**
+ * Serializes provider calls for one hostname across different Minddy targets.
+ * Target leases alone cannot protect two projects racing to claim the same
+ * hostname, because each project has a different target key.
+ */
+async function reserveDomainNameMutation(
+  domain: string,
+  actorId: string,
+): Promise<DomainProviderOperationError | null> {
+  const reservation = await reserveProviderOperation({
+    actorId,
+    provider: "vercel-domain-names",
+    operation: "mutation",
+    resourceKey: domain.toLowerCase(),
+    limit: DOMAIN_PROVIDER_LIMIT,
+    windowSeconds: DOMAIN_PROVIDER_WINDOW_SECONDS,
+    dedupeSeconds: DOMAIN_MUTATION_DEDUPE_SECONDS,
+  });
+  switch (reservation.state) {
+    case "reserved":
+      return null;
+    case "deduplicated":
+      return { ok: false, error: "operation_in_progress", retryAfter: reservation.retryAfter };
+    case "quota_exceeded":
+      return { ok: false, error: "rate_limited", retryAfter: reservation.retryAfter };
+    case "unavailable":
+      return { ok: false, error: "provider_unavailable" };
+  }
+}
+
 /** Attaches `domain` to the target (replaces any previous domain). */
 export async function setDomain(
   target: DomainTargetRef,
   rawDomain: string,
-  actorId: string
+  actorId: string,
+  options?: DomainMutationOptions,
 ): Promise<SetDomainResult> {
   const normalized = normalizeDomain(rawDomain);
   if (!normalized.ok) return { ok: false, error: normalized.error };
   const domain = normalized.domain;
 
-  const refusal = await reserveDomainProviderOperation({
-    actorId,
-    operation: "mutation",
-    resourceKey: targetResourceKey(target),
-    dedupeSeconds: DOMAIN_MUTATION_DEDUPE_SECONDS,
-  });
+  const refusal = options?.mutationAlreadyReserved
+    ? null
+    : await reserveCustomDomainMutation(
+        options?.resourceKey ?? targetResourceKey(target),
+        actorId,
+      );
   if (refusal) return refusal;
+
+  const domainRefusal = await reserveDomainNameMutation(domain, actorId);
+  if (domainRefusal) return domainRefusal;
 
   const service = getServiceClient();
 
@@ -199,6 +251,10 @@ export async function setDomain(
   // `if (previous)` here: this guard is compiled in `if (true)`.
   // See the explanation on `removeDomainAfterReservation`.
   const previous = await getDomainRowForTarget(target);
+  if (previous && previous.domain.toLowerCase() !== domain) {
+    const previousRefusal = await reserveDomainNameMutation(previous.domain, actorId);
+    if (previousRefusal) return previousRefusal;
+  }
   if (!(await removeDomainAfterReservation(previous))) {
     return { ok: false, error: "api_error" };
   }
@@ -222,9 +278,15 @@ export async function setDomain(
     .maybeSingle();
 
   if (error || !data) {
-    // Lost race on uniqueness → we detach what we have just attached.
+    // A global uniqueness race may have retained the same hostname for another
+    // target. Never detach that winner's provider resource.
     console.error("[custom-domains] insert failed:", error?.message);
-    void removeDomainFromVercel(domain);
+    const { data: retained } = await service
+      .from("custom_domains")
+      .select("id")
+      .eq("domain", domain)
+      .maybeSingle();
+    if (!retained) void removeDomainFromVercel(domain);
     return { ok: false, error: error?.code === "23505" ? "taken" : "api_error" };
   }
 
@@ -237,7 +299,30 @@ export async function setDomain(
  * removed by a target cascade. Failure is logged but does not block deletion:
  * a later add repairs the Vercel orphan through the accepted 409 response.
  */
-export async function detachDomainFromVercelOnly(row: CustomDomainRow): Promise<void> {
+export async function detachDomainFromVercelOnly(
+  row: CustomDomainRow,
+  actorId: string,
+  options?: DomainMutationOptions,
+): Promise<void> {
+  if (!options?.mutationAlreadyReserved) {
+    const refusal = await reserveCustomDomainMutation(
+      options?.resourceKey ?? rowResourceKey(row),
+      actorId,
+    );
+    if (refusal) return;
+  }
+  if (await reserveDomainNameMutation(row.domain, actorId)) return;
+
+  // The share cascade removed the captured row. If the hostname has already
+  // been retained by a newer mapping, provider cleanup belongs to that mapping.
+  const service = getServiceClient();
+  const { data: retained, error } = await service
+    .from("custom_domains")
+    .select("id")
+    .eq("domain", row.domain)
+    .maybeSingle();
+  if (error || retained) return;
+
   const removed = await removeDomainFromVercel(row.domain);
   if (!removed.ok) {
     console.error(
@@ -272,12 +357,15 @@ async function removeDomainAfterReservation(row: CustomDomainRow | null): Promis
   const removed = await removeDomainFromVercel(row.domain);
   if (!removed.ok) return false;
 
-  const service = getServiceClient();
-  const { error } = await service.from("custom_domains").delete().eq("id", row.id);
+  const { data: deleted, error } = await getServiceClient().rpc(
+    "delete_custom_domain_if_current",
+    { p_id: row.id, p_domain: row.domain },
+  );
   if (error) {
     console.error("[custom-domains] delete failed:", error.message);
     return false;
   }
+  if (!deleted) return false;
   invalidateCustomDomainCache(row.domain);
   return true;
 }
@@ -291,15 +379,18 @@ export type RemoveDomainResult =
 export async function removeDomain(
   row: CustomDomainRow | null,
   actorId: string,
+  options?: DomainMutationOptions,
 ): Promise<RemoveDomainResult> {
   if (!row) return { ok: true };
-  const refusal = await reserveDomainProviderOperation({
-    actorId,
-    operation: "mutation",
-    resourceKey: rowResourceKey(row),
-    dedupeSeconds: DOMAIN_MUTATION_DEDUPE_SECONDS,
-  });
+  const refusal = options?.mutationAlreadyReserved
+    ? null
+    : await reserveCustomDomainMutation(
+        options?.resourceKey ?? rowResourceKey(row),
+        actorId,
+      );
   if (refusal) return refusal;
+  const domainRefusal = await reserveDomainNameMutation(row.domain, actorId);
+  if (domainRefusal) return domainRefusal;
   return (await removeDomainAfterReservation(row))
     ? { ok: true }
     : { ok: false, error: "api_error" };
