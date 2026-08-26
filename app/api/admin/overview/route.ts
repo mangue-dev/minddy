@@ -3,8 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
 import { getServiceClient } from "@/lib/supabase-service";
-import { fetchAdminUsers, fetchByokUserIds, onboardingOf } from "@/lib/server/admin-users";
 import {
+  fetchAllAdminUsers,
+  fetchByokUserIds,
+  onboardingOf,
+} from "@/lib/server/admin-users";
+import {
+  fetchAllBillingAccountsForAdmin,
   resolvePlanFromBillingAccount,
   type BillingAccount,
 } from "@/lib/server/billing-accounts";
@@ -25,10 +30,6 @@ import type { AdminOverview, AdminOverviewDay } from "@/lib/types";
  * `onboardingOf`) — duplicating these rules in SQL would cause them to diverge at the first
  * changement de produit.
  */
-
-/** The account count remains small; beyond that the view no longer has any meaning at all
- * way (dedicated aggregates would be needed, not a scan). */
-const FUNNEL_SCAN_LIMIT = 5_000;
 
 const IANA_TZ = /^[A-Za-z][A-Za-z0-9_+-]*(?:\/[A-Za-z0-9_+-]+)*$/;
 
@@ -56,14 +57,10 @@ export async function GET(request: NextRequest) {
   const tz = requested && IANA_TZ.test(requested) ? requested : "UTC";
 
   const service = getServiceClient();
-  const [totalsRes, accountsRes, page, byokUserIds] = await Promise.all([
+  const [totalsRes, accounts, users, byokUserIds] = await Promise.all([
     service.rpc("get_admin_user_totals", { p_tz: tz }),
-    service
-      .from("billing_accounts")
-      .select(
-        "user_id, admin_override_plan_id, stripe_plan_id, stripe_subscription_status",
-      ),
-    fetchAdminUsers({ search: null, limit: FUNNEL_SCAN_LIMIT, offset: 0 }),
+    fetchAllBillingAccountsForAdmin(),
+    fetchAllAdminUsers(),
     fetchByokUserIds(),
   ]);
 
@@ -76,14 +73,13 @@ export async function GET(request: NextRequest) {
   // Internal accounts count NOWHERE: the PRC has already removed them from
   // its totals, it remains to remove them from the two aggregates calculated here.
   const internalIds = new Set(
-    page.rows.filter((row) => row.is_internal).map((row) => row.user_id),
+    users.filter((row) => row.is_internal).map((row) => row.user_id),
   );
 
   // Distribution of plans: an account without line `billing_accounts` is on the
   // default plan, so we start from zero for all plans and we do not count
   // as existing lines change.
   const counts = new Map(BILLING_PLANS.map((plan) => [plan.id, 0]));
-  const accounts = (accountsRes.data ?? []) as Array<Partial<BillingAccount>>;
   let withAccount = 0;
   for (const account of accounts) {
     if (account.user_id && internalIds.has(account.user_id)) continue;
@@ -101,7 +97,7 @@ export async function GET(request: NextRequest) {
   // Funnel: among the accounts to which onboarding was presented, how many
   // completed it, how many passed it.
   const funnel = { started: 0, completed: 0, dismissed: 0 };
-  for (const row of page.rows) {
+  for (const row of users) {
     if (row.is_internal) continue;
     const state = onboardingOf(row, byokUserIds);
     if (!state.started) continue;

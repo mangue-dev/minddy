@@ -44,6 +44,8 @@ export interface AdminUsersPage {
   total: number;
 }
 
+const ADMIN_USER_SCAN_PAGE_SIZE = 500;
+
 /** An accounts page, most recent registration first. */
 export async function fetchAdminUsers(params: {
   search?: string | null;
@@ -64,19 +66,57 @@ export async function fetchAdminUsers(params: {
   return { rows, total: rows.length > 0 ? Number(rows[0].total_count) || 0 : 0 };
 }
 
+/** Reads every account in bounded RPC pages for exact overview aggregates. */
+export async function fetchAllAdminUsers(): Promise<AdminUserRpcRow[]> {
+  const rows: AdminUserRpcRow[] = [];
+  let offset = 0;
+  let total: number | null = null;
+
+  while (total === null || rows.length < total) {
+    const page = await fetchAdminUsers({
+      search: null,
+      limit: ADMIN_USER_SCAN_PAGE_SIZE,
+      offset,
+    });
+    if (total === null) total = page.total;
+    if (page.rows.length === 0) break;
+    rows.push(...page.rows);
+    offset += page.rows.length;
+  }
+
+  return rows;
+}
+
 /**
  * Accounts that have set a BYOK key. The "key" stage of onboarding is
  * checkmark above (MIN-149): without this set, the admin funnel would count
  * blocked on this stage of the accounts which have passed it.
  *
- * Read in full rather than filtered on the page: `user_ai_keys` carries only one
- * line per BYOK account — a tiny subset of accounts — and a single
- * read serves both admin routes regardless of their pagination.
+ * Read in full rather than filtered to the visible admin page:
+ * `user_ai_keys` carries only one row per BYOK account. Bounded response pages
+ * avoid PostgREST's row ceiling while producing one set for the whole request.
  */
 export async function fetchByokUserIds(): Promise<Set<string>> {
-  const { data, error } = await getServiceClient().from("user_ai_keys").select("user_id");
-  if (error) throw new Error(error.message);
-  return new Set((data ?? []).map((row) => (row as { user_id: string }).user_id));
+  const service = getServiceClient();
+  const ids = new Set<string>();
+  let offset = 0;
+  let total: number | null = null;
+
+  while (total === null || ids.size < total) {
+    const { data, error, count } = await service
+      .from("user_ai_keys")
+      .select("user_id", { count: "exact" })
+      .range(offset, offset + ADMIN_USER_SCAN_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    if (total === null && count !== null) total = count;
+    const page = (data ?? []) as Array<{ user_id: string }>;
+    for (const row of page) ids.add(row.user_id);
+    if (page.length === 0) break;
+    offset += page.length;
+    if (total === null && page.length < ADMIN_USER_SCAN_PAGE_SIZE) break;
+  }
+
+  return ids;
 }
 
 /** The onboarding state of an account, resolved as the home resolves it. */
@@ -139,4 +179,3 @@ export async function setUserInternal(
   });
   if (updateError) throw new Error(updateError.message);
 }
-

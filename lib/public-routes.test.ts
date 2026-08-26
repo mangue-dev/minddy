@@ -147,6 +147,23 @@ describe("CDN cache header vs custom domains", () => {
       delete process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
     }
   });
+
+  it("keeps a self-hosted canonical hostname on the application route", () => {
+    const previousAppUrl = process.env.MINDDY_PUBLIC_APP_URL;
+    const previousAllowlist = process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
+    process.env.MINDDY_PUBLIC_APP_URL = "https://tickets.example.test:8443";
+    process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST =
+      "tickets.example.test,feedback.example.test";
+    try {
+      expect(isPrimaryHost("tickets.example.test")).toBe(true);
+      expect(isPrimaryHost("feedback.example.test")).toBe(false);
+    } finally {
+      if (previousAppUrl === undefined) delete process.env.MINDDY_PUBLIC_APP_URL;
+      else process.env.MINDDY_PUBLIC_APP_URL = previousAppUrl;
+      if (previousAllowlist === undefined) delete process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
+      else process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST = previousAllowlist;
+    }
+  });
 });
 
 function bySource(a: { source: string }, b: { source: string }) {

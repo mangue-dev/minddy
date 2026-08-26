@@ -1,16 +1,15 @@
 import { type NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
+  applyStripeBillingEvent,
   findUserIdForStripeIdentifiers,
   syncSubscriptionToBillingAccount,
-  upsertBillingAccount,
 } from "@/lib/server/billing-accounts";
 import {
   coerceStripePlanId,
   fetchStripeSubscription,
   getStripeWebhookSecret,
   isStripeConfigured,
-  stripeUnixToIso,
   verifyStripeWebhookSignature,
   type StripeCheckoutSession,
   type StripeEvent,
@@ -106,13 +105,11 @@ async function handleCheckoutCompleted(
   const userId = session.metadata?.user_id ?? null;
   if (!userId) throw new Error("Checkout session is missing metadata.user_id.");
 
-  await upsertBillingAccount(userId, {
+  await applyStripeBillingEvent(userId, event, {
     stripe_customer_id: session.customer ?? null,
     stripe_subscription_id: session.subscription ?? null,
     stripe_checkout_session_id: session.id,
     stripe_plan_id: coerceStripePlanId(session.metadata?.plan_id),
-    stripe_last_event_id: event.id,
-    stripe_last_event_created: stripeUnixToIso(event.created),
   });
 
   if (session.subscription) {
@@ -247,10 +244,8 @@ export async function POST(request: NextRequest) {
             customerId: invoice.customer ?? null,
           }));
         if (userId) {
-          await upsertBillingAccount(userId, {
+          await applyStripeBillingEvent(userId, event, {
             stripe_subscription_status: "past_due",
-            stripe_last_event_id: event.id,
-            stripe_last_event_created: stripeUnixToIso(event.created),
           });
           trackBilling(event, userId, { status: "past_due" });
         }

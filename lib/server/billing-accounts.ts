@@ -161,6 +161,74 @@ export async function upsertBillingAccount(
   return data as BillingAccount;
 }
 
+type StripeBillingUpdate = Pick<
+  BillingAccount,
+  | "stripe_customer_id"
+  | "stripe_subscription_id"
+  | "stripe_price_id"
+  | "stripe_plan_id"
+  | "stripe_subscription_status"
+  | "stripe_current_period_start"
+  | "stripe_current_period_end"
+  | "stripe_cancel_at_period_end"
+  | "stripe_checkout_session_id"
+>;
+
+/**
+ * Applies a Stripe-owned patch only when its source event is at least as new
+ * as the account's current watermark. The database performs the comparison
+ * and write atomically so concurrent, reordered webhook deliveries cannot
+ * regress entitlements. Reusing the same event id is allowed because checkout
+ * processing enriches its initial patch after fetching the subscription.
+ */
+export async function applyStripeBillingEvent(
+  userId: string,
+  event: StripeEvent,
+  updates: Partial<StripeBillingUpdate>,
+): Promise<BillingAccount> {
+  const { data, error } = await getServiceClient().rpc("apply_stripe_billing_event", {
+    p_user_id: userId,
+    p_event_id: event.id,
+    p_event_created: stripeUnixToIso(event.created),
+    p_patch: updates,
+  });
+  if (error || !data) {
+    throw new Error(error?.message ?? "Stripe billing event returned no account");
+  }
+  return data as BillingAccount;
+}
+
+const ADMIN_BILLING_SCAN_PAGE_SIZE = 500;
+
+/** Reads every billing row in bounded pages for exact admin aggregates. */
+export async function fetchAllBillingAccountsForAdmin(): Promise<
+  Array<Partial<BillingAccount>>
+> {
+  const service = getServiceClient();
+  const accounts: Array<Partial<BillingAccount>> = [];
+  let offset = 0;
+  let total: number | null = null;
+
+  while (total === null || accounts.length < total) {
+    const { data, error, count } = await service
+      .from("billing_accounts")
+      .select(
+        "user_id, admin_override_plan_id, admin_override_expires_at, stripe_plan_id, stripe_subscription_status",
+        { count: "exact" },
+      )
+      .range(offset, offset + ADMIN_BILLING_SCAN_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    if (total === null && count !== null) total = count;
+    const page = (data ?? []) as Array<Partial<BillingAccount>>;
+    accounts.push(...page);
+    if (page.length === 0) break;
+    offset += page.length;
+    if (total === null && page.length < ADMIN_BILLING_SCAN_PAGE_SIZE) break;
+  }
+
+  return accounts;
+}
+
 // ── Sync Stripe ──────────────────────────────────────────────────────────────
 
 /**
@@ -187,7 +255,7 @@ export async function syncSubscriptionToBillingAccount(
     coerceStripePlanId(subscription.metadata?.plan_id);
   const period = getStripeSubscriptionPeriod(subscription);
 
-  await upsertBillingAccount(userId, {
+  const updates: Partial<StripeBillingUpdate> = {
     stripe_customer_id: subscription.customer,
     stripe_subscription_id: subscription.id,
     stripe_price_id: priceId,
@@ -196,13 +264,12 @@ export async function syncSubscriptionToBillingAccount(
     stripe_current_period_start: stripeUnixToIso(period.start),
     stripe_current_period_end: stripeUnixToIso(period.end),
     stripe_cancel_at_period_end: subscription.cancel_at_period_end,
-    ...(event
-      ? {
-          stripe_last_event_id: event.id,
-          stripe_last_event_created: stripeUnixToIso(event.created),
-        }
-      : {}),
-  });
+  };
+  if (event) {
+    await applyStripeBillingEvent(userId, event, updates);
+  } else {
+    await upsertBillingAccount(userId, updates);
+  }
 
   return userId;
 }
