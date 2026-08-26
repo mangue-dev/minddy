@@ -38,7 +38,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   issues,
   issueMap,
   relationsByIssue,
-  candidateIssues,
+  getCandidateIssues,
   projectId,
   projectKey,
   memberMap,
@@ -65,8 +65,8 @@ export const KanbanColumn = memo(function KanbanColumn({
   issueMap: Map<string, Issue>;
   /** Resolved relation chips per issue id (MIN-25). */
   relationsByIssue: Map<string, ChipRelation[]>;
-  /** All project issues — candidates for the "add relation" picker. */
-  candidateIssues: Issue[];
+  /** Read lazily when the relation picker opens or a prompt is copied. */
+  getCandidateIssues: () => Issue[];
   projectId: string;
   projectKey: string;
   memberMap: Map<string, Member>;
@@ -128,7 +128,7 @@ export const KanbanColumn = memo(function KanbanColumn({
  each frame (MIN-319). Hence this parent `relative`. */}
       <div
         className={cn(
-          "relative flex min-h-0 flex-1 flex-col rounded-xl transition-colors",
+          "relative flex min-h-0 flex-1 flex-col rounded-xl",
           // The background lights up on the column that WILL RECEIVE, not the one that the
           // pointer touches: hovering over a card does not make its column
           // a `isOver`, and the background flashed from one card to another.
@@ -169,7 +169,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                     objectiveMap={objectiveMap}
                     parent={parent}
                     relations={relationsByIssue.get(issue.id)}
-                    candidateIssues={candidateIssues}
+                    getCandidateIssues={getCandidateIssues}
                     onOpenRelated={onOpenIssueById}
                     onAddRelation={onAddRelation}
                     onOpenPlan={onOpenPlan}
@@ -207,4 +207,59 @@ export const KanbanColumn = memo(function KanbanColumn({
       </div>
     </div>
   );
-});
+}, sameKanbanColumnProps);
+
+function sameRelations(
+  previous: ChipRelation[] | undefined,
+  current: ChipRelation[] | undefined
+) {
+  if (previous === current) return true;
+  if (!previous || !current || previous.length !== current.length) return false;
+  return previous.every((relation, index) => {
+    const next = current[index];
+    return (
+      relation.id === next.id &&
+      relation.relation === next.relation &&
+      relation.otherId === next.otherId &&
+      relation.otherNumber === next.otherNumber &&
+      relation.resolved === next.resolved
+    );
+  });
+}
+
+type ComparableKanbanColumnProps = {
+  issues: Issue[];
+  issueMap: Map<string, Issue>;
+  relationsByIssue: Map<string, ChipRelation[]>;
+};
+
+function sameKanbanColumnProps(
+  previous: ComparableKanbanColumnProps,
+  current: ComparableKanbanColumnProps
+) {
+  const before = previous as unknown as Record<string, unknown>;
+  const after = current as unknown as Record<string, unknown>;
+  for (const key of Object.keys(before)) {
+    if (key === "issueMap" || key === "relationsByIssue") continue;
+    if (before[key] !== after[key]) return false;
+  }
+  for (const issue of current.issues) {
+    const parentId = issue.parent_id;
+    if (
+      parentId &&
+      previous.issueMap.get(parentId)?.number !==
+        current.issueMap.get(parentId)?.number
+    ) {
+      return false;
+    }
+    if (
+      !sameRelations(
+        previous.relationsByIssue.get(issue.id),
+        current.relationsByIssue.get(issue.id)
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+}

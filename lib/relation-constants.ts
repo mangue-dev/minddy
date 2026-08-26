@@ -37,6 +37,20 @@ export const RELATION_PRIORITY: IssueRelationType[] = [
   "related",
 ];
 
+const RELATION_PRIORITY_RANK = new Map(
+  RELATION_PRIORITY.map((relation, index) => [relation, index])
+);
+
+function sortResolvedRelations(relations: ResolvedRelation[]) {
+  return relations.sort((a, b) => {
+    if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
+    return (
+      (RELATION_PRIORITY_RANK.get(a.relation) ?? 0) -
+      (RELATION_PRIORITY_RANK.get(b.relation) ?? 0)
+    );
+  });
+}
+
 /** The three relation types a user can pick when adding, in menu order.
     Same list as RELATION_TYPE_VALUES (lib/relation-validation.ts), typed mutable
     for the menus that map over it. */
@@ -98,13 +112,67 @@ export function resolveRelations(
         });
     }
   }
-  return out.sort((a, b) => {
-    if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
-    return (
-      RELATION_PRIORITY.indexOf(a.relation) -
-      RELATION_PRIORITY.indexOf(b.relation)
-    );
-  });
+  return sortResolvedRelations(out);
+}
+
+/**
+ * Resolve all relation endpoints in one pass for list views such as a board.
+ * Calling `resolveRelations` once per card would scan the complete relation
+ * collection for every card, turning each realtime update into O(cards × rows).
+ */
+export function resolveRelationsByIssue(
+  rows: IssueRelation[],
+  statusById?: Map<string, IssueStatus>
+): Map<string, ResolvedRelation[]> {
+  const byIssue = new Map<string, ResolvedRelation[]>();
+  const append = (issueId: string, relation: ResolvedRelation) => {
+    const list = byIssue.get(issueId);
+    if (list) list.push(relation);
+    else byIssue.set(issueId, [relation]);
+  };
+  const isClosedId = (id: string) => {
+    const status = statusById?.get(id);
+    return status !== undefined && isClosedStatus(status);
+  };
+
+  for (const row of rows) {
+    if (row.type === "blocks") {
+      const resolved = isClosedId(row.source_id);
+      append(row.source_id, {
+        id: row.id,
+        relation: "blocks",
+        otherId: row.target_id,
+        resolved,
+      });
+      if (row.target_id !== row.source_id) {
+        append(row.target_id, {
+          id: row.id,
+          relation: "blocked_by",
+          otherId: row.source_id,
+          resolved,
+        });
+      }
+      continue;
+    }
+
+    append(row.source_id, {
+      id: row.id,
+      relation: "related",
+      otherId: row.target_id,
+      resolved: false,
+    });
+    if (row.target_id !== row.source_id) {
+      append(row.target_id, {
+        id: row.id,
+        relation: "related",
+        otherId: row.source_id,
+        resolved: false,
+      });
+    }
+  }
+
+  for (const relations of byIssue.values()) sortResolvedRelations(relations);
+  return byIssue;
 }
 
 /**

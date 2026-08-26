@@ -53,7 +53,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   projectMap,
   issueMap,
   relationsByIssue,
-  issuesByProject,
+  getCandidateIssues,
   memberMapByProject,
   categoryMapByProject,
   objectiveMapByProject,
@@ -79,9 +79,8 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   issueMap: Map<string, Issue>;
   /** Resolved relation chips per issue id (MIN-25). */
   relationsByIssue?: Map<string, ChipRelation[]>;
-  /** All board issues per project — candidates for the "add relation" picker
-      (relations are same-project by construction). */
-  issuesByProject?: Map<string, Issue[]>;
+  /** Read lazily when a card opens the same-project relation picker. */
+  getCandidateIssues?: (projectId: string) => Issue[] | undefined;
   memberMapByProject: Map<string, Map<string, Member>>;
   categoryMapByProject: Map<string, Map<string, Category>>;
   objectiveMapByProject: Map<string, Map<string, Objective>>;
@@ -147,6 +146,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
         onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
         onSetCategories: (issueId: string, ids: string[]) => void;
         onDelete?: (issueId: string) => Promise<void>;
+        getCandidateIssues?: () => Issue[] | undefined;
       }
     >();
     return (pid: string) => {
@@ -162,12 +162,21 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
           onDelete: onDeleteIssue
             ? (id: string) => onDeleteIssue(id, pid)
             : undefined,
+          getCandidateIssues: getCandidateIssues
+            ? () => getCandidateIssues(pid)
+            : undefined,
         };
         cache.set(pid, bound);
       }
       return bound;
     };
-  }, [onAddRelation, onUpdateIssue, onSetCategories, onDeleteIssue]);
+  }, [
+    getCandidateIssues,
+    onAddRelation,
+    onUpdateIssue,
+    onSetCategories,
+    onDeleteIssue,
+  ]);
 
   return (
     <div className={cn("flex flex-col", BOARD_COLUMN_CLASS)}>
@@ -182,7 +191,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
  each image (MIN-319). Hence this parent `relative`. */}
       <div
         className={cn(
-          "relative flex min-h-0 flex-1 flex-col rounded-xl transition-colors",
+          "relative flex min-h-0 flex-1 flex-col rounded-xl",
           // The bottom, its roundness and the reason to keep them OUT of the scroller:
           // cf. KanbanColumn (rounding on what scrolls crops the content).
           (dropPreview || isOver) && "bg-muted/50"
@@ -223,7 +232,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
                     }
                     parent={parent}
                     relations={relationsByIssue?.get(issue.id)}
-                    candidateIssues={issuesByProject?.get(pid)}
+                    getCandidateIssues={bound.getCandidateIssues}
                     onOpenRelated={onOpenIssueById}
                     onAddRelation={bound.onAddRelation}
                     onOpenPlan={onOpenPlan}
@@ -263,4 +272,59 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
       </div>
     </div>
   );
-});
+}, sameGlobalKanbanColumnProps);
+
+function sameRelations(
+  previous: ChipRelation[] | undefined,
+  current: ChipRelation[] | undefined
+) {
+  if (previous === current) return true;
+  if (!previous || !current || previous.length !== current.length) return false;
+  return previous.every((relation, index) => {
+    const next = current[index];
+    return (
+      relation.id === next.id &&
+      relation.relation === next.relation &&
+      relation.otherId === next.otherId &&
+      relation.otherNumber === next.otherNumber &&
+      relation.resolved === next.resolved
+    );
+  });
+}
+
+type ComparableGlobalKanbanColumnProps = {
+  issues: Issue[];
+  issueMap: Map<string, Issue>;
+  relationsByIssue?: Map<string, ChipRelation[]>;
+};
+
+function sameGlobalKanbanColumnProps(
+  previous: ComparableGlobalKanbanColumnProps,
+  current: ComparableGlobalKanbanColumnProps
+) {
+  const before = previous as unknown as Record<string, unknown>;
+  const after = current as unknown as Record<string, unknown>;
+  for (const key of Object.keys(before)) {
+    if (key === "issueMap" || key === "relationsByIssue") continue;
+    if (before[key] !== after[key]) return false;
+  }
+  for (const issue of current.issues) {
+    const parentId = issue.parent_id;
+    if (
+      parentId &&
+      previous.issueMap.get(parentId)?.number !==
+        current.issueMap.get(parentId)?.number
+    ) {
+      return false;
+    }
+    if (
+      !sameRelations(
+        previous.relationsByIssue?.get(issue.id),
+        current.relationsByIssue?.get(issue.id)
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+}

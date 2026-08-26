@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -25,10 +25,15 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
-import { resolveRelations } from "@/lib/relation-constants";
-import { displayRank } from "@/lib/board-drag";
-import { boardCollision } from "@/lib/board-dnd";
+import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { createBoardColumnsBuilder } from "@/lib/board-columns";
+import {
+  BOARD_DROP_ANIMATION,
+  BOARD_MOUSE_ACTIVATION_DISTANCE,
+  boardCollision,
+} from "@/lib/board-dnd";
 import { useBoardDrop } from "@/lib/use-board-drop";
+import { useBoardCardAnimations } from "@/lib/use-board-card-animations";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
@@ -157,6 +162,12 @@ export function GlobalKanbanBoard({
     }
     return map;
   }, [allIssues, issues]);
+  const issuesByProjectRef = useRef(issuesByProject);
+  issuesByProjectRef.current = issuesByProject;
+  const getCandidateIssues = useCallback(
+    (projectId: string) => issuesByProjectRef.current.get(projectId),
+    []
+  );
   const relationsByIssue = useMemo(() => {
     const map = new Map<string, ChipRelation[]>();
     if (!relations?.length) return map;
@@ -164,8 +175,9 @@ export function GlobalKanbanBoard({
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const)
     );
+    const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
     for (const issue of issues) {
-      const resolved = resolveRelations(issue.id, relations, statusById)
+      const resolved = (resolvedByIssue.get(issue.id) ?? [])
         .map((r) => {
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;
@@ -180,19 +192,11 @@ export function GlobalKanbanBoard({
     () => comparator ?? issueComparator(sort),
     [comparator, sort]
   );
+  const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
-    () =>
-      statuses.map((status) => ({
-        status,
-        items: issues
-          .filter((i) => i.status === status.value)
-          .sort(displayComparator),
-      })),
-    [issues, statuses, displayComparator]
+    () => buildColumns(statuses, issues, displayComparator),
+    [buildColumns, issues, statuses, displayComparator]
   );
-
-  // Board reading order — the order in which a slipped packet lands.
-  const rank = useMemo(() => displayRank(columns), [columns]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelection = useCallback((issueId: string) => {
@@ -263,7 +267,6 @@ export function GlobalKanbanBoard({
     manual: sort === "manual",
     issueMap,
     selectedIds,
-    rank,
     // Cycle view: the receipt order is the only one, therefore no reordering
     // in a column — only the status change passes.
     crossColumnOnly: !!comparator,
@@ -281,7 +284,11 @@ export function GlobalKanbanBoard({
   // sensor never fires — hooks must run unconditionally.
   const sensors = useSensors(
     useSensor(MouseSensor, {
-      activationConstraint: { distance: readOnly ? Number.MAX_SAFE_INTEGER : 6 },
+      activationConstraint: {
+        distance: readOnly
+          ? Number.MAX_SAFE_INTEGER
+          : BOARD_MOUSE_ACTIVATION_DISTANCE,
+      },
     })
   );
 
@@ -291,20 +298,30 @@ export function GlobalKanbanBoard({
 
   // The edge fade and lasso want the same knot. Memorized fusion: one
   // new identity with each render would cause them to detach and then reattach.
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const cardAnimations = useBoardCardAnimations(scrollerRef, columns);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
+      scrollerRef.current = node;
       fadeRef(node);
       marqueeRef(node);
     },
     [fadeRef, marqueeRef]
   );
 
-  const handleDragStart = (event: DragStartEvent) => drop.start(event);
+  const handleDragStart = (event: DragStartEvent) => {
+    cardAnimations.measure();
+    drop.start(event);
+  };
   const handleDragMove = (event: DragMoveEvent) => drop.track(event);
 
   const handleDragEnd = (event: DragEndEvent) => {
     // The marker already showed THIS plan: we write it as is.
     const planned = drop.plan(event);
+    if (planned) {
+      cardAnimations.measure();
+      cardAnimations.skipNext([String(event.active.id)]);
+    }
     drop.end();
     if (!planned) return;
 
@@ -314,8 +331,8 @@ export function GlobalKanbanBoard({
   };
 
   return (
-    // Halo “agent in progress” on cross-project maps: provider in GLOBAL mode
-    // (no projectId → endpoint /api/agent-activity, bounded by the RLS).
+    // Halo “agent in progress” on cross-project maps: the provider receives
+    // every project displayed by this board.
     <AgentActivityProvider projectIds={[...projectMap.keys()]}>
     {/* “@” when hovering over a card (or on selection) opens Numo — even
  context as the Numo button of the selection pill (MIN-105). */}
@@ -363,7 +380,7 @@ export function GlobalKanbanBoard({
               projectMap={projectMap}
               issueMap={issueMap}
               relationsByIssue={relationsByIssue}
-              issuesByProject={issuesByProject}
+              getCandidateIssues={getCandidateIssues}
               memberMapByProject={memberMapByProject}
               categoryMapByProject={categoryMapByProject}
               objectiveMapByProject={objectiveMapByProject}
@@ -391,7 +408,7 @@ export function GlobalKanbanBoard({
 
       <MarqueeOverlay overlayRef={marqueeOverlayRef} />
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={BOARD_DROP_ANIMATION}>
         {activeIssue ? (
           <div className="relative w-[21rem]">
             {/* The package is not visible on the cursor: the account says so. */}

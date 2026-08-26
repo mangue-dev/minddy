@@ -25,6 +25,7 @@ import type {
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
 import type { Issue } from "@/lib/types";
 import {
+  displayRank,
   dragBundle,
   planBoardMove,
   previewBoardMove,
@@ -50,7 +51,9 @@ export interface BoardDrop {
   /** On each movement: recalculates the mark, only re-renders if it has moved. */
   track: (event: BoardDragEvent) => void;
   /** The movements to write for this gesture (`null` = nothing to do). */
-  plan: (event: BoardDragEvent) => { status: IssueStatus; moves: PlannedMove[] } | null;
+  plan: (
+    event: BoardDragEvent
+  ) => { status: IssueStatus; moves: PlannedMove[] } | null;
   end: () => void;
 }
 
@@ -60,7 +63,6 @@ export function useBoardDrop({
   manual,
   issueMap,
   selectedIds,
-  rank,
   crossColumnOnly = false,
 }: {
   /** The columns as displayed — the order read is that of the screen. */
@@ -71,8 +73,6 @@ export function useBoardDrop({
   manual: boolean;
   issueMap: Map<string, Issue>;
   selectedIds: Set<string>;
-  /** Rang d'affichage de chaque ticket (`displayRank`). */
-  rank: Map<string, number>;
   /** Cycle view: the receipt order is the only one, a ticket already in the target column
  does not move there — only the status change passes. */
   crossColumnOnly?: boolean;
@@ -81,12 +81,44 @@ export function useBoardDrop({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
   const nowRef = useRef(0);
+  const bundleRef = useRef<Issue[]>([]);
+  const planCacheRef = useRef<{
+    status: IssueStatus;
+    overIssueId: string | null;
+    after: boolean;
+    manual: boolean;
+    crossColumnOnly: boolean;
+    items: Issue[];
+    result: { status: IssueStatus; moves: PlannedMove[] } | null;
+  } | null>(null);
+  const trackedPlanRef = useRef<{
+    planned: object | null;
+    comparator: (a: Issue, b: Issue) => number;
+  } | null>(null);
 
   const itemsByStatus = useMemo(() => {
     const map = new Map<IssueStatus, Issue[]>();
     for (const column of columns) map.set(column.status.value, column.items);
     return map;
   }, [columns]);
+
+  const positionItemsByStatus = useMemo(() => {
+    if (!manual) return itemsByStatus;
+    const map = new Map<IssueStatus, Issue[]>();
+    for (const [status, items] of itemsByStatus) {
+      const alreadySorted = items.every(
+        (issue, index) =>
+          index === 0 || items[index - 1].position <= issue.position
+      );
+      map.set(
+        status,
+        alreadySorted
+          ? items
+          : [...items].sort((a, b) => a.position - b.position)
+      );
+    }
+    return map;
+  }, [itemsByStatus, manual]);
 
   const plan = useCallback(
     (event: BoardDragEvent) => {
@@ -101,14 +133,20 @@ export function useBoardDrop({
         issueById: issueMap,
       });
       if (!target) return null;
-      const bundle = dragBundle(
-        String(event.active.id),
-        selectedIds,
-        issueMap,
-        rank
-      );
+      const bundle = bundleRef.current;
       if (bundle.length === 0) return null;
       const items = itemsByStatus.get(target.status) ?? [];
+      const cached = planCacheRef.current;
+      if (
+        cached?.status === target.status &&
+        cached.overIssueId === target.overIssueId &&
+        cached.after === target.after &&
+        cached.manual === manual &&
+        cached.crossColumnOnly === crossColumnOnly &&
+        cached.items === items
+      ) {
+        return cached.result;
+      }
       const moves = planBoardMove({
         bundle: crossColumnOnly
           ? bundle.filter((issue) => issue.status !== target.status)
@@ -116,24 +154,44 @@ export function useBoardDrop({
         targetStatus: target.status,
         overIssueId: target.overIssueId,
         dropAfter: target.after,
-        // The position calculation wants the column sorted BY POSITION, and the order
-        // displayed is not always: in cycle view, it comes from
-        // reco comparator while `sort` remains “manual”. Both
-        // coincide everywhere else, so the copy costs nothing.
-        columnItems: manual
-          ? [...items].sort((a, b) => a.position - b.position)
-          : items,
+        // Cycle views can display a recommendation order while persisting a
+        // manual position. That alternate order is prepared once per layout,
+        // not sorted again for every pointer event.
+        columnItems: positionItemsByStatus.get(target.status) ?? [],
         manual,
         now: nowRef.current,
       });
-      return moves.length > 0 ? { status: target.status, moves } : null;
+      const result = moves.length > 0 ? { status: target.status, moves } : null;
+      planCacheRef.current = {
+        status: target.status,
+        overIssueId: target.overIssueId,
+        after: target.after,
+        manual,
+        crossColumnOnly,
+        items,
+        result,
+      };
+      return result;
     },
-    [crossColumnOnly, issueMap, itemsByStatus, manual, rank, selectedIds]
+    [
+      crossColumnOnly,
+      issueMap,
+      itemsByStatus,
+      manual,
+      positionItemsByStatus,
+    ]
   );
 
   const track = useCallback(
     (event: BoardDragEvent) => {
       const planned = plan(event);
+      if (
+        trackedPlanRef.current?.planned === planned &&
+        trackedPlanRef.current.comparator === comparator
+      ) {
+        return;
+      }
+      trackedPlanRef.current = { planned, comparator };
       const next = planned
         ? previewBoardMove({
             moves: planned.moves,
@@ -150,16 +208,28 @@ export function useBoardDrop({
     (event: Pick<DragStartEvent, "active">) => {
       const id = String(event.active.id);
       nowRef.current = Date.now();
-      setActiveId(id);
-      setDraggingIds(
-        new Set(dragBundle(id, selectedIds, issueMap, rank).map((i) => i.id))
+      // The rank map is only useful while starting a multi-card drag. Building
+      // it on every issue render needlessly allocates and walks the whole board.
+      const bundle = dragBundle(
+        id,
+        selectedIds,
+        issueMap,
+        displayRank(columns)
       );
+      bundleRef.current = bundle;
+      planCacheRef.current = null;
+      trackedPlanRef.current = null;
+      setActiveId(id);
+      setDraggingIds(new Set(bundle.map((issue) => issue.id)));
       setPreview(null);
     },
-    [issueMap, rank, selectedIds]
+    [columns, issueMap, selectedIds]
   );
 
   const end = useCallback(() => {
+    bundleRef.current = [];
+    planCacheRef.current = null;
+    trackedPlanRef.current = null;
     setActiveId(null);
     setDraggingIds(new Set());
     setPreview(null);

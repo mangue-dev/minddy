@@ -70,7 +70,7 @@ import {
   agentPlanPromptVariant,
 } from "@/lib/agent-launch-prompt";
 import { RELATION_TYPES } from "@/lib/relation-constants";
-import { NO_LAYOUT_ANIMATION, type CardDragData } from "@/lib/board-dnd";
+import type { CardDragData } from "@/lib/board-dnd";
 import type {
   Category,
   Issue,
@@ -910,7 +910,7 @@ export const IssueCard = memo(function IssueCard({
   objectiveMap,
   parent,
   relations,
-  candidateIssues,
+  getCandidateIssues,
   onOpenIssue,
   onOpenRelated,
   onAddRelation,
@@ -939,7 +939,8 @@ export const IssueCard = memo(function IssueCard({
   parent?: Issue | null;
   relations?: ChipRelation[];
   /** All project issues — candidates for the "add relation" picker. */
-  candidateIssues?: Issue[];
+  /** Avoid passing a board-wide array through every card render. */
+  getCandidateIssues?: () => Issue[] | undefined;
   onOpenRelated?: (issueId: string) => void;
   /** Adds a relation from this issue (source) to the picked target. When set,
       the right-click menu gains the three "mark as…" relation actions. */
@@ -978,18 +979,16 @@ export const IssueCard = memo(function IssueCard({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  // The sortable now serves only TWO purposes: grabbing the card and acting as
-  // a hover target. It no longer animates anything — neither the shift during
-  // dragging (`NO_SHIFT_STRATEGY`) nor the FLIP after dropping (`animateLayoutChanges`).
-  // That FLIP was redundant: the optimistic cache already moves the card on
-  // arrival, and dnd-kit replayed the path from the old position on top of it —
-  // two animations for one move, hence the jump on release.
+  // The sortable serves only TWO purposes: grabbing the card and acting as a
+  // hover target. dnd-kit does not shift cards during the gesture; the board's
+  // layout animator handles every committed move above the column scrollers.
+  // Keeping those responsibilities separate avoids replaying the drag path on
+  // top of the cache update, which caused the old jump on release.
   // `columnStatus` is what collision detection reads to attach a card to its
   // column (lib/board-dnd.ts).
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: issue.id,
     data: { columnStatus: issue.status } satisfies CardDragData,
-    animateLayoutChanges: NO_LAYOUT_ANIMATION,
   });
   const agentActive = useAgentActive(issue.id);
   // An agent run is ACTIVE on the issue → the action OPENS its conversation.
@@ -1146,19 +1145,22 @@ export const IssueCard = memo(function IssueCard({
   // already linked — linking to completed/canceled work makes no sense (a blocker
   // clos ne bloque plus).
   const relationCandidates = useMemo(() => {
+    const candidateIssues = relationType ? getCandidateIssues?.() : undefined;
     if (!candidateIssues) return [];
     const linked = new Set((relations ?? []).map((r) => r.otherId));
     return candidateIssues.filter(
       (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
     );
-  }, [candidateIssues, relations, issue.id]);
+  }, [getCandidateIssues, relationType, relations, issue.id]);
   // Context common to the two copyable prompts (implement the ticket, write
   // its plan): relations and categories, resolved into readable names.
   const promptContext = () => {
     // Relationships of the issue (type + identifier + title of the other issue) — the
     // title is resolved from candidateIssues (the complete list of the project),
     // which only exists in the authenticated app: no leak on the public board side.
-    const titleById = new Map((candidateIssues ?? []).map((i) => [i.id, i.title]));
+    const titleById = new Map(
+      (getCandidateIssues?.() ?? []).map((i) => [i.id, i.title])
+    );
     return {
       relations: (relations ?? []).map((r) => ({
         type: r.relation,
@@ -1500,7 +1502,7 @@ export const IssueCard = memo(function IssueCard({
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively.
       className={cn(
-        "relative cursor-pointer rounded-xl",
+        "relative cursor-pointer rounded-xl transition-opacity duration-150 ease-out motion-reduce:transition-none",
         (isDragging || dragging) && "opacity-40",
       )}
     >

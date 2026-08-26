@@ -24,11 +24,16 @@ import type {
   Objective,
   ViewSort,
 } from "@/lib/types";
-import { resolveRelations } from "@/lib/relation-constants";
+import { resolveRelationsByIssue } from "@/lib/relation-constants";
 import { issueComparator } from "@/lib/view-filter";
-import { displayRank } from "@/lib/board-drag";
-import { boardCollision } from "@/lib/board-dnd";
+import { createBoardColumnsBuilder } from "@/lib/board-columns";
+import {
+  BOARD_DROP_ANIMATION,
+  BOARD_MOUSE_ACTIVATION_DISTANCE,
+  boardCollision,
+} from "@/lib/board-dnd";
 import { useBoardDrop } from "@/lib/use-board-drop";
+import { useBoardCardAnimations } from "@/lib/use-board-card-animations";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
@@ -129,6 +134,12 @@ export function KanbanBoard({
     () => new Map(allIssues.map((i) => [i.id, i])),
     [allIssues]
   );
+  const candidateIssuesRef = useRef(allIssues);
+  candidateIssuesRef.current = allIssues;
+  const getCandidateIssues = useCallback(
+    () => candidateIssuesRef.current,
+    []
+  );
   const relationsByIssue = useMemo(() => {
     const map = new Map<string, ChipRelation[]>();
     if (relations.length === 0) return map;
@@ -136,8 +147,9 @@ export function KanbanBoard({
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const)
     );
+    const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
     for (const issue of issues) {
-      const resolved = resolveRelations(issue.id, relations, statusById)
+      const resolved = (resolvedByIssue.get(issue.id) ?? [])
         .map((r) => {
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;
@@ -148,18 +160,12 @@ export function KanbanBoard({
     return map;
   }, [issues, relations, allIssueMap]);
 
+  const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const comparator = useMemo(() => issueComparator(sort), [sort]);
   const columns = useMemo(
-    () =>
-      statuses.map((status) => ({
-        status,
-        items: issues.filter((i) => i.status === status.value).sort(comparator),
-      })),
-    [issues, statuses, comparator]
+    () => buildColumns(statuses, issues, comparator),
+    [buildColumns, issues, statuses, comparator]
   );
-
-  // Board reading order — the order in which a swiped packet lands.
-  const rank = useMemo(() => displayRank(columns), [columns]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelection = useCallback((issueId: string) => {
@@ -225,7 +231,6 @@ export function KanbanBoard({
     manual: sort === "manual",
     issueMap,
     selectedIds,
-    rank,
   });
   const { preview, draggingIds, activeId } = drop;
   const activeIssue = activeId ? issueMap.get(activeId) ?? null : null;
@@ -237,7 +242,9 @@ export function KanbanBoard({
   // scroll, so touch never starts a drag (status changes go through the card →
   // side panel instead). Desktop mouse drag is unchanged.
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } })
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: BOARD_MOUSE_ACTIVATION_DISTANCE },
+    })
   );
 
   // Fade the left/right edges of the board while more columns lie off-screen.
@@ -245,6 +252,7 @@ export function KanbanBoard({
 
   // Mobile: track which column is snapped into view to drive the dot indicator.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const cardAnimations = useBoardCardAnimations(scrollerRef, columns);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
       scrollerRef.current = node;
@@ -291,13 +299,22 @@ export function KanbanBoard({
     el.scrollTo({ left: index * stride, behavior: "smooth" });
   }, []);
 
-  const handleDragStart = (event: DragStartEvent) => drop.start(event);
+  const handleDragStart = (event: DragStartEvent) => {
+    cardAnimations.measure();
+    drop.start(event);
+  };
   const handleDragMove = (event: DragMoveEvent) => drop.track(event);
 
   const handleDragEnd = (event: DragEndEvent) => {
     // The marker already showed THIS plan: we write it as is (MIN-75 for the
     // package, `previewBoardMove` for place).
     const planned = drop.plan(event);
+    if (planned) {
+      // Refresh after any drag autoscroll so displaced cards animate from the
+      // positions visible at the exact moment of release.
+      cardAnimations.measure();
+      cardAnimations.skipNext([String(event.active.id)]);
+    }
     drop.end();
     if (!planned) return;
 
@@ -370,7 +387,7 @@ export function KanbanBoard({
                 issues={items}
                 issueMap={issueMap}
                 relationsByIssue={relationsByIssue}
-                candidateIssues={allIssues}
+                getCandidateIssues={getCandidateIssues}
                 projectId={projectId}
                 projectKey={projectKey}
                 memberMap={memberMap}
@@ -401,12 +418,10 @@ export function KanbanBoard({
 
       <MarqueeOverlay overlayRef={marqueeOverlayRef} />
 
-      {/* dropAnimation={null}: the move is optimistic (moveIssue patches the cache
-          synchronously), so the real card is already at its destination on drop.
-          dnd-kit's default drop animation would fly the overlay back toward the
-          source card's original rect first — the confusing "return to origin then
-          jump" on cross-column moves. Disabling it makes the card snap into place. */}
-      <DragOverlay dropAnimation={null}>
+      {/* The custom animation measures the optimistic destination after the
+          move, then lands this fixed overlay there. The journey therefore stays
+          visible between columns instead of being clipped by either scroller. */}
+      <DragOverlay dropAnimation={BOARD_DROP_ANIMATION}>
         {activeIssue ? (
           <div className="relative w-[21rem]">
             {/* The package is not visible in the cursor: the account says so. */}
