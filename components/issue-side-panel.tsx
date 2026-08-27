@@ -1082,11 +1082,6 @@ export function IssueSidePanel({
                     />
                   </PropertyRow>
 
-                  <IssueResourcesSection
-                    issueId={issue.id}
-                    projectId={issue.project_id}
-                  />
-
                   <RelationsSection
                     issue={issue}
                     relations={resolvedRelations}
@@ -1095,6 +1090,11 @@ export function IssueSidePanel({
                     onOpenIssue={onOpenIssue}
                     onAddRelation={onAddRelation}
                     onRemoveRelation={onRemoveRelation}
+                  />
+
+                  <IssueResourcesSection
+                    issueId={issue.id}
+                    projectId={issue.project_id}
                   />
 
                   {githubMetadata && (
