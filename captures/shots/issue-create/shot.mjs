@@ -8,7 +8,15 @@
  * node captures/shots/issue-create/shot.mjs # produces the PNGs
  * node captures/shots/issue-create/shot.mjs --publish # + book on the landing
  */
-import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
+import {
+  openPage,
+  settle,
+  shoot,
+  CAPTURE,
+  CAPTURE_VARIANTS,
+  DEFAULT_VIEW_NAMES,
+} from "../../lib/browser.mjs";
+import { catalog } from "../../lib/messages.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "workflowIssue";
@@ -39,24 +47,17 @@ const ISSUE = {
  * data). The S/P/E/L keyboard shortcuts would have avoided this table, but
  * they are filtered as long as the focus is in the title or description.
  */
-const ARIA = {
-  fr: {
-    dialog: "Nouveau ticket",
-    priority: "Changer la priorité",
-    effort: "Changer l'effort",
-    categories: "Modifier les catégories",
-    highPriority: "Haute",
-    smartFill: "Smart-fill",
-  },
-  en: {
-    dialog: "New issue",
-    priority: "Change priority",
-    effort: "Change effort",
-    categories: "Edit categories",
-    highPriority: "High",
-    smartFill: "Smart-fill",
-  },
-};
+async function uiLabels(locale) {
+  const messages = await catalog(locale);
+  return {
+    dialog: messages.IssueUI.newIssueTitle,
+    priority: messages.IssueUI.changePriorityAria,
+    effort: messages.IssueUI.changeEffortAria,
+    categories: messages.IssueUI.editCategoriesAria,
+    highPriority: messages.Priority.high,
+    smartFill: messages.IssueUI.smartFillChip,
+  };
+}
 
 /**
  * True as long as a floating overlay (open selector, tooltip) occupies
@@ -82,12 +83,7 @@ async function settleOverlays(page) {
 const FLOATING_SOURCE = `() => !(${FLOATING.toString()})()`;
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
@@ -103,12 +99,9 @@ async function capture({ locale, theme }) {
 
     // `c` — the creation shortcut, global (lib/create-context.tsx).
     await page.keyboard.press("c");
-    const dialog = page.getByRole("dialog", { name: /^(?:Nouveau ticket|New issue)$/ });
+    const words = await uiLabels(locale);
+    const dialog = page.getByRole("dialog", { name: words.dialog, exact: true });
     await dialog.waitFor({ state: "visible", timeout: 10_000 });
-    const words =
-      (await page.getByRole("dialog", { name: ARIA.fr.dialog }).count()) > 0
-        ? ARIA.fr
-        : ARIA.en;
 
     // The title field is `autoFocus`: we type directly in it.
     await page.keyboard.type(ISSUE.title, { delay: 6 });

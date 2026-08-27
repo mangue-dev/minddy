@@ -19,7 +19,14 @@
  * node captures/shots/palette/shot.mjs # produces the PNGs
  * node captures/shots/palette/shot.mjs --publish # + book on the landing
  */
-import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
+import {
+  openPage,
+  settle,
+  shoot,
+  CAPTURE,
+  CAPTURE_VARIANTS,
+  DEFAULT_VIEW_NAMES,
+} from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "featurePalette";
@@ -34,7 +41,7 @@ const VIEWPORT = { width: 1736, height: 1085 };
  * demo world ticket titles, and it is also the name of the public board
  * on the interface side — this is what brings up a page AND tickets.
  */
-const QUERY = { fr: "board", en: "board" };
+const QUERY = "board";
 
 /**
  * A ticket result can be recognized by its identifier. No word limit
@@ -45,12 +52,7 @@ const QUERY = { fr: "board", en: "board" };
 const ISSUE_ROW = /[A-Z]{2,4}-\d+/;
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
@@ -75,12 +77,12 @@ async function capture({ locale, theme }) {
     // that the element is ready before each touch.
     const input = dialog.getByRole("textbox").first();
     await input.waitFor({ state: "visible", timeout: 10_000 });
-    await input.pressSequentially(QUERY[locale], { delay: 60 });
+    await input.pressSequentially(QUERY, { delay: 60 });
 
     const typed = await input.inputValue();
-    if (typed !== QUERY[locale]) {
+    if (typed !== QUERY) {
       throw new Error(
-        `${locale}/${theme} — la recherche affiche « ${typed} » au lieu de « ${QUERY[locale]} ».`,
+        `${locale}/${theme} — search input contains "${typed}" instead of "${QUERY}".`,
       );
     }
 
@@ -120,9 +122,9 @@ async function capture({ locale, theme }) {
 
     if (check.issues < 3 || check.actions < 1) {
       throw new Error(
-        `${locale}/${theme} — la palette montre ${check.actions} action(s) et ${check.issues} ` +
-          `ticket(s) dans le cadre pour « ${QUERY[locale]} ». L'emplacement promet les DEUX ` +
-          `(« une recherche qui remonte tickets et actions ») : change la requête.`,
+        `${locale}/${theme} — the palette shows ${check.actions} action(s) and ` +
+          `${check.issues} issue(s) for "${QUERY}". This shot requires both result types; ` +
+          `choose a different query.`,
       );
     }
     if (check.clipped.length > 0) {

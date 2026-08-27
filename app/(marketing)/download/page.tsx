@@ -234,7 +234,7 @@ export default async function DownloadPage() {
         </div>
       </section>
 
-      <MobilePwaInstallGuide copy={mobileInstallGuideCopy} />
+      <MobilePwaInstallGuide copy={mobileInstallGuideCopy} locale={locale} />
 
       {/* ── The facts ──────────────────────────── ────────────────────────────
  A strip of four boxes separated by one-pixel lines, in the

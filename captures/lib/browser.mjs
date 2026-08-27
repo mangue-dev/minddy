@@ -12,6 +12,17 @@ import { CAPTURE } from "./config.mjs";
 import { loadEnv, ROOT } from "./env.mjs";
 
 export const AUTH_STATE = resolve(ROOT, "captures/.auth/demo.json");
+export const CAPTURE_LOCALES = ["fr", "en", "de", "pt-BR", "it", "es"];
+const requestedLocales = process.env.CAPTURE_LOCALES?.split(",").filter(Boolean);
+const unsupportedLocales = requestedLocales?.filter(
+  (locale) => !CAPTURE_LOCALES.includes(locale),
+);
+if (unsupportedLocales?.length) {
+  throw new Error(`Unsupported capture locale(s): ${unsupportedLocales.join(", ")}`);
+}
+export const CAPTURE_VARIANTS = (requestedLocales ?? CAPTURE_LOCALES).flatMap((locale) =>
+  ["light", "dark"].map((theme) => ({ locale, theme })),
+);
 const expectedPageLocales = new WeakMap();
 const expectedPageThemes = new WeakMap();
 
@@ -129,6 +140,10 @@ export const DEFAULT_VIEW_NAMES = {
   // Board.defaultViewName in messages/<locale>.json
   fr: "Toutes",
   en: "All",
+  de: "Alle",
+  "pt-BR": "Todos",
+  it: "Tutti",
+  es: "Todos",
 };
 
 async function alignStoredViewNames(context, locale) {

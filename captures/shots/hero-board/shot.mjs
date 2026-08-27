@@ -19,7 +19,14 @@
  * The target is set by CAPTURE_BASE_URL (default localhost):
  *   CAPTURE_BASE_URL=https://www.minddy.app node captures/shots/hero-board/shot.mjs
  */
-import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
+import {
+  openPage,
+  settle,
+  shoot,
+  CAPTURE,
+  CAPTURE_VARIANTS,
+  DEFAULT_VIEW_NAMES,
+} from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "heroBoard";
@@ -30,12 +37,7 @@ const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 const VIEWPORT = { width: 1736, height: 1085 };
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });

@@ -26,7 +26,8 @@ Landing frame: **16/10**, same window as `heroBoard`
 
 ## Variations
 
-fr/light, fr/dark, en/light, en/dark
+fr/light, fr/dark, en/light, en/dark, de/light, de/dark, pt-BR/light,
+pt-BR/dark, it/light, it/dark, es/light, es/dark
 
 ## The typed text: `board`
 

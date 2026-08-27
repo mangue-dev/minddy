@@ -39,7 +39,7 @@ export const MANIFEST_PATH = resolve(ROOT, "components/marketing/screenshot-mani
 /** The location catalog, source of truth for valid identifiers. */
 const SLOTS_PATH = resolve(ROOT, "components/marketing/screenshot-slots.ts");
 
-export const LANGS = ["fr", "en"];
+export const LANGS = ["fr", "en", "de", "pt-BR", "it", "es"];
 export const THEMES = ["light", "dark"];
 
 /**
@@ -177,7 +177,7 @@ export async function writeManifest() {
   const published = await listPublished();
 
   const orphans = published.filter((key) => {
-    const slot = key.replace(/-(fr|en)-(light|dark)$/, "");
+    const slot = key.replace(/-(fr|en|de|pt-BR|it|es)-(light|dark)$/, "");
     return slot === key || !slots.has(slot);
   });
 

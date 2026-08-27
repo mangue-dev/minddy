@@ -54,7 +54,8 @@ the straight edge it fails instead of producing a shaky image.
 
 ## Variations
 
-fr/light, fr/dark, en/light, en/dark
+fr/light, fr/dark, en/light, en/dark, de/light, de/dark, pt-BR/light,
+pt-BR/dark, it/light, it/dark, es/light, es/dark
 
 ## What won't be there, and why
 

@@ -30,7 +30,8 @@ connected in Camille Roy. The data comes from
 
 ## Variations
 
-fr/light, fr/dark, en/light, en/dark
+fr/light, fr/dark, en/light, en/dark, de/light, de/dark, pt-BR/light,
+pt-BR/dark, it/light, it/dark, es/light, es/dark
 
 The content of the pages is in **English** in all four: it is data,
 like board tickets. What changes from one language to another is the

@@ -7,7 +7,7 @@
  * node captures/shots/feedback-inbox/shot.mjs # produces the PNGs
  *   node captures/shots/feedback-inbox/shot.mjs --publish   # + livre
  */
-import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
+import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "feedbackInbox";
@@ -20,12 +20,7 @@ const POST = "Can we get notified in Slack?";
 const MERGE_TARGET = "Slack alerts when an incident opens";
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });

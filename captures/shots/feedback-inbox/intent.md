@@ -42,7 +42,8 @@ credible fictitious accounts — pseudonyms, votes and feedback unchanged.
 
 ## Variations
 
-fr/light, fr/dark, en/light, en/dark
+fr/light, fr/dark, en/light, en/dark, de/light, de/dark, pt-BR/light,
+pt-BR/dark, it/light, it/dark, es/light, es/dark
 
 ## What the screen lost, and the defect that remains (August 12, 2026)
 

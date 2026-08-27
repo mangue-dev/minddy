@@ -51,7 +51,8 @@ the location — and the team response is already visible, on the editorial side
 
 ## Variations
 
-fr/light, fr/dark, en/light, en/dark
+fr/light, fr/dark, en/light, en/dark, de/light, de/dark, pt-BR/light,
+pt-BR/dark, it/light, it/dark, es/light, es/dark
 
 ## Known pitfalls
 

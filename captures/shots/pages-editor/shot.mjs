@@ -14,7 +14,7 @@
  *   CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/pages-editor/shot.mjs
  *   CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/pages-editor/shot.mjs --publish
  */
-import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
+import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "pagesEditor";
@@ -34,12 +34,7 @@ const TASK_COUNT = 5;
 const DONE_COUNT = 2;
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });

@@ -8,7 +8,7 @@
  * node captures/shots/pull-request/shot.mjs # produces the PNGs
  *   node captures/shots/pull-request/shot.mjs --publish   # + livre
  */
-import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
+import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 import {
   COMMENTS,
@@ -27,12 +27,7 @@ const OUT = "captures/shots/pull-request/out";
 const VIEWPORT = { width: 1447, height: 1085 };
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 const json = (route, body) =>
   route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });

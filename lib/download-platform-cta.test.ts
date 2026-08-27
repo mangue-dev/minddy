@@ -11,6 +11,7 @@ import {
   MobilePwaInstallGuide,
   type MobileInstallGuideCopy,
 } from "@/components/marketing/mobile-pwa-install-guide";
+import type { Locale } from "@/i18n/config";
 import { WINDOWS_STORE_DEEP_LINK } from "@/lib/desktop/install-prompt";
 
 const copy: DownloadPlatformCtaProps = {
@@ -86,6 +87,10 @@ describe("DownloadPlatformCta", () => {
   beforeEach(() => {
     (window as typeof window & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
       true;
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -104,14 +109,14 @@ describe("DownloadPlatformCta", () => {
     await act(async () => root.render(createElement(DownloadPlatformCta, copy)));
   }
 
-  async function renderWithGuide() {
+  async function renderWithGuide(locale: Locale = "en") {
     await act(async () =>
       root.render(
         createElement(
           "div",
           null,
           createElement(DownloadPlatformCta, copy),
-          createElement(MobilePwaInstallGuide, { copy: guideCopy }),
+          createElement(MobilePwaInstallGuide, { copy: guideCopy, locale }),
         ),
       ),
     );
@@ -201,5 +206,15 @@ describe("DownloadPlatformCta", () => {
     expect(container.querySelector("section#mobile-install-guide h2")?.textContent).toBe(
       "Install minddy like an app",
     );
+  });
+
+  it("uses the current locale for the Android guide screenshot", async () => {
+    setNavigatorProbe({ userAgentDataPlatform: "Android", userAgent: "Mozilla/5.0 Android" });
+    await renderWithGuide("de");
+
+    const screenshot = Array.from(container.querySelectorAll("img")).find((image) =>
+      decodeURIComponent(image.getAttribute("src") ?? "").includes("heroBoard-de-light.webp"),
+    );
+    expect(screenshot).toBeDefined();
   });
 });

@@ -8,7 +8,7 @@
  * node captures/shots/feedback-board/shot.mjs # produces the PNGs
  *   node captures/shots/feedback-board/shot.mjs --publish   # + livre
  */
-import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
+import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "feedbackBoard";
@@ -24,12 +24,7 @@ const TOP = [
 ];
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
   // DISCONNECTED: When logged in, the header would show the visitor's identity and

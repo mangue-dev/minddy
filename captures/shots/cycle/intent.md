@@ -30,7 +30,8 @@ It's a gesture that a user makes, not a trick.
 
 ## Variations
 
-fr/light, fr/dark, en/light, en/dark
+fr/light, fr/dark, en/light, en/dark, de/light, de/dark, pt-BR/light,
+pt-BR/dark, it/light, it/dark, es/light, es/dark
 
 ## Known pitfalls
 

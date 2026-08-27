@@ -18,6 +18,8 @@ import {
   mobileInstallGuidePlatformFromEvent,
   SHOW_MOBILE_INSTALL_GUIDE_EVENT,
 } from "@/lib/mobile-install-guide";
+import type { Locale } from "@/i18n/config";
+import { SCREENSHOT_SLOTS, screenshotSrc } from "@/components/marketing/screenshot-slots";
 
 type NavigatorWithUserAgentData = Navigator & {
   userAgentData?: { platform?: string };
@@ -178,16 +180,23 @@ function IosAddVisual({ copy }: { copy: MobileInstallGuideCopy }) {
   );
 }
 
-function AndroidPromptVisual({ copy }: { copy: MobileInstallGuideCopy }) {
+function AndroidPromptVisual({ copy, locale }: { copy: MobileInstallGuideCopy; locale: Locale }) {
+  const background = screenshotSrc(SCREENSHOT_SLOTS.heroBoard, {
+    lang: locale,
+    theme: "light",
+  });
+
   return (
     <div aria-hidden className="relative h-64 overflow-hidden bg-[#e8eaed]">
-      <Image
-        src="/captures/heroBoard-en-light.webp"
-        alt=""
-        fill
-        sizes="360px"
-        className="object-cover opacity-45"
-      />
+      {background ? (
+        <Image
+          src={background}
+          alt=""
+          fill
+          sizes="360px"
+          className="object-cover opacity-45"
+        />
+      ) : null}
       <div className="absolute inset-x-2 bottom-2 rounded-[1.5rem] bg-white p-4 shadow-xl">
         <div className="flex items-center gap-3">
           <Image
@@ -238,7 +247,13 @@ function AndroidMenuVisual({ copy }: { copy: MobileInstallGuideCopy }) {
   );
 }
 
-export function MobilePwaInstallGuide({ copy }: { copy: MobileInstallGuideCopy }) {
+export function MobilePwaInstallGuide({
+  copy,
+  locale,
+}: {
+  copy: MobileInstallGuideCopy;
+  locale: Locale;
+}) {
   const [platform, setPlatform] = useState<InstallPlatform | null>(null);
 
   useEffect(() => {
@@ -310,7 +325,7 @@ export function MobilePwaInstallGuide({ copy }: { copy: MobileInstallGuideCopy }
         ) : (
           <ol className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
             <GuideCard number={1} title={copy.androidStepPromptTitle} body={copy.androidStepPromptBody}>
-              <AndroidPromptVisual copy={copy} />
+              <AndroidPromptVisual copy={copy} locale={locale} />
             </GuideCard>
             <GuideCard number={2} title={copy.androidStepMenuTitle} body={copy.androidStepMenuBody}>
               <AndroidMenuVisual copy={copy} />

@@ -8,7 +8,7 @@
  * node captures/shots/agent/shot.mjs # produces the PNGs
  * node captures/shots/agent/shot.mjs --publish # + book on the landing
  */
-import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
+import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 import { toolCallLabel } from "../../lib/messages.mjs";
 
@@ -34,12 +34,7 @@ const TRACE = [
 ];
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 /**
  * “Editing 3 files”, reconstructed from the app catalog.
@@ -81,9 +76,7 @@ async function capture({ locale, theme }) {
     // This wording is translated; we rebuild it from the catalog rather than
     // copy it, and we only keep the first half — the separator and the
     // sentence case are set by the component, not by a key.
-    const readSummaries = await Promise.all(
-      ["fr", "en"].map((lang) => toolCallLabel(lang, "summaryRead", 2)),
-    );
+    const readSummaries = [await toolCallLabel(locale, "summaryRead", 2)];
     const readGroup = page
       .getByRole("button", {
         name: new RegExp(readSummaries.map(escapeRe).join("|"), "i"),
@@ -99,9 +92,7 @@ async function capture({ locale, theme }) {
     await page.mouse.move(600, 60);
     await page.waitForTimeout(400);
 
-    const editsLabels = await Promise.all(
-      ["fr", "en"].map((lang) => applyEditsLabel(lang)),
-    );
+    const editsLabels = [await applyEditsLabel(locale)];
     const check = await page.evaluate(
       ({ trace, editsLabels }) => {
         const main = document.querySelector("main");

@@ -7,9 +7,16 @@
  * node captures/shots/numo/shot.mjs # produces the PNGs
  * node captures/shots/numo/shot.mjs --publish # + book on the landing
  */
-import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
+import {
+  openPage,
+  settle,
+  shoot,
+  CAPTURE,
+  CAPTURE_VARIANTS,
+  DEFAULT_VIEW_NAMES,
+} from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
-import { toolCallLabel } from "../../lib/messages.mjs";
+import { catalog, toolCallLabel } from "../../lib/messages.mjs";
 
 const SLOT = "numoPanel";
 const OUT = "captures/shots/numo/out";
@@ -67,26 +74,15 @@ const DURATION = /\b1\b[^0-9]*\b3\b/;
  * copied: a capture must not continue to pass if the product changes
  * ce texte.
  */
-async function toolLabels() {
-  return (
-    await Promise.all(
-      ["fr", "en"].map((locale) =>
-        Promise.all([
-          toolCallLabel(locale, "foundIssues", 3),
-          toolCallLabel(locale, "issuesUpdated", 2),
-        ]),
-      ),
-    )
-  ).flat();
+async function toolLabels(locale) {
+  return Promise.all([
+    toolCallLabel(locale, "foundIssues", 3),
+    toolCallLabel(locale, "issuesUpdated", 2),
+  ]);
 }
 
 const PUBLISH = process.argv.includes("--publish");
-const VARIANTS = [
-  { locale: "fr", theme: "light" },
-  { locale: "fr", theme: "dark" },
-  { locale: "en", theme: "light" },
-  { locale: "en", theme: "dark" },
-];
+const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({
@@ -115,7 +111,11 @@ async function capture({ locale, theme }) {
     // No conversation is restored: `localStorage` is blank in a
     // capture context. We go through the list, and aim for the title — a
     // English data, valid for both languages.
-    const historyTrigger = panel.getByRole("button", { name: "Conversations" });
+    const messages = await catalog(locale);
+    const historyTrigger = panel.getByRole("button", {
+      name: messages.Assistant.conversations,
+      exact: true,
+    });
     const conversationButton = page.getByRole("button", { name: new RegExp(CONVERSATION) });
     let opened = false;
     for (let attempt = 0; attempt < 3 && !opened; attempt += 1) {
@@ -168,7 +168,7 @@ async function capture({ locale, theme }) {
     await page.evaluate(() => document.activeElement?.blur?.());
     await page.waitForTimeout(400);
 
-    const labels = await toolLabels();
+    const labels = await toolLabels(locale);
     const check = await page.evaluate(
       ({ labels, viewNames }) => {
         const dialog = document.querySelector('[role="dialog"]');
