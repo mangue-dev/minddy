@@ -35,6 +35,13 @@ files:
   - "!electron-builder.yml"
   - "!release/**"
 
+# Shell-owned recovery documents cannot fetch the product font from an
+# unavailable server. Package the same Inter Latin subset used by Next so the
+# local surfaces retain minddy's typography without growing the main bundle.
+extraResources:
+  - from: ../app/fonts/inter-latin.woff2
+    to: fonts/inter-latin.woff2
+
 # It writes `CFBundleURLTypes`, which makes deep-link authentication testable
 # for the first time: `app.setAsDefaultProtocolClient`
 # just ANNOUNCES a schema that the bundle must already declare.

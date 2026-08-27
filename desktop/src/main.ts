@@ -62,6 +62,10 @@ import {
 } from "@/lib/desktop/native-push";
 import { quitDecision, quitPrompt } from "@/lib/desktop/quit-guard";
 import {
+  desktopServerUnavailableHtml,
+  isDesktopServerUnavailable,
+} from "@/lib/desktop/server-unavailable";
+import {
   carrySessionCookies,
   staleSessionCookies,
 } from "@/lib/desktop/session-carry";
@@ -104,6 +108,7 @@ import {
   readDesktopServerOrigin,
   writeDesktopServerOrigin,
 } from "./server-store";
+import { desktopShellFontDataUrl } from "./shell-font";
 import {
   checkForUpdatesManually,
   replayUpdateStatus,
@@ -690,6 +695,32 @@ function createWindow(
   });
 
   guardNavigation(window);
+  window.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
+      if (
+        !isDesktopServerUnavailable(
+          { errorCode, isMainFrame, validatedUrl },
+          origin,
+        )
+      ) {
+        return;
+      }
+      trace("server-unavailable", {
+        errorCode,
+        errorDescription,
+        origin,
+      });
+      const html = desktopServerUnavailableHtml(
+        origin,
+        validatedUrl,
+        desktopShellFontDataUrl(),
+      );
+      void window.loadURL(
+        `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+      );
+    },
+  );
   if (showWhenReady) window.once("ready-to-show", () => window.show());
   // A frameless window has no buttons: they light up here, where they belong
   // place in the mark line, before the first display.

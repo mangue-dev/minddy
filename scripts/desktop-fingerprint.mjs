@@ -37,6 +37,8 @@ const repo = path.resolve(dir, "..");
  */
 const PACKAGING_INPUTS = [
   "desktop/electron-builder.yml",
+  // Offline shell documents load this packaged font outside the JS bundle.
+  "app/fonts/inter-latin.woff2",
   "desktop/build/entitlements.mac.plist",
   // The translations of `Info.plist`, posed by `extraResources` (MIN-359).
   // They are not entered by esbuild and are not named in any file

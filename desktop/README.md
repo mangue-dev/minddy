@@ -78,6 +78,19 @@ Choosing **Use minddy Cloud** removes the custom selection and returns to the
 stable cloud channel. While a custom server is active, the preview channel is
 hidden because it is a property of minddy Cloud, not of the operator's server.
 
+If the selected server cannot load, the shell replaces Chromium's network error
+with a local recovery screen. It names the configured server, preserves the
+failed route for **Try again**, and opens the server picker from **Check server
+settings**. The message refers to server availability and configuration, never
+to Internet access, because a valid minddy server can live on localhost or a
+private network.
+
+The unavailable screen and server picker share a small offline-safe design
+layer in `lib/desktop/shell-ui.ts`. It mirrors minddy's light and dark tokens,
+official SVG brandmark, pill buttons, inputs, and focus treatment. The packaged
+shell also carries the same Inter Latin subset as the site; these local surfaces
+must never depend on an asset served by the selected origin.
+
 ## The channel (MIN-352)
 
 When minddy Cloud is selected, the shell loads one of two cloud origins:
