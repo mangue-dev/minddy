@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isIP } from "node:net";
 import type { NetworkPolicyRule } from "@vercel/sandbox";
 
 import {
@@ -143,6 +144,16 @@ describe("buildAgentNetworkPolicy — deny-by-default egress", () => {
     const subnets = policy().subnets;
     expect(subnets?.deny).toEqual(AGENT_DENIED_EGRESS_SUBNETS);
     expect(subnets?.allow).toBeUndefined();
+  });
+
+  it("sends only the IPv4 CIDR form accepted by Vercel Sandbox", () => {
+    for (const cidr of AGENT_DENIED_EGRESS_SUBNETS) {
+      const [address, prefix, extra] = cidr.split("/");
+      expect(extra).toBeUndefined();
+      expect(isIP(address)).toBe(4);
+      expect(Number(prefix)).toBeGreaterThanOrEqual(0);
+      expect(Number(prefix)).toBeLessThanOrEqual(32);
+    }
   });
 
   it("is never an allow-all or deny-all string policy", () => {

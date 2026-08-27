@@ -107,7 +107,14 @@ export const AGENT_PACKAGE_EGRESS_HOSTS = [
   "repo.packagist.org",
 ] as const;
 
-/** Addresses that a public hostname must never route sandbox traffic to. */
+/**
+ * IPv4 addresses that a public hostname must never route sandbox traffic to.
+ *
+ * The production Vercel Sandbox API rejected `::/128` with HTTP 400, while
+ * its published subnet examples use IPv4. Keep this request list IPv4-only
+ * until Vercel documents an accepted IPv6 form; the domain allowlist still
+ * denies every destination that is not explicit.
+ */
 export const AGENT_DENIED_EGRESS_SUBNETS = [
   "0.0.0.0/8",
   "10.0.0.0/8",
@@ -119,11 +126,6 @@ export const AGENT_DENIED_EGRESS_SUBNETS = [
   "198.18.0.0/15",
   "224.0.0.0/4",
   "240.0.0.0/4",
-  "::/128",
-  "::1/128",
-  "fc00::/7",
-  "fe80::/10",
-  "ff00::/8",
 ] as const;
 
 /** Deterministic name of the microVM of a run (persisted in `agent_runs.sandbox_id`). */
