@@ -5,10 +5,19 @@ summary: Choose a supported topology, install minddy, configure its services, an
 category: deployment
 audience: both
 tags: [self-hosting, self host, deployment, docker, supabase, installation, local, server, numo]
-lastReviewed: 2026-08-21
+lastReviewed: 2026-08-27
 ---
 
 minddy is open source under the GNU AGPL v3.0 only. The only supported distribution is the public `mangue-dev/minddy` repository and its immutable tagged release assets. Do not use a moving branch, an unofficial deployment repository, or a third-party image. The exact release row in `deploy/self-hosted/compatibility.json` is the source of truth for the supported image digest, Supabase Compose revision, host architectures, and Docker minimums.
+
+## Install the desktop app first
+
+The supported self-host flow starts in the signed minddy desktop app. Install it
+from [minddy.app/download](https://www.minddy.app/download) before preparing a
+local clone or server. Windows installs through Microsoft Store and has no
+`.exe`; macOS and Linux use their platform downloads. Confirm that the app opens.
+Its native **minddy** menu selects the data source. Press **Alt** to reveal that
+menu on Windows or Linux; macOS uses its global menu bar.
 
 ## What a self-hosted instance contains
 
@@ -55,12 +64,18 @@ cd minddy
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
-pnpm self-host:local
 ```
 
-`self-host:local` checks port 6463, starts the minimal local Supabase stack, applies migrations and Storage configuration, writes only missing `.env.local` values, builds the production app when needed, binds minddy to loopback, waits for `/api/health`, and opens `/signup`. If the port is occupied, use `pnpm self-host:local -- --port <another-port>`. `--no-open` suppresses browser navigation; `--keep-backend` deliberately leaves Supabase running after minddy stops.
+Open **minddy > Connect to a Server… > Run local minddy on this computer** and
+select the clone. On Windows or Linux, press **Alt** first. The app invokes the
+local launcher with browser navigation disabled, starts the minimal Supabase
+stack, applies migrations and Storage configuration, builds minddy when needed,
+waits for health, and opens sign-up in its own window. It owns shutdown and later
+restarts. A terminal-owned `pnpm self-host:local` process is a troubleshooting
+fallback only and must be stopped before the app can reclaim the folder.
 
-On macOS, install the signed minddy desktop app, choose **minddy > Connect to a Server… > Run local minddy on this Mac**, and select the clone. The app can start and stop minddy and Supabase together. On Windows and Linux, use the browser URL instead; no desktop build is currently published for those systems. `Ctrl+C` stops the local app and Supabase together, and running `pnpm self-host:local` starts them again. `supabase db reset --local` destroys local data and is only for resetting an evaluation stack, never for recovery.
+`supabase db reset --local` destroys local data and is only for resetting an
+evaluation stack, never for recovery.
 
 ## Server installation
 
@@ -88,6 +103,15 @@ pnpm self-host:doctor -- --mode managed --db-url 'postgresql://postgres:...'
 
 It checks redacted configuration, release compatibility, containers, scheduler, agent runner, disk space, and—when given a database URL—migrations and Storage. Confirm the app origin, health endpoint, Auth email delivery, a test account, a project, an issue, an attachment, and a first restorable backup before declaring the instance ready.
 
+To make a self-hosted server the desktop app's data source, open the native
+**minddy** menu on macOS or press **Alt** to reveal it on Windows and Linux. Choose
+**Connect to a Server…**, enter the application's HTTPS origin or a private IPv4
+HTTP origin, and connect. The menu remains usable if that origin fails to load.
+Choose **Use minddy Cloud** there to remove the custom source. Use **Run local
+minddy on this computer** only for a local clone folder, not for a remote server;
+stop a terminal-owned local launcher first. The source choice is stored on the
+computer, and Cloud and self-hosted sessions remain separate.
+
 ## Supabase and application configuration
 
 The selected Supabase API/Auth, Storage, Realtime, and PostgreSQL endpoints must be reachable from the application host. The bootstrap does not derive Supabase API keys from a database URL. Supply the public URL, anon key, service-role key, and a migration-capable database URL; it verifies required schemas, `extensions.vector`, Realtime publication, application configuration, Storage buckets, and Storage policies. Buckets are reconciled through the Storage API because SQL dumps do not contain object-store bytes.
@@ -97,4 +121,3 @@ Configure Supabase Auth with the exact app origin, `/auth/callback`, an operator
 ## Moving data from Minddy Cloud
 
 The Data section of account settings can export a JSON transfer file and restore it on another minddy instance. Import is additive: it preserves project, issue, page, and personal-data IDs when safe; conflicts receive new IDs and are reported. It does not transfer passwords, API keys, OAuth tokens, repository credentials, or billing subscriptions. Reconnect those services on the self-hosted destination. Export from Cloud, install and verify the destination, then import and review the reported conflicts.
-

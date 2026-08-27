@@ -86,6 +86,7 @@ export interface DownloadPlatformCtaProps {
   linuxDebArm64Label: string;
   linuxRpmArm64Label: string;
   windowsLabel: string;
+  windowsBody: string;
   androidLabel: string;
   iosLabel: string;
   tutorialLabel: string;
@@ -105,6 +106,7 @@ export function DownloadPlatformCta({
   linuxDebArm64Label,
   linuxRpmArm64Label,
   windowsLabel,
+  windowsBody,
   androidLabel,
   iosLabel,
   tutorialLabel,
@@ -147,6 +149,11 @@ export function DownloadPlatformCta({
           {windowsLabel}
         </a>
       </Button>
+    );
+    details = (
+      <p className="mt-4 max-w-lg text-xs leading-relaxed text-muted-foreground">
+        {windowsBody}
+      </p>
     );
   } else if (platform === "linux") {
     action = (

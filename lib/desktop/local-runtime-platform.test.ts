@@ -2,8 +2,23 @@ import { describe, expect, it } from "vitest";
 
 import {
   localRuntimeProcessSpec,
+  localRuntimeStartupState,
   localRuntimeStopSpec,
 } from "./local-runtime-platform";
+
+describe("localRuntimeStartupState", () => {
+  it("starts an unavailable local server", () => {
+    expect(localRuntimeStartupState(false, false)).toBe("start");
+  });
+
+  it("reuses a healthy server owned by this desktop process", () => {
+    expect(localRuntimeStartupState(true, true)).toBe("ready");
+  });
+
+  it("refuses a healthy server owned outside the desktop app", () => {
+    expect(localRuntimeStartupState(true, false)).toBe("external");
+  });
+});
 
 describe("localRuntimeProcessSpec", () => {
   it("uses a hidden Windows command shell for the pnpm launcher", () => {

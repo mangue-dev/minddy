@@ -13,11 +13,11 @@ import {
   Database,
   Download,
   ExternalLink,
+  FolderOpen,
   Globe2,
   HardDrive,
   Laptop,
   Mail,
-  Monitor,
   RotateCcw,
   Server,
   ShieldCheck,
@@ -342,46 +342,101 @@ function EmailConfiguration({
 
 function ClientAccess({
   serverOrigin,
-  signupUrl,
   local,
   privateNetwork,
   copy,
-  downloadUrl,
 }: {
   serverOrigin: string;
-  signupUrl: string;
   local: boolean;
   privateNetwork?: boolean;
   copy: SelfHostingInstallCopy;
-  downloadUrl: string;
 }) {
+  const destinationTitle = local ? copy.desktopLocalPathTitle : copy.desktopServerPathTitle;
+  const DestinationIcon = local ? FolderOpen : Server;
+
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <section className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5">
-        <div className="flex items-center gap-2 font-medium">
-          <Laptop className="h-4 w-4 text-primary" aria-hidden />
-          {copy.macAppTitle}
+    <section className="space-y-4" aria-labelledby="desktop-source-title">
+      <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <Laptop className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+          <div>
+            <h2 id="desktop-source-title" className="font-medium">{copy.desktopAppTitle}</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{copy.desktopAppBody}</p>
+          </div>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {local ? copy.macLocalBody : privateNetwork ? copy.macPrivateBody : copy.macTeamBody}
-        </p>
-        <p className="mt-3 rounded-lg bg-background px-3 py-2 font-mono text-xs text-foreground">{copy.macServerMenu} → {serverOrigin}</p>
-        <ResourceLink href={downloadUrl}>{copy.downloadMacApp}</ResourceLink>
-      </section>
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-center gap-2 font-medium">
-          <Monitor className="h-4 w-4 text-primary" aria-hidden />
-          {copy.browserTitle}
-        </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {local ? copy.browserLocalBody : privateNetwork ? copy.browserPrivateBody : copy.browserTeamBody}
-        </p>
-        <a href={signupUrl} target={local ? undefined : "_blank"} rel={local ? undefined : "noopener noreferrer"} className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-          {copy.openSignup}
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </a>
-      </section>
-    </div>
+
+        <ol className="mt-6 grid gap-4 lg:grid-cols-2">
+          <li className="rounded-xl border border-border bg-background p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground" aria-hidden>1</span>
+              <div>
+                <h3 className="font-medium">{copy.desktopMenuStepTitle}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{copy.desktopMenuStepBody}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-xl border border-border bg-card shadow-sm" aria-hidden>
+              <div className="flex items-center gap-4 border-b border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">minddy</span>
+                <span>Edit</span>
+                <span>View</span>
+                <span>Window</span>
+              </div>
+              <div className="w-[min(100%,17rem)] border-r border-border py-1.5 text-xs">
+                <div className="px-3 py-1.5 text-muted-foreground">Server: minddy Cloud</div>
+                <div className="flex items-center justify-between bg-primary px-3 py-2 font-medium text-primary-foreground">
+                  <span>Connect to a Server…</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            </div>
+          </li>
+
+          <li className="rounded-xl border border-border bg-background p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground" aria-hidden>2</span>
+              <div>
+                <h3 className="font-medium">{destinationTitle}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {local ? copy.desktopLocalBody : privateNetwork ? copy.desktopPrivateBody : copy.desktopTeamBody}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-border bg-card p-4 shadow-sm">
+              <p className="text-sm font-semibold">{copy.desktopPickerTitle}</p>
+              {local ? (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-2 rounded-lg border border-primary bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground">
+                    <HardDrive className="h-4 w-4 shrink-0" aria-hidden />
+                    <span>{copy.desktopLocalAction}</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+                    <FolderOpen className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
+                    <span>{copy.desktopFolderExample}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <p className="text-xs font-medium text-foreground">{copy.desktopServerAddressLabel}</p>
+                    <div className="mt-1.5 rounded-lg border border-primary bg-background px-3 py-2.5 font-mono text-xs text-foreground ring-2 ring-primary/15">{serverOrigin}</div>
+                  </div>
+                  <div className="flex justify-end">
+                    <span className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">{copy.desktopConnectAction}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+              <DestinationIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <span>{local ? copy.desktopLocalChoiceNote : copy.desktopServerChoiceNote}</span>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
   );
 }
 
@@ -418,12 +473,10 @@ export function SelfHostingInstallWizard({
     : (domainValid ? enteredHost : "tickets.example.com");
   const adminEmail = emailValid ? email.trim() : "ops@example.com";
   const serverOrigin = `${serverAccess === "private" ? "http" : "https"}://${host}`;
-  const signupUrl = `${serverOrigin}/signup`;
   const serverSetupValid = addressValid && emailValid;
   const localOrigin = "http://localhost:6463";
-  const localSignupUrl = `${localOrigin}/signup`;
 
-  const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile\npnpm self-host:local`;
+  const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile`;
   const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile`;
   const fetchSupabase = "node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase";
   const featureFlags = optionalFeatures.map((feature) => ` \\\n  --enable ${feature}`).join("");
@@ -438,7 +491,7 @@ export function SelfHostingInstallWizard({
     : `${copy.networkSetupPublic}${supabaseMode === "full" ? ` ${copy.dnsSupabase}: supabase.${host} → ${copy.dnsTarget}.` : ""}`;
   const promptGuide = `${links.guide}?route=${path ?? "local"}`;
   const transferPrompt = migrate
-    ? `\n\nCloud transfer\n- Before installing: ${copy.exportOne} ${copy.exportTwo}\n- After sign-up: ${copy.importOne} ${copy.importTwo}`
+    ? `\n\n${copy.transferPromptTitle}\n- ${copy.transferPromptBefore}: ${copy.exportOne} ${copy.exportTwo}\n- ${copy.transferPromptAfter}: ${copy.importOne} ${copy.importTwo}`
     : "";
   const featureCatalog = [
     { id: "application-email" as const, title: copy.serviceEmailTitle, body: copy.serviceEmailBody, setup: copy.serviceEmailSetup, icon: Mail },
@@ -459,7 +512,7 @@ export function SelfHostingInstallWizard({
     MINDDY_PNPM_VERSION: pnpmVersion,
     MINDDY_LOCAL_ORIGIN: localOrigin,
     MINDDY_DOWNLOAD_URL: links.download,
-  }).replace(copy.localPromptClientOld, copy.localPromptClientNew).replace(copy.localPromptStopOld, copy.localPromptStopNew);
+  });
 
   const teamPrompt = replaceTokens(copy.teamPromptTemplate, {
     MINDDY_GUIDE_URL: promptGuide,
@@ -491,10 +544,29 @@ export function SelfHostingInstallWizard({
   const selectPath = (nextPath: Path) => {
     setPath(nextPath);
     setMethod(null);
-    setAcknowledged((current) => Object.fromEntries(Object.entries(current).filter(([id]) => ["migration-export", "capacity"].includes(id))));
+    setAcknowledged((current) => Object.fromEntries(Object.entries(current).filter(([id]) => ["desktop-app", "migration-export", "capacity"].includes(id))));
   };
 
   const stages: Step[] = [
+    {
+      id: "desktop-app",
+      title: copy.desktopSetupTitle,
+      body: copy.desktopSetupBody,
+      canContinue: ack("desktop-app"),
+      content: (
+        <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <Laptop className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+            <div>
+              <p className="font-medium">{copy.desktopSetupPlatformTitle}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{copy.desktopSetupPlatformBody}</p>
+            </div>
+          </div>
+          <div className="mt-4"><ResourceLink href={links.download}>{copy.downloadDesktopApp}</ResourceLink></div>
+          <DoneBlock copy={copy} criterion={copy.desktopSetupDone} acked={ack("desktop-app")} onAck={() => acknowledge("desktop-app")} />
+        </div>
+      ),
+    },
     {
       id: "route",
       title: copy.routeTitle,
@@ -728,7 +800,7 @@ export function SelfHostingInstallWizard({
       canContinue: ack("local-verify"),
       content: (
         <div className="space-y-5">
-          <ClientAccess serverOrigin={localOrigin} signupUrl={localSignupUrl} local copy={copy} downloadUrl={links.download} />
+          <ClientAccess serverOrigin={localOrigin} local copy={copy} />
           <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
             <Checklist items={[copy.testAccount, copy.testProject, copy.testAttachment]} />
             <DoneBlock copy={copy} criterion={copy.verifyLocalDone} acked={ack("local-verify")} onAck={() => acknowledge("local-verify")} />
@@ -750,7 +822,7 @@ export function SelfHostingInstallWizard({
       canContinue: ack("open"),
       content: (
         <div className="space-y-5">
-          <ClientAccess serverOrigin={serverOrigin} signupUrl={signupUrl} local={false} privateNetwork={serverAccess === "private"} copy={copy} downloadUrl={links.download} />
+          <ClientAccess serverOrigin={serverOrigin} local={false} privateNetwork={serverAccess === "private"} copy={copy} />
           <DoneBlock copy={copy} criterion={copy.openTeamDone} acked={ack("open")} onAck={() => acknowledge("open")} />
         </div>
       ),
@@ -762,7 +834,7 @@ export function SelfHostingInstallWizard({
       canContinue: ack("migration-import"),
       content: (
         <div className="space-y-5">
-          <ClientAccess serverOrigin={path === "local" ? localOrigin : serverOrigin} signupUrl={path === "local" ? localSignupUrl : signupUrl} local={path === "local"} privateNetwork={serverAccess === "private"} copy={copy} downloadUrl={links.download} />
+          <ClientAccess serverOrigin={path === "local" ? localOrigin : serverOrigin} local={path === "local"} privateNetwork={serverAccess === "private"} copy={copy} />
           <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
             <p className="text-sm font-medium">{copy.importHeading}</p>
             <Checklist items={[copy.importOne, copy.importTwo]} />
@@ -779,7 +851,7 @@ export function SelfHostingInstallWizard({
       content: (
         <div className="space-y-5 rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
           <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><p className="text-sm leading-relaxed">{path === "local" ? copy.localTeamAnswer : copy.answerUpdates}</p></div>
-          {path === "local" && <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-xl border border-border bg-background p-4"><p className="text-xs font-medium text-muted-foreground">{copy.stopLabel}</p><CommandBlock command="Ctrl+C" copy={copy} /></div><div className="rounded-xl border border-border bg-background p-4"><p className="text-xs font-medium text-muted-foreground">{copy.restartLabel}</p><CommandBlock command="pnpm self-host:local" copy={copy} /></div></div>}
+          {path === "local" && <Checklist items={[copy.desktopStopInstruction, copy.desktopRestartInstruction]} />}
           {path === "team" && <div className="flex flex-wrap gap-2"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>}
         </div>
       ),

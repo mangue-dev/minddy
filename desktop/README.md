@@ -62,10 +62,11 @@ MINDDY_DESKTOP_ORIGIN=http://localhost:3000 npm start
 ```
 
 The variable only exists for development. A packaged app ignores it. Installed
-users choose a server from **Account → Preferences → Desktop app**; remote
-origins must use HTTPS, while HTTP is accepted only for loopback and
-private-network IP addresses. This shared flow works on macOS, Windows, and
-Linux, including **Run local minddy on this computer**.
+users choose a source from the native **minddy > Connect to a Server…** menu;
+Windows and Linux users press **Alt** first because the menu bar is hidden by
+default. Remote origins must use HTTPS, while HTTP is accepted only for loopback
+and private-network IP addresses. This flow works on macOS, Windows, and Linux,
+including **Run local minddy on this computer** for a local clone folder.
 
 ## The selected server
 
@@ -96,12 +97,11 @@ session — cookies are by origin, so the first pass on the preview
 asks to reconnect once; return to stable finds the session
 production, remained intact.
 
-Account → Preferences is the primary surface for channel, server, update, and
-diagnostic controls. The native application menu keeps the same recovery
-commands because the settings screen is served by the origin it controls: if an
-origin does not load, the menu remains available to return to production. On
-Windows and Linux that menu is hidden by default and can be revealed with Alt;
-macOS keeps its normal global menu.
+The native application menu is the reference surface for channel, server,
+update, and diagnostic controls. Unlike a settings screen served by the selected
+origin, the menu remains available when that origin does not load. On Windows
+and Linux it is hidden by default and can be revealed with **Alt**; macOS keeps
+its normal global menu.
 
 It is retained in `userData/channel.json`, therefore **by machine and by profile**,
 never in the account: a setting that decides which page to serve should read

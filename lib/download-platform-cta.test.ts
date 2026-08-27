@@ -26,6 +26,7 @@ const copy: DownloadPlatformCtaProps = {
   linuxDebArm64Label: "Download .deb (ARM64)",
   linuxRpmArm64Label: "Download .rpm (ARM64)",
   windowsLabel: "Get it from Microsoft Store",
+  windowsBody: "Install from Microsoft Store. No .exe installer is provided.",
   androidLabel: "Install on Android",
   iosLabel: "Install on iPhone",
   tutorialLabel: "View installation guide",
@@ -133,6 +134,7 @@ describe("DownloadPlatformCta", () => {
       container.querySelector<HTMLAnchorElement>(`a[href="${WINDOWS_STORE_DEEP_LINK}"]`)
         ?.textContent,
     ).toContain("Microsoft Store");
+    expect(container.textContent).toContain("No .exe installer is provided.");
   });
 
   it("falls back to macOS when the platform is unsupported", async () => {

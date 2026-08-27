@@ -14,6 +14,19 @@ Before choosing a topology, read the binding
 [self-hosted distribution contract](self-hosting-distribution.md), including
 its release compatibility matrix and responsibility split.
 
+## Install the desktop app first
+
+Self-hosting is configured and opened from the minddy desktop app. Before
+installing a local instance or preparing a server, install the signed app from
+[minddy.app/download](https://www.minddy.app/download) and confirm that it opens.
+Windows installation goes through Microsoft Store; there is no `.exe` installer.
+macOS and Linux use the downloads shown for their platform.
+
+Keep the app installed throughout this guide. Its native **minddy** menu is the
+source-selection and recovery surface: macOS shows it in the global menu bar;
+Windows and Linux reveal the hidden menu bar when you press **Alt**. Later steps
+use **Connect to a Server…** to select either a local clone or a remote server.
+
 ## Supported topology
 
 minddy consists of a Node.js web application and a complete Supabase stack.
@@ -144,35 +157,27 @@ cd minddy
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
-pnpm self-host:local
 ```
 
-`self-host:local` checks that minddy's dedicated port is available, runs the
-bootstrap, creates a production build when the release or port changed, and
-binds the application to loopback. Later restarts reuse that build, avoiding
-the development watcher and its memory cost. The bootstrap validates migration names and order, starts the local
-stack, obtains local Supabase API keys, applies migrations, creates or corrects
-Storage buckets, writes only missing values to `.env.local`, and verifies the
-database and Storage API. `--minimal` leaves Studio, analytics, Edge Functions,
-image transformation, the pooler, and other services that minddy does not use
-stopped, reducing the local memory footprint. Port `6463` avoids the common
-application-development port `3000`. If it is already occupied, the command
-reports that conflict and accepts an explicit alternative with
-`pnpm self-host:local -- --port <port>`.
+Open the native **minddy** menu, press **Alt** first on Windows or Linux, and
+choose **Connect to a Server… > Run local minddy on this computer**. Select the
+cloned folder. The desktop app invokes `self-host:local --no-open`, checks the
+dedicated port, bootstraps the minimal Supabase stack, builds minddy when needed,
+waits for `/api/health`, and opens sign-up in its own window. It remembers the
+folder for later launches. Quitting minddy stops both the application and its
+local Supabase backend; reopening minddy starts both again.
 
-On macOS or Linux, install the signed minddy desktop app from
-[minddy.app/download](https://www.minddy.app/download), choose
-**minddy > Connect to a Server… > Run local minddy on this computer**, and
-select the cloned minddy folder. The app remembers that folder, starts Supabase
-and minddy on later app launches, waits for health, and opens sign-up. Quitting
-the app stops both. On Windows, `pnpm self-host:local` starts both services and
-opens `http://localhost:6463/signup` in the default browser. Create an account,
-create a project, and create an issue.
+The app-owned launcher binds minddy to loopback on port `6463`, validates
+migration names and order, applies migrations, reconciles Storage, and writes
+only missing `.env.local` values. The minimal profile leaves unused Supabase
+services stopped. If startup fails, use **Help > Copy Diagnostic Report** before
+falling back to a terminal.
 
-In a terminal, `Ctrl+C` stops the application and its local Supabase backend
-together. Run `pnpm self-host:local` from the clone to start both again. Use
-`--no-open` only when another client owns navigation, and `--keep-backend` only
-when you deliberately want Supabase to remain allocated after minddy stops.
+For troubleshooting only, `pnpm self-host:local` can run the same launcher in a
+terminal. Stop that process with `Ctrl+C` before returning to **Run local minddy
+on this computer**; the desktop app refuses to claim a server owned by another
+process. `--keep-backend` deliberately leaves Supabase allocated and is not part
+of the normal desktop flow.
 
 To reset an evaluation stack, explicitly destroy its local data and bootstrap it
 again:
@@ -272,6 +277,28 @@ URL is supplied—migrations and Storage.
 ```bash
 pnpm self-host:doctor -- --mode managed --db-url 'postgresql://postgres:...@db.example.com:5432/postgres'
 ```
+
+### Connect the desktop app to this instance
+
+The native application menu is the source-selection and recovery surface on
+macOS, Windows, and Linux. It remains available even when the selected server
+cannot load. On macOS, open the global **minddy** menu. On Windows or Linux,
+press **Alt** to reveal the hidden menu bar, then open **minddy**.
+
+- Choose **Connect to a Server…**, enter the minddy application origin (for
+  example, `https://tickets.example.com` or `http://192.168.1.50`), and select
+  **Connect**. Public servers require HTTPS; HTTP is accepted only for localhost
+  and private-network IPv4 addresses.
+- Choose **Run local minddy on this computer** in that dialog only when the data
+  source is a local clone. Stop any terminal-owned `pnpm self-host:local` process
+  first, then select the clone's root folder; the app owns the local minddy and
+  Supabase lifecycle from that point.
+- Choose **Use minddy Cloud** from the same **minddy** menu to remove the custom
+  source and return to Minddy Cloud.
+
+The selected source is stored on that computer. Cookies are not copied between
+Minddy Cloud and a self-hosted server, so the first switch can require signing
+in or creating an account on the selected instance.
 
 The update, backup, and restore entry points are safety gates for the operation
 runbook. They verify the inputs they can safely verify but never guess a Storage

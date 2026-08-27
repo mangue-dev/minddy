@@ -4,6 +4,17 @@ export interface LocalRuntimeProcessSpec {
   windowsHide?: boolean;
 }
 
+export type LocalRuntimeStartupState = "start" | "ready" | "external";
+
+/** Distinguishes a desktop-owned server from one started in another terminal. */
+export function localRuntimeStartupState(
+  healthy: boolean,
+  ownsLiveProcess: boolean,
+): LocalRuntimeStartupState {
+  if (!healthy) return "start";
+  return ownsLiveProcess ? "ready" : "external";
+}
+
 /** Builds the platform-native launcher without depending on Electron. */
 export function localRuntimeProcessSpec(
   platform: NodeJS.Platform,

@@ -211,6 +211,7 @@ export default async function DownloadPage() {
                   linuxDebArm64Label={t("linuxDebArm64")}
                   linuxRpmArm64Label={t("linuxRpmArm64")}
                   windowsLabel={t("downloadButtonWindows")}
+                  windowsBody={t("windowsBody")}
                   androidLabel={t("downloadButtonAndroid")}
                   iosLabel={t("downloadButtonIos")}
                   tutorialLabel={t("showTutorial")}

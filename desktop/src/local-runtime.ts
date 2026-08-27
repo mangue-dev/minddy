@@ -5,6 +5,7 @@ import { app } from "electron";
 
 import {
   localRuntimeProcessSpec,
+  localRuntimeStartupState,
   localRuntimeStopSpec,
 } from "@/lib/desktop/local-runtime-platform";
 
@@ -57,7 +58,16 @@ async function isHealthy(): Promise<boolean> {
 
 /** Starts Supabase and minddy together, then resolves when the app is ready. */
 export async function startLocalRuntime(root: string): Promise<void> {
-  if (await isHealthy()) return;
+  const startupState = localRuntimeStartupState(
+    await isHealthy(),
+    runtime !== null && runtime.exitCode === null,
+  );
+  if (startupState === "ready") return;
+  if (startupState === "external") {
+    throw new Error(
+      "Local minddy is already running outside the desktop app. Stop it in its terminal with Ctrl+C, then try again.",
+    );
+  }
   if (runtime && runtime.exitCode === null) return;
   const validatedRoot = validateLocalRuntimeRoot(root);
   const spec = localRuntimeProcessSpec(process.platform, process.env.SHELL);
