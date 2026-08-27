@@ -1,6 +1,14 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -61,7 +69,7 @@ const CreateIssueDialog = dynamic(
   { ssr: false },
 );
 const IssueSidePanel = dynamic(
-  () => import("@/components/issue-side-panel").then((m) => m.IssueSidePanel),
+  () => loadIssueSidePanel().then((m) => m.IssueSidePanel),
   { ssr: false },
 );
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
@@ -76,6 +84,10 @@ import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
+import {
+  loadIssueSidePanel,
+  preloadSurface,
+} from "@/lib/lazy-app-surfaces";
 import type {
   CreateIssueInput,
   Issue,
@@ -212,6 +224,23 @@ function ProjectBoard() {
   useEffect(() => {
     if (openIssueId) setSidePanelMounted(true);
   }, [openIssueId]);
+
+  // Mount the closed panel during idle time so its large hook tree and editor
+  // preload do not land on the first card click. The transition remains
+  // interruptible if the user interacts while the warm-up is rendering.
+  useEffect(() => {
+    if (sidePanelMounted) return;
+    const run = () => {
+      preloadSurface(loadIssueSidePanel);
+      startTransition(() => setSidePanelMounted(true));
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(run, { timeout: 4_000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const handle = window.setTimeout(run, 2_000);
+    return () => window.clearTimeout(handle);
+  }, [sidePanelMounted]);
 
   useEffect(() => {
     if (importOpen) setImportMounted(true);

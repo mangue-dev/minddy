@@ -2039,6 +2039,14 @@ html[data-desktop-platform="darwin"]
   -webkit-app-region: no-drag;
 }
 
+/* Full-window backdrop filters force the browser to recomposite the complete
+   board during modal and side-panel animations. Their translucent scrims make
+   the tiny blur imperceptible, so keep the scrim and avoid the dropped frames. */
+:is([data-slot="dialog-overlay"], [data-slot="side-panel-overlay"]) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 /* ⚠ **Neither the shell header nor the mark line carries a socket** (MIN-309).
 
    They each wore one, and both were REDUNDANT: the band

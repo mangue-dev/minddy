@@ -32,6 +32,7 @@ import { DesktopWindowButtons } from "@/components/desktop-window-buttons";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
+import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
 const AssistantPanel = dynamic(
@@ -41,10 +42,7 @@ const AssistantPanel = dynamic(
 
 // Deferred for the same reason (the Notes modal renders markdown).
 const ScratchpadModal = dynamic(
-  () =>
-    import("@/components/scratchpad/scratchpad-modal").then(
-      (m) => m.ScratchpadModal
-    ),
+  () => loadScratchpadModal().then((m) => m.ScratchpadModal),
   { ssr: false }
 );
 

@@ -31,6 +31,7 @@ import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
 import { useMobileGestures, useIsTouchDevice } from "../hooks/useMobileGestures";
 import { eventKey } from "../hooks/usePalette";
 import { usePaletteStore } from "../store";
+import { orderByCategoryRank } from "../category-order";
 import styles from "../styles/SearchView.module.css";
 import type { ActionExecutionContext } from "../registry/types";
 import type { PaletteItem, FavoritePaletteItem } from "../types";
@@ -293,13 +294,10 @@ export function SearchView({
       list = [...favoriteItems, ...nonFavoriteItems];
     }
 
-    // Sort by category order so visual order matches array order
-    // (critical for keyboard navigation: activeIndex === globalIndex)
-    return [...list].sort((a, b) => {
-      const orderA = categoryOrder[a.filterCategory] ?? 999;
-      const orderB = categoryOrder[b.filterCategory] ?? 999;
-      return orderA - orderB;
-    });
+    // Group by category order so visual order matches array order (critical for
+    // keyboard navigation: activeIndex === globalIndex). This stays linear for
+    // the thousands of issue rows shown by an empty-query palette.
+    return orderByCategoryRank(list, categoryOrder);
   }, [filteredItems, query, favorites, categoryOrder]);
 
   // Group items for the virtualized list

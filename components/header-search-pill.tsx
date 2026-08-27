@@ -54,7 +54,13 @@ export interface PaletteGroup {
  * so they work before the deferred palette chunk loads; this pill is the
  * pointer entry point in the desktop header.
  */
-export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
+export function HeaderSearchPill({
+  onOpen,
+  onWarm,
+}: {
+  onOpen: () => void;
+  onWarm?: () => void;
+}) {
   const t = useTranslations("Nav");
   // The pill ANNOUNCES the shortcut: it must therefore say the one we have under the
   // fingers. The cheat sheet and the foot of the palette already solve “mod” at the
@@ -65,6 +71,8 @@ export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
+      onPointerEnter={onWarm}
+      onFocus={onWarm}
       aria-label={t("searchPlaceholder")}
       className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[0.8rem] font-medium text-muted-foreground shadow-none transition-[border-color,box-shadow] hover:border-primary/40 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
     >

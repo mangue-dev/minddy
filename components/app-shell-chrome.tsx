@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -116,6 +117,13 @@ import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
 import { useIssuePanel } from "@/lib/issue-panel-context";
+import {
+  loadCommandPalette,
+  loadGlobalIssuePanel,
+  loadIssueSidePanel,
+  loadScratchpadModal,
+  preloadSurface,
+} from "@/lib/lazy-app-surfaces";
 
 /**
  * How many rows from OTHER projects the mobile surfaces get, per data group.
@@ -169,13 +177,12 @@ const ExportIssuesDialog = dynamic(
 );
 
 const CommandPalette = dynamic(
-  () => import("@/components/command-palette").then((m) => m.CommandPalette),
+  () => loadCommandPalette().then((m) => m.CommandPalette),
   { ssr: false },
 );
 
 const GlobalIssuePanel = dynamic(
-  () =>
-    import("@/components/global-issue-panel").then((module) => module.GlobalIssuePanel),
+  () => loadGlobalIssuePanel().then((module) => module.GlobalIssuePanel),
   { ssr: false },
 );
 
@@ -389,6 +396,38 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // lightweight global shortcut launcher. The full palette mounts on demand.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMounted, setPaletteMounted] = useState(false);
+  const warmPalette = useCallback(() => {
+    preloadSurface(loadCommandPalette);
+    startTransition(() => setPaletteMounted(true));
+  }, []);
+
+  // Build the large palette item model off the interaction path. A transition
+  // lets React yield while thousands of cross-project rows are mapped.
+  useEffect(() => {
+    const run = () => warmPalette();
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(run, { timeout: 3_000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const handle = window.setTimeout(run, 1_500);
+    return () => window.clearTimeout(handle);
+  }, [warmPalette]);
+
+  // These surfaces are less frequent, so preload their code after the palette.
+  // Pointer intent below still starts the scratchpad immediately when needed.
+  useEffect(() => {
+    const run = () => {
+      preloadSurface(loadGlobalIssuePanel);
+      preloadSurface(loadIssueSidePanel);
+      preloadSurface(loadScratchpadModal);
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(run, { timeout: 5_000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const handle = window.setTimeout(run, 2_500);
+    return () => window.clearTimeout(handle);
+  }, []);
 
   // Does the page have a secondary sidebar? The mounting of the bar is
   // correct answer; the road gives the same before hydration, where nothing is
@@ -1528,13 +1567,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // revalidates it when the snapshot has aged (no-op while fresh).
   const handlePaletteOpenChange = useCallback(
     (next: boolean) => {
-      if (next) setPaletteMounted(true);
+      if (next) warmPalette();
       setPaletteOpen(next);
       if (!next) return;
       armSearchIndex();
       refreshSearchIndex();
     },
-    [armSearchIndex, refreshSearchIndex]
+    [armSearchIndex, refreshSearchIndex, warmPalette]
   );
   useCommandPaletteLauncher({
     open: paletteOpen,
@@ -1595,8 +1634,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
               <div className="hidden items-center gap-2 desktop:flex">
                 <UsageIndicator />
-                <ScratchpadTrigger />
-                <HeaderSearchPill onOpen={() => handlePaletteOpenChange(true)} />
+                <ScratchpadTrigger
+                  onWarm={() => preloadSurface(loadScratchpadModal)}
+                />
+                <HeaderSearchPill
+                  onOpen={() => handlePaletteOpenChange(true)}
+                  onWarm={warmPalette}
+                />
                 <NewMenu />
               </div>
             }

@@ -14,7 +14,7 @@ import {
 /** Header entry point for the task notebook (also reachable via ⌘K and the
     `G N` chord). Filled bordered icon button, matching the ⌘K search pill —
     and, while tasks are still open, a pill carrying how many are left. */
-export function ScratchpadTrigger() {
+export function ScratchpadTrigger({ onWarm }: { onWarm?: () => void }) {
   const t = useTranslations("Scratchpad");
   const { open } = useScratchpad();
   const { done, total } = useScratchpadProgress();
@@ -34,6 +34,8 @@ export function ScratchpadTrigger() {
               : t("openAria")
           }
           onClick={() => open("click")}
+          onPointerEnter={onWarm}
+          onFocus={onWarm}
           className={cn(
             "rounded-full border border-border bg-card text-muted-foreground shadow-none hover:bg-card hover:text-foreground",
             left > 0 && "gap-1.5 px-2.5"
