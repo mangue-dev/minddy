@@ -49,12 +49,12 @@ const PLATFORMS = {
 
 type Platform = keyof typeof PLATFORMS;
 
-const PLATFORM_LINKS: ReadonlyArray<{ platform: Platform; label: string }> = [
-  { platform: "macos", label: "macOS" },
-  { platform: "linux", label: "Linux" },
-  { platform: "windows", label: "Windows" },
-  { platform: "mobile-pwa", label: "Mobile PWA" },
-];
+const PLATFORM_LINKS = [
+  { platform: "macos", labelKey: "platformGuideMacos" },
+  { platform: "linux", labelKey: "platformGuideLinux" },
+  { platform: "windows", labelKey: "platformGuideWindows" },
+  { platform: "mobile-pwa", labelKey: "platformGuideMobile" },
+] as const satisfies ReadonlyArray<{ platform: Platform; labelKey: string }>;
 
 function platformConfig(raw: string) {
   return raw in PLATFORMS ? PLATFORMS[raw as Platform] : null;
@@ -225,7 +225,7 @@ export default async function DownloadPlatformPage({
                   aria-current={active ? "page" : undefined}
                   className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50"
                 >
-                  {item.label}
+                  {td(item.labelKey)}
                   <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
                 </Link>
               );

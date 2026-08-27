@@ -77,7 +77,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/precios",
     },
     namespace: "Pricing",
-    lastModified: "2026-08-06",
+    lastModified: "2026-08-27",
     priority: 0.8,
   },
   {
@@ -91,7 +91,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/mcp",
     },
     namespace: "Mcp",
-    lastModified: "2026-08-10",
+    lastModified: "2026-08-27",
     priority: 0.9,
   },
   {
@@ -105,7 +105,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/autoalojamiento",
     },
     namespace: "SelfHosting",
-    lastModified: "2026-08-21",
+    lastModified: "2026-08-27",
     priority: 0.7,
   },
   // The installation wizard. A tool page rather than an argument page: it is
@@ -229,7 +229,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/linear",
     },
     namespace: "AlternativeLinear",
-    lastModified: "2026-08-05",
+    lastModified: "2026-08-27",
     priority: 0.7,
   },
   {
@@ -243,7 +243,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/jira",
     },
     namespace: "AlternativeJira",
-    lastModified: "2026-07-27",
+    lastModified: "2026-08-27",
     priority: 0.7,
   },
   {
@@ -257,7 +257,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/notion",
     },
     namespace: "AlternativeNotion",
-    lastModified: "2026-07-27",
+    lastModified: "2026-08-27",
     priority: 0.7,
   },
   {

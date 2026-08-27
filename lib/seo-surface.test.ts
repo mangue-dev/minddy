@@ -29,8 +29,10 @@ describe("public SEO surface", () => {
       expect(new Set(metadata.map(({ description }) => description)).size).toBe(metadata.length);
 
       for (const item of metadata) {
-        expect(item.title.length, `${locale}.${item.key} title`).toBeGreaterThanOrEqual(8);
-        expect(item.title.length, `${locale}.${item.key} title`).toBeLessThanOrEqual(70);
+        const route = routeByKey(item.key);
+        const renderedTitle = route.titleIsAbsolute ? item.title : `${item.title} · minddy`;
+        expect(renderedTitle.length, `${locale}.${item.key} title`).toBeGreaterThanOrEqual(8);
+        expect(renderedTitle.length, `${locale}.${item.key} title`).toBeLessThanOrEqual(70);
         expect(item.description.length, `${locale}.${item.key} description`).toBeGreaterThanOrEqual(40);
         expect(item.description.length, `${locale}.${item.key} description`).toBeLessThanOrEqual(170);
       }

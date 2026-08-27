@@ -4700,7 +4700,7 @@
     "openOperationsGuide": "Aprire la guida di backup e aggiornamento"
   },
   "SelfHostingInstall": {
-    "metaTitle": "Installazione di minddy — guidato guidato per l'auto-ospitazione",
+    "metaTitle": "Installa minddy — procedura guidata per l'hosting autonomo",
     "metaDescription": "Installare prima l'app desktop, quindi seguire un percorso guidato verso un'istanza locale o server-hosted minddy.",
     "backToGuide": "Torna alla guida",
     "restart": "Ricominciare",

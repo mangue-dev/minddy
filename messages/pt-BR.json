@@ -4946,7 +4946,7 @@
     "verifyTeamDone": "o diagnóstico não relata nenhuma verificação com falha."
   },
   "Mcp": {
-    "metaTitle": "Rastreador de problemas MCP open source para agentes de código",
+    "metaTitle": "Rastreador MCP open source para agentes de código",
     "metaDescription": "Conecte Claude Code, Cursor, Codex e outros agentes MCP ao Minddy. Eles leem problemas, escrevem planos e atualizam tarefas no workspace open source.",
     "heroTitle": "Seu agente de codificação trabalha dentro do seu rastreador de problemas",
     "heroSubtitle": "Um comando, uma aprovação em seu navegador, e seu agente lê e atualiza seus problemas.",

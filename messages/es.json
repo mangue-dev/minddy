@@ -4946,7 +4946,7 @@
     "verifyTeamDone": "el médico no reporta ningún fallo en la verificación."
   },
   "Mcp": {
-    "metaTitle": "Gestor de incidencias MCP open source para agentes de programación",
+    "metaTitle": "Gestor MCP open source para agentes de programación",
     "metaDescription": "Conecta Claude Code, Cursor, Codex y otros agentes MCP a Minddy. Leen incidencias, escriben planes y actualizan tareas en el espacio open source.",
     "heroTitle": "Tu agente de programación trabaja dentro de tu gestor de incidencias",
     "heroSubtitle": "Un comando, una aprobación en su navegador, y su agente lee y actualiza sus incidencias.",
