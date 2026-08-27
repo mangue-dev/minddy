@@ -1,5 +1,7 @@
 import os from "node:os";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import {
   BrowserWindow,
   Notification as NativeNotification,
@@ -64,6 +66,7 @@ import {
   staleSessionCookies,
 } from "@/lib/desktop/session-carry";
 import { routeDisposition } from "@/lib/desktop/window-routes";
+import { parseWnsHelperChannel } from "@/lib/desktop/wns";
 import {
   desktopWindowFrameOptions,
   MACOS_TRAFFIC_LIGHT_POSITION,
@@ -132,11 +135,49 @@ let stopClaimingLocalRuns: (() => void) | null = null;
 let quittingForUpdate = false;
 /** Only one APNs registration at a time, shared between site mounts. */
 let apnsRegistration: Promise<string> | null = null;
+/** One WNS channel request at a time; each new process still obtains a fresh URI. */
+let wnsRegistration: Promise<string | null> | null = null;
 const backgroundLaunchRequested =
   process.platform === "linux" && isLinuxBackgroundLaunch(process.argv);
 let linuxBackgroundEnabled = false;
 let linuxAutostartInstalled = false;
 let nativeNotificationsAvailable = true;
+
+const WNS_HELPER_TIMEOUT_MS = 5 * 60 * 1000;
+
+function isWnsHelperAvailable(): boolean {
+  return (
+    process.platform === "win32" &&
+    app.isPackaged &&
+    existsSync(path.join(process.resourcesPath, "wns", "minddy-wns.exe"))
+  );
+}
+
+function runWnsHelper(args: string[]): Promise<string | null> {
+  if (!isWnsHelperAvailable()) {
+    return Promise.resolve(null);
+  }
+  const executable = path.join(process.resourcesPath, "wns", "minddy-wns.exe");
+  return new Promise((resolve) => {
+    execFile(
+      executable,
+      args,
+      { windowsHide: true, timeout: WNS_HELPER_TIMEOUT_MS, maxBuffer: 64 * 1024 },
+      (error, stdout, stderr) => {
+        if (error) {
+          console.error("[push/wns] native helper failed:", stderr.trim() || error.message);
+          resolve(null);
+          return;
+        }
+        resolve(stdout);
+      },
+    );
+  });
+}
+
+async function requestWnsChannel(): Promise<string | null> {
+  return parseWnsHelperChannel(await runWnsHelper(["channel"]));
+}
 
 /**
  * THE CHANNEL, and the origin that results from it (MIN-352).
@@ -632,6 +673,7 @@ function createWindow(
         `--minddy-version=${app.getVersion()}`,
         `--minddy-packaged=${app.isPackaged ? "1" : "0"}`,
         `--minddy-native-notifications=${nativeNotificationsAvailable ? "1" : "0"}`,
+        `--minddy-windows-wns=${isWnsHelperAvailable() ? "1" : "0"}`,
       ],
       // The spell checker goes through `NSSpellChecker` on macOS, at
       // each text modification, on the UI thread of the browser process —
@@ -734,7 +776,8 @@ function registerIpc(): void {
   const notificationCapabilities = notificationCapabilitiesForPlatform(
     process.platform,
     app.isPackaged,
-    nativeNotificationsAvailable
+    nativeNotificationsAvailable,
+    isWnsHelperAvailable(),
   );
 
   ipcMain.on("minddy:version", (event) => {
@@ -761,9 +804,12 @@ function registerIpc(): void {
   );
 
   ipcMain.on("minddy:set-badge", (_event, count: unknown) => {
-    if (notificationCapabilities.badge !== "dock") return;
     const n = typeof count === "number" && Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
-    app.dock?.setBadge(n > 0 ? String(n) : "");
+    if (notificationCapabilities.badge === "dock") {
+      app.dock?.setBadge(n > 0 ? String(n) : "");
+    } else if (notificationCapabilities.badge === "windows") {
+      void runWnsHelper(["badge", String(n)]);
+    }
   });
 
   ipcMain.on("minddy:notification:show", (_event, input: unknown) => {
@@ -819,9 +865,9 @@ function registerIpc(): void {
   });
 
   ipcMain.handle("minddy:push:register", async (_event, options: unknown) => {
-    // The development binary does not carry the APNs heading of minddy and
-    // must not make the renderer believe that it has a reachable device.
-    if (process.platform !== "darwin" || !app.isPackaged) return null;
+    if (!app.isPackaged || (process.platform !== "darwin" && process.platform !== "win32")) {
+      return null;
+    }
     try {
       const userData = app.getPath("userData");
       const activate =
@@ -830,15 +876,26 @@ function registerIpc(): void {
         (options as { activate?: unknown }).activate === true;
       if (activate) await setNativePushAllowed(userData, true);
       else if (!(await nativePushAllowed(userData))) return null;
+      const installationId = await pushInstallationId(userData);
+      if (process.platform === "win32") {
+        wnsRegistration ??= requestWnsChannel();
+        const channelUri = await wnsRegistration;
+        if (!channelUri) wnsRegistration = null;
+        return channelUri
+          ? { transport: "wns" as const, endpoint: channelUri, installationId }
+          : null;
+      }
       apnsRegistration ??= pushNotifications.registerForAPNSNotifications();
       const token = await apnsRegistration;
       return {
-        token,
-        installationId: await pushInstallationId(userData),
+        transport: "apns" as const,
+        endpoint: `apns:${token}`,
+        installationId,
       };
     } catch (error) {
       apnsRegistration = null;
-      console.error("[push] inscription APNs impossible", error);
+      wnsRegistration = null;
+      console.error("[push] native registration failed", error);
       return null;
     }
   });
@@ -848,14 +905,21 @@ function registerIpc(): void {
       pushNotifications.unregisterForAPNSNotifications();
       apnsRegistration = null;
       await setNativePushAllowed(app.getPath("userData"), false);
+    } else if (process.platform === "win32") {
+      wnsRegistration = null;
+      await runWnsHelper(["unregister"]);
+      await setNativePushAllowed(app.getPath("userData"), false);
     }
   });
 
   ipcMain.on("minddy:push:open-settings", () => {
-    if (notificationCapabilities.settings !== "macos") return;
     // No URL from the remote page passes through this channel: the main
     // process constructs the system destination itself and targets this app.
-    void shell.openExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
+    if (notificationCapabilities.settings === "macos") {
+      void shell.openExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
+    } else if (notificationCapabilities.settings === "windows") {
+      void shell.openExternal("ms-settings:notifications");
+    }
   });
 
   ipcMain.on("minddy:window-buttons", (_event, visible: unknown) => {

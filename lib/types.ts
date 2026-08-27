@@ -280,8 +280,10 @@ export interface MyNotification {
 export interface PushDevice {
   id: string;
   endpoint: string;
-  /** The protocol that joins this device: VAPID on the web, APNs in the macOS app. */
-  transport: "web" | "apns";
+  /** The protocol that reaches this device: VAPID, APNs, or WNS. */
+  transport: "web" | "apns" | "wns";
+  /** Stable local identity for native endpoint rotation; null for Web Push. */
+  native_installation_id: string | null;
   /** “Chrome on macOS” — calculated server-side (lib/device-label.ts). */
   device_label: string | null;
   /** The language of the device, fixed at the subscription: the telephone in French

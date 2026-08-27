@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
     capabilities: {
       web: capability("webPush").configured,
       apns: capability("apns").configured,
+      wns: capability("wns").configured,
     },
   });
 }
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
   // anti-SSRF DNS resolution of the web endpoint: capacity absent = none
   // network call, even validation.
   const transportCapability = capability(
-    selectedTransport === "web" ? "webPush" : "apns",
+    selectedTransport === "web" ? "webPush" : selectedTransport,
   );
   if (!transportCapability.configured) {
     return NextResponse.json(
@@ -198,7 +199,10 @@ export async function POST(request: NextRequest) {
       .eq("native_installation_id", installationId)
       .neq("endpoint", endpointValue);
     if (cleanupError) {
-      console.error("[api/push-subscriptions] cleanup of rotated APNs token failed:", cleanupError.message);
+      console.error(
+        "[api/push-subscriptions] cleanup of rotated native endpoint failed:",
+        cleanupError.message,
+      );
     }
   }
 

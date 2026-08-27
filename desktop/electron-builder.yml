@@ -55,6 +55,9 @@ win:
   # Windows presents the executable icon as a square. This asset has an opaque
   # square background so transparent rounded corners cannot render as black.
   icon: build/icon-windows.png
+  extraResources:
+    - from: build/wns/${arch}
+      to: wns
 
 # Partner Center assigns this immutable identity. Keep the literal values here:
 # electron-builder validates AppX identity fields before expanding environment

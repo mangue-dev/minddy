@@ -46,6 +46,8 @@ const PACKAGING_INPUTS = [
   "desktop/build/fr.lproj",
   // Microsoft Store tile assets are injected directly by electron-builder.
   "desktop/build/appx",
+  "desktop/build/appxmanifest.xml.template",
+  "desktop/native",
   // The Windows executable icon is injected directly by electron-builder.
   "desktop/build/icon-windows.png",
   // The Icon Composer source is a FILE (`icon.json` + the SVG): it is
@@ -53,6 +55,7 @@ const PACKAGING_INPUTS = [
   "desktop/build/icon.icon",
   // The bundler options are part of what is produced.
   "scripts/build-desktop.mjs",
+  "scripts/build-windows-store.mjs",
   // For VERSIONS of electron and electron-updater — see NORMALIZE, which
   // remove the version number from the app.
   "desktop/package.json",

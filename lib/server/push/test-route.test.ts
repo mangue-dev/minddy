@@ -34,6 +34,7 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 vi.mock("@/lib/server/push/vapid", () => ({ isPushConfigured: () => true }));
 vi.mock("@/lib/server/push/apns", () => ({ isApnsConfigured: () => true }));
+vi.mock("@/lib/server/push/wns", () => ({ isWnsConfigured: () => true }));
 vi.mock("@/lib/server/push/send", () => ({ sendPushToUser: H.sendPushToUser }));
 
 const { POST } = await import("@/app/api/account/push-subscriptions/test/route");

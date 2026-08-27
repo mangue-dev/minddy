@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { configureWebPush } from "./vapid";
 import { sendApnsNotification } from "./apns";
+import { sendWnsNotification } from "./wns";
 import { toPushLocale, type PushLocale, type PushPayload } from "./payload";
 import { sendPinnedWebPushNotification } from "./web";
 
@@ -42,7 +43,7 @@ import { sendPinnedWebPushNotification } from "./web";
 export interface PushSubscriptionRow {
   id: string;
   endpoint: string;
-  transport?: "web" | "apns";
+  transport?: "web" | "apns" | "wns";
   p256dh: string | null;
   auth: string | null;
   locale: string | null;
@@ -92,6 +93,26 @@ async function sendToSubscription(
     }
     console.error(
       `[push/apns] delivery failed (${response.status || "no status"}): ${response.reason ?? "unknown reason"}`
+    );
+    await incrementFailureCount(service, sub.id);
+    return "failed";
+  }
+
+  if (sub.transport === "wns") {
+    const response = await sendWnsNotification(sub.endpoint, payload, TTL_SECONDS);
+    if (response.status === 200) {
+      await service
+        .from("push_subscriptions")
+        .update({ last_push_at: new Date().toISOString(), failure_count: 0 })
+        .eq("id", sub.id);
+      return "sent";
+    }
+    if (response.status === 404 || response.status === 410) {
+      await service.from("push_subscriptions").delete().eq("id", sub.id);
+      return "gone";
+    }
+    console.error(
+      `[push/wns] delivery failed (${response.status || "no status"}): ${response.reason ?? "unknown reason"}`
     );
     await incrementFailureCount(service, sub.id);
     return "failed";

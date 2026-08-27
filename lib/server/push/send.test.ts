@@ -18,12 +18,14 @@ import type { PushPayload } from "./payload";
 const H = vi.hoisted(() => ({
   send: vi.fn<(sub: unknown, payload: string, opts: unknown) => Promise<void>>(),
   sendApns: vi.fn(),
+  sendWns: vi.fn(),
 }));
 
 vi.mock("web-push", () => ({
   default: { setVapidDetails: vi.fn() },
 }));
 vi.mock("./apns", () => ({ sendApnsNotification: H.sendApns }));
+vi.mock("./wns", () => ({ sendWnsNotification: H.sendWns }));
 vi.mock("./web", () => ({ sendPinnedWebPushNotification: H.send }));
 
 const { sendPushToUser } = await import("./send");
@@ -84,6 +86,7 @@ beforeEach(() => {
   vi.stubEnv("VAPID_SUBJECT", "mailto:push@example.test");
   H.send.mockReset();
   H.sendApns.mockReset();
+  H.sendWns.mockReset();
 });
 
 describe("sendPushToUser", () => {
@@ -151,6 +154,52 @@ describe("sendPushToUser", () => {
       failed: 0,
     });
     expect(ops).toEqual([{ table: "push_subscriptions", op: "delete", args: null }]);
+  });
+
+  it("routes WNS and removes an expired channel", async () => {
+    H.sendWns.mockResolvedValue({ status: 410, reason: "ChannelExpired" });
+    const endpoint = "https://db5p.notify.windows.com/?token=expired";
+    const { service, ops } = stubService([
+      {
+        id: "windows",
+        endpoint,
+        transport: "wns",
+        p256dh: null,
+        auth: null,
+        locale: "en",
+      },
+    ]);
+
+    expect(await sendPushToUser(service, "u1", () => PAYLOAD)).toEqual({
+      sent: 0,
+      gone: 1,
+      failed: 0,
+    });
+    expect(H.sendWns).toHaveBeenCalledWith(endpoint, PAYLOAD, 86_400);
+    expect(ops).toEqual([{ table: "push_subscriptions", op: "delete", args: null }]);
+  });
+
+  it("counts a transient WNS failure and retains the channel", async () => {
+    H.sendWns.mockResolvedValue({ status: 503, reason: "Dropped" });
+    const { service, ops } = stubService([
+      {
+        id: "windows",
+        endpoint: "https://db5p.notify.windows.com/?token=retry",
+        transport: "wns",
+        p256dh: null,
+        auth: null,
+        locale: "en",
+      },
+    ]);
+
+    expect(await sendPushToUser(service, "u1", () => PAYLOAD)).toEqual({
+      sent: 0,
+      gone: 0,
+      failed: 1,
+    });
+    expect(ops).toEqual([
+      { table: "push_subscriptions", op: "update", args: { failure_count: 3 } },
+    ]);
   });
 
   // 404/410: the push service tells us that the subscription no longer exists. It is

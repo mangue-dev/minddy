@@ -36,6 +36,7 @@ import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 const VERSION_FLAG = "--minddy-version=";
 const PACKAGED_FLAG = "--minddy-packaged=";
 const NATIVE_NOTIFICATIONS_FLAG = "--minddy-native-notifications=";
+const WINDOWS_WNS_FLAG = "--minddy-windows-wns=";
 
 function readVersion(): string {
   const flag = process.argv.find((arg) => arg.startsWith(VERSION_FLAG));
@@ -47,14 +48,18 @@ const packaged = process.argv.some((arg) => arg === `${PACKAGED_FLAG}1`);
 const nativeNotificationsAvailable = process.argv.some(
   (arg) => arg === `${NATIVE_NOTIFICATIONS_FLAG}1`
 );
+const windowsWnsAvailable = process.argv.some(
+  (arg) => arg === `${WINDOWS_WNS_FLAG}1`
+);
 const notificationCapabilities = notificationCapabilitiesForPlatform(
   process.platform,
   packaged,
-  nativeNotificationsAvailable
+  nativeNotificationsAvailable,
+  windowsWnsAvailable,
 );
 
 const nativePushBridge: Partial<DesktopBridge> =
-  notificationCapabilities.backgroundTransport === "apns"
+  notificationCapabilities.backgroundTransport !== null
     ? {
         registerForPushNotifications(options) {
           return ipcRenderer.invoke("minddy:push:register", options) as ReturnType<
@@ -68,7 +73,7 @@ const nativePushBridge: Partial<DesktopBridge> =
     : {};
 
 const notificationSettingsBridge: Partial<DesktopBridge> =
-  notificationCapabilities.settings === "macos"
+  notificationCapabilities.settings !== null
     ? {
         openNotificationSettings() {
           ipcRenderer.send("minddy:push:open-settings");

@@ -34,6 +34,32 @@ describe("parsePushRegistration", () => {
     expect(parsePushRegistration({ transport: "apns", endpoint: "https://x" })).toBeNull();
     expect(parsePushRegistration({ transport: "apns", endpoint: "apns:not-hex" })).toBeNull();
   });
+
+  it("accepts only Microsoft HTTPS channel URIs for WNS", () => {
+    const installationId = "11111111-1111-4111-8111-111111111111";
+    const endpoint = "https://wns2-by3p.notify.windows.com/?token=channel";
+    expect(parsePushRegistration({ transport: "wns", endpoint, installationId })).toEqual({
+      endpoint,
+      transport: "wns",
+      p256dh: null,
+      auth: null,
+      installationId,
+    });
+    expect(
+      parsePushRegistration({
+        transport: "wns",
+        endpoint: "https://notify.windows.com.attacker.example/channel",
+        installationId,
+      }),
+    ).toBeNull();
+    expect(
+      parsePushRegistration({
+        transport: "wns",
+        endpoint: "http://notify.windows.com/channel",
+        installationId,
+      }),
+    ).toBeNull();
+  });
 });
 
 /**

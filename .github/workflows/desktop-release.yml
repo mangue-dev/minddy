@@ -271,6 +271,10 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           MINDDY_WINDOWS_STORE_IDENTITY_NAME: ${{ vars.WINDOWS_STORE_IDENTITY_NAME }}
           MINDDY_WINDOWS_STORE_PUBLISHER: ${{ vars.WINDOWS_STORE_PUBLISHER }}
+          # Reserved for the dormant WNS implementation. Both remain empty
+          # until Entra identity and PFN mapping are deliberately activated.
+          MINDDY_WINDOWS_WNS_APP_ID: ${{ vars.WINDOWS_WNS_APP_ID }}
+          MINDDY_WINDOWS_WNS_OBJECT_ID: ${{ vars.WINDOWS_WNS_OBJECT_ID }}
         run: npm --prefix desktop run dist:win:store
 
       - name: Validate MSIX manifests with the Windows SDK
@@ -278,6 +282,7 @@ jobs:
         env:
           MINDDY_WINDOWS_STORE_IDENTITY_NAME: ${{ vars.WINDOWS_STORE_IDENTITY_NAME }}
           MINDDY_WINDOWS_STORE_PUBLISHER: ${{ vars.WINDOWS_STORE_PUBLISHER }}
+          MINDDY_WINDOWS_WNS_APP_ID: ${{ vars.WINDOWS_WNS_APP_ID }}
         run: ./scripts/verify-windows-desktop.ps1
 
       # Partner Center requires unsigned submission packages. Sign only
@@ -303,6 +308,7 @@ jobs:
         env:
           MINDDY_WINDOWS_STORE_IDENTITY_NAME: ${{ vars.WINDOWS_STORE_IDENTITY_NAME }}
           MINDDY_WINDOWS_STORE_PUBLISHER: ${{ vars.WINDOWS_STORE_PUBLISHER }}
+          MINDDY_WINDOWS_WNS_APP_ID: ${{ vars.WINDOWS_WNS_APP_ID }}
         run: |
           $testDirectory = "$env:RUNNER_TEMP\minddy-windows-store-test"
           New-Item -ItemType Directory -Force $testDirectory | Out-Null

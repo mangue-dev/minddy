@@ -30,6 +30,12 @@ import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-backg
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
+export interface DesktopNativePushRegistration {
+  transport: "apns" | "wns";
+  endpoint: string;
+  installationId: string;
+}
+
 export interface DesktopBridge {
   /** The version of the shell (`app.getVersion()`), to display it. */
   readonly version: string;
@@ -75,14 +81,13 @@ export interface DesktopBridge {
   /** Wake the renderer's realtime connection after the desktop resumes. */
   onNotificationTransportWake?(handler: () => void): () => void;
   /**
-   * Registers the signed bundle with APNs and makes its token current. Optional
+   * Registers the packaged app with its native background transport. Optional
    * so that the deployed site remains compatible with the old shells.
    */
-  registerForPushNotifications?(options?: { activate?: boolean }): Promise<{
-    token: string;
-    installationId: string;
-  } | null>;
-  /** Remove this installation's APNs registration. */
+  registerForPushNotifications?(
+    options?: { activate?: boolean }
+  ): Promise<DesktopNativePushRegistration | null>;
+  /** Remove this installation's native registration. */
   unregisterForPushNotifications?(): Promise<void>;
   /** Directly opens minddy's Notifications sheet in System Settings. */
   openNotificationSettings?(): void;

@@ -26,6 +26,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 export interface PushTransportCapabilities {
   web: boolean;
   apns: boolean;
+  wns: boolean;
 }
 
 export async function fetchPushDevicesApi(): Promise<{
@@ -79,9 +80,10 @@ export async function savePushDeviceApi(
   return device;
 }
 
-/** Associates the APNs token returned by the signed macOS shell with the account. */
+/** Associates a native APNs token or WNS channel with the account. */
 export async function saveNativePushDeviceApi(
-  token: string,
+  endpoint: string,
+  transport: "apns" | "wns",
   installationId: string,
   locale: string,
   opts: { track?: boolean; refresh?: boolean } = {}
@@ -91,8 +93,8 @@ export async function saveNativePushDeviceApi(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        transport: "apns",
-        endpoint: `apns:${token}`,
+        transport,
+        endpoint,
         installationId,
         locale,
         refresh: opts.refresh,

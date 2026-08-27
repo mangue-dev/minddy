@@ -7,6 +7,7 @@ import { getDesktopBridge } from "./desktop/bridge";
 import { notificationActor, notificationTitle } from "./notification-line";
 import { notificationLineKey, notificationTargetPath } from "./notification-target";
 import { useNotifications } from "./use-notifications";
+import { usePushDevicesQuery } from "./use-push-devices-query";
 import type { MyNotification } from "./types";
 
 /**
@@ -26,6 +27,7 @@ import type { MyNotification } from "./types";
  */
 export function useDesktopNotifications(): void {
   const { notifications, unreadCount } = useNotifications();
+  const { capabilities: pushCapabilities } = usePushDevicesQuery();
   const t = useTranslations("Inbox");
   const tIssue = useTranslations("Issue");
   const tTimeline = useTranslations("Timeline");
@@ -51,7 +53,12 @@ export function useDesktopNotifications(): void {
     if (!capabilities?.localNativeBanners || !bridge.showLocalNotification) return;
     // Packaged macOS receives this same event through APNs. When the app is
     // running, Electron delivers that push to the main process, which shows it.
-    if (capabilities.backgroundTransport !== null) return;
+    if (capabilities.backgroundTransport === "apns") return;
+    if (capabilities.backgroundTransport === "wns") {
+      // Self-hosted servers may intentionally omit WNS credentials. Wait for
+      // the capability response, then retain the live local relay as fallback.
+      if (!pushCapabilities || pushCapabilities.wns) return;
+    }
 
     if (seen.current === null) {
       seen.current = new Set(notifications.map((n) => n.id));
@@ -104,5 +111,5 @@ export function useDesktopNotifications(): void {
     // The register follows the list rather than growing indefinitely: one line
     // deleted leaves it, and it won't come back.
     seen.current = new Set(byId.keys());
-  }, [notifications, t, tIssue, tTimeline]);
+  }, [notifications, pushCapabilities, t, tIssue, tTimeline]);
 }

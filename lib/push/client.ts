@@ -29,7 +29,7 @@ import type { PushDevice } from "@/lib/types";
 function nativePushBridge(): DesktopNativePushBridge | null {
   const bridge = getDesktopBridge();
   if (
-    bridge?.notificationCapabilities?.backgroundTransport !== "apns" ||
+    bridge?.notificationCapabilities?.backgroundTransport == null ||
     !bridge.registerForPushNotifications
   ) {
     return null;
@@ -113,7 +113,7 @@ export async function currentEndpoint(): Promise<string | null> {
   const native = nativePushBridge();
   if (native) {
     const registration = await native.registerForPushNotifications();
-    return registration ? `apns:${registration.token}` : null;
+    return registration?.endpoint ?? null;
   }
   if (!isPushSupported()) return null;
   const registration = await navigator.serviceWorker.getRegistration("/");
@@ -216,7 +216,8 @@ export async function subscribeThisDevice(locale: string): Promise<SubscribeResu
       const registration = await native.registerForPushNotifications({ activate: true });
       if (!registration) return { ok: false, reason: "failed" };
       const device = await saveNativePushDeviceApi(
-        registration.token,
+        registration.endpoint,
+        registration.transport,
         registration.installationId,
         locale
       );
@@ -266,7 +267,7 @@ export async function refreshThisDeviceSubscription(
   if (native) {
     const registration = await native.registerForPushNotifications();
     if (!registration) return null;
-    return saveNativePushDeviceApi(registration.token, registration.installationId, locale, {
+    return saveNativePushDeviceApi(registration.endpoint, registration.transport, registration.installationId, locale, {
       refresh: true,
       track: false,
     });
@@ -304,7 +305,7 @@ export async function unsubscribeThisDevice(): Promise<string | null> {
   if (bridge) {
     const registration = await bridge.registerForPushNotifications();
     await bridge.unregisterForPushNotifications?.();
-    return registration ? `apns:${registration.token}` : null;
+    return registration?.endpoint ?? null;
   }
   if (!isPushSupported()) return null;
   const registration = await navigator.serviceWorker.getRegistration("/");

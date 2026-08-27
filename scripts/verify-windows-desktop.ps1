@@ -13,6 +13,8 @@ $resolvedStoreDirectory = if ([string]::IsNullOrWhiteSpace($StoreDirectory)) {
 }
 $identityName = $env:MINDDY_WINDOWS_STORE_IDENTITY_NAME
 $publisher = $env:MINDDY_WINDOWS_STORE_PUBLISHER
+$wnsAppId = $env:MINDDY_WINDOWS_WNS_APP_ID
+$wnsEnabled = -not [string]::IsNullOrWhiteSpace($wnsAppId)
 $temporaryDirectory = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
 
 if ([string]::IsNullOrWhiteSpace($identityName) -or [string]::IsNullOrWhiteSpace($publisher)) {
@@ -50,6 +52,7 @@ foreach ($package in $msixPackages) {
   $namespace = New-Object System.Xml.XmlNamespaceManager($appxManifest.NameTable)
   $namespace.AddNamespace("f", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
   $namespace.AddNamespace("uap", "http://schemas.microsoft.com/appx/manifest/uap/windows10")
+  $namespace.AddNamespace("com", "http://schemas.microsoft.com/appx/manifest/com/windows10")
   $namespace.AddNamespace("rescap", "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities")
   $identity = $appxManifest.SelectSingleNode("/f:Package/f:Identity", $namespace)
   if ($identity.Name -ne $identityName -or $identity.Publisher -ne $publisher) {
@@ -60,6 +63,18 @@ foreach ($package in $msixPackages) {
   }
   if (-not $appxManifest.SelectSingleNode("//rescap:Capability[@Name='runFullTrust']", $namespace)) {
     throw "$($package.Name) does not declare runFullTrust."
+  }
+  $pushClass = $appxManifest.SelectSingleNode("//com:Extension[@Category='windows.comServer']//com:Class", $namespace)
+  $pushHelper = Join-Path $unpackDirectory "resources/wns/minddy-wns.exe"
+  if ($wnsEnabled) {
+    if (-not $pushClass -or $pushClass.Id -ne $wnsAppId) {
+      throw "$($package.Name) does not register the configured WNS COM activator."
+    }
+    if (-not (Test-Path $pushHelper)) {
+      throw "$($package.Name) does not contain the WNS native helper."
+    }
+  } elseif ($pushClass -or (Test-Path $pushHelper)) {
+    throw "$($package.Name) contains WNS components although WNS is not configured."
   }
 }
 

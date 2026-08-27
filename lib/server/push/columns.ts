@@ -14,4 +14,4 @@ import "server-only";
  * `PushSubscription`. It is already known to the browser that reads it.
  */
 export const PUSH_DEVICE_COLUMNS =
-  "id, endpoint, transport, device_label, locale, enabled, created_at, last_seen_at, last_push_at";
+  "id, endpoint, transport, native_installation_id, device_label, locale, enabled, created_at, last_seen_at, last_push_at";

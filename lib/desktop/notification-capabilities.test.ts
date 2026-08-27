@@ -37,6 +37,30 @@ describe("notificationCapabilitiesForPlatform", () => {
       .toBeNull();
   });
 
+  it("exposes WNS and the native badge only when its helper is packaged", () => {
+    expect(notificationCapabilitiesForPlatform("win32", true, true, true)).toEqual({
+      localNativeBanners: true,
+      backgroundTransport: "wns",
+      backgroundSession: null,
+      settings: "windows",
+      badge: "windows",
+    });
+    expect(notificationCapabilitiesForPlatform("win32", false)).toEqual({
+      localNativeBanners: true,
+      backgroundTransport: null,
+      backgroundSession: null,
+      settings: "windows",
+      badge: null,
+    });
+    expect(notificationCapabilitiesForPlatform("win32", true)).toEqual({
+      localNativeBanners: true,
+      backgroundTransport: null,
+      backgroundSession: null,
+      settings: "windows",
+      badge: null,
+    });
+  });
+
   it("reports a missing native notification server", () => {
     expect(notificationCapabilitiesForPlatform("linux", true, false)).toMatchObject({
       localNativeBanners: false,

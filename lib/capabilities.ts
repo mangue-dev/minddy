@@ -21,6 +21,7 @@ export type CapabilityId =
   | "transactionalEmail"
   | "webPush"
   | "apns"
+  | "wns"
   | "github"
   | "gitlab";
 
@@ -303,6 +304,11 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
   if (!present(env, "APNS_BUNDLE_ID")) {
     apnsMissing.push("APNS_BUNDLE_ID");
   }
+  const wnsMissing = missing(env, [
+    "WNS_TENANT_ID",
+    "WNS_APP_ID",
+    "WNS_CLIENT_SECRET",
+  ]);
   const gitStateMissing = missing(env, ["GIT_STATE_SECRET"]);
   const githubMissing = missing(env, [
     "GITHUB_APP_ID",
@@ -473,6 +479,12 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       apnsMissing,
       "APNs is configured.",
       "APNs is disabled; no connection to Apple is opened.",
+    ),
+    wns: optional(
+      "wns",
+      wnsMissing,
+      "WNS is configured.",
+      "WNS is disabled; no connection to Microsoft is opened.",
     ),
     github: gitProvider(
       "github",

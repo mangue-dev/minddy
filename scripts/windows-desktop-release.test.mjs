@@ -7,6 +7,7 @@ import sharp from "sharp";
 import {
   requireWindowsStoreArtifacts,
   requireWindowsStoreIdentity,
+  resolveWindowsWnsBuildIdentity,
   WINDOWS_STORE_IDENTITY,
 } from "./windows-desktop-release.mjs";
 
@@ -64,6 +65,56 @@ test("uses opaque icons for the Windows executable and AppX shell surfaces", asy
     const corner = await asset.extract({ left: 0, top: 0, width: 1, height: 1 }).raw().toBuffer();
     assert.deepEqual([...corner], [255, 255, 255], `${fileName} must have a white corner`);
   }
+});
+
+test("packages the architecture-matched WNS helper and COM activator", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  const manifest = await readFile(
+    new URL("../desktop/build/appxmanifest.xml.template", import.meta.url),
+    "utf8",
+  );
+  const helperProject = await readFile(
+    new URL("../desktop/native/wns-helper/wns-helper.vcxproj", import.meta.url),
+    "utf8",
+  );
+  const buildScript = await readFile(new URL("./build-windows-store.mjs", import.meta.url), "utf8");
+  const verifier = await readFile(new URL("./verify-windows-desktop.ps1", import.meta.url), "utf8");
+
+  assert.doesNotMatch(config, /^  customManifestPath:/m);
+  assert.match(config, /^    - from: build\/wns\/\$\{arch\}$/m);
+  assert.match(manifest, /Category="windows\.comServer"/);
+  assert.match(manifest, /Arguments="----WindowsAppRuntimePushServer:"/);
+  assert.match(manifest, /Id="__MINDDY_WNS_APP_ID__"/);
+  assert.match(helperProject, /Release\|x64/);
+  assert.match(helperProject, /Release\|ARM64/);
+  assert.match(helperProject, /Microsoft\.WindowsAppSDK/);
+  assert.match(buildScript, /resolveWindowsWnsBuildIdentity/);
+  assert.match(buildScript, /WNS is dormant; packaging without the helper and COM activator/);
+  assert.match(buildScript, /--config\.appx\.customManifestPath=appxmanifest\.generated\.xml/);
+  assert.match(verifier, /resources\/wns\/minddy-wns\.exe/);
+  assert.match(verifier, /contains WNS components although WNS is not configured/);
+});
+
+test("keeps WNS dormant unless both release identities are configured", () => {
+  assert.equal(resolveWindowsWnsBuildIdentity(undefined, ""), null);
+  assert.throws(
+    () => resolveWindowsWnsBuildIdentity("11111111-1111-1111-1111-111111111111", ""),
+    /must either both be set or both be empty/
+  );
+  assert.throws(
+    () => resolveWindowsWnsBuildIdentity("not-a-guid", "22222222-2222-2222-2222-222222222222"),
+    /WINDOWS_WNS_APP_ID must be a GUID/
+  );
+  assert.deepEqual(
+    resolveWindowsWnsBuildIdentity(
+      "11111111-1111-1111-1111-111111111111",
+      "22222222-2222-2222-2222-222222222222"
+    ),
+    {
+      appId: "11111111-1111-1111-1111-111111111111",
+      objectId: "22222222-2222-2222-2222-222222222222",
+    }
+  );
 });
 
 test("requires one MSIX package for each Windows architecture", () => {

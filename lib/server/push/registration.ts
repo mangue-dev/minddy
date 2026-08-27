@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isPushInstallationId } from "@/lib/desktop/push-installation";
+import { isWnsChannelUri } from "@/lib/desktop/wns";
 
 /**
  * What a device (re)registration decides is its `enabled` and its
@@ -36,7 +37,7 @@ export interface PriorRegistration {
 
 export interface ParsedPushRegistration {
   endpoint: string;
-  transport: "web" | "apns";
+  transport: "web" | "apns" | "wns";
   p256dh: string | null;
   auth: string | null;
   installationId: string | null;
@@ -60,6 +61,21 @@ export function parsePushRegistration(input: unknown): ParsedPushRegistration | 
     return {
       endpoint: value.endpoint,
       transport: "apns",
+      p256dh: null,
+      auth: null,
+      installationId: value.installationId,
+    };
+  }
+
+  if (value.transport === "wns") {
+    if (
+      typeof value.endpoint !== "string" ||
+      !isWnsChannelUri(value.endpoint) ||
+      !isPushInstallationId(value.installationId)
+    ) return null;
+    return {
+      endpoint: value.endpoint,
+      transport: "wns",
       p256dh: null,
       auth: null,
       installationId: value.installationId,

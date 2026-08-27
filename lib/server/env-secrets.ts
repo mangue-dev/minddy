@@ -128,6 +128,12 @@ export const SECRET_SPECS: SecretSpec[] = [
     requiredWhenDeployed: false,
     purpose: "signature des notifications APNs de l'app macOS",
   },
+  {
+    name: "WNS_CLIENT_SECRET",
+    minLength: KEY_MIN,
+    requiredWhenDeployed: false,
+    purpose: "OAuth authentication for Windows Push Notification Services",
+  },
 ];
 
 /** Deployed environment, at Vercel as on any production Node server. */

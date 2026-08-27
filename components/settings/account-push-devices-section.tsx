@@ -75,6 +75,9 @@ export function AccountPushDevicesSection() {
   /** Like browser capabilities, read after editing (see effect). */
   const [inDesktopApp, setInDesktopApp] = useState(false);
   const [nativeDesktopPush, setNativeDesktopPush] = useState(false);
+  const [nativeDesktopTransport, setNativeDesktopTransport] = useState<
+    "apns" | "wns" | null
+  >(null);
   const [localDesktopBanners, setLocalDesktopBanners] = useState(false);
   const [nativeNotificationSettings, setNativeNotificationSettings] = useState(false);
   const [linuxBackground, setLinuxBackground] = useState<
@@ -93,16 +96,18 @@ export function AccountPushDevicesSection() {
     setNeedsInstall(isIOS() && !isStandalone());
     setInDesktopApp(isDesktop());
     const desktop = getDesktopBridge();
+    const nativeTransport =
+      desktop?.notificationCapabilities?.backgroundTransport ?? null;
+    setNativeDesktopTransport(nativeTransport);
     setNativeDesktopPush(
-      desktop?.notificationCapabilities?.backgroundTransport === "apns" &&
-        !!desktop.registerForPushNotifications
+      nativeTransport !== null && !!desktop?.registerForPushNotifications
     );
     setLocalDesktopBanners(
       desktop?.notificationCapabilities?.localNativeBanners === true
     );
     setNativeNotificationSettings(
-      desktop?.notificationCapabilities?.settings === "macos" &&
-        !!desktop.openNotificationSettings
+      desktop?.notificationCapabilities?.settings !== null &&
+        !!desktop?.openNotificationSettings
     );
     if (desktop?.notificationCapabilities?.backgroundSession === "linux") {
       void desktop.getLinuxBackgroundNotifications?.().then(setLinuxBackground);
@@ -245,6 +250,13 @@ export function AccountPushDevicesSection() {
 
   const deviceName = (d: PushDevice) => d.device_label || t("unknownDevice");
 
+  const transportConfigured = (device: PushDevice) =>
+    device.transport === "apns"
+      ? capabilities?.apns
+      : device.transport === "wns"
+        ? capabilities?.wns
+        : capabilities?.web;
+
   const subtitleOf = (d: PushDevice) => {
     const parts = [
       t("addedOn", {
@@ -277,7 +289,14 @@ export function AccountPushDevicesSection() {
             ? "linuxNativeUnavailableHint"
             : "desktopLocalHint"
         )
-      : capabilities && !(nativeDesktopPush ? capabilities.apns : capabilities.web)
+      : capabilities &&
+          !(
+            nativeDesktopTransport === "apns"
+              ? capabilities.apns
+              : nativeDesktopTransport === "wns"
+                ? capabilities.wns
+                : capabilities.web
+          )
         ? t("notConfiguredHint")
         : permission === "unsupported"
           ? t("unsupportedHint")
@@ -298,7 +317,16 @@ export function AccountPushDevicesSection() {
         <SettingsRow
           htmlFor="push-this-device"
           label={t("enableLabel")}
-          hint={blocked ?? t(nativeDesktopPush ? "enableDescNative" : "enableDesc")}
+          hint={
+            blocked ??
+            t(
+              nativeDesktopTransport === "wns"
+                ? "enableDescWindows"
+                : nativeDesktopPush
+                  ? "enableDescNative"
+                  : "enableDesc"
+            )
+          }
           control={
             blocked && !nativeNotificationSettings ? undefined : (
               <>
@@ -310,7 +338,11 @@ export function AccountPushDevicesSection() {
                     onClick={() => getDesktopBridge()?.openNotificationSettings?.()}
                   >
                     <Settings2 className="size-4" />
-                    {t("macSettingsButton")}
+                    {t(
+                      nativeDesktopTransport === "wns"
+                        ? "windowsSettingsButton"
+                        : "macSettingsButton"
+                    )}
                   </Button>
                 )}
                 {!blocked && (
@@ -376,9 +408,7 @@ export function AccountPushDevicesSection() {
                   {/* The test is only offered on the device you have in front of you: elsewhere, you wouldn't see if it rang. */}
                   {device.endpoint === thisEndpoint &&
                     device.enabled &&
-                    (device.transport === "apns"
-                      ? capabilities?.apns
-                      : capabilities?.web) && (
+                    transportConfigured(device) && (
                     <Button
                       type="button"
                       variant="outline"
@@ -394,7 +424,7 @@ export function AccountPushDevicesSection() {
                     aria-label={t("enableLabel")}
                     checked={device.enabled}
                     disabled={
-                      !(device.transport === "apns" ? capabilities?.apns : capabilities?.web)
+                      !transportConfigured(device)
                     }
                     onCheckedChange={(v) => void toggleDevice(device, v)}
                   />

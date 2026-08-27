@@ -8,6 +8,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isPushConfigured } from "@/lib/server/push/vapid";
 import { isApnsConfigured } from "@/lib/server/push/apns";
+import { isWnsConfigured } from "@/lib/server/push/wns";
 import { toPushLocale } from "@/lib/server/push/payload";
 import { sendPushToUser } from "@/lib/server/push/send";
 
@@ -53,8 +54,11 @@ export async function POST(request: NextRequest) {
   if (!device) {
     return NextResponse.json({ error: t("pushDeviceNotFound") }, { status: 404 });
   }
-  const configured =
-    device.transport === "apns" ? isApnsConfigured() : isPushConfigured();
+  const configured = device.transport === "apns"
+    ? isApnsConfigured()
+    : device.transport === "wns"
+      ? isWnsConfigured()
+      : isPushConfigured();
   if (!configured) {
     return NextResponse.json({ error: t("pushNotConfigured") }, { status: 503 });
   }

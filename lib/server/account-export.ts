@@ -302,7 +302,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     // the label already says what device it is.
     service
       .from("push_subscriptions")
-      .select("transport, device_label, enabled, created_at, last_push_at")
+      .select("transport, native_installation_id, device_label, enabled, created_at, last_push_at")
       .eq("user_id", userId)
       .order("created_at"),
     service

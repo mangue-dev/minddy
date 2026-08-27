@@ -220,6 +220,48 @@ so the `cmd`, pnpm, Supabase, and Next.js child processes are closed together.
    shutdown, update ownership, and uninstall. This post-certification check is
    the only validation that exercises Microsoft's final signature and delivery.
 
+### Dormant WNS implementation and future activation
+
+WNS background delivery is currently parked: the managed server credentials and
+the `public-release` WNS variables are intentionally not configured. The native
+helper, server transport, migration, and tests remain in the repository so the
+work can be resumed without a rewrite, but normal Windows Store packages do not
+contain the helper or COM activator and do not advertise background WNS support.
+Local native notifications continue to work while the Electron process runs.
+
+The absence of both `WINDOWS_WNS_APP_ID` and `WINDOWS_WNS_OBJECT_ID` is a valid
+release configuration. Packaging enables WNS only when both are present and
+valid GUIDs; a partial configuration fails early. Missing server-side
+`WNS_TENANT_ID`, `WNS_APP_ID`, and `WNS_CLIENT_SECRET` similarly leaves delivery
+disabled and opens no connection to Microsoft.
+
+To activate the dormant Windows App SDK push path later:
+
+1. Register a multi-tenant Microsoft Entra application. Record its Application
+   (client) ID, Directory (tenant) ID, and the Object ID of the managed
+   application/service principal. The Object ID is not the object ID shown on
+   the app registration overview.
+2. Store the Application ID as the `WINDOWS_WNS_APP_ID` GitHub environment
+   variable and the service-principal Object ID as `WINDOWS_WNS_OBJECT_ID` in
+   `public-release`. Packaging injects the AppId as the stable COM class ID and
+   compiles the Object ID into both x64 and ARM64 helpers. Neither value is a
+   secret.
+3. Configure the server with `WNS_TENANT_ID`, `WNS_APP_ID`, and
+   `WNS_CLIENT_SECRET`. The secret stays server-side and must never enter the
+   MSIX or GitHub environment variables used by the desktop build.
+4. Copy the Package Family Name from Partner Center, then email
+   `Win_App_SDK_Push@microsoft.com` with subject `Windows App SDK Push
+   Notifications Mapping Request` and body `PFN: <PFN>, AppId: <Application
+   ID>, ObjectId: <service-principal Object ID>`. Microsoft processes mapping
+   requests weekly; keep the confirmation with the release record.
+
+When WNS is enabled, the Windows build refuses partial or malformed AppId/Object
+ID values. The manifest verifier then checks that every MSIX contains the native
+helper and registers its COM class with the configured AppId. With WNS dormant,
+the verifier instead rejects accidental helper or COM contents. A successful
+unsigned CI installation does not prove WNS delivery: the PFN mapping and final
+Store signature are exercised only by the post-certification acceptance pass.
+
 For a Windows-only publication or retry of an existing core release, run:
 
 ```bash
@@ -244,6 +286,8 @@ Local packaging and validation commands are:
 ```powershell
 $env:MINDDY_WINDOWS_STORE_IDENTITY_NAME = "mangue-dev.minddy"
 $env:MINDDY_WINDOWS_STORE_PUBLISHER = "CN=D5052B10-735B-4EF0-920F-642DFBDEB04F"
+$env:MINDDY_WINDOWS_WNS_APP_ID = "<Entra Application ID>"
+$env:MINDDY_WINDOWS_WNS_OBJECT_ID = "<service-principal Object ID>"
 $env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
 npm --prefix desktop run dist:win:store
 ./scripts/verify-windows-desktop.ps1
@@ -283,6 +327,7 @@ says — a quiet ceiling is a lie.
 | `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | Apple notarization | GitHub environment `public-release` |
 | `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD` | signature Developer ID | GitHub environment `public-release` |
 | `WINDOWS_STORE_IDENTITY_NAME`, `WINDOWS_STORE_PUBLISHER` | immutable Partner Center package identity | GitHub environment variables on `public-release` |
+| `WINDOWS_WNS_APP_ID`, `WINDOWS_WNS_OBJECT_ID` | Reserved WNS COM class and channel registration identities | Currently unset; optional paired GitHub environment variables on `public-release` when WNS is activated |
 | `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` | write public feed | GitHub-only workflow |
 
 The public value of the flow is also configured on Vercel for the route of

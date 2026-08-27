@@ -253,7 +253,7 @@ first real connection by external link is verified there.
 
 ---
 
-## 3. Notifications: Web Push and APNs
+## 3. Notifications: Web Push, APNs, and WNS
 
 MIN-291 used the real-time inbox feed and renderer notifications. MIN-474 moves
 native banners behind a validated main-process IPC and exposes an explicit
@@ -272,6 +272,27 @@ the app runs, `received-apns-notification` transforms it into a native banner an
 its click opens the transported route. The real-time relay is disabled on that
 platform so the same event cannot display twice. The macOS Dock badge remains
 powered by the real-time list: it represents an exact state, not an APNs event.
+
+The repository contains a dormant C++/WinRT helper around Windows App SDK
+`PushNotificationManager`, but managed builds currently leave its Entra and
+server variables unset. Normal Store packages therefore omit the helper and COM
+activator, advertise no WNS transport, and continue using the real-time native
+banner relay while Electron is running. The opt-in package path is retained for
+later activation.
+
+When configured, every launch of an installation that the user previously
+enabled asks the helper for a fresh WNS channel URI. The authenticated renderer
+refresh then rotates the server row by stable installation ID without turning a
+disabled row back on. The helper also becomes the MSIX COM server registered
+under the Entra AppId for background delivery.
+
+In that configured mode, the server sends cloud-sourced adaptive toast XML with a `minddy://open?next=`
+protocol activation. Windows displays it without an Electron process. Clicking
+it starts minddy or reaches the running single instance through the same argv
+deep-link path as authentication and other external opens. The real-time relay
+is disabled only when the package actually contains the WNS helper, preventing
+duplicate banners. The renderer unread count then uses the packaged Windows
+badge platform; it never calls the macOS Dock API.
 
 What it opens on the other hand, and which does not exist on the web: clicking on a
 notification wakes up the window on the correct ticket, the badge is an exact number,
