@@ -163,7 +163,7 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   // would re-fail silently and the user would believe the work delivered.
   if (report.pushError) {
     await emit("error", {
-      message: (PUSH_FAILED_STRINGS[locale] ?? PUSH_FAILED_STRINGS.en)(
+      message: PUSH_FAILED_STRINGS[locale](
         cap(report.pushError, 300),
       ),
     });
@@ -437,7 +437,7 @@ async function landOnPullRequest(
 
   if (report.pushed.remoteUpdated && prState.state === "merged" && prState.number != null) {
     await emit("error", {
-      message: (MERGED_DURING_TURN_STRINGS[locale] ?? MERGED_DURING_TURN_STRINGS.en)(
+      message: MERGED_DURING_TURN_STRINGS[locale](
         prRef(target.provider, prState.number),
         prTerm(target.provider),
       ),

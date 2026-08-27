@@ -79,9 +79,12 @@ describe("gardes d'entrée", () => {
     expect(resolveAudioFormat("application/pdf")).toBeNull();
   });
 
-  it("retombe sur des valeurs sûres pour la langue et le fuseau", () => {
+  it("falls back to safe locale and time-zone values", () => {
     expect(resolveLocale("fr")).toBe("fr");
-    expect(resolveLocale("de")).toBe("en");
+    expect(resolveLocale("de")).toBe("de");
+    expect(resolveLocale("pt-BR")).toBe("pt-BR");
+    expect(resolveLocale("it")).toBe("it");
+    expect(resolveLocale("es")).toBe("es");
     expect(resolveLocale(42)).toBe("en");
     expect(resolveTimeZone("Europe/Paris")).toBe("Europe/Paris");
     expect(resolveTimeZone("x".repeat(200))).toBe("UTC");

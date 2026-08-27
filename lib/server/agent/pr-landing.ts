@@ -6,13 +6,15 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { insertEvents } from "@/lib/server/issue-events";
 import { forgeActorValue } from "@/lib/pr-events";
 import { defaultLocale, type Locale } from "@/i18n/config";
-import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
+import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus,
+} from "@/lib/numo-default-status";
 import type { RepoProviderId } from "@/lib/repo-providers";
 
 import { notifyPullRequestOpened } from "./pr-opened-notify";
 import { prStateFromRef, upsertPullRequest } from "./pull-requests";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
-import { getRun, runRepoBindingIsCurrent, stampRun, type AgentRun } from "./runs";
+import { getRun, runRepoBindingIsCurrent, stampRun, type AgentRun,
+} from "./runs";
 import { isValidGitBranchName } from "./branch-name";
 import { isForgeApiError } from "./forge";
 import type { EmitAgentEvent } from "./agent-contract";
@@ -49,17 +51,18 @@ export interface PrLandingContext {
   target: RepoCloneTarget;
   forge: Forge;
   /** ANCHOR ticket of the run, when there is one. Null = run notebook or reread:
- * no tickets to synchronize, comment or trace. */
+   * no tickets to synchronize, comment or trace. */
   issue: { identifier: string } | null;
   workBranch: string;
   baseBranch: string;
   /** Langue du commentaire de ticket : celle du lanceur. */
   locale: Locale;
   /** The calling engine's event emitter: `appendEvent` serialized in the
- * function, a POST to `/events` from the microVM. Same type as that of
- * the loop, so that neither has to make a second one. */
+   * function, a POST to `/events` from the microVM. Same type as that of
+   * the loop, so that neither has to make a second one. */
   emit: EmitAgentEvent;
-  prState: { number: number | null; url: string | null; state: AgentRun["pr_state"] };
+  prState: { number: number | null; url: string | null; state: AgentRun["pr_state"];
+  };
 }
 
 /** Base seq of `sandbox_compute` lines (outside the LLM call band). */
@@ -101,7 +104,8 @@ export async function assertPrLandingAuthority(
     target.provider !== current.repo_provider ||
     target.externalRepoId !== current.repo_external_id
   ) {
-    throw new PrLandingAuthorityError("fresh repository target does not match the run");
+    throw new PrLandingAuthorityError("fresh repository target does not match the run",
+    );
   }
   if (!isValidGitBranchName(ctx.workBranch) || !isValidGitBranchName(ctx.baseBranch)) {
     throw new PrLandingAuthorityError("invalid pull request branch");
@@ -118,6 +122,14 @@ export const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {
     `Le push de fin de tour a échoué — la branche distante n'a PAS reçu le travail de ce tour. Le travail reste dans la sandbox et sera re-poussé au prochain tour. Détail : ${detail}`,
   en: (detail) =>
     `The turn-end push failed — the remote branch did NOT receive this turn's work. The work is kept in the sandbox and will be pushed again next turn. Detail: ${detail}`,
+  de: (detail) =>
+    `Der Push am Ende dieser Runde ist fehlgeschlagen — der Remote-Branch hat die Änderungen dieser Runde NICHT erhalten. Die Änderungen bleiben in der Sandbox und werden in der nächsten Runde erneut gepusht. Details: ${detail}`,
+  "pt-BR": (detail) =>
+    `O push ao final desta rodada falhou — a branch remota NÃO recebeu as alterações desta rodada. O trabalho continua na sandbox e será enviado novamente na próxima rodada. Detalhes: ${detail}`,
+  it: (detail) =>
+    `Il push al termine di questo turno non è riuscito — il branch remoto NON ha ricevuto le modifiche di questo turno. Il lavoro rimane nella sandbox e verrà inviato di nuovo al prossimo turno. Dettagli: ${detail}`,
+  es: (detail) =>
+    `El push al final de este turno ha fallado — la rama remota NO ha recibido los cambios de este turno. El trabajo se conserva en el entorno y volverá a enviarse en el próximo turno. Detalles: ${detail}`,
 };
 
 /** Provider term displayed in notes/comments (brands, not localized). */
@@ -135,11 +147,22 @@ function capitalized(term: string): string {
 }
 
 /** Thread note when the PR was merged DURING the round (non-PR work). */
-export const MERGED_DURING_TURN_STRINGS: Record<Locale, (ref: string, term: string) => string> = {
+export const MERGED_DURING_TURN_STRINGS: Record<
+  Locale,
+  (ref: string, term: string) => string
+> = {
   fr: (ref, term) =>
     `La ${term} ${ref} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune ${term}. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
   en: (ref, term) =>
     `${capitalized(term)} ${ref} was merged during this turn: the new work was pushed to the branch but no longer belongs to any ${term}. Start a new session to continue — it will begin from a fresh branch.`,
+  de: (ref, term) =>
+    `${capitalized(term)} ${ref} wurde während dieser Runde zusammengeführt: Die neuen Änderungen wurden auf den Branch gepusht, gehören aber nicht mehr zu einem ${term}. Starte eine neue Sitzung, um fortzufahren — sie beginnt mit einem neuen Branch.`,
+  "pt-BR": (ref, term) =>
+    `${capitalized(term)} ${ref} foi mesclado durante esta rodada: as novas alterações foram enviadas para a branch, mas não pertencem mais a nenhum ${term}. Inicie uma nova sessão para continuar — ela começará em uma branch nova.`,
+  it: (ref, term) =>
+    `${capitalized(term)} ${ref} è stata unita durante questo turno: le nuove modifiche sono state inviate al branch, ma non appartengono più ad alcuna ${term}. Avvia una nuova sessione per continuare — partirà da un branch nuovo.`,
+  es: (ref, term) =>
+    `${capitalized(term)} ${ref} se fusionó durante este turno: los cambios nuevos se enviaron a la rama, pero ya no pertenecen a ninguna ${term}. Inicia una sesión nueva para continuar — partirá de una rama nueva.`,
 };
 
 const COMMENT_STRINGS: Record<
@@ -154,7 +177,8 @@ const COMMENT_STRINGS: Record<
   fr: {
     header: (id) => `Agent numo — ${id}`,
     opened: (term) => `${capitalized(term)} ouverte.`,
-    reopened: (term) => `${capitalized(term)} rouverte avec le nouveau travail.`,
+    reopened: (term) =>
+      `${capitalized(term)} rouverte avec le nouveau travail.`,
     viewPr: (term) => `Voir la ${term}`,
   },
   en: {
@@ -162,6 +186,33 @@ const COMMENT_STRINGS: Record<
     opened: (term) => `${capitalized(term)} opened.`,
     reopened: (term) => `${capitalized(term)} reopened with the new work.`,
     viewPr: (term) => `View the ${term}`,
+  },
+  de: {
+    header: (id) => `Numo-Agent — ${id}`,
+    opened: (term) => `${capitalized(term)} geöffnet.`,
+    reopened: (term) =>
+      `${capitalized(term)} mit den neuen Änderungen wieder geöffnet.`,
+    viewPr: (term) => `${capitalized(term)} ansehen`,
+  },
+  "pt-BR": {
+    header: (id) => `Agente Numo — ${id}`,
+    opened: (term) => `${capitalized(term)} aberto.`,
+    reopened: (term) =>
+      `${capitalized(term)} reaberto com as novas alterações.`,
+    viewPr: (term) => `Ver ${term}`,
+  },
+  it: {
+    header: (id) => `Agente Numo — ${id}`,
+    opened: (term) => `${capitalized(term)} aperta.`,
+    reopened: (term) => `${capitalized(term)} riaperta con le nuove modifiche.`,
+    viewPr: (term) => `Visualizza ${term}`,
+  },
+  es: {
+    header: (id) => `Agente Numo — ${id}`,
+    opened: (term) => `${capitalized(term)} abierta.`,
+    reopened: (term) =>
+      `${capitalized(term)} reabierta con los cambios nuevos.`,
+    viewPr: (term) => `Ver ${term}`,
   },
 };
 
@@ -197,7 +248,10 @@ export async function resolveRunPrefs(
     if (ownerId) {
       const r = await getAccountSettings({ userId: ownerId });
       if (r.ok) {
-        return { locale: r.settings.locale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
+        return {
+          locale: r.settings.locale,
+          numoDefaultStatus: DEFAULT_NUMO_STATUS,
+        };
       }
     }
   } catch {
@@ -222,7 +276,7 @@ export async function postPrComment(
   if (!run.created_by || !run.issue_id) return;
   try {
     const service = getServiceClient();
-    const s = COMMENT_STRINGS[locale] ?? COMMENT_STRINGS.en;
+    const s = COMMENT_STRINGS[locale];
     const term = prTerm(provider);
     const label = kind === "reopened" ? s.reopened(term) : s.opened(term);
     const body = `**${s.header(identifier)}**\n\n${label}\n\n🔗 [${s.viewPr(term)}](${prUrl})`;
@@ -288,7 +342,8 @@ export async function registerPr(
   kind: "opened" | "reopened",
 ): Promise<void> {
   await assertPrLandingAuthority(ctx);
-  const { run, target, issue, workBranch, baseBranch, locale, emit, prState } = ctx;
+  const { run, target, issue, workBranch, baseBranch, locale, emit, prState } =
+    ctx;
   prState.number = pr.number;
   prState.url = pr.url;
   // The SAME calculation that powers `pull_requests` ten more lines
@@ -347,8 +402,19 @@ export async function registerPr(
     // Open and REOPEN are two distinct facts (MIN-164): reopening
     // was not told at all, and the ticket was reviewed again without
     // rien ne dise ce qui l'y avait remis.
-    await recordAgentPrEvent(ctx, kind === "opened" ? "pr_opened" : "pr_reopened", pr.number);
-    await postPrComment(run, issue.identifier, kind, pr.url, locale, target.provider);
+    await recordAgentPrEvent(
+      ctx,
+      kind === "opened" ? "pr_opened" : "pr_reopened",
+      pr.number,
+    );
+    await postPrComment(
+      run,
+      issue.identifier,
+      kind,
+      pr.url,
+      locale,
+      target.provider,
+    );
   }
 }
 
@@ -357,7 +423,9 @@ export async function registerPr(
  * the agent is running) and the GitHub webhook stamps `agent_runs.pr_state`, invisible
  * of the snapshot taken at the claim. Without this adjustment, a mid-turn reject would never be reopened to push, and a mid-turn merge would go unnoticed.
  */
-export async function refreshPrStateFromDb(ctx: PrLandingContext): Promise<void> {
+export async function refreshPrStateFromDb(
+  ctx: PrLandingContext,
+): Promise<void> {
   const db = await getRun(ctx.run.id).catch(() => null);
   if (!db) return;
   ctx.prState.number = db.pr_number;
@@ -389,7 +457,10 @@ export async function reopenIfRejectedWorkPushed(
       number: ctx.prState.number,
     })
     .catch((err) => {
-      console.error("[pr-landing] PR reopen on push failed:", (err as Error).message);
+      console.error(
+        "[pr-landing] PR reopen on push failed:",
+        (err as Error).message,
+      );
       return null;
     });
   if (reopened && !reopened.merged) await registerPr(ctx, reopened, "reopened");
@@ -486,7 +557,8 @@ export async function openPullRequestAfterPush(
           number: prState.number,
         })
         .catch((err) => {
-          console.error("[agent-execute] PR reopen failed:", (err as Error).message);
+          console.error("[agent-execute] PR reopen failed:", (err as Error).message,
+          );
           return null;
         });
       if (reopened) {
@@ -495,7 +567,8 @@ export async function openPullRequestAfterPush(
           result: {
             number: reopened.number,
             url: reopened.url,
-            note: andJobs("The rejected pull request was reopened with the new work."),
+            note: andJobs("The rejected pull request was reopened with the new work.",
+            ),
           },
           success: true,
         };
@@ -517,7 +590,8 @@ export async function openPullRequestAfterPush(
     });
     await registerPr(ctx, pr, "opened");
     return {
-      result: { number: pr.number, url: pr.url, ...(jobsNote ? { note: jobsNote } : {}) },
+      result: { number: pr.number, url: pr.url, ...(jobsNote ? { note: jobsNote } : {}),
+      },
       success: true,
     };
   } catch (err) {
@@ -532,6 +606,7 @@ export async function openPullRequestAfterPush(
         success: false,
       };
     }
-    return { result: { error: andJobs((err as Error).message) }, success: false };
+    return { result: { error: andJobs((err as Error).message) }, success: false,
+    };
   }
 }

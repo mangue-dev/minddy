@@ -232,11 +232,15 @@ describe("buildPushPayload", () => {
 });
 
 describe("toPushLocale", () => {
-  it("ramène toute variante française sur `fr`, le reste sur `en`", () => {
+  it("normalizes every supported regional locale and defaults to English", () => {
     expect(toPushLocale("fr")).toBe("fr");
     expect(toPushLocale("fr-FR")).toBe("fr");
     expect(toPushLocale("FR")).toBe("fr");
     expect(toPushLocale("en-US")).toBe("en");
+    expect(toPushLocale("de-DE")).toBe("de");
+    expect(toPushLocale("pt-BR")).toBe("pt-BR");
+    expect(toPushLocale("it-IT")).toBe("it");
+    expect(toPushLocale("es-MX")).toBe("es");
     expect(toPushLocale(null)).toBe("en");
     expect(toPushLocale("")).toBe("en");
   });

@@ -68,7 +68,7 @@ export function EmojiPicker({
         <Frimousse.Root
           // The language of the app controls that of the search: search
           // “fuze” must find 🚀 in French like “rocket” in English.
-          locale={locale === "fr" ? "fr" : "en"}
+          locale={locale === "pt-BR" ? "pt" : locale}
           className="isolate flex h-[340px] w-full flex-col bg-popover"
           onEmojiSelect={({ emoji }) => {
             onChange(emoji);

@@ -2,6 +2,25 @@ import "server-only";
 
 import { SSO_ENV_VAR } from "@/lib/feedback/env-lines";
 import { INTEGRATION_ENV_VAR } from "@/lib/feedback/integration-contract";
+import type { Locale } from "@/i18n/config";
+import {
+  apiPromptDe,
+  apiPromptEs,
+  apiPromptIt,
+  apiPromptPtBr,
+  boardPromptDe,
+  boardPromptEs,
+  boardPromptIt,
+  boardPromptPtBr,
+  issuesPromptDe,
+  issuesPromptEs,
+  issuesPromptIt,
+  issuesPromptPtBr,
+  webhookSectionDe,
+  webhookSectionEs,
+  webhookSectionIt,
+  webhookSectionPtBr,
+} from "./integration-prompt-localized";
 
 /**
  * All-in-one integration prompt (MIN-37): text ready to paste into a
@@ -37,7 +56,7 @@ export interface IntegrationPromptWebhook {
 
 export interface IntegrationPromptInput {
   mode: IntegrationPromptMode;
-  locale: "fr" | "en";
+  locale: Locale;
   projectName: string;
   /** Free instruction: where to place the button / where to connect the collection. */
   placement: string;
@@ -52,30 +71,67 @@ export interface IntegrationPromptInput {
 
 export function buildIntegrationPrompt(input: IntegrationPromptInput): string {
   const placement = input.placement.trim();
-  const fr = input.locale === "fr";
+  const builders = PROMPT_BUILDERS[input.locale];
   if (input.mode === "board") {
     // The board is a minddy page: nothing goes back to the app.
-    return fr
-      ? boardPromptFr(input, placement)
-      : boardPromptEn(input, placement);
+    return builders.board(input, placement);
   }
   const envVar =
     input.mode === "issues" ? ISSUES_KEY_ENV_VAR : FEEDBACK_KEY_ENV_VAR;
   const body =
     input.mode === "issues"
-      ? fr
-        ? issuesPromptFr(input, placement)
-        : issuesPromptEn(input, placement)
-      : fr
-        ? apiPromptFr(input, placement)
-        : apiPromptEn(input, placement);
+      ? builders.issues(input, placement)
+        : builders.api(input, placement);
   if (!input.webhook) return body;
-  return `${body}\n\n${
-    fr
-      ? webhookSectionFr(input.webhook, envVar)
-      : webhookSectionEn(input.webhook, envVar)
+  return `${body}\n\n${builders.webhook(input.webhook, envVar)
   }`;
 }
+
+interface IntegrationPromptBuilders {
+  board: (input: IntegrationPromptInput, placement: string) => string;
+  api: (input: IntegrationPromptInput, placement: string) => string;
+  issues: (input: IntegrationPromptInput, placement: string) => string;
+  webhook: (webhook: IntegrationPromptWebhook, envVar: string) => string;
+}
+
+const PROMPT_BUILDERS: Record<Locale, IntegrationPromptBuilders> = {
+  en: {
+    board: boardPromptEn,
+    api: apiPromptEn,
+    issues: issuesPromptEn,
+    webhook: webhookSectionEn,
+  },
+  fr: {
+    board: boardPromptFr,
+    api: apiPromptFr,
+    issues: issuesPromptFr,
+    webhook: webhookSectionFr,
+  },
+  de: {
+    board: boardPromptDe,
+    api: apiPromptDe,
+    issues: issuesPromptDe,
+    webhook: webhookSectionDe,
+  },
+  "pt-BR": {
+    board: boardPromptPtBr,
+    api: apiPromptPtBr,
+    issues: issuesPromptPtBr,
+    webhook: webhookSectionPtBr,
+  },
+  it: {
+    board: boardPromptIt,
+    api: apiPromptIt,
+    issues: issuesPromptIt,
+    webhook: webhookSectionIt,
+  },
+  es: {
+    board: boardPromptEs,
+    api: apiPromptEs,
+    issues: issuesPromptEs,
+    webhook: webhookSectionEs,
+  },
+};
 
 // ── Webhook: the road that RECEIVES ────────────────────────────────────────────
 

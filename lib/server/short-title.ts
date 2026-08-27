@@ -4,6 +4,7 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import type { AiFeature } from "@/lib/server/ai-usage";
+import { responseLanguageInstruction } from "@/lib/locale-language";
 
 /**
  * Numo's titler: a two- to six-word label — never more — based on
@@ -160,9 +161,7 @@ export async function generateShortTitle({
   const language =
     locale === "auto"
       ? "the SAME language as the text itself"
-      : locale === "fr"
-        ? "French, with all its accents and diacritics (é, è, ê, à, ù, ç). The word for an issue is « ticket »"
-        : "English";
+      : responseLanguageInstruction(locale, { mentionIssueTerm: true });
 
   const systemPrompt = `You name things in minddy, an issue tracker. You are given ${SUBJECT[kind]}.
 

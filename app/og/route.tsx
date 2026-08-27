@@ -4,6 +4,7 @@ import { getClientIp } from "@/lib/server/request-ip";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
+import { loadMessages } from "@/i18n/messages";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -75,10 +76,7 @@ export async function GET(request: NextRequest) {
   const refused = rateLimitRefusal(`ip:${getClientIp(request)}`, "og", OG_RATE_LIMIT);
   if (refused) return refused;
 
-  const messages = (await import(`../../messages/${locale}.json`)).default as Record<
-    string,
-    Record<string, string>
-  >;
+  const messages = await loadMessages(locale) as Record<string, Record<string, string>>;
   const namespace = messages[route.namespace] ?? {};
   const title = namespace.metaTitle ?? SITE_NAME;
   const description = namespace.metaDescription ?? "";

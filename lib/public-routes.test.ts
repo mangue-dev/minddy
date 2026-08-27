@@ -5,23 +5,31 @@ import {
   PUBLIC_ROUTES,
   PUBLIC_ROUTE_PATHS,
   englishPathForFrench,
+  localeForPublicPath,
+  publicPathForLocale,
+  publicRouteVariants,
   routeByPath,
 } from "./public-routes";
 import { PROTECTED_PREFIXES } from "./protected-prefixes";
 import nextConfig, {
-  FRENCH_SLUG_REDIRECTS,
+  LOCALIZED_SLUG_REDIRECTS,
   PRIMARY_HOST_PATTERN,
   PUBLIC_ROUTE_PATHS as CONFIG_PUBLIC_ROUTE_PATHS,
 } from "../next.config.mjs";
 import { isPrimaryHost } from "./public-hosts";
+import { locales } from "@/i18n/config";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 describe("public routes table", () => {
-  it("gives every page a distinct English and French path", () => {
+  it("gives every page distinct explicit locale paths", () => {
     const paths = PUBLIC_ROUTES.flatMap((route) => [route.en, route.fr]);
     expect(new Set(paths).size).toBe(paths.length);
-    expect(PUBLIC_ROUTE_PATHS.size).toBe(paths.length);
+    const variants = PUBLIC_ROUTES.flatMap((route) =>
+      publicRouteVariants(route).map(({ path }) => path),
+    );
+    expect(new Set(variants).size).toBe(variants.length);
+    expect(PUBLIC_ROUTE_PATHS.size).toBe(variants.length);
   });
 
   it("puts every French path under /fr", () => {
@@ -46,21 +54,55 @@ describe("public routes table", () => {
     }
     expect(routeByPath("/blog")).toBeNull();
   });
+
+  it("publishes every public page in all six locales", () => {
+    const home = PUBLIC_ROUTES.find((route) => route.key === "home")!;
+    expect(publicRouteVariants(home)).toEqual([
+      { locale: "fr", path: "/fr" },
+      { locale: "en", path: "/" },
+      { locale: "de", path: "/de" },
+      { locale: "pt-BR", path: "/pt-br" },
+      { locale: "it", path: "/it" },
+      { locale: "es", path: "/es" },
+    ]);
+
+    for (const [locale, path] of [
+      ["de", "/de"],
+      ["pt-BR", "/pt-br"],
+      ["it", "/it"],
+      ["es", "/es"],
+    ] as const) {
+      expect(publicPathForLocale(home, locale)).toBe(path);
+      expect(localeForPublicPath(path)).toBe(locale);
+      expect(routeByPath(path)?.key).toBe("home");
+    }
+
+    for (const route of PUBLIC_ROUTES) {
+      expect(publicRouteVariants(route)).toHaveLength(6);
+    }
+
+    const pricing = PUBLIC_ROUTES.find((route) => route.key === "pricing")!;
+    expect(publicPathForLocale(pricing, "de")).toBe("/de/preise");
+    expect(publicPathForLocale(pricing, "pt-BR")).toBe("/pt-br/precos");
+    expect(publicPathForLocale(pricing, "it")).toBe("/it/prezzi");
+    expect(publicPathForLocale(pricing, "es")).toBe("/es/precios");
+  });
 });
 
 describe("protected prefixes", () => {
   /**
- * The proxy protects a BLACKLIST: everything that is not there falls into the
- * rendered Next (and therefore in 404 if there is no route). This is what makes
- * true 404s possible — but it means that an app route added tomorrow
- * would be public by default. This test is the safeguard.
- */
+   * The proxy protects a BLACKLIST: everything that is not there falls into the
+   * rendered Next (and therefore in 404 if there is no route). This is what makes
+   * true 404s possible — but it means that an app route added tomorrow
+   * would be public by default. This test is the safeguard.
+   */
   it("covers every route folder of app/(app)", () => {
     const appDir = path.join(REPO_ROOT, "app", "(app)");
     const segments = readdirSync(appDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       // `(…)` groups and `_…` private segments do not produce URLs.
-      .filter((entry) => !entry.name.startsWith("(") && !entry.name.startsWith("_"))
+      .filter((entry) => !entry.name.startsWith("(") && !entry.name.startsWith("_"),
+      )
       .map((entry) => `/${entry.name}`);
 
     expect(segments.length).toBeGreaterThan(0);
@@ -80,18 +122,26 @@ describe("protected prefixes", () => {
   });
 });
 
-describe("French slug redirects in next.config.mjs", () => {
+describe("localized slug redirects in next.config.mjs", () => {
   /**
- * A `.mjs` cannot import the TypeScript table: the list of
- * redirects is copied there. This test is what prevents the two from diverging — adding a public page without its redirect causes it to fail.
- */
-  it("redirects every English slug used under /fr to its translated slug", () => {
-    const expected = PUBLIC_ROUTES
-      // The landing has no slug: `/fr` IS its French URL.
-      .filter((route) => route.en !== "/" && route.fr !== `/fr${route.en}`)
-      .map((route) => ({ source: `/fr${route.en}`, destination: route.fr }));
+   * A `.mjs` cannot import the TypeScript table: the list of
+   * redirects is copied there. This test is what prevents the two from diverging — adding a public page without its redirect causes it to fail.
+   */
+  it("redirects every English slug used under a locale prefix", () => {
+    const home = PUBLIC_ROUTES.find((route) => route.en === "/")!;
+    const expected = locales
+      .filter((locale) => locale !== "en")
+      .flatMap((locale) => {
+        const prefix = publicPathForLocale(home, locale);
+        return PUBLIC_ROUTES.filter((route) => route.en !== "/")
+          .map((route) => ({
+            source: `${prefix}${route.en}`,
+            destination: publicPathForLocale(route, locale),
+          }))
+          .filter((rule) => rule.source !== rule.destination);
+      });
 
-    expect([...FRENCH_SLUG_REDIRECTS].sort(bySource)).toEqual(
+    expect([...LOCALIZED_SLUG_REDIRECTS].sort(bySource)).toEqual(
       [...expected].sort(bySource),
     );
   });
@@ -106,12 +156,12 @@ describe("French slug redirects in next.config.mjs", () => {
 
 describe("CDN cache header vs custom domains", () => {
   /**
- * The `/` of a custom domain serves a feedback board, personalized
- * per cookie. It fell under the CDN cache header placed on `/` for the
- * landing, without `Vary`: the CDN could serve to a visitor the page of another
- * (MIN-337). The `has: host` condition is what breaks it — and it
- * doesn't appear anywhere in the types.
- */
+   * The `/` of a custom domain serves a feedback board, personalized
+   * per cookie. It fell under the CDN cache header placed on `/` for the
+   * landing, without `Vary`: the CDN could serve to a visitor the page of another
+   * (MIN-337). The `has: host` condition is what breaks it — and it
+   * doesn't appear anywhere in the types.
+   */
   const cacheEntries = async () =>
     (await nextConfig.headers!()).filter((entry) =>
       entry.headers.some((header) => header.key === "Vercel-CDN-Cache-Control"),
@@ -123,15 +173,23 @@ describe("CDN cache header vs custom domains", () => {
       [...PUBLIC_ROUTE_PATHS].sort(),
     );
     for (const entry of entries) {
-      expect(entry.has).toEqual([{ type: "host", value: PRIMARY_HOST_PATTERN }]);
+      expect(entry.has).toEqual([
+        { type: "host", value: PRIMARY_HOST_PATTERN },
+      ]);
     }
   });
 
   it("matches only hosts that serve minddy itself", () => {
     // Next compares the anchored value, on the host without port and in lowercase.
-    const matches = (host: string) => new RegExp(`^${PRIMARY_HOST_PATTERN}$`).test(host);
+    const matches = (host: string) =>
+      new RegExp(`^${PRIMARY_HOST_PATTERN}$`).test(host);
 
-    for (const host of ["minddy.app", "www.minddy.app", "preview.minddy.app", "localhost"]) {
+    for (const host of [
+      "minddy.app",
+      "www.minddy.app",
+      "preview.minddy.app",
+      "localhost",
+    ]) {
       expect(matches(host)).toBe(true);
       expect(isPrimaryHost(host)).toBe(true);
     }
@@ -139,7 +197,11 @@ describe("CDN cache header vs custom domains", () => {
     // client (allowed by ops): never shared cache.
     process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST = "feedback.minddy.app";
     try {
-      for (const host of ["feedback.acme.com", "acme.com", "feedback.minddy.app"]) {
+      for (const host of [
+        "feedback.acme.com",
+        "acme.com",
+        "feedback.minddy.app",
+      ]) {
         expect(matches(host)).toBe(false);
         expect(isPrimaryHost(host)).toBe(false);
       }
@@ -158,9 +220,11 @@ describe("CDN cache header vs custom domains", () => {
       expect(isPrimaryHost("tickets.example.test")).toBe(true);
       expect(isPrimaryHost("feedback.example.test")).toBe(false);
     } finally {
-      if (previousAppUrl === undefined) delete process.env.MINDDY_PUBLIC_APP_URL;
+      if (previousAppUrl === undefined)
+        delete process.env.MINDDY_PUBLIC_APP_URL;
       else process.env.MINDDY_PUBLIC_APP_URL = previousAppUrl;
-      if (previousAllowlist === undefined) delete process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
+      if (previousAllowlist === undefined)
+        delete process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
       else process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST = previousAllowlist;
     }
   });

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { resolveApplicationLocale } from "@/lib/locale-language";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getProjectAccess,
@@ -2265,7 +2267,7 @@ export async function executeTool(
           projectId,
           actorId: ctx.userId,
           email: args.email,
-          locale: ctx.locale === "fr" ? "fr" : "en",
+          locale: resolveApplicationLocale(ctx.locale),
         });
         if (!result.ok) return settingsError(result.errorKey);
         return {

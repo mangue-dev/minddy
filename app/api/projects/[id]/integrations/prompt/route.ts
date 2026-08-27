@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import type { Locale } from "@/i18n/config";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -75,8 +76,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  const locale =
-    (await getLocale()) === "fr" ? ("fr" as const) : ("en" as const);
+  const locale = (await getLocale()) as Locale;
   const prompt = buildIntegrationPrompt({
     // A 'feedback' key provides feedback via the API: this is 'api' mode.
     mode: body.kind === "issues" ? "issues" : "api",

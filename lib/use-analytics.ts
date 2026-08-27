@@ -88,6 +88,16 @@ export function useAnalytics() {
     []
   );
 
+  /** Preserve the first localized landing as a property on the acquisition funnel. */
+  const setAcquisitionContext = useCallback((locale: string, path: string) => {
+    onAnalyticsReady(() => {
+      getAnalyticsClient()?.register_once({
+        acquisition_locale: locale,
+        acquisition_landing_path: path,
+      });
+    });
+  }, []);
+
   /**
  * Person properties at activation milestones (`first_issue_at`,
  * `mcp_connected`…). Goes through the native API rather than `track({ $set })`
@@ -108,8 +118,12 @@ export function useAnalytics() {
       group,
       resetGroups,
       setProjectContext,
+      setAcquisitionContext,
       setPersonProperties,
     }),
-    [track, identify, reset, group, resetGroups, setProjectContext, setPersonProperties]
+    [track, identify, reset, group, resetGroups, setProjectContext,
+      setAcquisitionContext,
+      setPersonProperties,
+    ]
   );
 }

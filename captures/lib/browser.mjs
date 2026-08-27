@@ -19,7 +19,7 @@ const expectedPageThemes = new WeakMap();
  * Opens a page ready to photograph.
  *
  *   theme   "light" | "dark"
- *   locale  "fr" | "en"
+ *   locale  any supported minddy locale
  * authed true to reuse the demo account session
  */
 export async function openPage({
@@ -35,7 +35,14 @@ export async function openPage({
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: CAPTURE.deviceScaleFactor,
-    locale: locale === "fr" ? "fr-FR" : "en-US",
+    locale: {
+      en: "en-US",
+      fr: "fr-FR",
+      de: "de-DE",
+      "pt-BR": "pt-BR",
+      it: "it-IT",
+      es: "es-ES",
+    }[locale] ?? "en-US",
     colorScheme: theme,
     // Cuts CSS animations and Framer Motion transitions at source,
     // instead of waiting for the image to stop moving.

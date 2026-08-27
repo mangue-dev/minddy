@@ -11,13 +11,13 @@ describe("resolveInterfaceLocale", () => {
     ).toBe("fr");
   });
 
-  it("ignore un cookie qui n'est pas une langue supportée", () => {
+  it("uses a supported locale cookie before browser preferences", () => {
     expect(
       resolveInterfaceLocale({
         cookieHeader: "NEXT_LOCALE=de",
         languages: ["fr-FR"],
       })
-    ).toBe("fr");
+    ).toBe("de");
   });
 
   // The case of registration: the cookie is ONLY written by the selectors of
@@ -32,11 +32,13 @@ describe("resolveInterfaceLocale", () => {
     ).toBe("fr");
   });
 
-  it("rend l'anglais quand rien ne dit la langue", () => {
+  it("uses English only when no supported language is available", () => {
     expect(resolveInterfaceLocale({ cookieHeader: "", languages: [] })).toBe("en");
     expect(
       resolveInterfaceLocale({ cookieHeader: "", languages: ["de-DE", "es"] })
-    ).toBe("en");
+    ).toBe(
+      "de",
+    );
   });
 
   it("ne confond pas un cookie dont le nom finit par NEXT_LOCALE", () => {

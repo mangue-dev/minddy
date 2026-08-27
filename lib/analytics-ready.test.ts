@@ -123,7 +123,7 @@ describe("file d'attente des événements", () => {
     const mod = await freshModule();
     const { calls, client } = stubClient();
 
-    mod.trackEvent("landing_viewed", {});
+    mod.trackEvent("landing_viewed", { locale: "en" });
     expect(calls).toHaveLength(0); // pas de client : rien ne part encore
 
     mod.setAnalyticsClient(client);
@@ -137,7 +137,7 @@ describe("file d'attente des événements", () => {
     const { calls, client } = stubClient();
 
     const before = new Date();
-    mod.trackEvent("landing_viewed", {});
+    mod.trackEvent("landing_viewed", { locale: "en" });
     const after = new Date();
 
     mod.setAnalyticsClient(client);
@@ -153,7 +153,7 @@ describe("file d'attente des événements", () => {
     const mod = await freshModule();
     const { calls, client } = stubClient();
 
-    mod.trackEvent("landing_viewed", {});
+    mod.trackEvent("landing_viewed", { locale: "en" });
     mod.trackEvent("landing_cta_clicked", { location: "hero" });
 
     mod.setAnalyticsClient(client);
@@ -179,7 +179,7 @@ describe("file d'attente des événements", () => {
     const mod = await freshModule();
     const { calls, client } = stubClient();
 
-    for (let i = 0; i < 50; i++) mod.trackEvent("landing_viewed", {});
+    for (let i = 0; i < 50; i++) mod.trackEvent("landing_viewed", { locale: "en" });
 
     mod.setAnalyticsClient(client);
     mod.markAnalyticsReady();
@@ -190,7 +190,7 @@ describe("file d'attente des événements", () => {
   it("vide la file sans rien envoyer quand PostHog ne s'initialise pas", async () => {
     const mod = await freshModule();
 
-    mod.trackEvent("landing_viewed", {});
+    mod.trackEvent("landing_viewed", { locale: "en" });
     // No client filed: this is the case “no key” / “local host”, where
     // `PostHogInit` still calls `markAnalyticsReady`.
     expect(() => mod.markAnalyticsReady()).not.toThrow();
@@ -205,7 +205,7 @@ describe("file d'attente des événements", () => {
   it("l'identité est rejouée AVANT les événements en attente", async () => {
     const mod = await freshModule();
     const order: string[] = [];
-    mod.trackEvent("landing_viewed", {});
+    mod.trackEvent("landing_viewed", { locale: "en" });
     mod.onAnalyticsReady(() => order.push("identify"));
     mod.setAnalyticsClient({
       __loaded: true,

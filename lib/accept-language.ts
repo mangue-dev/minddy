@@ -1,4 +1,4 @@
-import { locales, type Locale } from "@/i18n/config";
+import { supportedLocaleForTag, type Locale } from "@/i18n/config";
 
 /**
  * Best supported locale of a `Accept-Language` header, or `null`.
@@ -19,11 +19,10 @@ export function detectFromAcceptLanguage(header: string | null): Locale | null {
     })
     .sort((a, b) => b.q - a.q);
 
-  for (const { tag } of ranked) {
-    const primary = tag.split("-")[0];
-    if ((locales as readonly string[]).includes(primary)) {
-      return primary as Locale;
+  for (const { tag, q } of ranked) {
+    if (q <= 0) continue;
+    const locale = supportedLocaleForTag(tag);
+    if (locale) return locale;
     }
-  }
   return null;
 }

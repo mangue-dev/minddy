@@ -11,6 +11,7 @@ import {
   type IntegrationPromptMode,
 } from "@/lib/server/integration-prompt";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import type { Locale } from "@/i18n/config";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const placement =
     typeof body.placement === "string" ? body.placement.trim().slice(0, PLACEMENT_MAX) : "";
 
-  const locale = (await getLocale()) === "fr" ? ("fr" as const) : ("en" as const);
+  const locale = (await getLocale()) as Locale;
   const origin = canonicalAppOrigin();
   const projectName = guard.access.project.name;
 
@@ -68,7 +69,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // installed at the customer's premises would break silently.
       ssoSecret = await getOrCreateSsoSecret(id);
       if (!ssoSecret) {
-        return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+        return NextResponse.json({ error: t("databaseError") }, { status: 500 },
+        );
       }
     }
     const prompt = buildIntegrationPrompt({
@@ -80,7 +82,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       boardUrl: `${origin}/f/${board.token}`,
       sso: !!ssoSecret,
     });
-    return NextResponse.json({ prompt, board_enabled: true, sso_secret: ssoSecret });
+    return NextResponse.json({
+      prompt,
+      board_enabled: true,
+      sso_secret: ssoSecret,
+    });
   }
 
   // mode === "api": a new key for each generation (the clear one is never
@@ -88,11 +94,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const created = await createIntegration({
     projectId: id,
     actorId: guard.userId,
-    name: locale === "fr" ? "Intégration app (prompt)" : "App integration (prompt)",
+    name: INTEGRATION_NAME[locale],
     kind: "feedback",
   });
   if (!created.ok) {
-    return NextResponse.json({ error: t(created.errorKey) }, { status: created.status });
+    return NextResponse.json(
+      { error: t(created.errorKey) },
+      { status: created.status },
+    );
   }
   const prompt = buildIntegrationPrompt({
     mode: "api",
@@ -103,3 +112,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   });
   return NextResponse.json({ prompt, key_created: true, api_key: created.key });
 }
+
+const INTEGRATION_NAME: Record<Locale, string> = {
+  en: "App integration (prompt)",
+  fr: "Intégration app (prompt)",
+  de: "App-Integration (Prompt)",
+  "pt-BR": "Integração do app (prompt)",
+  it: "Integrazione app (prompt)",
+  es: "Integración de la app (prompt)",
+};

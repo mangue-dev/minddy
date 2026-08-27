@@ -1,7 +1,8 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 import { detectFromAcceptLanguage } from "../lib/accept-language";
-import { defaultLocale, locales, type Locale } from "./config";
+import { defaultLocale, supportedLocaleForTag, type Locale } from "./config";
+import { loadMessages } from "./messages";
 
 /**
  * Resolution order: locale explicitly requested → header
@@ -19,7 +20,7 @@ import { defaultLocale, locales, type Locale } from "./config";
  * The parameter is `undefined` everywhere else: on a normal page rendering,
  * the string below is unchanged.
  *
- * The header comes FIRST and is placed by the proxy on the six public pages
+ * The header comes FIRST and is placed by the proxy on localized public pages
  * (MIN-88): it is the URL which decides the language of an indexable page
  * (`/fr/tarifs` is French, whatever anyone says the visitor's cookie), not a
  * stored preference. Without this priority, a visitor whose cookie says "in"
@@ -48,10 +49,10 @@ export default getRequestConfig(async ({ locale: requested }) => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: await loadMessages(locale),
   };
 });
 
 function pick(raw: string | null | undefined): Locale | null {
-  return raw && (locales as readonly string[]).includes(raw) ? (raw as Locale) : null;
+  return supportedLocaleForTag(raw);
 }

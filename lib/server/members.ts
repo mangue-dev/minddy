@@ -2,8 +2,6 @@ import "server-only";
 
 import { createTranslator } from "next-intl";
 
-import en from "@/messages/en.json";
-import fr from "@/messages/fr.json";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
@@ -20,6 +18,8 @@ import { sendPushToUser } from "@/lib/server/push/send";
 import { sendInvitationEmail } from "@/lib/server/invitation-email";
 import { capability } from "@/lib/server/capabilities";
 import type { Invitation } from "@/lib/types";
+import type { Locale } from "@/i18n/config";
+import { pushMessages } from "@/lib/server/push/payload";
 
 /**
  * Shared project-membership cores, used by /api/projects/[id]/members and the
@@ -63,7 +63,7 @@ export async function inviteMember({
   origin?: string;
   /** Email language. We do not know that of the guest — we take that of
  the inviter, who is the person from whom the guest is waiting for the message. */
-  locale?: "fr" | "en";
+  locale?: Locale;
 }): Promise<
   | { ok: true; invitation: Invitation }
   | {
@@ -123,7 +123,7 @@ export async function inviteMember({
       p_invited_email: normalized,
       p_invited_user_id: memberUser?.id ?? null,
       p_member_limit: memberLimit,
-    }
+    },
   );
 
   if (error) {
@@ -305,7 +305,7 @@ function pushInvitation(inviteeId: string, inviterId: string): void {
     const inviterName = displayName(toNamed(inviters.get(inviterId)), "");
 
     await sendPushToUser(service, inviteeId, (locale) => {
-      const messages = locale === "fr" ? (fr as typeof en) : en;
+      const messages = pushMessages(locale);
       const t = createTranslator({ locale, messages, namespace: "Inbox" });
       return {
         // The title is the NAME OF THE THING everywhere else (the ticket, the
@@ -366,8 +366,10 @@ export async function removeMember({
   // later request in case membership changed outside this path.
   const { revokeMemberAgentAuthority } = await import("./agent/control-plane");
   await revokeMemberAgentAuthority({ projectId, userId }).catch((revocationError) => {
-    console.error("[members] active agent authority revocation failed:", revocationError);
-  });
+    console.error("[members] active agent authority revocation failed:", revocationError,
+      );
+  },
+  );
   return { ok: true };
 }
 
@@ -410,7 +412,7 @@ export async function cancelInvitation({
  are not part of this: `status = 'pending'` is not enough to say
  that an invitation is alive (MIN-197). */
 export async function listPendingInvitations(
-  projectId: string
+  projectId: string,
 ): Promise<Array<{ id: string; email: string; created_at: string }>> {
   const service = getServiceClient();
   const { data, error } = await service

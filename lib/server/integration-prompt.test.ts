@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildIntegrationPrompt } from "./integration-prompt";
 import { SSO_ENV_VAR } from "@/lib/feedback/env-lines";
 import { INTEGRATION_ENV_VAR } from "@/lib/feedback/integration-contract";
+import { locales } from "@/i18n/config";
 
 /**
  * What these tests keep is the REASON for the two destinations of the
@@ -24,9 +25,9 @@ const BASE = {
 /** The prefixes that minddy's credentials carry, all paths combined. */
 const CREDENTIAL_PREFIXES = ["fbsso_", "mdyk_"];
 
-describe("prompt d'intégration — board public", () => {
-  for (const locale of ["fr", "en"] as const) {
-    it(`nomme la variable d'environnement au lieu du secret (${locale})`, () => {
+describe("integration prompt — public board", () => {
+  for (const locale of locales) {
+    it(`names the environment variable instead of the secret (${locale})`, () => {
       const prompt = buildIntegrationPrompt({
         ...BASE,
         locale,
@@ -40,7 +41,7 @@ describe("prompt d'intégration — board public", () => {
     });
   }
 
-  it("sans SSO, ne parle ni de JWT ni de variable d'environnement", () => {
+  it("does not mention JWTs or their environment variable without SSO", () => {
     const prompt = buildIntegrationPrompt({
       ...BASE,
       mode: "board",
@@ -52,7 +53,7 @@ describe("prompt d'intégration — board public", () => {
     expect(prompt).toContain("https://www.minddy.app/f/tok");
   });
 
-  it("reprend l'instruction de placement telle qu'elle a été écrite", () => {
+  it("preserves the placement instruction exactly as written", () => {
     const prompt = buildIntegrationPrompt({
       ...BASE,
       mode: "board",
@@ -61,11 +62,27 @@ describe("prompt d'intégration — board public", () => {
     });
     expect(prompt).toContain("Dans le menu utilisateur");
   });
+
+  it.each([
+    ["de", "# minddy-Feedback in diese Anwendung integrieren"],
+    ["pt-BR", "# Integrar o feedback do minddy a este aplicativo"],
+    ["it", "# Integrare i feedback di minddy in questa applicazione"],
+    ["es", "# Integrar los comentarios de minddy en esta aplicación"],
+  ] as const)("uses native copy instead of English fallback for %s", (locale, heading) => {
+    const prompt = buildIntegrationPrompt({
+      ...BASE,
+      locale,
+      mode: "board",
+      boardUrl: "https://www.minddy.app/f/tok",
+      sso: false,
+    });
+    expect(prompt.startsWith(heading)).toBe(true);
+  });
 });
 
-describe("prompt d'intégration — API serveur-à-serveur", () => {
-  for (const locale of ["fr", "en"] as const) {
-    it(`nomme la variable d'environnement au lieu de la clé (${locale})`, () => {
+describe("integration prompt — server-to-server API", () => {
+  for (const locale of locales) {
+    it(`names the environment variable instead of the key (${locale})`, () => {
       const prompt = buildIntegrationPrompt({ ...BASE, locale, mode: "api" });
       expect(prompt).toContain(INTEGRATION_ENV_VAR.feedback);
       for (const prefix of CREDENTIAL_PREFIXES) expect(prompt).not.toContain(prefix);
@@ -75,15 +92,15 @@ describe("prompt d'intégration — API serveur-à-serveur", () => {
     });
   }
 
-  it("passe la clé par l'en-tête d'autorisation, jamais en dur", () => {
+  it("passes the key through the authorization header instead of hardcoding it", () => {
     const prompt = buildIntegrationPrompt({ ...BASE, mode: "api" });
     expect(prompt).toContain(`Authorization: Bearer $${INTEGRATION_ENV_VAR.feedback}`);
   });
 });
 
-describe("prompt d'intégration — tickets par l'API", () => {
-  for (const locale of ["fr", "en"] as const) {
-    it(`nomme la variable d'environnement au lieu de la clé (${locale})`, () => {
+describe("integration prompt — issues API", () => {
+  for (const locale of locales) {
+    it(`names the environment variable instead of the key (${locale})`, () => {
       const prompt = buildIntegrationPrompt({ ...BASE, locale, mode: "issues" });
       expect(prompt).toContain(INTEGRATION_ENV_VAR.issues);
       for (const prefix of CREDENTIAL_PREFIXES) expect(prompt).not.toContain(prefix);
@@ -91,16 +108,24 @@ describe("prompt d'intégration — tickets par l'API", () => {
     });
   }
 
-  it("cite la variable des tickets, pas celle du feedback", () => {
+  it("names the issues variable instead of the feedback variable", () => {
     const prompt = buildIntegrationPrompt({ ...BASE, mode: "issues" });
     expect(prompt).toContain(`Authorization: Bearer $${INTEGRATION_ENV_VAR.issues}`);
     expect(prompt).not.toContain(INTEGRATION_ENV_VAR.feedback);
   });
 
-  it("annonce le triage : rien n'entre directement dans le backlog", () => {
-    for (const locale of ["fr", "en"] as const) {
+  it("states that new issues enter triage rather than the backlog", () => {
+    const triageTerm = {
+      en: "triage",
+      fr: "triage",
+      de: "triage",
+      "pt-BR": "triagem",
+      it: "triage",
+      es: "triaje",
+    } as const;
+    for (const locale of locales) {
       const prompt = buildIntegrationPrompt({ ...BASE, locale, mode: "issues" });
-      expect(prompt.toLowerCase()).toContain("triage");
+      expect(prompt.toLowerCase()).toContain(triageTerm[locale]);
     }
   });
 });
@@ -112,14 +137,14 @@ describe("prompt d'intégration — tickets par l'API", () => {
  * only thing that a receiver cannot guess — that the HMAC key is
  * the fingerprint of the API key, not the key.
  */
-describe("prompt d'intégration — section webhook", () => {
+describe("integration prompt — webhook section", () => {
   const WEBHOOK = {
     url: "https://acme.test/hooks/minddy",
     events: ["issue.status_changed"],
     scope: "integration",
   };
 
-  it("n'apparaît que si un webhook est réglé", () => {
+  it("appears only when a webhook is configured", () => {
     const without = buildIntegrationPrompt({ ...BASE, mode: "issues" });
     const with_ = buildIntegrationPrompt({
       ...BASE,
@@ -131,8 +156,8 @@ describe("prompt d'intégration — section webhook", () => {
   });
 
   for (const mode of ["api", "issues"] as const) {
-    for (const locale of ["fr", "en"] as const) {
-      it(`dit la clé du HMAC et le corps brut, sans credential (${mode}/${locale})`, () => {
+    for (const locale of locales) {
+      it(`describes the HMAC key and raw body without credentials (${mode}/${locale})`, () => {
         const prompt = buildIntegrationPrompt({
           ...BASE,
           locale,
@@ -151,7 +176,7 @@ describe("prompt d'intégration — section webhook", () => {
     }
   }
 
-  it("annonce les événements réellement suivis et le périmètre choisi", () => {
+  it("announces only the configured events and scope", () => {
     const prompt = buildIntegrationPrompt({
       ...BASE,
       mode: "issues",

@@ -341,8 +341,7 @@ export function CommandPalette({
     [groups, tNav]
   );
 
-  const isFr = locale.startsWith("fr");
-  const themeLabel = isFr ? "Changer le thème" : "Change theme";
+  const themeLabel = tNav("changeTheme");
 
   // Each cmdk PaletteItem becomes an item in the palette. metaText (id
   // PQ-42, project name) becomes the contextLabel dim; tickets receive

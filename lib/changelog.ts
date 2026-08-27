@@ -43,7 +43,7 @@
  *, or a poorly sorted list.
  */
 
-import type { Locale } from "@/i18n/config";
+import { intlLocaleByLocale, type Locale } from "@/i18n/config";
 
 export interface ChangelogEntry {
   /** Stable slug: i18n key, URL anchor and `guid` of the RSS feed. */
@@ -126,15 +126,10 @@ export function hasRecentChangelog(now: number = Date.now()): boolean {
   return age < RECENT_CHANGELOG_DAYS * 24 * 60 * 60 * 1000;
 }
 
-/** The Intl format name of the language served. */
-function intlLocale(locale: Locale): string {
-  return locale === "fr" ? "fr-FR" : "en-GB";
-}
-
 /** Readable date in the language served, without depending on the server's time zone. */
 export function formatChangelogDate(iso: string, locale: Locale): string {
   const [year, month, day] = iso.split("-").map(Number);
-  return new Intl.DateTimeFormat(intlLocale(locale), {
+  return new Intl.DateTimeFormat(intlLocaleByLocale[locale], {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -156,7 +151,7 @@ export function formatChangelogAge(
   now: number = Date.now(),
 ): string {
   const published = Date.parse(`${iso}T00:00:00Z`);
-  const format = new Intl.RelativeTimeFormat(intlLocale(locale), {
+  const format = new Intl.RelativeTimeFormat(intlLocaleByLocale[locale], {
     numeric: "auto",
   });
 

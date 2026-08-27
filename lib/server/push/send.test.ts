@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { PushPayload } from "./payload";
+import type { PushLocale, PushPayload } from "./payload";
 
 /**
  * MIN-183 — maintenance of the subscription base.
@@ -249,7 +249,7 @@ describe("sendPushToUser", () => {
     ]);
     // Explicit signature: without it, `mock.calls` is typed on an empty tuple
     // and reading `c[0]` doesn't compile.
-    const payloadFor = vi.fn<(locale: "fr" | "en") => PushPayload>(() => PAYLOAD);
+    const payloadFor = vi.fn<(locale: PushLocale) => PushPayload>(() => PAYLOAD);
 
     const tally = await sendPushToUser(service, "u1", payloadFor);
 

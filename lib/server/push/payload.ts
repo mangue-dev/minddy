@@ -5,6 +5,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
+import de from "@/messages/de.json";
+import ptBR from "@/messages/pt-BR.json";
+import it from "@/messages/it.json";
+import es from "@/messages/es.json";
+import { supportedLocaleForTag, type Locale } from "@/i18n/config";
 import { displayName } from "@/lib/display-name";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import {
@@ -12,7 +17,8 @@ import {
   notificationLineKey,
 } from "@/lib/notification-target";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
-import { resolveApiKeyActors, type ApiKeyActor } from "@/lib/server/api-key-actors";
+import { resolveApiKeyActors, type ApiKeyActor,
+} from "@/lib/server/api-key-actors";
 import type { NotificationRow } from "@/lib/server/notifications";
 
 /**
@@ -50,17 +56,26 @@ export interface PushPayload {
   /** Relative path — the service worker resolves it to its origin. */
   url: string;
   /** Browser-side grouping: a burst on the same target REPLACES au
- * instead of stacking. Echo of `replaceUnread` on the inbox side. */
+   * instead of stacking. Echo of `replaceUnread` on the inbox side. */
   tag: string;
 }
 
-export type PushLocale = "fr" | "en";
+export type PushLocale = Locale;
 
-const CATALOGS: Record<PushLocale, typeof en> = { en, fr: fr as typeof en };
+const CATALOGS: Record<PushLocale, typeof en> = { en, fr: fr as typeof en,
+  de: de as typeof en,
+  "pt-BR": ptBR as typeof en,
+  it: it as typeof en,
+  es: es as typeof en,
+};
+
+export function pushMessages(locale: PushLocale): typeof en {
+  return CATALOGS[locale];
+}
 
 /** Normalizes a stored language (`"fr-FR"`, `"FR"`, `null`) to a catalog. */
 export function toPushLocale(raw: string | null | undefined): PushLocale {
-  return raw?.trim().toLowerCase().startsWith("fr") ? "fr" : "en";
+  return supportedLocaleForTag(raw) ?? "en";
 }
 
 export interface PushContext {
@@ -71,7 +86,7 @@ export interface PushContext {
   /** Title of a ROUTINE (MIN-185) — the banner only shows him. */
   routines: Map<string, string>;
   /** Number + title of a PULL REQUEST — the banner shows them as the
- * reference and title of a ticket. */
+   * reference and title of a ticket. */
   pullRequests: Map<string, { number: number; title: string | null }>;
   /** Title of a wiki PAGE (MIN-278) — the banner only shows it. */
   pages: Map<string, string>;
@@ -103,14 +118,14 @@ export function emptyPushContext(): PushContext {
  */
 export async function loadPushContext(
   service: SupabaseClient,
-  rows: readonly NotificationRow[]
+  rows: readonly NotificationRow[],
 ): Promise<PushContext> {
   const ctx = emptyPushContext();
   if (rows.length === 0) return ctx;
 
-  const ids = (pick: (r: NotificationRow) => string | null | undefined): string[] => [
-    ...new Set(rows.map(pick).filter((v): v is string => !!v)),
-  ];
+  const ids = (pick: (r: NotificationRow) => string | null | undefined,
+  ): string[] => [
+    ...new Set(rows.map(pick).filter((v): v is string => !!v))];
   const issueIds = ids((r) => r.issue_id);
   const conversationIds = ids((r) => r.agent_conversation_id);
   const objectiveIds = ids((r) => r.objective_id);
@@ -141,7 +156,8 @@ export async function loadPushContext(
           .select("id, number, title")
           .in("id", issueIds)
           .is("deleted_at", null)
-      : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
+      : Promise.resolve({ data: [] as { id: string; number: number; title: string }[],
+        }),
     conversationIds.length
       ? service.from("agent_conversations").select("id, title").in("id", conversationIds)
       : Promise.resolve({ data: [] as { id: string; title: string | null }[] }),
@@ -217,14 +233,15 @@ export async function loadPushContext(
 export function buildPushPayload(
   ctx: PushContext,
   row: NotificationRow,
-  locale: PushLocale
+  locale: PushLocale,
 ): PushPayload | null {
   const url = notificationTargetPath(row);
   if (!url) return null;
 
   const messages = CATALOGS[locale];
   const t = createTranslator({ locale, messages, namespace: "Inbox" });
-  const tTimeline = createTranslator({ locale, messages, namespace: "Timeline" });
+  const tTimeline = createTranslator({ locale, messages, namespace: "Timeline",
+  });
 
   // The title is WHAT we're talking about — the first line of the inbox. There
   // reference of the ticket in front: it is she who we recognize at a glance in
@@ -260,7 +277,9 @@ export function buildPushPayload(
     const key = row.project_id ? ctx.projectKeys.get(row.project_id) : null;
     title = key ? `${key}-${issue.number} · ${issue.title}` : issue.title;
   } else if (row.agent_conversation_id) {
-    const conversationTitle = ctx.agentConversations.get(row.agent_conversation_id);
+    const conversationTitle = ctx.agentConversations.get(
+      row.agent_conversation_id,
+    );
     if (conversationTitle === undefined) return null;
     title = conversationTitle || t("someAgentConversationFallback");
   } else {
@@ -274,8 +293,14 @@ export function buildPushPayload(
   if (row.via_smart_assign) {
     actor = "Smart Assign";
   } else if (row.via_mcp) {
-    const keyActor = row.api_key_id ? ctx.apiKeyActors.get(row.api_key_id) : null;
-    actor = mcpActorLabel(keyActor?.agent, keyActor?.name, tTimeline("mcpFallback"));
+    const keyActor = row.api_key_id
+      ? ctx.apiKeyActors.get(row.api_key_id)
+      : null;
+    actor = mcpActorLabel(
+      keyActor?.agent,
+      keyActor?.name,
+      tTimeline("mcpFallback"),
+    );
   } else if (row.via_assistant) {
     // Our agent outside MCP (MIN-278): the cat, the code agent. The same name as
     // the inbox gives it — otherwise the banner and the line would say two

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useLocale } from "next-intl";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 
@@ -17,7 +19,11 @@ import { useTrackView } from "@/lib/use-track-view";
  * redirects others to `/home` before arriving here.
  */
 export function LandingViewed() {
-  const { track } = useAnalytics();
-  useTrackView(true, "landing", () => track("landing_viewed", {}));
+  const locale = useLocale();
+  const { setAcquisitionContext, track } = useAnalytics();
+  useEffect(() => {
+    setAcquisitionContext(locale, window.location.pathname);
+  }, [locale, setAcquisitionContext]);
+  useTrackView(true, "landing", () => track("landing_viewed", { locale }));
   return null;
 }

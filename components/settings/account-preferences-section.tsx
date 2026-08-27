@@ -46,6 +46,10 @@ import { useAccountTheme } from "@/lib/use-account-theme";
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
   en: "English",
+  de: "Deutsch",
+  "pt-BR": "Português (Brasil)",
+  it: "Italiano",
+  es: "Español",
 };
 
 /** `""` = “we don’t know yet”: the theme only exists on the client side, and

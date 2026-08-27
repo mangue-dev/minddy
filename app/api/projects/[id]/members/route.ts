@@ -12,6 +12,7 @@ import {
   removeMember,
 } from "@/lib/server/members";
 import type { Invitation, Member } from "@/lib/types";
+import type { Locale } from "@/i18n/config";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     origin: canonicalAppOrigin(),
     // We do not know the language of the guest: we take that of the inviter,
     // who is the person from whom he expects the message.
-    locale: (await getLocale()) === "fr" ? "fr" : "en",
+    locale: (await getLocale()) as Locale,
   });
   if (!result.ok) {
     // `errorParams` carries the `{limit}` of `memberLimitReached`: a message to

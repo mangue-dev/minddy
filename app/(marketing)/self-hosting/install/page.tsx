@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
 import packageJson from "@/package.json";
-import enMessages from "@/messages/en.json";
-import frMessages from "@/messages/fr.json";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
+import { loadMessages } from "@/i18n/messages";
 import { localizedHref } from "@/lib/locale-href";
 import { MINDDY_REPOSITORY_URL, SITE_URL } from "@/lib/site";
 import {
@@ -17,7 +16,8 @@ import {
 } from "@/components/marketing/self-hosting-install-wizard";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return publicPageMetadata({ routeKey: "selfHostingInstall", locale: (await getLocale()) as Locale });
+  return publicPageMetadata({ routeKey: "selfHostingInstall", locale: (await getLocale()) as Locale,
+  });
 }
 
 export default async function SelfHostingInstallPage({
@@ -26,7 +26,7 @@ export default async function SelfHostingInstallPage({
   searchParams: Promise<{ route?: string | string[] }>;
 }) {
   const locale = (await getLocale()) as Locale;
-  const messages = locale === "fr" ? frMessages : enMessages;
+  const messages = await loadMessages(locale);
   const copy = messages.SelfHostingInstall as SelfHostingInstallCopy;
   const releaseTag = `v${packageJson.version}`;
   const [confirmSignupTemplate, resetPasswordTemplate] = await Promise.all([
@@ -34,7 +34,8 @@ export default async function SelfHostingInstallPage({
     readSelfHostingEmailTemplate("reset-password"),
   ]);
   const routeParam = (await searchParams).route;
-  const initialPath = routeParam === "local" || routeParam === "team" ? routeParam : null;
+  const initialPath =
+    routeParam === "local" || routeParam === "team" ? routeParam : null;
 
   return (
     <div className="min-h-[calc(100dvh-4rem)] bg-muted/20">

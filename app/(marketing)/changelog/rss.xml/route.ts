@@ -2,8 +2,9 @@ import type { NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
-import { CHANGELOG_FEED_PATH, changelogFeedStylePath } from "@/lib/changelog-feed";
-import { routeByKey } from "@/lib/public-routes";
+import { CHANGELOG_FEED_PATH, changelogFeedStylePath,
+} from "@/lib/changelog-feed";
+import { publicPathForLocale, routeByKey } from "@/lib/public-routes";
 import { SITE_URL } from "@/lib/site";
 import type { MessageKey } from "@/lib/i18n-keys";
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const t = await getTranslations({ locale, namespace: "Changelog" });
   const route = routeByKey("changelog");
-  const pageUrl = `${SITE_URL}${locale === "fr" ? route.fr : route.en}`;
+  const pageUrl = `${SITE_URL}${publicPathForLocale(route, locale)}`;
   const feedUrl = `${SITE_URL}${CHANGELOG_FEED_PATH}${locale === defaultLocale ? "" : `?locale=${locale}`}`;
 
   const items = CHANGELOG_ENTRIES.map((entry) =>
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     <title>minddy · ${escapeXml(t("metaTitle"))}</title>
     <link>${escapeXml(pageUrl)}</link>
     <description>${escapeXml(t("metaDescription"))}</description>
-    <language>${locale === "fr" ? "fr-fr" : "en-us"}</language>
+    <language>${RSS_LANGUAGE[locale]}</language>
     <lastBuildDate>${rfc822(CHANGELOG_ENTRIES[0].date)}</lastBuildDate>
     <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />
 ${items}
@@ -83,10 +84,20 @@ ${items}
       // by the `<link rel="alternate" type="application/rss+xml">` of the `<head>`
       // of the page, which keeps the canonical type.
       "Content-Type": "text/xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+      "Cache-Control":
+        "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
     },
   });
 }
+
+const RSS_LANGUAGE: Record<Locale, string> = {
+  en: "en-us",
+  fr: "fr-fr",
+  de: "de-de",
+  "pt-BR": "pt-br",
+  it: "it-it",
+  es: "es-es",
+};
 
 /** Short ISO date → RFC 822 date, the only one that RSS 2.0 accepts. */
 function rfc822(iso: string): string {

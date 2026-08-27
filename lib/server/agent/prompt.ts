@@ -7,6 +7,7 @@ import { groupReviewThreads, type ReviewCommentLike, type ReviewThreadState } fr
 // for the gesture and for the sentence which names it. `repo-host` is also without DB
 // nor import server-only — it goes into the microVM bundle.
 import { HISTORY_WINDOW_DAYS, PR_BASE_TAG } from "./repo-host";
+import { responseLanguageInstruction } from "@/lib/locale-language";
 
 /**
  * Cloud code agent prompts (MIN-46, unbridled as CONVERSATIONAL agent).
@@ -600,7 +601,9 @@ export function buildPrReviewSystemPrompt(input: {
   /** The tool names of the engine that plays the replay (MIN-286). */
   n?: PromptToolNames;
 }): string {
-  const language = input.locale === "fr" ? "French" : "English";
+  const language = responseLanguageInstruction(input.locale, {
+    mentionIssueTerm: true,
+  });
   const n = input.n ?? LOOP_TOOL_NAMES;
   const shellNote = reviewShellOutputNote(n);
   const attachments = input.images === true

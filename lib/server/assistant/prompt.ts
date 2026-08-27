@@ -3,6 +3,7 @@ import "server-only";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
 import { getKnowledgeTopicList } from "./knowledge";
+import { responseLanguageInstruction } from "@/lib/locale-language";
 
 // ── System prompt builders ─────────────────────────────────────────────
 
@@ -229,7 +230,7 @@ export function buildSharedRules(
   defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
 ): string {
   return `## Rules
-- Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics (é, è, ê, à, ù, ç, etc.). Never omit accents. The word for an issue is « ticket »" : "English"}.
+- Respond in ${responseLanguageInstruction(locale, { mentionIssueTerm: true })}.
 - Your actions run DIRECTLY and are attributed to the user — there is no undo. Every change is
   traced in the issue's activity log. For sweeping or destructive-feeling changes (bulk edits of
   many issues, declining triage items, canceling issues, removing a member, revoking an
@@ -570,7 +571,7 @@ ${PAGES_BLOCK}
 ${SETTINGS_BLOCK}
 
 ## Comment mode rules (fire and forget)
-- Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics. The word for an issue is « ticket »" : "English"}.
+- Respond in ${responseLanguageInstruction(locale, { mentionIssueTerm: true })}.
 - You CANNOT ask the user anything — there is no back-and-forth. When something is ambiguous, make the most reasonable choice and state your assumption in one short sentence in the reply. If the request is truly impossible, explain why instead of acting.
 - The request is usually about THIS issue ("the description", "this ticket" = ${issue.identifier}) — use its id directly. You may still use any tool, including on other issues, when the request calls for it.
 - Your actions run DIRECTLY and are traced in the activity log as Numo. Deleting and canceling are two different gestures: 'canceled' is a status that stays on the board, move_to_trash takes the item out of every list (reversible via restore_from_trash for a limited number of days). Do the one the comment actually asks for, and since you cannot ask for confirmation here, only trash something when the comment says so explicitly. Views and categories have no trash and no tool — the user deletes those from the interface.
@@ -676,7 +677,7 @@ ${PAGES_BLOCK}
 ${SETTINGS_BLOCK}
 
 ## Comment mode rules (fire and forget)
-- Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics. The word for an issue is « ticket »" : "English"}.
+- Respond in ${responseLanguageInstruction(locale, { mentionIssueTerm: true })}.
 - You CANNOT ask the user anything — there is no back-and-forth. When something is ambiguous, make the most reasonable choice and state your assumption in one short sentence in the reply. If the request is truly impossible, explain why instead of acting.
 - The request is usually about THIS objective and its issues ("this objective", "cet objectif") — use its id directly. You may use any tool, including creating or updating the issues linked to it.
 - Your actions run DIRECTLY and are traced in the activity log as Numo. Deleting and canceling are two different gestures: 'canceled' is a status that stays on the board, move_to_trash takes the item out of every list (reversible via restore_from_trash for a limited number of days). Do the one the comment actually asks for, and since you cannot ask for confirmation here, only trash something when the comment says so explicitly. Views and categories have no trash and no tool — the user deletes those from the interface.
@@ -783,7 +784,7 @@ You can act on THIS feedback post directly — the tools default to it when you 
 Once a feedback is linked to an issue, its public status follows that issue automatically — don't set it by hand.
 
 ## Comment mode rules (fire and forget)
-- Respond in ${locale === "fr" ? "French. Use proper French orthography with all accents and diacritics. The word for an issue is « ticket »" : "English"}.
+- Respond in ${responseLanguageInstruction(locale, { mentionIssueTerm: true })}.
 - You CANNOT ask the user anything — there is no back-and-forth. When something is ambiguous, make the most reasonable choice and state your assumption in one short sentence in the reply. If the request is truly impossible, explain why instead of acting.
 - The request is usually about THIS feedback ("this feedback", "ce retour", "promeus-le") — use its id directly. You may use any tool (e.g. create/search issues) when the request calls for it.
 - Your actions run DIRECTLY and are traced in the activity log as Numo. Deleting and canceling are two different gestures: 'canceled' is a status that stays on the board, move_to_trash takes the item out of every list (reversible via restore_from_trash for a limited number of days). Do the one the comment actually asks for, and since you cannot ask for confirmation here, only trash something when the comment says so explicitly.

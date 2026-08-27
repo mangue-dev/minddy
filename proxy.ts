@@ -10,7 +10,8 @@ import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 import { detectFromAcceptLanguage } from "@/lib/accept-language";
 import {
   PUBLIC_ROUTE_PATHS,
-  englishPathForFrench,
+  localeForPublicPath,
+  publicPathForLocale,
   routeByPath,
 } from "@/lib/public-routes";
 import { isProtectedPath } from "@/lib/protected-prefixes";
@@ -19,6 +20,7 @@ import {
   ACCOUNT_THEME_HEADER,
   resolveAccountTheme,
 } from "@/lib/account-theme";
+import { supportedLocaleForTag } from "@/i18n/config";
 import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
@@ -320,16 +322,14 @@ function awaitsMfaChallenge(session: { access_token?: string } | null): boolean 
 }
 
 /**
- * Public site: language carried by the URL (MIN-88). `/fr/tarifs` is rewritten
- * to `/pricing` by making `x-minddy-locale: fr` — a single code page,
- * two indexable URLs. Without a header, the same URL served both languages
- * according to a cookie: Googlebot only saw English, and half of the content
- * on the site didn't exist for anyone.
+ * Public site: language carried by the URL (MIN-88). A localized path is
+ * rewritten to its canonical English route with `x-minddy-locale`, so one page
+ * implementation can serve independently indexable and measurable variants.
  */
 function serveLocalizedPublicRoute(request: NextRequest, pathname: string): NextResponse {
-  const englishPath = englishPathForFrench(pathname);
-  const locale = englishPath ? "fr" : "en";
   const route = routeByPath(pathname);
+  const locale = localeForPublicPath(pathname) ?? "en";
+  const englishPath = route?.en ?? pathname;
   const headers: Record<string, string> = {
     [PUBLIC_THEME_HEADER]: "1",
     [LOCALE_HEADER]: locale,
@@ -354,7 +354,7 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
     );
   }
 
-  const response = englishPath
+  const response = pathname !== englishPath
     ? NextResponse.rewrite(
         rewriteTo(request, englishPath),
         withRequestHeaders(request, headers),
@@ -432,29 +432,31 @@ export async function proxy(request: NextRequest) {
         return applySession(NextResponse.redirect(new URL("/home", request.url)));
       }
 
-      // French-speaking visitor on `/` → `/fr`. Cookie first (a preference
-      // explicit), the `Accept-Language` then. Before localized URLs, the
-      // cookie made `/` render in French; now that the language is
-      // carried by the URL, the only way to continue honoring it is to send
-      // the visitor to the correct URL.
+      // Visitor with a supported preference on `/` → its localized landing.
+      // Cookie first (an explicit preference), then `Accept-Language`.
       //
       // TEMPORAIRE (307), jamais permanent : `/` doit rester crawlable telle
       // what, and Googlebot has neither cookies nor French `Accept-Language` — it
       // therefore always receives 200 on the English version.
       if (pathname === "/") {
-        const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
+        const cookieLocale = supportedLocaleForTag(
+          request.cookies.get("NEXT_LOCALE")?.value,
+        );
         const preferred =
           cookieLocale ??
           detectFromAcceptLanguage(request.headers.get("accept-language"));
-        if (preferred === "fr") {
+        const preferredPath = route && preferred
+          ? publicPathForLocale(route, preferred)
+          : "/";
+        if (preferredPath !== "/") {
           // `nextUrl.clone()`, and above all NOT `new URL("/fr", request.url)`:
           // a relative URL starts from the root and deletes the query. A
-          // French speaking arriving on `/?utm_source=…` was sent to a
-          // `/fr` nu — the attribution of the visit left with, and the landing
+          // A localized visitor arriving on `/?utm_source=…` was previously sent
+          // to a bare locale path — the attribution left with the query, and the landing
           // registered as `$direct`. This is exactly the traffic (campaign,
           // launch, newsletter) that we seek to measure.
           const target = request.nextUrl.clone();
-          target.pathname = "/fr";
+          target.pathname = preferredPath;
           return applySession(NextResponse.redirect(target, 307));
         }
       }

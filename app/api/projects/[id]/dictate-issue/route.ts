@@ -29,6 +29,7 @@ import {
   isDateOrNull,
 } from "@/lib/issue-validation";
 import type { IssueDraftPatch } from "@/lib/types";
+import { responseLanguageInstruction } from "@/lib/locale-language";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -313,7 +314,7 @@ ${JSON.stringify(draft, null, 1)}
 ## Rules
 ${modeRules}
 - Only pass ids listed above. If something matches nothing (unknown member, category…), do not guess — say so in your reply instead.
-- After your tool call(s), reply with ONE short plain sentence in ${locale === "fr" ? "French (with proper accents; an issue is « ticket »)" : "English"} summarizing what you changed, or explaining why you changed nothing. No markdown, no emoji, no ids.`;
+- After your tool call(s), reply with ONE short plain sentence in ${responseLanguageInstruction(locale, { mentionIssueTerm: true })} summarizing what you changed, or explaining why you changed nothing. No markdown, no emoji, no ids.`;
 }
 
 type OpenRouterMessage = {

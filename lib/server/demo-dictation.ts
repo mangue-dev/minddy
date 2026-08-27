@@ -1,6 +1,7 @@
 import "server-only";
 
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
+import { responseLanguageInstruction } from "@/lib/locale-language";
 import { avatarDataUri } from "@/lib/avatar";
 import { ISSUE_PRIORITIES, isPriority } from "@/lib/issue-validation";
 import {
@@ -172,7 +173,7 @@ ${members.map((m) => `- ${m.id} = ${m.name}`).join("\n")}
 ${categories.map((c) => `- ${c.id} = ${c.name}`).join("\n")}
 
 ## Rules
-- Write title and description in ${locale === "fr" ? "French (with proper accents)" : "English"}, whatever language the sentence is in.
+- Write title and description in ${responseLanguageInstruction(locale)}, whatever language the sentence is in.
 - The title says what the work IS, imperative and concrete — never a transcript of the sentence.
 - The description restates what was said, faithfully. NEVER invent facts, steps, causes or numbers.
 - Always set priority: read it from the words when stated, estimate it from urgency and impact otherwise.

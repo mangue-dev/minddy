@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { locales, type Locale } from "@/i18n/config";
-import { routeByKey, type PublicRouteKey } from "@/lib/public-routes";
+import {
+  publicPathForLocale,
+  publicRouteVariants,
+  routeByKey, type PublicRouteKey,
+} from "@/lib/public-routes";
 import { SITE_URL } from "@/lib/site";
 
 /**
@@ -13,14 +17,20 @@ import { SITE_URL } from "@/lib/site";
  * description, no canonical, and no sharing sticker (Next does derive
  * `twitter:*` from `openGraph`, but it cannot derive anything that doesn't exist).
  *
- * What it produces, for any public page and in both languages :
- * `title`, `description`, `canonical`, the three `hreflang` (`en`, `fr`,
- * `x-default`), the complete `openGraph` block and the explicit `twitter` block.
+ * What it produces for any public page and each explicit locale variant:
+ * `title`, `description`, `canonical`, reciprocal `hreflang` entries,
+ * the complete `openGraph` block, and the explicit `twitter` block.
  *
- * `x-default` points to English: this is the version served to those who have not expressed a preference, and the only one that exists for all pages.
+ * `x-default` points to English: this is the version served to visitors who
+ * have not expressed a supported preference. Every page exists in all locales.
  */
 
-const OG_LOCALE: Record<Locale, string> = { en: "en_US", fr: "fr_FR" };
+const OG_LOCALE: Record<Locale, string> = { en: "en_US", fr: "fr_FR",
+  de: "de_DE",
+  "pt-BR": "pt_BR",
+  it: "it_IT",
+  es: "es_ES",
+};
 
 /**
  * Sharing block of a public page without a dedicated thumbnail (MIN-95).
@@ -121,17 +131,16 @@ export async function publicPageMetadata({
 
   const title = t("metaTitle");
   const description = t("metaDescription");
-  const path = locale === "fr" ? route.fr : route.en;
+  const path = publicPathForLocale(route, locale);
   const image = ogImageUrl(routeKey, locale);
 
   // `languages` must list ALL variants, including the one on the page
   // common: a hreflang that does not reference itself is reported as
   // "missing return" by Search Console, and the group is ignored.
-  const languages: Record<string, string> = {
-    en: route.en,
-    fr: route.fr,
-    "x-default": route.en,
-  };
+  const languages: Record<string, string> = Object.fromEntries(
+    publicRouteVariants(route).map((variant) => [variant.locale, variant.path]),
+  );
+  languages["x-default"] = route.en;
 
   return {
     title: route.titleIsAbsolute ? { absolute: title } : title,

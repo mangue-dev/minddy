@@ -8,6 +8,11 @@ import {
 } from "./changelog";
 import en from "../messages/en.json";
 import fr from "../messages/fr.json";
+import de from "../messages/de.json";
+import ptBR from "../messages/pt-BR.json";
+import itMessages from "../messages/it.json";
+import es from "../messages/es.json";
+import type { Locale } from "@/i18n/config";
 
 /**
  * The changelog is the only page whose content grows with each delivery, and
@@ -16,7 +21,12 @@ import fr from "../messages/fr.json";
  * a list that has been completed from the bottom.
  */
 
-const catalogues = { en: en.Changelog, fr: fr.Changelog } as Record<
+const catalogues = { en: en.Changelog, fr: fr.Changelog,
+  de: de.Changelog,
+  "pt-BR": ptBR.Changelog,
+  it: itMessages.Changelog,
+  es: es.Changelog,
+} as Record<
   string,
   Record<string, string>
 >;
@@ -26,7 +36,7 @@ describe("changelog entries", () => {
     expect(CHANGELOG_ENTRIES.length).toBeGreaterThan(0);
   });
 
-  it("gives every entry a title and a body in both languages", () => {
+  it("gives every entry a title and a body in every language", () => {
     for (const entry of CHANGELOG_ENTRIES) {
       for (const [locale, messages] of Object.entries(catalogues)) {
         expect(
@@ -45,7 +55,9 @@ describe("changelog entries", () => {
     for (const entry of CHANGELOG_ENTRIES) {
       expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       // `2026-07-32` passes the regex but not this.
-      expect(new Date(`${entry.date}T00:00:00Z`).toISOString().slice(0, 10)).toBe(entry.date);
+      expect(
+        new Date(`${entry.date}T00:00:00Z`).toISOString().slice(0, 10),
+      ).toBe(entry.date);
     }
   });
 
@@ -55,11 +67,11 @@ describe("changelog entries", () => {
   });
 
   /**
- * The list is rendered as is, and its first entry becomes the page's
- * `lastModified` in the sitemap. An entry added at the bottom
- * would therefore go unnoticed by the engines, which is exactly the opposite of
- * but.
- */
+   * The list is rendered as is, and its first entry becomes the page's
+   * `lastModified` in the sitemap. An entry added at the bottom
+   * would therefore go unnoticed by the engines, which is exactly the opposite of
+   * but.
+   */
   it("stays sorted newest first", () => {
     const dates = CHANGELOG_ENTRIES.map((entry) => entry.date);
     expect(dates).toEqual([...dates].sort().reverse());
@@ -75,15 +87,19 @@ describe("changelog freshness", () => {
   const DAY = 24 * 60 * 60 * 1000;
   const latest = Date.parse(`${CHANGELOG_LAST_MODIFIED}T00:00:00Z`);
 
-  it("s'allume le jour de la livraison, y compris avant minuit UTC", () => {
+  it("lights up on release day, including before UTC midnight", () => {
     expect(hasRecentChangelog(latest)).toBe(true);
     // Paris, 1 a.m. on the day of release: again the day before in UTC.
     expect(hasRecentChangelog(latest - 2 * 60 * 60 * 1000)).toBe(true);
   });
 
-  it("tient cinq jours, pas six", () => {
-    expect(hasRecentChangelog(latest + RECENT_CHANGELOG_DAYS * DAY - 1)).toBe(true);
-    expect(hasRecentChangelog(latest + RECENT_CHANGELOG_DAYS * DAY)).toBe(false);
+  it("lasts five days, not six", () => {
+    expect(hasRecentChangelog(latest + RECENT_CHANGELOG_DAYS * DAY - 1)).toBe(
+      true,
+    );
+    expect(hasRecentChangelog(latest + RECENT_CHANGELOG_DAYS * DAY)).toBe(
+      false,
+    );
   });
 });
 
@@ -91,7 +107,7 @@ describe("changelog freshness", () => {
 describe("changelog age", () => {
   const DAY = 24 * 60 * 60 * 1000;
   const published = Date.parse("2026-07-20T00:00:00Z");
-  const age = (now: number, locale: "en" | "fr" = "en") =>
+  const age = (now: number, locale: Locale = "en") =>
     formatChangelogAge("2026-07-20", locale, now);
 
   it("counts in days in the served language", () => {
@@ -99,14 +115,18 @@ describe("changelog age", () => {
     expect(age(published + DAY)).toBe("yesterday");
     expect(age(published + 3 * DAY)).toBe("3 days ago");
     expect(age(published + 3 * DAY, "fr")).toBe("il y a 3 jours");
+    expect(age(published + 3 * DAY, "de")).toBe("vor 3 Tagen");
+    expect(age(published + 3 * DAY, "pt-BR")).toBe("há 3 dias");
+    expect(age(published + 3 * DAY, "it")).toBe("3 giorni fa");
+    expect(age(published + 3 * DAY, "es")).toBe("hace 3 días");
   });
 
   /**
- * Dates are written in UTC-midnight: a reader east of UTC opens the
- * page while today's delivery is still "in the future". Without
- * floor, the page would say "in 4 hours".
- */
-  it("ne parle jamais au futur", () => {
+   * Dates are written in UTC-midnight: a reader east of UTC opens the
+   * page while today's delivery is still "in the future". Without
+   * floor, the page would say "in 4 hours".
+   */
+  it("never describes a publication as being in the future", () => {
     expect(age(published - 4 * 60 * 60 * 1000)).toBe("today");
   });
 

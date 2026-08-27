@@ -1,7 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { BILLING_PLANS } from "@/lib/billing-plans";
 import { CONTACT_EMAIL, MCP_ENDPOINT, SITE_URL } from "@/lib/site";
-import { routeByKey, type PublicRouteKey } from "@/lib/public-routes";
+import {
+  publicPathForLocale,
+  routeByKey, type PublicRouteKey,
+} from "@/lib/public-routes";
 import type { Locale } from "@/i18n/config";
 import { FAQ_KEYS, MCP_FAQ_KEYS, PRICING_FAQ_KEYS } from "./faq-keys";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -40,7 +43,12 @@ import type { MessageKey } from "@/lib/i18n-keys";
 /** The six areas of the product, as the nav already names them — same order. */
 const FEATURE_KEYS = ["tracker", "agents", "numo", "speed", "feedback", "more"] as const;
 
-const LANG_TAG: Record<Locale, string> = { en: "en-US", fr: "fr-FR" };
+const LANG_TAG: Record<Locale, string> = { en: "en-US", fr: "fr-FR",
+  de: "de-DE",
+  "pt-BR": "pt-BR",
+  it: "it-IT",
+  es: "es-ES",
+};
 
 /** The page whose graph is rendered, by variant. */
 const VARIANT_ROUTE: Record<StructuredDataVariant, PublicRouteKey> = {
@@ -72,10 +80,8 @@ export async function StructuredData({
 
   const inLanguage = LANG_TAG[locale] ?? LANG_TAG.en;
   const route = routeByKey(VARIANT_ROUTE[variant]);
-  const pageUrl = `${SITE_URL}${locale === "fr" ? route.fr : route.en}`;
-  const pricingUrl = `${SITE_URL}${
-    locale === "fr" ? routeByKey("pricing").fr : routeByKey("pricing").en
-  }`;
+  const pageUrl = `${SITE_URL}${publicPathForLocale(route, locale)}`;
+  const pricingUrl = `${SITE_URL}${publicPathForLocale(routeByKey("pricing"), locale)}`;
 
   const prices = BILLING_PLANS.map((plan) => plan.priceEurMonthly);
   const planNameKey = { free: "planFree", go: "planGo", pro: "planPro" } as const;
@@ -168,7 +174,7 @@ export async function StructuredData({
       "@type": "SoftwareApplication",
       "@id": `${SITE_URL}/#software`,
       name: "minddy",
-      url: `${SITE_URL}${routeByKey("home")[locale === "fr" ? "fr" : "en"]}`,
+      url: `${SITE_URL}${publicPathForLocale(routeByKey("home"), locale)}`,
       applicationCategory: "DeveloperApplication",
       operatingSystem: "Web",
       offers,

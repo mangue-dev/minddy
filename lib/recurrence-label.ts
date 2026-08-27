@@ -10,6 +10,7 @@
 import type { useFormatter, useTranslations } from "next-intl";
 import { dueDateHasTime } from "./due-date";
 import type { RecurrenceCadence } from "./recurrence";
+import { resolveApplicationLocale } from "./locale-language";
 
 type RecurrenceT = ReturnType<typeof useTranslations<"Recurrence">>;
 type Formatter = ReturnType<typeof useFormatter>;
@@ -20,7 +21,10 @@ type Formatter = ReturnType<typeof useFormatter>;
  * English rule without a table to maintain.
  */
 function ordinalDay(day: number, locale: string): string {
-  if (locale.startsWith("fr")) return day === 1 ? "1er" : String(day);
+  const resolved = resolveApplicationLocale(locale);
+  if (resolved === "fr") return day === 1 ? "1er" : String(day);
+  if (resolved === "de") return `${day}.`;
+  if (resolved !== "en") return String(day);
   const rule = new Intl.PluralRules("en", { type: "ordinal" }).select(day);
   const suffix = rule === "one" ? "st" : rule === "two" ? "nd" : rule === "few" ? "rd" : "th";
   return `${day}${suffix}`;

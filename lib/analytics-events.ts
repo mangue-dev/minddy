@@ -469,7 +469,7 @@ export interface AnalyticsEventProps {
   upgrade_prompt_clicked: { source: string };
 
   // ── Site public (MIN-73) ──
-  landing_viewed: NoProps;
+  landing_viewed: { locale: string };
   // `mcp_page`, `comparison` and `changelog`: the content pages added by
   //MIN-93. They exist only to be found — knowing which one leads
   // really at registration is half the lot measurement.

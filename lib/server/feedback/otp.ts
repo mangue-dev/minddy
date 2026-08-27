@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Locale } from "@/i18n/config";
+
 import { randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
@@ -55,7 +57,7 @@ export async function requestFeedbackOtp(params: {
   boardId: string;
   email: string;
   ip: string;
-  locale: "fr" | "en";
+  locale: Locale;
 }): Promise<RequestOtpResult> {
   const consoleEmail =
     process.env.EMAIL_PROVIDER?.trim() === "console" &&

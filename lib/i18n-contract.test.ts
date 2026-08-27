@@ -5,8 +5,12 @@ import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
+import de from "@/messages/de.json";
 import en from "@/messages/en.json";
+import es from "@/messages/es.json";
 import fr from "@/messages/fr.json";
+import itMessages from "@/messages/it.json";
+import ptBr from "@/messages/pt-BR.json";
 
 /**
  * The contract between CATALOG and CODE: a placeholder message must be
@@ -126,10 +130,16 @@ function findViolations(required: Set<string>): Violation[] {
   return violations;
 }
 
-describe("contrat i18n catalogue ↔ code", () => {
-  const requiredEn = keysRequiringValues(en as Catalog);
-  const requiredFr = keysRequiringValues(fr as Catalog);
-  const required = new Set([...requiredEn, ...requiredFr]);
+describe("i18n catalog ↔ code contract", () => {
+  const catalogs = { en, fr, de, "pt-BR": ptBr, it: itMessages, es } as const;
+  const requiredByLocale = Object.fromEntries(
+    Object.entries(catalogs).map(([locale, catalog]) => [
+      locale,
+      keysRequiringValues(catalog as Catalog),
+    ]),
+  ) as Record<keyof typeof catalogs, Set<string>>;
+  const requiredEn = requiredByLocale.en;
+  const required = new Set(Object.values(requiredByLocale).flatMap((keys) => [...keys]));
 
   it("the reference catalog contains messages with placeholders", () => {
     // Guardrail for the test itself: if detection broke, it would return an
@@ -141,9 +151,9 @@ describe("contrat i18n catalogue ↔ code", () => {
   it("no message with placeholders is called without its values", () => {
     const violations = findViolations(required);
     const report = violations
-      .map((v) => `  ${v.file}:${v.line} — ${v.key} attend des valeurs`)
+      .map((v) => `  ${v.file}:${v.line} — ${v.key} expects values`)
       .join("\n");
-    expect(violations, `Appels sans valeurs :\n${report}`).toEqual([]);
+    expect(violations, `Calls without values:\n${report}`).toEqual([]);
   });
 
   /**
@@ -155,21 +165,27 @@ describe("contrat i18n catalogue ↔ code", () => {
    */
   it.each([
     ["Changelog", CHANGELOG_ENTRIES.map((e) => e.id), ["entry_%_title", "entry_%_body"]],
-  ] as const)("le namespace %s couvre toutes ses clés construites", (namespace, ids, shapes) => {
+  ] as const)("the %s namespace covers every constructed key", (namespace, ids, shapes) => {
     const flat = new Set(leafPaths((namespace === "Changelog" ? en.Changelog : {}) as Catalog));
     const missing = ids
       .flatMap((id) => shapes.map((shape) => shape.replace("%", id)))
       .filter((key) => !flat.has(key));
-    expect(missing, `Clés absentes de ${namespace} : ${missing.join(", ")}`).toEqual([]);
+    expect(missing, `Missing ${namespace} keys: ${missing.join(", ")}`).toEqual([]);
   });
 
-  it("fr and en require the same values for the same key", () => {
+  it("all locales contain exactly the English keys", () => {
+    const englishKeys = leafPaths(en as Catalog).sort();
+    for (const catalog of Object.values(catalogs)) {
+      expect(leafPaths(catalog as Catalog).sort()).toEqual(englishKeys);
+    }
+  });
+
+  it("all locales require values for the same keys", () => {
     // A difference means that one translation lost or gained a placeholder:
     // the message is then broken in only one language, which a monolingual
     // review never catches.
-    const diverging = [...new Set([...requiredEn, ...requiredFr])]
-      .filter((key) => requiredEn.has(key) !== requiredFr.has(key))
-      .sort();
-    expect(diverging).toEqual([]);
+    for (const [locale, requiredLocale] of Object.entries(requiredByLocale)) {
+      expect([...requiredLocale].sort(), locale).toEqual([...requiredEn].sort());
+    }
   });
 });

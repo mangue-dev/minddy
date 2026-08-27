@@ -8,7 +8,14 @@
 
 import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { enUS as rdpEnUS, fr as rdpFr } from "react-day-picker/locale";
+import {
+  de as rdpDe,
+  enUS as rdpEnUS,
+  es as rdpEs,
+  fr as rdpFr,
+  it as rdpIt,
+  ptBR as rdpPtBR,
+} from "react-day-picker/locale";
 import {
   Popover,
   PopoverAnchor,
@@ -39,6 +46,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { Locale } from "@/i18n/config";
 
 /** Default time applied when the time toggle is switched on. */
 const DEFAULT_HOUR = 9;
@@ -47,7 +55,7 @@ const DEFAULT_HOUR = 9;
 // not with every route that renders a date field. The fallback holds the
 // calendar's footprint so the popover doesn't collapse while it streams in.
 const CalendarSurface = React.lazy(() =>
-  import("@/components/calendar").then((m) => ({ default: m.Calendar }))
+  import("@/components/calendar").then((m) => ({ default: m.Calendar })),
 );
 const CALENDAR_FALLBACK = "h-[300px] w-72 animate-pulse rounded-md bg-muted/50";
 
@@ -117,7 +125,14 @@ export function DateTimePicker({
   const locale = useLocale();
   // Locale objects come from a tiny standalone subpath — only DayPicker itself
   // (via <Calendar> below) is heavy enough to deserve the lazy boundary.
-  const dfLocale = locale === "fr" ? rdpFr : rdpEnUS;
+  const dfLocale = {
+    en: rdpEnUS,
+    fr: rdpFr,
+    de: rdpDe,
+    "pt-BR": rdpPtBR,
+    it: rdpIt,
+    es: rdpEs,
+  }[locale as Locale];
 
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -244,7 +259,8 @@ export function DateTimePicker({
     const base = parseDueDate(value);
     if (!isRecurring || !recurrence || !base) return [];
     const from = new Date(month.getFullYear(), month.getMonth(), 1 - 7);
-    const to = new Date(month.getFullYear(), month.getMonth() + 1, 7, 23, 59, 59, 999);
+    const to = new Date(month.getFullYear(), month.getMonth() + 1, 7, 23, 59, 59, 999,
+    );
     return occurrencesBetween(base, recurrence, from, to);
   }, [isRecurring, recurrence, value, month]);
 
@@ -315,8 +331,12 @@ export function DateTimePicker({
   if (variant === "value") {
     trigger = (
       <button type="button" aria-label={ariaLabel} className={cn(VALUE_TRIGGER, className)}>
-        {isRecurring && <Repeat className="size-3.5 shrink-0 text-muted-foreground" />}
-        {label ?? <span className="text-muted-foreground">{placeholderText}</span>}
+        {isRecurring && (
+          <Repeat className="size-3.5 shrink-0 text-muted-foreground" />
+        )}
+        {label ?? (
+          <span className="text-muted-foreground">{placeholderText}</span>
+        )}
       </button>
     );
   } else if (variant === "chip") {
@@ -380,7 +400,8 @@ export function DateTimePicker({
         <PopoverAnchor asChild>
           <span
             aria-hidden
-            style={{ position: "fixed", left: anchor?.x ?? 0, top: anchor?.y ?? 0 }}
+            style={{ position: "fixed", left: anchor?.x ?? 0, top: anchor?.y ?? 0,
+            }}
           />
         </PopoverAnchor>
       ) : (

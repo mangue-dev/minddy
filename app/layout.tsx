@@ -23,11 +23,21 @@ import {
   isAccountTheme,
 } from "@/lib/account-theme";
 import { SITE_NAME, SITE_URL, SITE_VERIFICATION } from "@/lib/site";
+import type { Locale } from "@/i18n/config";
 import "./globals.css";
 
 // Operator-controlled metadata and client boot settings must be read when the
 // container starts, never while the image is built.
 export const dynamic = "force-dynamic";
+
+const OPEN_GRAPH_LOCALE: Record<Locale, string> = {
+  en: "en_US",
+  fr: "fr_FR",
+  de: "de_DE",
+  "pt-BR": "pt_BR",
+  it: "it_IT",
+  es: "es_ES",
+};
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const instrumentSerif = Instrument_Serif({
@@ -90,7 +100,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       siteName: "minddy",
-      locale: locale === "fr" ? "fr_FR" : "en_US",
+      locale: OPEN_GRAPH_LOCALE[locale as Locale],
       url: SITE_URL,
       title: "minddy",
       description: t("description"),

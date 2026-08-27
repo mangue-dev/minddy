@@ -73,6 +73,102 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     expired: "it waited too long to start",
     stalled: "it stopped with nothing left to resume",
   },
+  de: {
+    quota: "das KI-Nutzungsbudget des Kontos aufgebraucht ist",
+    verification_failed:
+      "die Implementierung ihre eigene Prüfung nicht bestanden hat",
+    interrupted: "jemand die laufende Sitzung unterbrochen hat",
+    run_failed: "eine Sitzung fehlgeschlagen ist",
+    max_steps: "die Kette ihre maximale Schrittzahl erreicht hat",
+    noRepo: "das Projekt kein verknüpftes Repository hat",
+    unsupportedProvider:
+      "der Anbieter des verknüpften Repositorys den Agenten nicht unterstützt",
+    alreadyRunning:
+      "bereits eine andere Sitzung an diesem Ticket gearbeitet hat",
+    quotaExceeded: "das KI-Nutzungsbudget des Kontos aufgebraucht ist",
+    noModelForProvider: "für diesen Anbieter kein Modell verfügbar ist",
+    modelAbovePlan: "das angeforderte Modell über dem Tariflimit liegt",
+    executionBackendUnavailable:
+      "auf dieser Instanz keine Ausführungsumgebung konfiguriert ist",
+    promptRequired: "für den Schritt keine Anweisung vorlag",
+    issueNotFound: "das Ticket nicht mehr existiert",
+    entitlement: "Automatisierungen nicht im Projekttarif enthalten sind",
+    taken_over: "jemand das Ticket übernommen hat",
+    gone: "das Ticket oder Projekt gelöscht wurde",
+    expired: "sie zu lange auf den Start gewartet hat",
+    stalled: "sie ohne fortsetzbaren Stand angehalten hat",
+  },
+  "pt-BR": {
+    quota: "o orçamento de uso de IA da conta acabou",
+    verification_failed: "a implementação não passou na própria verificação",
+    interrupted: "alguém interrompeu a sessão em andamento",
+    run_failed: "uma sessão terminou com falha",
+    max_steps: "a cadeia atingiu o número máximo de etapas",
+    noRepo: "o projeto não tem um repositório vinculado",
+    unsupportedProvider:
+      "o provedor do repositório vinculado não oferece suporte ao agente",
+    alreadyRunning: "outra sessão já estava trabalhando na tarefa",
+    quotaExceeded: "o orçamento de uso de IA da conta acabou",
+    noModelForProvider: "nenhum modelo está disponível para este provedor",
+    modelAbovePlan: "o modelo solicitado ultrapassa o limite do plano",
+    executionBackendUnavailable:
+      "nenhum ambiente de execução está configurado na instância",
+    promptRequired: "a etapa não tinha uma instrução para enviar",
+    issueNotFound: "a tarefa não existe mais",
+    entitlement: "as automações não estão incluídas no plano do projeto",
+    taken_over: "alguém assumiu a tarefa",
+    gone: "a tarefa ou o projeto foi excluído",
+    expired: "ela esperou tempo demais para começar",
+    stalled: "ela parou sem deixar nada para retomar",
+  },
+  it: {
+    quota: "il budget di utilizzo dell'IA dell'account è esaurito",
+    verification_failed:
+      "l'implementazione non ha superato la propria verifica",
+    interrupted: "qualcuno ha interrotto la sessione in corso",
+    run_failed: "una sessione è terminata con un errore",
+    max_steps: "la catena ha raggiunto il numero massimo di passaggi",
+    noRepo: "il progetto non ha un repository collegato",
+    unsupportedProvider:
+      "il provider del repository collegato non supporta l'agente",
+    alreadyRunning: "un'altra sessione stava già lavorando sul ticket",
+    quotaExceeded: "il budget di utilizzo dell'IA dell'account è esaurito",
+    noModelForProvider: "non è disponibile alcun modello per questo provider",
+    modelAbovePlan: "il modello richiesto supera il limite del piano",
+    executionBackendUnavailable:
+      "nell'istanza non è configurato alcun ambiente di esecuzione",
+    promptRequired: "il passaggio non conteneva istruzioni da inviare",
+    issueNotFound: "il ticket non esiste più",
+    entitlement: "le automazioni non sono incluse nel piano del progetto",
+    taken_over: "qualcuno ha preso in carico il ticket",
+    gone: "il ticket o il progetto è stato eliminato",
+    expired: "ha atteso troppo a lungo prima di iniziare",
+    stalled: "si è fermata senza lasciare nulla da riprendere",
+  },
+  es: {
+    quota: "el presupuesto de uso de IA de la cuenta se ha agotado",
+    verification_failed: "la implementación no superó su propia verificación",
+    interrupted: "alguien interrumpió la sesión en curso",
+    run_failed: "una sesión terminó con un error",
+    max_steps: "la cadena alcanzó el número máximo de pasos",
+    noRepo: "el proyecto no tiene un repositorio vinculado",
+    unsupportedProvider:
+      "el proveedor del repositorio vinculado no admite el agente",
+    alreadyRunning: "otra sesión ya estaba trabajando en la incidencia",
+    quotaExceeded: "el presupuesto de uso de IA de la cuenta se ha agotado",
+    noModelForProvider: "no hay ningún modelo disponible para este proveedor",
+    modelAbovePlan: "el modelo solicitado supera el límite del plan",
+    executionBackendUnavailable:
+      "no hay ningún entorno de ejecución configurado en la instancia",
+    promptRequired: "el paso no tenía ninguna instrucción que enviar",
+    issueNotFound: "la incidencia ya no existe",
+    entitlement:
+      "las automatizaciones no están incluidas en el plan del proyecto",
+    taken_over: "alguien se hizo cargo de la incidencia",
+    gone: "la incidencia o el proyecto se eliminó",
+    expired: "esperó demasiado para empezar",
+    stalled: "se detuvo sin dejar nada que reanudar",
+  },
 };
 
 const STRINGS: Record<
@@ -104,7 +200,8 @@ const STRINGS: Record<
   },
   en: {
     header: "Numo automation",
-    awaiting: "The plan is written and checked. The rest is waiting on your go-ahead.",
+    awaiting:
+      "The plan is written and checked. The rest is waiting on your go-ahead.",
     completed: "The chain ran to the end.",
     stopped: (reason) => `The chain stopped: ${reason}.`,
     steps: (n) => `${n} step${n > 1 ? "s" : ""} played`,
@@ -113,6 +210,61 @@ const STRINGS: Record<
     blockers: "Blockers",
     resume: "Continue or stop it from the issue panel.",
     unknownReason: "an execution condition was no longer met",
+  },
+  de: {
+    header: "Numo-Automatisierung",
+    awaiting:
+      "Der Plan ist erstellt und geprüft. Für den nächsten Schritt fehlt nur deine Freigabe.",
+    completed: "Die Kette wurde vollständig ausgeführt.",
+    stopped: (reason) => `Die Kette wurde angehalten, weil ${reason}.`,
+    steps: (n) => `${n} Schritt${n === 1 ? "" : "e"} ausgeführt`,
+    spent: (percent) => `${percent} des Monatsbudgets verbraucht`,
+    verdict: "Ergebnis",
+    blockers: "Blockierende Punkte",
+    resume: "Setze sie im Ticketbereich fort oder halte sie dort an.",
+    unknownReason: "eine Ausführungsbedingung nicht mehr erfüllt war",
+  },
+  "pt-BR": {
+    header: "Automação do Numo",
+    awaiting:
+      "O plano foi escrito e verificado. O restante aguarda sua aprovação.",
+    completed: "A cadeia chegou ao fim.",
+    stopped: (reason) => `A cadeia parou porque ${reason}.`,
+    steps: (n) =>
+      `${n} etapa${n === 1 ? "" : "s"} executada${n === 1 ? "" : "s"}`,
+    spent: (percent) => `${percent} do orçamento mensal utilizado`,
+    verdict: "Resultado",
+    blockers: "Bloqueios",
+    resume: "Continue ou interrompa pelo painel da tarefa.",
+    unknownReason: "uma condição de execução deixou de ser atendida",
+  },
+  it: {
+    header: "Automazione Numo",
+    awaiting:
+      "Il piano è stato scritto e verificato. Il resto attende la tua approvazione.",
+    completed: "La catena è arrivata fino alla fine.",
+    stopped: (reason) => `La catena si è fermata perché ${reason}.`,
+    steps: (n) =>
+      `${n} passaggi${n === 1 ? "o" : ""} eseguit${n === 1 ? "o" : "i"}`,
+    spent: (percent) => `${percent} del budget mensile utilizzato`,
+    verdict: "Esito",
+    blockers: "Blocchi",
+    resume: "Continua o interrompi dal pannello del ticket.",
+    unknownReason: "una condizione di esecuzione non era più soddisfatta",
+  },
+  es: {
+    header: "Automatización de Numo",
+    awaiting:
+      "El plan está escrito y verificado. El resto espera tu aprobación.",
+    completed: "La cadena llegó hasta el final.",
+    stopped: (reason) => `La cadena se detuvo porque ${reason}.`,
+    steps: (n) =>
+      `${n} paso${n === 1 ? "" : "s"} ejecutado${n === 1 ? "" : "s"}`,
+    spent: (percent) => `${percent} del presupuesto mensual utilizado`,
+    verdict: "Resultado",
+    blockers: "Bloqueos",
+    resume: "Continúa o deténla desde el panel de la incidencia.",
+    unknownReason: "una condición de ejecución dejó de cumplirse",
   },
 };
 
@@ -161,7 +313,7 @@ export async function postChainComment(
 ): Promise<void> {
   try {
     const locale = await localeOf(chain.owner_id);
-    const s = STRINGS[locale] ?? STRINGS.en;
+    const s = STRINGS[locale];
     const lines: string[] = [`**${s.header}**`, ""];
 
     if (kind === "awaiting_human") {
@@ -169,7 +321,7 @@ export async function postChainComment(
     } else if (kind === "completed") {
       lines.push(s.completed);
     } else {
-      const reasons = STOP_REASONS[locale] ?? STOP_REASONS.en;
+      const reasons = STOP_REASONS[locale];
       const reason =
         (chain.stop_reason && reasons[chain.stop_reason]) || s.unknownReason;
       lines.push(s.stopped(reason));
@@ -179,7 +331,11 @@ export async function postChainComment(
       lines.push("", `**${s.verdict}** — ${extras.verdictSummary.trim()}`);
     }
     if (extras.verdictBlockers?.length) {
-      lines.push("", `**${s.blockers}**`, ...extras.verdictBlockers.map((b) => `- ${b}`));
+      lines.push(
+        "",
+        `**${s.blockers}**`,
+        ...extras.verdictBlockers.map((b) => `- ${b}`),
+      );
     }
 
     const share = await spentShare(chain);
@@ -194,7 +350,10 @@ export async function postChainComment(
       via_assistant: true,
     });
   } catch (err) {
-    console.error("[automations] chain comment failed:", (err as Error).message);
+    console.error(
+      "[automations] chain comment failed:",
+      (err as Error).message,
+    );
   }
 }
 
@@ -300,6 +459,9 @@ export async function notifyChain(
       },
     ]);
   } catch (err) {
-    console.error("[automations] chain notification failed:", (err as Error).message);
+    console.error(
+      "[automations] chain notification failed:",
+      (err as Error).message,
+    );
   }
 }

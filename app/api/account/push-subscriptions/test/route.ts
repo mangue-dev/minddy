@@ -2,14 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createTranslator } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
-import en from "@/messages/en.json";
-import fr from "@/messages/fr.json";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isPushConfigured } from "@/lib/server/push/vapid";
 import { isApnsConfigured } from "@/lib/server/push/apns";
 import { isWnsConfigured } from "@/lib/server/push/wns";
-import { toPushLocale } from "@/lib/server/push/payload";
+import { pushMessages, toPushLocale } from "@/lib/server/push/payload";
 import { sendPushToUser } from "@/lib/server/push/send";
 
 /**
@@ -71,7 +69,7 @@ export async function POST(request: NextRequest) {
   const locale = toPushLocale(device.locale as string | null);
   const tPush = createTranslator({
     locale,
-    messages: locale === "fr" ? (fr as typeof en) : en,
+    messages: pushMessages(locale),
     namespace: "Push",
   });
 

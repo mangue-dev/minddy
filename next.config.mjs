@@ -17,7 +17,7 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
  * a `.mjs` file cannot import the TypeScript table, so the list is
  * copied here and the test fails if the two diverge.
  */
-export const FRENCH_SLUG_REDIRECTS = [
+export const LOCALIZED_SLUG_REDIRECTS = [
   { source: "/fr/pricing", destination: "/fr/tarifs" },
   { source: "/fr/self-hosting", destination: "/fr/auto-hebergement" },
   {
@@ -29,11 +29,76 @@ export const FRENCH_SLUG_REDIRECTS = [
   { source: "/fr/legal", destination: "/fr/mentions-legales" },
   { source: "/fr/terms", destination: "/fr/cgu" },
   { source: "/fr/privacy", destination: "/fr/confidentialite" },
+  { source: "/de/pricing", destination: "/de/preise" },
+  { source: "/de/self-hosting", destination: "/de/selbst-hosten" },
+  {
+    source: "/de/self-hosting/install",
+    destination: "/de/selbst-hosten/installieren",
+  },
+  { source: "/de/download", destination: "/de/herunterladen" },
+  { source: "/de/changelog", destination: "/de/neuigkeiten" },
+  { source: "/de/alternatives/linear", destination: "/de/alternativen/linear" },
+  { source: "/de/alternatives/jira", destination: "/de/alternativen/jira" },
+  { source: "/de/alternatives/notion", destination: "/de/alternativen/notion" },
+  { source: "/de/legal", destination: "/de/impressum" },
+  { source: "/de/terms", destination: "/de/nutzungsbedingungen" },
+  { source: "/de/privacy", destination: "/de/datenschutz" },
+  { source: "/pt-br/pricing", destination: "/pt-br/precos" },
+  { source: "/pt-br/self-hosting", destination: "/pt-br/auto-hospedagem" },
+  {
+    source: "/pt-br/self-hosting/install",
+    destination: "/pt-br/auto-hospedagem/instalar",
+  },
+  { source: "/pt-br/download", destination: "/pt-br/baixar" },
+  { source: "/pt-br/changelog", destination: "/pt-br/novidades" },
+  {
+    source: "/pt-br/alternatives/linear",
+    destination: "/pt-br/alternativas/linear",
+  },
+  {
+    source: "/pt-br/alternatives/jira",
+    destination: "/pt-br/alternativas/jira",
+  },
+  {
+    source: "/pt-br/alternatives/notion",
+    destination: "/pt-br/alternativas/notion",
+  },
+  { source: "/pt-br/legal", destination: "/pt-br/aviso-legal" },
+  { source: "/pt-br/terms", destination: "/pt-br/termos" },
+  { source: "/pt-br/privacy", destination: "/pt-br/privacidade" },
+  { source: "/it/pricing", destination: "/it/prezzi" },
+  { source: "/it/self-hosting", destination: "/it/hosting-autonomo" },
+  {
+    source: "/it/self-hosting/install",
+    destination: "/it/hosting-autonomo/installa",
+  },
+  { source: "/it/download", destination: "/it/scarica" },
+  { source: "/it/changelog", destination: "/it/novita" },
+  { source: "/it/alternatives/linear", destination: "/it/alternative/linear" },
+  { source: "/it/alternatives/jira", destination: "/it/alternative/jira" },
+  { source: "/it/alternatives/notion", destination: "/it/alternative/notion" },
+  { source: "/it/legal", destination: "/it/note-legali" },
+  { source: "/it/terms", destination: "/it/termini" },
+  { source: "/it/cookies", destination: "/it/cookie" },
+  { source: "/es/pricing", destination: "/es/precios" },
+  { source: "/es/self-hosting", destination: "/es/autoalojamiento" },
+  {
+    source: "/es/self-hosting/install",
+    destination: "/es/autoalojamiento/instalar",
+  },
+  { source: "/es/download", destination: "/es/descargar" },
+  { source: "/es/changelog", destination: "/es/novedades" },
+  { source: "/es/alternatives/linear", destination: "/es/alternativas/linear" },
+  { source: "/es/alternatives/jira", destination: "/es/alternativas/jira" },
+  { source: "/es/alternatives/notion", destination: "/es/alternativas/notion" },
+  { source: "/es/legal", destination: "/es/aviso-legal" },
+  { source: "/es/terms", destination: "/es/terminos" },
+  { source: "/es/privacy", destination: "/es/privacidad" },
 ];
 
 /**
- * All public URLs, EN and FR — same copy, same test of
- * non-divergence. They are used here to set the CDN cache header (see
+ * All explicit public locale URLs — same copy, same non-divergence test.
+ * They are used here to set the CDN cache header (see
  * `headers()`).
  */
 export const PUBLIC_ROUTE_PATHS = [
@@ -65,6 +130,62 @@ export const PUBLIC_ROUTE_PATHS = [
   "/fr/cgu",
   "/fr/confidentialite",
   "/fr/cookies",
+  "/de",
+  "/de/preise",
+  "/de/mcp",
+  "/de/selbst-hosten",
+  "/de/selbst-hosten/installieren",
+  "/de/herunterladen",
+  "/de/neuigkeiten",
+  "/de/alternativen/linear",
+  "/de/alternativen/jira",
+  "/de/alternativen/notion",
+  "/de/impressum",
+  "/de/nutzungsbedingungen",
+  "/de/datenschutz",
+  "/de/cookies",
+  "/pt-br",
+  "/pt-br/precos",
+  "/pt-br/mcp",
+  "/pt-br/auto-hospedagem",
+  "/pt-br/auto-hospedagem/instalar",
+  "/pt-br/baixar",
+  "/pt-br/novidades",
+  "/pt-br/alternativas/linear",
+  "/pt-br/alternativas/jira",
+  "/pt-br/alternativas/notion",
+  "/pt-br/aviso-legal",
+  "/pt-br/termos",
+  "/pt-br/privacidade",
+  "/pt-br/cookies",
+  "/it",
+  "/it/prezzi",
+  "/it/mcp",
+  "/it/hosting-autonomo",
+  "/it/hosting-autonomo/installa",
+  "/it/scarica",
+  "/it/novita",
+  "/it/alternative/linear",
+  "/it/alternative/jira",
+  "/it/alternative/notion",
+  "/it/note-legali",
+  "/it/termini",
+  "/it/privacy",
+  "/it/cookie",
+  "/es",
+  "/es/precios",
+  "/es/mcp",
+  "/es/autoalojamiento",
+  "/es/autoalojamiento/instalar",
+  "/es/descargar",
+  "/es/novedades",
+  "/es/alternativas/linear",
+  "/es/alternativas/jira",
+  "/es/alternativas/notion",
+  "/es/aviso-legal",
+  "/es/terminos",
+  "/es/privacidad",
+  "/es/cookies",
 ];
 
 /**
@@ -115,33 +236,33 @@ const nextConfig = {
     optimizePackageImports: ["radix-ui"],
   },
   /**
- * Runtime files of the repository, embedded in the functions.
- *
- * The agent bundle and Markdown projection are produced by `prebuild`; the
- * product knowledge is versioned Markdown. All are read by path at runtime.
- * Next's tracer tracks imports, not arbitrary file reads, so these patterns
- * keep them in the deployed function.
- *
- * `.agent-vm/` (MIN-224) — the microVM harness, written to the VM at
- * startup of each round. Absent, each `loop_in_vm` run fails on a
- * ENOENT. The pattern covers all API routes: the harness is written from
- * the LAUNCH path as well as from the drain CRON, and listing both at the
- * main would cause a third caller, someday, to discover the problem in
- * production.
- *
- * `.pages-md/` (MIN-295) — the markdown projection of the pages, output of the bundler
- * of Next because it substitutes `typeof window` → `"undefined"` and
- * thus reduces `elementFromString` of tiptap to one `throw` unconditional (see
- * scripts/build-pages-md.mjs, which carries the measure). Here the pattern is `/**`, and
- * not `/api/**`: the projection is called from API routes, but also
- * from page export, search and server actions — that is,
- * from page routes. Restricting the pattern would amount to keeping this
- * list by hand, to save a file that Vercel pools in any way
- * between traces.
- *
- * `content/knowledge/` — the articles Numo retrieves with `get_help`. They are
- * intentionally outside the source graph so product updates stay Markdown-only.
- */
+   * Runtime files of the repository, embedded in the functions.
+   *
+   * The agent bundle and Markdown projection are produced by `prebuild`; the
+   * product knowledge is versioned Markdown. All are read by path at runtime.
+   * Next's tracer tracks imports, not arbitrary file reads, so these patterns
+   * keep them in the deployed function.
+   *
+   * `.agent-vm/` (MIN-224) — the microVM harness, written to the VM at
+   * startup of each round. Absent, each `loop_in_vm` run fails on a
+   * ENOENT. The pattern covers all API routes: the harness is written from
+   * the LAUNCH path as well as from the drain CRON, and listing both at the
+   * main would cause a third caller, someday, to discover the problem in
+   * production.
+   *
+   * `.pages-md/` (MIN-295) — the markdown projection of the pages, output of the bundler
+   * of Next because it substitutes `typeof window` → `"undefined"` and
+   * thus reduces `elementFromString` of tiptap to one `throw` unconditional (see
+   * scripts/build-pages-md.mjs, which carries the measure). Here the pattern is `/**`, and
+   * not `/api/**`: the projection is called from API routes, but also
+   * from page export, search and server actions — that is,
+   * from page routes. Restricting the pattern would amount to keeping this
+   * list by hand, to save a file that Vercel pools in any way
+   * between traces.
+   *
+   * `content/knowledge/` — the articles Numo retrieves with `get_help`. They are
+   * intentionally outside the source graph so product updates stay Markdown-only.
+   */
   outputFileTracingIncludes: {
     "/api/**": [".agent-vm/**", "content/knowledge/**"],
     "/**": [".pages-md/**"],
@@ -180,7 +301,7 @@ const nextConfig = {
         destination: "/projects/:id?view=my",
         permanent: false,
       },
-      ...FRENCH_SLUG_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
+      ...LOCALIZED_SLUG_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
     ];
   },
   async headers() {

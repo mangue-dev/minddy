@@ -1,6 +1,8 @@
 import { type NextRequest } from "next/server";
 
 import { buildDesktopOpenUrl } from "@/lib/desktop/open-link";
+import { detectFromAcceptLanguage } from "@/lib/accept-language";
+import { defaultLocale, type Locale } from "@/i18n/config";
 
 /**
  * `GET /desktop/return?next=…` — bounce from browser to app (MIN-293).
@@ -27,12 +29,15 @@ import { buildDesktopOpenUrl } from "@/lib/desktop/open-link";
 export function GET(request: NextRequest) {
   const deepLink = buildDesktopOpenUrl(request.nextUrl.searchParams.get("next") ?? "");
   const escaped = deepLink.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  // Use `fr` when the browser locale starts with `fr`: this page is served
-  // without a session or language cookie, so there is nothing else to inspect.
-  const fr = (request.headers.get("accept-language") ?? "").toLowerCase().startsWith("fr");
+  // This public handoff has no account session, so the browser preference is
+  // the only locale signal available.
+  const locale =
+    detectFromAcceptLanguage(request.headers.get("accept-language")) ?? defaultLocale;
+
+  const copy = RETURN_COPY[locale];
 
   const html = `<!doctype html>
-<html lang="${fr ? "fr" : "en"}">
+<html lang="${locale}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -52,8 +57,8 @@ export function GET(request: NextRequest) {
 </style>
 </head>
 <body>
-<p>${fr ? "Retour à minddy…" : "Returning to minddy…"}</p>
-<p><a href="${escaped}">${fr ? "Ouvrir l’application" : "Open the app"}</a></p>
+<p>${copy.returning}</p>
+<p><a href="${escaped}">${copy.open}</a></p>
 <script>location.href = ${JSON.stringify(deepLink)};</script>
 </body>
 </html>`;
@@ -66,3 +71,12 @@ export function GET(request: NextRequest) {
     },
   });
 }
+
+const RETURN_COPY: Record<Locale, { returning: string; open: string }> = {
+  en: { returning: "Returning to minddy…", open: "Open the app" },
+  fr: { returning: "Retour à minddy…", open: "Ouvrir l’application" },
+  de: { returning: "Zurück zu minddy…", open: "App öffnen" },
+  "pt-BR": { returning: "Voltando ao minddy…", open: "Abrir o aplicativo" },
+  it: { returning: "Ritorno a minddy…", open: "Apri l’app" },
+  es: { returning: "Volviendo a minddy…", open: "Abrir la aplicación" },
+};

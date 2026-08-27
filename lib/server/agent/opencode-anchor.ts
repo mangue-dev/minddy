@@ -18,6 +18,7 @@ import {
   type AgentAnchor,
 } from "./prompt";
 import type { FavoriteSubagentModel } from "./subagent-config";
+import { responseLanguageInstruction } from "@/lib/locale-language";
 
 /**
  * THE MINDDY ANCHOR SERVED AT OPENCODE (MIN-286) — the text that the supervisor writes
@@ -202,7 +203,9 @@ export function buildOpencodeAnchor(input: OpencodeAnchorInput): string {
   const routine = input.interactive === false;
   const notebook = input.anchor === "notebook";
   const hasRepo = input.hasRepo !== false;
-  const replyLanguage = input.locale === "fr" ? "French" : "English";
+  const replyLanguage = responseLanguageInstruction(input.locale, {
+    mentionIssueTerm: true,
+  });
   const validateTool = `- \`validate_changes\` — run an explicit preflight of the current worktree (type-check, tests, diff review).`;
   const anchorTools = !hasRepo
     ? validateTool

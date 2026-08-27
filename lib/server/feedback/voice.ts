@@ -28,6 +28,7 @@ import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
+import { responseLanguageInstruction } from "@/lib/locale-language";
 
 /**
  * Dictate a return — the core shared by the TWO surfaces (MIN-37).
@@ -150,7 +151,7 @@ ${JSON.stringify(draft, null, 1)}
 - FOLLOW-UP dictation ("ajoute que…", "reformule le titre", "enlève la dernière phrase"): apply EXACTLY that, keeping everything else word for word. Never rewrite the whole thing because one sentence was added.
 - NEVER invent. No cause you were not told, no step that was not described, no severity, no priority, no workaround. If the person was vague, the feedback stays vague — that is information too.
 - Keep their voice: first person if they speak in the first person, their words for their domain. You are transcribing a thought into a form, not writing a support ticket about it.
-- Write \`title\` and \`body\` in the language the person dictates in; write \`reply\` in ${locale === "fr" ? "French (with proper accents)" : "English"}.
+- Write \`title\` and \`body\` in the language the person dictates in; write \`reply\` in ${responseLanguageInstruction(locale)}.
 - Every field of the tool is required: to leave one untouched, pass back its current value unchanged.`;
 }
 

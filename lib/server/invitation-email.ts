@@ -3,6 +3,7 @@ import "server-only";
 import { capability } from "@/lib/server/capabilities";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { orbSeedOr, projectOrbGradient } from "@/lib/project-orb-colors";
+import type { Locale } from "@/i18n/config";
 
 /**
  * The project invitation email (MIN-197) — Resend via raw fetch, like
@@ -58,7 +59,7 @@ export interface SendInvitationEmailParams {
    * the fallback orb, exactly like `<ProjectOrb>`. */
   projectIconUrl?: string | null;
   token: string;
-  locale: "fr" | "en";
+  locale: Locale;
   /** Site origin for this deployment (dev/preview/prod). */
   origin?: string;
 }
@@ -79,9 +80,101 @@ function escapeHtml(value: string): string {
  * the link goes there directly. The wizard carries the return to `/login` for
  * people who already have an account, and passes the token along.
  */
-export function invitationLink(token: string, origin: string = SITE_URL): string {
+export function invitationLink(token: string, origin: string = SITE_URL,
+): string {
   return `${origin.replace(/\/$/, "")}/signup?invite=${encodeURIComponent(token)}`;
 }
+
+interface InvitationEmailCopy {
+  someone: string;
+  subject: (inviter: string, project: string) => string;
+  preheader: (project: string) => string;
+  title: (inviter: string, project: string) => string;
+  lead: string;
+  cta: string;
+  note: (email: string) => string;
+  ignore: string;
+}
+
+const INVITATION_COPY: Record<Locale, InvitationEmailCopy> = {
+  en: {
+    someone: "Someone",
+    subject: (inviter, project) => `${inviter} invited you to "${project}"`,
+    preheader: (project) => `Join "${project}" on minddy.`,
+    title: (inviter, project) => `${inviter} invited you to join ${project}`,
+    lead: "minddy is where the team tracks its issues, objectives and feedback.",
+    cta: "Join the project",
+    note: (email) =>
+      `This invitation was sent to ${email}. Create your account with that address and it will bring you into the project.`,
+    ignore:
+      "If you don't know this person, ignore this email — nothing will happen.",
+  },
+  fr: {
+    someone: "Quelqu'un",
+    subject: (inviter, project) => `${inviter} vous invite sur « ${project} »`,
+    preheader: (project) => `Rejoignez « ${project} » sur minddy.`,
+    title: (inviter, project) =>
+      `${inviter} vous invite à rejoindre ${project}`,
+    lead: "minddy, c'est là que l'équipe suit ses tickets, ses objectifs et ses retours.",
+    cta: "Rejoindre le projet",
+    note: (email) =>
+      `Invitation envoyée à ${email}. Créez votre compte avec cette adresse : elle vous rattache au projet.`,
+    ignore:
+      "Si vous ne connaissez pas cette personne, ignorez cet email — rien ne se passera.",
+  },
+  de: {
+    someone: "Jemand",
+    subject: (inviter, project) => `${inviter} lädt dich zu „${project}“ ein`,
+    preheader: (project) => `Tritt „${project}“ auf minddy bei.`,
+    title: (inviter, project) =>
+      `${inviter} lädt dich ein, ${project} beizutreten`,
+    lead: "In minddy verwaltet das Team Tickets, Ziele und Feedback.",
+    cta: "Projekt beitreten",
+    note: (email) =>
+      `Diese Einladung wurde an ${email} gesendet. Erstelle dein Konto mit dieser Adresse, um dem Projekt beizutreten.`,
+    ignore:
+      "Wenn du diese Person nicht kennst, ignoriere diese E-Mail — es passiert nichts.",
+  },
+  "pt-BR": {
+    someone: "Alguém",
+    subject: (inviter, project) => `${inviter} convidou você para “${project}”`,
+    preheader: (project) => `Participe de “${project}” no minddy.`,
+    title: (inviter, project) =>
+      `${inviter} convidou você para participar de ${project}`,
+    lead: "O minddy é onde a equipe acompanha tarefas, objetivos e feedbacks.",
+    cta: "Participar do projeto",
+    note: (email) =>
+      `Este convite foi enviado para ${email}. Crie sua conta com esse endereço para entrar no projeto.`,
+    ignore:
+      "Se você não conhece essa pessoa, ignore este e-mail — nada acontecerá.",
+  },
+  it: {
+    someone: "Qualcuno",
+    subject: (inviter, project) => `${inviter} ti ha invitato a “${project}”`,
+    preheader: (project) => `Unisciti a “${project}” su minddy.`,
+    title: (inviter, project) =>
+      `${inviter} ti ha invitato a unirti a ${project}`,
+    lead: "minddy è lo spazio in cui il team gestisce ticket, obiettivi e feedback.",
+    cta: "Unisciti al progetto",
+    note: (email) =>
+      `Questo invito è stato inviato a ${email}. Crea l'account con questo indirizzo per entrare nel progetto.`,
+    ignore:
+      "Se non conosci questa persona, ignora questa email — non succederà nulla.",
+  },
+  es: {
+    someone: "Alguien",
+    subject: (inviter, project) => `${inviter} te ha invitado a «${project}»`,
+    preheader: (project) => `Únete a «${project}» en minddy.`,
+    title: (inviter, project) =>
+      `${inviter} te ha invitado a unirte a ${project}`,
+    lead: "minddy es el espacio donde el equipo gestiona incidencias, objetivos y comentarios.",
+    cta: "Unirse al proyecto",
+    note: (email) =>
+      `Esta invitación se envió a ${email}. Crea tu cuenta con esta dirección para entrar en el proyecto.`,
+    ignore:
+      "Si no conoces a esta persona, ignora este correo — no ocurrirá nada.",
+  },
+};
 
 /**
  * The project icon, 48 px with rounded corners — the imported image when there
@@ -106,53 +199,46 @@ function projectIconHtml(params: SendInvitationEmailParams): string {
 }
 
 export async function sendInvitationEmail(
-  params: SendInvitationEmailParams
+  params: SendInvitationEmailParams,
 ): Promise<boolean> {
   const link = invitationLink(params.token, params.origin ?? SITE_URL);
   const provider = process.env.EMAIL_PROVIDER?.trim();
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.INVITATION_EMAIL_FROM?.trim();
   if (provider === "console" && process.env.NODE_ENV !== "production") {
-    console.log(`[invitation-email] (dev — no RESEND_API_KEY) link for ${params.to}: ${link}`);
+    console.log(
+      `[invitation-email] (dev — no RESEND_API_KEY) link for ${params.to}: ${link}`,
+    );
     return true;
   }
   const emailCapability = capability("transactionalEmail");
-  if (!emailCapability.configured || provider !== "resend" || !apiKey || !from) {
+  if (
+    !emailCapability.configured ||
+    provider !== "resend" ||
+    !apiKey ||
+    !from
+  ) {
     console.error(
       `[invitation-email] email disabled — ${emailCapability.diagnostic}`,
     );
     return false;
   }
 
-  const fr = params.locale === "fr";
-  const inviter = params.inviterName.trim() || (fr ? "Quelqu'un" : "Someone");
-  const subject = fr
-    ? `${inviter} vous invite sur « ${params.projectName} »`
-    : `${inviter} invited you to "${params.projectName}"`;
+  const copy = INVITATION_COPY[params.locale];
+  const inviter = params.inviterName.trim() || copy.someone;
+  const subject = copy.subject(inviter, params.projectName);
 
   // The text shown after the subject in a message list. Without it, clients may
   // copy the beginning of the body — here “minddy”, the word from the logo.
-  const preheader = fr
-    ? `Rejoignez « ${params.projectName} » sur minddy.`
-    : `Join "${params.projectName}" on minddy.`;
-  const title = fr
-    ? `${inviter} vous invite à rejoindre ${params.projectName}`
-    : `${inviter} invited you to join ${params.projectName}`;
-  const lead = fr
-    ? "minddy, c'est là que l'équipe suit ses tickets, ses objectifs et ses retours."
-    : "minddy is where the team tracks its issues, objectives and feedback.";
-  const cta = fr ? "Rejoindre le projet" : "Join the project";
-  const note = fr
-    ? `Invitation envoyée à ${params.to}. Créez votre compte avec cette adresse : elle vous rattache au projet.`
-    : `This invitation was sent to ${params.to}. Create your account with that address and it will bring you into the project.`;
-  const ignore = fr
-    ? "Si vous ne connaissez pas cette personne, ignorez cet email — rien ne se passera."
-    : "If you don't know this person, ignore this email — nothing will happen.";
+  const preheader = copy.preheader(params.projectName);
+  const title = copy.title(inviter, params.projectName);
+  const { lead, cta, ignore } = copy;
+  const note = copy.note(params.to);
 
   const text = `${title}\n\n${lead}\n\n${cta} : ${link}\n\n${note}\n\n${ignore}\n\n${SITE_NAME} — ${SITE_URL}`;
 
   const html = `<!doctype html>
-<html lang="${fr ? "fr" : "en"}">
+<html lang="${params.locale}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -228,7 +314,7 @@ export async function sendInvitationEmail(
     if (!response.ok) {
       const detail = await response.text();
       console.error(
-        `[invitation-email] Resend error (${response.status}): ${detail.slice(0, 200)}`
+        `[invitation-email] Resend error (${response.status}): ${detail.slice(0, 200)}`,
       );
       return false;
     }

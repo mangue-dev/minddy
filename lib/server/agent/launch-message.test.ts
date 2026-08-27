@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/agent/launch-message";
 import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
+import de from "../../../messages/de.json";
 
 const issue: LaunchMessageIssue = {
   number: 42,
@@ -94,14 +95,14 @@ describe("buildAgentLaunchMessage", () => {
     expect(message).toContain(fr.Agent.launchPrompt.writePlan);
   });
 
-  it("langue inconnue ou absente → anglais (locale par défaut)", async () => {
+  it("uses the requester's supported locale", async () => {
     const message = await buildAgentLaunchMessage({
       mode: "implement",
       issue,
       projectKey: "MIN",
       locale: "de",
     });
-    expect(message).toContain(en.Agent.launchPrompt.default);
+    expect(message).toContain(de.Agent.launchPrompt.default);
   });
 
   it("les précisions de l'utilisateur s'ajoutent à la consigne, elles ne la remplacent pas", async () => {

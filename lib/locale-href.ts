@@ -1,14 +1,13 @@
 import type { Locale } from "@/i18n/config";
-import { routeByPath } from "@/lib/public-routes";
+import { publicPathForLocale, routeByPath } from "@/lib/public-routes";
 
 /**
  * Translates a public site link into the language served (MIN-88).
  *
  * Links in the nav, footer and sections are written once, in
- * canonical English (`/pricing`, `/#tracker`, `/legal`). Without this function,
- * a visitor arriving on `/fr` left in English from the first click — and
- * each French page became a dead end for a crawler, which found
- * no link to the rest of the French version.
+ * canonical English (`/pricing`, `/#tracker`, `/legal`). It selects an explicit
+ * locale path when that page is translated and deliberately falls back to the
+ * English path for the pilot locales' untranslated pages.
  *
  * The anchor is kept as is (`/#tracker` → `/fr#tracker`): the
  * section identifiers are not translated, only the path is. URLs
@@ -16,7 +15,7 @@ import { routeByPath } from "@/lib/public-routes";
  * unchanged — they only exist in one version.
  */
 export function localizedHref(href: string, locale: Locale): string {
-  if (locale !== "fr") return href;
+  if (locale === "en") return href;
 
   const hashAt = href.indexOf("#");
   const path = hashAt === -1 ? href : href.slice(0, hashAt);
@@ -25,9 +24,9 @@ export function localizedHref(href: string, locale: Locale): string {
   const route = routeByPath(path || "/");
   if (!route) return href;
 
-  // `/fr` + `#tracker`, not `/fr/#tracker`: both lead to the same place
+  // `/de` + `#tracker`, not `/de/#tracker`: both lead to the same place
   // but only the first one is the canonical URL of the page.
-  return `${route.fr}${hash}`;
+  return `${publicPathForLocale(route, locale)}${hash}`;
 }
 
 /**
@@ -38,5 +37,5 @@ export function localizedHref(href: string, locale: Locale): string {
 export function switchLocaleHref(pathname: string, next: Locale): string | null {
   const route = routeByPath(pathname);
   if (!route) return null;
-  return next === "fr" ? route.fr : route.en;
+  return publicPathForLocale(route, next);
 }

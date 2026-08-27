@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
+import type { Locale } from "@/i18n/config";
 import { isCustomPublicHost } from "@/lib/server/custom-domains";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import {
@@ -85,7 +86,7 @@ export async function requestOtpAction(
   if (!trimmed.includes("@") || trimmed.length < 5) {
     return { ok: false, error: "invalidEmail" };
   }
-  const locale = (await getLocale()) === "fr" ? "fr" : "en";
+  const locale = (await getLocale()) as Locale;
   const result = await requestFeedbackOtp({
     boardId: ctx.board.id,
     email: trimmed,
@@ -316,7 +317,7 @@ export async function dictateFeedbackAction(
   const transcript = normalizeVoiceTranscript(input.transcript);
   if (!transcript.trim()) return { ok: false, error: "failed" };
 
-  const locale = (await getLocale()) === "fr" ? "fr" : "en";
+  const locale = (await getLocale()) as Locale;
   try {
     const { patch, reply, usage } = await runFeedbackVoicePass({
       transcript,

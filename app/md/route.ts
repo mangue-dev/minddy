@@ -10,7 +10,10 @@ import {
   type Comparison,
 } from "@/lib/comparisons";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
-import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
+import { PUBLIC_ROUTES,
+  publicPathForLocale,
+  routeByKey, type PublicRouteKey,
+} from "@/lib/public-routes";
 import { MCP_ENDPOINT, MINDDY_REPOSITORY_URL, SITE_URL } from "@/lib/site";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
@@ -81,7 +84,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     : defaultLocale) as Locale;
 
   const route = routeByKey(key);
-  const canonical = `${SITE_URL}${locale === "fr" ? route.fr : route.en}`;
+  const canonical = `${SITE_URL}${publicPathForLocale(route, locale)}`;
 
   let body: string;
   if (key === "home") body = await renderLanding(locale, canonical);
@@ -298,7 +301,7 @@ async function renderSelfHosting(locale: Locale, canonical: string): Promise<str
   ];
   const operations = ["backup", "update", "diagnose"] as const;
   const installRoute = routeByKey("selfHostingInstall");
-  const installUrl = `${SITE_URL}${locale === "fr" ? installRoute.fr : installRoute.en}`;
+  const installUrl = `${SITE_URL}${publicPathForLocale(installRoute, locale)}`;
 
   return [
     header(t("metaTitle"), t("metaDescription"), canonical),
@@ -427,7 +430,7 @@ async function renderLegal(
 function links(locale: Locale): string {
   const path = (key: PublicRouteKey) => {
     const route = routeByKey(key);
-    return `${SITE_URL}${locale === "fr" ? route.fr : route.en}`;
+    return `${SITE_URL}${publicPathForLocale(route, locale)}`;
   };
   return [
     "## Links",
