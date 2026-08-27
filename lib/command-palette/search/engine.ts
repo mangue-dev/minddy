@@ -57,7 +57,7 @@ export interface ScoredSearchResult<T> {
 
 /**
  * Stop words to skip when matching abbreviations.
- * Common liaison words in French and English.
+ * Common liaison words in every supported product language.
  */
 const STOP_WORDS = new Set([
   // French
@@ -67,6 +67,19 @@ const STOP_WORDS = new Set([
   // English
   "the", "a", "an", "and", "or", "in", "on", "for",
   "by", "with", "to", "of", "at", "from", "as", "is",
+  // German
+  "der", "die", "das", "den", "dem", "ein", "eine", "einer",
+  "und", "oder", "im", "auf", "fur", "von", "mit", "zu", "zum", "zur", "aus",
+  // Brazilian Portuguese
+  "o", "os", "as", "um", "uma", "e", "ou", "em", "no", "na", "nos", "nas",
+  "para", "por", "com", "do", "da", "dos", "das", "ao", "aos",
+  // Italian
+  "il", "lo", "i", "gli", "un", "uno", "e", "o", "su", "per", "da", "di",
+  "del", "della", "dei", "degli", "delle", "al", "allo", "alla", "ai", "agli", "alle",
+  "nel", "nello", "nella", "nei", "negli", "nelle", "con",
+  // Spanish
+  "el", "los", "las", "unos", "unas", "y", "o", "en", "sobre", "para", "por",
+  "con", "del", "al", "desde", "como", "es",
 ]);
 
 /**

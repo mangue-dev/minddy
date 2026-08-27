@@ -26,6 +26,17 @@ describe("complete locale messages", () => {
       expect(leafPaths(catalog).sort()).toEqual(englishKeys);
     }
   });
+
+  it.each([
+    [de, ["ApiErrors.nameRequired", "Projects.invitationRejected", "ToolCall.viewCreated"]],
+    [ptBr, ["FeedbackBoard.postTitlePlaceholder", "Privacy.dataAI", "Changelog.metaTitle"]],
+    [itMessages, ["PullRequests.commitDiffTitle", "Pricing.row_scratchpad", "SelfHostingInstall.domainLabel"]],
+    [es, ["Agents.pinSession", "PullRequests.commitDiffTitle"]],
+  ] as const)("does not retain proven English copy", (catalog, keys) => {
+    for (const key of keys) {
+      expect(catalogValue(catalog, key)).not.toBe(catalogValue(en, key));
+    }
+  });
 });
 
 interface CatalogNode {
@@ -39,4 +50,11 @@ function leafPaths(value: CatalogNode, prefix = ""): string[] {
       ? leafPaths(child as CatalogNode, path)
       : [path];
   });
+}
+
+function catalogValue(catalog: CatalogNode, path: string): unknown {
+  return path.split(".").reduce<unknown>((node, key) => {
+    if (!node || typeof node !== "object") return undefined;
+    return (node as CatalogNode)[key];
+  }, catalog);
 }

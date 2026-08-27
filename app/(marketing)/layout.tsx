@@ -3,6 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { DesktopMarketingRedirect } from "@/components/desktop-marketing-redirect";
+import { AcquisitionContext } from "@/components/marketing/acquisition-context";
 import { resolveCapabilities } from "@/lib/capabilities";
 
 /**
@@ -32,6 +33,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       {/* In the desktop app, the public site has nothing to say: we go back to
  the app, which will return to the connection if necessary (MIN-291). */}
       <DesktopMarketingRedirect />
+      <AcquisitionContext />
       <MarketingNav />
       <main className="flex-1">{children}</main>
       <MarketingFooter />

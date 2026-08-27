@@ -228,6 +228,7 @@ export interface Forge {
     number: number;
     verdict: ReviewVerdict;
     body: string;
+    locale?: string;
   }): Promise<ReviewSubmission>;
   /** Approval count, already reduced: the rule "last verdict by
  user" is a GitHub detail (GitLab maintains the current list), it

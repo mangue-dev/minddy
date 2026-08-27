@@ -50,6 +50,7 @@ import {
   type ChatMessage,
 } from "./loop";
 import { serializeToolResult } from "./tool-result-serialization";
+import { commentFallbackDone } from "@/lib/server/runtime-locale-copy";
 
 // ── @Numo in comments (fire and forget, Linear-style) ───────────────────
 // A comment mentioning @numo spawns this agent AFTER the HTTP response (via
@@ -137,11 +138,6 @@ const COMMENT_TOOLS = ASSISTANT_TOOLS.filter(
 
 // Stored comment content is written once in the requester's locale (unlike UI
 // chrome, which localizes per viewer).
-const FALLBACK_DONE: Record<string, string> = {
-  fr: "C'est fait.",
-  en: "Done.",
-};
-
 export async function runCommentMention({
   supabase,
   service,
@@ -350,7 +346,7 @@ export async function runCommentMention({
 
     // ── Finalize: only the final message remains ─────────────────────────
     await display.finish(
-      finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
+      finalContent || commentFallbackDone(locale)
     );
 
     // Notifications, like a regular comment: issue owner/assignee + thread
@@ -380,10 +376,10 @@ export async function runCommentMention({
       issue_id: issueId,
       comment_id: replyId as string,
       actor_id: actorId,
-      // The line itself says that it was NUMO who wrote. The inbox knew it
-      // already by the comment (`comments.via_assistant`); the notification
-      // pushed, she only reads this line — without this flag, the banner
-      // announced “<le demandeur> commented” to the requester himself.
+      // The entry itself says Numo wrote it. The inbox already knows this from
+      // `comments.via_assistant`, but the pushed notification reads only this
+      // row. Without the flag, the banner would tell the requester that they
+      // commented on their own ticket.
       via_assistant: true,
     }));
     await insertNotifications(service, rows);
@@ -589,7 +585,7 @@ export async function runObjectiveCommentMention({
     });
 
     await display.finish(
-      finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
+      finalContent || commentFallbackDone(locale)
     );
 
     // Notifications: the objective's lead + the thread root author, members
@@ -858,7 +854,7 @@ export async function runFeedbackCommentMention({
     });
 
     await display.finish(
-      finalContent || FALLBACK_DONE[locale] || FALLBACK_DONE.en
+      finalContent || commentFallbackDone(locale)
     );
 
     // Notifications: the thread root author, members only — plus the

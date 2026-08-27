@@ -15,61 +15,56 @@ import {
 } from "./pull-requests";
 
 /**
- * THE PULL REQUESTS OF THE PROJECT, seen and acted upon since an ORDINARY run (MIN-267).
+ * Project pull requests, visible and actionable from an ordinary run (MIN-267).
  *
- * What `pr-tools.ts` serves is THE pull request for a REVIEW session:
- * a run anchored to a PR, without an editing tool, which comments on that one and not one
- * other. The other half was missing — a run of ticket, notebook or ROUTINE
- * couldn't even KNOW a pull request existed. “Give me an update
- * PRs of the week every Friday" was inexpressible: the routine
- * went to read the deposit in shell, which says nothing about rereading, checks
- * nor states.
+ * `pr-tools.ts` serves one pull request for a review session: a run anchored to
+ * a PR, without editing tools, that comments only on that PR. The other half was
+ * missing: a ticket, notebook, or routine run could not even discover that pull
+ * requests existed. “Give me an update on this week's PRs every Friday” was not
+ * expressible; the routine could inspect the repository in a shell, which says
+ * nothing about reviews, checks, or forge state.
  *
- * Hence this family, served at the TICKET and CARNET anchors (never at the
- * rereading, of which read-only remains a property of the toolset):
+ * This tool family is therefore available to ticket and notebook anchors, but
+ * never to review sessions, whose read-only nature remains a toolset property:
  *
- *  - `list_pull_requests` — l'inventaire, lu en BASE (`pull_requests`), pas chez
- * the forge: it is the same table as the Pull Requests page, therefore the same
- * list, and a lazy swipe refreshes it when it gets old. List
- * fifteen PR then doesn't cost fifteen API calls.
- * - `read_pull_request` — the detail of UNE, at the forge. The diff per file
- * only comes on `include_diff`: a routine that runs through the week
- * fifteen headers, not fifteen diffs.
- * - entries: thread comment, line comment, response to a thread,
- * Review VERDICT, and change of STATUS (including merger).
+ * - `list_pull_requests`: inventory read from `pull_requests`, not the forge. It
+ *   matches the Pull Requests page and refreshes stale data lazily, so listing
+ *   fifteen PRs does not cost fifteen API calls.
+ * - `read_pull_request`: details for one PR from the forge. Per-file diffs are
+ *   included only with `include_diff`, so a routine can scan fifteen headers
+ *   without fetching fifteen diffs.
+ * - write tools: conversation comment, inline comment, thread reply, review
+ *   verdict, and state change including merge.
  *
- * ## What it changes from the doctrine, and who decided it
+ * ## How this changes the earlier policy
  *
- * `pr-tools.ts` says, from MIN-141: “Numo gives an opinion, he does not hold
- * door” — none of its three writings submits a verdict to the forge, because
- * that a `APPROVE` posted by the app would satisfy branch protection and that a
- * `REQUEST_CHANGES` would block the PR until a human raises it.
+ * Since MIN-141, `pr-tools.ts` follows “Numo gives an opinion; it does not hold
+ * the gate”: none of its three writes submits a verdict to the forge, because an
+ * App `APPROVE` could satisfy branch protection and `REQUEST_CHANGES` would block
+ * the PR until a human dismissed it.
  *
- * **This rule no longer holds here, and it is an explicit choice of the owner
- * of the product** (2026-08-10): `review_pull_request` submits a real verdict and
- * `set_pull_request_state` merges. A routine can therefore approve and
- * merge without any human intervention. The counterpart is this,
- * it is real, and it is assumed - what limits it are the
- * DEPOSIT branch protections, nothing more on Minddy's side.
+ * **That rule does not apply here, by explicit product-owner decision**
+ * (2026-08-10): `review_pull_request` submits a real verdict and
+ * `set_pull_request_state` can merge. A routine may therefore approve and merge
+ * without human intervention. Repository branch protections are the boundary;
+ * minddy adds no further gate.
  *
- * IDENTITY does not change: everything goes under the installation token, so
- * under the account of minddy — an automated gesture bears the name of minddy (see the
- * identity table of `forge.ts`). Which, here, is exactly what we want:
- * a PR merged by a routine should not be read as merged by the
- * person who wrote the routine three months ago.
+ * Identity does not change: everything uses the installation token and therefore
+ * the minddy account (see the identity table in `forge.ts`). That is deliberate:
+ * a PR merged by a routine should not appear to have been merged by the person
+ * who authored the routine months earlier.
  *
- * A word about SELF-REVIEW: GitHub refuses to approve a PR opened by the
- * same account (422). This is the NORMAL case of Numo PRs, and `submitReview` the
- * already catch up by publishing the verdict in comments - the result says it
- * (`published: "comment"`), and the tool passes it to the model rather than
- * to suggest an approval which did not take place.
+ * GitHub refuses self-review with 422 when the same account opened the PR. That
+ * is normal for Numo PRs; `submitReview` falls back to publishing the verdict in
+ * a comment and returns `published: "comment"`. The tool exposes this to the
+ * model rather than implying that an approval occurred.
  */
 
 export { PROJECT_PR_TOOL_NAMES } from "./platform-tool-names";
 
 type ToolOutcome = { result: unknown; success: boolean };
 
-/** Deposit linked to the run project, with a FRESH token. */
+/** Repository linked to the run project, with a fresh token. */
 export interface ProjectRepoTarget {
   token: string;
   repoFullName: string;
@@ -77,24 +72,23 @@ export interface ProjectRepoTarget {
 }
 
 export interface ProjectPrToolContext {
-  /** Project run — the perimeter of everything this family sees. */
+  /** Run project, which scopes everything this tool family can see. */
   projectId: string;
   /**
-   * Deposit + token, re-solved EACH CALL: a round can last longer
-   * as the installation token that cloned the repository. `null` = this project does not have
-   * linked deposit (the tool says so, it does not lift).
+   * Repository and token, resolved on every call because a turn can outlive the
+   * installation token used to clone the repository. `null` means the project
+   * has no linked repository; the tool reports that without throwing.
    */
   repo: () => Promise<ProjectRepoTarget | null>;
-  /** Model of the run — he signs what Numo writes. */
+  /** Run model, included in the signature on Numo's writes. */
   model: string;
-  /** Language of signature: that of the launcher. */
+  /** Signature language inherited from the launcher. */
   locale: string;
   /**
-   * Anchors set by THIS RUN — the SAME object as the running session
-   * reread (`PrToolContext.inline`), persisted by `execute.ts` in the
-   * checkpoint. The ceiling is therefore “5 per run”, ALL pull requests
-   * confused: fifteen anchored remarks remain noise, whether they fall on
-   * one PR or out of five.
+   * Anchors created by this run. This is the same object used by review sessions
+   * (`PrToolContext.inline`) and persisted by `execute.ts` in the checkpoint. The
+   * limit is therefore five per run across all pull requests: fifteen inline
+   * remarks are still noise whether they target one PR or five.
    */
   inline: { used: number };
   reserveInline?: () => Promise<number | null>;
@@ -580,6 +574,7 @@ async function reviewPullRequest(
       repoFullName: target.repoFullName,
       number,
       verdict,
+      locale: ctx.locale,
       body: signReviewBody(body, ctx.model, ctx.locale).slice(
         0,
         MAX_BODY_LENGTH,

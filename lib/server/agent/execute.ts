@@ -51,6 +51,7 @@ import {
 import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
 import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
+import { priorConversationLostNote } from "@/lib/server/runtime-locale-copy";
 import { forgeFor, type Forge } from "./forge";
 import { prStateFromRef } from "./pull-requests";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -180,11 +181,8 @@ function priorConversationLost(run: AgentRun): boolean {
   return !!saved?.messages?.length && !saved.opencode;
 }
 
-/** The sentence the resumed turn reads in place of the history it no longer has. */
-const PRIOR_CONVERSATION_LOST_NOTE: Record<string, string> = {
-  fr: "Note : les tours précédents de cette session ont été joués par l'ancien moteur, dont l'historique n'est pas lisible ici. Tu ne vois pas cet échange — repars du ticket et de l'état du dépôt, et dis-le si ça change quelque chose.",
-  en: "Note: the earlier turns of this session ran on the previous engine, whose history cannot be read here. You cannot see that exchange — work from the issue and the state of the repository, and say so if it matters.",
-};
+/** Localized sentence read by a resumed turn whose old history is unavailable. */
+const PRIOR_CONVERSATION_LOST_NOTE = priorConversationLostNote;
 
 /**
  * THE PROMPT OF AN OPENCODE TURN, taken from the primer (MIN-286).
@@ -516,7 +514,7 @@ export async function executeAgentRun(
    */
   const runBillTo: AiUsageBillTo = run.created_by
     ? { userId: run.created_by }
-    : { unattributed: `run ${run.id} sans created_by` };
+    : { unattributed: `run ${run.id} without created_by` };
   /**
    * WHICH LINE bills this run (MIN-185). Technically it is the same run; for
    * billing, it is not: an agent run is an action we took, while a routine run is
@@ -1336,7 +1334,7 @@ export async function executeAgentRun(
        * a message whose context it cannot see.
        */
       prompt: priorConversationLost(run)
-        ? `${PRIOR_CONVERSATION_LOST_NOTE[commentLocale] ?? PRIOR_CONVERSATION_LOST_NOTE.en}\n\n${userPromptFromMessages(messages)}`
+        ? `${PRIOR_CONVERSATION_LOST_NOTE(commentLocale)}\n\n${userPromptFromMessages(messages)}`
         : userPromptFromMessages(messages),
     };
 

@@ -3,6 +3,8 @@ import "server-only";
 import { resolveDiffPosition } from "./mr-position";
 import { isForgeApiError, type Forge } from "./forge";
 import { AI_REVIEW_MAX_INLINE_COMMENTS } from "./tools";
+import type { Locale } from "@/i18n/config";
+import { resolveApplicationLocale } from "@/lib/locale-language";
 
 export { AI_REVIEW_MAX_INLINE_COMMENTS };
 
@@ -242,9 +244,13 @@ export function resolvePrCommentAnchor(
 
 // ── Review-summary signature ────────────────────────────────────────────────
 
-const SIGNATURE: Record<string, (model: string) => string> = {
-  fr: (model) => `🤖 Relu par Numo (minddy) · ${model}`,
+const SIGNATURE: Record<Locale, (model: string) => string> = {
   en: (model) => `🤖 Reviewed by Numo (minddy) · ${model}`,
+  fr: (model) => `🤖 Relu par Numo (minddy) · ${model}`,
+  de: (model) => `🤖 Von Numo (minddy) geprüft · ${model}`,
+  "pt-BR": (model) => `🤖 Revisado pelo Numo (minddy) · ${model}`,
+  it: (model) => `🤖 Revisionato da Numo (minddy) · ${model}`,
+  es: (model) => `🤖 Revisado por Numo (minddy) · ${model}`,
 };
 
 /**
@@ -262,12 +268,12 @@ export function signReviewBody(
   locale: string,
 ): string {
   const trimmed = body.trim();
-  const sign = SIGNATURE[locale] ?? SIGNATURE.en;
+  const sign = SIGNATURE[resolveApplicationLocale(locale)];
   const line = sign(model);
   if (trimmed.includes(line)) return trimmed;
   // A signature in ANOTHER language or from another model counts too: we avoid a
   // duplicate footer, not one particular string.
-  if (/🤖\s*(Relu par|Reviewed by) Numo \(minddy\)/.test(trimmed))
+  if (/🤖[^\n]*Numo \(minddy\)/.test(trimmed))
     return trimmed;
   return `${trimmed}\n\n---\n${line}`;
 }

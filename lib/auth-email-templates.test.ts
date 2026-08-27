@@ -1,108 +1,122 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { locales, type Locale } from "@/i18n/config";
+import { SELF_HOSTING_EMAIL_SUBJECTS } from "@/lib/self-hosting-email-templates";
 
 /**
- * The two authentication emails only speak ONE language per sending.
- *
- * They live outside of any code: they are Go templates rendered by GoTrue,
- * whose versioned copy is `supabase/email-templates/`. Nothing in the
- * repository executes them — so nothing would say that a sentence has moved out of its
- * branch, or that a branch has lost its `{{ end }}`. Hence this test: it renders
- * both languages ​​with a lowercase evaluator (the only pattern these files
- * use) and checks what comes out.
+ * GoTrue renders these templates outside the application, so this test executes
+ * the restricted locale branch shape used by both versioned HTML files.
  */
 
 const TEMPLATES = ["confirm-signup.html", "reset-password.html"] as const;
 
-const FRENCH_MARKERS = [
-  "Confirmez",
-  "Confirmer",
-  "Réinitialisez",
-  "Choisir un nouveau",
-  "Le bouton ne fonctionne pas",
-  "Ignorez cet",
-];
-const ENGLISH_MARKERS = [
-  "Confirm your email",
-  "Confirm my email",
-  "Reset your password",
-  "Choose a new password",
-  "Button not working",
-  "Ignore this email",
-  "ignore this email",
-];
+const MARKERS: Record<(typeof TEMPLATES)[number], Record<Locale, string>> = {
+  "confirm-signup.html": {
+    en: "Confirm my email",
+    fr: "Confirmer mon e-mail",
+    de: "E-Mail-Adresse bestätigen",
+    "pt-BR": "Confirmar meu e-mail",
+    it: "Conferma la mia email",
+    es: "Confirmar mi correo",
+  },
+  "reset-password.html": {
+    en: "Choose a new password",
+    fr: "Choisir un nouveau mot de passe",
+    de: "Neues Passwort festlegen",
+    "pt-BR": "Escolher uma nova senha",
+    it: "Scegli una nuova password",
+    es: "Elegir una nueva contraseña",
+  },
+};
+
+const LOCALE_BRANCH =
+  /\{\{ if eq \$locale "fr" \}\}([\s\S]*?)\{\{ else if eq \$locale "de" \}\}([\s\S]*?)\{\{ else if eq \$locale "pt-BR" \}\}([\s\S]*?)\{\{ else if eq \$locale "it" \}\}([\s\S]*?)\{\{ else if eq \$locale "es" \}\}([\s\S]*?)\{\{ else \}\}([\s\S]*?)\{\{ end \}\}/g;
+
+const BRANCH_INDEX: Record<Locale, number> = {
+  fr: 1,
+  de: 2,
+  "pt-BR": 3,
+  it: 4,
+  es: 5,
+  en: 6,
+};
 
 function read(name: string): string {
   return readFileSync(
     path.join(__dirname, "..", "supabase", "email-templates", name),
-    "utf8"
+    "utf8",
   );
 }
 
-/** `{{ if $fr }}A{{ else }}B{{ end }}` → A or B. No nested branch here. */
-function render(template: string, fr: boolean): string {
+function render(template: string, locale: Locale): string {
   return template.replace(
-    /\{\{ if \$fr \}\}([\s\S]*?)\{\{ else \}\}([\s\S]*?)\{\{ end \}\}/g,
-    (_match, frBranch: string, enBranch: string) => (fr ? frBranch : enBranch)
+    LOCALE_BRANCH,
+    (_match, ...groups: string[]) => groups[BRANCH_INDEX[locale] - 1],
   );
 }
 
 describe.each(TEMPLATES)("%s", (name) => {
   const template = read(name);
-  // The header comment carries the subject, also connected, and examples
-  // code — it doesn't have to pass language assertions.
   const body = template.slice(template.indexOf("-->") + 3);
 
-  it("branche sur la langue du compte, sans planter sur un compte sans langue", () => {
-    // `printf "%v"` is not cosmetic: `eq nil "fr"` causes rendering to FAIL
-    // a Go template, therefore the entire email, for any account whose
-    // metadata does not have this field yet.
+  it("reads a missing metadata locale safely", () => {
     expect(template).toContain(
-      '{{ $fr := eq (printf "%v" (index .Data "locale")) "fr" }}'
+      '{{ $locale := printf "%v" (index .Data "locale") }}',
     );
     expect(body).not.toContain(".Data.locale");
   });
 
-  it("ferme chaque branche", () => {
-    const count = (needle: string) => body.split(needle).length - 1;
-    expect(count("{{ if $fr }}")).toBeGreaterThan(0);
-    expect(count("{{ else }}")).toBe(count("{{ if $fr }}"));
-    expect(count("{{ end }}")).toBe(count("{{ if $fr }}"));
-  });
-
-  it("ne rend que du français en français", () => {
-    const rendered = render(body, true);
-    expect(rendered).not.toContain("{{ if $fr }}");
-    expect(rendered).toContain('lang="fr"');
-    for (const marker of ENGLISH_MARKERS) {
-      expect(rendered).not.toContain(marker);
+  it("contains the same complete branch contract at every copy site", () => {
+    const branchCount = body.split('{{ if eq $locale "fr" }}').length - 1;
+    expect(branchCount).toBeGreaterThan(0);
+    for (const locale of ["de", "pt-BR", "it", "es"] as const) {
+      expect(body.split(`{{ else if eq $locale "${locale}" }}`).length - 1).toBe(
+        branchCount,
+      );
     }
-    expect(FRENCH_MARKERS.some((m) => rendered.includes(m))).toBe(true);
+    expect(body.split("{{ else }}").length - 1).toBe(branchCount);
+    expect(body.split("{{ end }}").length - 1).toBe(branchCount);
   });
 
-  it("ne rend que de l'anglais en anglais", () => {
-    const rendered = render(body, false);
-    expect(rendered).not.toContain("{{ if $fr }}");
-    expect(rendered).toContain('lang="en"');
-    for (const marker of FRENCH_MARKERS) {
-      expect(rendered).not.toContain(marker);
+  it.each(locales)("renders only the %s copy", (locale) => {
+    const rendered = render(body, locale);
+    expect(rendered).not.toContain("{{ if eq $locale");
+    expect(rendered).toContain(`lang="${locale}"`);
+    expect(rendered).toContain(MARKERS[name][locale]);
+    for (const other of locales.filter((candidate) => candidate !== locale)) {
+      expect(rendered).not.toContain(MARKERS[name][other]);
     }
-    expect(ENGLISH_MARKERS.some((m) => rendered.includes(m))).toBe(true);
   });
 
-  // The link is the only thing the email has to do: it must survive
-  // the language switch, identical in both renderings.
-  it("garde le lien à jeton dans les deux langues", () => {
-    for (const fr of [true, false]) {
-      const rendered = render(body, fr);
+  it("keeps the token link in every locale", () => {
+    for (const locale of locales) {
+      const rendered = render(body, locale);
       expect(rendered).toContain("token_hash={{ .TokenHash }}");
       expect(rendered).toContain(
         name === "reset-password.html"
           ? "type=recovery&next=/reset-password"
-          : "type=signup&next=/auth/confirmed"
+          : "type=signup&next=/auth/confirmed",
       );
       expect(rendered).not.toContain("{{ .ConfirmationURL }}");
+    }
+  });
+});
+
+describe("self-hosting email subjects", () => {
+  it("contains a branch for every non-default locale", () => {
+    for (const subject of Object.values(SELF_HOSTING_EMAIL_SUBJECTS)) {
+      for (const locale of locales.filter((candidate) => candidate !== "en")) {
+        expect(subject).toContain(`$locale "${locale}"`);
+      }
+    }
+
+    const localConfig = readFileSync(
+      path.join(__dirname, "..", "supabase", "config.toml"),
+      "utf8",
+    );
+    for (const locale of locales.filter((candidate) => candidate !== "en")) {
+      expect(localConfig.split(`$locale "${locale}"`).length - 1).toBe(2);
     }
   });
 });

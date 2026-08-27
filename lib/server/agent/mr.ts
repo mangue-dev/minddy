@@ -16,6 +16,7 @@ import {
 import { fromGitlabSystemNotes, type PrTimelineEvent } from "@/lib/pr-timeline";
 import { resolveDiffPosition } from "./mr-position";
 import { summarizeGitlabPipelines, type ChecksSummary, type RawPipeline } from "./checks-core";
+import { reviewFallbackPrefix } from "./review-copy";
 import type {
   PullRequestRef,
   PullRequestFile,
@@ -34,10 +35,10 @@ import type {
 
 /**
  * GitLab Merge Request Operations for Code Broker (MIN-69) — the mirror of
- * `pr.ts` against the GitLab API v4, behind the SAME surface (neutral types of
+ * `pr.ts` for GitLab API v4, behind the same surface (neutral types from
  * `pr.ts`, identical signatures, exposed via `forge.ts`). Correspondence:
  * • `number` = the `iid` of the MR (number per project, like a PR number);
- * • the repository is addressed by its full URL-encoded path (`group/projet`);
+ * • the repository is addressed by its full URL-encoded path (`group/project`);
  * • state: `opened`/`locked` → `open`, `merged` → `closed` + `merged: true`
  * (same convention as GitHub: `state` open/closed + boolean `merged`);
  * • conversation = non-system notes; anchored review = discussions
@@ -46,7 +47,7 @@ import type {
  * Token: OAuth access token of the connected account (minted by resolveRepoCloneTarget).
  */
 
-/** GitLab API error with HTTP status (during `GithubApiError`). */
+/** GitLab API error with an HTTP status, analogous to `GithubApiError`. */
 export class GitlabApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -56,7 +57,7 @@ export class GitlabApiError extends Error {
   }
 }
 
-/** Project path `group/sub/projet` → GitLab URL id (all encoded, including `/`). */
+/** Project path `group/sub/project` to GitLab URL ID (fully encoded, including `/`). */
 function projectPath(repoFullName: string): string {
   return encodeURIComponent(repoFullName);
 }
@@ -186,8 +187,8 @@ function toMergeable(mr: RawMr): { mergeable?: boolean | null; mergeableState?: 
       return { mergeable: null, mergeableState: "unknown" };
     default:
       // `not_approved`, `blocked_status`, `ci_must_pass`, `discussions_not_resolved`,
-      // `need_rebase`, `draft_status`, `requested_changes`… : autant de refus du
-      // repository itself, which the UI all says the same way ("merge blocked").
+      // `need_rebase`, `draft_status`, and `requested_changes` are all refusals
+      // from the repository itself, which the UI presents as “merge blocked”.
       return { mergeable: false, mergeableState: "blocked" };
   }
 }
@@ -346,7 +347,7 @@ async function listRawDiffs(
   );
 }
 
-/** Diff brut GitLab → fichier neutre (statut, compteurs +/−, patch unified). */
+/** Raw GitLab diff to a neutral file shape (status, +/- counts, unified patch). */
 function toPullRequestFile(d: RawDiff): PullRequestFile {
   const { additions, deletions } = countDiffLines(d.diff ?? "");
   return {
@@ -564,9 +565,9 @@ export async function compareBranches(opts: {
 }
 
 /**
- * Merge base of two BRANCHES — the counterpart without MR of `getMergeBaseSha`: the base
- * context unfolding of the diff view of a session that does not yet have an MR.
- * GitLab l'expose directement (endpoint repository/merge_base).
+ * Merge base of two branches, the MR-less counterpart to `getMergeBaseSha`. It
+ * supplies base context when expanding a diff for a session that has no MR yet.
+ * GitLab exposes it directly through the `repository/merge_base` endpoint.
  */
 export async function getBranchesMergeBaseSha(opts: {
   token: string;
@@ -608,14 +609,14 @@ const MAX_MEMBER_PAGES = 2;
 /**
  * GitLab accounts that can be mentioned on this project (MIN-162).
  *
- * `members/all` and not `members`: GitLab distinguishes DIRECT members from
- * project of those who inherit it from the parent group — and on an instance
- * organized into groups, the second list is the bulk of the people. This is the
- * pendant exact de l'`affiliation=all` de GitHub.
+ * Use `members/all`, not `members`: GitLab distinguishes direct project members
+ * from those inheriting access through a parent group. On group-based instances,
+ * inherited members are often the majority. This matches GitHub's
+ * `affiliation=all` behavior.
  *
- * GitLab serves a `name` in addition to the `username`: we keep it, the suggestion is
- * then searches by name as well as by identifier — but it is always
- * `@username` which is inserted, only notifies him.
+ * GitLab returns `name` in addition to `username`. Keep it so suggestions can
+ * search both names and identifiers, while always inserting `@username`, the
+ * only form that sends a notification.
  */
 export async function listRepoMembers(opts: {
   token: string;
@@ -666,8 +667,8 @@ export async function listPullRequests(opts: {
 
 /**
  * Removes a remote branch (MIN-102) — mirror of `deleteBranch` of `pr.ts`.
- * Unlike GitHub, the branch name is FULLY URL-encoded here
- * (l'API GitLab attend un segment, pas un chemin). 404 → `"already-gone"`.
+ * Unlike GitHub, the branch name is fully URL-encoded here because the GitLab
+ * API expects one segment, not a path. A 404 becomes `"already-gone"`.
  */
 export async function deleteBranch(opts: {
   token: string;
@@ -817,13 +818,6 @@ export async function markMergeRequestReadyForReview(opts: {
 
 // ── Reviews formelles (MIN-138) ──────────────────────────────────────────────
 
-/** Like `pr.ts`: the verdict written in full at the top of the fallback note. */
-const FALLBACK_VERDICT_PREFIX: Record<ReviewVerdict, string> = {
-  approve: "**Approuvé depuis minddy.**",
-  request_changes: "**Changements demandés depuis minddy.**",
-  comment: "",
-};
-
 /** Does GitLab deny approval (MR author, or tier without the API)?
     Unlike GitHub's 422, it's a 401 — and a 403/404 on
     instances where the trust endpoint is not served. */
@@ -876,6 +870,7 @@ export async function submitMergeRequestReview(opts: {
   number: number;
   verdict: ReviewVerdict;
   body: string;
+  locale?: string;
 }): Promise<ReviewSubmission> {
   let published: ReviewSubmission["published"] =
     opts.verdict === "request_changes" ? "comment" : "review";
@@ -889,7 +884,9 @@ export async function submitMergeRequestReview(opts: {
     }
   }
 
-  const prefix = published === "comment" ? FALLBACK_VERDICT_PREFIX[opts.verdict] : "";
+  const prefix = published === "comment"
+    ? reviewFallbackPrefix(opts.verdict, opts.locale)
+    : "";
   const body = `${prefix}\n\n${opts.body}`.trim();
   // A bare approval without a message has nothing more to say: the note does not go away
   // only if it carries something (the prefix counts as content).
@@ -904,10 +901,10 @@ interface RawApprovals {
 }
 
 /**
- * Countdown of MR approvals. GitLab maintains the current list of
- * approbateurs (pas un historique de reviews comme GitHub) : il n'y a donc rien
- * to reduce, and `changesRequested` is always 0 — the “changes” state
- * requested” does not exist on the GitLab side (minddy notes it + event).
+ * Summary of MR approvals. GitLab maintains the current approver list rather
+ * than a review history like GitHub, so there is nothing to reduce.
+ * `changesRequested` is always 0 because that review state does not exist on
+ * GitLab; minddy represents requested changes with a note and an event.
  */
 export async function listMergeRequestApprovals(opts: {
   token: string;
@@ -993,7 +990,7 @@ interface RawNote {
   created_at: string;
   position?: RawPosition | null;
   original_position?: RawPosition | null;
-  /** Resolution of the FIL, carried by each resolvable note (MIN-139). */
+  /** Thread resolution, carried by each resolvable note (MIN-139). */
   resolved?: boolean;
   resolvable?: boolean;
   resolved_by?: { username?: string } | null;
@@ -1136,8 +1133,8 @@ function toReviewComment(
     // No review to attach this comment to: GitLab has no subject
     // review, its diff notes go alone in the thread (MIN-159).
     review_id: null,
-    // GitLab does not expose a hunk snippet per note — all renders (UI,
-    // prompt de l'agent) ont un repli sans hunk (chemin + ligne + corps).
+    // GitLab does not expose a hunk snippet per note. Every renderer (UI and
+    // agent prompt) falls back to the path, line, and body without a hunk.
     diff_hunk: "",
     user: n.author
       ? { login: n.author.username ?? "", avatar_url: n.author.avatar_url ?? null }
@@ -1191,23 +1188,23 @@ export async function listMergeRequestDiffComments(opts: {
 
 /**
  * Review thread resolution status (MIN-139) — the GitLab counterpart to the
- * GraphQL query of `pr.ts`, but without any other ENDPOINT to query: the
- * discussions already carry everything, `listMergeRequestDiffComments` only does the
- * discard by flattening. `threadId` is the discussion id (a string, like
- * difference in note ids), `rootCommentId` the first DiffNote — the same
- * root as on the GitHub side, therefore the same pairing key.
+ * GraphQL query in `pr.ts`, but with no additional endpoint: discussions
+ * already carry everything, while `listMergeRequestDiffComments` discards this
+ * data when flattening. `threadId` is the discussion ID (a string, unlike note
+ * IDs), and `rootCommentId` is the first DiffNote—the same root as on GitHub,
+ * and therefore the same pairing key.
  *
- * Price to pay, not to hide: it's a SECOND paginated pass on
- * `/discussions`, launched in parallel with the first by `prReviewCommentsResponse`.
- * The two readings therefore cost twice the same pages. Merge them
- * would ask to change the form of `Forge` (a call returning comments AND
- * son), which reading REST + GraphQL from GitHub does not serve as well
- * simply — hence this duplicate, bounded by `DISCUSSIONS_MAX_PAGES`.
+ * This deliberately makes a second paginated pass over `/discussions`, launched
+ * in parallel with the first by `prReviewCommentsResponse`, so the same pages
+ * are fetched twice. Combining them would require changing the `Forge` shape to
+ * return comments and threads together, which does not map cleanly to GitHub's
+ * REST and GraphQL reads. The duplication is bounded by
+ * `DISCUSSIONS_MAX_PAGES`.
  *
- * `resolved` is carried by EACH note in the thread (GitLab resolves the thread, not the
- * note): reading the root is enough. An unresolvable discussion (rare on a
- * DiffNote) is reported `resolved: false` — the caller does not have to make one
- * special case, the forge will refuse the tilt if it is not permitted.
+ * `resolved` is carried by every note in the thread because GitLab resolves the
+ * thread, not an individual note, so reading the root is enough. An unresolvable
+ * discussion (rare for a DiffNote) is reported as `resolved: false`; the caller
+ * needs no special case, and the forge rejects an unsupported toggle.
  */
 export async function listMergeRequestDiffThreads(opts: {
   token: string;
@@ -1265,7 +1262,7 @@ interface RawAward {
 const AWARDS_MAX_NOTES = 120;
 const AWARDS_CONCURRENCY = 8;
 
-/** `Promise.all` par tranches : cent notes ne doivent pas partir d'un coup. */
+/** Run `Promise.all` in batches so a hundred notes never start at once. */
 async function mapLimited<A, B>(
   items: A[],
   limit: number,
@@ -1287,12 +1284,12 @@ async function gitlabCurrentUsername(token: string): Promise<string | null> {
 }
 
 /**
- * Collection of awards for a topic: a NOTE, or the merge request itself —
+ * Collection of awards for a subject: a note, or the merge request itself—
  * `PR_BODY_COMMENT_ID` (MIN-147), the body that opens the conversation thread.
  *
- * Nothing else distinguishes the two surfaces on the GitLab side: a thread note and
- * a review note carry their awards under the same URL, which leaves
- * `listMergeRequestNoteAwards` and `setMergeRequestNoteAward` serve both.
+ * Nothing else distinguishes these surfaces on GitLab: conversation and review
+ * notes expose awards under the same URL, so `listMergeRequestNoteAwards` and
+ * `setMergeRequestNoteAward` serve both.
  */
 function awardsUrl(repoFullName: string, iid: number, noteId: number): string {
   const base = `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${iid}`;
@@ -1302,19 +1299,18 @@ function awardsUrl(repoFullName: string, iid: number, noteId: number): string {
 }
 
 /**
- * Reactions from review comments — the GitLab counterpart of the request
- * `reactionGroups` de `pr.ts`, mais **note par note** : l'API des awards n'existe
- * only by note, and nothing in the response to the discussions bears them out. It is therefore
- * the N+1 that the ticket framework feared, made bearable by a ceiling
- * (`AWARDS_MAX_NOTES`) and limited competition rather than a bet.
+ * Reactions from review comments—the GitLab counterpart to the
+ * `reactionGroups` request in `pr.ts`, but queried note by note. The awards API
+ * exists only for individual notes, and discussion responses contain no awards.
+ * This is therefore the N+1 request pattern anticipated during issue planning,
+ * bounded by `AWARDS_MAX_NOTES` and limited concurrency.
  *
- * A note that fails to read simply gives zero reaction: one reaction
- * illegible should not take away the review view.
+ * A note that cannot be read simply returns no reactions; one unreadable
+ * reaction must not remove the whole review view.
  *
- * `viewerIsActor` (MIN-145): if false, the token is that of the project LINK and
- * not that of the person looking — “mine” would then have no
- * sense. We don't even ask for `GET /user` (a round trip saved) and everything
- * sort en `mine: false`.
+ * With `viewerIsActor: false` (MIN-145), the token belongs to the project link,
+ * not the person viewing the page, so “mine” would be meaningless. We skip
+ * `GET /user` and return `mine: false` for every reaction.
  */
 export async function listMergeRequestNoteAwards(opts: {
   token: string;
@@ -1357,15 +1353,14 @@ export async function listMergeRequestNoteAwards(opts: {
 }
 
 /**
- * Add or remove a reaction to a note. GitLab rejects duplicate award
- * (404 “has already been taken”) and only allows HIS to be removed: both
- * paths therefore go through the list, like on the GitHub side.
+ * Add or remove a reaction from a note. GitLab rejects duplicate awards
+ * (“has already been taken”) and only lets users remove their own, so both
+ * paths inspect the list, as on GitHub.
  *
- * `login` is that of the actor (MIN-145) and it is **ignored here**: GitLab
- * awards the award under the token account, and `GET /user` gives the name — nothing
- * is not to be passed from the outside. It only exists in the signature because
- * GitHub needs it to find the reaction to delete (even
- * arrangement que `commentIds`, que GitHub ignore).
+ * `login` identifies the actor (MIN-145) and is ignored here: GitLab creates the
+ * award under the token account, and `GET /user` supplies the name. It remains
+ * in the shared signature because GitHub needs it to find the reaction to
+ * delete, just as `commentIds` remains for GitLab while GitHub ignores it.
  */
 export async function setMergeRequestNoteAward(opts: {
   token: string;
@@ -1462,9 +1457,9 @@ export async function createMergeRequestDiffComment(opts: {
 }
 
 /**
- * Reply in a review thread. `commentId` is the id of a thread note: GitLab
- * addresses the responses by discussion — we find the main discussion then
- * we add the note (flat wire, the answer points to the root).
+ * Reply in a review thread. `commentId` identifies a thread note, while GitLab
+ * addresses replies by discussion. We find the owning discussion and add the
+ * note; the flat thread points the reply back to the root.
  */
 export async function replyToMergeRequestDiffComment(opts: {
   token: string;

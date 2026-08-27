@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
+import { MARKDOWN_LOCALE_COPY } from "@/lib/markdown-locale-copy";
 import { BILLING_PLANS } from "@/lib/billing-plans";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import {
@@ -10,9 +11,11 @@ import {
   type Comparison,
 } from "@/lib/comparisons";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
-import { PUBLIC_ROUTES,
+import {
+  PUBLIC_ROUTES,
   publicPathForLocale,
-  routeByKey, type PublicRouteKey,
+  routeByKey,
+  type PublicRouteKey,
 } from "@/lib/public-routes";
 import { MCP_ENDPOINT, MINDDY_REPOSITORY_URL, SITE_URL } from "@/lib/site";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -28,19 +31,17 @@ import {
  * by the proxy. Each HTML page also announces it with a header
  * `Link: <…>; rel="alternate"; type="text/markdown"`.
  *
- * **Why.** An agent who wants to read a page today pays for 440 KB of HTML
- * to extract 4 KB of text, and must guess the structure along the way. THE
- * Markdown gives it the same content, hierarchical, without a byte of markup
- * useless. This is one of the points that Cloudflare's agentic auditor notes, and
- * the only one on his list that costs anything to produce.
+ * **Why.** An agent that reads a page otherwise downloads 440 KB of HTML to
+ * extract 4 KB of text and must infer the structure along the way. Markdown
+ * provides the same hierarchical content without unnecessary markup. This is
+ * one of the findings from Cloudflare's agentic auditor, and the only one on
+ * that list that requires us to produce an additional representation.
  *
- * **Which it is not.** Not a byte-for-byte mirror of HTML. The content
- * is rebuilt from THE SAME i18n KEYS as the components — so it does not
- * cannot tell anything other than the page - but the order and grouping
- * are rewritten for a reader who reads text, not layout. THE
- * four legal pages return their title, their description and a link: their
- * body is structured prose in JSX, rewriting it here would make it
- * second source of legal truth, which we do not want at any price.
+ * **What it is not.** It is not a byte-for-byte mirror of the HTML. The content
+ * is rebuilt from the same i18n keys as the components, while its order and
+ * grouping are adapted for a text reader. The four legal pages return their
+ * title, description, and a link: their bodies are structured prose in JSX,
+ * and reproducing them here would create a second source of legal truth.
  */
 
 const KEYS = new Set<string>(PUBLIC_ROUTES.map((route) => route.key));
@@ -54,18 +55,18 @@ const COMPARISON_BY_ROUTE = new Map<string, Comparison>(
  * Which page to render, and in what language — read in the HEADERS set by the
  * proxy, with the query as a backup.
  *
- * The proxy passed the information into query (`/md?route=pricing&locale=fr`).
- * It didn't happen: on a middleware rewrite, Next 16 gives the
- * route handler the ORIGINAL URL (`request.nextUrl` and `request.url` are equal
- * `/pricing`), not the target. `route` was therefore still absent, `/md` fell
- * on its default, and ALL pages of the site served the Markdown of the
- * landing — measured by building the Markdown version of MIN-93 pages.
+ * The proxy originally passed the information in the query
+ * (`/md?route=pricing&locale=fr`). That did not work: after a middleware
+ * rewrite, Next 16 gives the route handler the original URL (`request.nextUrl`
+ * and `request.url` both equal `/pricing`), not the target. `route` was therefore
+ * absent, `/md` used its default, and every page served the landing Markdown.
+ * This was observed while building the Markdown version of the MIN-93 pages.
  *
- * The request headers go through the rewriting: it's already there
- * que `x-minddy-locale` atteint `i18n/request.ts`.
+ * Request headers survive the rewrite; `x-minddy-locale` already reaches
+ * `i18n/request.ts` through this path.
  *
- * The query remains read second so that `/md?route=…&locale=…` continues to
- * operate in direct call — this is what you type to check a page.
+ * The query remains the fallback so `/md?route=…&locale=…` continues to work
+ * when called directly, which is useful for inspecting a page.
  */
 function requested(request: NextRequest): { rawKey: string; rawLocale: string } {
   const params = request.nextUrl.searchParams;
@@ -105,8 +106,13 @@ export async function GET(request: NextRequest): Promise<Response> {
   });
 }
 
-function header(title: string, description: string, canonical: string): string {
-  return `# ${title}\n\n> ${description}\n\nCanonical: ${canonical}\n`;
+function header(
+  title: string,
+  description: string,
+  canonical: string,
+  locale: Locale,
+): string {
+  return `# ${title}\n\n> ${description}\n\n${MARKDOWN_LOCALE_COPY[locale].canonical}: ${canonical}\n`;
 }
 
 async function renderLanding(locale: Locale, canonical: string): Promise<string> {
@@ -153,7 +159,7 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
   ];
 
   return [
-    header(t("metaTitle"), t("metaDescription"), canonical),
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitleBefore")} ${t("heroTitleAccent")}`,
     t("heroSubtitle"),
     t("heroNote"),
@@ -178,13 +184,14 @@ async function renderPricing(locale: Locale, canonical: string): Promise<string>
   const planNameKey = { free: "planFree", go: "planGo", pro: "planPro" } as const;
 
   return [
-    header(t("metaTitle"), t("metaDescription"), canonical),
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
     // Prices come from BILLING_PLANS, never from a copy — same rule as
     // structured data.
     BILLING_PLANS.map(
-      (plan) => `- **${tb(planNameKey[plan.id])}**: ${plan.priceEurMonthly} EUR / month`,
+      (plan) =>
+        `- **${tb(planNameKey[plan.id])}**: ${plan.priceEurMonthly} EUR / ${MARKDOWN_LOCALE_COPY[locale].perMonth}`,
     ).join("\n"),
     `## ${t("comparisonTitle")}`,
     t("comparisonSubtitle"),
@@ -213,7 +220,7 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
   ]);
 
   return [
-    header(t("metaTitle"), t("metaDescription"), canonical),
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
     t("heroNote"),
@@ -304,7 +311,7 @@ async function renderSelfHosting(locale: Locale, canonical: string): Promise<str
   const installUrl = `${SITE_URL}${publicPathForLocale(installRoute, locale)}`;
 
   return [
-    header(t("metaTitle"), t("metaDescription"), canonical),
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
     `- ${t("heroCtaPrimary")}: ${installUrl}`,
@@ -351,7 +358,7 @@ async function renderChangelog(locale: Locale, canonical: string): Promise<strin
   return [
     // No subtitle: the page no longer has one, and the header already bears the
     // description. One more sentence before the list wouldn't say anything new.
-    header(t("metaTitle"), t("metaDescription"), canonical),
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
     ...CHANGELOG_ENTRIES.map((entry) =>
       [
         `## ${t(`entry_${entry.id}_title` as MessageKey<"Changelog">)}`,
@@ -387,7 +394,7 @@ async function renderComparison(
   ];
 
   return [
-    header(tc("metaTitle"), tc("metaDescription"), canonical),
+    header(tc("metaTitle"), tc("metaDescription"), canonical, locale),
     `## ${tc("heroTitle")}`,
     tc("heroSubtitle"),
 
@@ -421,27 +428,28 @@ async function renderLegal(
   const route = routeByKey(key);
   const t = await getTranslations({ locale, namespace: route.namespace });
   return [
-    header(t("metaTitle"), t("metaDescription"), canonical),
-    `The full text of this page is only published as HTML: ${canonical}`,
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
+    `${MARKDOWN_LOCALE_COPY[locale].fullHtml}: ${canonical}`,
     links(locale),
   ].join("\n\n") + "\n";
 }
 
 function links(locale: Locale): string {
+  const copy = MARKDOWN_LOCALE_COPY[locale].links;
   const path = (key: PublicRouteKey) => {
     const route = routeByKey(key);
     return `${SITE_URL}${publicPathForLocale(route, locale)}`;
   };
   return [
-    "## Links",
-    `- Home: ${path("home")}`,
-    `- Pricing: ${path("pricing")}`,
-    `- MCP server: ${path("mcp")}`,
-    `- Self-hosting guide: ${path("selfHosting")}`,
-    `- Repository: ${MINDDY_REPOSITORY_URL}`,
-    `- Changelog: ${path("changelog")}`,
-    `- MCP integration guide: ${SITE_URL}/llms.txt`,
-    `- Terms: ${path("terms")}`,
-    `- Privacy: ${path("privacy")}`,
+    `## ${copy.title}`,
+    `- ${copy.home}: ${path("home")}`,
+    `- ${copy.pricing}: ${path("pricing")}`,
+    `- ${copy.mcp}: ${path("mcp")}`,
+    `- ${copy.selfHosting}: ${path("selfHosting")}`,
+    `- ${copy.repository}: ${MINDDY_REPOSITORY_URL}`,
+    `- ${copy.changelog}: ${path("changelog")}`,
+    `- ${copy.mcpGuide}: ${SITE_URL}/llms.txt`,
+    `- ${copy.terms}: ${path("terms")}`,
+    `- ${copy.privacy}: ${path("privacy")}`,
   ].join("\n");
 }

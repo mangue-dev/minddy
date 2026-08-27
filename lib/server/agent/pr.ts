@@ -21,6 +21,7 @@ import {
   type RawGithubTimelineEvent,
 } from "@/lib/pr-timeline";
 import type { CommitAuthor } from "@/lib/commit-authors";
+import { reviewFallbackPrefix } from "./review-copy";
 
 /**
  * GitHub Pull Request Operations for Code Agent (MIN-46): Open PR
@@ -41,10 +42,9 @@ export interface PullRequestRef {
   base?: string;
   /** Head SHA — immutable anchor to calculate the merge base (getMergeBaseSha). */
   headSha?: string;
-  /** Number of PR commits, as forge counts. GitHub serves it with
-      the GET of A PR (never with the list); GitLab doesn't serve it anywhere and it
-      leaves `undefined` — the caller then falls back to the length of the list
-      de commits. */
+  /** Number of PR commits, as counted by the forge. GitHub returns it when
+      fetching one PR (never in the list); GitLab does not return it, so it stays
+      `undefined` and the caller falls back to the commit list length. */
   commitCount?: number;
   /** Author and opening date: `body` opens the thread as a comment, it needs its header. */
   user?: { login: string; avatar_url: string | null } | null;
@@ -61,9 +61,9 @@ export interface PullRequestRef {
       responds `mergeable: null` + `mergeable_state: "unknown"` for a few
       seconds), and the *list* endpoint does not return these two fields at all. */
   mergeable?: boolean | null;
-  /** Detailed mergeability status: `clean`, `blocked` (filing requires
-      approbations / des checks), `dirty` (conflit), `unstable` (checks non
-      required in failure), `unknown`. */
+  /** Detailed mergeability status: `clean`, `blocked` (the repository requires
+      approvals or checks), `dirty` (conflict), `unstable` (optional checks are
+      failing), or `unknown`. */
   mergeableState?: string | null;
 }
 
@@ -131,15 +131,15 @@ export interface PullRequestCommit {
    * root commit (no parent), where there is nothing to unfold before.
    */
   parentSha: string | null;
-  /** Lines added/removed BY THIS COMMIT. `null` = not yet read: none
-      of the two forges do not use these figures with the list (see `…CommitExtras`). */
+  /** Lines added and removed by this commit. `null` means not yet read because
+      neither forge includes these figures in the list (see `…CommitExtras`). */
   additions: number | null;
   deletions: number | null;
   /**
-   * ALL its authors, main one (MIN-159) — one co-signed commit has
-   * several, and this is the common case as soon as an agent has held the keyboard.
-   * Empty until `…CommitExtras` responds; the caller then falls back on
-   * `author` / `authorName`, l'auteur principal seul.
+   * All authors, including the primary one (MIN-159). A co-signed commit has
+   * several, which is common when an agent authored the change. Empty until
+   * `…CommitExtras` responds; the caller then falls back to `author` and
+   * `authorName`, which represent only the primary author.
    */
   authors: CommitAuthor[];
 }
@@ -333,11 +333,11 @@ interface RawPull {
 }
 
 /**
- * `toRef` serves the GET of A PR **and** `listPullRequests`. The *list* endpoint does not
- * renvoie ni `mergeable`, ni `mergeable_state`, ni `merged` : ces champs y
- * remain `undefined`. This is intentional and does not interfere with the cleaning of branches (which
- * does not read them), but any reader must distinguish `undefined` (“not
- * l'information ») de `false` (« vraiment pas fusionnable »).
+ * `toRef` serves both the single-PR GET and `listPullRequests`. The list endpoint
+ * returns none of `mergeable`, `mergeable_state`, or `merged`, so these fields
+ * remain `undefined`. This is intentional and does not affect branch cleanup,
+ * which does not read them, but callers must distinguish `undefined` (“no
+ * information”) from `false` (“definitely not mergeable”).
  */
 function toRef(pr: RawPull): PullRequestRef {
   return {
@@ -643,10 +643,10 @@ export async function listPullRequestCommitExtras(opts: {
       extras.set(c.oid, {
         additions: c.additions ?? 0,
         deletions: c.deletions ?? 0,
-        // MEASURED: GitHub makes the main author LEAD then the co-signers,
-        // already duplicated by email — a trailer which repeats the author does not add
-        // no entry. It also resolves accounts, up to `noreply@anthropic.com`
-        // (→ `claude`), which REST does nowhere.
+        // MEASURED: GitHub puts the primary author first, followed by co-signers,
+        // already deduplicated by email. A trailer that repeats the author adds no
+        // entry. It also resolves accounts, including `noreply@anthropic.com`
+        // (to `claude`), which REST does not do.
         authors: (c.authors?.nodes ?? []).flatMap((a) => {
           const name = a?.name?.trim();
           if (!name && !a?.user?.login) return [];
@@ -654,8 +654,8 @@ export async function listPullRequestCommitExtras(opts: {
             {
               login: a?.user?.login ?? null,
               name: name || (a?.user?.login as string),
-              // L'avatar du COMPTE seulement : `GitActor.avatarUrl` sert un
-              // identicon for an unknown email, which would read like a photo.
+              // Use only the account avatar: `GitActor.avatarUrl` returns an
+              // identicon for an unknown email, which would look like a photo.
               avatar_url: a?.user?.avatarUrl ?? null,
             },
           ];
@@ -673,8 +673,8 @@ export async function listPullRequestCommitExtras(opts: {
  * The difference of ONE commit against its parent — “what this commit changes”, at
  * same format as the diff of the entire PR (same patches, same rendering).
  *
- * GitHub serves at most 300 files on this endpoint; beyond that it would be necessary
- * paginer, mais un commit unique qui touche 300 fichiers ne se lit plus
+ * GitHub returns at most 300 files from this endpoint. Beyond that we would need
+ * pagination, but a single commit touching 300 files is no longer useful to read
  * file by file anyway.
  */
 export async function getCommitDiff(opts: {
@@ -1024,18 +1024,6 @@ const GITHUB_REVIEW_EVENT: Record<ReviewVerdict, "APPROVE" | "REQUEST_CHANGES" |
   comment: "COMMENT",
 };
 
-/**
- * The verdict, written in full at the top of the fallback commentary — without it,
- * a PR reader on GitHub would only see a bare comment where minddy
- * displays “approved”. In French, like the body of PR that the agent writes
- * (`execute.ts`).
- */
-const FALLBACK_VERDICT_PREFIX: Record<ReviewVerdict, string> = {
-  approve: "**Approuvé depuis minddy.**",
-  request_changes: "**Changements demandés depuis minddy.**",
-  comment: "",
-};
-
 /** Is GitHub refusing because the author can't proofread himself?
     Measured: 422 “Review Can not approve your own pull request”. */
 function isSelfReviewRefusal(err: unknown): boolean {
@@ -1071,6 +1059,7 @@ export async function submitPullRequestReview(opts: {
   number: number;
   verdict: ReviewVerdict;
   body: string;
+  locale?: string;
 }): Promise<ReviewSubmission> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const postReview = (event: string, body: string) =>
@@ -1095,9 +1084,9 @@ export async function submitPullRequestReview(opts: {
     return { published: "review" };
   } catch (err) {
     if (!isSelfReviewRefusal(err)) throw err;
-    // The prefix also guarantees a NON-EMPTY body: GitHub accepts a `APPROVE`
-    // sans message, mais refuse un commentaire qui n'en a pas.
-    const body = `${FALLBACK_VERDICT_PREFIX[opts.verdict]}\n\n${opts.body}`.trim();
+    // The prefix also guarantees a non-empty body: GitHub accepts an `APPROVE`
+    // without a message but rejects an empty comment.
+    const body = `${reviewFallbackPrefix(opts.verdict, opts.locale)}\n\n${opts.body}`.trim();
     await createPullRequestComment({ ...opts, body });
     return { published: "comment" };
   }
@@ -1311,7 +1300,7 @@ export async function listPullRequestComments(opts: {
  *
  * Three surfaces, because an image can be anywhere on the PR: its
  * BODY, a thread message, a line remark. They are read in parallel
- * and pour into the same table — the caller is looking for a uuid, not a location.
+ * and collected in the same table—the caller wants a UUID, not a location.
  *
  * Best-effort on the surface: a failed read removes images from the table,
  * it does not cause the PR display to fall.
@@ -1456,10 +1445,10 @@ export async function listPullRequestReviewComments(opts: {
  * comment” from GitHub: it leaves immediately, excluding group review).
  *
  * `commitId` MUST be the head of the PR (`PullRequestRef.headSha`), and the line
- * must belong to diff: checked against real API, one line out of diff —
- * typically a context line unfolded in the view — is refused in
- * **422** (`pull_request_review_thread.line: could not be resolved`). L'appelant
- * must therefore only offer the affordance on the lines of the original hunks.
+ * must belong to the diff. Tests against the real API show that a line outside
+ * the diff—typically an expanded context line—is rejected with **422**
+ * (`pull_request_review_thread.line: could not be resolved`). The caller must
+ * therefore offer this action only on lines from the original hunks.
  *
  * `startLine`/`startSide` are there for multi-line comments (excluding
  * perimeter today): GitHub accepts them on this same endpoint.
@@ -1605,8 +1594,8 @@ export async function listPullRequestReviewThreads(opts: {
 
 /**
  * Resolves (or reopens) a review thread. GraphQL ONLY: REST does not expose
- * neither of these two operations, and the thread is addressed by its node id — the one that
- * `listPullRequestReviewThreads` vient de rendre, jamais un id de commentaire.
+ * either operation, and the thread is addressed by the node ID returned by
+ * `listPullRequestReviewThreads`, never by a comment ID.
  */
 export async function setPullRequestReviewThreadResolved(opts: {
   token: string;
@@ -1665,8 +1654,8 @@ function toReactions(
   return out;
 }
 
-/** Comments read by thread: a review thread that exceeds is extremely rare, and this
-    who overflows only loses his reactions – never his text, served by the REST. */
+/** Comments read per thread. An overflowing review thread is extremely rare, and
+    overflow only loses reactions—never text, which REST still returns. */
 const REACTIONS_COMMENTS_PER_THREAD = 50;
 
 interface RawReactionThreads {
@@ -1690,21 +1679,19 @@ interface RawReactionThreads {
 /**
  * Reactions from ALL review comments, in one GraphQL query.
  *
- * REST knows how to count them (the payload of a comment carries an object
- * `reactions`) but does NOT say if the current identity has already reacted — but it is
- * exactly what decides the state of the button. Knowing REST would require a
- * appeal by comment; `reactionGroups` gives it for the entire PR at once,
- * with `viewerHasReacted` — “the viewer” being, literally, the bearer of the
- * token qui lit.
+ * REST knows how to count them (a comment payload carries a `reactions` object)
+ * but does not say whether the current identity has already reacted, which is
+ * exactly what determines the button state. REST would require one request per
+ * comment; `reactionGroups` returns the whole PR at once, including
+ * `viewerHasReacted`, where “viewer” literally means the token bearer.
  *
- * Hence `viewerIsActor` (MIN-145): if false, the token is that of the installation
- * and `viewerHasReacted` talks about the BOT. We then force `mine: false` rather than
- * to render as is an “I reacted” which is not that of anyone. The accounts,
- * they are the same for everyone.
+ * Hence `viewerIsActor` (MIN-145): when false, the token belongs to the
+ * installation and `viewerHasReacted` describes the bot. We force `mine: false`
+ * instead of showing an “I reacted” state that belongs to no user. Counts are
+ * the same for everyone.
  *
- * `commentIds` is ignored: the request starts from the PR, not from the comments. He
- * is only there because GitLab has nothing equivalent and must query
- * note par note.
+ * `commentIds` is ignored: the request starts from the PR, not its comments. It
+ * exists only because GitLab has no equivalent and must query each note.
  */
 export async function listPullRequestReviewCommentReactions(opts: {
   token: string;

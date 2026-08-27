@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { AcquisitionContext } from "@/components/marketing/acquisition-context";
 import { resolveCapabilities } from "@/lib/capabilities";
 
 /**
@@ -25,6 +26,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
   const webAnalytics = resolveCapabilities(process.env).vercelWebAnalytics.configured;
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background">
+      <AcquisitionContext />
       <MarketingNav />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-10">{children}</main>
       <MarketingFooter />

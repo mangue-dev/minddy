@@ -89,9 +89,11 @@ Custom SMTP: Resend (`smtp.resend.com`, `noreply@mail.minddy.app`, sender
 
 | Template | Versioned copy | Subject |
 | --- | --- | --- |
-| Confirm signup | [supabase/email-templates/confirm-signup.html](../supabase/email-templates/confirm-signup.html) | `Confirm your email address` |
-| Reset password | [supabase/email-templates/reset-password.html](../supabase/email-templates/reset-password.html) | `Réinitialisez votre mot de passe · Reset your password` |
+| Confirm signup | [supabase/email-templates/confirm-signup.html](../supabase/email-templates/confirm-signup.html) | Locale branch from `lib/self-hosting-email-templates.ts` |
+| Reset password | [supabase/email-templates/reset-password.html](../supabase/email-templates/reset-password.html) | Locale branch from `lib/self-hosting-email-templates.ts` |
 
+Both the subject and body select one of the six supported locales from
+`user_metadata.locale`, with English as the safe fallback for older accounts.
 Both carry a link to `token_hash`, never `{{ .ConfirmationURL }}`: this one
 logs in with a simple `GET`, which is precisely what MIN-345 removed. The
 Reset template is the only place where the route destination is

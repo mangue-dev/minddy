@@ -8,8 +8,8 @@ export const SELF_HOSTING_EMAIL_TEMPLATE_NAMES = ["confirm-signup", "reset-passw
 export type SelfHostingEmailTemplateName = (typeof SELF_HOSTING_EMAIL_TEMPLATE_NAMES)[number];
 
 export const SELF_HOSTING_EMAIL_SUBJECTS = {
-  "confirm-signup": '{{ if eq (printf "%v" (index .Data "locale")) "fr" }}Confirmez votre adresse e-mail{{ else }}Confirm your email{{ end }}',
-  "reset-password": '{{ if eq (printf "%v" (index .Data "locale")) "fr" }}Réinitialisez votre mot de passe{{ else }}Reset your password{{ end }}',
+  "confirm-signup": '{{ $locale := printf "%v" (index .Data "locale") }}{{ if eq $locale "fr" }}Confirmez votre adresse e-mail{{ else if eq $locale "de" }}Bestätige deine E-Mail-Adresse{{ else if eq $locale "pt-BR" }}Confirme seu endereço de e-mail{{ else if eq $locale "it" }}Conferma il tuo indirizzo email{{ else if eq $locale "es" }}Confirma tu dirección de correo{{ else }}Confirm your email{{ end }}',
+  "reset-password": '{{ $locale := printf "%v" (index .Data "locale") }}{{ if eq $locale "fr" }}Réinitialisez votre mot de passe{{ else if eq $locale "de" }}Setze dein Passwort zurück{{ else if eq $locale "pt-BR" }}Redefina sua senha{{ else if eq $locale "it" }}Reimposta la password{{ else if eq $locale "es" }}Restablece tu contraseña{{ else }}Reset your password{{ end }}',
 } satisfies Record<SelfHostingEmailTemplateName, string>;
 
 export function isSelfHostingEmailTemplateName(value: string): value is SelfHostingEmailTemplateName {

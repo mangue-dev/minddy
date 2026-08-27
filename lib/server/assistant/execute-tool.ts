@@ -371,7 +371,7 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   invitationAlreadyPending:
     "There is already a pending invitation for that email.",
   memberLimitReached:
-    "This project has reached the number of guests the owner's plan allows (members plus pending invitations). Relay that as-is.",
+    "This project has reached the number of guests the owner's plan allows (members plus pending invitations). Relay this meaning in the user's language.",
   cannotRemoveOwner: "The project owner cannot be removed.",
   invalidColor: "That color is invalid (use a hex color like #7c5cff).",
   categoryNotFound: "Category not found in this project.",
@@ -384,14 +384,14 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
     "at a publicly reachable host (localhost and private addresses are refused).",
   webhookHumanOnly:
     "Choosing where a webhook delivers is the owner's own gesture: it is done " +
-    "in Settings → Integrations, not by an assistant. Relay that as-is. You " +
+    "in Settings → Integrations, not by an assistant. Relay this meaning in the user's language. You " +
     "can still turn the webhook off, or change the events and scope of the " +
     "destination already in place.",
   webhookInvalidConfig: "The webhook events or scope are invalid.",
   smartAssignNotAllowed:
-    "Smart Assign is not included in the owner's plan, so it cannot be turned on. Relay that as-is.",
+    "Smart Assign is not included in the owner's plan, so it cannot be turned on. Relay this meaning in the user's language.",
   automationsNotAllowed:
-    "Automations are not included in the owner's plan, so the loop cannot be armed on this project. Relay that as-is.",
+    "Automations are not included in the owner's plan, so the loop cannot be armed on this project. Relay this meaning in the user's language.",
   webhookIssuesOnly:
     "That is a 'feedback' key: it creates no issue, so it has no webhook. Only an 'issues' key can have one.",
   databaseError: "A database error occurred.",

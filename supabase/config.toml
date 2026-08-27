@@ -30,11 +30,11 @@ enable_signup = true
 double_confirm_changes = true
 
 [auth.email.template.confirmation]
-subject = "Confirmez votre adresse e-mail · Confirm your email"
+subject = '{{ $locale := printf "%v" (index .Data "locale") }}{{ if eq $locale "fr" }}Confirmez votre adresse e-mail{{ else if eq $locale "de" }}Bestätige deine E-Mail-Adresse{{ else if eq $locale "pt-BR" }}Confirme seu endereço de e-mail{{ else if eq $locale "it" }}Conferma il tuo indirizzo email{{ else if eq $locale "es" }}Confirma tu dirección de correo{{ else }}Confirm your email{{ end }}'
 content_path = "./supabase/email-templates/confirm-signup.html"
 
 [auth.email.template.recovery]
-subject = "Réinitialisez votre mot de passe · Reset your password"
+subject = '{{ $locale := printf "%v" (index .Data "locale") }}{{ if eq $locale "fr" }}Réinitialisez votre mot de passe{{ else if eq $locale "de" }}Setze dein Passwort zurück{{ else if eq $locale "pt-BR" }}Redefina sua senha{{ else if eq $locale "it" }}Reimposta la password{{ else if eq $locale "es" }}Restablece tu contraseña{{ else }}Reset your password{{ end }}'
 content_path = "./supabase/email-templates/reset-password.html"
 
 [realtime]

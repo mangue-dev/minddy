@@ -9,21 +9,21 @@
 
   Subject to place above the body — the “Subject” field of the dashboard goes through
   the SAME template engine as the body, so it plugs in the same:
-      {{ if eq (printf "%v" (index .Data "locale")) "fr" }}Confirmez votre adresse e-mail{{ else }}Confirm your email{{ end }}
+      {{ $locale := printf "%v" (index .Data "locale") }}{{ if eq $locale "fr" }}Confirmez votre adresse e-mail{{ else if eq $locale "de" }}Bestätige deine E-Mail-Adresse{{ else if eq $locale "pt-BR" }}Confirme seu endereço de e-mail{{ else if eq $locale "it" }}Conferma il tuo indirizzo email{{ else if eq $locale "es" }}Confirma tu dirección de correo{{ else }}Confirm your email{{ end }}
   (to be copied as is, without escaping the quotation marks — escaping only concerns
   as `supabase/config.toml`, locally. Check on a real shipment: a subject
   which would emerge literal is repaired by returning to bilingual
   « Confirmez votre adresse e-mail · Confirm your email ».)
 
-  ONLY ONE LANGUAGE PER SENDING. The email spoke both at once, one under
+  ONLY ONE LANGUAGE PER SENDING. The email previously spoke two at once, one under
   the other: this is the only place in the product where the user read a language
   which he did not choose. The language comes from `user_metadata.locale`, the same
   field that `lib/server/account-settings.ts` reads — GoTrue exposes metadata
   of the account under `{{ .Data }}` in its templates.
 
-  `index .Data "locale"` rather than `.Data.locale`, and `printf "%v"` around:
+  `index .Data "locale"` rather than `.Data.locale`, wrapped in `printf "%v"`:
   on an account WITHOUT this field (accounts before MIN-3xx), `.Data.locale` is worth
-  `nil` and `eq nil "fr"` CAUSES the rendering of the Go template to fail
+  `nil`, and comparing `nil` with a locale string CAUSES the Go template to fail
   (“incompatible types for comparison”) — so the entire email. Passed by
   `printf`, the absence is worth `"<nil>"`, the comparison is false, and the English
   output: the product defect (`i18n/config.ts`).
@@ -59,15 +59,15 @@
     #f5f7fb --background   #ffffff --card       #0a0a0a --foreground
     #606369 --muted-fg     #d9dce5 --border     #000000 --brand
 -->
-{{ $fr := eq (printf "%v" (index .Data "locale")) "fr" }}
+{{ $locale := printf "%v" (index .Data "locale") }}
 <!doctype html>
-<html lang="{{ if $fr }}fr{{ else }}en{{ end }}">
+<html lang="{{ if eq $locale "fr" }}fr{{ else if eq $locale "de" }}de{{ else if eq $locale "pt-BR" }}pt-BR{{ else if eq $locale "it" }}it{{ else if eq $locale "es" }}es{{ else }}en{{ end }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="supported-color-schemes" content="light dark" />
-    <title>{{ if $fr }}Confirmez votre e-mail{{ else }}Confirm your email{{ end }}</title>
+    <title>{{ if eq $locale "fr" }}Confirmez votre e-mail{{ else if eq $locale "de" }}Bestätige deine E-Mail-Adresse{{ else if eq $locale "pt-BR" }}Confirme seu endereço de e-mail{{ else if eq $locale "it" }}Conferma il tuo indirizzo email{{ else if eq $locale "es" }}Confirma tu dirección de correo{{ else }}Confirm your email{{ end }}</title>
     <style>
       @media (prefers-color-scheme: dark) {
         .m-bg    { background-color: #070809 !important; }
@@ -79,7 +79,7 @@
         .m-hr    { border-color: #24262b !important; }
         .m-url   { color: #000000 !important; }
       }
-      /* Outlook.com applique son propre mode sombre via cet attribut. */
+      /* Outlook.com applies its own dark mode through this attribute. */
       [data-ogsc] .m-bg    { background-color: #070809 !important; }
       [data-ogsc] .m-card  { background-color: #0e0f11 !important; border-color: #24262b !important; }
       [data-ogsc] .m-word,
@@ -97,7 +97,7 @@
   >
     <!-- Preview text (the gray line next to the object), hidden in the body -->
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-      {{ if $fr }}Un clic et votre compte minddy est actif.{{ else }}One click and your minddy account is active.{{ end }}
+      {{ if eq $locale "fr" }}Un clic et votre compte minddy est actif.{{ else if eq $locale "de" }}Ein Klick, und dein minddy-Konto ist aktiv.{{ else if eq $locale "pt-BR" }}Basta um clique para ativar sua conta do minddy.{{ else if eq $locale "it" }}Un clic e il tuo account minddy sarà attivo.{{ else if eq $locale "es" }}Un clic y tu cuenta de minddy estará activa.{{ else }}One click and your minddy account is active.{{ end }}
     </div>
 
     <table
@@ -119,7 +119,7 @@
             cellspacing="0"
             style="width:100%;max-width:600px;"
           >
-            <!-- Carte -->
+            <!-- Card -->
             <tr>
               <td
                 class="m-card"
@@ -137,15 +137,15 @@
                   class="m-title"
                   style="margin:0 0 10px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:30px;color:#0a0a0a;"
                 >
-                  {{ if $fr }}Confirmez votre e-mail{{ else }}Confirm your email{{ end }}
+                  {{ if eq $locale "fr" }}Confirmez votre e-mail{{ else if eq $locale "de" }}Bestätige deine E-Mail-Adresse{{ else if eq $locale "pt-BR" }}Confirme seu endereço de e-mail{{ else if eq $locale "it" }}Conferma il tuo indirizzo email{{ else if eq $locale "es" }}Confirma tu dirección de correo{{ else }}Confirm your email{{ end }}
                 </h1>
                 <p
                   class="m-text"
                   style="margin:0 0 24px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:24px;color:#606369;"
                 >
-                  {{ if $fr }}Un clic et votre compte minddy est actif. Ce lien fonctionne
+                  {{ if eq $locale "fr" }}Un clic et votre compte minddy est actif. Ce lien fonctionne
                   depuis n'importe quel appareil — ouvrez-le sur votre téléphone si c'est
-                  plus simple.{{ else }}One click and your minddy account is active. This
+                  plus simple.{{ else if eq $locale "de" }}Ein Klick, und dein minddy-Konto ist aktiv. Dieser Link funktioniert auf jedem Gerät — öffne ihn auf deinem Smartphone, wenn das einfacher ist.{{ else if eq $locale "pt-BR" }}Basta um clique para ativar sua conta do minddy. Este link funciona em qualquer dispositivo — abra-o no celular se for mais fácil.{{ else if eq $locale "it" }}Un clic e il tuo account minddy sarà attivo. Questo link funziona da qualsiasi dispositivo — aprilo sul telefono se è più comodo.{{ else if eq $locale "es" }}Un clic y tu cuenta de minddy estará activa. Este enlace funciona desde cualquier dispositivo — ábrelo en el teléfono si te resulta más cómodo.{{ else }}One click and your minddy account is active. This
                   link works from any device — open it on your phone if that is
                   easier.{{ end }}
                 </p>
@@ -156,7 +156,7 @@
                       <a
                         href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed"
                         style="display:inline-block;padding:13px 26px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;border-radius:12px;"
-                        >{{ if $fr }}Confirmer mon e-mail{{ else }}Confirm my email{{ end }}</a
+                        >{{ if eq $locale "fr" }}Confirmer mon e-mail{{ else if eq $locale "de" }}E-Mail-Adresse bestätigen{{ else if eq $locale "pt-BR" }}Confirmar meu e-mail{{ else if eq $locale "it" }}Conferma la mia email{{ else if eq $locale "es" }}Confirmar mi correo{{ else }}Confirm my email{{ end }}</a
                       >
                     </td>
                   </tr>
@@ -173,8 +173,8 @@
                   class="m-foot"
                   style="margin:0 0 8px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#606369;"
                 >
-                  {{ if $fr }}Le bouton ne fonctionne pas ? Copiez ce lien dans votre
-                  navigateur.{{ else }}Button not working? Copy this link into your
+                  {{ if eq $locale "fr" }}Le bouton ne fonctionne pas ? Copiez ce lien dans votre
+                  navigateur.{{ else if eq $locale "de" }}Funktioniert die Schaltfläche nicht? Kopiere diesen Link in deinen Browser.{{ else if eq $locale "pt-BR" }}O botão não funciona? Copie este link para o navegador.{{ else if eq $locale "it" }}Il pulsante non funziona? Copia questo link nel browser.{{ else if eq $locale "es" }}¿No funciona el botón? Copia este enlace en el navegador.{{ else }}Button not working? Copy this link into your
                   browser.{{ end }}
                 </p>
                 <p
@@ -190,15 +190,15 @@
               </td>
             </tr>
 
-            <!-- Pied, hors carte -->
+            <!-- Footer outside the card -->
             <tr>
               <td style="padding:24px 8px 0;text-align:center;">
                 <p
                   class="m-foot"
                   style="margin:0 0 6px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#606369;"
                 >
-                  {{ if $fr }}Vous n'êtes pas à l'origine de cette demande ? Ignorez cet
-                  e-mail.{{ else }}Didn't create a minddy account? You can ignore this
+                  {{ if eq $locale "fr" }}Vous n'êtes pas à l'origine de cette demande ? Ignorez cet
+                  e-mail.{{ else if eq $locale "de" }}Du hast kein minddy-Konto erstellt? Dann kannst du diese E-Mail ignorieren.{{ else if eq $locale "pt-BR" }}Não criou uma conta do minddy? Você pode ignorar este e-mail.{{ else if eq $locale "it" }}Non hai creato un account minddy? Puoi ignorare questa email.{{ else if eq $locale "es" }}¿No has creado una cuenta de minddy? Puedes ignorar este correo.{{ else }}Didn't create a minddy account? You can ignore this
                   email.{{ end }}
                 </p>
                 <p
