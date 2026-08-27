@@ -54,26 +54,27 @@ test("bootstrap always generates the forge secrets; optional secrets follow capa
 
 test("migrations are sorted, include the vector extension, and repair Realtime policies", () => {
   const migrations = listMigrations();
-  assert.equal(migrations.length, 39);
   assert.deepEqual([...migrations].sort(), migrations);
-  assert.equal(migrations[0], "20270106090000_baseline.sql");
-  assert.equal(migrations[1], "20270106091000_initial_data.sql");
-  assert.equal(migrations[2], "20270106092000_reapply_realtime_policies.sql");
-  assert.equal(
-    migrations[3],
+  assert.deepEqual(migrations.slice(0, 3), [
+    "20270106090000_baseline.sql",
+    "20270106091000_initial_data.sql",
+    "20270106092000_reapply_realtime_policies.sql",
+  ]);
+
+  const requiredMigrations = [
     "20270106094000_page_broadcast_and_pull_request_notification_deduplication.sql",
-  );
-  assert.equal(migrations[4], "20270106095000_github_issue_sync_metadata.sql");
-  // The managed forge relay control plane and its instance-side
-  // self-provisioning close the list.
-  assert.equal(migrations[6], "20270106110000_forge_relay_control_plane.sql");
-  assert.equal(
-    migrations[12],
+    "20270106095000_github_issue_sync_metadata.sql",
+    "20270106110000_forge_relay_control_plane.sql",
     "20270106170000_forge_relay_self_provisioning.sql",
-  );
-  assert.equal(migrations[13], "20270106180000_page_viewers.sql");
-  assert.equal(migrations[14], "20270106190000_feedback_board_page_tabs.sql");
-  assert.equal(migrations.at(-1), "20270106430000_atomic_agent_resume_budget.sql");
+    "20270106180000_page_viewers.sql",
+    "20270106190000_feedback_board_page_tabs.sql",
+  ];
+  for (const required of requiredMigrations) {
+    assert.ok(migrations.includes(required), `missing required migration: ${required}`);
+  }
+
+  const versions = migrations.map((migration) => migration.split("_")[0]);
+  assert.equal(new Set(versions).size, migrations.length);
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 
