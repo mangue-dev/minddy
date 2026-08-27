@@ -28,7 +28,7 @@ export interface Objective {
  * A resource attached to an issue/objective (comment_id null) or to a
  * comment/reply — a FILE or a LINK (MIN-184). A file lives in the private
  * `attachments` Storage bucket and is served through
- * GET /api/attachments/file?path=… (302 → signed URL); a link carries its URL
+ * GET /api/attachments/file?path=… (same-origin byte proxy); a link carries its URL
  * and, when the site had one, its favicon inlined as a data URI.
  *
  * The table is still named `attachments`: the rename is one of the notion, not

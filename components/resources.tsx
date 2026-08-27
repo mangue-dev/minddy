@@ -75,7 +75,7 @@ export function pageResourceHref(projectId: string, pageId: string): string {
   return `/projects/${projectId}/pages/${pageId}`;
 }
 
-/** The single read door for the private bucket (302 → signed URL). */
+/** The same-origin proxy for the private attachment bucket. */
 export function attachmentFileUrl(storagePath: string, download = false): string {
   const qs = new URLSearchParams({ path: storagePath });
   if (download) qs.set("download", "1");

@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 const getAuthedUser = vi.fn();
 const getProjectAccess = vi.fn();
-const signedAttachmentUrl = vi.fn();
 const info = vi.fn();
 const download = vi.fn();
 const from = vi.fn(() => ({ info, download }));
@@ -16,9 +15,6 @@ vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: (...args: unknown[]) => getProjectAccess(...args),
 }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
-vi.mock("@/lib/server/attachments", () => ({
-  signedAttachmentUrl: (...args: unknown[]) => signedAttachmentUrl(...args),
-}));
 
 const { GET } = await import("@/app/api/attachments/file/route");
 
@@ -42,10 +38,9 @@ beforeEach(() => {
     data: new Blob(["<!doctype html><h1>Preview</h1>"], { type: "text/html" }),
     error: null,
   });
-  signedAttachmentUrl.mockResolvedValue("https://signed.test/file");
 });
 
-describe("GET /api/attachments/file preview", () => {
+describe("GET /api/attachments/file proxy", () => {
   it("returns the authentication response before reading storage", async () => {
     getAuthedUser.mockResolvedValue({
       ok: false,
@@ -80,7 +75,7 @@ describe("GET /api/attachments/file preview", () => {
     );
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(response.headers.get("cross-origin-resource-policy")).toBe("same-origin");
-    expect(signedAttachmentUrl).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("uses sniffed markup instead of a misleading image content type", async () => {
@@ -92,7 +87,7 @@ describe("GET /api/attachments/file preview", () => {
     expect(response.headers.get("content-type")).toBe("text/html");
   });
 
-  it("redirects unsupported preview requests to a forced download", async () => {
+  it("proxies unsupported previews as forced downloads", async () => {
     info.mockResolvedValue({ data: { contentType: "application/zip" }, error: null });
     download.mockResolvedValue({
       data: new Blob([new Uint8Array([0x50, 0x4b, 0x03, 0x04])], {
@@ -103,12 +98,15 @@ describe("GET /api/attachments/file preview", () => {
 
     const response = await GET(request());
 
-    expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe("https://signed.test/file");
-    expect(signedAttachmentUrl).toHaveBeenCalledWith(service, PATH, {
-      download: true,
-      mimeType: "application/zip",
-    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("content-type")).toBe("application/zip");
+    expect(response.headers.get("content-disposition")).toBe(
+      "attachment; filename*=UTF-8''file.html"
+    );
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      new Uint8Array([0x50, 0x4b, 0x03, 0x04])
+    );
   });
 
   it("returns not found when the storage object cannot be read", async () => {
@@ -117,16 +115,42 @@ describe("GET /api/attachments/file preview", () => {
     const response = await GET(request());
 
     expect(response.status).toBe(404);
-    expect(signedAttachmentUrl).not.toHaveBeenCalled();
   });
 
-  it("retains the signed URL path outside preview mode", async () => {
+  it("proxies explicit downloads without exposing the storage address", async () => {
     const response = await GET(request(PATH, "download=1"));
 
-    expect(response.status).toBe(302);
-    expect(from).not.toHaveBeenCalled();
-    expect(signedAttachmentUrl).toHaveBeenCalledWith(service, PATH, {
-      download: true,
+    expect(response.status).toBe(200);
+    expect(from).toHaveBeenCalledWith("attachments");
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("content-disposition")).toBe(
+      "attachment; filename*=UTF-8''file.html"
+    );
+    expect(await response.text()).toContain("<h1>Preview</h1>");
+  });
+
+  it("forces active content to download outside the sandboxed preview", async () => {
+    const response = await GET(request(PATH, ""));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-disposition")).toContain("attachment");
+    expect(response.headers.get("content-security-policy")).toBeNull();
+  });
+
+  it("serves allowlisted content inline outside preview mode", async () => {
+    info.mockResolvedValue({ data: { contentType: "image/png" }, error: null });
+    download.mockResolvedValue({
+      data: new Blob([
+        new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      ]),
+      error: null,
     });
+
+    const response = await GET(request(PATH, ""));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-disposition")).toBe("inline");
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("content-security-policy")).toContain("sandbox");
   });
 });

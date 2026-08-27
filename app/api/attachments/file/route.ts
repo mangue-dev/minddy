@@ -2,9 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
-import { signedAttachmentUrl } from "@/lib/server/attachments";
 import { attachmentPreviewKind } from "@/lib/attachment-preview";
-import { normalizeMimeType, sniffMimeType } from "@/lib/inline-safe";
+import {
+  isInlineSafeMimeType,
+  normalizeMimeType,
+  sniffMimeType,
+} from "@/lib/inline-safe";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -21,20 +24,24 @@ const PREVIEW_CSP = [
   "frame-ancestors 'self'",
 ].join("; ");
 
-function downloadRedirect(url: string): NextResponse {
-  const response = NextResponse.redirect(url, 302);
-  response.headers.set("Cache-Control", "private, no-store");
-  return response;
+function fileNameFromPath(path: string): string {
+  return path.split("/").at(-1)?.trim() || "attachment";
+}
+
+function contentDisposition(inline: boolean, fileName: string): string {
+  if (inline) return "inline";
+  return `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
 /**
  * GET /api/attachments/file?path=…&download=0|1&preview=0|1 — the single read door for the
  * private `attachments` bucket. Access is derived from the path prefix
- * (`projects/{pid}/…` → project member, `chat/{uid}/…` → that user), then we
- * normally 302 to a short-lived signed URL. Preview mode instead proxies
- * browser-compatible bytes through an inert, same-origin response. Active
- * documents are sandboxed both here and by the viewer iframe, while files the
- * browser cannot display keep the normal forced-download behavior.
+ * (`projects/{pid}/…` → project member, `chat/{uid}/…` → that user), then the
+ * file is streamed through a same-origin response so the storage host never
+ * reaches the browser. Preview mode accepts every browser-compatible format;
+ * ordinary reads use the stricter inline allowlist, and every other response
+ * forces a download. Active previews are sandboxed both here and by the viewer
+ * iframe.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -62,49 +69,34 @@ export async function GET(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  if (preview) {
-    const bucket = service.storage.from("attachments");
-    const [{ data: info }, { data: file, error }] = await Promise.all([
-      bucket.info(path),
-      bucket.download(path),
-    ]);
-    if (error || !file) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    const storedMimeType = normalizeMimeType(info?.contentType || file.type);
-    const mimeType = sniffMimeType(bytes) ?? storedMimeType;
-
-    if (attachmentPreviewKind(mimeType)) {
-      return new NextResponse(bytes, {
-        headers: {
-          "Cache-Control": "private, no-store",
-          "Content-Disposition": "inline",
-          "Content-Security-Policy": PREVIEW_CSP,
-          "Content-Type": mimeType,
-          "Cross-Origin-Resource-Policy": "same-origin",
-          "Referrer-Policy": "no-referrer",
-          "X-Content-Type-Options": "nosniff",
-          "X-Frame-Options": "SAMEORIGIN",
-        },
-      });
-    }
-
-    const url = await signedAttachmentUrl(service, path, {
-      download: true,
-      mimeType,
-    });
-    if (!url) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    return downloadRedirect(url);
-  }
-
-  const url = await signedAttachmentUrl(service, path, { download });
-  if (!url) {
+  const bucket = service.storage.from("attachments");
+  const [{ data: info }, { data: file, error }] = await Promise.all([
+    bucket.info(path),
+    bucket.download(path),
+  ]);
+  if (error || !file) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return downloadRedirect(url);
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const storedMimeType = normalizeMimeType(info?.contentType || file.type);
+  const mimeType = sniffMimeType(bytes) ?? storedMimeType;
+  const inline = preview
+    ? attachmentPreviewKind(mimeType) !== null
+    : !download && isInlineSafeMimeType(mimeType);
+  const headers: Record<string, string> = {
+    "Cache-Control": "private, no-store",
+    "Content-Disposition": contentDisposition(inline, fileNameFromPath(path)),
+    "Content-Length": String(bytes.byteLength),
+    "Content-Type": mimeType || "application/octet-stream",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+  };
+  if (inline) {
+    headers["Content-Security-Policy"] = PREVIEW_CSP;
+    headers["X-Frame-Options"] = "SAMEORIGIN";
+  }
+
+  return new NextResponse(bytes, { headers });
 }
