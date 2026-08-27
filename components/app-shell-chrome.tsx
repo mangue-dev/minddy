@@ -11,7 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -115,6 +115,7 @@ import type {
 } from "@/lib/types";
 import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
 import { useIssuePanel } from "@/lib/issue-panel-context";
 import {
@@ -355,6 +356,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tPages = useTranslations("Pages");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   const {
@@ -491,6 +493,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // instant.
   const { objectives: projectObjectives, loading: objectivesLoading } =
     useObjectivesQuery(currentProjectId);
+  const objectiveBoardId = objectiveIdFromBoardLocation(
+    pathname,
+    searchParams.get("objective"),
+  );
+  const objectiveBoard = objectiveBoardId
+    ? projectObjectives.find((objective) => objective.id === objectiveBoardId) ?? null
+    : null;
 
   // The current project wiki pages, for ⌘K (MIN-270). Same cache as
   // the tree of the Pages tab: opening the tab does not ask for anything, and a page
@@ -1379,7 +1388,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               label: t("tickets"),
               icon: LayoutGrid,
               href: base,
-              active: pathname === base,
+              active: pathname === base && !objectiveBoardId,
               // P (project) — B is the all-project board, from a project too.
               shortcut: "P",
             },
@@ -1388,7 +1397,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               label: t("objectives"),
               icon: Target,
               href: `${base}/objectives`,
-              active: pathname.startsWith(`${base}/objectives`),
+              active:
+                pathname.startsWith(`${base}/objectives`) || !!objectiveBoardId,
               shortcut: "O",
             },
             // Between Objectives and Triage: the project wiki can be read with what
@@ -1525,7 +1535,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, homeBadgeCollapsed, t, tProjects]);
+  }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, homeBadgeCollapsed, t, tProjects]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
@@ -1627,7 +1637,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         zen ? undefined : (
           <Header
             className="bg-background backdrop-blur-none"
-            left={<AppBreadcrumb />}
+            left={<AppBreadcrumb objective={objectiveBoard} />}
             right={
               // Desktop only — on mobile, Search moves to the navbar Search button
               // and "Nouveau" to the navbar "+", so the header collapses to the

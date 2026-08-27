@@ -19,6 +19,12 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import type { Project } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { objectiveBreadcrumbLabel } from "@/lib/objective-board-route";
+
+interface BreadcrumbObjective {
+  id: string;
+  name: string;
+}
 
 /** The section translation key for the current project route (drives the last crumb). */
 function sectionKeyFor(pathname: string): string | null {
@@ -146,6 +152,7 @@ function BreadcrumbLevel({
  */
 function MobileBreadcrumb({
   project,
+  objective,
   section,
   sectionKey,
   isInbox,
@@ -160,6 +167,7 @@ function MobileBreadcrumb({
   isRoutines,
 }: {
   project: Project | null;
+  objective: BreadcrumbObjective | null;
   section: string | null;
   sectionKey: string | null;
   isInbox: boolean;
@@ -227,7 +235,15 @@ function MobileBreadcrumb({
     // The board root ("tickets") is the project root — show the switcher and
     // go back up to Home. Nested sections go back to the project root.
     const atRoot = !section || sectionKey === "tickets";
-    if (atRoot) {
+    if (objective && atRoot) {
+      backHref = `/projects/${project.id}/objectives?open=${objective.id}`;
+      backIcon = (
+        <span className="max-w-[10ch] truncate text-xs font-medium">
+          {objectiveBreadcrumbLabel(objective.name)}
+        </span>
+      );
+      current = <CurrentLabel>{section}</CurrentLabel>;
+    } else if (atRoot) {
       backHref = "/home";
       backIcon = homeIcon;
       current = <ProjectSwitcher project={project} />;
@@ -285,7 +301,11 @@ function CurrentLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AppBreadcrumb() {
+export function AppBreadcrumb({
+  objective = null,
+}: {
+  objective?: BreadcrumbObjective | null;
+}) {
   const t = useTranslations("Nav");
   const pathname = usePathname();
   const { projects } = useProjects();
@@ -384,6 +404,21 @@ export function AppBreadcrumb() {
         </BreadcrumbLevel>
 
         <BreadcrumbLevel
+          show={!!(project && objective)}
+          levelKey={`objective-${objective?.id ?? ""}`}
+        >
+          {project && objective ? (
+            <Link
+              href={`/projects/${project.id}/objectives?open=${objective.id}`}
+              title={objective.name}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {objectiveBreadcrumbLabel(objective.name)}
+            </Link>
+          ) : null}
+        </BreadcrumbLevel>
+
+        <BreadcrumbLevel
           show={!!(project && section)}
           levelKey={`section-${sectionKey ?? ""}`}
         >
@@ -401,6 +436,7 @@ export function AppBreadcrumb() {
       {/* Mobile (<768px): two-stage back + current level. */}
       <MobileBreadcrumb
         project={project}
+        objective={objective}
         section={section}
         sectionKey={sectionKey}
         isInbox={isInbox}
