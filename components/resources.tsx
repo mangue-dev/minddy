@@ -33,6 +33,10 @@ import {
   X,
 } from "lucide-react";
 import { EntityPill, PillIcon, type PillRadius } from "@/components/entity-pill";
+import {
+  attachmentPreviewKind,
+  type AttachmentPreviewKind,
+} from "@/lib/attachment-preview";
 import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
 import { usePagesQuery } from "@/lib/use-pages-query";
@@ -75,6 +79,12 @@ export function pageResourceHref(projectId: string, pageId: string): string {
 export function attachmentFileUrl(storagePath: string, download = false): string {
   const qs = new URLSearchParams({ path: storagePath });
   if (download) qs.set("download", "1");
+  return `/api/attachments/file?${qs.toString()}`;
+}
+
+/** Authenticated same-origin response used only inside the sandboxed viewer. */
+export function attachmentPreviewUrl(storagePath: string): string {
+  const qs = new URLSearchParams({ path: storagePath, preview: "1" });
   return `/api/attachments/file?${qs.toString()}`;
 }
 
@@ -537,6 +547,51 @@ const KIND_TINT: Record<"file" | "link" | "page", string | undefined> = {
   page: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
 };
 
+function AttachmentPreview({
+  kind,
+  storagePath,
+  fileName,
+}: {
+  kind: AttachmentPreviewKind;
+  storagePath: string;
+  fileName: string;
+}) {
+  const src = attachmentPreviewUrl(storagePath);
+
+  if (kind === "image") {
+    return (
+      // Storage file behind an authenticated response; next/image cannot optimize it.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={fileName} className="h-full w-full object-contain p-4" />
+    );
+  }
+  if (kind === "audio") {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <audio src={src} controls className="w-full max-w-3xl" />
+      </div>
+    );
+  }
+  if (kind === "video") {
+    return (
+      <video
+        src={src}
+        controls
+        className="h-full w-full object-contain p-4"
+        aria-label={fileName}
+      />
+    );
+  }
+  return (
+    <iframe
+      src={src}
+      title={fileName}
+      sandbox=""
+      className="h-full w-full border-0 bg-white"
+    />
+  );
+}
+
 /**
  * Common display for resources everywhere in the app — a file, a link and a
  * page read as the same chip, which is the whole point of the notion (MIN-184,
@@ -546,7 +601,8 @@ const KIND_TINT: Record<"file" | "link" | "page", string | undefined> = {
  *
  * - `pill` — minddy's common pill ([entity-pill.tsx](entity-pill.tsx)),
  * that of the Numo context: same concentric rays, same tinted figure,
- * same superimposed cross. Clicking previews an image, downloads another file, opens a link in a tab, a page in the app.
+ * same superimposed cross. Clicking previews a browser-compatible file,
+ * downloads an unsupported one, opens a link in a tab, or opens a page in the app.
  * - `ultra-compact` — icon + truncated name only, for dense surfaces (chat
  * bubbles, reply rows).
  *
@@ -585,6 +641,8 @@ export function ResourcePills({
   if (done.length === 0 && inFlight.length === 0) return null;
 
   const compact = variant === "ultra-compact";
+  const activePreviewKind = attachmentPreviewKind(preview?.mime_type);
+  const activePreviewPath = preview?.storage_path ?? null;
   const compactClass = cn(
     "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[11px] text-foreground/90",
     pillClassName
@@ -657,14 +715,14 @@ export function ResourcePills({
             : null;
         const path = a.storage_path ?? null;
         const mime = a.mime_type ?? "application/octet-stream";
-        const image = !url && !pageId && isImage(mime);
+        const previewKind = !url && !pageId ? attachmentPreviewKind(mime) : null;
         const label = url
           ? t("openLink")
           : pageId
             ? pageHref
               ? t("openPage")
               : t("pageUnavailable")
-            : image
+            : previewKind
               ? t("preview")
               : t("download");
         const body = (
@@ -732,7 +790,7 @@ export function ResourcePills({
               >
                 {body}
               </a>
-            ) : image && path ? (
+            ) : previewKind && path ? (
               <button
                 type="button"
                 onClick={() => setPreview(a)}
@@ -843,24 +901,15 @@ export function ResourcePills({
         )}
 
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="max-w-3xl px-4 pb-4 pt-16">
-          <DialogTitle className="absolute top-4 right-14 left-4 flex h-8 items-center truncate text-sm font-medium">
-            {preview?.file_name}
-          </DialogTitle>
-          {preview?.storage_path && (
-            <>
-              {/* Storage file behind an auth redirect — next/image can't optimize it. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={attachmentFileUrl(preview.storage_path)}
-                alt={preview.file_name}
-                className="max-h-[75vh] w-full object-contain"
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button asChild size="sm">
-                  <a href={attachmentFileUrl(preview.storage_path, true)}>
-                    {t("download")}
-                  </a>
+        <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 !rounded-2xl sm:max-w-[calc(100%-2rem)] data-vaul-drawer:h-[96dvh] data-vaul-drawer:max-h-[96dvh]">
+          <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5 pr-14">
+            <DialogTitle className="min-w-0 flex-1 truncate text-sm font-medium">
+              {preview?.file_name}
+            </DialogTitle>
+            {preview && activePreviewPath && (
+              <div className="flex shrink-0 items-center gap-2">
+                <Button asChild size="sm" variant="outline">
+                  <a href={attachmentFileUrl(activePreviewPath, true)}>{t("download")}</a>
                 </Button>
                 {onRemove && (canRemove?.(preview) ?? true) && (
                   <Button
@@ -875,8 +924,17 @@ export function ResourcePills({
                   </Button>
                 )}
               </div>
-            </>
-          )}
+            )}
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden bg-muted/30">
+            {preview && activePreviewPath && activePreviewKind && (
+              <AttachmentPreview
+                kind={activePreviewKind}
+                storagePath={activePreviewPath}
+                fileName={preview.file_name}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
