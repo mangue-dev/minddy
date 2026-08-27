@@ -10,6 +10,7 @@ interface MarkdownLocaleCopy {
     pricing: string;
     mcp: string;
     selfHosting: string;
+    download: string;
     repository: string;
     changelog: string;
     mcpGuide: string;
@@ -29,6 +30,7 @@ export const MARKDOWN_LOCALE_COPY: Record<Locale, MarkdownLocaleCopy> = {
       pricing: "Pricing",
       mcp: "MCP server",
       selfHosting: "Self-hosting guide",
+      download: "Downloads",
       repository: "Repository",
       changelog: "Changelog",
       mcpGuide: "MCP integration guide",
@@ -46,6 +48,7 @@ export const MARKDOWN_LOCALE_COPY: Record<Locale, MarkdownLocaleCopy> = {
       pricing: "Tarifs",
       mcp: "Serveur MCP",
       selfHosting: "Guide d'auto-hébergement",
+      download: "Téléchargements",
       repository: "Dépôt",
       changelog: "Nouveautés",
       mcpGuide: "Guide d'intégration MCP",
@@ -63,6 +66,7 @@ export const MARKDOWN_LOCALE_COPY: Record<Locale, MarkdownLocaleCopy> = {
       pricing: "Preise",
       mcp: "MCP-Server",
       selfHosting: "Anleitung zum Selbst-Hosting",
+      download: "Downloads",
       repository: "Repository",
       changelog: "Änderungsprotokoll",
       mcpGuide: "MCP-Integrationsanleitung",
@@ -80,6 +84,7 @@ export const MARKDOWN_LOCALE_COPY: Record<Locale, MarkdownLocaleCopy> = {
       pricing: "Preços",
       mcp: "Servidor MCP",
       selfHosting: "Guia de auto-hospedagem",
+      download: "Downloads",
       repository: "Repositório",
       changelog: "Histórico de alterações",
       mcpGuide: "Guia de integração MCP",
@@ -97,6 +102,7 @@ export const MARKDOWN_LOCALE_COPY: Record<Locale, MarkdownLocaleCopy> = {
       pricing: "Prezzi",
       mcp: "Server MCP",
       selfHosting: "Guida all'hosting autonomo",
+      download: "Download",
       repository: "Repository",
       changelog: "Registro delle modifiche",
       mcpGuide: "Guida all'integrazione MCP",
@@ -114,6 +120,7 @@ export const MARKDOWN_LOCALE_COPY: Record<Locale, MarkdownLocaleCopy> = {
       pricing: "Precios",
       mcp: "Servidor MCP",
       selfHosting: "Guía de autoalojamiento",
+      download: "Descargas",
       repository: "Repositorio",
       changelog: "Registro de cambios",
       mcpGuide: "Guía de integración MCP",

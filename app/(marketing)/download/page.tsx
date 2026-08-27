@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
+import { ArrowRight } from "lucide-react";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
+import { publicPathForLocale, routeByKey } from "@/lib/public-routes";
 import {
   desktopFeedBaseUrl,
   dmgEntry,
@@ -59,6 +62,13 @@ const POINTS = [
   { key: "notifications", icon: "bell" },
   { key: "updates", icon: "refresh" },
 ] as const satisfies ReadonlyArray<{ key: string; icon: IsoTileName }>;
+
+const PLATFORM_GUIDES = [
+  { routeKey: "downloadMacos", labelKey: "platformGuideMacos" },
+  { routeKey: "downloadLinux", labelKey: "platformGuideLinux" },
+  { routeKey: "downloadWindows", labelKey: "platformGuideWindows" },
+  { routeKey: "downloadMobile", labelKey: "platformGuideMobile" },
+] as const;
 
 /**
  * The version and weight of the `.dmg` Apple silicon, read in the feed.
@@ -231,6 +241,36 @@ export default async function DownloadPage() {
               <DesktopShowcase />
             </Reveal>
           </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border py-14 sm:py-16">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <RevealHeading
+            className="text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+            text={t("platformGuidesTitle")}
+          />
+          <Reveal as="p" delay={0.12} className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">
+            {t("platformGuidesSubtitle")}
+          </Reveal>
+          <nav aria-label={t("platformGuidesTitle")}>
+            <RevealGroup
+              as="div"
+              step={0.06}
+              className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              {PLATFORM_GUIDES.map((guide) => (
+                <Link
+                  key={guide.routeKey}
+                  href={publicPathForLocale(routeByKey(guide.routeKey), locale)}
+                  className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-4 text-sm font-medium transition-colors hover:bg-muted/50"
+                >
+                  {t(guide.labelKey)}
+                  <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
+                </Link>
+              ))}
+            </RevealGroup>
+          </nav>
         </div>
       </section>
 

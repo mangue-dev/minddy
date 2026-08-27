@@ -2,7 +2,7 @@
   "id": "/",
   "name": "minddy",
   "short_name": "minddy",
-  "description": "A minimal issue tracker. Issues, objectives, cycles, user feedback and coding agents in one place.",
+  "description": "An open-source issue tracker and project workspace with objectives, cycles, user feedback and coding agents.",
   "lang": "en",
   "start_url": "/home",
   "scope": "/",

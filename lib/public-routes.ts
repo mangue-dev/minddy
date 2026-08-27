@@ -23,10 +23,11 @@
 /**
  * `lastModified` is the only one of the three sitemap fields that Google actually reads
  * (`priority` and `changeFrequency` have been ignored for a long time;
- * Bing still looks at them a little): it is he who triggers a new pass
- * of the crawler. It is therefore kept by hand, page by page - a build date
- * updated with each deployment would mean "everything has changed" each time, and Google quickly learns not to believe it anymore. **To be updated when the
- * page content changes**, not with each deployment.
+ * Bing still considers them): it is the signal that triggers another crawler
+ * pass. It is therefore maintained by hand, page by page. A build date updated
+ * on every deployment would claim that everything changed every time, and
+ * search engines quickly learn to ignore it. Update it when page content
+ * changes, not on every deployment.
  */
 import { CHANGELOG_LAST_MODIFIED } from "@/lib/changelog";
 import type { Namespace } from "@/lib/i18n-keys";
@@ -35,7 +36,7 @@ import { locales, type Locale } from "@/i18n/config";
 export interface PublicRoute {
   /** Stable key, used by `publicPageMetadata` and links. */
   key: string;
-  /** URL canonique (anglais). */
+  /** Canonical English URL. */
   en: string;
   /** French URL. */
   fr: string;
@@ -125,10 +126,7 @@ export const PUBLIC_ROUTES = [
     lastModified: "2026-08-21",
     priority: 0.5,
   },
-  // The desktop app (MIN-292). It has its own page and not a button on the landing:
-  // what to say here — macOS only, and the notifications that
-  // stop when the app is exited — does not fit under a button, and the
-  // silence would be the only dishonesty on the site.
+  // Platform hub for the native desktop apps and installable mobile PWA.
   {
     key: "download",
     en: "/download",
@@ -140,8 +138,64 @@ export const PUBLIC_ROUTES = [
       es: "/es/descargar",
     },
     namespace: "Download",
-    lastModified: "2026-08-13",
-    priority: 0.7,
+    lastModified: "2026-08-27",
+    priority: 0.9,
+  },
+  {
+    key: "downloadMacos",
+    en: "/download/macos",
+    fr: "/fr/telecharger/macos",
+    localized: {
+      de: "/de/herunterladen/macos",
+      "pt-BR": "/pt-br/baixar/macos",
+      it: "/it/scarica/macos",
+      es: "/es/descargar/macos",
+    },
+    namespace: "DownloadMacos",
+    lastModified: "2026-08-27",
+    priority: 0.8,
+  },
+  {
+    key: "downloadLinux",
+    en: "/download/linux",
+    fr: "/fr/telecharger/linux",
+    localized: {
+      de: "/de/herunterladen/linux",
+      "pt-BR": "/pt-br/baixar/linux",
+      it: "/it/scarica/linux",
+      es: "/es/descargar/linux",
+    },
+    namespace: "DownloadLinux",
+    lastModified: "2026-08-27",
+    priority: 0.8,
+  },
+  {
+    key: "downloadWindows",
+    en: "/download/windows",
+    fr: "/fr/telecharger/windows",
+    localized: {
+      de: "/de/herunterladen/windows",
+      "pt-BR": "/pt-br/baixar/windows",
+      it: "/it/scarica/windows",
+      es: "/es/descargar/windows",
+    },
+    namespace: "DownloadWindows",
+    lastModified: "2026-08-27",
+    priority: 0.8,
+  },
+  {
+    key: "downloadMobile",
+    en: "/download/mobile-pwa",
+    fr: "/fr/telecharger/pwa-mobile",
+    localized: {
+      de: "/de/herunterladen/mobile-pwa",
+      "pt-BR": "/pt-br/baixar/pwa-movel",
+      it: "/it/scarica/pwa-mobile",
+      es: "/es/descargar/pwa-movil",
+    },
+    namespace: "DownloadMobile",
+    lastModified: "2026-08-27",
+    priority: 0.8,
   },
   // Only page whose `lastModified` is NOT hand-held: here,
   // “content has changed” and “an entry has been added” are the same

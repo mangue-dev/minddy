@@ -34,7 +34,8 @@ export function GET(): Response {
 
   const body = `# minddy
 
-> A minimal issue tracker with a first-class MCP server. Projects hold issues;
+> An open-source issue tracker and project workspace with a first-class MCP
+> server. Projects hold issues;
 > objectives group issues around a goal; an issue can carry an implementation
 > plan whose markdown checkboxes are trackable tasks. Agents read and write
 > minddy over MCP, as the user who authorised them.

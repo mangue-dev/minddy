@@ -51,6 +51,19 @@ const COMPARISON_BY_ROUTE = new Map<string, Comparison>(
   COMPARISONS.map((comparison) => [comparison.routeKey, comparison]),
 );
 
+const DOWNLOAD_PLATFORM_NAMESPACES = {
+  downloadMacos: "DownloadMacos",
+  downloadLinux: "DownloadLinux",
+  downloadWindows: "DownloadWindows",
+  downloadMobile: "DownloadMobile",
+} as const;
+
+type DownloadPlatformRouteKey = keyof typeof DOWNLOAD_PLATFORM_NAMESPACES;
+
+function isDownloadPlatformRoute(key: PublicRouteKey): key is DownloadPlatformRouteKey {
+  return key in DOWNLOAD_PLATFORM_NAMESPACES;
+}
+
 /**
  * Which page to render, and in what language — read in the HEADERS set by the
  * proxy, with the query as a backup.
@@ -92,6 +105,9 @@ export async function GET(request: NextRequest): Promise<Response> {
   else if (key === "pricing") body = await renderPricing(locale, canonical);
   else if (key === "mcp") body = await renderMcp(locale, canonical);
   else if (key === "selfHosting") body = await renderSelfHosting(locale, canonical);
+  else if (key === "download") body = await renderDownload(locale, canonical);
+  else if (isDownloadPlatformRoute(key))
+    body = await renderDownloadPlatform(key, locale, canonical);
   else if (key === "changelog") body = await renderChangelog(locale, canonical);
   else if (COMPARISON_BY_ROUTE.has(key))
     body = await renderComparison(COMPARISON_BY_ROUTE.get(key)!, locale, canonical);
@@ -346,6 +362,65 @@ async function renderSelfHosting(locale: Locale, canonical: string): Promise<str
   ].join("\n\n") + "\n";
 }
 
+async function renderDownload(locale: Locale, canonical: string): Promise<string> {
+  const t = await getTranslations({ locale, namespace: "Download" });
+  const platformRoutes = [
+    ["downloadMacos", "platformGuideMacos"],
+    ["downloadLinux", "platformGuideLinux"],
+    ["downloadWindows", "platformGuideWindows"],
+    ["downloadMobile", "platformGuideMobile"],
+  ] as const;
+
+  return [
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
+    `## ${t("heroTitle")} ${t("heroTitleAccent")}`,
+    t("heroSubtitle"),
+    `## ${t("platformGuidesTitle")}`,
+    t("platformGuidesSubtitle"),
+    platformRoutes
+      .map(([routeKey, labelKey]) => {
+        const route = routeByKey(routeKey);
+        return `- ${t(labelKey)}: ${SITE_URL}${publicPathForLocale(route, locale)}`;
+      })
+      .join("\n"),
+    `## ${t("iosGuideTitle")}`,
+    t("iosGuideBody"),
+    `## ${t("androidGuideTitle")}`,
+    t("androidGuideBody"),
+    `## ${t("pointsTitle")}`,
+    t("pointsSubtitle"),
+    links(locale),
+  ].join("\n\n") + "\n";
+}
+
+async function renderDownloadPlatform(
+  key: DownloadPlatformRouteKey,
+  locale: Locale,
+  canonical: string,
+): Promise<string> {
+  const t = await getTranslations({
+    locale,
+    namespace: DOWNLOAD_PLATFORM_NAMESPACES[key],
+  });
+
+  return [
+    header(t("metaTitle"), t("metaDescription"), canonical, locale),
+    `## ${t("heroTitle")}`,
+    t("heroSubtitle"),
+    `## ${t("availabilityTitle")}`,
+    t("availabilityBody"),
+    `## ${t("installTitle")}`,
+    [t("stepOne"), t("stepTwo"), t("stepThree")]
+      .map((step, index) => `${index + 1}. ${step}`)
+      .join("\n"),
+    `## ${t("noteTitle")}`,
+    t("noteBody"),
+    `## ${t("openSourceTitle")}`,
+    t("openSourceBody"),
+    links(locale),
+  ].join("\n\n") + "\n";
+}
+
 /**
  * The changelog in Markdown (MIN-93) — the simplest text version of the site,
  * and probably the most useful: "what changed in minddy" is
@@ -446,6 +521,7 @@ function links(locale: Locale): string {
     `- ${copy.pricing}: ${path("pricing")}`,
     `- ${copy.mcp}: ${path("mcp")}`,
     `- ${copy.selfHosting}: ${path("selfHosting")}`,
+    `- ${copy.download}: ${path("download")}`,
     `- ${copy.repository}: ${MINDDY_REPOSITORY_URL}`,
     `- ${copy.changelog}: ${path("changelog")}`,
     `- ${copy.mcpGuide}: ${SITE_URL}/llms.txt`,

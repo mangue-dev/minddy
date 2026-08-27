@@ -19,7 +19,7 @@ export const MCP_DISCOVERY_INSTRUCTIONS =
  * remains the canonical workflow reference for agents that need more than discovery.
  */
 export const MCP_FULL_USAGE_GUIDE =
-"minddy is a minimal issue tracker (Linear-like). Hierarchy: a project is the " +
+"minddy is an open-source issue tracker and project workspace. Hierarchy: a project is the " +
       "workspace; issues belong to a project; an objective groups issues of a project " +
       "around a goal — minddy_list_objectives lists them, minddy_get_objective " +
       "opens one (description, its issues, its comment thread), " +

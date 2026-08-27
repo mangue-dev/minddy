@@ -8,6 +8,7 @@ import {
 import type { Locale } from "@/i18n/config";
 import { FAQ_KEYS, MCP_FAQ_KEYS, PRICING_FAQ_KEYS } from "./faq-keys";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { MINDDY_LICENSE_URL, MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
 /**
  * Structured data from the public site (schema.org, JSON-LD).
@@ -111,6 +112,25 @@ export async function StructuredData({
     })),
   };
 
+  const downloadUrl = `${SITE_URL}${publicPathForLocale(routeByKey("download"), locale)}`;
+  const software = {
+    "@type": "SoftwareApplication",
+    "@id": `${SITE_URL}/#software`,
+    name: "minddy",
+    url: `${SITE_URL}${publicPathForLocale(routeByKey("home"), locale)}`,
+    description: t("metaDescription"),
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Web, macOS, Windows, Linux",
+    softwareRequirements:
+      "Current web browser; installable progressive web app on iOS, iPadOS, and Android",
+    downloadUrl,
+    codeRepository: MINDDY_REPOSITORY_URL,
+    license: MINDDY_LICENSE_URL,
+    isAccessibleForFree: true,
+    publisher: { "@id": `${SITE_URL}/#organization` },
+    offers,
+  };
+
   // Each variant has its questions AND its namespace: a declared question
   // here but missing from the page is a Rich Results Test error.
   const faqKeys: ReadonlyArray<string> =
@@ -136,6 +156,7 @@ export async function StructuredData({
     url: SITE_URL,
     logo: `${SITE_URL}/logo.svg`,
     email: CONTACT_EMAIL,
+    sameAs: [MINDDY_REPOSITORY_URL],
   };
 
   /**
@@ -170,15 +191,7 @@ export async function StructuredData({
         },
       },
     },
-    {
-      "@type": "SoftwareApplication",
-      "@id": `${SITE_URL}/#software`,
-      name: "minddy",
-      url: `${SITE_URL}${publicPathForLocale(routeByKey("home"), locale)}`,
-      applicationCategory: "DeveloperApplication",
-      operatingSystem: "Web",
-      offers,
-    },
+    software,
     faq,
   ];
 
@@ -198,14 +211,7 @@ export async function StructuredData({
             isPartOf: { "@id": `${SITE_URL}/#website` },
             publisher: { "@id": `${SITE_URL}/#organization` },
             // The same offers as the landing, on the page which details them.
-            mainEntity: {
-              "@type": "SoftwareApplication",
-              "@id": `${SITE_URL}/#software`,
-              name: "minddy",
-              applicationCategory: "DeveloperApplication",
-              operatingSystem: "Web",
-              offers,
-            },
+            mainEntity: software,
           },
           faq,
         ]
@@ -220,19 +226,12 @@ export async function StructuredData({
             publisher: { "@id": `${SITE_URL}/#organization` },
           },
           {
-            "@type": "SoftwareApplication",
-            "@id": `${SITE_URL}/#software`,
-            name: "minddy",
+            ...software,
             url: pageUrl,
-            description: t("metaDescription"),
-            applicationCategory: "DeveloperApplication",
-            operatingSystem: "Web",
             inLanguage,
             // The six areas of the product, named only once — the menu
             // “Product” from the nav reads the same keys.
             featureList: FEATURE_KEYS.map((key) => t(`navMenu_${key}_title`)),
-            publisher: { "@id": `${SITE_URL}/#organization` },
-            offers,
           },
           faq,
         ];
@@ -243,6 +242,92 @@ export async function StructuredData({
       // The strings come from the translation files, but a `<` followed by
       // `/script>` would close the tag: we therefore replace all `<` with its
       // Unicode escape, which JSON.parse rereads as the original character.
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": graph,
+        }).replaceAll("<", "\\u003c"),
+      }}
+    />
+  );
+}
+
+const DOWNLOAD_PLATFORM_SCHEMA = {
+  downloadMacos: { operatingSystem: "macOS", applicationSubCategory: "Native desktop application" },
+  downloadLinux: { operatingSystem: "Linux", applicationSubCategory: "Native desktop application" },
+  downloadWindows: {
+    operatingSystem: "Windows",
+    applicationSubCategory: "Native desktop application",
+  },
+  downloadMobile: {
+    operatingSystem: "iOS, iPadOS, Android",
+    applicationSubCategory: "Progressive Web App",
+  },
+} as const satisfies Partial<Record<PublicRouteKey, {
+  operatingSystem: string;
+  applicationSubCategory: string;
+}>>;
+
+type DownloadPlatformRouteKey = keyof typeof DOWNLOAD_PLATFORM_SCHEMA;
+
+/** Software and page entities for a dedicated platform discovery page. */
+export async function DownloadPlatformStructuredData({
+  routeKey,
+}: {
+  routeKey: DownloadPlatformRouteKey;
+}) {
+  const locale = (await getLocale()) as Locale;
+  const route = routeByKey(routeKey);
+  const t = await getTranslations(route.namespace);
+  const pageUrl = `${SITE_URL}${publicPathForLocale(route, locale)}`;
+  const platform = DOWNLOAD_PLATFORM_SCHEMA[routeKey];
+  const graph = [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "minddy",
+      url: SITE_URL,
+      logo: `${SITE_URL}/logo.svg`,
+      email: CONTACT_EMAIL,
+      sameAs: [MINDDY_REPOSITORY_URL],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      name: "minddy",
+      url: SITE_URL,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${pageUrl}#webpage`,
+      url: pageUrl,
+      name: t("metaTitle"),
+      description: t("metaDescription"),
+      inLanguage: LANG_TAG[locale],
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      mainEntity: { "@id": `${pageUrl}#software` },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${pageUrl}#software`,
+      name: "minddy",
+      url: pageUrl,
+      downloadUrl: pageUrl,
+      description: t("metaDescription"),
+      applicationCategory: "DeveloperApplication",
+      applicationSubCategory: platform.applicationSubCategory,
+      operatingSystem: platform.operatingSystem,
+      codeRepository: MINDDY_REPOSITORY_URL,
+      license: MINDDY_LICENSE_URL,
+      isAccessibleForFree: true,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+  ];
+
+  return (
+    <script
+      type="application/ld+json"
       dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           "@context": "https://schema.org",
