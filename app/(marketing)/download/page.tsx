@@ -13,7 +13,6 @@ import {
 import { Reveal, RevealGroup, RevealHeading } from "@/components/marketing/reveal";
 import { DesktopShowcase } from "@/components/marketing/desktop-showcase";
 import { SectionCta } from "@/components/marketing/section-cta";
-import { TrackedDownloadLink } from "@/components/marketing/tracked-download-link";
 import { DownloadPlatformCta } from "@/components/marketing/download-platform-cta";
 import {
   MobilePwaInstallGuide,
@@ -24,13 +23,11 @@ import { IsoTile, type IsoTileName } from "@/components/marketing/iso-tile";
 /**
  * `/download` — minddy desktop and mobile installation (MIN-292, MIN-418, MIN-473).
  *
- * **A PAGE and not a button on the landing**, because there is something here
- * honest thing to say that doesn't fit under a button: app left, no more
- * notification. Electron does not support the Chromium push service (§3 of
- * framing), while the site and the installed web app even sound closed. THE
- * silence would be the only dishonesty of the site; write it in small letters under a button
- * would amount to the same — hence its place, mid-page, at the same size as the
- * reassurance that faces him.
+ * **A PAGE and not a button on the landing**, because the platform differences
+ * need an honest explanation that does not fit under a button. Closing the
+ * window keeps the Windows and Linux app running in the background, while the
+ * signed macOS app can receive APNs notifications even after it quits. This
+ * belongs mid-page, at the same size as the control the user retains over it.
  *
  * **Numbers are READ, not written.** Version and weight come from
  * update manifests, with a cache time. A “~100 MB”
@@ -190,16 +187,34 @@ export default async function DownloadPage() {
                   real anchors, and Windows opens the native Store listing. */}
               <Reveal
                 delay={0.26}
-                className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3"
+                className="mt-8 max-w-xl"
               >
                 <DownloadPlatformCta
                   macLabel={t("downloadButtonMac")}
                   macIntelLabel={t("downloadIntel")}
                   linuxLabel={t("downloadButtonLinux")}
                   linuxArmLabel={t("linuxAppImageArm64")}
+                  linuxBody={t("linuxBody")}
+                  linuxReleaseLabel={
+                    linuxRelease
+                      ? t("linuxRelease", {
+                          version: linuxRelease.version,
+                          size: linuxRelease.size
+                            ? formatBytes(linuxRelease.size, locale)
+                            : t("specSizeUnknown"),
+                        })
+                      : t("linuxReleaseUnknown")
+                  }
+                  linuxPackagesLabel={t("linuxPackages")}
+                  linuxDebX64Label={t("linuxDebX64")}
+                  linuxRpmX64Label={t("linuxRpmX64")}
+                  linuxDebArm64Label={t("linuxDebArm64")}
+                  linuxRpmArm64Label={t("linuxRpmArm64")}
                   windowsLabel={t("downloadButtonWindows")}
                   androidLabel={t("downloadButtonAndroid")}
                   iosLabel={t("downloadButtonIos")}
+                  tutorialLabel={t("showTutorial")}
+                  selectorLabel={t("platformSelectorLabel")}
                 />
               </Reveal>
 
@@ -207,85 +222,6 @@ export default async function DownloadPage() {
                 {t("requirements")}
               </Reveal>
 
-              {/* Keep every distribution visible below the adaptive primary
-                  action so visitors can still download for another machine. */}
-              <Reveal as="p" delay={0.36} className="mt-1.5 text-xs text-muted-foreground">
-                {t("platformNote")}
-              </Reveal>
-
-              <Reveal delay={0.42} className="mt-7 max-w-md rounded-xl border bg-muted/20 p-4">
-                <p className="text-sm font-medium">{t("linuxTitle")}</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  {t("linuxBody")}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                  <TrackedDownloadLink
-                    platform="linux"
-                    format="AppImage"
-                    arch="x64"
-                    href="/api/desktop/download?platform=linux&format=AppImage&arch=x64"
-                    className="font-medium underline-offset-4 hover:underline"
-                  >
-                    {t("linuxAppImageX64")}
-                  </TrackedDownloadLink>
-                  <TrackedDownloadLink
-                    platform="linux"
-                    format="AppImage"
-                    arch="arm64"
-                    href="/api/desktop/download?platform=linux&format=AppImage&arch=arm64"
-                    className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                  >
-                    {t("linuxAppImageArm64")}
-                  </TrackedDownloadLink>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {linuxRelease
-                    ? t("linuxRelease", {
-                        version: linuxRelease.version,
-                        size: linuxRelease.size ? formatBytes(linuxRelease.size, locale) : t("specSizeUnknown"),
-                      })
-                    : t("linuxReleaseUnknown")}
-                </p>
-                <p className="mt-3 text-xs text-muted-foreground">{t("linuxPackages")}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                  <TrackedDownloadLink
-                    platform="linux"
-                    format="deb"
-                    arch="x64"
-                    href="/api/desktop/download?platform=linux&format=deb&arch=x64"
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {t("linuxDebX64")}
-                  </TrackedDownloadLink>
-                  <TrackedDownloadLink
-                    platform="linux"
-                    format="rpm"
-                    arch="x64"
-                    href="/api/desktop/download?platform=linux&format=rpm&arch=x64"
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {t("linuxRpmX64")}
-                  </TrackedDownloadLink>
-                  <TrackedDownloadLink
-                    platform="linux"
-                    format="deb"
-                    arch="arm64"
-                    href="/api/desktop/download?platform=linux&format=deb&arch=arm64"
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {t("linuxDebArm64")}
-                  </TrackedDownloadLink>
-                  <TrackedDownloadLink
-                    platform="linux"
-                    format="rpm"
-                    arch="arm64"
-                    href="/api/desktop/download?platform=linux&format=rpm&arch=arm64"
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {t("linuxRpmArm64")}
-                  </TrackedDownloadLink>
-                </div>
-              </Reveal>
             </div>
 
             {/* `-mr-6`: the composition bites on the right margin in wide screen.
@@ -359,8 +295,7 @@ export default async function DownloadPage() {
         </div>
       </section>
 
-      {/* ── Renunciation, and its counterpart ───────────────────────────────
- first. The opposite — the good news in big, the bad news in footnote — is exactly the layout that makes you not want to read. */}
+      {/* ── Background notifications, and their controls ─────────────────── */}
       <section className="border-t border-border bg-muted/20 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
           <div className="grid gap-px overflow-hidden rounded-2xl bg-border ring-1 ring-border md:grid-cols-2">

@@ -14,6 +14,10 @@ import {
   resolveInstallPlatform,
   type InstallPlatform,
 } from "@/lib/desktop/install-prompt";
+import {
+  mobileInstallGuidePlatformFromEvent,
+  SHOW_MOBILE_INSTALL_GUIDE_EVENT,
+} from "@/lib/mobile-install-guide";
 
 type NavigatorWithUserAgentData = Navigator & {
   userAgentData?: { platform?: string };
@@ -246,11 +250,28 @@ export function MobilePwaInstallGuide({ copy }: { copy: MobileInstallGuideCopy }
     });
     setPlatform(resolved);
 
+    const showSelectedGuide = (event: Event) => {
+      const selected = mobileInstallGuidePlatformFromEvent(event);
+      if (!selected) return;
+
+      setPlatform(selected);
+      window.setTimeout(() => {
+        document
+          .getElementById("mobile-install-guide")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 0);
+    };
+    window.addEventListener(SHOW_MOBILE_INSTALL_GUIDE_EVENT, showSelectedGuide);
+
     if ((resolved === "ios" || resolved === "android") && location.hash === "#mobile-install-guide") {
       requestAnimationFrame(() => {
         document.getElementById("mobile-install-guide")?.scrollIntoView({ behavior: "smooth" });
       });
     }
+
+    return () => {
+      window.removeEventListener(SHOW_MOBILE_INSTALL_GUIDE_EVENT, showSelectedGuide);
+    };
   }, []);
 
   if (platform !== "ios" && platform !== "android") {
