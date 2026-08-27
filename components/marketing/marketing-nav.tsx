@@ -7,7 +7,6 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   Boxes,
   Equal,
-  Download,
   FileText,
   GitFork,
   Laptop,
@@ -36,11 +35,10 @@ import type { MessageKey } from "@/lib/i18n-keys";
 /**
  * Public site navigation bar (MIN-73) — landing, prices, legal pages.
  *
- * Centered floating dot, taken from the layout of the AutoKap nav: grid
- * `1fr auto 1fr` so that the links remain optically centered regardless
- * the clutter of the logo and buttons. It retracts as soon as you leave the
- * first screen and returns when you go back up: on a landing, the nav belongs
- * to the hero, not to the scrolling.
+ * Centered floating bar with a `1fr auto 1fr` grid so the links remain
+ * optically centered regardless of the logo and account actions. It stays
+ * visible across the whole marketing surface so navigation and conversion
+ * actions remain available on long pages.
  */
 
 type NavLink = {
@@ -72,11 +70,8 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   // this is what distinguishes it from the “Agents & MCP” entry just above.
   { key: "mcp", href: "/mcp", icon: Terminal },
   { key: "selfHosting", href: "/self-hosting", icon: Server },
-  // The Mac app (MIN-292), last: it's the only entry that doesn't talk about
-  // what minddy does but from where we use it. She belongs here
-  // because it is indexable and an internal link is worth more than a line of
-  // sitemap — but not higher, otherwise it would pass for the normal way
-  // to use minddy, while the browser remains the place.
+  // The desktop app is last because it describes where Minddy runs rather than
+  // what it does. It remains discoverable without displacing the product story.
   { key: "download", href: "/download", icon: Laptop },
 ];
 
@@ -151,8 +146,7 @@ function hasAuthCookie(): boolean {
   return document.cookie.includes("-auth-token");
 }
 
-/** `[a-t-on une session, faut-il la demander]`. We start from `false`: the rendering
-    server and the first paint therefore coincide for the majority case. */
+/** `[has a session, should probe]`. Starting false keeps server and first paint aligned. */
 function useSession(): [boolean, boolean, (v: boolean) => void] {
   const [hasSession, setHasSession] = useState(false);
   const [probe, setProbe] = useState(false);
@@ -170,14 +164,6 @@ export function MarketingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hasSession, probeSession, setHasSession] = useSession();
 
-  const [pinned, setPinned] = useState(true);
-  useEffect(() => {
-    const onScroll = () => setPinned(window.scrollY < window.innerHeight * 0.5);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   // On the landing, clicking the logo does not trigger any navigation (we are there
   // already): we therefore go back explicitly, and we delete the anchor so that the URL
   // reflects the actual position. Elsewhere, the link does its job.
@@ -193,12 +179,7 @@ export function MarketingNav() {
   return (
     <>
       {probeSession && <SessionProbe onChange={setHasSession} />}
-      <header
-        className={cn(
-          "sticky top-0 z-50 px-3 pt-3 pb-2 transition-transform duration-300 ease-out sm:px-4 sm:pt-4",
-          pinned ? "translate-y-0" : "-translate-y-[130%]",
-        )}
-      >
+      <header className="sticky top-0 z-50 px-3 pt-3 pb-2 sm:px-4 sm:pt-4">
         <div className="mx-auto grid h-14 w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-full border border-border bg-card/95 pr-3 pl-5 shadow-sm backdrop-blur-md">
           <Link
             href={href("/")}
@@ -248,19 +229,8 @@ export function MarketingNav() {
               <Equal className="h-5 w-5" />
             </button>
 
-            {/* TWO BUTTONS, never three (MIN-292): connect, and
-                download — download in PRIMARY. The desktop app is
-                the door that we want to push, and it leads in any case to the
-                account creation: we do not make you choose between two doors which
-                overlook the same room.
-
-                **“Create an account” has left the bar**, and it is not a
-                omission. Three side-by-side controls asked the visitor to
-                to decide where the hero already does it for him; registration
-                remains one click away — from the hero, from the page of
-                download, from the login screen which says “not
-                still counting.” And an existing session replaces any
-                way both buttons with a single “open app”. */}
+            {/* Keep one secondary account action and one Cloud conversion action.
+                An existing session replaces both with a direct app link. */}
             <div className="hidden items-center gap-2 sm:flex">
               {hasSession ? (
                 <Button asChild size="sm" className="px-4">
@@ -273,11 +243,10 @@ export function MarketingNav() {
                   </Button>
                   <Button asChild size="sm" className="px-4">
                     <Link
-                      href={localizedHref("/download", locale)}
+                      href="/signup"
                       onClick={() => track("landing_cta_clicked", { location: "nav" })}
                     >
-                      <Download data-icon="inline-start" />
-                      {t("navDownload")}
+                      {t("navGetStarted")}
                     </Link>
                   </Button>
                 </>

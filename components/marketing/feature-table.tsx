@@ -13,7 +13,7 @@ import { cn } from "mangue-ui/lib/utils";
  *
  * Purely presentational: NO translation here, no access to the plans. The
  * labels arrive already translated, the cells already calculated. This is what
- * allows the pricing page to continue to derive its values ​​from
+ * allows the pricing page to continue to derive its values from
  * `BILLING_PLANS` while the comparisons derive theirs from
  * `lib/comparisons.ts`.
  */
@@ -49,6 +49,7 @@ export function FeatureTable({
   groups,
   includedLabel,
   notIncludedLabel,
+  framed = false,
 }: {
   /** Title read by screen readers (`<caption class="sr-only">`). */
   caption: string;
@@ -57,31 +58,32 @@ export function FeatureTable({
   /** Icon labels yes/no, for those who cannot see the icons. */
   includedLabel: string;
   notIncludedLabel: string;
+  /** Give short comparison tables visible cell and outer borders. */
+  framed?: boolean;
 }) {
   return (
-    <div className="overflow-x-auto">
-      {/* `border-separate` and not `border-collapse`: the left column is
- pasted to the left to survive the horizontal scrolling of the mobile, and
- a cell `sticky` under `border-collapse` loses the rule of its line
- (the line then belongs to the table, not to the cell). Each
- cell therefore carries its own `border-t`. */}
-      <table className="w-full min-w-[520px] border-separate border-spacing-0 text-sm">
+    <div className={cn("overflow-x-auto", framed && "rounded-2xl border border-border")}>
+      {/* `border-separate` keeps the sticky first column and each row border
+          intact while the table scrolls horizontally on mobile. */}
+      <table
+        className={cn(
+          "w-full min-w-[520px] border-separate border-spacing-0 text-sm",
+          framed && "min-w-[720px]",
+        )}
+      >
         <caption className="sr-only">{caption}</caption>
 
         {groups.map((group, groupIndex) => (
           <tbody key={group.key}>
-            {/* Thirty lines later, “the middle column, was Go?” »
- is the only question that matters. A `sticky` y
- header would respond, but the navbar retracts on scrolling: it
- would float above an empty stripe. Each group recalls
- therefore the columns itself — and it also works on the table
- which scrolls sideways, where nothing can stick. */}
-            <tr>
+            {/* Repeating column labels for each group keeps long pricing tables
+                understandable without a vertically sticky header. */}
+            <tr className={cn(framed && "bg-muted/35")}>
               <th
                 scope="col"
                 className={cn(
                   "sticky left-0 z-10 w-[38%] bg-background pr-6 pb-3 text-left text-sm font-semibold text-foreground",
-                  groupIndex > 0 && "pt-12",
+                  groupIndex > 0 && !framed && "pt-12",
+                  framed && "border-b border-border bg-muted px-4 py-4",
                 )}
               >
                 {group.label}
@@ -91,8 +93,9 @@ export function FeatureTable({
                   key={column.key}
                   scope="col"
                   className={cn(
-                    "pb-3 text-center text-sm font-semibold",
-                    groupIndex > 0 && "pt-12",
+                    "pb-3 text-left text-sm font-semibold",
+                    groupIndex > 0 && !framed && "pt-12",
+                    framed && "border-b border-l border-border px-4 py-4",
                     column.highlighted ? "text-primary" : "text-muted-foreground",
                   )}
                 >
@@ -105,7 +108,10 @@ export function FeatureTable({
               <tr key={row.key}>
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 border-t border-border bg-background py-3.5 pr-6 text-left font-normal"
+                  className={cn(
+                    "sticky left-0 z-10 border-t border-border bg-background py-3.5 pr-6 text-left font-normal",
+                    framed && "px-4",
+                  )}
                 >
                   <span className="inline-flex items-center gap-1.5 text-foreground">
                     {row.label}
@@ -114,18 +120,20 @@ export function FeatureTable({
                 </th>
                 {row.cells.map((cell, index) => (
                   // `relative`: sr-only labels are in absolute position.
-                  // Sans bloc conteneur local, ils se positionnent par rapport
-                  // to the document and escape horizontal scrolling of the
-                  // table — the entire page would overflow on mobile.
+                  // Without a local positioned cell, screen-reader labels would
+                  // anchor to the document and widen the page on mobile.
                   <td
                     key={columns[index]?.key ?? index}
-                    className="relative border-t border-border py-3.5 text-center"
+                    className={cn(
+                      "relative border-t border-border py-3.5 text-left",
+                      framed && "border-l px-4",
+                    )}
                   >
                     {typeof cell === "boolean" ? (
                       cell ? (
                         <>
                           <Check
-                            className="mx-auto h-4 w-4 text-primary"
+                            className="h-4 w-4 text-primary"
                             strokeWidth={3}
                             aria-hidden
                           />
@@ -134,7 +142,7 @@ export function FeatureTable({
                       ) : (
                         <>
                           <Minus
-                            className="mx-auto h-4 w-4 text-muted-foreground/50"
+                            className="h-4 w-4 text-muted-foreground/50"
                             aria-hidden
                           />
                           <span className="sr-only">{notIncludedLabel}</span>

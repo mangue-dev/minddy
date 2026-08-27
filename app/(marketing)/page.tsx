@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
-import { HeroShader } from "@/components/marketing/hero-shader";
 import { Hero } from "@/components/marketing/hero";
 import { SectionEditions } from "@/components/marketing/section-editions";
 import { SectionTracker } from "@/components/marketing/section-tracker";
@@ -38,29 +37,20 @@ export default async function LandingPage() {
     <>
       <StructuredData />
       <LandingViewed />
-      {/* Background: placed here and not in the hero so that it starts from the top
- of the document and goes behind the navbar. It is anchored to the
- `relative isolate` of the marketing layout (<main> is not positioned). */}
-      <HeroShader />
       <Hero />
-      {/* Seven sections of content, in the order of the demonstration: the hero
- promises the agent loop, the tracker immediately reassures ("and below,
- it's a real tracker"), the Agents section proves the promise, the
- speed follows, then what enters from the outside, then the reminder that
- the rest is already there.
- Agents passed before Speed (MIN-148): proof must follow the
- promise, not wait two sections. The “Product” menu of the nav reads
- like the map of this page, it follows the same order. */}
+      {/* The opening answers the commercial question first: use the managed Cloud
+          service or run the same open-source core yourself. The product tour then
+          proves the choice through concrete screens and workflows. */}
+      <SectionEditions />
+      <SectionOpenSource />
       <SectionTracker />
       <SectionAgents />
       <SectionSpeed />
-      {/* Pages before returns, not after: the next section
- opens with “so far, everything came from you”. The wiki is the last place where this is still true. */}
+      {/* Pages come before feedback because the following section changes the
+          source of the work from the team to its users. */}
       <SectionPages />
       <SectionFeedback />
       <SectionMore />
-      <SectionOpenSource />
-      <SectionEditions />
       <SectionPricingTeaser />
       <SectionFaq />
       <SectionCta />

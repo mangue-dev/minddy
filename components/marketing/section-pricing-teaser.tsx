@@ -14,15 +14,15 @@ export async function SectionPricingTeaser() {
   return (
     <section id="pricing" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <header className="mx-auto mb-10 max-w-2xl text-center sm:mb-12">
+        <header className="mb-10 max-w-2xl sm:mb-12">
           <RevealHeading
-            className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+            className="max-w-2xl text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
             text={t("pricingTitle")}
           />
           <Reveal
             as="p"
             delay={0.15}
-            className="leading-relaxed text-pretty text-muted-foreground"
+            className="mt-3 max-w-xl leading-relaxed text-pretty text-muted-foreground"
           >
             {t("pricingSubtitle")}
           </Reveal>
@@ -32,7 +32,7 @@ export async function SectionPricingTeaser() {
           <PricingPlans />
         </Reveal>
 
-        <Reveal delay={0.1} className="mt-8 text-center">
+        <Reveal delay={0.1} className="mt-8">
           <Link
             href={localizedHref("/pricing", locale as Locale)}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"

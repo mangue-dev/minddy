@@ -68,7 +68,7 @@ export function PricingPlans({ headingLevel = 3 }: { headingLevel?: 2 | 3 } = {}
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-center">
+      <div className="flex justify-start">
         <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium">
           <button
             type="button"
@@ -186,8 +186,8 @@ export function PricingPlans({ headingLevel = 3 }: { headingLevel?: 2 | 3 } = {}
         })}
       </div>
 
-      <p className="text-center text-xs text-muted-foreground">{tl("pricingNote")}</p>
-      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+      <p className="text-xs text-muted-foreground">{tl("pricingNote")}</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">
         {tl("pricingSelfHostedNote")} {" "}
         <Link href={localizedHref("/self-hosting", locale as Locale)} className="font-medium text-foreground underline underline-offset-4">
           {tl("pricingSelfHostedCta")}

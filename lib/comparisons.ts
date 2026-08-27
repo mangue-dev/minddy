@@ -20,15 +20,14 @@ import type { PublicRouteKey } from "@/lib/public-routes";
  *
  * ## What is compared, and what is not
  *
- * Only four lines: what a colleague costs, what code agents
- * do there, what which must be configured before writing a ticket, and for whom
- * the tool is made. No list of functions, no copied price, no cross
- * on a competitor's product.
+ * The table covers only verifiable structural differences: source model,
+ * seats, agents, project knowledge, feedback, hosting, setup, and audience.
+ * Current minddy features get their own section instead of turning the table
+ * into a long checklist.
  *
- * This is deliberate. A table of thirty crosses is out of date in the following quarter, and
- * it only takes ONE false cross for a reader who knows the other tool
- * to stop believing the rest of the page - therefore also the models, which cite in priority the sources which recognize their limits. Each page says
- * first of all what the other does better.
+ * This is deliberate. A long matrix goes stale quickly, and one false claim
+ * undermines the rest. Each page links to official documentation and says
+ * where the other tool is stronger.
  *
  * ## The two mistakes not to make
  *
@@ -47,7 +46,7 @@ import type { PublicRouteKey } from "@/lib/public-routes";
  */
 
 export interface Comparison {
-  /** Segment d'URL : `/alternatives/<slug>`. */
+  /** URL segment for `/alternatives/<slug>`. */
   slug: string;
   /** Proper name of the competitor — never translated, never in the i18n catalog. */
   name: string;
@@ -57,6 +56,8 @@ export interface Comparison {
   namespace: Namespace;
   /** Its public pricing page: the reader should be able to check for themselves. */
   pricingUrl: string;
+  /** Its official product documentation, used to substantiate feature claims. */
+  docsUrl: string;
 }
 
 export const COMPARISONS = [
@@ -66,6 +67,7 @@ export const COMPARISONS = [
     routeKey: "alternativeLinear",
     namespace: "AlternativeLinear",
     pricingUrl: "https://linear.app/pricing",
+    docsUrl: "https://linear.app/docs",
   },
   {
     slug: "jira",
@@ -73,6 +75,7 @@ export const COMPARISONS = [
     routeKey: "alternativeJira",
     namespace: "AlternativeJira",
     pricingUrl: "https://www.atlassian.com/software/jira/pricing",
+    docsUrl: "https://support.atlassian.com/jira-software-cloud/",
   },
   {
     slug: "notion",
@@ -80,6 +83,7 @@ export const COMPARISONS = [
     routeKey: "alternativeNotion",
     namespace: "AlternativeNotion",
     pricingUrl: "https://www.notion.com/pricing",
+    docsUrl: "https://www.notion.com/help",
   },
 ] as const satisfies ReadonlyArray<Comparison>;
 
@@ -95,8 +99,12 @@ export type ComparisonSlug = (typeof COMPARISONS)[number]["slug"];
  * — which one cannot be.
  */
 export const COMPARISON_ROWS = [
+  "source",
   "teammate",
   "agents",
+  "pages",
+  "feedback",
+  "hosting",
   "setup",
   "builtFor",
 ] as const;
@@ -105,6 +113,16 @@ export type ComparisonRow = (typeof COMPARISON_ROWS)[number];
 
 /** The three arguments of each column of prose, on both sides. */
 export const COMPARISON_POINTS = [1, 2, 3] as const;
+
+/** Current minddy capabilities that deserve more than one table cell. */
+export const COMPARISON_FEATURES = [
+  "openSource",
+  "pages",
+  "scratchpad",
+  "feedback",
+  "pullRequests",
+  "voice",
+] as const;
 
 export function comparisonBySlug(slug: string): Comparison | null {
   return COMPARISONS.find((entry) => entry.slug === slug) ?? null;

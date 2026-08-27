@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
-import { CtaShader } from "./hero-shader";
 import { TrackedCta } from "./tracked-cta";
 import { Reveal, RevealHeading } from "./reveal";
 
@@ -10,11 +9,8 @@ import { Reveal, RevealHeading } from "./reveal";
  * prices: both end on the same request, there is no reason
  * that they should not end on the same screen.
  *
- * One screen, precisely: the section occupies almost the entire height of the viewport
- * and centers its content, with the animated background of the hero behind. This is the only moment on the page, with the hero, where we are not asked to read but to click.
- *
- * `relative isolate`: the shader is a child in `-z-10`, it must remain
- * behind the text of the section without passing behind the background of the page.
+ * The section gives the visitor one clear product action after the objections
+ * and pricing have been addressed.
  */
 export async function SectionCta() {
   const t = await getTranslations("Landing");
@@ -26,9 +22,8 @@ export async function SectionCta() {
   // deployed): the section fits on the screen from the outset, and gains air when the
   // bar retracts rather than running out before.
   return (
-    <section className="relative isolate flex min-h-[80svh] items-center overflow-hidden border-t border-border py-24 sm:min-h-svh sm:py-32">
-      <CtaShader />
-      <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
+    <section className="flex min-h-[70svh] items-center overflow-hidden border-t border-border bg-muted/20 py-24 sm:py-32">
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
         <RevealHeading
           className="mb-4 text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
           text={t("ctaTitle")}
@@ -36,7 +31,7 @@ export async function SectionCta() {
         <Reveal
           as="p"
           delay={0.15}
-          className="mx-auto mb-8 max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground"
+          className="mb-8 max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground"
         >
           {t("ctaSubtitle")}
         </Reveal>

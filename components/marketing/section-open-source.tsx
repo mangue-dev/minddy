@@ -15,32 +15,21 @@ export async function SectionOpenSource() {
 
   return (
     <section id="open-source" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
-        <div className="rounded-3xl border border-border bg-card px-6 py-10 sm:px-10 sm:py-14">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
+        <div>
           <RevealHeading
-            className="mx-auto max-w-2xl text-center text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
+            className="max-w-lg text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
             text={t("openSourceTitle")}
           />
           <Reveal
             as="p"
             delay={0.1}
-            className="mx-auto mt-4 max-w-xl text-center leading-relaxed text-pretty text-muted-foreground"
+            className="mt-4 max-w-lg leading-relaxed text-pretty text-muted-foreground"
           >
             {t("openSourceSubtitle")}
           </Reveal>
 
-          <Reveal as="ul" delay={0.18} className="mt-10 grid gap-4 sm:grid-cols-3">
-            {POINTS.map((point) => (
-              <li key={point} className="rounded-2xl border border-border bg-muted/30 p-5">
-                <h3 className="font-medium">{t(`openSource_${point}_title`)}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {t(`openSource_${point}_body`)}
-                </p>
-              </li>
-            ))}
-          </Reveal>
-
-          <Reveal delay={0.26} className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
+          <Reveal delay={0.2} className="mt-8 flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-start xl:flex-row">
             <Button asChild>
               <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noreferrer">
                 <Github data-icon="inline-start" />
@@ -58,12 +47,23 @@ export async function SectionOpenSource() {
 
           <Reveal
             as="p"
-            delay={0.32}
-            className="mt-6 text-center text-xs leading-relaxed text-muted-foreground"
+            delay={0.28}
+            className="mt-5 text-xs leading-relaxed text-muted-foreground"
           >
             {t("openSourceLicense")}
           </Reveal>
         </div>
+
+        <Reveal as="ul" delay={0.12} className="divide-y divide-border border-y border-border">
+            {POINTS.map((point) => (
+              <li key={point} className="grid gap-2 py-6 sm:grid-cols-[10rem_1fr] sm:gap-8 sm:py-7">
+                <h3 className="font-medium text-foreground">{t(`openSource_${point}_title`)}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {t(`openSource_${point}_body`)}
+                </p>
+              </li>
+            ))}
+        </Reveal>
       </div>
     </section>
   );
