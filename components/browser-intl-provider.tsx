@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, useLocale } from "next-intl";
 
 type IntlProviderProps = React.ComponentProps<typeof NextIntlClientProvider>;
 
@@ -28,5 +28,9 @@ export function BrowserIntlProvider({
 
 /** Replace only the message catalog while inheriting locale, clock and zone. */
 export function InheritedIntlProvider(props: IntlProviderProps) {
-  return <NextIntlClientProvider {...props} />;
+  const inheritedLocale = useLocale();
+  const { locale, ...rest } = props;
+  return (
+    <NextIntlClientProvider locale={locale ?? inheritedLocale} {...rest} />
+  );
 }

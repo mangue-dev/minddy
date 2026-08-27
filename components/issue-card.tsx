@@ -1,15 +1,17 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSortable } from "@dnd-kit/sortable";
-import { useTranslations, useFormatter } from "next-intl";
 import {
-  ConfirmDeleteDialog,
-  Spinner,
-  cn,
-  toast,
-} from "mangue-ui";
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react";
+import { useRouter } from "next/navigation";
+import { useDraggable } from "@dnd-kit/core";
+import { useTranslations, useFormatter } from "next-intl";
+import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
 import { AgentBeam } from "@/components/agent-beam";
 import {
   Calendar,
@@ -57,7 +59,11 @@ import {
   useAgentHasSession,
   useIssuePr,
 } from "@/components/agent/agent-activity-context";
-import { handOffIssueApi, isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
+import {
+  handOffIssueApi,
+  isPrWorthShowing,
+  type IssuePr,
+} from "@/lib/agent-api";
 import {
   setAgentComposeDraft,
   type AgentComposeIntent,
@@ -70,7 +76,6 @@ import {
   agentPlanPromptVariant,
 } from "@/lib/agent-launch-prompt";
 import { RELATION_TYPES } from "@/lib/relation-constants";
-import type { CardDragData } from "@/lib/board-dnd";
 import type {
   Category,
   Issue,
@@ -307,7 +312,9 @@ function CategoryDisplay({
         aria-hidden
       />
       <span className="truncate">{first.name}</span>
-      {extra > 0 && <span className="shrink-0 text-muted-foreground">+{extra}</span>}
+      {extra > 0 && (
+        <span className="shrink-0 text-muted-foreground">+{extra}</span>
+      )}
     </span>
   ) : (
     <span className="text-xs text-muted-foreground/60">{t("noneFem")}</span>
@@ -428,12 +435,7 @@ function AssigneePick({
     value: m.user_id,
     label: displayName(m),
     keywords: m.email ? [m.email] : undefined,
-    icon: (
-      <UserAvatar
-        seed={m.avatar_seed}
-        className="size-5"
-      />
-    ),
+    icon: <UserAvatar seed={m.avatar_seed} className="size-5" />,
   }));
   return (
     <SearchSelect
@@ -519,7 +521,9 @@ function ObjectiveIndicator({ objective }: { objective: IssueCardObjective }) {
         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
           <span
             className="size-2.5 shrink-0 rounded-full"
-            style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
+            style={{
+              backgroundColor: objective.color ?? "var(--muted-foreground)",
+            }}
             aria-hidden
           />
           <span className="truncate">{objective.name}</span>
@@ -608,7 +612,9 @@ function PrPick({
     : "text-emerald-600 dark:text-emerald-500";
   if (!onOpen) {
     return (
-      <span className={cn("flex items-center gap-1 text-[11px] font-medium", tone)}>
+      <span
+        className={cn("flex items-center gap-1 text-[11px] font-medium", tone)}
+      >
         {content}
       </span>
     );
@@ -713,11 +719,11 @@ export const IssueCardBody = memo(function IssueCardBody({
   const tCycles = useTranslations("Cycles");
   const plan = planProgress(issue.plan);
   const assignee = issue.assignee_id
-    ? memberMap.get(issue.assignee_id) ?? null
+    ? (memberMap.get(issue.assignee_id) ?? null)
     : null;
   const objective =
     issue.objective_id && objectiveMap
-      ? objectiveMap.get(issue.objective_id) ?? null
+      ? (objectiveMap.get(issue.objective_id) ?? null)
       : null;
   // Memoized, and limited to the first 400 characters: three truncated lines
   // need no more, and the rest of the body is never read (MIN-316).
@@ -728,8 +734,9 @@ export const IssueCardBody = memo(function IssueCardBody({
   const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
 
   const description = useMemo(
-    () => (issue.description ? plainMarkdown(issue.description.slice(0, 400)) : ""),
-    [issue.description]
+    () =>
+      issue.description ? plainMarkdown(issue.description.slice(0, 400)) : "",
+    [issue.description],
   );
 
   const setStatus = onUpdate
@@ -749,8 +756,10 @@ export const IssueCardBody = memo(function IssueCardBody({
     : undefined;
   // Recurrence and due date are sent together in one write (MIN-136).
   const setRecurrence = onUpdate
-    ? (next: { due_date: string | null; recurrence: RecurrenceCadence | null }) =>
-        onUpdate(next)
+    ? (next: {
+        due_date: string | null;
+        recurrence: RecurrenceCadence | null;
+      }) => onUpdate(next)
     : undefined;
 
   return (
@@ -762,13 +771,17 @@ export const IssueCardBody = memo(function IssueCardBody({
         "flex flex-col gap-2 rounded-xl border border-border/60 p-3 text-left shadow-none dark:border-border dark:shadow-xs",
         // Bulk selection (MIN-75): blue-tinted background instead of an outline.
         selected ? "bg-primary/10" : "bg-card",
-        dragging && "cursor-grabbing shadow-lg"
+        dragging && "cursor-grabbing shadow-lg",
       )}
     >
       {/* Cross-project boards only: the issue's origin project (orb + name). */}
       {project && (
         <div className="-mb-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-3.5" />
+          <ProjectOrb
+            seed={projectOrbSeed(project)}
+            iconUrl={project.icon_url}
+            className="size-3.5"
+          />
           <span className="truncate">{project.name}</span>
         </div>
       )}
@@ -780,7 +793,10 @@ export const IssueCardBody = memo(function IssueCardBody({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
-                  <IterationCw className="size-3" aria-label={tCycles("inCurrentCycle")} />
+                  <IterationCw
+                    className="size-3"
+                    aria-label={tCycles("inCurrentCycle")}
+                  />
                 </span>
               </TooltipTrigger>
               <TooltipContent>{tCycles("inCurrentCycle")}</TooltipContent>
@@ -810,7 +826,9 @@ export const IssueCardBody = memo(function IssueCardBody({
           {/* The chevron alone does not explain the prefix: on a sub-issue,
               hovering “› MIN-42” names the relation — “Sub-issue of MIN-12”. */}
           {parentNumber == null ? (
-            <span className="truncate">{issueIdentifier(projectKey, issue.number)}</span>
+            <span className="truncate">
+              {issueIdentifier(projectKey, issue.number)}
+            </span>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -900,7 +918,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   );
 });
 
-export const IssueCard = memo(function IssueCard({
+const IssueCardContent = memo(function IssueCardContent({
   issue,
   projectId,
   projectKey,
@@ -947,7 +965,7 @@ export const IssueCard = memo(function IssueCard({
   onAddRelation?: (
     sourceId: string,
     type: IssueRelationType,
-    targetId: string
+    targetId: string,
   ) => void;
   onOpenPlan?: (issue: Issue) => void;
   /** Opens the ticket panel. **Takes the ticket as an argument**, as
@@ -979,17 +997,6 @@ export const IssueCard = memo(function IssueCard({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  // The sortable serves only TWO purposes: grabbing the card and acting as a
-  // hover target. dnd-kit does not shift cards during the gesture; the board's
-  // layout animator handles every committed move above the column scrollers.
-  // Keeping those responsibilities separate avoids replaying the drag path on
-  // top of the cache update, which caused the old jump on release.
-  // `columnStatus` is what collision detection reads to attach a card to its
-  // column (lib/board-dnd.ts).
-  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
-    id: issue.id,
-    data: { columnStatus: issue.status } satisfies CardDragData,
-  });
   const agentActive = useAgentActive(issue.id);
   // An agent run is ACTIVE on the issue → the action OPENS its conversation.
   // Otherwise (no run, or all completed), it LAUNCHES a new one from scratch (MIN-68).
@@ -999,7 +1006,7 @@ export const IssueCard = memo(function IssueCard({
   // rejects a `noRepo` launch anyway, so remove the option early. Stay permissive
   // while the query loads → no flash in the common case (project WITH a repository).
   const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
-    issue.project_id
+    issue.project_id,
   );
   // In the desktop app a local run needs NO linked repository: it plays on the
   // folder attached to this machine. In the browser the link stays the only
@@ -1024,19 +1031,19 @@ export const IssueCard = memo(function IssueCard({
   const cardMemberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const cardCategoryList = useMemo(
     () => [...categoryMap.values()],
-    [categoryMap]
+    [categoryMap],
   );
   const cardObjectiveList = useMemo(
     () => (objectiveMap ? [...objectiveMap.values()] : []),
-    [objectiveMap]
+    [objectiveMap],
   );
   const openParent = useMemo(
     () => (parent ? () => onOpenIssue(parent) : undefined),
-    [onOpenIssue, parent]
+    [onOpenIssue, parent],
   );
   const openPlan = useMemo(
     () => (onOpenPlan ? () => onOpenPlan(issue) : undefined),
-    [onOpenPlan, issue]
+    [onOpenPlan, issue],
   );
   const openPr = pr
     ? () => router.push(`/pull-requests?pr=${pr.prId}`)
@@ -1061,19 +1068,24 @@ export const IssueCard = memo(function IssueCard({
   });
   const drop = useFileDrop(uploads.addFiles);
   // Context menu (right-click) — pointer viewport position, null = closed.
-  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(
-    null
-  );
+  const [menuPosition, setMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   // Remembered position of the last right-click: the relation picker opens in
   // the same place as the menu that just closed.
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation being added (type chosen) → opens the target picker.
-  const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
+  const [relationType, setRelationType] = useState<IssueRelationType | null>(
+    null,
+  );
   // Confirmation before trash (the “Move to trash” entry).
   const [confirmDelete, setConfirmDelete] = useState(false);
   // “Custom”: the free-form prompt dialog, opened either to copy the prompt or
   // launch the agent (`null` = closed).
-  const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
+  const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(
+    null,
+  );
   // Code agent for this ticket (MIN-46) — right-click menu + ⇧A shortcut. Redirects
   // to the Agents page rather than opening a modal. Two entry points:
   //  • openAgentSession — rouvre la session existante (sa run la plus active, `?issue=`) ;
@@ -1085,7 +1097,7 @@ export const IssueCard = memo(function IssueCard({
   };
   const composeAgentSession = (
     prompt: string,
-    intent: AgentComposeIntent = "implement"
+    intent: AgentComposeIntent = "implement",
   ) => {
     setAgentComposeDraft({
       kind: "issue",
@@ -1107,7 +1119,7 @@ export const IssueCard = memo(function IssueCard({
     // from the user's perspective, the same menu entry filled the composer only
     // every other time, without explaining the difference.
     composeAgentSession(
-      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`
+      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
     );
   };
   // A plan already exists → the “plan” entries (⋯ menu, copied prompt, agent)
@@ -1120,7 +1132,7 @@ export const IssueCard = memo(function IssueCard({
   const writePlanWithAgent = () => {
     composeAgentSession(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
-      "plan"
+      "plan",
     );
   };
   // “Check implementation”: new session that rereads the work ALREADY done
@@ -1130,7 +1142,7 @@ export const IssueCard = memo(function IssueCard({
   const verifyWithAgent = () => {
     composeAgentSession(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
-      "verify"
+      "verify",
     );
   };
   // ⇧A: ticket already with a session → we open it; otherwise we start a new one.
@@ -1149,7 +1161,8 @@ export const IssueCard = memo(function IssueCard({
     if (!candidateIssues) return [];
     const linked = new Set((relations ?? []).map((r) => r.otherId));
     return candidateIssues.filter(
-      (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
+      (i) =>
+        i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
     );
   }, [getCandidateIssues, relationType, relations, issue.id]);
   // Context common to the two copyable prompts (implement the ticket, write
@@ -1159,7 +1172,7 @@ export const IssueCard = memo(function IssueCard({
     // title is resolved from candidateIssues (the complete list of the project),
     // which only exists in the authenticated app: no leak on the public board side.
     const titleById = new Map(
-      (getCandidateIssues?.() ?? []).map((i) => [i.id, i.title])
+      (getCandidateIssues?.() ?? []).map((i) => [i.id, i.title]),
     );
     return {
       relations: (relations ?? []).map((r) => ({
@@ -1220,10 +1233,10 @@ export const IssueCard = memo(function IssueCard({
         projectKey,
         resourceCount: issue.resource_count,
         ...promptContext(),
-      })
+      }),
     );
     toast.success(
-      tPlan(issueHasPlan ? "reviewPromptCopied" : "planPromptCopied")
+      tPlan(issueHasPlan ? "reviewPromptCopied" : "planPromptCopied"),
     );
   };
 
@@ -1240,7 +1253,7 @@ export const IssueCard = memo(function IssueCard({
         projectKey,
         resourceCount: issue.resource_count,
         ...promptContext(),
-      })
+      }),
     );
     toast.success(t("verifyPromptCopied"));
   };
@@ -1251,12 +1264,12 @@ export const IssueCard = memo(function IssueCard({
   // automatic start: we do not know if this instruction is work.
   const runCustomPrompt = async (
     instructions: string,
-    target: CustomPromptTarget
+    target: CustomPromptTarget,
   ) => {
     if (target === "launch") {
       composeAgentSession(
         `${tAgent("launchPrompt.head", { identifier })}\n\n${instructions}`,
-        "custom"
+        "custom",
       );
       return;
     }
@@ -1269,8 +1282,8 @@ export const IssueCard = memo(function IssueCard({
           resourceCount: issue.resource_count,
           ...promptContext(),
         },
-        instructions
-      )
+        instructions,
+      ),
     );
     toast.success(t("promptCopied"));
   };
@@ -1303,7 +1316,7 @@ export const IssueCard = memo(function IssueCard({
   // The “Custom” dialog suspends them: it covers the card, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } =
-    useIssueFieldShortcuts(!isDragging && !customTarget, {
+    useIssueFieldShortcuts(!dragging && !customTarget, {
       " ": openIssue,
       "shift+p": () => void copyPrompt(),
       "shift+a": launchAgent,
@@ -1331,17 +1344,15 @@ export const IssueCard = memo(function IssueCard({
   // and finds at the time of typing the one which is under the pointer.
   const askNumoRef = useAskNumoTarget(issue);
 
-  // dnd-kit, field shortcuts and '@' all three want the div
-  // root. Merger memorized (the three refs are stable): a new
-  // identity with each rendering would cause the three to be detached and then reattached. Do nothing
-  // return, so that React stays on the `null` callback on unmount.
+  // Field shortcuts and the Ask Numo target share the interactive card node.
+  // Keep the merged callback stable so React does not detach both refs during
+  // unrelated card updates.
   const setCardRef = useCallback(
     (el: HTMLDivElement | null) => {
-      setNodeRef(el);
       shortcutsRef(el);
       askNumoRef(el);
     },
-    [setNodeRef, shortcutsRef, askNumoRef]
+    [shortcutsRef, askNumoRef],
   );
 
   /**
@@ -1362,97 +1373,104 @@ export const IssueCard = memo(function IssueCard({
     // nothing has ever been returned: that’s where the economy happens.
     if (!menuPosition) return lastMenuActions.current;
     return [
-    // Prompt and agent: two submenus “Generate a plan” / “Implement the
-    // ticket”, shared with the side panel. The code officer is working on
-    // the Agents PAGE; ⇧P and ⇧A remain on the “implement” branch.
-    ...agentActions,
-    // Open pull request — only offered when a PR exists for the ticket.
-    ...(agentsEnabled && pr && openPr
-      ? [
-          {
-            id: "open-pr",
-            label: tAgent("viewPullRequest"),
-            keywords: ["pull request", "pr", "review", "github", "gitlab", "merge"],
-            icon: <GitPullRequest className="size-4" />,
-            onSelect: openPr,
-          },
-        ]
-      : []),
-    // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
-    // leaf opens the target-issue picker at the pointer. Shown only when the
-    // board wired the relation handlers.
-    ...(onAddRelation
-      ? [
-          {
-            id: "relations",
-            label: tRel("relations"),
-            keywords: ["relation", "link", "lier", "bloc", "block"],
-            icon: <Link2 className="size-4" />,
-            children: RELATION_TYPES.map((type) => ({
-              id: `relation-${type}`,
-              label: tRel(`action_${type}`),
-              keywords: [tRel(type), "relation", "link", "lier"],
-              icon: <RelationIcon relation={type} className="size-4" />,
-              onSelect: () => setRelationType(type),
-            })),
-          },
-        ]
-      : []),
-    // Goal and deadline are ONLY displayed on the map when they are
-    // placed: without them, the card offers no socket for placing them. The menu
-    // then reopens the picker at the pointer — exactly what O and D do.
-    ...(!issue.objective_id && objectiveMap && objectiveMap.size > 0
-      ? [
-          {
-            id: "set-objective",
-            label: t("actionLinkObjective"),
-            keywords: ["objectif", "objective", "goal", "lier", "link"],
-            icon: <Target className="size-4" />,
-            shortcut: KEY_FOR_FIELD.objective,
-            onSelect: () => openFieldAtPointer("objective"),
-          },
-        ]
-      : []),
-    ...(!issue.due_date
-      ? [
-          {
-            id: "set-due-date",
-            label: t("actionSetDueDate"),
-            keywords: [
-              "échéance",
-              "echeance",
-              "date",
-              "due",
-              "deadline",
-              "calendrier",
-              "calendar",
-            ],
-            icon: <Calendar className="size-4" />,
-            shortcut: KEY_FOR_FIELD.dueDate,
-            onSelect: () => openFieldAtPointer("dueDate"),
-          },
-        ]
-      : []),
+      // Prompt and agent: two submenus “Generate a plan” / “Implement the
+      // ticket”, shared with the side panel. The code officer is working on
+      // the Agents PAGE; ⇧P and ⇧A remain on the “implement” branch.
+      ...agentActions,
+      // Open pull request — only offered when a PR exists for the ticket.
+      ...(agentsEnabled && pr && openPr
+        ? [
+            {
+              id: "open-pr",
+              label: tAgent("viewPullRequest"),
+              keywords: [
+                "pull request",
+                "pr",
+                "review",
+                "github",
+                "gitlab",
+                "merge",
+              ],
+              icon: <GitPullRequest className="size-4" />,
+              onSelect: openPr,
+            },
+          ]
+        : []),
+      // Relations (MIN-25 / MIN-30): grouped under a "Relations" submenu. Each
+      // leaf opens the target-issue picker at the pointer. Shown only when the
+      // board wired the relation handlers.
+      ...(onAddRelation
+        ? [
+            {
+              id: "relations",
+              label: tRel("relations"),
+              keywords: ["relation", "link", "lier", "bloc", "block"],
+              icon: <Link2 className="size-4" />,
+              children: RELATION_TYPES.map((type) => ({
+                id: `relation-${type}`,
+                label: tRel(`action_${type}`),
+                keywords: [tRel(type), "relation", "link", "lier"],
+                icon: <RelationIcon relation={type} className="size-4" />,
+                onSelect: () => setRelationType(type),
+              })),
+            },
+          ]
+        : []),
+      // Goal and deadline are ONLY displayed on the map when they are
+      // placed: without them, the card offers no socket for placing them. The menu
+      // then reopens the picker at the pointer — exactly what O and D do.
+      ...(!issue.objective_id && objectiveMap && objectiveMap.size > 0
+        ? [
+            {
+              id: "set-objective",
+              label: t("actionLinkObjective"),
+              keywords: ["objectif", "objective", "goal", "lier", "link"],
+              icon: <Target className="size-4" />,
+              shortcut: KEY_FOR_FIELD.objective,
+              onSelect: () => openFieldAtPointer("objective"),
+            },
+          ]
+        : []),
+      ...(!issue.due_date
+        ? [
+            {
+              id: "set-due-date",
+              label: t("actionSetDueDate"),
+              keywords: [
+                "échéance",
+                "echeance",
+                "date",
+                "due",
+                "deadline",
+                "calendrier",
+                "calendar",
+              ],
+              icon: <Calendar className="size-4" />,
+              shortcut: KEY_FOR_FIELD.dueDate,
+              onSelect: () => openFieldAtPointer("dueDate"),
+            },
+          ]
+        : []),
       ...(buildMenuActions?.(issue) ?? []),
-    ...(onDelete
-      ? [
-          {
-            id: "delete",
-            label: tCommon("moveToTrash"),
-            keywords: [
-              "corbeille",
-              "trash",
-              "supprimer",
-              "delete",
-              "remove",
-              "archiver",
-            ],
-            icon: <Trash2 className="size-4" />,
-            separatorBefore: true,
-            variant: "destructive" as const,
-            onSelect: () => setConfirmDelete(true),
-          },
-        ]
+      ...(onDelete
+        ? [
+            {
+              id: "delete",
+              label: tCommon("moveToTrash"),
+              keywords: [
+                "corbeille",
+                "trash",
+                "supprimer",
+                "delete",
+                "remove",
+                "archiver",
+              ],
+              icon: <Trash2 className="size-4" />,
+              separatorBefore: true,
+              variant: "destructive" as const,
+              onSelect: () => setConfirmDelete(true),
+            },
+          ]
         : []),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1477,11 +1495,6 @@ export const IssueCard = memo(function IssueCard({
   return (
     <div
       ref={setCardRef}
-      // What the board lasso looks for in the DOM, and what it avoids like
-      // starting point — a card is not from the background (see marquee-selection).
-      data-issue-id={issue.id}
-      {...attributes}
-      {...listeners}
       {...hoverProps}
       onClick={(e) => {
         if (e.shiftKey && onSelect) {
@@ -1501,10 +1514,7 @@ export const IssueCard = memo(function IssueCard({
       {...drop.handlers}
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively.
-      className={cn(
-        "relative cursor-pointer rounded-xl transition-opacity duration-150 ease-out motion-reduce:transition-none",
-        (isDragging || dragging) && "opacity-40",
-      )}
+      className={cn("relative cursor-pointer rounded-xl")}
     >
       <DropOverlay
         show={drop.dragging}
@@ -1608,6 +1618,43 @@ export const IssueCard = memo(function IssueCard({
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />
+    </div>
+  );
+});
+
+type IssueCardProps = ComponentProps<typeof IssueCardContent> & {
+  /** Keep dnd-kit's active node mounted without reserving a card slot. */
+  landingOutOfFlow?: boolean;
+};
+
+/**
+ * Keep dnd-kit's frame-by-frame context updates inside this tiny shell. The
+ * interactive card is memoized below it, so pointer movement changes only the
+ * wrapper transform state instead of replaying every card hook and menu.
+ */
+export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
+  const { landingOutOfFlow = false, ...contentProps } = props;
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: props.issue.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-issue-id={props.issue.id}
+      data-column-status={props.issue.status}
+      data-board-landing-source={landingOutOfFlow ? "" : undefined}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "rounded-xl transition-opacity duration-150 ease-out motion-reduce:transition-none",
+        landingOutOfFlow
+          ? "invisible absolute pointer-events-none"
+          : "relative",
+        (isDragging || props.dragging) && "opacity-40",
+      )}
+    >
+      <IssueCardContent {...contentProps} />
     </div>
   );
 });

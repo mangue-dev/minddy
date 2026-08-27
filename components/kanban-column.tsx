@@ -2,13 +2,13 @@
 
 import { Fragment, memo, useCallback, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
-import { NO_SHIFT_STRATEGY } from "@/lib/board-dnd";
 import type { DropPreview } from "@/lib/board-drag";
 import {
   BoardDropIndicator,
+  BoardDropLandingPlaceholder,
+  type BoardLandingPreview,
   useRevealDropIndicator,
 } from "@/components/board-drop-indicator";
 import { Plus } from "lucide-react";
@@ -57,6 +57,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   selectedIds,
   draggingIds,
   dropPreview,
+  landingPreview,
   onSelect,
 }: {
   status: StatusMeta;
@@ -81,7 +82,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   onAddRelation: (
     sourceId: string,
     type: IssueRelationType,
-    targetId: string
+    targetId: string,
   ) => void;
   /** Trash from right-clicking a card (absent → entry disappears). */
   onDeleteIssue?: (issueId: string) => Promise<void>;
@@ -95,6 +96,8 @@ export const KanbanColumn = memo(function KanbanColumn({
   draggingIds?: Set<string>;
   /** The drop mark, when dragging is aimed at THIS column. */
   dropPreview?: DropPreview;
+  /** The reserved destination slot while the overlay is landing. */
+  landingPreview?: BoardLandingPreview;
   onSelect: (issueId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
@@ -111,91 +114,96 @@ export const KanbanColumn = memo(function KanbanColumn({
       setNodeRef(node);
       fadeRef(node);
     },
-    [setNodeRef, fadeRef]
+    [setNodeRef, fadeRef],
   );
   useRevealDropIndicator(scrollerRef, dropPreview);
+  const landingHere = landingPreview?.status === status.value;
+  const displayedCount = landingPreview
+    ? issues.filter((issue) => !landingPreview.activeIds.has(issue.id)).length +
+      (landingHere ? landingPreview.activeIds.size : 0)
+    : issues.length;
 
   return (
     <div className={cn("flex flex-col", BOARD_COLUMN_CLASS)}>
-      <div className="mb-2 flex items-center gap-2 px-1">
+      <div className="relative z-30 mb-2 flex items-center gap-2 bg-background px-1">
         <StatusIndicator status={status.value} className="size-4" />
         <h2 className="text-sm font-semibold">{ts(status.value)}</h2>
         <span className="relative top-px text-xs text-muted-foreground">
-          {issues.length}
+          {displayedCount}
         </span>
       </div>
 
-      {/* The edge fade is drawn NEXT to the scroller, never on it: a
- `mask-image` on a scrolling container causes it to recompose to
- each frame (MIN-319). Hence this parent `relative`. */}
+      {/* Draw the edge fade beside the scroller. A mask on the scrolling
+          container would be recomposited every frame (MIN-319). */}
       <div
         className={cn(
           "relative flex min-h-0 flex-1 flex-col rounded-xl",
-          // The background lights up on the column that WILL RECEIVE, not the one that the
-          // pointer touches: hovering over a card does not make its column
-          // a `isOver`, and the background flashed from one card to another.
+          // Highlight the destination column. Hovering a card does not set the
+          // column's `isOver`, which previously made the background flicker.
           //
-          // ⚠ The background AND its rounding are HERE, not on the scroller: a
-          // `rounded-xl` placed on a container which scrolls CROPS its contents
-          // in the four corner arcs. The point of the deposit marker is there
-          // made to nibble as soon as the line fell at the top of the column
-          // (PR 66). Same box, same rounding on the screen, but the cutting of the
-          // scroller becomes square again.
-          (dropPreview || isOver) && "bg-muted/50"
+          // Keep the rounded background on this wrapper, not the scroller. A
+          // rounded scrolling container clips the drop marker in its corner
+          // arcs when the marker is at the top (PR 66).
+          (dropPreview || landingHere || isOver) && "bg-muted/50",
         )}
       >
         <div
           ref={setScrollRef}
           data-board-column-scroller
+          data-board-column-status={status.value}
           onScroll={scrollProps.onScroll}
           className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2"
         >
-          <SortableContext
-            items={issues.map((i) => i.id)}
-            strategy={NO_SHIFT_STRATEGY}
-          >
-            {issues.map((issue) => {
-              const parent = issue.parent_id
-                ? issueMap.get(issue.parent_id) ?? null
-                : null;
-              return (
-                <Fragment key={issue.id}>
-                  {dropPreview?.beforeIssueId === issue.id && (
-                    <BoardDropIndicator count={dropPreview.count} />
-                  )}
-                  <IssueCard
-                    issue={issue}
-                    projectId={projectId}
-                    projectKey={projectKey}
-                    memberMap={memberMap}
-                    categoryMap={categoryMap}
-                    objectiveMap={objectiveMap}
-                    parent={parent}
-                    relations={relationsByIssue.get(issue.id)}
-                    getCandidateIssues={getCandidateIssues}
-                    onOpenRelated={onOpenIssueById}
-                    onAddRelation={onAddRelation}
-                    onOpenPlan={onOpenPlan}
-                    onOpenIssue={onOpenIssue}
-                    onUpdateIssue={onUpdateIssue}
-                    onSetCategories={onSetCategories}
-                    onDelete={onDeleteIssue}
-                    selected={selectedIds.has(issue.id)}
-                    dragging={draggingIds?.has(issue.id)}
-                    onSelect={onSelect}
-                    buildMenuActions={buildMenuActions}
-                    inCurrentCycle={
-                      !!currentCycleId && issue.cycle_id === currentCycleId
-                    }
-                  />
-                </Fragment>
-              );
-            })}
-            {/* `beforeIssueId === null`: the packet is placed at the end of the column. */}
-            {dropPreview && dropPreview.beforeIssueId === null && (
-              <BoardDropIndicator count={dropPreview.count} />
-            )}
-          </SortableContext>
+          {issues.map((issue) => {
+            const parent = issue.parent_id
+              ? (issueMap.get(issue.parent_id) ?? null)
+              : null;
+            return (
+              <Fragment key={issue.id}>
+                {landingHere && landingPreview.beforeIssueId === issue.id && (
+                  <BoardDropLandingPlaceholder height={landingPreview.height} />
+                )}
+                {dropPreview?.beforeIssueId === issue.id && (
+                  <BoardDropIndicator count={dropPreview.count} />
+                )}
+                <IssueCard
+                  issue={issue}
+                  projectId={projectId}
+                  projectKey={projectKey}
+                  memberMap={memberMap}
+                  categoryMap={categoryMap}
+                  objectiveMap={objectiveMap}
+                  parent={parent}
+                  relations={relationsByIssue.get(issue.id)}
+                  getCandidateIssues={getCandidateIssues}
+                  onOpenRelated={onOpenIssueById}
+                  onAddRelation={onAddRelation}
+                  onOpenPlan={onOpenPlan}
+                  onOpenIssue={onOpenIssue}
+                  onUpdateIssue={onUpdateIssue}
+                  onSetCategories={onSetCategories}
+                  onDelete={onDeleteIssue}
+                  selected={selectedIds.has(issue.id)}
+                  dragging={draggingIds?.has(issue.id)}
+                  landingOutOfFlow={
+                    landingPreview?.activeIds.has(issue.id) ? true : undefined
+                  }
+                  onSelect={onSelect}
+                  buildMenuActions={buildMenuActions}
+                  inCurrentCycle={
+                    !!currentCycleId && issue.cycle_id === currentCycleId
+                  }
+                />
+              </Fragment>
+            );
+          })}
+          {/* `beforeIssueId === null`: the packet is placed at the end of the column. */}
+          {dropPreview && dropPreview.beforeIssueId === null && (
+            <BoardDropIndicator count={dropPreview.count} />
+          )}
+          {landingHere && landingPreview.beforeIssueId === null && (
+            <BoardDropLandingPlaceholder height={landingPreview.height} />
+          )}
 
           <button
             type="button"
@@ -206,7 +214,7 @@ export const KanbanColumn = memo(function KanbanColumn({
             {t("newIssue")}
           </button>
         </div>
-        <ScrollFadeEdges edges={edges} />
+        <ScrollFadeEdges edges={edges} className="z-30" />
       </div>
     </div>
   );
@@ -214,7 +222,7 @@ export const KanbanColumn = memo(function KanbanColumn({
 
 function sameRelations(
   previous: ChipRelation[] | undefined,
-  current: ChipRelation[] | undefined
+  current: ChipRelation[] | undefined,
 ) {
   if (previous === current) return true;
   if (!previous || !current || previous.length !== current.length) return false;
@@ -238,7 +246,7 @@ type ComparableKanbanColumnProps = {
 
 function sameKanbanColumnProps(
   previous: ComparableKanbanColumnProps,
-  current: ComparableKanbanColumnProps
+  current: ComparableKanbanColumnProps,
 ) {
   const before = previous as unknown as Record<string, unknown>;
   const after = current as unknown as Record<string, unknown>;
@@ -258,7 +266,7 @@ function sameKanbanColumnProps(
     if (
       !sameRelations(
         previous.relationsByIssue.get(issue.id),
-        current.relationsByIssue.get(issue.id)
+        current.relationsByIssue.get(issue.id),
       )
     ) {
       return false;

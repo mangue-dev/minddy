@@ -2,9 +2,12 @@
 
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { useFormatter, useTimeZone } from "next-intl";
+import { useFormatter, useLocale, useTimeZone } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BrowserIntlProvider } from "@/components/browser-intl-provider";
+import {
+  BrowserIntlProvider,
+  InheritedIntlProvider,
+} from "@/components/browser-intl-provider";
 
 function DeadlineLabels() {
   const format = useFormatter();
@@ -20,6 +23,10 @@ function DeadlineLabels() {
   });
 
   return createElement("span", null, `${timeZone}|${date}|${timed}`);
+}
+
+function InheritedLocale() {
+  return createElement("span", null, useLocale());
 }
 
 describe("BrowserIntlProvider", () => {
@@ -57,6 +64,36 @@ describe("BrowserIntlProvider", () => {
     expect(container.textContent).toMatch(
       /^Europe\/Paris\|31\/08\/2026\|09:00$/,
     );
+
+    act(() => root.unmount());
+  });
+
+  it("passes the parent locale to a nested catalog provider", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        createElement(
+          BrowserIntlProvider,
+          {
+            locale: "fr",
+            messages: {},
+            initialTimeZone: "UTC",
+            children: createElement(
+              InheritedIntlProvider,
+              {
+                messages: {},
+                children: createElement(InheritedLocale),
+              },
+            ),
+          },
+        ),
+      );
+    });
+
+    expect(container.textContent).toBe("fr");
 
     act(() => root.unmount());
   });

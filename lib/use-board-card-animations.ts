@@ -13,11 +13,13 @@ const CARD_SELECTOR = "[data-issue-id]";
 const COLUMN_SCROLLER_SELECTOR = "[data-board-column-scroller]";
 const MOVE_DURATION_MS = 180;
 const SCROLL_IDLE_MS = 100;
-const SKIP_WINDOW_MS = 500;
+const SKIP_WINDOW_MS = 1_000;
 
 type CardSnapshot = {
   rect: DOMRect;
   clip: CardClip;
+  layoutLeft: number;
+  layoutTop: number;
 };
 
 type CardClip = {
@@ -32,12 +34,13 @@ type CurrentCard = CardSnapshot & { node: HTMLElement };
 type RunningAnimation = {
   animation: Animation;
   cleanup: () => void;
+  clone: HTMLElement;
 };
 
 function cardClip(
   node: HTMLElement,
   boardRect: DOMRect,
-  columnRects: Map<HTMLElement, DOMRect>
+  columnRects: Map<HTMLElement, DOMRect>,
 ): CardClip {
   const columnScroller = node.closest<HTMLElement>(COLUMN_SCROLLER_SELECTOR);
   let columnRect = columnScroller ? columnRects.get(columnScroller) : undefined;
@@ -57,14 +60,32 @@ function readCards(root: HTMLElement | null) {
   const cards = new Map<string, CurrentCard>();
   if (!root) return cards;
   const boardRect = root.getBoundingClientRect();
+  const boardScrollLeft = root.scrollLeft;
   const columnRects = new Map<HTMLElement, DOMRect>();
   for (const node of root?.querySelectorAll<HTMLElement>(CARD_SELECTOR) ?? []) {
     const id = node.dataset.issueId;
-    if (!id) continue;
+    if (!id || node.hasAttribute("data-board-landing-source")) continue;
+    const columnScroller = node.closest<HTMLElement>(COLUMN_SCROLLER_SELECTOR);
+    const columnRect = columnScroller
+      ? (columnRects.get(columnScroller) ??
+        columnScroller.getBoundingClientRect())
+      : boardRect;
+    if (columnScroller && !columnRects.has(columnScroller)) {
+      columnRects.set(columnScroller, columnRect);
+    }
+    const rect = node.getBoundingClientRect();
     cards.set(id, {
       node,
-      rect: node.getBoundingClientRect(),
+      rect,
       clip: cardClip(node, boardRect, columnRects),
+      // Viewport coordinates change while either scroller moves. These content
+      // coordinates do not, so a server echo during scroll is not mistaken for
+      // a card reorder and animated back from the stale screen position.
+      layoutLeft: rect.left - boardRect.left + boardScrollLeft,
+      layoutTop:
+        rect.top -
+        columnRect.top +
+        (columnScroller?.scrollTop ?? root.scrollTop),
     });
   }
   return cards;
@@ -72,7 +93,9 @@ function readCards(root: HTMLElement | null) {
 
 function snapshots(cards: Map<string, CurrentCard>) {
   const result = new Map<string, CardSnapshot>();
-  for (const [id, { rect, clip }] of cards) result.set(id, { rect, clip });
+  for (const [id, { rect, clip, layoutLeft, layoutTop }] of cards) {
+    result.set(id, { rect, clip, layoutLeft, layoutTop });
+  }
   return result;
 }
 
@@ -89,11 +112,11 @@ function clampToClip(rect: DOMRect, clip: CardClip) {
   return {
     left: Math.min(
       Math.max(rect.left, clip.left),
-      Math.max(clip.left, clip.right - rect.width)
+      Math.max(clip.left, clip.right - rect.width),
     ),
     top: Math.min(
       Math.max(rect.top, clip.top),
-      Math.max(clip.top, clip.bottom - rect.height)
+      Math.max(clip.top, clip.bottom - rect.height),
     ),
   };
 }
@@ -103,6 +126,27 @@ function removeDuplicateIds(root: HTMLElement) {
   for (const node of root.querySelectorAll<HTMLElement>("[id]")) {
     node.removeAttribute("id");
   }
+}
+
+function animationViewport(boardRect: DOMRect, columnRects: Iterable<DOMRect>) {
+  const columns = Array.from(columnRects);
+  if (columns.length === 0) return boardRect;
+  const top = Math.max(
+    boardRect.top,
+    Math.min(...columns.map((rect) => rect.top)),
+  );
+  const bottom = Math.min(
+    boardRect.bottom,
+    Math.max(...columns.map((rect) => rect.bottom)),
+  );
+  return {
+    left: boardRect.left,
+    right: boardRect.right,
+    top,
+    bottom,
+    width: boardRect.width,
+    height: Math.max(0, bottom - top),
+  };
 }
 
 /**
@@ -115,7 +159,9 @@ function removeDuplicateIds(root: HTMLElement) {
  */
 export function useBoardCardAnimations(
   root: RefObject<HTMLElement | null>,
-  columns: BoardColumn[]
+  columns: BoardColumn[],
+  suspended = false,
+  layoutSignal?: unknown,
 ) {
   const previousCards = useRef(new Map<string, CardSnapshot>());
   const skippedOnce = useRef(new Map<string, number>());
@@ -124,7 +170,12 @@ export function useBoardCardAnimations(
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const register = useCallback(
-    (id: string, animation: Animation, release: () => void) => {
+    (
+      id: string,
+      animation: Animation,
+      clone: HTMLElement,
+      release: () => void,
+    ) => {
       let cleaned = false;
       const cleanup = () => {
         if (cleaned) return;
@@ -134,11 +185,11 @@ export function useBoardCardAnimations(
           running.current.delete(id);
         }
       };
-      running.current.set(id, { animation, cleanup });
+      running.current.set(id, { animation, cleanup, clone });
       animation.addEventListener("finish", cleanup, { once: true });
       animation.addEventListener("cancel", cleanup, { once: true });
     },
-    []
+    [],
   );
 
   const cancelRunning = useCallback(() => {
@@ -150,9 +201,11 @@ export function useBoardCardAnimations(
 
   const cancelCard = useCallback((id: string) => {
     const entry = running.current.get(id);
-    if (!entry) return;
+    if (!entry) return null;
+    const rect = entry.clone.getBoundingClientRect();
     entry.animation.cancel();
     entry.cleanup();
+    return rect;
   }, []);
 
   const measure = useCallback(() => {
@@ -164,13 +217,22 @@ export function useBoardCardAnimations(
     for (const id of ids) skippedOnce.current.set(id, expiresAt);
   }, []);
 
+  const unskip = useCallback((ids: Iterable<string>) => {
+    for (const id of ids) skippedOnce.current.delete(id);
+  }, []);
+
   useLayoutEffect(() => {
     const board = root.current;
     if (!board) return;
 
     const previous = previousCards.current;
     const current = readCards(board);
-    const viewport = board.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+    const columnRects = Array.from(
+      board.querySelectorAll<HTMLElement>(COLUMN_SCROLLER_SELECTOR),
+      (node) => node.getBoundingClientRect(),
+    );
+    const viewport = animationViewport(boardRect, columnRects);
 
     if (!reducedMotion.current && previous.size > 0) {
       const layer = document.createElement("div");
@@ -218,13 +280,9 @@ export function useBoardCardAnimations(
         const toPoint = toVisible
           ? { left: to.rect.left, top: to.rect.top }
           : clampToClip(to.rect, to.clip);
-        const x = fromPoint.left - toPoint.left;
-        const y = fromPoint.top - toPoint.top;
-        if (
-          Math.abs(x) < 0.5 &&
-          Math.abs(y) < 0.5 &&
-          fromVisible === toVisible
-        ) {
+        const layoutX = from.layoutLeft - to.layoutLeft;
+        const layoutY = from.layoutTop - to.layoutTop;
+        if (Math.abs(layoutX) < 0.5 && Math.abs(layoutY) < 0.5) {
           continue;
         }
 
@@ -232,7 +290,12 @@ export function useBoardCardAnimations(
         // identical geometry. That echo must not cancel the flight already in
         // progress. Replace an animation only when this card actually moves
         // again.
-        cancelCard(id);
+        const interruptedRect = cancelCard(id);
+        const visualFromPoint = interruptedRect
+          ? { left: interruptedRect.left, top: interruptedRect.top }
+          : fromPoint;
+        const x = visualFromPoint.left - toPoint.left;
+        const y = visualFromPoint.top - toPoint.top;
 
         const clone = to.node.cloneNode(true) as HTMLElement;
         removeDuplicateIds(clone);
@@ -286,9 +349,9 @@ export function useBoardCardAnimations(
             duration: MOVE_DURATION_MS,
             easing: "cubic-bezier(0.2, 0, 0, 1)",
             fill: "forwards",
-          }
+          },
         );
-        register(move.id, animation, () => {
+        register(move.id, animation, move.clone, () => {
           move.target.style.visibility = move.previousVisibility;
           move.clone.remove();
           if (layer.childElementCount === 0) layer.remove();
@@ -296,9 +359,11 @@ export function useBoardCardAnimations(
       }
     }
 
-    skippedOnce.current.clear();
+    for (const [id, expiresAt] of skippedOnce.current) {
+      if (expiresAt < performance.now()) skippedOnce.current.delete(id);
+    }
     previousCards.current = snapshots(current);
-  }, [cancelCard, columns, register, root]);
+  }, [cancelCard, columns, layoutSignal, register, root]);
 
   useEffect(() => {
     const board = root.current;
@@ -310,7 +375,14 @@ export function useBoardCardAnimations(
     updateReducedMotion();
     motionQuery.addEventListener("change", updateReducedMotion);
     const refreshAfterInteraction = () => {
+      // Fixed clones cannot follow native scrolling. Reveal the real cards on
+      // the first scroll frame so every card remains attached to its column.
+      cancelRunning();
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      if (suspended) {
+        refreshTimer.current = null;
+        return;
+      }
       refreshTimer.current = setTimeout(() => {
         refreshTimer.current = null;
         measure();
@@ -320,7 +392,9 @@ export function useBoardCardAnimations(
       capture: true,
       passive: true,
     });
-    window.addEventListener("resize", refreshAfterInteraction, { passive: true });
+    window.addEventListener("resize", refreshAfterInteraction, {
+      passive: true,
+    });
     return () => {
       board.removeEventListener("scroll", refreshAfterInteraction, true);
       window.removeEventListener("resize", refreshAfterInteraction);
@@ -328,7 +402,7 @@ export function useBoardCardAnimations(
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       cancelRunning();
     };
-  }, [cancelRunning, measure, root]);
+  }, [cancelRunning, measure, root, suspended]);
 
-  return { measure, skipNext };
+  return { cancel: cancelRunning, measure, skipNext, unskip };
 }

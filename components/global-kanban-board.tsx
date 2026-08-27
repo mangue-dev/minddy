@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -34,9 +35,15 @@ import { issueComparator } from "@/lib/view-filter";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
-  BOARD_DROP_ANIMATION,
   BOARD_MOUSE_ACTIVATION_DISTANCE,
   boardCollision,
+  captureBoardDragPreview,
+  createBoardBoundsModifier,
+  createBoardDropAnimation,
+  measureBoardDragBounds,
+  measureBoardDropBundleHeight,
+  measureBoardDropVisualTarget,
+  type BoardDragBounds,
 } from "@/lib/board-dnd";
 import { useBoardDrop } from "@/lib/use-board-drop";
 import { useBoardCardAnimations } from "@/lib/use-board-card-animations";
@@ -44,6 +51,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
+import type { BoardLandingPreview } from "@/components/board-drop-indicator";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
@@ -52,17 +60,12 @@ import {
   useMarqueeSelection,
 } from "@/components/marquee-selection";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
-import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import {
   restoreBoardScroll,
   type BoardScrollPosition,
 } from "@/lib/board-scroll";
-
-const EMPTY_MEMBERS: Map<string, Member> = new Map();
-const EMPTY_CATEGORIES: Map<string, Category> = new Map();
-const EMPTY_OBJECTIVES: Map<string, Objective> = new Map();
 
 /**
  * The cross-project kanban's drag-and-drop surface (MIN-29) — the same DnD model
@@ -115,14 +118,18 @@ export function GlobalKanbanBoard({
   /** Opens a related issue's side panel (clicking a relation chip). */
   onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
-  onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
+  onUpdateIssue: (
+    issueId: string,
+    patch: IssueUpdateInput,
+    projectId: string,
+  ) => void;
   onDeleteIssue: (issueId: string, projectId: string) => Promise<void>;
   onAskNumo: (issues: Issue[]) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
   onMove: (
     issueId: string,
     patch: { status?: IssueStatus; position: number },
-    projectId: string
+    projectId: string,
   ) => Promise<void>;
   /** Open the app-wide create dialog preset to a column's status (MIN-33).
       Absent → the columns render no "new issue" footer (cycle mode). */
@@ -133,7 +140,7 @@ export function GlobalKanbanBoard({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
-    projectId: string
+    projectId: string,
   ) => void;
   /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
       same-column reordering is disabled; cross-column drag still moves status. */
@@ -157,14 +164,14 @@ export function GlobalKanbanBoard({
 }) {
   const issueMap = useMemo(
     () => new Map(issues.map((i) => [i.id, i])),
-    [issues]
+    [issues],
   );
 
   // Relation resolution + picker candidates work on the FULL board (the other
   // end of a relation may be outside the current view/cycle scope).
   const allIssueMap = useMemo(
     () => new Map((allIssues ?? issues).map((i) => [i.id, i])),
-    [allIssues, issues]
+    [allIssues, issues],
   );
   const issuesByProject = useMemo(() => {
     const map = new Map<string, Issue[]>();
@@ -179,14 +186,14 @@ export function GlobalKanbanBoard({
   issuesByProjectRef.current = issuesByProject;
   const getCandidateIssues = useCallback(
     (projectId: string) => issuesByProjectRef.current.get(projectId),
-    []
+    [],
   );
   const relationsByIssue = useMemo(() => {
     const map = new Map<string, ChipRelation[]>();
     if (!relations?.length) return map;
     // Blocker statuses drive relation resolution (a done blocker no longer blocks).
     const statusById = new Map(
-      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const)
+      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
     const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
     for (const issue of issues) {
@@ -203,12 +210,12 @@ export function GlobalKanbanBoard({
 
   const displayComparator = useMemo(
     () => comparator ?? issueComparator(sort),
-    [comparator, sort]
+    [comparator, sort],
   );
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
     () => buildColumns(statuses, issues, displayComparator),
-    [buildColumns, issues, statuses, displayComparator]
+    [buildColumns, issues, statuses, displayComparator],
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -220,10 +227,18 @@ export function GlobalKanbanBoard({
       return next;
     });
   }, []);
-  const selectedIssues = useMemo(() => issues.filter((issue) => selectedIds.has(issue.id)), [issues, selectedIds]);
-  const updateSelected = useCallback((patch: IssueUpdateInput) => {
-    selectedIssues.forEach((issue) => onUpdateIssue(issue.id, patch, issue.project_id));
-  }, [onUpdateIssue, selectedIssues]);
+  const selectedIssues = useMemo(
+    () => issues.filter((issue) => selectedIds.has(issue.id)),
+    [issues, selectedIds],
+  );
+  const updateSelected = useCallback(
+    (patch: IssueUpdateInput) => {
+      selectedIssues.forEach((issue) =>
+        onUpdateIssue(issue.id, patch, issue.project_id),
+      );
+    },
+    [onUpdateIssue, selectedIssues],
+  );
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
   // Lasso on the bottom of the board — same hook, same selection as the project board.
   const {
@@ -251,7 +266,7 @@ export function GlobalKanbanBoard({
     if (!cycleTargetId || !onSetCycle) return undefined;
     const { addable, removable } = splitCycleSelection(
       selectedIssues,
-      cycleTargetId
+      cycleTargetId,
     );
     if (addable.length === 0 && removable.length === 0) return undefined;
     return {
@@ -272,7 +287,7 @@ export function GlobalKanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, selectionProjectId, onAddRelation, clearSelection]);
-  // Drag it: embedded package, deposit marker and writing plan, of the same
+  // The dragged bundle, drop marker, and persisted move share the same
   // calculation as the project board (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
     columns,
@@ -280,17 +295,24 @@ export function GlobalKanbanBoard({
     manual: sort === "manual",
     issueMap,
     selectedIds,
-    // Cycle view: the receipt order is the only one, therefore no reordering
-    // in a column — only the status change passes.
+    // Cycle views preserve their display order, so only cross-column status
+    // changes are persisted.
     crossColumnOnly: !!comparator,
   });
   const { preview, draggingIds, activeId } = drop;
-  const activeIssue = activeId ? issueMap.get(activeId) ?? null : null;
-  const activeProject = activeIssue
-    ? projectMap.get(activeIssue.project_id)
-    : undefined;
-  const activeParent =
-    activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
+  const [landingPreview, setLandingPreview] =
+    useState<BoardLandingPreview | null>(null);
+  const isLanding = landingPreview !== null;
+  const dragPreviewHtmlRef = useRef<string | null>(null);
+  const dragBoundsRef = useRef<BoardDragBounds | null>(null);
+  const dragBoundsModifier = useMemo(
+    () => createBoardBoundsModifier(dragBoundsRef),
+    [],
+  );
+  const dragModifiers = useMemo(
+    () => [dragBoundsModifier],
+    [dragBoundsModifier],
+  );
 
   // Mouse-only drag (touch scrolls the swipeable columns) — mirrors KanbanBoard.
   // Read-only boards (past/future cycles) get a huge activation distance so the
@@ -302,26 +324,30 @@ export function GlobalKanbanBoard({
           ? Number.MAX_SAFE_INTEGER
           : BOARD_MOUSE_ACTIVATION_DISTANCE,
       },
-    })
+    }),
   );
 
   // Fade the left/right edges of the board while more columns lie off-screen
   // — same affordance as the project board.
-  const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>("x");
+  const {
+    ref: fadeRef,
+    scrollProps,
+    edges,
+  } = useScrollFade<HTMLDivElement>("x");
 
-  // The edge fade and lasso want the same knot. Memorized fusion: one
-  // new identity with each render would cause them to detach and then reattach.
+  // The edge fade and marquee selection share one stable callback ref.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const localHorizontalScroll = useRef(0);
   const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
-  const cardAnimations = useBoardCardAnimations(scrollerRef, columns);
+  const dropAnimation = useMemo(() => createBoardDropAnimation(), []);
+  const landingGenerationRef = useRef(0);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
       scrollerRef.current = node;
       fadeRef(node);
       marqueeRef(node);
     },
-    [fadeRef, marqueeRef]
+    [fadeRef, marqueeRef],
   );
 
   useLayoutEffect(() => {
@@ -329,142 +355,238 @@ export function GlobalKanbanBoard({
     if (node) restoreBoardScroll(node, preservedHorizontalScroll);
   }, [columns, preservedHorizontalScroll]);
 
+  // Scroll restoration must run before the FLIP hook reads viewport geometry.
+  const cardAnimations = useBoardCardAnimations(
+    scrollerRef,
+    columns,
+    activeId !== null,
+    landingPreview,
+  );
+  useLayoutEffect(() => {
+    dropAnimation.layoutCommitted((id) => issueMap.get(id) ?? null);
+  }, [columns, dropAnimation, issueMap]);
+  useEffect(
+    () => () => {
+      landingGenerationRef.current += 1;
+      dropAnimation.cancel();
+    },
+    [dropAnimation],
+  );
+
   const handleDragStart = (event: DragStartEvent) => {
-    cardAnimations.measure();
+    landingGenerationRef.current += 1;
+    dropAnimation.cancel();
+    cardAnimations.cancel();
+    setLandingPreview(null);
+    dragPreviewHtmlRef.current = captureBoardDragPreview(
+      String(event.active.id),
+    );
+    dragBoundsRef.current = measureBoardDragBounds(scrollerRef.current);
     drop.start(event);
   };
-  const handleDragMove = (event: DragMoveEvent) => drop.track(event);
+  const pendingTrackRef = useRef<DragMoveEvent | null>(null);
+  const trackFrameRef = useRef<number | null>(null);
+  const cancelPendingTrack = useCallback(() => {
+    pendingTrackRef.current = null;
+    if (trackFrameRef.current != null) {
+      cancelAnimationFrame(trackFrameRef.current);
+      trackFrameRef.current = null;
+    }
+  }, []);
+  const handleDragMove = useCallback(
+    (event: DragMoveEvent) => {
+      pendingTrackRef.current = event;
+      if (trackFrameRef.current != null) return;
+      trackFrameRef.current = requestAnimationFrame(() => {
+        trackFrameRef.current = null;
+        const latest = pendingTrackRef.current;
+        pendingTrackRef.current = null;
+        if (latest) drop.track(latest);
+      });
+    },
+    [drop],
+  );
+  useEffect(() => cancelPendingTrack, [cancelPendingTrack]);
 
   const handleDragEnd = (event: DragEndEvent) => {
+    cancelPendingTrack();
     // The marker already showed THIS plan: we write it as is.
     const planned = drop.plan(event);
-    if (planned) {
+    const draggedId = String(event.active.id);
+    const activeMove = planned?.moves.find(
+      (move) => move.issue.id === draggedId,
+    );
+    if (activeMove) {
       cardAnimations.measure();
-      cardAnimations.skipNext([String(event.active.id)]);
+      cardAnimations.skipNext(draggingIds);
+      const destinationStatus =
+        activeMove.patch.status ?? activeMove.issue.status;
+      const visualTarget = measureBoardDropVisualTarget({
+        activeId: draggedId,
+        activeIds: draggingIds,
+        bounds: dragBoundsRef.current,
+        status: destinationStatus,
+      });
+      const bundleHeight = measureBoardDropBundleHeight({
+        activeIds: draggingIds,
+        status: destinationStatus,
+      });
+      const nextLanding =
+        preview && preview.status === destinationStatus && bundleHeight != null
+          ? {
+              ...preview,
+              activeIds: new Set(draggingIds),
+              height: bundleHeight,
+            }
+          : null;
+      const generation = ++landingGenerationRef.current;
+      setLandingPreview(nextLanding);
+      dropAnimation.prepare(
+        {
+          activeId: draggedId,
+          position: activeMove.patch.position,
+          status: destinationStatus,
+          visualTarget,
+        },
+        () => {
+          cardAnimations.unskip(draggingIds);
+          if (landingGenerationRef.current === generation) {
+            setLandingPreview(null);
+          }
+        },
+      );
     }
     drop.end();
     if (!planned) return;
 
     void Promise.all(
-      planned.moves.map((m) => onMove(m.issue.id, m.patch, m.issue.project_id))
+      planned.moves.map((m) => onMove(m.issue.id, m.patch, m.issue.project_id)),
     ).catch((err) => toast.error((err as Error).message));
+  };
+
+  const handleDragCancel = () => {
+    cancelPendingTrack();
+    landingGenerationRef.current += 1;
+    dropAnimation.cancel();
+    setLandingPreview(null);
+    drop.end();
   };
 
   return (
     // Halo “agent in progress” on cross-project maps: the provider receives
     // every project displayed by this board.
     <AgentActivityProvider projectIds={[...projectMap.keys()]}>
-    {/* “@” when hovering over a card (or on selection) opens Numo — even
- context as the Numo button of the selection pill (MIN-105). */}
-    <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
-    <DndContext
-      sensors={sensors}
-      collisionDetection={boardCollision}
-      onDragStart={handleDragStart}
-      // The side of the deposit changes without the target changing: this is `onDragMove`
-      // who sees it, not `onDragOver` (see KanbanBoard).
-      onDragMove={handleDragMove}
-      onDragOver={handleDragMove}
-      onDragEnd={handleDragEnd}
-      onDragCancel={drop.end}
-    >
-      {selectedIssues.length > 0 && (
-        <BulkIssueActions
-          count={selectedIssues.length}
-          members={Array.from(memberMapByProject.values()).flatMap((members) => Array.from(members.values()))}
-          onUpdate={updateSelected}
-          onDelete={async () => {
-            await Promise.all(selectedIssues.map((issue) => onDeleteIssue(issue.id, issue.project_id)));
-            clearSelection();
-          }}
-          onClear={clearSelection}
-          onAskNumo={() => onAskNumo(selectedIssues)}
-          cycle={bulkCycle}
-          objectives={bulkObjectives}
-          onLink={bulkLink}
-        />
-      )}
-      {/* Edge fade NEXT to the scroller, not on it (MIN-319). */}
-      <div className="relative flex h-full min-h-0 flex-col">
-        <div
-          ref={setScrollerRef}
-          onScroll={(event) => {
-            preservedHorizontalScroll.current = event.currentTarget.scrollLeft;
-            scrollProps.onScroll();
-          }}
-          onPointerDown={onMarqueePointerDown}
-          className={cn("h-full min-h-0", BOARD_SCROLLER_CLASS)}
+      {/* “@” on card hover or selection opens Numo with the same context as
+          the button on the selection pill (MIN-105). */}
+      <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={boardCollision}
+          onDragStart={handleDragStart}
+          // The drop side can change without the target changing, so the marker
+          // must track `onDragMove` as well as `onDragOver`.
+          onDragMove={handleDragMove}
+          onDragOver={handleDragMove}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
-          {columns.map(({ status, items }) => (
-            <GlobalKanbanColumn
-              key={status.value}
-              status={status}
-              issues={items}
-              projectMap={projectMap}
-              issueMap={issueMap}
-              relationsByIssue={relationsByIssue}
-              getCandidateIssues={getCandidateIssues}
-              memberMapByProject={memberMapByProject}
-              categoryMapByProject={categoryMapByProject}
-              objectiveMapByProject={objectiveMapByProject}
-              onOpenIssue={onOpenIssue}
-              onOpenIssueById={onOpenIssueById}
-              onOpenPlan={onOpenPlan}
-              onUpdateIssue={onUpdateIssue}
-              onSetCategories={onSetCategories}
-              onCreateIssue={onCreateIssue}
-              onAddRelation={onAddRelation}
-              onDeleteIssue={onDeleteIssue}
-              buildMenuActions={buildMenuActions}
-              currentCycleId={currentCycleId}
-              selectedIds={selectedIds}
-              draggingIds={draggingIds}
-              dropPreview={
-                preview?.status === status.value ? preview : undefined
-              }
-              onSelect={toggleSelection}
+          {selectedIssues.length > 0 && (
+            <BulkIssueActions
+              count={selectedIssues.length}
+              members={Array.from(memberMapByProject.values()).flatMap(
+                (members) => Array.from(members.values()),
+              )}
+              onUpdate={updateSelected}
+              onDelete={async () => {
+                await Promise.all(
+                  selectedIssues.map((issue) =>
+                    onDeleteIssue(issue.id, issue.project_id),
+                  ),
+                );
+                clearSelection();
+              }}
+              onClear={clearSelection}
+              onAskNumo={() => onAskNumo(selectedIssues)}
+              cycle={bulkCycle}
+              objectives={bulkObjectives}
+              onLink={bulkLink}
             />
-          ))}
-        </div>
-        <ScrollFadeEdges edges={edges} axis="x" />
-      </div>
-
-      <MarqueeOverlay overlayRef={marqueeOverlayRef} />
-
-      <DragOverlay dropAnimation={BOARD_DROP_ANIMATION} zIndex={20}>
-        {activeIssue ? (
-          <div className="relative w-[21rem]">
-            {/* The package is not visible on the cursor: the account says so. */}
-            {draggingIds.size > 1 && (
-              <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
-                {draggingIds.size}
-              </span>
-            )}
-            <IssueCardBody
-              issue={activeIssue}
-              projectKey={activeProject?.key ?? ""}
-              project={activeProject}
-              memberMap={
-                memberMapByProject.get(activeIssue.project_id) ?? EMPTY_MEMBERS
-              }
-              categoryMap={
-                categoryMapByProject.get(activeIssue.project_id) ?? EMPTY_CATEGORIES
-              }
-              objectiveMap={
-                objectiveMapByProject.get(activeIssue.project_id) ?? EMPTY_OBJECTIVES
-              }
-              parentNumber={activeParent?.number}
-              relations={relationsByIssue.get(activeIssue.id)}
-              inCurrentCycle={
-                !!currentCycleId && activeIssue.cycle_id === currentCycleId
-              }
-              dragging
-            />
+          )}
+          {/* Edge fade NEXT to the scroller, not on it (MIN-319). */}
+          <div className="relative flex h-full min-h-0 flex-col">
+            <div
+              ref={setScrollerRef}
+              onScroll={(event) => {
+                preservedHorizontalScroll.current =
+                  event.currentTarget.scrollLeft;
+                scrollProps.onScroll();
+              }}
+              onPointerDown={onMarqueePointerDown}
+              style={isLanding ? { scrollSnapType: "none" } : undefined}
+              className={cn("h-full min-h-0", BOARD_SCROLLER_CLASS)}
+            >
+              {columns.map(({ status, items }) => (
+                <GlobalKanbanColumn
+                  key={status.value}
+                  status={status}
+                  issues={items}
+                  projectMap={projectMap}
+                  issueMap={issueMap}
+                  relationsByIssue={relationsByIssue}
+                  getCandidateIssues={getCandidateIssues}
+                  memberMapByProject={memberMapByProject}
+                  categoryMapByProject={categoryMapByProject}
+                  objectiveMapByProject={objectiveMapByProject}
+                  onOpenIssue={onOpenIssue}
+                  onOpenIssueById={onOpenIssueById}
+                  onOpenPlan={onOpenPlan}
+                  onUpdateIssue={onUpdateIssue}
+                  onSetCategories={onSetCategories}
+                  onCreateIssue={onCreateIssue}
+                  onAddRelation={onAddRelation}
+                  onDeleteIssue={onDeleteIssue}
+                  buildMenuActions={buildMenuActions}
+                  currentCycleId={currentCycleId}
+                  selectedIds={selectedIds}
+                  draggingIds={draggingIds}
+                  dropPreview={
+                    preview?.status === status.value ? preview : undefined
+                  }
+                  landingPreview={landingPreview ?? undefined}
+                  onSelect={toggleSelection}
+                />
+              ))}
+            </div>
+            <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
-    </AskNumoProvider>
+
+          <MarqueeOverlay overlayRef={marqueeOverlayRef} />
+
+          <DragOverlay
+            dropAnimation={dropAnimation.animation}
+            modifiers={dragModifiers}
+            style={{ pointerEvents: "none" }}
+            zIndex={20}
+          >
+            {activeId && dragPreviewHtmlRef.current ? (
+              <div className="relative w-full">
+                {/* The badge represents the rest of a multi-card bundle. */}
+                {draggingIds.size > 1 && (
+                  <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
+                    {draggingIds.size}
+                  </span>
+                )}
+                <div
+                  aria-hidden
+                  dangerouslySetInnerHTML={{
+                    __html: dragPreviewHtmlRef.current,
+                  }}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </AskNumoProvider>
     </AgentActivityProvider>
   );
 }

@@ -2,13 +2,13 @@
 
 import { Fragment, memo, useCallback, useMemo, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
-import { NO_SHIFT_STRATEGY } from "@/lib/board-dnd";
 import type { DropPreview } from "@/lib/board-drag";
 import {
   BoardDropIndicator,
+  BoardDropLandingPlaceholder,
+  type BoardLandingPreview,
   useRevealDropIndicator,
 } from "@/components/board-drop-indicator";
 import { Plus } from "lucide-react";
@@ -65,6 +65,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   selectedIds,
   draggingIds,
   dropPreview,
+  landingPreview,
   onSelect,
   onCreateIssue,
   onAddRelation,
@@ -88,13 +89,19 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   /** Opens a related issue's side panel (clicking a relation chip). */
   onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
-  onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
+  onUpdateIssue: (
+    issueId: string,
+    patch: IssueUpdateInput,
+    projectId: string,
+  ) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
   selectedIds: Set<string>;
   /** Tickets boarded by current swipe — faded with the card entered. */
   draggingIds?: Set<string>;
   /** The drop mark, when dragging is aimed at THIS column. */
   dropPreview?: DropPreview;
+  /** The reserved destination slot while the overlay is landing. */
+  landingPreview?: BoardLandingPreview;
   onSelect: (issueId: string) => void;
   /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
   onCreateIssue?: (status: IssueStatus) => void;
@@ -103,7 +110,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
-    projectId: string
+    projectId: string,
   ) => void;
   /** Trash from right-clicking a card (the ticket project follows). */
   onDeleteIssue?: (issueId: string, projectId: string) => Promise<void>;
@@ -124,15 +131,19 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
       setNodeRef(node);
       fadeRef(node);
     },
-    [setNodeRef, fadeRef]
+    [setNodeRef, fadeRef],
   );
   useRevealDropIndicator(scrollerRef, dropPreview);
+  const landingHere = landingPreview?.status === status.value;
+  const displayedCount = landingPreview
+    ? issues.filter((issue) => !landingPreview.activeIds.has(issue.id)).length +
+      (landingHere ? landingPreview.activeIds.size : 0)
+    : issues.length;
 
   /**
-   * The handlers of the cross-project board take the project as the LAST argument, and
-   * a column here mixes the projects. We therefore link them BY PROJECT, once
-   * for all, rather than with a new arrow per card and per rendering — without
-   * which `memo` on `IssueCard` would not bite on anything (MIN-316).
+   * Cross-project handlers take the project as their final argument, while one
+   * column can contain several projects. Bind them once per project so cards do
+   * not receive new callback identities on every render (MIN-316).
    */
   const bindToProject = useMemo(() => {
     const cache = new Map<
@@ -141,7 +152,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
         onAddRelation?: (
           sourceId: string,
           type: IssueRelationType,
-          targetId: string
+          targetId: string,
         ) => void;
         onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
         onSetCategories: (issueId: string, ids: string[]) => void;
@@ -180,11 +191,11 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
 
   return (
     <div className={cn("flex flex-col", BOARD_COLUMN_CLASS)}>
-      <div className="mb-2 flex items-center gap-2 px-1">
+      <div className="relative z-30 mb-2 flex items-center gap-2 bg-background px-1">
         <StatusIndicator status={status.value} className="size-4" />
         <h2 className="text-sm font-semibold">{ts(status.value)}</h2>
         <span className="relative top-px text-xs text-muted-foreground">
-          {issues.length}
+          {displayedCount}
         </span>
       </div>
 
@@ -196,69 +207,74 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
           "relative flex min-h-0 flex-1 flex-col rounded-xl",
           // The bottom, its roundness and the reason to keep them OUT of the scroller:
           // cf. KanbanColumn (rounding on what scrolls crops the content).
-          (dropPreview || isOver) && "bg-muted/50"
+          (dropPreview || landingHere || isOver) && "bg-muted/50",
         )}
       >
         <div
           ref={setScrollRef}
           data-board-column-scroller
+          data-board-column-status={status.value}
           onScroll={scrollProps.onScroll}
           className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2"
         >
-          <SortableContext
-            items={issues.map((i) => i.id)}
-            strategy={NO_SHIFT_STRATEGY}
-          >
-            {issues.map((issue) => {
-              const project = projectMap.get(issue.project_id);
-              const pid = issue.project_id;
-              const bound = bindToProject(pid);
-              const parent = issue.parent_id
-                ? issueMap.get(issue.parent_id) ?? null
-                : null;
-              return (
-                <Fragment key={issue.id}>
-                  {dropPreview?.beforeIssueId === issue.id && (
-                    <BoardDropIndicator count={dropPreview.count} />
-                  )}
-                  <IssueCard
-                    issue={issue}
-                    projectId={pid}
-                    projectKey={project?.key ?? ""}
-                    project={project}
-                    memberMap={memberMapByProject.get(pid) ?? EMPTY_MEMBERS}
-                    categoryMap={
-                      categoryMapByProject.get(pid) ?? EMPTY_CATEGORIES
-                    }
-                    objectiveMap={
-                      objectiveMapByProject.get(pid) ?? EMPTY_OBJECTIVES
-                    }
-                    parent={parent}
-                    relations={relationsByIssue?.get(issue.id)}
-                    getCandidateIssues={bound.getCandidateIssues}
-                    onOpenRelated={onOpenIssueById}
-                    onAddRelation={bound.onAddRelation}
-                    onOpenPlan={onOpenPlan}
-                    onOpenIssue={onOpenIssue}
-                    onUpdateIssue={bound.onUpdateIssue}
-                    onSetCategories={bound.onSetCategories}
-                    onDelete={bound.onDelete}
-                    selected={selectedIds.has(issue.id)}
-                    dragging={draggingIds?.has(issue.id)}
-                    onSelect={onSelect}
-                    buildMenuActions={buildMenuActions}
-                    inCurrentCycle={
-                      !!currentCycleId && issue.cycle_id === currentCycleId
-                    }
-                  />
-                </Fragment>
-              );
-            })}
-            {/* `beforeIssueId === null`: the packet is placed at the end of the column. */}
-            {dropPreview && dropPreview.beforeIssueId === null && (
-              <BoardDropIndicator count={dropPreview.count} />
-            )}
-          </SortableContext>
+          {issues.map((issue) => {
+            const project = projectMap.get(issue.project_id);
+            const pid = issue.project_id;
+            const bound = bindToProject(pid);
+            const parent = issue.parent_id
+              ? (issueMap.get(issue.parent_id) ?? null)
+              : null;
+            return (
+              <Fragment key={issue.id}>
+                {landingHere && landingPreview.beforeIssueId === issue.id && (
+                  <BoardDropLandingPlaceholder height={landingPreview.height} />
+                )}
+                {dropPreview?.beforeIssueId === issue.id && (
+                  <BoardDropIndicator count={dropPreview.count} />
+                )}
+                <IssueCard
+                  issue={issue}
+                  projectId={pid}
+                  projectKey={project?.key ?? ""}
+                  project={project}
+                  memberMap={memberMapByProject.get(pid) ?? EMPTY_MEMBERS}
+                  categoryMap={
+                    categoryMapByProject.get(pid) ?? EMPTY_CATEGORIES
+                  }
+                  objectiveMap={
+                    objectiveMapByProject.get(pid) ?? EMPTY_OBJECTIVES
+                  }
+                  parent={parent}
+                  relations={relationsByIssue?.get(issue.id)}
+                  getCandidateIssues={bound.getCandidateIssues}
+                  onOpenRelated={onOpenIssueById}
+                  onAddRelation={bound.onAddRelation}
+                  onOpenPlan={onOpenPlan}
+                  onOpenIssue={onOpenIssue}
+                  onUpdateIssue={bound.onUpdateIssue}
+                  onSetCategories={bound.onSetCategories}
+                  onDelete={bound.onDelete}
+                  selected={selectedIds.has(issue.id)}
+                  dragging={draggingIds?.has(issue.id)}
+                  landingOutOfFlow={
+                    landingPreview?.activeIds.has(issue.id) ? true : undefined
+                  }
+                  onSelect={onSelect}
+                  buildMenuActions={buildMenuActions}
+                  inCurrentCycle={
+                    !!currentCycleId && issue.cycle_id === currentCycleId
+                  }
+                />
+              </Fragment>
+            );
+          })}
+          {/* `beforeIssueId === null`: the packet is placed at the end of the column. */}
+          {dropPreview && dropPreview.beforeIssueId === null && (
+            <BoardDropIndicator count={dropPreview.count} />
+          )}
+          {landingHere && landingPreview.beforeIssueId === null && (
+            <BoardDropLandingPlaceholder height={landingPreview.height} />
+          )}
 
           {onCreateIssue && (
             <button
@@ -271,7 +287,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
             </button>
           )}
         </div>
-        <ScrollFadeEdges edges={edges} />
+        <ScrollFadeEdges edges={edges} className="z-30" />
       </div>
     </div>
   );
@@ -279,7 +295,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
 
 function sameRelations(
   previous: ChipRelation[] | undefined,
-  current: ChipRelation[] | undefined
+  current: ChipRelation[] | undefined,
 ) {
   if (previous === current) return true;
   if (!previous || !current || previous.length !== current.length) return false;
@@ -303,7 +319,7 @@ type ComparableGlobalKanbanColumnProps = {
 
 function sameGlobalKanbanColumnProps(
   previous: ComparableGlobalKanbanColumnProps,
-  current: ComparableGlobalKanbanColumnProps
+  current: ComparableGlobalKanbanColumnProps,
 ) {
   const before = previous as unknown as Record<string, unknown>;
   const after = current as unknown as Record<string, unknown>;
@@ -323,7 +339,7 @@ function sameGlobalKanbanColumnProps(
     if (
       !sameRelations(
         previous.relationsByIssue?.get(issue.id),
-        current.relationsByIssue?.get(issue.id)
+        current.relationsByIssue?.get(issue.id),
       )
     ) {
       return false;

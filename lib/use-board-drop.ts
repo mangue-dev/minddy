@@ -40,6 +40,15 @@ type BoardDragEvent = Pick<
   "active" | "over"
 >;
 
+const CARD_SELECTOR = "[data-issue-id]";
+const COLUMN_SCROLLER_SELECTOR = "[data-board-column-scroller]";
+
+type CachedCardGeometry = {
+  centerY: number;
+  scrollTop: number;
+  scroller: HTMLElement | null;
+};
+
 export interface BoardDrop {
   /** The drop mark, or `null` when the gesture would not write anything. */
   preview: DropPreview | null;
@@ -52,7 +61,7 @@ export interface BoardDrop {
   track: (event: BoardDragEvent) => void;
   /** The movements to write for this gesture (`null` = nothing to do). */
   plan: (
-    event: BoardDragEvent
+    event: BoardDragEvent,
   ) => { status: IssueStatus; moves: PlannedMove[] } | null;
   end: () => void;
 }
@@ -82,6 +91,9 @@ export function useBoardDrop({
   const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
   const nowRef = useRef(0);
   const bundleRef = useRef<Issue[]>([]);
+  const bundleIdsRef = useRef<Set<string>>(new Set());
+  const cardNodesRef = useRef<Map<string, HTMLElement>>(new Map());
+  const cardGeometryRef = useRef<Map<string, CachedCardGeometry>>(new Map());
   const planCacheRef = useRef<{
     status: IssueStatus;
     overIssueId: string | null;
@@ -101,6 +113,7 @@ export function useBoardDrop({
     for (const column of columns) map.set(column.status.value, column.items);
     return map;
   }, [columns]);
+  const rankById = useMemo(() => displayRank(columns), [columns]);
 
   const positionItemsByStatus = useMemo(() => {
     if (!manual) return itemsByStatus;
@@ -108,30 +121,105 @@ export function useBoardDrop({
     for (const [status, items] of itemsByStatus) {
       const alreadySorted = items.every(
         (issue, index) =>
-          index === 0 || items[index - 1].position <= issue.position
+          index === 0 || items[index - 1].position <= issue.position,
       );
       map.set(
         status,
         alreadySorted
           ? items
-          : [...items].sort((a, b) => a.position - b.position)
+          : [...items].sort((a, b) => a.position - b.position),
       );
     }
     return map;
   }, [itemsByStatus, manual]);
 
+  const cardCenterY = useCallback((issueId: string) => {
+    const node = cardNodesRef.current.get(issueId);
+    if (!node) return null;
+    let cached = cardGeometryRef.current.get(issueId);
+    if (!cached) {
+      const rect = node.getBoundingClientRect();
+      const scroller = node.closest<HTMLElement>(COLUMN_SCROLLER_SELECTOR);
+      cached = {
+        centerY: rect.top + rect.height / 2,
+        scrollTop: scroller?.scrollTop ?? 0,
+        scroller,
+      };
+      cardGeometryRef.current.set(issueId, cached);
+    }
+    return (
+      cached.centerY - ((cached.scroller?.scrollTop ?? 0) - cached.scrollTop)
+    );
+  }, []);
+
+  const readManualTarget = useCallback(
+    (event: BoardDragEvent, status: IssueStatus) => {
+      const activeRect = event.active.rect.current.translated;
+      if (!activeRect) {
+        return { status, overIssueId: null, after: false };
+      }
+      const probe = {
+        x: activeRect.left + activeRect.width / 2,
+        y: activeRect.top + activeRect.height / 2,
+      };
+      const movingIds = bundleIdsRef.current;
+      const items = itemsByStatus.get(status) ?? [];
+      const pointedCard =
+        typeof document.elementFromPoint === "function"
+          ? document
+              .elementFromPoint(probe.x, probe.y)
+              ?.closest<HTMLElement>(CARD_SELECTOR)
+          : null;
+      const pointedId = pointedCard?.dataset.issueId;
+      if (
+        pointedId &&
+        !movingIds.has(pointedId) &&
+        pointedCard.dataset.columnStatus === status
+      ) {
+        const center = cardCenterY(pointedId);
+        return {
+          status,
+          overIssueId: pointedId,
+          after: center != null && probe.y >= center,
+        };
+      }
+
+      let lastIssueId: string | null = null;
+      for (const issue of items) {
+        if (movingIds.has(issue.id)) continue;
+        const center = cardCenterY(issue.id);
+        if (center == null) continue;
+        if (probe.y < center) {
+          return { status, overIssueId: issue.id, after: false };
+        }
+        lastIssueId = issue.id;
+      }
+      return {
+        status,
+        overIssueId: lastIssueId,
+        after: lastIssueId != null,
+      };
+    },
+    [cardCenterY, itemsByStatus],
+  );
+
   const plan = useCallback(
     (event: BoardDragEvent) => {
-      // Dropping a card on itself writes nothing — and therefore shows nothing.
-      if (!event.over || String(event.over.id) === String(event.active.id)) {
-        return null;
-      }
-      const target = readDropTarget({
-        overId: event.over.id,
-        overRect: event.over.rect,
-        activeRect: event.active.rect.current.translated,
-        issueById: issueMap,
-      });
+      if (!event.over) return null;
+      const overId = String(event.over.id);
+      const targetStatus = itemsByStatus.has(overId as IssueStatus)
+        ? (overId as IssueStatus)
+        : null;
+      const target = targetStatus
+        ? manual
+          ? readManualTarget(event, targetStatus)
+          : { status: targetStatus, overIssueId: null, after: false }
+        : readDropTarget({
+            overId: event.over.id,
+            overRect: event.over.rect,
+            activeRect: event.active.rect.current.translated,
+            issueById: issueMap,
+          });
       if (!target) return null;
       const bundle = bundleRef.current;
       if (bundle.length === 0) return null;
@@ -179,7 +267,8 @@ export function useBoardDrop({
       itemsByStatus,
       manual,
       positionItemsByStatus,
-    ]
+      readManualTarget,
+    ],
   );
 
   const track = useCallback(
@@ -199,35 +288,45 @@ export function useBoardDrop({
             comparator,
           })
         : null;
-      setPreview((current) => (sameDropPreview(current, next) ? current : next));
+      setPreview((current) =>
+        sameDropPreview(current, next) ? current : next,
+      );
     },
-    [comparator, itemsByStatus, plan]
+    [comparator, itemsByStatus, plan],
   );
 
   const start = useCallback(
     (event: Pick<DragStartEvent, "active">) => {
       const id = String(event.active.id);
       nowRef.current = Date.now();
-      // The rank map is only useful while starting a multi-card drag. Building
-      // it on every issue render needlessly allocates and walks the whole board.
-      const bundle = dragBundle(
-        id,
-        selectedIds,
-        issueMap,
-        displayRank(columns)
-      );
+      const bundle = dragBundle(id, selectedIds, issueMap, rankById);
       bundleRef.current = bundle;
+      bundleIdsRef.current = new Set(bundle.map((issue) => issue.id));
+      cardNodesRef.current = manual
+        ? new Map(
+            Array.from(document.querySelectorAll<HTMLElement>(CARD_SELECTOR))
+              .map((node) => [node.dataset.issueId, node] as const)
+              .filter(
+                (entry): entry is readonly [string, HTMLElement] =>
+                  entry[0] != null,
+              ),
+          )
+        : new Map();
+      cardGeometryRef.current.clear();
       planCacheRef.current = null;
       trackedPlanRef.current = null;
       setActiveId(id);
       setDraggingIds(new Set(bundle.map((issue) => issue.id)));
       setPreview(null);
     },
-    [columns, issueMap, selectedIds]
+    [issueMap, manual, rankById, selectedIds],
   );
 
   const end = useCallback(() => {
     bundleRef.current = [];
+    bundleIdsRef.current.clear();
+    cardNodesRef.current.clear();
+    cardGeometryRef.current.clear();
     planCacheRef.current = null;
     trackedPlanRef.current = null;
     setActiveId(null);
