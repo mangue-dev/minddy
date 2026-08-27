@@ -209,11 +209,11 @@ async function promptInstall(version: string): Promise<void> {
 }
 
 /**
- * The REQUESTED verification, from the menu — the only one that has the right to answer
+ * The REQUESTED verification — the only one that has the right to answer
  * “you are up to date”. That's the difference with the one above: here
  * someone asked the question, so silence would be a breakdown.
  */
-export async function checkForUpdatesFromMenu(): Promise<void> {
+export async function checkForUpdatesManually(): Promise<void> {
   if (!app.isPackaged) {
     await dialog.showMessageBox({
       type: "info",

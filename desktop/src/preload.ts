@@ -83,6 +83,18 @@ const bridge: DesktopBridge = {
   ...nativePushBridge,
   ...notificationSettingsBridge,
 
+  openServerPicker() {
+    ipcRenderer.send("minddy:server-picker:open");
+  },
+
+  checkForUpdates() {
+    return ipcRenderer.invoke("minddy:update:check") as Promise<void>;
+  },
+
+  copyDiagnosticReport() {
+    return ipcRenderer.invoke("minddy:diagnostics:copy") as Promise<boolean>;
+  },
+
   openExternal(url: string) {
     ipcRenderer.send("minddy:open-external", url);
   },

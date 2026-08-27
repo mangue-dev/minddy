@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AppWindow } from "lucide-react";
-import { Switch } from "mangue-ui";
+import { Button, Switch } from "mangue-ui";
 
-import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
 import { desktopChannelForOrigin, type DesktopChannel } from "@/lib/desktop/channel";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 
@@ -26,28 +26,58 @@ import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
  */
 export function AccountDesktopSection() {
   const ta = useTranslations("Account");
-  // `null` until mounting: the bridge and the origin only exist on the client side, and
-  // returning the card on the first pass would cause it to flash at everyone's house.
-  const [channel, setChannel] = useState<DesktopChannel | null>(null);
+  // `null` until mounting: the bridge and origin exist only in the client.
+  // Rendering the card on the first pass would make it flash in browsers.
+  const [desktop, setDesktop] = useState<{
+    bridge: DesktopBridge;
+    channel: DesktopChannel | null;
+    origin: string;
+  } | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [copyingDiagnostics, setCopyingDiagnostics] = useState(false);
+  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
 
   useEffect(() => {
-    if (!getDesktopBridge()) return;
-    setChannel(desktopChannelForOrigin(window.location.origin));
+    const bridge = getDesktopBridge();
+    if (!bridge) return;
+    setDesktop({
+      bridge,
+      channel: desktopChannelForOrigin(window.location.origin),
+      origin: window.location.origin,
+    });
   }, []);
 
-  if (!channel) return null;
+  if (!desktop) return null;
 
-  // We do NOT return from this call: the main process reloads the window on
-  // the other origin, and this document ceases to exist. So the switch freezes
-  // on the requested position — there is no one to put it back, and that's it
-  // that we want to see during the second of loading.
+  // The main process reloads the window on the other origin, so this document
+  // disappears. Keep the switch on the requested value during that handoff.
   const toggle = (next: boolean) => {
-    const bridge = getDesktopBridge();
-    if (!bridge || switching) return;
+    if (switching) return;
     setSwitching(true);
-    setChannel(next ? "preview" : "stable");
-    bridge.setChannel(next ? "preview" : "stable");
+    setDesktop({ ...desktop, channel: next ? "preview" : "stable" });
+    desktop.bridge.setChannel(next ? "preview" : "stable");
+  };
+
+  const checkForUpdates = async () => {
+    if (!desktop.bridge.checkForUpdates || checking) return;
+    setChecking(true);
+    try {
+      await desktop.bridge.checkForUpdates();
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const copyDiagnostics = async () => {
+    if (!desktop.bridge.copyDiagnosticReport || copyingDiagnostics) return;
+    setCopyingDiagnostics(true);
+    setDiagnosticsCopied(false);
+    try {
+      setDiagnosticsCopied(await desktop.bridge.copyDiagnosticReport());
+    } finally {
+      setCopyingDiagnostics(false);
+    }
   };
 
   return (
@@ -57,18 +87,76 @@ export function AccountDesktopSection() {
       description={ta("desktopSectionDesc")}
     >
       <SettingsRow
-        htmlFor="account-desktop-preview"
-        label={ta("desktopPreviewLabel")}
-        hint={ta("desktopPreviewDesc")}
+        label={ta("desktopServerLabel")}
+        hint={desktop.origin}
         control={
-          <Switch
-            id="account-desktop-preview"
-            checked={channel === "preview"}
-            onCheckedChange={toggle}
-            disabled={switching}
-          />
+          desktop.bridge.openServerPicker ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => desktop.bridge.openServerPicker?.()}
+            >
+              {ta("desktopServerChange")}
+            </Button>
+          ) : undefined
         }
       />
+      {desktop.channel && (
+        <SettingsRow
+          htmlFor="account-desktop-preview"
+          label={ta("desktopPreviewLabel")}
+          hint={ta("desktopPreviewDesc")}
+          control={
+            <Switch
+              id="account-desktop-preview"
+              checked={desktop.channel === "preview"}
+              onCheckedChange={toggle}
+              disabled={switching}
+            />
+          }
+        />
+      )}
+      <SettingsRow
+        label={ta("desktopVersionLabel")}
+        hint={ta("desktopVersionValue", { version: desktop.bridge.version })}
+        control={
+          desktop.bridge.checkForUpdates ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={checking}
+              onClick={() => void checkForUpdates()}
+            >
+              {ta(checking ? "desktopUpdateChecking" : "desktopUpdateCheck")}
+            </Button>
+          ) : undefined
+        }
+      />
+      {desktop.bridge.copyDiagnosticReport && (
+        <SettingsRow
+          label={ta("desktopDiagnosticsLabel")}
+          hint={ta("desktopDiagnosticsDesc")}
+          control={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={copyingDiagnostics}
+              onClick={() => void copyDiagnostics()}
+            >
+              {ta(
+                diagnosticsCopied
+                  ? "desktopDiagnosticsCopied"
+                  : copyingDiagnostics
+                    ? "desktopDiagnosticsCopying"
+                    : "desktopDiagnosticsCopy",
+              )}
+            </Button>
+          }
+        />
+      )}
     </SettingsGroup>
   );
 }

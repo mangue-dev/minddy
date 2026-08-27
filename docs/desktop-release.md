@@ -161,10 +161,12 @@ recent → download `.zip` in background, then install **at
 next ⌘Q**. Never a restart imposed under the fingers of someone who
 writes a ticket.
 
-The menu also says “Check for Updates…” — the only check that has the right
-to answer "you are up to date", because someone asked the question. The one
-which runs on its own is silent: otherwise the only thing the app would say to
-someone offline would be that it was unable to update.
+Account → Preferences provides **Check for Updates…** as the primary manual
+check — the only check that has the right to answer "you are up to date",
+because someone asked the question. The native menu retains the command as a
+fallback when the remote interface cannot load. Background checks stay silent:
+otherwise the only thing the app would say to someone offline would be that it
+was unable to update.
 
 **The `.zip` is not a duplicate of the `.dmg`**: Squirrel.Mac can only read it.
 The `.dmg` is used for the first download, the `.zip` for all updates
@@ -181,7 +183,10 @@ lifecycle. There is no Windows direct installer, Authenticode certificate, or
 Windows `electron-updater` feed.
 
 The shell never initializes `electron-updater` on Windows. The **Check for
-Updates…** command instead says that Microsoft Store owns the installation.
+Updates…** command in Account → Preferences instead says that Microsoft Store
+owns the installation. The native application menu is auto-hidden so the window
+uses normal Windows chrome without an extra menu strip; Alt reveals the menu as
+a recovery surface.
 
 The shared `protocols` declaration writes `minddy://` into
 `AppxManifest.xml`. Windows delivers cold-start and second-instance links

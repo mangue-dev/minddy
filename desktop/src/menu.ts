@@ -1,10 +1,29 @@
-import { Menu, app, clipboard, shell, type BrowserWindow } from "electron";
+import { Menu, app, clipboard, dialog, shell, type BrowserWindow } from "electron";
 
 import type { DesktopChannel } from "@/lib/desktop/channel";
 import { DESKTOP_STABLE_ORIGIN } from "@/lib/desktop/config";
 import { hideWindow } from "./hide-window";
 import { diagnosticReport } from "./run-log";
-import { checkForUpdatesFromMenu } from "./updater";
+import { checkForUpdatesManually } from "./updater";
+
+/** Confirm locally before copying a report that can contain machine paths. */
+export async function copyDiagnosticReportWithConfirmation(
+  window: BrowserWindow,
+): Promise<boolean> {
+  const { response } = await dialog.showMessageBox(window, {
+    type: "warning",
+    message: "Copy the diagnostic report?",
+    detail:
+      "The report can contain local folder paths and user names. Review it before sharing it with support.",
+    buttons: ["Copy Report", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (response !== 0) return false;
+  clipboard.writeText(diagnosticReport());
+  return true;
+}
 
 /**
  * The application menu (MIN-291).
@@ -66,7 +85,7 @@ export function buildAppMenu(
       // This explicitly requested check is the only one allowed to answer that
       // the app is up to date. Background checks remain silent.
       label: "Check for Updates…",
-      click: () => void checkForUpdatesFromMenu(),
+      click: () => void checkForUpdatesManually(),
     },
     {
       label: "Preview Latest Features",
@@ -157,9 +176,9 @@ export function buildAppMenu(
  * Here, in Help, rather than in the settings: this is where we look for it
  * when the app is going bad, and the menu remains accessible even if the
  * page does not load — the very reason for which channel is there.
- */
+          */
           label: "Copy Diagnostic Report",
-          click: () => clipboard.writeText(diagnosticReport()),
+          click: () => void copyDiagnosticReportWithConfirmation(window),
         },
         { type: "separator" },
         {

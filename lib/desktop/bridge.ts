@@ -35,6 +35,12 @@ export interface DesktopBridge {
   readonly version: string;
   /** The host platform, used only for platform-specific desktop chrome. */
   readonly platform: NodeJS.Platform;
+  /** Open the shell-owned server and local-folder picker. */
+  openServerPicker?(): void;
+  /** Run an explicitly requested shell update check. */
+  checkForUpdates?(): Promise<void>;
+  /** Confirm and copy the diagnostic report without exposing its contents. */
+  copyDiagnosticReport?(): Promise<boolean>;
   /** Explicit notification support. Optional only for older installed shells. */
   readonly notificationCapabilities?: DesktopNotificationCapabilities;
   /**

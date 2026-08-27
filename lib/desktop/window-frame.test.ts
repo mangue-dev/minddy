@@ -14,11 +14,11 @@ describe("desktopWindowFrameOptions", () => {
   });
 
   it.each(["win32", "linux"] as const)(
-    "uses native window chrome and a visible menu bar on %s",
+    "uses native window chrome and an auto-hidden menu bar on %s",
     (platform) => {
       expect(desktopWindowFrameOptions(platform)).toEqual({
         frame: true,
-        autoHideMenuBar: false,
+        autoHideMenuBar: true,
       });
     }
   );

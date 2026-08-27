@@ -88,7 +88,7 @@ import {
   detachLocalRepo,
   localBranches,
 } from "./local-repo";
-import { buildAppMenu } from "./menu";
+import { buildAppMenu, copyDiagnosticReportWithConfirmation } from "./menu";
 import { openServerPicker } from "./server-picker";
 import {
   LOCAL_SELF_HOST_ORIGIN,
@@ -101,7 +101,12 @@ import {
   readDesktopServerOrigin,
   writeDesktopServerOrigin,
 } from "./server-store";
-import { replayUpdateStatus, requestInstall, startAutoUpdates } from "./updater";
+import {
+  checkForUpdatesManually,
+  replayUpdateStatus,
+  requestInstall,
+  startAutoUpdates,
+} from "./updater";
 import { trace } from "./trace";
 
 /**
@@ -606,8 +611,8 @@ function createWindow(
     minWidth: 960,
     minHeight: 640,
     // macOS integrates its traffic lights into the app header. Windows and Linux
-    // keep the native frame so their title-bar controls and application menu stay
-    // visible and follow each platform's window-manager conventions.
+    // keep native title-bar controls while auto-hiding the fallback application
+    // menu until the user presses Alt.
     ...desktopWindowFrameOptions(process.platform),
     backgroundColor: "#000000",
     show: false,
@@ -746,6 +751,14 @@ function registerIpc(): void {
   });
 
   ipcMain.on("minddy:auth-link-ready", () => flushAuthLink());
+
+  ipcMain.on("minddy:server-picker:open", () => openCurrentServerPicker());
+
+  ipcMain.handle("minddy:update:check", () => checkForUpdatesManually());
+
+  ipcMain.handle("minddy:diagnostics:copy", () =>
+    mainWindow ? copyDiagnosticReportWithConfirmation(mainWindow) : false,
+  );
 
   ipcMain.on("minddy:set-badge", (_event, count: unknown) => {
     if (notificationCapabilities.badge !== "dock") return;

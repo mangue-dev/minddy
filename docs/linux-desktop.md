@@ -127,11 +127,14 @@ supported local launcher without opening a browser, waits for
 window. The launcher uses the user's configured shell or `/bin/sh`, and stops
 with the desktop app.
 
-The Linux application menu provides the same server controls as the macOS app:
-**Connect to a Server…** persists a validated HTTPS or private-network origin,
-**Use minddy Cloud** removes that selection, and **Preview Latest Features**
-switches the minddy Cloud channel. Packaged Linux builds also register
-`minddy://` for browser-to-desktop authentication callbacks.
+Account → Preferences is the primary Linux surface for changing the server,
+switching the minddy Cloud preview channel, checking for updates, and copying a
+diagnostic report after native confirmation. **Change…** opens the same picker
+for a validated HTTPS or private-network origin, local minddy folder, or return
+to minddy Cloud. The native application menu keeps these recovery commands and
+the edit, zoom, full-screen, close, and quit shortcuts, but is hidden by default;
+press Alt to reveal it when the remote interface cannot load. Packaged Linux
+builds also register `minddy://` for browser-to-desktop authentication callbacks.
 
 ## Release pipeline
 

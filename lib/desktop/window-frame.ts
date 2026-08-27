@@ -7,7 +7,7 @@ export type DesktopWindowFrameOptions =
     }
   | {
       frame: true;
-      autoHideMenuBar: false;
+      autoHideMenuBar: true;
     };
 
 /** Keep integrated traffic lights on macOS and native window chrome elsewhere. */
@@ -23,6 +23,6 @@ export function desktopWindowFrameOptions(
 
   return {
     frame: true,
-    autoHideMenuBar: false,
+    autoHideMenuBar: true,
   };
 }
