@@ -34,7 +34,11 @@ import {
   shouldCatchUpOnResume,
   wakeRealtime,
 } from "./realtime-resume";
-import { createCatchUpQueue, type CatchUpQueue } from "./realtime-catch-up";
+import {
+  createCatchUpQueue,
+  INITIAL_CATCH_UP_COALESCE_MS,
+  type CatchUpQueue,
+} from "./realtime-catch-up";
 import { refreshGlobalIssueSnapshot } from "./global-issues-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { trace } from "./desktop/trace";
@@ -182,6 +186,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
  * follows a cut only triggers one for everyone (MIN-305).
  */
   const catchUpQueue = useRef<CatchUpQueue | null>(null);
+  const initialCatchUpQueue = useRef<CatchUpQueue | null>(null);
   if (catchUpQueue.current === null) {
     catchUpQueue.current = createCatchUpQueue((matches) => {
       void queryClient.invalidateQueries({
@@ -189,12 +194,23 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       });
     });
   }
+  if (initialCatchUpQueue.current === null) {
+    initialCatchUpQueue.current = createCatchUpQueue((matches) => {
+      void queryClient.invalidateQueries({
+        predicate: (query) => matches(query.queryKey),
+      });
+    }, INITIAL_CATCH_UP_COALESCE_MS);
+  }
   useEffect(() => {
     const queue = catchUpQueue.current;
-    return () => queue?.cancel();
+    const initialQueue = initialCatchUpQueue.current;
+    return () => {
+      queue?.cancel();
+      initialQueue?.cancel();
+    };
   }, []);
   const catchUp = useCallback(
-    (keys: QueryKey[]) => {
+    (keys: QueryKey[], initialSubscription = false) => {
       // Trace call point (MIN-307): a `catchUp` line followed by a
       // `longtask` is THE signature of the invalidation wave, and `cache` says
       // how many queries have been searched. No-op trace off.
@@ -216,7 +232,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           // The normal aggregate refetch remains the fallback.
         });
       }
-      catchUpQueue.current?.push(keys);
+      const queue = initialSubscription
+        ? initialCatchUpQueue.current
+        : catchUpQueue.current;
+      queue?.push(keys);
     },
     [queryClient]
   );
@@ -235,6 +254,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // The first join closes the snapshot→subscription gap too. Without this,
       // a write committed between the initial GET and SUBSCRIBED is never seen.
       let needsCatchUp = true;
+      let hasSubscribed = false;
       let authRetry: ReturnType<typeof setTimeout> | null = null;
       let authAttempts = 0;
 
@@ -260,9 +280,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           }
           channel.subscribe((status) => {
             if (status === "SUBSCRIBED") {
+              const initialSubscription = !hasSubscribed;
+              hasSubscribed = true;
               if (needsCatchUp) {
                 needsCatchUp = false;
-                catchUp(scopeKeys);
+                catchUp(scopeKeys, initialSubscription);
               }
             } else if (
               status === "CHANNEL_ERROR" ||

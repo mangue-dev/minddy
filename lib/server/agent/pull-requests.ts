@@ -847,3 +847,36 @@ export async function listPullRequestsForUser(
     pairs.has(`${row.provider}:${row.repo_full_name}`),
   );
 }
+
+/**
+ * Count visible pull requests without loading rows, issue joins, run
+ * decorations, or triggering a forge synchronization. The app shell uses this
+ * for its badge on every route; the full list remains exclusive to the Pull
+ * Requests page.
+ */
+export async function countPullRequestsForUser(
+  supabase: SupabaseClient,
+  repos: VisibleRepo[],
+  states: PullRequestState[],
+): Promise<number> {
+  const namesByProvider = new Map<string, Set<string>>();
+  for (const repo of repos) {
+    const names = namesByProvider.get(repo.provider) ?? new Set<string>();
+    names.add(repo.repoFullName);
+    namesByProvider.set(repo.provider, names);
+  }
+
+  const counts = await Promise.all(
+    [...namesByProvider.entries()].map(async ([provider, names]) => {
+      const { count, error } = await supabase
+        .from("pull_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("provider", provider)
+        .in("repo_full_name", [...names])
+        .in("state", states);
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    }),
+  );
+  return counts.reduce((total, count) => total + count, 0);
+}

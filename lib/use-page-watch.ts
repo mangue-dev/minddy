@@ -11,13 +11,56 @@ import { useEffect } from "react";
 
 import { openPageWatch } from "./page-watch";
 
+interface SharedPageWatch {
+  refs: number;
+  closeTimer: ReturnType<typeof setTimeout> | null;
+  close: () => void;
+}
+
+const sharedPageWatches = new Map<string, SharedPageWatch>();
+
+/**
+ * Share the heartbeat across overlapping mounts of the same page. React Strict
+ * Mode intentionally mounts, cleans up, and mounts effects again in
+ * development; deferring the last release by one task prevents that probe from
+ * producing POST → DELETE → POST network churn and a transient false absence.
+ */
+export function retainPageWatch(projectId: string, pageId: string): () => void {
+  const key = `${projectId}:${pageId}`;
+  const existing = sharedPageWatches.get(key);
+  const watch = existing ?? {
+    refs: 0,
+    closeTimer: null,
+    close: openPageWatch({ projectId, pageId }).close,
+  };
+  if (watch.closeTimer) {
+    clearTimeout(watch.closeTimer);
+    watch.closeTimer = null;
+  }
+  watch.refs += 1;
+  sharedPageWatches.set(key, watch);
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    watch.refs -= 1;
+    if (watch.refs > 0 || watch.closeTimer) return;
+    watch.closeTimer = setTimeout(() => {
+      watch.closeTimer = null;
+      if (watch.refs > 0) return;
+      watch.close();
+      sharedPageWatches.delete(key);
+    }, 0);
+  };
+}
+
 export function usePageWatch(
   projectId: string | null,
   pageId: string | null
 ): void {
   useEffect(() => {
     if (!projectId || !pageId) return;
-    const opened = openPageWatch({ projectId, pageId });
-    return () => opened.close();
+    return retainPageWatch(projectId, pageId);
   }, [projectId, pageId]);
 }

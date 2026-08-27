@@ -133,14 +133,19 @@ function AddContextButton({
   );
   const boardOn = open && kind === "issue";
   const board = useNumoBoard(boardOn);
-  // The lenses come from the palette index — the same source as the
-  // “@” text, so the same list on both sides of the compose.
-  const mentionSources = useMentionSources(scopeProjectId);
-  // The pages are those of the COURANT project: a wiki belongs to its
-  // project (see use-mention-sources). This is the cache that the sidebar already reads,
-  // so pinning a page costs no extra query — and we browse it
-  // in depth to propose the tree in the order in which it is read on the left.
-  const pagesQuery = usePagesQuery(scopeProjectId ?? null);
+  // Exact project caches are only needed after the user chooses a contextual
+  // entity type. Keeping the closed assistant mounted must not preload issues,
+  // objectives, and pages on every project route.
+  const needsProjectEntities =
+    open && (kind === "issue" || kind === "objective" || kind === "page");
+  const mentionSources = useMentionSources(
+    scopeProjectId,
+    needsProjectEntities,
+  );
+  // The page picker needs hierarchy in addition to the flat mention source.
+  const pagesQuery = usePagesQuery(
+    open && kind === "page" ? scopeProjectId : null,
+  );
   const pages = useMemo(
     () =>
       flattenPageTree(pagesQuery.tree)

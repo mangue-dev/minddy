@@ -59,21 +59,23 @@ export interface MentionSources {
  * editor's suggestions. Rebuilding them on each render would make it rest
  * the content under the caret.
  *
- * `projectId` is the current project, when the surface has one: its lines
- * fresh ones replace those of the snapshot.
+ * `projectId` is the current project, when the surface has one. The search
+ * snapshot remains usable without mounting the three exact project queries;
+ * callers can defer those queries until a mention picker is actually used.
  */
-export function useMentionSources(projectId?: string | null): MentionSources {
+export function useMentionSources(
+  projectId?: string | null,
+  loadExactProjectData: boolean = true,
+): MentionSources {
   const { index, armNow } = useSearchIndex();
   const { projects } = useProjects();
-  // The caches of the current project, when there is one. Hooks are called
-  // unconditionally (hook rule); without a project they return empty lists
-  // and the replacement does not trigger.
-  const { issues: freshIssues } = useIssuesQuery(projectId ?? null);
-  const { objectives: freshObjectives } = useObjectivesQuery(projectId ?? null);
-  // The wiki cache, the same one that the sidebar reads: citing a page does not cost
-  // so no more requests, and a renamed page changes its wording everywhere
-  // at the same time.
-  const { pages: projectPages } = usePagesQuery(projectId ?? null);
+  const exactProjectId = loadExactProjectData ? (projectId ?? null) : null;
+  const { issues: freshIssues, loading: issuesLoading } =
+    useIssuesQuery(exactProjectId);
+  const { objectives: freshObjectives, loading: objectivesLoading } =
+    useObjectivesQuery(exactProjectId);
+  const { pages: projectPages, loading: pagesLoading } =
+    usePagesQuery(exactProjectId);
 
   const keyByProject = useMemo(
     () => new Map(projects.map((p) => [p.id, p.key])),
@@ -84,7 +86,7 @@ export function useMentionSources(projectId?: string | null): MentionSources {
     const rows = mergeByProject(
       index?.issues ?? [],
       projectId ?? null,
-      projectId ? freshIssues : null,
+      exactProjectId && !issuesLoading ? freshIssues : null,
     );
     return rows.flatMap((row) => {
       // Without its project key, a ticket has no identifier — therefore nothing
@@ -101,13 +103,13 @@ export function useMentionSources(projectId?: string | null): MentionSources {
         },
       ];
     });
-  }, [index?.issues, projectId, freshIssues, keyByProject]);
+  }, [index?.issues, projectId, exactProjectId, issuesLoading, freshIssues, keyByProject]);
 
   const objectives = useMemo<MentionObjective[]>(() => {
     const rows = mergeByProject(
       index?.objectives ?? [],
       projectId ?? null,
-      projectId ? freshObjectives : null,
+      exactProjectId && !objectivesLoading ? freshObjectives : null,
     );
     return rows.map((row) => ({
       id: row.id,
@@ -115,20 +117,26 @@ export function useMentionSources(projectId?: string | null): MentionSources {
       name: row.name,
       color: row.color,
     }));
-  }, [index?.objectives, projectId, freshObjectives]);
+  }, [
+    index?.objectives,
+    projectId,
+    exactProjectId,
+    objectivesLoading,
+    freshObjectives,
+  ]);
 
-  const pages = useMemo<MentionPage[]>(
-    () =>
-      projectId
-        ? projectPages.map((page) => ({
-            id: page.id,
-            project_id: page.project_id,
-            title: page.title,
-            icon: page.icon,
-          }))
-        : [],
-    [projectId, projectPages],
-  );
+  const pages = useMemo<MentionPage[]>(() => {
+    if (!projectId) return [];
+    const rows = exactProjectId && !pagesLoading
+      ? projectPages
+      : (index?.pages ?? []).filter((page) => page.project_id === projectId);
+    return rows.map((page) => ({
+      id: page.id,
+      project_id: page.project_id,
+      title: page.title,
+      icon: page.icon,
+    }));
+  }, [projectId, exactProjectId, pagesLoading, projectPages, index?.pages]);
 
   return { issues, objectives, pages, armNow };
 }

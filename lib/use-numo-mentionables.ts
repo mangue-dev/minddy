@@ -74,7 +74,10 @@ export function useNumoMentionables(scopeProjectId: string | null): {
   // Tickets and objectives come from the palette index, like the mentions
   // a description: it already carries everything, of all my projects. The pages, they
   // are those of the project in scope — a wiki belongs to its project.
-  const { issues, objectives, pages, armNow } = useMentionSources(scopeProjectId);
+  const { issues, objectives, pages, armNow } = useMentionSources(
+    scopeProjectId,
+    wanted,
+  );
 
   const links = useMentionLinksFor({ issues, objectives, pages });
 

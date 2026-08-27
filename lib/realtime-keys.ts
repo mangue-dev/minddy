@@ -55,6 +55,8 @@ const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", t
 // pages, a run of any project moves them. lib/use-agent-runs.ts.
 const ALL_AGENT_SESSIONS_KEY: QueryKey = ["agent-sessions", "all"];
 const ALL_PULL_REQUESTS_KEY: QueryKey = ["pull-requests", "all"];
+const OPEN_PULL_REQUEST_COUNT_KEY: QueryKey = ["pull-requests", "open-count"];
+const AGENT_ACTIVITY_KEY: QueryKey = ["agent-active-issues"];
 
 /**
  * Views DERIVED from a ticket: their list membership is calculated in SQL,
@@ -135,6 +137,7 @@ function keysForAgentRun(change: BroadcastChange): Invalidation[] {
     return [active(["routines", routineId, "runs"]), active(["routines"])];
   }
   return [
+    active(AGENT_ACTIVITY_KEY),
     active(ALL_AGENT_SESSIONS_KEY),
     active(ALL_PULL_REQUESTS_KEY),
     ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
@@ -446,7 +449,9 @@ export function keysForProjectEvent(
       const prId = typeof record?.id === "string" ? record.id : null;
       const issueId = issueIdOf(change);
       return [
+        active(AGENT_ACTIVITY_KEY),
         active(ALL_PULL_REQUESTS_KEY),
+        active(OPEN_PULL_REQUEST_COUNT_KEY),
         ...(prId ? [active(["pull-request", prId])] : []),
         ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
       ];
@@ -486,8 +491,10 @@ export const USER_SCOPE_KEYS: QueryKey[] = [
   // his neither. As a prefix, as project side — `["agent-runs"]` covers
   // `["agent-runs","issue",id]`.
   ["agent-runs"],
+  AGENT_ACTIVITY_KEY,
   ALL_AGENT_SESSIONS_KEY,
   ALL_PULL_REQUESTS_KEY,
+  OPEN_PULL_REQUEST_COUNT_KEY,
 ];
 
 export const projectScopeKeys = (projectId: string): QueryKey[] => [
@@ -509,6 +516,7 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
   ["agent-runs"],
+  AGENT_ACTIVITY_KEY,
   // Routines can be edited while this tab is asleep. Their project broadcast
   // is ephemeral, so the persisted list needs the same resume catch-up.
   ["routines"],
@@ -551,4 +559,5 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   TRIAGE_COUNTS_KEY,
   ALL_AGENT_SESSIONS_KEY,
   ALL_PULL_REQUESTS_KEY,
+  OPEN_PULL_REQUEST_COUNT_KEY,
 ];

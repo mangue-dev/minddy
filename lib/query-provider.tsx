@@ -117,6 +117,19 @@ function isPersistable(query: Query): boolean {
 }
 
 /**
+ * A persisted entry predates this provider mount. Queries that completed after
+ * that boundary came from the current page load and must not be invalidated by
+ * the restore callback.
+ */
+export function wasRestoredBeforeMount(
+  query: Pick<Query, "queryKey" | "state">,
+  mountedAt: number,
+): boolean {
+  const updatedAt = query.state.dataUpdatedAt;
+  return updatedAt > 0 && updatedAt < mountedAt && isPersistableKey(query.queryKey);
+}
+
+/**
  * Purge the snapshot. Called at disconnection: the cache carries the data of the
  * account which is leaving, and the machine can be shared.
  */
@@ -130,6 +143,7 @@ export function clearPersistedQueryCache() {
 }
 
 export function AppQueryProvider({ children }: { children: ReactNode }) {
+  const [mountedAt] = useState(() => Date.now());
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -166,18 +180,19 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
       client={queryClient}
       persistOptions={persistOptions}
       onSuccess={() => {
-        // The snapshot comes from the DISK: its freshness date is that of
-        // last tab opened, and nothing says what has changed since then — the
-        // deck broadcasts are not replayed. Without it, reloading less
-        // five minutes after the snapshot did not request ANYTHING from the server
-        // (`staleTime` not expired) and redisplayed the previous state, with confidence
-        // fresh data. Reloading should always mean “tell me again
-        // the truth.”
+        // Disk snapshots need one refresh because realtime events are not
+        // replayed while the tab is closed. The cache also contains queries
+        // that finished during this startup, however. Invalidating the entire
+        // cache here made those live requests run twice (and `always` mount
+        // queries up to three times in development).
         //
-        // `refetchType: "none"`: we mark expired without launching a query here.
-        // The mounted caches restart by themselves immediately after, when the
-        // `isRestoring` — this is the mount refetch, not a second train.
-        void queryClient.invalidateQueries({ refetchType: "none" });
+        // Refresh only entries whose timestamp proves they came from before
+        // this provider mount. `invalidateQueries` deduplicates observers and
+        // starts one request per active restored query.
+        void queryClient.invalidateQueries({
+          predicate: (query) => wasRestoredBeforeMount(query, mountedAt),
+          refetchType: "active",
+        });
       }}
     >
       {children}

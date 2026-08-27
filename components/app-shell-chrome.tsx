@@ -60,7 +60,10 @@ import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { markDraftPage } from "@/lib/pages-draft";
-import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
+import {
+  useAgentSessionsQuery,
+  useOpenPullRequestCountQuery,
+} from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
@@ -476,6 +479,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const isInbox = pathname.startsWith("/inbox");
   const isAgents = pathname.startsWith("/agents");
   const isRoutines = pathname.startsWith("/routines");
+  const { counts: triageCounts } = useTriageCountsQuery();
 
   // Shares the ["issues", projectId] cache with the board (no extra realtime
   // bridge). Since MIN-91 the palette lists every project's tickets from the
@@ -484,19 +488,23 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { data: projectIssues } = useQuery({
     queryKey: ["issues", currentProjectId ?? ""],
     queryFn: issuesQueryFn(currentProjectId as string),
-    enabled: !!currentProjectId,
+    enabled: !!currentProjectId && paletteOpen,
   });
 
   // Objectives feed the palette list. useObjectivesQuery shares the
   // ["objectives", projectId] cache, kept fresh by realtime — the lines of
   // current project are therefore accurate, where the search index is a
   // instant.
-  const { objectives: projectObjectives, loading: objectivesLoading } =
-    useObjectivesQuery(currentProjectId);
   const objectiveBoardId = objectiveIdFromBoardLocation(
     pathname,
     searchParams.get("objective"),
   );
+  const { objectives: projectObjectives, loading: objectivesLoading } =
+    useObjectivesQuery(
+      currentProjectId && (paletteOpen || !!objectiveBoardId)
+        ? currentProjectId
+        : null,
+    );
   const objectiveBoard = objectiveBoardId
     ? projectObjectives.find((objective) => objective.id === objectiveBoardId) ?? null
     : null;
@@ -505,7 +513,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // the tree of the Pages tab: opening the tab does not ask for anything, and a page
   // fame there changes name in the palette without going back and forth.
   const { pages: wikiPages, createPage: createWikiPage } =
-    usePagesQuery(currentProjectId);
+    usePagesQuery(paletteOpen ? currentProjectId : null);
 
   /**
    * “New page” from ⌘K: the page is created then OPENED, as does
@@ -593,7 +601,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   // Triage is a hidden issue status — the sidebar counter derives from the
   // same issues cache the board and search already keep fresh.
-  const triageCount = (projectIssues ?? []).filter((i) => i.status === "triage").length;
+  const triageCount = currentProjectId
+    ? (triageCounts[currentProjectId]?.triage ?? 0)
+    : 0;
 
   // Feedback (MIN-37): counter of open/planned feedback, via an endpoint
   // lightweight (badge does not need the full list).
@@ -618,8 +628,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // those of Numo. This is intentional: the sticker announces what the tab contains,
   // and restricting it to PRs attached to a ticket would exactly reopen the
   // problem that MIN-143 closes — a screen that shows half of the repository.
-  const { pullRequests } = useAllPullRequestsQuery();
-  const openPrCount = pullRequests.length;
+  const openPrCount = useOpenPullRequestCountQuery();
 
   // Smart Assign active but without rules on one of my projects (MIN-31): the
   // sidebar bears the mark, and it is the welcome which explains it — the entrance
@@ -639,7 +648,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // without a single badge, and the sorting, moreover, remained invisible as long as we
   // didn't get into it. Each project line therefore now carries the sum
   // of the two counters that can be read on its tabs once inside.
-  const { counts: triageCounts } = useTriageCountsQuery();
   // From a project, the same information on OTHERS: the return entry
   // “Home” brings the total (that of the current project is already on its
   // their own tabs, two lines below).

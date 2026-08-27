@@ -54,6 +54,17 @@ export const agentActivityQueryKey = (
   : (["agent-active-issues", "__global__", [...projectIds].sort().join(",")] as const);
 
 /**
+ * Realtime events cover idle-to-working and working-to-idle transitions. Keep
+ * the short poll only while work is active as a resilience backstop; an idle
+ * board otherwise has no state that can advance on its own.
+ */
+export function agentActivityPollInterval(
+  workingIssueIds: readonly string[] | undefined,
+): number | false {
+  return (workingIssueIds?.length ?? 0) > 0 ? 4000 : false;
+}
+
+/**
  * ⚠ A failed request RISES. It does not render empty lists.
  *
  * Making `{ workingIssueIds: [], … }` to `!res.ok` stored the failure as a
@@ -102,10 +113,8 @@ export function AgentActivityProvider({
   const { data } = useQuery({
     queryKey: agentActivityQueryKey(projectId, projectIds),
     queryFn: () => fetchAgentActivity(projectId, projectIds),
-    // Fast as long as an agent is working; slow otherwise (idle sessions are
-    // stable until a user action).
     refetchInterval: (query) =>
-      (query.state.data?.workingIssueIds?.length ?? 0) > 0 ? 4000 : 15000,
+      agentActivityPollInterval(query.state.data?.workingIssueIds),
   });
 
   const working = data?.workingIssueIds ?? [];

@@ -41,6 +41,14 @@ import type { QueryKey } from "@tanstack/react-query";
  */
 export const CATCH_UP_COALESCE_MS = 120;
 
+/**
+ * First subscriptions are staggered: the user channel joins first, then the
+ * project list loads and project channels join. A wider one-time window merges
+ * those scopes into one reconciliation request wave. Reconnects and foreground
+ * resumes continue to use {@link CATCH_UP_COALESCE_MS}.
+ */
+export const INITIAL_CATCH_UP_COALESCE_MS = 350;
+
 /** The identity of a key in the queue — the same as react-query. */
 const hash = (key: readonly unknown[]): string => JSON.stringify(key);
 

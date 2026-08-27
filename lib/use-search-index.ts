@@ -15,8 +15,8 @@
 //
 // Freshness: the index is a SNAPSHOT, and refreshing it costs 4000 rows.
 // Three things keep it up to date without reloading it:
-// - the CURRENT project doesn't even read it: app-shell-chrome replaces its lines
-//   par ["issues", projectId] / ["objectives", projectId], toujours vivants ;
+// - the CURRENT project does not read it: app-shell-chrome replaces its rows
+//   with the live ["issues", projectId] / ["objectives", projectId] caches;
 // - actions ⌘; patch the line they touch (patchSearchIndexIssue);
 // - what is written ELSEWHERE (Numo, the MCP, a teammate) is placed line at
 // line by the real-time bridge — writeIndexRow lower. Without him, a ticket
@@ -35,10 +35,44 @@ import type {
 
 export const SEARCH_INDEX_KEY = ["me", "search-index"] as const;
 
-/** Idle delay before arming the fetch when requestIdleCallback is missing. */
-const ARM_FALLBACK_MS = 2_000;
+/** Minimum quiet period before background indexing can start. */
+export const SEARCH_INDEX_ARM_DELAY_MS = 1_500;
+/** Maximum additional idle wait after the quiet period. */
+export const SEARCH_INDEX_IDLE_TIMEOUT_MS = 500;
 /** How long an index snapshot is trusted before a palette open revalidates it. */
 const SEARCH_INDEX_STALE_MS = 30_000;
+
+export interface SearchIndexArmScheduler {
+  setTimeout(callback: () => void, delay: number): number;
+  clearTimeout(handle: number): void;
+  requestIdleCallback?: (callback: () => void, options: { timeout: number }) => number;
+  cancelIdleCallback?: (handle: number) => void;
+}
+
+/**
+ * Keep background indexing out of the initial API burst. Explicit palette
+ * opens bypass this scheduler through `armNow()`.
+ */
+export function scheduleSearchIndexArm(
+  scheduler: SearchIndexArmScheduler,
+  arm: () => void,
+): () => void {
+  let idleHandle: number | null = null;
+  const delayHandle = scheduler.setTimeout(() => {
+    if (scheduler.requestIdleCallback) {
+      idleHandle = scheduler.requestIdleCallback(arm, {
+        timeout: SEARCH_INDEX_IDLE_TIMEOUT_MS,
+      });
+      return;
+    }
+    arm();
+  }, SEARCH_INDEX_ARM_DELAY_MS);
+
+  return () => {
+    scheduler.clearTimeout(delayHandle);
+    if (idleHandle !== null) scheduler.cancelIdleCallback?.(idleHandle);
+  };
+}
 
 async function fetchSearchIndexApi(): Promise<SearchIndexResponse> {
   const response = await fetch("/api/me/search-index");
@@ -67,24 +101,11 @@ export function useSearchIndex() {
   const queryClient = useQueryClient();
   const [armed, setArmed] = useState(false);
 
-  // Arm on idle: the palette is never the reason a page is slow to paint.
+  // Arm after the startup burst, then on idle: the palette never competes
+  // with the page's critical API requests unless the user explicitly opens it.
   useEffect(() => {
     if (armed) return;
-    const idle = (
-      window as Window & {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      }
-    ).requestIdleCallback;
-    if (idle) {
-      const handle = idle(() => setArmed(true), { timeout: ARM_FALLBACK_MS });
-      return () => {
-        (
-          window as Window & { cancelIdleCallback?: (h: number) => void }
-        ).cancelIdleCallback?.(handle);
-      };
-    }
-    const timer = setTimeout(() => setArmed(true), ARM_FALLBACK_MS);
-    return () => clearTimeout(timer);
+    return scheduleSearchIndexArm(window, () => setArmed(true));
   }, [armed]);
 
   const { data } = useQuery({
@@ -104,7 +125,7 @@ export function useSearchIndex() {
 }
 
 /**
- * Patch one indexed ticket in place — used by the palette's ⌘; actions so the
+ * Patch one indexed ticket in place — used by the palette's command actions so the
  * row's status icon updates immediately, exactly like the per-project cache
  * patch does for the board. No-op when the index isn't loaded.
  */
@@ -128,10 +149,10 @@ export function patchSearchIndexIssue(
  * (lib/optimistic/remote-echo.ts).
  *
  * The patch above was not enough: it only affects rows ALREADY
- * indexed. A ticket that Numo has just created is by definition not there — the
- * palette therefore only found it after a complete reload of the index (4,000
- * lines, triggered when it is opened when the snapshot is out of date). Except in the
- * current project, whose app-shell-chrome replaces the lines with its live
+ * indexed. A ticket that Numo just created is absent by definition, so the
+ * palette previously found it only after a complete index reload (up to 4,000
+ * rows, triggered when an outdated snapshot is opened). The current project is
+ * the exception because app-shell-chrome replaces index rows with its live
  * caches; elsewhere, ⌘K ignored the ticket.
  *
  * An unknown line is put at the HEAD: the route sorts `updated_at desc`, and this

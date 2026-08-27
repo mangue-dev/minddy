@@ -173,7 +173,7 @@ export default async function RootLayout({
   const clientMessages = publicClientMessages(messages);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Theme applied BEFORE the first paint. Injected out of React tree
             (useServerInsertedHTML) : un <script> rendu par un composant fait

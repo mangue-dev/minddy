@@ -963,6 +963,11 @@ export async function fetchAllPullRequestsApi(input: {
   return parseJson(await fetch(`/api/pull-requests?${params}`));
 }
 
+/** Lightweight open-PR count used by the persistent app shell. */
+export async function fetchOpenPullRequestCountApi(): Promise<{ count: number }> {
+  return parseJson(await fetch("/api/pull-requests/count"));
+}
+
 /**
  * The conversation thread: messages, PR ACTIVITY (MIN-159) and reactions,
  * served together — it all goes into one thread ordered by date.

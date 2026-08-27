@@ -9,6 +9,7 @@ import {
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
   fetchIssueAutomationApi,
+  fetchOpenPullRequestCountApi,
   fetchPullRequestApi,
   fetchPrCommitDiffApi,
   fetchPullRequestCommentsApi,
@@ -307,6 +308,17 @@ export function useAllPullRequestsQuery(
 
 /** Cache key for the global list of agent sessions (Agents page). */
 export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
+
+/** Lightweight cache key for the persistent navigation badge. */
+export const openPullRequestCountQueryKey = ["pull-requests", "open-count"] as const;
+
+export function useOpenPullRequestCountQuery() {
+  const { data } = useQuery({
+    queryKey: openPullRequestCountQueryKey,
+    queryFn: fetchOpenPullRequestCountApi,
+  });
+  return data?.count ?? 0;
+}
 
 /**
  * Global list of agent sessions (Agents page). Polling ~5 sec as a

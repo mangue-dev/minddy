@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CATCH_UP_COALESCE_MS,
   createCatchUpQueue,
+  INITIAL_CATCH_UP_COALESCE_MS,
   matchesCatchUpScope,
 } from "./realtime-catch-up";
 
@@ -55,7 +56,7 @@ function invalidatedByLoop(scope: unknown[][], cacheKeys: unknown[][]) {
 }
 
 describe("matchesCatchUpScope", () => {
-  it("couvre exactement ce que couvrait la boucle clé-par-clé", () => {
+  it("covers exactly what the key-by-key loop covered", () => {
     const wanted = new Set(SCOPE.map((k) => JSON.stringify(k)));
     const byPredicate = new Set(
       CACHE_KEYS.filter((k) => matchesCatchUpScope(k, wanted)).map((k) =>
@@ -67,7 +68,7 @@ describe("matchesCatchUpScope", () => {
     );
   });
 
-  it("ne matche pas un préfixe seulement partiel", () => {
+  it("does not match a partial prefix", () => {
     const wanted = new Set([JSON.stringify(["views", "global"])]);
     expect(matchesCatchUpScope(["views", "p2"], wanted)).toBe(false);
     expect(matchesCatchUpScope(["views"], wanted)).toBe(false);
@@ -79,7 +80,7 @@ describe("createCatchUpQueue", () => {
     vi.useRealTimers();
   });
 
-  it("ne balaie qu'une fois pour toute la volée de rejoins", () => {
+  it("scans once for an entire reconnection wave", () => {
     vi.useFakeTimers();
     const flushes: ((k: readonly unknown[]) => boolean)[] = [];
     const queue = createCatchUpQueue((matches) => flushes.push(matches));
@@ -105,7 +106,7 @@ describe("createCatchUpQueue", () => {
     expect(matches(["billing"])).toBe(false);
   });
 
-  it("repart à zéro après un balayage", () => {
+  it("starts a new batch after a scan", () => {
     vi.useFakeTimers();
     const flushes: ((k: readonly unknown[]) => boolean)[] = [];
     const queue = createCatchUpQueue((matches) => flushes.push(matches));
@@ -120,7 +121,7 @@ describe("createCatchUpQueue", () => {
     expect(flushes[1](["notifications"])).toBe(true);
   });
 
-  it("ne balaie rien après un démontage", () => {
+  it("does not scan after cancellation", () => {
     vi.useFakeTimers();
     const flushes: unknown[] = [];
     const queue = createCatchUpQueue((matches) => flushes.push(matches));
@@ -129,19 +130,38 @@ describe("createCatchUpQueue", () => {
     vi.advanceTimersByTime(CATCH_UP_COALESCE_MS * 10);
     expect(flushes).toHaveLength(0);
   });
+
+  it("coalesces staggered first user and project subscriptions", () => {
+    vi.useFakeTimers();
+    const flushes: ((k: readonly unknown[]) => boolean)[] = [];
+    const queue = createCatchUpQueue(
+      (matches) => flushes.push(matches),
+      INITIAL_CATCH_UP_COALESCE_MS,
+    );
+
+    queue.push([["notifications"], ["projects"]]);
+    vi.advanceTimersByTime(CATCH_UP_COALESCE_MS + 100);
+    queue.push([["issues", "p1"], ["me", "board"]]);
+
+    expect(flushes).toHaveLength(0);
+    vi.advanceTimersByTime(INITIAL_CATCH_UP_COALESCE_MS);
+    expect(flushes).toHaveLength(1);
+    expect(flushes[0](["notifications"])).toBe(true);
+    expect(flushes[0](["issues", "p1"])).toBe(true);
+  });
 });
 
-describe("sur un vrai QueryClient", () => {
+describe("with a real QueryClient", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
   /**
- * The ticket catch: coverage needs to be the same, not just faster
- *. We check it on the real `invalidateQueries` — INACTIVE
- * requests included, since this is what `type: "active"` would have broken.
- */
-  it("marque les mêmes requêtes que la boucle, actives et inactives", async () => {
+   * The coverage must stay identical, not merely become faster. Exercise the
+   * real `invalidateQueries`, including inactive queries that an `active` filter
+   * would miss.
+   */
+  it("marks the same active and inactive queries as the loop", async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: Infinity } },
     });
