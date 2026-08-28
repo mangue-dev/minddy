@@ -69,6 +69,7 @@ paths = [
   '''(?:^|/)lib/server/(?:avatar-seeds|git/webhook-routes|git/webhook-tenant-isolation)\.test\.ts$''',
   '''(?:^|/)lib/server/agent/(?:control-plane|secret-scan)\.test\.ts$''',
   '''(?:^|/)lib/server/agent/redaction-invariant\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/redact\.test\.ts$''',
   '''(?:^|/)lib/server/agent/vm/control-plane-client\.test\.ts$''',
   '''(?:^|/)lib/server/agent/vm/(?:llm-proxy|supervisor)\.test\.ts$''',
   '''(?:^|/)lib/server/assistant/loop-secrets\.test\.ts$''',
