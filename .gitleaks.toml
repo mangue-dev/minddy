@@ -48,8 +48,14 @@ paths = [
   '''(?:^|/)lib/desktop/(?:git-config\.git|local-repo|local-turn|wns)\.test\.ts$''',
   '''(?:^|/)lib/server/(?:admin|feedback/public-surface|git/forge-provider)\.test\.ts$''',
   '''(?:^|/)lib/server/agent/(?:local-turn-route|pr-clone|pr-landing-authority|repo-clone-history|sandbox-push)\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/control-plane\.test\.ts$''',
   '''(?:^|/)lib/server/agent/pr\.ts$''',
-  '''(?:^|/)lib/server/agent/vm/(?:opencode-config|opencode-tools|supervisor|tool-bridge(?:-concurrency)?)\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/vm/(?:opencode-config|opencode-tools|supervisor|tool-bridge(?:-concurrency)?|turn)\.test\.ts$''',
+  '''(?:^|/)\.claude/skills/posthog-integration-javascript_node/references/identify-users\.md$''',
+  '''(?:^|/)app/\(auth\)/login/page\.tsx$''',
+  '''(?:^|/)components/(?:markdown|project-members)\.tsx$''',
+  '''(?:^|/)messages/en\.json$''',
+  '''(?:^|/)scripts/build-desktop-icon\.mjs$''',
 ]
 
 [[allowlists]]
@@ -77,6 +83,7 @@ paths = ['''(?:^|/)lib/server/agent/secret-scan\.test\.ts$''']
 description = "Synthetic GitHub tokens used by focused isolation tests."
 targetRules = ["github-app-token"]
 paths = [
+  '''(?:^|/)lib/server/agent/redact\.test\.ts$''',
   '''(?:^|/)lib/server/agent/redaction-invariant\.test\.ts$''',
   '''(?:^|/)lib/server/agent/vm/(?:llm-proxy|supervisor)\.test\.ts$''',
 ]
@@ -85,3 +92,8 @@ paths = [
 description = "A syntactically valid test key used to verify relay-token rejection."
 targetRules = ["private-key"]
 paths = ['''(?:^|/)lib/server/git/relayed-token-refresh\.test\.ts$''']
+
+[[allowlists]]
+description = "Synthetic GitLab tokens used by the legacy focused redaction test."
+targetRules = ["gitlab-pat"]
+paths = ['''(?:^|/)lib/server/agent/redact\.test\.ts$''']

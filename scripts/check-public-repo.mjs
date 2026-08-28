@@ -36,11 +36,14 @@ const historicalForbiddenPaths = [
   /^problems\.md$/,
   /^tsconfig\.tsbuildinfo$/,
   /^copy-audit.*\.(?:json|md)$/,
+  /^copy-fix-report\.md$/,
+  /^docs\/harness-2026-08\.md$/,
   /^[^/]+-plan\.md$/,
   /^desktop\/dist\//,
   /^docs\/audits\/securite-2026-08-05\.md$/,
   /^docs\/desktop-signing\.md$/,
   /^docs\/rgpd\/registre-des-traitements\.md$/,
+  /^scripts\/(?:indexnow|seed-inbox)\.mjs$/,
 ];
 
 // Surfaces specific to the Minddy Cloud operation. They are controlled in
