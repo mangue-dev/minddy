@@ -1,6 +1,6 @@
 {
   "name": "minddy-desktop",
-  "version": "0.10.22",
+  "version": "0.10.23",
   "private": true,
   "license": "AGPL-3.0-only",
   "description": "The minddy desktop shell — a window into www.minddy.app",
