@@ -77,6 +77,7 @@ import { checkAgentQuota } from "./quota";
 import { generatedAgentBranchName } from "./branch-name";
 import { resolveServerExecSecret, signServerExecToken } from "./server-exec-token";
 import { resolveAgentExecutionTarget } from "@/lib/agent-execution-target";
+import { planBootstrapRetry } from "./retry";
 
 function repoTargetMatchesRun(run: AgentRun, target: RepoCloneTarget): boolean {
   return (
@@ -117,7 +118,9 @@ function minDefined(...values: (number | undefined)[]): number | undefined {
  * When idle, a session NO LONGER blocks the ticket: only queued/running count
  * as "an agent is working". It remains HOT and resumable from the conversation
  * composer (checkpoint + snapshot preserved).
- * Only a BOOT error (repo/model) → `failed`. The drain calls after claiming.
+ * Retryable bootstrap HTTP failures return to `queued` with bounded backoff;
+ * non-retryable or exhausted boot errors fail a new run. The drain calls after
+ * claiming.
  */
 
 /**
@@ -526,6 +529,12 @@ export async function executeAgentRun(
   const sandboxUsageFeature = run.routine_id ? "routine_compute" : "sandbox_compute";
   let sandbox: Sandbox | null = null;
   /**
+   * A platform run key minted before Sandbox creation is not persisted until the
+   * network policy has been installed. If bootstrap fails first, this local hash
+   * is the only handle capable of revoking the otherwise orphaned key.
+   */
+  let uninstalledVmKeyHash: string | null = null;
+  /**
    * Credentials known to trusted bootstrap code (MIN-239). Declared before the
    * `try` so clone, provider, and relay failures are redacted before their error
    * messages reach the UI. Sandbox remotes themselves are credential-free after
@@ -828,6 +837,7 @@ export async function executeAgentRun(
         if (minted) {
           vmKey = minted.key;
           vmKeyHash = minted.hash;
+          uninstalledVmKeyHash = minted.hash;
         }
       }
     }
@@ -993,6 +1003,7 @@ export async function executeAgentRun(
       // reaper would revoke nothing while believing it had closed the tap.
       provider_key_id: vmKeyHash,
     });
+    uninstalledVmKeyHash = null;
 
     // No one can use the PREVIOUS chunk's key anymore: the policy just installed
     // injects the new one. Revoke it immediately rather than waiting for expiry —
@@ -1726,10 +1737,32 @@ export async function executeAgentRun(
       spentUsd == null ? {} : { cost_usd: Math.max(run.cost_usd, spentUsd) };
     // BOOTSTRAP error (repository/model/clone: sandbox never acquired).
     if (!sandbox) {
-      // An EXISTING CONVERSATION (checkpoint) never dies on a bootstrap error — often
-      // transient (GitHub token minting, 502). SUSPEND with the visible error: the
-      // next message retries bootstrap with the context intact. Only a BLANK run
-      // (nothing to preserve) fails as `failed`.
+      const retry = planBootstrapRetry(err, run.attempts);
+      if (retry?.requeue) {
+        if (uninstalledVmKeyHash) {
+          await revokeRunKey(uninstalledVmKeyHash).catch(() => {});
+          uninstalledVmKeyHash = null;
+        }
+        await stampRun(run.id, {
+          status: "queued",
+          not_before: new Date(Date.now() + retry.delayMs).toISOString(),
+          error_message: cap(message, 1000),
+          checkpoint: null,
+          continuations: 0,
+          last_activity_at: new Date().toISOString(),
+          interrupt_requested: false,
+          ...costFromLedger,
+        });
+        return "suspended";
+      }
+      if (uninstalledVmKeyHash) {
+        await revokeRunKey(uninstalledVmKeyHash).catch(() => {});
+        uninstalledVmKeyHash = null;
+      }
+      // An EXISTING CONVERSATION (checkpoint) never dies on a terminal bootstrap
+      // error. Suspend with the visible error so the next message can retry with
+      // its context intact. A blank run reaches the failed state below only for a
+      // non-retryable error or after the bounded transient retries are exhausted.
       if (run.checkpoint?.messages?.length) {
         await stampRun(run.id, {
           status: "completed",

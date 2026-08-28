@@ -5,7 +5,6 @@ import type { NetworkPolicyRule } from "@vercel/sandbox";
 import {
   AGENT_DENIED_EGRESS_SUBNETS,
   AGENT_LLM_PLACEHOLDER_KEY,
-  AGENT_PACKAGE_EGRESS_HOSTS,
   AGENT_VM_PATH_PREFIX,
   admitSandboxCaller,
   agentForgeRemoteUrl,
@@ -126,18 +125,12 @@ describe("buildAgentNetworkPolicy — le plan de contrôle", () => {
   });
 });
 
-describe("buildAgentNetworkPolicy — deny-by-default egress", () => {
-  it("has no wildcard or repository-controlled destination", () => {
+describe("buildAgentNetworkPolicy — public egress with private-network denial", () => {
+  it("allows arbitrary public destinations without attaching a transform", () => {
     const allow = policy().allow;
     if (!allow || Array.isArray(allow)) throw new Error("expected a record-form allow list");
-    expect(allow["*"]).toBeUndefined();
+    expect(allow["*"]).toEqual([]);
     expect(allow["attacker.example"]).toBeUndefined();
-  });
-
-  it("allows the fixed public package registries without secret transforms", () => {
-    const allow = policy().allow;
-    if (!allow || Array.isArray(allow)) throw new Error("expected a record-form allow list");
-    for (const host of AGENT_PACKAGE_EGRESS_HOSTS) expect(allow[host]).toEqual([]);
   });
 
   it("denies private and link-local destinations even after DNS resolution", () => {
@@ -154,6 +147,7 @@ describe("buildAgentNetworkPolicy — deny-by-default egress", () => {
       expect(Number(prefix)).toBeGreaterThanOrEqual(0);
       expect(Number(prefix)).toBeLessThanOrEqual(32);
     }
+    expect(AGENT_DENIED_EGRESS_SUBNETS).not.toContain("240.0.0.0/4");
   });
 
   it("is never an allow-all or deny-all string policy", () => {
@@ -239,6 +233,10 @@ describe("forge authentication stays in trusted network policy", () => {
     expect(serialized).not.toContain("old-token");
     expect(serialized).toContain(Buffer.from("x-access-token:new-token").toString("base64"));
     expect(serialized).toContain("sk-or-v1-secret");
+    if (typeof rotated === "string" || !rotated.allow || Array.isArray(rotated.allow)) {
+      throw new Error("expected a record-form allow list");
+    }
+    expect(rotated.allow["*"]).toEqual([]);
   });
 
   it("removes the old repository rule when a link moves", () => {

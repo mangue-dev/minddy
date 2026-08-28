@@ -89,7 +89,6 @@ export interface AgentSandbox {
   writeFiles(files: Array<{ path: string; content: string }>): Promise<void>;
   mkDir(path: string): Promise<void>;
   stop(): Promise<void>;
-  updateNetworkPolicy(policy: NetworkPolicy): Promise<void>;
   getCommand(commandId: string): Promise<AgentSandboxCommand | null>;
 }
 
@@ -154,23 +153,16 @@ function sandboxCredentials(): { token: string; teamId: string; projectId: strin
  * expired is treated as "not found" → recreates + `onCreate`. Optional boot
  * from AGENT_SANDBOX_SNAPSHOT_ID (pre-heated image) for fresh creation.
  *
- * NETWORK POLICY (MIN-223) — `networkPolicy` is set at creation AND **reset
- * every time you wake up**, and it’s not a suspender belt:
+ * NETWORK POLICY (MIN-223) — `networkPolicy` is set at creation and refreshed
+ * every time a persistent sandbox resumes.
  *
- * - the policy SURVIVES a resumption of session — measured on 2026-08-07: one
- *   session reprise sans qu'on lui repasse quoi que ce soit rendait toujours 200
- * on the completion with the placeholder, and always forwarded the plan of
- * control. It was not to be assumed, it is done;
- * - but she survives with **yesterday's key inside**. The run key is revoked
- * when the VM is put to rest (`run-key.ts`), therefore a session woken up without
- * new policy would leave with a `transform` which injects a dead key —
- * 401s on first completion, and nothing to tell.
+ * The policy survives a resumed session, including the credentials embedded in
+ * its transforms. The previous run key is revoked when the VM stops, so a
+ * resumed sandbox must not execute until the new policy and key are installed.
  *
- * Hence `updateNetworkPolicy` on the wake-up path: it does not repeat a fault,
- * he re-poses the secret of the day. We do NOT do it on the path of creation (the
- * politics has already been used as an argument), and failure does not bring down the trick —
- * it is better a round which starts with the old policy, and says so, than a round which
- * qui n'existe pas.
+ * A refresh failure is therefore a bootstrap failure, not a warning. Propagating
+ * it prevents confusing provider 401s and lets the run-level bounded 5xx retry
+ * schedule handle a transient Vercel outage.
  */
 export async function getOrCreateAgentSandbox(opts: {
   name: string;
@@ -215,9 +207,7 @@ export async function getOrCreateAgentSandbox(opts: {
     : await VercelSandbox.getOrCreate({ ...base, runtime: SANDBOX_RUNTIME });
 
   if (opts.networkPolicy && !created) {
-    await sandbox.updateNetworkPolicy(opts.networkPolicy).catch((err) => {
-      console.error("[agent-sandbox] network policy refresh failed:", (err as Error).message);
-    });
+    await sandbox.update({ networkPolicy: opts.networkPolicy });
   }
   return { sandbox: sandbox as unknown as AgentSandbox, created };
 }
@@ -297,7 +287,7 @@ export async function refreshAgentSandboxForgeAccess(
     token: target.token,
     origin: new URL(target.remoteUrl).origin,
   });
-  await sandbox.updateNetworkPolicy(policy);
+  await (sandbox as unknown as VercelSandbox).update({ networkPolicy: policy });
 }
 
 function requireSandboxCapability(): boolean {

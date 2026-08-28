@@ -8,6 +8,7 @@
 import { mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { chromium } from "playwright";
+import { requireAuthStateForUrl } from "./auth-state.mjs";
 import { CAPTURE } from "./config.mjs";
 import { loadEnv, ROOT } from "./env.mjs";
 
@@ -41,6 +42,7 @@ export async function openPage({
   frozenNow = CAPTURE.frozenNow,
 } = {}) {
   loadEnv();
+  if (authed) await requireAuthStateForUrl(AUTH_STATE, CAPTURE.baseUrl);
 
   const browser = await chromium.launch();
   const context = await browser.newContext({

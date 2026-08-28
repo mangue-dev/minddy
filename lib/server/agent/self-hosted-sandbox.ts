@@ -146,8 +146,6 @@ export class SelfHostedSandbox implements AgentSandbox {
     await runnerRequest(sandboxPath(this.name, "/stop"), { body: {} });
   }
 
-  async updateNetworkPolicy(): Promise<void> {}
-
   async getCommand(commandId: string): Promise<AgentSandboxCommand | null> {
     const result = await runnerRequest<{ exists: boolean; running: boolean; exitCode: number | null }>(
       `/v1/commands/${encodeURIComponent(commandId)}`,

@@ -52,10 +52,10 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  * own keys. **The LLM proxy now has the same word** (`resolveProxyTarget`,
  * strict equality on `pathname`): on a machine, it is he who sets the
  * key, so it is he who holds what this line here holds.
- * 2. Egress is deny-by-default. Package managers can reach a fixed set of
- * public registries, while the run-specific provider, control plane, and forge
- * hosts are added explicitly. Repository-controlled mirrors and URLs cannot
- * silently expand this boundary.
+ * 2. Public egress is available because development tools routinely follow CDN
+ * redirects and repository-defined download URLs. Private, loopback, link-local,
+ * carrier-grade NAT, benchmark, and multicast IPv4 ranges remain denied after
+ * DNS resolution. Connectivity is broad; secret injection remains exact.
  *
  * WHAT REMAINS POSSIBLE, AND WHICH IS BOUNDED ELSEWHERE: a hostile model can
  * call the credited route outside the loop (a `curl` is enough). It's not
@@ -85,7 +85,7 @@ export const AGENT_LLM_PLACEHOLDER_KEY = "minddy-placeholder";
  * platform sign in the OIDC claim `sandbox_name`. */
 const AGENT_SANDBOX_PREFIX = "agent-";
 
-/** Public package registries supported inside the agent sandbox. */
+/** Package hosts retained when rotating a policy created by an older release. */
 export const AGENT_PACKAGE_EGRESS_HOSTS = [
   "registry.npmjs.org",
   "registry.yarnpkg.com",
@@ -110,10 +110,10 @@ export const AGENT_PACKAGE_EGRESS_HOSTS = [
 /**
  * IPv4 addresses that a public hostname must never route sandbox traffic to.
  *
- * The production Vercel Sandbox API rejected `::/128` with HTTP 400, while
- * its published subnet examples use IPv4. Keep this request list IPv4-only
- * until Vercel documents an accepted IPv6 form; the domain allowlist still
- * denies every destination that is not explicit.
+ * The production Vercel Sandbox API rejected `::/128` with HTTP 400 and
+ * `240.0.0.0/4` with HTTP 500. Keep this request list to the ranges verified
+ * against Vercel. The public-domain wildcard remains subject to these subnet
+ * denies after DNS resolution.
  */
 export const AGENT_DENIED_EGRESS_SUBNETS = [
   "0.0.0.0/8",
@@ -125,7 +125,6 @@ export const AGENT_DENIED_EGRESS_SUBNETS = [
   "192.168.0.0/16",
   "198.18.0.0/15",
   "224.0.0.0/4",
-  "240.0.0.0/4",
 ] as const;
 
 /** Deterministic name of the microVM of a run (persisted in `agent_runs.sandbox_id`). */
@@ -301,12 +300,12 @@ function splitUrl(raw: string, label: string): { host: string; path: string } {
  * 1. the LLM provider — a single credited route, in POST, EXACT path;
  * 2. our own origin — the control plane, forwarded with OIDC;
  * 3. the linked forge host — credentials only on exact smart-HTTP paths;
- * 4. fixed public package registries. Everything else is denied.
+ * 4. untransformed public Internet access for package managers, release assets,
+ *    custom registries, and repository-defined install scripts.
  *
- * A request to a listed domain that does not match ANY rules still passes,
- * simply not transformed (measured: `GET /api/v1/key` springs at 401 side
- * OpenRouter, not refusing the firewall). Listing a domain does not restrict it
- * not — it adds rules to it.
+ * The wildcard grants connectivity only. Secrets remain attached to exact host,
+ * method, and path rules, so arbitrary public destinations never receive an LLM
+ * or forge credential from the policy.
  */
 export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): NetworkPolicy {
   const llm = splitUrl(chatCompletionsUrl(input.baseUrl), "provider base URL");
@@ -330,9 +329,7 @@ export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): Network
   // The provider and the control plane can share a host (generic BYOK
   // hosted with us, never seen but not prohibited): their rules add up
   // then on the same input, they do not overwrite each other.
-  const allow: Record<string, NetworkPolicyRule[]> = Object.fromEntries(
-    AGENT_PACKAGE_EGRESS_HOSTS.map((host) => [host, []]),
-  );
+  const allow: Record<string, NetworkPolicyRule[]> = { "*": [] };
   for (const [host, rule] of [
     [llm.host, llmRule],
     [app.host, controlRule],
@@ -379,7 +376,9 @@ export function rotateAgentForgeCredential(
   const allow = Object.fromEntries(
     Object.entries(policy.allow).flatMap(([host, rules]) => {
       const remaining = rules.filter((rule) => !isForgeRule(rule));
-      return remaining.length > 0 || AGENT_PACKAGE_EGRESS_HOSTS.some((allowed) => allowed === host)
+      return remaining.length > 0 ||
+        host === "*" ||
+        AGENT_PACKAGE_EGRESS_HOSTS.some((allowed) => allowed === host)
         ? [[host, remaining]]
         : [];
     }),

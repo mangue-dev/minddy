@@ -15,6 +15,11 @@ overrides:
 
 packageExtensionsChecksum: sha256-gb8IWRYa0HLC0njrFwOplLteblxDkJjrN7zLnxlfTj0=
 
+patchedDependencies:
+  web-push@3.6.7:
+    hash: 643894c41fa680567920fd08b7f6d427d21396eab07abace37fd151d4cb063d5
+    path: patches/web-push@3.6.7.patch
+
 importers:
 
   .:
@@ -228,7 +233,7 @@ importers:
         version: 0.9.0(@tiptap/core@3.30.2(@tiptap/pm@3.30.2))
       web-push:
         specifier: ^3.6.7
-        version: 3.6.7
+        version: 3.6.7(patch_hash=643894c41fa680567920fd08b7f6d427d21396eab07abace37fd151d4cb063d5)
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -12593,7 +12598,7 @@ snapshots:
 
   web-namespaces@2.0.1: {}
 
-  web-push@3.6.7:
+  web-push@3.6.7(patch_hash=643894c41fa680567920fd08b7f6d427d21396eab07abace37fd151d4cb063d5):
     dependencies:
       asn1.js: 5.4.1
       http_ece: 1.2.0

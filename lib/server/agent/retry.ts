@@ -52,6 +52,56 @@ export const MAX_RETRY_WAIT_MS = 30_000;
  */
 const PROVIDER_REQUEUE_DELAYS_MS = [30_000, 120_000, 300_000, 600_000];
 
+/**
+ * Bootstrap uses the same recovery window as provider calls. The Sandbox SDK
+ * already retries a request twice over roughly one second, but a short platform
+ * incident can easily outlive that window. Re-queuing releases the function and
+ * retries on a later drain tick instead of turning a transient 5xx into a failed
+ * unattended run.
+ */
+const BOOTSTRAP_REQUEUE_DELAYS_MS = PROVIDER_REQUEUE_DELAYS_MS;
+
+export type BootstrapRetryPlan =
+  | { requeue: true; delayMs: number }
+  | { requeue: false };
+
+function httpStatusFromError(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null;
+  const candidate = error as {
+    response?: { status?: unknown };
+    status?: unknown;
+    statusCode?: unknown;
+  };
+  for (const status of [
+    candidate.response?.status,
+    candidate.status,
+    candidate.statusCode,
+  ]) {
+    if (typeof status === "number" && Number.isInteger(status)) return status;
+  }
+  return null;
+}
+
+/**
+ * Returns a delayed retry only for an observed retryable HTTP response. Generic
+ * bootstrap errors remain terminal: invalid repository data, malformed network
+ * policy, and other programming/configuration faults must stay visible rather
+ * than looping behind a generic error message.
+ *
+ * `attempts` is incremented atomically by `claim_agent_run`, so attempt one gets
+ * the first delay and the fifth retryable failure becomes terminal.
+ */
+export function planBootstrapRetry(
+  error: unknown,
+  attempts: number,
+): BootstrapRetryPlan | null {
+  const status = httpStatusFromError(error);
+  if (status == null || !isRetryableStatus(status)) return null;
+  const attempt = Math.max(1, Math.floor(attempts) || 1);
+  const delayMs = BOOTSTRAP_REQUEUE_DELAYS_MS[attempt - 1];
+  return delayMs == null ? { requeue: false } : { requeue: true, delayMs };
+}
+
 /** Number of deferred requeues granted to a failure before honest rest. */
 export const MAX_PROVIDER_REQUEUES = PROVIDER_REQUEUE_DELAYS_MS.length;
 

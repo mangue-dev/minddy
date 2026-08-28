@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { APIError } from "@vercel/sandbox";
 import {
   isRetryableStatus,
   isContextLengthError,
   parseRetryAfterMs,
   backoffMs,
+  planBootstrapRetry,
   StreamError,
 } from "./retry";
 
@@ -71,6 +73,38 @@ describe("backoffMs", () => {
   it("applique un jitter ±10%", () => {
     expect(backoffMs(0, 0)).toBe(450); // 500 * 0.9
     expect(backoffMs(0, 1)).toBe(550); // 500 * 1.1
+  });
+});
+
+describe("planBootstrapRetry", () => {
+  it("requeues a Sandbox 500 with bounded drain-scale delays", () => {
+    const error = new APIError(
+      new Response('{"error":{"message":"An unexpected internal error occurred"}}', {
+        status: 500,
+      }),
+    );
+
+    expect(planBootstrapRetry(error, 1)).toEqual({ requeue: true, delayMs: 30_000 });
+    expect(planBootstrapRetry(error, 2)).toEqual({ requeue: true, delayMs: 120_000 });
+    expect(planBootstrapRetry(error, 3)).toEqual({ requeue: true, delayMs: 300_000 });
+    expect(planBootstrapRetry(error, 4)).toEqual({ requeue: true, delayMs: 600_000 });
+    expect(planBootstrapRetry(error, 5)).toEqual({ requeue: false });
+  });
+
+  it("also retries rate limits and common status-bearing errors", () => {
+    expect(planBootstrapRetry({ status: 429 }, 1)).toEqual({
+      requeue: true,
+      delayMs: 30_000,
+    });
+    expect(planBootstrapRetry({ statusCode: 503 }, 1)).toEqual({
+      requeue: true,
+      delayMs: 30_000,
+    });
+  });
+
+  it("keeps configuration 4xx and unclassified failures terminal", () => {
+    expect(planBootstrapRetry({ response: { status: 400 } }, 1)).toBeNull();
+    expect(planBootstrapRetry(new Error("Invalid CIDR"), 1)).toBeNull();
   });
 });
 
