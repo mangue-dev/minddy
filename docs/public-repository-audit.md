@@ -1,161 +1,118 @@
 # Repository publication audit
 
-Date: August 16, 2026. Scope: `main` and `production` branches, tracked
-remotes, and locally inaccessible Git objects. This document is an audit report;
-it is neither legal advice nor an effective revocation of a secret.
+Last reviewed: August 28, 2026. Scope: the complete canonical Git namespace,
+the launch candidate tree, release material, licensing, bundled assets, example
+data, documentation, support paths, and the boundary between the public core
+and private managed operations.
 
-## Result
+This report records publication evidence. It is not legal advice and does not
+replace credential revocation when a real credential is found.
 
-**Publication is blocked.** The local check passes, but the August 23, 2026
-fresh-mirror scan of the canonical GitHub remote found forbidden historical
-paths and two PEM private-key markers in historical `problems.md` blobs. The
-remote history must be rewritten and rescanned before the repository can be
-made public.
+## Current decision
 
-The scan did not identify a private key or active token matching the
-GitHub, OpenAI, Anthropic, Slack, AWS or Google patterns in the current tree. The
-strings resembling test secrets and `scripts/extract-apns-secret.mjs`
-are deliberately ignored: they are used to verify detection and are not
-operational identifiers. A text search finds loopback and service-name URLs in
-the documentation and tests; they are necessary for local development and are
-not internal infrastructure URLs published by the project.
+**Publication remains blocked pending GitHub's retained-reference cleanup.**
 
-## Redacted rotation ledger
+The repository-controlled branches and tags were rewritten and pushed on
+August 28, 2026. A clean reconstruction of the publishable namespace passes
+both the public-repository check and Gitleaks across all history. A fresh mirror
+of GitHub still exposes the old objects through 94 server-owned
+`refs/pull/*/head` references. Those references retain 18 forbidden internal
+paths and two synthetic PEM delimiter fragments from `problems.md`. Repository
+administrators cannot update or delete those refs directly, so GitHub Support
+must purge them and invalidate cached views before publication.
 
-This ledger records classifications and evidence locations without storing a
-secret, a token prefix, an account identifier, or a credential fingerprint.
-Each row is a publication gate; an unverified row blocks publication.
+The canonical repository and its GHCR package remain private. Do not change
+either visibility until a fresh remote scan passes with no finding.
 
-| Finding class | Historical location | Classification | Evidence retained outside this repository | Publication decision |
-| --- | --- | --- | --- | --- |
-| PEM private-key marker (2 blobs) | `problems.md` | Potential real secret until the owner proves otherwise. | Owner provides a dated revocation or rotation record that identifies the affected service without reproducing the key. | Blocked: rotate or revoke, then rewrite every remote ref. |
-| APNs PEM delimiter | `scripts/extract-apns-secret.mjs` | False positive: removed converter source, not a key payload. | Narrow scanner exception and source review. | No rotation required; retain the narrow exception only. |
-| Structured provider-token samples | Dedicated secret-scanner and redaction tests | Synthetic test values. | Test source and its assertions demonstrate deterministic, non-operational samples. | No rotation required; do not add a blanket test-tree exclusion. |
-| Default-account identifier | Historical seed script | Identifier, not a credential format; operational status has not been evidenced. | Owner confirmation that no active account remained, or a dated deactivation record. | Blocked until confirmed or deactivated. |
+## History rewrite evidence
 
-The scan output is intentionally not copied here. The release owner records only
-the remote ref-inventory SHA-256 and aggregate counts in the issue after a
-clean scan. Rotation records belong in the operator's restricted incident
-store, not in Git.
+The rewrite removed every historical version of these paths from all
+repository-controlled branches and tags:
 
-## History to be cleaned up
+- `.claude/launch.json` and `.claude/settings.json`;
+- `MIN-102-plan.md` and `MIN-184-plan.md`;
+- `captures/world/world.md`;
+- `copy-audit-landing.json`, `copy-audit-landing.md`, `copy-audit.json`,
+  `copy-audit.md`, and `copy-fix-report.md`;
+- `dev.log` and `problems.md`;
+- `docs/audits/securite-2026-08-05.md`, `docs/desktop-signing.md`,
+  `docs/harness-2026-08.md`, and
+  `docs/rgpd/registre-des-traitements.md`;
+- `scripts/indexnow.mjs` and `scripts/seed-inbox.mjs`.
 
-The paths below are still reachable from the refs and cause failure
-`npm run check:public-repo`:
+Personal Gmail addresses in commit, tag, and file metadata were normalized to
+the maintainer's GitHub noreply address. The rewrite was performed from a
+verified mirror containing branches, tags, and GitHub pull-request refs. It
+produced a 137-ref clean reconstruction with 29,871 reachable objects, no
+forbidden path, no Gmail metadata, and no Gitleaks finding. The controlled
+branch and tag update used exact force-with-lease values.
 
-- `.claude/launch.json` and `.claude/settings.json` ; the first contained a
-  absolute workstation path;
-- `MIN-102-plan.md`, `MIN-184-plan.md`, `copy-audit*.{json,md}`, `dev.log` and
-  `problems.md` ; internal work documents and logs;
-- `captures/world/world.md` ; private capture state;
-- `docs/audits/securite-2026-08-05.md`, `docs/desktop-signing.md` and
-  `docs/rgpd/registre-des-traitements.md` ; internal documentation;
-- an old version of `scripts/seed-inbox.mjs` containing an identifier of
-  default account.
+A verified pre-rewrite mirror and a separate bundle containing local-only
+preflight tags are retained in the maintainer's restricted backup store. They
+contain the retired private history, must never be published, and exist only
+for incident recovery.
 
-The removal of `.claude/launch.json` from the current tree is included in this
-change. On August 16, 2026, local branches, refs `origin/*` followed and
-tags have been rewritten with `git filter-branch` to remove each path
-listed, along with all historical versions of `scripts/seed-inbox.mjs`.
-The current version of the script, which requires a UUID passed as an argument,
-was then reintroduced. A pre-rewrite mirror backup is kept outside the repository
-to be published in `/private/tmp/minddy-before-public-history-rewrite-20260816.git`.
+## Redacted finding ledger
 
-Git metadata also exposes a personal mailbox, a GitHub noreply identity, and
-two service identities. They are not secrets, but constitute personal data or
-attributions: the persons concerned must confirm their publication. Commit
-messages contain product context and are included in the scope of human
-proofreading before export.
+The ledger intentionally contains no token, secret value, account identifier,
+or credential fingerprint.
 
-## Rewriting and revocation procedure
+| Finding class | Classification | Required action | State |
+| --- | --- | --- | --- |
+| Two PEM delimiter fragments in historical `problems.md` blobs | Synthetic, escaped test examples. Reconstructed payloads are 66 bytes and cannot be parsed as private keys. | Remove from public history; no credential rotation. | Removed from controlled refs; GitHub PR-ref purge pending. |
+| APNs delimiter in historical `scripts/extract-apns-secret.mjs` | Converter example, not a key payload; it cannot be parsed as a private key. | Remove the obsolete internal helper from public history. | Complete. |
+| Provider-token and private-key samples in scanner/redaction tests | Deterministic, non-operational fixtures. | Keep narrow rule-and-path classifications; never exclude the test tree broadly. | Complete. |
+| Identifier in historical `scripts/seed-inbox.mjs` | Account identifier, not an authentication credential. The script and identifier are unnecessary for distribution. | Remove every historical version. | Complete. |
 
-1. Before any rewriting, determine if the seed identifier has ever been
-   active. If it has been, deactivate/run it on the supplier side before
-   publish: removing a Git text does not revoke anything.
-2. Clone a backup mirror out of the release repository and freeze the
-   pushes. List the refs to keep with `git for-each-ref`.
-3. On a working copy, use `git filter-repo` (or BFG after review) to
-   remove the paths listed above from **all** refs intended to be
-   published. If the seed identifier must remain in the code, replace it with
-   a clearly synthetic fixture value before rewriting.
-4. Check `git log --all`, `git fsck --full --no-reflogs --unreachable`,
-   `npm run check:public-repo` and `npm run check:public-repo:remote`; only
-   push refs cleaned with
-   `--force-with-lease` after warning contributors. Invalidate tags,
-   caches, forks and archives that would expose old SHAs.
-5. In each monitored clone, expire the reflogs then purge:
-   `git reflog expire --expire=now --all` and `git gc --prune=now`. These commands
-   are destructive: only launch them after validation of the backup.
+No parseable private key or active token was found in the rewritten namespace.
+The scanner output remains redacted; only aggregate evidence belongs in issue
+tracking or this repository.
 
-Inaccessible objects observed locally are not pushed by an ordinary push, but
-they must be purged before transferring a `.git` folder,
-to create a bundle or deliver a repository archive.
+## GitHub retained-data escalation
 
-### GitHub retained-data escalation
+The Support request must identify `mangue-dev/minddy`, state that 94 affected
+server-owned pull-request refs remain after a sensitive-data rewrite, and ask
+GitHub to remove the retired objects from PR refs, cached commit views, source
+archives, Actions caches, and server garbage-collection roots. It must include
+the two `git-filter-repo` first-changed commit identifiers without including any
+removed content or secret-shaped sample.
 
-After the rewrite and force-push, run the fresh-mirror command again. If any
-affected pull-request ref, cached commit view, release archive, Actions cache,
-fork, LFS object, or direct historical URL still exposes the private-key
-material, open a GitHub Support request before publication. Include the
-repository owner/name, affected pull-request count, `git-filter-repo`'s first
-changed commit identifiers, and any orphaned-LFS report; provide rotation
-evidence through the restricted incident channel, never the secret itself.
-GitHub's sensitive-data removal procedure describes this Support path and the
-server-side garbage collection and cached-view cleanup it can perform.
+After GitHub confirms cleanup, rerun the remote scanner from a disposable fresh
+mirror. Publication remains blocked unless it reports zero findings and zero
+unexpected unreachable objects.
 
-## Current tree inventory
+## Current-tree publication review
 
-| Element | Observation | Decision before publication |
+| Area | Evidence | Decision |
 | --- | --- | --- |
-| `captures/world/seed/` and `captures/shots/` | Tracked demo data/captures including JSONL, markdown and images. | Manually check that they only represent fictitious accounts, emails, projects and avatars. |
-| `public/captures/` | 32 WebP captures intended for the public site. | Confirm their synthetic origin and the absence of real data. |
-| `public/agents/*.svg`, `public/import/*.svg` | Logos of third-party products and services. | Obtain/archive authorization or replace with generic pictograms; the brands are not licensed by the AGPL. |
-| `public/logo.svg`, `app/` and `desktop/build/` icons | minddy brand assets. | The holder must confirm that he owns the rights; document separate brand policy. |
-| `app/fonts/inter-arrows.woff2` | Inter font, with `app/fonts/LICENSE-Inter.txt`. | Keep the SIL OFL-1.1 notice during any distribution. |
-| `.claude/` and `CLAUDE.md` | Instructions/development tools followed. | Review license and confidentiality before maintaining public; `launch.json` was removed because it leaked a local path. |
+| License and notices | `LICENSE`, `NOTICE`, and `docs/licensing.md` record AGPL-3.0-only, the historical MIT notice, contributor identities, and the DCO policy. | Ready. |
+| Public/private boundary | `docs/editions.md`, self-hosting documentation, and the licensing policy keep billing, fleet operations, support cases, and service-account administration outside the public core. | Ready. |
+| Fonts | Inter ships with `app/fonts/LICENSE-Inter.txt`. | Ready. |
+| Product and import choices | Third-party logo artwork was replaced with project-authored neutral pictograms; product names only identify compatibility. | Ready. |
+| minddy brand | Logos and icons are maintained by the project copyright holder and excluded from the software trademark grant. | Ready. |
+| Screenshots and capture fixtures | The tracked captures are generated from synthetic product fixtures and contain no production credential or internal endpoint. | Ready. |
+| Dependencies | Lockfile audit, Dependabot, and the release container scan have no open fixed high or critical finding. | Recheck for the exact final candidate. |
+| Documentation and support | README, self-hosting guides, contribution guide, code of conduct, confidential vulnerability reporting, support routes, and launch announcement are present and link-checked. | Ready. |
 
-GDPR documents still followed (`docs/rgpd/`) must be re-read to confirm
-that they describe generic procedures and not subcontractors, contacts or
-configurations not intended for the public.
+## Permanent controls
 
-## Licenses and chain of rights
+`scripts/check-public-repo.mjs` checks the index, worktree, full reachable
+history, forbidden paths, and secret-shaped content. Remote mode builds a
+disposable mirror and explicitly fetches GitHub pull-request, replacement, and
+notes refs. The release workflow runs that remote mode before dependency
+installation or repository scripts.
 
-The project declares `AGPL-3.0-only` in `package.json`; `LICENSE`, `NOTICE` and
-`docs/licensing.md` preserve the historical MIT record, the attribution of
-known contributors, the DCO policy and the Inter notice. This architecture is
-compatible with publication under AGPL, provided that the contributors
-historical have authorized their contribution under this license or that their
-code is retired/relicensed.
+Gitleaks runs across all Git history with redacted output. Its policy inherits
+the maintained provider-token, private-key, and high-entropy rules, plus the
+project's internal-network and email-address rules. Classifications are narrow
+rule-and-path pairs. There is no blanket test-tree exclusion.
 
-The dependency inventory is locked in `pnpm-lock.yaml` and
-`package-lock.json`. Existing policy lists MIT, Apache-2.0, ISC, BSD,
-MPL-2.0 and LGPL-3.0-or-later (in particular via `sharp`) and does not report
-GPL-2.0-only. These licenses are in principle compatible with the distribution
-AGPL of the project, subject to keeping the notices and respecting the
-LGPL/MPL obligations for the components concerned. The order
-`pnpm licenses list --json` was unable to produce the complete inventory in this
-environment because the pnpm store index is incomplete; the publishing CI must
-run it from a clean installation and archive its result with the tag.
+Before the final visibility change:
 
-## Permanent control
-
-`scripts/check-public-repo.mjs` controls the index, forbidden paths and
-reasons for secrecy. Outside of `--staged` mode, it also inspects each reachable blob
-from branches, tags and refs `origin/*`, so that a secret deleted from HEAD
-remains blocking until the publishable history is cleaned. Its `--remote`
-mode creates a disposable mirror of the configured remote, explicitly fetches
-GitHub pull-request, replacement, and notes refs, scans every remote ref
-without honoring replacement objects, and rejects unexpected unreachable
-objects. The release workflow runs that mode against the exact canonical remote.
-Checkpoints under `refs/codex/*` are not included in the local scan: they are
-not part of a standard push and should never be exported with `git push --mirror`
-or a copy from the `.git` folder. The mode
-`--staged` remains voluntarily limited to candidate changes: it is adapted
-to the local hook; the CI must execute the command without options.
-
-CI also runs the maintained Gitleaks scanner over all Git history with fully
-redacted output. Its checked-in policy inherits the provider-token, private-key,
-and high-entropy rules and adds internal-network URL and email-address markers.
-It deliberately has no test-tree path exclusion: a fixture is scanned like any
-other source, and a finding must be classified as synthetic, rotated, or
-removed before publication.
+1. obtain GitHub confirmation and repeat the fresh-mirror scan;
+2. build and publish one immutable private release candidate from the rewritten
+   production SHA;
+3. verify its source archives, manifests, checksums, OCI digest and signature,
+   desktop artifacts, dependency results, and security probe;
+4. record the exact version, commit SHA, tag object, OCI digest, and final
+   namespace inventory in the launch-preflight issue.
