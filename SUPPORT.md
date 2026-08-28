@@ -1,38 +1,35 @@
 # Support
 
-Minddy Cloud is operated by Minddy; self-hosted minddy is the same public core
-operated by its installer. The [edition guide](docs/editions.md) explains the
-hosting, data, provider, backup, and update responsibilities before you choose
-a support channel.
+Minddy Cloud is operated by Minddy. Self-hosted minddy is the same public core
+operated on infrastructure you control. The [edition guide](docs/editions.md)
+explains hosting, data, provider, backup, and update responsibilities.
 
-## Choose the right channel
+## Choose a channel
 
-| Need | Channel | Commitment |
+| Need | Channel | What to expect |
 | --- | --- | --- |
-| Install, configure or use the self-hosted open-source core | [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions) | Public assistance, to the best of availability, without guaranteed delay; the operator remains responsible for its infrastructure and data |
-| Reproducible core bug | [Bug form](https://github.com/mangue-dev/minddy-issues/issues/new?template=bug_report.yml) | Community triage, with no guarantee of fix or timeline |
-| Evolution of the heart | [Improvement form](https://github.com/mangue-dev/minddy-issues/issues/new?template=feature_request.yml) | Public discussion; acceptance does not constitute a commitment to delivery |
-| Vulnerability or proof of exploitation | [SECURITY.md](SECURITY.md#12-report-vulnerability) | Private channel and coordinated disclosure |
-| Minddy Cloud account, billing or managed service data | [hello@minddy.app](mailto:hello@minddy.app) | Private support according to the conditions of the subscribed Cloud offer |
-| SLA, migration, training or support | [hello@minddy.app](mailto:hello@minddy.app) | Commercial service distinct from the community project |
+| Install, configure, or use self-hosted minddy | [GitHub Discussions](https://github.com/mangue-dev/minddy/discussions) | Best-effort public community help; operators remain responsible for their infrastructure and data |
+| Report a reproducible core bug | [Bug report](https://github.com/mangue-dev/minddy/issues/new?template=bug_report.yml) | Community triage without a guaranteed fix or timeline |
+| Propose an improvement | [Feature request](https://github.com/mangue-dev/minddy/issues/new?template=feature_request.yml) | Public discussion; acceptance is not a delivery commitment |
+| Report a vulnerability or proof of exploitation | [Security policy](SECURITY.md#report-a-vulnerability) | Confidential reporting and coordinated disclosure |
+| Ask about a Minddy Cloud account, billing, or managed-service data | [hello@minddy.app](mailto:hello@minddy.app) | Private support under the applicable Cloud terms |
+| Request an SLA, migration, training, or commercial support | [hello@minddy.app](mailto:hello@minddy.app) | A service separate from community support |
 
 ## Community support
 
-Give the version or commit, the environment, the expected result, the
-result obtained and minimal reproduction. Redact logs: do not
-never publish any token, email, tenant ID or customer data.
+Include the minddy version or commit, environment, expected behavior, actual
+behavior, and a minimal reproduction. Redact logs. Never publish tokens,
+personal email addresses, tenant identifiers, or customer data.
 
-Maintainers and contributors respond voluntarily or in the time they
-can devote to the project. A question may remain unanswered and a way out
-can be closed if it is incomplete, non-reproducible, outside the scope or
-inactive. Anyone can help; no community response constitutes
-a guarantee, an SLA or a contractual commitment.
+Maintainers and contributors respond as time permits. Questions may remain
+unanswered, and inactive, incomplete, non-reproducible, or out-of-scope threads
+may be closed. Community responses do not create a warranty, SLA, or contractual
+commitment.
 
-## Commercial offering
+## Commercial services
 
-Managed hosting and associated services possibly finance the
-project, but do not change either the AGPL license of the core, nor the technical criteria
-acceptance of a contribution. A support contract can guarantee a channel,
-a deadline or a service; it does not automatically give priority to a
-function in the public repository. Account and billing data remains
-on the private channel and are never requested in a public issue.
+Managed hosting and services may fund the project, but they do not change the
+AGPL license or contribution standards for the public core. A commercial
+agreement may provide a private channel, response target, or service; it does
+not automatically prioritize a feature in the public repository. Account and
+billing data must stay in private support channels.

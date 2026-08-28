@@ -10,7 +10,9 @@ test("Gitleaks extends maintained rules and adds publication-specific markers", 
   assert.match(policy, /useDefault\s*=\s*true/);
   assert.match(policy, /id\s*=\s*"minddy-internal-network-url"/);
   assert.match(policy, /id\s*=\s*"minddy-personal-email-marker"/);
-  assert.doesNotMatch(policy, /(?:^|\n)paths\s*=/);
+  assert.match(policy, /targetRules\s*=\s*\["private-key"\]/);
+  assert.doesNotMatch(policy, /paths\s*=\s*\[[^\]]*(?:\*\*|fixtures\?)/s);
+  assert.doesNotMatch(policy, /paths\s*=\s*\[\s*'''(?:\.\*|\(\?:\^\|\/\)\.\*)/s);
 });
 
 test("CI scans all Git history with the checked-in policy and redacts findings", () => {

@@ -1,127 +1,122 @@
-# Security checklist before going into production
+# Security release checklist
 
-**Version: 1.0 — owner: minddy technical team**
+**Version 1.0 — owner: minddy technical maintainers**
 
-This checklist is a mandatory barrier before any promotion of Minddy
-Cloud. A release of the heart already goes through this promotion and therefore reuses the
-same proof. It complements CI, code review and periodic audits;
-it never replaces a pentest when the risk of the launch requires it.
+This checklist is a mandatory promotion barrier for Minddy Cloud and public
+core releases. It complements CI, review, and periodic audits. It never replaces
+a penetration test when the release risk requires one.
 
-## Execution mode
+## Evidence record
 
-1. Determine the candidate SHA. For a core release, run `npm run deploy`
-   and let it prepare the release commit; for a web deployment alone,
-   use the own `HEAD` displayed by the script. Deployment shows SHA
-   correct before requesting the review. From this SHA, copy the
-   [report template](#report-template) in a private issue or
-   in `mangue-dev/minddy-cloud-ops`. Never stick a secret, token,
-   real personal data or detail facilitating exploitation. The
-   stable reference of this report will be requested by the deployment.
-2. List the diff from `production`, its migrations and its endpoints
-   sensitive. Run all checks below; register for each
-   `OK`, `N/A` with proof, or `Exception <ID>`, with proof no
-   sensitive (command, CI run, configuration capture or ticket).
-3. Have the report reread by a maintainer who did not carry out all of them alone
-   the controls. Any exception must have an owner, a deadline and
-   explicit acceptance of risk before promotion.
-4. Decide if a pentest is required with the criteria below. A pentest
-   required but unfinished blocks promotion; an exception cannot
-   transform into a simple checklist check.
-5. Continue `npm run deploy` giving the reference and the two decisions.
-   For a non-interactive web deployment where the SHA is already known, provide
-   `MINDDY_SECURITY_REVIEW_REF`, `MINDDY_RESIDUAL_RISKS` (`none` or
-   `documented`) and `MINDDY_PENTEST_STATUS` (`not-required` or `completed`). The
-   workflow also validates the `1.0` version of this checklist before requesting
-   approval of the `cloud-production` environment.
+1. Record the exact candidate SHA and the previous production SHA.
+2. Create a private report from the template below. Never include a credential,
+   personal data, or exploit-enabling detail.
+3. Give every control an `OK`, `N/A`, or `Exception <ID>` result with a
+   non-sensitive evidence reference.
+4. Require review by a maintainer who did not perform every control alone.
+5. Record the pentest decision and residual-risk status.
+6. Pass the stable report reference to the release workflow.
 
-The tests and searches below start from the root of the repository. Replace
-`<BASE_SHA>` by `origin/production` and `<CANDIDATE_URL>` by HTTPS URL
-complete candidate or staging deployment. The checks of
-configuration outside the depot must be dated in the proof.
+For non-interactive deployment, provide:
 
-## Mandatory checks
+- `MINDDY_SECURITY_REVIEW_REF`;
+- `MINDDY_RESIDUAL_RISKS` as `none` or `documented`;
+- `MINDDY_PENTEST_STATUS` as `not-required` or `completed`.
 
-| ID | Control | How to check | Expected result / proof |
-| --- | --- | --- | --- |
-| HTTP-1 | HTTPS and HSTS | `curl -sS -D - -o /dev/null <CANDIDATE_URL>` then inspect `next.config.mjs` and the HTTP→HTTPS redirection of the host. | Error-free HTTPS; HTTP redirect; `Strict-Transport-Security` with `max-age` of at least one year and `includeSubDomains`. The presence of `preload` does not constitute registration in the preload list, a separate and almost irreversible decision. |
-| HTTP-2 | Browser headers | On public, authenticated, error and API pages: `curl -sS -D - -o /dev/null …`. Also check for exceptions in `next.config.mjs`. | Consistent CSP (`frame-ancestors`, `base-uri`, `form-action` depending on the route), `X-Content-Type-Options: nosniff`, anti-framing protection, `Referrer-Policy` and `Permissions-Policy`. Any route exception is justified and tested. |
-| HTTP-3 | Cache and sensitive content | Review the new `GET`, `Cache-Control`, `revalidate`, `force-static`, `use cache` and CDN behavior with two accounts. | No authenticated responses or personal data in a shared cache; sensitive responses `private`/`no-store`; MIME types and non-executable downloads. |
-| REQ-1 | CSRF | Inventory `POST`, `PUT`, `PATCH`, `DELETE` of diff: `git diff --name-only <BASE_SHA> -- app \| rg '/route\.ts$'`. For each cookie route, check CSRF token or strict validation `Origin`/`Host`/application header and make a negative cross-origin call. | Legitimate request accepted, cross-origin request refused. `SameSite` remains an additional defense, never the only justification. Signed public endpoints (webhooks/OAuth) have their own control. |
-| REQ-2 | CORS | `rg -n 'Access-Control-Allow|cors|OPTIONS' app lib next.config.mjs` then test authorized and unauthorized preflights. | CORS absent by default. Minimal origins, methods and headers where required; never reflective origin or `*` with credentials. A public OAuth endpoint in `*` does not receive any cookies and remains explicitly documented. |
-| SESS-1 | Cookies, sessions and tokens | Inspect `lib/session-cookies.ts`, other `cookies.set`, Auth Supabase configuration and login/logout/refresh flows. Check the candidate's `Set-Cookie` without recording their value. | Session cookies `Secure` in production and `SameSite=Lax`/`Strict` depending on the flow; `HttpOnly` when the architecture allows it. The documented exception for cookies read by `@supabase/ssr` is not expanded. Bounded expiration and rotation of active refresh tokens. |
-| SESS-2 | Invalidation and replay | Test logout, password change/reset, administrative revocation and refresh token rotation on a test account. | The old token or cookie does not restore a session after the intended event; replay of a rotated refresh token fails; no lasting privileged session without justification. |
-| DB-1 | RLS of all tables | Review each migration of the diff, then `npx vitest run lib/schema-guardrails.test.ts` and negative tests with two users/projects. | RLS activated upon creation; policies limited to `authenticated`/`service_role`, inter-project separation demonstrated, no policy `anon` or always true condition introduced. |
-| DB-2 | Permissions, Views and Columns | Review `GRANT`/`REVOKE`, views, `SECURITY DEFINER` functions, Storage buckets and PostgREST access. Test directly with anon/auth test keys. | Minimum privilege; encrypted/secret columns not selectable; `search_path` safe for privileged functions; private buckets by default, public formats served without active content. |
-| DB-3 | Service-role bypasses | `git diff <BASE_SHA> -- 'app/**' 'lib/server/**' \| rg -n 'service\|admin\|supabaseService'` and trace each customer-provided identifier back to their access control. | Each read/write that bypasses RLS explicitly redoes authentication, per-resource authorization, and input validation before privileged invocation. |
-| DATA-1 | API Keys and Secrets | `git diff <BASE_SHA>`, GitHub secret scanning, `rg -n 'NEXT_PUBLIC_|API_KEY|SECRET|TOKEN' app components lib public .env.example` and review of Vercel/Supabase variables without displaying their values. | No secrets in Git, client bundle, URL, capture, artifact or log. Only explicitly public keys carry `NEXT_PUBLIC_`; private keys encrypted at rest, hidden from reading, with minimum range and rotatable. |
-| DATA-2 | Personal data | Map new data, exports, analytics, logs, backups and subcontractors; check `docs/rgpd/` and retention/deletion policies. | Minimum collection and documented purpose; limited access and retention; deletion/export tested; no real personal data in CI, previews, logs or security reports. |
-| AUTH-1 | Password Policy | `npx vitest run lib/password-policy.test.ts lib/signup-wizard.test.ts`, then check that the instance's Supabase policy is not weaker than the UI. | Agreed length/complexity enforced server-side, compromised passwords denied if option available, messages without account leaks. |
-| AUTH-2 | MFA | Review changes in administration, billing, keys and identities; test registration, challenge, recovery and MFA deactivation. | MFA required for defined high risk roles/operations; secrets and recovery codes not logged, single use verified. If MFA is not applicable, justification entered. |
-| API-1 | Sensitive Endpoints | Inventory auth, invitations, exports, uploads, webhooks, OAuth, IA, billing, admin actions and new diff routes. Test without session, with other tenant, invalid input, excessive size and excessive flow. | Authentication and authorization server failed closed, schema and bounds validated at runtime, rate limit on abusive operations, errors without internal details. Webhooks use the raw body signature; Outgoing fetches include protocol, host, redirects and private IPs. |
-| SUPPLY-1 | Dependencies and Build Chain | Check `CI / Tests & typecheck`, `CI / Dependency audit` jobs, frozen installation and Dependabot/secret scanning alerts. | Green candidate SHA, consistent lockfiles, no unaccepted high/critical vulnerabilities, no new build steps with secrecy or unjustified write permission. |
-| OPS-1 | Configuration and rollback | Compare Vercel, Supabase and GitHub variables/permissions to their reference; check migration, restorable backup, observability and rollback procedure in `docs/releases.md`. | Revised configuration without exposing any value; migration-compatible backup and rollback; alerts and incident owner identified. |
+## Mandatory controls
+
+| ID | Control | Required result |
+| --- | --- | --- |
+| HTTP-1 | HTTPS and HSTS | HTTPS succeeds, HTTP redirects, and HSTS uses at least one year with `includeSubDomains`. HSTS preload is a separate decision. |
+| HTTP-2 | Browser headers | Public, authenticated, error, and API responses consistently apply the documented CSP, anti-framing, MIME, referrer, and permissions policies. |
+| HTTP-3 | Sensitive caching | Authenticated or personal responses are never stored in a shared cache; sensitive responses use `private` or `no-store`. |
+| REQ-1 | CSRF | Every cookie-authenticated state change validates origin or an equivalent anti-CSRF signal; negative cross-origin requests fail. |
+| REQ-2 | CORS | CORS is absent by default and narrowly scoped where required. Credentials never combine with a wildcard origin. |
+| SESS-1 | Cookies and tokens | Production cookie attributes, bounded expiration, token rotation, and logout behavior match the documented session model. |
+| SESS-2 | Invalidation | Logout, password reset/change, administrative revocation, and refresh-token rotation invalidate the intended prior credentials. |
+| DB-1 | RLS | Every application table enables RLS; policies enforce tenant boundaries; two-account negative tests pass. |
+| DB-2 | Database privileges | Grants, views, privileged functions, columns, and Storage policies follow least privilege. Sensitive columns are not directly readable. |
+| DB-3 | Service-role access | Every customer-controlled identifier is reauthorized before a service-role read or write. |
+| DATA-1 | Secrets | Git history, client bundles, URLs, captures, artifacts, and logs contain no operational secret. Runtime secrets are scoped and rotatable. |
+| DATA-2 | Personal data | Collection, purpose, access, retention, export, deletion, analytics, logs, backups, and subprocessors match the documented policy. |
+| AUTH-1 | Password policy | Server configuration is not weaker than the UI policy; compromised-password protection is enabled when available. |
+| AUTH-2 | MFA | High-risk roles and operations use the agreed MFA policy; enrollment, challenge, recovery, and removal are tested. |
+| API-1 | Sensitive endpoints | Authentication, tenant authorization, runtime validation, size limits, rate limits, webhook signatures, and SSRF controls fail closed. |
+| SUPPLY-1 | Dependencies and build chain | Lockfiles are consistent; builds are frozen; no unaccepted high/critical finding or unjustified workflow permission remains. |
+| OPS-1 | Configuration and rollback | Runtime configuration, migrations, backup restoration, observability, incident ownership, and rollback are verified. |
+
+Suggested repository checks:
+
+```bash
+npm run check:public-repo
+npm run check:public-repo:remote
+npm run check:workflow-action-pins
+npm run lint
+npm run typecheck
+npm test
+npm run test:release
+npm audit --omit=dev --audit-level=high
+```
+
+Live HTTP, session, tenant, database, and configuration controls must be tested
+against an authorized candidate environment. Record only redacted outcomes.
 
 ## Pentest decision
 
-Mark the pentest `required-not-completed` and stop the release if at least one
-of the following cases is not already covered by a recent pentest at the perimeter
-equivalent:
+Set the pentest status to `required-not-completed` and stop promotion when an
+equivalent recent pentest does not cover any of these changes:
 
-- new authentication, authorization, MFA, session or OAuth mechanism;
-- significant change of RLS, multi-tenant, `service_role`, public storage or
-  exposure of personal data;
-- new high-impact surface: payment, active upload, webhook, import,
-  code/agent execution, preferred third-party integration or administration;
-- change of infrastructure, network boundary or major launch with a
-  significantly higher volume/exposure;
-- new threat, recent incident, or high/critical observation whose exploitation
-  realistic cannot be excluded by testing and internal review.
+- authentication, authorization, MFA, sessions, or OAuth;
+- RLS, multi-tenancy, service-role access, public Storage, or personal-data
+  exposure;
+- payments, active uploads, webhooks, imports, agent execution, privileged
+  integrations, or administration;
+- a major infrastructure/network boundary or exposure increase;
+- a new threat, incident, or realistic high/critical finding.
 
-The scope, date, service provider, report and status of corrections
-of the pentest are referenced in the report, without publishing the details
-sensitive. `completed` means that the report is received, the blocking findings
-are corrected and retested, and the rest are recorded as residual risks.
+`completed` means the report was received, blocking findings were corrected
+and retested, and remaining findings are documented as residual risks.
 
 ## Exceptions and residual risks
 
-One line is required per non-`OK` control. An exception without deadline,
-compensatory measure or approver blocks production.
+Each exception requires an owner, deadline, compensating control, and explicit
+approval. An exception cannot waive an exposed secret, broken tenant boundary,
+realistically exploitable high/critical vulnerability, or required unfinished
+pentest.
 
-| ID | Control | Gap and justification | Impact / probability | Compensatory measure | Owner | Deadline | Approver |
+| ID | Control | Gap and justification | Impact and likelihood | Compensating control | Owner | Deadline | Approver |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | EX-… | … | … | … | … | … | YYYY-MM-DD | … |
 
-The status transmitted to the workflow is `none` if this table is empty, otherwise
-`documented`. An exception cannot cover an exposed secret, a separation
-broken multi-tenant, an exploitable high/critical vulnerability or a pentest
-required but unfinished.
+Use `none` when this table is empty and `documented` otherwise.
 
 ## Report template
 
 ```markdown
-# Release security review — <date> — <SHA>
+# Release security review — <date> — <candidate SHA>
 
-- Checklist: 1.0 (`docs/security-release-checklist.md` at SHA `<SHA>`)
-- Diff: `<previous production>..<SHA>`
-- Verified candidate/staging: <URL or non-sensitive identifier>
-- Executor: <name> — Reviewer/approver: <name>
-- Pentest : not-required | completed | required-not-completed
-- Pentest reference and justification: <reference or justification>
+- Checklist: 1.0
+- Diff: <previous production SHA>..<candidate SHA>
+- Candidate environment: <non-sensitive URL or identifier>
+- Executor: <name>
+- Reviewer/approver: <name>
+- Pentest: not-required | completed | required-not-completed
+- Pentest reference and rationale: <reference>
 - Residual risks: none | documented
 
-| ID | Result | Non-sensitive evidence / note |
+| ID | Result | Non-sensitive evidence |
 | --- | --- | --- |
 | HTTP-1 | OK | … |
 | … | … | … |
 
 ## Exceptions and residual risks
 
-<copy the required table above, or write “None”>
+None
 
 ## Verdict
 
 - [ ] Every control has a result and evidence.
-- [ ] Exceptions have an owner, deadline, and approval.
-- [ ] The pentest is not required, or it is complete and its blocking findings have been retested.
-- [ ] Promotion of this SHA is explicitly approved.
+- [ ] Every exception has an owner, deadline, compensating control, and approval.
+- [ ] The pentest is not required or is complete with blocking findings retested.
+- [ ] Promotion of this exact SHA is explicitly approved.
 ```

@@ -14,6 +14,15 @@ regex = '''(?i)\bhttps?://((?:10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.
 secretGroup = 1
 keywords = ["http://", "https://"]
 
+[[rules.allowlists]]
+description = "Documented self-hosting examples and focused SSRF test fixtures."
+paths = [
+  '''(?:^|/)docs/self-hosting\.md$''',
+  '''(?:^|/)scripts/self-hosting-install\.mjs$''',
+  '''(?:^|/)scripts/self-hosting-tools\.test\.mjs$''',
+  '''(?:^|/)lib/(?:desktop/(?:local-models|server-origin)|server/(?:agent/vm/opencode-permissions|forge-relay/webhook-secret-route|link-preview|safe-fetch|ssrf-surfaces)|session-cookies)\.test\.ts$''',
+]
+
 [[rules]]
 id = "minddy-personal-email-marker"
 description = "Potential personal email address exposed in public content."
@@ -21,5 +30,58 @@ regex = '''\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})\b'''
 secretGroup = 1
 
 [[rules.allowlists]]
-description = "Synthetic or project-owned public contact domains."
+description = "Synthetic/project-owned domains and exact fixtures that exercise email handling."
 stopwords = ["example.com", "example.test", "minddy.app", "users.noreply.github.com"]
+paths = [
+  '''(?:^|/)\.claude/skills/capture-shot/SKILL\.md$''',
+  '''(?:^|/)\.env\.example$''',
+  '''(?:^|/)\.github/workflows/(?:dco|desktop-release|promote-production|release)\.yml$''',
+  '''(?:^|/)captures/(?:lib/frame\.mjs|world/seed/011-votants-emails\.mjs)$''',
+  '''(?:^|/)desktop/(?:build/icon\.icon/icon\.json|electron-builder\.yml|released\.json)$''',
+  '''(?:^|/)docs/(?:desktop-release|releases)\.md$''',
+  '''(?:^|/)messages/fr\.json$''',
+  '''(?:^|/)package\.json$''',
+  '''(?:^|/)public/captures/workflowPr-pt-BR-dark\.webp$''',
+  '''(?:^|/)scripts/(?:agent-runner-git-relay|release-security-policy)\.test\.mjs$''',
+  '''(?:^|/)lib/(?:commit-authors|display-name|export/issues-csv|import/import|mention-scan(?:-forge)?|pr-numo-mention|signup-wizard)\.test\.ts$''',
+  '''(?:^|/)lib/(?:display-name|mention-scan|server/import-mapping-ai)\.ts$''',
+  '''(?:^|/)lib/desktop/(?:git-config\.git|local-repo|local-turn|wns)\.test\.ts$''',
+  '''(?:^|/)lib/server/(?:admin|feedback/public-surface|git/forge-provider)\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/(?:local-turn-route|pr-clone|pr-landing-authority|repo-clone-history|sandbox-push)\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/pr\.ts$''',
+  '''(?:^|/)lib/server/agent/vm/(?:opencode-config|opencode-tools|supervisor|tool-bridge(?:-concurrency)?)\.test\.ts$''',
+]
+
+[[allowlists]]
+description = "Exact synthetic credential fixtures and non-secret release identifiers."
+targetRules = ["generic-api-key"]
+paths = [
+  '''(?:^|/)deploy/self-hosted/\.env\.example$''',
+  '''(?:^|/)desktop/released\.json$''',
+  '''(?:^|/)scripts/(?:linux-desktop-release\.test|validate-self-hosted-compose)\.mjs$''',
+  '''(?:^|/)lib/desktop/run-log\.test\.ts$''',
+  '''(?:^|/)lib/server/(?:avatar-seeds|git/webhook-routes|git/webhook-tenant-isolation)\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/(?:control-plane|secret-scan)\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/redaction-invariant\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/vm/control-plane-client\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/vm/(?:llm-proxy|supervisor)\.test\.ts$''',
+  '''(?:^|/)lib/server/assistant/loop-secrets\.test\.ts$''',
+]
+
+[[allowlists]]
+description = "Provider-shaped values used only by focused redaction and scanner tests."
+targetRules = ["aws-access-token", "gcp-api-key", "stripe-access-token"]
+paths = ['''(?:^|/)lib/server/agent/secret-scan\.test\.ts$''']
+
+[[allowlists]]
+description = "Synthetic GitHub tokens used by focused isolation tests."
+targetRules = ["github-app-token"]
+paths = [
+  '''(?:^|/)lib/server/agent/redaction-invariant\.test\.ts$''',
+  '''(?:^|/)lib/server/agent/vm/(?:llm-proxy|supervisor)\.test\.ts$''',
+]
+
+[[allowlists]]
+description = "A syntactically valid test key used to verify relay-token rejection."
+targetRules = ["private-key"]
+paths = ['''(?:^|/)lib/server/git/relayed-token-refresh\.test\.ts$''']
