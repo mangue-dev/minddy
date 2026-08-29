@@ -86,16 +86,21 @@ import type { PageVersion } from "@/lib/pages";
 /** The announced shelf life, the same as the basket (30 days). */
 const RETENTION_DAYS = 30;
 
+export type PageHistoryTab = "versions" | "activity";
+
 export function PageHistorySheet({
   projectId,
   pageId,
   open,
+  initialTab = "activity",
   onOpenChange,
   onRestored,
 }: {
   projectId: string;
   pageId: string;
   open: boolean;
+  /** Which question opened the panel: comments/activity, or saved versions. */
+  initialTab?: PageHistoryTab;
   onOpenChange: (open: boolean) => void;
   /**
    * The page has just been rewritten: the open editor behind is holding a document
@@ -114,22 +119,14 @@ export function PageHistorySheet({
   // carries only an id and a name already resolved). The same cache as everywhere else.
   const { members } = useMembersQuery(projectId, open);
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<"versions" | "activity">("activity");
+  const [tab, setTab] = useState<PageHistoryTab>(initialTab);
 
-  // Reopening the panel restarts from the ACTIVITY, and without the unfolded version: nor the
-  // that we looked at the time before nor the tab where we left it have any
-  // reason to be what we are looking for.
-  //
-  // The activity first because it is the common question — “what
-  // happened here, what was said? ". The versions respond to a
-  // rarer and more serious question, the one after the incident: “put me back
-  // that’s how it was.”
+  // Each header button names the question it opens. Do not reuse the tab from a
+  // previous visit: Comments opens activity and the save indicator opens versions.
   useEffect(() => {
-    if (!open) {
-      setSelected(null);
-      setTab("activity");
-    }
-  }, [open]);
+    setSelected(null);
+    if (open) setTab(initialTab);
+  }, [open, initialTab]);
 
   const versions = useQuery({
     queryKey: ["page-versions", pageId],
@@ -213,7 +210,7 @@ export function PageHistorySheet({
         <SidePanelBody className="flex flex-col gap-4 pt-0">
           <Tabs
             value={tab}
-            onValueChange={(value) => setTab(value as "versions" | "activity")}
+            onValueChange={(value) => setTab(value as PageHistoryTab)}
           >
             <TabsList variant="line" className={TAB_LIST_DENSE}>
               <TabsTrigger value="activity" className={TAB_TRIGGER_DENSE}>

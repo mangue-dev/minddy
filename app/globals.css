@@ -1755,6 +1755,11 @@ nav[aria-label="Navigation"]
    in the gutter, already taken by the handle and the `+`. */
 .page-block-commented {
   position: relative;
+  --page-comment-accent: color-mix(
+    in oklab,
+    var(--page-color-teal) 70%,
+    transparent
+  );
 }
 
 .page-block-commented::before {
@@ -1765,7 +1770,18 @@ nav[aria-label="Navigation"]
   left: -0.75rem;
   width: 2px;
   border-radius: 1px;
-  background-color: color-mix(in oklab, var(--page-color-teal) 70%, transparent);
+  background-color: var(--page-comment-accent);
+}
+
+/* A frozen excerpt is underlined only while the same text still exists in the
+   commented block. Like the edge, this is an editor decoration rather than
+   document content. */
+.page-commented-passage {
+  text-decoration-line: underline;
+  text-decoration-color: var(--page-comment-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  text-decoration-skip-ink: auto;
 }
 
 /* The PASTILLE of a commented block: the count, and the button that opens the thread.

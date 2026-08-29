@@ -454,7 +454,7 @@ export function PageEditor({
       className={cn("page-editor", className)}
       data-gutter={editor && editable ? "" : undefined}
     >
-      {editor && editable && <BlockGutter editor={editor} />}
+      {editor && editable && <BlockGutter editor={editor} onComment={onComment} />}
       {/* The “Comment” bubble is placed in SCREEN coordinates: it does not need any positioned parent, and therefore does not request one from this
  container, which deliberately does not have one (see below). */}
       {editor && editable && onComment && (

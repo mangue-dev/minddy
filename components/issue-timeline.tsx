@@ -76,8 +76,9 @@ import {
  *
  * The first three (ticket, objective, return) are lines of `comments` and
  * fill it entirely. The fourth, the thread of a page, lives in its
- * own table (`page_comments`) and has neither attachment nor public visibility,
- * no @Numo response in progress: hence the optional ones. It is this interface, and not
+ * own table (`page_comments`) and has neither attachments nor public visibility;
+ * the remaining fields are optional because older page rows do not require them.
+ * It is this interface, and not
  * `Comment`, which says what this component actually READS — expanding it is what
  * avoided a fourth copy of the thread.
  */

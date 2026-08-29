@@ -54,7 +54,6 @@ export interface ChangelogEntry {
 
 /** Newest to oldest — this is the display order AND the order of the feed. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
-  { id: "open-source", date: "2026-08-26" },
   { id: "desktop-app", date: "2026-08-26" },
   { id: "activity-breakdowns", date: "2026-08-25" },
   { id: "custom-avatar", date: "2026-08-25" },

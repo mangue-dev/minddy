@@ -62,6 +62,14 @@ export function usePageComments({
   const { data, isPending } = useQuery({
     queryKey: pageCommentsKey(pageId),
     queryFn: () => fetchPageCommentsApi(projectId, pageId),
+    // Live text uses the per-comment broadcast topic; polling is the safety net
+    // for durable state transitions if a broadcast is missed.
+    refetchInterval: (query) =>
+      (query.state.data as PageComment[] | undefined)?.some(
+        (comment) => comment.assistant_status === "working"
+      )
+        ? 1500
+        : false,
   });
   const comments = useMemo(() => data ?? [], [data]);
 

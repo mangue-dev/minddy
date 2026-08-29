@@ -21,11 +21,54 @@ describe("page interface regressions", () => {
     );
   });
 
-  it("uses a pointer over the block handle and grabbing only while pressed", () => {
+  it("keeps the pointer cursor until a block drag actually starts", () => {
     const gutter = source("components/pages/block-gutter.tsx");
 
-    expect(gutter).toContain("cursor-pointer active:cursor-grabbing");
-    expect(gutter).not.toContain("cursor-grab active:cursor-grabbing");
+    expect(gutter).toContain("onElementDragStart={() => setDragging(true)}");
+    expect(gutter).toContain("onElementDragEnd={() => setDragging(false)}");
+    expect(gutter).toContain(
+      'dragging ? "cursor-grabbing" : "cursor-pointer"'
+    );
+    expect(gutter).not.toContain("active:cursor-grabbing");
+  });
+
+  it("shows the formatting toolbar only for focused text selections", () => {
+    const bubble = source("components/pages/page-comment-bubble.tsx");
+
+    expect(bubble).toContain("editor.view.hasFocus()");
+    expect(bubble).toContain("selection instanceof TextSelection");
+  });
+
+  it("uses app chrome for block comment annotations", () => {
+    const badge = source("components/pages/block-comment-badge.tsx");
+    const comments = source("components/pages/block-comments.ts");
+    const gutter = source("components/pages/block-gutter.tsx");
+    const css = source("app/globals.css");
+
+    expect(badge).toContain("<Tooltip");
+    expect(badge).toContain("<TooltipContent");
+    expect(comments).not.toContain(".title =");
+    expect(comments).toContain("Decoration.inline(range.from, range.to");
+    expect(css).toContain(".page-commented-passage");
+    expect(gutter).toContain("COMMENTED_GUTTER_SHIFT");
+  });
+
+  it("keeps page actions in a fixed header and opens the requested side-panel tab", () => {
+    const view = source("components/pages/page-view.tsx");
+    const history = source("components/pages/page-history.tsx");
+
+    expect(view).toContain(
+      'className="relative flex min-h-0 flex-1 flex-col"'
+    );
+    expect(view).toContain(
+      'className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6"'
+    );
+    expect(view).toContain('onOpenHistory={() => openHistory("versions")}');
+    expect(view).toContain('onClick={() => openHistory("activity")}');
+    expect(view).toContain("<MessageSquare");
+    expect(view).toContain("initialTab={historyTab}");
+    expect(history).toContain('initialTab = "activity"');
+    expect(history).toContain("if (open) setTab(initialTab)");
   });
 
   it("builds the full sidebar and open-page menu from one action list", () => {

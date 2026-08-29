@@ -35,20 +35,30 @@ import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
 
+import { BlockCommentBadge } from "@/components/pages/block-comment-badge";
+import { pageCommentHighlightRanges } from "@/lib/page-comment-highlights";
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 
 /** The classes that app/globals.css paints. */
-const COMMENTED_CLASS = "page-block-commented";
-const BADGE_CLASS = "page-block-comment-badge";
+export const COMMENTED_BLOCK_CLASS = "page-block-commented";
+const COMMENTED_PASSAGE_CLASS = "page-commented-passage";
 
 /** The attribute that carries the anchor: the layer reads it on click. */
 const BLOCK_ATTR = "data-block-id";
 
 export const blockCommentsKey = new PluginKey<DecorationSet>("blockComments");
 
-/** How many messages per commented block — the count carried by the pastille. */
-export type CommentedBlocks = ReadonlyMap<string, number>;
+export interface CommentedBlockDecoration {
+  /** How many messages the badge reports. */
+  count: number;
+  /** Frozen passages that should be underlined if they still exist. */
+  quotes: readonly string[];
+}
+
+export type CommentedBlocks = ReadonlyMap<string, CommentedBlockDecoration>;
 
 /** What the extension keeps for the layer: the thread opening hook, and
  the tag label (the widget cannot read the i18n catalog). */
@@ -74,33 +84,36 @@ export function documentBlockIds(editor: Editor | null): Set<string> {
   return ids;
 }
 
-/** The sticker: the count, and the click which opens the thread. */
+const badgeRoots = new WeakMap<globalThis.Node, Root>();
+
+/** The badge uses the same React tooltip primitive as the rest of the app. */
 function badge(
   blockId: string,
   count: number,
   storage: BlockCommentsStorage
 ): HTMLElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = BADGE_CLASS;
-  button.setAttribute(BLOCK_ATTR, blockId);
-  button.setAttribute("aria-label", storage.label);
-  button.title = storage.label;
-  button.contentEditable = "false";
-  button.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
-    `<span>${count}</span>`;
-  // `mousedown` rather than `click`, and `preventDefault` with: without that
-  // ProseMirror first places the cursor, which closes the thread that we open in
-  // moving the selection below it.
-  button.addEventListener("mousedown", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    storage.open?.(blockId);
-  });
-  return button;
+  const host = document.createElement("span");
+  host.contentEditable = "false";
+  const root = createRoot(host);
+  root.render(
+    createElement(BlockCommentBadge, {
+      blockId,
+      count,
+      label: storage.label,
+      onOpen: (id: string) => storage.open?.(id),
+    })
+  );
+  badgeRoots.set(host, root);
+  return host;
+}
+
+function destroyBadge(dom: globalThis.Node): void {
+  const root = badgeRoots.get(dom);
+  if (!root) return;
+  badgeRoots.delete(dom);
+  // Decoration teardown can happen inside a React-driven editor update.
+  // Defer unmounting so React never destroys a root during another render.
+  queueMicrotask(() => root.unmount());
 }
 
 function decorationsFor(
@@ -112,25 +125,41 @@ function decorationsFor(
   if (blocks.size === 0) return out;
   doc.descendants((node, pos) => {
     const id = node.attrs?.[PAGE_BLOCK_ID_ATTRIBUTE];
-    const count = typeof id === "string" ? blocks.get(id) : undefined;
-    if (typeof id === "string" && count) {
+    const annotation = typeof id === "string" ? blocks.get(id) : undefined;
+    if (typeof id === "string" && annotation) {
       out.push(
         Decoration.node(pos, pos + node.nodeSize, {
-          class: COMMENTED_CLASS,
+          class: COMMENTED_BLOCK_CLASS,
           [BLOCK_ATTR]: id,
         })
       );
+      for (const range of pageCommentHighlightRanges(
+        node,
+        pos,
+        annotation.quotes
+      )) {
+        out.push(
+          Decoration.inline(range.from, range.to, {
+            class: COMMENTED_PASSAGE_CLASS,
+          })
+        );
+      }
       // The widget is placed AT THE END of the block, and made out of flow by the CSS: at
       // start, it would be inserted before the first letter and shift the
       // text of a commented block in relation to its neighbors.
       out.push(
-        Decoration.widget(pos + node.nodeSize - 1, () => badge(id, count, storage), {
-          side: 1,
-          // It is NOT from the document: neither copied with the selection, nor counted
-          // in the positions that the block commands manipulate.
-          ignoreSelection: true,
-          marks: [],
-        })
+        Decoration.widget(
+          pos + node.nodeSize - 1,
+          () => badge(id, annotation.count, storage),
+          {
+            side: 1,
+            // It is NOT from the document: neither copied with the selection, nor counted
+            // in the positions that the block commands manipulate.
+            ignoreSelection: true,
+            marks: [],
+            destroy: destroyBadge,
+          }
+        )
       );
     }
     return false;
