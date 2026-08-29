@@ -20,6 +20,7 @@ export function getToolResultCharLimit(
     case "list_issues":
     case "search_issues":
     case "get_issue":
+    case "list_inbox":
       return 12_000;
     // A targeted routine may contain a 20,000-character instruction. The
     // default call stays compact, while this ceiling preserves the full JSON

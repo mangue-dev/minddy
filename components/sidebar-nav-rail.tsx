@@ -13,6 +13,10 @@ export type SidebarNavRailItem = {
  string is what the hover says and what a screen reader reads: the dot
  alone would tell nothing to anyone who doesn't see it. */
   indicator?: string;
+  /** Numeric attention count shown at the far edge of the row. */
+  count?: number;
+  /** Accessible description of the numeric count. */
+  countLabel?: string;
 };
 
 /**
@@ -92,10 +96,18 @@ export function SidebarNavRail({
                 <span className="relative flex min-w-0 flex-1 items-center gap-2">
                   {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
                   <span className="truncate">{item.label}</span>
+                  {item.count !== undefined && (
+                    <span
+                      className="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground"
+                      aria-label={item.countLabel}
+                    >
+                      {item.count > 99 ? "99+" : item.count}
+                    </span>
+                  )}
                   {item.indicator && (
                     <span
                       className="ml-auto flex items-center"
-                      title={item.indicator}
+                      aria-label={item.indicator}
                     >
                       <span
                         className="size-1.5 rounded-full bg-amber-500"

@@ -125,11 +125,13 @@ export interface AssistantMention {
  */
 export interface AssistantPageContext {
   projectId?: string;
+  /** The account-level inbox is the current ambient surface. */
+  inbox?: true;
   /**
- * Context PINED by hand from the composer (@ button), as opposed to
- * from the rest of this object, inferred from the page. It survives navigation: it's
- * the user who chose it, not the page that published it.
- */
+   * Context PINED by hand from the composer (@ button), as opposed to
+   * from the rest of this object, inferred from the page. It survives navigation: it's
+   * the user who chose it, not the page that published it.
+   */
   pinned?: AssistantPinnedContext[];
   /** Legacy (pre views-v2): the board tab the message was sent from. No longer
       populated — kept so old persisted messages still render their badge. */
@@ -168,10 +170,10 @@ export interface AssistantPageContext {
   /** Human date-range label ("6–19 juil") — used for the context badge. */
   cycleLabel?: string;
   /**
- * The opened wiki PAGE (MIN-273). The title travels with the id so that the
- * pill says it without rereading the page, and so that Numo can name it before
- * its first call of tool.
- */
+   * The opened wiki PAGE (MIN-273). The title travels with the id so that the
+   * pill says it without rereading the page, and so that Numo can name it before
+   * its first call of tool.
+   */
   pageId?: string;
   pageTitle?: string;
   pageIcon?: string | null;
@@ -200,21 +202,21 @@ export interface AssistantChatRequest {
     size_bytes: number;
   }>;
   /**
- * The "@" written in the message (members, projects), resolved on the client side.
- * Persisted on the message metadata and given to Numo in the form of a
- * resolution line name → id.
- */
+   * The "@" written in the message (members, projects), resolved on the client side.
+   * Persisted on the message metadata and given to Numo in the form of a
+   * resolution line name → id.
+   */
   mentions?: AssistantMention[];
   /**
- * The “/” command placed at the top of the message, when there is one. Validated
- * server, persisted on the message metadata and unfolded as a block
- * of instructions attached to this message (same mechanics as the mentions).
- */
+   * The “/” command placed at the top of the message, when there is one. Validated
+   * server, persisted on the message metadata and unfolded as a block
+   * of instructions attached to this message (same mechanics as the mentions).
+   */
   command?: AssistantCommandId;
   /**
- * The browser's IANA zone (MIN-185). Without it, "creates a routine every
- * Mondays at 1 p.m." would go into UTC without anyone knowing — and would find out weeks later, when the routine runs. This is
- * data that only the client knows: the server cannot guess it.
- */
+   * The browser's IANA zone (MIN-185). Without it, "creates a routine every
+   * Mondays at 1 p.m." would go into UTC without anyone knowing — and would find out weeks later, when the routine runs. This is
+   * data that only the client knows: the server cannot guess it.
+   */
   timezone?: string;
 }

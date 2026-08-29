@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { AssistantPageContext } from "@/lib/assistant-types";
-import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
+import {
+  DEFAULT_NUMO_STATUS,
+  type NumoDefaultStatus,
+} from "@/lib/numo-default-status";
 import { getKnowledgeTopicList } from "./knowledge";
 import { responseLanguageInstruction } from "@/lib/locale-language";
 
@@ -77,7 +80,7 @@ export function formatWikiMap(pages: PromptPage[] | undefined): string {
     for (const page of childrenOf.get(parentId) ?? []) {
       if (lines.length >= WIKI_MAP_LIMIT) return;
       lines.push(
-        `${"  ".repeat(depth)}- "${page.title.trim() || "(untitled)"}" (page id: ${page.id})`
+        `${"  ".repeat(depth)}- "${page.title.trim() || "(untitled)"}" (page id: ${page.id})`,
       );
       walk(page.id, depth + 1);
     }
@@ -227,7 +230,7 @@ const DISTRESS_BLOCK = `## If someone expresses distress or self-harm
 
 export function buildSharedRules(
   locale: string,
-  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
+  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS,
 ): string {
   return `## Rules
 - Respond in ${responseLanguageInstruction(locale, { mentionIssueTerm: true })}.
@@ -371,7 +374,7 @@ function formatStatusCounts(counts: Record<string, number>): string {
 export function buildSystemPrompt(
   project: PromptProjectContext,
   locale: string,
-  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
+  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS,
 ): string {
   const memberLines =
     project.members
@@ -430,7 +433,7 @@ ${buildSharedRules(locale, defaultStatus)}`;
 
 export function buildGlobalSystemPrompt(
   locale: string,
-  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
+  defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS,
 ): string {
   return `You are Numo, the AI assistant for minddy, a lightweight issue tracker (projects, kanban issues, objectives, saved views).
 You help users create, find and edit issues, triage, assign work, comment, and configure kanban views — through your tools, in natural language.
@@ -804,7 +807,10 @@ ${DISTRESS_BLOCK}`;
  *. The block also bears today's date: "the first of each month"
  * needs to know when it is.
  */
-export function buildClockBlock(timezone: string, now: Date = new Date()): string {
+export function buildClockBlock(
+  timezone: string,
+  now: Date = new Date(),
+): string {
   let local: string;
   try {
     local = new Intl.DateTimeFormat("en-US", {
@@ -830,15 +836,21 @@ export function buildClockBlock(timezone: string, now: Date = new Date()): strin
  */
 export function buildPageContextBlock(ctx: AssistantPageContext): string {
   const lines: string[] = [];
+  if (ctx.inbox) {
+    lines.push(
+      "- The user is looking at their Inbox.",
+      "When they ask what they missed, what is unread, what is waiting, or refer to notifications without another explicit target, call list_inbox. It returns read/unread state and exact target ids; do not guess from project activity.",
+    );
+  }
   if (ctx.issueId) {
     lines.push(
       `- Open issue: ${ctx.issueIdentifier ?? "(unknown identifier)"}${ctx.issueTitle ? ` — "${ctx.issueTitle}"` : ""} (id: ${ctx.issueId})${ctx.projectId ? ` in project (id: ${ctx.projectId})` : ""}.`,
-      `When the user says "ce ticket", "cette issue", "this issue", or similar, they mean the issue above — use its id directly, do not search for it.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`
+      `When the user says "ce ticket", "cette issue", "this issue", or similar, they mean the issue above — use its id directly, do not search for it.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`,
     );
     if (ctx.prNumber != null) {
       lines.push(
         `- Open pull request: #${ctx.prNumber}${ctx.prState ? ` (${ctx.prState})` : ""}, attached to that issue (opened by the code agent or by a human — both live on the same page).`,
-        `When the user says "cette PR", "this pull request", "la PR", "le diff", they mean this PR. To read or explain what it changes, call read_pull_request with the issue id above. To make changes to it, launch_code_agent on that same issue.`
+        `When the user says "cette PR", "this pull request", "la PR", "le diff", they mean this PR. To read or explain what it changes, call read_pull_request with the issue id above. To make changes to it, launch_code_agent on that same issue.`,
       );
     }
   } else if (ctx.issueIds?.length) {
@@ -851,40 +863,40 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
         const title = ctx.issueTitles?.[i];
         return `  - ${identifier ?? "(unknown identifier)"}${title ? ` — "${title}"` : ""} (id: ${id})`;
       }),
-      `When the user says "ces tickets", "la sélection", "these issues", "tous", or gives an instruction with no explicit target, they mean exactly the issues above — use their ids directly, do not search for them.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`
+      `When the user says "ces tickets", "la sélection", "these issues", "tous", or gives an instruction with no explicit target, they mean exactly the issues above — use their ids directly, do not search for them.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`,
     );
   } else if (ctx.objectiveId) {
     lines.push(
       `- Objective board: "${ctx.objectiveName ?? "(unknown name)"}" (id: ${ctx.objectiveId}).`,
-      `When the user says "cet objectif" / "this objective", they mean the objective above.`
+      `When the user says "cet objectif" / "this objective", they mean the objective above.`,
     );
   } else if (ctx.feedbackId) {
     lines.push(
       `- Open feedback post: "${ctx.feedbackTitle ?? "(untitled)"}" (id: ${ctx.feedbackId}).`,
-      `When the user says "ce feedback", "ce retour", "this feedback", "promeus-le", "réponds-lui" or similar, they mean the feedback post above — use its id directly with the feedback tools (get_feedback, promote_feedback_to_issue, link_feedback_to_issue, respond_to_feedback). Do not search for it.`
+      `When the user says "ce feedback", "ce retour", "this feedback", "promeus-le", "réponds-lui" or similar, they mean the feedback post above — use its id directly with the feedback tools (get_feedback, promote_feedback_to_issue, link_feedback_to_issue, respond_to_feedback). Do not search for it.`,
     );
   } else if (ctx.pageId) {
     lines.push(
       `- Open wiki page: "${ctx.pageTitle?.trim() || "(untitled)"}" (page id: ${ctx.pageId}).`,
-      `When the user says "cette page", "this page", "ce document", "cette doc" — or gives an instruction with no explicit target while on it ("résume", "transforme ça en tickets", "corrige ce paragraphe", "ajoute une section") — they mean the page above. Read it with get_page on that exact id, do not search for it. Write with append_to_page / edit_page_text rather than update_page: the user may be typing in that very document, and a full rewrite would overwrite them.`
+      `When the user says "cette page", "this page", "ce document", "cette doc" — or gives an instruction with no explicit target while on it ("résume", "transforme ça en tickets", "corrige ce paragraphe", "ajoute une section") — they mean the page above. Read it with get_page on that exact id, do not search for it. Write with append_to_page / edit_page_text rather than update_page: the user may be typing in that very document, and a full rewrite would overwrite them.`,
     );
   } else if (ctx.routineId) {
     lines.push(
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
       `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction, its cadence, its model), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; do not ask the user to repeat it.`,
-      `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`
+      `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
     );
   }
   if (ctx.viewId) {
     lines.push(
       `- Current kanban view: "${ctx.viewName ?? "(unnamed)"}" (id: ${ctx.viewId}).`,
-      `When the user asks to filter, sort, or otherwise change "this view" / "the current view" / "cette vue", edit THIS view with update_view (that exact id) — do NOT create a new view unless they explicitly ask for a new or separate one.`
+      `When the user asks to filter, sort, or otherwise change "this view" / "the current view" / "cette vue", edit THIS view with update_view (that exact id) — do NOT create a new view unless they explicitly ask for a new or separate one.`,
     );
   }
   if (ctx.cycleId) {
     lines.push(
       `- Their cycle (personal, cross-project week/fortnight): ${ctx.cycleLabel ?? "(current)"} (id: ${ctx.cycleId}).`,
-      `When the user says "mon cycle", "ma semaine", "remplis mon cycle" or a steering phrase like "priorise les fixs UI", they mean this cycle — use get_cycle / fill_cycle / add_issues_to_cycle / remove_issues_from_cycle. Steering phrases become fill_cycle weight boosts, never forced picks. Speak in effort sizes or % of capacity, never raw points.`
+      `When the user says "mon cycle", "ma semaine", "remplis mon cycle" or a steering phrase like "priorise les fixs UI", they mean this cycle — use get_cycle / fill_cycle / add_issues_to_cycle / remove_issues_from_cycle. Steering phrases become fill_cycle weight boosts, never forced picks. Speak in effort sizes or % of capacity, never raw points.`,
     );
   }
   // PINNED context: the user designated it himself (@ button on
@@ -907,7 +919,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
         }
         return `  - Team member ${item.label}${item.detail ? ` (${item.detail})` : ""} (user id: ${item.id}) — that id is what assignee fields take`;
       }),
-      `When the request has no other explicit target, it is about these — use their ids directly, do not search for them.`
+      `When the request has no other explicit target, it is about these — use their ids directly, do not search for them.`,
     );
   }
 

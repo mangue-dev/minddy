@@ -23,6 +23,7 @@ import {
   FileText,
   CalendarClock,
   IterationCw,
+  Inbox,
   Layers,
   LayoutGrid,
   MessagesSquare,
@@ -79,6 +80,10 @@ const STYLES: Record<
   routine: {
     icon: CalendarClock,
     tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
+  },
+  inbox: {
+    icon: Inbox,
+    tint: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
   },
   // The wiki: the same figure as the page tree in the sidebar.
   page: {
@@ -190,7 +195,9 @@ export function ContextPill({
           <span
             className={cn(
               "min-w-0 truncate font-medium",
-              disabled ? "text-muted-foreground line-through" : "text-foreground/80",
+              disabled
+                ? "text-muted-foreground line-through"
+                : "text-foreground/80",
             )}
           >
             {chip.label}

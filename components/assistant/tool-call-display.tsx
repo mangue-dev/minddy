@@ -29,6 +29,7 @@ import {
   GitPullRequest,
   GitPullRequestCreate,
   Globe,
+  Inbox,
   IterationCw,
   LayoutGrid,
   Link2,
@@ -97,11 +98,10 @@ interface ToolCallListProps {
 /** The proposition carried by a result of `propose_backlog`, if it has
  * survived the trip (result of an old format, truncated message, etc.). */
 function seedProposalOf(
-  result: unknown
+  result: unknown,
 ): { projectId: string; proposal: SeedProposal } | null {
   const r = result as
-    | { project_id?: unknown; proposal?: { issues?: unknown } }
-    | undefined;
+    { project_id?: unknown; proposal?: { issues?: unknown } } | undefined;
   if (typeof r?.project_id !== "string") return null;
   if (!Array.isArray(r.proposal?.issues) || r.proposal.issues.length === 0) {
     return null;
@@ -122,7 +122,7 @@ interface ToolMeta {
     result: Record<string, unknown> | undefined,
     success: boolean,
     status: string,
-    t: TranslateFn
+    t: TranslateFn,
   ) => string;
 }
 
@@ -144,7 +144,7 @@ function queryLabel(args: Record<string, unknown>): string {
 /** Count of rows in a `{key: [...]}` tool result. */
 function resultCount(
   result: Record<string, unknown> | undefined,
-  key: string
+  key: string,
 ): number {
   const rows = result?.[key] as Array<unknown> | undefined;
   return rows?.length ?? 0;
@@ -209,7 +209,9 @@ function prNumber(args: Record<string, unknown>): number | null {
 
 /** Reference of the ticket targeted when the tool carried one (otherwise: that of the run). */
 function targetIssue(args: Record<string, unknown>): string | null {
-  return typeof args.issue === "string" && args.issue.trim() ? args.issue.trim() : null;
+  return typeof args.issue === "string" && args.issue.trim()
+    ? args.issue.trim()
+    : null;
 }
 
 /**
@@ -238,6 +240,15 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingProjects");
       return t("foundProjects", { count: resultCount(result, "projects") });
+    },
+  },
+  list_inbox: {
+    icon: Inbox,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingInbox");
+      return t("foundInboxNotifications", {
+        count: resultCount(result, "notifications"),
+      });
     },
   },
   list_issues: {
@@ -456,7 +467,8 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingObjective");
       if (!success) return t("createObjectiveFailed");
-      const objective = result?.objective as Record<string, unknown> | undefined;
+      const objective = result?.objective as
+        Record<string, unknown> | undefined;
       const name = typeof objective?.name === "string" ? objective.name : null;
       return name
         ? t("objectiveCreatedWithName", { name })
@@ -480,9 +492,12 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("loadingObjective");
       if (!success) return t("objectiveNotFound");
-      const objective = result?.objective as Record<string, unknown> | undefined;
+      const objective = result?.objective as
+        Record<string, unknown> | undefined;
       const name = typeof objective?.name === "string" ? objective.name : null;
-      return name ? t("objectiveLoadedWithName", { name }) : t("objectiveLoaded");
+      return name
+        ? t("objectiveLoadedWithName", { name })
+        : t("objectiveLoaded");
     },
   },
   comment_objective: {
@@ -605,7 +620,8 @@ const TOOL_META: Record<string, ToolMeta> = {
       const removing = args.remove === true;
       if (status === "running")
         return removing ? t("unlinkingIssues") : t("linkingIssues");
-      if (!success) return removing ? t("unlinkIssuesFailed") : t("linkIssuesFailed");
+      if (!success)
+        return removing ? t("unlinkIssuesFailed") : t("linkIssuesFailed");
       return removing ? t("issuesUnlinked") : t("issuesLinked");
     },
   },
@@ -649,7 +665,9 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: MessagesSquare,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("addingFeedbackComment");
-      return success ? t("feedbackCommentAdded") : t("addFeedbackCommentFailed");
+      return success
+        ? t("feedbackCommentAdded")
+        : t("addFeedbackCommentFailed");
     },
   },
   respond_to_feedback: {
@@ -657,9 +675,12 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, _result, success, status, t) => {
       // The VIDED public response is not a published response: it is its
       // indent, and that's what the user should read in the thread.
-      const clearing = typeof args.response === "string" && !args.response.trim();
+      const clearing =
+        typeof args.response === "string" && !args.response.trim();
       if (status === "running")
-        return clearing ? t("clearingFeedbackResponse") : t("respondingToFeedback");
+        return clearing
+          ? t("clearingFeedbackResponse")
+          : t("respondingToFeedback");
       if (!success) return t("respondToFeedbackFailed");
       return clearing ? t("feedbackResponseCleared") : t("feedbackResponded");
     },
@@ -924,7 +945,10 @@ const TOOL_META: Record<string, ToolMeta> = {
   move_file: {
     icon: FileSymlink,
     getLabel: (args, _r, _s, _st, t) =>
-      t("agentMoveFile", { from: (args.from as string) || "…", to: (args.to as string) || "…" }),
+      t("agentMoveFile", {
+        from: (args.from as string) || "…",
+        to: (args.to as string) || "…",
+      }),
   },
   delete_file: {
     icon: FileX,
@@ -960,7 +984,9 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: FilePen,
     getLabel: (args, _r, _s, _st, t) => {
       const issue = targetIssue(args);
-      return issue ? t("agentUpdateIssueTarget", { issue }) : t("agentUpdateIssue");
+      return issue
+        ? t("agentUpdateIssueTarget", { issue })
+        : t("agentUpdateIssue");
     },
   },
   write_issue_plan: {
@@ -985,7 +1011,9 @@ const TOOL_META: Record<string, ToolMeta> = {
       const job = (args.job_id as string) || (result?.job_id as string) || "…";
       if (args.action === "stop") return t("agentBackgroundStop", { job });
       if (args.action === "check") return t("agentBackgroundCheck", { job });
-      return t("agentBackgroundStart", { command: (args.command as string) || "…" });
+      return t("agentBackgroundStart", {
+        command: (args.command as string) || "…",
+      });
     },
   },
   // Sous-agents (MIN-112). `toolArgSummary` persiste `{ mode, task, model,
@@ -1059,12 +1087,15 @@ const TOOL_META: Record<string, ToolMeta> = {
   comment_pr: {
     icon: MessageSquare,
     getLabel: (_a, _r, success, status, t) =>
-      status === "complete" && !success ? t("agentCommentPrFailed") : t("agentCommentPr"),
+      status === "complete" && !success
+        ? t("agentCommentPrFailed")
+        : t("agentCommentPr"),
   },
   comment_pr_line: {
     icon: MessageSquareCode,
     getLabel: (args, _r, success, status, t) => {
-      if (status === "complete" && !success) return t("agentCommentPrLineFailed");
+      if (status === "complete" && !success)
+        return t("agentCommentPrLineFailed");
       return t("agentCommentPrLine", {
         path: (args.path as string) || "…",
         line: typeof args.line === "number" ? args.line : 0,
@@ -1074,7 +1105,9 @@ const TOOL_META: Record<string, ToolMeta> = {
   reply_pr_thread: {
     icon: Reply,
     getLabel: (_a, _r, success, status, t) =>
-      status === "complete" && !success ? t("agentReplyPrThreadFailed") : t("agentReplyPrThread"),
+      status === "complete" && !success
+        ? t("agentReplyPrThreadFailed")
+        : t("agentReplyPrThread"),
   },
   // PROJECT pull requests (MIN-267): these have a number.
   list_pull_requests: {
@@ -1086,13 +1119,16 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, _r, success, status, t) => {
       if (status === "complete" && !success) return t("agentCommentPrFailed");
       const number = prNumber(args);
-      return number != null ? t("agentCommentPrTarget", { number }) : t("agentCommentPr");
+      return number != null
+        ? t("agentCommentPrTarget", { number })
+        : t("agentCommentPr");
     },
   },
   comment_pull_request_line: {
     icon: MessageSquareCode,
     getLabel: (args, _r, success, status, t) => {
-      if (status === "complete" && !success) return t("agentCommentPrLineFailed");
+      if (status === "complete" && !success)
+        return t("agentCommentPrLineFailed");
       return t("agentCommentPrLine", {
         path: (args.path as string) || "…",
         line: typeof args.line === "number" ? args.line : 0,
@@ -1102,7 +1138,9 @@ const TOOL_META: Record<string, ToolMeta> = {
   reply_pull_request_thread: {
     icon: Reply,
     getLabel: (_a, _r, success, status, t) =>
-      status === "complete" && !success ? t("agentReplyPrThreadFailed") : t("agentReplyPrThread"),
+      status === "complete" && !success
+        ? t("agentReplyPrThreadFailed")
+        : t("agentReplyPrThread"),
   },
   // The VERDICT carries the information: an approval and a request for
   // modifications do not commit the same thing, and the forge records them.
@@ -1111,7 +1149,8 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, _r, success, status, t) => {
       if (status === "complete" && !success) return t("agentReviewPrFailed");
       const number = prNumber(args) ?? 0;
-      if (args.verdict === "approve") return t("agentReviewPrApprove", { number });
+      if (args.verdict === "approve")
+        return t("agentReviewPrApprove", { number });
       if (args.verdict === "request_changes")
         return t("agentReviewPrRequestChanges", { number });
       return t("agentReviewPrComment", { number });
@@ -1260,7 +1299,7 @@ function summarizeActions(items: ToolCallItem[], t: TranslateFn): string {
   }
 
   const parts = ACTION_ORDER.filter((kind) => counts.get(kind)).map((kind) =>
-    t(SUMMARY_KEYS[kind], { count: counts.get(kind)! })
+    t(SUMMARY_KEYS[kind], { count: counts.get(kind)! }),
   );
   // A failure is no longer seen by the color of the line (the summary covers everything
   // the group, not on the wrongful action): it is SAID, at the end of the sentence.
@@ -1308,7 +1347,10 @@ function AskUserSummaryRow({
         className="group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
       >
         <ChevronRight
-          className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-90")}
+          className={cn(
+            "h-3 w-3 shrink-0 transition-transform",
+            open && "rotate-90",
+          )}
         />
         <MessageCircleQuestion className="h-3 w-3 shrink-0" />
         <span className="flex-1 truncate">{label}</span>
@@ -1341,13 +1383,18 @@ function ToolCallRow({ item, t }: { item: ToolCallItem; t: TranslateFn }) {
     <div
       className={cn(
         "flex items-center gap-2 py-0.5 text-xs",
-        isError ? "text-destructive" : "text-muted-foreground"
+        isError ? "text-destructive" : "text-muted-foreground",
       )}
     >
       <Icon className="h-3 w-3 shrink-0" />
       {/* Action IN PROGRESS → the label itself shimmer (no spinner: the text
  which breathes already says “it spins”, without adding a rotating object). */}
-      <span className={cn("flex-1 truncate", item.status === "running" && "text-shimmer")}>
+      <span
+        className={cn(
+          "flex-1 truncate",
+          item.status === "running" && "text-shimmer",
+        )}
+      >
         {label}
       </span>
       {isError ? <X className="h-3 w-3 shrink-0" /> : null}
@@ -1369,7 +1416,7 @@ export function ToolCallList({
 
   // ask_user (complete) renders as an interactive callout outside the list.
   const askUserCallouts = items.filter(
-    (i) => i.name === "ask_user" && i.status === "complete"
+    (i) => i.name === "ask_user" && i.status === "complete",
   );
   // The pending primer proposition takes the place of its line: it is a
   // insight to reread, not a past action.
@@ -1380,11 +1427,11 @@ export function ToolCallList({
             i.name === "propose_backlog" &&
             i.status === "complete" &&
             i.success !== false &&
-            seedProposalOf(i.result)
+            seedProposalOf(i.result),
         )
       : [];
   const calloutIds = new Set(
-    [...askUserCallouts, ...seedCallouts].map((i) => i.id)
+    [...askUserCallouts, ...seedCallouts].map((i) => i.id),
   );
   const rowItems = items.filter((i) => !calloutIds.has(i.id));
 
@@ -1396,7 +1443,8 @@ export function ToolCallList({
 
     const anyRunning = rowItems.some((i) => i.status === "running");
     const lastItem = rowItems[rowItems.length - 1];
-    const lastError = lastItem.status === "complete" && lastItem.success === false;
+    const lastError =
+      lastItem.status === "complete" && lastItem.success === false;
 
     // Salvo COMPLETED: the header line no longer shows the last action but
     // what the ENTIRE salvo did, and it is the SAME sentence folded or unfolded
@@ -1427,13 +1475,13 @@ export function ToolCallList({
             "group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal hover:bg-transparent",
             headerError
               ? "text-destructive"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <ChevronRight
             className={cn(
               "h-3 w-3 shrink-0 transition-transform",
-              expanded && "rotate-90"
+              expanded && "rotate-90",
             )}
           />
           <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>

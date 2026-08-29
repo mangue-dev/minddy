@@ -1184,7 +1184,7 @@ export function AppSidebar({
         )}
 
         {/* Footer */}
-        <div className={cn("pt-2 pb-4", GUTTER)}>
+        <div className={cn("pt-2 pb-2.5", GUTTER)}>
           <SidebarFooter
             collapsed={collapsed}
             onMenuOpenChange={overlay ? setMenuOpen : undefined}

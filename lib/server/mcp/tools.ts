@@ -149,6 +149,8 @@ import {
 import { registerPageTools } from "@/lib/server/mcp/page-tools";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
+import { readInboxNotifications } from "@/lib/server/inbox";
+import { buildInboxToolResult } from "@/lib/inbox-tool";
 import {
   compactToolDescription,
   type DiscoveryAnnotations,
@@ -931,6 +933,37 @@ export function registerMinddyTools(
           role: p.owner_id === auth.userId ? "owner" : "member",
         })),
       });
+    },
+  );
+
+  server.registerTool(
+    "minddy_list_inbox",
+    {
+      title: "List inbox",
+      description:
+        "Read the API key owner's inbox with read/unread state, timestamps, actors, " +
+        "comment excerpts, and target ids. Use it to answer what the user missed or " +
+        "what is waiting for them. Defaults to unread notifications.",
+      inputSchema: z.object({
+        state: z.enum(["all", "unread", "read"]).optional(),
+        category: z.enum(["all", "mentions"]).optional(),
+        query: z.string().max(500).optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+      }),
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const auth = requireUser(extra);
+      if ("error" in auth) return auth.error;
+
+      const service = getServiceClient();
+      const result = await readInboxNotifications({
+        client: service,
+        service,
+        userId: auth.userId,
+      });
+      if (result.error) return fail("database_error", result.error);
+      return ok(buildInboxToolResult(result.notifications, args));
     },
   );
 
@@ -3439,9 +3472,7 @@ export function registerMinddyTools(
   // Same cores as Numo (lib/server/cycles.ts): parity by construction.
 
   /** Common guard of cycle tools: auth + prefs (activated cycles). */
-  async function requireCycle(
-    extra: ToolExtra,
-  ): Promise<
+  async function requireCycle(extra: ToolExtra): Promise<
     | {
         userId: string;
         keyId: string | null;
