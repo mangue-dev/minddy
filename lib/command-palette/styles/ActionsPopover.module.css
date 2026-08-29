@@ -227,22 +227,6 @@
   gap: 3px;
 }
 
-.kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--cp-muted);
-  background: color-mix(in srgb, var(--cp-border) 35%, transparent);
-  border: 1px solid var(--cp-border);
-  border-radius: 3px;
-}
-
 /* =============================================================================
    EMPTY STATE
    ============================================================================= */

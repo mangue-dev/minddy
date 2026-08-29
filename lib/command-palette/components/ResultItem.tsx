@@ -11,6 +11,7 @@
 "use client";
 
 import { useCallback, memo, type ReactNode } from "react";
+import { Kbd } from "@/components/ui/kbd";
 import styles from "../styles/ResultItem.module.css";
 import type { PaletteItem } from "../types";
 
@@ -133,9 +134,9 @@ export const ResultItem = memo(function ResultItem({
       {item.shortcut && item.shortcut.length > 0 && !isMobile && (
         <span className={styles.shortcut}>
           {item.shortcut.map((key, i) => (
-            <kbd key={i} className={styles.kbd}>
+            <Kbd key={i}>
               {key}
-            </kbd>
+            </Kbd>
           ))}
         </span>
       )}

@@ -10,6 +10,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
+import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
 import { SearchIcon } from "../icons";
 import styles from "../styles/SearchBar.module.css";
@@ -172,7 +173,7 @@ export function SearchBar({
 
       {value.length > 0 && onTab && tabHint && historyIndex < 0 && (
         <div className={styles.tabHint}>
-          <kbd className={styles.tabKbd}>Tab</kbd>
+          <Kbd>Tab</Kbd>
           <span className={styles.tabLabel}>{tabHint}</span>
         </div>
       )}

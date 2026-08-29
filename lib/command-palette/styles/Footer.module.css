@@ -46,21 +46,6 @@
   gap: 2px;
 }
 
-.kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  font-size: var(--cp-fs-kbd);
-  font-family: var(--cp-font-mono, monospace);
-  background: var(--cp-bg);
-  border: 1px solid var(--cp-border);
-  border-radius: var(--cp-radius-sm);
-  color: var(--cp-muted);
-}
-
 .label {
   font-size: var(--cp-fs-text);
   color: var(--cp-muted);

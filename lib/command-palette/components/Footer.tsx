@@ -10,6 +10,7 @@
 
 "use client";
 
+import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
 import { isApplePlatform } from "../hooks/usePalette";
 import styles from "../styles/Footer.module.css";
@@ -59,7 +60,7 @@ export function Footer({
         <span className={styles.logo}>{footerLogo}</span>
         {showExpandHint ? (
           <div className={styles.hint}>
-            <kbd className={styles.kbd}>↓</kbd>
+            <Kbd>↓</Kbd>
             <span className={styles.label}>{t("footer.expand")}</span>
           </div>
         ) : view === "search" && hasActions ? (
@@ -78,14 +79,14 @@ export function Footer({
       <div className={styles.hints}>
         {showExpandHint ? (
           <div className={styles.hint}>
-            <kbd className={styles.kbd}>↓</kbd>
+            <Kbd>↓</Kbd>
             <span className={styles.label}>{t("footer.expand")}</span>
           </div>
         ) : (
           <>
             {showDefaultActionHint && (
               <div className={styles.hint}>
-                <kbd className={styles.kbd}>↵</kbd>
+                <Kbd>↵</Kbd>
                 <span className={styles.label}>{defaultActionLabel}</span>
               </div>
             )}
@@ -96,9 +97,9 @@ export function Footer({
               <div className={styles.hint}>
                 <span className={styles.keys}>
                   {actionsKbd.map((key, i) => (
-                    <kbd key={i} className={styles.kbd}>
+                    <Kbd key={i}>
                       {key}
-                    </kbd>
+                    </Kbd>
                   ))}
                 </span>
                 <span className={styles.label}>{t("footer.actions")}</span>
