@@ -611,27 +611,29 @@ function AuthorValue({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="-mr-1.5 flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+        >
+          {identity}
+        </span>
+      </TooltipTrigger>
+      {/* Keep the copy action on the icon itself: hovering the author only
+          reveals the address, while clicking the explicit control copies it. */}
+      <TooltipContent className="flex items-center gap-2">
+        {email}
         <button
           type="button"
           onClick={copy}
           aria-label={copied ? t("emailCopied") : t("copyEmail")}
-          className="-mr-1.5 flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+          className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-background/70 outline-none transition-colors hover:bg-background/15 hover:text-background focus-visible:bg-background/15 focus-visible:text-background focus-visible:ring-1 focus-visible:ring-background/60"
         >
-          {identity}
+          {copied ? (
+            <Check aria-hidden="true" className="size-3.5" />
+          ) : (
+            <Copy aria-hidden="true" className="size-3.5" />
+          )}
         </button>
-      </TooltipTrigger>
-      {/* Email, and the icon gesture — “Copy email” written in all
-          letters next to the address doubled the width of the tooltip to
-          repeat what a pair of leaves already says. The checkmark that replaces
-          the icon is acknowledgment; the word remains, but
-          `aria-label`, for those who do not see the icon. */}
-      <TooltipContent className="flex items-center gap-2">
-        {email}
-        {copied ? (
-          <Check className="size-3.5 shrink-0" />
-        ) : (
-          <Copy className="size-3.5 shrink-0 text-muted-foreground" />
-        )}
       </TooltipContent>
     </Tooltip>
   );
@@ -2064,18 +2066,22 @@ function FeedbackDetail({
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
           />
+        </div>
+        </div>
+      </div>
+
+      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
+        <div className="mx-auto max-w-3xl">
           <CommentComposer
             members={members}
             projectId={projectId}
             onSubmit={handleComment}
-            // Without a published board, a public comment has no pages where
-            // displayed: the toggle remains visible but off, and says
-            // why rather than disappearing without explanation.
+            // Without a published board, a public comment has nowhere to appear.
+            // Keep the toggle visible but disabled so the missing setting is explicit.
             publicOption={{
               disabledReason: boardEnabled ? undefined : t("publicNeedsBoard"),
             }}
           />
-        </div>
         </div>
       </div>
 
