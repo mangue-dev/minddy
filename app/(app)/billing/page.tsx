@@ -58,7 +58,9 @@ export default function BillingPage() {
           <div>
             <h2 className="text-sm font-semibold">{t("plansTitle")}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              {t("plansSubtitle")}
+              {status?.adminOverride
+                ? t("adminOverrideSectionSubtitle")
+                : t("plansSubtitle")}
             </p>
           </div>
           <PlanSection />

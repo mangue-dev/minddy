@@ -13,6 +13,13 @@ import type { UsageHistoryFeature } from "@/lib/usage-features";
 export interface BillingStatusResponse {
   planId: BillingPlanId;
   source: "admin_override" | "stripe" | "default";
+  /** Present only while an admin override is active. */
+  adminOverride: {
+    /** null means that the override has no time limit. */
+    expiresAt: string | null;
+    /** Plan that applies when the override is removed or expires. */
+    basePlanId: BillingPlanId;
+  } | null;
   /** Stripe service actually operated by this instance. */
   managedBilling: boolean;
   /** AI quota actually operated by this instance. */

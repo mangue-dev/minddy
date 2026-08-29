@@ -453,7 +453,13 @@ function GlobalBoardInner() {
   const openProject = openIssue ? projectMap.get(openPid) : undefined;
 
   if (loading || viewsLoading || projectsLoading) {
-    return <BoardLoadingSkeleton position={boardScrollPosition} />;
+    return (
+      <BoardLoadingSkeleton
+        position={boardScrollPosition}
+        specialView={cycleMode}
+        showCreateIssue={!cycleMode}
+      />
+    );
   }
 
   const boardHandlers = {
@@ -498,8 +504,6 @@ function GlobalBoardInner() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
-        {/* The page title jumps in the only case where there is nothing at all:
- the screen is then reduced to what there is to do. */}
         {cycleMode && cycles?.enabled && selectedCycle ? (
           // Title line: date-selector left, Ask Numo right — the gauges live
           // on the pills row below.
@@ -511,11 +515,7 @@ function GlobalBoardInner() {
             />
             <CycleAskNumo onAskNumo={askNumoAboutCycle} />
           </div>
-        ) : nothingAnywhere ? null : (
-          <h1 className="font-display text-lg font-semibold tracking-tight">
-            {cycleMode ? tBoard("cycleTab") : t("allTitle")}
-          </h1>
-        )}
+        ) : null}
         {/* Nothing anywhere: no toolbar above a screen that
  has only one thing to offer. */}
         {!nothingAnywhere && (
