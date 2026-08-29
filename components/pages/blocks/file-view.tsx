@@ -7,8 +7,9 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Download, File as FileIcon, RotateCcw } from "lucide-react";
+import { Download, RotateCcw } from "lucide-react";
 import { cx } from "@/components/pages/blocks/cx";
+import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
   NODE_LINK_CLASS,
   isPlainNavigationClick,
@@ -41,6 +42,10 @@ export function FileView({ node, selected }: NodeViewProps) {
   const name =
     (node.attrs.name as string | null) || upload?.file.name || t("blockFile");
   const size = (node.attrs.size as number | null) ?? upload?.file.size ?? 0;
+  const mime =
+    (node.attrs.mime as string | null) ||
+    upload?.file.type ||
+    "application/octet-stream";
 
   // The rule lives in lib/page-files.ts, along with the rest of what this module knows
   // of a file address — and it is tested there.
@@ -64,8 +69,10 @@ export function FileView({ node, selected }: NodeViewProps) {
       )}
       contentEditable={false}
     >
-      <FileIcon
-        className={cx("size-4 shrink-0 text-muted-foreground", !src && "opacity-60")}
+      <ResourceTypeIcon
+        mime={mime}
+        name={name}
+        className={cx("size-4", !src && "opacity-60")}
       />
 
       <span className="min-w-0 flex-1">

@@ -31,6 +31,7 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import {
   ChatInput,
+  type ChatInputContextAttachments,
   type ChatInputHandle,
 } from "@/components/assistant/chat-input";
 import {
@@ -823,17 +824,21 @@ export const AssistantShell = forwardRef<
                   onMentionQuery={onMentionQuery}
                   onAddContext={addPinned}
                   commands={slashCommands}
-                  contextSlot={
+                  contextSlot={(attachments: ChatInputContextAttachments) => (
                     <AssistantContextBar
                       chips={chips}
+                      resources={attachments.resources}
+                      pending={attachments.pending}
                       disabledKeys={disabledKeys}
                       onToggle={toggleChip}
                       onRemove={removePinned}
+                      onRemoveResource={attachments.onRemove}
+                      onRemovePending={attachments.onRemovePending}
                       onAdd={addPinned}
                       scopeProjectId={projectId}
                       showAddButton={false}
                     />
-                  }
+                  )}
                 />
               </div>
             </div>

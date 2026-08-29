@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Button,
   CommandDialog,
@@ -23,16 +23,9 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import {
-  FileSpreadsheet,
-  FileText,
-  ImageIcon,
-  Link2,
-  Paperclip,
-  Plus,
-  X,
-} from "lucide-react";
-import { EntityPill, PillIcon, type PillRadius } from "@/components/entity-pill";
+import { FileText, Link2, Paperclip, Plus, X } from "lucide-react";
+import { EntityPill, type PillRadius } from "@/components/entity-pill";
+import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
   attachmentPreviewKind,
   type AttachmentPreviewKind,
@@ -41,7 +34,13 @@ import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { flattenPageTree } from "@/lib/pages";
+import { formatFileSize } from "@/lib/page-files";
 import type { PendingResource } from "@/lib/use-attachment-uploads";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Saved rows (with id) and just-added composer entries (without) alike, in the
@@ -86,10 +85,6 @@ export function attachmentFileUrl(storagePath: string, download = false): string
 export function attachmentPreviewUrl(storagePath: string): string {
   const qs = new URLSearchParams({ path: storagePath, preview: "1" });
   return `/api/attachments/file?${qs.toString()}`;
-}
-
-function isImage(mime: string): boolean {
-  return mime.startsWith("image/");
 }
 
 /** Paperclip button + hidden multi-file input, shared by every composer that
@@ -186,19 +181,23 @@ export function AddResourceButton({
         }}
       />
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("add")}
-            title={t("add")}
-            disabled={disabled}
-            className={cn("rounded-full text-muted-foreground", className)}
-          >
-            <Plus className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("add")}
+                disabled={disabled}
+                className={cn("rounded-full text-muted-foreground", className)}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t("add")}</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
             <Paperclip className="size-4" />
@@ -522,42 +521,53 @@ export function DropOverlay({
   );
 }
 
-function TypeIcon({ mime, className }: { mime: string; className?: string }) {
-  const Icon = isImage(mime)
-    ? ImageIcon
-    : mime === "application/pdf"
-      ? FileText
-      : mime === "text/csv" || mime.includes("spreadsheet") || mime.includes("excel")
-        ? FileSpreadsheet
-        : Paperclip;
-  return <Icon className={className} aria-hidden />;
+const RESOURCE_NAME_LIMIT = 24;
+
+/** Keep compact labels predictable while preserving a useful file extension. */
+export function compactResourceName(name: string): string {
+  if (name.length <= RESOURCE_NAME_LIMIT) return name;
+  const extension = name.match(/\.[^.\s]{1,8}$/)?.[0] ?? "";
+  const headLength = Math.max(8, RESOURCE_NAME_LIMIT - extension.length - 1);
+  return `${name.slice(0, headLength).trimEnd()}…${extension}`;
 }
 
-function formatBytes(n: number, mb: string, kb: string): string {
-  if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} ${mb}`;
-  return `${Math.max(1, Math.round(n / 1024))} ${kb}`;
+/** Adds a visual break before the extension without changing the filename text. */
+function CompactResourceName({ name }: { name: string }) {
+  const compactName = compactResourceName(name);
+  const extensionStart = compactName.indexOf("….");
+  if (extensionStart === -1) return compactName;
+
+  const ellipsisEnd = extensionStart + 1;
+  return (
+    <>
+      <span className="sr-only">{name}</span>
+      <span aria-hidden>
+        {compactName.slice(0, ellipsisEnd)}
+        <span className="inline-block w-px" />
+        {compactName.slice(ellipsisEnd)}
+      </span>
+    </>
+  );
 }
 
-/** A tint per resource type, in the context pill table of
- Numo: a page is indigo HERE AS THERE. A file remains gray — it
- has no nature to announce, its MIME figure already says so. */
-const KIND_TINT: Record<"file" | "link" | "page", string | undefined> = {
-  file: undefined,
-  link: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
-  page: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
-};
+/** Transparent leading slot matching the 20px figure used by context pills. */
+function ResourceFigure({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="flex size-5 shrink-0 items-center justify-center">
+      {children}
+    </span>
+  );
+}
 
 function AttachmentPreview({
   kind,
-  storagePath,
+  src,
   fileName,
 }: {
   kind: AttachmentPreviewKind;
-  storagePath: string;
+  src: string;
   fileName: string;
 }) {
-  const src = attachmentPreviewUrl(storagePath);
-
   if (kind === "image") {
     return (
       // Storage file behind an authenticated response; next/image cannot optimize it.
@@ -595,33 +605,29 @@ function AttachmentPreview({
 /**
  * Common display for resources everywhere in the app — a file, a link and a
  * page read as the same chip, which is the whole point of the notion (MIN-184,
- * MIN-275). What differs is only what fits inside: a file shows its type icon
- * and its weight, a link its favicon, a page its emoji — and neither of those
- * two has a size to speak of.
+ * MIN-275). What differs is only the direct leading figure: a color-coded file
+ * type icon, a link favicon, or a page emoji.
  *
- * - `pill` — minddy's common pill ([entity-pill.tsx](entity-pill.tsx)),
- * that of the Numo context: same concentric rays, same tinted figure,
- * same superimposed cross. Clicking previews a browser-compatible file,
- * downloads an unsupported one, opens a link in a tab, or opens a page in the app.
- * - `ultra-compact` — icon + truncated name only, for dense surfaces (chat
- * bubbles, reply rows).
+ * It uses the exact same envelope as Numo's context pills. The leading slot has
+ * the same geometry too, while keeping the colored file icon free of any tile.
+ * Clicking previews a browser-compatible file, downloads an unsupported one,
+ * opens a link in a tab, or opens a page in the app.
  *
  * `pending` renders the in-flight entries of a composer as spinner pills.
  */
 export function ResourcePills({
   resources,
   pending,
-  variant = "pill",
   radius = "full",
   onRemove,
   canRemove,
   onRemovePending,
   className,
   pillClassName,
+  fileHref,
 }: {
   resources?: ResourceLike[];
   pending?: PendingResource[];
-  variant?: "pill" | "ultra-compact";
   /** Pill radius — figure follows (concentric rays). `md` for
  Numo composer nesting. */
   radius?: PillRadius;
@@ -632,72 +638,61 @@ export function ResourcePills({
   className?: string;
   /** Applied to each chip — e.g. `shadow-none` in the Numo composer. */
   pillClassName?: string;
+  /** Override file delivery for isolated previews that do not use private
+      attachment storage. Product surfaces should keep the authenticated
+      default. */
+  fileHref?: (
+    resource: ResourceLike,
+    disposition: "preview" | "download"
+  ) => string;
 }) {
   const t = useTranslations("Resources");
+  const locale = useLocale();
   const [preview, setPreview] = useState<ResourceLike | null>(null);
 
   const done = resources ?? [];
   const inFlight = pending ?? [];
   if (done.length === 0 && inFlight.length === 0) return null;
 
-  const compact = variant === "ultra-compact";
   const activePreviewKind = attachmentPreviewKind(preview?.mime_type);
   const activePreviewPath = preview?.storage_path ?? null;
-  const compactClass = cn(
-    "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[11px] text-foreground/90",
-    pillClassName
-  );
-
-  /** The chip's leading square — a MIME type icon, a favicon, or an emoji. */
-  const iconTile = (inner: React.ReactNode, tint?: string) =>
-    compact ? (
-      inner
-    ) : (
-      <PillIcon radius={radius} tint={tint}>
-        {inner}
-      </PillIcon>
-    );
-
-  /** The page emoji, or the default wiki icon — same tile as the
- remains, so that all three genders read on a single line. */
+  const activePreviewSrc =
+    preview && activePreviewPath
+      ? fileHref?.(preview, "preview") ?? attachmentPreviewUrl(activePreviewPath)
+      : null;
+  /** Page and link figures stay direct too, matching the file-type icons. */
   const pageIcon = (emoji: string | null | undefined) =>
-    iconTile(
-      emoji ? (
-        <span className={compact ? "text-[10px] leading-none" : "text-[11px] leading-none"}>
-          {emoji}
-        </span>
+    <ResourceFigure>
+      {emoji ? (
+        <span className="text-xs leading-none">{emoji}</span>
       ) : (
         <FileText
-          className={compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"}
+          className="size-4 text-indigo-500 dark:text-indigo-400"
           aria-hidden
         />
-      ),
-      // An emoji wears its own color: the hue would go against it.
-      emoji ? undefined : KIND_TINT.page
-    );
+      )}
+    </ResourceFigure>;
 
-  const linkIcon = (iconDataUrl: string | null | undefined) =>
-    iconTile(
-      // A favicon is an inline data URI — next/image has nothing to optimize,
-      // and the fallback covers the sites that have none.
-      iconDataUrl ? (
+  const linkIcon = (iconDataUrl: string | null | undefined) => (
+    <ResourceFigure>
+      {/* A favicon is an inline data URI — next/image has nothing to optimize,
+          and the fallback covers the sites that have none. */}
+      {iconDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={iconDataUrl}
           alt=""
           aria-hidden
-          className={
-            compact ? "size-3 shrink-0 rounded-[2px]" : "h-3.5 w-3.5 object-contain"
-          }
+          className="size-4 rounded-[2px] object-contain"
         />
       ) : (
         <Link2
-          className={compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"}
+          className="size-4 text-sky-600 dark:text-sky-400"
           aria-hidden
         />
-      ),
-      iconDataUrl ? undefined : KIND_TINT.link
-    );
+      )}
+    </ResourceFigure>
+  );
 
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
@@ -716,6 +711,9 @@ export function ResourcePills({
         const path = a.storage_path ?? null;
         const mime = a.mime_type ?? "application/octet-stream";
         const previewKind = !url && !pageId ? attachmentPreviewKind(mime) : null;
+        const fullName = pageId
+          ? (a.page?.title?.trim() || a.file_name)
+          : a.file_name;
         const label = url
           ? t("openLink")
           : pageId
@@ -731,30 +729,27 @@ export function ResourcePills({
               ? linkIcon(a.icon_data_url)
               : pageId
                 ? pageIcon(a.page?.icon)
-                : iconTile(
-                    <TypeIcon
-                      mime={mime}
-                      className={
-                        compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"
-                      }
-                    />
+                : (
+                    <ResourceFigure>
+                      <ResourceTypeIcon
+                        mime={mime}
+                        name={a.file_name}
+                        className="size-4"
+                      />
+                    </ResourceFigure>
                   )}
             <span
+              title={fullName}
               className={cn(
                 "truncate",
-                !compact && "min-w-0 font-medium text-foreground/80",
+                "min-w-0 font-medium text-foreground/80",
                 // Page gone to the trash: the title remains readable, but nothing
                 // does not pretend that it can be opened.
                 pageId && !pageHref && "text-muted-foreground line-through"
               )}
             >
-              {pageId ? (a.page?.title?.trim() || a.file_name) : a.file_name}
+              <CompactResourceName name={fullName} />
             </span>
-            {!compact && !url && !pageId && (
-              <span className="shrink-0 text-muted-foreground">
-                {formatBytes(a.size_bytes ?? 0, t("mb"), t("kb"))}
-              </span>
-            )}
           </>
         );
         const removable = !!onRemove && (canRemove?.(a) ?? true);
@@ -768,17 +763,22 @@ export function ResourcePills({
                 href={pageHref}
                 title={label}
                 aria-label={label}
-                className="flex min-w-0 items-center gap-[inherit] hover:underline"
+                className="flex min-w-0 items-center gap-[inherit] no-underline"
               >
                 {body}
               </Link>
             ) : pageId ? (
-              <span
-                title={label}
-                className="flex min-w-0 items-center gap-[inherit]"
-              >
-                {body}
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    tabIndex={0}
+                    className="flex min-w-0 items-center gap-[inherit] outline-none"
+                  >
+                    {body}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t("pageUnavailable")}</TooltipContent>
+              </Tooltip>
             ) : url ? (
               <a
                 href={url}
@@ -786,7 +786,7 @@ export function ResourcePills({
                 rel="noopener noreferrer"
                 title={url}
                 aria-label={label}
-                className="flex min-w-0 items-center gap-[inherit] hover:underline"
+                className="flex min-w-0 items-center gap-[inherit] no-underline"
               >
                 {body}
               </a>
@@ -795,15 +795,15 @@ export function ResourcePills({
                 type="button"
                 onClick={() => setPreview(a)}
                 title={label}
-                className="flex min-w-0 items-center gap-[inherit] hover:underline"
+                className="flex min-w-0 items-center gap-[inherit]"
               >
                 {body}
               </button>
             ) : path ? (
               <a
-                href={attachmentFileUrl(path, true)}
+                href={fileHref?.(a, "download") ?? attachmentFileUrl(path, true)}
                 title={label}
-                className="flex min-w-0 items-center gap-[inherit] hover:underline"
+                className="flex min-w-0 items-center gap-[inherit] no-underline"
               >
                 {body}
               </a>
@@ -814,31 +814,11 @@ export function ResourcePills({
         );
         const key = a.id ?? url ?? pageId ?? path ?? a.file_name;
 
-        // The dense form keeps its own envelope: it lives in a bubble of
-        // conversation, where the common pill would be twice too big.
-        if (compact) {
-          return (
-            <span key={key} className={compactClass}>
-              {inner}
-              {removable && (
-                <button
-                  type="button"
-                  onClick={() => onRemove(a)}
-                  title={t("remove")}
-                  className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  <X className="size-3" aria-hidden />
-                  <span className="sr-only">{t("remove")}</span>
-                </button>
-              )}
-            </span>
-          );
-        }
-
         return (
           <EntityPill
             key={key}
             radius={radius}
+            highlight
             className={pillClassName}
             action={
               removable
@@ -857,59 +837,55 @@ export function ResourcePills({
 
       {inFlight
         .filter((p) => p.status === "uploading")
-        .map((p) =>
-          compact ? (
-            <span
-              key={p.localId}
-              className={cn(compactClass, "text-muted-foreground")}
-            >
-              <Spinner className="size-3 shrink-0" />
-              <span className="truncate">{p.file_name}</span>
-              {onRemovePending && (
-                <button
-                  type="button"
-                  onClick={() => onRemovePending(p.localId)}
-                  title={t("remove")}
-                  className="shrink-0 rounded-full p-0.5 hover:bg-accent hover:text-foreground"
-                >
-                  <X className="size-3" aria-hidden />
-                  <span className="sr-only">{t("remove")}</span>
-                </button>
-              )}
+        .map((p) => (
+          <EntityPill
+            key={p.localId}
+            radius={radius}
+            highlight
+            className={cn("text-muted-foreground", pillClassName)}
+            action={
+              onRemovePending
+                ? {
+                    label: t("remove"),
+                    onClick: () => onRemovePending(p.localId),
+                    icon: <X className="size-3" />,
+                  }
+                : undefined
+            }
+          >
+            <ResourceFigure>
+              <Spinner className="size-4 text-muted-foreground" />
+            </ResourceFigure>
+            <span className="min-w-0 truncate" title={p.file_name}>
+              <CompactResourceName name={p.file_name} />
             </span>
-          ) : (
-            <EntityPill
-              key={p.localId}
-              radius={radius}
-              className={cn("text-muted-foreground", pillClassName)}
-              action={
-                onRemovePending
-                  ? {
-                      label: t("remove"),
-                      onClick: () => onRemovePending(p.localId),
-                      icon: <X className="size-3" />,
-                    }
-                  : undefined
-              }
-            >
-              <PillIcon radius={radius}>
-                <Spinner className="h-3 w-3" />
-              </PillIcon>
-              <span className="min-w-0 truncate">{p.file_name}</span>
-            </EntityPill>
-          )
-        )}
+          </EntityPill>
+        ))}
 
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 !rounded-2xl sm:max-w-[calc(100%-2rem)] data-vaul-drawer:h-[96dvh] data-vaul-drawer:max-h-[96dvh]">
+        <DialogContent className="flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 !rounded-2xl sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]">
           <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5 pr-14">
-            <DialogTitle className="min-w-0 flex-1 truncate text-sm font-medium">
-              {preview?.file_name}
-            </DialogTitle>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="truncate text-sm font-medium">
+                {preview?.file_name}
+              </DialogTitle>
+              {preview?.size_bytes != null && (
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {formatFileSize(preview.size_bytes, locale)}
+                </p>
+              )}
+            </div>
             {preview && activePreviewPath && (
               <div className="flex shrink-0 items-center gap-2">
                 <Button asChild size="sm" variant="outline">
-                  <a href={attachmentFileUrl(activePreviewPath, true)}>{t("download")}</a>
+                  <a
+                    href={
+                      fileHref?.(preview, "download") ??
+                      attachmentFileUrl(activePreviewPath, true)
+                    }
+                  >
+                    {t("download")}
+                  </a>
                 </Button>
                 {onRemove && (canRemove?.(preview) ?? true) && (
                   <Button
@@ -927,10 +903,10 @@ export function ResourcePills({
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-hidden bg-muted/30">
-            {preview && activePreviewPath && activePreviewKind && (
+            {preview && activePreviewSrc && activePreviewKind && (
               <AttachmentPreview
                 kind={activePreviewKind}
-                storagePath={activePreviewPath}
+                src={activePreviewSrc}
                 fileName={preview.file_name}
               />
             )}

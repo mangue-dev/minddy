@@ -36,7 +36,16 @@ import {
   filterCommands,
   type SlashCommandOption,
 } from "@/components/assistant/slash-menu";
-import { ResourcePills, DropOverlay, useFileDrop } from "@/components/resources";
+import {
+  ResourcePills,
+  DropOverlay,
+  useFileDrop,
+  type ResourceLike,
+} from "@/components/resources";
+import {
+  ScrollableContextRow,
+  type AdaptiveContextItem,
+} from "@/components/assistant/adaptive-context-row";
 import { SearchMenu } from "@/components/search-menu";
 import { SendShortcutKeys } from "@/components/send-shortcut";
 import { Kbd } from "@/components/ui/kbd";
@@ -47,7 +56,10 @@ import {
   filterMentionItems,
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import {
+  useAttachmentUploads,
+  type PendingResource,
+} from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
 import type {
   AssistantCommandId,
@@ -128,6 +140,13 @@ function createMentionNode(option: MentionOption): HTMLSpanElement {
   return pill;
 }
 
+export interface ChatInputContextAttachments {
+  resources: ResourceLike[];
+  pending: PendingResource[];
+  onRemove: (resource: ResourceLike) => void;
+  onRemovePending: (localId: string) => void;
+}
+
 interface ChatInputProps {
   onSend: (
     message: string,
@@ -160,12 +179,13 @@ interface ChatInputProps {
    */
   hideAttach?: boolean;
   /**
-   * Context row placed at the top of the composer, above the text (the
-   * Numo context pills and the @ button). She lives with the appellant: the
-   * composer knows nothing about what she is wearing, he just lends her his place —
-   * whose radius is calculated for a concentric nesting.
+   * Context row placed at the top of the composer, above the text. A render
+   * function receives the current uploads so the host can merge every context
+   * item into one adaptive row.
    */
-  contextSlot?: ReactNode;
+  contextSlot?:
+    | ReactNode
+    | ((attachments: ChatInputContextAttachments) => ReactNode);
   /**
    * Place the context row in a banner behind the top of the composer.
    * The agent's conversations bring together the choices which determine his
@@ -272,7 +292,58 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const { user } = useAuth();
     const userId = user?.id;
     const uploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
-        // The agent accepts a message that steers it while it works
+    const uploadedResources = uploads.pending.filter(
+      (entry) => entry.status === "done",
+    );
+    const removeUploadedResource = useCallback(
+      (resource: ResourceLike) => {
+        const match = uploads.pending.find(
+          (entry) => entry.storage_path === resource.storage_path,
+        );
+        if (match) uploads.remove(match.localId);
+      },
+      [uploads],
+    );
+    const contextAttachments: ChatInputContextAttachments = {
+      resources: uploadedResources,
+      pending: uploads.pending,
+      onRemove: removeUploadedResource,
+      onRemovePending: uploads.remove,
+    };
+    const mergedContext =
+      typeof contextSlot === "function"
+        ? contextSlot(contextAttachments)
+        : contextSlot;
+    const contextIncludesAttachments = typeof contextSlot === "function";
+    const standaloneAttachmentItems: AdaptiveContextItem[] = [
+      ...uploadedResources.map((resource) => ({
+        key: `resource:${resource.localId}`,
+        render: () => (
+          <ResourcePills
+            radius="md"
+            className="flex-nowrap"
+            pillClassName="shadow-none"
+            resources={[resource]}
+            onRemove={removeUploadedResource}
+          />
+        ),
+      })),
+      ...uploads.pending
+        .filter((resource) => resource.status === "uploading")
+        .map((resource) => ({
+          key: `pending:${resource.localId}`,
+          render: () => (
+            <ResourcePills
+              radius="md"
+              className="flex-nowrap"
+              pillClassName="shadow-none"
+              pending={[resource]}
+              onRemovePending={uploads.remove}
+            />
+          ),
+        })),
+    ];
+    // The agent accepts a message that steers it while it works
     // (`sendWhileStreaming`): its files must remain reachable in this
     // same case. The Numo cat keeps its button hidden as long as it generates.
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
@@ -983,9 +1054,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
  turns on or off — otherwise the editor loses focus (the FocusScope of the
  Sheet then rests it on the shell) and the text typed during the
  response disappears. */}
-        {contextSlot && contextPlacement === "above" ? (
+        {mergedContext && contextPlacement === "above" ? (
           <div className="relative z-0 mx-3 -mb-7 flex min-h-[70px] items-start rounded-t-[1.5rem] bg-muted/60 px-2 pt-2 dark:bg-muted/35">
-            {contextSlot}
+            {mergedContext}
           </div>
         ) : null}
         <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
@@ -1001,29 +1072,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {...(canAttach ? drop.handlers : {})}
         >
           <DropOverlay show={canAttach && drop.dragging} />
-          {/* Context row (pills + @ button), provided by the host. She
- scrolls horizontally and therefore keeps its own row: the
- attachments are stacked below. Concentric
- nesting: the surface is rounded-2xl (--radius-2xl =
- --radius + 8px = 24px), so a pill in rounded-md
- (--radius - 2px = 14px) + the 10px (p-2.5) which separate it du
- edge === 24px. */}
-          {contextPlacement === "inside" ? contextSlot : null}
-          {uploads.pending.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
-              <ResourcePills
-                radius="md"
-                pillClassName="shadow-none"
-                resources={uploads.pending.filter((p) => p.status === "done")}
-                pending={uploads.pending}
-                onRemove={(a) => {
-                  const match = uploads.pending.find(
-                    (p) => p.storage_path === a.storage_path
-                  );
-                  if (match) uploads.remove(match.localId);
-                }}
-                onRemovePending={uploads.remove}
-              />
+          {/* The host can merge semantic context and attachments into this
+          single adaptive row. Concentric nesting: the surface is rounded-2xl
+          (24px), while its rounded-md pills sit behind a 10px gutter. */}
+          {contextPlacement === "inside" ? mergedContext : null}
+          {!contextIncludesAttachments && standaloneAttachmentItems.length > 0 && (
+            <div className="px-2.5 pt-2.5">
+              <ScrollableContextRow items={standaloneAttachmentItems} />
             </div>
           )}
           <div className="relative max-h-[180px] min-h-[52px] overflow-y-auto px-4 pb-1 pt-3">

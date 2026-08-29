@@ -78,6 +78,7 @@ export interface PillAction {
 export function EntityPill({
   radius = "full",
   dimmed = false,
+  highlight = false,
   ariaLabel,
   action,
   className,
@@ -86,6 +87,8 @@ export function EntityPill({
   radius?: PillRadius;
   /** Extinguished Pill: Diminished, but still there. */
   dimmed?: boolean;
+  /** Highlight the entire envelope when its content is interactive. */
+  highlight?: boolean;
   ariaLabel?: string;
   action?: PillAction;
   className?: string;
@@ -96,7 +99,9 @@ export function EntityPill({
       aria-label={ariaLabel}
       data-disabled={dimmed || undefined}
       className={cn(
-        "group/pill relative flex min-w-0 max-w-full items-center gap-1.5 border border-border bg-card py-1 pl-1 pr-2.5 text-xs shadow-sm transition-opacity",
+        "group/pill relative flex min-w-0 max-w-full items-center gap-1.5 border border-border bg-card py-1 pl-1 pr-2.5 text-xs shadow-sm transition-colors",
+        highlight &&
+          "hover:border-foreground/15 hover:bg-accent/70 focus-within:border-foreground/15 focus-within:bg-accent/70",
         radius === "full" ? "rounded-full" : "rounded-md",
         dimmed && "opacity-60",
         className
@@ -106,7 +111,9 @@ export function EntityPill({
       {action && (
         <span
           className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-[inherit] bg-gradient-to-l from-card via-card to-transparent pl-4 pr-1 transition-opacity",
+            "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-[inherit] bg-gradient-to-l from-card via-card to-transparent pl-4 pr-1 transition-[opacity,--tw-gradient-from,--tw-gradient-via]",
+            highlight &&
+              "group-hover/pill:from-accent group-hover/pill:via-accent",
             // On the keyboard, it is the focus of the button which reveals it - otherwise we
             // would rely on an invisible.
             action.persistent

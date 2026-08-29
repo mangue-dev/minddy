@@ -76,12 +76,12 @@ const PUBLIC_ROUTES = new Set([
  * `/og` = the sharing tile (app/og/route.tsx): without it, Slack, `/p/` = wiki pages published for reading (MIN-283) — the route validates its
  * token itself, just like `/share/`.
  */
-const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/", "/p/", "/og", "/md", "/api/runtime-config"];
+const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/", "/p/", "/og", "/md", "/api/runtime-config", "/attachments-debug"];
 
 /** Public but not indexed: the URL IS the secret, or there is nothing to index.
  `/p/` is (MIN-283): publishing a page does not make it findable on
  Google, and it is not an option — neither here nor in the dialog. */
-const NOINDEX_PREFIXES = ["/share/", "/f/", "/p/"];
+const NOINDEX_PREFIXES = ["/share/", "/f/", "/p/", "/attachments-debug"];
 
 // Custom domains (MIN-36): paths served as is on a host
 //custom. `/f/` + `/share/` = cross-navigation by token (site tabs
@@ -105,7 +105,7 @@ const CUSTOM_HOST_TOKEN_PREFIXES: ReadonlyArray<{ prefix: string; kind: PublicTo
 // switch the default theme to "system" instead of "dark" (MIN-60). The header
 // being placed on the server side, the anti-FOUC script of the layout chooses the correct default
 // from the first paint.
-const PUBLIC_SITE_PREFIXES = ["/f/", "/share/", "/p/"];
+const PUBLIC_SITE_PREFIXES = ["/f/", "/share/", "/p/", "/attachments-debug"];
 const PUBLIC_THEME_HEADER = "x-minddy-public";
 const LOCALE_HEADER = "x-minddy-locale";
 const ROUTE_HEADER = "x-minddy-route";
