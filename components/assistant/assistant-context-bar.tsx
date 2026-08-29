@@ -1,7 +1,7 @@
 "use client";
 
-// The context row of Numo's composer: what he has in front of him, plus the
-// @ button that lets you add one.
+// The context row of Numo's composer: what it currently has in front of it.
+// New pinned context is added from the composer's left-side add menu.
 //
 // The row NEVER crosses the line — a board with view, cycle and selection
 // would make the composition grow by three rows. It scrolls horizontally, without
@@ -403,6 +403,7 @@ export function AssistantContextBar({
   onAdd,
   scopeProjectId,
   inputDisabled,
+  showAddButton = true,
 }: {
   chips: AssistantContextChip[];
   disabledKeys: ReadonlySet<string>;
@@ -413,7 +414,10 @@ export function AssistantContextBar({
   onAdd: (item: AssistantPinnedContext) => void;
   scopeProjectId: string | null;
   inputDisabled?: boolean;
+  showAddButton?: boolean;
 }) {
+  if (chips.length === 0 && !showAddButton) return null;
+
   return (
     <div className="flex items-center gap-1.5 px-2.5 pt-2.5">
       {chips.length > 0 && (
@@ -432,11 +436,13 @@ export function AssistantContextBar({
           ))}
         </HScroller>
       )}
-      <AddContextButton
-        scopeProjectId={scopeProjectId}
-        onAdd={onAdd}
-        disabled={inputDisabled}
-      />
+      {showAddButton && (
+        <AddContextButton
+          scopeProjectId={scopeProjectId}
+          onAdd={onAdd}
+          disabled={inputDisabled}
+        />
+      )}
     </div>
   );
 }

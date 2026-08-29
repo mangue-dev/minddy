@@ -313,6 +313,7 @@
   },
   "Resources": {
     "attach": "Attach files",
+    "addFiles": "Add files",
     "add": "Add a resource",
     "addFile": "Attachment",
     "addLink": "Link",
@@ -504,6 +505,7 @@
     "contextIgnored": "{label}; ignored",
     "contextScrollPrev": "Scroll left",
     "contextScrollNext": "Scroll right",
+    "addFilesOrContext": "Add files or context",
     "addContext": "Add context",
     "addContextMember": "Team member",
     "addContextProject": "Project",

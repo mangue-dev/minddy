@@ -821,6 +821,7 @@ export const AssistantShell = forwardRef<
                   disabled={aiAvailability.loading}
                   mentionables={mentionables}
                   onMentionQuery={onMentionQuery}
+                  onAddContext={addPinned}
                   commands={slashCommands}
                   contextSlot={
                     <AssistantContextBar
@@ -830,6 +831,7 @@ export const AssistantShell = forwardRef<
                       onRemove={removePinned}
                       onAdd={addPinned}
                       scopeProjectId={projectId}
+                      showAddButton={false}
                     />
                   }
                 />

@@ -14,14 +14,19 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   Button,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
+  CommandShortcut,
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
-import { ArrowUp, Paperclip, Square } from "lucide-react";
+import { ArrowUp, Paperclip, Plus, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionChip } from "@/components/mention-chip";
 import {
+  MentionFigure,
   MentionSuggestions,
   filterMentions,
   type MentionOption,
@@ -32,11 +37,19 @@ import {
   type SlashCommandOption,
 } from "@/components/assistant/slash-menu";
 import { ResourcePills, DropOverlay, useFileDrop } from "@/components/resources";
+import { SearchMenu } from "@/components/search-menu";
 import { SendShortcutKeys } from "@/components/send-shortcut";
+import { Kbd } from "@/components/ui/kbd";
+import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
-import type { AssistantCommandId, AssistantMention } from "@/lib/assistant-types";
+import type {
+  AssistantCommandId,
+  AssistantMention,
+  AssistantPinnedContext,
+} from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import {
   Tooltip,
@@ -48,6 +61,8 @@ import {
     text-ish) — MIN-24 scope. */
 const ACCEPT =
   "image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json,.log";
+const DEFAULT_ADD_CONTEXT_RESULTS = 10;
+const ATTACHMENT_SHORTCUT_KEY = "a";
 
 /** The envelope of a mention in the editor: a NON-editable, empty node, in
  which React carries the real pill (MentionChip). Composing it does not redraw
@@ -94,6 +109,20 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
       : {}),
     ...(node.dataset.mentionColor ? { color: node.dataset.mentionColor } : {}),
   };
+}
+
+function createMentionNode(option: MentionOption): HTMLSpanElement {
+  const pill = document.createElement("span");
+  pill.contentEditable = "false";
+  pill.dataset.mentionType = option.type;
+  pill.dataset.mentionId = option.id;
+  pill.dataset.mentionLabel = option.label;
+  if (option.avatarSeed) pill.dataset.mentionSeed = option.avatarSeed;
+  const iconAttr = option.iconUrl ?? option.icon;
+  if (iconAttr) pill.dataset.mentionIcon = iconAttr;
+  if (option.color) pill.dataset.mentionColor = option.color;
+  pill.className = MENTION_SLOT_CLASS;
+  return pill;
 }
 
 interface ChatInputProps {
@@ -149,6 +178,9 @@ interface ChatInputProps {
    */
   mentionables?: MentionOption[];
   onMentionQuery?: (active: boolean) => void;
+  /** Adds a mentionable entity to Numo's pinned context. When provided, the
+   * left-side add button combines this flat picker with file upload. */
+  onAddContext?: (item: AssistantPinnedContext) => void;
   /**
    * The “/” commands offered when the message STARTS with a slash.
    * Empty/absent = no slash menu at all (composers outside the Numo shell).
@@ -209,6 +241,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       contextPlacement = "inside",
       mentionables,
       onMentionQuery,
+      onAddContext,
       commands,
       initialValue,
       leadingControls,
@@ -221,10 +254,16 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   ) {
     const t = useTranslations("Assistant");
     const isSend = useIsSendShortcut();
+    const modKey = useModKey();
     const tAttach = useTranslations("Resources");
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [addMenuOpen, setAddMenuOpen] = useState(false);
+    const [addMenuQuery, setAddMenuQuery] = useState("");
+    const [addMenuContainer, setAddMenuContainer] = useState<HTMLElement | null>(
+      null,
+    );
     const [isEmpty, setIsEmpty] = useState(true);
     const [isFocused, setIsFocused] = useState(false);
     const { user } = useAuth();
@@ -234,9 +273,55 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     // (`sendWhileStreaming`): its files must remain reachable in this
     // same case. The Numo cat keeps its button hidden as long as it generates.
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
+    const hasMentionMenu = mentionables !== undefined || !!onAddContext;
+    const canAdd = canAttach || !!onAddContext;
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
     });
+
+    const addMenuAnchorRef = useCallback((node: HTMLDivElement | null) => {
+      setAddMenuContainer(
+        node
+          ? (node.closest('[data-slot="sheet-content"]') as HTMLElement | null)
+          : null,
+      );
+    }, []);
+
+    const handleAddMenuOpenChange = useCallback(
+      (open: boolean) => {
+        setAddMenuOpen(open);
+        if (open) onMentionQuery?.(true);
+        else setAddMenuQuery("");
+      },
+      [onMentionQuery],
+    );
+
+    const addContextOptions = useMemo(
+      () =>
+        addMenuQuery.trim()
+          ? (mentionables ?? [])
+          : (mentionables ?? []).slice(0, DEFAULT_ADD_CONTEXT_RESULTS),
+      [addMenuQuery, mentionables],
+    );
+
+    const handleAttachShortcut = useCallback(
+      (e: React.KeyboardEvent) => {
+        if (
+          !canAttach ||
+          disabled ||
+          !userId ||
+          !matchesModShiftCombo(e, ATTACHMENT_SHORTCUT_KEY)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        setAddMenuOpen(false);
+        setAddMenuQuery("");
+        fileInputRef.current?.click();
+      },
+      [canAttach, disabled, userId],
+    );
 
     const serializeContent = useCallback((): string => {
       const el = editorRef.current;
@@ -390,16 +475,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         range.setEnd(found.node, found.end);
         range.deleteContents();
 
-        const pill = document.createElement("span");
-        pill.contentEditable = "false";
-        pill.dataset.mentionType = option.type;
-        pill.dataset.mentionId = option.id;
-        pill.dataset.mentionLabel = option.label;
-        if (option.avatarSeed) pill.dataset.mentionSeed = option.avatarSeed;
-        const iconAttr = option.iconUrl ?? option.icon;
-        if (iconAttr) pill.dataset.mentionIcon = iconAttr;
-        if (option.color) pill.dataset.mentionColor = option.color;
-        pill.className = MENTION_SLOT_CLASS;
+        const pill = createMentionNode(option);
         range.insertNode(pill);
 
         // Unbreakable space after the pill: without it, the caret finds itself
@@ -423,6 +499,46 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         syncMentionSlots();
       },
       [readMention, onMentionQuery, syncMentionSlots],
+    );
+
+    const addContextOption = useCallback(
+      (option: MentionOption) => {
+        if (onAddContext) {
+          onAddContext({
+            kind: option.type,
+            id: option.id,
+            label: option.label,
+            ...(option.detail ? { detail: option.detail } : {}),
+            ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
+            ...(option.color !== undefined ? { color: option.color } : {}),
+          });
+        } else {
+          const el = editorRef.current;
+          if (!el) return;
+          const current = el.textContent ?? "";
+          if (current && !/[\s ]$/.test(current)) {
+            el.appendChild(document.createTextNode(" "));
+          }
+          const pill = createMentionNode(option);
+          const space = document.createTextNode(" ");
+          el.append(pill, space);
+
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.setStart(space, 1);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          el.focus();
+          setIsEmpty(false);
+          syncMentionSlots();
+        }
+        setAddMenuOpen(false);
+        setAddMenuQuery("");
+      },
+      [onAddContext, syncMentionSlots],
     );
 
     /** The mentions actually made in the text, duplicated. */
@@ -820,6 +936,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           className,
         )}
         onMouseDown={handleContainerMouseDown}
+        onKeyDownCapture={handleAttachShortcut}
       >
         {/* Each mention placed in the text receives ITS pill, carried in its
  envelope: same component as in the bubble sent, so never
@@ -949,10 +1066,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
             <div className="flex min-w-0 items-center gap-1.5">
-              {leadingControls}
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              {canAttach && (
+              {canAdd && (
                 <>
                   <input
                     ref={fileInputRef}
@@ -965,19 +1079,102 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       e.target.value = "";
                     }}
                   />
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    disabled={disabled || !userId}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
-                    aria-label={tAttach("attach")}
-                    title={tAttach("attach")}
-                  >
-                    <Paperclip className="size-4" />
-                  </Button>
+                  {hasMentionMenu ? (
+                    <div ref={addMenuAnchorRef} className="shrink-0">
+                      <SearchMenu
+                        open={addMenuOpen}
+                        onOpenChange={handleAddMenuOpenChange}
+                        align="start"
+                        container={addMenuContainer}
+                        tooltip={t("addFilesOrContext")}
+                        searchPlaceholder={t("addContext")}
+                        searchValue={addMenuQuery}
+                        onSearchValueChange={setAddMenuQuery}
+                        contentClassName="w-80"
+                        trigger={
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            disabled={disabled}
+                            className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                            aria-label={t("addFilesOrContext")}
+                          >
+                            <Plus className="size-4" />
+                          </Button>
+                        }
+                      >
+                        {canAttach && (
+                          <CommandGroup>
+                            <CommandItem
+                              forceMount
+                              value={tAttach("addFiles")}
+                              disabled={!userId}
+                              aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
+                              onSelect={() => {
+                                fileInputRef.current?.click();
+                                setAddMenuOpen(false);
+                                setAddMenuQuery("");
+                              }}
+                              className="gap-2"
+                            >
+                              <Paperclip className="size-4 text-muted-foreground" />
+                              {tAttach("addFiles")}
+                              <CommandShortcut className="inline-flex items-center gap-0.5 tracking-normal">
+                                <Kbd size="sm">{modKey}</Kbd>
+                                <Kbd size="sm">
+                                  {modKey === "⌘" ? "⇧" : "Shift"}
+                                </Kbd>
+                                <Kbd size="sm">
+                                  {ATTACHMENT_SHORTCUT_KEY.toUpperCase()}
+                                </Kbd>
+                              </CommandShortcut>
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
+                        {canAttach && !!mentionables?.length && <CommandSeparator />}
+                        <CommandGroup>
+                          {addContextOptions.map((option) => (
+                            <CommandItem
+                              key={`${option.type}:${option.id}`}
+                              value={`${option.label} ${option.detail ?? ""} ${(option.keywords ?? []).join(" ")}`}
+                              onSelect={() => addContextOption(option)}
+                              className="gap-2"
+                            >
+                              <MentionFigure option={option} />
+                              <span className="min-w-0 truncate">
+                                {option.label}
+                                {option.detail && (
+                                  <span className="ml-1.5 text-muted-foreground">
+                                    {option.detail}
+                                  </span>
+                                )}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </SearchMenu>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      disabled={disabled || !userId}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                      aria-label={tAttach("addFiles")}
+                      aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
+                      title={tAttach("addFiles")}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  )}
                 </>
               )}
+              {leadingControls}
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
                 <Button
                   size="icon-sm"
