@@ -66,8 +66,7 @@ export function TaskRow({
       <div
         className={cn(
           "min-w-0 flex-1 text-sm leading-relaxed",
-          struck && "text-muted-foreground line-through [&_*]:text-muted-foreground",
-          task.state === "in_progress" && "font-medium"
+          struck && "text-muted-foreground line-through [&_*]:text-muted-foreground"
         )}
       >
         <Markdown className="[&_p]:my-0">{task.text}</Markdown>

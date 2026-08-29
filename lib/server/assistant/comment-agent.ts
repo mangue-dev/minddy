@@ -72,6 +72,25 @@ export function mentionsNumo(body: string): boolean {
 }
 
 /**
+ * Build the recipients for a Numo comment without notifying the person whose
+ * comment triggered the reply. Other eligible participants still receive the
+ * same notification as they would for a regular comment.
+ */
+export function numoCommentNotificationTargets(
+  requesterId: string,
+  memberIds: Set<string>,
+  candidates: Array<string | null | undefined>
+): string[] {
+  const targets = new Set<string>();
+  for (const userId of candidates) {
+    if (userId && userId !== requesterId && memberIds.has(userId)) {
+      targets.add(userId);
+    }
+  }
+  return [...targets];
+}
+
+/**
  * Linear-style continuation: a reply posted right under a Numo comment
  * re-triggers Numo without needing a new @numo mention. Threads are flat
  * (depth ≤ 1), so "replying to Numo" = the thread's LAST comment before this
@@ -352,26 +371,20 @@ export async function runCommentMention({
     );
 
     // Notifications, like a regular comment: issue owner/assignee + thread
-    // root author, members only — PLUS the requester. A human comment never
-    // notifies its own author, but this one is Numo's: the person it just
-    // answered is precisely who has something new to read. The 'comment'
-    // category of the account settings gates the whole thing, as usual.
+    // root author, members only. The requester already initiated and sees the
+    // live reply, so notifying them would announce the result of their own action.
     const valid = await projectMemberIds(service, issue.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
       .select("author_id")
       .eq("id", rootId)
       .maybeSingle();
-    const targets = new Set<string>();
-    for (const uid of [
-      actorId,
+    const targets = numoCommentNotificationTargets(actorId, valid, [
       rootComment?.author_id,
       issue.created_by,
       issue.assignee_id,
-    ] as (string | null | undefined)[]) {
-      if (uid && valid.has(uid)) targets.add(uid);
-    }
-    const rows: NotificationRow[] = [...targets].map((uid) => ({
+    ]);
+    const rows: NotificationRow[] = targets.map((uid) => ({
       user_id: uid,
       project_id: issue.project_id as string,
       type: "comment" as const,
@@ -591,22 +604,18 @@ export async function runObjectiveCommentMention({
     );
 
     // Notifications: the objective's lead + the thread root author, members
-    // only — plus the requester, whom Numo just answered (see the issue twin).
+    // only, excluding the requester who initiated Numo's reply.
     const valid = await projectMemberIds(service, objective.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
       .select("author_id")
       .eq("id", rootId)
       .maybeSingle();
-    const targets = new Set<string>();
-    for (const uid of [
-      actorId,
+    const targets = numoCommentNotificationTargets(actorId, valid, [
       rootComment?.author_id,
       objective.lead_user_id,
-    ] as (string | null | undefined)[]) {
-      if (uid && valid.has(uid)) targets.add(uid);
-    }
-    const rows: NotificationRow[] = [...targets].map((uid) => ({
+    ]);
+    const rows: NotificationRow[] = targets.map((uid) => ({
       user_id: uid,
       project_id: objective.project_id as string,
       type: "comment" as const,
@@ -859,24 +868,19 @@ export async function runFeedbackCommentMention({
       finalContent || commentFallbackDone(locale)
     );
 
-    // Notifications: the thread root author, members only — plus the
-    // requester, whom Numo just answered (see the issue twin). (A feedback
-    // post has no owner/assignee/lead.)
+    // Notifications: the thread root author, members only, excluding the
+    // requester who initiated Numo's reply. A feedback post has no owner,
+    // assignee, or lead.
     const valid = await projectMemberIds(service, post.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
       .select("author_id")
       .eq("id", rootId)
       .maybeSingle();
-    const targets = new Set<string>();
-    for (const uid of [actorId, rootComment?.author_id] as (
-      | string
-      | null
-      | undefined
-    )[]) {
-      if (uid && valid.has(uid)) targets.add(uid);
-    }
-    const rows: NotificationRow[] = [...targets].map((uid) => ({
+    const targets = numoCommentNotificationTargets(actorId, valid, [
+      rootComment?.author_id,
+    ]);
+    const rows: NotificationRow[] = targets.map((uid) => ({
       user_id: uid,
       project_id: post.project_id as string,
       type: "comment" as const,
