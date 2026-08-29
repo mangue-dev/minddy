@@ -43,6 +43,10 @@ import { Kbd } from "@/components/ui/kbd";
 import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
+import {
+  filterMentionItems,
+  findActiveMentionQuery,
+} from "@/lib/mention-menu";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
 import type {
@@ -61,7 +65,6 @@ import {
     text-ish) — MIN-24 scope. */
 const ACCEPT =
   "image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json,.log";
-const DEFAULT_ADD_CONTEXT_RESULTS = 10;
 const ATTACHMENT_SHORTCUT_KEY = "a";
 
 /** The envelope of a mention in the editor: a NON-editable, empty node, in
@@ -297,10 +300,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     );
 
     const addContextOptions = useMemo(
-      () =>
-        addMenuQuery.trim()
-          ? (mentionables ?? [])
-          : (mentionables ?? []).slice(0, DEFAULT_ADD_CONTEXT_RESULTS),
+      () => filterMentionItems(mentionables ?? [], addMenuQuery),
       [addMenuQuery, mentionables],
     );
 
@@ -424,14 +424,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!el.contains(node)) return null;
       const end = sel.anchorOffset;
       const before = (node.textContent ?? "").slice(0, end);
-      // An “@” at the beginning of a word only — not that of an email address.
-      const match = /(^|[\s ])@([^\s @]{0,30})$/.exec(before);
+      const match = findActiveMentionQuery(before);
       if (!match) return null;
       return {
         node: node as Text,
-        start: end - match[2].length - 1,
+        start: match.start,
         end,
-        query: match[2],
+        query: match.query,
       };
     }, []);
 
@@ -1090,6 +1089,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         searchPlaceholder={t("addContext")}
                         searchValue={addMenuQuery}
                         onSearchValueChange={setAddMenuQuery}
+                        shouldFilter={false}
                         contentClassName="w-80"
                         trigger={
                           <Button

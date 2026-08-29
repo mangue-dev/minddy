@@ -10,11 +10,13 @@
 // FIGURE and the LINE: a person, a project, a ticket, an objective, a page
 // from the wiki are recognized by the same sign on both sides.
 
+import { useEffect, useRef } from "react";
 import { BookText, FileText } from "lucide-react";
 import { cn } from "mangue-ui";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
+import { filterMentionItems } from "@/lib/mention-menu";
 
 export interface MentionOption {
   type: "member" | "project" | "issue" | "objective" | "page";
@@ -40,18 +42,8 @@ export interface MentionOption {
 export function filterMentions(
   options: MentionOption[],
   query: string,
-  limit = 6,
 ): MentionOption[] {
-  const q = query.trim().toLowerCase();
-  return options
-    .filter((o) =>
-      q
-        ? [o.label, ...(o.keywords ?? [])].some((term) =>
-            term.toLowerCase().includes(q),
-          )
-        : true,
-    )
-    .slice(0, limit);
+  return filterMentionItems(options, query);
 }
 
 /** The figure of an option — the same as that of its pill once placed. */
@@ -130,6 +122,8 @@ export function MentionOptionRow({
   return (
     <button
       type="button"
+      role="option"
+      aria-selected={active}
       onMouseDown={(e) => {
         e.preventDefault();
         onPick();
@@ -166,12 +160,22 @@ export function MentionSuggestions({
   onHover: (index: number) => void;
   className?: string;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    listRef.current
+      ?.querySelector<HTMLElement>('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, options]);
+
   if (options.length === 0) return null;
 
   return (
     <div
+      ref={listRef}
+      role="listbox"
       className={cn(
-        "absolute bottom-full z-50 mb-1 max-h-56 w-64 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md",
+        "scrollbar-quiet absolute bottom-full z-50 mb-1 max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
         className,
       )}
     >

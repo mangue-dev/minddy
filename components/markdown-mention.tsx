@@ -19,6 +19,7 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
 } from "react";
 import { Extension, type Editor } from "@tiptap/core";
@@ -28,7 +29,12 @@ import {
   ReactRenderer,
   type NodeViewProps,
 } from "@tiptap/react";
-import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
+import {
+  Suggestion,
+  type SuggestionMatch,
+  type SuggestionProps,
+  type Trigger,
+} from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { useMentionLinks } from "@/components/mention-links";
@@ -39,6 +45,7 @@ import {
 } from "@/components/mention-suggest";
 import { memberLabel, type MentionScan, type ScannedMention } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
+import { findActiveMentionQuery } from "@/lib/mention-menu";
 
 /* ── The node ───────────────────────────── ────────────────────────────── */
 
@@ -214,7 +221,13 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
   ref,
 ) {
   const [selected, setSelected] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => setSelected(0), [props.items]);
+  useEffect(() => {
+    listRef.current
+      ?.querySelector<HTMLElement>('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selected, props.items]);
 
   const choose = (index: number) => {
     const item = props.items[index];
@@ -244,7 +257,11 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
   if (props.items.length === 0) return null;
 
   return (
-    <div className="max-h-56 w-72 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg">
+    <div
+      ref={listRef}
+      role="listbox"
+      className="scrollbar-quiet max-h-56 w-72 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-1 shadow-lg"
+    >
       {props.items.map((option, index) => (
         <MentionOptionRow
           key={`${option.type}:${option.id}`}
@@ -261,6 +278,28 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
 /** Viewport breathing room, and the gap between the caret and the menu. */
 const EDGE = 8;
 const GAP = 6;
+
+/** Tiptap matcher with single-space queries and a double-space exit gesture. */
+function findMultiwordMentionMatch(config: Trigger): SuggestionMatch {
+  const text = config.$position.nodeBefore?.isText
+    ? config.$position.nodeBefore.text
+    : null;
+  if (!text) return null;
+
+  const active = findActiveMentionQuery(text);
+  if (!active) return null;
+  if (config.startOfLine && active.start !== 0) return null;
+
+  const textFrom = config.$position.pos - text.length;
+  return {
+    range: {
+      from: textFrom + active.start,
+      to: config.$position.pos,
+    },
+    query: active.query,
+    text: text.slice(active.start),
+  };
+}
 
 /**
  * Imperative rendering of the menu, carried to the body of the document and positioned in
@@ -358,9 +397,9 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
         // the same, and ProseMirror raised during editing (MIN-270).
         pluginKey: new PluginKey("mentionSuggest"),
         char: "@",
-        // Like everywhere else: the wording is searched by its START of the word,
-        // and it is the choice in the list which poses “@Jean Dupont” in full.
-        allowSpaces: false,
+        // One space stays inside the query; a second consecutive space closes it.
+        allowSpaces: true,
+        findSuggestionMatch: findMultiwordMentionMatch,
         items: ({ query }) => {
           options.onQuery?.();
           return filterMentions(options.items(), query);
