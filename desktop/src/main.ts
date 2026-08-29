@@ -715,6 +715,7 @@ function createWindow(
         origin,
         validatedUrl,
         desktopShellFontDataUrl(),
+        process.platform,
       );
       void window.loadURL(
         `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,

@@ -127,14 +127,18 @@ export function useAgentRunQuery(runId: string | null) {
  */
 export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   const enabled = !!runId;
-  const { data, isPending } = useQuery({
+  const { data, isPending, isFetching } = useQuery({
     queryKey: ["agent-run-events", runId],
     queryFn: () => fetchAgentRunEventsApi(runId as string),
     enabled,
     refetchOnMount: "always",
     refetchInterval: active ? 2000 : false,
   });
-  return { events: data?.events ?? [], loading: enabled && isPending };
+  return {
+    events: data?.events ?? [],
+    loading: enabled && isPending,
+    fetching: enabled && isFetching,
+  };
 }
 
 /** Tracking rate of a CI in progress — a CI is counted in minutes, not in
@@ -213,28 +217,31 @@ export function agentRunDiffStatQueryKey(runId: string) {
 }
 
 /**
- * BOTH HEADER NUMBERS DURING THE ROUND (MIN-266).
+ * Header summary from the same diff source as the full session patch.
  *
- * The header took them from the `files_changed` events, emitted at the END of the round: during
- * qu'il travaillait, l'agent pouvait toucher trente fichiers sans que rien ne
- * move up there — and in the first round of a session, there was nothing at all.
- * This query reads the same diff as the view, in summarized version (no patch),
- * and therefore gives the counters while the work is done.
- *
- * It ONLY rotates during the tour: at rest, the events are authentic and do not
- * cost nothing — they are already charged by the wire.
+ * It loads once whenever a conversation is displayed, then polls only while the
+ * agent works. Loading at rest lets an authoritative empty response clear stale
+ * historical events instead of resurrecting reverted files.
  */
-export function useAgentRunDiffStatQuery(runId: string | null, working: boolean) {
-  const { data } = useQuery({
+export function useAgentRunDiffStatQuery(
+  runId: string | null,
+  enabled: boolean,
+  working: boolean,
+) {
+  const { data, isFetching, isError } = useQuery({
     queryKey: agentRunDiffStatQueryKey(runId ?? ""),
     queryFn: () => fetchAgentRunDiffApi(runId!, { stat: true }),
-    enabled: Boolean(runId) && working,
+    enabled: Boolean(runId) && enabled,
     refetchOnMount: "always",
-    refetchInterval: working ? 7000 : false,
+    refetchInterval: enabled && working ? 7000 : false,
   });
   return {
     files: data?.files ?? [],
     live: data?.live === true,
+    /** Distinguishes an authoritative empty diff from a query that has not answered yet. */
+    ready: data !== undefined,
+    /** Safe to use for actions: the latest refresh completed successfully. */
+    verified: data !== undefined && !isFetching && !isError,
   };
 }
 

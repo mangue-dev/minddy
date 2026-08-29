@@ -503,6 +503,17 @@ describe("buildAgentContextMessage link resources", () => {
     expect(msg).not.toContain("169.254.169.254");
   });
 });
+
+describe("general conversation context", () => {
+  it("does not claim that every free-form session came from the notebook", () => {
+    const message = buildNotebookContextMessage({ repo });
+
+    expect(message).toContain("general project conversation");
+    expect(message).toContain("ordinary free-form message");
+    expect(message).not.toContain("launched from the user's NOTEBOOK");
+  });
+});
+
 /**
  * The landing status lives in the CONTEXT message, which is of all
  * way specific to the run (deposit, branch, ticket).

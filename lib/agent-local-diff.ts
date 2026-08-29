@@ -1,4 +1,8 @@
-import type { AgentRunEvent, PullRequestFile } from "./agent-api";
+import type {
+  AgentFileChange,
+  AgentRunEvent,
+  PullRequestFile,
+} from "./agent-api";
 
 /** Form transported by the local direct and by the `files_changed` event. */
 export interface AgentLocalDiff {
@@ -83,6 +87,31 @@ export function mergeAgentLocalDiff(
     files: [...byPath.values()].sort(byFilename),
     truncated: settled.truncated || live.truncated,
   };
+}
+
+/**
+ * Chooses the one session diff that drives every conversation surface.
+ *
+ * An authoritative empty response must win over historical file events: it means
+ * the changes were reverted. Falling back in that case used to resurrect stale
+ * files, show their counters, and offer a pull request for an empty diff.
+ */
+export function selectAgentSessionDiff(opts: {
+  local: boolean;
+  localDiff: AgentLocalDiff;
+  remoteFiles: PullRequestFile[];
+  remoteReady: boolean;
+  fallbackFiles: AgentFileChange[];
+}): PullRequestFile[] {
+  if (opts.local) return opts.localDiff.files;
+  if (opts.remoteReady) return opts.remoteFiles;
+  return opts.fallbackFiles.map((file) => ({
+    filename: file.path,
+    status: file.status === "deleted" ? "removed" : file.status,
+    additions: file.additions,
+    deletions: file.deletions,
+    ...(file.previousPath ? { previous_filename: file.previousPath } : {}),
+  }));
 }
 
 function byFilename(a: PullRequestFile, b: PullRequestFile): number {

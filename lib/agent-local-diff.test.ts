@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   mergeAgentLocalDiff,
   parseAgentLocalDiff,
+  selectAgentSessionDiff,
   settledAgentLocalDiff,
 } from "./agent-local-diff";
 import type { AgentRunEvent } from "./agent-api";
@@ -17,7 +18,7 @@ function event(seq: number, diff: unknown): AgentRunEvent {
   };
 }
 
-describe("diff local d'un run", () => {
+describe("a run's local diff", () => {
   it("validates the shape before giving it to the renderer", () => {
     expect(parseAgentLocalDiff({
       files: [
@@ -34,7 +35,7 @@ describe("diff local d'un run", () => {
     });
   });
 
-  it("garde le dernier patch d'un fichier retouché sur plusieurs tours", () => {
+  it("keeps the latest patch for a file edited across several turns", () => {
     const settled = settledAgentLocalDiff([
       event(1, { files: [{ filename: "a.ts", status: "modified", additions: 1, deletions: 0, patch: "ancien" }] }),
       event(2, { files: [{ filename: "b.ts", status: "added", additions: 2, deletions: 0, patch: "b" }] }),
@@ -47,7 +48,7 @@ describe("diff local d'un run", () => {
     ]);
   });
 
-  it("fait gagner l'instantané live sur les events persistés", () => {
+  it("lets the live snapshot override persisted events", () => {
     const merged = mergeAgentLocalDiff(
       { files: [{ filename: "a.ts", status: "modified", additions: 1, deletions: 0, patch: "settled" }], truncated: false },
       { files: [{ filename: "a.ts", status: "modified", additions: 2, deletions: 0, patch: "live" }], truncated: true },
@@ -66,5 +67,34 @@ describe("diff local d'un run", () => {
       { files: [{ filename: "a.ts", status: "modified", additions: 1, deletions: 0 }], truncated: false },
       { files: [], truncated: false, snapshot: true },
     ).files).toEqual([]);
+  });
+
+  it("does not resurrect historical files after an authoritative empty response", () => {
+    expect(selectAgentSessionDiff({
+      local: false,
+      localDiff: { files: [], truncated: false },
+      remoteFiles: [],
+      remoteReady: true,
+      fallbackFiles: [
+        { path: "stale.ts", status: "modified", additions: 2, deletions: 1 },
+      ],
+    })).toEqual([]);
+  });
+
+  it("uses the attributed local patch instead of working-tree fallback files", () => {
+    expect(selectAgentSessionDiff({
+      local: true,
+      localDiff: {
+        files: [
+          { filename: "owned.ts", status: "modified", additions: 1, deletions: 0 },
+        ],
+        truncated: false,
+      },
+      remoteFiles: [],
+      remoteReady: false,
+      fallbackFiles: [
+        { path: "user-wip.ts", status: "modified", additions: 9, deletions: 4 },
+      ],
+    }).map((file) => file.filename)).toEqual(["owned.ts"]);
   });
 });

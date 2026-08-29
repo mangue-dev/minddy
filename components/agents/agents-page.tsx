@@ -65,9 +65,8 @@ import {
 
 function DetailLoading() {
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
-      <Skeleton className="h-9 w-full rounded-lg" />
-      <Skeleton className="min-h-0 flex-1 rounded-xl" />
+    <div className="flex h-full min-h-0 flex-1 items-center justify-center">
+      <Spinner className="size-5 text-muted-foreground" />
     </div>
   );
 }
