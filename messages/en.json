@@ -3630,6 +3630,7 @@
   },
   "Admin": {
     "pageTitle": "Admin",
+    "filterPlaceholder": "Filter {count, plural, =0 {admin sections} one {# admin section} other {# admin sections}}…",
     "tabs": {
       "overview": "Overview",
       "users": "Users",
@@ -3817,6 +3818,7 @@
     },
     "finance": {
       "title": "Finances",
+      "summary": "Monthly summary",
       "subtitle": "What comes in and what goes out, on the same timeline. Income comes from Stripe balance transactions (net of fees and refunds), costs from OpenRouter, converted at each day's rate.",
       "window": "{days}d",
       "loadError": "Couldn’t load the finances.",
@@ -3958,6 +3960,7 @@
       "internalOffToast": "{name} counts toward statistics again."
     },
     "overview": {
+      "summary": "Key metrics",
       "totalUsers": "Accounts",
       "newUsers": "{count, plural, one {# new this week} other {# new this week}}",
       "newUsers30d": "New in 30d",

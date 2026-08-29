@@ -3630,6 +3630,7 @@
   },
   "Admin": {
     "pageTitle": "Administración",
+    "filterPlaceholder": "{count, plural, =0 {Filtrar secciones} one {Filtrar # sección} other {Filtrar # secciones}}…",
     "tabs": {
       "overview": "Resumen",
       "users": "Usuarios",
@@ -3817,6 +3818,7 @@
     },
     "finance": {
       "title": "Finanzas",
+      "summary": "Resumen mensual",
       "subtitle": "Ingresos y gastos en una misma cronología. Los ingresos proceden de las transacciones de saldo de Stripe (descontadas las comisiones y los reembolsos); los costes, de OpenRouter, convertidos al tipo de cambio de cada día.",
       "window": "{days}¿Qué es eso?",
       "loadError": "No se ha podido cargar las finanzas.",
@@ -3958,6 +3960,7 @@
       "internalOffToast": "{name} cuenta con estadísticas de nuevo."
     },
     "overview": {
+      "summary": "Métricas clave",
       "totalUsers": "Cuentas",
       "newUsers": "{count, plural, one {# Nueva esta semana} other {# Nueva esta semana}}",
       "newUsers30d": "Nuevo en 30d",

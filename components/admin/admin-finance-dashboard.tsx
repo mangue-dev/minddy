@@ -23,6 +23,10 @@ import {
 import type { AdminFinance, AdminFinanceDay } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
+  ADMIN_SECTIONS,
+  adminSectionAnchor,
+} from "@/lib/admin-sections";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -303,7 +307,12 @@ export function AdminFinanceDashboard() {
         </div>
       ) : (
         <>
-          <MoneyTiles finance={finance} t={t} />
+          <div
+            id={adminSectionAnchor(ADMIN_SECTIONS.financeSummary)}
+            className="scroll-mt-20 rounded-xl"
+          >
+            <MoneyTiles finance={finance} t={t} />
+          </div>
 
           {!finance.stripe.configured ? (
             <p className="text-xs text-muted-foreground">{t("finance.stripeHidden")}</p>
@@ -317,6 +326,7 @@ export function AdminFinanceDashboard() {
           />
 
           <StatsSection
+            id={adminSectionAnchor(ADMIN_SECTIONS.financeChart)}
             title={t("finance.chartTitle")}
             info={t("finance.chartInfo")}
           >
@@ -327,13 +337,19 @@ export function AdminFinanceDashboard() {
 
           <SpendCap finance={finance} t={t} />
 
-          <StatsSection title={t("finance.byType")}>
+          <StatsSection
+            id={adminSectionAnchor(ADMIN_SECTIONS.financeByType)}
+            title={t("finance.byType")}
+          >
             <FeatureTable rows={byFeature} featureLabel={featureLabel} t={t} />
           </StatsSection>
 
           {/* The runs are POINTUAL consultation information: they do not take
  plus the whole page, they wait to be requested. */}
-          <StatsSection title={t("finance.logs")}>
+          <StatsSection
+            id={adminSectionAnchor(ADMIN_SECTIONS.financeLogs)}
+            title={t("finance.logs")}
+          >
             <RecentRunsAccordion
               runs={stats.recent_runs}
               featureLabel={featureLabel}
@@ -677,7 +693,10 @@ function SpendCap({
 
   if (!cap || cap.limitUsd === null) {
     return (
-      <StatsSection title={t("finance.capTitle")}>
+      <StatsSection
+        id={adminSectionAnchor(ADMIN_SECTIONS.financeCap)}
+        title={t("finance.capTitle")}
+      >
         <StatsCard>
           <p className="text-sm text-muted-foreground">{t("finance.capUnavailable")}</p>
         </StatsCard>
@@ -692,7 +711,11 @@ function SpendCap({
   const alerting = percent >= 90;
 
   return (
-    <StatsSection title={t("finance.capTitle")} info={t("finance.capInfo")}>
+    <StatsSection
+      id={adminSectionAnchor(ADMIN_SECTIONS.financeCap)}
+      title={t("finance.capTitle")}
+      info={t("finance.capInfo")}
+    >
       <StatsCard className="flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <span className="text-2xl font-semibold tabular-nums tracking-tight">

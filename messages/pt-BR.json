@@ -3630,6 +3630,7 @@
   },
   "Admin": {
     "pageTitle": "Administrador",
+    "filterPlaceholder": "{count, plural, =0 {Filtrar seções} one {Filtrar # seção} other {Filtrar # seções}}…",
     "tabs": {
       "overview": "Visão geral",
       "users": "Usuários",
@@ -3817,6 +3818,7 @@
     },
     "finance": {
       "title": "Finanças",
+      "summary": "Resumo mensal",
       "subtitle": "O que entra e o que sai, na mesma linha do tempo. A receita vem de transações de saldo de Stripe (líquidas de taxas e reembolsos), custos de OpenRouter, convertidos à taxa de cada dia.",
       "window": "{days}d",
       "loadError": "Não foi possível carregar as finanças.",
@@ -3958,6 +3960,7 @@
       "internalOffToast": "{name} conta para estatísticas novamente."
     },
     "overview": {
+      "summary": "Métricas principais",
       "totalUsers": "Contas",
       "newUsers": "{count, plural, one {# novidade esta semana} other {# novidade esta semana}}",
       "newUsers30d": "Nova em 30d",

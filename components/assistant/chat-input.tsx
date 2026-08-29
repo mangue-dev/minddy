@@ -948,10 +948,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           </div>
 
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            {/* Files are a property of the message, not the template: in
- the agent therefore precedes the template selector, as requested
- by MIN-369. */}
             <div className="flex min-w-0 items-center gap-1.5">
+              {leadingControls}
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
               {canAttach && (
                 <>
                   <input
@@ -978,9 +978,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   </Button>
                 </>
               )}
-              {leadingControls}
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
                 <Button
                   size="icon-sm"
@@ -997,6 +994,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                     <DictateButton
                       onTranscription={appendDictated}
                       disabled={disabled}
+                      className={canAttach ? "-ml-0.5" : undefined}
                     />
                   )}
                   {!isEmpty &&

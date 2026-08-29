@@ -3630,6 +3630,7 @@
   },
   "Admin": {
     "pageTitle": "Administration",
+    "filterPlaceholder": "Filtrer {count, plural, =0 {les sections} one {la section} other {les # sections}}…",
     "tabs": {
       "overview": "Vue d'ensemble",
       "users": "Utilisateurs",
@@ -3817,6 +3818,7 @@
     },
     "finance": {
       "title": "Finances",
+      "summary": "Synthèse du mois",
       "subtitle": "Ce qui rentre et ce qui sort, sur le même axe de temps. Les entrées viennent des transactions Stripe (net des frais et des remboursements), les coûts d'OpenRouter, convertis au taux de chaque journée.",
       "window": "{days} j",
       "loadError": "Impossible de charger les finances.",
@@ -3958,6 +3960,7 @@
       "internalOffToast": "{name} recompte dans les statistiques."
     },
     "overview": {
+      "summary": "Indicateurs clés",
       "totalUsers": "Comptes",
       "newUsers": "{count, plural, one {# nouveau cette semaine} other {# nouveaux cette semaine}}",
       "newUsers30d": "Nouveaux sur 30 j",

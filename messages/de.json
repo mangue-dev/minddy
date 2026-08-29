@@ -3630,6 +3630,7 @@
   },
   "Admin": {
     "pageTitle": "Administrator",
+    "filterPlaceholder": "{count, plural, =0 {Admin-Bereiche filtern} one {# Admin-Bereich filtern} other {# Admin-Bereiche filtern}}…",
     "tabs": {
       "overview": "Übersicht",
       "users": "Benutzer",
@@ -3817,6 +3818,7 @@
     },
     "finance": {
       "title": "Finanzen",
+      "summary": "Monatsübersicht",
       "subtitle": "Was eingeht und was ausgeht, auf derselben Zeitachse. Die Einnahmen stammen aus Stripe Saldotransaktionen (abzüglich Gebühren und Rückerstattungen), Kosten aus OpenRouter, umgerechnet zum jeweiligen Tageskurs.",
       "window": "{days}d",
       "loadError": "Die Finanzen konnten nicht geladen werden.",
@@ -3958,6 +3960,7 @@
       "internalOffToast": "{name} zählt wieder für Statistiken."
     },
     "overview": {
+      "summary": "Kennzahlen",
       "totalUsers": "Konten rückgängig machen",
       "newUsers": "{count, plural, one {# neu diese Woche} other {# neu diese Woche}}",
       "newUsers30d": "Neu in 30d",

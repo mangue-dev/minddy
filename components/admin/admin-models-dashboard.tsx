@@ -65,6 +65,11 @@ import {
 } from "@/lib/agent-reasoning";
 import { formatMultiplier } from "@/lib/model-multiplier";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import {
+  ADMIN_SECTIONS,
+  adminSectionAnchor,
+  type AdminSectionId,
+} from "@/lib/admin-sections";
 
 type ConfigValues = Record<string, string | null>;
 
@@ -168,6 +173,7 @@ export function AdminModelsDashboard() {
           {AI_MODEL_CONFIG_GROUPS.filter((group) => group !== "byok").map((group) => (
             <SettingsGroup
               key={group}
+              id={adminSectionAnchor(MODEL_GROUP_SECTIONS[group])}
               icon={GROUP_ICONS[group]}
               title={t(`groups.${group}.title`)}
               // Optional description: some groups explain themselves through
@@ -195,7 +201,10 @@ export function AdminModelsDashboard() {
           ))}
 
           {/* ── Personal keys: one modular section per BYOK provider ── */}
-          <section className="flex flex-col gap-4">
+          <section
+            id={adminSectionAnchor(ADMIN_SECTIONS.modelsByok)}
+            className="flex scroll-mt-20 flex-col gap-4 rounded-xl"
+          >
             <div className="flex items-center gap-1.5 px-0.5">
               <h2 className="text-sm font-semibold tracking-tight text-foreground">
                 {t("groups.byok.title")}
@@ -241,6 +250,15 @@ const GROUP_ICONS: Record<AiConfigGroup, LucideIcon> = {
   byok: KeyRound,
   voice: Mic,
   feedback: MessageSquareHeart,
+};
+
+const MODEL_GROUP_SECTIONS: Record<AiConfigGroup, AdminSectionId> = {
+  assistant: ADMIN_SECTIONS.modelsAssistant,
+  automations: ADMIN_SECTIONS.modelsAutomations,
+  agent: ADMIN_SECTIONS.modelsAgent,
+  byok: ADMIN_SECTIONS.modelsByok,
+  voice: ADMIN_SECTIONS.modelsVoice,
+  feedback: ADMIN_SECTIONS.modelsFeedback,
 };
 
 /**

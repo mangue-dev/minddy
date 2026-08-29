@@ -3630,6 +3630,7 @@
   },
   "Admin": {
     "pageTitle": "Amministratore",
+    "filterPlaceholder": "{count, plural, =0 {Filtra le sezioni} one {Filtra # sezione} other {Filtra # sezioni}}…",
     "tabs": {
       "overview": "Panoramica",
       "users": "Utenti",
@@ -3817,6 +3818,7 @@
     },
     "finance": {
       "title": "Finanze",
+      "summary": "Riepilogo mensile",
       "subtitle": "Ciò che entra e ciò che esce, sulla stessa timeline. Il reddito proviene da operazioni di saldo Stripe (netto di tasse e rimborsi), costi da OpenRouter, convertiti a ogni tasso di giorno.",
       "window": "{days}(e)",
       "loadError": "Non potrei caricare le finanze.",
@@ -3958,6 +3960,7 @@
       "internalOffToast": "{name} conta di nuovo per le statistiche."
     },
     "overview": {
+      "summary": "Metriche chiave",
       "totalUsers": "Conti",
       "newUsers": "{count, plural, one {# nuovo questa settimana} other {# nuovo questa settimana}}",
       "newUsers30d": "Nuovo in 30d",
