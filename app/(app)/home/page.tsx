@@ -15,6 +15,7 @@ import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { OnboardingCard } from "@/components/home/onboarding-card";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
 import { HomeTip } from "@/components/home/home-tip";
+import HomeLoading from "./loading";
 
 /** Display name from Supabase auth metadata (display_name → full_name → name),
     never the raw email — mirrors the sidebar account button. */
@@ -81,6 +82,8 @@ export default function HomePage() {
   );
 
   const greeting = useGreeting(name);
+
+  if (onboarding.loading) return <HomeLoading />;
 
   /**
    * The page fits on ONE screen, and nothing below. There was a column of
