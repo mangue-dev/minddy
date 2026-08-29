@@ -211,6 +211,7 @@ function SessionRow({
       <TooltipTrigger asChild>
         <button
           type="button"
+          data-sidebar-filter-result
           onClick={onSelect}
           // Right-clicking opens the row menu, wherever it lands on it. Aim
           // a “⋯” would require hovering over the line to make it appear,

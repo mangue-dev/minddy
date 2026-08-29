@@ -487,6 +487,7 @@ function PageRow({
 
       <Link
         href={`/projects/${page.project_id}/pages/${page.id}`}
+        data-sidebar-filter-result
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pr-1 text-left outline-none"
       >
         <span className="flex size-4 shrink-0 items-center justify-center text-sm leading-none">

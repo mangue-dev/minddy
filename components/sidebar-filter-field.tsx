@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 import { cn } from "mangue-ui";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { moveSidebarFilterResultFocus } from "@/lib/keyboard/sidebar-filter-navigation";
 
 /**
  * The filter field in the title line of a secondary sidebar.
@@ -57,6 +58,26 @@ export function SidebarFilterField({
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, []);
+
+  useEffect(() => {
+    const onResultKeyDown = (event: KeyboardEvent) => {
+      if (!value.trim() || event.metaKey || event.ctrlKey || event.altKey) return;
+      const input = ref.current;
+      if (!input) return;
+      if (
+        !moveSidebarFilterResultFocus({
+          input,
+          key: event.key,
+        })
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    window.addEventListener("keydown", onResultKeyDown, true);
+    return () => window.removeEventListener("keydown", onResultKeyDown, true);
+  }, [value]);
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">

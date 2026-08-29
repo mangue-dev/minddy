@@ -491,6 +491,7 @@ function RoutineRow({
   return (
     <button
       type="button"
+      data-sidebar-filter-result
       onClick={onSelect}
       className={cn(
         // `pr-3` and not `pr-2`: the status point (paused, missed passage)

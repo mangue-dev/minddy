@@ -259,6 +259,7 @@ export function AdminDashboard() {
                   <li key={section.id}>
                     <button
                       type="button"
+                      data-sidebar-filter-result
                       onClick={() => openSection(section)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
                     >

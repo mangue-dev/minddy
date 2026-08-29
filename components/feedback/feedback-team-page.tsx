@@ -684,6 +684,7 @@ function FeedbackRow({
     <button
       ref={askNumoRef}
       type="button"
+      data-sidebar-filter-result
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(

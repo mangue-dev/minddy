@@ -729,6 +729,7 @@ function TriageRow({
     <button
       ref={askNumoRef}
       type="button"
+      data-sidebar-filter-result
       aria-pressed={picked}
       onClick={(e) => {
         if (e.shiftKey) {

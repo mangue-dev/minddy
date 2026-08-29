@@ -313,6 +313,7 @@ function PrRow({
   return (
     <button
       type="button"
+      data-sidebar-filter-result
       onClick={onSelect}
       // The DERIVED selection of the page, not the CLICKS state: both
       // diverge in the two most common opening cases — upon arrival
