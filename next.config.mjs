@@ -376,15 +376,12 @@ const nextConfig = {
 
     const BASE_CSP = "frame-ancestors 'none'; base-uri 'self'";
 
-    // ⚠ `/oauth/authorize` and the temporary attachment debug assets are
-    // EXCLUDED from this entry (only one CSP header per answer: two accumulate
-    // in intersection, and the strictest would win). The OAuth screen receives
-    // its dedicated policy below; the debug asset handler mirrors the private
-    // attachment response so its sandboxed iframe can load same-origin files.
-    // Exclusions are anchored on `/` or the end — otherwise a future route with
-    // the same prefix would silently exit ALL these headers.
+    // ⚠ `/oauth/authorize` is EXCLUDED from this entry (only one CSP header per
+    // answer: two accumulate in intersection, the strictest would win).
+    // The exclusion is anchored on `/` or the end — otherwise a future route in
+    // `/oauth/authorize-…` would silently exit ALL these headers.
     headers.push({
-      source: "/((?!(?:oauth/authorize|attachments-debug/assets)(?:/|$)).*)",
+      source: "/((?!oauth/authorize(?:/|$)).*)",
       headers: securityHeaders(`${BASE_CSP}; form-action 'self'`),
     });
 
