@@ -18,6 +18,7 @@ import {
 } from "@/lib/ai-model-config";
 import { parseSubagentFavorites } from "@/lib/subagent-favorites";
 import { parseRecommendedModels } from "@/lib/recommended-models";
+import { isReasoningLevel, REASONING_LEVELS } from "@/lib/agent-reasoning";
 
 /**
  * Admin gate for the app-config endpoints: authenticate the request (JWT via
@@ -95,6 +96,12 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
+  }
+  if (kind === "reasoning" && trimmed && !isReasoningLevel(trimmed)) {
+    return NextResponse.json(
+      { error: `Reasoning level must be one of: ${REASONING_LEVELS.join(", ")}` },
+      { status: 400 }
+    );
   }
   // A routing suffix has only three legal values, plus the blank which
   // deletes the line (“no parameters”). Refuse here rather than leave

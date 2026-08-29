@@ -51,6 +51,8 @@ import {
 } from "./loop";
 import { serializeToolResult } from "./tool-result-serialization";
 import { commentFallbackDone } from "@/lib/server/runtime-locale-copy";
+import { getAssistantReasoningLevel } from "./reasoning";
+import { reasoningMaxTokens } from "@/lib/agent-reasoning";
 
 // ── @Numo in comments (fire and forget, Linear-style) ───────────────────
 // A comment mentioning @numo spawns this agent AFTER the HTTP response (via
@@ -918,6 +920,7 @@ async function runLoop(
     surface: "assistant",
   });
   ctx.model = aiRuntime.model;
+  const reasoningLevel = await getAssistantReasoningLevel();
 
   let finalContent = "";
   let continueLoop = true;
@@ -948,7 +951,8 @@ async function runLoop(
         model: ctx.model,
         messages,
         stream: true,
-        maxOutputTokens: 4096,
+        maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
+        reasoning: { effort: reasoningLevel },
         ...(lastRound ? {} : { tools }),
       }),
       "Numo (minddy)",

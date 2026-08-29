@@ -42,6 +42,7 @@ import {
 import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
+import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import {
   ManagedAiUnavailableError,
   resolveAiRuntime,
@@ -495,6 +496,7 @@ export async function POST(request: NextRequest) {
   // proposed (otherwise the model burns a round to be refused).
   const webSearchEnabled = await isWebSearchEnabled();
   if (!webSearchEnabled) activeTools = withoutWebSearch(activeTools);
+  const reasoningLevel = await getAssistantReasoningLevel();
 
   // What the user is currently viewing. In project mode that's the open issue/
   // objective/view; in global mode it's the cross-project view or cycle. The
@@ -517,7 +519,9 @@ export async function POST(request: NextRequest) {
     .from("assistant_messages")
     .select("role, content, tool_calls, tool_call_id, tool_name, metadata")
     .eq("conversation_id", convId)
-    .order("created_at", { ascending: true })
+    // Fetch the latest window, then restore chronological order below. Asking
+    // for the oldest 30 made long conversations lose the current user turn.
+    .order("created_at", { ascending: false })
     .limit(30);
 
   // Detect caching support via OpenRouter pricing metadata — memoised per process.
@@ -549,20 +553,21 @@ export async function POST(request: NextRequest) {
   };
 
   if (history) {
+    const chronologicalHistory = [...history].reverse();
     // Heavy parts (PDF base64, CSV excerpts) go only with the LATEST user
     // message; older images stay (cheap signed URLs), the rest degrade to
     // text notes inside buildAttachmentParts.
-    const lastUserIdx = history.reduce(
+    const lastUserIdx = chronologicalHistory.reduce(
       (acc, m, i) => (m.role === "user" ? i : acc),
       -1
     );
-    const modalities = history.some((m) => rowAttachments(m).length > 0)
+    const modalities = chronologicalHistory.some((m) => rowAttachments(m).length > 0)
       ? aiRuntime.provider === "openrouter"
         ? await getModelInputModalities(model, apiKey)
         : new Set(["text"])
       : null;
 
-    for (const [i, msg] of history.entries()) {
+    for (const [i, msg] of chronologicalHistory.entries()) {
       const sanitized =
         sanitizeAssistantMessageContent(msg.content) +
         (msg.role === "user"
@@ -627,6 +632,7 @@ export async function POST(request: NextRequest) {
           model,
           aiRuntime,
           conversationId: finalConvId,
+          reasoningLevel,
           webSearch: webSearchEnabled ? { runId, used: 0 } : undefined,
         });
 

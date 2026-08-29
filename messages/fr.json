@@ -3670,7 +3670,7 @@
     "title": "Modèles IA",
     "subtitle": "Modèles utilisés par minddy. Chaque choix s'applique tout de suite ; « modèle par défaut » rend le réglage au défaut du produit.",
     "loadError": "Impossible de charger la configuration.",
-    "saved": "Modèle enregistré",
+    "saved": "Réglage enregistré",
     "fieldDefault": "Modèle par défaut",
     "suffix": {
       "label": "Choix du fournisseur",
@@ -3708,6 +3708,10 @@
       "assistant_model": {
         "label": "Modèle de Numo",
         "desc": "Numo dans le chat et dans les réponses en commentaire."
+      },
+      "assistant_reasoning_level": {
+        "label": "Niveau de raisonnement",
+        "desc": "Un niveau élevé peut améliorer les demandes complexes, mais prend plus de temps et utilise plus de jetons. S'applique au chat et aux commentaires de Numo."
       },
       "fallback_model": {
         "label": "Modèle de repli",

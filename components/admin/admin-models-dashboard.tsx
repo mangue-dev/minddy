@@ -31,6 +31,7 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { HelpHint } from "@/components/settings/help-hint";
 import { ModelCombobox } from "@/components/agent/model-combobox";
+import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { ByokModelCombobox } from "@/components/admin/byok-model-combobox";
 import { ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
@@ -58,6 +59,10 @@ import {
   type SubagentThinkingEffort,
 } from "@/lib/subagent-favorites";
 import { DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels } from "@/lib/recommended-models";
+import {
+  REASONING_LEVELS,
+  toReasoningLevel,
+} from "@/lib/agent-reasoning";
 import { formatMultiplier } from "@/lib/model-multiplier";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 
@@ -432,6 +437,10 @@ function ConfigRow({
       return (
         <RecommendedRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
       );
+    case "reasoning":
+      return (
+        <ReasoningRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
+      );
     case "modelId":
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
     case "model":
@@ -446,6 +455,57 @@ function ConfigRow({
         />
       );
   }
+}
+
+function ReasoningRow({
+  field,
+  label,
+  desc,
+  value,
+  onSaved,
+}: {
+  field: AiConfigField;
+  label: string;
+  desc: string | null;
+  value: string | null;
+  onSaved: (key: string, value: string) => void;
+}) {
+  const t = useTranslations("Admin");
+  const saved = toReasoningLevel(value ?? field.fallback);
+  const [busy, setBusy] = useState(false);
+
+  const select = async (next: string) => {
+    if (busy || next === saved) return;
+    setBusy(true);
+    try {
+      await patchConfig(field.key, next);
+      onSaved(field.key, next);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SettingsRow
+      label={label}
+      hint={desc ?? undefined}
+      control={
+        <div className="flex w-full items-center gap-2 sm:w-64">
+          <ReasoningCombobox
+            value={saved}
+            levels={REASONING_LEVELS}
+            disabled={busy}
+            variant="field"
+            onChange={(next) => void select(next)}
+          />
+          {busy ? <Spinner className="shrink-0" /> : null}
+        </div>
+      }
+    />
+  );
 }
 
 /**

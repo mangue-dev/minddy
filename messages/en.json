@@ -3670,7 +3670,7 @@
     "title": "AI models",
     "subtitle": "Models minddy runs. Every pick applies right away; “default model” hands the setting back to the product default.",
     "loadError": "Couldn’t load the configuration.",
-    "saved": "Model saved",
+    "saved": "Setting saved",
     "fieldDefault": "Default model",
     "suffix": {
       "label": "Provider routing",
@@ -3708,6 +3708,10 @@
       "assistant_model": {
         "label": "Numo model",
         "desc": "Numo in chat and in comment replies."
+      },
+      "assistant_reasoning_level": {
+        "label": "Reasoning level",
+        "desc": "Higher levels can improve complex work, but take longer and use more tokens. Applies to Numo chat and comments."
       },
       "fallback_model": {
         "label": "Fallback model",

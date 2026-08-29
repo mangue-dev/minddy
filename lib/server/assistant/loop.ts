@@ -17,6 +17,11 @@ import {
   getToolResultCharLimit,
   serializeToolResult,
 } from "./tool-result-serialization";
+import {
+  DEFAULT_REASONING_LEVEL,
+  reasoningMaxTokens,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
 
 // ── OpenRouter streaming agent loop (ported from AutoKap's assistant) ───
 
@@ -124,6 +129,7 @@ export async function getModelInputModalities(
 export interface ProcessChatContext extends ToolContext {
   model: string;
   conversationId: string;
+  reasoningLevel?: ReasoningLevel;
   /** Solved by the way. Optional for internal calls/historical tests. */
   aiRuntime?: ResolvedAiRuntime;
 }
@@ -131,8 +137,9 @@ export interface ProcessChatContext extends ToolContext {
 /**
  * The agentic while-loop: stream one OpenRouter completion, forward deltas to
  * the client as SSE, execute any tool calls, persist every intermediate
- * message, feed results back, and repeat (max 6 rounds). `ask_user` pauses the
- * loop — the user's answer arrives as the next POST.
+ * message, feed results back, and repeat within a bounded tool budget. A final
+ * text-only round always closes the turn. `ask_user` pauses the loop — the
+ * user's answer arrives as the next POST.
  */
 export async function processChat(
   messages: ChatMessage[],
@@ -165,7 +172,8 @@ export async function processChat(
   // The template sent, including routing suffix (MIN-263) — it may lose its
   // suffix being looped if OpenRouter refuses it.
   let requestModel = context.model;
-  const MAX_TOOL_ROUNDS = 6;
+  const MAX_TOOL_EXECUTION_ROUNDS = 12;
+  const reasoningLevel = context.reasoningLevel ?? DEFAULT_REASONING_LEVEL;
   // Living IDs seen during the tour (MIN-343). The register is
   // CUMULATIVE on purpose: a key returned in round 1 must remain substituted in
   // what a round 3 `list_integrations` would rewrite.
@@ -174,6 +182,9 @@ export async function processChat(
   while (continueLoop) {
     continueLoop = false;
     roundCount++;
+    // Always reserve one text-only round after the tool budget. Previously the
+    // sixth tool round ended the stream silently, with no final assistant reply.
+    const forceConclusion = roundCount > MAX_TOOL_EXECUTION_ROUNDS;
 
     const call = await fetchAiChat(
       aiRuntime,
@@ -182,8 +193,9 @@ export async function processChat(
         model: m,
         messages,
         stream: true,
-        maxOutputTokens: 4096,
-        ...(tools.length > 0 ? { tools } : {}),
+        maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
+        reasoning: { effort: reasoningLevel },
+        ...(tools.length > 0 && !forceConclusion ? { tools } : {}),
       }),
       "Numo (minddy)",
       "[assistant]",
@@ -448,7 +460,7 @@ export async function processChat(
       // - ask_user, or a tool that hands the turn back: stop and wait for user
       // - other tools: continue normally with tools enabled (round cap only —
       //   minddy tools chain legitimately: create issue → set categories → comment)
-      if (!hasAskUser && !pausedByTool && roundCount < MAX_TOOL_ROUNDS) {
+      if (!hasAskUser && !pausedByTool && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
         continueLoop = true;
       }
       fullContent = "";

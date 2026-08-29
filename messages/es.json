@@ -3670,7 +3670,7 @@
     "title": "Modelos de IA",
     "subtitle": "Modelos que utiliza minddy. Cada selección se aplica de inmediato; «modelo predeterminado» devuelve el ajuste al valor predeterminado del producto.",
     "loadError": "No se puede cargar la configuración.",
-    "saved": "Modelo guardado",
+    "saved": "Ajuste guardado",
     "fieldDefault": "Modelo predeterminado",
     "suffix": {
       "label": "Enrutamiento del proveedor",
@@ -3708,6 +3708,10 @@
       "assistant_model": {
         "label": "Modelo Numo",
         "desc": "Numo en chat y en respuestas de comentarios."
+      },
+      "assistant_reasoning_level": {
+        "label": "Nivel de razonamiento",
+        "desc": "Los niveles altos pueden mejorar el trabajo complejo, pero tardan más y usan más tokens. Se aplica al chat y a los comentarios de Numo."
       },
       "fallback_model": {
         "label": "Modelo de retroceso",

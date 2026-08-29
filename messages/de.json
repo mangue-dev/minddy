@@ -3670,7 +3670,7 @@
     "title": "KI-Modelle",
     "subtitle": "Modelle minddy wird ausgeführt. Jede Auswahl gilt sofort; „Standardmodell“ setzt die Einstellung auf die Standardeinstellung des Produkts zurück.",
     "loadError": "Die Konfiguration konnte nicht geladen werden.",
-    "saved": "Modell gespeichert",
+    "saved": "Einstellung gespeichert",
     "fieldDefault": "Standardmodell",
     "suffix": {
       "label": "Provider-Routing",
@@ -3708,6 +3708,10 @@
       "assistant_model": {
         "label": "Numo-Modell",
         "desc": "Numo im Chat und im Kommentar Antworten."
+      },
+      "assistant_reasoning_level": {
+        "label": "Reasoning-Stufe",
+        "desc": "Höhere Stufen können komplexe Aufgaben verbessern, brauchen aber mehr Zeit und Tokens. Gilt für Numo-Chats und -Kommentare."
       },
       "fallback_model": {
         "label": "Fallback-Modell",

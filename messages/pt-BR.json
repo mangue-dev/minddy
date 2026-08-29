@@ -3670,7 +3670,7 @@
     "title": "Modelos de IA",
     "subtitle": "Modelos minddy são executados. Cada escolha se aplica imediatamente; “modelo padrão” devolve a configuração ao padrão do produto.",
     "loadError": "Não foi possível carregar a configuração.",
-    "saved": "Modelo salvo",
+    "saved": "Configuração salva",
     "fieldDefault": "Modelo padrão",
     "suffix": {
       "label": "Roteamento do provedor",
@@ -3708,6 +3708,10 @@
       "assistant_model": {
         "label": "Modelo Numo",
         "desc": "Numo no bate-papo e nas respostas de comentários."
+      },
+      "assistant_reasoning_level": {
+        "label": "Nível de raciocínio",
+        "desc": "Níveis mais altos podem melhorar tarefas complexas, mas levam mais tempo e usam mais tokens. Aplica-se aos chats e comentários do Numo."
       },
       "fallback_model": {
         "label": "Modelo substituto",
