@@ -41,7 +41,25 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
 import { useAccountTheme } from "@/lib/use-account-theme";
-import { Copy, UserRound, Triangle, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh, IterationCw, Link2, Target, Bookmark, BookmarkPlus, Pencil } from "lucide-react";
+import {
+  Bookmark,
+  BookmarkPlus,
+  CircleDashed,
+  ClipboardCopy,
+  Copy,
+  IterationCw,
+  Link2,
+  Monitor,
+  Moon,
+  Pencil,
+  SignalHigh,
+  Sun,
+  SunMoon,
+  Target,
+  Trash2,
+  Triangle,
+  UserRound,
+} from "lucide-react";
 import {
   CommandPalette as CommandPaletteShell,
   type ActionProvider,
@@ -68,6 +86,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
+import { useCreate } from "@/lib/create-context";
 import { useCurrentView } from "@/lib/current-view-context";
 import { useSavedViewsQuery } from "@/lib/use-saved-views-query";
 import { useProjects } from "@/lib/projects-context";
@@ -89,6 +108,7 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAnalytics } from "@/lib/use-analytics";
 import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
+import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
 import type {
   Issue,
   Member,
@@ -213,11 +233,13 @@ export function CommandPalette({
   const tBulk = useTranslations("BulkActions");
   const tCycles = useTranslations("Cycles");
   const tNav = useTranslations("Nav");
+  const tAction = useTranslations("CommandPaletteActions");
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();
   const { projects } = useProjects();
+  const { openCreateIssue, openCreateObjective } = useCreate();
   // The account theme: the choice is persisted to user_metadata so it
   // follows the account to every device (lib/use-account-theme.ts).
   const { theme, setTheme } = useAccountTheme();
@@ -370,11 +392,12 @@ export function CommandPalette({
                 : undefined,
             contextLabel: it.metaText,
             filterCategory: cat,
-            entityType: it.entityType,
+            entityType: it.entityType ?? (it.href ? "navigation" : undefined),
             // Line project: the motor boosts those of the current project
             // (SearchContext.currentContextId), without excluding others.
             contextId: it.contextId,
             data: it.data,
+            href: it.href,
             execute: () => {
               // `it.key` is a stable identifier (cmd-*, ticket id) —
               // never the translated wording, which would fragment the stats.
@@ -411,6 +434,7 @@ export function CommandPalette({
         // would leave its id in the account once the view is forgotten.
         favoritable: false,
         data: view,
+        href: view.href,
         execute: () => {
           track("saved_view_opened", {});
           router.push(view.href);
@@ -616,6 +640,42 @@ export function CommandPalette({
           },
         });
 
+        const projectObjectives = (searchIndex?.objectives ?? []).filter(
+          (objective) => objective.project_id === issue.project_id
+        );
+        actions.push({
+          id: "issue.objective",
+          label: tIssueUI("changeObjectiveAria"),
+          icon: Target,
+          category: "secondary",
+          priority: 9,
+          requiresForm: {
+            ...selectField("objective", tIssueUI("changeObjectiveAria"), [
+              {
+                value: "__none__",
+                label: tField("noObjective"),
+                description: issue.objective_id === null ? "•" : undefined,
+              },
+              ...projectObjectives.map((objective) => ({
+                value: objective.id,
+                label: objective.name,
+                description: objective.id === issue.objective_id ? "•" : undefined,
+              })),
+            ]),
+            onSubmit: (values) =>
+              update(
+                issue,
+                {
+                  objective_id:
+                    values.objective === "__none__"
+                      ? null
+                      : (values.objective as string),
+                },
+                tIssueUI("changeObjectiveAria")
+              ),
+          },
+        });
+
         // — Copy the prompt (the ⇧P of the board: XML agent + auto-start MIN-20) —
         actions.push({
           id: "issue.copy-prompt",
@@ -686,11 +746,11 @@ export function CommandPalette({
           },
         });
 
-        // — Copier l'identifiant (PQ-42) —
+        // Copy the stable human identifier (for example, PQ-42).
         if (item.contextLabel) {
           actions.push({
             id: "issue.copy-id",
-            label: `Copier « ${item.contextLabel} »`,
+            label: tAction("copyIdentifier", { identifier: item.contextLabel }),
             icon: Copy,
             category: "secondary",
             priority: 0,
@@ -705,7 +765,54 @@ export function CommandPalette({
         return actions;
       },
     };
-  }, [queryClient, membersForProject, projects, user, categoryNameById, tIssueUI, tStatus, tPriority, tField]);
+  }, [queryClient, membersForProject, projects, user, categoryNameById, searchIndex, tIssueUI, tStatus, tPriority, tField, tAction]);
+
+  const entityProvider = useMemo(
+    () =>
+      createMinddyEntityActionsProvider({
+        labels: {
+          copied: tAction("copied"),
+          linkCopied: tAction("linkCopied"),
+          openInNewTab: tAction("openInNewTab"),
+          copyLink: tAction("copyLink"),
+          newIssue: tAction("newIssue"),
+          newObjective: tAction("newObjective"),
+          copyProjectKey: tAction("copyProjectKey"),
+          openObjectives: tAction("openObjectives"),
+          openPages: tAction("openPages"),
+          openTriage: tAction("openTriage"),
+          openFeedback: tAction("openFeedback"),
+          openProjectSettings: tAction("openProjectSettings"),
+          viewObjectiveIssues: tAction("viewObjectiveIssues"),
+          newIssueForObjective: tAction("newIssueForObjective"),
+          copyObjectiveName: tAction("copyObjectiveName"),
+          openProjectBoard: tAction("openProjectBoard"),
+          newIssueInProject: tAction("newIssueInProject"),
+          copyPageTitle: tAction("copyPageTitle"),
+          copyIssueTitle: tAction("copyIssueTitle"),
+          openLinkedObjective: tAction("openLinkedObjective"),
+        },
+        navigate: (href) => router.push(href),
+        openInNewTab: (href) => {
+          window.open(
+            new URL(href, window.location.origin).href,
+            "_blank",
+            "noopener,noreferrer"
+          );
+        },
+        copyText: async (value, confirmation, resolveHref) => {
+          const text = resolveHref
+            ? new URL(value, window.location.origin).href
+            : value;
+          await navigator.clipboard.writeText(text);
+          toast.success(confirmation);
+        },
+        openCreateIssue: (projectId, objectiveId) =>
+          openCreateIssue({ projectId, objectiveId }),
+        openCreateObjective: (projectId) => openCreateObjective({ projectId }),
+      }),
+    [openCreateIssue, openCreateObjective, router, tAction]
+  );
 
   // === “Change the theme”: a single item, the inline select makes the submenu ===
   const themeProvider = useMemo<ActionProvider>(() => {
@@ -1188,8 +1295,8 @@ export function CommandPalette({
   }, [bulkRequest, tIssueUI, tStatus, tPriority, tField]);
 
   const providers = useMemo(
-    () => [issueProvider, themeProvider, savedViewProvider, bulkFieldProvider],
-    [issueProvider, themeProvider, savedViewProvider, bulkFieldProvider]
+    () => [issueProvider, entityProvider, themeProvider, savedViewProvider, bulkFieldProvider],
+    [issueProvider, entityProvider, themeProvider, savedViewProvider, bulkFieldProvider]
   );
 
   // In bulk mode, the palette displays the selection options instead of the

@@ -39,6 +39,9 @@ export interface PaletteItem {
   /** Raw entity (e.g. the Issue) — lets the palette derive status icons and wire
    *  mutations (⌘; actions) without re-querying. Ignored by the mobile search. */
   data?: unknown;
+  /** Stable in-app destination for link-oriented palette actions. The mobile
+   *  menu still uses `onSelect`; desktop uses this for copy/open-in-new-tab. */
+  href?: string;
   onSelect?: () => void;
 }
 

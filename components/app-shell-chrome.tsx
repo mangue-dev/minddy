@@ -801,8 +801,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       key: "goto",
       heading: t("goTo"),
       items: [
-        { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
-        { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
+        { key: "go-home", label: t("home"), icon: Home, href: "/home", onSelect: () => router.push("/home") },
+        { key: "go-inbox", label: t("inbox"), icon: Inbox, href: "/inbox", onSelect: () => router.push("/inbox") },
         {
           key: "open-notes",
           label: tScratch("open"),
@@ -816,12 +816,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 key: "go-pull-requests",
                 label: t("pullRequests"),
                 icon: GitPullRequest,
+                href: "/pull-requests",
                 onSelect: () => router.push("/pull-requests"),
               },
               {
                 key: "go-agents",
                 label: t("agents"),
                 icon: NumoNavIcon,
+                href: "/agents",
                 onSelect: () => router.push("/agents"),
               },
               {
@@ -830,6 +832,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 key: "go-routines",
                 label: tRoutines("title"),
                 icon: CalendarClock,
+                href: "/routines",
                 keywords: [
                   "routine",
                   "routines",
@@ -848,6 +851,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "go-all-global",
           label: t("allIssues"),
           icon: LayoutGrid,
+          href: "/all",
           onSelect: () => router.push("/all"),
         },
         {
@@ -857,6 +861,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "go-cycle",
           label: t("cycle"),
           icon: IterationCw,
+          href: "/all?view=cycle",
           keywords: [
             "cycle",
             "sprint",
@@ -873,6 +878,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "go-account-settings",
           label: t("accountSettings"),
           icon: Settings,
+          href: "/settings",
           onSelect: () => router.push("/settings"),
         },
         {
@@ -939,7 +945,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: p.name,
           icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
           keywords: [p.key],
+          entityType: "project",
           contextId: p.id,
+          data: p,
+          href: `/projects/${p.id}`,
           onSelect: () => router.push(`/projects/${p.id}`),
         })),
       });
@@ -962,6 +971,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: base,
             contextId,
             onSelect: () => router.push(base),
           },
@@ -972,6 +982,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/objectives`,
             contextId,
             onSelect: () => router.push(`${base}/objectives`),
           },
@@ -984,6 +995,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: [...kw, "wiki", "documentation", "doc"],
             meta: chip,
             metaText,
+            href: `${base}/pages`,
             contextId,
             onSelect: () => router.push(`${base}/pages`),
           },
@@ -994,6 +1006,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/triage`,
             contextId,
             onSelect: () => router.push(`${base}/triage`),
           },
@@ -1004,6 +1017,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/feedback`,
             contextId,
             onSelect: () => router.push(`${base}/feedback`),
           },
@@ -1014,6 +1028,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/settings`,
             contextId,
             onSelect: () => router.push(`${base}/settings`),
           },
@@ -1088,6 +1103,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       meta: project ? projectChip(project) : undefined,
       metaText: project ? project.name : s.tabLabel,
       contextId: project?.id,
+      href: settingsSectionHref(s, project?.id),
       onSelect: () => router.push(settingsSectionHref(s, project?.id)),
     });
 
@@ -1160,6 +1176,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 entityType: "issue",
                 contextId: i.project_id,
                 data: i,
+                href: `/projects/${i.project_id}?issue=${i.id}`,
                 onSelect: () => openIssuePanel(i.project_id, i.id),
               },
             ];
@@ -1185,7 +1202,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 keywords: [project.name, project.key],
                 meta: projectChip(project),
                 metaText: project.name,
+                entityType: "objective",
                 contextId: o.project_id,
+                data: o,
+                href: `/projects/${o.project_id}/objectives?open=${o.id}`,
                 onSelect: () =>
                   router.push(`/projects/${o.project_id}/objectives?open=${o.id}`),
               },
@@ -1241,7 +1261,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 metaText: excerpt
                   ? `${project.name} · ${truncateExcerpt(excerpt)}`
                   : project.name,
+                entityType: "page",
                 contextId: page.project_id,
+                data: page,
+                href: `/projects/${page.project_id}/pages/${page.id}`,
                 onSelect: () =>
                   router.push(`/projects/${page.project_id}/pages/${page.id}`),
               },
