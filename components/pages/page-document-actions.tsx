@@ -9,7 +9,11 @@ import {
   FileDown,
   FileText,
   Globe,
+  Plus,
   Printer,
+  Star,
+  StarOff,
+  Trash2,
 } from "lucide-react";
 
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -21,42 +25,35 @@ import { buildPageAgentPrompt } from "@/lib/page-agent-prompt";
 import { useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { trackEvent } from "@/lib/analytics";
 
+export type PageMenuTarget = {
+  id: string;
+  title: string;
+  favorite: boolean;
+};
+
 /**
- * What can be done EXIT from a page (MIN-283): publish it, take it away.
- *
- * Written ONCE for its two anchors — the menu ⋯ of a line in the tree, and
- * that of the open page. This is the rule of the repository for everything that opens from
- * two places (see `ContextMenuAction`, components/issue-context-menu): two
- * lists always end up diverging, and it is the one that is opened the least
- * often which keeps the entry out of date.
- *
- * A single DIALOG for an entire tree, and that's the point of the hook: it carries
- * the targeted page in state rather than being mounted per line. A sidebar of one hundred
- * pages would otherwise create one hundred dialogs and one hundred disabled queries.
- *
- * PDF is not another export format: it is the PRINTING of the document,
- * on a view designed for that (app/(app)/projects/[id]/pages-print/[pageId]). A server-side PDF engine would have meant a second definition of the layout to be kept, to produce what the browser already produces. does not take away its content: it gives something to go
- * to read it, plus the instructions of what we want to do with it
- * (lib/page-agent-prompt.ts). It goes through a dialog, like publishing,
- * and for the same reason: it has something to ask before acting.
+ * Builds the complete page menu for both the sidebar tree and the open page.
+ * Keeping structural and document actions together prevents the less frequently
+ * opened menu from losing entries over time. Dialog state is held once per menu
+ * surface rather than once per page row.
  */
 export function usePageDocumentMenu({
   projectId,
   pages,
+  onCreateChild,
+  onToggleFavorite,
+  onTrash,
 }: {
   projectId: string;
-  /** The project tree, flat: it gives the number of descendants of a page,
- which is what “with subpages” really means. */
+  /** The flat project tree determines whether branch export actions are useful. */
   pages: readonly { id: string; parent_id: string | null }[];
+  onCreateChild: (parentId: string) => void;
+  onToggleFavorite: (page: PageMenuTarget) => void;
+  onTrash: (page: PageMenuTarget) => void;
 }): {
-  /** The “Copy for agent”, “Publish” and “Export” entries for a given
- page.
-
- `shortcut` is only true for the OPEN page: ⌘⇧L aims at it and
- display the key on the tree line of ANOTHER page would promise a
- gesture that would copy another document. */
+  /** `shortcut` is only true for the open page targeted by ⌘⇧L. */
   actionsFor: (
-    page: { id: string; title: string },
+    page: PageMenuTarget,
     options?: { shortcut?: boolean }
   ) => ContextMenuAction[];
   /** Open the publishing dialog without going through the menu — what
@@ -171,7 +168,7 @@ export function usePageDocumentMenu({
 
   const actionsFor = useCallback(
     (
-      page: { id: string; title: string },
+      page: PageMenuTarget,
       options?: { shortcut?: boolean }
     ): ContextMenuAction[] => {
       const count = countOf(page.id);
@@ -211,6 +208,22 @@ export function usePageDocumentMenu({
 
       return [
         {
+          id: "new-subpage",
+          label: t("newSubpage"),
+          icon: <Plus className="size-4" />,
+          onSelect: () => onCreateChild(page.id),
+        },
+        {
+          id: "favorite",
+          label: page.favorite ? t("unfavorite") : t("favorite"),
+          icon: page.favorite ? (
+            <StarOff className="size-4" />
+          ) : (
+            <Star className="size-4" />
+          ),
+          onSelect: () => onToggleFavorite(page),
+        },
+        {
           id: "copy-for-agent",
           label: t("copyForAgent"),
           // What we type while looking for the entry, and which is not in the
@@ -237,9 +250,27 @@ export function usePageDocumentMenu({
           icon: <Download className="size-4" />,
           children: exportChildren,
         },
+        {
+          id: "trash",
+          label: t("deletePage"),
+          icon: <Trash2 className="size-4" />,
+          variant: "destructive",
+          separatorBefore: true,
+          onSelect: () => onTrash(page),
+        },
       ];
     },
-    [countOf, download, print, openAgentCopy, modShortcut, t]
+    [
+      countOf,
+      download,
+      print,
+      openAgentCopy,
+      modShortcut,
+      onCreateChild,
+      onToggleFavorite,
+      onTrash,
+      t,
+    ]
   );
 
   const dialogs = useMemo(

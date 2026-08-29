@@ -32,8 +32,6 @@ import {
   MoreHorizontal,
   Plus,
   Star,
-  StarOff,
-  Trash2,
 } from "lucide-react";
 
 import type { PageSummary } from "@/lib/pages-api";
@@ -50,7 +48,10 @@ import {
   PagePresenceDot,
   usePresentOn,
 } from "@/components/pages/page-presence";
-import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
+import {
+  usePageDocumentMenu,
+  type PageMenuTarget,
+} from "@/components/pages/page-document-actions";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -81,9 +82,9 @@ export interface PageTreeProps {
   query: string;
   onCreateChild: (parentId: string) => void;
   onMove: (dragId: string, targetId: string, mode: PageDropMode) => void;
-  onTrash: (page: PageSummary) => void;
+  onTrash: (page: PageMenuTarget) => void;
   /** Pin/unpin. The favorite is SHARED by the project (lib/pages.ts). */
-  onToggleFavorite: (page: PageSummary) => void;
+  onToggleFavorite: (page: PageMenuTarget) => void;
 }
 
 export function PageTree({
@@ -193,11 +194,26 @@ export function PageTree({
     setDrop(null);
   }, []);
 
-  /* ── Publier, exporter (MIN-283) ────────────────────────────────────────
-     Both entries are written once for their two anchors — this
-     line, and the menu ⋯ of the opened page. The publishing dialog is
-     mounted ONCE for the whole tree: it carries its intended page in its state. */
-  const { actionsFor, dialogs } = usePageDocumentMenu({ projectId, pages });
+  const createChild = useCallback(
+    (parentId: string) => {
+      if (!expanded.has(parentId)) {
+        const next = new Set(expanded);
+        next.add(parentId);
+        persist(next);
+      }
+      onCreateChild(parentId);
+    },
+    [expanded, onCreateChild, persist]
+  );
+
+  // One action list serves the hover menu, the context menu, and the open page.
+  const { actionsFor, dialogs } = usePageDocumentMenu({
+    projectId,
+    pages,
+    onCreateChild: createChild,
+    onToggleFavorite,
+    onTrash,
+  });
 
   if (filtered) {
     return filtered.length === 0 ? (
@@ -217,11 +233,9 @@ export function PageTree({
             drop={null}
             dragging={false}
             untitled={t("untitled")}
-            documentActions={actionsFor(page)}
+            actions={actionsFor(page)}
             onToggle={() => {}}
-            onCreateChild={onCreateChild}
-            onTrash={onTrash}
-            onToggleFavorite={onToggleFavorite}
+            onCreateChild={createChild}
           />
         ))}
         {dialogs}
@@ -244,18 +258,9 @@ export function PageTree({
           drop={drop?.id === node.id ? drop.mode : null}
           dragging={dragId === node.id}
           untitled={t("untitled")}
-          documentActions={actionsFor(node)}
+          actions={actionsFor(node)}
           onToggle={() => toggle(node.id)}
-          onCreateChild={(parentId) => {
-            if (!expanded.has(parentId)) {
-              const next = new Set(expanded);
-              next.add(parentId);
-              persist(next);
-            }
-            onCreateChild(parentId);
-          }}
-          onTrash={onTrash}
-          onToggleFavorite={onToggleFavorite}
+          onCreateChild={createChild}
           onDragStart={() => setDragId(node.id)}
           onDragOverRow={(mode) => {
             if (!dragId || dragId === node.id) return;
@@ -290,12 +295,10 @@ export function PageTree({
               drop={null}
               dragging={false}
               untitled={t("untitled")}
-              documentActions={actionsFor(page)}
+              actions={actionsFor(page)}
               pinned
               onToggle={() => {}}
-              onCreateChild={onCreateChild}
-              onTrash={onTrash}
-              onToggleFavorite={onToggleFavorite}
+              onCreateChild={createChild}
             />
           ))}
           <div className="mx-2 my-1.5 h-px shrink-0 bg-border" aria-hidden />
@@ -316,12 +319,10 @@ function PageRow({
   drop,
   dragging,
   untitled,
-  documentActions,
+  actions,
   pinned = false,
   onToggle,
   onCreateChild,
-  onTrash,
-  onToggleFavorite,
   onDragStart,
   onDragOverRow,
   onDropRow,
@@ -336,15 +337,13 @@ function PageRow({
   drop: PageDropMode | null;
   dragging: boolean;
   untitled: string;
-  /** “Publish” and “Export” (MIN-283), written by shared hook. */
-  documentActions: ContextMenuAction[];
+  /** The complete menu, shared with the open page. */
+  actions: ContextMenuAction[];
   /** Returned to the BLOCK of favorites, at the top of the bar: it then bears
       the star which, for lack of an intertitle, says what this block is. */
   pinned?: boolean;
   onToggle: () => void;
   onCreateChild: (parentId: string) => void;
-  onTrash: (page: PageSummary) => void;
-  onToggleFavorite: (page: PageSummary) => void;
   onDragStart?: () => void;
   onDragOverRow?: (mode: PageDropMode) => void;
   onDropRow?: (mode: PageDropMode) => void;
@@ -366,45 +365,6 @@ function PageRow({
     const rect = event.currentTarget.getBoundingClientRect();
     return dropModeAt(event.clientY - rect.top, rect.height);
   };
-
-  /**
-   * The actions of the line, written ONCE for two anchors: the button
-   * “⋯” which appears on hover, and right-click anywhere on the line.
-   *
-   * That's the whole point of going through `ContextMenuAction[]` rather than
-   * copy `<DropdownMenuItem>`: two menus which list the same thing from
-   * two different places always end up diverging, and this is the one
-   * which is opened the least often which keeps the action out of date. Here there is only one
-   * list — board maps and primary sidebar already do the same
-   * (components/issue-context-menu.tsx).
-   */
-  const actions: ContextMenuAction[] = [
-    {
-      id: "new-subpage",
-      label: t("newSubpage"),
-      icon: <Plus className="size-4" />,
-      onSelect: () => onCreateChild(page.id),
-    },
-    {
-      id: "favorite",
-      label: page.favorite ? t("unfavorite") : t("favorite"),
-      icon: page.favorite ? (
-        <StarOff className="size-4" />
-      ) : (
-        <Star className="size-4" />
-      ),
-      onSelect: () => onToggleFavorite(page),
-    },
-    ...documentActions,
-    {
-      id: "trash",
-      label: t("deletePage"),
-      icon: <Trash2 className="size-4" />,
-      variant: "destructive",
-      separatorBefore: true,
-      onSelect: () => onTrash(page),
-    },
-  ];
 
   return (
     <>

@@ -46,6 +46,7 @@ import type { ActivityItem, ThreadMessage } from "@/components/issue-timeline";
 import { usePageComments } from "@/lib/use-page-comments";
 import type { PageThread } from "@/lib/page-comments";
 import type { EventContext } from "@/lib/describe-event";
+import { PageBacklinks } from "@/components/pages/page-backlinks";
 
 /** The log cache key for a page — the one that the real-time bridge invalidates. */
 export const pageEventsKey = (pageId: string) =>
@@ -179,6 +180,7 @@ export function PageActivity({
 
   return (
     <div className="flex flex-col gap-4">
+      <PageBacklinks projectId={projectId} pageId={pageId} />
       <IssueActivity
         items={items}
         ctx={ctx}

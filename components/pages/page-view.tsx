@@ -48,6 +48,7 @@ import {
   cancelDraftDiscard,
   forgetDraftPage,
   isDraftPage,
+  markDraftPage,
   scheduleDraftDiscard,
 } from "@/lib/pages-draft";
 import { ancestorsOf, descendantIds } from "@/lib/pages";
@@ -66,12 +67,14 @@ import {
 } from "@/components/pages/block-actions";
 import { PageHeader } from "@/components/pages/page-header";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
-import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
+import {
+  usePageDocumentMenu,
+  type PageMenuTarget,
+} from "@/components/pages/page-document-actions";
 import { PageHistorySheet } from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
-import { PageBacklinks } from "@/components/pages/page-backlinks";
 import { PageCommentLayer } from "@/components/pages/page-comment-layer";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
@@ -639,14 +642,69 @@ function PageSurface({
     [pages, pageId]
   );
 
-  /* ── Send this page OUT: publish, export (MIN-283) ─────────────────────── */
-  //
-  // The same entries as in the menu ⋯ of the tree line, written one
-  // times (components/pages/page-document-actions.tsx). They are HERE too
-  // because it is by READING a page that we decide to send it to someone —
-  // not by looking for it in a column.
-  const documentMenu = usePageDocumentMenu({ projectId, pages });
-  const pageRef = useMemo(() => ({ id: pageId, title }), [pageId, title]);
+  /* ── The same page menu as the sidebar tree ───────────────────────────── */
+  const createChildFromMenu = useCallback(
+    (parentId: string) => {
+      void (async () => {
+        try {
+          const child = await createPage({ parent_id: parentId });
+          markDraftPage(child.id);
+          void flushRef
+            .current()
+            .finally(() => router.push(`${base}/${child.id}`));
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : t("createFailed"));
+        }
+      })();
+    },
+    [base, createPage, router, t]
+  );
+
+  const toggleFavoriteFromMenu = useCallback(
+    (target: PageMenuTarget) => {
+      void updatePage(target.id, { favorite: !target.favorite }).catch(
+        (err: unknown) => {
+          toast.error(err instanceof Error ? err.message : t("favoriteFailed"));
+        }
+      );
+    },
+    [t, updatePage]
+  );
+
+  const trashFromMenu = useCallback(
+    (target: PageMenuTarget) => {
+      void (async () => {
+        try {
+          const trashed = await trashPage(target.id);
+          router.push(base);
+          toast.success(
+            trashed > 1
+              ? t("trashedWithChildren", { count: trashed })
+              : t("trashed", { title: target.title || t("untitled") })
+          );
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : t("deleteFailed"));
+        }
+      })();
+    },
+    [base, router, t, trashPage]
+  );
+
+  const documentMenu = usePageDocumentMenu({
+    projectId,
+    pages,
+    onCreateChild: createChildFromMenu,
+    onToggleFavorite: toggleFavoriteFromMenu,
+    onTrash: trashFromMenu,
+  });
+  const pageRef = useMemo<PageMenuTarget>(
+    () => ({
+      id: pageId,
+      title,
+      favorite: summary?.favorite ?? page?.favorite ?? false,
+    }),
+    [pageId, title, summary?.favorite, page?.favorite]
+  );
 
   /* ── ⌘⇧L: copy this page for an agent ───────────────────────────── */
   //
@@ -911,11 +969,6 @@ function PageSurface({
             />
           </PageTaskSurface>
         </div>
-        {/* At the foot of the DOCUMENT, in the same column as it: “which relies
-            on this page? » asks oneself when one has finished reading it, not in
-            a piece of furniture that would constantly gain width. Absent while
-            no one cites the page (MIN-279). */}
-        <PageBacklinks projectId={projectId} pageId={pageId} />
       </div>
       </div>
 
