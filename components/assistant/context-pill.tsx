@@ -27,6 +27,7 @@ import {
   Layers,
   LayoutGrid,
   MessagesSquare,
+  Settings2,
   Target,
   X,
 } from "lucide-react";
@@ -97,6 +98,10 @@ const STYLES: Record<
   cycle: {
     icon: IterationCw,
     tint: "bg-teal-500/12 text-teal-600 dark:text-teal-400",
+  },
+  settings: {
+    icon: Settings2,
+    tint: "bg-slate-500/12 text-slate-600 dark:text-slate-400",
   },
   // Member and project never pass through this table: they carry their
   // its own figure (portrait, orb).

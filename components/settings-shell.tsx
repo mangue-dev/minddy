@@ -46,8 +46,6 @@ type SettingsShellProps = {
   title: string;
   defaultTab: string;
   tabs: SettingsTab[];
-  /** Rendered above the tab content (banners, warnings…). */
-  topSlot?: ReactNode;
   /**
    * “Filter the 18 settings…”. A FUNCTION, not a string: the namespace
    * differs (account / project) so the translation comes from the page, but the
@@ -146,7 +144,6 @@ export function SettingsShell({
   title,
   defaultTab,
   tabs,
-  topSlot,
   audience,
   filterPlaceholder,
 }: SettingsShellProps) {
@@ -158,7 +155,6 @@ export function SettingsShell({
         title={title}
         defaultTab={defaultTab}
         tabs={tabs}
-        topSlot={topSlot}
         audience={audience}
         filterPlaceholder={filterPlaceholder}
       />
@@ -170,7 +166,6 @@ function SettingsTabs({
   title,
   defaultTab,
   tabs,
-  topSlot,
   audience,
   filterPlaceholder,
 }: SettingsShellProps) {
@@ -368,23 +363,25 @@ function SettingsTabs({
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        {/* Panel header, MOBILE only: return to rail and
-            name of the open tab. On desktop the rail is on the screen and the
-            already highlights — one more bar would have nothing to say, and would push
-            cards down to repeat it. */}
+        {/* The settings content keeps the same structural header as the other
+            list/detail screens. It stays intentionally empty on desktop: the
+            secondary rail already names the active tab, while the blank header
+            gives the settings cards the expected top breathing room. */}
         <AppContentHeader
-          className="md:hidden"
           contentClassName="gap-2 px-4"
         >
           <Button
             variant="ghost"
             size="icon-sm"
+            className="md:hidden"
             aria-label={title}
             onClick={() => setMobileDetail(false)}
           >
             <ChevronLeft />
           </Button>
-          <span className="truncate text-sm font-medium">{activeLabel}</span>
+          <span className="truncate text-sm font-medium md:hidden">
+            {activeLabel}
+          </span>
         </AppContentHeader>
 
         <div
@@ -393,7 +390,6 @@ function SettingsTabs({
           className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 md:px-6 md:pt-6"
         >
           <div className={cn("mx-auto flex flex-col gap-4", SETTINGS_MAX_WIDTH)}>
-            {topSlot}
             {/* Only the open tab is mounted — that's already what it did
                 `TabsContent`, which dismantles the others. The key forces a
                 reassembly at each change: a panel must not inherit from

@@ -15,7 +15,7 @@ import {
 } from "mangue-ui";
 import { Copy } from "lucide-react";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
-import { BrandLogo } from "@/components/brand-logo";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
 
 /** “Connect an agent” — OAuth only: The install command does not contain ANY secrets (the agent opens the browser to allow first use). 100% client-side copy, nothing to generate.
 
@@ -24,8 +24,8 @@ import { BrandLogo } from "@/components/brand-logo";
  button and explanation stacked together - and nothing was read there anymore.
 
  The same component serves the account settings (`account-mcp-section.tsx`) and
- the MCP stage of onboarding (`components/home/onboarding-mcp-step.tsx`), qui
- only adds its “Skip this step” output. */
+ the MCP onboarding step (`components/home/onboarding-mcp-step.tsx`), which only
+ adds its “Skip this step” action. */
 export function McpConnectPanel({
   className,
   onSelect,
@@ -59,7 +59,7 @@ export function McpConnectPanel({
             onClick={() => select(item)}
             className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-brand/8 focus-visible:border-ring focus-visible:outline-none"
           >
-            <BrandLogo brand={item} className="size-4 shrink-0" />
+            <McpAgentLogo agent={item.id} className="size-4" />
             <span className="min-w-0 truncate">{item.label}</span>
           </button>
         ))}

@@ -128,6 +128,10 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
   const ctx: AssistantPageContext = {
     projectId: pick("projectId"),
     inbox: obj.inbox === true ? true : undefined,
+    settings:
+      obj.settings === "account" || obj.settings === "project"
+        ? obj.settings
+        : undefined,
     pinned,
     onglet: obj.onglet === "my" || obj.onglet === "all" ? obj.onglet : undefined,
     issueId: pick("issueId"),

@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Check } from "lucide-react";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
-import { BrandLogo } from "@/components/brand-logo";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { NumoFace } from "@/components/numo-face";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
@@ -89,7 +89,7 @@ export async function SectionAgents() {
                   key={agent.id}
                   className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-4 text-left text-xs font-medium text-foreground/90 shadow-sm"
                 >
-                  <BrandLogo brand={agent} className="h-6 w-6" />
+                  <McpAgentLogo agent={agent.id} size={24} />
                   {agent.label}
                 </li>
               ))}

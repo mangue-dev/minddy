@@ -56,8 +56,14 @@ Bundled asset policy:
   `app/fonts/LICENSE-Inter.txt`.
 - minddy logos and icons are maintained by the project copyright holder.
 - Product screenshots and capture fixtures are generated from synthetic data.
-- Third-party product choices use project-authored neutral pictograms; the
-  adjacent product names identify compatibility and do not imply endorsement.
+- Coding-agent marks are rendered from the MIT-licensed `@lobehub/icons`
+  package. Import-provider marks are rendered from the CC0-1.0-licensed
+  `simple-icons` package. Their adjacent names identify compatibility and do
+  not imply endorsement; trademarks remain with their respective owners.
+- The VS Code stable icon comes from Microsoft's official brand download and
+  is used only to identify the corresponding connection instructions. Its use
+  follows the published VS Code icon and name guidelines; Microsoft retains all
+  trademark rights.
 - New fonts, icons, illustrations, captures, or copied code require a recorded
   source and redistribution license before merge.
 

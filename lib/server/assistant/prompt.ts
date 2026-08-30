@@ -918,6 +918,17 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       "When they ask what they missed, what is unread, what is waiting, or refer to notifications without another explicit target, call list_inbox. It returns read/unread state and exact target ids; do not guess from project activity.",
     );
   }
+  if (ctx.settings === "account") {
+    lines.push(
+      "- The user opened Numo from their account settings.",
+      "When they refer to these settings or ask for a change without another explicit target, they mean their own account settings. Read the current values with get_account_settings before changing them with update_account_settings.",
+    );
+  } else if (ctx.settings === "project") {
+    lines.push(
+      `- The user opened Numo from the settings of the current project${ctx.projectId ? ` (id: ${ctx.projectId})` : ""}.`,
+      `When they refer to these settings or ask for a change without another explicit target, they mean this project's settings. Use update_project for changes.${ctx.projectId ? ` The current project id is ${ctx.projectId}.` : ""}`,
+    );
+  }
   if (ctx.issueId) {
     lines.push(
       `- Open issue: ${ctx.issueIdentifier ?? "(unknown identifier)"}${ctx.issueTitle ? ` — "${ctx.issueTitle}"` : ""} (id: ${ctx.issueId})${ctx.projectId ? ` in project (id: ${ctx.projectId})` : ""}.`,

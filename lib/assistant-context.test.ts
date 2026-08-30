@@ -23,6 +23,7 @@ const t = ((key: string) => key) as unknown as Parameters<
 const everything: AssistantPageContext = {
   projectId: "p1",
   inbox: true,
+  settings: "project",
   issueId: "i1",
   issueIdentifier: "MIN-42",
   issueTitle: "Un ticket",
@@ -108,6 +109,33 @@ describe("contextChips — inbox", () => {
     );
     expect(
       applyContextSelection({ inbox: true }, new Set(["inbox"])),
+    ).toBeNull();
+  });
+});
+
+describe("contextChips — settings", () => {
+  it("distinguishes account settings from project settings", () => {
+    expect(contextChips({ settings: "account" }, { t })).toContainEqual(
+      expect.objectContaining({
+        key: "settings",
+        kind: "settings",
+        label: "contextAccountSettings",
+      }),
+    );
+    expect(
+      contextChips({ projectId: "p1", settings: "project" }, { t }),
+    ).toContainEqual(
+      expect.objectContaining({
+        key: "settings",
+        kind: "settings",
+        label: "contextProjectSettings",
+      }),
+    );
+  });
+
+  it("removes the settings surface when its chip is disabled", () => {
+    expect(
+      applyContextSelection({ settings: "account" }, new Set(["settings"])),
     ).toBeNull();
   });
 });

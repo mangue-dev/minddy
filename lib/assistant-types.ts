@@ -127,6 +127,8 @@ export interface AssistantPageContext {
   projectId?: string;
   /** The account-level inbox is the current ambient surface. */
   inbox?: true;
+  /** The settings surface the assistant was opened from. */
+  settings?: "account" | "project";
   /**
    * Context PINED by hand from the composer (@ button), as opposed to
    * from the rest of this object, inferred from the page. It survives navigation: it's

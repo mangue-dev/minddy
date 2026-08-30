@@ -277,7 +277,7 @@ const nextConfig = {
   // The alias `mangue-ui/*` of `tsconfig.json` takes care of this — see the
   // comment there, it carries the measure.
   experimental: {
-    optimizePackageImports: ["radix-ui"],
+    optimizePackageImports: ["radix-ui", "simple-icons"],
   },
   /**
    * Runtime files of the repository, embedded in the functions.
@@ -424,9 +424,9 @@ const nextConfig = {
       ],
     });
 
-    // Public pages, in their two languages. Recopied from
-    // `lib/public-routes.ts` faute de pouvoir importer du TypeScript ici —
-    // `lib/public-routes.test.ts` checks that they do not diverge.
+    // Public pages in both languages. Repeated from `lib/public-routes.ts`
+    // because this file cannot import TypeScript; `lib/public-routes.test.ts`
+    // checks that the two lists do not diverge.
     //
     // They responded `cache-control: private, no-cache, no-store` with
     // `x-vercel-cache: MISS` on EVERY call, because the landing was calling

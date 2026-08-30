@@ -25,6 +25,7 @@ export type AssistantContextKind =
   | "page"
   | "view"
   | "cycle"
+  | "settings"
   | "member";
 
 export interface AssistantContextChip {
@@ -128,6 +129,19 @@ export function contextChips(
     });
   }
 
+  if (ctx?.settings) {
+    const label =
+      ctx.settings === "account"
+        ? t("contextAccountSettings")
+        : t("contextProjectSettings");
+    chips.push({
+      key: "settings",
+      kind: "settings",
+      label,
+      tooltip: label,
+    });
+  }
+
   if (ctx?.objectiveId) {
     chips.push({
       key: "objective",
@@ -214,6 +228,7 @@ export function contextChips(
 const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   project: ["projectId"],
   inbox: ["inbox"],
+  settings: ["settings"],
   // The PR follows its ticket: it only exists in the prompt attached to it.
   issue: [
     "issueId",

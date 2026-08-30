@@ -1,9 +1,6 @@
 import { cn } from "mangue-ui/lib/utils";
 
-/** A third-party brand bears its logo and, when it is monochrome, its variant
- for dark background. The two registers that have one — the MCP
- (`lib/mcp-agents.ts`) agents and the tools from which a backlog is imported
- (`lib/import-guides.ts`) — satisfy this form. */
+/** A static brand asset and its optional dark-background variant. */
 export interface BrandMark {
   /** Logo for light theme (public/). */
   logo: string;
@@ -13,18 +10,11 @@ export interface BrandMark {
 
 /** Logo of a third party brand, with light/dark toggle when a variant exists.
  Deliberately WITHOUT "use client": used both in server
- components (OAuth pages) and in client components (settings) — and
- the McpAgent object carries a non-serializable build() function border
- RSC, so only the bare essentials cross.
+ components and client components without introducing a client boundary.
 
  `loading="lazy"`, and this is not a comfort detail (MIN-100). React 19
  PRELOAD from the header any `<img>` encountered in server rendering which is
- not lazy: the window of the landing agents — nine logos, duplicate
- when there is a dark variant — therefore posed eighteen
- `<link rel="preload" as="image">` in the `<head>`, all ahead of the capture of the
- hero, which is the LCP element. None of these logos are on the first screen; a
- logo in the viewport (OAuth page, settings) loads
- immediately anyway, `lazy` or not. */
+ not lazy. Static marks are never more important than the page's LCP asset. */
 export function BrandLogo({ brand, className }: { brand: BrandMark; className?: string }) {
   if (!brand.logoDark) {
     // eslint-disable-next-line @next/next/no-img-element

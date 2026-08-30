@@ -6,7 +6,7 @@ import { Button, cn, toast } from "mangue-ui";
 import { Copy, ExternalLink } from "lucide-react";
 import { IMPORT_GUIDES, type ImportGuide } from "@/lib/import-guides";
 import { useModShortcut } from "@/lib/keyboard/use-mod-shortcut";
-import { BrandLogo } from "@/components/brand-logo";
+import { ImportSourceLogo } from "@/components/import-source-logo";
 
 /**
  * The procedure to follow on the side of the tool you leave (MIN-98): the selector
@@ -78,7 +78,7 @@ export function ImportGuideBlock({
                   : "border-border bg-background text-muted-foreground hover:text-foreground"
               )}
             >
-              <BrandLogo brand={item} className="size-4 shrink-0" />
+              <ImportSourceLogo source={item.id} className="size-4" />
               {item.label}
             </button>
           );
