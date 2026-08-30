@@ -362,7 +362,7 @@
     "segmentAutomations": "Automazioni",
     "resetsAt": "Ripristina il {date}",
     "upgradeTo": "Aggiornamento a {plan}",
-    "viewBilling": "Visualizza fatturazione",
+    "viewBilling": "Vai alla fatturazione",
     "pageTitle": "Fatturazione",
     "selfHostedTitle": "I servizi gestiti sono disabili",
     "selfHostedDescription": "Questa istanza auto-ospitata non ha quota minddy o fatturazione Stripe. Configura il tuo provider di AI con BYOK o un endpoint locale.",

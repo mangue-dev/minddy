@@ -142,7 +142,7 @@ export function UsageIndicator({
         collisionPadding={sidebar ? 10 : 8}
         className="w-80 p-0"
       >
-        <UsageBreakdownBody />
+        <UsageBreakdownBody compact />
         <UsageFooter onNavigate={() => handleOpenChange(false)} />
       </PopoverContent>
     </Popover>
@@ -154,10 +154,16 @@ export function UsageIndicator({
  * reset date and detail lines. Standalone (reads `useBillingSummary`) —
  * the caller owns the shell (popover or card).
  *
- * @param bordered Separates blocks by high borders (card settings);
- * omitted for popover.
+ * @param bordered Separates blocks with borders in the billing-page card.
+ * @param compact Uses the denser spacing of the usage popover.
  */
-export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean }) {
+export function UsageBreakdownBody({
+  bordered = false,
+  compact = false,
+}: {
+  bordered?: boolean;
+  compact?: boolean;
+}) {
   const t = useTranslations("Billing");
   const locale = useLocale();
   const {
@@ -217,7 +223,12 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3",
+          compact ? "px-3 pb-1 pt-2" : "px-4 py-3"
+        )}
+      >
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-semibold tabular-nums leading-none text-foreground">
             {loading ? "—" : `${roundRemainingPercent(remainingPercent)}%`}
@@ -231,7 +242,12 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
         </span>
       </div>
 
-      <div className={cn("space-y-2 px-4 py-3", bordered && "border-t border-border")}>
+      <div
+        className={cn(
+          compact ? "space-y-1.5 px-3 pb-2 pt-1" : "space-y-2 px-4 py-3",
+          bordered && "border-t border-border"
+        )}
+      >
         <div className="relative">
           {/* Filling = remaining budget: full on reset, empty one
  times the budget consumed. */}
@@ -262,13 +278,18 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
         )}
       </div>
 
-      <div className={cn("px-4 py-3", bordered && "border-t border-border")}>
+      <div
+        className={cn(
+          compact ? "px-3 py-2" : "px-4 py-3",
+          bordered && "border-t border-border"
+        )}
+      >
         {/* The gauge counts the remainder, the detail counts the consumed: we say,
  otherwise the two percentages read in the same direction. */}
         <p className="mb-1.5 text-xs font-medium text-muted-foreground">
           {t("breakdownTitle")}
         </p>
-        <ul className="space-y-1">
+        <ul className="space-y-0">
           {rows.map((row) => {
             const rowPercent =
               includedUsd > 0 ? Math.round((row.usd / includedUsd) * 100) : 0;
@@ -357,7 +378,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   }, [nextPlanId, redirecting, status?.subscription]);
 
   return (
-    <div className="space-y-1 border-t border-border p-2">
+    <div className="space-y-1 p-2">
       {canUpgrade && nextPlanId && (
         <Button
           type="button"

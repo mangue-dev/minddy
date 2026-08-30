@@ -362,7 +362,7 @@
     "segmentAutomations": "Automatisierungen",
     "resetsAt": "Zurücksetzen am {date}",
     "upgradeTo": "Upgrade auf {plan}",
-    "viewBilling": "Abrechnung anzeigen",
+    "viewBilling": "Zur Abrechnung",
     "pageTitle": "Abrechnung",
     "selfHostedTitle": "Verwaltete Dienste sind deaktiviert",
     "selfHostedDescription": "Diese selbstgehostete Instanz hat kein minddy-Kontingent oder Stripe-Abrechnung. Konfigurieren Sie Ihren eigenen KI-Anbieter mit BYOK oder einem lokalen Endpunkt.",

@@ -362,7 +362,7 @@
     "segmentAutomations": "Automações",
     "resetsAt": "Reinicia em {date}",
     "upgradeTo": "Fazer upgrade para {plan}",
-    "viewBilling": "Ver faturamento",
+    "viewBilling": "Ir para faturamento",
     "pageTitle": "Faturamento",
     "selfHostedTitle": "Os serviços gerenciados estão desativados",
     "selfHostedDescription": "Esta instância auto-hospedada não tem cota do minddy nem cobrança da Stripe. Configure seu próprio provedor de IA com BYOK ou um endpoint local.",

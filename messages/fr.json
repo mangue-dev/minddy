@@ -362,7 +362,7 @@
     "segmentAutomations": "Automatisations",
     "resetsAt": "Réinitialisation le {date}",
     "upgradeTo": "Passer à {plan}",
-    "viewBilling": "Voir la facturation",
+    "viewBilling": "Aller à la facturation",
     "pageTitle": "Facturation",
     "selfHostedTitle": "Les services managés sont désactivés",
     "selfHostedDescription": "Cette instance auto-hébergée n'a ni quota minddy ni facturation Stripe. Configurez votre propre fournisseur IA avec BYOK ou un endpoint local.",

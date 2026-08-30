@@ -362,7 +362,7 @@
     "segmentAutomations": "Automations",
     "resetsAt": "Resets on {date}",
     "upgradeTo": "Upgrade to {plan}",
-    "viewBilling": "View billing",
+    "viewBilling": "Go to billing",
     "pageTitle": "Billing",
     "selfHostedTitle": "Managed services are disabled",
     "selfHostedDescription": "This self-hosted instance has no minddy quota or Stripe billing. Configure your own AI provider with BYOK or a local endpoint.",
