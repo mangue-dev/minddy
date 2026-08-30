@@ -80,7 +80,9 @@ const BODY = z
       "'# ' is the page title), bold/italic/inline code, links, bullet and " +
       "numbered lists, task lists ('- [ ]' / '- [x]'), quotes, fenced code " +
       "blocks, horizontal rules, <details><summary>…</summary>…</details> " +
-      "collapsibles, and '[[page:<page_id>]]' on its own line to embed a link to " +
+      "collapsibles, <aside data-type=\"callout\" " +
+      "data-page-callout-color=\"blue\" data-page-callout-icon=\"💡\">…</aside> " +
+      "callouts, and '[[page:<page_id>]]' on its own line to embed a link to " +
       "another page. Anything else degrades to plain text. Never send " +
       "ProseMirror JSON — markdown is the contract. " +
       IMAGES_AND_FILES

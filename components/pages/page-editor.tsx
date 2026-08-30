@@ -40,6 +40,7 @@ import { taskItemNodeView } from "@/components/scratchpad/task-item-view";
 import { subpageNodeView } from "@/components/pages/blocks/subpage-view";
 import { imageNodeView } from "@/components/pages/blocks/image-view";
 import { fileNodeView } from "@/components/pages/blocks/file-view";
+import { calloutNodeView } from "@/components/pages/blocks/callout-view";
 import {
   PageUploadsProvider,
   type PageUploads,
@@ -62,6 +63,7 @@ import {
 } from "@/components/pages/page-comment-bubble";
 import { focusDocumentEnd } from "@/components/pages/block-actions";
 import { handleNodeLinkClick } from "@/components/editor-node-link";
+import { insertNotionCalloutPaste } from "@/lib/pages-callout-paste";
 import {
   MentionLinksProvider,
   type MentionLinks,
@@ -295,6 +297,7 @@ export function PageEditor({
             // context of uploads and renders from React.
             image: imageNodeView(),
             pageFile: fileNodeView(),
+            callout: calloutNodeView(),
           },
           extensions: { codeBlock: codeBlockEditorExtension() },
         }),
@@ -335,15 +338,23 @@ export function PageEditor({
   // they therefore go through a ref, read at the time of the gesture.
   const uploadsRef = useRef(uploads);
   uploadsRef.current = uploads;
+  const liveEditorRef = useRef<Editor | null>(null);
 
   const editorProps = useMemo(
     () => ({
       ...EDITOR_PROPS,
       handlePaste: (_view: unknown, event: ClipboardEvent) => {
         const files = filesToUpload(event.clipboardData);
-        if (!files || !uploadsRef.current) return false;
+        if (files && uploadsRef.current) {
+          event.preventDefault();
+          uploadsRef.current.addFiles(files);
+          return true;
+        }
+
+        const text = event.clipboardData?.getData("text/plain") ?? "";
+        const editor = liveEditorRef.current;
+        if (!editor || !insertNotionCalloutPaste(editor, text)) return false;
         event.preventDefault();
-        uploadsRef.current.addFiles(files);
         return true;
       },
       handleDrop: (
@@ -378,6 +389,7 @@ export function PageEditor({
     editorProps,
     onUpdate: ({ editor }) => onChangeRef.current(editor.getJSON()),
   });
+  liveEditorRef.current = editor;
 
   // The other half of the rule above: moving the pointer refreshes it.
   // The listener lives as long as the editor is mounted.

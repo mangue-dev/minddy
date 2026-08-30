@@ -1606,6 +1606,77 @@ nav[aria-label="Navigation"]
   background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
 }
 
+/* A callout carries a palette name, never a fixed color. The same document is
+   therefore legible in both themes, and the editor, published page, history,
+   and print view all render the same semantic `<aside>`. */
+[data-page-callout-color="red"] { --page-callout-tone: var(--page-color-red); }
+[data-page-callout-color="orange"] { --page-callout-tone: var(--page-color-orange); }
+[data-page-callout-color="amber"] { --page-callout-tone: var(--page-color-amber); }
+[data-page-callout-color="green"] { --page-callout-tone: var(--page-color-green); }
+[data-page-callout-color="teal"] { --page-callout-tone: var(--page-color-teal); }
+[data-page-callout-color="blue"] { --page-callout-tone: var(--page-color-blue); }
+[data-page-callout-color="indigo"] { --page-callout-tone: var(--page-color-indigo); }
+[data-page-callout-color="violet"] { --page-callout-tone: var(--page-color-violet); }
+[data-page-callout-color="pink"] { --page-callout-tone: var(--page-color-pink); }
+[data-page-callout-color="gray"] { --page-callout-tone: var(--page-color-gray); }
+
+.page-editor [data-type="callout"] {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.625rem;
+  margin-block: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklab, var(--page-callout-tone) 12%, transparent);
+}
+
+.dark .page-editor [data-type="callout"] {
+  background-color: color-mix(in oklab, var(--page-callout-tone) 20%, transparent);
+}
+
+.page-editor .page-callout-icon {
+  display: flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(var(--page-callout-icon-offset, 0px));
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  font-size: 1.375rem;
+  line-height: 1;
+}
+
+.page-editor .page-callout-icon-button {
+  cursor: pointer;
+  color: inherit;
+}
+
+.page-editor .page-callout-icon-button:hover {
+  background-color: color-mix(in oklab, var(--page-callout-tone) 16%, transparent);
+}
+
+.page-editor .page-callout-icon-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.page-editor .page-callout-content:only-child {
+  grid-column: 1 / -1;
+}
+
+.page-editor .page-callout-content > :first-child {
+  margin-top: 0;
+}
+
+.page-editor .page-callout-content > :last-child {
+  margin-bottom: 0;
+}
+
 /* The paragraph of a task otherwise inherits the `[&_p]:my-2` of the body of the page, this
    which pushes the TEXT down and leaves the checkbox alone in
    high. The notebook has the same rule, for the same reason. */

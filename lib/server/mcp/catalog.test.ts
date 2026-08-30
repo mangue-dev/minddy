@@ -438,6 +438,9 @@ describe("catalogue MCP — les pages", () => {
     expect(param("minddy_create_page", "markdown").description).toContain(
       "[[page:"
     );
+    expect(param("minddy_create_page", "markdown").description).toContain(
+      'data-type="callout"'
+    );
   });
 
   it("annonce les rétroliens là où on lit une page", () => {

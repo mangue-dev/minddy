@@ -54,7 +54,9 @@ import { Kbd } from "@/components/ui/kbd";
 import {
   PAGE_COLORS,
   PAGE_COLOR_ATTRIBUTE,
+  activeCalloutColor,
   activePageColor,
+  setCalloutColor,
   setPageColor,
   turnIntoItems,
   type PageColor,
@@ -110,13 +112,20 @@ function ColorItems({
 }) {
   const t = useTranslations("Pages");
   const colorName = useTranslations("Categories.colors");
-  const active = activePageColor(editor, kind);
+  const calloutColor =
+    kind === "background" ? activeCalloutColor(editor) : undefined;
+  const active =
+    calloutColor === undefined ? activePageColor(editor, kind) : calloutColor;
+  const setColor = (color: PageColor | null) =>
+    calloutColor === undefined
+      ? setPageColor(editor, kind, color)
+      : setCalloutColor(editor, color);
 
   return (
     <>
       <DropdownMenuItem
         onSelect={() => {
-          setPageColor(editor, kind, null);
+          setColor(null);
           onDone();
         }}
       >
@@ -128,7 +137,7 @@ function ColorItems({
         <DropdownMenuItem
           key={`${kind}:${color}`}
           onSelect={() => {
-            setPageColor(editor, kind, color);
+            setColor(color);
             onDone();
           }}
         >
@@ -293,7 +302,9 @@ export function BlockMenu({
             <ColorItems editor={editor} kind="text" onDone={close} />
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {t("colorBackground")}
+              {activeCalloutColor(editor) === undefined
+                ? t("colorBackground")
+                : t("calloutColor")}
             </DropdownMenuLabel>
             <ColorItems editor={editor} kind="background" onDone={close} />
           </DropdownMenuSubContent>

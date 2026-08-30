@@ -128,6 +128,7 @@ export const PAGE_NODE_ATTRIBUTES: Record<string, readonly string[]> = {
   taskList: ["blockId", "tight"],
   taskItem: ["checked", "state"],
   blockquote: ["blockId"],
+  callout: ["blockId", "icon", "color"],
   codeBlock: ["blockId", "language"],
   horizontalRule: ["blockId"],
   details: ["blockId", "open"],

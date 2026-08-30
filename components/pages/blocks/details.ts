@@ -140,7 +140,7 @@ export const detailsBlock: PageBlock = {
   labelKey: "blockDetails",
   slash: {
     group: "advanced",
-    order: 3,
+    order: 4,
     keywords: ["details", "dépliant", "depliant", "toggle", "collapse", "accordion", "fold"],
   },
   turnInto: (editor) => editor.chain().focus().setDetails().run(),
