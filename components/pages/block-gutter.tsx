@@ -148,11 +148,25 @@ export function BlockGutter({
       element.style.transform = commented
         ? `translateX(-${COMMENTED_GUTTER_SHIFT}px)`
         : "";
-      // The text does not start at the edge of the block: a block of code is 12 px wide
-      // padding and a border, a quote has its own. Without counting them,
-      // the handle fits on the FRAME and floats above the first
-      // line — visible on code, invisible on a paragraph that has neither
-      // neither one nor the other.
+      // A code block starts with custom chrome rather than a text line. Center
+      // the gutter on the actual language trigger so changes to the header's
+      // padding, button size, or border radius cannot leave the controls behind.
+      const languageTrigger = box.querySelector(
+        ".code-block-node-language-trigger"
+      );
+      if (languageTrigger instanceof HTMLElement) {
+        const blockRect = dom.getBoundingClientRect();
+        const triggerRect = languageTrigger.getBoundingClientRect();
+        const offset =
+          triggerRect.top -
+          blockRect.top +
+          (triggerRect.height - BUTTON_SIZE) / 2;
+        element.style.marginTop = `${Math.max(0, Math.round(offset))}px`;
+        return;
+      }
+      // Text does not always start at the block's top edge: quotes, callouts,
+      // and other framed blocks carry their own padding or border. Include
+      // those insets so the gutter stays centered on their first line.
       const inset =
         parseFloat(style.paddingTop || "0") +
         parseFloat(style.borderTopWidth || "0");

@@ -1018,6 +1018,7 @@
     "copied": "Copié",
     "codeLanguage": "Langage du code",
     "codePlainText": "Texte brut",
+    "codeWrap": "Replier les lignes longues",
     "codeLanguageSearch": "Rechercher un langage…",
     "codeLanguageEmpty": "Aucun langage trouvé.",
     "scrollToBottom": "Revenir en bas",

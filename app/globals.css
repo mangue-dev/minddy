@@ -577,11 +577,19 @@ html[data-desktop-app] .zen-nav-hotzone {
    available on pages and in the live editors. The code element remains the
    editable content DOM; only the surrounding chrome is custom. */
 .ProseMirror .code-block-node-view {
+  --code-comment: #8b949e;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-constant: #79c0ff;
+  --code-title: #d2a8ff;
+  --code-attr: #79c0ff;
+  --code-tag: #7ee787;
   margin-block: 0.5rem;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  border: 1px solid #343434;
+  border-radius: 1.5rem;
+  background: #202020;
+  color: #f5f5f5;
 }
 .ProseMirror .code-block-node-view > .code-block-node-header {
   display: flex;
@@ -589,9 +597,8 @@ html[data-desktop-app] .zen-nav-hotzone {
   align-items: center;
   justify-content: flex-start;
   gap: 0.5rem;
-  border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-  background: color-mix(in oklab, var(--muted) 60%, transparent);
-  padding: 0.25rem 1rem;
+  background: transparent;
+  padding: 1rem 1rem 0.25rem;
 }
 .ProseMirror .code-block-node-language {
   min-width: 0;
@@ -599,7 +606,7 @@ html[data-desktop-app] .zen-nav-hotzone {
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--muted-foreground);
+  color: #f5f5f5;
   cursor: text;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: inherit;
@@ -615,7 +622,7 @@ html[data-desktop-app] .zen-nav-hotzone {
   justify-content: flex-start;
   gap: 0.375rem;
   padding: 0;
-  color: var(--muted-foreground);
+  color: #f5f5f5;
   font-size: inherit;
   font-weight: 400;
   line-height: 1.2;
@@ -627,6 +634,20 @@ html[data-desktop-app] .zen-nav-hotzone {
 .ProseMirror .code-block-node-language:read-only {
   cursor: default;
 }
+.ProseMirror .code-block-node-actions {
+  display: flex;
+  margin-left: auto;
+  align-items: center;
+  gap: 0.125rem;
+}
+.ProseMirror .code-block-node-actions button {
+  color: #a3a3a3;
+}
+.ProseMirror .code-block-node-wrap[data-active="true"],
+.ProseMirror .code-block-node-actions button:hover {
+  background: rgb(255 255 255 / 8%);
+  color: #f5f5f5;
+}
 .ProseMirror .code-block-node-copy {
   margin-left: auto;
 }
@@ -634,8 +655,8 @@ html[data-desktop-app] .zen-nav-hotzone {
   color: var(--primary);
 }
 .ProseMirror .code-block-node-copy:hover {
-  background: var(--muted);
-  color: var(--foreground);
+  background: rgb(255 255 255 / 8%);
+  color: #f5f5f5;
 }
 .ProseMirror .code-block-node-view > pre {
   margin: 0;
@@ -643,12 +664,44 @@ html[data-desktop-app] .zen-nav-hotzone {
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 1rem;
+  padding: 0.5rem 1rem 1rem;
+  color: #f5f5f5;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
   font-size: inherit;
-  line-height: inherit;
+  font-variant-ligatures: none;
+  line-height: 1.65;
+}
+.ProseMirror .code-block-node-view[data-wrapped="true"] > pre {
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.ProseMirror .code-block-node-view[data-wrapped="false"] > pre {
+  white-space: pre;
+}
+.ProseMirror
+  .code-block-node-view[data-overflowing="true"][data-expanded="false"]
+  > pre {
+  max-height: 26.25rem;
+  overflow-y: hidden;
 }
 .ProseMirror .code-block-node-view > pre > code {
   font-size: inherit;
+}
+.ProseMirror .code-block-node-expand {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: flex-start;
+  background: transparent;
+  padding: 0.25rem 1rem 1rem;
+}
+.ProseMirror .code-block-node-expand > button {
+  gap: 0.25rem;
+  color: #a3a3a3;
+  font-size: 0.75rem;
 }
 
 /* ─── Streamdown chrome trim (Numo assistant markdown) ───────────────────
@@ -1720,17 +1773,14 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── The FLYER (MIN-270) ─────────────────────── ────────────────────────
-   This block has NO style by default, and that's what made it
-   incomprehensible: `@tiptap/extension-details` does not return a `<details>`
-   HTML but three `div[data-type]`, and its fallback button arrives empty, without
-   dimension. On the screen: two stacked paragraphs, one of which sometimes disappears,
-   without anything to click. The Tailwind rules of the body of the page aimed to
-   the real `<details>`/`<summary>` tags — so they only applied to
-   rien.
+/* ─── The disclosure block (MIN-270) ─────────────────────────────────────
+   TipTap renders the outer details node as a div with an empty fallback
+   button, while the summary remains a native `<summary>`. The custom chevron
+   supplies the control, so the browser's native summary marker must be removed;
+   otherwise both indicators occupy the same left edge.
 
-   The form chosen is that of Notion: a chevron in the margin, the summary in
-   bold next to it, the body indented below both and aligned with the summary. */
+   The layout follows Notion: a chevron in the margin, a medium-weight summary
+   beside it, and the content aligned below the summary. */
 .page-editor [data-type="details"] {
   display: grid;
   grid-template-columns: 1.25rem 1fr;
@@ -1770,9 +1820,14 @@ nav[aria-label="Navigation"]
   grid-column: 2;
   min-width: 0;
 }
-.page-editor [data-type="detailsSummary"] {
+.page-editor .page-details-summary {
+  display: block;
+  list-style: none;
   font-weight: 500;
   line-height: 1.75rem;
+}
+.page-editor .page-details-summary::-webkit-details-marker {
+  display: none;
 }
 /* The folded body is hidden by the `hidden` attribute that the node view sets;
    unfolded, it breathes a little under its summary. */

@@ -91,6 +91,9 @@ export function setDetailsLabels(next: {
 const CHEVRON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 
+/** Stable hook for removing the browser's native summary marker. */
+export const DETAILS_SUMMARY_CLASS = "page-details-summary";
+
 const PageDetails = Details.extend({
   addStorage() {
     return { ...this.parent?.(), markdown: detailsMarkdown };
@@ -124,6 +127,8 @@ const PageDetailsSummary = DetailsSummary.extend({
   addStorage() {
     return { ...this.parent?.(), markdown: summaryMarkdown };
   },
+}).configure({
+  HTMLAttributes: { class: DETAILS_SUMMARY_CLASS },
 });
 
 const PageDetailsContent = DetailsContent.extend({
