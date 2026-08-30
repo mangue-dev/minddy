@@ -120,10 +120,6 @@ export default function AccountSettingsPage() {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
-      // A single card: the installation of the App that the projects reuse
-      // to link a deposit, and the account under which YOU act on a PR
-      // (MIN-144), are two levels of the same forge account. Separated, they
-      // forced themselves to quote each other to be understood.
       content: <AccountGitConnectionsSection />,
     },
     {

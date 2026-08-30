@@ -6,8 +6,8 @@ import { trackEvent } from "./analytics";
 
 /**
  * Code Agent Client Fetchers (MIN-46): BYOK OpenRouter keys of the account,
- * default model and default reasoning level (MIN-122) of
- * the user. The plaintext key is never returned.
+ * default model, default reasoning level (MIN-122), and branch prefix of the
+ * user. The plaintext key is never returned.
  */
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -90,7 +90,12 @@ export interface AgentPreferences {
   default_model: string | null;
   /** null = `off` (MIN-122). */
   default_reasoning_level: ReasoningLevel | null;
+  branch_prefix: string;
 }
+
+export type AgentPreferencesPatch = Partial<
+  Omit<AgentPreferences, "branch_prefix"> & { branch_prefix: string | null }
+>;
 
 export async function fetchAgentPreferencesApi(): Promise<AgentPreferences> {
   return parseJson(await fetch("/api/account/agent-preferences"));
@@ -98,11 +103,11 @@ export async function fetchAgentPreferencesApi(): Promise<AgentPreferences> {
 
 /**
  * PARTIAL write: only passed fields are sent (the PUT only writes
- * what it receives) — the two settings share a line, one must not
- * clear the other.
+ * what it receives) — the settings share a row, so one must not clear the
+ * others.
  */
 export async function saveAgentPreferencesApi(
-  patch: Partial<AgentPreferences>,
+  patch: AgentPreferencesPatch,
 ): Promise<AgentPreferences> {
   return parseJson(
     await fetch("/api/account/agent-preferences", {

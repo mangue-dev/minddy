@@ -102,6 +102,7 @@ export const SETTINGS_SECTIONS = {
   accountPushDevices: "account-push-devices",
   accountMcp: "account-mcp",
   accountConnectedApps: "account-connected-apps",
+  accountGitBranchPrefix: "account-git-branch-prefix",
   accountGitConnections: "account-git-connections",
   accountAiProvider: "account-ai-provider",
   accountAgent: "account-agent",
@@ -398,6 +399,16 @@ export function useSettingsSections(): SettingsSection[] {
       // two separate cards required them to be glued together head on. Keywords
       // the two are therefore united there — “act in my name” must always fall
       // on this map.
+      account({
+        id: SETTINGS_SECTIONS.accountGitBranchPrefix,
+        tab: "git",
+        icon: GitBranch,
+        title: tAccount("gitAgentBranchesTitle"),
+        keywords: [
+          "agent", "numo", "git", "branche", "branch", "préfixe", "prefix",
+          "namespace", "espace de noms",
+        ],
+      }),
       account({
         id: SETTINGS_SECTIONS.accountGitConnections,
         tab: "git",

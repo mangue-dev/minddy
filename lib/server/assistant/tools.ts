@@ -1412,7 +1412,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model and reasoning level, and the automation preset. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1552,6 +1552,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...REASONING_LEVELS, null],
             description:
               "How much the code agent reasons before acting, by default. null falls back to minddy's default.",
+          },
+          branch_prefix: {
+            type: ["string", "null"],
+            description:
+              "Prefix for new branches created by Numo, for example 'numo/' or 'team/numo/'. The trailing slash is added automatically. null resets it to 'numo/'. Existing branches are unchanged.",
           },
         },
       },

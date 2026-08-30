@@ -13,7 +13,11 @@ import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
 import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
-import { generatedAgentBranchName, isValidGitBranchName } from "./branch-name";
+import {
+  DEFAULT_AGENT_BRANCH_PREFIX,
+  generatedAgentBranchName,
+  isValidGitBranchName,
+} from "./branch-name";
 import { localDiffPayload } from "./local-diff-payload";
 import {
   anchorForRun,
@@ -1321,7 +1325,7 @@ async function runCreatePr(
 
   const anchorId = await anchorIssueIdFor(run);
   const identifier = anchorId ? await issueIdentifier(anchorId) : null;
-  const { locale } = await runPrefsFor(run);
+  const { locale, branchPrefix } = await runPrefsFor(run);
   const prState = {
     number: run.pr_number,
     url: run.pr_url,
@@ -1341,6 +1345,7 @@ async function runCreatePr(
       issueIdentifier: identifier,
       conversationTitle: run.title,
       prompt: run.prompt,
+      branchPrefix,
     });
   const suppliedBranch =
     typeof body.workBranch === "string" ? body.workBranch.trim() : "";
@@ -1487,8 +1492,13 @@ async function runPrefsFor(run: AgentRun) {
       return {
         locale: r.settings.locale,
         numoDefaultStatus: r.settings.numo_default_status,
+        branchPrefix: r.settings.agent.branch_prefix,
       };
     }
   }
-  return { locale: defaultLocale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
+  return {
+    locale: defaultLocale,
+    numoDefaultStatus: DEFAULT_NUMO_STATUS,
+    branchPrefix: DEFAULT_AGENT_BRANCH_PREFIX,
+  };
 }

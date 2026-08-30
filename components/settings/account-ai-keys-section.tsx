@@ -45,7 +45,11 @@ export function AccountAiKeysSection() {
   const { keys, loading: keysLoading } = useAiKeysQuery();
   const byokKey = keys[0];
 
-  const { defaultModel, defaultReasoningLevel, loading: prefLoading } = useAgentPreferencesQuery();
+  const {
+    defaultModel,
+    defaultReasoningLevel,
+    loading: prefLoading,
+  } = useAgentPreferencesQuery();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const reasoningLevels = useReasoningLevelsFor(defaultModel || providerDefaultModel);
 
