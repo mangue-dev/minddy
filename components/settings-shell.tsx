@@ -15,6 +15,7 @@ import { useReducedMotion } from "framer-motion";
 import { Button, cn } from "mangue-ui";
 import { ChevronLeft, type LucideIcon } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -371,7 +372,10 @@ function SettingsTabs({
             name of the open tab. On desktop the rail is on the screen and the
             already highlights — one more bar would have nothing to say, and would push
             cards down to repeat it. */}
-        <div className="flex shrink-0 items-center gap-2 px-4 py-3 md:hidden">
+        <AppContentHeader
+          className="md:hidden"
+          contentClassName="gap-2 px-4"
+        >
           <Button
             variant="ghost"
             size="icon-sm"
@@ -381,7 +385,7 @@ function SettingsTabs({
             <ChevronLeft />
           </Button>
           <span className="truncate text-sm font-medium">{activeLabel}</span>
-        </div>
+        </AppContentHeader>
 
         <div
           ref={contentFade.ref}

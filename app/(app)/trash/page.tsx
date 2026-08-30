@@ -144,31 +144,32 @@ function TrashRow({
                 className="mx-0 max-w-48 overflow-hidden text-[1.05em] text-ellipsis"
               />
             ) : null}
-
-            <span className="flex min-w-0 items-center gap-1.5">
-              {item.deleted_by ? (
-                <UserAvatar
-                  seed={item.deleted_by.avatar_seed}
-                  className="size-4"
-                />
-              ) : null}
-              <span className="truncate">
-                {t("deletedBy", { name: actorName, date: deletedOn })}
-              </span>
-            </span>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
-        <span
-          className={cn(
-            "text-xs font-medium tabular-nums",
-            left <= 3 ? "text-destructive" : "text-muted-foreground",
-          )}
-        >
-          {left <= 0 ? t("daysLeftNone") : t("daysLeft", { count: left })}
-        </span>
+      <div className="mt-4 flex items-end justify-between gap-3 border-t border-border/60 pt-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            {item.deleted_by ? (
+              <UserAvatar
+                seed={item.deleted_by.avatar_seed}
+                className="size-4"
+              />
+            ) : null}
+            <span className="truncate">
+              {t("deletedBy", { name: actorName, date: deletedOn })}
+            </span>
+          </span>
+          <span
+            className={cn(
+              "text-xs font-medium tabular-nums",
+              left <= 3 ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {left <= 0 ? t("daysLeftNone") : t("daysLeft", { count: left })}
+          </span>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

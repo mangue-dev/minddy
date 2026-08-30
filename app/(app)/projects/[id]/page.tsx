@@ -53,7 +53,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
-import { ObjectiveBanner } from "@/components/objective-banner";
+import { ObjectiveBoardHeader } from "@/components/objective-banner";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 // Deferred: the import wizard (and its papaparse CSV machinery) only runs from
 // ?setup=import — a one-time gesture that must not tax every board navigation.
@@ -616,51 +616,49 @@ function ProjectBoard() {
         </div>
       ) : (
         <>
-          <div className="shrink-0 px-6 pt-4">
-            {activeObjective ? (
-              <ObjectiveBanner
-                objective={activeObjective}
-                objectives={objectives}
-                projectId={project.id}
-                progress={objectiveProgress(activeObjective.id, issues)}
-                lead={
-                  activeObjective.lead_user_id
-                    ? members.find((m) => m.user_id === activeObjective.lead_user_id) ??
-                      null
-                    : null
-                }
-              />
-            ) : (
-              <BoardToolbar
-                tabOrderScope={project.id}
-                views={views}
-                activeViewId={activeViewId}
-                generatingViewIds={generatingViewIds}
-                onSelectView={selectView}
-                config={config}
-                onConfigChange={setConfig}
-                members={members}
-                categories={categories}
-                objectives={objectives}
-                integrations={integrations}
-                dirty={dirty}
-                onCreateView={handleCreateView}
-                onUpdateActiveView={saveActiveView}
-                onRenameView={renameView}
-                onDeleteView={deleteView}
-                onAskNumo={handleAskNumo}
-                // The cycle is personal & cross-project: the tab exists on every
-                // board but is canonical on /all only — here it just links out
-                // (↗), it never scopes the cycle to this project (MIN-32).
-                cycleTab={{
-                  active: false,
-                  external: true,
-                  completionPercent: currentCycleCompletionPercent,
-                  onSelect: () => router.push("/all?view=cycle"),
-                }}
-              />
-            )}
-          </div>
+          {activeObjective ? (
+            <ObjectiveBoardHeader
+              objective={activeObjective}
+              objectives={objectives}
+              projectId={project.id}
+              progress={objectiveProgress(activeObjective.id, issues)}
+              lead={
+                activeObjective.lead_user_id
+                  ? members.find((m) => m.user_id === activeObjective.lead_user_id) ??
+                    null
+                  : null
+              }
+            />
+          ) : (
+            <BoardToolbar
+              tabOrderScope={project.id}
+              views={views}
+              activeViewId={activeViewId}
+              generatingViewIds={generatingViewIds}
+              onSelectView={selectView}
+              config={config}
+              onConfigChange={setConfig}
+              members={members}
+              categories={categories}
+              objectives={objectives}
+              integrations={integrations}
+              dirty={dirty}
+              onCreateView={handleCreateView}
+              onUpdateActiveView={saveActiveView}
+              onRenameView={renameView}
+              onDeleteView={deleteView}
+              onAskNumo={handleAskNumo}
+              // The cycle is personal & cross-project: the tab exists on every
+              // board but is canonical on /all only — here it just links out
+              // (↗), it never scopes the cycle to this project (MIN-32).
+              cycleTab={{
+                active: false,
+                external: true,
+                completionPercent: currentCycleCompletionPercent,
+                onSelect: () => router.push("/all?view=cycle"),
+              }}
+            />
+          )}
           <div className="min-h-0 flex-1 pt-3">
             <KanbanBoard
               issues={boardIssues}

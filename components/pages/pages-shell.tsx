@@ -33,6 +33,7 @@ import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError } from "@/lib/pages-api";
 import { rememberLastPage } from "@/lib/pages-last-open";
 import { markDraftPage } from "@/lib/pages-draft";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 import {
   Tooltip,
@@ -187,11 +188,11 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-7"
+                className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
                 aria-label={t("newPage")}
                 onClick={() => void create(null)}
               >
-                <Plus className="size-4" />
+                <Plus className="size-[18px]" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("newPage")}</TooltipContent>

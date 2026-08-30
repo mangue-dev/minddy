@@ -3,12 +3,10 @@
 import { startTransition } from "react";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import {
-  Button,
-  cn,
-} from "mangue-ui";
-import { ChevronDown, Pencil, X, Target } from "lucide-react";
+import { Button, cn } from "mangue-ui";
+import { ChevronDown, ChevronLeft, Target } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
+import { AppContentHeader } from "@/components/app-content-header";
 import { Dot } from "@/components/issue-property-fields";
 import { ProgressRing } from "@/components/progress-ring";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
@@ -24,7 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * The banner title doubles as a selector so users can move directly between
+ * The header title doubles as a selector so users can move directly between
  * objective boards. It reuses the standard searchable picker and keeps a bare
  * title-style trigger, with a chevron as the only affordance.
  *
@@ -71,8 +69,8 @@ function ObjectiveSwitch({
   );
 }
 
-/** Header banner shown when the board is filtered to a single objective (plan §6). */
-export function ObjectiveBanner({
+/** Content header shown when the board is filtered to a single objective. */
+export function ObjectiveBoardHeader({
   objective,
   objectives,
   projectId,
@@ -87,7 +85,6 @@ export function ObjectiveBanner({
   lead: Member | null;
 }) {
   const t = useTranslations("Objectives");
-  const tCommon = useTranslations("Common");
   const tStatus = useTranslations("ObjectiveStatus");
   const format = useFormatter();
   const status = OBJECTIVE_STATUS_MAP[objective.status];
@@ -106,7 +103,16 @@ export function ObjectiveBanner({
     objective.status !== "canceled";
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-card px-4 py-3">
+    <AppContentHeader contentClassName="gap-5 px-4 md:px-6">
+      <Button asChild variant="ghost" size="icon-sm">
+        <Link
+          href={`/projects/${projectId}/objectives?open=${objective.id}`}
+          aria-label={t("backToObjective")}
+        >
+          <ChevronLeft />
+        </Link>
+      </Button>
+
       {/* Identity: color dot, name, and status. */}
       <div className="flex min-w-0 max-w-full shrink-0 items-center gap-3">
         <span
@@ -130,7 +136,7 @@ export function ObjectiveBanner({
       <div className="hidden h-9 w-px shrink-0 bg-border sm:block" aria-hidden />
 
       {/* Indicators — progress · lead · target */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div className="flex shrink-0 items-center gap-x-6">
         {/* The ring matches the lead avatar and target-date icon so all three
         indicators share the same visual grid: a circle followed by two lines.
         The percentage lives in the tooltip because it is effort-weighted,
@@ -205,23 +211,6 @@ export function ObjectiveBanner({
           </div>
         )}
       </div>
-
-      <div className="ml-auto flex items-center gap-2">
-        {/* Editing navigates to the objective page (MIN-226), so this remains a
-        real link that can be opened in a new tab. */}
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/projects/${projectId}/objectives?open=${objective.id}`}>
-            <Pencil />
-            {tCommon("edit")}
-          </Link>
-        </Button>
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/projects/${projectId}`} title={t("closeFilter")}>
-            <X />
-            {tCommon("close")}
-          </Link>
-        </Button>
-      </div>
-    </div>
+    </AppContentHeader>
   );
 }

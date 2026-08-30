@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, type UIEvent } from "react";
 import { Skeleton } from "mangue-ui";
+import { AppContentHeader } from "@/components/app-content-header";
 import {
   BOARD_COLUMN_CLASS,
   BOARD_SCROLLER_CLASS,
@@ -30,7 +31,7 @@ export function BoardLoadingSkeleton({
 }: {
   position?: BoardScrollPosition;
   columns?: number;
-  /** Special views such as Cycle own a title row above the view tabs. */
+  /** Special views such as Cycle replace the standard right-side controls. */
   specialView?: boolean;
   /** Cycle boards do not offer issue creation from their columns. */
   showCreateIssue?: boolean;
@@ -54,42 +55,31 @@ export function BoardLoadingSkeleton({
       aria-hidden
       data-board-loading-skeleton
     >
-      <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
-        {specialView && (
-          <div
-            className="flex items-center justify-between gap-3"
-            data-board-skeleton-special-title
-          >
-            <Skeleton className="h-7 w-44 rounded-md" />
-            <Skeleton className="h-8 w-28 rounded-md" />
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap items-center gap-1">
-            {VIEW_WIDTHS.map((width, index) => (
-              <Skeleton
-                key={index}
-                className={`h-7 ${width} rounded-full`}
-              />
-            ))}
-            <Skeleton className="size-8 rounded-md" />
-          </div>
-
-          <div className="ml-auto flex items-center gap-1.5">
-            {specialView ? (
-              <>
-                <Skeleton className="h-7 w-20 rounded-full" />
-                <Skeleton className="h-7 w-24 rounded-full" />
-              </>
-            ) : (
-              Array.from({ length: 3 }).map((_, index) => (
-                <Skeleton key={index} className="size-8 rounded-md" />
-              ))
-            )}
-          </div>
+      <AppContentHeader
+        data-board-skeleton-header
+        contentClassName="gap-2 px-4 md:px-6"
+      >
+        <div className="flex shrink-0 items-center gap-1">
+          {VIEW_WIDTHS.map((width, index) => (
+            <Skeleton key={index} className={`h-7 ${width} rounded-full`} />
+          ))}
+          <Skeleton className="size-8 rounded-md" />
         </div>
-      </div>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {specialView ? (
+            <>
+              <Skeleton className="h-7 w-16 rounded-full" />
+              <Skeleton className="h-8 w-44 rounded-md" />
+              <Skeleton className="size-8 rounded-md" />
+            </>
+          ) : (
+            Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="size-8 rounded-md" />
+            ))
+          )}
+        </div>
+      </AppContentHeader>
 
       <div className="min-h-0 flex-1 pt-3">
         <div

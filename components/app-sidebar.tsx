@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type ComponentType,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -21,46 +22,43 @@ import {
   WINDOW_BUTTONS_WIDTH,
   WindowButtonDecoys,
 } from "@/components/desktop-window-buttons";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Button,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   cn,
   type NavItem,
   type NavSection,
 } from "mangue-ui";
-import { useAccountTheme } from "@/lib/use-account-theme";
-import { Kbd } from "@/components/ui/kbd";
+import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import {
   IssueContextMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
 import {
-  Sun,
-  Moon,
-  Monitor,
-  Check,
   LogOut,
-  MoreHorizontal,
   Megaphone,
   BarChart3,
   CreditCard,
   Settings,
   ArrowUpRight,
   Shield,
-  Newspaper,
+  CircleHelp,
+  Search,
   Trash2,
   ArrowDownToLine,
   Loader2,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  Home,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -68,19 +66,36 @@ import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
-import { hasRecentChangelog } from "@/lib/changelog";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { transitions } from "@/lib/motion";
-import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
+import { NewMenu } from "@/components/new-menu";
+import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
+import { UsageIndicator } from "@/components/usage-indicator";
+import {
+  SIDEBAR_COMPACT_CONTROL_CLASS,
+  SIDEBAR_TOOLTIP_DELAY_MS,
+} from "@/lib/sidebar-control-styles";
+import type { Locale } from "@/i18n/config";
+import type { MessageKey } from "@/lib/i18n-keys";
+import {
+  CHANGELOG_ENTRIES,
+  formatChangelogAge,
+  formatChangelogDate,
+} from "@/lib/changelog";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { Project } from "@/lib/types";
 
 /** The bar unfolded. Exported for the Zen mode navigation block, which
  * unfolds out of the flow and must know its width to tidy up. */
@@ -124,7 +139,6 @@ const ROW_BOX = "w-9";
  * `disableHoverableContent` finishes the job: the tooltip does not hover,
  * it therefore cannot retain the pointer that we thought we had output.
  */
-const TOOLTIP_DELAY_MS = 600;
 
 /** A sidebar nav item that can advertise its `G`-chord second key (e.g. "M"). */
 export type AppNavItem = NavItem & {
@@ -167,26 +181,13 @@ const WhatsNewDialog = dynamic(
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
-/**
- * The brand: the logo, and nothing else. Out of production it changes SHADE
- * (`ENV_LOGO_TINT`) — this is the only signal, and it is enough. The name of
- * the environment written next to it was one more word to read at every glance,
- * for information that we already know when we are on it.
- *
- * CENTERED in the one-line box, not aligned from the left like the
- * icons: it is wider than them (26 px compared to 18), and it is its center which
- * must fall on theirs. The box being the same in both states, it does not
- * does not move a pixel when the bar opens or closes.
- */
+/** Minddy mark for web, Windows, Linux, and the collapsed macOS rail. */
 function SidebarBrand() {
   return (
     <Link
       href="/home"
       aria-label="minddy"
       className={cn(
-        // `sidebar-brand-mark`: taking app/globals.css which does it
-        // SWIPE from one edge of the line to the other when the macOS buttons
-        // take or give up their place (full screen, rail).
         "sidebar-brand-mark inline-flex shrink-0 items-center justify-center text-sidebar-foreground",
         ROW_BOX,
       )}
@@ -196,6 +197,128 @@ function SidebarBrand() {
   );
 }
 
+function SidebarTopAction({
+  icon: Icon,
+  label,
+  href,
+  onClick,
+  onWarm,
+  badge,
+  shortcut,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  onWarm?: () => void;
+  badge?: ReactNode;
+  shortcut?: ReactNode;
+}) {
+  const className = cn(
+    SIDEBAR_COMPACT_CONTROL_CLASS,
+    "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+  );
+  const content = (
+    <>
+      <Icon className="size-[18px]" />
+      {badge != null ? (
+        <span className="absolute -right-0.5 -top-0.5 flex items-center justify-center rounded-full bg-sidebar">
+          {badge}
+        </span>
+      ) : null}
+    </>
+  );
+  const control = href ? (
+    <Link href={href} aria-label={label} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button
+      type="button"
+      aria-label={label}
+      className={className}
+      onClick={onClick}
+      onPointerEnter={onWarm}
+      onFocus={onWarm}
+    >
+      {content}
+    </button>
+  );
+
+  return (
+    <Tooltip
+      delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
+      disableHoverableContent
+    >
+      <TooltipTrigger asChild>{control}</TooltipTrigger>
+      <TooltipContent side="bottom" className="flex items-center gap-2">
+        <span>{label}</span>
+        {shortcut}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function SidebarTopActions({
+  collapsed,
+  inbox,
+  onSearch,
+  onSearchWarm,
+}: {
+  collapsed: boolean;
+  inbox: AppNavItem;
+  onSearch: () => void;
+  onSearchWarm?: () => void;
+}) {
+  const t = useTranslations("Nav");
+  const tk = useTranslations("Keyboard");
+  const modKey = useModKey();
+  if (collapsed) return null;
+
+  return (
+    <div className="ml-auto flex shrink-0 items-center gap-1">
+      <SidebarTopAction
+        icon={Search}
+        label={t("searchPlaceholder")}
+        onClick={onSearch}
+        onWarm={onSearchWarm}
+        shortcut={<KbdSequence keys={[[modKey, "K"]]} size="sm" />}
+      />
+      <SidebarTopAction
+        icon={inbox.icon!}
+        label={inbox.label}
+        href={inbox.href as string}
+        badge={inbox.badgeCollapsed ?? inbox.badge}
+        shortcut={
+          inbox.shortcut ? (
+            <KbdSequence
+              keys={[[CHORD_PREFIX.toUpperCase()], [inbox.shortcut]]}
+              separator={tk("then")}
+              size="sm"
+            />
+          ) : null
+        }
+      />
+    </div>
+  );
+}
+
+function SidebarQuickActions({
+  collapsed,
+  onScratchpadWarm,
+}: {
+  collapsed: boolean;
+  onScratchpadWarm?: () => void;
+}) {
+  return (
+    <div className={cn("flex shrink-0 gap-1 pt-3", GUTTER)}>
+      <NewMenu variant="sidebar" collapsed={collapsed} />
+      {!collapsed ? (
+        <ScratchpadTrigger variant="sidebar" onWarm={onScratchpadWarm} />
+      ) : null}
+    </div>
+  );
+}
 
 /* ─── Nav ──────────────────────────────────────────────────────────── */
 
@@ -218,7 +341,7 @@ function SidebarRow({
       : null;
 
   const rowClass = cn(
-    "group relative flex h-9 items-center gap-3 rounded-lg text-sm font-medium transition-colors",
+    "group relative flex h-9 cursor-pointer items-center gap-3 rounded-lg text-sm font-medium transition-colors",
     // The left indent is the SAME in both states (see the column of
     // icons at the head of the file): the icon does not move when the bar is animated.
     // Folded, the line closes at 36 px on its icon — 9 + 18 + 9.
@@ -322,7 +445,7 @@ function SidebarRow({
   // replaced, and the tab starts again from the top of the document.
   row = (
     <Tooltip
-      delayDuration={TOOLTIP_DELAY_MS}
+      delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
       disableHoverableContent
       open={collapsed || item.shortcut ? undefined : false}
     >
@@ -358,14 +481,20 @@ function SidebarRow({
 function SidebarNav({
   sections,
   collapsed,
+  currentProject,
+  projects,
+  onMenuOpenChange,
 }: {
   sections: AppNavSection[];
   collapsed: boolean;
+  currentProject: Project | null;
+  projects: Project[];
+  onMenuOpenChange?: (open: boolean) => void;
 }) {
   return (
     <nav
       className={cn(
-        "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-3 pb-2",
+        "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-1 pb-2",
         GUTTER,
       )}
     >
@@ -384,7 +513,17 @@ function SidebarNav({
           <ul className="flex flex-col gap-1">
             {section.items.map((item) => (
               <li key={item.key}>
-                <SidebarRow item={item} collapsed={collapsed} />
+                {item.key === "home-back" && currentProject ? (
+                  <ProjectContextRow
+                    homeItem={item}
+                    currentProject={currentProject}
+                    projects={projects}
+                    collapsed={collapsed}
+                    onMenuOpenChange={onMenuOpenChange}
+                  />
+                ) : (
+                  <SidebarRow item={item} collapsed={collapsed} />
+                )}
               </li>
             ))}
           </ul>
@@ -394,43 +533,124 @@ function SidebarNav({
   );
 }
 
-/* ─── Footer ───────────────────────────────────────────────────────── */
-
-const THEME_CHOICES = [
-  { value: "light", icon: Sun, label: "themeLight" },
-  { value: "dark", icon: Moon, label: "themeDark" },
-  { value: "system", icon: Monitor, label: "themeSystem" },
-] as const;
-
-/** The theme rarely changes: it is in a submenu rather than
-    to occupy three lines of the account menu. The shutter icon shows the
-    current setting, so as not to have to open the submenu to read it. */
-function ThemeSubmenu() {
+function ProjectContextRow({
+  homeItem,
+  currentProject,
+  projects,
+  collapsed,
+  onMenuOpenChange,
+}: {
+  homeItem: AppNavItem;
+  currentProject: Project;
+  projects: Project[];
+  collapsed: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
+}) {
   const t = useTranslations("Nav");
-  // The account theme: the choice is persisted to user_metadata so it
-  // follows the account to every device (lib/use-account-theme.ts).
-  const { theme, setTheme } = useAccountTheme();
-  const CurrentIcon =
-    THEME_CHOICES.find((c) => c.value === theme)?.icon ?? Monitor;
+  const tk = useTranslations("Keyboard");
+  const pathname = usePathname();
+  const prefetchProject = usePrefetchProject();
+  const compactBadge = homeItem.badgeCollapsed ?? homeItem.badge;
+
+  const projectTrigger = (
+    <DropdownMenuTrigger
+      aria-label={currentProject.name}
+      className={cn(
+        "flex h-9 cursor-pointer items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
+        collapsed
+          ? cn(ROW_BOX, ROW_PL, "gap-0 pr-[9px]")
+          : "min-w-0 flex-1 gap-2 px-2.5 text-left",
+      )}
+    >
+      <ProjectOrb
+        seed={projectOrbSeed(currentProject)}
+        iconUrl={currentProject.icon_url}
+        className="size-[18px] rounded-[5px]"
+      />
+      {!collapsed ? (
+        <>
+          <span className="min-w-0 flex-1 truncate">{currentProject.name}</span>
+          <ChevronDown
+            className="size-3.5 shrink-0 text-sidebar-foreground/45"
+            aria-hidden
+          />
+        </>
+      ) : null}
+    </DropdownMenuTrigger>
+  );
 
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <CurrentIcon />
-        {t("changeTheme")}
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        {THEME_CHOICES.map(({ value, icon: Icon, label }) => (
-          <DropdownMenuItem key={value} onSelect={() => setTheme(value)}>
-            <Icon />
-            {t(label)}
-            {theme === value && <Check className="ml-auto size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
+    <DropdownMenu onOpenChange={onMenuOpenChange}>
+      {collapsed ? (
+        <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
+          <TooltipTrigger asChild>{projectTrigger}</TooltipTrigger>
+          <TooltipContent side="right">{currentProject.name}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <div className="flex items-center gap-1">
+          <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
+            <TooltipTrigger asChild>
+              <MotionLink
+                href={homeItem.href as string}
+                aria-label={homeItem.label}
+                className="relative flex h-9 w-12 shrink-0 cursor-pointer items-center justify-center gap-0.5 rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
+                whileTap={{ scale: 0.97 }}
+                transition={transitions.snappy}
+              >
+                <ChevronLeft className="size-3.5" aria-hidden />
+                <Home className="size-[18px]" aria-hidden />
+                {compactBadge != null ? (
+                  <span className="absolute right-0.5 top-0.5 flex items-center justify-center rounded-full bg-sidebar">
+                    {compactBadge}
+                  </span>
+                ) : null}
+              </MotionLink>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="flex items-center gap-2">
+              <span>{homeItem.label}</span>
+              {homeItem.shortcut ? (
+                <KbdSequence
+                  keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
+                  separator={tk("then")}
+                  size="sm"
+                />
+              ) : null}
+            </TooltipContent>
+          </Tooltip>
+          {projectTrigger}
+        </div>
+      )}
+
+      <DropdownMenuContent side="right" align="start" sideOffset={6} className="w-60">
+        <DropdownMenuLabel>{t("projects")}</DropdownMenuLabel>
+        {projects.map((project) => {
+          const href = projectTabHref(pathname, project.id);
+          const current = project.id === currentProject.id;
+          return (
+            <DropdownMenuItem key={project.id} asChild>
+              <Link
+                href={href}
+                aria-current={current ? "page" : undefined}
+                onMouseEnter={() => prefetchProject(project.id)}
+                onFocus={() => prefetchProject(project.id)}
+              >
+                <ProjectOrb
+                  seed={projectOrbSeed(project)}
+                  iconUrl={project.icon_url}
+                  className="size-[18px] rounded-[5px]"
+                />
+                <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                {current ? <Check className="ml-auto size-4 shrink-0" /> : null}
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
+
+/* ─── Footer ───────────────────────────────────────────────────────── */
 
 function AccountButton({
   collapsed,
@@ -445,101 +665,197 @@ function AccountButton({
   const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const seed = useMyAvatarSource();
-  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
-  const [whatsNewMounted, setWhatsNewMounted] = useState(false);
 
-  // After assembly only: the freshness can be read on the visitor's clock,
-  // and a server rendering which would decide for him would cause the hydration to diverge
-  // on the border of five days.
-  const [recentChangelog, setRecentChangelog] = useState(false);
-  useEffect(() => setRecentChangelog(hasRecentChangelog()), []);
+  return (
+    <DropdownMenu onOpenChange={onMenuOpenChange}>
+      <DropdownMenuTrigger
+        className={cn(
+          "flex h-10 cursor-pointer items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
+          // The avatar is 22 px: its own removal refocuses it on the same
+          // vertical than the 18 px icons (see the icons column).
+          AVATAR_PL,
+          collapsed ? cn(ROW_BOX, "pr-[7px]") : "w-full gap-3 pr-3 text-left",
+        )}
+      >
+        <UserAvatar seed={seed} className="size-[22px]" />
+        {!collapsed && (
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {name}
+          </span>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="top" className="w-56">
+        <DropdownMenuItem asChild>
+          <Link href="/settings">
+            <Settings />
+            {t("accountSettings")}
+          </Link>
+        </DropdownMenuItem>
+        {/* Secondary account destinations stay grouped here so the primary
+            sidebar footer only carries the account and status controls. */}
+        <DropdownMenuItem asChild>
+          <Link href="/statistics">
+            <BarChart3 />
+            {t("statistics")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/trash">
+            <Trash2 />
+            {t("trash")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/billing">
+            <CreditCard />
+            {t("billing")}
+          </Link>
+        </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <Shield />
+              {t("adminDashboard")}
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
+          <LogOut />
+          {t("signOut")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+const CHANGELOG_PREVIEW_ENTRIES = CHANGELOG_ENTRIES.slice(0, 3);
+
+function ChangelogTimelineMarker({
+  position,
+}: {
+  position: "first" | "middle" | "last";
+}) {
+  return (
+    <span
+      aria-hidden
+      className="relative flex w-4 shrink-0 self-stretch items-center justify-center"
+    >
+      {position !== "first" ? (
+        <span className="absolute top-0 h-[calc(50%-6px)] w-px bg-border" />
+      ) : null}
+      <span className="relative z-10 size-2.5 rounded-full border-2 border-muted-foreground/60 bg-popover" />
+      {position !== "last" ? (
+        <span className="absolute bottom-0 h-[calc(50%-6px)] w-px bg-border" />
+      ) : null}
+    </span>
+  );
+}
+
+function ChangelogButton({
+  productFeedbackUrl,
+  onMenuOpenChange,
+}: {
+  productFeedbackUrl: string | null;
+  onMenuOpenChange?: (open: boolean) => void;
+}) {
+  const t = useTranslations("Nav");
+  const tc = useTranslations("Changelog");
+  const locale = useLocale() as Locale;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMounted, setDialogMounted] = useState(false);
+  const handleMenuOpenChange = (nextOpen: boolean) => {
+    setMenuOpen(nextOpen);
+    onMenuOpenChange?.(nextOpen);
+  };
+
+  const control = (
+    <button
+      type="button"
+      aria-label={t("whatsNew")}
+      className={SIDEBAR_COMPACT_CONTROL_CLASS}
+    >
+      <CircleHelp className="size-[18px]" />
+    </button>
+  );
 
   return (
     <>
-      <DropdownMenu onOpenChange={onMenuOpenChange}>
-        <DropdownMenuTrigger
-          className={cn(
-            "flex h-10 items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
-            // The avatar is 22 px: its own removal refocuses it on the same
-            // vertical than the 18 px icons (see the icons column).
-            AVATAR_PL,
-            collapsed ? cn(ROW_BOX, "pr-[7px]") : "w-full gap-3 pr-3 text-left",
-          )}
-        >
-          <UserAvatar seed={seed} className="size-[22px]" />
-          {!collapsed && (
-            <>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {name}
-              </span>
-              <MoreHorizontal className="size-4 shrink-0 text-muted-foreground" />
-            </>
-          )}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" className="w-56">
-          <DropdownMenuItem asChild>
-            <Link href="/settings">
-              <Settings />
-              {t("accountSettings")}
-            </Link>
-          </DropdownMenuItem>
-          {/* The statistics have left the foot of the bar for this menu
-              (MIN-133): they consult each other from time to time, while the
-              trash searches in the urgency of what we have just erased —
-              it is she who deserves to be permanently visible. */}
-          <DropdownMenuItem asChild>
-            <Link href="/statistics">
-              <BarChart3 />
-              {t("statistics")}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/billing">
-              <CreditCard />
-              {t("billing")}
-            </Link>
-          </DropdownMenuItem>
-          {isAdmin && (
-            <DropdownMenuItem asChild>
-              <Link href="/admin">
-                <Shield />
-                {t("adminDashboard")}
-              </Link>
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          <ThemeSubmenu />
-          <DropdownMenuSeparator />
-          {/* The public changelog, in a modal: we read what has just been released
-              without leaving the app. Blue badge as long as the last delivery has
-              moins de cinq jours. */}
+      <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
+        <DropdownMenuTrigger asChild>{control}</DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="top" className="w-80">
+          <DropdownMenuLabel className="font-normal text-muted-foreground">
+            {t("whatsNew")}
+          </DropdownMenuLabel>
+          <ol>
+            {CHANGELOG_PREVIEW_ENTRIES.map((entry, index) => (
+              <li
+                key={entry.id}
+                className="flex h-8 items-center gap-1.5 px-2.5 text-sm leading-tight"
+              >
+                <ChangelogTimelineMarker
+                  position={index === 0 ? "first" : "middle"}
+                />
+                <span className="min-w-0 flex-1 truncate">
+                  {tc(
+                    `entry_${entry.id}_title` as MessageKey<"Changelog">,
+                  )}
+                </span>
+                <time
+                  dateTime={entry.date}
+                  title={formatChangelogDate(entry.date, locale)}
+                  className="shrink-0 text-xs tabular-nums text-muted-foreground"
+                >
+                  {formatChangelogAge(entry.date, locale)}
+                </time>
+              </li>
+            ))}
+          </ol>
           <DropdownMenuItem
             onSelect={() => {
-              setWhatsNewMounted(true);
-              setWhatsNewOpen(true);
+              handleMenuOpenChange(false);
+              setDialogMounted(true);
+              setDialogOpen(true);
             }}
+            className="h-8 cursor-pointer gap-1.5 py-0 max-[1199px]:py-0"
           >
-            <Newspaper />
-            {t("whatsNew")}
-            {recentChangelog && (
-              <span
-                aria-hidden
-                className="ml-auto size-2 shrink-0 rounded-full bg-blue-500"
-              />
-            )}
+            <ChangelogTimelineMarker position="last" />
+            <span className="min-w-0 flex-1 truncate">
+              {t("viewFullChangelog")}
+            </span>
           </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
-            <LogOut />
-            {t("signOut")}
-          </DropdownMenuItem>
+          {productFeedbackUrl ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => {
+                  handleMenuOpenChange(false);
+                  window.open(
+                    productFeedbackUrl,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
+                className="cursor-pointer py-1.5 max-[1199px]:py-1.5"
+              >
+                <Megaphone className="size-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate">
+                  {t("shareFeedback")}
+                </span>
+                <ArrowUpRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
+              </DropdownMenuItem>
+            </>
+          ) : null}
           <DropdownMenuSeparator />
-          <div className="px-2 py-1 text-center text-xs text-muted-foreground">
-            {APP_VERSION}
-          </div>
+          <p className="flex h-8 items-center justify-between gap-3 px-2.5 text-xs text-muted-foreground">
+            <span>{t("version")}</span>
+            <span className="tabular-nums">{APP_VERSION}</span>
+          </p>
         </DropdownMenuContent>
       </DropdownMenu>
-      {whatsNewMounted ? (
-        <WhatsNewDialog open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
+      {dialogMounted ? (
+        <WhatsNewDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       ) : null}
     </>
   );
@@ -584,7 +900,7 @@ function FooterRow({
         "flex h-9 items-center rounded-lg text-sm font-medium transition-colors",
         disabled
           ? "cursor-default"
-          : "hover:bg-sidebar-accent hover:text-foreground",
+          : "cursor-pointer hover:bg-sidebar-accent hover:text-foreground",
         active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
         ROW_PL,
         collapsed ? cn(ROW_BOX, "pr-[9px]") : "w-full gap-3 pr-3 text-left",
@@ -605,7 +921,7 @@ function FooterRow({
   // and loses focus with each tilt of the rail (MIN-313).
   return (
     <Tooltip
-      delayDuration={TOOLTIP_DELAY_MS}
+      delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
       disableHoverableContent
       open={collapsed ? undefined : false}
     >
@@ -695,7 +1011,11 @@ function UpdateFooterCard({ collapsed }: { collapsed: boolean }) {
           while downloading draws the eye to an impossible gesture — the
           spinning wheel of the wording already says that something is moving forward. */}
       {ready && (
-        <Button size="sm" className="mt-2 w-full" onClick={install}>
+        <Button
+          size="sm"
+          className="mt-2 w-full cursor-pointer"
+          onClick={install}
+        >
           {t("updateAction")}
         </Button>
       )}
@@ -710,36 +1030,32 @@ function SidebarFooter({
   collapsed: boolean;
   onMenuOpenChange?: (open: boolean) => void;
 }) {
-  const t = useTranslations("Nav");
-  const router = useRouter();
-  const pathname = usePathname();
   const { productFeedbackUrl } = useRuntimeConfig();
   return (
     <div className="flex flex-col gap-0.5">
-      {/* Above its neighbors: it is the only one of the four things on the foot which
-          appears by itself, and the only one that disappears. Place it between
-          two permanent lines would blow up everything below to
-          chaque fois. */}
+      {/* The update card stays above the stable account/status row because it
+          appears only while a desktop update is active. */}
       <UpdateFooterCard collapsed={collapsed} />
-      <FooterRow
-        icon={Trash2}
-        label={t("trash")}
-        collapsed={collapsed}
-        active={pathname.startsWith("/trash")}
-        onClick={() => router.push("/trash")}
-      />
-      {productFeedbackUrl && (
-        <FooterRow
-          icon={Megaphone}
-          label={t("shareFeedback")}
-          collapsed={collapsed}
-          onClick={() =>
-            window.open(productFeedbackUrl, "_blank", "noopener,noreferrer")
-          }
-          trailingIcon={ArrowUpRight}
-        />
-      )}
-      <AccountButton collapsed={collapsed} onMenuOpenChange={onMenuOpenChange} />
+      <div className="flex items-center gap-0.5">
+        <div className={cn(!collapsed && "min-w-0 flex-1")}>
+          <AccountButton
+            collapsed={collapsed}
+            onMenuOpenChange={onMenuOpenChange}
+          />
+        </div>
+        {!collapsed ? (
+          <>
+            <UsageIndicator
+              variant="sidebar"
+              onOpenChange={onMenuOpenChange}
+            />
+            <ChangelogButton
+              productFeedbackUrl={productFeedbackUrl}
+              onMenuOpenChange={onMenuOpenChange}
+            />
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -772,25 +1088,23 @@ const RAIL_CLOSE_DELAY_MS = 150;
 export function AppSidebar({
   sections,
   modeKey,
+  currentProject,
+  projects,
+  inbox,
+  onSearch,
+  onSearchWarm,
+  onScratchpadWarm,
   overlay = false,
-  inZenPanel = false,
 }: {
   sections: AppNavSection[];
   modeKey: string;
+  currentProject: Project | null;
+  projects: Project[];
+  inbox: AppNavItem;
+  onSearch: () => void;
+  onSearchWarm?: () => void;
+  onScratchpadWarm?: () => void;
   overlay?: boolean;
-  /**
-   * The bar is rendered IN the Zen mode navigation block: unfolded as
-   * everywhere else, but entirely out of the flow, and stored away from the screen as
-   * that we do not fly over the edge (`components/zen-nav-overlay.tsx`).
-   *
-   * Only one thing depends on it, and that is the ANIMATION of the brand: the buttons
-   * macOS goes away with the block and comes back with it, so the place they
-   * reserve opens and closes with each hover. Lively, the brand
-   * would cross his line every time, late on a block that is already slipping —
-   * exactly what `data-rail` disarms for rail mode. Same reason, same
-   * marqueur (cf. app/globals.css).
-   */
-  inZenPanel?: boolean;
 }) {
   const reduce = useReducedMotion();
   const dx = modeKey === "home" ? -16 : 16;
@@ -1132,30 +1446,11 @@ export function AppSidebar({
           overlay && !collapsed && "shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]",
         )}
       >
-        {/* The brand. Anchored to the LEFT, and the SAME element that the bar is at
-            rail or unfolded: changing it when unfolding would dismantle what the
-            tab just aimed, and the first tab in the rail
-            would lose focus. The rail having only 56 px, `overflow-hidden` the
-            cuts — it does not refocus and therefore never moves.
-            Same height and same bottom border as the header and the line of
-            title of the secondary sidebar: a single horizontal line
-            crosses the application, from one edge to the other.
-
-            In the desktop app, THIS line houses the buttons
-            macOS, instead of the mark, which goes to the right (MIN-291) —
-            `sidebar-brand-row` is the socket for app/globals.css, and
-            `data-window-buttons` tells him if the buttons are there. */}
+        {/* The top row keeps one stable DOM structure while the rail opens and
+            closes, so keyboard focus is preserved. On macOS it hosts the native
+            window controls; CSS hides the logo there, leaving search and inbox on
+            the right. Web, Windows, and Linux keep the logo on the left. */}
         <div
-          data-window-buttons={windowButtons.reserved ? "" : undefined}
-          // Mark sliding is only ARMED once the first state
-          // of the window received: before the response from the bridge the place is worth
-          // “closed”, and animating this catch-up would start the app on a
-          // logo that crosses its bar.
-          data-window-buttons-ready={windowButtons.ready ? "" : undefined}
-          // Rail mode: the only state where the WIDTH of the bar changes. There
-          // brand follows the line in real time (`100cqw`) and above all must not
-          // not be amortized additionally — see app/globals.css.
-          data-rail={overlay || inZenPanel ? "" : undefined}
           className={cn(
             "sidebar-brand-row relative flex h-[60px] shrink-0 items-center border-b border-border",
             GUTTER,
@@ -1163,11 +1458,28 @@ export function AppSidebar({
         >
           {windowButtons.decoy && <WindowButtonDecoys />}
           <SidebarBrand />
+          <SidebarTopActions
+            collapsed={collapsed}
+            inbox={inbox}
+            onSearch={onSearch}
+            onSearchWarm={onSearchWarm}
+          />
         </div>
+
+        <SidebarQuickActions
+          collapsed={collapsed}
+          onScratchpadWarm={onScratchpadWarm}
+        />
 
         {/* Nav — animated swap between home and project modes */}
         {reduce ? (
-          <SidebarNav sections={sections} collapsed={collapsed} />
+          <SidebarNav
+            sections={sections}
+            collapsed={collapsed}
+            currentProject={currentProject}
+            projects={projects}
+            onMenuOpenChange={overlay ? setMenuOpen : undefined}
+          />
         ) : (
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -1178,7 +1490,13 @@ export function AppSidebar({
               exit={{ opacity: 0, x: dx }}
               transition={transitions.fade}
             >
-              <SidebarNav sections={sections} collapsed={collapsed} />
+              <SidebarNav
+                sections={sections}
+                collapsed={collapsed}
+                currentProject={currentProject}
+                projects={projects}
+                onMenuOpenChange={overlay ? setMenuOpen : undefined}
+              />
             </motion.div>
           </AnimatePresence>
         )}

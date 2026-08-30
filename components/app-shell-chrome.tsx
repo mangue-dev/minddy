@@ -16,7 +16,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   AppShell,
-  Header,
   MobileNav,
   Spinner,
   cn,
@@ -69,18 +68,14 @@ import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { isAgentSessionUnread } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import {
-  HeaderSearchPill,
   type PaletteGroup,
   type PaletteItem,
 } from "@/components/header-search-pill";
-import { NewMenu } from "@/components/new-menu";
-import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
-import { UsageIndicator } from "@/components/usage-indicator";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
+import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { NumoIcon } from "@/components/numo-icon";
@@ -505,10 +500,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         ? currentProjectId
         : null,
     );
-  const objectiveBoard = objectiveBoardId
-    ? projectObjectives.find((objective) => objective.id === objectiveBoardId) ?? null
-    : null;
-
   // The current project wiki pages, for ⌘K (MIN-270). Same cache as
   // the tree of the Pages tab: opening the tab does not ask for anything, and a page
   // fame there changes name in the palette without going back and forth.
@@ -1568,6 +1559,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, homeBadgeCollapsed, t, tProjects]);
 
+  // Inbox is a compact top control on desktop. Mobile keeps the regular row,
+  // where there is no primary sidebar to host that control.
+  const desktopSections = useMemo(
+    () =>
+      sections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.key !== "inbox"),
+      })),
+    [sections],
+  );
+
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
 
@@ -1623,40 +1625,44 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      // `app-shell`: taking globals.css on the <main> of the shell, whose
-      // low reserve adjusts to the REAL height of the moving bar
-      // (--mobile-nav-clearance). Rien d'autre ne s'y accroche.
+      // `app-shell` targets the shell's <main>; its bottom reserve follows the
+      // real mobile-nav height through --mobile-nav-clearance.
       className="app-shell"
-      // The navigation block: the primary sidebar, then the home point of
-      // the SECONDARY sidebar that the page teleports there. Both live in the
-      // same box, to the left of the header — this is what shifts the breadcrumbs and
-      // the content, instead of letting them pass over a column.
+      // The navigation block contains the primary sidebar followed by the
+      // landing point where pages teleport their secondary sidebar.
       //
-      // Zen mode (MIN-134): the header is not hidden, it is not given —
-      // no empty strip where it was. NAVIGATION does not leave: the
-      // Zen is not meant to confine. Both bars leave the stream as one
-      // block and remember when hovering over the left edge (`ZenNavOverlay`), excluding
-      // of the flow, without shifting anything — exactly the market that the primary passes
-      // already with its rail. Zen removes the furniture, not the navigation.
-      //
-      // The block ALWAYS carries the primary, the secondary being added when the
-      // page has one: it is this which hosts the app window buttons
-      // desktop, and it is also the only navigation of pages that do not have
-      // barre secondaire.
+      // Zen mode keeps both navigation bars available from the left-edge
+      // overlay without reserving space. There is no longer a shared header to
+      // hide or offset: page content always owns the full content column.
       sidebar={
         <div className="relative flex h-full">
           {zen || compactDesktop ? (
             <ZenNavOverlay
               width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
             >
-              <AppSidebar sections={sections} modeKey={modeKey} inZenPanel />
+              <AppSidebar
+                sections={desktopSections}
+                modeKey={modeKey}
+                currentProject={currentProject}
+                projects={projects}
+                inbox={inboxItem}
+                onSearch={() => handlePaletteOpenChange(true)}
+                onSearchWarm={warmPalette}
+                onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
+              />
               <SecondarySidebarSlot reserve={secondaryNav} />
             </ZenNavOverlay>
           ) : (
             <>
               <AppSidebar
-                sections={sections}
+                sections={desktopSections}
                 modeKey={modeKey}
+                currentProject={currentProject}
+                projects={projects}
+                inbox={inboxItem}
+                onSearch={() => handlePaletteOpenChange(true)}
+                onSearchWarm={warmPalette}
+                onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
                 overlay={secondaryNav}
               />
               <SecondarySidebarSlot reserve={secondaryNav} />
@@ -1664,29 +1670,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           )}
         </div>
       }
+      // Narrow macOS windows use the mobile shell, so the primary sidebar is
+      // absent. This native-control clearance is not an application header and
+      // stays display:none everywhere else.
       header={
-        zen ? undefined : (
-          <Header
-            className="bg-background backdrop-blur-none"
-            left={<AppBreadcrumb objective={objectiveBoard} />}
-            right={
-              // Desktop only — on mobile, Search moves to the navbar Search button
-              // and "Nouveau" to the navbar "+", so the header collapses to the
-              // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
-              <div className="hidden items-center gap-2 desktop:flex">
-                <UsageIndicator />
-                <ScratchpadTrigger
-                  onWarm={() => preloadSurface(loadScratchpadModal)}
-                />
-                <HeaderSearchPill
-                  onOpen={() => handlePaletteOpenChange(true)}
-                  onWarm={warmPalette}
-                />
-                <NewMenu />
-              </div>
-            }
-          />
-        )
+        <div className="compact-window-controls-clearance h-[60px] shrink-0 items-center border-b border-border px-4">
+          <HeaderWindowButtonsSlot />
+        </div>
       }
       // The mobile nav REMAINS: it is through its search button that you open
       // the palette on mobile, so hiding it would lock everyone in Zen mode
@@ -1704,7 +1694,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
     >
       {children}
-      {/* Command palette (⌘K / ⌘P / F, header search pill) — same groups as
+      {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
  index also serves these actions: members and categories of the project
  OF THE TICKET, which is not necessarily that of the page (MIN-91). */}

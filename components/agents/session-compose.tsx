@@ -15,6 +15,7 @@ import {
   toast,
 } from "mangue-ui";
 import { Check, ChevronLeft, ChevronsUpDown, MessageSquare } from "lucide-react";
+import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -370,15 +371,15 @@ export function SessionCompose({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header, with the SAME geometry as an open conversation
- (`AgentConversation`: `px-4 pt-4 pb-2.5`, mobile return · icon · title).
+      {/* Header with the same 60 px geometry as an open conversation
+ (`AgentConversation`, mobile return · icon · title).
  This is not decoration: when the real session takes over —
  a few seconds after sending —, the page exchanges this pane for the one
  of the conversation. Without a header here, the thread started 50 px higher and
  the message already written jumped down at the time of recovery.
  The title follows the same fate: “New conversation” gives way to the
  title that the agent gives it, without anything moving. */}
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
+      <AppContentHeader contentClassName="gap-2 px-4">
         {/* Under `md` only: the conversations column is hidden behind
  this pane, you need a return path. Above, the two coexist. */}
         {onBack ? (
@@ -404,7 +405,7 @@ export function SessionCompose({
           <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
         )}
         <span className="truncate text-sm font-medium">{tAgents("newButton")}</span>
-      </div>
+      </AppContentHeader>
       <div className="min-h-0 flex-1">
         {aiUnavailable ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">

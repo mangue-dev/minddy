@@ -33,6 +33,7 @@ import {
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 import { NumoIcon } from "@/components/numo-icon";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 /**
  * Plan usage (MIN-72) — header pad + popover: unified budget bar
@@ -82,10 +83,23 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
   pro: "planPro",
 };
 
-export function UsageIndicator() {
+export function UsageIndicator({
+  variant = "header",
+  collapsed = false,
+  onOpenChange,
+}: {
+  variant?: "header" | "sidebar";
+  collapsed?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const t = useTranslations("Billing");
   const { loading, remainingPercent, state, usage } = useBillingSummary();
   const [open, setOpen] = useState(false);
+  const sidebar = variant === "sidebar";
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   if (!loading && !usage?.managedAi) return null;
 
@@ -97,26 +111,39 @@ export function UsageIndicator() {
         : "text-muted-foreground hover:text-foreground";
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
           aria-label={t("usageAria")}
           className={cn(
-            "h-8 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium tabular-nums shadow-none hover:bg-card",
+            "gap-1.5 text-xs font-medium tabular-nums shadow-none",
+            sidebar
+              ? cn(
+                  SIDEBAR_COMPACT_CONTROL_CLASS,
+                  "text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                )
+              : "h-8 rounded-full border border-border bg-card px-2.5 hover:bg-card",
             stateClass
           )}
         >
-          <Gauge className="size-[15px]" strokeWidth={2} />
-          {loading
-            ? "…"
-            : t("usagePercent", { percent: roundRemainingPercent(remainingPercent) })}
+          {(!sidebar || collapsed) && <Gauge className="size-[15px]" strokeWidth={2} />}
+          {!collapsed
+            ? loading
+              ? "…"
+              : t("usagePercent", { percent: roundRemainingPercent(remainingPercent) })
+            : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-80 p-0">
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={sidebar ? 10 : 8}
+        className="w-80 p-0"
+      >
         <UsageBreakdownBody />
-        <UsageFooter onNavigate={() => setOpen(false)} />
+        <UsageFooter onNavigate={() => handleOpenChange(false)} />
       </PopoverContent>
     </Popover>
   );

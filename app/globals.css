@@ -7,8 +7,8 @@
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
 
-/* The shell remains a desktop application from 768 px: complete header, palette
-   search and side navigation. Below this threshold only, the pill
+/* The shell remains a desktop application from 768 px: primary navigation and
+   the full command palette. Below this threshold only, the pill
    mobile navigation takes over. 768–1199 px displays use the
    retracted side panel (see AppShellChrome), rather than the mobile interface.
    This redefinition, after the mango-ui tokens, aligns `desktop:` and
@@ -45,13 +45,25 @@
 }
 
 /* In the Electron app, the fixed strip that allows you to move the window covers
-   the first 60 pixels (including the left edge of the header). When the panel
+   the first 60 pixels. When the compact navigation panel
    navigation compact is stored, its edge must pass ABOVE this strip
    and become a web zone again; otherwise a hover of the top-left corner cannot
    never recall navigation. Once opened, it goes back under the panel
    itself and does not block any controls. */
 html[data-desktop-app] .zen-nav-hotzone {
   -webkit-app-region: no-drag;
+}
+
+/* Without the primary sidebar, a narrow macOS window still needs one native
+   titlebar-height clearance so the traffic lights do not cover page content.
+   Other platforms and every desktop-width layout reserve no header space. */
+.compact-window-controls-clearance {
+  display: none;
+}
+@media (width < 768px) {
+  html[data-desktop-platform="darwin"] .compact-window-controls-clearance {
+    display: flex;
+  }
 }
 
 /* mango-ui gives menu options a higher touch target up to
@@ -2084,79 +2096,14 @@ html[data-desktop-platform="darwin"]
    taken on a pseudo-element `fixed` — not on the header, whose rectangle
    follows the animated width. */
 
-/* The traffic lights are drawn ABOVE the page, at the top left.
-   Rather than going down the column to make a band of their own — which
-   pushes the entire sidebar down and reveals a seam of one
-   other color above it —, they arise IN the line of mark, at the
-   place de la marque, which passes to the right. The line keeps its 60 px and its background:
-   nothing moves, there is nothing new on the screen, only a place exchanged.
-
-   `data-window-buttons` is set by components/app-sidebar.tsx when the
-   buttons are there. In RAIL mode they are removed (56 px does not hold them) and
-   the attribute disappears with them: the mark returns to the left, in its place. Below
-   768 px the bar is no longer rendered at all, and it's the header that keeps them
-   the corner (`HeaderWindowButtonsSlot`, components/desktop-window-buttons.tsx).
-
-   The place they occupy — left edge at 19, three 14 px pellets at a step
-   of 23, therefore a straight edge at 79, plus a margin - is NOTICED on a capture
-   system screen rather than inferred, and lives in `WINDOW_BUTTONS_WIDTH`
-   (components/desktop-window-buttons.tsx). This block does not need it: the
-   mark snaps to the right edge of the line, not to them. */
-/* ── The GLISSE brand, it does not teleport ───────────────────────────────
-   MIN-293. The place opens and closes along the way — we pass right through
-   screen, macOS takes the buttons to the top of the screen, and the line no longer has anything
-   to keep for them; the rail folds, same thing. The mark then jumped from one edge to
-   the other, without transition, which makes the whole bar seem to be reloading.
-
-   `justify-content` and `padding` do not animate (the second, yes, but it
-   would push the mark instead of moving it). Hence the staging: the line
-   becomes a query CONTAINER, and the mark translates by the width that
-   rest — `100cqw` is the content width of the line (excluding gutter), `100%`
-   that of the brand itself. The difference is exactly the journey, at any
-   bar width, without a single hard number and without measuring anything in JS.
-
-   The animation is only ARMED once the first window state is received
-   (`data-window-buttons-ready`, set by components/app-sidebar.tsx): before the
-   response from the bridge, the place is “closed” by default, and animate this
-   catching up there would start the app on a logo crossing its bar.
-
-   ⚠ And this line does **not** carry a window socket, per MIN-309 above:
-   the `fixed` band of 60 px already covers it, and the argument is valid here a fortiori
-   — `container-type: inline-size` makes this line a container whose
-   width comes to life with each hover, i.e. exactly the moving rectangle of which
-   MIN-309 explains that the map of the regions is outdated image after image. */
-html[data-desktop-platform="darwin"] .sidebar-brand-row {
-  container-type: inline-size;
-}
-
-html[data-desktop-platform="darwin"] .sidebar-brand-row[data-window-buttons] .sidebar-brand-mark {
-  transform: translateX(calc(100cqw - 100%));
-}
-
-/* ⚠ **No transition when the BAR comes alive**, and it is the opposite of a
-   oversight. `100cqw` follows the width of the line in real time: when the rail is
-   unfolds, the target of `translateX` is already moving, on the framer curve. Ask a
-   relaxation on top of it is to dampen a value which is already coming to life - the
-   logo falls behind its own bar and runs after it. Seen in use,
-   and that's exactly what we don't want: these two are one.
-
-   Without transition, the brand sticks to the width to the pixel, for free.
-   The movement we wanted to animate is the OTHER — the full screen, where the place
-   opens or closes without the bar moving a pixel, and where nothing
-   would carry the logo if it didn't slide off on its own.
-
-   `data-rail` is set by components/app-sidebar.tsx when the bar is in
-   rail mode, that is to say in the only state where its width changes. */
+/* MIN-488: expanded macOS sidebars use the top-left space for native window
+   controls, so only search and inbox remain on the right. The collapsed rail
+   hides those actions and restores the Minddy mark. Web, Windows, and Linux
+   always keep the mark visible. */
 html[data-desktop-platform="darwin"]
-  .sidebar-brand-row[data-window-buttons-ready]:not([data-rail])
+  [data-collapsed="false"]
   .sidebar-brand-mark {
-  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html[data-desktop-platform="darwin"] .sidebar-brand-row .sidebar-brand-mark {
-    transition: none;
-  }
+  display: none;
 }
 
 /* ─── Toasts (sonner) — Geist-style solid status pills ──────────────────────

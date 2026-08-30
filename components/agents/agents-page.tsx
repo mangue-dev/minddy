@@ -43,6 +43,7 @@ import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import {
   FREE_COMPOSE_PARAM,
   setAgentComposeDraft,
@@ -440,10 +441,10 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
           size="icon-sm"
           variant="ghost"
           onClick={onClick}
-          className="-mr-2 text-muted-foreground hover:text-foreground"
+          className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
           aria-label={t("newButton")}
         >
-          <Plus className="size-4" />
+          <Plus className="size-[18px]" />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{t("newButton")}</TooltipContent>

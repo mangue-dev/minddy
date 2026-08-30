@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { EmptyScene } from "@/components/empty-scene";
+import { AppContentHeader } from "@/components/app-content-header";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -65,6 +66,7 @@ import { SearchSelect, checkedProps } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
@@ -272,11 +274,11 @@ function FeedbackFilterMenu({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="text-muted-foreground hover:text-foreground"
+          className={SIDEBAR_COMPACT_CONTROL_CLASS}
           aria-label={tooltip}
         >
           <span className="relative flex items-center justify-center">
-            <ListFilter className="size-4" />
+            <ListFilter className="size-[18px]" />
             {active ? (
               <span
                 aria-hidden
@@ -1113,11 +1115,11 @@ export function FeedbackTeamPage() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="-mr-2 text-muted-foreground hover:text-foreground"
+                  className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
                   aria-label={t("newFeedback")}
                   onClick={() => setCreateOpen(true)}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-[18px]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("newFeedback")}</TooltipContent>
@@ -1565,7 +1567,7 @@ function FeedbackDetail({
           WITHOUT border: it is the fading of the content which says that it continues
           above, and a separate bar would cut it off from what it covers (even
           part as the pull request and the agent conversation). */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
+      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -1586,7 +1588,7 @@ function FeedbackDetail({
             reviewFailed={reviewGaveUp(post)}
           />
         </span>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* The linked ticket is no longer ANNOUNCED here: it has its row in the
               file, with its status, title and detachment. Only remains
               the gesture that only exists before it — making one. */}
@@ -1661,7 +1663,7 @@ function FeedbackDetail({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </AppContentHeader>
 
       {/* Scrolling body, centered like the yard. */}
       <div

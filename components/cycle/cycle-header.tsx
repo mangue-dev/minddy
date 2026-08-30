@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -11,8 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "mangue-ui";
-import { Check, ChevronDown } from "lucide-react";
-import { NumoIcon } from "@/components/numo-icon";
+import { Check, ChevronDown, Settings } from "lucide-react";
 import { ProgressRing } from "@/components/progress-ring";
 import { addDays } from "@/lib/cycle";
 import type { BoardCycles, CycleInfo } from "@/lib/types";
@@ -23,11 +22,8 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * The cycle-mode header (MIN-32): a date-range title-selector on the left
- * (never a duration word — the dates ARE the identity of a cycle), and on the
- * right — where the filter/sort/view controls normally live — the "Ask Numo"
- * badge input, the capacity ring (% of target points filled; raw points stay
- * hidden) and the intensity label linking to the settings tab.
+ * Cycle-mode controls for the shared board header: progress gauges, the
+ * date-range selector, and a direct route to cycle settings.
  */
 
 const day = (date: string) => new Date(`${date}T00:00:00`);
@@ -87,13 +83,16 @@ export function CycleTitleSelector({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 font-display text-lg font-semibold tracking-tight transition-colors hover:text-muted-foreground"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="max-w-64 gap-1.5 font-normal"
         >
-          {phaseLabel} · {formatCycleRange(format, selected)}
+          <span className="truncate">
+            {phaseLabel} · {formatCycleRange(format, selected)}
+          </span>
           <ChevronDown className="size-4 text-muted-foreground" aria-hidden />
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-56">
         {cycles.current && entry(cycles.current, t("currentCycle"))}
@@ -134,43 +133,19 @@ function RingStat({
   );
 }
 
-/** The "Ask Numo" badge input — lives on the title-selector line (right end),
-    NOT with the progress rings. Submitting opens the assistant scoped to the
-    cycle with the message pre-sent. */
-export function CycleAskNumo({ onAskNumo }: { onAskNumo: (message: string) => void }) {
-  const t = useTranslations("Cycles");
-  const [draft, setDraft] = useState("");
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const message = draft.trim();
-        if (!message) return;
-        onAskNumo(message);
-        setDraft("");
-      }}
-      className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 transition-colors focus-within:border-foreground/30"
-    >
-      <NumoIcon animated={false} className="size-3.5 shrink-0 text-primary" />
-      <input
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        placeholder={t("askNumoPlaceholder")}
-        className="w-44 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-      />
-    </form>
-  );
-}
-
-/** The gauges of the pills row (replacing the filter/sort controls):
-    completion ring, capacity ring, intensity label. */
+/** Cycle controls replacing the normal filter/sort/view actions. */
 export function CycleControls({
+  cycles,
   cycle,
+  selectedId,
+  onSelect,
   filledPoints,
   completionPercent,
 }: {
+  cycles: BoardCycles;
   cycle: CycleInfo;
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
   filledPoints: number;
   /** Points-weighted share of closed (done/canceled) work; null = empty cycle. */
   completionPercent: number | null;
@@ -182,26 +157,38 @@ export function CycleControls({
       : 0;
 
   return (
-    <div className="flex items-center gap-3">
-      {completionPercent !== null && (
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-3">
+        {completionPercent !== null && (
+          <RingStat
+            percent={completionPercent}
+            colorClass="text-emerald-500"
+            tooltip={t("completionTooltip", { percent: completionPercent })}
+          />
+        )}
         <RingStat
-          percent={completionPercent}
-          colorClass="text-emerald-500"
-          tooltip={t("completionTooltip", { percent: completionPercent })}
+          percent={capacityPercent}
+          colorClass="text-primary"
+          tooltip={t("capacityTooltip", { percent: capacityPercent })}
         />
-      )}
-      <RingStat
-        percent={capacityPercent}
-        colorClass="text-primary"
-        tooltip={t("capacityTooltip", { percent: capacityPercent })}
+      </div>
+
+      <CycleTitleSelector
+        cycles={cycles}
+        selectedId={selectedId}
+        onSelect={onSelect}
       />
 
-      <Link
-        href="/settings?tab=cycles"
-        className="text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
-      >
-        {t(`intensity_${cycle.intensity}`)}
-      </Link>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button asChild variant="ghost" size="icon-sm">
+            <Link href="/settings?tab=cycles" aria-label={t("settingsAction")}>
+              <Settings />
+            </Link>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{t("settingsAction")}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

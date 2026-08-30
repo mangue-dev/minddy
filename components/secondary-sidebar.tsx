@@ -128,7 +128,7 @@ export function SecondarySidebar({
           <div className="flex-1" />
         )}
         {actions ? (
-          <div className="flex shrink-0 items-center">{actions}</div>
+          <div className="flex shrink-0 items-center gap-1">{actions}</div>
         ) : null}
       </div>
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">

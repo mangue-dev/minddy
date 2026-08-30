@@ -64,6 +64,7 @@ import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageEditor } from "@/components/pages/page-editor";
+import { AppContentHeader } from "@/components/app-content-header";
 import { usePageUploads } from "@/components/pages/page-uploads";
 import {
   focusDocumentStart,
@@ -837,7 +838,7 @@ function PageSurface({
     <div className="relative flex min-h-0 flex-1 flex-col">
       {/* A structural, non-scrolling header: breadcrumb on the left; presence,
           versions, comments, and document actions on the right. */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
+      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
         <div className="flex min-w-0 flex-1 items-center">
           <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
         </div>
@@ -884,7 +885,7 @@ function PageSurface({
             }
           />
         </div>
-      </div>
+      </AppContentHeader>
       {documentMenu.dialogs}
 
       {/* The table of contents floats at the right edge of the PANEL, therefore out of the

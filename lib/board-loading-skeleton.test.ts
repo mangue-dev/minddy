@@ -16,7 +16,7 @@ describe("board loading shell", () => {
     );
 
     expect(routeSkeletons).toContain("<BoardLoadingSkeleton");
-    expect(skeleton).toContain("data-board-skeleton-special-title");
+    expect(skeleton).toContain("data-board-skeleton-header");
     expect(skeleton).toContain("data-board-skeleton-column");
     expect(skeleton).toContain("data-board-skeleton-card");
     expect(skeleton).toContain("data-board-skeleton-create-issue");
@@ -24,18 +24,31 @@ describe("board loading shell", () => {
     expect(skeleton).toContain("BOARD_COLUMN_CLASS");
   });
 
-  it("keeps the global title exclusive to the Cycle selector", () => {
+  it("keeps views and cycle controls in the shared board header", () => {
     const board = readFileSync(
       join(ROOT, "components/global-board.tsx"),
       "utf8",
     );
-    const header = board.slice(
-      board.indexOf('<div className="flex shrink-0 flex-col gap-3 px-6 pt-4">'),
-      board.indexOf("<BoardToolbar"),
+    const toolbar = readFileSync(
+      join(ROOT, "components/board-toolbar.tsx"),
+      "utf8",
+    );
+    const cycleHeader = readFileSync(
+      join(ROOT, "components/cycle/cycle-header.tsx"),
+      "utf8",
+    );
+    const cycleControls = cycleHeader.slice(
+      cycleHeader.indexOf("export function CycleControls"),
     );
 
-    expect(header).toContain("<CycleTitleSelector");
-    expect(header).not.toContain("<h1");
-    expect(header).not.toContain('t("allTitle")');
+    expect(toolbar).toContain("<AppContentHeader");
+    expect(board).toContain("<BoardToolbar");
+    expect(board).not.toContain("CycleAskNumo");
+    expect(cycleControls.indexOf("<RingStat")).toBeLessThan(
+      cycleControls.indexOf("<CycleTitleSelector"),
+    );
+    expect(cycleControls.indexOf("<CycleTitleSelector")).toBeLessThan(
+      cycleControls.indexOf("<Settings"),
+    );
   });
 });

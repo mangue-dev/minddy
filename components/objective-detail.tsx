@@ -27,6 +27,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { AppContentHeader } from "@/components/app-content-header";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
 // see markdown-editor-lazy.tsx. Warmed from idle time in ObjectiveDetail.
 import {
@@ -384,7 +385,7 @@ export function ObjectiveDetail({
  above (same part as triage and pull request). It does not NAME
  the objective - the left column designates it, the title writes it in big
  just below - it only describes what we DO there. */}
-      <div className="flex shrink-0 items-center gap-1.5 px-4 py-3 md:px-6">
+      <AppContentHeader contentClassName="gap-1.5 px-4 md:px-6">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -395,7 +396,7 @@ export function ObjectiveDetail({
           <ChevronLeft />
         </Button>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* Numo resumes dictation: the microphone has disappeared in the menu, the acknowledgment of
  work in progress remains here, in the place occupied by the command. */}
           {numoBusy && (
@@ -477,7 +478,7 @@ export function ObjectiveDetail({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </AppContentHeader>
 
       <div
         ref={fade.ref}

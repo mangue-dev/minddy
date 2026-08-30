@@ -38,6 +38,7 @@ import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type {
   AgentRunPrResponse,
@@ -214,11 +215,11 @@ function PrFilterMenu({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="-mr-2 text-muted-foreground hover:text-foreground"
+          className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
           aria-label={t("filterTooltip", { state: stateLabel })}
         >
           <span className="relative flex items-center justify-center">
-            <ListFilter className="size-4" />
+            <ListFilter className="size-[18px]" />
             {active ? (
               /* The ring in the color of the bar detaches the pellet from the line
                  of the icon, which passes just below. */

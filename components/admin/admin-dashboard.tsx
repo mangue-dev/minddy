@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { AppContentHeader } from "@/components/app-content-header";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -297,7 +298,10 @@ export function AdminDashboard() {
         {/* Panel header, MOBILE only: return to rail and
  name of the open tab. On desktop the rail is on the screen and the
  is already highlighted. */}
-        <div className="flex shrink-0 items-center gap-2 px-4 py-3 md:hidden">
+        <AppContentHeader
+          className="md:hidden"
+          contentClassName="gap-2 px-4"
+        >
           <Button
             variant="ghost"
             size="icon-sm"
@@ -309,7 +313,7 @@ export function AdminDashboard() {
           <span className="truncate text-sm font-medium">
             {t(`tabs.${active}`)}
           </span>
-        </div>
+        </AppContentHeader>
 
         <div
           ref={contentFade.ref}

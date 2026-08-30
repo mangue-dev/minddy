@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, cn, Spinner, toast } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
+import { AppContentHeader } from "@/components/app-content-header";
 import { cumulativeBranchFiles, changeTotals } from "@/lib/agent-changed-files";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -872,12 +873,8 @@ export function AgentConversation({
   return (
     <MentionLinksProvider value={links}>
       <div className="flex h-full flex-col overflow-hidden">
-        {/* Header: left block provided by the host (default: session template in
-          live / targeted issue in composite) + actions on the right. Without border: the wire
-          breathes all the way to the top, and the header doesn't read as a separate bar.
-          Bottom deliberately tighter than the top (`pb-2.5`): the space under the
-          title is already given by the `pt-3` of the sessions bar just below. */}
-        <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
+        {/* Host title on the left and session actions on the shared 60 px line. */}
+        <AppContentHeader contentClassName="gap-2 px-4">
           {headerTitle ??
             (liveRun ? (
               <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
@@ -900,7 +897,7 @@ export function AgentConversation({
               {headerActions}
             </div>
           ) : null}
-        </div>
+        </AppContentHeader>
 
         {/* Feed: event stream (live), in-flight launch, spinner or intro. */}
         <div className="min-h-0 flex-1">
