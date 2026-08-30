@@ -51,6 +51,7 @@ export function ScratchpadTrigger({
               ? cn(
                   SIDEBAR_ROW_ACTION_CLASS,
                   "gap-1.5 px-[9px] text-sidebar-foreground/70",
+                  left === 0 && "size-9",
                 )
               : "rounded-full border border-border bg-card text-muted-foreground hover:bg-card hover:text-foreground",
             !sidebar && left > 0 && "gap-1.5 px-2.5"

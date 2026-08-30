@@ -687,7 +687,7 @@ function AccountButton({
           collapsed ? cn(ROW_BOX, "pr-[7px]") : "w-full gap-3 pr-3 text-left",
         )}
       >
-        <UserAvatar seed={seed} className="size-[22px]" />
+        <UserAvatar seed={seed} className="size-[22px] max-w-none" />
         {!collapsed && (
           <span className="min-w-0 flex-1 truncate text-sm font-medium">
             {name}
@@ -1140,7 +1140,14 @@ function SidebarFooter({
         onOpenChange={onMenuOpenChange}
       />
       <div className="flex items-center gap-0.5">
-        <div className={cn(!collapsed && "min-w-0 flex-1")}>
+        <div
+          className={cn(
+            // Keep the rail-sized account slot while the aside widens. The
+            // trailing controls are clipped at the right edge instead of
+            // crossing the avatar during the first animation frames.
+            !collapsed && "min-w-9 flex-1",
+          )}
+        >
           <AccountButton
             collapsed={collapsed}
             onMenuOpenChange={onMenuOpenChange}
