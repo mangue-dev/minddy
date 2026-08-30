@@ -652,6 +652,7 @@ export default function TriagePage() {
             value={message}
             onChange={setMessage}
             members={members}
+            mentions={mentions}
             placeholder={t("messagePlaceholder")}
             rows={3}
             autoFocus

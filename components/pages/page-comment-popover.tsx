@@ -33,11 +33,13 @@ import {
   ReplyComposer,
 } from "@/components/issue-timeline";
 import { posOfBlockId } from "@/components/pages/block-actions";
+import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import {
   hasOpenDismissibleLayer,
   isInOverlayLayer,
 } from "@/lib/overlay-layers";
 import type { PageThread } from "@/lib/page-comments";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import type { Member } from "@/lib/types";
 
 /** Width of the panel, and the margin it keeps with the edge of the window. */
@@ -89,6 +91,7 @@ export function PageCommentPopover({
   const tTimeline = useTranslations("Timeline");
   const panel = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ top: number; left: number } | null>(null);
+  const mentions = useDescriptionMentions(projectId, members);
 
   const measure = useCallback(() => {
     if (!editor || editor.isDestroyed) return;
@@ -208,6 +211,7 @@ export function PageCommentPopover({
             members={members}
             currentUserId={currentUserId}
             projectId={projectId}
+            mentions={mentions}
             onAdd={onAdd}
             onEdit={onEdit}
             onDelete={onDelete}
@@ -249,6 +253,7 @@ function ThreadPanel({
   members,
   currentUserId,
   projectId,
+  mentions,
   onAdd,
   onEdit,
   onDelete,
@@ -257,6 +262,7 @@ function ThreadPanel({
   members: Member[];
   currentUserId: string | null;
   projectId: string;
+  mentions: MarkdownEditorMentions;
   onAdd: (input: {
     body: string;
     mentionedUserIds: string[];
@@ -281,6 +287,7 @@ function ThreadPanel({
         <CommentBlock
           comment={root}
           ctx={ctx}
+          mentions={mentions}
           currentUserId={currentUserId}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -293,6 +300,7 @@ function ThreadPanel({
           <CommentBlock
             comment={reply}
             ctx={ctx}
+            mentions={mentions}
             currentUserId={currentUserId}
             onEdit={onEdit}
             onDelete={onDelete}
@@ -305,6 +313,7 @@ function ThreadPanel({
       <div className="border-t border-border/60">
         <ReplyComposer
           members={members}
+          mentions={mentions}
           currentUserId={currentUserId}
           projectId={projectId}
           rootId={root.id}

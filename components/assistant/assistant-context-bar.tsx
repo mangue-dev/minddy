@@ -280,7 +280,12 @@ function AddContextButton({
                   value={page.id}
                   keywords={[page.title]}
                   onSelect={() =>
-                    pick({ kind: "page", id: page.id, label: page.title })
+                    pick({
+                      kind: "page",
+                      id: page.id,
+                      label: page.title,
+                      icon: page.icon,
+                    })
                   }
                   className="gap-2"
                 >

@@ -121,6 +121,9 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
         ...(typeof v.color === "string" && v.color.length <= 32
           ? { color: v.color }
           : {}),
+        ...(typeof v.icon === "string" && v.icon.length <= 32
+          ? { icon: v.icon }
+          : {}),
       }));
     return list.length > 0 ? list : undefined;
   })();
@@ -190,6 +193,9 @@ function parseMentions(raw: unknown): AssistantMention[] {
         : {}),
       ...(typeof v.color === "string" && v.color.length <= 32
         ? { color: v.color }
+        : {}),
+      ...(typeof v.icon === "string" && v.icon.length <= 32
+        ? { icon: v.icon }
         : {}),
     }));
 }

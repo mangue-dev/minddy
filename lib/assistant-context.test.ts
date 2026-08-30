@@ -139,3 +139,39 @@ describe("contextChips — settings", () => {
     ).toBeNull();
   });
 });
+
+describe("contextChips — page icons", () => {
+  it("uses the ambient page emoji when one is available", () => {
+    const chips = contextChips(
+      {
+        projectId: "p1",
+        pageId: "page-1",
+        pageTitle: "Launch guide",
+        pageIcon: "🚀",
+      },
+      { t },
+    );
+
+    expect(chips.find((chip) => chip.kind === "page")).toMatchObject({
+      label: "Launch guide",
+      icon: "🚀",
+    });
+  });
+
+  it("preserves the emoji of a manually pinned page", () => {
+    const chips = contextChips(
+      {
+        pinned: [
+          { kind: "page", id: "page-1", label: "Launch guide", icon: "🚀" },
+        ],
+      },
+      { t },
+    );
+
+    expect(chips.find((chip) => chip.kind === "page")).toMatchObject({
+      label: "Launch guide",
+      icon: "🚀",
+      pinned: true,
+    });
+  });
+});

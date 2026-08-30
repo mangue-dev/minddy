@@ -236,26 +236,54 @@ export function flattenPageTree<T extends PageRow>(
   return out;
 }
 
+/** The two forests rendered above and below the favorites separator. */
+export interface SplitFavoritePageTree<T extends PageRow> {
+  favorites: PageTreeNode<T>[];
+  regular: PageTreeNode<T>[];
+}
+
 /**
- * The PINLED pages, in the order of the tree.
+ * Extract favorite pages and their complete subtrees from the regular tree.
  *
- * The order is that of the in-depth search, and not that of the postings
- * favorite: it is the only one that the eye finds from one visit to the next, and it does not
- * does not rearrange the block when a fourth is pinned.
- *
- * It starts from the TREE and not from the flat list, which solves two cases of one
- * suddenly: a page whose parent is in the trash has been moved up to the root
- * by `buildPageTree` and therefore remains pinned, and each sibling is already sorted
- * by `position`.
- *
- * What it does NOT do: remove the page from the tree. A favorite subpage
- * reads twice in the bar — pinning is a shortcut, not a
- * move.
+ * A favorite is a tree root in the favorites section, even when it was nested in
+ * the project. Its descendants keep their hierarchy and are not repeated below
+ * the separator. A favorite nested below another favorite stays in that ancestor's
+ * subtree instead of becoming a second root, so every page is returned exactly once.
  */
-export function favoritePages<T extends PageRow & { favorite: boolean }>(
-  tree: readonly PageTreeNode<T>[]
-): PageTreeNode<T>[] {
-  return flattenPageTree(tree).filter((node) => node.favorite);
+export function splitFavoritePageTree<
+  T extends PageRow & { favorite: boolean },
+>(tree: readonly PageTreeNode<T>[]): SplitFavoritePageTree<T> {
+  const favorites: PageTreeNode<T>[] = [];
+
+  const cloneSubtree = (
+    node: PageTreeNode<T>,
+    depth: number
+  ): PageTreeNode<T> => ({
+    ...node,
+    depth,
+    children: node.children.map((child) => cloneSubtree(child, depth + 1)),
+  });
+
+  const extract = (
+    nodes: readonly PageTreeNode<T>[],
+    depth: number
+  ): PageTreeNode<T>[] => {
+    const regular: PageTreeNode<T>[] = [];
+    for (const node of nodes) {
+      if (node.favorite) {
+        favorites.push(cloneSubtree(node, 0));
+        continue;
+      }
+      regular.push({
+        ...node,
+        depth,
+        children: extract(node.children, depth + 1),
+      });
+    }
+    return regular;
+  };
+
+  return { favorites, regular: extract(tree, 0) };
 }
 
 /**

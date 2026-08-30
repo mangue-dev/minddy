@@ -63,7 +63,7 @@ export function PageToc({
 }) {
   const t = useTranslations("Pages");
   const [entries, setEntries] = useState<TocEntry[]>([]);
-  const [active, setActive] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!editor) return;
@@ -93,14 +93,14 @@ export function PageToc({
     const measure = () => {
       frame = 0;
       const line = root.getBoundingClientRect().top + SCROLL_MARGIN * 3;
-      let current = entries[0].pos;
+      let current = entries[0].id;
       for (const entry of entries) {
         const element = headingElement(editor, entry.pos);
         if (element && element.getBoundingClientRect().top <= line) {
-          current = entry.pos;
+          current = entry.id;
         }
       }
-      setActive(current);
+      setActiveId(current);
     };
     const onScroll = () => {
       if (frame) return;
@@ -185,12 +185,12 @@ export function PageToc({
         )}
       >
         {entries.map((entry) => (
-          <span key={entry.pos} className="flex h-2.5 items-center">
+          <span key={entry.id} className="flex h-2.5 items-center">
             <span
               className={cn(
                 "h-0.5 rounded-full transition-colors",
                 DASH_WIDTH[Math.min(entry.level, 3)],
-                entry.pos === active ? "bg-foreground/70" : "bg-foreground/25"
+                entry.id === activeId ? "bg-foreground/70" : "bg-foreground/25"
               )}
             />
           </span>
@@ -218,11 +218,11 @@ neither of the two layers having to reorganize itself. */}
         )}
       >
         {entries.map((entry) => {
-          const current = entry.pos === active;
+          const current = entry.id === activeId;
           const level = Math.min(entry.level, 3);
           return (
             <button
-              key={entry.pos}
+              key={entry.id}
               type="button"
               onClick={() => goTo(entry.pos)}
               title={entry.text}

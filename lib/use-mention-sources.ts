@@ -26,6 +26,7 @@ import {
 } from "@/lib/mention-target";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useProjects } from "@/lib/projects-context";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
@@ -38,10 +39,12 @@ import type {
   MentionIssue,
   MentionObjective,
   MentionPage,
+  MentionProject,
 } from "@/lib/mention-scan";
 import type { Member } from "@/lib/types";
 
 export interface MentionSources {
+  projects: MentionProject[];
   issues: MentionIssue[];
   objectives: MentionObjective[];
   /** The COURANT project wiki pages (MIN-273). They do not come from
@@ -79,6 +82,18 @@ export function useMentionSources(
 
   const keyByProject = useMemo(
     () => new Map(projects.map((p) => [p.id, p.key])),
+    [projects],
+  );
+
+  const mentionProjects = useMemo<MentionProject[]>(
+    () =>
+      projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        key: project.key,
+        avatarSeed: projectOrbSeed(project),
+        iconUrl: project.icon_url,
+      })),
     [projects],
   );
 
@@ -138,7 +153,7 @@ export function useMentionSources(
     }));
   }, [projectId, exactProjectId, pagesLoading, projectPages, index?.pages]);
 
-  return { issues, objectives, pages, armNow };
+  return { projects: mentionProjects, issues, objectives, pages, armNow };
 }
 
 /**
@@ -203,7 +218,8 @@ export function useDescriptionMentions(
   members: Member[],
   onOpenIssue?: (projectId: string, issueId: string) => void,
 ): MarkdownEditorMentions {
-  const { issues, objectives, pages, armNow } = useMentionSources(projectId);
+  const { projects, issues, objectives, pages, armNow } =
+    useMentionSources(projectId);
   const links = useMentionLinksFor({ issues, objectives, pages }, onOpenIssue);
 
   const options = useMemo<MentionOption[]>(
@@ -214,6 +230,14 @@ export function useDescriptionMentions(
         label: displayName(m),
         avatarSeed: m.avatar_seed,
         keywords: m.email ? [m.email] : [],
+      })),
+      ...projects.map((project) => ({
+        type: "project" as const,
+        id: project.id,
+        label: project.name,
+        avatarSeed: project.avatarSeed,
+        iconUrl: project.iconUrl,
+        keywords: [project.key],
       })),
       ...issues.map((i) => ({
         type: "issue" as const,
@@ -239,12 +263,12 @@ export function useDescriptionMentions(
           icon: p.icon,
         })),
     ],
-    [members, issues, objectives, pages],
+    [members, projects, issues, objectives, pages],
   );
 
   const scan = useMemo(
-    () => contentMentionScanner({ members, issues, objectives, pages }),
-    [members, issues, objectives, pages],
+    () => contentMentionScanner({ members, projects, issues, objectives, pages }),
+    [members, projects, issues, objectives, pages],
   );
 
   // Memorized: the object is read as a downstream IDENTITY — the editor reconstructs

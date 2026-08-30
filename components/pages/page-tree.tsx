@@ -36,7 +36,7 @@ import {
 
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
-import { ancestorsOf, favoritePages } from "@/lib/pages";
+import { ancestorsOf, splitFavoritePageTree } from "@/lib/pages";
 import { dropModeAt, type PageDropMode } from "@/lib/pages-move";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import {
@@ -169,19 +169,17 @@ export function PageTree({
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [pages, query]);
 
-  /* ── Favorites ─────────────────────────── ────────────────────────────
-     Pinned at the top, FLAT: a favorite subpage is therefore read twice
-     in the bar — here at level 0, and in its true place in the tree. This is the
-     meaning of the gesture: pinning is a shortcut, not a move, and see the
-     page quitter son parent se lirait comme un reparentage.
+  /* ── Favorites ──────────────────────────────────────────────────────────
+     Each favorite becomes a root in the upper forest and brings its complete
+     subtree with it. The lower forest excludes those nodes, so a nested favorite
+     and every one of its descendants appear exactly once in the sidebar.
 
-     No section title above: the star at the end of the line already says this
-     what is this block, and an intertitle for three lines costs more height
-     than he explains. The separator is enough to detach it from the tree.
-
-     The order and choice of lines lives in `favoritePages` (lib/pages.ts),
-     with the rest of the logic tree — so tested, like it. */
-  const favorites = useMemo(() => favoritePages(tree), [tree]);
+     There is no section title: the star on favorite rows and the separator make
+     the distinction without spending another line of sidebar space. */
+  const { favorites, regular } = useMemo(
+    () => splitFavoritePageTree(tree),
+    [tree]
+  );
 
   /* ── The deposit ────────────────────────────── ────────────────────────────── */
   const [dragId, setDragId] = useState<string | null>(null);
@@ -243,68 +241,61 @@ export function PageTree({
     );
   }
 
-  const rows: React.ReactNode[] = [];
-  const walk = (nodes: PageTreeNode<PageSummary>[]) => {
-    for (const node of nodes) {
-      const open = expanded.has(node.id);
-      rows.push(
-        <PageRow
-          key={node.id}
-          page={node}
-          depth={node.depth}
-          hasChildren={node.children.length > 0}
-          open={open}
-          active={node.id === activePageId}
-          drop={drop?.id === node.id ? drop.mode : null}
-          dragging={dragId === node.id}
-          untitled={t("untitled")}
-          actions={actionsFor(node)}
-          onToggle={() => toggle(node.id)}
-          onCreateChild={createChild}
-          onDragStart={() => setDragId(node.id)}
-          onDragOverRow={(mode) => {
-            if (!dragId || dragId === node.id) return;
-            setDrop({ id: node.id, mode });
-          }}
-          onDropRow={(mode) => {
-            if (dragId && dragId !== node.id) onMove(dragId, node.id, mode);
-            endDrag();
-          }}
-          onDragEnd={endDrag}
-        />
-      );
-      if (open) walk(node.children);
-    }
+  const renderRows = (
+    nodes: PageTreeNode<PageSummary>[],
+    favoriteSection: boolean
+  ): React.ReactNode[] => {
+    const rendered: React.ReactNode[] = [];
+    const walk = (branch: PageTreeNode<PageSummary>[]) => {
+      for (const node of branch) {
+        const open = expanded.has(node.id);
+        rendered.push(
+          <PageRow
+            key={node.id}
+            page={node}
+            depth={node.depth}
+            hasChildren={node.children.length > 0}
+            open={open}
+            active={node.id === activePageId}
+            drop={drop?.id === node.id ? drop.mode : null}
+            dragging={dragId === node.id}
+            untitled={t("untitled")}
+            actions={actionsFor(node)}
+            pinned={favoriteSection && node.favorite}
+            onToggle={() => toggle(node.id)}
+            onCreateChild={createChild}
+            onDragStart={() => setDragId(node.id)}
+            onDragOverRow={(mode) => {
+              if (!dragId || dragId === node.id) return;
+              setDrop({ id: node.id, mode });
+            }}
+            onDropRow={(mode) => {
+              if (dragId && dragId !== node.id) onMove(dragId, node.id, mode);
+              endDrag();
+            }}
+            onDragEnd={endDrag}
+          />
+        );
+        if (open) walk(node.children);
+      }
+    };
+    walk(nodes);
+    return rendered;
   };
-  walk(tree);
+  const favoriteRows = renderRows(favorites, true);
+  const regularRows = renderRows(regular, false);
 
   return (
     <div className="flex flex-col gap-0.5 px-2 pt-2 pb-4">
       {favorites.length > 0 && (
         <>
-          {favorites.map((page) => (
-            // The key is prefixed: a favorite subpage is rendered TWICE
-            // in this same list, here and in the tree below.
-            <PageRow
-              key={`fav-${page.id}`}
-              page={page}
-              depth={0}
-              hasChildren={false}
-              open={false}
-              active={page.id === activePageId}
-              drop={null}
-              dragging={false}
-              untitled={t("untitled")}
-              actions={actionsFor(page)}
-              pinned
-              onToggle={() => {}}
-              onCreateChild={createChild}
-            />
-          ))}
-          <div className="mx-2 my-1.5 h-px shrink-0 bg-border" aria-hidden />
+          {favoriteRows}
+          {regularRows.length > 0 && (
+            <div className="mx-2 my-1.5 h-px shrink-0 bg-border" aria-hidden />
+          )}
         </>
       )}
-      {rows}
+      {regularRows}
       {dialogs}
     </div>
   );
@@ -339,8 +330,7 @@ function PageRow({
   untitled: string;
   /** The complete menu, shared with the open page. */
   actions: ContextMenuAction[];
-  /** Returned to the BLOCK of favorites, at the top of the bar: it then bears
-      the star which, for lack of an intertitle, says what this block is. */
+  /** Whether this row itself is a favorite in the upper tree. */
   pinned?: boolean;
   onToggle: () => void;
   onCreateChild: (parentId: string) => void;

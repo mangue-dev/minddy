@@ -4,11 +4,11 @@ import {
   ancestorsOf,
   buildPageTree,
   descendantIds,
-  favoritePages,
   flattenPageTree,
   foldPath,
   positionAtEnd,
   positionBetween,
+  splitFavoritePageTree,
   wouldCreateCycle,
   type Page,
   type PageNode,
@@ -259,47 +259,65 @@ describe("foldPath", () => {
   });
 });
 
-/**
- * The FAVORITES of the secondary bar (shared by the project).
- *
- * Two properties, and they are the gesture itself: the block follows the order of
- * the TREE — not that of favorites, which would jump the lines from one
- * visit to the next —, and a pinned subpage stays IN ITS PLACE in the tree.
- * Pinning is a shortcut to a page, not a reparenting: seeing it leave
- * its parent would read like a move that no one requested.
- */
-describe("les pages en favori", () => {
+/** Favorites are extracted as subtrees for the secondary sidebar. */
+describe("splitFavoritePageTree", () => {
   const doc = () => [
     page({ id: "a", position: "A" }),
     page({ id: "a1", parent_id: "a", position: "A", favorite: true }),
+    page({ id: "a1i", parent_id: "a1", position: "A" }),
     page({ id: "a2", parent_id: "a", position: "B" }),
     page({ id: "b", position: "B", favorite: true }),
+    page({ id: "b1", parent_id: "b", position: "A" }),
   ];
 
-  it("come out in tree order, not list order", () => {
-    // “b” is the LAST in the flat list but comes after “a1” in
-    // the tree: this is the order we read.
-    const tree = buildPageTree(doc());
-    expect(favoritePages(tree).map((p) => p.id)).toEqual(["a1", "b"]);
-  });
+  it("extracts favorites in tree order with their complete subtrees", () => {
+    const { favorites } = splitFavoritePageTree(buildPageTree(doc()));
 
-  it("do not leave their place in the tree", () => {
-    const tree = buildPageTree(doc());
-    expect(flattenPageTree(tree).map((p) => p.id)).toEqual(["a", "a1", "a2", "b"]);
-  });
-
-  it("remain pinned when their parent is no longer in the list", () => {
-    // Parent to trash: `buildPageTree` moves the child back to the root
-    // rather than making it disappear, and the favorite follows.
-    const orphan = doc().filter((p) => p.id !== "a");
-    expect(favoritePages(buildPageTree(orphan)).map((p) => p.id)).toEqual([
+    expect(favorites.map((node) => node.id)).toEqual(["a1", "b"]);
+    expect(flattenPageTree(favorites).map((node) => node.id)).toEqual([
       "a1",
+      "a1i",
       "b",
+      "b1",
+    ]);
+    expect(favorites.map((node) => node.depth)).toEqual([0, 0]);
+    expect(favorites.map((node) => node.children[0].depth)).toEqual([1, 1]);
+  });
+
+  it("removes favorite subtrees from their original locations", () => {
+    const { favorites, regular } = splitFavoritePageTree(buildPageTree(doc()));
+
+    expect(flattenPageTree(regular).map((node) => node.id)).toEqual(["a", "a2"]);
+    expect(
+      [...flattenPageTree(favorites), ...flattenPageTree(regular)]
+        .map((node) => node.id)
+        .sort()
+    ).toEqual(["a", "a1", "a1i", "a2", "b", "b1"]);
+  });
+
+  it("does not extract a nested favorite twice", () => {
+    const nested = doc().map((item) =>
+      item.id === "a1i" ? { ...item, favorite: true } : item
+    );
+    const { favorites } = splitFavoritePageTree(buildPageTree(nested));
+
+    expect(favorites.map((node) => node.id)).toEqual(["a1", "b"]);
+    expect(flattenPageTree(favorites).map((node) => node.id)).toEqual([
+      "a1",
+      "a1i",
+      "b",
+      "b1",
     ]);
   });
 
-  it("return an empty list when nothing is pinned", () => {
+  it("keeps the full tree in the regular section when nothing is pinned", () => {
     const none = doc().map((p) => ({ ...p, favorite: false }));
-    expect(favoritePages(buildPageTree(none))).toEqual([]);
+    const tree = buildPageTree(none);
+    const { favorites, regular } = splitFavoritePageTree(tree);
+
+    expect(favorites).toEqual([]);
+    expect(flattenPageTree(regular).map((node) => node.id)).toEqual(
+      flattenPageTree(tree).map((node) => node.id)
+    );
   });
 });

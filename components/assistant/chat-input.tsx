@@ -581,6 +581,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             ...(option.detail ? { detail: option.detail } : {}),
             ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
             ...(option.color !== undefined ? { color: option.color } : {}),
+            ...(option.icon !== undefined ? { icon: option.icon } : {}),
           });
         } else {
           const el = editorRef.current;

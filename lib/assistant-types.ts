@@ -87,6 +87,8 @@ export interface AssistantPinnedContext {
   /** Objectives: their color — this is what their target wears, here like
  everywhere else in the application. */
   color?: string | null;
+  /** Wiki pages: their emoji, when they have one. */
+  icon?: string | null;
 }
 
 /**

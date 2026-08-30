@@ -10,6 +10,7 @@ import { cn } from "mangue-ui";
 import { CodeBlock } from "@/components/code-block";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
+import { useMentionLinks, type MentionLinks } from "@/components/mention-links";
 import {
   memberLabel,
   mentionScanner,
@@ -38,20 +39,54 @@ function rehypeMentions(scan: MentionScan) {
     scan(value).map((seg) => {
       if (seg.mention === undefined) return { type: "text", value: seg.text };
       const mention = seg.mention;
-      // `member` in test, and not “not numo”: the scanner also knows how to render
-      // FORGE accounts (MIN-162), which no list of minddy members produces
-      // here — a ticket comment only quotes people from here. Ticket and
-      // objective do not succeed either: it is the scanner of a DESCRIPTION
-      // who produces them, and a description goes to its editor.
-      const properties =
-        mention.type === "member"
-          ? {
+      const properties = (() => {
+        switch (mention.type) {
+          case "member":
+            return {
               "data-mention-type": "member",
               "data-mention-id": mention.member.user_id,
               "data-mention-label": memberLabel(mention.member),
               "data-mention-seed": mention.member.avatar_seed,
-            }
-          : { "data-mention-type": "numo" };
+            };
+          case "forge":
+            return {
+              "data-mention-type": "forge",
+              "data-mention-id": mention.login,
+              "data-mention-label": mention.login,
+              "data-mention-avatar": mention.avatarUrl,
+            };
+          case "issue":
+            return {
+              "data-mention-type": "issue",
+              "data-mention-id": mention.issue.id,
+              "data-mention-label": mention.issue.identifier,
+            };
+          case "objective":
+            return {
+              "data-mention-type": "objective",
+              "data-mention-id": mention.objective.id,
+              "data-mention-label": mention.objective.name,
+              "data-mention-color": mention.objective.color,
+            };
+          case "project":
+            return {
+              "data-mention-type": "project",
+              "data-mention-id": mention.project.id,
+              "data-mention-label": mention.project.name,
+              "data-mention-seed": mention.project.avatarSeed,
+              "data-mention-icon": mention.project.iconUrl,
+            };
+          case "page":
+            return {
+              "data-mention-type": "page",
+              "data-mention-id": mention.page.id,
+              "data-mention-label": mention.page.title,
+              "data-mention-icon": mention.page.icon,
+            };
+          case "numo":
+            return { "data-mention-type": "numo" };
+        }
+      })();
       return { type: "element", tagName: "span", properties, children: [] };
     });
 
@@ -114,35 +149,40 @@ function rehypeChain(
 /** Renders markdown (GFM) with minimal, token-aware styling. Raw HTML is kept
     as text by default; callers that intentionally display trusted forge HTML
     can opt in with `allowRawHtml`.
-    Pass `members` to render "@Name" and "@numo" mentions as chips — the same
-    chip as the Numo composer's (components/mention-chip). The array may be
-    empty: it says "this surface carries mentions", and "@numo" is citable there
-    even when nobody else is.
-    A comment only quotes PEOPLE: tickets and objectives do not
-    cite that in a description, which does not have read-only rendering — its
-    display surface IS its editor (components/markdown-editor), where the
-    pills come from the tiptap node. */
+    Pass `mentionScan` and its matching `mentionLinks` on surfaces that support
+    every entity type. `members` remains the lightweight compatibility path for
+    member and Numo mentions. Both paths render the same MentionChip component
+    used while composing. */
 export function Markdown({
   children,
   className,
   members,
+  mentionScan,
+  mentionLinks,
   allowRawHtml = false,
 }: {
   children: string;
   className?: string;
   members?: Member[];
+  /** Full entity scanner for surfaces that support every mention type. */
+  mentionScan?: MentionScan;
+  /** Navigation rules paired with `mentionScan`. */
+  mentionLinks?: MentionLinks;
   /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
   allowRawHtml?: boolean;
 }) {
   // null outside of a PR view: images in a ticket comment are already
   // served by minddy, they have nothing to proxify.
   const imageEndpoint = usePrEndpoint();
+  const inheritedMentionLinks = useMentionLinks();
+  const links = mentionLinks ?? inheritedMentionLinks;
   // No members = surface without mentions: the rehype channel stops at
   // sanitizer, and a “@something” remains there.
-  const scan = useMemo(
+  const memberScan = useMemo(
     () => (members ? mentionScanner(members) : undefined),
     [members],
   );
+  const scan = mentionScan ?? memberScan;
   return (
     <div
       className={cn(
@@ -282,6 +322,29 @@ export function Markdown({
                   id={p["data-mention-id"] as string}
                   label={p["data-mention-label"] as string}
                   avatarSeed={p["data-mention-seed"] as string}
+                />
+              );
+            }
+            if (
+              type === "forge" ||
+              type === "issue" ||
+              type === "objective" ||
+              type === "project" ||
+              type === "page"
+            ) {
+              const id = p["data-mention-id"] as string;
+              return (
+                <MentionChip
+                  type={type}
+                  id={id}
+                  label={p["data-mention-label"] as string}
+                  avatarSeed={p["data-mention-seed"] as string | undefined}
+                  avatarUrl={p["data-mention-avatar"] as string | undefined}
+                  iconUrl={type === "project" ? p["data-mention-icon"] as string : null}
+                  icon={type === "page" ? p["data-mention-icon"] as string : null}
+                  color={p["data-mention-color"] as string | undefined}
+                  href={links?.href(type, id) ?? null}
+                  onNavigate={() => links?.navigate(type, id)}
                 />
               );
             }

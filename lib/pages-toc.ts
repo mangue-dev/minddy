@@ -1,4 +1,5 @@
 import type { Node } from "@tiptap/pm/model";
+import { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
 
 /**
  * What the floating table of contents reads from a document
@@ -10,7 +11,9 @@ import type { Node } from "@tiptap/pm/model";
  * is, and it cannot describe a page that the document no longer contains.
  */
 export interface TocEntry {
-  /** The ProseMirror position of the title — its identity AND its DOM anchor. */
+  /** Stable block identity, independent from edits before the heading. */
+  id: string;
+  /** The current ProseMirror position used to find the heading in the DOM. */
   pos: number;
   /** 1, 2 or 3: the block register does not offer others. */
   level: number;
@@ -35,7 +38,16 @@ export function readHeadings(doc: Node): TocEntry[] {
     if (node.type.name !== "heading") return true;
     const text = node.textContent.trim();
     if (text) {
-      entries.push({ pos, level: (node.attrs.level as number) || 1, text });
+      const blockId = node.attrs[BLOCK_ID_ATTRIBUTE];
+      entries.push({
+        id:
+          typeof blockId === "string" && blockId
+            ? blockId
+            : `heading-at-${pos}`,
+        pos,
+        level: (node.attrs.level as number) || 1,
+        text,
+      });
     }
     // Un titre n'en contient pas d'autre : inutile d'y descendre.
     return false;
@@ -55,6 +67,7 @@ export function sameHeadings(a: TocEntry[], b: TocEntry[]): boolean {
     a.length === b.length &&
     a.every(
       (entry, i) =>
+        entry.id === b[i].id &&
         entry.pos === b[i].pos &&
         entry.level === b[i].level &&
         entry.text === b[i].text

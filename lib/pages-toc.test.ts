@@ -17,14 +17,24 @@ import { describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
 import { Document } from "@tiptap/extension-document";
 import { Text } from "@tiptap/extension-text";
+import UniqueID from "@tiptap/extension-unique-id";
 import { blockExtensions } from "@/components/pages/blocks";
+import { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
 import { readHeadings, sameHeadings } from "@/lib/pages-toc";
 
 function makeEditor(content: string) {
   return new Editor({
     element: document.createElement("div"),
     content,
-    extensions: [Document, Text, ...blockExtensions({ headless: true })] as never,
+    extensions: [
+      Document,
+      Text,
+      ...blockExtensions({ headless: true }),
+      UniqueID.configure({
+        attributeName: BLOCK_ID_ATTRIBUTE,
+        types: ["heading"],
+      }),
+    ] as never,
   });
 }
 
@@ -96,5 +106,22 @@ describe("deux lectures successives", () => {
     ).toBe(false);
     before.destroy();
     after.destroy();
+  });
+
+  it("keeps heading identities stable when earlier content moves their positions", async () => {
+    const editor = makeEditor("<p>Before</p><h1>One</h1><h2>Two</h2>");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const before = readHeadings(editor.state.doc);
+
+    editor.commands.insertContentAt(1, "Longer ");
+    const after = readHeadings(editor.state.doc);
+
+    expect(after.map((entry) => entry.id)).toEqual(
+      before.map((entry) => entry.id)
+    );
+    expect(after.map((entry) => entry.pos)).not.toEqual(
+      before.map((entry) => entry.pos)
+    );
+    editor.destroy();
   });
 });

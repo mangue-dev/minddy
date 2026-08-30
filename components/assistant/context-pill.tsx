@@ -192,6 +192,10 @@ export function ContextPill({
               className={cn("size-5", PILL_INNER_RADIUS[radius])}
               iconClassName="h-3 w-3"
             />
+          ) : chip.kind === "page" && chip.icon && !disabled ? (
+            <PillIcon radius={radius} tint={style.tint}>
+              <span className="text-xs leading-none">{chip.icon}</span>
+            </PillIcon>
           ) : (
             <PillIcon radius={radius} tint={disabled ? undefined : style.tint}>
               <Icon className="h-3 w-3" />

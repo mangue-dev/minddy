@@ -46,6 +46,8 @@ export interface AssistantContextChip {
   iconUrl?: string | null;
   /** Objectifs : leur couleur — celle que porte leur cible, ici comme ailleurs. */
   color?: string | null;
+  /** Wiki pages: their emoji, when they have one. */
+  icon?: string | null;
   /** Hand pinned (@ button) — removeable, where ambient turns off. */
   pinned?: boolean;
 }
@@ -167,6 +169,7 @@ export function contextChips(
       kind: "page",
       label: ctx.pageTitle?.trim() || t("contextPage"),
       tooltip: t("contextPage"),
+      icon: ctx.pageIcon ?? null,
     });
   }
 
@@ -217,6 +220,7 @@ export function contextChips(
         ? { iconUrl: project?.icon_url ?? null }
         : {}),
       ...(item.kind === "objective" ? { color: item.color ?? null } : {}),
+      ...(item.kind === "page" ? { icon: item.icon ?? null } : {}),
       pinned: true,
     });
   }
