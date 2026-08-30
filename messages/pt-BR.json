@@ -1673,6 +1673,8 @@
     "updateDownloading": "Baixando versão {version}…",
     "updateReady": "Atualização para versão {version}",
     "updateAction": "Atualização",
+    "updateConfirmTitle": "Esta ação reiniciará o aplicativo",
+    "updateConfirmDescription": "Salve seu trabalho antes de reiniciar o aplicativo.",
     "shareFeedback": "Compartilhar comentários",
     "whatsNew": "Novidades",
     "version": "Versão",
@@ -4356,6 +4358,8 @@
   "NewVersion": {
     "title": "Uma nova versão está disponível",
     "refresh": "Atualizar",
+    "confirmTitle": "Esta ação atualizará a página atual",
+    "confirmDescription": "Salve seu trabalho antes de atualizar a página.",
     "dismiss": "Dispensar"
   },
   "Landing": {

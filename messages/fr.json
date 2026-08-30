@@ -1673,6 +1673,8 @@
     "updateDownloading": "Téléchargement de la version {version}…",
     "updateReady": "Mettre à jour vers la version {version}",
     "updateAction": "Mettre à jour",
+    "updateConfirmTitle": "Cette action va redémarrer l'app",
+    "updateConfirmDescription": "Enregistrez votre travail avant de redémarrer l'app.",
     "shareFeedback": "Partager un retour",
     "whatsNew": "Nouveautés",
     "version": "Version",
@@ -4356,6 +4358,8 @@
   "NewVersion": {
     "title": "Une nouvelle version est disponible",
     "refresh": "Rafraîchir",
+    "confirmTitle": "Cette action va rafraîchir la page actuelle",
+    "confirmDescription": "Enregistrez votre travail avant de rafraîchir la page.",
     "dismiss": "Fermer"
   },
   "Landing": {

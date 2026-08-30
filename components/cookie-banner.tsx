@@ -65,8 +65,7 @@ export function CookieBanner() {
       // Bottom padding: the page is fully bleed since the root layout
       // declares `viewport-fit=cover`, so `bottom-4` now counts from the
       // PHYSICAL edge — 16 px, less than the home indicator bar.
-      // The padding raises the card above it. Same gesture as the FAB of
-      // Numo and the new version headband.
+      // The padding raises the card above it, like the Numo FAB.
       //
       // Do NOT abbreviate an arbitrary-valued utility with points
       // suspension in a comment: Tailwind scans the entire file,

@@ -272,6 +272,11 @@ const NumoNavIcon = ({ className }: { className?: string }) => (
 );
 NumoNavIcon.displayName = "NumoNavIcon";
 
+const TriageNavIcon = ({ className }: { className?: string }) => (
+  <CircleDotDashed className={className} strokeWidth={2.25} />
+);
+TriageNavIcon.displayName = "TriageNavIcon";
+
 /**
  * The counter of a sidebar entry (inbox, PR, triage, feedback, project).
  * Capped at “99+”: a queue that is very late must not widen the line to
@@ -1455,7 +1460,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "triage",
               label: t("triage"),
-              icon: CircleDotDashed,
+              icon: TriageNavIcon,
               href: `${base}/triage`,
               active: pathname.startsWith(`${base}/triage`),
               shortcut: "T",

@@ -1673,6 +1673,8 @@
     "updateDownloading": "Downloading version {version}…",
     "updateReady": "Update to version {version}",
     "updateAction": "Update",
+    "updateConfirmTitle": "This action will restart the app",
+    "updateConfirmDescription": "Save your work before restarting the app.",
     "shareFeedback": "Share feedback",
     "whatsNew": "What's new",
     "version": "Version",
@@ -4356,6 +4358,8 @@
   "NewVersion": {
     "title": "A new version is available",
     "refresh": "Refresh",
+    "confirmTitle": "This action will refresh the current page",
+    "confirmDescription": "Save your work before refreshing the page.",
     "dismiss": "Dismiss"
   },
   "Landing": {

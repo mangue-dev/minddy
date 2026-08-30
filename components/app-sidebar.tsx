@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type ComponentType,
@@ -13,6 +14,7 @@ import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { useDesktopUpdateStatus } from "@/lib/desktop/use-update-status";
+import { useNewVersion } from "@/lib/use-new-version";
 import {
   useHoldWindowButtons,
   useWideLayout,
@@ -33,6 +35,13 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
   cn,
   type NavItem,
   type NavSection,
@@ -54,6 +63,7 @@ import {
   Search,
   Trash2,
   ArrowDownToLine,
+  RefreshCw,
   Loader2,
   Check,
   ChevronDown,
@@ -883,6 +893,9 @@ function FooterRow({
   disabled = false,
   iconClassName,
   trailingIcon: TrailingIcon,
+  ariaControls,
+  ariaExpanded,
+  className,
 }: {
   icon: LucideIcon;
   label: string;
@@ -903,12 +916,18 @@ function FooterRow({
   disabled?: boolean;
   iconClassName?: string;
   trailingIcon?: LucideIcon;
+  ariaControls?: string;
+  ariaExpanded?: boolean;
+  className?: string;
 }) {
   const btn = (
     <button
       type="button"
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled || undefined}
+      aria-controls={ariaControls}
+      aria-expanded={ariaExpanded}
+      aria-haspopup={ariaControls ? "dialog" : undefined}
       className={cn(
         "flex h-9 items-center rounded-lg text-sm font-medium transition-colors",
         disabled
@@ -917,6 +936,7 @@ function FooterRow({
         active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
         ROW_PL,
         collapsed ? cn(ROW_BOX, "pr-[9px]") : "w-full gap-3 pr-3 text-left",
+        className,
       )}
     >
       <Icon className={cn("size-[18px] shrink-0", iconClassName)} />
@@ -945,92 +965,160 @@ function FooterRow({
 }
 
 /**
- * Updating the desktop app, in the sidebar (MIN-353).
- *
- * ## Why here, and not just in the native box
- *
- * The box is an instant: it opens at the end of the download, and which
- * answers “later” no longer has anything in front of his eyes. This insert LASTS as long as
- * that the new version is waiting on disk — it's the same information, but
- * that we can find instead of catching up with her.
- *
- * ## One insert, and not one more line
- *
- * It was first a line like its neighbors (Corbeille, Partager un
- * return): she could barely see herself. An update is not a destination
- * more in a list of destinations, it's the only thing on the foot that DEMANDS
- * something — hence the frame, the label that names the version, and the button
- * full which carries the verb. The grammar of the neighboring lines would say the
- * opposite: “one more menu entry, we’ll see later”.
- *
- * ## It doesn't return anything most of the time, and that's the point
- *
- * On the web there is no bridge, so never a state other than `idle`, so
- * never an insert: nothing to condition at `isDesktop()`, the state is enough. And in
- * the app, the lack of updating is almost always the case — a foot of
- * sidebar which would carry a permanently dead frame would cost its place to
- * quelque chose d'utile.
- *
- * The click does not install: it reopens the native box, which asks for the last yes
- * (`installUpdate`, lib/desktop/bridge.ts).
+ * Persistent update entry for both the desktop shell and the deployed web app.
+ * A native update takes priority because restarting the shell also reloads the
+ * current web app. Both variants require confirmation before interrupting work.
  */
-function UpdateFooterCard({ collapsed }: { collapsed: boolean }) {
-  const t = useTranslations("Nav");
-  const status = useDesktopUpdateStatus();
-  if (status.state === "idle") return null;
+function UpdateFooterCard({
+  collapsed,
+  onOpenChange,
+}: {
+  collapsed: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const tNav = useTranslations("Nav");
+  const tWebUpdate = useTranslations("NewVersion");
+  const tCommon = useTranslations("Common");
+  const confirmationId = useId();
+  const confirmationTitleId = `${confirmationId}-title`;
+  const confirmationDescriptionId = `${confirmationId}-description`;
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const desktopStatus = useDesktopUpdateStatus();
+  const webUpdate = useNewVersion();
+  const isWebUpdate = desktopStatus.state === "idle";
+  if (isWebUpdate && !webUpdate.visible) return null;
 
-  const ready = status.state === "ready";
-  const install = () => getDesktopBridge()?.installUpdate();
+  const ready = isWebUpdate || desktopStatus.state === "ready";
+  const pending = isWebUpdate && webUpdate.refreshing;
+  const label = isWebUpdate
+    ? tWebUpdate("title")
+    : tNav(
+        desktopStatus.state === "ready"
+          ? "updateReady"
+          : "updateDownloading",
+        { version: desktopStatus.version },
+      );
+  const actionLabel = isWebUpdate
+    ? tWebUpdate("refresh")
+    : tNav("updateAction");
+  const confirmationTitle = isWebUpdate
+    ? tWebUpdate("confirmTitle")
+    : tNav("updateConfirmTitle");
+  const confirmationDescription = isWebUpdate
+    ? tWebUpdate("confirmDescription")
+    : tNav("updateConfirmDescription");
+  const handleConfirmationOpenChange = (open: boolean) => {
+    setConfirmationOpen(open);
+    onOpenChange?.(open);
+  };
+  const applyUpdate = () => {
+    handleConfirmationOpenChange(false);
+    if (isWebUpdate) {
+      webUpdate.refresh();
+      return;
+    }
+    getDesktopBridge()?.installUpdate();
+  };
+  const confirmation = (
+    <PopoverContent
+      id={confirmationId}
+      role="dialog"
+      aria-labelledby={confirmationTitleId}
+      aria-describedby={confirmationDescriptionId}
+      side="top"
+      align="end"
+      sideOffset={8}
+      collisionPadding={10}
+      className="w-72 gap-3 rounded-xl p-3"
+    >
+      <PopoverHeader>
+        <PopoverTitle id={confirmationTitleId}>
+          {confirmationTitle}
+        </PopoverTitle>
+        <PopoverDescription id={confirmationDescriptionId}>
+          {confirmationDescription}
+        </PopoverDescription>
+      </PopoverHeader>
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => handleConfirmationOpenChange(false)}
+        >
+          {tCommon("cancel")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending}
+          className="bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
+          onClick={applyUpdate}
+        >
+          {pending && <Loader2 className="animate-spin" />}
+          {actionLabel}
+        </Button>
+      </div>
+    </PopoverContent>
+  );
 
-  // **Rail mode: 56 px, and the frame does not fit there.** We land on the
-  // grammar of neighboring lines — an icon in the box of 36, its
-  // tooltip, and the same gesture. This is the only place on the bar where the shape
-  // changes with width, because it is the only content of the foot which is not
-  // not already a line.
+  // The full card does not fit in the 56 px rail, so it becomes an icon row
+  // with the same label, confirmation, and action.
   if (collapsed) {
     return (
-      <FooterRow
-        icon={ready ? ArrowDownToLine : Loader2}
-        // Folded, the line only has its icon to distinguish itself from its
-        // neighbors: it takes the color of the button it replaces.
-        iconClassName={ready ? "text-primary" : "animate-spin"}
-        // ⚠ BOTH messages carry `{version}`: called without its values,
-        // next-intl silently falls back to the path of the key, and it's him
-        // that we read on the screen (see CLAUDE.md).
-        label={t(ready ? "updateReady" : "updateDownloading", {
-          version: status.version,
-        })}
-        collapsed
-        disabled={!ready}
-        onClick={install}
-      />
+      <Popover
+        open={confirmationOpen}
+        onOpenChange={handleConfirmationOpenChange}
+      >
+        <PopoverAnchor asChild>
+          <div>
+            <FooterRow
+              icon={
+                isWebUpdate ? RefreshCw : ready ? ArrowDownToLine : Loader2
+              }
+              iconClassName={ready ? "size-4 text-white" : "animate-spin"}
+              className={
+                ready
+                  ? "ml-1 h-7 w-7 justify-center rounded-full bg-[#0085FF] p-0 text-white hover:bg-[#0085FF]/90 hover:text-white"
+                  : undefined
+              }
+              label={label}
+              collapsed
+              disabled={!ready || pending}
+              ariaControls={ready && !pending ? confirmationId : undefined}
+              ariaExpanded={ready && !pending ? confirmationOpen : undefined}
+              onClick={() => handleConfirmationOpenChange(true)}
+            />
+          </div>
+        </PopoverAnchor>
+        {confirmation}
+      </Popover>
     );
   }
 
   return (
-    <div className="mb-1 rounded-lg border border-border bg-sidebar-accent/50 p-2.5">
-      {/* `text-pretty` and no `truncate`: the version number is half
-          of the sentence, and he would fall first. Two lines are better
-          than a “Update to ver…”. */}
-      <p className="flex items-start gap-1.5 text-pretty text-xs leading-snug text-muted-foreground">
+    <div className="mb-1 rounded-xl border border-border p-1.5">
+      <p className="flex items-start gap-1.5 px-1 pt-1 text-pretty text-xs leading-snug text-foreground">
         {!ready && <Loader2 className="mt-px size-3 shrink-0 animate-spin" />}
-        <span className="min-w-0">
-          {t(ready ? "updateReady" : "updateDownloading", {
-            version: status.version,
-          })}
-        </span>
+        <span className="min-w-0">{label}</span>
       </p>
-      {/* The button ONLY appears when it can act. A full grayed out button
-          while downloading draws the eye to an impossible gesture — the
-          spinning wheel of the wording already says that something is moving forward. */}
       {ready && (
-        <Button
-          size="sm"
-          className="mt-2 w-full cursor-pointer"
-          onClick={install}
+        <Popover
+          open={confirmationOpen}
+          onOpenChange={handleConfirmationOpenChange}
         >
-          {t("updateAction")}
-        </Button>
+          <PopoverTrigger asChild>
+            <Button
+              size="sm"
+              disabled={pending}
+              className="mt-2 w-full cursor-pointer rounded-md bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
+            >
+              {pending && <Loader2 className="animate-spin" />}
+              {actionLabel}
+            </Button>
+          </PopoverTrigger>
+          {confirmation}
+        </Popover>
       )}
     </div>
   );
@@ -1046,9 +1134,11 @@ function SidebarFooter({
   const { productFeedbackUrl } = useRuntimeConfig();
   return (
     <div className="flex flex-col gap-0.5">
-      {/* The update card stays above the stable account/status row because it
-          appears only while a desktop update is active. */}
-      <UpdateFooterCard collapsed={collapsed} />
+      {/* Update actions stay above the stable account/status row. */}
+      <UpdateFooterCard
+        collapsed={collapsed}
+        onOpenChange={onMenuOpenChange}
+      />
       <div className="flex items-center gap-0.5">
         <div className={cn(!collapsed && "min-w-0 flex-1")}>
           <AccountButton

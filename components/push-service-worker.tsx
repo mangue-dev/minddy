@@ -7,9 +7,7 @@ import { refreshThisDeviceSubscription } from "@/lib/push/client";
 
 /**
  * Mounts the push notification transport (Web Push in MIN-183, native APNs
- * in MIN-356). No rendering: this
- * component only exists for its effect, next to `<NewVersionBanner />` in
- * app providers.
+ * in MIN-356). This component renders nothing and only exists for its effect.
  *
  * ## It ONLY registers if permission is already granted
  *

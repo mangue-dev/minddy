@@ -55,7 +55,7 @@ const instrumentSerif = Instrument_Serif({
    home indicator, and therefore **all `env(safe-area-inset-*)`
    are worth 0**. The filing writes seven — the mobile browsing pill and the
    clearance that it reserves (`--mobile-nav-height`, app/globals.css), the FOB of
-   Numo, the new version banner, the nav marketing drawer, the
+   Numo, the nav marketing drawer, the
    wizard panel — and not a single one measured anything.
 
    `cover` makes the page full bleed and gives the insets their true value:
