@@ -178,9 +178,6 @@ export function AssistantPanel() {
             key={scopeProjectId ?? "__global__"}
             ref={handleShellRef}
             projectId={scopeProjectId}
-            descriptionKey={
-              scopeProjectId ? "emptyDescription" : "globalPlaceholder"
-            }
             mobileSubtitle={activeProject?.name}
             compact
             displayMode={displayMode}

@@ -447,9 +447,6 @@
   },
   "Assistant": {
     "title": "Numo fragen",
-    "greeting": "Hallo, ich bin Numo. Wie kann ich Ihnen bei Ihren Problemen helfen?",
-    "emptyDescription": "Ich kann Probleme erstellen, filtern, gesammelt bearbeiten und Ansichten erstellen.",
-    "globalPlaceholder": "Ich kann in allen Ihren Projekten arbeiten.",
     "inputPlaceholder": "Fragen Sie Numo etwas…",
     "providerUnavailableTitle": "Kein KI-Anbieter ist konfiguriert",
     "providerUnavailableDescription": "Diese Instanz enthält kein KI-Kontingent von minddy. Verbinden Sie Ihren eigenen API-Schlüssel, um Numo zu verwenden.",
@@ -478,10 +475,22 @@
       "older": "Älter"
     },
     "starter": {
-      "s1": "Was wartet in der Triage?",
-      "s2": "Hilf mir, ein Problem zu erstellen",
-      "s3": "Weise mir die dringenden Probleme zu",
-      "s4": "Erstelle eine Ansicht für dringende Fehler"
+      "s1": {
+        "title": "Meine Arbeit erkunden und verstehen",
+        "prompt": "Verschaffe mir einen Überblick über meine aktuelle Arbeit."
+      },
+      "s2": {
+        "title": "Etwas Neues erstellen",
+        "prompt": "Hilf mir, ein passendes Problem für mein Vorhaben zu erstellen."
+      },
+      "s3": {
+        "title": "Meine Arbeit organisieren",
+        "prompt": "Hilf mir, meine Aufgaben und Prioritäten zu organisieren."
+      },
+      "s4": {
+        "title": "Hilfe bei einer Aufgabe erhalten",
+        "prompt": "Ich brauche Hilfe, um bei einer Aufgabe weiterzukommen."
+      }
     },
     "contextIssue": "Problem im Kontext",
     "contextIssuesSelected": "{count, plural, one {# ausgewähltes Problem} other {# ausgewählte Probleme}}",
@@ -1665,6 +1674,8 @@
     "shareFeedback": "Feedback teilen",
     "whatsNew": "Was ist neu",
     "version": "Version",
+    "webVersion": "Webversion",
+    "appVersion": "App-Version",
     "viewFullChangelog": "Vollständiges Änderungsprotokoll anzeigen",
     "account": "Konto",
     "appearance": "Aussehen",

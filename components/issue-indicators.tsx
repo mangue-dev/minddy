@@ -6,6 +6,10 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
+import {
+  OBJECTIVE_STATUS_MAP,
+  type ObjectiveStatus,
+} from "@/lib/objective-constants";
 import { RELATION_META } from "@/lib/relation-constants";
 import type { IssueRelationType } from "@/lib/types";
 
@@ -121,6 +125,22 @@ export function StatusIndicator({
         </svg>
       );
   }
+}
+
+/** Reuse the ticket status glyphs for the corresponding objective states. */
+export function ObjectiveStatusIndicator({
+  status,
+  className,
+}: {
+  status: ObjectiveStatus;
+  className?: string;
+}) {
+  return (
+    <StatusIndicator
+      status={OBJECTIVE_STATUS_MAP[status].issueStatus}
+      className={className}
+    />
+  );
 }
 
 /* ── Priority ────────────────────────────────────────────────────────────

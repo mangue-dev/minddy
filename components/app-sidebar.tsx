@@ -686,17 +686,15 @@ function AccountButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-56">
         <DropdownMenuItem asChild>
+          <Link href="/billing">
+            <CreditCard />
+            {t("billing")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/settings">
             <Settings />
             {t("accountSettings")}
-          </Link>
-        </DropdownMenuItem>
-        {/* Secondary account destinations stay grouped here so the primary
-            sidebar footer only carries the account and status controls. */}
-        <DropdownMenuItem asChild>
-          <Link href="/statistics">
-            <BarChart3 />
-            {t("statistics")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
@@ -706,9 +704,9 @@ function AccountButton({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/billing">
-            <CreditCard />
-            {t("billing")}
+          <Link href="/statistics">
+            <BarChart3 />
+            {t("statistics")}
           </Link>
         </DropdownMenuItem>
         {isAdmin && (
@@ -765,6 +763,13 @@ function ChangelogButton({
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
+  const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    const bridge = getDesktopBridge();
+    if (bridge) setDesktopVersion(bridge.version);
+  }, []);
+
   const handleMenuOpenChange = (nextOpen: boolean) => {
     setMenuOpen(nextOpen);
     onMenuOpenChange?.(nextOpen);
@@ -848,10 +853,18 @@ function ChangelogButton({
             </>
           ) : null}
           <DropdownMenuSeparator />
-          <p className="flex h-8 items-center justify-between gap-3 px-2.5 text-xs text-muted-foreground">
-            <span>{t("version")}</span>
-            <span className="tabular-nums">{APP_VERSION}</span>
-          </p>
+          <div className="flex flex-col px-2.5 text-xs text-muted-foreground">
+            <p className="flex h-8 items-center justify-between gap-3">
+              <span>{t("webVersion")}</span>
+              <span className="tabular-nums">{APP_VERSION}</span>
+            </p>
+            {desktopVersion ? (
+              <p className="flex h-8 items-center justify-between gap-3">
+                <span>{t("appVersion")}</span>
+                <span className="tabular-nums">{desktopVersion}</span>
+              </p>
+            ) : null}
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
       {dialogMounted ? (

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { APP_VERSION } from "@/lib/app-version";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { toast } from "mangue-ui";
 import {
   BarChart3,
@@ -183,9 +184,15 @@ export function useAccountActions(): {
 export function MobileMenuFooter() {
   const t = useTranslations("Nav");
   const { user } = useAuth();
+  const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
   const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const seed = useMyAvatarSource();
+
+  useEffect(() => {
+    const bridge = getDesktopBridge();
+    if (bridge) setDesktopVersion(bridge.version);
+  }, []);
 
   return (
     <div className="flex flex-col gap-2 px-1">
@@ -198,7 +205,16 @@ export function MobileMenuFooter() {
           ) : null}
         </div>
       </div>
-      <div className="text-center text-xs text-muted-foreground">{APP_VERSION}</div>
+      <div className="flex flex-col text-center text-xs text-muted-foreground">
+        <span>
+          {t("webVersion")}: <span className="tabular-nums">{APP_VERSION}</span>
+        </span>
+        {desktopVersion ? (
+          <span>
+            {t("appVersion")}: <span className="tabular-nums">{desktopVersion}</span>
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

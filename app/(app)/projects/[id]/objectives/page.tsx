@@ -36,6 +36,7 @@ import {
   type ObjectiveStatus,
 } from "@/lib/objective-constants";
 import { EmptyScene } from "@/components/empty-scene";
+import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { NumoIcon } from "@/components/numo-icon";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
 import { SearchMenu } from "@/components/search-menu";
@@ -172,7 +173,6 @@ function ObjectiveFilterMenu({
           <span className="truncate">{t("filterActive")}</span>
         </CommandItem>
         {OBJECTIVE_STATUSES.map((s) => {
-          const Icon = s.icon;
           return (
             <CommandItem
               key={s.value}
@@ -181,7 +181,7 @@ function ObjectiveFilterMenu({
               onSelect={() => pick(s.value)}
               {...checkedProps(state === s.value)}
             >
-              <Icon className={cn("size-4 shrink-0", s.color)} />
+              <ObjectiveStatusIndicator status={s.value} className="size-4" />
               <span className="truncate">{tStatus(s.value)}</span>
             </CommandItem>
           );
@@ -220,7 +220,6 @@ function ObjectiveRow({
 }) {
   const tStatus = useTranslations("ObjectiveStatus");
   const status = OBJECTIVE_STATUS_MAP[objective.status];
-  const StatusIcon = status.icon;
   return (
     <button
       type="button"
@@ -250,7 +249,7 @@ function ObjectiveRow({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <StatusIcon className={cn("size-3.5 shrink-0", status.color)} />
+        <ObjectiveStatusIndicator status={status.value} className="size-3.5" />
         <span className="shrink-0 text-xs text-muted-foreground">
           {tStatus(status.value)}
         </span>

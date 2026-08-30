@@ -447,9 +447,6 @@
   },
   "Assistant": {
     "title": "Ask Numo",
-    "greeting": "Hi, I'm Numo. How can I help with your issues?",
-    "emptyDescription": "I can create issues, triage them, edit them in bulk and build views.",
-    "globalPlaceholder": "I can work across all your projects.",
     "inputPlaceholder": "Ask Numo anything…",
     "providerUnavailableTitle": "No AI provider is configured",
     "providerUnavailableDescription": "This instance does not include a minddy AI quota. Connect your own API key to use Numo.",
@@ -478,10 +475,22 @@
       "older": "Older"
     },
     "starter": {
-      "s1": "What's waiting in triage?",
-      "s2": "Help me create an issue",
-      "s3": "Assign me the urgent issues",
-      "s4": "Create a view of urgent bugs"
+      "s1": {
+        "title": "Explore and understand my work",
+        "prompt": "Give me an overview of what I'm working on right now."
+      },
+      "s2": {
+        "title": "Create something new",
+        "prompt": "Help me create an issue for what I need to do."
+      },
+      "s3": {
+        "title": "Organize my work",
+        "prompt": "Help me organize my tasks and priorities."
+      },
+      "s4": {
+        "title": "Get help with a task",
+        "prompt": "I need help making progress on a task."
+      }
     },
     "contextIssue": "Issue in context",
     "contextIssuesSelected": "{count, plural, one {# issue selected} other {# issues selected}}",
@@ -1665,6 +1674,8 @@
     "shareFeedback": "Share feedback",
     "whatsNew": "What's new",
     "version": "Version",
+    "webVersion": "Web version",
+    "appVersion": "App version",
     "viewFullChangelog": "View full changelog",
     "account": "Account",
     "appearance": "Appearance",

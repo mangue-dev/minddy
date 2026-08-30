@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, toast } from "mangue-ui";
-import { CheckCircle2, IterationCw, Loader2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, IterationCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import type { CycleInfo } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
+import { EmptyScene } from "@/components/empty-scene";
 
 /**
  * The three empty states of the cycle view (MIN-32):
@@ -79,11 +80,14 @@ export function CycleFutureNotice({ cycle }: { cycle: CycleInfo }) {
     month: "long",
   });
   return (
-    <EmptyShell>
-      <p className="max-w-xs text-sm text-muted-foreground">
-        {t("futureCycle", { date: start })}
-      </p>
-    </EmptyShell>
+    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+      <div className="mx-auto max-w-5xl">
+        <EmptyScene
+          icon={CalendarClock}
+          title={t("futureCycle", { date: start })}
+        />
+      </div>
+    </div>
   );
 }
 

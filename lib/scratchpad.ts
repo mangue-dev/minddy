@@ -447,14 +447,30 @@ export function appendScratchpadTasks(
         break;
       }
     }
-    // Drop the section's trailing blank lines so the block sits tight under it.
+    // Put additions before the section's trailing spacing, but keep that spacing
+    // byte-for-byte. The same helper serves the MCP and Numo, and deleting these
+    // lines here made a remote task addition collapse the empty paragraphs the
+    // user deliberately kept between sections.
     let end = insertAt;
     while (end > headingIdx + 1 && lines[end - 1].trim() === "") end--;
     return [...lines.slice(0, end), ...block, ...lines.slice(end)].join("\n");
   }
 
-  if (!content.trim()) return block.join("\n") + "\n";
-  return content.replace(/\n+$/, "") + "\n" + block.join("\n") + "\n";
+  if (content === "") return block.join("\n") + "\n";
+
+  // Keep trailing empty paragraphs (including the non-breaking-space sentinel
+  // produced by the WYSIWYG editor) after the newly appended tasks. Moving the
+  // insertion point rather than trimming preserves every existing line while
+  // still appending tasks directly after the last substantive note content.
+  const onlySpacing = lines.every((line) => line.trim() === "");
+  if (onlySpacing) {
+    const separator = content.endsWith("\n") ? "" : "\n";
+    return `${content}${separator}${block.join("\n")}\n`;
+  }
+  let end = lines.length;
+  while (end > 0 && lines[end - 1].trim() === "") end--;
+  const next = [...lines.slice(0, end), ...block, ...lines.slice(end)].join("\n");
+  return next.endsWith("\n") ? next : `${next}\n`;
 }
 
 /**

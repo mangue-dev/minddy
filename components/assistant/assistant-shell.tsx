@@ -10,7 +10,16 @@ import {
   forwardRef,
 } from "react";
 import { useTranslations } from "next-intl";
-import { History, Maximize2, Minimize2, Plus, X } from "lucide-react";
+import {
+  History,
+  Lightbulb,
+  ListTodo,
+  Maximize2,
+  Minimize2,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 import {
   Button,
   cn,
@@ -27,7 +36,6 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import {
   ChatInput,
@@ -72,7 +80,28 @@ import {
 import Link from "next/link";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 
-const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
+const STARTERS = [
+  {
+    key: "s1",
+    icon: Search,
+    iconClassName: "text-blue-600 dark:text-blue-400",
+  },
+  {
+    key: "s2",
+    icon: Plus,
+    iconClassName: "text-violet-600 dark:text-violet-400",
+  },
+  {
+    key: "s3",
+    icon: ListTodo,
+    iconClassName: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    key: "s4",
+    icon: Lightbulb,
+    iconClassName: "text-rose-600 dark:text-rose-400",
+  },
+] as const;
 
 export type AssistantDisplayMode = "compact" | "expanded";
 
@@ -98,8 +127,6 @@ export interface AssistantShellHandle {
 export interface AssistantShellProps {
   /** null = global assistant (no project context). */
   projectId: string | null;
-  /** Which i18n key to render under the empty-state title. */
-  descriptionKey?: "emptyDescription" | "globalPlaceholder";
   /** Optional mobile-only secondary label next to the sidebar toggle. */
   mobileSubtitle?: string;
   /** Tighten the layout for narrow surfaces like the global FAB panel. */
@@ -122,7 +149,6 @@ export const AssistantShell = forwardRef<
 >(function AssistantShell(
   {
     projectId,
-    descriptionKey = "emptyDescription",
     mobileSubtitle,
     compact = false,
     displayMode = "compact",
@@ -490,8 +516,7 @@ export const AssistantShell = forwardRef<
   );
 
   // Compact-mode header: no permanent sidebar; conversations live in a
-  // Popover and "new conversation" is a single + icon button. The close
-  // button (X) is aligned to the right when an onClose handler is provided.
+  // Popover. The new-conversation and close buttons are grouped on the right.
   const compactHeader = compact ? (
     <div
       ref={historyAnchorRef}
@@ -537,22 +562,6 @@ export const AssistantShell = forwardRef<
         </PopoverContent>
       </Popover>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("newConversation")}
-            onClick={handleNewConversation}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" sideOffset={6}>
-          {t("newConversation")}
-        </TooltipContent>
-      </Tooltip>
-
       {/* Compact ⇄ expanded toggle — desktop only (mobile is full-bleed). */}
       {onToggleDisplayMode && (
         <Tooltip>
@@ -580,13 +589,29 @@ export const AssistantShell = forwardRef<
       {/* No project name here: the current project is a context like a
  other, it is displayed (and turned off) as a pill in the composer. */}
 
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="ml-auto"
+            aria-label={t("newConversation")}
+            onClick={handleNewConversation}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" sideOffset={6}>
+          {t("newConversation")}
+        </TooltipContent>
+      </Tooltip>
+
       {onClose && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon-sm"
-              className="ml-auto"
               aria-label={tc("close")}
               onClick={onClose}
             >
@@ -760,16 +785,28 @@ export const AssistantShell = forwardRef<
                 <ConversationScrollButton />
               </Conversation>
             ) : (
-              /* Empty state — Numo greeting centered above the composer. */
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
-                <NumoIcon state="idle" className="size-12 text-foreground" />
-                <div className="max-w-xs space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {t("greeting")}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t(descriptionKey)}
-                  </p>
+              /* Empty state — a centered set of useful first actions. */
+              <div className="flex flex-1 items-center justify-center px-4">
+                <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+                  {STARTERS.map(({ key, icon: Icon, iconClassName }) => {
+                    const title = t(`starter.${key}.title` as const);
+                    const prompt = t(`starter.${key}.prompt` as const);
+                    return (
+                      <Button
+                        key={key}
+                        className="h-auto min-h-32 w-full flex-col items-start justify-between gap-8 rounded-xl px-5 py-5 text-left whitespace-normal"
+                        onClick={() => chatInputRef.current?.fill(prompt)}
+                        type="button"
+                        variant="outline"
+                      >
+                        <Icon
+                          className={cn("size-5 shrink-0", iconClassName)}
+                          aria-hidden
+                        />
+                        <span className="text-sm leading-5">{title}</span>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -778,28 +815,10 @@ export const AssistantShell = forwardRef<
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
                 compact ? "px-1.5 pb-1.5" : "px-2 md:px-0",
-                // Home: gutter under suggestions + bottom cushion outside
-                // compact (the lined dial already brings its own in conversation).
-                !hasMessages && "space-y-3",
+                // Empty states retain a small bottom cushion outside compact mode.
                 !hasMessages && !compact && "pb-2",
               )}
             >
-              {!hasMessages && (
-                <div className="overflow-hidden px-3">
-                  <Suggestions>
-                    {STARTER_KEYS.map((k) => {
-                      const prompt = t(`starter.${k}` as const);
-                      return (
-                        <Suggestion
-                          key={k}
-                          suggestion={prompt}
-                          onClick={handleAnswer}
-                        />
-                      );
-                    })}
-                  </Suggestions>
-                </div>
-              )}
               {/* Active question: the card takes the PLACE of the composer. THE
  ChatInput remains MOUNTED (hidden in CSS) — its draft and its
  focus scope survive, it reappears intact after the response. */}

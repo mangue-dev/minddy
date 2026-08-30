@@ -447,9 +447,6 @@
   },
   "Assistant": {
     "title": "Chieda a Numo",
-    "greeting": "Ciao, sono Numo. Come posso aiutarti con i tuoi ticket?",
-    "emptyDescription": "Posso creare ticket, triage, modificare in massa e costruire viste.",
-    "globalPlaceholder": "Posso lavorare su tutti i tuoi progetti.",
     "inputPlaceholder": "Chiedi a Numo qualsiasi cosa...",
     "providerUnavailableTitle": "Nessun provider di AI è configurato",
     "providerUnavailableDescription": "Questa istanza non include una quota AI di minddy. Collega la tua chiave API per utilizzare Numo.",
@@ -478,10 +475,22 @@
       "older": "Più vecchio"
     },
     "starter": {
-      "s1": "Cosa aspetta in triage?",
-      "s2": "Aiutami a creare un ticket",
-      "s3": "Assegnami i ticket urgenti",
-      "s4": "Crea una vista di bug urgenti"
+      "s1": {
+        "title": "Esplorare e comprendere il mio lavoro",
+        "prompt": "Dammi una panoramica di ciò su cui sto lavorando ora."
+      },
+      "s2": {
+        "title": "Creare qualcosa di nuovo",
+        "prompt": "Aiutami a creare un ticket per ciò che devo fare."
+      },
+      "s3": {
+        "title": "Organizzare il mio lavoro",
+        "prompt": "Aiutami a organizzare le mie attività e priorità."
+      },
+      "s4": {
+        "title": "Ottenere aiuto con un'attività",
+        "prompt": "Ho bisogno di aiuto per avanzare in un'attività."
+      }
     },
     "contextIssue": "Ticket di contesto",
     "contextIssuesSelected": "{count, plural, one {# ticket selezionato} other {# ticket selezionati}}",
@@ -1665,6 +1674,8 @@
     "shareFeedback": "Condividere il feedback",
     "whatsNew": "Cosa c'è di nuovo?",
     "version": "Versione",
+    "webVersion": "Versione web",
+    "appVersion": "Versione app",
     "viewFullChangelog": "Vedi il registro completo",
     "account": "Account",
     "appearance": "Aspetto",

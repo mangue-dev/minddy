@@ -31,6 +31,8 @@ import {
   SIDEBAR_TOOLTIP_DELAY_MS,
 } from "@/lib/sidebar-control-styles";
 
+const NEW_ISSUE_TOOLTIP_DELAY_MS = SIDEBAR_TOOLTIP_DELAY_MS * 2;
+
 export interface CreateAction {
   key: string;
   icon: LucideIcon;
@@ -98,7 +100,7 @@ export function NewMenu({
   if (sidebar) {
     return (
       <Tooltip
-        delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
+        delayDuration={NEW_ISSUE_TOOLTIP_DELAY_MS}
         disableHoverableContent
       >
         <TooltipTrigger asChild>

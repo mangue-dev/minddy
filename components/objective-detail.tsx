@@ -49,6 +49,7 @@ import {
   type DictateButtonHandle,
 } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
+import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { Kbd } from "@/components/ui/kbd";
 import { matchesModCombo } from "@/lib/keyboard/mod-combo";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
@@ -88,13 +89,11 @@ function ObjectiveStatusValue({
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
   const meta = OBJECTIVE_STATUS_MAP[value];
-  const Icon = meta.icon;
   const options: PickerOption[] = OBJECTIVE_STATUSES.map((s) => {
-    const SIcon = s.icon;
     return {
       value: s.value,
       label: tStatus(s.value),
-      icon: <SIcon className={cn("size-4", s.color)} />,
+      icon: <ObjectiveStatusIndicator status={s.value} className="size-4" />,
     };
   });
   return (
@@ -106,7 +105,7 @@ function ObjectiveStatusValue({
       tooltip={t("statusFieldLabel")}
       trigger={
         <button type="button" aria-label={t("statusFieldLabel")} className={TRIGGER}>
-          <Icon className={cn("size-4 shrink-0", meta.color)} />
+          <ObjectiveStatusIndicator status={meta.value} className="size-4" />
           <span className="truncate">{tStatus(meta.value)}</span>
         </button>
       }

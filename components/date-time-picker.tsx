@@ -3,7 +3,7 @@
 // One reusable date + time picker for every deadline in the app (issue cards,
 // the ticket side panel, and the issue / objective creation dialogs). Wraps the
 // themed <Calendar> in a popover, adds a clean time field and quick actions,
-// and renders one of three triggers via `variant`. Values are ISO strings
+// and renders one of four triggers via `variant`. Values are ISO strings
 // (local wall-clock time preserved); `null` means unset.
 
 import * as React from "react";
@@ -61,7 +61,7 @@ const CALENDAR_FALLBACK = "h-[300px] w-72 animate-pulse rounded-md bg-muted/50";
 
 // "anchored" has no visible trigger: it opens (controlled) at `anchor`, the
 // mouse position — used by the keyboard field shortcuts (issue-field-shortcuts).
-type Variant = "field" | "value" | "chip" | "anchored";
+type Variant = "field" | "value" | "chip" | "ghost" | "anchored";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -371,6 +371,22 @@ export function DateTimePicker({
         </span>
       </button>
     );
+  } else if (variant === "ghost") {
+    trigger = (
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        className={cn(
+          "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2",
+          className,
+        )}
+      >
+        <TriggerIcon className="size-[18px] shrink-0 text-muted-foreground" />
+        <span className={cn("truncate", !label && "text-muted-foreground")}>
+          {label ?? placeholderText}
+        </span>
+      </button>
+    );
   }
   // variant === "anchored": no trigger — opens (controlled) at `anchor`.
 
@@ -414,7 +430,11 @@ export function DateTimePicker({
         </PopoverTrigger>
       )}
       <PopoverContent
-        align={variant === "field" || variant === "anchored" ? "start" : "end"}
+        align={
+          variant === "field" || variant === "ghost" || variant === "anchored"
+            ? "start"
+            : "end"
+        }
         // The content is high (calendar + time, and the cadence in addition on a
         // recurring ticket): without ceiling, open from the bottom of a panel it
         // was overflowing the top of the window, months and tabs cut. Radix

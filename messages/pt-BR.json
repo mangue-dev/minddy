@@ -447,9 +447,6 @@
   },
   "Assistant": {
     "title": "Pergunte a Numo",
-    "greeting": "Olá, meu nome é Numo. Como posso ajudar com seus problemas?",
-    "emptyDescription": "Posso criar problemas, triá-los, editá-los em massa e criar visualizações.",
-    "globalPlaceholder": "Posso trabalhar em todos os seus projetos.",
     "inputPlaceholder": "Pergunte qualquer coisa a Numo…",
     "providerUnavailableTitle": "Nenhum provedor de IA está configurado",
     "providerUnavailableDescription": "Esta instância não inclui uma IA minddy cota. Conecte sua própria chave API para usar Numo.",
@@ -478,10 +475,22 @@
       "older": "Anteriores"
     },
     "starter": {
-      "s1": "O que está aguardando na triagem?",
-      "s2": "Ajude-me a criar um problema",
-      "s3": "Atribua-me os problemas urgentes",
-      "s4": "Criar uma visualização de bugs urgentes"
+      "s1": {
+        "title": "Explorar e entender meu trabalho",
+        "prompt": "Mostre-me uma visão geral do que estou trabalhando agora."
+      },
+      "s2": {
+        "title": "Criar algo novo",
+        "prompt": "Ajude-me a criar um problema para o que preciso fazer."
+      },
+      "s3": {
+        "title": "Organizar meu trabalho",
+        "prompt": "Ajude-me a organizar minhas tarefas e prioridades."
+      },
+      "s4": {
+        "title": "Obter ajuda com uma tarefa",
+        "prompt": "Preciso de ajuda para avançar em uma tarefa."
+      }
     },
     "contextIssue": "Problema no contexto",
     "contextIssuesSelected": "{count, plural, one {# problema selecionado} other {# problemas selecionados}}",
@@ -1665,6 +1674,8 @@
     "shareFeedback": "Compartilhar comentários",
     "whatsNew": "Novidades",
     "version": "Versão",
+    "webVersion": "Versão web",
+    "appVersion": "Versão do aplicativo",
     "viewFullChangelog": "Ver histórico completo",
     "account": "Conta",
     "appearance": "Aparência",

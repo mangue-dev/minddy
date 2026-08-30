@@ -447,9 +447,6 @@
   },
   "Assistant": {
     "title": "Demander à Numo",
-    "greeting": "Salut, je suis Numo. Comment puis-je vous aider sur vos tickets ?",
-    "emptyDescription": "Je peux créer des tickets, les trier, les modifier en masse et construire des vues.",
-    "globalPlaceholder": "Je peux travailler sur tous vos projets.",
     "inputPlaceholder": "Demandez quelque chose à Numo…",
     "providerUnavailableTitle": "Aucun fournisseur IA n'est configuré",
     "providerUnavailableDescription": "Cette instance n'inclut pas de quota IA minddy. Connectez votre propre clé API pour utiliser Numo.",
@@ -478,10 +475,22 @@
       "older": "Plus ancien"
     },
     "starter": {
-      "s1": "Qu'est-ce qui attend en triage ?",
-      "s2": "Aide-moi à créer un ticket",
-      "s3": "Assigne-moi les tickets urgents",
-      "s4": "Crée une vue des bugs urgents"
+      "s1": {
+        "title": "Explorer et comprendre mon travail",
+        "prompt": "Donne-moi un aperçu de ce sur quoi je travaille en ce moment."
+      },
+      "s2": {
+        "title": "Créer quelque chose",
+        "prompt": "Guide-moi pour créer un ticket adapté à mon besoin."
+      },
+      "s3": {
+        "title": "Organiser mon travail",
+        "prompt": "Aide-moi à organiser mes tâches et mes priorités."
+      },
+      "s4": {
+        "title": "Obtenir de l’aide sur une tâche",
+        "prompt": "J’ai besoin d’aide pour avancer sur une tâche."
+      }
     },
     "contextIssue": "Ticket en contexte",
     "contextIssuesSelected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
@@ -1665,6 +1674,8 @@
     "shareFeedback": "Partager un retour",
     "whatsNew": "Nouveautés",
     "version": "Version",
+    "webVersion": "Version web",
+    "appVersion": "Version de l'application",
     "viewFullChangelog": "Voir le changelog complet",
     "account": "Compte",
     "appearance": "Apparence",

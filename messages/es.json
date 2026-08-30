@@ -447,9 +447,6 @@
   },
   "Assistant": {
     "title": "Pregúntale a Numo",
-    "greeting": "Hola, soy Numo. ¿Cómo puedo ayudarte con tus incidencias?",
-    "emptyDescription": "Puedo crear incidencias, clasificarlas, editarlas en bloque y crear vistas.",
-    "globalPlaceholder": "Puedo trabajar en todos tus proyectos.",
     "inputPlaceholder": "Pregúntale lo que quieras a Numo…",
     "providerUnavailableTitle": "No se ha configurado ningún proveedor de IA",
     "providerUnavailableDescription": "Esta instancia no incluye una cuota de IA de minddy. Conecta tu propia clave de API para usar Numo.",
@@ -478,10 +475,22 @@
       "older": "Anteriores"
     },
     "starter": {
-      "s1": "¿Qué espera en la clasificación?",
-      "s2": "Ayúdame a crear una incidencia",
-      "s3": "Asígname las incidencias urgentes",
-      "s4": "Crea una vista de errores urgentes"
+      "s1": {
+        "title": "Explorar y comprender mi trabajo",
+        "prompt": "Dame una visión general de lo que estoy haciendo ahora mismo."
+      },
+      "s2": {
+        "title": "Crear algo nuevo",
+        "prompt": "Ayúdame a crear una incidencia para lo que necesito hacer."
+      },
+      "s3": {
+        "title": "Organizar mi trabajo",
+        "prompt": "Ayúdame a organizar mis tareas y prioridades."
+      },
+      "s4": {
+        "title": "Obtener ayuda con una tarea",
+        "prompt": "Necesito ayuda para avanzar en una tarea."
+      }
     },
     "contextIssue": "Incidencia en contexto",
     "contextIssuesSelected": "{count, plural, one {# incidencia seleccionada} other {# incidencias seleccionadas}}",
@@ -1665,6 +1674,8 @@
     "shareFeedback": "Compartir una sugerencia",
     "whatsNew": "¿Qué hay de nuevo?",
     "version": "Versión",
+    "webVersion": "Versión web",
+    "appVersion": "Versión de la aplicación",
     "viewFullChangelog": "Ver el registro de cambios completo",
     "account": "Cuenta",
     "appearance": "Apariencia",

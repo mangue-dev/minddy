@@ -6,6 +6,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { ChevronDown, ChevronLeft, Target } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
+import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { AppContentHeader } from "@/components/app-content-header";
 import { Dot } from "@/components/issue-property-fields";
 import { ProgressRing } from "@/components/progress-ring";
@@ -88,7 +89,6 @@ export function ObjectiveBoardHeader({
   const tStatus = useTranslations("ObjectiveStatus");
   const format = useFormatter();
   const status = OBJECTIVE_STATUS_MAP[objective.status];
-  const StatusIcon = status.icon;
   const targetDate = parseDueDate(objective.target_date);
 
   // Only open objectives become overdue, and only after the entire target day
@@ -127,7 +127,7 @@ export function ObjectiveBoardHeader({
             projectId={projectId}
           />
           <div className="flex items-center gap-1.5">
-            <StatusIcon className={`size-3.5 ${status.color}`} />
+            <ObjectiveStatusIndicator status={status.value} className="size-3.5" />
             <span className="text-xs text-muted-foreground">{tStatus(status.value)}</span>
           </div>
         </div>

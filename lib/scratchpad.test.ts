@@ -5,6 +5,7 @@ import {
   containsMarkdownTaskLine,
   mergeScratchpad,
   removeSettledTasks,
+  SPACER_LINE,
   scratchpadPreview,
   taskLinesMarkdown,
   taskSubtree,
@@ -200,6 +201,41 @@ describe("appendScratchpadTasks", () => {
     const note = "## A\n- [ ] a1\n## B\n- [ ] b1";
     const out = appendScratchpadTasks(note, [{ text: "b2", state: "completed" }], "B");
     expect(out).toBe("## A\n- [ ] a1\n## B\n- [ ] b1\n- [x] b2");
+  });
+
+  it("keeps a section's blank lines and editor spacers when adding a task", () => {
+    const note = [
+      "## Now",
+      "- [ ] existing",
+      "",
+      SPACER_LINE,
+      "",
+      "## Later",
+      "- [ ] next",
+    ].join("\n");
+
+    expect(
+      appendScratchpadTasks(note, [{ text: "new", state: "pending" }], "Now")
+    ).toBe(
+      [
+        "## Now",
+        "- [ ] existing",
+        "- [ ] new",
+        "",
+        SPACER_LINE,
+        "",
+        "## Later",
+        "- [ ] next",
+      ].join("\n")
+    );
+  });
+
+  it("keeps trailing blank lines and editor spacers when appending", () => {
+    const note = ["- [ ] existing", "", SPACER_LINE, ""].join("\n");
+
+    expect(appendScratchpadTasks(note, [{ text: "new", state: "pending" }])).toBe(
+      ["- [ ] existing", "- [ ] new", "", SPACER_LINE, ""].join("\n")
+    );
   });
 
   it("flattens multi-line task text to one line", () => {

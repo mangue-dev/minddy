@@ -27,6 +27,7 @@ import {
 } from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AssigneeCompact } from "@/components/issue-compact-fields";
+import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ProjectOrb } from "@/components/project-orb";
@@ -81,13 +82,11 @@ function ObjectiveStatusCompact({
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
   const meta = OBJECTIVE_STATUS_MAP[value];
-  const Icon = meta.icon;
   const options: PickerOption[] = OBJECTIVE_STATUSES.map((s) => {
-    const SIcon = s.icon;
     return {
       value: s.value,
       label: tStatus(s.value),
-      icon: <SIcon className={cn("size-4", s.color)} />,
+      icon: <ObjectiveStatusIndicator status={s.value} className="size-4" />,
     };
   });
   return (
@@ -98,7 +97,7 @@ function ObjectiveStatusCompact({
       tooltip={t("statusFieldLabel")}
       trigger={
         <button type="button" aria-label={t("statusFieldLabel")} className={BARE}>
-          <Icon className={cn("size-[18px] shrink-0", meta.color)} />
+          <ObjectiveStatusIndicator status={meta.value} className="size-[18px]" />
           <span>{tStatus(meta.value)}</span>
         </button>
       }
@@ -553,13 +552,12 @@ export function ObjectiveDialog({
                 noneLabel={t("noLead")}
               />
               <DateTimePicker
-                variant="field"
+                variant="ghost"
                 value={form.target_date}
                 onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
                 placeholder={t("targetDatePlaceholder")}
                 ariaLabel={t("targetDatePlaceholder")}
                 tooltip={t("targetDatePlaceholder")}
-                className="h-8 rounded-full max-sm:h-9"
               />
               <ColorCompact
                 value={form.color}
