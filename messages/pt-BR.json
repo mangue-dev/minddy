@@ -2290,7 +2290,7 @@
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Aplicativo de desktop",
-    "desktopAppHint": "Disponível para macOS e Linux. Sua própria janela, seletor de servidor e atualizações.",
+    "desktopAppHint": "Disponível para macOS, Windows e Linux. Sua própria janela, seletor de servidor e atualizações.",
     "desktopAppCta": "Baixar"
   },
   "AccountData": {

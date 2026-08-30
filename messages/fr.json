@@ -2292,7 +2292,7 @@
     "sendShortcutModEnter": "{mod} + Entrée",
     "sendShortcutEnter": "Entrée",
     "desktopAppLabel": "App de bureau",
-    "desktopAppHint": "Disponible sur macOS et Linux. Sa fenêtre, le choix du serveur et les mises à jour.",
+    "desktopAppHint": "Disponible sur macOS, Windows et Linux. Sa fenêtre, le choix du serveur et les mises à jour.",
     "desktopAppCta": "Télécharger"
   },
   "AccountData": {

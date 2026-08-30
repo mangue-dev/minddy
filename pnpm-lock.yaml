@@ -169,8 +169,8 @@ importers:
         specifier: ^1.33.0
         version: 1.33.0(react@19.2.8)
       mangue-ui:
-        specifier: ^0.6.0
-        version: 0.6.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.1(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: ^0.7.0
+        version: 0.7.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.1(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       mcp-handler:
         specifier: ^2.1.1
         version: 2.1.1(@modelcontextprotocol/server@2.0.0)(next@16.3.1(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
@@ -4715,8 +4715,8 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  mangue-ui@0.6.0:
-    resolution: {integrity: sha512-QwpdGeiFaQJWs0oxLRvFHPunXw5pyQZZwF/qJZqM+sofF4hvspW3dBo2KbvwMn8yADXLiZSRlZ0lTKJmV8mlqg==}
+  mangue-ui@0.7.0:
+    resolution: {integrity: sha512-zM27m7dbxI4cpftsh6vMxHCuPKeYgxuTOE768IQXfURxD5TOKoqC3+ODzCGQupmUcZTpd8gxnEMi0LaR4sx04w==}
     peerDependencies:
       next: '*'
       react: '>=18'
@@ -10687,7 +10687,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  mangue-ui@0.6.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.1(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+  mangue-ui@0.7.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.1(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       '@lobehub/icons': 5.16.0(@lobehub/ui@5.20.3)(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@radix-ui/react-switch': 1.3.3(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

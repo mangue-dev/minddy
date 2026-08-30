@@ -2292,7 +2292,7 @@
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Desktop app",
-    "desktopAppHint": "Available for macOS and Linux. Its own window, server selector, and updates.",
+    "desktopAppHint": "Available for macOS, Windows, and Linux. Its own window, server selector, and updates.",
     "desktopAppCta": "Download"
   },
   "AccountData": {
