@@ -2,6 +2,7 @@ import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { registerMinddyTools } from "@/lib/server/mcp/tools";
 import { verifyMcpToken } from "@/lib/server/mcp/auth";
 import { MCP_DISCOVERY_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
+import { withPrivateNoStore } from "@/lib/server/private-response";
 
 /**
  * minddy MCP server — stateless Streamable HTTP (a new McpServer per
@@ -24,6 +25,7 @@ const handler = createMcpHandler(
 );
 
 const authedHandler = withMcpAuth(handler, verifyMcpToken, { required: true });
+const privateHandler = withPrivateNoStore(authedHandler);
 
-export { authedHandler as GET, authedHandler as POST, authedHandler as DELETE };
+export { privateHandler as GET, privateHandler as POST, privateHandler as DELETE };
 export const maxDuration = 60;

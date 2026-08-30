@@ -2,13 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
+import { withPrivateNoStore } from "@/lib/server/private-response";
 
 /**
  * GET /api/me/scratchpad — the user's single personal notes doc (markdown +
  * task progress). PUT replaces it. Both act *as the user* (RLS self-manage on
  * user_scratchpad), so no service client is needed.
  */
-export async function GET(request: NextRequest) {
+async function readScratchpad(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   try {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+async function writeScratchpad(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
@@ -58,3 +59,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }
+
+export const GET = withPrivateNoStore(readScratchpad);
+export const PUT = withPrivateNoStore(writeScratchpad);

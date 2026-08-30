@@ -275,6 +275,7 @@ function PageSurface({
     () => ({
       items: () => mentionSources.options,
       onQuery: mentionSources.onQuery,
+      scan: mentionSources.scan,
     }),
     [mentionSources]
   );

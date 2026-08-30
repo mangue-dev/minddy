@@ -61,7 +61,7 @@ describe("page interface regressions", () => {
       'className="relative flex min-h-0 flex-1 flex-col"'
     );
     expect(view).toContain(
-      'className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6"'
+      '<AppContentHeader contentClassName="gap-2 px-4 md:px-6">'
     );
     expect(view).toContain('onOpenHistory={() => openHistory("versions")}');
     expect(view).toContain('onClick={() => openHistory("activity")}');
@@ -88,5 +88,14 @@ describe("page interface regressions", () => {
     }
     expect(tree).toContain("usePageDocumentMenu({");
     expect(view).toContain("usePageDocumentMenu({");
+  });
+
+  it("rehydrates mention pills after an agent rewrites page markdown", () => {
+    const editor = source("components/pages/page-editor.tsx");
+    const view = source("components/pages/page-view.tsx");
+
+    expect(editor).toContain("hydrateMentions(editor, scan)");
+    expect(editor).toContain("transaction.getMeta(MENTION_HYDRATION_META)");
+    expect(view).toContain("scan: mentionSources.scan");
   });
 });
