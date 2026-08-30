@@ -30,7 +30,7 @@ import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
-import { useIssuePanel } from "@/lib/issue-panel-context";
+import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
@@ -161,7 +161,7 @@ export function useMentionLinksFor(
   onOpenIssue?: (projectId: string, issueId: string) => void,
 ): MentionLinks {
   const router = useRouter();
-  const { openIssue, closeIssue } = useIssuePanel();
+  const { openIssue, closeIssue } = useIssuePanelActions();
   const { issues, objectives, pages } = sources;
 
   const projectOf = useMemo(

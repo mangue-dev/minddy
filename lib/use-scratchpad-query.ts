@@ -225,6 +225,15 @@ export function useScratchpadDoc({
   commitRef.current = commitOnce;
 
   const save = useCallback((content: string) => {
+    // Blur and unmount can both flush the editor. Avoid starting a CAS write
+    // when the submitted document is already the last server-confirmed one.
+    if (
+      !runningRef.current &&
+      pendingRef.current === null &&
+      content === baseRef.current.content
+    ) {
+      return;
+    }
     pendingRef.current = content;
     if (runningRef.current) return;
     runningRef.current = true;

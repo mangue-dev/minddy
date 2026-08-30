@@ -58,6 +58,13 @@ function request(pathname: string, headers: Record<string, string> = {}): NextRe
   });
 }
 
+function accessToken(userMetadata: Record<string, unknown> = {}): string {
+  const payload = Buffer.from(
+    JSON.stringify({ user_metadata: userMetadata }),
+  ).toString("base64url");
+  return `header.${payload}.signature`;
+}
+
 /** The request headers that the proxy lets pass until rendering. */
 function forwardedHeaders(response: { headers: Headers }): Record<string, string> {
   const names = response.headers.get("x-middleware-override-headers");
@@ -164,7 +171,10 @@ describe("account theme header (x-minddy-theme)", () => {
   it.each(["light", "dark", "system"] as const)(
     "asserts the saved theme on app routes: %s",
     async (theme) => {
-      session = { user: { id: "u1", user_metadata: { theme } } };
+      session = {
+        user: { id: "u1", user_metadata: { theme } },
+        access_token: accessToken({ theme }),
+      };
 
       const response = await proxy(request("/home"));
 
@@ -208,7 +218,10 @@ describe("account theme header (x-minddy-theme)", () => {
       { name: "sb-access-token", value: "neuf", options: OPTIONS },
       { name: "sb-refresh-token", value: "aussi-neuf", options: OPTIONS },
     ];
-    session = { user: { id: "u1", user_metadata: { theme: "light" } } };
+    session = {
+      user: { id: "u1", user_metadata: { theme: "light" } },
+      access_token: accessToken({ theme: "light" }),
+    };
 
     const response = await proxy(request("/home"));
 
@@ -217,5 +230,27 @@ describe("account theme header (x-minddy-theme)", () => {
     expect(response.cookies.get("sb-refresh-token")?.value).toBe("aussi-neuf");
     // The other proxy assertions survive the rebuild too.
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+  });
+
+  it("never reads the unverified user object returned by getSession", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    session = {
+      user: new Proxy(
+        { id: "u1", user_metadata: { theme: "dark" } },
+        {
+          get(target, property) {
+            console.warn("unverified session.user was read");
+            return target[property as keyof typeof target];
+          },
+        },
+      ),
+      access_token: accessToken({ theme: "dark" }),
+    };
+
+    const response = await proxy(request("/home"));
+
+    expect(forwardedHeaders(response)["x-minddy-theme"]).toBe("dark");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

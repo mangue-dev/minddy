@@ -115,7 +115,10 @@ import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
-import { useIssuePanel } from "@/lib/issue-panel-context";
+import {
+  useIssuePanelActions,
+  useIssuePanelTarget,
+} from "@/lib/issue-panel-context";
 import {
   loadCommandPalette,
   loadGlobalIssuePanel,
@@ -184,6 +187,21 @@ const GlobalIssuePanel = dynamic(
   () => loadGlobalIssuePanel().then((module) => module.GlobalIssuePanel),
   { ssr: false },
 );
+
+/** Keeps panel state updates out of the large app-shell render path. */
+function GlobalIssuePanelHost() {
+  const target = useIssuePanelTarget();
+  const { closeIssue } = useIssuePanelActions();
+  if (!target) return null;
+  return (
+    <GlobalIssuePanel
+      key={`${target.projectId}:${target.issueId}`}
+      projectId={target.projectId}
+      issueId={target.issueId}
+      onClose={closeIssue}
+    />
+  );
+}
 
 const BranchCleanupDialog = dynamic(
   () =>
@@ -368,10 +386,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
   const {
-    target: issuePanelTarget,
     openIssue: openIssuePanel,
     closeIssue: closeIssuePanel,
-  } = useIssuePanel();
+  } = useIssuePanelActions();
   const previousPathname = useRef(pathname);
   useEffect(() => {
     if (previousPathname.current !== pathname) closeIssuePanel();
@@ -1706,14 +1723,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           searchIndex={searchIndex}
         />
       ) : null}
-      {issuePanelTarget ? (
-        <GlobalIssuePanel
-          key={`${issuePanelTarget.projectId}:${issuePanelTarget.issueId}`}
-          projectId={issuePanelTarget.projectId}
-          issueId={issuePanelTarget.issueId}
-          onClose={closeIssuePanel}
-        />
-      ) : null}
+      <GlobalIssuePanelHost />
       {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
  dialog as the settings button, mounted here to be reachable
  from any page, on any of my projects. The key

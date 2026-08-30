@@ -16,5 +16,5 @@ export const transitions = {
  * layout causes the entire right half to jolt de
  * the screen. The curve starts quickly and settles gently.
  */
-  shell: { duration: 0.32, ease: [0.32, 0.72, 0, 1] } as Transition,
+  shell: { duration: 0.18, ease: [0.32, 0.72, 0, 1] } as Transition,
 };

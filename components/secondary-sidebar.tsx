@@ -169,7 +169,7 @@ export function SecondarySidebarSlot({ reserve }: { reserve: boolean }) {
  *
  * It is painted IN THE COLORS OF THE BAR, and not left transparent: in
  * leaving a page with a secondary sidebar, the page is suddenly unmounted and it
- * gutter is empty during the 320 ms of its closure. Without a bottom, we
+ * gutter is empty during the 180 ms of its closure. Without a bottom, we
  * saw the `bg-background` of the chassis — a light strip open between the bar
  * primary and the header, both in `bg-sidebar`. With it, the column closes
  * like a panel, without a gap.

@@ -40,6 +40,7 @@ export interface CreateAction {
   disabled?: boolean;
   /** Keyboard hint shown on the desktop menu (e.g. "C"). */
   shortcut?: string;
+  onWarm?: () => void;
   onSelect: () => void;
 }
 
@@ -53,7 +54,13 @@ export interface CreateAction {
 export function useCreateActions(): CreateAction[] {
   const t = useTranslations("Nav");
   const { openCreateProject } = useProjects();
-  const { openCreateIssue, openCreateObjective, canCreate } = useCreate();
+  const {
+    openCreateIssue,
+    openCreateObjective,
+    warmCreateIssue,
+    warmCreateObjective,
+    canCreate,
+  } = useCreate();
   const { projectLimitReached } = usePlanGates();
 
   return [
@@ -63,6 +70,7 @@ export function useCreateActions(): CreateAction[] {
       label: t("newIssue"),
       disabled: !canCreate,
       shortcut: "C",
+      onWarm: warmCreateIssue,
       onSelect: () => openCreateIssue(),
     },
     {
@@ -71,6 +79,7 @@ export function useCreateActions(): CreateAction[] {
       label: t("newObjective"),
       disabled: !canCreate,
       shortcut: "O",
+      onWarm: warmCreateObjective,
       onSelect: () => openCreateObjective(),
     },
     {
@@ -110,6 +119,8 @@ export function NewMenu({
             variant="ghost"
             disabled={issueAction.disabled}
             aria-label={issueAction.label}
+            onPointerEnter={issueAction.onWarm}
+            onFocus={issueAction.onWarm}
             onClick={issueAction.onSelect}
             className={cn(
               SIDEBAR_ROW_ACTION_CLASS,
@@ -153,6 +164,8 @@ export function NewMenu({
             <DropdownMenuItem
               key={action.key}
               disabled={action.disabled}
+              onPointerEnter={action.onWarm}
+              onFocus={action.onWarm}
               onSelect={action.onSelect}
             >
               <Icon />

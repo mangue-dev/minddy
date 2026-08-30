@@ -441,7 +441,7 @@ function SidebarRow({
   // is replaced and the focus it had falls on <body>. Here relaxation
   // is daily — `collapsed` switches each time the bar is hovered: we
   // clicks a project entry, `onFocusCapture` only retains the focus
-  // keyboard, the pointer leaves, 150 ms later the focused line is
+  // keyboard, the pointer leaves, 70 ms later the focused line is
   // replaced, and the tab starts again from the top of the document.
   row = (
     <Tooltip
@@ -1077,7 +1077,7 @@ function SidebarFooter({
 
 /** Delay before fallback when the pointer leaves the bar in rail mode. Quite short
  * so that the fold follows the gesture, long enough to tolerate a brush. */
-const RAIL_CLOSE_DELAY_MS = 150;
+const RAIL_CLOSE_DELAY_MS = 70;
 
 /**
  * The desktop sidebar. Hand-rolled (rather than mangue-ui's <Sidebar>) so the
@@ -1455,7 +1455,7 @@ export function AppSidebar({
           // `shadow-2xl`, which cannot be seen on a black background. She blends in instead
           // to disappear suddenly: leave a page with a secondary sidebar by
           // hovering over the bar turns it off at the same time as everything snaps back into place.
-          "transition-shadow duration-300",
+          "transition-shadow duration-200",
           overlay && !collapsed && "shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]",
         )}
       >

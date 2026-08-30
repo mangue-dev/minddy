@@ -115,7 +115,7 @@ import { DocumentTitle } from "@/components/document-title";
 import { IntegrationIndicator } from "@/components/integration-indicator";
 import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
-import { useIssuePanel } from "@/lib/issue-panel-context";
+import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import type {
   Category,
   CreateIssueInput,
@@ -184,7 +184,7 @@ export function IssueSidePanel({
   const tCommon = useTranslations("Common");
   const tPlan = useTranslations("Plan");
   const tAgent = useTranslations("Agent");
-  const { openIssue: openGlobalIssue } = useIssuePanel();
+  const { openIssue: openGlobalIssue } = useIssuePanelActions();
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();

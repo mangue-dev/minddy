@@ -203,6 +203,10 @@ export function ScratchpadEditor({
   });
 
   const editorRef = useRef<Editor | null>(null);
+  // Tiptap can normalize the initial markdown, so this baseline is refreshed
+  // from the live editor in `onCreate` before any user edit is submitted.
+  const initialContentRef = useRef(initialValue);
+  const lastSubmittedRef = useRef(initialValue);
   const startDictationRef = useRef<() => void>(() => {});
 
   // Dictation → one checkbox task per entry Numo cleaned up (a single take can
@@ -313,11 +317,20 @@ export function ScratchpadEditor({
   onLaunchSectionRef.current = onLaunchSection;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const submitIfChanged = (markdown: string) => {
+    if (markdown === lastSubmittedRef.current) return;
+    lastSubmittedRef.current = markdown;
+    onChangeRef.current(markdown);
+  };
   const scheduleCommit = (markdown: string) => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (markdown === lastSubmittedRef.current) {
+      timerRef.current = null;
+      return;
+    }
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
-      onChangeRef.current(markdown);
+      submitIfChanged(markdown);
     }, 500);
   };
   const flush = () => {
@@ -326,7 +339,7 @@ export function ScratchpadEditor({
       timerRef.current = null;
     }
     const ed = editorRef.current;
-    if (ed && !ed.isDestroyed) onChangeRef.current(getMarkdown(ed));
+    if (ed && !ed.isDestroyed) submitIfChanged(getMarkdown(ed));
   };
   const flushRef = useRef(flush);
   flushRef.current = flush;
@@ -339,7 +352,7 @@ export function ScratchpadEditor({
     const { content: next, removed } = removeSettledTasks(getMarkdown(ed));
     if (removed === 0) return 0;
     ed.commands.setContent(next); // tiptap-markdown re-parses the markdown
-    onChangeRef.current(next);
+    submitIfChanged(next);
     return removed;
   };
   const removeSettledFnRef = useRef(removeSettled);
@@ -441,8 +454,6 @@ export function ScratchpadEditor({
   // CREATION of the editor, while the prop changes with each save
   // (the request cache is rewritten) — passing it as is would therefore
   // see an option changed with each keystroke. See the rule below.
-  const initialContentRef = useRef(initialValue);
-
   // ⚠️ The options passed here are reread EACH rendering by tiptap, which
   // reapply a `editor.setOptions()` to everything that has changed identity —
   // from its own effect, therefore in the middle of the React commit phase. But the
@@ -461,13 +472,16 @@ export function ScratchpadEditor({
     editorProps: EDITOR_PROPS,
     onCreate: ({ editor }) => {
       editorRef.current = editor;
+      lastSubmittedRef.current = getMarkdown(editor);
       if (markdownRef) markdownRef.current = () => getMarkdown(editor);
       if (applyExternalRef)
         applyExternalRef.current = (content, opts) => {
           if (editor.isDestroyed) return;
+          const emitUpdate = opts?.emitUpdate ?? false;
           editor.commands.setContent(content, {
-            emitUpdate: opts?.emitUpdate ?? false,
+            emitUpdate,
           });
+          if (!emitUpdate) lastSubmittedRef.current = getMarkdown(editor);
         };
       if (removeSettledRef)
         removeSettledRef.current = () => removeSettledFnRef.current();

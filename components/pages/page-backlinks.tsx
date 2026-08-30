@@ -16,7 +16,7 @@ import { mentionNavigationTarget } from "@/lib/mention-target";
 import { EntityPill, PillIcon, PILL_INNER_RADIUS } from "@/components/entity-pill";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
-import { useIssuePanel } from "@/lib/issue-panel-context";
+import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import type { PageBacklink } from "@/lib/types";
 
 /** The trackbacks cache key — the one that the real-time bridge invalidates. */
@@ -80,7 +80,7 @@ function BacklinkPill({
   projectId: string;
 }) {
   const t = useTranslations("Pages");
-  const { openIssue } = useIssuePanel();
+  const { openIssue } = useIssuePanelActions();
   const target = mentionNavigationTarget(item.kind, item.id, projectId);
   const href = target?.href ?? "#";
   const label = item.title.trim() || t("untitled");
