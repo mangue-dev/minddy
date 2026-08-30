@@ -8,13 +8,13 @@ import {
 const READY: DesktopUpdateStatus = { state: "ready", version: "0.9.5" };
 
 describe("reduceUpdateStatus", () => {
-  it("annonce le téléchargement dès qu'une version est détectée", () => {
+  it("announces the download as soon as a version is detected", () => {
     expect(
       reduceUpdateStatus(IDLE_UPDATE_STATUS, { kind: "available", version: "0.9.5" })
     ).toEqual({ state: "downloading", version: "0.9.5" });
   });
 
-  it("passe à prêt quand elle est sur le disque", () => {
+  it("becomes ready when the update is on disk", () => {
     expect(
       reduceUpdateStatus(
         { state: "downloading", version: "0.9.5" },
@@ -23,30 +23,30 @@ describe("reduceUpdateStatus", () => {
     ).toEqual(READY);
   });
 
-  it("ne fait pas retomber en téléchargement une version déjà prête", () => {
-    // The six hour check re-announces what it finds, downloaded or
-    // No. Without this guard the line went back to “download…” without more
-    // jamais en sortir.
+  it("does not revert an already ready version to downloading", () => {
+    // The six-hour check can announce the same version again before another
+    // downloaded event. The ready state must remain actionable.
     expect(reduceUpdateStatus(READY, { kind: "available", version: "0.9.5" })).toBe(
       READY
     );
   });
 
-  it("suit en revanche une version ENCORE plus neuve", () => {
+  it("tracks a newer version after a previously ready one", () => {
     expect(
       reduceUpdateStatus(READY, { kind: "available", version: "0.9.6" })
     ).toEqual({ state: "downloading", version: "0.9.6" });
   });
 
-  it("garde ce qui est prêt quand la vérification suivante échoue", () => {
+  it("keeps a ready update when the next check fails", () => {
     // The file is on the disk: a cut network does not remove it, and
     // removing the line would erase the only way to install.
     expect(reduceUpdateStatus(READY, { kind: "error" })).toBe(READY);
   });
 
-  it("revient au silence si l'erreur tombe pendant le téléchargement", () => {
+  it("returns to idle when a download check fails", () => {
     expect(
       reduceUpdateStatus({ state: "downloading", version: "0.9.5" }, { kind: "error" })
     ).toEqual(IDLE_UPDATE_STATUS);
   });
+
 });

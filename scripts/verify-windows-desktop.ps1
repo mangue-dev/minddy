@@ -64,6 +64,10 @@ foreach ($package in $msixPackages) {
   if (-not $appxManifest.SelectSingleNode("//rescap:Capability[@Name='runFullTrust']", $namespace)) {
     throw "$($package.Name) does not declare runFullTrust."
   }
+  $storeUpdateHelper = Join-Path $unpackDirectory "resources/store-update/minddy-store-update.exe"
+  if (-not (Test-Path $storeUpdateHelper)) {
+    throw "$($package.Name) does not contain the Microsoft Store update helper."
+  }
   $pushClass = $appxManifest.SelectSingleNode("//com:Extension[@Category='windows.comServer']//com:Class", $namespace)
   $pushHelper = Join-Path $unpackDirectory "resources/wns/minddy-wns.exe"
   if ($wnsEnabled) {

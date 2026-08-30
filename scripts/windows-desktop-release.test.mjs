@@ -127,6 +127,28 @@ test("packages the architecture-matched WNS helper and COM activator", async () 
   assert.match(verifier, /contains WNS components although WNS is not configured/);
 });
 
+test("packages the architecture-matched Microsoft Store update helper", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  const helperProject = await readFile(
+    new URL("../desktop/native/store-update/store-update.vcxproj", import.meta.url),
+    "utf8",
+  );
+  const helperSource = await readFile(
+    new URL("../desktop/native/store-update/main.cpp", import.meta.url),
+    "utf8",
+  );
+  const buildScript = await readFile(new URL("./build-windows-store.mjs", import.meta.url), "utf8");
+  const verifier = await readFile(new URL("./verify-windows-desktop.ps1", import.meta.url), "utf8");
+
+  assert.match(config, /^    - from: build\/store-update\/\$\{arch\}$/m);
+  assert.match(helperProject, /Release\|x64/);
+  assert.match(helperProject, /Release\|ARM64/);
+  assert.match(helperProject, /Microsoft\.Windows\.CppWinRT/);
+  assert.match(helperSource, /GetAppAndOptionalStorePackageUpdatesAsync/);
+  assert.match(buildScript, /buildStoreUpdateHelper\(msbuild\)/);
+  assert.match(verifier, /resources\/store-update\/minddy-store-update\.exe/);
+});
+
 test("keeps WNS dormant unless both release identities are configured", () => {
   assert.equal(resolveWindowsWnsBuildIdentity(undefined, ""), null);
   assert.throws(

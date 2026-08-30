@@ -55,6 +55,10 @@ export interface DesktopBridge {
    * not `http(s)` — the renderer does not decide what we give to `open`.
    */
   openExternal(url: string): void;
+  /** Open minddy's immutable Microsoft Store product page on Windows. */
+  openWindowsStoreUpdate?(): void;
+  /** Follow package update availability reported by Microsoft Store. */
+  onWindowsStoreUpdateStatus?(handler: (available: boolean) => void): () => void;
   /**
    * The return of the authentication round (`minddy://auth?…`). Makes his
    * unsubscribe. The link received BEFORE the subscription is replayed upon subscription:

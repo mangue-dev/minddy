@@ -1675,6 +1675,8 @@
     "updateAction": "Aggiornamento",
     "updateConfirmTitle": "Questa azione riavvierà l’app",
     "updateConfirmDescription": "Salva il tuo lavoro prima di riavviare l’app.",
+    "windowsStoreUpdateReady": "È disponibile un aggiornamento in Microsoft Store",
+    "windowsStoreUpdateAction": "Apri Microsoft Store",
     "shareFeedback": "Condividere il feedback",
     "whatsNew": "Cosa c'è di nuovo?",
     "version": "Versione",

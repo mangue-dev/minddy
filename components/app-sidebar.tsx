@@ -14,6 +14,7 @@ import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { useDesktopUpdateStatus } from "@/lib/desktop/use-update-status";
+import { useWindowsStoreUpdateAvailable } from "@/lib/desktop/use-windows-store-update";
 import { useNewVersion } from "@/lib/use-new-version";
 import {
   useHoldWindowButtons,
@@ -63,6 +64,7 @@ import {
   Search,
   Trash2,
   ArrowDownToLine,
+  ShoppingBag,
   RefreshCw,
   Loader2,
   Check,
@@ -670,70 +672,167 @@ function AccountButton({
   onMenuOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("Nav");
+  const tCommon = useTranslations("Common");
   const { user, signOut } = useAuth();
   const isAdmin = useIsAdmin();
+  const confirmationId = useId();
+  const confirmationTitleId = `${confirmationId}-title`;
+  const confirmationDescriptionId = `${confirmationId}-description`;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const confirmationPendingRef = useRef(false);
   const meta = user?.user_metadata as AuthNameMeta | undefined;
   const name = authDisplayName(meta, user?.email ?? null, t("accountFallback"));
   const seed = useMyAvatarSource();
 
+  useEffect(() => {
+    onMenuOpenChange?.(menuOpen || confirmationPending || confirmationOpen);
+  }, [confirmationOpen, confirmationPending, menuOpen, onMenuOpenChange]);
+
+  const openSignOutConfirmation = () => {
+    confirmationPendingRef.current = true;
+    setConfirmationPending(true);
+    setMenuOpen(false);
+  };
+
+  const finishOpeningSignOutConfirmation = (event: Event) => {
+    if (!confirmationPendingRef.current) return;
+    event.preventDefault();
+    confirmationPendingRef.current = false;
+    setConfirmationOpen(true);
+    setConfirmationPending(false);
+  };
+
+  const confirmSignOut = () => {
+    setConfirmationOpen(false);
+    void signOut();
+  };
+
   return (
-    <DropdownMenu onOpenChange={onMenuOpenChange}>
-      <DropdownMenuTrigger
-        className={cn(
-          "flex h-10 cursor-pointer items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
-          // The avatar is 22 px: its own removal refocuses it on the same
-          // vertical than the 18 px icons (see the icons column).
-          AVATAR_PL,
-          collapsed ? cn(ROW_BOX, "pr-[7px]") : "w-full gap-3 pr-3 text-left",
-        )}
+    <Popover open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+      <PopoverAnchor asChild>
+        <div className={collapsed ? ROW_BOX : "w-full"}>
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger
+              className={cn(
+                "flex h-10 cursor-pointer items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
+                // The avatar is 22 px: its own removal refocuses it on the same
+                // vertical than the 18 px icons (see the icons column).
+                AVATAR_PL,
+                collapsed
+                  ? cn(ROW_BOX, "pr-[7px]")
+                  : "w-full gap-3 pr-3 text-left",
+              )}
+            >
+              <UserAvatar seed={seed} className="size-[22px] max-w-none" />
+              {!collapsed && (
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {name}
+                </span>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              className="w-56"
+              onCloseAutoFocus={finishOpeningSignOutConfirmation}
+            >
+              <DropdownMenuItem asChild>
+                <Link href="/settings?tab=profile">
+                  <UserAvatar seed={seed} className="size-4" />
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {name}
+                  </span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/billing">
+                  <CreditCard />
+                  {t("billing")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings">
+                  <Settings />
+                  {t("accountSettings")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/trash">
+                  <Trash2 />
+                  {t("trash")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/statistics">
+                  <BarChart3 />
+                  {t("statistics")}
+                </Link>
+              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">
+                    <Shield />
+                    {t("adminDashboard")}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={(event) => {
+                  event.preventDefault();
+                  openSignOutConfirmation();
+                }}
+              >
+                <LogOut />
+                {t("signOut")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        id={confirmationId}
+        role="dialog"
+        aria-labelledby={confirmationTitleId}
+        aria-describedby={confirmationDescriptionId}
+        side="top"
+        align="start"
+        sideOffset={8}
+        collisionPadding={10}
+        className="w-72 gap-3 rounded-xl p-3"
       >
-        <UserAvatar seed={seed} className="size-[22px] max-w-none" />
-        {!collapsed && (
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {name}
-          </span>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="w-56">
-        <DropdownMenuItem asChild>
-          <Link href="/billing">
-            <CreditCard />
-            {t("billing")}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings">
-            <Settings />
-            {t("accountSettings")}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/trash">
-            <Trash2 />
-            {t("trash")}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/statistics">
-            <BarChart3 />
-            {t("statistics")}
-          </Link>
-        </DropdownMenuItem>
-        {isAdmin && (
-          <DropdownMenuItem asChild>
-            <Link href="/admin">
-              <Shield />
-              {t("adminDashboard")}
-            </Link>
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
-          <LogOut />
-          {t("signOut")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <PopoverHeader>
+          <PopoverTitle id={confirmationTitleId}>
+            {t("signOutConfirmTitle")}
+          </PopoverTitle>
+          <PopoverDescription id={confirmationDescriptionId}>
+            {t("signOutConfirmDescription")}
+          </PopoverDescription>
+        </PopoverHeader>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setConfirmationOpen(false)}
+          >
+            {tCommon("cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={confirmSignOut}
+          >
+            {t("signOut")}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -965,9 +1064,9 @@ function FooterRow({
 }
 
 /**
- * Persistent update entry for both the desktop shell and the deployed web app.
- * A native update takes priority because restarting the shell also reloads the
- * current web app. Both variants require confirmation before interrupting work.
+ * Persistent update entry for the desktop shell, Microsoft Store package, and
+ * deployed web app. A desktop update takes priority because updating the shell
+ * also reloads the current web app.
  */
 function UpdateFooterCard({
   collapsed,
@@ -984,23 +1083,33 @@ function UpdateFooterCard({
   const confirmationDescriptionId = `${confirmationId}-description`;
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const desktopStatus = useDesktopUpdateStatus();
+  const windowsStoreUpdateAvailable = useWindowsStoreUpdateAvailable();
   const webUpdate = useNewVersion();
-  const isWebUpdate = desktopStatus.state === "idle";
+  const hasDirectDesktopUpdate = desktopStatus.state !== "idle";
+  const isStoreUpdate =
+    !hasDirectDesktopUpdate && windowsStoreUpdateAvailable;
+  const isWebUpdate = !hasDirectDesktopUpdate && !isStoreUpdate;
   if (isWebUpdate && !webUpdate.visible) return null;
 
-  const ready = isWebUpdate || desktopStatus.state === "ready";
+  const ready =
+    isWebUpdate || isStoreUpdate || desktopStatus.state === "ready";
   const pending = isWebUpdate && webUpdate.refreshing;
-  const label = isWebUpdate
-    ? tWebUpdate("title")
-    : tNav(
-        desktopStatus.state === "ready"
-          ? "updateReady"
-          : "updateDownloading",
-        { version: desktopStatus.version },
-      );
+  const label =
+    desktopStatus.state !== "idle"
+      ? tNav(
+          desktopStatus.state === "ready"
+            ? "updateReady"
+            : "updateDownloading",
+          { version: desktopStatus.version },
+        )
+      : isStoreUpdate
+        ? tNav("windowsStoreUpdateReady")
+        : tWebUpdate("title");
   const actionLabel = isWebUpdate
     ? tWebUpdate("refresh")
-    : tNav("updateAction");
+    : isStoreUpdate
+      ? tNav("windowsStoreUpdateAction")
+      : tNav("updateAction");
   const confirmationTitle = isWebUpdate
     ? tWebUpdate("confirmTitle")
     : tNav("updateConfirmTitle");
@@ -1015,6 +1124,10 @@ function UpdateFooterCard({
     handleConfirmationOpenChange(false);
     if (isWebUpdate) {
       webUpdate.refresh();
+      return;
+    }
+    if (isStoreUpdate) {
+      getDesktopBridge()?.openWindowsStoreUpdate?.();
       return;
     }
     getDesktopBridge()?.installUpdate();
@@ -1065,31 +1178,49 @@ function UpdateFooterCard({
   // The full card does not fit in the 56 px rail, so it becomes an icon row
   // with the same label, confirmation, and action.
   if (collapsed) {
+    const row = (
+      <FooterRow
+        icon={
+          isWebUpdate
+            ? RefreshCw
+            : isStoreUpdate
+              ? ShoppingBag
+              : ready
+                ? ArrowDownToLine
+                : Loader2
+        }
+        iconClassName={ready ? "size-4 text-white" : "animate-spin"}
+        className={
+          ready
+            ? "ml-1 h-7 w-7 justify-center rounded-full bg-[#0085FF] p-0 text-white hover:bg-[#0085FF]/90 hover:text-white"
+            : undefined
+        }
+        label={label}
+        collapsed
+        disabled={!ready || pending}
+        ariaControls={
+          ready && !pending && !isStoreUpdate ? confirmationId : undefined
+        }
+        ariaExpanded={
+          ready && !pending && !isStoreUpdate
+            ? confirmationOpen
+            : undefined
+        }
+        onClick={
+          isStoreUpdate
+            ? applyUpdate
+            : () => handleConfirmationOpenChange(true)
+        }
+      />
+    );
+    if (isStoreUpdate) return row;
     return (
       <Popover
         open={confirmationOpen}
         onOpenChange={handleConfirmationOpenChange}
       >
         <PopoverAnchor asChild>
-          <div>
-            <FooterRow
-              icon={
-                isWebUpdate ? RefreshCw : ready ? ArrowDownToLine : Loader2
-              }
-              iconClassName={ready ? "size-4 text-white" : "animate-spin"}
-              className={
-                ready
-                  ? "ml-1 h-7 w-7 justify-center rounded-full bg-[#0085FF] p-0 text-white hover:bg-[#0085FF]/90 hover:text-white"
-                  : undefined
-              }
-              label={label}
-              collapsed
-              disabled={!ready || pending}
-              ariaControls={ready && !pending ? confirmationId : undefined}
-              ariaExpanded={ready && !pending ? confirmationOpen : undefined}
-              onClick={() => handleConfirmationOpenChange(true)}
-            />
-          </div>
+          <div>{row}</div>
         </PopoverAnchor>
         {confirmation}
       </Popover>
@@ -1103,22 +1234,32 @@ function UpdateFooterCard({
         <span className="min-w-0">{label}</span>
       </p>
       {ready && (
-        <Popover
-          open={confirmationOpen}
-          onOpenChange={handleConfirmationOpenChange}
-        >
-          <PopoverTrigger asChild>
-            <Button
-              size="sm"
-              disabled={pending}
-              className="mt-2 w-full cursor-pointer rounded-md bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
-            >
-              {pending && <Loader2 className="animate-spin" />}
-              {actionLabel}
-            </Button>
-          </PopoverTrigger>
-          {confirmation}
-        </Popover>
+        isStoreUpdate ? (
+          <Button
+            size="sm"
+            className="mt-2 w-full cursor-pointer rounded-md bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
+            onClick={applyUpdate}
+          >
+            {actionLabel}
+          </Button>
+        ) : (
+          <Popover
+            open={confirmationOpen}
+            onOpenChange={handleConfirmationOpenChange}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                size="sm"
+                disabled={pending}
+                className="mt-2 w-full cursor-pointer rounded-md bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
+              >
+                {pending && <Loader2 className="animate-spin" />}
+                {actionLabel}
+              </Button>
+            </PopoverTrigger>
+            {confirmation}
+          </Popover>
+        )
       )}
     </div>
   );

@@ -190,11 +190,17 @@ describe("the `desktop/src/` shell", () => {
     expect(contract).toContain("openServerPicker?(): void;");
     expect(contract).toContain("checkForUpdates?(): Promise<void>;");
     expect(contract).toContain("copyDiagnosticReport?(): Promise<boolean>;");
+    expect(contract).toContain("openWindowsStoreUpdate?(): void;");
+    expect(contract).toContain("onWindowsStoreUpdateStatus?(");
 
     const preload = read("desktop/src/preload.ts");
     expect(preload).toContain('ipcRenderer.send("minddy:server-picker:open")');
     expect(preload).toContain('ipcRenderer.invoke("minddy:update:check")');
     expect(preload).toContain('ipcRenderer.invoke("minddy:diagnostics:copy")');
+    expect(preload).toContain('ipcRenderer.send("minddy:windows-store:open")');
+    expect(preload).toContain(
+      'ipcRenderer.send("minddy:windows-store-update-status-ready")',
+    );
     expect(preload).not.toContain("diagnosticReport");
 
     const main = read("desktop/src/main.ts");

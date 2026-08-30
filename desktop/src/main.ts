@@ -56,6 +56,7 @@ import {
 } from "@/lib/desktop/linux-background";
 import { notificationCapabilitiesForPlatform } from "@/lib/desktop/notification-capabilities";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
+import { WINDOWS_STORE_DEEP_LINK } from "@/lib/desktop/install-prompt";
 import {
   nativeNotificationSettingsUrl,
   nativePushContent,
@@ -71,6 +72,7 @@ import {
 } from "@/lib/desktop/session-carry";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { parseWnsHelperChannel } from "@/lib/desktop/wns";
+import { parseWindowsStoreUpdateProbe } from "@/lib/desktop/windows-store-update";
 import {
   desktopWindowFrameOptions,
   MACOS_TRAFFIC_LIGHT_POSITION,
@@ -147,8 +149,11 @@ const backgroundLaunchRequested =
 let linuxBackgroundEnabled = false;
 let linuxAutostartInstalled = false;
 let nativeNotificationsAvailable = true;
+let windowsStoreUpdateAvailable = false;
 
 const WNS_HELPER_TIMEOUT_MS = 5 * 60 * 1000;
+const STORE_UPDATE_HELPER_TIMEOUT_MS = 90 * 1000;
+const STORE_UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 function isWnsHelperAvailable(): boolean {
   return (
@@ -182,6 +187,67 @@ function runWnsHelper(args: string[]): Promise<string | null> {
 
 async function requestWnsChannel(): Promise<string | null> {
   return parseWnsHelperChannel(await runWnsHelper(["channel"]));
+}
+
+function isWindowsStoreUpdateHelperAvailable(): boolean {
+  return (
+    process.platform === "win32" &&
+    app.isPackaged &&
+    process.windowsStore &&
+    existsSync(
+      path.join(
+        process.resourcesPath,
+        "store-update",
+        "minddy-store-update.exe",
+      ),
+    )
+  );
+}
+
+function checkWindowsStoreUpdate(): Promise<boolean | null> {
+  if (!isWindowsStoreUpdateHelperAvailable()) return Promise.resolve(null);
+  const executable = path.join(
+    process.resourcesPath,
+    "store-update",
+    "minddy-store-update.exe",
+  );
+  return new Promise((resolve) => {
+    execFile(
+      executable,
+      [],
+      {
+        windowsHide: true,
+        timeout: STORE_UPDATE_HELPER_TIMEOUT_MS,
+        maxBuffer: 16 * 1024,
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          console.error(
+            "[updater/store] native helper failed:",
+            stderr.trim() || error.message,
+          );
+          resolve(null);
+          return;
+        }
+        resolve(parseWindowsStoreUpdateProbe(stdout)?.available ?? null);
+      },
+    );
+  });
+}
+
+function startWindowsStoreUpdateChecks(): void {
+  if (!isWindowsStoreUpdateHelperAvailable()) return;
+  const check = async () => {
+    const available = await checkWindowsStoreUpdate();
+    if (available === null || available === windowsStoreUpdateAvailable) return;
+    windowsStoreUpdateAvailable = available;
+    mainWindow?.webContents.send(
+      "minddy:windows-store-update-status",
+      available,
+    );
+  };
+  void check();
+  setInterval(check, STORE_UPDATE_CHECK_INTERVAL_MS);
 }
 
 /**
@@ -825,6 +891,18 @@ function registerIpc(): void {
     void shell.openExternal(url);
   });
 
+  ipcMain.on("minddy:windows-store:open", () => {
+    if (process.platform !== "win32" || !process.windowsStore) return;
+    void shell.openExternal(WINDOWS_STORE_DEEP_LINK);
+  });
+
+  ipcMain.on("minddy:windows-store-update-status-ready", (event) => {
+    event.sender.send(
+      "minddy:windows-store-update-status",
+      windowsStoreUpdateAvailable,
+    );
+  });
+
   ipcMain.on("minddy:auth-link-ready", () => flushAuthLink());
 
   ipcMain.on("minddy:server-picker:open", () => openCurrentServerPicker());
@@ -1358,6 +1436,7 @@ if (!app.requestSingleInstanceLock()) {
     // The window is passed to the updater so that its installation proposal
     // attaches to it, rather than floating alone in the middle of the screen.
     startAutoUpdates(() => mainWindow);
+    startWindowsStoreUpdateChecks();
     flushOpenLink();
     flushAuthLink();
 

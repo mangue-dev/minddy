@@ -63,6 +63,8 @@ win:
   # background below must stay transparent so Windows does not plate it dark.
   icon: build/icon-windows.png
   extraResources:
+    - from: build/store-update/${arch}
+      to: store-update
     - from: build/wns/${arch}
       to: wns
 

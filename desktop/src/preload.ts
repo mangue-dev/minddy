@@ -104,6 +104,23 @@ const bridge: DesktopBridge = {
     ipcRenderer.send("minddy:open-external", url);
   },
 
+  openWindowsStoreUpdate() {
+    ipcRenderer.send("minddy:windows-store:open");
+  },
+
+  onWindowsStoreUpdateStatus(handler) {
+    const listener = (_event: unknown, available: boolean) =>
+      handler(available);
+    ipcRenderer.on("minddy:windows-store-update-status", listener);
+    ipcRenderer.send("minddy:windows-store-update-status-ready");
+    return () => {
+      ipcRenderer.removeListener(
+        "minddy:windows-store-update-status",
+        listener,
+      );
+    };
+  },
+
   onAuthLink(handler: (link: DesktopAuthLink) => void) {
     const listener = (_event: unknown, link: DesktopAuthLink) => handler(link);
     ipcRenderer.on("minddy:auth-link", listener);
