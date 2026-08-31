@@ -29,6 +29,10 @@ if (manifest.release?.version !== version || manifest.release?.tag !== `v${versi
 const tag = `v${version}`;
 const reference = `${image}@${digest}`;
 const identityName = `minddy-v${version}-container.txt`;
+const signatureIdentity = process.env.COSIGN_CERTIFICATE_IDENTITY?.trim()
+  || "https://github.com/mangue-dev/minddy/.github/workflows/release.yml@refs/heads/production";
+const signatureIssuer = process.env.COSIGN_CERTIFICATE_ISSUER?.trim()
+  || "https://token.actions.githubusercontent.com";
 manifest.container = {
   image,
   tag: `${image}:${tag}`,
@@ -45,7 +49,8 @@ manifest.container = {
   },
   signature: {
     type: "keyless Sigstore",
-    identity: "https://github.com/mangue-dev/minddy-issues/.github/workflows/release.yml@refs/heads/production",
+    identity: signatureIdentity,
+    issuer: signatureIssuer,
   },
 };
 await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -59,6 +64,8 @@ const identity = [
   "sbom=SPDX OCI referrer",
   "provenance=SLSA OCI attestation",
   "signature=keyless Sigstore",
+  `signature-identity=${signatureIdentity}`,
+  `signature-issuer=${signatureIssuer}`,
   "",
 ].join("\n");
 await writeFile(path.join(output, identityName), identity);

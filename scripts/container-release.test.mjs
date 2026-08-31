@@ -4,6 +4,10 @@ import test from "node:test";
 
 const dockerignore = readFileSync(new URL("../.dockerignore", import.meta.url), "utf8");
 const dockerfile = readFileSync(new URL("../Dockerfile", import.meta.url), "utf8");
+const containerArtifact = readFileSync(
+  new URL("./add-container-release-artifact.mjs", import.meta.url),
+  "utf8",
+);
 const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
 
 test("keeps runtime email templates in the container build context", () => {
@@ -23,6 +27,16 @@ test("copies dependency patches before the frozen container install", () => {
   assert.ok(patchCopyIndex >= 0);
   assert.ok(patchCopyIndex < installIndex);
   assert.match(dockerignore, /^\.deepsec$/m);
+});
+
+test("records the actual Cosign identity without the retired repository name", () => {
+  assert.doesNotMatch(containerArtifact, /minddy-issues/);
+  assert.match(containerArtifact, /COSIGN_CERTIFICATE_IDENTITY/);
+  assert.match(containerArtifact, /COSIGN_CERTIFICATE_ISSUER/);
+  assert.match(
+    containerArtifact,
+    /https:\/\/github\.com\/mangue-dev\/minddy\/\.github\/workflows\/release\.yml@refs\/heads\/production/,
+  );
 });
 
 test("builds architecture-independent assets natively and strips runtime package managers", () => {
