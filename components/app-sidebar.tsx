@@ -21,10 +21,8 @@ import {
   useWideLayout,
   useWindowButtonsSlot,
 } from "@/lib/use-window-buttons";
-import {
-  WINDOW_BUTTONS_WIDTH,
-  WindowButtonDecoys,
-} from "@/components/desktop-window-buttons";
+import { WindowButtonDecoys } from "@/components/desktop-window-buttons";
+import { isMacWindowControlsZone } from "@/lib/sidebar-window-controls";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
@@ -230,14 +228,14 @@ function SidebarTopAction({
     "text-sidebar-foreground/65 hover:text-sidebar-foreground",
   );
   const content = (
-    <>
+    <span className="relative flex size-[18px] shrink-0">
       <Icon className="size-[18px]" />
       {badge != null ? (
-        <span className="absolute -right-0.5 -top-0.5 flex items-center justify-center rounded-full bg-sidebar">
+        <span className="absolute -right-2 -top-1.5 flex items-center justify-center rounded-full bg-sidebar">
           {badge}
         </span>
       ) : null}
-    </>
+    </span>
   );
   const control = href ? (
     <Link href={href} aria-label={label} className={className}>
@@ -1428,20 +1426,21 @@ export function AppSidebar({
   /**
    * Does the pointer move out of the bar THROUGH THE macOS BUTTONS? (MIN-291)
    *
-   * They are native: drawn over the page, they receive no
-   * DOM event and do not emit any. Go and click them from a rail
-   * unfolded, it is therefore EXIT from the bar from Chromium's point of view — the rail
-   * closes, the pimples disappear with it, and they become
-   * impossible to reach. The pointer will not even have finished its gesture.
+   * They are native: drawn over the page, they receive no DOM event and emit
+   * none. Moving to them from an expanded rail is therefore a sidebar exit
+   * from Chromium's point of view. Closing the rail at that point would hide
+   * the controls before the pointer can finish its gesture.
    *
-   * We recognize this outing from the place where it takes place, for lack of a better word: the
-   * top left corner, the same one that the score line reserves for them. There
-   * box takes `trafficLightPosition` (desktop/src/main.ts) and the
-   * `padding-left` de `.sidebar-brand-row` (app/globals.css) — trois endroits,
-   * a single object, and they must be read together.
+   * Detect the stable macOS titlebar corner rather than the asynchronous
+   * window-button visibility result. The result is temporarily false while an
+   * expanding rail asks Electron to restore the controls, which is exactly
+   * when this guard is needed.
    */
   const leavesThroughWindowButtons = (e: { clientX: number; clientY: number }) =>
-    windowButtons.reserved && e.clientX <= WINDOW_BUTTONS_WIDTH && e.clientY <= 60;
+    isMacWindowControlsZone(
+      document.documentElement.dataset.desktopPlatform,
+      e,
+    );
 
   /**
    * The pointer has gone to the buttons: we do not close, and we wait to
@@ -1540,8 +1539,8 @@ export function AppSidebar({
     };
     document.addEventListener("pointermove", onMove);
     return () => document.removeEventListener("pointermove", onMove);
-    // `scheduleClose` only reads refs: its closure may be out of date without
-    // que rien ne change.
+    // `scheduleClose` only reads refs: its closure can be stale without
+    // changing the behavior.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay, hovered]);
 
@@ -1605,6 +1604,7 @@ export function AppSidebar({
       <motion.aside
         ref={railRef}
         data-collapsed={collapsed}
+        data-rail-hovered={overlay && hovered ? "" : undefined}
         initial={{ width: asideWidth }}
         animate={{ width: asideWidth }}
         transition={shellTransition}
@@ -1690,7 +1690,7 @@ export function AppSidebar({
             GUTTER,
           )}
         >
-          {windowButtons.decoy && <WindowButtonDecoys />}
+          {!collapsed && windowButtons.decoy && <WindowButtonDecoys />}
           <SidebarBrand />
           <SidebarTopActions
             collapsed={collapsed}

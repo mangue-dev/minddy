@@ -2257,6 +2257,12 @@ html[data-desktop-platform="darwin"]
    hides those actions and restores the Minddy mark. Web, Windows, and Linux
    always keep the mark visible. */
 html[data-desktop-platform="darwin"]
+  [data-rail-hovered]
+  .sidebar-brand-row {
+  -webkit-app-region: no-drag;
+}
+
+html[data-desktop-platform="darwin"]
   [data-collapsed="false"]
   .sidebar-brand-mark {
   display: none;

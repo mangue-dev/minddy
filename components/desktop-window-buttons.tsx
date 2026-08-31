@@ -6,6 +6,9 @@ import {
   useWideLayout,
   useWindowButtonsSlot,
 } from "@/lib/use-window-buttons";
+import { WINDOW_BUTTONS_WIDTH } from "@/lib/sidebar-window-controls";
+
+export { WINDOW_BUTTONS_WIDTH } from "@/lib/sidebar-window-controls";
 
 /**
  * Remove macOS buttons while a dialog is open (MIN-291).
@@ -30,13 +33,10 @@ export function DesktopWindowButtons() {
  * from their left edge (19) to the right edge of the last pellet (65 + 14 = 79),
  * plus a margin.
  *
- * This is what `.sidebar-brand-row[data-window-buttons]` reserves in
- * app/globals.css, what the header reserves in compact mode, and what the guard
- * of the rail recognizes as "the pointer has gone to the buttons". Only one
- * digit, and it is read again with `TRAFFIC_LIGHTS` (desktop/src/main.ts).
+ * The compact header reserves this width, and the rail pointer guard recognizes
+ * the same area. The shared value lives in `lib/sidebar-window-controls.ts`;
+ * Electron's matching native geometry lives in `desktop/src/main.ts`.
  */
-export const WINDOW_BUTTONS_WIDTH = 84;
-
 /**
  * macOS Button Lures (MIN-291).
  *
