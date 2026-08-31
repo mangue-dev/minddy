@@ -16,6 +16,15 @@ test("keeps runtime email templates in the container build context", () => {
   );
 });
 
+test("copies dependency patches before the frozen container install", () => {
+  const patchCopyIndex = dockerfile.indexOf("COPY patches ./patches");
+  const installIndex = dockerfile.indexOf("pnpm install --frozen-lockfile");
+
+  assert.ok(patchCopyIndex >= 0);
+  assert.ok(patchCopyIndex < installIndex);
+  assert.match(dockerignore, /^\.deepsec$/m);
+});
+
 test("builds architecture-independent assets natively and strips runtime package managers", () => {
   const nodeDigest = "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df";
   assert.match(
