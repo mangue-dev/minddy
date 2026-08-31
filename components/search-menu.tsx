@@ -64,6 +64,8 @@ export type SearchMenuProps = {
  * (relations: type then ticket) and must start from an empty field. */
   searchValue?: string;
   onSearchValueChange?: (value: string) => void;
+  /** Disable cmdk ranking when the caller already filters and orders items. */
+  shouldFilter?: boolean;
   emptyText?: string;
   /** Hides the “No results” line. Menus that carry a
  * creation line keep it visible when nothing matches: it IS the answer,
@@ -91,6 +93,7 @@ export function SearchMenu({
   searchPlaceholder,
   searchValue,
   onSearchValueChange,
+  shouldFilter,
   emptyText,
   hideEmpty,
   align = "start",
@@ -116,7 +119,7 @@ export function SearchMenu({
       onClick={stop}
       onPointerDown={stop}
     >
-      <Command>
+      <Command shouldFilter={shouldFilter}>
         <DropdownSearchRow>
           <CommandPrimitive.Input
             autoFocus

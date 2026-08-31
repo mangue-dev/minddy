@@ -13,7 +13,7 @@ export const codeBlock: PageBlock = {
   labelKey: "blockCode",
   slash: {
     group: "advanced",
-    order: 1,
+    order: 2,
     keywords: ["code", "snippet", "pre", "```"],
   },
   turnInto: (editor) => editor.chain().focus().toggleCodeBlock().run(),

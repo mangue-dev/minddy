@@ -36,6 +36,7 @@ import {
   type ObjectiveStatus,
 } from "@/lib/objective-constants";
 import { EmptyScene } from "@/components/empty-scene";
+import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { NumoIcon } from "@/components/numo-icon";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
 import { SearchMenu } from "@/components/search-menu";
@@ -44,6 +45,7 @@ import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
@@ -144,11 +146,11 @@ function ObjectiveFilterMenu({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="text-muted-foreground hover:text-foreground"
+          className={SIDEBAR_COMPACT_CONTROL_CLASS}
           aria-label={tooltip}
         >
           <span className="relative flex items-center justify-center">
-            <ListFilter className="size-4" />
+            <ListFilter className="size-[18px]" />
             {active ? (
               /* The ring in the color of the bar detaches the pellet from the line
  of the icon, which passes just below. */
@@ -171,7 +173,6 @@ function ObjectiveFilterMenu({
           <span className="truncate">{t("filterActive")}</span>
         </CommandItem>
         {OBJECTIVE_STATUSES.map((s) => {
-          const Icon = s.icon;
           return (
             <CommandItem
               key={s.value}
@@ -180,7 +181,7 @@ function ObjectiveFilterMenu({
               onSelect={() => pick(s.value)}
               {...checkedProps(state === s.value)}
             >
-              <Icon className={cn("size-4 shrink-0", s.color)} />
+              <ObjectiveStatusIndicator status={s.value} className="size-4" />
               <span className="truncate">{tStatus(s.value)}</span>
             </CommandItem>
           );
@@ -219,10 +220,10 @@ function ObjectiveRow({
 }) {
   const tStatus = useTranslations("ObjectiveStatus");
   const status = OBJECTIVE_STATUS_MAP[objective.status];
-  const StatusIcon = status.icon;
   return (
     <button
       type="button"
+      data-sidebar-filter-result
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -248,7 +249,7 @@ function ObjectiveRow({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <StatusIcon className={cn("size-3.5 shrink-0", status.color)} />
+        <ObjectiveStatusIndicator status={status.value} className="size-3.5" />
         <span className="shrink-0 text-xs text-muted-foreground">
           {tStatus(status.value)}
         </span>
@@ -527,14 +528,17 @@ function ObjectivesInner() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="-mr-2 text-muted-foreground hover:text-foreground"
+                  className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
                   aria-label={t("newObjective")}
                   onClick={() => setDialogOpen(true)}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-[18px]" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t("newObjective")}</TooltipContent>
+              <TooltipContent className="flex items-center gap-2">
+                <span>{t("newObjective")}</span>
+                <Kbd size="sm">O</Kbd>
+              </TooltipContent>
             </Tooltip>
           </>
         }

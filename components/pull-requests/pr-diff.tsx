@@ -74,7 +74,7 @@ import {
  * Diff view of a PR (MIN-66, passed to `@pierre/diffs` in MIN-181): list of
  * collapsible files with +/− counters, unified ↔ side-by-side toggle, and
  * unfolding the hidden context between the hunks GitHub style. Consumed by the
- * detail panel of a PR (pre-detail), the diff sheets of a commit and
+ * detail panel of a PR (pre-detail), the diff panels of a commit and
  * of an agent run.
  *
  * GitHub returns one `patch` per file (a fragment of hunks): we reconstruct a
@@ -964,41 +964,48 @@ export function PrDiff({
   return (
     <PrDiffWorkers>
       <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
-        <div className="flex items-center justify-between gap-3">
-          {/* The counter IS the tree trigger: it already occupied this
-              place and already says what the tree is talking about. One more button in the
-              bar would be a chrome that no one asked for. */}
-          <PrFileTreeButton
-            files={files}
-            totalAdditions={totalAdd}
-            totalDeletions={totalDel}
-            onSelect={jumpToFile}
-          />
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setWrapChoice(!wrap)}
-              aria-pressed={wrap}
-              aria-label={t("wrapLines")}
-              title={t("wrapLines")}
-              className={cn(
-                "flex size-7 items-center justify-center rounded-md border transition-colors",
-                wrap
-                  ? "border-brand/40 bg-brand/10 text-brand"
-                  : "border-border text-muted-foreground hover:bg-muted",
-              )}
-            >
-              <WrapText className="size-3.5" />
-            </button>
-            <SegmentedControl
-              className="w-40"
-              value={viewType}
-              onChange={setViewType}
-              options={[
-                { value: "unified", label: t("unified") },
-                { value: "split", label: t("split") },
-              ]}
+        <div className="flex flex-col rounded-lg border border-border bg-muted/20">
+          {/* Navigation and presentation answer different questions. Keeping
+              them on separate rows makes the file tree the clear entry point
+              instead of one control among several unrelated switches. */}
+          <div className="flex min-h-10 items-center px-3">
+            <PrFileTreeButton
+              files={files}
+              totalAdditions={totalAdd}
+              totalDeletions={totalDel}
+              onSelect={jumpToFile}
             />
+          </div>
+          <div className="flex min-h-11 items-center justify-between gap-3 border-t border-border px-3 py-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("displayOptions")}
+            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setWrapChoice(!wrap)}
+                aria-pressed={wrap}
+                aria-label={t("wrapLines")}
+                title={t("wrapLines")}
+                className={cn(
+                  "flex size-7 items-center justify-center rounded-md border transition-colors",
+                  wrap
+                    ? "border-brand/40 bg-brand/10 text-brand"
+                    : "border-border text-muted-foreground hover:bg-muted",
+                )}
+              >
+                <WrapText className="size-3.5" />
+              </button>
+              <SegmentedControl
+                className="w-40"
+                value={viewType}
+                onChange={setViewType}
+                options={[
+                  { value: "unified", label: t("unified") },
+                  { value: "split", label: t("split") },
+                ]}
+              />
+            </div>
           </div>
         </div>
 

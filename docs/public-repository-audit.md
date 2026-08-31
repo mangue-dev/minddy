@@ -88,7 +88,7 @@ unexpected unreachable objects.
 | License and notices | `LICENSE`, `NOTICE`, and `docs/licensing.md` record AGPL-3.0-only, the historical MIT notice, contributor identities, and the DCO policy. | Ready. |
 | Public/private boundary | `docs/editions.md`, self-hosting documentation, and the licensing policy keep billing, fleet operations, support cases, and service-account administration outside the public core. | Ready. |
 | Fonts | Inter ships with `app/fonts/LICENSE-Inter.txt`. | Ready. |
-| Product and import choices | Third-party logo artwork was replaced with project-authored neutral pictograms; product names only identify compatibility. | Ready. |
+| Product and import choices | Agent marks come from the MIT-licensed `@lobehub/icons` package; import-provider marks come from the CC0-1.0-licensed `simple-icons` package. The VS Code stable icon comes from Microsoft's official brand download and is used only with its connection instructions. Product names and marks identify compatibility and do not imply endorsement. | Ready. |
 | minddy brand | Logos and icons are maintained by the project copyright holder and excluded from the software trademark grant. | Ready. |
 | Screenshots and capture fixtures | The tracked captures are generated from synthetic product fixtures and contain no production credential or internal endpoint. | Ready. |
 | Dependencies | Lockfile audit, Dependabot, and the release container scan have no open fixed high or critical finding. | Recheck for the exact final candidate. |

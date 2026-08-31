@@ -62,6 +62,20 @@ export interface MentionPage {
   icon: string | null;
 }
 
+/** A project as it appears in a mention. Its visual identity travels with the
+ * match so an editor can rebuild the same chip after re-reading plain text. */
+export interface MentionProject {
+  id: string;
+  /** The project name is written after the at sign. */
+  name: string;
+  /** Search-only project key, carried by mention sources rather than the scan. */
+  key: string;
+  /** Seed of the generated orb, after applying the project fallback rule. */
+  avatarSeed: string;
+  /** Imported favicon, or null when the generated orb is used. */
+  iconUrl: string | null;
+}
+
 export type ScannedMention =
   | { type: "numo"; member?: undefined }
   | { type: "member"; member: Member }
@@ -71,6 +85,7 @@ export type ScannedMention =
   | { type: "forge"; member?: undefined; login: string; avatarUrl: string | null }
   | { type: "issue"; member?: undefined; issue: MentionIssue }
   | { type: "objective"; member?: undefined; objective: MentionObjective }
+  | { type: "project"; member?: undefined; project: MentionProject }
   | { type: "page"; member?: undefined; page: MentionPage };
 
 /** A piece of bare text, or a recognized statement. Never both.
@@ -195,6 +210,7 @@ export function forgeMentionScanner(
  */
 export function contentMentionScanner(source: {
   members?: Member[];
+  projects?: MentionProject[];
   issues?: MentionIssue[];
   objectives?: MentionObjective[];
   pages?: MentionPage[];
@@ -208,6 +224,10 @@ export function contentMentionScanner(source: {
       ...(source.pages ?? []).map((page) => ({
         label: page.title,
         mention: { type: "page", page } as const,
+      })),
+      ...(source.projects ?? []).map((project) => ({
+        label: project.name,
+        mention: { type: "project", project } as const,
       })),
       ...(source.objectives ?? []).map((objective) => ({
         label: objective.name,

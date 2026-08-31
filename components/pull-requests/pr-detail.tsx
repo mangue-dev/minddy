@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import Link from "next/link";
+import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
@@ -1074,7 +1075,7 @@ export function PrDetail({
       {/* Header WITHOUT border: it's the fade of the thread that says it continues
           above, and a separate bar would cut it off from what it covers (even
           party than the agent conversation). */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
+      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -1198,19 +1199,11 @@ export function PrDetail({
             <PrStateBadge state={badgeState} icon />
           </div>
         ) : (
-          // Four side-by-side buttons fit on a wide, overflowing screen
-          // of the telephone: the cluster does not shrink (a label is not cut
-          // not), so it was pushing off the screen. She FALLS BACK to the line
-          // (`flex-wrap`) rather than overflowing, and under `lg` everything that is not
-          // not the main gesture — to merge, or to propose — passes under a
-          // “…”. What remains visible is what we open a PR for
-          // phone ; the rest is a tap away.
-          //
-          // The threshold is `lg`, not `md`: at `md` the page is ALREADY in two
-          // columns, and the detail only has what the list (320 px) and the rail
-          // leave him — the entire line would still overflow there. Beyond that, she
-          // holds, even if it means writing it on two lines.
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+          // Under `lg`, secondary actions move into the overflow menu. The
+          // remaining actions stay on the shared 60 px header line; if a long
+          // translation still exceeds the pane, the header remains horizontally
+          // reachable instead of growing vertically.
+          <div className="ml-auto flex shrink-0 items-center justify-end gap-1.5">
             {mergeBlockedByRepo ? (
               <span className="text-xs text-muted-foreground">{t("mergeBlockedByRepo")}</span>
             ) : null}
@@ -1448,7 +1441,7 @@ export function PrDetail({
             )}
           </div>
         )}
-      </div>
+      </AppContentHeader>
 
       {/* Fade OFF under Files tab (MIN-182). A faded mask
           everything it contains, including sticky elements: the header of

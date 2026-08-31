@@ -1,6 +1,9 @@
 import { type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getResolvedBilling } from "@/lib/server/billing-accounts";
+import {
+  getResolvedBilling,
+  resolveBasePlanFromBillingAccount,
+} from "@/lib/server/billing-accounts";
 import type { BillingStatusResponse } from "@/lib/billing-types";
 import { managedServices } from "@/lib/managed-services";
 
@@ -16,6 +19,13 @@ export async function GET(request: NextRequest) {
   const response: BillingStatusResponse = {
     planId: billing.planId,
     source: billing.source,
+    adminOverride:
+      billing.source === "admin_override"
+        ? {
+            expiresAt: account?.admin_override_expires_at ?? null,
+            basePlanId: resolveBasePlanFromBillingAccount(account).planId,
+          }
+        : null,
     managedBilling: services.billing,
     managedAi: services.ai,
     stripeConfigured: billing.stripeConfigured,

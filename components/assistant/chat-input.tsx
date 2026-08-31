@@ -14,14 +14,19 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   Button,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
+  CommandShortcut,
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
-import { ArrowUp, Paperclip, Square } from "lucide-react";
+import { ArrowUp, Paperclip, Plus, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionChip } from "@/components/mention-chip";
 import {
+  MentionFigure,
   MentionSuggestions,
   filterMentions,
   type MentionOption,
@@ -31,12 +36,36 @@ import {
   filterCommands,
   type SlashCommandOption,
 } from "@/components/assistant/slash-menu";
-import { ResourcePills, DropOverlay, useFileDrop } from "@/components/resources";
+import {
+  ResourcePills,
+  DropOverlay,
+  useFileDrop,
+  type ResourceLike,
+} from "@/components/resources";
+import {
+  ScrollableContextRow,
+  type AdaptiveContextItem,
+} from "@/components/assistant/adaptive-context-row";
+import { SearchMenu } from "@/components/search-menu";
 import { SendShortcutKeys } from "@/components/send-shortcut";
+import { Kbd } from "@/components/ui/kbd";
+import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
-import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
+import {
+  filterMentionItems,
+  findActiveMentionQuery,
+} from "@/lib/mention-menu";
+import {
+  useAttachmentUploads,
+  type PendingResource,
+} from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
-import type { AssistantCommandId, AssistantMention } from "@/lib/assistant-types";
+import type {
+  AssistantCommandId,
+  AssistantMention,
+  AssistantPinnedContext,
+} from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import {
   Tooltip,
@@ -48,6 +77,7 @@ import {
     text-ish) — MIN-24 scope. */
 const ACCEPT =
   "image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json,.log";
+const ATTACHMENT_SHORTCUT_KEY = "a";
 
 /** The envelope of a mention in the editor: a NON-editable, empty node, in
  which React carries the real pill (MentionChip). Composing it does not redraw
@@ -96,6 +126,27 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
   };
 }
 
+function createMentionNode(option: MentionOption): HTMLSpanElement {
+  const pill = document.createElement("span");
+  pill.contentEditable = "false";
+  pill.dataset.mentionType = option.type;
+  pill.dataset.mentionId = option.id;
+  pill.dataset.mentionLabel = option.label;
+  if (option.avatarSeed) pill.dataset.mentionSeed = option.avatarSeed;
+  const iconAttr = option.iconUrl ?? option.icon;
+  if (iconAttr) pill.dataset.mentionIcon = iconAttr;
+  if (option.color) pill.dataset.mentionColor = option.color;
+  pill.className = MENTION_SLOT_CLASS;
+  return pill;
+}
+
+export interface ChatInputContextAttachments {
+  resources: ResourceLike[];
+  pending: PendingResource[];
+  onRemove: (resource: ResourceLike) => void;
+  onRemovePending: (localId: string) => void;
+}
+
 interface ChatInputProps {
   onSend: (
     message: string,
@@ -128,12 +179,13 @@ interface ChatInputProps {
    */
   hideAttach?: boolean;
   /**
-   * Context row placed at the top of the composer, above the text (the
-   * Numo context pills and the @ button). She lives with the appellant: the
-   * composer knows nothing about what she is wearing, he just lends her his place —
-   * whose radius is calculated for a concentric nesting.
+   * Context row placed at the top of the composer, above the text. A render
+   * function receives the current uploads so the host can merge every context
+   * item into one adaptive row.
    */
-  contextSlot?: ReactNode;
+  contextSlot?:
+    | ReactNode
+    | ((attachments: ChatInputContextAttachments) => ReactNode);
   /**
    * Place the context row in a banner behind the top of the composer.
    * The agent's conversations bring together the choices which determine his
@@ -149,6 +201,9 @@ interface ChatInputProps {
    */
   mentionables?: MentionOption[];
   onMentionQuery?: (active: boolean) => void;
+  /** Adds a mentionable entity to Numo's pinned context. When provided, the
+   * left-side add button combines this flat picker with file upload. */
+  onAddContext?: (item: AssistantPinnedContext) => void;
   /**
    * The “/” commands offered when the message STARTS with a slash.
    * Empty/absent = no slash menu at all (composers outside the Numo shell).
@@ -209,6 +264,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       contextPlacement = "inside",
       mentionables,
       onMentionQuery,
+      onAddContext,
       commands,
       initialValue,
       leadingControls,
@@ -221,22 +277,122 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   ) {
     const t = useTranslations("Assistant");
     const isSend = useIsSendShortcut();
+    const modKey = useModKey();
     const tAttach = useTranslations("Resources");
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [addMenuOpen, setAddMenuOpen] = useState(false);
+    const [addMenuQuery, setAddMenuQuery] = useState("");
+    const [addMenuContainer, setAddMenuContainer] = useState<HTMLElement | null>(
+      null,
+    );
     const [isEmpty, setIsEmpty] = useState(true);
     const [isFocused, setIsFocused] = useState(false);
     const { user } = useAuth();
     const userId = user?.id;
     const uploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
-        // The agent accepts a message that steers it while it works
+    const uploadedResources = uploads.pending.filter(
+      (entry) => entry.status === "done",
+    );
+    const removeUploadedResource = useCallback(
+      (resource: ResourceLike) => {
+        const match = uploads.pending.find(
+          (entry) => entry.storage_path === resource.storage_path,
+        );
+        if (match) uploads.remove(match.localId);
+      },
+      [uploads],
+    );
+    const contextAttachments: ChatInputContextAttachments = {
+      resources: uploadedResources,
+      pending: uploads.pending,
+      onRemove: removeUploadedResource,
+      onRemovePending: uploads.remove,
+    };
+    const mergedContext =
+      typeof contextSlot === "function"
+        ? contextSlot(contextAttachments)
+        : contextSlot;
+    const contextIncludesAttachments = typeof contextSlot === "function";
+    const standaloneAttachmentItems: AdaptiveContextItem[] = [
+      ...uploadedResources.map((resource) => ({
+        key: `resource:${resource.localId}`,
+        render: () => (
+          <ResourcePills
+            radius="md"
+            className="flex-nowrap"
+            pillClassName="shadow-none"
+            resources={[resource]}
+            onRemove={removeUploadedResource}
+          />
+        ),
+      })),
+      ...uploads.pending
+        .filter((resource) => resource.status === "uploading")
+        .map((resource) => ({
+          key: `pending:${resource.localId}`,
+          render: () => (
+            <ResourcePills
+              radius="md"
+              className="flex-nowrap"
+              pillClassName="shadow-none"
+              pending={[resource]}
+              onRemovePending={uploads.remove}
+            />
+          ),
+        })),
+    ];
+    // The agent accepts a message that steers it while it works
     // (`sendWhileStreaming`): its files must remain reachable in this
     // same case. The Numo cat keeps its button hidden as long as it generates.
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
+    const hasMentionMenu = mentionables !== undefined || !!onAddContext;
+    const canAdd = canAttach || !!onAddContext;
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
     });
+
+    const addMenuAnchorRef = useCallback((node: HTMLDivElement | null) => {
+      setAddMenuContainer(
+        node
+          ? (node.closest('[data-slot="sheet-content"]') as HTMLElement | null)
+          : null,
+      );
+    }, []);
+
+    const handleAddMenuOpenChange = useCallback(
+      (open: boolean) => {
+        setAddMenuOpen(open);
+        if (open) onMentionQuery?.(true);
+        else setAddMenuQuery("");
+      },
+      [onMentionQuery],
+    );
+
+    const addContextOptions = useMemo(
+      () => filterMentionItems(mentionables ?? [], addMenuQuery),
+      [addMenuQuery, mentionables],
+    );
+
+    const handleAttachShortcut = useCallback(
+      (e: React.KeyboardEvent) => {
+        if (
+          !canAttach ||
+          disabled ||
+          !userId ||
+          !matchesModShiftCombo(e, ATTACHMENT_SHORTCUT_KEY)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        setAddMenuOpen(false);
+        setAddMenuQuery("");
+        fileInputRef.current?.click();
+      },
+      [canAttach, disabled, userId],
+    );
 
     const serializeContent = useCallback((): string => {
       const el = editorRef.current;
@@ -339,14 +495,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!el.contains(node)) return null;
       const end = sel.anchorOffset;
       const before = (node.textContent ?? "").slice(0, end);
-      // An “@” at the beginning of a word only — not that of an email address.
-      const match = /(^|[\s ])@([^\s @]{0,30})$/.exec(before);
+      const match = findActiveMentionQuery(before);
       if (!match) return null;
       return {
         node: node as Text,
-        start: end - match[2].length - 1,
+        start: match.start,
         end,
-        query: match[2],
+        query: match.query,
       };
     }, []);
 
@@ -390,16 +545,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         range.setEnd(found.node, found.end);
         range.deleteContents();
 
-        const pill = document.createElement("span");
-        pill.contentEditable = "false";
-        pill.dataset.mentionType = option.type;
-        pill.dataset.mentionId = option.id;
-        pill.dataset.mentionLabel = option.label;
-        if (option.avatarSeed) pill.dataset.mentionSeed = option.avatarSeed;
-        const iconAttr = option.iconUrl ?? option.icon;
-        if (iconAttr) pill.dataset.mentionIcon = iconAttr;
-        if (option.color) pill.dataset.mentionColor = option.color;
-        pill.className = MENTION_SLOT_CLASS;
+        const pill = createMentionNode(option);
         range.insertNode(pill);
 
         // Unbreakable space after the pill: without it, the caret finds itself
@@ -423,6 +569,47 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         syncMentionSlots();
       },
       [readMention, onMentionQuery, syncMentionSlots],
+    );
+
+    const addContextOption = useCallback(
+      (option: MentionOption) => {
+        if (onAddContext) {
+          onAddContext({
+            kind: option.type,
+            id: option.id,
+            label: option.label,
+            ...(option.detail ? { detail: option.detail } : {}),
+            ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
+            ...(option.color !== undefined ? { color: option.color } : {}),
+            ...(option.icon !== undefined ? { icon: option.icon } : {}),
+          });
+        } else {
+          const el = editorRef.current;
+          if (!el) return;
+          const current = el.textContent ?? "";
+          if (current && !/[\s ]$/.test(current)) {
+            el.appendChild(document.createTextNode(" "));
+          }
+          const pill = createMentionNode(option);
+          const space = document.createTextNode(" ");
+          el.append(pill, space);
+
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.setStart(space, 1);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          el.focus();
+          setIsEmpty(false);
+          syncMentionSlots();
+        }
+        setAddMenuOpen(false);
+        setAddMenuQuery("");
+      },
+      [onAddContext, syncMentionSlots],
     );
 
     /** The mentions actually made in the text, duplicated. */
@@ -820,6 +1007,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           className,
         )}
         onMouseDown={handleContainerMouseDown}
+        onKeyDownCapture={handleAttachShortcut}
       >
         {/* Each mention placed in the text receives ITS pill, carried in its
  envelope: same component as in the bubble sent, so never
@@ -867,9 +1055,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
  turns on or off — otherwise the editor loses focus (the FocusScope of the
  Sheet then rests it on the shell) and the text typed during the
  response disappears. */}
-        {contextSlot && contextPlacement === "above" ? (
+        {mergedContext && contextPlacement === "above" ? (
           <div className="relative z-0 mx-3 -mb-7 flex min-h-[70px] items-start rounded-t-[1.5rem] bg-muted/60 px-2 pt-2 dark:bg-muted/35">
-            {contextSlot}
+            {mergedContext}
           </div>
         ) : null}
         <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
@@ -885,29 +1073,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {...(canAttach ? drop.handlers : {})}
         >
           <DropOverlay show={canAttach && drop.dragging} />
-          {/* Context row (pills + @ button), provided by the host. She
- scrolls horizontally and therefore keeps its own row: the
- attachments are stacked below. Concentric
- nesting: the surface is rounded-2xl (--radius-2xl =
- --radius + 8px = 24px), so a pill in rounded-md
- (--radius - 2px = 14px) + the 10px (p-2.5) which separate it du
- edge === 24px. */}
-          {contextPlacement === "inside" ? contextSlot : null}
-          {uploads.pending.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
-              <ResourcePills
-                radius="md"
-                pillClassName="shadow-none"
-                resources={uploads.pending.filter((p) => p.status === "done")}
-                pending={uploads.pending}
-                onRemove={(a) => {
-                  const match = uploads.pending.find(
-                    (p) => p.storage_path === a.storage_path
-                  );
-                  if (match) uploads.remove(match.localId);
-                }}
-                onRemovePending={uploads.remove}
-              />
+          {/* The host can merge semantic context and attachments into this
+          single adaptive row. Concentric nesting: the surface is rounded-2xl
+          (24px), while its rounded-md pills sit behind a 10px gutter. */}
+          {contextPlacement === "inside" ? mergedContext : null}
+          {!contextIncludesAttachments && standaloneAttachmentItems.length > 0 && (
+            <div className="px-2.5 pt-2.5">
+              <ScrollableContextRow items={standaloneAttachmentItems} />
             </div>
           )}
           <div className="relative max-h-[180px] min-h-[52px] overflow-y-auto px-4 pb-1 pt-3">
@@ -948,11 +1120,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           </div>
 
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            {/* Files are a property of the message, not the template: in
- the agent therefore precedes the template selector, as requested
- by MIN-369. */}
             <div className="flex min-w-0 items-center gap-1.5">
-              {canAttach && (
+              {canAdd && (
                 <>
                   <input
                     ref={fileInputRef}
@@ -965,17 +1134,98 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       e.target.value = "";
                     }}
                   />
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    disabled={disabled || !userId}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
-                    aria-label={tAttach("attach")}
-                    title={tAttach("attach")}
-                  >
-                    <Paperclip className="size-4" />
-                  </Button>
+                  {hasMentionMenu ? (
+                    <div ref={addMenuAnchorRef} className="shrink-0">
+                      <SearchMenu
+                        open={addMenuOpen}
+                        onOpenChange={handleAddMenuOpenChange}
+                        align="start"
+                        container={addMenuContainer}
+                        tooltip={t("addFilesOrContext")}
+                        searchPlaceholder={t("addContext")}
+                        searchValue={addMenuQuery}
+                        onSearchValueChange={setAddMenuQuery}
+                        shouldFilter={false}
+                        contentClassName="w-80"
+                        trigger={
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            disabled={disabled}
+                            className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                            aria-label={t("addFilesOrContext")}
+                          >
+                            <Plus className="size-4" />
+                          </Button>
+                        }
+                      >
+                        {canAttach && (
+                          <CommandGroup>
+                            <CommandItem
+                              forceMount
+                              value={tAttach("addFiles")}
+                              disabled={!userId}
+                              aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
+                              onSelect={() => {
+                                fileInputRef.current?.click();
+                                setAddMenuOpen(false);
+                                setAddMenuQuery("");
+                              }}
+                              className="gap-2"
+                            >
+                              <Paperclip className="size-4 text-muted-foreground" />
+                              {tAttach("addFiles")}
+                              <CommandShortcut className="inline-flex items-center gap-0.5 tracking-normal">
+                                <Kbd size="sm">{modKey}</Kbd>
+                                <Kbd size="sm">
+                                  {modKey === "⌘" ? "⇧" : "Shift"}
+                                </Kbd>
+                                <Kbd size="sm">
+                                  {ATTACHMENT_SHORTCUT_KEY.toUpperCase()}
+                                </Kbd>
+                              </CommandShortcut>
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
+                        {canAttach && !!mentionables?.length && <CommandSeparator />}
+                        <CommandGroup>
+                          {addContextOptions.map((option) => (
+                            <CommandItem
+                              key={`${option.type}:${option.id}`}
+                              value={`${option.label} ${option.detail ?? ""} ${(option.keywords ?? []).join(" ")}`}
+                              onSelect={() => addContextOption(option)}
+                              className="gap-2"
+                            >
+                              <MentionFigure option={option} />
+                              <span className="min-w-0 truncate">
+                                {option.label}
+                                {option.detail && (
+                                  <span className="ml-1.5 text-muted-foreground">
+                                    {option.detail}
+                                  </span>
+                                )}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </SearchMenu>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      disabled={disabled || !userId}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                      aria-label={tAttach("addFiles")}
+                      aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
+                      title={tAttach("addFiles")}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  )}
                 </>
               )}
               {leadingControls}
@@ -997,6 +1247,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                     <DictateButton
                       onTranscription={appendDictated}
                       disabled={disabled}
+                      className={canAttach ? "-ml-0.5" : undefined}
                     />
                   )}
                   {!isEmpty &&

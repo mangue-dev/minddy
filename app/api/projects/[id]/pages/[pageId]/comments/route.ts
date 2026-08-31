@@ -1,9 +1,18 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { NextResponse, after, type NextRequest } from "next/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { addPageComment } from "@/lib/server/page-comments";
+import { getServiceClient } from "@/lib/supabase-service";
+import {
+  mentionsNumo,
+  replyTargetsNumoPage,
+  runPageCommentMention,
+} from "@/lib/server/assistant/comment-agent";
+
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
@@ -95,5 +104,34 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!result.ok) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
+
+  const commentBody = typeof input.body === "string" ? input.body : "";
+  const created = result.comment as {
+    id: string;
+    page_id: string;
+    parent_id: string | null;
+  };
+  const service = getServiceClient();
+  const trigger = mentionsNumo(commentBody)
+    ? "mention"
+    : (await replyTargetsNumoPage(service, created))
+      ? "reply"
+      : null;
+  if (trigger) {
+    const locale = await getLocale();
+    const { user, supabase } = auth;
+    after(() =>
+      runPageCommentMention({
+        supabase,
+        service,
+        pageId,
+        actorId: user.id,
+        triggerCommentId: created.id,
+        locale,
+        trigger,
+      })
+    );
+  }
+
   return NextResponse.json(result.comment, { status: 201 });
 }

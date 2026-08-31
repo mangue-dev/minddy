@@ -7,7 +7,7 @@ import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
 import { AppWindow, Globe } from "lucide-react";
 import { revokeOAuthGrantApi, type OAuthGrant } from "@/lib/oauth-grants-api";
 import { oauthGrantsQueryKey, useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
-import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
+import { isMcpAgentId } from "@/lib/mcp-agents";
 import {
   SettingsEmpty,
   SettingsGroup,
@@ -15,7 +15,7 @@ import {
 } from "@/components/settings/settings-ui";
 import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { BrandLogo } from "@/components/brand-logo";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
 
 /** “Connected applications”: active OAuth grants (agents connected
  via browser consent, without a key). Revoke cuts access
@@ -73,7 +73,7 @@ export function AccountConnectedAppsSection() {
               avatar={
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
                   {isMcpAgentId(grant.agent) ? (
-                    <BrandLogo brand={getMcpAgent(grant.agent)} className="size-4" />
+                    <McpAgentLogo agent={grant.agent} className="size-4" />
                   ) : (
                     <Globe className="size-4" />
                   )}

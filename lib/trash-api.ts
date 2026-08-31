@@ -30,6 +30,8 @@ export interface TrashItem {
   project_id: string | null;
   project_name: string | null;
   project_color: string | null;
+  project_icon_url: string | null;
+  project_orb_seed: string | null;
   deleted_at: string;
   deleted_by: TrashActor | null;
 }

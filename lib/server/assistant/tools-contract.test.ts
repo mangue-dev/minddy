@@ -11,7 +11,7 @@ describe("Numo tool contracts", () => {
     const create = tool("create_issue");
 
     expect(update?.function.parameters.properties.fields).not.toHaveProperty(
-      "smart_fill"
+      "smart_fill",
     );
     expect(create?.function.parameters.properties).toHaveProperty("smart_fill");
   });
@@ -35,17 +35,23 @@ describe("Numo tool contracts", () => {
     expect(comment).toBeDefined();
     expect(comment?.function.parameters.properties).toHaveProperty("body");
     expect(comment?.function.parameters.required).toEqual(["body"]);
-    expect(comment?.function.parameters.properties).toHaveProperty("feedback_post_id");
+    expect(comment?.function.parameters.properties).toHaveProperty(
+      "feedback_post_id",
+    );
   });
 
   it("advertises the owner-only backlog proposal", () => {
-    expect(tool("propose_backlog")?.function.description).toMatch(/OWNER ONLY/i);
+    expect(tool("propose_backlog")?.function.description).toMatch(
+      /OWNER ONLY/i,
+    );
   });
 
   it("loads routine instructions only when a routine is targeted", () => {
     const listRoutines = tool("list_routines");
 
-    expect(listRoutines?.function.parameters.properties).toHaveProperty("routine_id");
+    expect(listRoutines?.function.parameters.properties).toHaveProperty(
+      "routine_id",
+    );
     expect(listRoutines?.function.description).toMatch(/compact list/i);
     expect(listRoutines?.function.description).toMatch(/full instruction/i);
   });
@@ -53,24 +59,45 @@ describe("Numo tool contracts", () => {
   it("keeps feedback comment guidance aligned with the comment service", () => {
     const comment = tool("add_feedback_comment");
 
-    expect(comment?.function.description).not.toMatch(/1000 characters|no headings/i);
-    const body = comment?.function.parameters.properties.body as { description?: string };
-
-    expect(body.description).not.toMatch(
+    expect(comment?.function.description).not.toMatch(
       /1000 characters|no headings/i,
     );
+    const body = comment?.function.parameters.properties.body as {
+      description?: string;
+    };
+
+    expect(body.description).not.toMatch(/1000 characters|no headings/i);
   });
 
   it("makes product knowledge available without requiring a project", () => {
     expect(tool("get_help")?.function.parameters.required).toEqual(["topic"]);
-    const global = GLOBAL_ASSISTANT_TOOLS.find((candidate) => candidate.function.name === "get_help");
+    const global = GLOBAL_ASSISTANT_TOOLS.find(
+      (candidate) => candidate.function.name === "get_help",
+    );
 
-    expect(global?.function.parameters.properties).not.toHaveProperty("project_id");
+    expect(global?.function.parameters.properties).not.toHaveProperty(
+      "project_id",
+    );
+  });
+
+  it("makes the user's inbox readable without requiring a project", () => {
+    const inbox = tool("list_inbox");
+    expect(inbox?.function.parameters.properties.state).toBeDefined();
+    expect(inbox?.function.parameters.properties.category).toBeDefined();
+
+    const global = GLOBAL_ASSISTANT_TOOLS.find(
+      (candidate) => candidate.function.name === "list_inbox",
+    );
+    expect(global?.function.parameters.properties).not.toHaveProperty(
+      "project_id",
+    );
   });
 
   it("requires the get_issue revision when updating plan task indices", () => {
     const updatePlanTasks = tool("update_plan_tasks");
-    expect(updatePlanTasks?.function.parameters.required).toContain("expected_rev");
+    expect(updatePlanTasks?.function.parameters.required).toContain(
+      "expected_rev",
+    );
     expect(updatePlanTasks?.function.parameters.properties).toHaveProperty(
       "expected_rev",
     );

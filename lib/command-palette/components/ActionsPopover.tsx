@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
 import { CloseIcon, SearchIcon } from "../icons";
 import { usePaletteStore } from "../store";
@@ -375,9 +376,9 @@ export function ActionsPopover({
                     {action.shortcut && (
                       <div className={styles.shortcut}>
                         {action.shortcut.map((key, i) => (
-                          <kbd key={i} className={styles.kbd}>
+                          <Kbd key={i}>
                             {key}
-                          </kbd>
+                          </Kbd>
                         ))}
                       </div>
                     )}

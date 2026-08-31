@@ -69,6 +69,7 @@ import {
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";
+import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
 import { ProgressRing } from "@/components/progress-ring";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
@@ -800,11 +801,11 @@ export function BoardToolbar({
   }, [viewMenu, withShare, customCount, t]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <>
+      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
         {/* Views bar — pills (views + Cycle) are drag-reorderable; the "+"
             stays fixed at the end. */}
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <DndContext
             sensors={tabSensors}
             collisionDetection={closestCenter}
@@ -900,7 +901,7 @@ export function BoardToolbar({
           </Tooltip>
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {rightControls ?? (
             <>
           {dirty && activeView && (
@@ -1023,7 +1024,7 @@ export function BoardToolbar({
             </>
           )}
         </div>
-      </div>
+      </AppContentHeader>
 
       <ViewNameDialog
         open={createOpen}
@@ -1100,7 +1101,7 @@ export function BoardToolbar({
           if (!open) setShareTarget(null);
         }}
       />
-    </div>
+    </>
   );
 }
 

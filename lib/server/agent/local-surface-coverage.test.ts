@@ -136,6 +136,10 @@ describe("local execution surfaces outside `lib/**`", () => {
 const COQUILLE = {
   "main.ts": "assembles the window and IPC handlers; decisions live in @/lib/desktop/*",
   "preload.ts": "exposes the @/lib/desktop/bridge contract and nothing else",
+  "local-run-diff.ts":
+    "reads a run-owned snapshot from the desktop data directory; identifier and payload " +
+    "validation live in @/lib/desktop/local-run-diff, and path layout lives in " +
+    "@/lib/desktop/local-turn and @/lib/server/agent/harness-layout",
   "menu.ts": "composes the native menu from Electron APIs",
   "updater.ts": "wires electron-updater; decisions live in @/lib/desktop/update-*",
   "hide-window.ts": "wires hideWindowStep from @/lib/desktop/hide-window",
@@ -190,11 +194,17 @@ describe("the `desktop/src/` shell", () => {
     expect(contract).toContain("openServerPicker?(): void;");
     expect(contract).toContain("checkForUpdates?(): Promise<void>;");
     expect(contract).toContain("copyDiagnosticReport?(): Promise<boolean>;");
+    expect(contract).toContain("openWindowsStoreUpdate?(): void;");
+    expect(contract).toContain("onWindowsStoreUpdateStatus?(");
 
     const preload = read("desktop/src/preload.ts");
     expect(preload).toContain('ipcRenderer.send("minddy:server-picker:open")');
     expect(preload).toContain('ipcRenderer.invoke("minddy:update:check")');
     expect(preload).toContain('ipcRenderer.invoke("minddy:diagnostics:copy")');
+    expect(preload).toContain('ipcRenderer.send("minddy:windows-store:open")');
+    expect(preload).toContain(
+      'ipcRenderer.send("minddy:windows-store-update-status-ready")',
+    );
     expect(preload).not.toContain("diagnosticReport");
 
     const main = read("desktop/src/main.ts");

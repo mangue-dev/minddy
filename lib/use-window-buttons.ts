@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { getDesktopBridge } from "./desktop/bridge";
+import {
+  desktopBridgePlatform,
+  getDesktopBridge,
+} from "./desktop/bridge";
 import { trace } from "./desktop/trace";
 
 /**
@@ -33,7 +36,10 @@ let flush = 0;
 
 function macDesktopBridge() {
   const bridge = getDesktopBridge();
-  return bridge?.platform === "darwin" ? bridge : null;
+  if (!bridge || typeof navigator === "undefined") return null;
+  return desktopBridgePlatform(bridge, navigator.platform) === "darwin"
+    ? bridge
+    : null;
 }
 
 /**

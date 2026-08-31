@@ -23,9 +23,11 @@ import {
   FileText,
   CalendarClock,
   IterationCw,
+  Inbox,
   Layers,
   LayoutGrid,
   MessagesSquare,
+  Settings2,
   Target,
   X,
 } from "lucide-react";
@@ -80,6 +82,10 @@ const STYLES: Record<
     icon: CalendarClock,
     tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   },
+  inbox: {
+    icon: Inbox,
+    tint: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
+  },
   // The wiki: the same figure as the page tree in the sidebar.
   page: {
     icon: BookText,
@@ -92,6 +98,10 @@ const STYLES: Record<
   cycle: {
     icon: IterationCw,
     tint: "bg-teal-500/12 text-teal-600 dark:text-teal-400",
+  },
+  settings: {
+    icon: Settings2,
+    tint: "bg-slate-500/12 text-slate-600 dark:text-slate-400",
   },
   // Member and project never pass through this table: they carry their
   // its own figure (portrait, orb).
@@ -182,6 +192,10 @@ export function ContextPill({
               className={cn("size-5", PILL_INNER_RADIUS[radius])}
               iconClassName="h-3 w-3"
             />
+          ) : chip.kind === "page" && chip.icon && !disabled ? (
+            <PillIcon radius={radius} tint={style.tint}>
+              <span className="text-xs leading-none">{chip.icon}</span>
+            </PillIcon>
           ) : (
             <PillIcon radius={radius} tint={disabled ? undefined : style.tint}>
               <Icon className="h-3 w-3" />
@@ -190,7 +204,9 @@ export function ContextPill({
           <span
             className={cn(
               "min-w-0 truncate font-medium",
-              disabled ? "text-muted-foreground line-through" : "text-foreground/80",
+              disabled
+                ? "text-muted-foreground line-through"
+                : "text-foreground/80",
             )}
           >
             {chip.label}

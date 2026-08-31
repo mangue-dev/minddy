@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   activeAdminOverride,
+  resolveBasePlanFromBillingAccount,
   resolvePlanFromBillingAccount,
   type BillingAccount,
 } from "./billing-accounts";
@@ -100,6 +101,32 @@ describe("resolvePlanFromBillingAccount", () => {
     expect(resolvePlanFromBillingAccount(row, NOW)).toEqual({
       planId: "pro",
       source: "admin_override",
+    });
+  });
+});
+
+describe("resolveBasePlanFromBillingAccount", () => {
+  it("returns the eligible Stripe plan underneath an override", () => {
+    const row = account({
+      admin_override_plan_id: "pro",
+      stripe_plan_id: "go",
+      stripe_subscription_status: "active",
+    });
+    expect(resolveBasePlanFromBillingAccount(row)).toEqual({
+      planId: "go",
+      source: "stripe",
+    });
+  });
+
+  it("returns Free when there is no eligible Stripe plan", () => {
+    const row = account({
+      admin_override_plan_id: "pro",
+      stripe_plan_id: "go",
+      stripe_subscription_status: "canceled",
+    });
+    expect(resolveBasePlanFromBillingAccount(row)).toEqual({
+      planId: "free",
+      source: "default",
     });
   });
 });

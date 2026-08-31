@@ -164,7 +164,11 @@ describe("CDN cache header vs custom domains", () => {
    */
   const cacheEntries = async () =>
     (await nextConfig.headers!()).filter((entry) =>
-      entry.headers.some((header) => header.key === "Vercel-CDN-Cache-Control"),
+      entry.headers.some(
+        (header) =>
+          header.key === "Vercel-CDN-Cache-Control" &&
+          header.value !== "no-store",
+      ),
     );
 
   it("gates every public-cache header on a primary host", async () => {

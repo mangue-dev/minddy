@@ -88,22 +88,6 @@
   flex-shrink: 0;
 }
 
-.tabKbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--cp-muted);
-  background: color-mix(in srgb, var(--cp-border) 50%, transparent);
-  border: 1px solid var(--cp-border);
-  border-radius: 4px;
-}
-
 .tabLabel {
   font-size: var(--cp-fs-secondary);
   font-weight: 400;

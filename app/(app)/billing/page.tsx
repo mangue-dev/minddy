@@ -1,14 +1,17 @@
 "use client";
 
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "mangue-ui";
+import { Button, toast } from "mangue-ui";
+import { AppContentHeader } from "@/components/app-content-header";
 import { UsageSection } from "@/components/billing/usage-section";
 import { PlanSection } from "@/components/billing/plan-section";
 import { UsageHistorySection } from "@/components/billing/usage-history-section";
 import { useBillingSummary } from "@/lib/use-billing-query";
+import { createPortalApi } from "@/lib/billing-api";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import {
   billingStatusQueryKey,
   billingUsageQueryKey,
@@ -23,51 +26,91 @@ export default function BillingPage() {
   const t = useTranslations("Billing");
   const { loading, status, usage } = useBillingSummary();
   const hasManagedService = status?.managedBilling || usage?.managedAi;
+  const hasSubscription = !!status?.subscription;
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const contentFade = useScrollFade<HTMLDivElement>();
+
+  const openPortal = useCallback(async () => {
+    setOpeningPortal(true);
+    try {
+      window.location.href = await createPortalApi();
+    } catch (error) {
+      toast.error((error as Error).message);
+      setOpeningPortal(false);
+    }
+  }, []);
 
   if (!loading && !hasManagedService) {
     return (
-      <div className="mx-auto w-full max-w-5xl px-6 py-10">
-        <header className="mb-8">
-          <h1 className="text-xl font-semibold tracking-tight">{t("pageTitle")}</h1>
-        </header>
-        <div className="rounded-xl border border-border bg-card px-5 py-4">
-          <h2 className="text-sm font-semibold">{t("selfHostedTitle")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("selfHostedDescription")}</p>
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <AppContentHeader />
+        <div
+          ref={contentFade.ref}
+          {...contentFade.scrollProps}
+          className="min-h-0 flex-1 overflow-y-auto"
+        >
+          <div className="mx-auto w-full max-w-5xl px-6 py-10">
+            <div className="rounded-xl border border-border bg-card px-5 py-4">
+              <h2 className="text-sm font-semibold">{t("selfHostedTitle")}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("selfHostedDescription")}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Suspense fallback={null}>
         <CheckoutReturnToast />
       </Suspense>
 
-      <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight">{t("pageTitle")}</h1>
-      </header>
+      <AppContentHeader contentClassName="justify-end gap-2 px-4 md:px-6">
+        {hasSubscription ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={openingPortal}
+            onClick={() => void openPortal()}
+          >
+            {openingPortal ? t("loading") : t("manageSubscription")}
+          </Button>
+        ) : null}
+      </AppContentHeader>
 
-      <div className="space-y-10">
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold">{t("usageTitle")}</h2>
-          <UsageSection />
-        </section>
+      <div
+        ref={contentFade.ref}
+        {...contentFade.scrollProps}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
+        <div className="mx-auto w-full max-w-5xl px-6 py-10">
+          <div className="space-y-10">
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold">{t("usageTitle")}</h2>
+              <UsageSection />
+            </section>
 
-        <section className="space-y-3">
-          <div>
-            <h2 className="text-sm font-semibold">{t("plansTitle")}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("plansSubtitle")}
-            </p>
+            <section className="space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold">{t("plansTitle")}</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {status?.adminOverride
+                    ? t("adminOverrideSectionSubtitle")
+                    : t("plansSubtitle")}
+                </p>
+              </div>
+              <PlanSection />
+            </section>
+
+            {/* The accordion has its own header (title + subtitle). */}
+            <section>
+              <UsageHistorySection />
+            </section>
           </div>
-          <PlanSection />
-        </section>
-
-        {/* The accordion has its own header (title + subtitle). */}
-        <section>
-          <UsageHistorySection />
-        </section>
+        </div>
       </div>
     </div>
   );

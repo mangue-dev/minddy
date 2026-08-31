@@ -40,6 +40,8 @@ import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { GripVertical, Plus } from "lucide-react";
 import { cn } from "mangue-ui";
 import { BlockMenu } from "@/components/pages/block-menu";
+import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
+import { COMMENTED_BLOCK_CLASS } from "@/components/pages/block-comments";
 import {
   GUTTER_WIDTH,
   blockRange,
@@ -61,6 +63,9 @@ const POSITION = { placement: "left-start", strategy: "absolute" } as const;
     centering on the first line of the block, which has no CSS equivalent. */
 const BUTTON_SIZE = 24;
 
+/** Keep both gutter buttons clear of a commented block's left edge. */
+const COMMENTED_GUTTER_SHIFT = 12;
+
 /**
  * Gutter tooltips wait before appearing.
  *
@@ -77,12 +82,18 @@ const BUTTON_SIZE = 24;
 const TOOLTIP_DELAY_MS = 600;
 
 const BUTTON = cn(
-  "flex size-6 items-center justify-center rounded text-muted-foreground/60",
+  "flex size-6 items-center justify-center rounded-md text-muted-foreground/60",
   "transition-colors hover:bg-muted hover:text-foreground",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 );
 
-export function BlockGutter({ editor }: { editor: Editor }) {
+export function BlockGutter({
+  editor,
+  onComment,
+}: {
+  editor: Editor;
+  onComment?: (anchor: PageCommentAnchor) => void;
+}) {
   const t = useTranslations("Pages");
 
   // The block hovered over, in ref: it changes with each mouse movement, and a
@@ -93,6 +104,7 @@ export function BlockGutter({ editor }: { editor: Editor }) {
   });
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   // The menu anchor, in screen coordinates: the handle when clicked
   // above, the current block when you get to the keyboard.
   const [anchor, setAnchor] = useState({ top: 0, left: 0 });
@@ -125,14 +137,36 @@ export function BlockGutter({ editor }: { editor: Editor }) {
         // offset of the previous block, which would then follow the mouse from block to block
         // block without ever corresponding to the one below.
         element.style.marginTop = "0px";
+        element.style.transform = "";
         return;
       }
-      const style = getComputedStyle(styledBox(dom));
-      // The text does not start at the edge of the block: a block of code is 12 px wide
-      // padding and a border, a quote has its own. Without counting them,
-      // the handle fits on the FRAME and floats above the first
-      // line — visible on code, invisible on a paragraph that has neither
-      // neither one nor the other.
+      const box = styledBox(dom);
+      const style = getComputedStyle(box);
+      const commented =
+        dom.classList.contains(COMMENTED_BLOCK_CLASS) ||
+        box.classList.contains(COMMENTED_BLOCK_CLASS);
+      element.style.transform = commented
+        ? `translateX(-${COMMENTED_GUTTER_SHIFT}px)`
+        : "";
+      // A code block starts with custom chrome rather than a text line. Center
+      // the gutter on the actual language trigger so changes to the header's
+      // padding, button size, or border radius cannot leave the controls behind.
+      const languageTrigger = box.querySelector(
+        ".code-block-node-language-trigger"
+      );
+      if (languageTrigger instanceof HTMLElement) {
+        const blockRect = dom.getBoundingClientRect();
+        const triggerRect = languageTrigger.getBoundingClientRect();
+        const offset =
+          triggerRect.top -
+          blockRect.top +
+          (triggerRect.height - BUTTON_SIZE) / 2;
+        element.style.marginTop = `${Math.max(0, Math.round(offset))}px`;
+        return;
+      }
+      // Text does not always start at the block's top edge: quotes, callouts,
+      // and other framed blocks carry their own padding or border. Include
+      // those insets so the gutter stays centered on their first line.
       const inset =
         parseFloat(style.paddingTop || "0") +
         parseFloat(style.borderTopWidth || "0");
@@ -199,6 +233,8 @@ export function BlockGutter({ editor }: { editor: Editor }) {
         editor={editor}
         computePositionConfig={POSITION}
         onNodeChange={onNodeChange}
+        onElementDragStart={() => setDragging(true)}
+        onElementDragEnd={() => setDragging(false)}
       >
         {/* The width is WRITTEN, not deduced from the content: it is the same
             value that the rule of app/globals.css which extends the surface of
@@ -209,7 +245,7 @@ export function BlockGutter({ editor }: { editor: Editor }) {
         <div
           ref={gutter}
           style={{ width: GUTTER_WIDTH }}
-          className="flex items-center justify-end gap-0.5 pr-1"
+          className="flex items-center justify-end gap-0.5 pr-1 transition-transform"
         >
           <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
             <TooltipTrigger asChild>
@@ -240,7 +276,10 @@ export function BlockGutter({ editor }: { editor: Editor }) {
               <button
                 type="button"
                 aria-label={t("blockMenu")}
-                className={cn(BUTTON, "cursor-grab active:cursor-grabbing")}
+                className={cn(
+                  BUTTON,
+                  dragging ? "cursor-grabbing" : "cursor-pointer"
+                )}
                 // NO `preventDefault` on the `mousedown`, and that's it
                 // subject: native drag IS the default action of
                 // `mousedown`. The handle lives in a `div[draggable]` placed by
@@ -269,7 +308,12 @@ export function BlockGutter({ editor }: { editor: Editor }) {
         </div>
       </DragHandle>
 
-      <BlockMenu editor={editor} open={menuOpen} onOpenChange={setMenuOpen}>
+      <BlockMenu
+        editor={editor}
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        onComment={onComment}
+      >
         {/* The menu anchor: a dot, not a button. It exists so that the
             menu has where to put it when you open it with the keyboard, where the handle
             is not achievable. negative `tabIndex` — a point of 0 pixels does not

@@ -1,40 +1,47 @@
 "use client";
 
-// The “Comment” bubble (MIN-282) — the gesture that anchors a discussion to a block.
+// The contextual text toolbar for a page selection.
 //
-// We select some text, a bubble appears above, we click: the thread
-// opens NEXT to the block (page-comment-popover.tsx), anchored to it, with
-// the selected extract frozen in it. This is what makes rereading useful — “that sentence” — and it’s
-// the only thing that a page thread without an anchor would not be able to say.
+// Tiptap's BubbleMenu owns positioning and waits 300 ms after the last selection
+// update before appearing. That delay keeps the toolbar still while the user is
+// extending a selection. Formatting commands and the comment action share the
+// same menu, so selecting text produces one stable affordance instead of a
+// comment-only bubble followed by a separate editor menu.
 //
-// ─── Three mechanical choices ─────────────────────── ────────────────────────
-//
-// • `position: fixed` and SCREEN coordinates (`coordsAtPos`), rather than a
-// positioned parent. The column of the document already bears the reservation of
-// gutter and positioning of the block chrome (see page-view.tsx); y
-// adding an anchor for this bubble would require lowering it
-// in the editor, which deliberately has neither `relative` nor indent.
-// • `onMouseDown` with `preventDefault`, and not `onClick`: click a button
-// outside the editable area erases the selection BEFORE the click, therefore the gesture
-//    perdrait exactement ce qu'il vient chercher.
-// • The anchor is the FIRST LEVEL block which contains the start of the
-// selection — the same granularity as the handle, block link and
-// the merger of MIN-271. A selection straddling two blocks is therefore anchored to the
-// first: it is from him that the sentence we are commenting on comes from.
+// `onMouseDown.preventDefault()` preserves the ProseMirror selection while a
+// toolbar button receives the pointer. Comments anchor to the first top-level
+// block containing the selection start, matching block handles and block links.
 
-import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
-import { MessageSquarePlus } from "lucide-react";
+import { TextSelection } from "@tiptap/pm/state";
+import { useEditorState } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
+import {
+  Bold,
+  Code2,
+  Italic,
+  Link2,
+  MessageSquarePlus,
+  Strikethrough,
+  Unlink,
+} from "lucide-react";
 import { cn } from "mangue-ui";
 
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 import { MAX_QUOTE_LENGTH } from "@/lib/page-comments";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** What clicking on the bubble does: where to anchor, and what we're talking about. */
 export interface PageCommentAnchor {
   blockId: string;
-  quote: string;
+  quote?: string;
+  /** Open a new composer even when this block already has comments. */
+  startNew?: boolean;
 }
 
 /** The first level block that contains this position, and its id. */
@@ -47,92 +54,162 @@ function anchorBlockId(editor: Editor, pos: number): string | null {
   return typeof id === "string" && id ? id : null;
 }
 
-interface BubbleState {
-  top: number;
-  left: number;
-  anchor: PageCommentAnchor;
+const SELECTION_MENU_DELAY_MS = 300;
+
+function shouldShowSelectionMenu({ editor }: { editor: Editor }): boolean {
+  const { selection } = editor.state;
+  const { from, to, empty } = selection;
+  return (
+    editor.isEditable &&
+    editor.view.hasFocus() &&
+    selection instanceof TextSelection &&
+    !empty &&
+    !editor.isActive("codeBlock") &&
+    !!editor.state.doc.textBetween(from, to, " ").trim()
+  );
 }
 
-/** Reserved height above the selection — the bubble must not cover
- the line we are talking about. */
-const OFFSET = 8;
+function ToolbarButton({
+  label,
+  active = false,
+  onClick,
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip disableHoverableContent>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          aria-pressed={active}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onClick}
+          className={cn(
+            "flex size-8 items-center justify-center rounded-md text-muted-foreground",
+            "transition-colors hover:bg-control hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            active && "bg-control text-foreground"
+          )}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function PageCommentBubble({
   editor,
   onComment,
 }: {
-  editor: Editor | null;
+  editor: Editor;
   onComment: (anchor: PageCommentAnchor) => void;
 }) {
   const t = useTranslations("Pages");
-  const [state, setState] = useState<BubbleState | null>(null);
+  const active = useEditorState({
+    editor,
+    selector: ({ editor: current }) => ({
+      bold: current.isActive("bold"),
+      italic: current.isActive("italic"),
+      strike: current.isActive("strike"),
+      code: current.isActive("code"),
+      link: current.isActive("link"),
+    }),
+  });
 
-  const measure = useCallback(() => {
-    if (!editor || editor.isDestroyed || !editor.isEditable) {
-      setState(null);
-      return;
-    }
-    const { from, to, empty } = editor.state.selection;
-    if (empty) {
-      setState(null);
-      return;
-    }
+  const comment = () => {
+    if (!editor || editor.isDestroyed) return;
+    const { from, to } = editor.state.selection;
     const quote = editor.state.doc.textBetween(from, to, " ").trim();
     const blockId = anchorBlockId(editor, from);
-    // A selection of entire blocks (slipped into the gutter) has no
-    // text: there would be nothing to quote, and the gesture belongs to the menu ⋯.
-    if (!blockId || !quote) {
-      setState(null);
+    if (!blockId || !quote) return;
+    onComment({
+      blockId,
+      quote: quote.slice(0, MAX_QUOTE_LENGTH),
+      startNew: true,
+    });
+  };
+
+  const editLink = () => {
+    if (!editor || editor.isDestroyed) return;
+    const current = editor.getAttributes("link").href;
+    const href = window.prompt(
+      t("selectionLinkPrompt"),
+      typeof current === "string" ? current : "https://"
+    );
+    if (href === null) return;
+    if (!href.trim()) {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
-    const start = editor.view.coordsAtPos(from);
-    const end = editor.view.coordsAtPos(to);
-    setState({
-      top: Math.min(start.top, end.top) - OFFSET,
-      left: (start.left + end.left) / 2,
-      anchor: { blockId, quote: quote.slice(0, MAX_QUOTE_LENGTH) },
-    });
-  }, [editor]);
-
-  useEffect(() => {
-    if (!editor) return;
-    editor.on("selectionUpdate", measure);
-    editor.on("transaction", measure);
-    // The document scrolls under the bubble: it is in screen coordinates, so
-    // she must remeasure herself. `capture` — the scrolling container is a div,
-    // and an element's scroll event doesn't move up.
-    window.addEventListener("scroll", measure, true);
-    window.addEventListener("resize", measure);
-    return () => {
-      editor.off("selectionUpdate", measure);
-      editor.off("transaction", measure);
-      window.removeEventListener("scroll", measure, true);
-      window.removeEventListener("resize", measure);
-    };
-  }, [editor, measure]);
-
-  if (!state) return null;
+    editor.chain().focus().extendMarkRange("link").setLink({ href: href.trim() }).run();
+  };
 
   return (
-    <button
-      type="button"
-      // See the header: the selection dies before the click without this
-      // `preventDefault`, and she's the one we're looking for.
-      onMouseDown={(event) => {
-        event.preventDefault();
-        onComment(state.anchor);
-        setState(null);
-      }}
-      style={{ top: state.top, left: state.left }}
+    <BubbleMenu
+      editor={editor}
+      updateDelay={SELECTION_MENU_DELAY_MS}
+      shouldShow={shouldShowSelectionMenu}
+      options={{ placement: "top", offset: 8 }}
       className={cn(
-        "fixed z-50 -translate-x-1/2 -translate-y-full",
-        "flex items-center gap-1.5 rounded-full border border-border bg-popover",
-        "px-2.5 py-1 text-xs font-medium text-foreground shadow-md",
-        "transition-colors hover:bg-control"
+        "flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 shadow-md"
       )}
     >
-      <MessageSquarePlus className="size-3.5 text-muted-foreground" />
-      {t("commentSelection")}
-    </button>
+      <ToolbarButton
+        label={t("selectionBold")}
+        active={active?.bold}
+        onClick={() => editor?.chain().focus().toggleBold().run()}
+      >
+        <Bold className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label={t("selectionItalic")}
+        active={active?.italic}
+        onClick={() => editor?.chain().focus().toggleItalic().run()}
+      >
+        <Italic className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label={t("selectionStrike")}
+        active={active?.strike}
+        onClick={() => editor?.chain().focus().toggleStrike().run()}
+      >
+        <Strikethrough className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label={t("selectionCode")}
+        active={active?.code}
+        onClick={() => editor?.chain().focus().toggleCode().run()}
+      >
+        <Code2 className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label={active?.link ? t("selectionEditLink") : t("selectionAddLink")}
+        active={active?.link}
+        onClick={editLink}
+      >
+        <Link2 className="size-4" />
+      </ToolbarButton>
+      {active?.link ? (
+        <ToolbarButton
+          label={t("selectionRemoveLink")}
+          onClick={() => editor?.chain().focus().extendMarkRange("link").unsetLink().run()}
+        >
+          <Unlink className="size-4" />
+        </ToolbarButton>
+      ) : null}
+      <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+      <ToolbarButton label={t("commentSelection")} onClick={comment}>
+        <MessageSquarePlus className="size-4" />
+      </ToolbarButton>
+    </BubbleMenu>
   );
 }

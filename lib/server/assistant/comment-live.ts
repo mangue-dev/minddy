@@ -92,7 +92,8 @@ export interface CommentDisplay {
 
 export function commentDisplay(
   service: SupabaseClient,
-  commentId: string
+  commentId: string,
+  table: "comments" | "page_comments" = "comments"
 ): CommentDisplay {
   let currentTool: string | null = null;
   let lastFlushAt = 0;
@@ -106,7 +107,7 @@ export function commentDisplay(
   const write = (fields: Record<string, unknown>): Promise<void> => {
     writes = writes.then(async () => {
       const { error } = await service
-        .from("comments")
+        .from(table)
         .update(fields)
         .eq("id", commentId);
       if (error) console.error("[numo-comment] update failed:", error.message);

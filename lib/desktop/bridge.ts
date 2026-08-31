@@ -29,6 +29,10 @@ import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notifi
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
+import type {
+  DesktopLocalRunDiff,
+  DesktopLocalRunDiffInput,
+} from "@/lib/desktop/local-run-diff";
 
 export interface DesktopNativePushRegistration {
   transport: "apns" | "wns";
@@ -39,8 +43,11 @@ export interface DesktopNativePushRegistration {
 export interface DesktopBridge {
   /** The version of the shell (`app.getVersion()`), to display it. */
   readonly version: string;
-  /** The host platform, used only for platform-specific desktop chrome. */
-  readonly platform: NodeJS.Platform;
+  /**
+   * The host platform, used only for platform-specific desktop chrome.
+   * Optional because desktop shells released before 0.10.24 do not expose it.
+   */
+  readonly platform?: NodeJS.Platform;
   /** Open the shell-owned server and local-folder picker. */
   openServerPicker?(): void;
   /** Run an explicitly requested shell update check. */
@@ -55,6 +62,10 @@ export interface DesktopBridge {
    * not `http(s)` — the renderer does not decide what we give to `open`.
    */
   openExternal(url: string): void;
+  /** Open minddy's immutable Microsoft Store product page on Windows. */
+  openWindowsStoreUpdate?(): void;
+  /** Follow package update availability reported by Microsoft Store. */
+  onWindowsStoreUpdateStatus?(handler: (available: boolean) => void): () => void;
   /**
    * The return of the authentication round (`minddy://auth?…`). Makes his
    * unsubscribe. The link received BEFORE the subscription is replayed upon subscription:
@@ -201,6 +212,11 @@ export interface DesktopBridge {
     aliases?: string[];
   }): Promise<string[]>;
   /**
+   * Read the durable diff produced by a local run. Optional for compatibility
+   * with desktop shells released before this review surface was added.
+   */
+  localRunDiff?(input: DesktopLocalRunDiffInput): Promise<DesktopLocalRunDiff | null>;
+  /**
    * Reads models exposed by Ollama or an OpenAI-compatible endpoint on the
    * local loop. The main process refuses any URL that does not point to
    * loopback, and never returns anything other than template ids.
@@ -218,6 +234,22 @@ declare global {
 export function getDesktopBridge(): DesktopBridge | null {
   if (typeof window === "undefined") return null;
   return window.minddy ?? null;
+}
+
+/**
+ * Resolve the shell platform while the deployed web app is running in an older
+ * desktop build. Those builds predate `DesktopBridge.platform`, but Chromium's
+ * platform string still distinguishes the three supported desktop families.
+ */
+export function desktopBridgePlatform(
+  bridge: Pick<DesktopBridge, "platform">,
+  browserPlatform: string,
+): NodeJS.Platform | null {
+  if (bridge.platform) return bridge.platform;
+  if (/^mac/i.test(browserPlatform)) return "darwin";
+  if (/^win/i.test(browserPlatform)) return "win32";
+  if (/linux/i.test(browserPlatform)) return "linux";
+  return null;
 }
 
 /**

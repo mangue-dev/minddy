@@ -33,6 +33,8 @@ export interface PageComment {
   /** The root of the thread when this line is a response (depth ≤ 1). */
   parent_id: string | null;
   via_assistant?: boolean;
+  assistant_status?: "working" | "done" | "error" | null;
+  assistant_tool?: string | null;
   via_mcp?: boolean;
   api_key_id?: string | null;
   api_key_name?: string | null;
@@ -109,13 +111,37 @@ export function arrangeThreads(
 export function commentedBlockCounts(
   threads: PageThread[]
 ): Map<string, number> {
-  const counts = new Map<string, number>();
+  return new Map(
+    [...commentedBlockAnnotations(threads)].map(([id, annotation]) => [
+      id,
+      annotation.count,
+    ])
+  );
+}
+
+export interface CommentedBlockAnnotation {
+  count: number;
+  /** Frozen excerpts that still identify a particular passage in the block. */
+  quotes: string[];
+}
+
+/** The visual annotations carried by each live commented block. */
+export function commentedBlockAnnotations(
+  threads: PageThread[]
+): Map<string, CommentedBlockAnnotation> {
+  const annotations = new Map<string, CommentedBlockAnnotation>();
   for (const thread of threads) {
     if (thread.detached || !thread.root.block_id) continue;
     const id = thread.root.block_id;
-    counts.set(id, (counts.get(id) ?? 0) + 1 + thread.replies.length);
+    const annotation = annotations.get(id) ?? { count: 0, quotes: [] };
+    annotation.count += 1 + thread.replies.length;
+    const quote = thread.root.quote?.trim();
+    if (quote && !annotation.quotes.includes(quote)) {
+      annotation.quotes.push(quote);
+    }
+    annotations.set(id, annotation);
   }
-  return counts;
+  return annotations;
 }
 
 /** Ceiling of the frozen extract: enough to recognize the sentence, not enough to copy the block — a detached thread must fit on two lines in the list. */

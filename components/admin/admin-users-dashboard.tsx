@@ -57,6 +57,10 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
 import { giftSectionVisible } from "@/lib/admin-tabs";
 import {
+  ADMIN_SECTIONS,
+  adminSectionAnchor,
+} from "@/lib/admin-sections";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -894,7 +898,10 @@ export function AdminUsersDashboard() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+      <div
+        id={adminSectionAnchor(ADMIN_SECTIONS.usersAccounts)}
+        className="flex scroll-mt-20 flex-col gap-1 rounded-lg"
+      >
         <h2 className="text-sm font-semibold">{t("users.title")}</h2>
         <p className="text-sm text-muted-foreground">{t("users.subtitle")}</p>
       </div>

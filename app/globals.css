@@ -7,8 +7,8 @@
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
 
-/* The shell remains a desktop application from 768 px: complete header, palette
-   search and side navigation. Below this threshold only, the pill
+/* The shell remains a desktop application from 768 px: primary navigation and
+   the full command palette. Below this threshold only, the pill
    mobile navigation takes over. 768–1199 px displays use the
    retracted side panel (see AppShellChrome), rather than the mobile interface.
    This redefinition, after the mango-ui tokens, aligns `desktop:` and
@@ -45,13 +45,25 @@
 }
 
 /* In the Electron app, the fixed strip that allows you to move the window covers
-   the first 60 pixels (including the left edge of the header). When the panel
+   the first 60 pixels. When the compact navigation panel
    navigation compact is stored, its edge must pass ABOVE this strip
    and become a web zone again; otherwise a hover of the top-left corner cannot
    never recall navigation. Once opened, it goes back under the panel
    itself and does not block any controls. */
 html[data-desktop-app] .zen-nav-hotzone {
   -webkit-app-region: no-drag;
+}
+
+/* Without the primary sidebar, a narrow macOS window still needs one native
+   titlebar-height clearance so the traffic lights do not cover page content.
+   Other platforms and every desktop-width layout reserve no header space. */
+.compact-window-controls-clearance {
+  display: none;
+}
+@media (width < 768px) {
+  html[data-desktop-platform="darwin"] .compact-window-controls-clearance {
+    display: flex;
+  }
 }
 
 /* mango-ui gives menu options a higher touch target up to
@@ -561,33 +573,45 @@ html[data-desktop-app] .zen-nav-hotzone {
   pointer-events: none;
 }
 
-/* TipTap code blocks use a node view so the header and copy control stay
-   available on pages and in the live editors. The code element remains the
-   editable content DOM; only the surrounding chrome is custom. */
-.ProseMirror .code-block-node-view {
+/* Pages and Agent responses share this code-block surface. In TipTap, the code
+   element remains the editable content DOM; the same surrounding chrome is
+   reused with read-only highlighted content in an Agent conversation. */
+.code-block-node-view {
+  --code-block-border: #d0d7de;
+  --code-block-background: #f6f8fa;
+  --code-block-foreground: #1f2328;
+  --code-block-muted: #59636e;
+  --code-block-hover: rgb(31 35 40 / 8%);
   margin-block: 0.5rem;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  border: 1px solid var(--code-block-border);
+  border-radius: 1.5rem;
+  background: var(--code-block-background);
+  color: var(--code-block-foreground);
 }
-.ProseMirror .code-block-node-view > .code-block-node-header {
+.dark .code-block-node-view {
+  --code-block-border: #343434;
+  --code-block-background: #202020;
+  --code-block-foreground: #f5f5f5;
+  --code-block-muted: #a3a3a3;
+  --code-block-hover: rgb(255 255 255 / 8%);
+}
+.code-block-node-view > .code-block-node-header {
   display: flex;
   min-height: 2.5rem;
   align-items: center;
   justify-content: flex-start;
   gap: 0.5rem;
-  border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-  background: color-mix(in oklab, var(--muted) 60%, transparent);
-  padding: 0.25rem 1rem;
+  background: transparent;
+  padding: 1rem 1rem 0.25rem;
 }
-.ProseMirror .code-block-node-language {
+.code-block-node-language {
   min-width: 0;
   flex: 1;
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--muted-foreground);
+  color: var(--code-block-foreground);
   cursor: text;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: inherit;
@@ -595,7 +619,8 @@ html[data-desktop-app] .zen-nav-hotzone {
   line-height: 1.2;
   text-transform: lowercase;
 }
-.ProseMirror .code-block-node-language-trigger {
+.code-block-node-language-trigger,
+.code-block-node-language-label {
   min-width: 0;
   width: max-content;
   max-width: min(24rem, calc(100vw - 2rem));
@@ -603,40 +628,93 @@ html[data-desktop-app] .zen-nav-hotzone {
   justify-content: flex-start;
   gap: 0.375rem;
   padding: 0;
-  color: var(--muted-foreground);
+  color: var(--code-block-foreground);
   font-size: inherit;
   font-weight: 400;
   line-height: 1.2;
 }
-.ProseMirror .code-block-node-language-trigger > span {
+.code-block-node-language-label {
+  display: flex;
+  height: 2rem;
+  max-width: 18rem;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.code-block-node-language-trigger > span {
   min-width: 0;
   max-width: 18rem;
 }
-.ProseMirror .code-block-node-language:read-only {
+.code-block-node-language:read-only {
   cursor: default;
 }
-.ProseMirror .code-block-node-copy {
+.code-block-node-actions {
+  display: flex;
+  margin-left: auto;
+  align-items: center;
+  gap: 0.125rem;
+}
+.code-block-node-actions button {
+  color: var(--code-block-muted);
+}
+.code-block-node-wrap[data-active="true"],
+.code-block-node-actions button:hover {
+  background: var(--code-block-hover);
+  color: var(--code-block-foreground);
+}
+.code-block-node-copy {
   margin-left: auto;
 }
-.ProseMirror .code-block-node-copy[data-copied="true"] {
+.code-block-node-copy[data-copied="true"] {
   color: var(--primary);
 }
-.ProseMirror .code-block-node-copy:hover {
-  background: var(--muted);
-  color: var(--foreground);
+.code-block-node-copy:hover {
+  background: var(--code-block-hover);
+  color: var(--code-block-foreground);
 }
-.ProseMirror .code-block-node-view > pre {
+.code-block-node-view > pre {
   margin: 0;
   overflow-x: auto;
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 1rem;
+  padding: 0.5rem 1rem 1rem;
+  color: var(--code-block-foreground);
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
   font-size: inherit;
-  line-height: inherit;
+  font-variant-ligatures: none;
+  line-height: 1.65;
 }
-.ProseMirror .code-block-node-view > pre > code {
+.code-block-node-view[data-wrapped="true"] > pre {
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.code-block-node-view[data-wrapped="false"] > pre {
+  white-space: pre;
+}
+.code-block-node-view[data-overflowing="true"][data-expanded="false"] > pre {
+  max-height: 26.25rem;
+  overflow-y: hidden;
+}
+.code-block-node-view > pre > code {
   font-size: inherit;
+}
+.code-block-node-expand {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: flex-start;
+  background: transparent;
+  padding: 0.25rem 1rem 1rem;
+}
+.code-block-node-expand > button {
+  gap: 0.25rem;
+  color: var(--code-block-muted);
+  font-size: 0.75rem;
 }
 
 /* ─── Streamdown chrome trim (Numo assistant markdown) ───────────────────
@@ -1594,6 +1672,77 @@ nav[aria-label="Navigation"]
   background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
 }
 
+/* A callout carries a palette name, never a fixed color. The same document is
+   therefore legible in both themes, and the editor, published page, history,
+   and print view all render the same semantic `<aside>`. */
+[data-page-callout-color="red"] { --page-callout-tone: var(--page-color-red); }
+[data-page-callout-color="orange"] { --page-callout-tone: var(--page-color-orange); }
+[data-page-callout-color="amber"] { --page-callout-tone: var(--page-color-amber); }
+[data-page-callout-color="green"] { --page-callout-tone: var(--page-color-green); }
+[data-page-callout-color="teal"] { --page-callout-tone: var(--page-color-teal); }
+[data-page-callout-color="blue"] { --page-callout-tone: var(--page-color-blue); }
+[data-page-callout-color="indigo"] { --page-callout-tone: var(--page-color-indigo); }
+[data-page-callout-color="violet"] { --page-callout-tone: var(--page-color-violet); }
+[data-page-callout-color="pink"] { --page-callout-tone: var(--page-color-pink); }
+[data-page-callout-color="gray"] { --page-callout-tone: var(--page-color-gray); }
+
+.page-editor [data-type="callout"] {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.625rem;
+  margin-block: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklab, var(--page-callout-tone) 12%, transparent);
+}
+
+.dark .page-editor [data-type="callout"] {
+  background-color: color-mix(in oklab, var(--page-callout-tone) 20%, transparent);
+}
+
+.page-editor .page-callout-icon {
+  display: flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(var(--page-callout-icon-offset, 0px));
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  font-size: 1.375rem;
+  line-height: 1;
+}
+
+.page-editor .page-callout-icon-button {
+  cursor: pointer;
+  color: inherit;
+}
+
+.page-editor .page-callout-icon-button:hover {
+  background-color: color-mix(in oklab, var(--page-callout-tone) 16%, transparent);
+}
+
+.page-editor .page-callout-icon-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.page-editor .page-callout-content:only-child {
+  grid-column: 1 / -1;
+}
+
+.page-editor .page-callout-content > :first-child {
+  margin-top: 0;
+}
+
+.page-editor .page-callout-content > :last-child {
+  margin-bottom: 0;
+}
+
 /* The paragraph of a task otherwise inherits the `[&_p]:my-2` of the body of the page, this
    which pushes the TEXT down and leaves the checkbox alone in
    high. The notebook has the same rule, for the same reason. */
@@ -1637,17 +1786,14 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── The FLYER (MIN-270) ─────────────────────── ────────────────────────
-   This block has NO style by default, and that's what made it
-   incomprehensible: `@tiptap/extension-details` does not return a `<details>`
-   HTML but three `div[data-type]`, and its fallback button arrives empty, without
-   dimension. On the screen: two stacked paragraphs, one of which sometimes disappears,
-   without anything to click. The Tailwind rules of the body of the page aimed to
-   the real `<details>`/`<summary>` tags — so they only applied to
-   rien.
+/* ─── The disclosure block (MIN-270) ─────────────────────────────────────
+   TipTap renders the outer details node as a div with an empty fallback
+   button, while the summary remains a native `<summary>`. The custom chevron
+   supplies the control, so the browser's native summary marker must be removed;
+   otherwise both indicators occupy the same left edge.
 
-   The form chosen is that of Notion: a chevron in the margin, the summary in
-   bold next to it, the body indented below both and aligned with the summary. */
+   The layout follows Notion: a chevron in the margin, a medium-weight summary
+   beside it, and the content aligned below the summary. */
 .page-editor [data-type="details"] {
   display: grid;
   grid-template-columns: 1.25rem 1fr;
@@ -1687,9 +1833,14 @@ nav[aria-label="Navigation"]
   grid-column: 2;
   min-width: 0;
 }
-.page-editor [data-type="detailsSummary"] {
+.page-editor .page-details-summary {
+  display: block;
+  list-style: none;
   font-weight: 500;
   line-height: 1.75rem;
+}
+.page-editor .page-details-summary::-webkit-details-marker {
+  display: none;
 }
 /* The folded body is hidden by the `hidden` attribute that the node view sets;
    unfolded, it breathes a little under its summary. */
@@ -1755,6 +1906,11 @@ nav[aria-label="Navigation"]
    in the gutter, already taken by the handle and the `+`. */
 .page-block-commented {
   position: relative;
+  --page-comment-accent: color-mix(
+    in oklab,
+    var(--page-color-teal) 70%,
+    transparent
+  );
 }
 
 .page-block-commented::before {
@@ -1765,7 +1921,18 @@ nav[aria-label="Navigation"]
   left: -0.75rem;
   width: 2px;
   border-radius: 1px;
-  background-color: color-mix(in oklab, var(--page-color-teal) 70%, transparent);
+  background-color: var(--page-comment-accent);
+}
+
+/* A frozen excerpt is underlined only while the same text still exists in the
+   commented block. Like the edge, this is an editor decoration rather than
+   document content. */
+.page-commented-passage {
+  text-decoration-line: underline;
+  text-decoration-color: var(--page-comment-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  text-decoration-skip-ink: auto;
 }
 
 /* The PASTILLE of a commented block: the count, and the button that opens the thread.
@@ -1978,6 +2145,36 @@ html[data-desktop-platform="darwin"]
   -webkit-app-region: no-drag;
 }
 
+/* Content-pane headers remain a window handle on macOS. Declaring the drag
+   region on the header itself lets its interactive descendants reliably carve
+   out clickable no-drag areas while every empty part still moves the window. */
+html[data-desktop-platform="darwin"] .app-content-header {
+  -webkit-app-region: drag;
+}
+
+html[data-desktop-platform="darwin"] .app-content-header
+  :is(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    label,
+    summary,
+    [role="button"],
+    [role="link"],
+    [role="menuitem"],
+    [role="combobox"],
+    [role="tab"],
+    [role="option"],
+    [role="checkbox"],
+    [role="switch"],
+    [contenteditable="true"],
+    [tabindex]
+  ) {
+  -webkit-app-region: no-drag;
+}
+
 /* The secondary sidebar is teleported into the shell gutter. His line
    of title is therefore not in the same subtree as the fixed band of
    displacement, which otherwise covers it with its z-index. Place it above
@@ -2068,79 +2265,20 @@ html[data-desktop-platform="darwin"]
    taken on a pseudo-element `fixed` — not on the header, whose rectangle
    follows the animated width. */
 
-/* The traffic lights are drawn ABOVE the page, at the top left.
-   Rather than going down the column to make a band of their own — which
-   pushes the entire sidebar down and reveals a seam of one
-   other color above it —, they arise IN the line of mark, at the
-   place de la marque, which passes to the right. The line keeps its 60 px and its background:
-   nothing moves, there is nothing new on the screen, only a place exchanged.
-
-   `data-window-buttons` is set by components/app-sidebar.tsx when the
-   buttons are there. In RAIL mode they are removed (56 px does not hold them) and
-   the attribute disappears with them: the mark returns to the left, in its place. Below
-   768 px the bar is no longer rendered at all, and it's the header that keeps them
-   the corner (`HeaderWindowButtonsSlot`, components/desktop-window-buttons.tsx).
-
-   The place they occupy — left edge at 19, three 14 px pellets at a step
-   of 23, therefore a straight edge at 79, plus a margin - is NOTICED on a capture
-   system screen rather than inferred, and lives in `WINDOW_BUTTONS_WIDTH`
-   (components/desktop-window-buttons.tsx). This block does not need it: the
-   mark snaps to the right edge of the line, not to them. */
-/* ── The GLISSE brand, it does not teleport ───────────────────────────────
-   MIN-293. The place opens and closes along the way — we pass right through
-   screen, macOS takes the buttons to the top of the screen, and the line no longer has anything
-   to keep for them; the rail folds, same thing. The mark then jumped from one edge to
-   the other, without transition, which makes the whole bar seem to be reloading.
-
-   `justify-content` and `padding` do not animate (the second, yes, but it
-   would push the mark instead of moving it). Hence the staging: the line
-   becomes a query CONTAINER, and the mark translates by the width that
-   rest — `100cqw` is the content width of the line (excluding gutter), `100%`
-   that of the brand itself. The difference is exactly the journey, at any
-   bar width, without a single hard number and without measuring anything in JS.
-
-   The animation is only ARMED once the first window state is received
-   (`data-window-buttons-ready`, set by components/app-sidebar.tsx): before the
-   response from the bridge, the place is “closed” by default, and animate this
-   catching up there would start the app on a logo crossing its bar.
-
-   ⚠ And this line does **not** carry a window socket, per MIN-309 above:
-   the `fixed` band of 60 px already covers it, and the argument is valid here a fortiori
-   — `container-type: inline-size` makes this line a container whose
-   width comes to life with each hover, i.e. exactly the moving rectangle of which
-   MIN-309 explains that the map of the regions is outdated image after image. */
-html[data-desktop-platform="darwin"] .sidebar-brand-row {
-  container-type: inline-size;
-}
-
-html[data-desktop-platform="darwin"] .sidebar-brand-row[data-window-buttons] .sidebar-brand-mark {
-  transform: translateX(calc(100cqw - 100%));
-}
-
-/* ⚠ **No transition when the BAR comes alive**, and it is the opposite of a
-   oversight. `100cqw` follows the width of the line in real time: when the rail is
-   unfolds, the target of `translateX` is already moving, on the framer curve. Ask a
-   relaxation on top of it is to dampen a value which is already coming to life - the
-   logo falls behind its own bar and runs after it. Seen in use,
-   and that's exactly what we don't want: these two are one.
-
-   Without transition, the brand sticks to the width to the pixel, for free.
-   The movement we wanted to animate is the OTHER — the full screen, where the place
-   opens or closes without the bar moving a pixel, and where nothing
-   would carry the logo if it didn't slide off on its own.
-
-   `data-rail` is set by components/app-sidebar.tsx when the bar is in
-   rail mode, that is to say in the only state where its width changes. */
+/* MIN-488: expanded macOS sidebars use the top-left space for native window
+   controls, so only search and inbox remain on the right. The collapsed rail
+   hides those actions and restores the Minddy mark. Web, Windows, and Linux
+   always keep the mark visible. */
 html[data-desktop-platform="darwin"]
-  .sidebar-brand-row[data-window-buttons-ready]:not([data-rail])
-  .sidebar-brand-mark {
-  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  [data-rail-hovered]
+  .sidebar-brand-row {
+  -webkit-app-region: no-drag;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html[data-desktop-platform="darwin"] .sidebar-brand-row .sidebar-brand-mark {
-    transition: none;
-  }
+html[data-desktop-platform="darwin"]
+  [data-collapsed="false"]
+  .sidebar-brand-mark {
+  display: none;
 }
 
 /* ─── Toasts (sonner) — Geist-style solid status pills ──────────────────────

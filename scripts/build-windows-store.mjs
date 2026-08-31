@@ -16,6 +16,18 @@ const output = path.join(desktop, "release", "windows-store");
 const nativeProject = path.join(desktop, "native", "wns-helper", "wns-helper.vcxproj");
 const nativeOutput = path.join(desktop, "build", "wns");
 const nativeIntermediate = path.join(desktop, "build", "wns-obj");
+const storeUpdateProject = path.join(
+  desktop,
+  "native",
+  "store-update",
+  "store-update.vcxproj",
+);
+const storeUpdateOutput = path.join(desktop, "build", "store-update");
+const storeUpdateIntermediate = path.join(
+  desktop,
+  "build",
+  "store-update-obj",
+);
 const manifestTemplate = path.join(desktop, "build", "appxmanifest.xml.template");
 const generatedManifest = path.join(desktop, "build", "appxmanifest.generated.xml");
 
@@ -102,6 +114,24 @@ async function buildWnsHelper(msbuild, objectId) {
   }
 }
 
+async function buildStoreUpdateHelper(msbuild) {
+  await rm(storeUpdateOutput, { recursive: true, force: true });
+  await rm(storeUpdateIntermediate, { recursive: true, force: true });
+  for (const [platform, directory] of [["x64", "x64"], ["ARM64", "arm64"]]) {
+    const outDir = `${path.join(storeUpdateOutput, directory)}${path.sep}`;
+    const intDir = `${path.join(storeUpdateIntermediate, directory)}${path.sep}`;
+    await run(msbuild, [
+      storeUpdateProject,
+      "/restore",
+      "/m",
+      "/p:Configuration=Release",
+      `/p:Platform=${platform}`,
+      `/p:OutDir=${outDir}`,
+      `/p:IntDir=${intDir}`,
+    ]);
+  }
+}
+
 requireWindowsStoreIdentity(
   requiredEnvironment("MINDDY_WINDOWS_STORE_IDENTITY_NAME"),
   requiredEnvironment("MINDDY_WINDOWS_STORE_PUBLISHER")
@@ -113,17 +143,22 @@ const wnsIdentity = resolveWindowsWnsBuildIdentity(
 
 try {
   await rm(nativeOutput, { recursive: true, force: true });
+  await rm(storeUpdateOutput, { recursive: true, force: true });
   await Promise.all([
     mkdir(path.join(nativeOutput, "x64"), { recursive: true }),
     mkdir(path.join(nativeOutput, "arm64"), { recursive: true }),
+    mkdir(path.join(storeUpdateOutput, "x64"), { recursive: true }),
+    mkdir(path.join(storeUpdateOutput, "arm64"), { recursive: true }),
   ]);
+  const msbuild = await findMsBuild();
+  await buildStoreUpdateHelper(msbuild);
   if (wnsIdentity) {
     const template = await readFile(manifestTemplate, "utf8");
     await writeFile(
       generatedManifest,
       template.replace("__MINDDY_WNS_APP_ID__", wnsIdentity.appId),
     );
-    await buildWnsHelper(await findMsBuild(), wnsIdentity.objectId);
+    await buildWnsHelper(msbuild, wnsIdentity.objectId);
   } else {
     console.log("[build-windows-store] WNS is dormant; packaging without the helper and COM activator.");
   }
@@ -167,4 +202,6 @@ try {
   await rm(generatedManifest, { force: true });
   await rm(nativeOutput, { recursive: true, force: true });
   await rm(nativeIntermediate, { recursive: true, force: true });
+  await rm(storeUpdateOutput, { recursive: true, force: true });
+  await rm(storeUpdateIntermediate, { recursive: true, force: true });
 }

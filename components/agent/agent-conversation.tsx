@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, cn, Spinner, toast } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
+import { AppContentHeader } from "@/components/app-content-header";
 import { cumulativeBranchFiles, changeTotals } from "@/lib/agent-changed-files";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -32,6 +33,7 @@ import {
 } from "@/lib/agent-api";
 import {
   agentRunDiffQueryKey,
+  agentRunDiffStatQueryKey,
   agentRunQueryKey,
   allAgentSessionsQueryKey,
   issueAgentRunsQueryKey,
@@ -61,12 +63,10 @@ import {
   type AgentEnvironment,
 } from "./environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
-import {
-  useAgentRunLive,
-  useAgentRunLocalDiff,
-} from "@/lib/use-agent-run-live";
+import { useAgentRunLocalDiff } from "@/lib/use-agent-run-live";
 import {
   mergeAgentLocalDiff,
+  selectAgentSessionDiff,
   settledAgentLocalDiff,
 } from "@/lib/agent-local-diff";
 import { AgentEventFeed } from "./agent-event-feed";
@@ -307,6 +307,8 @@ export function AgentConversation({
    * to count, and we clicked again believing that it hadn't worked.
    */
   const serverWorking = liveRun ? isAgentRunWorking(liveRun.status) : false;
+  const wasWorkingRef = useRef(serverWorking);
+  const settlingAfterTurn = wasWorkingRef.current && !serverWorking;
   const [stopping, setStopping] = useState(false);
   const working = serverWorking && !stopping;
   // `runs` arrives sorted from newest to oldest: runs[0] is the last run.
@@ -333,7 +335,7 @@ export function AgentConversation({
   // steerable, without response already in flight. The living card then replaces the
   // compose; compose; the feed hides the corresponding bubble. Same react-query query as
   // the feed (shared key) → no additional request.
-  const { events: liveEvents } = useAgentRunEventsQuery(
+  const { events: liveEvents, fetching: eventsFetching } = useAgentRunEventsQuery(
     liveRun?.id ?? null,
     serverWorking,
   );
@@ -341,7 +343,6 @@ export function AgentConversation({
   // subscriber shares the same channel, but also makes Git counters local
   // available at the composer pill — a server route cannot read the
   // deposit that remains on the user's machine.
-  const runLive = useAgentRunLive(liveRun?.id ?? null, serverWorking);
   const streamedLocalDiff = useAgentRunLocalDiff(
     liveRun?.local_exec ? liveRun.id : null,
     serverWorking,
@@ -371,36 +372,33 @@ export function AgentConversation({
     [liveEvents],
   );
   /**
-   * THE SAME TWO NUMBERS, BUT DURING THE TURN (MIN-266).
-   *
-   * `files_changed` is only issued at the END of the turn: as long as the agent was working,
-   * the header didn't move a digit — and on the first turn of a session it
-   * displayed nothing at all, even though this is exactly the moment we want
-   * know what is happening to the repository. This summary is read in the
-   * microVM (`git diff`, without patches) and therefore progresses with the work.
-   *
-   * It only turns during the turn; at rest the events take control again,
-   * and they are already loaded.
+   * The authoritative session diff summary. It is the same server-side Git read
+   * as the full patch sheet, without patch bodies; local shared-checkout runs use
+   * their attributed patch instead. Keeping this query alive at rest is important:
+   * an empty response must clear stale event summaries and hide the PR action.
    */
-  const { files: liveDiffFiles } = useAgentRunDiffStatQuery(
+  const {
+    files: remoteDiffFiles,
+    ready: remoteDiffReady,
+    verified: remoteDiffVerified,
+  } = useAgentRunDiffStatQuery(
     liveRun?.id ?? null,
+    Boolean(liveRun) && !useLocalDiff,
     working,
   );
-  const liveHeaderFiles = useMemo(() => {
-    if (runLive?.fileStats.length) {
-      // Events describe rounds that have already been completed; the local statement replaces
-      // only the paths of the current tour and retains the rest of the session.
-      const byPath = new Map(sessionFiles.map((file) => [file.path, file]));
-      for (const file of runLive.fileStats) byPath.set(file.path, file);
-      return [...byPath.values()];
-    }
-    return liveDiffFiles.length > 0 ? liveDiffFiles : sessionFiles;
-  }, [liveDiffFiles, runLive?.fileStats, sessionFiles]);
+  const sessionDiffFiles = useMemo(
+    () => selectAgentSessionDiff({
+      local: useLocalDiff,
+      localDiff,
+      remoteFiles: remoteDiffFiles,
+      remoteReady: remoteDiffReady,
+      fallbackFiles: sessionFiles,
+    }),
+    [localDiff, remoteDiffFiles, remoteDiffReady, sessionFiles, useLocalDiff],
+  );
   const sessionTotals = useMemo(
-    // The direct is authentic as soon as it has something: it contains everything that
-    // carry the events (commits from past rounds) PLUS the current round.
-    () => changeTotals(liveHeaderFiles),
-    [liveHeaderFiles],
+    () => changeTotals(sessionDiffFiles),
+    [sessionDiffFiles],
   );
   /**
    * The sub-agents of the current turn (MIN-112) → indicator in the pill of the
@@ -489,8 +487,15 @@ export function AgentConversation({
   // A REVIEW session has nothing to deliver: it does not write to the repository
   // and does not have `create_pr`. Offering the button would send the agent a
   // consigne qu'il ne peut que refuser.
+  const diffReady = useLocalDiff
+    ? !settlingAfterTurn && !eventsFetching
+    : remoteDiffVerified;
   const canCreatePr =
-    steerable && liveRun?.pr_number == null && liveRun?.pull_request_id == null;
+    steerable &&
+    liveRun?.pr_number == null &&
+    liveRun?.pull_request_id == null &&
+    diffReady &&
+    sessionDiffFiles.length > 0;
   // Files in “files changed” blocks open the session diff view
   // IN the conversation (scratchpad note: see the diff while the agent
   // modifies, without waiting for the PR) — the Sheet shows the work pushed, PR or not.
@@ -545,7 +550,6 @@ export function AgentConversation({
   // On the SERVER, and not on what the interface displays: an optimistic shutdown
   // causes `working` to change to false seconds before the turn returns its
   // latest events, and it is precisely them that we are looking for here.
-  const wasWorkingRef = useRef(serverWorking);
   useEffect(() => {
     const runId = liveRun?.id;
     if (wasWorkingRef.current && !serverWorking && runId) {
@@ -554,6 +558,9 @@ export function AgentConversation({
       });
       void queryClient.invalidateQueries({
         queryKey: agentRunDiffQueryKey(runId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: agentRunDiffStatQueryKey(runId),
       });
     }
     wasWorkingRef.current = serverWorking;
@@ -825,39 +832,49 @@ export function AgentConversation({
       ? "loading"
       : "compose";
 
-  /**
-   * Action of the session, to the left of those of the host (the link to the pull
-   * request). The file summary is now in the pill above the
-   * compose, so that the header does not change size when the diff changes.
-   */
-  const sessionActions =
-    liveRun && canCreatePr && !working ? (
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={requestingPr}
-        onClick={() => void createPr()}
-      >
-        <GitPullRequest className="size-3.5" />
-        {t("createPullRequest")}
-      </Button>
-    ) : null;
+  /** Session diff counters and publication action, before the host actions. */
+  const sessionActions = liveRun ? (
+    <>
+      {sessionDiffFiles.length > 0 ? (
+        <button
+          type="button"
+          aria-label={t("diffTitle")}
+          onClick={openDiffSheet}
+          className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 font-mono text-xs tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="text-emerald-600 dark:text-emerald-400">
+            +{sessionTotals.additions}
+          </span>
+          <span className="text-red-600 dark:text-red-400">
+            −{sessionTotals.deletions}
+          </span>
+        </button>
+      ) : null}
+      {canCreatePr && !working ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={requestingPr}
+          onClick={() => void createPr()}
+        >
+          <GitPullRequest className="size-3.5" />
+          {t("createPullRequest")}
+        </Button>
+      ) : null}
+    </>
+  ) : null;
 
   // The live reading has its place in the pill during the tour. Once the turn
   // finished, the final block `files_changed` appears in the thread: let's not keep
   // a second pill which would only contain the same summary.
-  const changedFileCount = working ? liveHeaderFiles.length : 0;
+  const changedFileCount = working ? sessionDiffFiles.length : 0;
 
   return (
     <MentionLinksProvider value={links}>
       <div className="flex h-full flex-col overflow-hidden">
-        {/* Header: left block provided by the host (default: session template in
-          live / targeted issue in composite) + actions on the right. Without border: the wire
-          breathes all the way to the top, and the header doesn't read as a separate bar.
-          Bottom deliberately tighter than the top (`pb-2.5`): the space under the
-          title is already given by the `pt-3` of the sessions bar just below. */}
-        <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
+        {/* Host title on the left and session actions on the shared 60 px line. */}
+        <AppContentHeader contentClassName="gap-2 px-4">
           {headerTitle ??
             (liveRun ? (
               <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
@@ -880,7 +897,7 @@ export function AgentConversation({
               {headerActions}
             </div>
           ) : null}
-        </div>
+        </AppContentHeader>
 
         {/* Feed: event stream (live), in-flight launch, spinner or intro. */}
         <div className="min-h-0 flex-1">
@@ -894,7 +911,7 @@ export function AgentConversation({
               pendingUserMessages={pendingMessages}
               onOpenFile={openDiff}
               onOpenDiff={openDiffSheet}
-              liveDiffFiles={liveDiffFiles}
+              liveDiffFiles={sessionDiffFiles}
               hiddenQuestionEventId={activeQuestion?.eventId}
               localExec={liveRun.local_exec === true}
               className="h-full py-4"

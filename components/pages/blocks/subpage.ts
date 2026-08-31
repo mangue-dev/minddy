@@ -183,7 +183,7 @@ export const subpageBlock: PageBlock = {
   labelKey: "blockSubpage",
   slash: {
     group: "advanced",
-    order: 4,
+    order: 5,
     keywords: ["page", "subpage", "sous-page", "sous page", "child", "enfant", "wiki"],
   },
   // A subpage does not “transform” from a paragraph: there is nothing

@@ -326,8 +326,7 @@ export function TaskItemView({
         className={cn(
           "min-w-0 flex-1 leading-relaxed",
           struck &&
-            "text-muted-foreground line-through [&_*]:text-muted-foreground",
-          state === "in_progress" && "font-medium"
+            "text-muted-foreground line-through [&_*]:text-muted-foreground"
         )}
       />
 

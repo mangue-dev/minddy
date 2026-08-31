@@ -124,6 +124,10 @@ export const BlockPlaceholder = Extension.create<BlockPlaceholderOptions>({
  */
 export function pagePlaceholder(t: PagesTranslator) {
   return ({ node, depth }: { node: Node; depth: number }): string => {
+    // A code block owns its entire visual surface, including its empty state.
+    // Painting the page-level new-line prompt on the node-view wrapper leaves
+    // that prompt visible behind the code editor.
+    if (node.type.name === "codeBlock") return "";
     if (node.type.name === "heading") {
       const level = node.attrs.level as number;
       if (level === 1) return t("blockHeading1");

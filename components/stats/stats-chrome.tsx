@@ -66,12 +66,14 @@ export function StatsSectionHeader({
 
 /** Complete section: off-map header + children (often a `StatsCard`). */
 export function StatsSection({
+  id,
   title,
   info,
   description,
   className,
   children,
 }: {
+  id?: string;
   title: string;
   info?: string;
   description?: string;
@@ -79,7 +81,10 @@ export function StatsSection({
   children: ReactNode;
 }) {
   return (
-    <section className={cn("mt-8", className)}>
+    <section
+      id={id}
+      className={cn("mt-8", id && "scroll-mt-20 rounded-xl", className)}
+    >
       <StatsSectionHeader title={title} info={info} description={description} />
       {children}
     </section>
@@ -88,16 +93,20 @@ export function StatsSection({
 
 /** Single map surface, reused as is by all sections. */
 export function StatsCard({
+  id,
   className,
   children,
 }: {
+  id?: string;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <div
+      id={id}
       className={cn(
         "rounded-xl border border-border bg-card p-5 text-card-foreground",
+        id && "scroll-mt-20",
         className,
       )}
     >

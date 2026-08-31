@@ -34,10 +34,11 @@ test("writes the literal Partner Center identity into the AppX configuration", a
   assert.doesNotMatch(config, /publisher: \$\{env\./);
 });
 
-test("uses opaque icons for the Windows executable and AppX shell surfaces", async () => {
+test("uses rounded transparent icons for Windows shell surfaces", async () => {
   const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
   const fingerprint = await readFile(new URL("./desktop-fingerprint.mjs", import.meta.url), "utf8");
   assert.match(config, /^  icon: build\/icon-windows\.png$/m);
+  assert.match(config, /^  backgroundColor: transparent$/m);
   assert.match(fingerprint, /^  "desktop\/build\/appx",$/m);
   assert.match(fingerprint, /^  "desktop\/build\/icon-windows\.png",$/m);
 
@@ -45,7 +46,21 @@ test("uses opaque icons for the Windows executable and AppX shell surfaces", asy
   const { width, height, hasAlpha } = await icon.metadata();
   assert.equal(width, 1024);
   assert.equal(height, 1024);
-  assert.equal(hasAlpha, false);
+  assert.equal(hasAlpha, true);
+  const iconCorner = await icon
+    .extract({ left: 0, top: 0, width: 1, height: 1 })
+    .ensureAlpha()
+    .raw()
+    .toBuffer();
+  assert.equal(iconCorner[3], 0, "Windows executable icon must have a transparent corner");
+  const iconCenter = await sharp(
+    fileURLToPath(new URL("../desktop/build/icon-windows.png", import.meta.url)),
+  )
+    .extract({ left: 512, top: 512, width: 1, height: 1 })
+    .ensureAlpha()
+    .raw()
+    .toBuffer();
+  assert.equal(iconCenter[3], 255, "Windows executable icon must have an opaque center");
 
   const appxAssets = [
     ["Square44x44Logo.png", 44, 44],
@@ -60,10 +75,27 @@ test("uses opaque icons for the Windows executable and AppX shell surfaces", asy
     const metadata = await asset.metadata();
     assert.equal(metadata.width, expectedWidth, `${fileName} width`);
     assert.equal(metadata.height, expectedHeight, `${fileName} height`);
-    assert.equal(metadata.hasAlpha, false, `${fileName} must be opaque`);
+    assert.equal(metadata.hasAlpha, true, `${fileName} must support transparency`);
 
-    const corner = await asset.extract({ left: 0, top: 0, width: 1, height: 1 }).raw().toBuffer();
-    assert.deepEqual([...corner], [255, 255, 255], `${fileName} must have a white corner`);
+    const corner = await asset
+      .extract({ left: 0, top: 0, width: 1, height: 1 })
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+    assert.equal(corner[3], 0, `${fileName} must have a transparent corner`);
+    const center = await sharp(
+      fileURLToPath(new URL(`../desktop/build/appx/${fileName}`, import.meta.url)),
+    )
+      .extract({
+        left: Math.floor(expectedWidth / 2),
+        top: Math.floor(expectedHeight / 2),
+        width: 1,
+        height: 1,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+    assert.equal(center[3], 255, `${fileName} must have an opaque center`);
   }
 });
 
@@ -93,6 +125,28 @@ test("packages the architecture-matched WNS helper and COM activator", async () 
   assert.match(buildScript, /--config\.appx\.customManifestPath=appxmanifest\.generated\.xml/);
   assert.match(verifier, /resources\/wns\/minddy-wns\.exe/);
   assert.match(verifier, /contains WNS components although WNS is not configured/);
+});
+
+test("packages the architecture-matched Microsoft Store update helper", async () => {
+  const config = await readFile(new URL("../desktop/electron-builder.yml", import.meta.url), "utf8");
+  const helperProject = await readFile(
+    new URL("../desktop/native/store-update/store-update.vcxproj", import.meta.url),
+    "utf8",
+  );
+  const helperSource = await readFile(
+    new URL("../desktop/native/store-update/main.cpp", import.meta.url),
+    "utf8",
+  );
+  const buildScript = await readFile(new URL("./build-windows-store.mjs", import.meta.url), "utf8");
+  const verifier = await readFile(new URL("./verify-windows-desktop.ps1", import.meta.url), "utf8");
+
+  assert.match(config, /^    - from: build\/store-update\/\$\{arch\}$/m);
+  assert.match(helperProject, /Release\|x64/);
+  assert.match(helperProject, /Release\|ARM64/);
+  assert.match(helperProject, /Microsoft\.Windows\.CppWinRT/);
+  assert.match(helperSource, /GetAppAndOptionalStorePackageUpdatesAsync/);
+  assert.match(buildScript, /buildStoreUpdateHelper\(msbuild\)/);
+  assert.match(verifier, /resources\/store-update\/minddy-store-update\.exe/);
 });
 
 test("keeps WNS dormant unless both release identities are configured", () => {

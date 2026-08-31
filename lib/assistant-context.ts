@@ -21,9 +21,11 @@ export type AssistantContextKind =
   | "objective"
   | "feedback"
   | "routine"
+  | "inbox"
   | "page"
   | "view"
   | "cycle"
+  | "settings"
   | "member";
 
 export interface AssistantContextChip {
@@ -35,15 +37,17 @@ export interface AssistantContextChip {
   /** Tooltip: the detail that the wording left out. */
   tooltip: string;
   /**
- * Members: the seed of the portrait. Projects: the id, seed of the orb.
- * In both cases the pill shows the REAL figure of the thing rather
- * than a generic icon.
- */
+   * Members: the seed of the portrait. Projects: the id, seed of the orb.
+   * In both cases the pill shows the REAL figure of the thing rather
+   * than a generic icon.
+   */
   avatarSeed?: string;
   /** Projects: the imported favicon, when the project has one. */
   iconUrl?: string | null;
   /** Objectifs : leur couleur — celle que porte leur cible, ici comme ailleurs. */
   color?: string | null;
+  /** Wiki pages: their emoji, when they have one. */
+  icon?: string | null;
   /** Hand pinned (@ button) — removeable, where ambient turns off. */
   pinned?: boolean;
 }
@@ -118,6 +122,28 @@ export function contextChips(
     });
   }
 
+  if (ctx?.inbox) {
+    chips.push({
+      key: "inbox",
+      kind: "inbox",
+      label: t("contextInbox"),
+      tooltip: t("contextInboxTooltip"),
+    });
+  }
+
+  if (ctx?.settings) {
+    const label =
+      ctx.settings === "account"
+        ? t("contextAccountSettings")
+        : t("contextProjectSettings");
+    chips.push({
+      key: "settings",
+      kind: "settings",
+      label,
+      tooltip: label,
+    });
+  }
+
   if (ctx?.objectiveId) {
     chips.push({
       key: "objective",
@@ -143,6 +169,7 @@ export function contextChips(
       kind: "page",
       label: ctx.pageTitle?.trim() || t("contextPage"),
       tooltip: t("contextPage"),
+      icon: ctx.pageIcon ?? null,
     });
   }
 
@@ -177,7 +204,8 @@ export function contextChips(
   for (const item of ctx?.pinned ?? []) {
     // Pinned or ambient, a project keeps the same figure: its orb (or its
     // favicon), resolved here as the scope one.
-    const project = item.kind === "project" ? opts.project?.(item.id) : undefined;
+    const project =
+      item.kind === "project" ? opts.project?.(item.id) : undefined;
     chips.push({
       key: pinnedKey(item),
       kind: item.kind,
@@ -188,8 +216,11 @@ export function contextChips(
         : item.kind === "project"
           ? { avatarSeed: orbSeedOr(item.id, project?.orb_seed) }
           : {}),
-      ...(item.kind === "project" ? { iconUrl: project?.icon_url ?? null } : {}),
+      ...(item.kind === "project"
+        ? { iconUrl: project?.icon_url ?? null }
+        : {}),
       ...(item.kind === "objective" ? { color: item.color ?? null } : {}),
+      ...(item.kind === "page" ? { icon: item.icon ?? null } : {}),
       pinned: true,
     });
   }
@@ -200,6 +231,8 @@ export function contextChips(
 /** The fields that each ambient pill represents — what turning off the eye removes. */
 const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   project: ["projectId"],
+  inbox: ["inbox"],
+  settings: ["settings"],
   // The PR follows its ticket: it only exists in the prompt attached to it.
   issue: [
     "issueId",

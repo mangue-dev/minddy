@@ -30,7 +30,6 @@ import { ProjectLocalRepoSection } from "@/components/settings/project-local-rep
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
-import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import { SettingsGroup } from "@/components/settings/settings-ui";
 import {
   PROJECT_SETTINGS_DEFAULT_TAB,
@@ -39,6 +38,7 @@ import {
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 
 export default function ProjectSettingsPage() {
   const t = useTranslations("Settings");
@@ -49,6 +49,9 @@ export default function ProjectSettingsPage() {
   const { user } = useAuth();
   const { projects, loading: projectsLoading, deleteProject } = useProjects();
   const project = projects.find((p) => p.id === id);
+  useAssistantContext(
+    project ? { projectId: project.id, settings: "project" } : null,
+  );
 
   // Same cache key as the Smart Assign section and the Members tab: the
   // list is read here only to know if a tab deserves its badge,
@@ -206,12 +209,6 @@ export default function ProjectSettingsPage() {
         // “Hotspot” and “Exit Project” share the General tab
         // and exclude each other: the research must only propose that which is rendered.
         audience={isOwner ? "owner" : "member"}
-        topSlot={
-          <SettingsAssistantPrompt
-            projectId={project.id}
-            placeholder={t("assistantPromptPlaceholder")}
-          />
-        }
       />
 
       <ConfirmDeleteDialog

@@ -28,7 +28,7 @@ export type DesktopUpdateStatus =
   | { state: "idle" }
   /** A new version is coming down. Nothing to do, nothing to click. */
   | { state: "downloading"; version: string }
-  /** It's on the disk. This is the only state where a gesture is possible. */
+  /** A directly distributed update is on disk and ready to install. */
   | { state: "ready"; version: string };
 
 export const IDLE_UPDATE_STATUS: DesktopUpdateStatus = { state: "idle" };

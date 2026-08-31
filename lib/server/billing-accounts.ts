@@ -34,7 +34,7 @@ export interface BillingAccount {
   email: string | null;
   admin_override_plan_id: string | null;
   admin_override_note: string | null;
-  /** Fin du plan offert par un admin — null = sans limite (lib/billing-gift.ts). */
+  /** End of the admin-granted plan — null means no time limit (lib/billing-gift.ts). */
   admin_override_expires_at: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
@@ -85,6 +85,24 @@ export function activeAdminOverride(
   return isGiftExpired(account?.admin_override_expires_at, now) ? null : planId;
 }
 
+/**
+ * The plan underneath an admin override. This is the plan that applies as soon
+ * as a temporary override ends: an eligible Stripe plan, otherwise Free.
+ */
+export function resolveBasePlanFromBillingAccount(
+  account: BillingAccount | null
+): {
+  planId: BillingPlanId;
+  source: Exclude<BillingPlanSource, "admin_override">;
+} {
+  const stripePlanId = coerceBillingPlanId(account?.stripe_plan_id);
+  if (stripePlanId && shouldUseStripePlan(account?.stripe_subscription_status)) {
+    return { planId: stripePlanId, source: "stripe" };
+  }
+
+  return { planId: DEFAULT_BILLING_PLAN_ID, source: "default" };
+}
+
 export function resolvePlanFromBillingAccount(
   account: BillingAccount | null,
   now: number = Date.now()
@@ -94,13 +112,7 @@ export function resolvePlanFromBillingAccount(
 } {
   const adminPlanId = activeAdminOverride(account, now);
   if (adminPlanId) return { planId: adminPlanId, source: "admin_override" };
-
-  const stripePlanId = coerceBillingPlanId(account?.stripe_plan_id);
-  if (stripePlanId && shouldUseStripePlan(account?.stripe_subscription_status)) {
-    return { planId: stripePlanId, source: "stripe" };
-  }
-
-  return { planId: DEFAULT_BILLING_PLAN_ID, source: "default" };
+  return resolveBasePlanFromBillingAccount(account);
 }
 
 /**
@@ -351,20 +363,19 @@ export async function getResolvedBilling(userId: string): Promise<ResolvedBillin
   };
 }
 
-// ── Fin des plans offerts ────────────────────────────────────────────────────
+// ── End of granted plans ─────────────────────────────────────────────────────
 
 /**
  * Clears admin overrides whose deadline has passed.
  *
- * Does not cut ANYTHING: `activeAdminOverride` already ignores them from the second that
- * they expire, including quota. This scan is used so that the line stops
- * describing a gift that no longer exists — and, incidentally, the writing pushes
- * the change of plan to open tabs (the live listen
- * `billing_accounts`), which would otherwise keep the old badge until the next
- * loading.
+ * This does not revoke access itself: `activeAdminOverride` already ignores an
+ * override from the second it expires, including for quota checks. This scan
+ * only stops the row from describing a gift that no longer exists. The write
+ * also pushes the plan change to open tabs through the `billing_accounts` live
+ * subscription, which would otherwise keep the old badge until the next load.
  *
- * The note leaves with the plan: it said WHY we were giving a gift, it no longer has
- * any object once the gift is finished.
+ * The note is cleared with the plan because its reason no longer applies after
+ * the gift has ended.
  */
 export async function expireAdminOverrides(): Promise<{ expired: number }> {
   const service = getServiceClient();
@@ -384,17 +395,16 @@ export async function expireAdminOverrides(): Promise<{ expired: number }> {
   return { expired: (data ?? []).length };
 }
 
-// ── Periodic reconciliation ──────────────────────── ────────────────────────
+// ── Periodic reconciliation ──────────────────────────────────────────────────
 
 /**
- * Anti-drift net (cron, in addition to lazy re-sync): re-pulls the actual state
- * of each subscription from Stripe and rewrites it, independent of
- * webhooks. A missed event — renewal, change of plan, cancellation —
- * would otherwise be invisible to inactive users as reading never touches
- *. A canceled subscription naturally reverts to free via
- * `syncSubscriptionToBillingAccount` (status `canceled`). The most accounts
- * formerly synchronized first, in batches limited to fit within the budget
- * time of the function.
+ * Anti-drift safety net (cron, in addition to lazy re-sync): fetches each
+ * subscription's actual state from Stripe and rewrites it independently of
+ * webhooks. A missed renewal, plan change, or cancellation would otherwise be
+ * invisible for inactive users because no read triggers the lazy sync. A
+ * canceled subscription naturally falls back to Free through
+ * `syncSubscriptionToBillingAccount` (status `canceled`). The oldest synced
+ * accounts are processed first in bounded batches.
  */
 export async function reconcileStripeBillingAccounts(options?: {
   limit?: number;

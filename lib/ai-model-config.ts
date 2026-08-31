@@ -19,6 +19,7 @@ import { AGENT_PROVIDERS } from "@/lib/agent-providers";
 import { BYOK_MODEL_KEYS, byokFeatureDefaultModelKey } from "@/lib/ai-surfaces";
 import { DEFAULT_SUBAGENT_FAVORITES } from "@/lib/subagent-favorites";
 import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
+import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
 
 /**
  * `model` → id `provider/model` chosen in the platform key catalog;
@@ -26,9 +27,16 @@ import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
  * `claude-…`): the platform catalog would write invalid ids;
  * `favorites` → JSON list of `FavoriteSubagentModel`;
  * `recommended` → JSON list of ids, in the order of display of the picker ;
+ * `reasoning` → one of the shared Numo reasoning levels;
  * `flag` → “true”/”false” switch.
  */
-export type AiConfigKind = "model" | "modelId" | "favorites" | "recommended" | "flag";
+export type AiConfigKind =
+  | "model"
+  | "modelId"
+  | "reasoning"
+  | "favorites"
+  | "recommended"
+  | "flag";
 
 export type AiConfigGroup = "assistant" | "automations" | "agent" | "byok" | "voice" | "feedback";
 
@@ -72,9 +80,17 @@ export function isModelSuffix(value: string): value is ModelSuffix {
   return (MODEL_SUFFIXES as readonly string[]).includes(value);
 }
 
+export const ASSISTANT_REASONING_CONFIG_KEY = "assistant_reasoning_level";
+
 export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
-  // Assistant Numo + helpers texte
+  // Numo assistant and text helpers.
   { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  {
+    key: ASSISTANT_REASONING_CONFIG_KEY,
+    kind: "reasoning",
+    fallback: DEFAULT_REASONING_LEVEL,
+    group: "assistant",
+  },
   { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   {

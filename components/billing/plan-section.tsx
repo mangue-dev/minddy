@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check, Gift } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,19 +34,19 @@ import {
 } from "@/lib/billing-api";
 
 /**
- * The billing page plan cards (MIN-72, returns) — design modeled on
- * AutoKap: tinted highlighted map + ring, floating “Current Plan” badge,
- * prix / description / features en check-list, CTA pleine largeur. L'usage se
- * stated as MULTIPLES of Free (“10× more usage”), never as amounts.
+ * The billing page plan cards (MIN-72, returns) use a highlighted card and
+ * ring, a floating “Current plan” badge, prices, descriptions, feature lists,
+ * and full-width calls to action. Usage is stated as a multiple of Free
+ * (“10× more usage”), never as a monetary amount.
  *
  * Monthly/annual switch (2 months free): only affects CHECKOUT (new
- * subscription). An active subscriber changes plan/cademia via the Customer Portal.
+ * subscription). An active subscriber changes plan or billing cadence through
+ * the Customer Portal.
  *
- * TERMINATION no longer goes through the portal (MIN-296): “click-to-cancel”
- * asks that it does not cost more gestures than the subscription, and subscribe
- * fits with a button. It is therefore done here, a button and a confirmation, at the
- * end of the period — and the same card suggests going back as long as
- * this date has not passed.
+ * Cancellation no longer goes through the portal (MIN-296): “click-to-cancel”
+ * requires no more gestures than subscribing. It is handled here with a button
+ * and confirmation for the end of the period, and the same card offers to
+ * resume while that date has not passed.
  */
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {
@@ -128,9 +128,65 @@ export function PlanSection() {
   // core while only cloud capabilities are optional.
   if (!loading && !status?.managedBilling) return null;
 
+  const adminOverride = status?.adminOverride ?? null;
+  if (adminOverride) {
+    const basePlanLabel = t(PLAN_LABEL_KEYS[adminOverride.basePlanId]);
+    const overridePlanLabel = t(PLAN_LABEL_KEYS[planId]);
+    const expiresAt = adminOverride.expiresAt;
+
+    return (
+      <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/8 to-card p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+            <Gift className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-foreground">
+              {t("adminOverrideTitle", { plan: overridePlanLabel })}
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {expiresAt
+                ? t("adminOverrideTemporaryDescription", {
+                    date: new Intl.DateTimeFormat(locale, {
+                      dateStyle: "long",
+                    }).format(new Date(expiresAt)),
+                    plan: basePlanLabel,
+                  })
+                : t("adminOverrideUnlimitedDescription", {
+                    plan: basePlanLabel,
+                  })}
+            </p>
+            {cancelPending && periodEnd && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t("cancelScheduled", {
+                  date: new Intl.DateTimeFormat(locale, {
+                    dateStyle: "long",
+                  }).format(new Date(periodEnd)),
+                })}
+              </p>
+            )}
+            {hasSubscription && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4"
+                disabled={submittingPlanId !== null}
+                onClick={() => void openPortal("admin-override")}
+              >
+                {submittingPlanId === "admin-override"
+                  ? t("loading")
+                  : t("manageSubscription")}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {/* Bascule mensuel / annuel — l'annuel offre 2 mois. */}
+      {/* Monthly/yearly switch — yearly billing includes two free months. */}
       <div className="flex justify-center">
         <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium">
           <button
@@ -163,8 +219,7 @@ export function PlanSection() {
         </div>
       </div>
 
-      {/* Termination in progress: the date counts more than the word, it is this which
- says what remains due and until when access holds. */}
+      {/* The date makes a pending cancellation concrete: what remains and for how long. */}
       {cancelPending && periodEnd && (
         <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-center text-xs text-muted-foreground">
           {t("cancelScheduled", {

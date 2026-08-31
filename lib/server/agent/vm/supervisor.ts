@@ -100,9 +100,11 @@ import {
 import { matchAskUserAnswers, type AskUserQuestion } from "@/lib/ask-user";
 import {
   LOCAL_WORKING_DIFF_MAX_BYTES,
+  WORKING_DIFF_MAX_BYTES,
   readWorkingDiff,
   type WorkingDiff,
 } from "../working-diff";
+import { vmLocalDiffPath } from "../harness-layout";
 
 /**
  * THE SUPERVISOR (MIN-286, lot 1) — what `runVmTurn` becomes when the loop
@@ -729,6 +731,15 @@ export async function runOpencodeTurn(
    */
   let liveStatsTimer: ReturnType<typeof setTimeout> | null = null;
   let refreshLocalLiveStats = () => {};
+  /**
+   * Keep a run-scoped copy on the user's machine. Realtime remains the fast
+   * preview, while this artifact is the durable, on-demand source used after
+   * the turn has stopped or when a transport message was missed.
+   */
+  const persistLocalDiff = async (diff: WorkingDiff & { snapshot?: boolean }) => {
+    if (!local) return;
+    await deps.writeFile(vmLocalDiffPath(job.layout), JSON.stringify(diff)).catch(() => {});
+  };
 
   /**
    * The offer of sub-agents of the tour, as the config has just declared it.
@@ -1275,6 +1286,8 @@ export async function runOpencodeTurn(
                 }
                 return;
               }
+              const snapshot = { ...diff, ...(current ? { snapshot: true } : {}) };
+              await persistLocalDiff(snapshot);
               liveEdits.noteStats(diff.files.map(localDiffStat));
               publishLive({
                 text: "",
@@ -1283,7 +1296,7 @@ export async function runOpencodeTurn(
                 reasoningMs: 0,
                 ...liveEdits.payload(),
               });
-              cp.emitDiff({ ...diff, ...(current ? { snapshot: true } : {}) });
+              cp.emitDiff(snapshot);
             })();
           },
           attempt === 0 ? 350 : 650,
@@ -2647,24 +2660,27 @@ export async function runOpencodeTurn(
      * as if the agent had touched them.
      */
     const rawLocalDiff =
-      status === "completed" && local && filesFromSha
+      local && filesFromSha
         ? await readWorkingDiff(host, filesFromSha, {
             patches: true,
             scope: current ? await attributedScope() : undefined,
-            maxBytes: LOCAL_WORKING_DIFF_MAX_BYTES,
+            // The control plane applies its own 240 KB transport cap. The local
+            // artifact can retain the full review payload without sending it.
+            maxBytes: WORKING_DIFF_MAX_BYTES,
           }).catch(() => null)
         : null;
     const localDiff = rawLocalDiff
       ? { ...rawLocalDiff, ...(current ? { snapshot: true } : {}) }
       : null;
+    if (localDiff) await persistLocalDiff(localDiff);
     const changed =
-      status !== "completed"
-        ? null
-        : localDiff && localDiff.files.length > 0
+      localDiff
           ? {
               files: localDiff.files.map(localDiffStat),
               truncated: localDiff.truncated,
             }
+        : status !== "completed"
+          ? null
           : current
             ? await workingTreeChangedFiles(
                 host,

@@ -744,7 +744,7 @@ export async function executeAgentRun(
     const commitRef = issue?.identifier ?? "agent";
     // Comment and agent-summary language comes from the launcher (owner by default),
     // and the landing status for issues created by the agent comes from its account setting.
-    const { locale: commentLocale, numoDefaultStatus } = prefs;
+    const { locale: commentLocale, numoDefaultStatus, branchPrefix } = prefs;
     // Review session: the branches are those of the PR — its base is the diff
     // comparison point, and its head is what we review. Otherwise, use the base
     // selected at launch and the run's working branch. Without a linked
@@ -759,6 +759,7 @@ export async function executeAgentRun(
           issueIdentifier: issue?.identifier,
           conversationTitle: run.title,
           prompt: run.prompt,
+          branchPrefix,
         });
 
     /**

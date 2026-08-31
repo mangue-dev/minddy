@@ -53,7 +53,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
-import { ObjectiveBanner } from "@/components/objective-banner";
+import { ObjectiveBoardHeader } from "@/components/objective-banner";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 // Deferred: the import wizard (and its papaparse CSV machinery) only runs from
 // ?setup=import — a one-time gesture that must not tax every board navigation.
@@ -65,7 +65,7 @@ const ProjectImportDialog = dynamic(
   { ssr: false }
 );
 const CreateIssueDialog = dynamic(
-  () => import("@/components/create-issue-dialog").then((m) => m.CreateIssueDialog),
+  () => loadCreateIssueDialog().then((m) => m.CreateIssueDialog),
   { ssr: false },
 );
 const IssueSidePanel = dynamic(
@@ -85,6 +85,7 @@ import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import {
+  loadCreateIssueDialog,
   loadIssueSidePanel,
   preloadSurface,
 } from "@/lib/lazy-app-surfaces";
@@ -92,6 +93,7 @@ import type {
   CreateIssueInput,
   Issue,
   IssueRelationType,
+  IssueUpdateInput,
 } from "@/lib/types";
 
 function ProjectBoard() {
@@ -218,8 +220,18 @@ function ProjectBoard() {
   const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
-    if (createOpen) setCreateMounted(true);
-  }, [createOpen]);
+    if (createMounted) return;
+    const run = () => {
+      preloadSurface(loadCreateIssueDialog);
+      startTransition(() => setCreateMounted(true));
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(run, { timeout: 3_000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const handle = window.setTimeout(run, 1_500);
+    return () => window.clearTimeout(handle);
+  }, [createMounted]);
 
   useEffect(() => {
     if (openIssueId) setSidePanelMounted(true);
@@ -247,10 +259,11 @@ function ProjectBoard() {
   }, [importOpen]);
 
   // Open the create dialog, optionally preset to a column's status.
-  const openCreate = (status?: IssueStatus) => {
+  const openCreate = useCallback((status?: IssueStatus) => {
     setCreateStatus(status);
+    setCreateMounted(true);
     setCreateOpen(true);
-  };
+  }, []);
 
   // Create in an arbitrary project (the create dialog's "create in another
   // project" dropdown). Refresh that project's board cache so the issue shows
@@ -309,6 +322,14 @@ function ProjectBoard() {
     setOpenIssueId(id);
     setOpenIssueTab("description");
   }, []);
+  const handleOpenIssue = useCallback((issue: Issue) => {
+    setOpenIssueId(issue.id);
+    setOpenIssueTab("description");
+  }, []);
+  const handleOpenPlan = useCallback((issue: Issue) => {
+    setOpenIssueId(issue.id);
+    setOpenIssueTab("plan");
+  }, []);
   const handleAddRelation = useCallback(
     (sourceId: string, type: IssueRelationType, targetId: string) => {
       void addRelation(sourceId, type, targetId).catch((err) =>
@@ -349,8 +370,43 @@ function ProjectBoard() {
   );
 
   const boardIssues = activeObjective ? objectiveIssues : normalIssues;
-  const statuses = activeObjective ? STATUSES : visibleStatuses(config);
+  const statuses = useMemo(
+    () => (activeObjective ? STATUSES : visibleStatuses(config)),
+    [activeObjective, config],
+  );
   const sort = activeObjective ? "manual" : config.sort;
+
+  const handleAskNumoForIssues = useCallback(
+    (selectedIssues: Issue[]) => {
+      if (!project) return;
+      openAssistant({
+        projectId: project.id,
+        pageContext: {
+          projectId: project.id,
+          ...issuesPageContext(selectedIssues, (issue) =>
+            issueIdentifier(project.key, issue.number),
+          ),
+        },
+      });
+    },
+    [openAssistant, project],
+  );
+  const handleUpdateIssue = useCallback(
+    (id: string, patch: IssueUpdateInput) => {
+      void updateIssue(id, patch).catch((err) =>
+        toast.error((err as Error).message),
+      );
+    },
+    [updateIssue],
+  );
+  const handleSetCategories = useCallback(
+    (id: string, ids: string[]) => {
+      void setCategories(id, ids).catch((err) =>
+        toast.error((err as Error).message),
+      );
+    },
+    [setCategories],
+  );
 
   const handleCreateView = async (name: string, description?: string) => {
     const view = await createViewAndSelect(name);
@@ -483,6 +539,7 @@ function ProjectBoard() {
   useEffect(() => {
     if (newParam === "issue") {
       setCreateStatus(undefined);
+      setCreateMounted(true);
       setCreateOpen(true);
       router.replace(pathname);
     }
@@ -616,51 +673,49 @@ function ProjectBoard() {
         </div>
       ) : (
         <>
-          <div className="shrink-0 px-6 pt-4">
-            {activeObjective ? (
-              <ObjectiveBanner
-                objective={activeObjective}
-                objectives={objectives}
-                projectId={project.id}
-                progress={objectiveProgress(activeObjective.id, issues)}
-                lead={
-                  activeObjective.lead_user_id
-                    ? members.find((m) => m.user_id === activeObjective.lead_user_id) ??
-                      null
-                    : null
-                }
-              />
-            ) : (
-              <BoardToolbar
-                tabOrderScope={project.id}
-                views={views}
-                activeViewId={activeViewId}
-                generatingViewIds={generatingViewIds}
-                onSelectView={selectView}
-                config={config}
-                onConfigChange={setConfig}
-                members={members}
-                categories={categories}
-                objectives={objectives}
-                integrations={integrations}
-                dirty={dirty}
-                onCreateView={handleCreateView}
-                onUpdateActiveView={saveActiveView}
-                onRenameView={renameView}
-                onDeleteView={deleteView}
-                onAskNumo={handleAskNumo}
-                // The cycle is personal & cross-project: the tab exists on every
-                // board but is canonical on /all only — here it just links out
-                // (↗), it never scopes the cycle to this project (MIN-32).
-                cycleTab={{
-                  active: false,
-                  external: true,
-                  completionPercent: currentCycleCompletionPercent,
-                  onSelect: () => router.push("/all?view=cycle"),
-                }}
-              />
-            )}
-          </div>
+          {activeObjective ? (
+            <ObjectiveBoardHeader
+              objective={activeObjective}
+              objectives={objectives}
+              projectId={project.id}
+              progress={objectiveProgress(activeObjective.id, issues)}
+              lead={
+                activeObjective.lead_user_id
+                  ? members.find((m) => m.user_id === activeObjective.lead_user_id) ??
+                    null
+                  : null
+              }
+            />
+          ) : (
+            <BoardToolbar
+              tabOrderScope={project.id}
+              views={views}
+              activeViewId={activeViewId}
+              generatingViewIds={generatingViewIds}
+              onSelectView={selectView}
+              config={config}
+              onConfigChange={setConfig}
+              members={members}
+              categories={categories}
+              objectives={objectives}
+              integrations={integrations}
+              dirty={dirty}
+              onCreateView={handleCreateView}
+              onUpdateActiveView={saveActiveView}
+              onRenameView={renameView}
+              onDeleteView={deleteView}
+              onAskNumo={handleAskNumo}
+              // The cycle is personal & cross-project: the tab exists on every
+              // board but is canonical on /all only — here it just links out
+              // (↗), it never scopes the cycle to this project (MIN-32).
+              cycleTab={{
+                active: false,
+                external: true,
+                completionPercent: currentCycleCompletionPercent,
+                onSelect: () => router.push("/all?view=cycle"),
+              }}
+            />
+          )}
           <div className="min-h-0 flex-1 pt-3">
             <KanbanBoard
               issues={boardIssues}
@@ -676,36 +731,14 @@ function ProjectBoard() {
               members={members}
               categories={categories}
               objectives={objectives}
-              onOpenIssue={(issue: Issue) => {
-                setOpenIssueId(issue.id);
-                setOpenIssueTab("description");
-              }}
+              onOpenIssue={handleOpenIssue}
               onOpenIssueById={openIssueById}
               onAddRelation={handleAddRelation}
-              onOpenPlan={(issue: Issue) => {
-                setOpenIssueId(issue.id);
-                setOpenIssueTab("plan");
-              }}
+              onOpenPlan={handleOpenPlan}
               onCreateIssue={openCreate}
-              onAskNumo={(selectedIssues) => openAssistant({
-                projectId: project.id,
-                pageContext: {
-                  projectId: project.id,
-                  ...issuesPageContext(selectedIssues, (issue) =>
-                    issueIdentifier(project.key, issue.number)
-                  ),
-                },
-              })}
-              onUpdateIssue={(id, patch) =>
-                void updateIssue(id, patch).catch((err) =>
-                  toast.error((err as Error).message)
-                )
-              }
-              onSetCategories={(id, ids) =>
-                void setCategories(id, ids).catch((err) =>
-                  toast.error((err as Error).message)
-                )
-              }
+              onAskNumo={handleAskNumoForIssues}
+              onUpdateIssue={handleUpdateIssue}
+              onSetCategories={handleSetCategories}
               onDeleteIssue={deleteIssue}
               onMove={moveIssue}
               horizontalScroll={boardScrollPosition}

@@ -169,8 +169,8 @@ importers:
         specifier: ^1.34.0
         version: 1.34.0(react@19.2.8)
       mangue-ui:
-        specifier: ^0.6.0
-        version: 0.6.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: ^0.7.0
+        version: 0.7.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.1(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       mcp-handler:
         specifier: ^2.1.1
         version: 2.1.1(@modelcontextprotocol/server@2.0.0)(next@16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
@@ -225,6 +225,9 @@ importers:
       shiki:
         specifier: ^4.4.3
         version: 4.4.3
+      simple-icons:
+        specifier: 16.29.0
+        version: 16.29.0
       streamdown:
         specifier: ^2.6.0
         version: 2.6.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -4711,8 +4714,8 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  mangue-ui@0.6.0:
-    resolution: {integrity: sha512-QwpdGeiFaQJWs0oxLRvFHPunXw5pyQZZwF/qJZqM+sofF4hvspW3dBo2KbvwMn8yADXLiZSRlZ0lTKJmV8mlqg==}
+  mangue-ui@0.7.0:
+    resolution: {integrity: sha512-zM27m7dbxI4cpftsh6vMxHCuPKeYgxuTOE768IQXfURxD5TOKoqC3+ODzCGQupmUcZTpd8gxnEMi0LaR4sx04w==}
     peerDependencies:
       next: '*'
       react: '>=18'
@@ -5684,6 +5687,10 @@ packages:
 
   signal-exit@3.0.7:
     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
+
+  simple-icons@16.29.0:
+    resolution: {integrity: sha512-4H94f5ZgcCcgJroc902TFlFdgPu2IU2eD7+WebN2Z14xKYrKHeJ4UQcZwzgSuH4Rgzw+jp7sbHl40NefuIEYsg==}
+    engines: {node: '>=0.12.18'}
 
   sonner@2.0.7:
     resolution: {integrity: sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w==}
@@ -10678,7 +10685,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  mangue-ui@0.6.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+  mangue-ui@0.7.0(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.1(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       '@lobehub/icons': 5.16.0(@lobehub/ui@5.20.3)(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@radix-ui/react-switch': 1.3.3(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -12201,6 +12208,8 @@ snapshots:
   siginfo@2.0.0: {}
 
   signal-exit@3.0.7: {}
+
+  simple-icons@16.29.0: {}
 
   sonner@2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:

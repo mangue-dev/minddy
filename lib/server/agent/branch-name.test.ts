@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { generatedAgentBranchName, isValidGitBranchName, slugForAgentBranch } from "./branch-name";
+import {
+  generatedAgentBranchName,
+  isValidGitBranchName,
+  normalizeAgentBranchPrefix,
+  slugForAgentBranch,
+} from "./branch-name";
 
 describe("generatedAgentBranchName", () => {
   it("uses the ticket identifier when the conversation is ticket-linked", () => {
@@ -9,7 +14,7 @@ describe("generatedAgentBranchName", () => {
         issueIdentifier: "MIN-42",
         conversationTitle: "Refaire le menu",
       }),
-    ).toBe("minddy/agent/min-42-12345678");
+    ).toBe("numo/min-42-12345678");
   });
 
   it("uses the conversation title when there is no ticket", () => {
@@ -18,7 +23,7 @@ describe("generatedAgentBranchName", () => {
         runId: "12345678-aaaa-bbbb-cccc-dddddddddddd",
         conversationTitle: "Réparer l'écran d'accueil",
       }),
-    ).toBe("minddy/agent/reparer-l-ecran-d-accueil-12345678");
+    ).toBe("numo/reparer-l-ecran-d-accueil-12345678");
   });
 
   it("falls back to the prompt, then to agent", () => {
@@ -27,8 +32,30 @@ describe("generatedAgentBranchName", () => {
         runId: "12345678-aaaa-bbbb-cccc-dddddddddddd",
         prompt: "Ajouter un bouton",
       }),
-    ).toBe("minddy/agent/ajouter-un-bouton-12345678");
+    ).toBe("numo/ajouter-un-bouton-12345678");
     expect(slugForAgentBranch("   ")).toBe("agent");
+  });
+
+  it("uses the account prefix in canonical form", () => {
+    expect(
+      generatedAgentBranchName({
+        runId: "12345678-aaaa-bbbb-cccc-dddddddddddd",
+        issueIdentifier: "MIN-42",
+        branchPrefix: "team/numo",
+      }),
+    ).toBe("team/numo/min-42-12345678");
+  });
+});
+
+describe("normalizeAgentBranchPrefix", () => {
+  it("trims the value and adds exactly one trailing slash", () => {
+    expect(normalizeAgentBranchPrefix(" team/numo// ")).toBe("team/numo/");
+  });
+
+  it("rejects empty values and invalid git ref prefixes", () => {
+    expect(normalizeAgentBranchPrefix(" ")).toBeNull();
+    expect(normalizeAgentBranchPrefix("../release")).toBeNull();
+    expect(normalizeAgentBranchPrefix("team branch")).toBeNull();
   });
 });
 

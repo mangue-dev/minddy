@@ -128,7 +128,7 @@ export function SecondarySidebar({
           <div className="flex-1" />
         )}
         {actions ? (
-          <div className="flex shrink-0 items-center">{actions}</div>
+          <div className="flex shrink-0 items-center gap-1">{actions}</div>
         ) : null}
       </div>
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -169,7 +169,7 @@ export function SecondarySidebarSlot({ reserve }: { reserve: boolean }) {
  *
  * It is painted IN THE COLORS OF THE BAR, and not left transparent: in
  * leaving a page with a secondary sidebar, the page is suddenly unmounted and it
- * gutter is empty during the 320 ms of its closure. Without a bottom, we
+ * gutter is empty during the 180 ms of its closure. Without a bottom, we
  * saw the `bg-background` of the chassis — a light strip open between the bar
  * primary and the header, both in `bg-sidebar`. With it, the column closes
  * like a panel, without a gap.
@@ -202,7 +202,7 @@ function SecondarySidebarGutter({
           which crosses the entire screen. */}
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 h-[60px] border-b border-border"
+        className="secondary-sidebar-header-placeholder absolute inset-x-0 top-0 h-[60px] border-b border-border"
       />
       <div
         ref={setSlot}

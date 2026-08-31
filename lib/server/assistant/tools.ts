@@ -110,8 +110,7 @@ const ISSUE_FIELD_PROPERTIES = {
   },
   objective_id: {
     type: ["string", "null"],
-    description:
-      "Objective id (from list_objectives), or null to detach.",
+    description: "Objective id (from list_objectives), or null to detach.",
   },
   parent_id: {
     type: ["string", "null"],
@@ -211,8 +210,47 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         "Read minddy's product knowledge for a feature or topic. Use this before explaining a product feature, setup path, plan capability, or open-source/self-hosting detail.",
       parameters: {
         type: "object",
-        properties: { topic: { type: "string", description: "Knowledge topic id or natural-language query." } },
+        properties: {
+          topic: {
+            type: "string",
+            description: "Knowledge topic id or natural-language query.",
+          },
+        },
         required: ["topic"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_inbox",
+      description:
+        "Read the current user's inbox with read/unread state, timestamps, actors, excerpts, and resolvable targets. Use this for questions such as 'What did I miss?' or 'What is waiting for me?'. Defaults to unread notifications.",
+      parameters: {
+        type: "object",
+        properties: {
+          state: {
+            type: "string",
+            enum: ["all", "unread", "read"],
+            description: "Read state to return. Defaults to unread.",
+          },
+          category: {
+            type: "string",
+            enum: ["all", "mentions"],
+            description:
+              "Return every notification or only mentions. Defaults to all.",
+          },
+          query: {
+            type: "string",
+            description:
+              "Optional text filter across actors, project keys, target identifiers, titles, and comment excerpts.",
+          },
+          limit: {
+            type: "number",
+            description:
+              "Maximum notifications to return (default 50, max 100).",
+          },
+        },
       },
     },
   },
@@ -348,8 +386,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "list_categories",
-      description:
-        "List the project's categories (labels): id, name, color.",
+      description: "List the project's categories (labels): id, name, color.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -529,7 +566,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           new_string: {
             type: "string",
-            description: "What replaces it. An empty string deletes the passage.",
+            description:
+              "What replaces it. An empty string deletes the passage.",
           },
           replace_all: {
             type: "boolean",
@@ -695,7 +733,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           new_string: {
             type: "string",
-            description: "What replaces it. An empty string deletes the passage.",
+            description:
+              "What replaces it. An empty string deletes the passage.",
           },
           replace_all: {
             type: "boolean",
@@ -738,7 +777,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         properties: {
           issue_id: {
             type: "string",
-            description: "The issue the relation is stated FROM (its perspective).",
+            description:
+              "The issue the relation is stated FROM (its perspective).",
           },
           relation: {
             type: "string",
@@ -751,7 +791,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           remove: {
             type: "boolean",
-            description: "Remove that relation instead of adding it (default false).",
+            description:
+              "Remove that relation instead of adding it (default false).",
           },
         },
         required: ["issue_id", "relation", "target_issue_id"],
@@ -960,7 +1001,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         properties: {
           enabled: {
             type: "boolean",
-            description: "true publishes the board, false takes the public page down.",
+            description:
+              "true publishes the board, false takes the public page down.",
           },
           generate_sso_secret: {
             type: "boolean",
@@ -1018,7 +1060,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Only these public statuses (open, planned, in_progress, shipped, declined). Omit for all.",
           },
-          limit: { type: "number", description: "Max rows (default 50, max 200)." },
+          limit: {
+            type: "number",
+            description: "Max rows (default 50, max 200).",
+          },
         },
       },
     },
@@ -1157,7 +1202,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           color: {
             type: ["string", "null"],
-            description: "Accent color as a hex string like #7c5cff, or null to clear.",
+            description:
+              "Accent color as a hex string like #7c5cff, or null to clear.",
           },
           auto_assign_enabled: {
             type: "boolean",
@@ -1191,16 +1237,19 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           feedback_translate_enabled: {
             type: "boolean",
-            description: "Translate incoming feedback into the team's language when needed.",
+            description:
+              "Translate incoming feedback into the team's language when needed.",
           },
           feedback_team_language: {
             type: ["string", "null"],
-            description: "The team's target language for feedback translation, or null to use the app default.",
+            description:
+              "The team's target language for feedback translation, or null to use the app default.",
           },
           feedback_no_translate_languages: {
             type: "array",
             items: { type: "string" },
-            description: "Languages whose feedback should not be translated. Replaces the whole list.",
+            description:
+              "Languages whose feedback should not be translated. Replaces the whole list.",
           },
         },
       },
@@ -1215,7 +1264,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          email: { type: "string", description: "The invitee's account email." },
+          email: {
+            type: "string",
+            description: "The invitee's account email.",
+          },
         },
         required: ["email"],
       },
@@ -1266,7 +1318,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          category_id: { type: "string", description: "Category id (from list_categories)." },
+          category_id: {
+            type: "string",
+            description: "Category id (from list_categories).",
+          },
           name: { type: "string", description: "New category name." },
           color: { type: "string", description: "New hex color like #7c5cff." },
         },
@@ -1357,7 +1412,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model and reasoning level, and the automation preset. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1421,7 +1476,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           cycle_start_dow: {
             type: "number",
-            description: "ISO day the cycle starts on: 1 = Monday … 7 = Sunday.",
+            description:
+              "ISO day the cycle starts on: 1 = Monday … 7 = Sunday.",
           },
           cycle_intensity: {
             type: "string",
@@ -1431,7 +1487,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           cycle_upcoming_count: {
             type: "number",
-            description: "How many upcoming cycles to keep created ahead (1–4).",
+            description:
+              "How many upcoming cycles to keep created ahead (1–4).",
           },
           cycle_auto_capture_started: {
             type: "boolean",
@@ -1496,6 +1553,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "How much the code agent reasons before acting, by default. null falls back to minddy's default.",
           },
+          branch_prefix: {
+            type: ["string", "null"],
+            description:
+              "Prefix for new branches created by Numo, for example 'numo/' or 'team/numo/'. The trailing slash is added automatically. null resets it to 'numo/'. Existing branches are unchanged.",
+          },
         },
       },
     },
@@ -1515,7 +1577,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...TRASH_TYPES],
             description: "Only items of this kind. Omit for all.",
           },
-          limit: { type: "number", description: "Max rows (default 50, max 200)." },
+          limit: {
+            type: "number",
+            description: "Max rows (default 50, max 200).",
+          },
         },
       },
     },
@@ -1558,7 +1623,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...TRASH_TYPES],
             description: "The item's kind, as given by list_trash.",
           },
-          id: { type: "string", description: "The item's id, from list_trash." },
+          id: {
+            type: "string",
+            description: "The item's id, from list_trash.",
+          },
         },
         required: ["type", "id"],
       },
@@ -1594,7 +1662,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         properties: {
           priority_weight: {
             type: "number",
-            description: "Multiplier on the issue-priority component (default 1).",
+            description:
+              "Multiplier on the issue-priority component (default 1).",
           },
           unblocked_weight: {
             type: "number",
@@ -1602,7 +1671,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           small_first_weight: {
             type: "number",
-            description: "Multiplier on the smallest-first component (default 1).",
+            description:
+              "Multiplier on the smallest-first component (default 1).",
           },
           project_boosts: {
             type: "array",
@@ -1638,7 +1708,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               },
               required: ["keyword", "weight"],
             },
-            description: "Additive boost when the issue title contains the keyword.",
+            description:
+              "Additive boost when the issue title contains the keyword.",
           },
         },
       },
@@ -1776,8 +1847,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "set_scratchpad",
-      description:
-        `Replace the ENTIRE task notebook markdown — it overwrites the whole doc, so call get_scratchpad FIRST and preserve everything you are not changing. Use it only for what the surgical tools cannot do: editing a task's text, removing lines, adding/renaming/reordering '##' sections, writing prose. To tick tasks off use update_scratchpad_tasks; to add tasks use add_scratchpad_tasks. Checkbox convention: '- [ ]' to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Max ${MAX_SCRATCHPAD_LENGTH} characters; an empty string clears the notebook (confirm with the user first — there is no undo and no history). ALWAYS pass expected_rev (the \`rev\` from your get_scratchpad): the write is rejected instead of clobbering the user's concurrent edits.`,
+      description: `Replace the ENTIRE task notebook markdown — it overwrites the whole doc, so call get_scratchpad FIRST and preserve everything you are not changing. Use it only for what the surgical tools cannot do: editing a task's text, removing lines, adding/renaming/reordering '##' sections, writing prose. To tick tasks off use update_scratchpad_tasks; to add tasks use add_scratchpad_tasks. Checkbox convention: '- [ ]' to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Max ${MAX_SCRATCHPAD_LENGTH} characters; an empty string clears the notebook (confirm with the user first — there is no undo and no history). ALWAYS pass expected_rev (the \`rev\` from your get_scratchpad): the write is rejected instead of clobbering the user's concurrent edits.`,
       parameters: {
         type: "object",
         properties: {
@@ -1907,7 +1977,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         properties: {
           issue_id: {
             type: "string",
-            description: "Optional issue context. Required only for plan, implement and verify.",
+            description:
+              "Optional issue context. Required only for plan, implement and verify.",
           },
           mode: {
             type: "string",
@@ -1922,7 +1993,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           model: {
             type: "string",
-            description: "Optional exact model id to force (only when the user explicitly requests a specific model).",
+            description:
+              "Optional exact model id to force (only when the user explicitly requests a specific model).",
           },
           reasoning_level: {
             type: "string",
@@ -2029,6 +2101,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
 // cross-project, so their tools live here too — the trash spans every project
 // the user can reach, and lib/server/trash.ts does its own access control.
 export const ACCOUNT_TOOLS = new Set([
+  "list_inbox",
   "get_account_settings",
   "update_account_settings",
   "list_agent_models",
@@ -2047,14 +2120,19 @@ export const ACCOUNT_TOOLS = new Set([
 
 // Tools that never take a project (ask_user, the web, and the account-level
 // tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
-const NON_PROJECT_TOOLS = new Set(["ask_user", "web_search", "get_help", ...ACCOUNT_TOOLS]);
+const NON_PROJECT_TOOLS = new Set([
+  "ask_user",
+  "web_search",
+  "get_help",
+  ...ACCOUNT_TOOLS,
+]);
 
 // Every tool that operates on a project. In global mode these get a required
 // `project_id` parameter injected (see buildGlobalTools).
 export const PROJECT_SCOPED_TOOLS = new Set(
   ASSISTANT_TOOLS.map((t) => t.function.name).filter(
-    (name) => !NON_PROJECT_TOOLS.has(name)
-  )
+    (name) => !NON_PROJECT_TOOLS.has(name),
+  ),
 );
 
 // View tools that, in global mode, operate on the user's CROSS-PROJECT global

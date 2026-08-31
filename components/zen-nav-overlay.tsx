@@ -8,13 +8,13 @@ import { useHoldWindowButtons, useWideLayout } from "@/lib/use-window-buttons";
 
 /**
  * Entry and exit from navigation, in zen mode. Shorter than
- * `transitions.shell` (320 ms), and this is deliberate: the curve of the frame is
+ * `transitions.shell` (180 ms), and this is deliberate: the curve of the frame is
  * that of a layout which is reorganized — header, breadcrumbs and content
  * slide together, and it takes time to read it. Here NOTHING else moves:
  * the block passes above, it should only follow the pointer. The same curve,
  * on a third less.
  */
-const OVERLAY_SLIDE = { duration: 0.2, ease: [0.32, 0.72, 0, 1] } as const;
+const OVERLAY_SLIDE = { duration: 0.14, ease: [0.32, 0.72, 0, 1] } as const;
 
 /** Width of the sensitive edge, at the LEFT edge of the chassis, which recalls
  * navigation in zen mode. Wide enough to aim without a sight, thin enough to
@@ -55,7 +55,7 @@ export function ZenNavOverlay({
 
   const openPanel = useCallback(() => setOpen(true), []);
   // Without grace period: the block follows the pointer, it does not make it wait.
-  // The primary rail keeps one (150 ms) because it REMAINS on the screen one
+  // The primary rail keeps one (70 ms) because it REMAINS on the screen one
   // when folded — a touch makes it beat. This one goes away entirely;
   // the only gesture that takes him off the screen is the one that really leaves him.
   const closePanel = useCallback(() => setOpen(false), []);

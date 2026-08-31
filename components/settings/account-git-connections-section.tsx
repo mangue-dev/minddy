@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
+import { Button, ConfirmDeleteDialog, Input, Spinner, cn, toast } from "mangue-ui";
 import { GitBranch } from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import {
@@ -27,10 +27,16 @@ import {
   SettingsEmpty,
   SettingsGroup,
   SettingsListRow,
+  SettingsRow,
 } from "@/components/settings/settings-ui";
 import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { GitConnection, GitIdentity } from "@/lib/types";
+import { saveAgentPreferencesApi } from "@/lib/agent-keys-api";
+import {
+  agentPreferencesQueryKey,
+  useAgentPreferencesQuery,
+} from "@/lib/use-agent-preferences-query";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 
@@ -230,6 +236,8 @@ export function AccountGitConnectionsSection() {
 
   return (
     <>
+      <AccountGitBranchPrefix />
+
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountGitConnections}
         icon={GitBranch}
@@ -307,6 +315,81 @@ export function AccountGitConnectionsSection() {
         onConfirm={handleRevoke}
       />
     </>
+  );
+}
+
+function AccountGitBranchPrefix() {
+  const t = useTranslations("Account");
+  const tc = useTranslations("Common");
+  const queryClient = useQueryClient();
+  const { branchPrefix, loading } = useAgentPreferencesQuery();
+  const [draft, setDraft] = useState(branchPrefix);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setDraft(branchPrefix), [branchPrefix]);
+
+  const save = async () => {
+    if (saving || draft.trim() === branchPrefix) return;
+    setSaving(true);
+    try {
+      const saved = await saveAgentPreferencesApi({ branch_prefix: draft });
+      setDraft(saved.branch_prefix);
+      await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
+      toast.success(t("agentBranchPrefixSavedToast"));
+    } catch (err) {
+      setDraft(branchPrefix);
+      toast.error((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SettingsGroup
+      anchor={SETTINGS_SECTIONS.accountGitBranchPrefix}
+      icon={GitBranch}
+      title={t("gitAgentBranchesTitle")}
+      description={t("gitAgentBranchesDesc")}
+    >
+      {loading ? (
+        <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+      ) : (
+        <SettingsRow
+          label={t("agentBranchPrefixTitle")}
+          hint={t("agentBranchPrefixDesc")}
+          htmlFor="agent-branch-prefix"
+          control={
+            <div className="flex items-center gap-2">
+              <Input
+                id="agent-branch-prefix"
+                className="w-44 font-mono"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void save();
+                  }
+                }}
+                disabled={saving}
+                spellCheck={false}
+                autoCapitalize="none"
+                autoCorrect="off"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={saving || draft.trim() === branchPrefix}
+                onClick={() => void save()}
+              >
+                {saving ? t("agentBranchPrefixSaving") : t("agentBranchPrefixSave")}
+              </Button>
+            </div>
+          }
+        />
+      )}
+    </SettingsGroup>
   );
 }
 

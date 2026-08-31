@@ -2,6 +2,8 @@
 
 import { ExternalLink, Sparkles } from "lucide-react";
 import { CopyButton } from "@/components/marketing/copy-button";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import type { McpAgentId } from "@/lib/mcp-agents";
 
 type Props = {
   title: string;
@@ -29,15 +31,14 @@ export function SelfHostingAiActions({
     {
       label: claudeLabel,
       href: `claude://claude.ai/new?q=${encodeURIComponent(prompt)}`,
-      logo: "/agents/claude.svg",
+      agent: "claude",
     },
     {
       label: codexLabel,
       href: `codex://new?prompt=${encodeURIComponent(prompt)}`,
-      logo: "/agents/codex-light.svg",
-      darkLogo: "/agents/codex-dark.svg",
+      agent: "codex",
     },
-  ];
+  ] satisfies Array<{ label: string; href: string; agent: McpAgentId }>;
 
   return (
     <section className="border-y border-border bg-muted/20 py-12 sm:py-14">
@@ -51,14 +52,13 @@ export function SelfHostingAiActions({
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
-            {assistants.map(({ label, href, logo, darkLogo }) => (
+            {assistants.map(({ label, href, agent }) => (
               <a
                 key={label}
                 href={href}
                 className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-sm font-medium transition-colors hover:bg-muted"
               >
-                <img src={logo} alt="" aria-hidden className={darkLogo ? "h-4 w-4 object-contain dark:hidden" : "h-4 w-4 object-contain"} />
-                {darkLogo && <img src={darkLogo} alt="" aria-hidden className="hidden h-4 w-4 object-contain dark:block" />}
+                <McpAgentLogo agent={agent} className="size-4" />
                 {label}
                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
               </a>

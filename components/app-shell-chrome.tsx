@@ -16,7 +16,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   AppShell,
-  Header,
   MobileNav,
   Spinner,
   cn,
@@ -69,18 +68,14 @@ import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { isAgentSessionUnread } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import {
-  HeaderSearchPill,
   type PaletteGroup,
   type PaletteItem,
 } from "@/components/header-search-pill";
-import { NewMenu } from "@/components/new-menu";
-import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
-import { UsageIndicator } from "@/components/usage-indicator";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
+import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { NumoIcon } from "@/components/numo-icon";
@@ -120,7 +115,10 @@ import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
-import { useIssuePanel } from "@/lib/issue-panel-context";
+import {
+  useIssuePanelActions,
+  useIssuePanelTarget,
+} from "@/lib/issue-panel-context";
 import {
   loadCommandPalette,
   loadGlobalIssuePanel,
@@ -190,6 +188,21 @@ const GlobalIssuePanel = dynamic(
   { ssr: false },
 );
 
+/** Keeps panel state updates out of the large app-shell render path. */
+function GlobalIssuePanelHost() {
+  const target = useIssuePanelTarget();
+  const { closeIssue } = useIssuePanelActions();
+  if (!target) return null;
+  return (
+    <GlobalIssuePanel
+      key={`${target.projectId}:${target.issueId}`}
+      projectId={target.projectId}
+      issueId={target.issueId}
+      onClose={closeIssue}
+    />
+  );
+}
+
 const BranchCleanupDialog = dynamic(
   () =>
     import("@/components/settings/git-branch-cleanup").then(
@@ -258,6 +271,11 @@ const NumoNavIcon = ({ className }: { className?: string }) => (
   <NumoIcon animated={false} className={className} />
 );
 NumoNavIcon.displayName = "NumoNavIcon";
+
+const TriageNavIcon = ({ className }: { className?: string }) => (
+  <CircleDotDashed className={className} strokeWidth={2.25} />
+);
+TriageNavIcon.displayName = "TriageNavIcon";
 
 /**
  * The counter of a sidebar entry (inbox, PR, triage, feedback, project).
@@ -373,10 +391,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
   const {
-    target: issuePanelTarget,
     openIssue: openIssuePanel,
     closeIssue: closeIssuePanel,
-  } = useIssuePanel();
+  } = useIssuePanelActions();
   const previousPathname = useRef(pathname);
   useEffect(() => {
     if (previousPathname.current !== pathname) closeIssuePanel();
@@ -505,10 +522,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         ? currentProjectId
         : null,
     );
-  const objectiveBoard = objectiveBoardId
-    ? projectObjectives.find((objective) => objective.id === objectiveBoardId) ?? null
-    : null;
-
   // The current project wiki pages, for ⌘K (MIN-270). Same cache as
   // the tree of the Pages tab: opening the tab does not ask for anything, and a page
   // fame there changes name in the palette without going back and forth.
@@ -801,8 +814,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       key: "goto",
       heading: t("goTo"),
       items: [
-        { key: "go-home", label: t("home"), icon: Home, onSelect: () => router.push("/home") },
-        { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: () => router.push("/inbox") },
+        { key: "go-home", label: t("home"), icon: Home, href: "/home", onSelect: () => router.push("/home") },
+        { key: "go-inbox", label: t("inbox"), icon: Inbox, href: "/inbox", onSelect: () => router.push("/inbox") },
         {
           key: "open-notes",
           label: tScratch("open"),
@@ -816,12 +829,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 key: "go-pull-requests",
                 label: t("pullRequests"),
                 icon: GitPullRequest,
+                href: "/pull-requests",
                 onSelect: () => router.push("/pull-requests"),
               },
               {
                 key: "go-agents",
                 label: t("agents"),
                 icon: NumoNavIcon,
+                href: "/agents",
                 onSelect: () => router.push("/agents"),
               },
               {
@@ -830,6 +845,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 key: "go-routines",
                 label: tRoutines("title"),
                 icon: CalendarClock,
+                href: "/routines",
                 keywords: [
                   "routine",
                   "routines",
@@ -848,6 +864,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "go-all-global",
           label: t("allIssues"),
           icon: LayoutGrid,
+          href: "/all",
           onSelect: () => router.push("/all"),
         },
         {
@@ -857,6 +874,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "go-cycle",
           label: t("cycle"),
           icon: IterationCw,
+          href: "/all?view=cycle",
           keywords: [
             "cycle",
             "sprint",
@@ -873,6 +891,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "go-account-settings",
           label: t("accountSettings"),
           icon: Settings,
+          href: "/settings",
           onSelect: () => router.push("/settings"),
         },
         {
@@ -939,7 +958,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: p.name,
           icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
           keywords: [p.key],
+          entityType: "project",
           contextId: p.id,
+          data: p,
+          href: `/projects/${p.id}`,
           onSelect: () => router.push(`/projects/${p.id}`),
         })),
       });
@@ -962,6 +984,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: base,
             contextId,
             onSelect: () => router.push(base),
           },
@@ -972,6 +995,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/objectives`,
             contextId,
             onSelect: () => router.push(`${base}/objectives`),
           },
@@ -984,6 +1008,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: [...kw, "wiki", "documentation", "doc"],
             meta: chip,
             metaText,
+            href: `${base}/pages`,
             contextId,
             onSelect: () => router.push(`${base}/pages`),
           },
@@ -994,6 +1019,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/triage`,
             contextId,
             onSelect: () => router.push(`${base}/triage`),
           },
@@ -1004,6 +1030,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/feedback`,
             contextId,
             onSelect: () => router.push(`${base}/feedback`),
           },
@@ -1014,6 +1041,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             keywords: kw,
             meta: chip,
             metaText,
+            href: `${base}/settings`,
             contextId,
             onSelect: () => router.push(`${base}/settings`),
           },
@@ -1088,6 +1116,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       meta: project ? projectChip(project) : undefined,
       metaText: project ? project.name : s.tabLabel,
       contextId: project?.id,
+      href: settingsSectionHref(s, project?.id),
       onSelect: () => router.push(settingsSectionHref(s, project?.id)),
     });
 
@@ -1160,6 +1189,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 entityType: "issue",
                 contextId: i.project_id,
                 data: i,
+                href: `/projects/${i.project_id}?issue=${i.id}`,
                 onSelect: () => openIssuePanel(i.project_id, i.id),
               },
             ];
@@ -1185,7 +1215,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 keywords: [project.name, project.key],
                 meta: projectChip(project),
                 metaText: project.name,
+                entityType: "objective",
                 contextId: o.project_id,
+                data: o,
+                href: `/projects/${o.project_id}/objectives?open=${o.id}`,
                 onSelect: () =>
                   router.push(`/projects/${o.project_id}/objectives?open=${o.id}`),
               },
@@ -1241,7 +1274,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 metaText: excerpt
                   ? `${project.name} · ${truncateExcerpt(excerpt)}`
                   : project.name,
+                entityType: "page",
                 contextId: page.project_id,
+                data: page,
+                href: `/projects/${page.project_id}/pages/${page.id}`,
                 onSelect: () =>
                   router.push(`/projects/${page.project_id}/pages/${page.id}`),
               },
@@ -1424,7 +1460,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "triage",
               label: t("triage"),
-              icon: CircleDotDashed,
+              icon: TriageNavIcon,
               href: `${base}/triage`,
               active: pathname.startsWith(`${base}/triage`),
               shortcut: "T",
@@ -1545,6 +1581,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, homeBadgeCollapsed, t, tProjects]);
 
+  // Inbox is a compact top control on desktop. Mobile keeps the regular row,
+  // where there is no primary sidebar to host that control.
+  const desktopSections = useMemo(
+    () =>
+      sections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.key !== "inbox"),
+      })),
+    [sections],
+  );
+
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
 
@@ -1600,40 +1647,44 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      // `app-shell`: taking globals.css on the <main> of the shell, whose
-      // low reserve adjusts to the REAL height of the moving bar
-      // (--mobile-nav-clearance). Rien d'autre ne s'y accroche.
+      // `app-shell` targets the shell's <main>; its bottom reserve follows the
+      // real mobile-nav height through --mobile-nav-clearance.
       className="app-shell"
-      // The navigation block: the primary sidebar, then the home point of
-      // the SECONDARY sidebar that the page teleports there. Both live in the
-      // same box, to the left of the header — this is what shifts the breadcrumbs and
-      // the content, instead of letting them pass over a column.
+      // The navigation block contains the primary sidebar followed by the
+      // landing point where pages teleport their secondary sidebar.
       //
-      // Zen mode (MIN-134): the header is not hidden, it is not given —
-      // no empty strip where it was. NAVIGATION does not leave: the
-      // Zen is not meant to confine. Both bars leave the stream as one
-      // block and remember when hovering over the left edge (`ZenNavOverlay`), excluding
-      // of the flow, without shifting anything — exactly the market that the primary passes
-      // already with its rail. Zen removes the furniture, not the navigation.
-      //
-      // The block ALWAYS carries the primary, the secondary being added when the
-      // page has one: it is this which hosts the app window buttons
-      // desktop, and it is also the only navigation of pages that do not have
-      // barre secondaire.
+      // Zen mode keeps both navigation bars available from the left-edge
+      // overlay without reserving space. There is no longer a shared header to
+      // hide or offset: page content always owns the full content column.
       sidebar={
         <div className="relative flex h-full">
           {zen || compactDesktop ? (
             <ZenNavOverlay
               width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
             >
-              <AppSidebar sections={sections} modeKey={modeKey} inZenPanel />
+              <AppSidebar
+                sections={desktopSections}
+                modeKey={modeKey}
+                currentProject={currentProject}
+                projects={projects}
+                inbox={inboxItem}
+                onSearch={() => handlePaletteOpenChange(true)}
+                onSearchWarm={warmPalette}
+                onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
+              />
               <SecondarySidebarSlot reserve={secondaryNav} />
             </ZenNavOverlay>
           ) : (
             <>
               <AppSidebar
-                sections={sections}
+                sections={desktopSections}
                 modeKey={modeKey}
+                currentProject={currentProject}
+                projects={projects}
+                inbox={inboxItem}
+                onSearch={() => handlePaletteOpenChange(true)}
+                onSearchWarm={warmPalette}
+                onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
                 overlay={secondaryNav}
               />
               <SecondarySidebarSlot reserve={secondaryNav} />
@@ -1641,29 +1692,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           )}
         </div>
       }
+      // Narrow macOS windows use the mobile shell, so the primary sidebar is
+      // absent. This native-control clearance is not an application header and
+      // stays display:none everywhere else.
       header={
-        zen ? undefined : (
-          <Header
-            className="bg-background backdrop-blur-none"
-            left={<AppBreadcrumb objective={objectiveBoard} />}
-            right={
-              // Desktop only — on mobile, Search moves to the navbar Search button
-              // and "Nouveau" to the navbar "+", so the header collapses to the
-              // two-stage breadcrumb (AppBreadcrumb handles its own mobile layout).
-              <div className="hidden items-center gap-2 desktop:flex">
-                <UsageIndicator />
-                <ScratchpadTrigger
-                  onWarm={() => preloadSurface(loadScratchpadModal)}
-                />
-                <HeaderSearchPill
-                  onOpen={() => handlePaletteOpenChange(true)}
-                  onWarm={warmPalette}
-                />
-                <NewMenu />
-              </div>
-            }
-          />
-        )
+        <div className="compact-window-controls-clearance h-[60px] shrink-0 items-center border-b border-border px-4">
+          <HeaderWindowButtonsSlot />
+        </div>
       }
       // The mobile nav REMAINS: it is through its search button that you open
       // the palette on mobile, so hiding it would lock everyone in Zen mode
@@ -1681,7 +1716,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
     >
       {children}
-      {/* Command palette (⌘K / ⌘P / F, header search pill) — same groups as
+      {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
  index also serves these actions: members and categories of the project
  OF THE TICKET, which is not necessarily that of the page (MIN-91). */}
@@ -1693,14 +1728,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           searchIndex={searchIndex}
         />
       ) : null}
-      {issuePanelTarget ? (
-        <GlobalIssuePanel
-          key={`${issuePanelTarget.projectId}:${issuePanelTarget.issueId}`}
-          projectId={issuePanelTarget.projectId}
-          issueId={issuePanelTarget.issueId}
-          onClose={closeIssuePanel}
-        />
-      ) : null}
+      <GlobalIssuePanelHost />
       {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
  dialog as the settings button, mounted here to be reachable
  from any page, on any of my projects. The key

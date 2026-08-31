@@ -21,11 +21,11 @@ import { DiffCounters, FileStatusIcon } from "@/components/pull-requests/pr-file
  * diff, the panel can be 380 px and show the paths in full, for the time
  * you choose.
  *
- * **A `Popover`, and not a sheet.** Two of the three surfaces which render
- * `PrDiff` ARE already `Sheet` (the diff of a commit, that of an agent run):
- * nesting a second one would make two overlays, two focus traps and two
- * Escapes that argue. A single gesture everywhere, therefore, and no bifurcation
- * mobile to write or check.
+ * **A `Popover`, and not another modal panel.** Two of the three surfaces which
+ * render `PrDiff` already live in a `SidePanel` (the diff of a commit and that
+ * of an agent run): nesting a second modal would make two overlays, two focus
+ * traps and two Escapes that argue. A single gesture everywhere, therefore,
+ * and no mobile bifurcation to write or check.
  */
 
 /**
@@ -184,16 +184,20 @@ export function PrFileTreeButton({
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
 
   /**
- * Numo's panel had already learned this: in a `Sheet` modal,
+ * Numo's panel had already learned this: in a modal panel,
  * react-remove-scroll blocks the wheel on anything set to `<body>`.
- * Two of our three surfaces ARE IN — otherwise, the tree of a PR of forty
- * files would not scroll. We therefore carry it in the sheet when there is
- * one, and `<body>` otherwise.
+ * Two of our three surfaces ARE IN an overlay — otherwise, the tree of a PR of
+ * forty files would not scroll. We therefore carry it in the surrounding
+ * panel when there is one, and `<body>` otherwise.
  */
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const triggerRef = useCallback((node: HTMLButtonElement | null) => {
     setContainer(
-      node ? (node.closest('[data-slot="sheet-content"]') as HTMLElement | null) : null,
+      node
+        ? (node.closest(
+            '[data-slot="side-panel-content"],[data-slot="sheet-content"]',
+          ) as HTMLElement | null)
+        : null,
     );
   }, []);
 

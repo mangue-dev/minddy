@@ -41,10 +41,11 @@ import { objectiveColor } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbBaseColor } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
+import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
 
 /** The id of the pseudo-entity “Numo” in the mention lists: the assistant
  is not an account, so it does not have its own id. */
-export const NUMO_MENTION_ID = "__numo__";
+export { NUMO_MENTION_ID };
 
 /** What a mention can designate. The first four bear a FIGURE (a
  portrait, an orb, a face); ticket, objective and page do not have one — they

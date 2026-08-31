@@ -33,11 +33,13 @@ import {
   ReplyComposer,
 } from "@/components/issue-timeline";
 import { posOfBlockId } from "@/components/pages/block-actions";
+import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import {
   hasOpenDismissibleLayer,
   isInOverlayLayer,
 } from "@/lib/overlay-layers";
 import type { PageThread } from "@/lib/page-comments";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import type { Member } from "@/lib/types";
 
 /** Width of the panel, and the margin it keeps with the edge of the window. */
@@ -50,6 +52,8 @@ export interface BlockCommentTarget {
   blockId: string;
   /** The extract, when the thread opens on a selection that we have just made. */
   quote?: string;
+  /** Start a separate thread even if the block already has discussions. */
+  startNew?: boolean;
 }
 
 export function PageCommentPopover({
@@ -87,6 +91,7 @@ export function PageCommentPopover({
   const tTimeline = useTranslations("Timeline");
   const panel = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ top: number; left: number } | null>(null);
+  const mentions = useDescriptionMentions(projectId, members);
 
   const measure = useCallback(() => {
     if (!editor || editor.isDestroyed) return;
@@ -163,23 +168,22 @@ export function PageCommentPopover({
 
   if (!box) return null;
 
-  // The panel OPENS on a composer in two cases: the bubble has just been created
-  // a thread on a selection (`quote`), or the block has nothing yet. Otherwise he
-  // opens to the discussion, and we respond there.
-  const fresh = !!target.quote || threads.length === 0;
+  // Start with a composer for a new selection thread, an explicit block-menu
+  // comment, or a block with no existing discussion. Otherwise open the thread.
+  const fresh = !!target.startNew || !!target.quote || threads.length === 0;
 
   return (
     <div
       ref={panel}
       style={{ top: box.top, left: box.left, width: WIDTH }}
       className={cn(
-        "fixed z-40 max-h-[min(70vh,32rem)] overflow-y-auto scrollbar-quiet",
+        "fixed z-40 flex max-h-[min(70vh,32rem)] flex-col overflow-visible",
         "rounded-lg border border-border bg-popover shadow-lg"
       )}
     >
-      <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
         <span className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
-          {threads.length === 0 ? t("commentOnSelection") : t("comments")}
+          {fresh ? t("commentOnSelection") : t("comments")}
         </span>
         <Button
           variant="ghost"
@@ -192,36 +196,41 @@ export function PageCommentPopover({
         </Button>
       </div>
 
-      {/* The extract from the thread that IS BORN: what we have selected, under our eyes
- while we write. Without it, we type “yes but there…” without seeing
- which “there” it is. */}
-      {fresh && target.quote ? (
-        <p className="mx-3 mt-3 border-l-2 border-brand/50 pl-2 text-xs italic text-muted-foreground line-clamp-3">
-          {target.quote}
-        </p>
-      ) : null}
+      <div className="min-h-0 overflow-y-auto scrollbar-quiet">
+        {/* Keep the frozen extract visible while composing a new selection thread. */}
+        {fresh && target.quote ? (
+          <p className="mx-3 mt-3 border-l-2 border-brand/50 pl-2 text-xs italic text-muted-foreground line-clamp-3">
+            {target.quote}
+          </p>
+        ) : null}
 
-      {threads.map((thread) => (
-        <ThreadPanel
-          key={thread.root.id}
-          thread={thread}
-          members={members}
-          currentUserId={currentUserId}
-          projectId={projectId}
-          onAdd={onAdd}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      ))}
+        {threads.map((thread) => (
+          <ThreadPanel
+            key={thread.root.id}
+            thread={thread}
+            members={members}
+            currentUserId={currentUserId}
+            projectId={projectId}
+            mentions={mentions}
+            onAdd={onAdd}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
 
       {fresh && (
-        <div className="p-3">
+        <div className="relative shrink-0 p-3">
           <CommentComposer
             members={members}
             projectId={projectId}
             allowAttachments={false}
             autoFocus
-            placeholder={t("commentOnSelectionPlaceholder")}
+            placeholder={
+              target.quote
+                ? t("commentOnSelectionPlaceholder")
+                : t("commentOnBlockPlaceholder")
+            }
             submitLabel={tTimeline("comment")}
             onSubmit={async (body, mentionedUserIds) => {
               await onAdd({
@@ -244,6 +253,7 @@ function ThreadPanel({
   members,
   currentUserId,
   projectId,
+  mentions,
   onAdd,
   onEdit,
   onDelete,
@@ -252,6 +262,7 @@ function ThreadPanel({
   members: Member[];
   currentUserId: string | null;
   projectId: string;
+  mentions: MarkdownEditorMentions;
   onAdd: (input: {
     body: string;
     mentionedUserIds: string[];
@@ -276,6 +287,7 @@ function ThreadPanel({
         <CommentBlock
           comment={root}
           ctx={ctx}
+          mentions={mentions}
           currentUserId={currentUserId}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -288,6 +300,7 @@ function ThreadPanel({
           <CommentBlock
             comment={reply}
             ctx={ctx}
+            mentions={mentions}
             currentUserId={currentUserId}
             onEdit={onEdit}
             onDelete={onDelete}
@@ -300,6 +313,7 @@ function ThreadPanel({
       <div className="border-t border-border/60">
         <ReplyComposer
           members={members}
+          mentions={mentions}
           currentUserId={currentUserId}
           projectId={projectId}
           rootId={root.id}

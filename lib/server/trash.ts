@@ -93,9 +93,32 @@ export interface TrashItem {
   project_id: string | null;
   project_name: string | null;
   project_color: string | null;
+  project_icon_url: string | null;
+  project_orb_seed: string | null;
   deleted_at: string;
   /** Who deleted. Null if the account has since disappeared. */
   deleted_by: TrashActor | null;
+}
+
+/**
+ * A page draft with no user-authored information has nothing worth restoring.
+ * Keep untitled pages that contain text or own subpages: only truly abandoned
+ * drafts are hidden from the trash.
+ */
+export function isBlankTrashPage(
+  row: {
+    title?: string | null;
+    icon?: string | null;
+    content?: unknown;
+  },
+  hasDescendants: boolean,
+): boolean {
+  if (hasDescendants || row.title?.trim() || row.icon) return false;
+  const blocks = (row.content as { content?: unknown[] } | null)?.content;
+  if (!Array.isArray(blocks) || blocks.length === 0) return true;
+  if (blocks.length > 1) return false;
+  const only = blocks[0] as { type?: string; content?: unknown[] };
+  return only?.type === "paragraph" && !only.content?.length;
 }
 
 export type TrashResult =
@@ -289,7 +312,7 @@ export async function listTrash(
 
   const { data: liveProjects } = await userSupabase
     .from("projects")
-    .select("id, name, key, color, owner_id")
+    .select("id, name, key, color, icon_url, orb_seed, owner_id")
     .is("deleted_at", null);
 
   const projectIds = (liveProjects ?? []).map((p) => p.id as string);
@@ -303,6 +326,8 @@ export async function listTrash(
         name: p.name as string,
         key: p.key as string,
         color: (p.color as string | null) ?? null,
+        iconUrl: (p.icon_url as string | null) ?? null,
+        orbSeed: (p.orb_seed as string | null) ?? null,
       },
     ])
   );
@@ -342,13 +367,13 @@ export async function listTrash(
       // page and its twenty subpages make ONE line to restore, not twenty.
       inProjects(
         "pages",
-        "id, project_id, deleted_at, deleted_by, title, deleted_root_id",
+        "id, project_id, deleted_at, deleted_by, title, icon, content, deleted_root_id",
         projectIds,
         "deleted_root_id"
       ),
       service
         .from("projects")
-        .select("id, name, key, color, deleted_at, deleted_by")
+        .select("id, name, key, color, icon_url, orb_seed, deleted_at, deleted_by")
         .eq("owner_id", userId)
         .not("deleted_at", "is", null)
         .order("deleted_at", { ascending: false })
@@ -356,12 +381,33 @@ export async function listTrash(
         .then(({ data }) => (data ?? []) as unknown as TrashRow[]),
     ]);
 
+  const { data: pageDescendants } =
+    pageRows.length === 0
+      ? { data: [] }
+      : await service
+          .from("pages")
+          .select("deleted_root_id")
+          .in(
+            "deleted_root_id",
+            pageRows.map((row) => row.id),
+          )
+          .not("deleted_at", "is", null)
+          .limit(LIST_LIMIT);
+  const pageRootsWithDescendants = new Set(
+    (pageDescendants ?? []).flatMap((row) =>
+      typeof row.deleted_root_id === "string" ? [row.deleted_root_id] : [],
+    ),
+  );
+  const visiblePageRows = pageRows.filter(
+    (row) => !isBlankTrashPage(row, pageRootsWithDescendants.has(row.id)),
+  );
+
   const actors = await resolveActors(service, [
     ...issueRows,
     ...objectiveRows,
     ...feedbackRows,
     ...routineRows,
-    ...pageRows,
+    ...visiblePageRows,
     ...projectRows,
   ]);
 
@@ -372,6 +418,12 @@ export async function listTrash(
     project_name: row.project_id ? projectById.get(row.project_id)?.name ?? null : null,
     project_color: row.project_id
       ? projectById.get(row.project_id)?.color ?? null
+      : null,
+    project_icon_url: row.project_id
+      ? projectById.get(row.project_id)?.iconUrl ?? null
+      : null,
+    project_orb_seed: row.project_id
+      ? projectById.get(row.project_id)?.orbSeed ?? null
       : null,
     deleted_at: row.deleted_at,
     deleted_by: row.deleted_by ? actors.get(row.deleted_by) ?? null : null,
@@ -405,7 +457,7 @@ export async function listTrash(
       title: row.title ?? "",
       identifier: null,
     })),
-    ...pageRows.map((row) => ({
+    ...visiblePageRows.map((row) => ({
       ...base(row),
       type: "page" as const,
       title: row.title ?? "",
@@ -416,6 +468,9 @@ export async function listTrash(
       type: "project" as const,
       title: row.name ?? "",
       identifier: row.key ?? null,
+      project_color: row.color ?? null,
+      project_icon_url: row.icon_url ?? null,
+      project_orb_seed: row.orb_seed ?? null,
     })),
   ];
 
@@ -428,11 +483,15 @@ interface TrashRow {
   project_id?: string | null;
   deleted_at: string;
   deleted_by: string | null;
-  title?: string;
+  title?: string | null;
+  icon?: string | null;
+  content?: unknown;
   name?: string;
   key?: string;
   number?: number;
   color?: string | null;
+  icon_url?: string | null;
+  orb_seed?: string | null;
 }
 
 async function resolveActors(

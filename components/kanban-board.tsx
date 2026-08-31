@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  memo,
   useMemo,
   useRef,
   useState,
@@ -67,7 +68,7 @@ import {
   type BoardScrollPosition,
 } from "@/lib/board-scroll";
 
-export function KanbanBoard({
+export const KanbanBoard = memo(function KanbanBoard({
   issues,
   allIssues,
   relations,
@@ -588,7 +589,7 @@ export function KanbanBoard({
       </AskNumoProvider>
     </AgentActivityProvider>
   );
-}
+});
 
 /**
  * Mobile-only pagination dots for the swipeable board: one dot per status column,

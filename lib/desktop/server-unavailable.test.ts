@@ -50,6 +50,7 @@ describe("desktopServerUnavailableHtml", () => {
       "https://minddy.example.com",
       "https://minddy.example.com/projects?view=active",
       "data:font/woff2;base64,AA==",
+      "darwin",
     );
 
     expect(html).toContain(MINDDY_LOGO_PATH);
@@ -60,7 +61,22 @@ describe("desktopServerUnavailableHtml", () => {
     expect(html).toContain('href="https://minddy.example.com/projects?view=active"');
     expect(html).toContain("Try again");
     expect(html).toContain("Check server settings");
+    expect(html).toContain('data-desktop-platform="darwin"');
+    expect(html).toContain('class="desktop-drag-band"');
+    expect(html).toContain('-webkit-app-region: drag');
     expect(html.toLowerCase()).not.toContain("internet");
+  });
+
+  it("limits the local drag band to macOS", () => {
+    const html = desktopServerUnavailableHtml(
+      "https://minddy.example.com",
+      "https://minddy.example.com/home",
+      undefined,
+      "win32",
+    );
+
+    expect(html).toContain('data-desktop-platform="win32"');
+    expect(html).toContain('html[data-desktop-platform="darwin"] .desktop-drag-band');
   });
 
   it("escapes rendered values and refuses a retry on another origin", () => {

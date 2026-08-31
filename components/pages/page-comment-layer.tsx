@@ -32,7 +32,7 @@ import {
   type BlockCommentTarget,
 } from "@/components/pages/page-comment-popover";
 import { usePageComments } from "@/lib/use-page-comments";
-import { commentedBlockCounts } from "@/lib/page-comments";
+import { commentedBlockAnnotations } from "@/lib/page-comments";
 import type { Member } from "@/lib/types";
 
 export function PageCommentLayer({
@@ -81,7 +81,7 @@ export function PageCommentLayer({
  which lights up lives in the pure module, with the detachment: it is the same
  question, and it can be tested without setting up an editor. */
   const commentedBlocks = useMemo<CommentedBlocks>(
-    () => commentedBlockCounts(threads),
+    () => commentedBlockAnnotations(threads),
     [threads]
   );
 
@@ -114,10 +114,11 @@ export function PageCommentLayer({
   const painted = useRef("");
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
-    const signature = [...commentedBlocks]
-      .map(([id, count]) => `${id}:${count}`)
-      .sort()
-      .join(",");
+    const signature = JSON.stringify(
+      [...commentedBlocks]
+        .map(([id, annotation]) => [id, annotation] as const)
+        .sort(([left], [right]) => left.localeCompare(right))
+    );
     if (signature === painted.current) return;
     painted.current = signature;
     setCommentedBlocks(editor, commentedBlocks);

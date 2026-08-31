@@ -1,7 +1,7 @@
 import { cn } from "mangue-ui";
-import { Bot, Sparkles, WandSparkles, Workflow } from "lucide-react";
-import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
+import { Sparkles, WandSparkles, Workflow } from "lucide-react";
 import { NumoFace } from "@/components/numo-face";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
 
 /**
  * Portraits of actors WHO ARE NOT PEOPLE: Numo, an agent
@@ -54,29 +54,9 @@ export function McpAvatar({
   className?: string;
   iconClassName?: string;
 }) {
-  const known = isMcpAgentId(agent) ? getMcpAgent(agent) : null;
-  const logo = cn("size-3", iconClassName);
   return (
     <span aria-hidden className={disc(className)}>
-      {known ? (
-        known.logoDark ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={known.logo} alt="" className={cn(logo, "dark:hidden")} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={known.logoDark}
-              alt=""
-              className={cn(logo, "hidden dark:block")}
-            />
-          </>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={known.logo} alt="" className={logo} />
-        )
-      ) : (
-        <Bot className={cn("size-3.5", iconClassName)} />
-      )}
+      <McpAgentLogo agent={agent} size={12} className={iconClassName} />
     </span>
   );
 }

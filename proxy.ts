@@ -259,12 +259,6 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
   return response;
 }
 
-function isSupabaseGetSessionWarning(args: unknown[]): boolean {
-  return args.some(
-    (arg) => typeof arg === "string" && arg.includes("supabase.auth.getSession()")
-  );
-}
-
 /**
  * Current session read from cookies. `getSession()` does not check the
  * signature of the JWT: it is only used here for the routing and renewal of
@@ -294,15 +288,9 @@ async function readSession(request: NextRequest, url: string, key: string) {
       setAll: sink.collect,
     },
   });
-  const _w = console.warn;
-  console.warn = (...a: unknown[]) => {
-    if (isSupabaseGetSessionWarning(a)) return;
-    _w.apply(console, a);
-  };
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  console.warn = _w;
   return { session, applyCookies: sink.applyCookies };
 }
 
@@ -319,6 +307,17 @@ async function readSession(request: NextRequest, url: string, key: string) {
 function awaitsMfaChallenge(session: { access_token?: string } | null): boolean {
   if (!session?.access_token) return false;
   return needsMfaChallenge(decodeJwtPayload(session.access_token));
+}
+
+/** Reads untrusted routing metadata from the JWT without touching `session.user`. */
+function sessionUserMetadata(
+  session: { access_token?: string } | null,
+): Record<string, unknown> | undefined {
+  if (!session?.access_token) return undefined;
+  const metadata = decodeJwtPayload(session.access_token)?.user_metadata;
+  return metadata && typeof metadata === "object"
+    ? (metadata as Record<string, unknown>)
+    : undefined;
 }
 
 /**
@@ -428,7 +427,7 @@ export async function proxy(request: NextRequest) {
         supabaseKey,
       );
       applySession = applyCookies;
-      if (session?.user) {
+      if (session) {
         return applySession(NextResponse.redirect(new URL("/home", request.url)));
       }
 
@@ -479,7 +478,7 @@ export async function proxy(request: NextRequest) {
         supabaseKey,
       );
       applySession = applyCookies;
-      if (session?.user && !awaitsMfaChallenge(session)) {
+      if (session && !awaitsMfaChallenge(session)) {
         return applySession(NextResponse.redirect(new URL("/home", request.url)));
       }
     }
@@ -532,24 +531,17 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // `getSession()` reads cookies but does not verify the JWT signature. There
-  // route only uses it to route and refresh the session; APIs keep
-  // their own verification. The SDK rightly warns, but the warning is
-  // hidden here so as not to pollute the logs with each request.
-  const _w = console.warn;
-  console.warn = (...a: unknown[]) => {
-    if (isSupabaseGetSessionWarning(a)) return;
-    _w.apply(console, a);
-  };
+  // `getSession()` reads cookies but does not verify the JWT signature. This
+  // route uses only the session and token for routing and cookie refreshes;
+  // APIs keep their own identity verification.
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  console.warn = _w;
 
   // No session, or session whose second factor has not yet been
   // presented (MIN-132): in both cases the destination is /login, which renders
   // the form or the challenge screen depending on what it finds.
-  if (!session?.user || awaitsMfaChallenge(session)) {
+  if (!session || awaitsMfaChallenge(session)) {
     const loginUrl = new URL("/login", request.url);
     // pathname + search: /oauth/authorize must find its parameters
     // (client_id, code_challenge…) after passing through /login.
@@ -569,9 +561,8 @@ export async function proxy(request: NextRequest) {
   // written once): a stale theme is visible immediately, in every pixel.
   // Placed BEFORE the noindex header below: the rebuild replaces the
   // response, and anything set earlier on it would be lost.
-  const accountTheme = resolveAccountTheme(
-    session.user.user_metadata as Record<string, unknown> | undefined,
-  );
+  const userMetadata = sessionUserMetadata(session);
+  const accountTheme = resolveAccountTheme(userMetadata);
   if (accountTheme) {
     response = nextClean(request, { [ACCOUNT_THEME_HEADER]: accountTheme });
     for (const { name, value, options } of refreshedCookies) {
@@ -587,7 +578,7 @@ export async function proxy(request: NextRequest) {
   // Cross-device locale: if no NEXT_LOCALE cookie yet, seed it from the user's
   // saved preference so the UI language follows the account, not the browser.
   if (!request.cookies.get("NEXT_LOCALE")?.value) {
-    const metaLocale = session.user.user_metadata?.locale;
+    const metaLocale = userMetadata?.locale;
     if (typeof metaLocale === "string") {
       response.cookies.set("NEXT_LOCALE", metaLocale, {
         path: "/",

@@ -27,6 +27,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { AppContentHeader } from "@/components/app-content-header";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
 // see markdown-editor-lazy.tsx. Warmed from idle time in ObjectiveDetail.
 import {
@@ -48,6 +49,7 @@ import {
   type DictateButtonHandle,
 } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
+import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { Kbd } from "@/components/ui/kbd";
 import { matchesModCombo } from "@/lib/keyboard/mod-combo";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
@@ -87,13 +89,11 @@ function ObjectiveStatusValue({
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
   const meta = OBJECTIVE_STATUS_MAP[value];
-  const Icon = meta.icon;
   const options: PickerOption[] = OBJECTIVE_STATUSES.map((s) => {
-    const SIcon = s.icon;
     return {
       value: s.value,
       label: tStatus(s.value),
-      icon: <SIcon className={cn("size-4", s.color)} />,
+      icon: <ObjectiveStatusIndicator status={s.value} className="size-4" />,
     };
   });
   return (
@@ -105,7 +105,7 @@ function ObjectiveStatusValue({
       tooltip={t("statusFieldLabel")}
       trigger={
         <button type="button" aria-label={t("statusFieldLabel")} className={TRIGGER}>
-          <Icon className={cn("size-4 shrink-0", meta.color)} />
+          <ObjectiveStatusIndicator status={meta.value} className="size-4" />
           <span className="truncate">{tStatus(meta.value)}</span>
         </button>
       }
@@ -384,7 +384,7 @@ export function ObjectiveDetail({
  above (same part as triage and pull request). It does not NAME
  the objective - the left column designates it, the title writes it in big
  just below - it only describes what we DO there. */}
-      <div className="flex shrink-0 items-center gap-1.5 px-4 py-3 md:px-6">
+      <AppContentHeader contentClassName="gap-1.5 px-4 md:px-6">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -395,7 +395,7 @@ export function ObjectiveDetail({
           <ChevronLeft />
         </Button>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* Numo resumes dictation: the microphone has disappeared in the menu, the acknowledgment of
  work in progress remains here, in the place occupied by the command. */}
           {numoBusy && (
@@ -477,7 +477,7 @@ export function ObjectiveDetail({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </AppContentHeader>
 
       <div
         ref={fade.ref}
@@ -576,7 +576,11 @@ export function ObjectiveDetail({
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
           />
+        </div>
+      </div>
 
+      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
+        <div className="mx-auto max-w-3xl">
           <CommentComposer
             members={members}
             projectId={projectId}

@@ -160,8 +160,9 @@ verification, XDG, deep-link, and local-runtime contracts.
 
 Microsoft Store is the exclusive Windows distribution path and owns signing
 plus updates for the submitted MSIX packages. The shell never initializes
-electron-updater on Windows. The complete Partner Center and clean installation
-procedure is in
+electron-updater on Windows. A packaged C++/WinRT helper checks Store update
+availability at startup and every six hours; the sidebar opens the product page
+when an update is available. The complete Partner Center and clean installation procedure is in
 [docs/desktop-release.md](../docs/desktop-release.md#windows-microsoft-store).
 
 **The icon no longer has its own step.** Its source is `build/icon.icon`, the folder

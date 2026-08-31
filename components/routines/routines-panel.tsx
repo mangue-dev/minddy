@@ -23,6 +23,7 @@ import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { Routine } from "@/lib/routines-api";
 import {
   Tooltip,
@@ -373,10 +374,10 @@ export function RoutinesPanel({
                   size="icon-sm"
                   variant="ghost"
                   onClick={() => openWizard()}
-                  className="-mr-2 text-muted-foreground hover:text-foreground"
+                  className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
                   aria-label={t("newRoutine")}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-[18px]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("newRoutine")}</TooltipContent>
@@ -491,6 +492,7 @@ function RoutineRow({
   return (
     <button
       type="button"
+      data-sidebar-filter-result
       onClick={onSelect}
       className={cn(
         // `pr-3` and not `pr-2`: the status point (paused, missed passage)

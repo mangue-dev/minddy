@@ -47,6 +47,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_link_pull_request",
   "minddy_list_categories",
   "minddy_list_feedback",
+  "minddy_list_inbox",
   "minddy_list_integrations",
   "minddy_list_issues",
   "minddy_list_members",
@@ -106,11 +107,12 @@ async function coldStart(): Promise<{
 }> {
   const server = new McpServer(
     { name: "minddy-test", version: "1.0.0" },
-    { instructions: MCP_DISCOVERY_INSTRUCTIONS }
+    { instructions: MCP_DISCOVERY_INSTRUCTIONS },
   );
   registerMinddyTools(server);
 
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair();
   let nextId = 1;
   const pending = new Map<number, (message: WireResponse) => void>();
   clientTransport.onmessage = (message) => {
@@ -132,11 +134,11 @@ async function coldStart(): Promise<{
 
   const request = async <T>(
     method: string,
-    params: WireRequestParams
+    params: WireRequestParams,
   ): Promise<T> => {
     const id = nextId++;
     const response = new Promise<WireResponse>((resolve) =>
-      pending.set(id, resolve)
+      pending.set(id, resolve),
     );
     await clientTransport.send({ jsonrpc: "2.0", id, method, params });
     const message = await response;
@@ -187,7 +189,7 @@ describe("MCP cold-start discovery", () => {
     for (const tool of tools) {
       expect(tool.title?.trim(), tool.name).not.toBe("");
       expect(tool.description?.length, tool.name).toBeLessThanOrEqual(
-        MAX_DISCOVERY_DESCRIPTION_CHARS
+        MAX_DISCOVERY_DESCRIPTION_CHARS,
       );
       expect(tool.description, tool.name).toContain("Returns JSON text");
       expect(tool.description, tool.name).not.toContain(MCP_FULL_USAGE_GUIDE);
@@ -197,23 +199,27 @@ describe("MCP cold-start discovery", () => {
         expect(tool.description, tool.name).toContain("Read-only");
       } else {
         expect(tool.description, tool.name).toContain("Changes Minddy data");
-        expect(typeof tool.annotations?.destructiveHint, tool.name).toBe("boolean");
+        expect(typeof tool.annotations?.destructiveHint, tool.name).toBe(
+          "boolean",
+        );
       }
     }
 
-    expect(new Set(tools.map((tool) => tool.description)).size).toBe(tools.length);
+    expect(new Set(tools.map((tool) => tool.description)).size).toBe(
+      tools.length,
+    );
     for (const name of ["minddy_update_page", "minddy_append_to_page"]) {
       expect(tools.find((tool) => tool.name === name)?.description).toContain(
-        "Important errors: page_stale"
+        "Important errors: page_stale",
       );
     }
     expect(
       tools.find((tool) => tool.name === "minddy_get_pull_request")?.annotations
-        ?.openWorldHint
+        ?.openWorldHint,
     ).toBe(true);
     for (const name of ["minddy_delete_routine", "minddy_revoke_integration"]) {
       expect(
-        tools.find((tool) => tool.name === name)?.annotations?.destructiveHint
+        tools.find((tool) => tool.name === name)?.annotations?.destructiveHint,
       ).toBe(true);
     }
   });
@@ -222,10 +228,11 @@ describe("MCP cold-start discovery", () => {
     const { listings } = await coldStart();
     const descriptions = listings[0].tools.reduce(
       (total, tool) => total + (tool.description?.length ?? 0),
-      0
+      0,
     );
     const repeatedInitializationCost =
-      descriptions + MCP_DISCOVERY_INSTRUCTIONS.length * EXPECTED_TOOL_NAMES.length;
+      descriptions +
+      MCP_DISCOVERY_INSTRUCTIONS.length * EXPECTED_TOOL_NAMES.length;
 
     expect(MCP_DISCOVERY_INSTRUCTIONS.length).toBeLessThanOrEqual(400);
     expect(descriptions).toBeLessThanOrEqual(25_000);

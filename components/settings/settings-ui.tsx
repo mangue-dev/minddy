@@ -41,6 +41,7 @@ import { HelpHint } from "@/components/settings/help-hint";
 
 /** Group card: header (icon, title, index, master control), body, footer. */
 export function SettingsGroup({
+  id,
   icon,
   avatar,
   anchor,
@@ -54,6 +55,8 @@ export function SettingsGroup({
   className,
   children,
 }: {
+  /** Optional DOM destination for non-settings catalogs, such as Admin search. */
+  id?: string;
   icon?: LucideIcon;
   /** Full-width visual in place of the icon pad (e.g. a provider logo). */
   avatar?: ReactNode;
@@ -83,13 +86,13 @@ export function SettingsGroup({
   const hasBody = Children.toArray(children).length > 0;
   return (
     <section
-      id={anchor ? settingsSectionAnchor(anchor) : undefined}
+      id={anchor ? settingsSectionAnchor(anchor) : id}
       className={cn(
         "rounded-xl border bg-card text-card-foreground",
         /* `scroll-mt`: the shell unrolls the card CENTERING it, but a card
  higher than the window is aligned at the top — under the sticky header
  without this margin. */
-        anchor && "scroll-mt-20",
+        (anchor || id) && "scroll-mt-20",
         destructive ? "border-destructive/30" : "border-border",
         className,
       )}

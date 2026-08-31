@@ -128,7 +128,7 @@ export const fileBlock: PageBlock = {
   labelKey: "blockFile",
   slash: {
     group: "advanced",
-    order: 6,
+    order: 7,
     keywords: [
       "file",
       "fichier",

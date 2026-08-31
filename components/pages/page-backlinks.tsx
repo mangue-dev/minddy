@@ -1,23 +1,9 @@
 "use client";
 
-// “Quoted by” (MIN-279) — which is based on this page.
-//
-// The gesture that takes you from a wiki to a network. A spec page says nothing
-// of itself as long as we do not see the six tickets which quote it: “this
-// spec, what is it used for? » is a question that arises AT THE MOMENT we ask it.
-// reads, and the answer was so far not found in either direction.
-//
-// Three design decisions, and they stand:
-//
-// • AT THE FOOT OF THE DOCUMENT, not in another sidebar. It's a reading
-// end of page — we go down, we finish, we ask “so what?” ". A piece of furniture
-// permanent would steal width from the document for a response that we don't
-// only watch once.
-// • EMPTY = ABSENT. A frame that says “nothing cites this page” is a frame
-// that we read on all the new pages of the wiki, for nothing.
-// • THE TWO ORIGINS ARE NOT DISTINGUISHED. The server melts the resource
-// (MIN-275) and the mention in a single line. Know which of the two has
-// served is not a question we ask ourselves.
+// “Cited by” (MIN-279) connects a page to the pages, tickets, and objectives
+// that depend on it. It lives at the top of the activity log: citations are
+// context about the document, not part of its editable body. An empty result is
+// deliberately absent, and both citation sources use the same presentation.
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -26,9 +12,11 @@ import { FileText, Hash } from "lucide-react";
 import { cn } from "mangue-ui";
 
 import { fetchPageBacklinksApi } from "@/lib/pages-api";
-import { mentionTargetPath } from "@/lib/mention-target";
+import { mentionNavigationTarget } from "@/lib/mention-target";
 import { EntityPill, PillIcon, PILL_INNER_RADIUS } from "@/components/entity-pill";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
+import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import type { PageBacklink } from "@/lib/types";
 
 /** The trackbacks cache key — the one that the real-time bridge invalidates. */
@@ -64,13 +52,12 @@ export function PageBacklinks({
   });
 
   const items = backlinks.data ?? [];
-  // Neither skeleton nor error message: the panel is not what we came for
-  // read. As long as we don't know, it doesn't exist - it's the same silence that
-  // “nothing cites this page”, and that’s the right one.
+  // Neither a skeleton nor an error message is useful here. Until citations are
+  // known, the optional section stays absent, just like an empty result.
   if (items.length === 0) return null;
 
   return (
-    <section className={cn("mt-14 border-t border-border pt-6", className)}>
+    <section className={cn("border-b border-border pb-4", className)}>
       <h2 className="mb-3 text-xs font-medium text-muted-foreground">
         {t("backlinksTitle", { count: items.length })}
       </h2>
@@ -93,11 +80,26 @@ function BacklinkPill({
   projectId: string;
 }) {
   const t = useTranslations("Pages");
-  const href = mentionTargetPath(item.kind, item.id, projectId);
+  const { openIssue } = useIssuePanelActions();
+  const target = mentionNavigationTarget(item.kind, item.id, projectId);
+  const href = target?.href ?? "#";
   const label = item.title.trim() || t("untitled");
 
   return (
-    <Link href={href ?? "#"} className="block min-w-0 max-w-full">
+    <Link
+      href={href}
+      className="block min-w-0 max-w-full"
+      onClick={(event) => {
+        if (
+          target?.kind !== "issue-panel" ||
+          !isPlainNavigationClick(event)
+        ) {
+          return;
+        }
+        event.preventDefault();
+        openIssue(target.projectId, target.issueId);
+      }}
+    >
       <EntityPill radius="md" className="hover:bg-accent">
         {item.kind === "objective" ? (
           <ObjectiveIconBadge

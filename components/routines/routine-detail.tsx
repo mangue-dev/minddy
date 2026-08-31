@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { AgentConversation } from "@/components/agent/agent-conversation";
+import { AppContentHeader } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";
 import { Markdown } from "@/components/markdown";
 import { ModelBadge } from "@/components/model-badge";
@@ -357,11 +358,8 @@ export function RoutineDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {/* ── Header: the title, and nothing else on its line ─────────────
-          Same geometry as the conversation of an agent and the flap of a sweater
-          request (`px-4 pt-4 pb-2.5`, borderless): the content goes up to
-          high instead of being placed under a bar. */}
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
+      {/* The title and controls share the same 60 px bar as every detail pane. */}
+      <AppContentHeader contentClassName="gap-2 px-4">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -485,7 +483,7 @@ export function RoutineDetail({
             </DropdownMenu>
           </div>
         )}
-      </div>
+      </AppContentHeader>
 
       {editing && draft ? (
         <RoutineEditor

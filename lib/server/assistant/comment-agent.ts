@@ -28,6 +28,7 @@ import { ASSISTANT_TOOLS } from "./tools";
 import {
   buildCommentSystemPrompt,
   buildObjectiveCommentSystemPrompt,
+  buildPageCommentSystemPrompt,
   buildFeedbackCommentSystemPrompt,
   type CommentPromptThreadEntry,
 } from "./prompt";
@@ -51,6 +52,9 @@ import {
 } from "./loop";
 import { serializeToolResult } from "./tool-result-serialization";
 import { commentFallbackDone } from "@/lib/server/runtime-locale-copy";
+import { getAssistantReasoningLevel } from "./reasoning";
+import { reasoningMaxTokens } from "@/lib/agent-reasoning";
+import { readPageForAgent } from "@/lib/server/page-tools";
 
 // ── @Numo in comments (fire and forget, Linear-style) ───────────────────
 // A comment mentioning @numo spawns this agent AFTER the HTTP response (via
@@ -67,6 +71,25 @@ const MAX_TOOL_ROUNDS = 6;
 /** Detects an @numo / @Numo mention in a comment body (word-boundary, not mid-email). */
 export function mentionsNumo(body: string): boolean {
   return /(^|[\s(>])@numo\b/i.test(body);
+}
+
+/**
+ * Build the recipients for a Numo comment without notifying the person whose
+ * comment triggered the reply. Other eligible participants still receive the
+ * same notification as they would for a regular comment.
+ */
+export function numoCommentNotificationTargets(
+  requesterId: string,
+  memberIds: Set<string>,
+  candidates: Array<string | null | undefined>
+): string[] {
+  const targets = new Set<string>();
+  for (const userId of candidates) {
+    if (userId && userId !== requesterId && memberIds.has(userId)) {
+      targets.add(userId);
+    }
+  }
+  return [...targets];
 }
 
 /**
@@ -121,6 +144,24 @@ export async function replyTargetsNumoFeedback(
     .from("comments")
     .select("via_assistant, assistant_status")
     .eq("feedback_post_id", comment.feedback_post_id)
+    .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
+    .neq("id", comment.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return !!last?.via_assistant && last.assistant_status !== "working";
+}
+
+/** Page-comment twin of replyTargetsNumo. */
+export async function replyTargetsNumoPage(
+  service: SupabaseClient,
+  comment: { id: string; page_id: string; parent_id: string | null }
+): Promise<boolean> {
+  if (!comment.parent_id) return false;
+  const { data: last } = await service
+    .from("page_comments")
+    .select("via_assistant, assistant_status")
+    .eq("page_id", comment.page_id)
     .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
     .neq("id", comment.id)
     .order("created_at", { ascending: false })
@@ -350,26 +391,20 @@ export async function runCommentMention({
     );
 
     // Notifications, like a regular comment: issue owner/assignee + thread
-    // root author, members only — PLUS the requester. A human comment never
-    // notifies its own author, but this one is Numo's: the person it just
-    // answered is precisely who has something new to read. The 'comment'
-    // category of the account settings gates the whole thing, as usual.
+    // root author, members only. The requester already initiated and sees the
+    // live reply, so notifying them would announce the result of their own action.
     const valid = await projectMemberIds(service, issue.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
       .select("author_id")
       .eq("id", rootId)
       .maybeSingle();
-    const targets = new Set<string>();
-    for (const uid of [
-      actorId,
+    const targets = numoCommentNotificationTargets(actorId, valid, [
       rootComment?.author_id,
       issue.created_by,
       issue.assignee_id,
-    ] as (string | null | undefined)[]) {
-      if (uid && valid.has(uid)) targets.add(uid);
-    }
-    const rows: NotificationRow[] = [...targets].map((uid) => ({
+    ]);
+    const rows: NotificationRow[] = targets.map((uid) => ({
       user_id: uid,
       project_id: issue.project_id as string,
       type: "comment" as const,
@@ -589,22 +624,18 @@ export async function runObjectiveCommentMention({
     );
 
     // Notifications: the objective's lead + the thread root author, members
-    // only — plus the requester, whom Numo just answered (see the issue twin).
+    // only, excluding the requester who initiated Numo's reply.
     const valid = await projectMemberIds(service, objective.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
       .select("author_id")
       .eq("id", rootId)
       .maybeSingle();
-    const targets = new Set<string>();
-    for (const uid of [
-      actorId,
+    const targets = numoCommentNotificationTargets(actorId, valid, [
       rootComment?.author_id,
       objective.lead_user_id,
-    ] as (string | null | undefined)[]) {
-      if (uid && valid.has(uid)) targets.add(uid);
-    }
-    const rows: NotificationRow[] = [...targets].map((uid) => ({
+    ]);
+    const rows: NotificationRow[] = targets.map((uid) => ({
       user_id: uid,
       project_id: objective.project_id as string,
       type: "comment" as const,
@@ -618,6 +649,187 @@ export async function runObjectiveCommentMention({
     await insertNotifications(service, rows);
   } catch (err) {
     console.error("[numo-comment] objective failed:", err);
+    await display?.fail();
+  }
+}
+
+export async function runPageCommentMention({
+  supabase,
+  service,
+  pageId,
+  actorId,
+  triggerCommentId,
+  locale,
+  trigger = "mention",
+}: {
+  supabase: SupabaseClient;
+  service: SupabaseClient;
+  pageId: string;
+  actorId: string;
+  triggerCommentId: string;
+  locale: string;
+  trigger?: "mention" | "reply";
+}): Promise<void> {
+  let display: CommentDisplay | null = null;
+  try {
+    const { data: triggerRow } = await service
+      .from("page_comments")
+      .select("id, parent_id, body, author_id, block_id")
+      .eq("id", triggerCommentId)
+      .maybeSingle();
+    if (!triggerRow) return;
+    const rootId =
+      (triggerRow.parent_id as string | null) ?? (triggerRow.id as string);
+
+    const { data: page } = await service
+      .from("pages")
+      .select("id, project_id, title, created_by")
+      .is("deleted_at", null)
+      .eq("id", pageId)
+      .maybeSingle();
+    if (!page) return;
+
+    const projectId = page.project_id as string;
+    const access = await getProjectAccess(actorId, projectId);
+    if (!access || !(await hasUsageBudget(actorId, "assistant"))) return;
+
+    const currentPage = await readPageForAgent({
+      pageId,
+      projectId,
+      actorId,
+      withBacklinks: false,
+    });
+    if (!currentPage.ok) return;
+
+    const { data: reply, error: replyError } = await service
+      .from("page_comments")
+      .insert({
+        page_id: pageId,
+        project_id: projectId,
+        block_id: (triggerRow.block_id as string | null) ?? null,
+        quote: null,
+        author_id: actorId,
+        parent_id: rootId,
+        body: "",
+        via_assistant: true,
+        assistant_status: "working",
+      })
+      .select("id")
+      .single();
+    if (replyError || !reply) {
+      console.error("[numo-comment] page placeholder failed:", replyError?.message);
+      return;
+    }
+    const replyId = reply.id as string;
+    display = commentDisplay(service, replyId, "page_comments");
+
+    const [promptProject, { data: threadRows }, { data: rootComment }] =
+      await Promise.all([
+        gatherProjectPromptContext({
+          supabase,
+          service,
+          project: access.project as unknown as {
+            id: string;
+            name: string;
+            key: string;
+            owner_id: string;
+          },
+        }),
+        service
+          .from("page_comments")
+          .select("id, author_id, body, via_assistant, created_at")
+          .eq("page_id", pageId)
+          .neq("id", replyId)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        service
+          .from("page_comments")
+          .select("author_id, quote")
+          .eq("id", rootId)
+          .maybeSingle(),
+      ]);
+
+    const recentComments = [...(threadRows ?? [])].reverse();
+    const authorIds = recentComments.map((comment) => comment.author_id as string);
+    const users = await fetchAuthUsersById(service, [...authorIds, actorId]);
+    const authorName = (id: string | null, viaAssistant?: boolean): string =>
+      viaAssistant
+        ? "Numo"
+        : displayName(toNamed(id ? users.get(id) : null), "User");
+    const thread: CommentPromptThreadEntry[] = recentComments.map((comment) => ({
+      author: authorName(
+        comment.author_id as string | null,
+        !!comment.via_assistant
+      ),
+      body: (comment.body as string) ?? "",
+    }));
+
+    const systemPrompt = buildPageCommentSystemPrompt({
+      project: promptProject,
+      page: {
+        id: pageId,
+        title: currentPage.data.title,
+        markdown: currentPage.data.markdown,
+        version: currentPage.data.version,
+        quote: (rootComment?.quote as string | null) ?? null,
+      },
+      thread,
+      locale,
+    });
+
+    const cfg = await getAppConfigValues([
+      ...modelConfigKeys("assistant_model"),
+      ...modelConfigKeys("fallback_model"),
+    ]);
+    const { model } = resolveCascadeFromValues(
+      ["assistant_model", "fallback_model"],
+      cfg
+    );
+    const triggerText = `${authorName(actorId)} ${
+      trigger === "reply"
+        ? "replied to your comment"
+        : "mentioned you in a comment"
+    } on the page "${currentPage.data.title || "(untitled)"}":\n"""\n${
+      triggerRow.body as string
+    }\n"""`;
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: triggerText },
+    ];
+
+    const finalContent = await runLoop(messages, {
+      model,
+      projectId,
+      userId: actorId,
+      supabase,
+      service,
+      locale,
+      numoDefaultStatus: resolveNumoDefaultStatus(
+        users.get(actorId)?.user_metadata
+      ),
+      onTool: (name) => display?.tool(name),
+      onText: (partial) => display?.stream(partial),
+    });
+    await display.finish(finalContent || commentFallbackDone(locale));
+
+    const valid = await projectMemberIds(service, projectId);
+    const targets = numoCommentNotificationTargets(actorId, valid, [
+      rootComment?.author_id,
+      page.created_by,
+    ]);
+    const rows: NotificationRow[] = targets.map((userId) => ({
+      user_id: userId,
+      project_id: projectId,
+      type: "page_comment" as const,
+      issue_id: null,
+      page_id: pageId,
+      block_id: (triggerRow.block_id as string | null) ?? null,
+      actor_id: actorId,
+      via_assistant: true,
+    }));
+    await insertNotifications(service, rows);
+  } catch (error) {
+    console.error("[numo-comment] page failed:", error);
     await display?.fail();
   }
 }
@@ -857,24 +1069,19 @@ export async function runFeedbackCommentMention({
       finalContent || commentFallbackDone(locale)
     );
 
-    // Notifications: the thread root author, members only — plus the
-    // requester, whom Numo just answered (see the issue twin). (A feedback
-    // post has no owner/assignee/lead.)
+    // Notifications: the thread root author, members only, excluding the
+    // requester who initiated Numo's reply. A feedback post has no owner,
+    // assignee, or lead.
     const valid = await projectMemberIds(service, post.project_id as string);
     const { data: rootComment } = await service
       .from("comments")
       .select("author_id")
       .eq("id", rootId)
       .maybeSingle();
-    const targets = new Set<string>();
-    for (const uid of [actorId, rootComment?.author_id] as (
-      | string
-      | null
-      | undefined
-    )[]) {
-      if (uid && valid.has(uid)) targets.add(uid);
-    }
-    const rows: NotificationRow[] = [...targets].map((uid) => ({
+    const targets = numoCommentNotificationTargets(actorId, valid, [
+      rootComment?.author_id,
+    ]);
+    const rows: NotificationRow[] = targets.map((uid) => ({
       user_id: uid,
       project_id: post.project_id as string,
       type: "comment" as const,
@@ -918,6 +1125,7 @@ async function runLoop(
     surface: "assistant",
   });
   ctx.model = aiRuntime.model;
+  const reasoningLevel = await getAssistantReasoningLevel();
 
   let finalContent = "";
   let continueLoop = true;
@@ -948,7 +1156,8 @@ async function runLoop(
         model: ctx.model,
         messages,
         stream: true,
-        maxOutputTokens: 4096,
+        maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
+        reasoning: { effort: reasoningLevel },
         ...(lastRound ? {} : { tools }),
       }),
       "Numo (minddy)",

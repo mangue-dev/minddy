@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -39,6 +40,11 @@ import {
 } from "@/lib/last-create-project";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
+import {
+  loadCreateIssueDialog,
+  loadObjectiveDialog,
+  preloadSurface,
+} from "@/lib/lazy-app-surfaces";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type {
   CreateIssueInput,
@@ -51,11 +57,11 @@ import type {
 // dictation, attachments) out of every route's initial bundle. Loaded the first
 // time a create action fires.
 const CreateIssueDialog = dynamic(
-  () => import("@/components/create-issue-dialog").then((m) => m.CreateIssueDialog),
+  () => loadCreateIssueDialog().then((m) => m.CreateIssueDialog),
   { ssr: false }
 );
 const ObjectiveDialog = dynamic(
-  () => import("@/components/objective-dialog").then((m) => m.ObjectiveDialog),
+  () => loadObjectiveDialog().then((m) => m.ObjectiveDialog),
   { ssr: false }
 );
 
@@ -85,6 +91,8 @@ interface OpenObjectiveOptions {
 interface CreateContextValue {
   openCreateIssue: (opts?: OpenIssueOptions) => void;
   openCreateObjective: (opts?: OpenObjectiveOptions) => void;
+  warmCreateIssue: () => void;
+  warmCreateObjective: () => void;
   /** No project → nothing to create in; drives the header actions' disabled state. */
   canCreate: boolean;
 }
@@ -124,6 +132,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // Project whose members/categories/objectives feed the open dialog. Set on the
   // first open and left in place (dialogs stay mounted for reuse).
   const [target, setTarget] = useState<string | null>(null);
+  const [issueMounted, setIssueMounted] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   // Does the dialog open in dictation? Rested at EVERY opening, never
   // left lying around: otherwise a `C` typed after a ⌘⇧D would turn the microphone back on.
@@ -134,6 +143,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     assigneeId: string | null;
   }>({ objectiveId: null, assigneeId: null });
   const [objectiveOpen, setObjectiveOpen] = useState(false);
+  const [objectiveMounted, setObjectiveMounted] = useState(false);
   // Pre-filled name + recipient of the created objective, set by quick addition
   // of a picker. The callback lives in a ref: it does not redraw anything, and it is
   // CONSUMED upon creation — a subsequent opening (shortcut `O`, header) does not
@@ -141,9 +151,10 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const [objectiveName, setObjectiveName] = useState<string | undefined>(undefined);
   const objectiveCreatedRef = useRef<((objective: Objective) => void) | null>(null);
 
-  const { members } = useMembersQuery(target, !!target);
-  const { categories } = useCategoriesQuery(target);
-  const { objectives } = useObjectivesQuery(target);
+  const anyDialogMounted = issueMounted || objectiveMounted;
+  const { members } = useMembersQuery(target, anyDialogMounted && !!target);
+  const { categories } = useCategoriesQuery(issueMounted ? target : null);
+  const { objectives } = useObjectivesQuery(issueMounted ? target : null);
 
   // Optimistic (MIN-40): the card appears in the project cache AND the board
   // aggregated upon opening, the dialog closes without waiting for POST; reconciled
@@ -231,6 +242,21 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     [pathname, projects]
   );
 
+  const warmCreateIssue = useCallback(() => {
+    preloadSurface(loadCreateIssueDialog);
+    const pid = resolveTarget();
+    if (!pid) return;
+    setTarget(pid);
+    startTransition(() => setIssueMounted(true));
+  }, [resolveTarget]);
+  const warmCreateObjective = useCallback(() => {
+    preloadSurface(loadObjectiveDialog);
+    const pid = resolveTarget();
+    if (!pid) return;
+    setTarget(pid);
+    startTransition(() => setObjectiveMounted(true));
+  }, [resolveTarget]);
+
   const openCreateIssue = useCallback(
     (opts?: OpenIssueOptions) => {
       const pid = resolveTarget(opts?.projectId);
@@ -253,6 +279,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
         assigneeId: opts?.assigneeId ?? null,
       });
       setIssueDictate(opts?.dictate === true);
+      setIssueMounted(true);
       setIssueOpen(true);
     },
     [resolveTarget, pathname]
@@ -265,6 +292,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       setTarget(pid);
       setObjectiveName(opts?.name?.trim() || undefined);
       objectiveCreatedRef.current = opts?.onCreated ?? null;
+      setObjectiveMounted(true);
       setObjectiveOpen(true);
     },
     [resolveTarget]
@@ -332,48 +360,56 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     () => ({
       openCreateIssue,
       openCreateObjective,
+      warmCreateIssue,
+      warmCreateObjective,
       canCreate: projects.length > 0,
     }),
-    [openCreateIssue, openCreateObjective, projects.length]
+    [
+      openCreateIssue,
+      openCreateObjective,
+      warmCreateIssue,
+      warmCreateObjective,
+      projects.length,
+    ]
   );
 
   return (
     <CreateContext.Provider value={value}>
       {children}
-      {target && (
-        <>
-          <CreateIssueDialog
-            open={issueOpen}
-            onOpenChange={setIssueOpen}
-            projectId={target}
-            projects={projects}
-            members={members}
-            categories={categories}
-            objectives={objectives}
-            onCreate={(input) => createIssueGlobal(target, input)}
-            onCreateInProject={createIssueGlobal}
-            initialStatus={issuePresets.status}
-            initialObjectiveId={issuePresets.objectiveId}
-            initialAssigneeId={issuePresets.assigneeId}
-            autoDictate={issueDictate}
-          />
-          <ObjectiveDialog
-            open={objectiveOpen}
-            onOpenChange={(next) => {
-              // Closed without creating: the picker callback dies with the dialog.
-              if (!next) objectiveCreatedRef.current = null;
-              setObjectiveOpen(next);
-            }}
-            members={members}
-            projects={projects}
-            projectId={target}
-            initialName={objectiveName}
-            onCreate={(input) => createObjectiveForTarget(target, input)}
-            onCreateInProject={createObjectiveGlobal}
-            onUpdate={async () => {}}
-          />
-        </>
-      )}
+      {target && issueMounted ? (
+        <CreateIssueDialog
+          open={issueOpen}
+          onOpenChange={setIssueOpen}
+          projectId={target}
+          projects={projects}
+          members={members}
+          categories={categories}
+          objectives={objectives}
+          onCreate={(input) => createIssueGlobal(target, input)}
+          onCreateInProject={createIssueGlobal}
+          initialStatus={issuePresets.status}
+          initialObjectiveId={issuePresets.objectiveId}
+          initialAssigneeId={issuePresets.assigneeId}
+          autoDictate={issueDictate}
+        />
+      ) : null}
+      {target && objectiveMounted ? (
+        <ObjectiveDialog
+          open={objectiveOpen}
+          onOpenChange={(next) => {
+            // Closed without creating: the picker callback dies with the dialog.
+            if (!next) objectiveCreatedRef.current = null;
+            setObjectiveOpen(next);
+          }}
+          members={members}
+          projects={projects}
+          projectId={target}
+          initialName={objectiveName}
+          onCreate={(input) => createObjectiveForTarget(target, input)}
+          onCreateInProject={createObjectiveGlobal}
+          onUpdate={async () => {}}
+        />
+      ) : null}
     </CreateContext.Provider>
   );
 }

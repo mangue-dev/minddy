@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 
-import { getDesktopBridge } from "@/lib/desktop/bridge";
+import {
+  desktopBridgePlatform,
+  getDesktopBridge,
+} from "@/lib/desktop/bridge";
 import { useAffirmWindowButtons } from "@/lib/use-window-buttons";
 import { startDesktopTrace } from "@/lib/desktop/trace";
 
@@ -34,8 +37,9 @@ export function DesktopChrome() {
     const bridge = getDesktopBridge();
     if (!bridge) return;
     const root = document.documentElement;
+    const platform = desktopBridgePlatform(bridge, navigator.platform);
     root.setAttribute("data-desktop-app", "");
-    root.setAttribute("data-desktop-platform", bridge.platform);
+    if (platform) root.setAttribute("data-desktop-platform", platform);
     return () => {
       root.removeAttribute("data-desktop-app");
       root.removeAttribute("data-desktop-platform");

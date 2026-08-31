@@ -3,8 +3,8 @@
 // Compact pickers for the create-issue dialog — the options read as one inline
 // row (Figma: assets/figma/New issue minddy.png). Icon-representable fields
 // show just their indicator (status/priority, effort triangle, category dot,
-// avatar); due date and objective render as bordered pills. Same value/onChange
-// contracts as the side-panel fields in issue-property-fields.tsx.
+// avatar). Same value/onChange contracts as the side-panel fields in
+// issue-property-fields.tsx.
 
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
@@ -47,7 +47,7 @@ import {
 // comfortable: under `sm` each trigger gains a few guard pixels.
 const BARE =
   "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2";
-const PILL =
+const SMART_FILL_PILL =
   "flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring max-sm:h-9";
 
 // Lets the create-issue dialog drive each picker's open state from a keyboard
@@ -275,7 +275,7 @@ export function AssigneeCompact({
           {current ? (
             <UserAvatar
               seed={current.avatar_seed}
-              className="size-6"
+              className="size-5"
             />
           ) : (
             <UserCircle2
@@ -311,14 +311,13 @@ export function DueDateCompact({
   const tField = useTranslations("Field");
   return (
     <DateTimePicker
-      variant="field"
+      variant="ghost"
       value={value}
       onChange={onChange}
       recurrence={recurrence}
       onRecurrenceChange={onRecurrenceChange}
       placeholder={tField("dueDate")}
       ariaLabel={t("changeDueDateAria")}
-      className="h-8 rounded-full max-sm:h-9"
       open={open}
       onOpenChange={onOpenChange}
       tooltip={shortcutHint ? tField("dueDate") : undefined}
@@ -367,7 +366,7 @@ export function ObjectiveCompact({
       onOpenChange={onOpenChange}
       shortcutHint={shortcutHint}
       trigger={
-        <button type="button" aria-label={t("changeObjectiveAria")} className={PILL}>
+        <button type="button" aria-label={t("changeObjectiveAria")} className={BARE}>
           {current ? (
             <>
               <Dot color={current.color} />
@@ -416,7 +415,7 @@ export function SmartFillCompact({
           aria-pressed={value}
           onClick={() => onChange(!value)}
           className={cn(
-            PILL,
+            SMART_FILL_PILL,
             value
               ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
               : "text-muted-foreground",

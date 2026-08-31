@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { EmptyScene } from "@/components/empty-scene";
+import { AppContentHeader } from "@/components/app-content-header";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -65,6 +66,7 @@ import { SearchSelect, checkedProps } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
@@ -272,11 +274,11 @@ function FeedbackFilterMenu({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="text-muted-foreground hover:text-foreground"
+          className={SIDEBAR_COMPACT_CONTROL_CLASS}
           aria-label={tooltip}
         >
           <span className="relative flex items-center justify-center">
-            <ListFilter className="size-4" />
+            <ListFilter className="size-[18px]" />
             {active ? (
               <span
                 aria-hidden
@@ -611,27 +613,29 @@ function AuthorValue({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="-mr-1.5 flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+        >
+          {identity}
+        </span>
+      </TooltipTrigger>
+      {/* Keep the copy action on the icon itself: hovering the author only
+          reveals the address, while clicking the explicit control copies it. */}
+      <TooltipContent className="flex items-center gap-2">
+        {email}
         <button
           type="button"
           onClick={copy}
           aria-label={copied ? t("emailCopied") : t("copyEmail")}
-          className="-mr-1.5 flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+          className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-background/70 outline-none transition-colors hover:bg-background/15 hover:text-background focus-visible:bg-background/15 focus-visible:text-background focus-visible:ring-1 focus-visible:ring-background/60"
         >
-          {identity}
+          {copied ? (
+            <Check aria-hidden="true" className="size-3.5" />
+          ) : (
+            <Copy aria-hidden="true" className="size-3.5" />
+          )}
         </button>
-      </TooltipTrigger>
-      {/* Email, and the icon gesture — “Copy email” written in all
-          letters next to the address doubled the width of the tooltip to
-          repeat what a pair of leaves already says. The checkmark that replaces
-          the icon is acknowledgment; the word remains, but
-          `aria-label`, for those who do not see the icon. */}
-      <TooltipContent className="flex items-center gap-2">
-        {email}
-        {copied ? (
-          <Check className="size-3.5 shrink-0" />
-        ) : (
-          <Copy className="size-3.5 shrink-0 text-muted-foreground" />
-        )}
       </TooltipContent>
     </Tooltip>
   );
@@ -684,6 +688,7 @@ function FeedbackRow({
     <button
       ref={askNumoRef}
       type="button"
+      data-sidebar-filter-result
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -1110,11 +1115,11 @@ export function FeedbackTeamPage() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="-mr-2 text-muted-foreground hover:text-foreground"
+                  className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
                   aria-label={t("newFeedback")}
                   onClick={() => setCreateOpen(true)}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-[18px]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("newFeedback")}</TooltipContent>
@@ -1562,7 +1567,7 @@ function FeedbackDetail({
           WITHOUT border: it is the fading of the content which says that it continues
           above, and a separate bar would cut it off from what it covers (even
           part as the pull request and the agent conversation). */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
+      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -1583,7 +1588,7 @@ function FeedbackDetail({
             reviewFailed={reviewGaveUp(post)}
           />
         </span>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* The linked ticket is no longer ANNOUNCED here: it has its row in the
               file, with its status, title and detachment. Only remains
               the gesture that only exists before it — making one. */}
@@ -1658,7 +1663,7 @@ function FeedbackDetail({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </AppContentHeader>
 
       {/* Scrolling body, centered like the yard. */}
       <div
@@ -2063,18 +2068,22 @@ function FeedbackDetail({
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
           />
+        </div>
+        </div>
+      </div>
+
+      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
+        <div className="mx-auto max-w-3xl">
           <CommentComposer
             members={members}
             projectId={projectId}
             onSubmit={handleComment}
-            // Without a published board, a public comment has no pages where
-            // displayed: the toggle remains visible but off, and says
-            // why rather than disappearing without explanation.
+            // Without a published board, a public comment has nowhere to appear.
+            // Keep the toggle visible but disabled so the missing setting is explicit.
             publicOption={{
               disabledReason: boardEnabled ? undefined : t("publicNeedsBoard"),
             }}
           />
-        </div>
         </div>
       </div>
 

@@ -52,6 +52,7 @@ export type PageBlockId =
   | "orderedList"
   | "taskList"
   | "quote"
+  | "callout"
   | "codeBlock"
   | "divider"
   | "details"

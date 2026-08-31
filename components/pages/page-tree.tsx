@@ -32,13 +32,11 @@ import {
   MoreHorizontal,
   Plus,
   Star,
-  StarOff,
-  Trash2,
 } from "lucide-react";
 
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
-import { ancestorsOf, favoritePages } from "@/lib/pages";
+import { ancestorsOf, splitFavoritePageTree } from "@/lib/pages";
 import { dropModeAt, type PageDropMode } from "@/lib/pages-move";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import {
@@ -50,7 +48,10 @@ import {
   PagePresenceDot,
   usePresentOn,
 } from "@/components/pages/page-presence";
-import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
+import {
+  usePageDocumentMenu,
+  type PageMenuTarget,
+} from "@/components/pages/page-document-actions";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -81,9 +82,9 @@ export interface PageTreeProps {
   query: string;
   onCreateChild: (parentId: string) => void;
   onMove: (dragId: string, targetId: string, mode: PageDropMode) => void;
-  onTrash: (page: PageSummary) => void;
+  onTrash: (page: PageMenuTarget) => void;
   /** Pin/unpin. The favorite is SHARED by the project (lib/pages.ts). */
-  onToggleFavorite: (page: PageSummary) => void;
+  onToggleFavorite: (page: PageMenuTarget) => void;
 }
 
 export function PageTree({
@@ -168,19 +169,17 @@ export function PageTree({
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [pages, query]);
 
-  /* ── Favorites ─────────────────────────── ────────────────────────────
-     Pinned at the top, FLAT: a favorite subpage is therefore read twice
-     in the bar — here at level 0, and in its true place in the tree. This is the
-     meaning of the gesture: pinning is a shortcut, not a move, and see the
-     page quitter son parent se lirait comme un reparentage.
+  /* ── Favorites ──────────────────────────────────────────────────────────
+     Each favorite becomes a root in the upper forest and brings its complete
+     subtree with it. The lower forest excludes those nodes, so a nested favorite
+     and every one of its descendants appear exactly once in the sidebar.
 
-     No section title above: the star at the end of the line already says this
-     what is this block, and an intertitle for three lines costs more height
-     than he explains. The separator is enough to detach it from the tree.
-
-     The order and choice of lines lives in `favoritePages` (lib/pages.ts),
-     with the rest of the logic tree — so tested, like it. */
-  const favorites = useMemo(() => favoritePages(tree), [tree]);
+     There is no section title: the star on favorite rows and the separator make
+     the distinction without spending another line of sidebar space. */
+  const { favorites, regular } = useMemo(
+    () => splitFavoritePageTree(tree),
+    [tree]
+  );
 
   /* ── The deposit ────────────────────────────── ────────────────────────────── */
   const [dragId, setDragId] = useState<string | null>(null);
@@ -193,11 +192,26 @@ export function PageTree({
     setDrop(null);
   }, []);
 
-  /* ── Publier, exporter (MIN-283) ────────────────────────────────────────
-     Both entries are written once for their two anchors — this
-     line, and the menu ⋯ of the opened page. The publishing dialog is
-     mounted ONCE for the whole tree: it carries its intended page in its state. */
-  const { actionsFor, dialogs } = usePageDocumentMenu({ projectId, pages });
+  const createChild = useCallback(
+    (parentId: string) => {
+      if (!expanded.has(parentId)) {
+        const next = new Set(expanded);
+        next.add(parentId);
+        persist(next);
+      }
+      onCreateChild(parentId);
+    },
+    [expanded, onCreateChild, persist]
+  );
+
+  // One action list serves the hover menu, the context menu, and the open page.
+  const { actionsFor, dialogs } = usePageDocumentMenu({
+    projectId,
+    pages,
+    onCreateChild: createChild,
+    onToggleFavorite,
+    onTrash,
+  });
 
   if (filtered) {
     return filtered.length === 0 ? (
@@ -217,11 +231,9 @@ export function PageTree({
             drop={null}
             dragging={false}
             untitled={t("untitled")}
-            documentActions={actionsFor(page)}
+            actions={actionsFor(page)}
             onToggle={() => {}}
-            onCreateChild={onCreateChild}
-            onTrash={onTrash}
-            onToggleFavorite={onToggleFavorite}
+            onCreateChild={createChild}
           />
         ))}
         {dialogs}
@@ -229,79 +241,61 @@ export function PageTree({
     );
   }
 
-  const rows: React.ReactNode[] = [];
-  const walk = (nodes: PageTreeNode<PageSummary>[]) => {
-    for (const node of nodes) {
-      const open = expanded.has(node.id);
-      rows.push(
-        <PageRow
-          key={node.id}
-          page={node}
-          depth={node.depth}
-          hasChildren={node.children.length > 0}
-          open={open}
-          active={node.id === activePageId}
-          drop={drop?.id === node.id ? drop.mode : null}
-          dragging={dragId === node.id}
-          untitled={t("untitled")}
-          documentActions={actionsFor(node)}
-          onToggle={() => toggle(node.id)}
-          onCreateChild={(parentId) => {
-            if (!expanded.has(parentId)) {
-              const next = new Set(expanded);
-              next.add(parentId);
-              persist(next);
-            }
-            onCreateChild(parentId);
-          }}
-          onTrash={onTrash}
-          onToggleFavorite={onToggleFavorite}
-          onDragStart={() => setDragId(node.id)}
-          onDragOverRow={(mode) => {
-            if (!dragId || dragId === node.id) return;
-            setDrop({ id: node.id, mode });
-          }}
-          onDropRow={(mode) => {
-            if (dragId && dragId !== node.id) onMove(dragId, node.id, mode);
-            endDrag();
-          }}
-          onDragEnd={endDrag}
-        />
-      );
-      if (open) walk(node.children);
-    }
+  const renderRows = (
+    nodes: PageTreeNode<PageSummary>[],
+    favoriteSection: boolean
+  ): React.ReactNode[] => {
+    const rendered: React.ReactNode[] = [];
+    const walk = (branch: PageTreeNode<PageSummary>[]) => {
+      for (const node of branch) {
+        const open = expanded.has(node.id);
+        rendered.push(
+          <PageRow
+            key={node.id}
+            page={node}
+            depth={node.depth}
+            hasChildren={node.children.length > 0}
+            open={open}
+            active={node.id === activePageId}
+            drop={drop?.id === node.id ? drop.mode : null}
+            dragging={dragId === node.id}
+            untitled={t("untitled")}
+            actions={actionsFor(node)}
+            pinned={favoriteSection && node.favorite}
+            onToggle={() => toggle(node.id)}
+            onCreateChild={createChild}
+            onDragStart={() => setDragId(node.id)}
+            onDragOverRow={(mode) => {
+              if (!dragId || dragId === node.id) return;
+              setDrop({ id: node.id, mode });
+            }}
+            onDropRow={(mode) => {
+              if (dragId && dragId !== node.id) onMove(dragId, node.id, mode);
+              endDrag();
+            }}
+            onDragEnd={endDrag}
+          />
+        );
+        if (open) walk(node.children);
+      }
+    };
+    walk(nodes);
+    return rendered;
   };
-  walk(tree);
+  const favoriteRows = renderRows(favorites, true);
+  const regularRows = renderRows(regular, false);
 
   return (
     <div className="flex flex-col gap-0.5 px-2 pt-2 pb-4">
       {favorites.length > 0 && (
         <>
-          {favorites.map((page) => (
-            // The key is prefixed: a favorite subpage is rendered TWICE
-            // in this same list, here and in the tree below.
-            <PageRow
-              key={`fav-${page.id}`}
-              page={page}
-              depth={0}
-              hasChildren={false}
-              open={false}
-              active={page.id === activePageId}
-              drop={null}
-              dragging={false}
-              untitled={t("untitled")}
-              documentActions={actionsFor(page)}
-              pinned
-              onToggle={() => {}}
-              onCreateChild={onCreateChild}
-              onTrash={onTrash}
-              onToggleFavorite={onToggleFavorite}
-            />
-          ))}
-          <div className="mx-2 my-1.5 h-px shrink-0 bg-border" aria-hidden />
+          {favoriteRows}
+          {regularRows.length > 0 && (
+            <div className="mx-2 my-1.5 h-px shrink-0 bg-border" aria-hidden />
+          )}
         </>
       )}
-      {rows}
+      {regularRows}
       {dialogs}
     </div>
   );
@@ -316,12 +310,10 @@ function PageRow({
   drop,
   dragging,
   untitled,
-  documentActions,
+  actions,
   pinned = false,
   onToggle,
   onCreateChild,
-  onTrash,
-  onToggleFavorite,
   onDragStart,
   onDragOverRow,
   onDropRow,
@@ -336,15 +328,12 @@ function PageRow({
   drop: PageDropMode | null;
   dragging: boolean;
   untitled: string;
-  /** “Publish” and “Export” (MIN-283), written by shared hook. */
-  documentActions: ContextMenuAction[];
-  /** Returned to the BLOCK of favorites, at the top of the bar: it then bears
-      the star which, for lack of an intertitle, says what this block is. */
+  /** The complete menu, shared with the open page. */
+  actions: ContextMenuAction[];
+  /** Whether this row itself is a favorite in the upper tree. */
   pinned?: boolean;
   onToggle: () => void;
   onCreateChild: (parentId: string) => void;
-  onTrash: (page: PageSummary) => void;
-  onToggleFavorite: (page: PageSummary) => void;
   onDragStart?: () => void;
   onDragOverRow?: (mode: PageDropMode) => void;
   onDropRow?: (mode: PageDropMode) => void;
@@ -366,45 +355,6 @@ function PageRow({
     const rect = event.currentTarget.getBoundingClientRect();
     return dropModeAt(event.clientY - rect.top, rect.height);
   };
-
-  /**
-   * The actions of the line, written ONCE for two anchors: the button
-   * “⋯” which appears on hover, and right-click anywhere on the line.
-   *
-   * That's the whole point of going through `ContextMenuAction[]` rather than
-   * copy `<DropdownMenuItem>`: two menus which list the same thing from
-   * two different places always end up diverging, and this is the one
-   * which is opened the least often which keeps the action out of date. Here there is only one
-   * list — board maps and primary sidebar already do the same
-   * (components/issue-context-menu.tsx).
-   */
-  const actions: ContextMenuAction[] = [
-    {
-      id: "new-subpage",
-      label: t("newSubpage"),
-      icon: <Plus className="size-4" />,
-      onSelect: () => onCreateChild(page.id),
-    },
-    {
-      id: "favorite",
-      label: page.favorite ? t("unfavorite") : t("favorite"),
-      icon: page.favorite ? (
-        <StarOff className="size-4" />
-      ) : (
-        <Star className="size-4" />
-      ),
-      onSelect: () => onToggleFavorite(page),
-    },
-    ...documentActions,
-    {
-      id: "trash",
-      label: t("deletePage"),
-      icon: <Trash2 className="size-4" />,
-      variant: "destructive",
-      separatorBefore: true,
-      onSelect: () => onTrash(page),
-    },
-  ];
 
   return (
     <>
@@ -487,6 +437,7 @@ function PageRow({
 
       <Link
         href={`/projects/${page.project_id}/pages/${page.id}`}
+        data-sidebar-filter-result
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pr-1 text-left outline-none"
       >
         <span className="flex size-4 shrink-0 items-center justify-center text-sm leading-none">

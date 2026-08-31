@@ -15,6 +15,10 @@ import {
 } from "@/components/stats/stats-chrome";
 import type { AdminOverview, AdminOverviewDay } from "@/lib/types";
 import {
+  ADMIN_SECTIONS,
+  adminSectionAnchor,
+} from "@/lib/admin-sections";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -237,7 +241,10 @@ export function AdminOverviewDashboard() {
   return (
     <div>
       {/* 1 — The present: how many accounts, how many live. */}
-      <StatsCard className="grid grid-cols-1 gap-5 divide-y divide-border sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-y-0">
+      <StatsCard
+        id={adminSectionAnchor(ADMIN_SECTIONS.overviewSummary)}
+        className="grid grid-cols-1 gap-5 divide-y divide-border sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-y-0"
+      >
         <Metric
           variant="hero"
           className="sm:pr-5"
@@ -277,7 +284,11 @@ export function AdminOverviewDashboard() {
       </StatsCard>
 
       {/* 2 — The last 30 days, two twin bands (never superimposed). */}
-      <StatsSection title={t("overview.activity")} info={t("overview.activeInfo")}>
+      <StatsSection
+        id={adminSectionAnchor(ADMIN_SECTIONS.overviewActivity)}
+        title={t("overview.activity")}
+        info={t("overview.activeInfo")}
+      >
         <StatsCard className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
             <StatsSectionHeader title={t("overview.activeDaily")} />
@@ -303,6 +314,7 @@ export function AdminOverviewDashboard() {
       {/* 3 — Where are the newcomers? The funnel reads as proportions of the
           same whole; the tiles below keep the exact counts. */}
       <StatsSection
+        id={adminSectionAnchor(ADMIN_SECTIONS.overviewOnboarding)}
         title={t("overview.onboarding")}
         info={t("overview.onboardingInfo")}
       >
@@ -347,8 +359,12 @@ export function AdminOverviewDashboard() {
         </StatsCard>
       </StatsSection>
 
-      {/* 4 — Ce qu'ils paient. */}
-      <StatsSection title={t("overview.plans")} info={t("overview.plansInfo")}>
+      {/* 4 — What accounts pay. */}
+      <StatsSection
+        id={adminSectionAnchor(ADMIN_SECTIONS.overviewPlans)}
+        title={t("overview.plans")}
+        info={t("overview.plansInfo")}
+      >
         <StatsCard className="flex flex-col gap-4">
           {data.plans.map((plan) => (
             <PlanRow
@@ -363,7 +379,10 @@ export function AdminOverviewDashboard() {
       </StatsSection>
 
       {/* 5 — The base: what the app contains. */}
-      <StatsSection title={t("overview.content")}>
+      <StatsSection
+        id={adminSectionAnchor(ADMIN_SECTIONS.overviewContent)}
+        title={t("overview.content")}
+      >
         <StatsCard className="grid grid-cols-2 gap-5 sm:grid-cols-4">
           <TotalItem
             label={t("overview.totalProjects")}

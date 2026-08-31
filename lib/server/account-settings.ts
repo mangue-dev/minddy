@@ -50,6 +50,10 @@ import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { userHasByokKey } from "@/lib/server/agent/model";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { emailLocalPart } from "@/lib/display-name";
+import {
+  DEFAULT_AGENT_BRANCH_PREFIX,
+  normalizeAgentBranchPrefix,
+} from "@/lib/server/agent/branch-name";
 
 /**
  * The requesting user's own account settings, mirroring Account → Profile /
@@ -80,15 +84,16 @@ export interface AccountSettings {
   automation_preset: AutomationPresetId | null;
   /** Inbox (MIN-82) — one toggle per trigger family. */
   notifications: NotificationPrefs;
-  /** Code Agent Preferences (MIN-46 / MIN-122). Only account setting
+  /** Code Agent Preferences (MIN-46 / MIN-122). The only account setting block
  * which does NOT live in `user_metadata` but in `user_agent_preferences` —
- * hence its separate reading. `null` = follows app default. */
+ * hence its separate reading. */
   agent: AgentPrefs;
 }
 
 export interface AgentPrefs {
   default_model: string | null;
   default_reasoning_level: ReasoningLevel | null;
+  branch_prefix: string;
 }
 
 /** Same safeguard as the PUT of /api/account/agent-preferences: `provider/model`
@@ -116,7 +121,7 @@ async function readAgentPrefs(
   const service = getServiceClient();
   const { data, error } = await service
     .from("user_agent_preferences")
-    .select("default_model, default_reasoning_level")
+    .select("default_model, default_reasoning_level, branch_prefix")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) {
@@ -126,6 +131,7 @@ async function readAgentPrefs(
   const row = data as {
     default_model: string | null;
     default_reasoning_level: string | null;
+    branch_prefix: string | null;
   } | null;
   return {
     ok: true,
@@ -134,6 +140,8 @@ async function readAgentPrefs(
       default_reasoning_level: isReasoningLevel(row?.default_reasoning_level)
         ? row.default_reasoning_level
         : null,
+      branch_prefix:
+        normalizeAgentBranchPrefix(row?.branch_prefix) ?? DEFAULT_AGENT_BRANCH_PREFIX,
     },
   };
 }
@@ -371,6 +379,16 @@ export async function updateAccountSettings({
       return { ok: false, error: "default_reasoning_level must be off, low, medium or high." };
     }
     agentPatch.default_reasoning_level = level;
+  }
+  if ("branch_prefix" in input) {
+    const prefix =
+      input.branch_prefix === null
+        ? DEFAULT_AGENT_BRANCH_PREFIX
+        : normalizeAgentBranchPrefix(input.branch_prefix);
+    if (!prefix) {
+      return { ok: false, error: "branch_prefix is not a valid Git branch prefix." };
+    }
+    agentPatch.branch_prefix = prefix;
   }
 
   // Nothing recognised to change.

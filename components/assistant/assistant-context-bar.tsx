@@ -1,26 +1,22 @@
 "use client";
 
-// The context row of Numo's composer: what he has in front of him, plus the
-// @ button that lets you add one.
+// The context row of Numo's composer: what it currently has in front of it.
+// New pinned context is added from the composer's left-side add menu.
 //
-// The row NEVER crosses the line — a board with view, cycle and selection
-// would make the composition grow by three rows. It scrolls horizontally, without
-// visible bar, with two chevrons which only appear on hover and
-// only if there is something left to see on this side.
+// The row never crosses the line. Anything that no longer fits is represented
+// by a +X trigger whose popover shows the complete message context.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AtSign,
   BookText,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Folder,
   Target,
   User,
 } from "lucide-react";
-import { Button, CommandGroup, CommandItem, cn } from "mangue-ui";
+import { Button, CommandGroup, CommandItem } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
@@ -28,6 +24,11 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 import { ContextPill } from "@/components/assistant/context-pill";
+import {
+  ScrollableContextRow,
+  type AdaptiveContextItem,
+} from "@/components/assistant/adaptive-context-row";
+import { ResourcePills, type ResourceLike } from "@/components/resources";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier, isClosedStatus } from "@/lib/issue-constants";
 import { useMentionSources } from "@/lib/use-mention-sources";
@@ -37,74 +38,7 @@ import { useProjects } from "@/lib/projects-context";
 import { useNumoBoard, useNumoMembers } from "@/lib/use-numo-mentionables";
 import type { AssistantContextChip } from "@/lib/assistant-context";
 import type { AssistantPinnedContext } from "@/lib/assistant-types";
-
-// ── Horizontal scrolling ────────────────────── ───────────────────────
-
-function HScroller({ children }: { children: React.ReactNode }) {
-  const t = useTranslations("Assistant");
-  const ref = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ left: false, right: false });
-
-  const measure = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    setEdges({
-      left: el.scrollLeft > 1,
-      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
-    });
-  }, []);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    measure();
-    // The content moves without the row changing size (a pill that
-    // is added, a wording which arrives): we observe BOTH.
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-    return () => observer.disconnect();
-  }, [measure]);
-
-  const scrollBy = (direction: -1 | 1) => {
-    ref.current?.scrollBy({
-      left: direction * Math.max(120, (ref.current.clientWidth || 0) * 0.6),
-      behavior: "smooth",
-    });
-  };
-
-  return (
-    <div className="group/scroller relative min-w-0 flex-1">
-      <div
-        ref={ref}
-        onScroll={measure}
-        className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <div className="flex w-max items-center gap-1.5">{children}</div>
-      </div>
-      {(["left", "right"] as const).map((side) =>
-        edges[side] ? (
-          <button
-            key={side}
-            type="button"
-            aria-label={side === "left" ? t("contextScrollPrev") : t("contextScrollNext")}
-            onClick={() => scrollBy(side === "left" ? -1 : 1)}
-            className={cn(
-              "absolute top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground group-hover/scroller:opacity-100 focus-visible:opacity-100",
-              side === "left" ? "left-0" : "right-0",
-            )}
-          >
-            {side === "left" ? (
-              <ChevronLeft className="size-3" />
-            ) : (
-              <ChevronRight className="size-3" />
-            )}
-          </button>
-        ) : null,
-      )}
-    </div>
-  );
-}
+import type { PendingResource } from "@/lib/use-attachment-uploads";
 
 // ── @ button: add context ─────────────────────────────────────────────
 
@@ -346,7 +280,12 @@ function AddContextButton({
                   value={page.id}
                   keywords={[page.title]}
                   onSelect={() =>
-                    pick({ kind: "page", id: page.id, label: page.title })
+                    pick({
+                      kind: "page",
+                      id: page.id,
+                      label: page.title,
+                      icon: page.icon,
+                    })
                   }
                   className="gap-2"
                 >
@@ -397,46 +336,88 @@ function AddContextButton({
 
 export function AssistantContextBar({
   chips,
+  resources = [],
+  pending = [],
   disabledKeys,
   onToggle,
   onRemove,
+  onRemoveResource,
+  onRemovePending,
   onAdd,
   scopeProjectId,
   inputDisabled,
+  showAddButton = true,
 }: {
   chips: AssistantContextChip[];
+  resources?: ResourceLike[];
+  pending?: PendingResource[];
   disabledKeys: ReadonlySet<string>;
   /** Turns off/on an ambient pill (the eye). */
   onToggle: (key: string) => void;
   /** Remove a pill pinned to the hand (the cross). */
   onRemove: (key: string) => void;
+  onRemoveResource?: (resource: ResourceLike) => void;
+  onRemovePending?: (localId: string) => void;
   onAdd: (item: AssistantPinnedContext) => void;
   scopeProjectId: string | null;
   inputDisabled?: boolean;
+  showAddButton?: boolean;
 }) {
+  const items: AdaptiveContextItem[] = [
+    ...chips.map((chip) => ({
+      key: `context:${chip.key}`,
+      render: () => (
+        <ContextPill
+          chip={chip}
+          radius="md"
+          className="shadow-none"
+          disabled={disabledKeys.has(chip.key)}
+          {...(chip.pinned
+            ? { onRemove: () => onRemove(chip.key) }
+            : { onToggle: () => onToggle(chip.key) })}
+        />
+      ),
+    })),
+    ...resources.map((resource) => ({
+      key: `resource:${resource.id ?? resource.storage_path ?? resource.file_name}`,
+      render: () => (
+        <ResourcePills
+          resources={[resource]}
+          radius="md"
+          className="flex-nowrap"
+          pillClassName="shadow-none"
+          onRemove={onRemoveResource}
+        />
+      ),
+    })),
+    ...pending
+      .filter((resource) => resource.status === "uploading")
+      .map((resource) => ({
+        key: `pending:${resource.localId}`,
+        render: () => (
+          <ResourcePills
+            pending={[resource]}
+            radius="md"
+            className="flex-nowrap"
+            pillClassName="shadow-none"
+            onRemovePending={onRemovePending}
+          />
+        ),
+      })),
+  ];
+
+  if (items.length === 0 && !showAddButton) return null;
+
   return (
     <div className="flex items-center gap-1.5 px-2.5 pt-2.5">
-      {chips.length > 0 && (
-        <HScroller>
-          {chips.map((chip) => (
-            <ContextPill
-              key={chip.key}
-              chip={chip}
-              radius="md"
-              className="shadow-none"
-              disabled={disabledKeys.has(chip.key)}
-              {...(chip.pinned
-                ? { onRemove: () => onRemove(chip.key) }
-                : { onToggle: () => onToggle(chip.key) })}
-            />
-          ))}
-        </HScroller>
+      <ScrollableContextRow items={items} className="flex-1" />
+      {showAddButton && (
+        <AddContextButton
+          scopeProjectId={scopeProjectId}
+          onAdd={onAdd}
+          disabled={inputDisabled}
+        />
       )}
-      <AddContextButton
-        scopeProjectId={scopeProjectId}
-        onAdd={onAdd}
-        disabled={inputDisabled}
-      />
     </div>
   );
 }

@@ -1,4 +1,9 @@
-import type { AgentRunEvent, PullRequestFile } from "./agent-api";
+import type {
+  AgentFileChange,
+  AgentRunEvent,
+  PullRequestFile,
+} from "./agent-api";
+import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 
 /** Form transported by the local direct and by the `files_changed` event. */
 export interface AgentLocalDiff {
@@ -12,11 +17,17 @@ const PATCH_CAP = 240_000;
 const STATUSES = new Set(["added", "removed", "renamed", "modified"]);
 
 /** Client boundary: a historical event or malformed Realtime message should never feed directly to the diff renderer. */
-export function parseAgentLocalDiff(raw: unknown): AgentLocalDiff {
+export function parseAgentLocalDiff(
+  raw: unknown,
+  opts: { patchCap?: number } = {},
+): AgentLocalDiff {
   const value = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   const rows = Array.isArray(value.files) ? value.files : [];
   const files: PullRequestFile[] = [];
-  let remaining = PATCH_CAP;
+  let remaining = Math.max(
+    1,
+    Math.min(opts.patchCap ?? PATCH_CAP, DESKTOP_LOCAL_DIFF_PATCH_CAP),
+  );
   let truncated = value.truncated === true;
   for (const item of rows) {
     if (!item || typeof item !== "object") continue;
@@ -83,6 +94,31 @@ export function mergeAgentLocalDiff(
     files: [...byPath.values()].sort(byFilename),
     truncated: settled.truncated || live.truncated,
   };
+}
+
+/**
+ * Chooses the one session diff that drives every conversation surface.
+ *
+ * An authoritative empty response must win over historical file events: it means
+ * the changes were reverted. Falling back in that case used to resurrect stale
+ * files, show their counters, and offer a pull request for an empty diff.
+ */
+export function selectAgentSessionDiff(opts: {
+  local: boolean;
+  localDiff: AgentLocalDiff;
+  remoteFiles: PullRequestFile[];
+  remoteReady: boolean;
+  fallbackFiles: AgentFileChange[];
+}): PullRequestFile[] {
+  if (opts.local) return opts.localDiff.files;
+  if (opts.remoteReady) return opts.remoteFiles;
+  return opts.fallbackFiles.map((file) => ({
+    filename: file.path,
+    status: file.status === "deleted" ? "removed" : file.status,
+    additions: file.additions,
+    deletions: file.deletions,
+    ...(file.previousPath ? { previous_filename: file.previousPath } : {}),
+  }));
 }
 
 function byFilename(a: PullRequestFile, b: PullRequestFile): number {

@@ -160,7 +160,7 @@ export const imageBlock: PageBlock = {
   labelKey: "blockImage",
   slash: {
     group: "advanced",
-    order: 5,
+    order: 6,
     keywords: [
       "image",
       "img",

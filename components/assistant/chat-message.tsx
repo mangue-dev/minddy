@@ -1,13 +1,19 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import { IconButton, toast } from "mangue-ui";
+import { IconButton, cn, toast } from "mangue-ui";
 import type {
   AssistantMention,
   AssistantMessage,
@@ -26,6 +32,11 @@ import { orbSeedOr } from "@/lib/project-orb-colors";
 import { MentionChip } from "@/components/mention-chip";
 import { useMentionLinks } from "@/components/mention-links";
 import { ResourcePills, type ResourceLike } from "@/components/resources";
+import {
+  AdaptiveContextRow,
+  type AdaptiveContextItem,
+} from "@/components/assistant/adaptive-context-row";
+import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-renderer";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -57,6 +68,9 @@ interface ChatMessageProps {
   showCopyButton?: boolean;
   /** Content placed between an assistant answer and its Copy button. */
   afterContent?: ReactNode;
+  /** Use the fenced-code component from Pages while preserving Streamdown for
+   * the rest of the response. Agent conversations opt into this renderer. */
+  usePageCodeBlock?: boolean;
 }
 
 // ── Copy button ───────────────────────────────────────────────────────
@@ -96,25 +110,48 @@ function CopyButton({ text }: { text: string }) {
 /** What Numo had in mind for THIS message. The project is left
  side: it applies to the entire conversation, repeating it at each bubble
  would not teach anything. */
-function MessageContextChips({ context }: { context: AssistantPageContext }) {
+function MessageContextRow({
+  context,
+  resources,
+}: {
+  context?: AssistantPageContext | null;
+  resources: ResourceLike[];
+}) {
   const t = useTranslations("Assistant");
   const { projects } = useProjects();
   const chips = useMemo(
-    () =>
-      contextChips(context, {
-        t,
-        project: (id) => projects.find((p) => p.id === id),
-      }).filter((chip) => chip.kind !== "project"),
+    () => context
+      ? contextChips(context, {
+          t,
+          project: (id) => projects.find((p) => p.id === id),
+        }).filter((chip) => chip.kind !== "project")
+      : [],
     [context, t, projects],
   );
 
-  if (chips.length === 0) return null;
+  const items: AdaptiveContextItem[] = [
+    ...chips.map((chip) => ({
+      key: `context:${chip.key}`,
+      render: () => <ContextPill chip={chip} />,
+    })),
+    ...resources.map((resource) => ({
+      key: `resource:${resource.id ?? resource.storage_path ?? resource.file_name}`,
+      render: () => (
+        <ResourcePills
+          resources={[resource]}
+          className="flex-nowrap"
+        />
+      ),
+    })),
+  ];
+
+  if (items.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1">
-      {chips.map((chip) => (
-        <ContextPill key={chip.key} chip={chip} />
-      ))}
-    </div>
+    <AdaptiveContextRow
+      items={items}
+      align="end"
+      className="w-full max-w-full"
+    />
   );
 }
 
@@ -258,8 +295,18 @@ function UserText({
 // ── Assistant text renderer ───────────────────────────────────────────
 // For assistant responses: AI Elements Response (Streamdown).
 
-function AssistantText({ content }: { content: string }) {
-  return <MessageResponse>{content}</MessageResponse>;
+function AssistantText({
+  content,
+  usePageCodeBlock = false,
+}: {
+  content: string;
+  usePageCodeBlock?: boolean;
+}) {
+  return (
+    <MessageResponse components={usePageCodeBlock ? PAGE_CODE_COMPONENTS : undefined}>
+      {content}
+    </MessageResponse>
+  );
 }
 
 // ── Message components ────────────────────────────────────────────────
@@ -287,6 +334,7 @@ export const ChatMessage = memo(function ChatMessage({
   onSeedCreated,
   showCopyButton = true,
   afterContent,
+  usePageCodeBlock = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
 
@@ -300,15 +348,14 @@ export const ChatMessage = memo(function ChatMessage({
       <div className="flex w-full flex-col">
         {isUser ? (
           <div className="ml-auto flex max-w-[85%] flex-col items-end gap-1">
-            {message.context && <MessageContextChips context={message.context} />}
-            {Array.isArray(message.metadata?.attachments) &&
-              message.metadata.attachments.length > 0 && (
-                <ResourcePills
-                  variant="ultra-compact"
-                  resources={message.metadata.attachments as ResourceLike[]}
-                  className="justify-end"
-                />
-              )}
+            <MessageContextRow
+              context={message.context}
+              resources={
+                Array.isArray(message.metadata?.attachments)
+                  ? (message.metadata.attachments as ResourceLike[])
+                  : []
+              }
+            />
             {message.content && (
               <>
                 {/* `rounded-xl` and not the `rounded-2xl` of SURFACES (the
@@ -340,8 +387,16 @@ export const ChatMessage = memo(function ChatMessage({
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             {message.content && (
               <>
-                <MessageContent className="chat-selectable relative px-0 py-0 text-sm leading-relaxed text-foreground">
-                  <AssistantText content={message.content} />
+                <MessageContent
+                  className={cn(
+                    "chat-selectable relative px-0 py-0 text-sm leading-relaxed text-foreground",
+                    usePageCodeBlock && "w-full",
+                  )}
+                >
+                  <AssistantText
+                    content={message.content}
+                    usePageCodeBlock={usePageCodeBlock}
+                  />
                 </MessageContent>
                 {afterContent ? <div className="w-full">{afterContent}</div> : null}
                 {showCopyButton && (

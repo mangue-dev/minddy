@@ -31,6 +31,7 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { HelpHint } from "@/components/settings/help-hint";
 import { ModelCombobox } from "@/components/agent/model-combobox";
+import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { ByokModelCombobox } from "@/components/admin/byok-model-combobox";
 import { ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
@@ -58,8 +59,17 @@ import {
   type SubagentThinkingEffort,
 } from "@/lib/subagent-favorites";
 import { DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels } from "@/lib/recommended-models";
+import {
+  REASONING_LEVELS,
+  toReasoningLevel,
+} from "@/lib/agent-reasoning";
 import { formatMultiplier } from "@/lib/model-multiplier";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import {
+  ADMIN_SECTIONS,
+  adminSectionAnchor,
+  type AdminSectionId,
+} from "@/lib/admin-sections";
 
 type ConfigValues = Record<string, string | null>;
 
@@ -163,6 +173,7 @@ export function AdminModelsDashboard() {
           {AI_MODEL_CONFIG_GROUPS.filter((group) => group !== "byok").map((group) => (
             <SettingsGroup
               key={group}
+              id={adminSectionAnchor(MODEL_GROUP_SECTIONS[group])}
               icon={GROUP_ICONS[group]}
               title={t(`groups.${group}.title`)}
               // Optional description: some groups explain themselves through
@@ -190,7 +201,10 @@ export function AdminModelsDashboard() {
           ))}
 
           {/* ── Personal keys: one modular section per BYOK provider ── */}
-          <section className="flex flex-col gap-4">
+          <section
+            id={adminSectionAnchor(ADMIN_SECTIONS.modelsByok)}
+            className="flex scroll-mt-20 flex-col gap-4 rounded-xl"
+          >
             <div className="flex items-center gap-1.5 px-0.5">
               <h2 className="text-sm font-semibold tracking-tight text-foreground">
                 {t("groups.byok.title")}
@@ -236,6 +250,15 @@ const GROUP_ICONS: Record<AiConfigGroup, LucideIcon> = {
   byok: KeyRound,
   voice: Mic,
   feedback: MessageSquareHeart,
+};
+
+const MODEL_GROUP_SECTIONS: Record<AiConfigGroup, AdminSectionId> = {
+  assistant: ADMIN_SECTIONS.modelsAssistant,
+  automations: ADMIN_SECTIONS.modelsAutomations,
+  agent: ADMIN_SECTIONS.modelsAgent,
+  byok: ADMIN_SECTIONS.modelsByok,
+  voice: ADMIN_SECTIONS.modelsVoice,
+  feedback: ADMIN_SECTIONS.modelsFeedback,
 };
 
 /**
@@ -432,6 +455,10 @@ function ConfigRow({
       return (
         <RecommendedRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
       );
+    case "reasoning":
+      return (
+        <ReasoningRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
+      );
     case "modelId":
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
     case "model":
@@ -446,6 +473,57 @@ function ConfigRow({
         />
       );
   }
+}
+
+function ReasoningRow({
+  field,
+  label,
+  desc,
+  value,
+  onSaved,
+}: {
+  field: AiConfigField;
+  label: string;
+  desc: string | null;
+  value: string | null;
+  onSaved: (key: string, value: string) => void;
+}) {
+  const t = useTranslations("Admin");
+  const saved = toReasoningLevel(value ?? field.fallback);
+  const [busy, setBusy] = useState(false);
+
+  const select = async (next: string) => {
+    if (busy || next === saved) return;
+    setBusy(true);
+    try {
+      await patchConfig(field.key, next);
+      onSaved(field.key, next);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SettingsRow
+      label={label}
+      hint={desc ?? undefined}
+      control={
+        <div className="flex w-full items-center gap-2 sm:w-64">
+          <ReasoningCombobox
+            value={saved}
+            levels={REASONING_LEVELS}
+            disabled={busy}
+            variant="field"
+            onChange={(next) => void select(next)}
+          />
+          {busy ? <Spinner className="shrink-0" /> : null}
+        </div>
+      }
+    />
+  );
 }
 
 /**

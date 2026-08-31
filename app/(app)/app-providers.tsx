@@ -24,7 +24,6 @@ import { IssuePanelProvider } from "@/lib/issue-panel-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
-import { NewVersionBanner } from "@/components/new-version-banner";
 import { PushServiceWorker } from "@/components/push-service-worker";
 import { DesktopNotifications } from "@/components/desktop-notifications";
 import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
@@ -110,7 +109,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             <ScratchpadModal />
                             <DeferredKeyboardCheatsheet />
                             <AnalyticsProjectGroup />
-                            <NewVersionBanner />
                             <PushServiceWorker />
                             {/* The native counterpart in the desktop app (MIN-291):
  the MIN-89 real-time bridge already provides everything,

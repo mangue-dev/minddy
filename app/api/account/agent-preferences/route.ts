@@ -5,10 +5,14 @@ import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { userHasByokKey } from "@/lib/server/agent/model";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
+import {
+  DEFAULT_AGENT_BRANCH_PREFIX,
+  normalizeAgentBranchPrefix,
+} from "@/lib/server/agent/branch-name";
 
 /**
- * User agent preferences (MIN-46): its default model, and its
- * default reasoning level (MIN-122). Self-managed RLS
+ * User agent preferences (MIN-46): its default model, default reasoning level
+ * (MIN-122), and branch prefix. Self-managed RLS
  * (user_agent_preferences) → we use the client cookie. `default_model` null =
  * follows root default (app_config.agent_model); `default_reasoning_level`
  * null = `off`. An explicit model is a free id (as at launch) — not
@@ -16,8 +20,8 @@ import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-err
  * of the run.
  *
  * The PUT is PARTIAL: only the fields PRESENT in the body are written — the
- * two settings live on the same line and are edited by two controls
- * distinct, and one must not erase the other.
+ * settings live on the same row and are edited by distinct controls, so one
+ * must not erase the others.
  */
 
 /**
@@ -33,18 +37,21 @@ export async function GET(request: NextRequest) {
 
   const { data } = await auth.supabase
     .from("user_agent_preferences")
-    .select("default_model, default_reasoning_level")
+    .select("default_model, default_reasoning_level, branch_prefix")
     .eq("user_id", auth.user.id)
     .maybeSingle();
   const row = data as {
     default_model: string | null;
     default_reasoning_level: string | null;
+    branch_prefix: string | null;
   } | null;
   return NextResponse.json({
     default_model: row?.default_model ?? null,
     default_reasoning_level: isReasoningLevel(row?.default_reasoning_level)
       ? row.default_reasoning_level
       : null,
+    branch_prefix:
+      normalizeAgentBranchPrefix(row?.branch_prefix) ?? DEFAULT_AGENT_BRANCH_PREFIX,
   });
 }
 
@@ -52,7 +59,11 @@ export async function PUT(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  type PrefsBody = { default_model?: string | null; default_reasoning_level?: string | null };
+  type PrefsBody = {
+    default_model?: string | null;
+    default_reasoning_level?: string | null;
+    branch_prefix?: string | null;
+  };
   let body: PrefsBody;
   try {
     const parsed: unknown = await request.json();
@@ -100,17 +111,34 @@ export async function PUT(request: NextRequest) {
     patch.default_reasoning_level = level;
   }
 
+  if ("branch_prefix" in body) {
+    const prefix =
+      body.branch_prefix === null
+        ? DEFAULT_AGENT_BRANCH_PREFIX
+        : normalizeAgentBranchPrefix(body.branch_prefix);
+    if (!prefix) {
+      return NextResponse.json({ error: "Invalid branch prefix" }, { status: 400 });
+    }
+    patch.branch_prefix = prefix;
+  }
+
   const { data, error } = await auth.supabase
     .from("user_agent_preferences")
     .upsert(patch, { onConflict: "user_id" })
-    .select("default_model, default_reasoning_level")
+    .select("default_model, default_reasoning_level, branch_prefix")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const row = data as { default_model: string | null; default_reasoning_level: string | null };
+  const row = data as {
+    default_model: string | null;
+    default_reasoning_level: string | null;
+    branch_prefix: string | null;
+  };
   return NextResponse.json({
     default_model: row.default_model ?? null,
     default_reasoning_level: isReasoningLevel(row.default_reasoning_level)
       ? row.default_reasoning_level
       : null,
+    branch_prefix:
+      normalizeAgentBranchPrefix(row.branch_prefix) ?? DEFAULT_AGENT_BRANCH_PREFIX,
   });
 }

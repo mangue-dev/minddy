@@ -63,6 +63,8 @@ export interface PaletteItem {
   subContextId?: string;
   /** Arbitrary host data, available to ActionProviders. */
   data?: unknown;
+  /** Optional destination represented by the item. */
+  href?: string;
 }
 
 /** Internal: favorites are cloned into a "favorites" group with these extras. */

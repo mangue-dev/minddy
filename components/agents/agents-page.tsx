@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Dialog,
@@ -36,13 +37,18 @@ import {
   type ProjectGroup,
 } from "@/components/sidebar-project-group";
 import { matchesFilter } from "@/components/sidebar-filter-field";
-import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
+import {
+  allAgentSessionsQueryKey,
+  patchAgentConversationPinnedInCache,
+  useAgentSessionsQuery,
+} from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import {
   FREE_COMPOSE_PARAM,
   setAgentComposeDraft,
@@ -65,9 +71,8 @@ import {
 
 function DetailLoading() {
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 p-4">
-      <Skeleton className="h-9 w-full rounded-lg" />
-      <Skeleton className="min-h-0 flex-1 rounded-xl" />
+    <div className="flex h-full min-h-0 flex-1 items-center justify-center">
+      <Spinner className="size-5 text-muted-foreground" />
     </div>
   );
 }
@@ -211,6 +216,7 @@ function SessionRow({
       <TooltipTrigger asChild>
         <button
           type="button"
+          data-sidebar-filter-result
           onClick={onSelect}
           // Right-clicking opens the row menu, wherever it lands on it. Aim
           // a “⋯” would require hovering over the line to make it appear,
@@ -440,10 +446,10 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
           size="icon-sm"
           variant="ghost"
           onClick={onClick}
-          className="-mr-2 text-muted-foreground hover:text-foreground"
+          className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
           aria-label={t("newButton")}
         >
-          <Plus className="size-4" />
+          <Plus className="size-[18px]" />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{t("newButton")}</TooltipContent>
@@ -564,6 +570,7 @@ export function AgentsPage() {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { sessions, loading, refetch } = useAgentSessionsQuery();
   // Projects where the agent can work (linked repository) — only they carry the
@@ -615,6 +622,9 @@ export function AgentsPage() {
   const [renameTarget, setRenameTarget] = useState<AgentSessionListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentSessionListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Ignore an obsolete response if the same conversation is toggled again
+  // before its first pin request settles.
+  const pinMutationSequence = useRef(new Map<string, number>());
   // Go back to composing it NEW with each “New” (and with each pre-written text
   // received): without this, a message typed and then abandoned would drag on in the conversation
   // next “virgin” — which would no longer be.
@@ -890,14 +900,35 @@ export function AgentsPage() {
     await refetch();
   };
 
-  /** Pin a conversation for this account, then move it back to the top of the list. */
-  const togglePinnedSession = async (session: AgentSessionListItem) => {
-    try {
-      await setAgentConversationPinnedApi(session.runId, !session.pinned);
-      await refetch();
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
+  /** Move the conversation immediately, then persist the new pinned state.
+   * A rejected write restores only this conversation so concurrent optimistic
+   * changes to other rows remain intact. */
+  const togglePinnedSession = (session: AgentSessionListItem) => {
+    const nextPinned = !session.pinned;
+    const sequence = (pinMutationSequence.current.get(session.runId) ?? 0) + 1;
+    pinMutationSequence.current.set(session.runId, sequence);
+    const previousPinned = patchAgentConversationPinnedInCache(
+      queryClient,
+      session.runId,
+      nextPinned,
+    );
+
+    void setAgentConversationPinnedApi(session.runId, nextPinned)
+      .then(() => {
+        if (pinMutationSequence.current.get(session.runId) !== sequence) return;
+        void queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey });
+      })
+      .catch((err) => {
+        if (pinMutationSequence.current.get(session.runId) !== sequence) return;
+        if (previousPinned !== undefined) {
+          patchAgentConversationPinnedInCache(
+            queryClient,
+            session.runId,
+            previousPinned,
+          );
+        }
+        toast.error((err as Error).message);
+      });
   };
 
   /**

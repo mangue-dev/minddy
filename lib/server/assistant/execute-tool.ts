@@ -177,6 +177,12 @@ import {
 import { proposeBacklogFromBrief } from "@/lib/server/brief-to-issues";
 import { MIN_BRIEF_CHARS } from "@/lib/seed/types";
 import { getKnowledgeArticle, getKnowledgeTopicList } from "./knowledge";
+import { readInboxNotifications } from "@/lib/server/inbox";
+import {
+  buildInboxToolResult,
+  type InboxReadCategory,
+  type InboxReadState,
+} from "@/lib/inbox-tool";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -705,6 +711,34 @@ export async function executeTool(
         : toolError(r.error);
     }
 
+    if (toolName === "list_inbox") {
+      const state: InboxReadState =
+        args.state === "all" || args.state === "read" || args.state === "unread"
+          ? args.state
+          : "unread";
+      const category: InboxReadCategory =
+        args.category === "mentions" ? "mentions" : "all";
+      const limit =
+        typeof args.limit === "number" && Number.isFinite(args.limit)
+          ? args.limit
+          : 50;
+      const result = await readInboxNotifications({
+        client: ctx.supabase,
+        service: ctx.service,
+        userId: ctx.userId,
+      });
+      if (result.error) return toolError(result.error);
+      return {
+        result: buildInboxToolResult(result.notifications, {
+          state,
+          category,
+          query: typeof args.query === "string" ? args.query : undefined,
+          limit,
+        }),
+        success: true,
+      };
+    }
+
     // ── Trash (MIN-133 — personal and inter-project) ──────────────
     if (
       toolName === "list_trash" ||
@@ -1106,7 +1140,13 @@ export async function executeTool(
             `The plan is capped at ${MAX_PLAN_LENGTH} characters.`,
           );
         }
-        return writePlan(ctx, issueId, next, undefined, current.updatedAt || undefined);
+        return writePlan(
+          ctx,
+          issueId,
+          next,
+          undefined,
+          current.updatedAt || undefined,
+        );
       }
 
       case "update_plan_tasks": {

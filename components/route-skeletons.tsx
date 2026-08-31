@@ -1,5 +1,7 @@
-import { Skeleton } from "mangue-ui";
+import { Skeleton, cn } from "mangue-ui";
+import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 
 /**
  * Segment skeletons (MIN-89).
@@ -61,10 +63,13 @@ export function ListDetailSkeleton({
   rows = 6,
   rowClassName = "h-14",
   cards = 3,
+  emptyHeader = false,
 }: {
   rows?: number;
   rowClassName?: string;
   cards?: number;
+  /** Match detail panes whose structural header is intentionally blank. */
+  emptyHeader?: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0">
@@ -76,10 +81,19 @@ export function ListDetailSkeleton({
         </div>
       </SecondarySidebar>
       <div className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
-        <div className="shrink-0 px-4 py-3 md:px-6">
-          <Skeleton className="h-8 w-48" />
-        </div>
-        <div className="min-h-0 flex-1 px-4 pt-1 pb-8 md:px-6">
+        {emptyHeader ? (
+          <AppContentHeader />
+        ) : (
+          <div className="shrink-0 px-4 py-3 md:px-6">
+            <Skeleton className="h-8 w-48" />
+          </div>
+        )}
+        <div
+          className={cn(
+            "min-h-0 flex-1 px-4 pt-1 pb-8 md:px-6",
+            emptyHeader && "md:pt-6",
+          )}
+        >
           <div className="mx-auto flex max-w-3xl flex-col gap-4">
             {Array.from({ length: cards }).map((_, i) => (
               <Skeleton key={i} className="h-32 rounded-xl" />
@@ -136,40 +150,25 @@ export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
 
 /** Settings (MIN-167): the template above, with miter lines. */
 export function SettingsPageSkeleton({ rows = 3 }: { rows?: number }) {
-  return <ListDetailSkeleton rows={6} rowClassName="h-10" cards={rows} />;
+  return (
+    <ListDetailSkeleton
+      rows={6}
+      rowClassName="h-10"
+      cards={rows}
+      emptyHeader
+    />
+  );
 }
 
-/**
- * Kanban board: toolbar then columns. Takes the full structure
- * height of `app/(app)/projects/[id]/page.tsx` (`flex h-full flex-col`, then
- * `min-h-0 flex-1 px-6 pt-4`) so that the switch to the real board does not move
- * neither the toolbar nor the top of the columns.
- */
-export function BoardSkeleton({ columns = 4 }: { columns?: number }) {
-  return (
-    <div className="flex h-full flex-col">
-      <div className="shrink-0 px-6 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 px-6 pt-4">
-        <div className="flex h-full gap-4 overflow-hidden">
-          {Array.from({ length: columns }).map((_, col) => (
-            <div key={col} className="flex min-w-[260px] flex-1 flex-col gap-3">
-              <Skeleton className="h-5 w-28" />
-              {/* Decreasing columns: a wall of identical cards reads like a
- display bug, not a loading. */}
-              {Array.from({ length: Math.max(1, 4 - col) }).map((_, card) => (
-                <Skeleton key={card} className="h-24 rounded-xl" />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+/** Route-level board loading uses the same complete frame as data loading. */
+export function BoardSkeleton({
+  columns = 4,
+  specialView = false,
+}: {
+  columns?: number;
+  specialView?: boolean;
+}) {
+  return <BoardLoadingSkeleton columns={columns} specialView={specialView} />;
 }
 
 /**

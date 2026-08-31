@@ -1,14 +1,18 @@
 import { Skeleton } from "mangue-ui";
+import { AppContentHeader } from "@/components/app-content-header";
 import { StatsSkeleton } from "@/components/stats/stats-skeleton";
 
 export default function StatisticsLoading() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10">
-      <div className="mb-7">
-        <Skeleton className="h-7 w-64 max-w-full" />
-        <Skeleton className="mt-2 h-4 w-80 max-w-full" />
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <AppContentHeader contentClassName="px-4 md:px-6">
+        <Skeleton className="h-5 w-56 max-w-full" />
+      </AppContentHeader>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-5xl px-6 py-10">
+          <StatsSkeleton />
+        </div>
       </div>
-      <StatsSkeleton />
     </div>
   );
 }

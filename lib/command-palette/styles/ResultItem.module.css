@@ -134,25 +134,6 @@
   margin-left: auto;
 }
 
-.kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
-  font-size: var(--cp-fs-kbd);
-  font-family: var(--cp-font-mono, monospace);
-  background: color-mix(in srgb, var(--cp-border) 35%, transparent);
-  border-radius: var(--cp-radius-sm);
-  color: var(--cp-muted);
-}
-
-.item.active .kbd {
-  background: color-mix(in srgb, var(--cp-accent-fg) 20%, transparent);
-  color: var(--cp-accent-fg);
-}
-
 /* Type indicator - shows item type */
 .typeIndicator {
   font-size: var(--cp-fs-secondary);

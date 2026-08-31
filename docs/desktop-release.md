@@ -188,6 +188,13 @@ owns the installation. The native application menu is auto-hidden so the window
 uses normal Windows chrome without an extra menu strip; Alt reveals the menu as
 a recovery surface.
 
+The packaged app also includes a small C++/WinRT probe that calls
+`StoreContext.GetAppAndOptionalStorePackageUpdatesAsync` at startup and every
+six hours. When Microsoft Store reports an update for the current package, the
+shared sidebar update card links to the immutable product page
+(`ProductId=9P181CDLRFBC`). Detection failures remain silent and retry on the
+next interval; Microsoft Store continues to own download and installation.
+
 The shared `protocols` declaration writes `minddy://` into
 `AppxManifest.xml`. Windows delivers cold-start and second-instance links
 through `argv`; both routes are handled before the renderer subscribes. AppX

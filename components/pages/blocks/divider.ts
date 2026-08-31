@@ -18,7 +18,7 @@ export const dividerBlock: PageBlock = {
   labelKey: "blockDivider",
   slash: {
     group: "advanced",
-    order: 2,
+    order: 3,
     keywords: ["divider", "séparateur", "separateur", "rule", "hr", "line", "---"],
   },
   turnInto: false,

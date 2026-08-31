@@ -15,6 +15,7 @@ import { DesktopChrome } from "@/components/desktop-chrome";
 import { LazyToaster } from "@/components/lazy-toaster";
 import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { publicClientMessages } from "@/lib/public-client-messages";
 import { RuntimeConfigProvider } from "@/lib/runtime-config-provider";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -55,7 +56,7 @@ const instrumentSerif = Instrument_Serif({
    home indicator, and therefore **all `env(safe-area-inset-*)`
    are worth 0**. The filing writes seven — the mobile browsing pill and the
    clearance that it reserves (`--mobile-nav-height`, app/globals.css), the FOB of
-   Numo, the new version banner, the nav marketing drawer, the
+   Numo, the nav marketing drawer, the
    wizard panel — and not a single one measured anything.
 
    `cover` makes the page full bleed and gives the insets their true value:
@@ -185,13 +186,14 @@ export default async function RootLayout({
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
         <ThemeProvider defaultTheme={defaultTheme}>
-          <RuntimeConfigProvider config={runtimeConfig}>
-          <BrowserIntlProvider
-            locale={locale}
-            messages={clientMessages}
-            now={now}
-            initialTimeZone={initialTimeZone}
-          >
+          <TooltipProvider>
+            <RuntimeConfigProvider config={runtimeConfig}>
+            <BrowserIntlProvider
+              locale={locale}
+              messages={clientMessages}
+              now={now}
+              initialTimeZone={initialTimeZone}
+            >
             {/* The strip by which you move the desktop app window
                 (MIN-292). Here, and not in a shell: this is the only position of
                 repository from where it covers ALL configurations. An audit in
@@ -225,8 +227,9 @@ export default async function RootLayout({
                 initial (MIN-94). The init is deferred and cookieless as long as the
                 headband has not been sliced ​​— see component. */}
             <PostHogInit />
-          </BrowserIntlProvider>
-          </RuntimeConfigProvider>
+            </BrowserIntlProvider>
+            </RuntimeConfigProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

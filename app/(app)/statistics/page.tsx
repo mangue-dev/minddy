@@ -19,11 +19,13 @@ import {
 import { trackEvent } from "@/lib/analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import { EmptyScene } from "@/components/empty-scene";
+import { AppContentHeader } from "@/components/app-content-header";
 import { EffortDurations } from "@/components/stats/effort-durations";
 import { MentionChip } from "@/components/mention-chip";
 import { StatsHero } from "@/components/stats/stats-hero";
 import { StatsSkeleton } from "@/components/stats/stats-skeleton";
 import { WorkLandscape } from "@/components/stats/work-landscape";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import {
   Metric,
   StatsCard,
@@ -124,6 +126,7 @@ export default function StatisticsPage() {
   const { openCreateProject } = useProjects();
   const { user } = useAuth();
   const avatarSource = useMyAvatarSource();
+  const contentFade = useScrollFade<HTMLDivElement>();
   const userName = authDisplayName(
     user?.user_metadata as AuthNameMeta | undefined,
     user?.email ?? null,
@@ -147,26 +150,33 @@ export default function StatisticsPage() {
   );
 
   const header = (
-    <div className="mb-7">
-      <h1 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-display text-2xl font-semibold tracking-tight">
+    <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
+      <h1 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
         <span>{t("titlePrefix")}</span>
         <MentionChip
           type="member"
           id={user?.id ?? "current-user"}
           label={userName}
           avatarSeed={avatarSource}
-          className="font-sans text-[0.78em]"
+          className="font-sans"
         />
       </h1>
-      <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-    </div>
+    </AppContentHeader>
   );
 
   if (loading || !stats) {
     return (
-      <div className="mx-auto w-full max-w-5xl px-6 py-10">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
         {header}
-        <StatsSkeleton />
+        <div
+          ref={contentFade.ref}
+          {...contentFade.scrollProps}
+          className="min-h-0 flex-1 overflow-y-auto"
+        >
+          <div className="mx-auto w-full max-w-5xl px-6 py-10">
+            <StatsSkeleton />
+          </div>
+        </div>
       </div>
     );
   }
@@ -179,72 +189,87 @@ export default function StatisticsPage() {
 
   if (isEmpty) {
     return (
-      <div className="mx-auto w-full max-w-5xl px-6 py-10">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
         {header}
-        <EmptyScene icon={BarChart3} title={t("emptyTitle")}>
-          {canCreate ? (
-            <Button onClick={() => openCreateIssue()}>
-              <Plus />
-              {t("emptyCta")}
-            </Button>
-          ) : (
-            <Button onClick={openCreateProject}>
-              <Plus />
-              {tProjects("firstProject")}
-            </Button>
-          )}
-        </EmptyScene>
+        <div
+          ref={contentFade.ref}
+          {...contentFade.scrollProps}
+          className="min-h-0 flex-1 overflow-y-auto"
+        >
+          <div className="mx-auto w-full max-w-5xl px-6 py-10">
+            <EmptyScene icon={BarChart3} title={t("emptyTitle")}>
+              {canCreate ? (
+                <Button onClick={() => openCreateIssue()}>
+                  <Plus />
+                  {t("emptyCta")}
+                </Button>
+              ) : (
+                <Button onClick={openCreateProject}>
+                  <Plus />
+                  {tProjects("firstProject")}
+                </Button>
+              )}
+            </EmptyScene>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {header}
-
-      <StatsHero
-        heatmap={stats.heatmap}
-        joinedDate={joinedDate}
-        total={year.total}
-        issues={year.issues}
-        tasks={year.tasks}
-        activeDays={year.activeDays}
-        streak={streak}
-      />
-
-      <WorkLandscape
-        total={stats.breakdownTotal}
-        projects={stats.perProject}
-        categories={stats.perCategory}
-        objectives={stats.perObjective}
-      />
-
-      <RhythmSection cycles={stats.cycles} workload={stats.workload} />
-
-      <StatsSection title={t("allTime")}>
-        <div className="grid grid-cols-2 gap-5 border-y border-border py-5 sm:grid-cols-4">
-          <TotalItem
-            label={t("created")}
-            value={stats.totals.created}
-            info={t("createdInfo")}
+      <div
+        ref={contentFade.ref}
+        {...contentFade.scrollProps}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
+        <div className="mx-auto w-full max-w-5xl px-6 py-10">
+          <StatsHero
+            heatmap={stats.heatmap}
+            joinedDate={joinedDate}
+            total={year.total}
+            issues={year.issues}
+            tasks={year.tasks}
+            activeDays={year.activeDays}
+            streak={streak}
           />
-          <TotalItem
-            label={t("completed")}
-            value={stats.totals.completed}
-            info={t("completedInfo")}
+
+          <WorkLandscape
+            total={stats.breakdownTotal}
+            projects={stats.perProject}
+            categories={stats.perCategory}
+            objectives={stats.perObjective}
           />
-          <TotalItem
-            label={t("tasksCompleted")}
-            value={stats.totals.tasksCompleted}
-            info={t("tasksCompletedInfo")}
-          />
-          <TotalItem
-            label={t("projects")}
-            value={stats.totals.projects}
-            info={t("projectsInfo")}
-          />
+
+          <RhythmSection cycles={stats.cycles} workload={stats.workload} />
+
+          <StatsSection title={t("allTime")}>
+            <div className="grid grid-cols-2 gap-5 border-y border-border py-5 sm:grid-cols-4">
+              <TotalItem
+                label={t("created")}
+                value={stats.totals.created}
+                info={t("createdInfo")}
+              />
+              <TotalItem
+                label={t("completed")}
+                value={stats.totals.completed}
+                info={t("completedInfo")}
+              />
+              <TotalItem
+                label={t("tasksCompleted")}
+                value={stats.totals.tasksCompleted}
+                info={t("tasksCompletedInfo")}
+              />
+              <TotalItem
+                label={t("projects")}
+                value={stats.totals.projects}
+                info={t("projectsInfo")}
+              />
+            </div>
+          </StatsSection>
         </div>
-      </StatsSection>
+      </div>
     </div>
   );
 }

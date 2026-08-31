@@ -48,7 +48,11 @@ export function useSecondarySidebar(): SecondarySidebar {
   return ctx;
 }
 
-export function SecondarySidebarProvider({ children }: { children: ReactNode }) {
+export function SecondarySidebarProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   // An ACCOUNT, not a boolean: between two pages with a secondary bar, the old one
   // disassembles after mounting the new one. A boolean would fall back to false
@@ -87,6 +91,8 @@ export function SecondarySidebarProvider({ children }: { children: ReactNode }) 
  * page whose bar disappears (empty list) corrects itself.
  */
 export function routeHasSecondaryNav(pathname: string): boolean {
+  if (pathname.startsWith("/inbox")) return true;
+  if (pathname.startsWith("/trash")) return true;
   if (pathname.startsWith("/pull-requests")) return true;
   if (pathname.startsWith("/agents")) return true;
   if (pathname.startsWith("/routines")) return true;

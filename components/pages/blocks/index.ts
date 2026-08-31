@@ -38,6 +38,7 @@ import { bulletListBlock } from "@/components/pages/blocks/bullet-list";
 import { orderedListBlock } from "@/components/pages/blocks/ordered-list";
 import { taskListBlock } from "@/components/pages/blocks/task-list";
 import { quoteBlock } from "@/components/pages/blocks/quote";
+import { calloutBlock } from "@/components/pages/blocks/callout";
 import { codeBlock } from "@/components/pages/blocks/code";
 import { dividerBlock } from "@/components/pages/blocks/divider";
 import { detailsBlock } from "@/components/pages/blocks/details";
@@ -60,6 +61,11 @@ export {
   type PageColor,
   type PageColorKind,
 } from "@/components/pages/blocks/color";
+export {
+  automaticCalloutColor,
+  activeCalloutColor,
+  setCalloutColor,
+} from "@/components/pages/blocks/callout";
 
 /** The catalog v1. Add a block = a file, and a line HERE. */
 export const PAGE_BLOCKS: readonly PageBlock[] = [
@@ -71,6 +77,7 @@ export const PAGE_BLOCKS: readonly PageBlock[] = [
   orderedListBlock,
   taskListBlock,
   quoteBlock,
+  calloutBlock,
   codeBlock,
   dividerBlock,
   detailsBlock,

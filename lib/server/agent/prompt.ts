@@ -1256,10 +1256,11 @@ export function buildPrReviewContextMessage(input: {
 }
 
 /**
- * CONTEXT user message of a NOTEBOOK session (MIN-84): repository + frame.
- * Deliberately minimal — the NOTE itself arrives in the following user
- * message (the launcher prompt), it is IT that the agent responds to. The living notebook
- * can be reread at any time via `read_scratchpad`.
+ * Context message for a general project conversation: repository and scope.
+ *
+ * Sessions without a ticket can start from the Agents page, the notebook, or an
+ * integration. The next user message identifies the actual request; this bootstrap
+ * must not invent a notebook origin for every free-form conversation.
  */
 export function buildNotebookContextMessage(input: {
   /** `null` for a run on a project with NO linked repository (local only):
@@ -1274,5 +1275,5 @@ export function buildNotebookContextMessage(input: {
     : `Workspace: the folder the user attached to this project on their own machine — a local git checkout with no forge remote. You edit the files; NOTHING is committed or pushed for you: what you change simply stays in their working tree, and they review, commit and publish it themselves.`;
   return `${repoBlock}${input.projectName ? `\nProject: ${input.projectName}` : ""}
 
-This session was launched from the user's NOTEBOOK: their note follows as the next message — it is your instruction, a free-form prompt rather than a formal ticket. The note is a snapshot of part of the notebook; \`read_scratchpad\` gives you its live state (all tasks with their \`task_index\` and current checkboxes) whenever it matters — and always right before \`update_scratchpad_task\`.${landingStatusLine(input.numoDefaultStatus)}`;
+This is a general project conversation, not a ticket-backed job. The user's next message is the request. Treat it as notebook content only when it explicitly refers to working notes; otherwise answer it as an ordinary free-form message. The notebook remains available through \`read_scratchpad\` when the request genuinely needs its live state.${landingStatusLine(input.numoDefaultStatus)}`;
 }

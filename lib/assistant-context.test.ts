@@ -7,22 +7,23 @@ import type { AssistantPageContext } from "./assistant-types";
  * the eye of a pill must remove from the sent context exactly the fields
  * that it represented.
  *
- * It is this return that breaks silently. Adding a context nature
- * requires two gestures - the pill, and its entry in the field table - and
- * doing only one does nothing: the pill goes out on the screen, the message
- * persists "Numo didn't see that", and Numo nevertheless received it. Hence the last
- * test, which is valid for any nature added after this one.
+ * This reverse path can break silently. Adding a context kind requires both a
+ * chip and its field-table entry. Adding only the chip makes the interface say
+ * Numo ignored the context even though the request still carries it. The final
+ * test protects every current and future context kind from that drift.
  */
 
 // The real translator brings nothing here: what is verified is the PATH of a
-// field down to his pill, not the sentence written on it.
+// field into its chip, not the sentence rendered inside it.
 const t = ((key: string) => key) as unknown as Parameters<
   typeof contextChips
 >[1]["t"];
 
-/** A context that carries ONE pill of each ambient nature. */
+/** A context that carries one chip of every ambient kind. */
 const everything: AssistantPageContext = {
   projectId: "p1",
+  inbox: true,
+  settings: "project",
   issueId: "i1",
   issueIdentifier: "MIN-42",
   issueTitle: "Un ticket",
@@ -38,8 +39,8 @@ const everything: AssistantPageContext = {
   cycleLabel: "6–19 juil",
 };
 
-describe("contextChips — la routine", () => {
-  it("porte le titre de la routine ouverte", () => {
+describe("contextChips — routine", () => {
+  it("uses the open routine title", () => {
     const chips = contextChips(
       { projectId: "p1", routineId: "r1", routineTitle: "Audit sécurité" },
       { t },
@@ -50,17 +51,19 @@ describe("contextChips — la routine", () => {
 
   it("falls back to a generic label when the title is missing", () => {
     const chips = contextChips({ routineId: "r1" }, { t });
-    expect(chips.find((c) => c.key === "routine")?.label).toBe("contextRoutine");
+    expect(chips.find((c) => c.key === "routine")?.label).toBe(
+      "contextRoutine",
+    );
   });
 
-  it("n'existe pas sans routine ouverte", () => {
+  it("does not add a routine chip without an open routine", () => {
     const chips = contextChips({ projectId: "p1" }, { t });
     expect(chips.some((c) => c.key === "routine")).toBe(false);
   });
 });
 
-describe("applyContextSelection — ce que l'œil éteint retire", () => {
-  it("retire l'id ET le titre de la routine", () => {
+describe("applyContextSelection", () => {
+  it("removes both the routine id and title", () => {
     const sent = applyContextSelection(everything, new Set(["routine"]));
     expect(sent?.routineId).toBeUndefined();
     expect(sent?.routineTitle).toBeUndefined();
@@ -75,10 +78,10 @@ describe("applyContextSelection — ce que l'œil éteint retire", () => {
   });
 
   /**
- * The safeguard: EACH ambient pill must have something to extinguish. A
- * nature added without its entry in the table would pass all the
- * tests above and fail here.
- */
+   * The safeguard: EACH ambient pill must have something to extinguish. A
+   * nature added without its entry in the table would pass all the
+   * tests above and fail here.
+   */
   it("actually turns off each pill in a complete context", () => {
     for (const chip of contextChips(everything, { t })) {
       const sent = applyContextSelection(everything, new Set([chip.key]));
@@ -88,8 +91,87 @@ describe("applyContextSelection — ce que l'œil éteint retire", () => {
       ).length;
       expect(
         after,
-        `la pilule « ${chip.key} » ne retire aucun champ du contexte envoyé`,
+        `the “${chip.key}” chip does not remove a field from the sent context`,
       ).toBeLessThan(before);
     }
+  });
+});
+
+describe("contextChips — inbox", () => {
+  it("renders and removes the ambient inbox context", () => {
+    const chips = contextChips({ inbox: true }, { t });
+    expect(chips).toContainEqual(
+      expect.objectContaining({
+        key: "inbox",
+        kind: "inbox",
+        label: "contextInbox",
+      }),
+    );
+    expect(
+      applyContextSelection({ inbox: true }, new Set(["inbox"])),
+    ).toBeNull();
+  });
+});
+
+describe("contextChips — settings", () => {
+  it("distinguishes account settings from project settings", () => {
+    expect(contextChips({ settings: "account" }, { t })).toContainEqual(
+      expect.objectContaining({
+        key: "settings",
+        kind: "settings",
+        label: "contextAccountSettings",
+      }),
+    );
+    expect(
+      contextChips({ projectId: "p1", settings: "project" }, { t }),
+    ).toContainEqual(
+      expect.objectContaining({
+        key: "settings",
+        kind: "settings",
+        label: "contextProjectSettings",
+      }),
+    );
+  });
+
+  it("removes the settings surface when its chip is disabled", () => {
+    expect(
+      applyContextSelection({ settings: "account" }, new Set(["settings"])),
+    ).toBeNull();
+  });
+});
+
+describe("contextChips — page icons", () => {
+  it("uses the ambient page emoji when one is available", () => {
+    const chips = contextChips(
+      {
+        projectId: "p1",
+        pageId: "page-1",
+        pageTitle: "Launch guide",
+        pageIcon: "🚀",
+      },
+      { t },
+    );
+
+    expect(chips.find((chip) => chip.kind === "page")).toMatchObject({
+      label: "Launch guide",
+      icon: "🚀",
+    });
+  });
+
+  it("preserves the emoji of a manually pinned page", () => {
+    const chips = contextChips(
+      {
+        pinned: [
+          { kind: "page", id: "page-1", label: "Launch guide", icon: "🚀" },
+        ],
+      },
+      { t },
+    );
+
+    expect(chips.find((chip) => chip.kind === "page")).toMatchObject({
+      label: "Launch guide",
+      icon: "🚀",
+      pinned: true,
+    });
   });
 });

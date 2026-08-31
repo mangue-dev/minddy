@@ -233,6 +233,31 @@ export const PUBLIC_ROUTE_PATHS = [
 ];
 
 /**
+ * API responses are dynamic and may contain account or project data. React
+ * Query owns client-side freshness; HTTP intermediaries must never retain a
+ * second, implicit copy. Only routes with an intentional public cache stay out.
+ */
+export const PRIVATE_API_NO_STORE_EXEMPT_PREFIXES = [
+  "avatars",
+  "self-hosting/email-templates",
+];
+
+const PRIVATE_API_EXEMPT_PATTERN = PRIVATE_API_NO_STORE_EXEMPT_PREFIXES
+  .map((prefix) => `${prefix}(?:/|$)`)
+  .join("|");
+
+export const PRIVATE_API_NO_STORE_SOURCE =
+  `/api/((?!${PRIVATE_API_EXEMPT_PATTERN}).*)`;
+
+export function isPrivateApiNoStorePath(pathname) {
+  if (!pathname.startsWith("/api/")) return false;
+  const relative = pathname.slice("/api/".length);
+  return !PRIVATE_API_NO_STORE_EXEMPT_PREFIXES.some(
+    (prefix) => relative === prefix || relative.startsWith(`${prefix}/`),
+  );
+}
+
+/**
  * Hosts that serve minddy itself, as a regular expression — the form
  * that `has: [{ type: "host" }]` expects from an entry of `headers()` (compared
  * anchored, port removed, lowercase).
@@ -277,7 +302,7 @@ const nextConfig = {
   // The alias `mangue-ui/*` of `tsconfig.json` takes care of this — see the
   // comment there, it carries the measure.
   experimental: {
-    optimizePackageImports: ["radix-ui"],
+    optimizePackageImports: ["radix-ui", "simple-icons"],
   },
   /**
    * Runtime files of the repository, embedded in the functions.
@@ -424,9 +449,23 @@ const nextConfig = {
       ],
     });
 
-    // Public pages, in their two languages. Recopied from
-    // `lib/public-routes.ts` faute de pouvoir importer du TypeScript ici —
-    // `lib/public-routes.test.ts` checks that they do not diverge.
+    // Dynamic API data is private by default. This covers the scratchpad,
+    // pages, issues, objectives, account settings, OAuth tokens, and the MCP
+    // transport. Route-specific Cache-Control headers may still allow a private
+    // browser cache, but neither a generic CDN nor Vercel may store the result.
+    headers.push({
+      source: PRIVATE_API_NO_STORE_SOURCE,
+      headers: [
+        { key: "Cache-Control", value: "private, no-store" },
+        { key: "CDN-Cache-Control", value: "no-store" },
+        { key: "Vercel-CDN-Cache-Control", value: "no-store" },
+        { key: "Pragma", value: "no-cache" },
+      ],
+    });
+
+    // Public pages in both languages. Repeated from `lib/public-routes.ts`
+    // because this file cannot import TypeScript; `lib/public-routes.test.ts`
+    // checks that the two lists do not diverge.
     //
     // They responded `cache-control: private, no-cache, no-store` with
     // `x-vercel-cache: MISS` on EVERY call, because the landing was calling

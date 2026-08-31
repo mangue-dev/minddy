@@ -17,17 +17,26 @@
 // Everything related to the document is in block-actions.ts: this component does not
 // only calls, so that the behavior remains testable without an interface.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import {
   CopyPlus,
   Link2,
+  MessageSquarePlus,
   Palette,
   Repeat2,
   Trash2,
 } from "lucide-react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -45,7 +54,9 @@ import { Kbd } from "@/components/ui/kbd";
 import {
   PAGE_COLORS,
   PAGE_COLOR_ATTRIBUTE,
+  activeCalloutColor,
   activePageColor,
+  setCalloutColor,
   setPageColor,
   turnIntoItems,
   type PageColor,
@@ -64,6 +75,7 @@ import {
   selectionIsMediaOnly,
   turnBlocksInto,
 } from "@/components/pages/block-actions";
+import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 
 /** The patch of a color, painted with the token it places — the “A”
  for the text, the solid square for the background. */
@@ -100,13 +112,20 @@ function ColorItems({
 }) {
   const t = useTranslations("Pages");
   const colorName = useTranslations("Categories.colors");
-  const active = activePageColor(editor, kind);
+  const calloutColor =
+    kind === "background" ? activeCalloutColor(editor) : undefined;
+  const active =
+    calloutColor === undefined ? activePageColor(editor, kind) : calloutColor;
+  const setColor = (color: PageColor | null) =>
+    calloutColor === undefined
+      ? setPageColor(editor, kind, color)
+      : setCalloutColor(editor, color);
 
   return (
     <>
       <DropdownMenuItem
         onSelect={() => {
-          setPageColor(editor, kind, null);
+          setColor(null);
           onDone();
         }}
       >
@@ -118,7 +137,7 @@ function ColorItems({
         <DropdownMenuItem
           key={`${kind}:${color}`}
           onSelect={() => {
-            setPageColor(editor, kind, color);
+            setColor(color);
             onDone();
           }}
         >
@@ -135,15 +154,21 @@ export function BlockMenu({
   editor,
   open,
   onOpenChange,
+  onComment,
   children,
 }: {
   editor: Editor;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onComment?: (anchor: PageCommentAnchor) => void;
   /** The trigger — the margin handle, or any button. */
   children: React.ReactNode;
 }) {
   const t = useTranslations("Pages");
+  const [pendingDelete, setPendingDelete] = useState<{
+    range: { from: number; to: number };
+    count: number;
+  } | null>(null);
 
   // Recalculated at each OPENING: the selection has moved between two, and one
   // “transform to” which checks the block before is worse than no check.
@@ -211,6 +236,7 @@ export function BlockMenu({
   };
 
   return (
+    <>
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent
@@ -276,7 +302,9 @@ export function BlockMenu({
             <ColorItems editor={editor} kind="text" onDone={close} />
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {t("colorBackground")}
+              {activeCalloutColor(editor) === undefined
+                ? t("colorBackground")
+                : t("calloutColor")}
             </DropdownMenuLabel>
             <ColorItems editor={editor} kind="background" onDone={close} />
           </DropdownMenuSubContent>
@@ -308,13 +336,32 @@ export function BlockMenu({
           <span className="truncate">{t("copyBlockLink")}</span>
         </DropdownMenuItem>
 
+        {onComment && count === 1 ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              const blockId = selectedBlockId(editor);
+              if (blockId) onComment({ blockId, startNew: true });
+              close();
+            }}
+          >
+            <MessageSquarePlus />
+            <span className="truncate">{t("commentSelection")}</span>
+          </DropdownMenuItem>
+        ) : null}
+
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
           variant="destructive"
           onSelect={() => {
-            deleteBlocks(editor);
-            closeAndFocus();
+            if (subpageId) {
+              deleteBlocks(editor);
+              closeAndFocus();
+              return;
+            }
+            const range = blockRange(editor);
+            if (range) setPendingDelete({ range, count: Math.max(1, count) });
+            close();
           }}
         >
           <Trash2 />
@@ -328,5 +375,36 @@ export function BlockMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <AlertDialog
+      open={pendingDelete !== null}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setPendingDelete(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t("blockDeleteTitle", { count: pendingDelete?.count ?? 1 })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>{t("blockDeleteBody")}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t("blockDeleteCancel")}</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              const range = pendingDelete?.range;
+              if (range) editor.chain().focus().deleteRange(range).run();
+              setPendingDelete(null);
+              focusBlockRange(editor, range ?? null);
+            }}
+          >
+            {t("blockDeleteConfirm")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

@@ -101,7 +101,11 @@ vi.mock("./pr-landing", async (importOriginal) => ({
   // that's the whole point): here we check that we call it, not what it does.
   reopenIfRejectedWorkPushed: vi.fn(async () => {}),
   notePrCommits: vi.fn(async () => {}),
-  resolveRunPrefs: vi.fn(async () => ({ locale: "fr" as const, numoDefaultStatus: "triage" })),
+  resolveRunPrefs: vi.fn(async () => ({
+    locale: "fr" as const,
+    numoDefaultStatus: "triage",
+    branchPrefix: "numo/",
+  })),
 }));
 
 const { landVmTurn, billableSandboxMs, MAX_SANDBOX_MS } = await import("./vm-rest");

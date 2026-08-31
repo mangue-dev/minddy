@@ -46,6 +46,7 @@ import {
 } from "@/lib/describe-event";
 import type { TimelineItem } from "@/lib/use-issue-timeline";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
+import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -62,6 +63,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import type { Attachment, Comment, Member, ResourceInput } from "@/lib/types";
 import type { CommentVisibility } from "@/lib/feedback/types";
 import {
@@ -76,8 +78,9 @@ import {
  *
  * The first three (ticket, objective, return) are lines of `comments` and
  * fill it entirely. The fourth, the thread of a page, lives in its
- * own table (`page_comments`) and has neither attachment nor public visibility,
- * no @Numo response in progress: hence the optional ones. It is this interface, and not
+ * own table (`page_comments`) and has neither attachments nor public visibility;
+ * the remaining fields are optional because older page rows do not require them.
+ * It is this interface, and not
  * `Comment`, which says what this component actually READS — expanding it is what
  * avoided a fourth copy of the thread.
  */
@@ -425,6 +428,7 @@ function EventRow({
 export function CommentBlock({
   comment,
   ctx,
+  mentions,
   currentUserId,
   onEdit,
   onDelete,
@@ -433,10 +437,10 @@ export function CommentBlock({
   isReply = false,
 }: {
   comment: ThreadMessage;
-  /** Only MEMBERS are read here (the author, his face, the pills of
-      mention): the guy says it, so that a surface without objectives or
-      categories — the thread of a page — does not have to create an empty setting. */
+  /** Members identify authors; the optional mention model expands body chips
+      to projects and other entities without coupling this block to queries. */
   ctx: Pick<EventContext, "members">;
+  mentions?: MarkdownEditorMentions;
   currentUserId: string | null;
   onEdit: (commentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
@@ -618,7 +622,12 @@ export function CommentBlock({
           </div>
         ) : liveBody ? (
           <div className="flex flex-col gap-1.5">
-            <Markdown className="text-foreground" members={ctx.members}>
+            <Markdown
+              className="text-foreground"
+              members={ctx.members}
+              mentionScan={mentions?.scan}
+              mentionLinks={mentions?.links}
+            >
               {liveBody}
             </Markdown>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -642,6 +651,7 @@ export function CommentBlock({
             value={draft}
             onChange={setDraft}
             members={ctx.members}
+            mentions={mentions}
             onSubmit={() => void saveEdit()}
             onEscape={() => setEditing(false)}
             autoFocus
@@ -670,7 +680,12 @@ export function CommentBlock({
         </div>
       ) : (
         comment.body && (
-          <Markdown className="text-foreground" members={ctx.members}>
+          <Markdown
+            className="text-foreground"
+            members={ctx.members}
+            mentionScan={mentions?.scan}
+            mentionLinks={mentions?.links}
+          >
             {comment.body}
           </Markdown>
         )
@@ -726,6 +741,7 @@ export function CommentBlock({
     Exported from MIN-282: the thread of a page responds with the same gesture. */
 export function ReplyComposer({
   members,
+  mentions,
   currentUserId,
   projectId,
   rootId,
@@ -734,6 +750,7 @@ export function ReplyComposer({
   onReply,
 }: {
   members: Member[];
+  mentions: MarkdownEditorMentions;
   currentUserId: string | null;
   projectId: string;
   rootId: string;
@@ -835,6 +852,7 @@ export function ReplyComposer({
         value={draft}
         onChange={setDraft}
         members={members}
+        mentions={mentions}
         onSubmit={() => void submit()}
         onEscape={() => {
           if (!draft.trim()) close();
@@ -887,6 +905,7 @@ function CommentCard({
   ctx,
   currentUserId,
   projectId,
+  mentions,
   header,
   allowAttachments = true,
   onReply,
@@ -898,6 +917,7 @@ function CommentCard({
   ctx: EventContext;
   currentUserId: string | null;
   projectId: string;
+  mentions: MarkdownEditorMentions;
   /** The headband, when the surface has one (see `commentHeader`). */
   header?: React.ReactNode;
   allowAttachments?: boolean;
@@ -930,6 +950,7 @@ function CommentCard({
         <CommentBlock
           comment={item.comment}
           ctx={ctx}
+          mentions={mentions}
           currentUserId={currentUserId}
           onEdit={onEditComment}
           onDelete={onDeleteComment}
@@ -942,6 +963,7 @@ function CommentCard({
           <CommentBlock
             comment={reply}
             ctx={ctx}
+            mentions={mentions}
             currentUserId={currentUserId}
             onEdit={onEditComment}
             onDelete={onDeleteComment}
@@ -954,6 +976,7 @@ function CommentCard({
       <div className="border-t border-border/60">
         <ReplyComposer
           members={ctx.members}
+          mentions={mentions}
           currentUserId={currentUserId}
           projectId={projectId}
           rootId={item.comment.id}
@@ -1073,6 +1096,7 @@ export function IssueActivity({
 }) {
   const t = useTranslations("Timeline");
   const [open, setOpen] = useState(true);
+  const mentions = useDescriptionMentions(projectId, ctx.members);
   const rows = groupRows(items);
 
   return (
@@ -1106,6 +1130,7 @@ export function IssueActivity({
                     ctx={ctx}
                     currentUserId={currentUserId}
                     projectId={projectId}
+                    mentions={mentions}
                     header={commentHeader?.(row.item.comment)}
                     allowAttachments={allowAttachments}
                     onReply={onReply}
@@ -1174,6 +1199,7 @@ export function CommentComposer({
   const [posting, setPosting] = useState(false);
   const [visibility, setVisibility] = useState<CommentVisibility>("internal");
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
+  const mentions = useDescriptionMentions(projectId, members);
   const drop = useFileDrop(uploads.addFiles);
   const isPublic = visibility === "public";
 
@@ -1235,6 +1261,7 @@ export function CommentComposer({
         value={draft}
         onChange={setDraft}
         members={members}
+        mentions={mentions}
         onSubmit={() => void submit()}
         placeholder={
           placeholder ??

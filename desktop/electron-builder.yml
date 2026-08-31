@@ -59,10 +59,12 @@ win:
     - target: appx
       arch: [x64, arm64]
   executableName: minddy
-  # Windows presents the executable icon as a square. This asset has an opaque
-  # square background so transparent rounded corners cannot render as black.
+  # Keep the rounded silhouette in the generated executable icon. The AppX
+  # background below must stay transparent so Windows does not plate it dark.
   icon: build/icon-windows.png
   extraResources:
+    - from: build/store-update/${arch}
+      to: store-update
     - from: build/wns/${arch}
       to: wns
 
@@ -78,6 +80,7 @@ appx:
   publisherDisplayName: mangue-dev
   applicationId: minddy
   displayName: minddy
+  backgroundColor: transparent
   languages: [en-US, fr-FR]
   minVersion: "10.0.17763.0"
   maxVersionTested: "10.0.26100.0"

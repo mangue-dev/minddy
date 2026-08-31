@@ -18,6 +18,7 @@ import {
 } from "mangue-ui";
 import { Check, ChevronLeft, CircleDotDashed, Copy, X } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
+import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { IntegrationIndicator } from "@/components/integration-indicator";
@@ -444,7 +445,7 @@ export default function TriagePage() {
  continues above, and a separate bar would cut it off from the
  it caps (same part as the pull request and the
  agent conversation). */}
-            <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
+            <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -460,7 +461,7 @@ export default function TriagePage() {
               {/* Same order as the actions of a pull request (pr-detail):
  the neutral action, then the refusal, then the acceptance last
  — the gesture that advances the ticket is always on the right. */}
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="ml-auto flex shrink-0 items-center gap-1.5">
                 <SearchSelect
                   value={null}
                   onChange={(id) => {
@@ -488,7 +489,7 @@ export default function TriagePage() {
                   {t("accept")}
                 </Button>
               </div>
-            </div>
+            </AppContentHeader>
 
             <div
               ref={detailFade.ref}
@@ -598,7 +599,11 @@ export default function TriagePage() {
                   onDeleteComment={deleteComment}
                   onDeleteAttachment={deleteAttachment}
                 />
+              </div>
+            </div>
 
+            <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
+              <div className="mx-auto max-w-3xl">
                 <CommentComposer
                   members={members}
                   projectId={projectId}
@@ -647,6 +652,7 @@ export default function TriagePage() {
             value={message}
             onChange={setMessage}
             members={members}
+            mentions={mentions}
             placeholder={t("messagePlaceholder")}
             rows={3}
             autoFocus
@@ -729,6 +735,7 @@ function TriageRow({
     <button
       ref={askNumoRef}
       type="button"
+      data-sidebar-filter-result
       aria-pressed={picked}
       onClick={(e) => {
         if (e.shiftKey) {

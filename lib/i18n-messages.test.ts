@@ -3,6 +3,7 @@ import { loadMessages } from "@/i18n/messages";
 import de from "@/messages/de.json";
 import en from "@/messages/en.json";
 import es from "@/messages/es.json";
+import fr from "@/messages/fr.json";
 import itMessages from "@/messages/it.json";
 import ptBr from "@/messages/pt-BR.json";
 
@@ -24,6 +25,12 @@ describe("complete locale messages", () => {
     const englishKeys = leafPaths(en).sort();
     for (const catalog of [de, ptBr, itMessages, es]) {
       expect(leafPaths(catalog).sort()).toEqual(englishKeys);
+    }
+  });
+
+  it("lists Windows as a supported desktop platform in every locale", () => {
+    for (const catalog of [en, fr, de, ptBr, itMessages, es]) {
+      expect(catalog.Account.desktopAppHint).toContain("Windows");
     }
   });
 

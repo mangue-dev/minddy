@@ -804,6 +804,7 @@ function renderItem(
         askUserAnswer={it.askUserAnswer}
         showCopyButton={ctx.copyableIds.has(it.message.id)}
         afterContent={afterContent}
+        usePageCodeBlock
       />
     );
   }

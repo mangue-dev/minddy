@@ -9,6 +9,7 @@ import { defaultLocale, type Locale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus,
 } from "@/lib/numo-default-status";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { DEFAULT_AGENT_BRANCH_PREFIX } from "./branch-name";
 
 import { notifyPullRequestOpened } from "./pr-opened-notify";
 import { prStateFromRef, upsertPullRequest } from "./pull-requests";
@@ -224,16 +225,23 @@ const COMMENT_STRINGS: Record<
  * - `numoDefaultStatus`: landing status of a ticket created by the agent
  * (Account → Preferences). It ONLY comes from the launcher — it's HIS setting;
  * without a launcher, the historical default (`triage`), never that of the owner.
+ * - `branchPrefix`: namespace of new work branches (Account → Agent). It comes
+ * from the launcher; fallback contexts use `numo/`.
  */
 export async function resolveRunPrefs(
   run: AgentRun,
-): Promise<{ locale: Locale; numoDefaultStatus: NumoDefaultStatus }> {
+): Promise<{
+  locale: Locale;
+  numoDefaultStatus: NumoDefaultStatus;
+  branchPrefix: string;
+}> {
   if (run.created_by) {
     const r = await getAccountSettings({ userId: run.created_by });
     if (r.ok) {
       return {
         locale: r.settings.locale,
         numoDefaultStatus: r.settings.numo_default_status,
+        branchPrefix: r.settings.agent.branch_prefix,
       };
     }
   }
@@ -251,13 +259,18 @@ export async function resolveRunPrefs(
         return {
           locale: r.settings.locale,
           numoDefaultStatus: DEFAULT_NUMO_STATUS,
+          branchPrefix: DEFAULT_AGENT_BRANCH_PREFIX,
         };
       }
     }
   } catch {
     // ignore — we fall back on the default
   }
-  return { locale: defaultLocale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
+  return {
+    locale: defaultLocale,
+    numoDefaultStatus: DEFAULT_NUMO_STATUS,
+    branchPrefix: DEFAULT_AGENT_BRANCH_PREFIX,
+  };
 }
 
 /**

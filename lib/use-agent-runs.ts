@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
@@ -16,9 +16,16 @@ import {
   fetchPullRequestCommitsApi,
   fetchPrReviewCommentsApi,
   isAgentRunWorking,
+  type AgentSessionListItem,
   type PrEndpoint,
   type PullRequestStateFilter,
 } from "./agent-api";
+import { getDesktopBridge } from "./desktop/bridge";
+import {
+  parseAgentLocalDiff,
+  type AgentLocalDiff,
+} from "./agent-local-diff";
+import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 
 /** Cache key for agent runs of an issue. */
 export function issueAgentRunsQueryKey(issueId: string) {
@@ -127,14 +134,18 @@ export function useAgentRunQuery(runId: string | null) {
  */
 export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   const enabled = !!runId;
-  const { data, isPending } = useQuery({
+  const { data, isPending, isFetching } = useQuery({
     queryKey: ["agent-run-events", runId],
     queryFn: () => fetchAgentRunEventsApi(runId as string),
     enabled,
     refetchOnMount: "always",
     refetchInterval: active ? 2000 : false,
   });
-  return { events: data?.events ?? [], loading: enabled && isPending };
+  return {
+    events: data?.events ?? [],
+    loading: enabled && isPending,
+    fetching: enabled && isFetching,
+  };
 }
 
 /** Tracking rate of a CI in progress — a CI is counted in minutes, not in
@@ -207,34 +218,69 @@ export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: b
   };
 }
 
+/**
+ * Full local diff retained by the desktop shell. It is read only while the
+ * review panel is open, and the settled key forces one final disk read when a
+ * running turn stops. Older shells return no source and the caller falls back
+ * to the persisted event payload.
+ */
+export function useDesktopAgentRunDiffQuery(
+  runId: string,
+  enabled: boolean,
+  working: boolean,
+): { diff: AgentLocalDiff | null; loading: boolean } {
+  const bridge = getDesktopBridge();
+  const supported = Boolean(bridge?.localRunDiff);
+  const { data, isPending } = useQuery({
+    queryKey: ["desktop-agent-run-diff", runId, working ? "live" : "settled"],
+    queryFn: async () => {
+      const raw = await getDesktopBridge()?.localRunDiff?.({ runId });
+      return raw
+        ? parseAgentLocalDiff(raw, { patchCap: DESKTOP_LOCAL_DIFF_PATCH_CAP })
+        : null;
+    },
+    enabled: enabled && supported,
+    refetchOnMount: "always",
+    refetchInterval: enabled && working ? 7000 : false,
+    retry: false,
+  });
+  return {
+    diff: data ?? null,
+    loading: enabled && supported && isPending,
+  };
+}
+
 /** Diff SUMMARY cache key (the same files, without the patches). */
 export function agentRunDiffStatQueryKey(runId: string) {
   return ["agent-run-diff-stat", runId] as const;
 }
 
 /**
- * BOTH HEADER NUMBERS DURING THE ROUND (MIN-266).
+ * Header summary from the same diff source as the full session patch.
  *
- * The header took them from the `files_changed` events, emitted at the END of the round: during
- * qu'il travaillait, l'agent pouvait toucher trente fichiers sans que rien ne
- * move up there — and in the first round of a session, there was nothing at all.
- * This query reads the same diff as the view, in summarized version (no patch),
- * and therefore gives the counters while the work is done.
- *
- * It ONLY rotates during the tour: at rest, the events are authentic and do not
- * cost nothing — they are already charged by the wire.
+ * It loads once whenever a conversation is displayed, then polls only while the
+ * agent works. Loading at rest lets an authoritative empty response clear stale
+ * historical events instead of resurrecting reverted files.
  */
-export function useAgentRunDiffStatQuery(runId: string | null, working: boolean) {
-  const { data } = useQuery({
+export function useAgentRunDiffStatQuery(
+  runId: string | null,
+  enabled: boolean,
+  working: boolean,
+) {
+  const { data, isFetching, isError } = useQuery({
     queryKey: agentRunDiffStatQueryKey(runId ?? ""),
     queryFn: () => fetchAgentRunDiffApi(runId!, { stat: true }),
-    enabled: Boolean(runId) && working,
+    enabled: Boolean(runId) && enabled,
     refetchOnMount: "always",
-    refetchInterval: working ? 7000 : false,
+    refetchInterval: enabled && working ? 7000 : false,
   });
   return {
     files: data?.files ?? [],
     live: data?.live === true,
+    /** Distinguishes an authoritative empty diff from a query that has not answered yet. */
+    ready: data !== undefined,
+    /** Safe to use for actions: the latest refresh completed successfully. */
+    verified: data !== undefined && !isFetching && !isError,
   };
 }
 
@@ -308,6 +354,32 @@ export function useAllPullRequestsQuery(
 
 /** Cache key for the global list of agent sessions (Agents page). */
 export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
+
+type AgentSessionsData = { sessions: AgentSessionListItem[] };
+
+/** Update one conversation's pinned state in the shared sessions cache.
+ * The Agents list derives both its pinned group and its project groups from
+ * this query, so one synchronous cache write moves the row immediately. The
+ * previous field value is returned for a targeted rollback if the PATCH fails. */
+export function patchAgentConversationPinnedInCache(
+  queryClient: QueryClient,
+  runId: string,
+  pinned: boolean,
+): boolean | undefined {
+  const previous = queryClient.getQueryData<AgentSessionsData>(
+    allAgentSessionsQueryKey,
+  );
+  const session = previous?.sessions.find((item) => item.runId === runId);
+  if (!previous || !session) return undefined;
+
+  queryClient.setQueryData<AgentSessionsData>(allAgentSessionsQueryKey, {
+    ...previous,
+    sessions: previous.sessions.map((item) =>
+      item.runId === runId ? { ...item, pinned } : item,
+    ),
+  });
+  return session.pinned;
+}
 
 /** Lightweight cache key for the persistent navigation badge. */
 export const openPullRequestCountQueryKey = ["pull-requests", "open-count"] as const;

@@ -1,5 +1,5 @@
-import { DocPageSkeleton } from "@/components/route-skeletons";
+import { ListDetailSkeleton } from "@/components/route-skeletons";
 
 export default function TrashLoading() {
-  return <DocPageSkeleton width="3xl" rows={3} rowClassName="h-16" />;
+  return <ListDetailSkeleton rows={7} rowClassName="h-10" cards={3} />;
 }

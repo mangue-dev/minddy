@@ -244,7 +244,7 @@ export function useOnboarding(): UseOnboardingResult {
     // a well-established account.
     loading,
     finalScreen,
-    showCard: state.visible || finalScreen,
+    showCard: !loading && (state.visible || finalScreen),
     acknowledgeStep,
     finish,
     dismiss,

@@ -855,7 +855,7 @@ describe("les tools de plateforme", () => {
     // `agent_runs.branch_name` is only stamped after a first REAL push
     // (MIN-123) — but it is `create_pr` who has just done it. Read it on the line
     // of the run gave an EMPTY head to the forge, and stamped `branch_name: ""`.
-    const branch = `minddy/agent/agent-${RUN_ID.slice(0, 8)}`;
+    const branch = `numo/agent-${RUN_ID.slice(0, 8)}`;
     const res = await call("POST", "/tool/create_pr", {
       args: { title: "Ajoute le truc" },
       pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },

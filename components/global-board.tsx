@@ -29,12 +29,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { IssueSidePanel } from "@/components/issue-side-panel";
-import {
-  CycleAskNumo,
-  CycleControls,
-  CycleTitleSelector,
-  formatCycleRange,
-} from "@/components/cycle/cycle-header";
+import { CycleControls, formatCycleRange } from "@/components/cycle/cycle-header";
 import {
   CycleActivationWelcome,
   CycleCompletedBanner,
@@ -400,18 +395,6 @@ function GlobalBoardInner() {
         : null
   );
 
-  const askNumoAboutCycle = useCallback(
-    (message: string) => {
-      if (!selectedCycle || !cycleLabel) return;
-      openAssistant({
-        projectId: null,
-        prompt: message,
-        pageContext: { cycleId: selectedCycle.id, cycleLabel },
-      });
-    },
-    [openAssistant, selectedCycle, cycleLabel]
-  );
-
   // Right-click cycle actions, on every card of this board (both modes).
   const onSetIssueCycle = useCallback(
     (issue: Issue, cycleId: string | null) =>
@@ -453,7 +436,13 @@ function GlobalBoardInner() {
   const openProject = openIssue ? projectMap.get(openPid) : undefined;
 
   if (loading || viewsLoading || projectsLoading) {
-    return <BoardLoadingSkeleton position={boardScrollPosition} />;
+    return (
+      <BoardLoadingSkeleton
+        position={boardScrollPosition}
+        specialView={cycleMode}
+        showCreateIssue={!cycleMode}
+      />
+    );
   }
 
   const boardHandlers = {
@@ -497,74 +486,57 @@ function GlobalBoardInner() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
-        {/* The page title jumps in the only case where there is nothing at all:
- the screen is then reduced to what there is to do. */}
-        {cycleMode && cycles?.enabled && selectedCycle ? (
-          // Title line: date-selector left, Ask Numo right — the gauges live
-          // on the pills row below.
-          <div className="flex items-center justify-between gap-3">
-            <CycleTitleSelector
-              cycles={cycles}
-              selectedId={selectedCycleId}
-              onSelect={setSelectedCycleId}
-            />
-            <CycleAskNumo onAskNumo={askNumoAboutCycle} />
-          </div>
-        ) : nothingAnywhere ? null : (
-          <h1 className="font-display text-lg font-semibold tracking-tight">
-            {cycleMode ? tBoard("cycleTab") : t("allTitle")}
-          </h1>
-        )}
-        {/* Nothing anywhere: no toolbar above a screen that
+      {/* Nothing anywhere: no toolbar above a screen that
  has only one thing to offer. */}
-        {!nothingAnywhere && (
-          <BoardToolbar
-            tabOrderScope="global"
-            views={views}
-            activeViewId={cycleMode ? null : activeViewId}
-            generatingViewIds={generatingViewIds}
-            onSelectView={(id) => {
-              if (cycleMode) switchCycleMode(false);
-              selectView(id);
-            }}
-            config={config}
-            onConfigChange={setConfig}
-            members={unionMembers}
-            categories={allCategories}
-            objectives={allObjectives}
-            integrations={allIntegrations}
-            projects={projects}
-            groupFacetsByName
-            dirty={cycleMode ? false : dirty}
-            onCreateView={handleCreateView}
-            onUpdateActiveView={saveActiveView}
-            onRenameView={renameView}
-            onDeleteView={deleteView}
-            withNumo
-            withShare={false}
-            onAskNumo={handleAskNumo}
-            cycleTab={{
-              active: cycleMode,
-              completionPercent: currentCycleCompletionPercent,
-              onSelect: () => switchCycleMode(true),
-            }}
-            rightControls={
-              cycleMode ? (
-                cyclesEnabled && selectedCycle ? (
-                  <CycleControls
-                    cycle={selectedCycle}
-                    filledPoints={cycleFilledPoints(cycleIssues)}
-                    completionPercent={cycleCompletionPercent(cycleIssues)}
-                  />
-                ) : (
-                  <span aria-hidden />
-                )
-              ) : undefined
-            }
-          />
-        )}
-      </div>
+      {!nothingAnywhere && (
+        <BoardToolbar
+          tabOrderScope="global"
+          views={views}
+          activeViewId={cycleMode ? null : activeViewId}
+          generatingViewIds={generatingViewIds}
+          onSelectView={(id) => {
+            if (cycleMode) switchCycleMode(false);
+            selectView(id);
+          }}
+          config={config}
+          onConfigChange={setConfig}
+          members={unionMembers}
+          categories={allCategories}
+          objectives={allObjectives}
+          integrations={allIntegrations}
+          projects={projects}
+          groupFacetsByName
+          dirty={cycleMode ? false : dirty}
+          onCreateView={handleCreateView}
+          onUpdateActiveView={saveActiveView}
+          onRenameView={renameView}
+          onDeleteView={deleteView}
+          withNumo
+          withShare={false}
+          onAskNumo={handleAskNumo}
+          cycleTab={{
+            active: cycleMode,
+            completionPercent: currentCycleCompletionPercent,
+            onSelect: () => switchCycleMode(true),
+          }}
+          rightControls={
+            cycleMode ? (
+              cyclesEnabled && selectedCycle ? (
+                <CycleControls
+                  cycles={cycles}
+                  cycle={selectedCycle}
+                  selectedId={selectedCycleId}
+                  onSelect={setSelectedCycleId}
+                  filledPoints={cycleFilledPoints(cycleIssues)}
+                  completionPercent={cycleCompletionPercent(cycleIssues)}
+                />
+              ) : (
+                <span aria-hidden />
+              )
+            ) : undefined
+          }
+        />
+      )}
 
       {cycleMode ? (
         !cyclesEnabled ? (

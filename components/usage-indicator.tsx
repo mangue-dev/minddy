@@ -33,6 +33,7 @@ import {
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 import { NumoIcon } from "@/components/numo-icon";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 /**
  * Plan usage (MIN-72) — header pad + popover: unified budget bar
@@ -82,10 +83,23 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
   pro: "planPro",
 };
 
-export function UsageIndicator() {
+export function UsageIndicator({
+  variant = "header",
+  collapsed = false,
+  onOpenChange,
+}: {
+  variant?: "header" | "sidebar";
+  collapsed?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const t = useTranslations("Billing");
   const { loading, remainingPercent, state, usage } = useBillingSummary();
   const [open, setOpen] = useState(false);
+  const sidebar = variant === "sidebar";
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   if (!loading && !usage?.managedAi) return null;
 
@@ -97,26 +111,39 @@ export function UsageIndicator() {
         : "text-muted-foreground hover:text-foreground";
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
           aria-label={t("usageAria")}
           className={cn(
-            "h-8 gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium tabular-nums shadow-none hover:bg-card",
+            "gap-1.5 text-xs font-medium tabular-nums shadow-none",
+            sidebar
+              ? cn(
+                  SIDEBAR_COMPACT_CONTROL_CLASS,
+                  "text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                )
+              : "h-8 rounded-full border border-border bg-card px-2.5 hover:bg-card",
             stateClass
           )}
         >
-          <Gauge className="size-[15px]" strokeWidth={2} />
-          {loading
-            ? "…"
-            : t("usagePercent", { percent: roundRemainingPercent(remainingPercent) })}
+          {(!sidebar || collapsed) && <Gauge className="size-[15px]" strokeWidth={2} />}
+          {!collapsed
+            ? loading
+              ? "…"
+              : t("usagePercent", { percent: roundRemainingPercent(remainingPercent) })
+            : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-80 p-0">
-        <UsageBreakdownBody />
-        <UsageFooter onNavigate={() => setOpen(false)} />
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={sidebar ? 10 : 8}
+        className="w-80 p-0"
+      >
+        <UsageBreakdownBody compact />
+        <UsageFooter onNavigate={() => handleOpenChange(false)} />
       </PopoverContent>
     </Popover>
   );
@@ -127,10 +154,16 @@ export function UsageIndicator() {
  * reset date and detail lines. Standalone (reads `useBillingSummary`) —
  * the caller owns the shell (popover or card).
  *
- * @param bordered Separates blocks by high borders (card settings);
- * omitted for popover.
+ * @param bordered Separates blocks with borders in the billing-page card.
+ * @param compact Uses the denser spacing of the usage popover.
  */
-export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean }) {
+export function UsageBreakdownBody({
+  bordered = false,
+  compact = false,
+}: {
+  bordered?: boolean;
+  compact?: boolean;
+}) {
   const t = useTranslations("Billing");
   const locale = useLocale();
   const {
@@ -190,7 +223,12 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3",
+          compact ? "px-3 pb-1 pt-2" : "px-4 py-3"
+        )}
+      >
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-semibold tabular-nums leading-none text-foreground">
             {loading ? "—" : `${roundRemainingPercent(remainingPercent)}%`}
@@ -204,7 +242,12 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
         </span>
       </div>
 
-      <div className={cn("space-y-2 px-4 py-3", bordered && "border-t border-border")}>
+      <div
+        className={cn(
+          compact ? "space-y-1.5 px-3 pb-2 pt-1" : "space-y-2 px-4 py-3",
+          bordered && "border-t border-border"
+        )}
+      >
         <div className="relative">
           {/* Filling = remaining budget: full on reset, empty one
  times the budget consumed. */}
@@ -235,13 +278,18 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
         )}
       </div>
 
-      <div className={cn("px-4 py-3", bordered && "border-t border-border")}>
+      <div
+        className={cn(
+          compact ? "px-3 py-2" : "px-4 py-3",
+          bordered && "border-t border-border"
+        )}
+      >
         {/* The gauge counts the remainder, the detail counts the consumed: we say,
  otherwise the two percentages read in the same direction. */}
         <p className="mb-1.5 text-xs font-medium text-muted-foreground">
           {t("breakdownTitle")}
         </p>
-        <ul className="space-y-1">
+        <ul className="space-y-0">
           {rows.map((row) => {
             const rowPercent =
               includedUsd > 0 ? Math.round((row.usd / includedUsd) * 100) : 0;
@@ -330,7 +378,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   }, [nextPlanId, redirecting, status?.subscription]);
 
   return (
-    <div className="space-y-1 border-t border-border p-2">
+    <div className="space-y-1 p-2">
       {canUpgrade && nextPlanId && (
         <Button
           type="button"

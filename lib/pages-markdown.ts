@@ -29,7 +29,8 @@
  * say losing one each time there and back.
  *
  * Everything else — titles, lists, tasks and their four states, nesting,
- * quote, code, separator, leaflet, subpage, bold/italic/code/link —
+ * quote, callout (including its icon and color), code, separator, leaflet,
+ * subpage, bold/italic/code/link —
  * returns identical, and lib/pages-markdown.test.ts plays it block by block, in
  * BROADCASTING the register: a block added without its projection causes the sequence to fall.
  *
@@ -48,6 +49,7 @@ import {
   BLOCK_ID_ATTRIBUTE,
   BLOCK_ID_TYPES,
 } from "@/components/pages/blocks";
+import { normalizeNotionCalloutPaste } from "@/components/pages/blocks/callout";
 
 /** A page as the projection sees it: its header, and its body. */
 export interface PageProjection {
@@ -126,7 +128,7 @@ export function markdownToPage(markdown: string): PageProjection {
 
 /** The body alone — the counterpart of `bodyToMarkdown`. */
 export function bodyFromMarkdown(markdown: string): JSONContent {
-  const editor = pageEditor(markdown);
+  const editor = pageEditor(normalizeNotionCalloutPaste(markdown) ?? markdown);
   try {
     return stampBlockIds(editor.getJSON());
   } finally {

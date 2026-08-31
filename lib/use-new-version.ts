@@ -10,7 +10,7 @@ import {
 } from "./new-version";
 
 /**
- * “A new version is available” (MIN-157): loop compares the SHA
+ * “A new version is available” (MIN-157): the sidebar entry compares the SHA
  * of the deployment which meets the one fixed in this bundle.
  *
  * It is a `useQuery` and not a `setInterval`, for a specific reason: at
@@ -19,7 +19,7 @@ import {
  * The background tab therefore suspends polling without a line to write.
  *
  * The key is excluded from disk persistence (lib/query-provider.tsx): a SHA
- * server rehydrated from localStorage would turn the banner back on just after
+ * server rehydrated from localStorage would turn the update entry back on just after
  * the reload which has just updated the app.
  */
 export const NEW_VERSION_KEY = ["version"] as const;

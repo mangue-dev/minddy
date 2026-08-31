@@ -3,23 +3,3 @@
   gap: 3px;
   align-items: center;
 }
-
-.kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  font-size: var(--cp-fs-kbd);
-  font-family: var(--cp-font-mono, monospace);
-  background: color-mix(in srgb, var(--cp-border) 35%, transparent);
-  border-radius: var(--cp-radius-sm);
-  color: var(--cp-muted);
-}
-
-.kbd.sm {
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-}

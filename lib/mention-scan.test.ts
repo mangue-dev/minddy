@@ -5,6 +5,7 @@ import {
   type MentionIssue,
   type MentionObjective,
   type MentionPage,
+  type MentionProject,
   type MentionSegment,
 } from "./mention-scan";
 import type { Member } from "./types";
@@ -33,6 +34,14 @@ const page = (title: string, icon: string | null = null): MentionPage => ({
   icon,
 });
 
+const project = (name: string): MentionProject => ({
+  id: `id-${name}`,
+  name,
+  key: "MIN",
+  avatarSeed: `seed-${name}`,
+  iconUrl: "https://example.com/icon.png",
+});
+
 /** A compact reading of the division: the text as is, a mention in
  “@Nom” (or “@numo”). */
 const shape = (segments: MentionSegment[]) =>
@@ -49,16 +58,18 @@ const shape = (segments: MentionSegment[]) =>
               ? `@${s.mention.objective.name}`
               : s.mention.type === "page"
                 ? `@${s.mention.page.title}`
-                : `@${s.mention.member.full_name}`,
+                : s.mention.type === "project"
+                  ? `@${s.mention.project.name}`
+                  : `@${s.mention.member.full_name}`,
   );
 
 describe("mentionScanner", () => {
-  it("laisse un texte sans mention d'un seul tenant", () => {
+  it("keeps text without mentions in one segment", () => {
     const scan = mentionScanner([member("Jean")]);
     expect(shape(scan("rien à signaler"))).toEqual(["rien à signaler"]);
   });
 
-  it("découpe une mention de membre au milieu du texte", () => {
+  it("splits a member mention in the middle of text", () => {
     const scan = mentionScanner([member("Jean")]);
     expect(shape(scan("dis à @Jean de relire"))).toEqual([
       "dis à ",
@@ -67,37 +78,37 @@ describe("mentionScanner", () => {
     ]);
   });
 
-  it("préfère le nom le plus long", () => {
+  it("prefers the longest name", () => {
     const scan = mentionScanner([member("Jean"), member("Jean Dupont")]);
     expect(shape(scan("@Jean Dupont arrive"))).toEqual(["@Jean Dupont", " arrive"]);
   });
 
-  it("exige la casse exacte pour un membre", () => {
+  it("requires exact casing for a member", () => {
     const scan = mentionScanner([member("Jean")]);
     expect(shape(scan("@jean"))).toEqual(["@jean"]);
   });
 
-  it("accepte « numo » dans n'importe quelle casse", () => {
+  it("accepts Numo in any casing", () => {
     const scan = mentionScanner([member("Jean")]);
     expect(shape(scan("@Numo et @NUMO"))).toEqual(["@numo", " et ", "@numo"]);
   });
 
-  it("cite Numo même sans aucun membre", () => {
+  it("mentions Numo without any members", () => {
     const scan = mentionScanner([]);
     expect(shape(scan("@numo regarde"))).toEqual(["@numo", " regarde"]);
   });
 
-  it("ne fait pas une pilule de chaque « @ » quand il n'y a pas de membre", () => {
+  it("does not turn every at sign into a chip when no members exist", () => {
     const scan = mentionScanner([]);
     expect(shape(scan("écris à @quelquun"))).toEqual(["écris à @quelquun"]);
   });
 
-  it("ne cite pas Numo dans une adresse e-mail", () => {
+  it("does not mention Numo inside an email address", () => {
     const scan = mentionScanner([]);
     expect(shape(scan("clement@numo.dev"))).toEqual(["clement@numo.dev"]);
   });
 
-  it("cite Numo en début de texte et après une parenthèse", () => {
+  it("mentions Numo at the start and after an opening parenthesis", () => {
     const scan = mentionScanner([]);
     expect(shape(scan("@numo (@numo aussi)"))).toEqual([
       "@numo",
@@ -107,14 +118,14 @@ describe("mentionScanner", () => {
     ]);
   });
 
-  it("enchaîne deux mentions collées par un espace", () => {
+  it("recognizes two mentions separated by a space", () => {
     const scan = mentionScanner([member("Jean"), member("Marie")]);
     expect(shape(scan("@Jean @Marie"))).toEqual(["@Jean", " ", "@Marie"]);
   });
 });
 
 describe("contentMentionScanner", () => {
-  it("cite un ticket par son identifiant", () => {
+  it("mentions an issue by identifier", () => {
     const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
     expect(shape(scan("bloqué par @MIN-42 depuis hier"))).toEqual([
       "bloqué par ",
@@ -123,27 +134,27 @@ describe("contentMentionScanner", () => {
     ]);
   });
 
-  it("laisse en texte un identifiant bien formé mais inconnu", () => {
+  it("leaves a well-formed unknown identifier as text", () => {
     const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
     expect(shape(scan("voir @MIN-99"))).toEqual(["voir @MIN-99"]);
   });
 
-  it("ne cite pas un ticket sans arobase", () => {
+  it("does not mention an issue without an at sign", () => {
     const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
     expect(shape(scan("voir MIN-42"))).toEqual(["voir MIN-42"]);
   });
 
-  it("ne prend pas « @MIN-42 » dans « @MIN-42x »", () => {
+  it("does not match an issue prefix inside a longer token", () => {
     const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
     expect(shape(scan("@MIN-42x"))).toEqual(["@MIN-42x"]);
   });
 
-  it("cite un objectif par son nom", () => {
+  it("mentions an objective by name", () => {
     const scan = contentMentionScanner({ objectives: [objective("Refonte SEO")] });
     expect(shape(scan("dans @Refonte SEO"))).toEqual(["dans ", "@Refonte SEO"]);
   });
 
-  it("mêle personne, ticket et objectif dans un même texte", () => {
+  it("mixes member, issue, and objective mentions in one text", () => {
     const scan = contentMentionScanner({
       members: [member("Jean")],
       issues: [issue("MIN-42")],
@@ -158,7 +169,7 @@ describe("contentMentionScanner", () => {
     ]);
   });
 
-  it("donne la personne, pas l'objectif, quand les deux portent le même nom", () => {
+  it("prefers a member when an objective has the same name", () => {
     const scan = contentMentionScanner({
       members: [member("Atlas")],
       objectives: [objective("Atlas")],
@@ -167,7 +178,7 @@ describe("contentMentionScanner", () => {
     expect(first.mention?.type).toBe("member");
   });
 
-  it("cite encore Numo dans une description", () => {
+  it("still mentions Numo in a description", () => {
     const scan = contentMentionScanner({ issues: [issue("MIN-42")] });
     expect(shape(scan("@numo regarde @MIN-42"))).toEqual([
       "@numo",
@@ -177,7 +188,7 @@ describe("contentMentionScanner", () => {
   });
 
   // MIN-273 — a wiki page is cited as an objective: by its TITLE.
-  it("cite une page du wiki par son titre", () => {
+  it("mentions a wiki page by title", () => {
     const scan = contentMentionScanner({ pages: [page("Guide de démarrage", "📘")] });
     const segments = scan("tout est dans @Guide de démarrage");
     expect(shape(segments)).toEqual(["tout est dans ", "@Guide de démarrage"]);
@@ -188,14 +199,14 @@ describe("contentMentionScanner", () => {
     });
   });
 
-  it("préfère le plus long titre de page quand l'un contient l'autre", () => {
+  it("prefers the longest page title when one contains another", () => {
     const scan = contentMentionScanner({
       pages: [page("Guide"), page("Guide de démarrage")],
     });
     expect(shape(scan("@Guide de démarrage"))).toEqual(["@Guide de démarrage"]);
   });
 
-  it("donne l'objectif, pas la page, quand les deux portent le même nom", () => {
+  it("prefers an objective when a page has the same name", () => {
     const scan = contentMentionScanner({
       objectives: [objective("Atlas")],
       pages: [page("Atlas")],
@@ -204,7 +215,21 @@ describe("contentMentionScanner", () => {
     expect(first.mention?.type).toBe("objective");
   });
 
-  it("ne fait pas une pilule de chaque « @ » sans aucune source", () => {
+  it("mentions a project by name and preserves its visual metadata", () => {
+    const scan = contentMentionScanner({ projects: [project("Minddy Website")] });
+    const segments = scan("ship this in @Minddy Website");
+    expect(shape(segments)).toEqual(["ship this in ", "@Minddy Website"]);
+    expect(segments[1].mention).toMatchObject({
+      type: "project",
+      project: {
+        id: "id-Minddy Website",
+        avatarSeed: "seed-Minddy Website",
+        iconUrl: "https://example.com/icon.png",
+      },
+    });
+  });
+
+  it("does not turn every at sign into a chip without sources", () => {
     const scan = contentMentionScanner({});
     expect(shape(scan("écris à @quelquun"))).toEqual(["écris à @quelquun"]);
   });

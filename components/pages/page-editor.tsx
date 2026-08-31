@@ -31,15 +31,19 @@ import { NodeRange } from "@tiptap/extension-node-range";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import {
+  MENTION_HYDRATION_META,
   MentionNode,
   MentionSuggest,
+  hydrateMentions,
   type MentionSuggestOptions,
 } from "@/components/markdown-mention";
+import type { MentionScan } from "@/lib/mention-scan";
 import { pageExtensions } from "@/components/pages/page-extensions";
 import { taskItemNodeView } from "@/components/scratchpad/task-item-view";
 import { subpageNodeView } from "@/components/pages/blocks/subpage-view";
 import { imageNodeView } from "@/components/pages/blocks/image-view";
 import { fileNodeView } from "@/components/pages/blocks/file-view";
+import { calloutNodeView } from "@/components/pages/blocks/callout-view";
 import {
   PageUploadsProvider,
   type PageUploads,
@@ -62,6 +66,7 @@ import {
 } from "@/components/pages/page-comment-bubble";
 import { focusDocumentEnd } from "@/components/pages/block-actions";
 import { handleNodeLinkClick } from "@/components/editor-node-link";
+import { insertNotionCalloutPaste } from "@/lib/pages-callout-paste";
 import {
   MentionLinksProvider,
   type MentionLinks,
@@ -77,6 +82,11 @@ import {
 import { TitleBridge } from "@/components/pages/title-bridge";
 
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
+
+export interface PageEditorMentions extends MentionSuggestOptions {
+  /** Rebuild mention nodes from the plain-text form stored by agent writes. */
+  scan: MentionScan;
+}
 
 /* Body typography. Same bias as the notebook: the edition IS
  the preview, there is no raw markdown mode. */
@@ -200,7 +210,7 @@ export function PageEditor({
  */
   uploads?: PageUploads & { addFiles: (files: Iterable<File>, options?: { at?: number }) => void };
   /** Quotable “@” — same options as in an issue description. */
-  mentions?: MentionSuggestOptions;
+  mentions?: PageEditorMentions;
   /** Where the pills already placed lead: a ticket, an objective, a page
  open with one click (components/mention-links). */
   mentionLinks?: MentionLinks | null;
@@ -295,6 +305,7 @@ export function PageEditor({
             // context of uploads and renders from React.
             image: imageNodeView(),
             pageFile: fileNodeView(),
+            callout: calloutNodeView(),
           },
           extensions: { codeBlock: codeBlockEditorExtension() },
         }),
@@ -335,15 +346,23 @@ export function PageEditor({
   // they therefore go through a ref, read at the time of the gesture.
   const uploadsRef = useRef(uploads);
   uploadsRef.current = uploads;
+  const liveEditorRef = useRef<Editor | null>(null);
 
   const editorProps = useMemo(
     () => ({
       ...EDITOR_PROPS,
       handlePaste: (_view: unknown, event: ClipboardEvent) => {
         const files = filesToUpload(event.clipboardData);
-        if (!files || !uploadsRef.current) return false;
+        if (files && uploadsRef.current) {
+          event.preventDefault();
+          uploadsRef.current.addFiles(files);
+          return true;
+        }
+
+        const text = event.clipboardData?.getData("text/plain") ?? "";
+        const editor = liveEditorRef.current;
+        if (!editor || !insertNotionCalloutPaste(editor, text)) return false;
         event.preventDefault();
-        uploadsRef.current.addFiles(files);
         return true;
       },
       handleDrop: (
@@ -376,8 +395,26 @@ export function PageEditor({
     extensions,
     content: initialRef.current,
     editorProps,
-    onUpdate: ({ editor }) => onChangeRef.current(editor.getJSON()),
+    onUpdate: ({ editor, transaction }) => {
+      // Rebuilding mention pills is presentation-only. Persisting that
+      // transaction would attribute a write to the viewer who opened the page.
+      if (transaction.getMeta(MENTION_HYDRATION_META)) return;
+      onChangeRef.current(editor.getJSON());
+    },
   });
+  liveEditorRef.current = editor;
+
+  // Agent writes round-trip mentions through Markdown, where they intentionally
+  // become plain text. Rebuild their editor nodes once the mention index is
+  // available so the page renders the same pills as a human-authored document.
+  const scan = mentions?.scan;
+  useEffect(() => {
+    if (!editor || !scan || editor.isFocused) return;
+    queueMicrotask(() => {
+      if (editor.isDestroyed || editor.isFocused) return;
+      hydrateMentions(editor, scan);
+    });
+  }, [editor, scan]);
 
   // The other half of the rule above: moving the pointer refreshes it.
   // The listener lives as long as the editor is mounted.
@@ -454,7 +491,7 @@ export function PageEditor({
       className={cn("page-editor", className)}
       data-gutter={editor && editable ? "" : undefined}
     >
-      {editor && editable && <BlockGutter editor={editor} />}
+      {editor && editable && <BlockGutter editor={editor} onComment={onComment} />}
       {/* The “Comment” bubble is placed in SCREEN coordinates: it does not need any positioned parent, and therefore does not request one from this
  container, which deliberately does not have one (see below). */}
       {editor && editable && onComment && (

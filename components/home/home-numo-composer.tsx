@@ -16,7 +16,7 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
  * hands the prompt to the global assistant panel (`projectId: null` → global
  * scope), which opens and auto-sends.
  *
- * The “@”, the “/” and the paperclip are the SAME as in the panel: same
+ * The “@”, the “/” and file attachments are the SAME as in the panel: same
  * list of mentions, same orders, same upload. This is the first
  * place where you write in Numo — a sentence you start there must not lose
  * halfway through what she can say once the panel is opened. Mentions,
@@ -26,7 +26,7 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
  * The files are already mounted when the sending leaves: {@link ChatInput}
  * uploads them to the selection and blocks the sending as long as it goes up. What
  * passes through the opening is therefore just a list of storage paths — the
- * reason why the paperclip was hidden here (`open()` does not carry
+ * reason why file attachment was hidden here (`open()` does not carry
  * file) was only due to a missing relay, not a lost file.
  *
  * Global scope (`null`) on both sides: we cite people, projects,

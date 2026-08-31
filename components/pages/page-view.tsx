@@ -33,7 +33,12 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, MoreHorizontal, TriangleAlert } from "lucide-react";
+import {
+  Check,
+  MessageSquare,
+  MoreHorizontal,
+  TriangleAlert,
+} from "lucide-react";
 import type { Editor, JSONContent } from "@tiptap/react";
 
 import { eventKey } from "@/lib/keyboard/event-key";
@@ -48,6 +53,7 @@ import {
   cancelDraftDiscard,
   forgetDraftPage,
   isDraftPage,
+  markDraftPage,
   scheduleDraftDiscard,
 } from "@/lib/pages-draft";
 import { ancestorsOf, descendantIds } from "@/lib/pages";
@@ -58,6 +64,7 @@ import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageEditor } from "@/components/pages/page-editor";
+import { AppContentHeader } from "@/components/app-content-header";
 import { usePageUploads } from "@/components/pages/page-uploads";
 import {
   focusDocumentStart,
@@ -66,12 +73,17 @@ import {
 } from "@/components/pages/block-actions";
 import { PageHeader } from "@/components/pages/page-header";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
-import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
-import { PageHistorySheet } from "@/components/pages/page-history";
+import {
+  usePageDocumentMenu,
+  type PageMenuTarget,
+} from "@/components/pages/page-document-actions";
+import {
+  PageHistorySheet,
+  type PageHistoryTab,
+} from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
-import { PageBacklinks } from "@/components/pages/page-backlinks";
 import { PageCommentLayer } from "@/components/pages/page-comment-layer";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
@@ -83,29 +95,16 @@ import {
   type PageSaveState,
 } from "@/components/pages/use-page-autosave";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Delay before writing, from the last keystroke. */
 const SAVE_DELAY_MS = 1_000;
 
-/**
- * WHERE IS THIS DOCUMENT — registration status and last author, in one
- * single object (MIN-282).
- *
- * The two were answering the same question from opposite corners of the screen:
- * a check mark at the top right (“here we go”), and “modified by Clément” ago
- * 2 days” under the title. Nothing linked them, even though we read them in the same
- * movement when arriving at a page — and the second pushed the body of a
- * line, on all pages, for information that we seek once.
- *
- * What the merger keeps from the original reasoning: **what flashes remains a
- * icon**. The text is stable — a name and a date that do not change over time.
- * typing —, so it can be written. The recording wheel spins alongside
- * without moving anything.
- *
- * And it's a BUTTON: it's by reading "modified by someone else" that we
- * wonders what has changed, so that's where the panel opens
- * of activity. The question remains beside its answer.
- */
+/** Save state and last editor, exposed as the header shortcut to versions. */
 function PageStatus({
   state,
   updatedAt,
@@ -164,49 +163,42 @@ function PageStatus({
       })
     : null;
 
+  const accessibleLabel = `${t("historyTabVersions")} — ${label}${
+    edited ? ` — ${edited}` : ""
+  }`;
+
   return (
-    <button
-      type="button"
-      onClick={onOpenHistory}
-      // Accessible name does NOT depend on hover: visible text is hidden
-      // at rest, therefore absent from the accessibility tree. The two halves are
-      // repeated here — the status, then who wrote —, and the text on the screen is
-      // marked decoratively so as not to be announced twice.
-      aria-label={edited ? `${label} — ${edited}` : label}
-      className={cn(
-        "group flex items-center gap-1.5 rounded px-1 py-0.5 text-xs transition-colors",
-        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        // The background on hover does two things at once: it says that it
-        // click, and it detaches the text which unfolds from what it covers —
-        // on a narrow surface, it passes in front of Ariadne's thread.
-        "hover:bg-muted",
-        state === "conflict"
-          ? "text-amber-600 dark:text-amber-500"
-          : "text-muted-foreground/70 hover:text-foreground"
-      )}
-    >
-      <span role="status" aria-label={label} className="flex shrink-0">
-        {state === "saving" ? (
-          <Spinner className="size-3.5" />
-        ) : state === "conflict" ? (
-          <TriangleAlert className="size-3.5" />
-        ) : (
-          <Check className="size-3.5" />
-        )}
-      </span>
-      {/* At REST, a check mark and nothing else. The name and date are not what
-          that we monitor while writing - this is what we will SEEK, once, in
-          arriving on a page that was not written. They therefore unfold to
-          hover (and tab), where the eye already is. */}
-      {edited ? (
-        <span
-          aria-hidden
-          className="hidden max-w-[14rem] truncate group-hover:block group-focus-visible:block"
+    <Tooltip disableHoverableContent>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onOpenHistory}
+          aria-label={accessibleLabel}
+          className={cn(
+            state === "conflict"
+              ? "text-amber-600 hover:text-amber-600 dark:text-amber-500"
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
-          {edited}
-        </span>
-      ) : null}
-    </button>
+          <span role="status" aria-label={label} className="flex shrink-0">
+            {state === "saving" ? (
+              <Spinner className="size-3.5" />
+            ) : state === "conflict" ? (
+              <TriangleAlert className="size-3.5" />
+            ) : (
+              <Check className="size-3.5" />
+            )}
+          </span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="end">
+        <span>{label}</span>
+        {edited ? (
+          <span className="ml-1.5 text-muted-foreground">{edited}</span>
+        ) : null}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -283,6 +275,7 @@ function PageSurface({
     () => ({
       items: () => mentionSources.options,
       onQuery: mentionSources.onQuery,
+      scan: mentionSources.scan,
     }),
     [mentionSources]
   );
@@ -610,6 +603,11 @@ function PageSurface({
   // makes one believe a page. The name comes from the MEMBERS of the project, already charged
   // for mentions and presence — never the raw email (lib/display-name).
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyTab, setHistoryTab] = useState<PageHistoryTab>("activity");
+  const openHistory = useCallback((tab: PageHistoryTab) => {
+    setHistoryTab(tab);
+    setHistoryOpen(true);
+  }, []);
   const lastWriterId =
     summary?.updated_by ?? page?.updated_by ?? summary?.created_by ?? page?.created_by ?? null;
   const lastWriterKind = summary?.updated_kind ?? page?.updated_kind ?? "human";
@@ -639,14 +637,69 @@ function PageSurface({
     [pages, pageId]
   );
 
-  /* ── Send this page OUT: publish, export (MIN-283) ─────────────────────── */
-  //
-  // The same entries as in the menu ⋯ of the tree line, written one
-  // times (components/pages/page-document-actions.tsx). They are HERE too
-  // because it is by READING a page that we decide to send it to someone —
-  // not by looking for it in a column.
-  const documentMenu = usePageDocumentMenu({ projectId, pages });
-  const pageRef = useMemo(() => ({ id: pageId, title }), [pageId, title]);
+  /* ── The same page menu as the sidebar tree ───────────────────────────── */
+  const createChildFromMenu = useCallback(
+    (parentId: string) => {
+      void (async () => {
+        try {
+          const child = await createPage({ parent_id: parentId });
+          markDraftPage(child.id);
+          void flushRef
+            .current()
+            .finally(() => router.push(`${base}/${child.id}`));
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : t("createFailed"));
+        }
+      })();
+    },
+    [base, createPage, router, t]
+  );
+
+  const toggleFavoriteFromMenu = useCallback(
+    (target: PageMenuTarget) => {
+      void updatePage(target.id, { favorite: !target.favorite }).catch(
+        (err: unknown) => {
+          toast.error(err instanceof Error ? err.message : t("favoriteFailed"));
+        }
+      );
+    },
+    [t, updatePage]
+  );
+
+  const trashFromMenu = useCallback(
+    (target: PageMenuTarget) => {
+      void (async () => {
+        try {
+          const trashed = await trashPage(target.id);
+          router.push(base);
+          toast.success(
+            trashed > 1
+              ? t("trashedWithChildren", { count: trashed })
+              : t("trashed", { title: target.title || t("untitled") })
+          );
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : t("deleteFailed"));
+        }
+      })();
+    },
+    [base, router, t, trashPage]
+  );
+
+  const documentMenu = usePageDocumentMenu({
+    projectId,
+    pages,
+    onCreateChild: createChildFromMenu,
+    onToggleFavorite: toggleFavoriteFromMenu,
+    onTrash: trashFromMenu,
+  });
+  const pageRef = useMemo<PageMenuTarget>(
+    () => ({
+      id: pageId,
+      title,
+      favorite: summary?.favorite ?? page?.favorite ?? false,
+    }),
+    [pageId, title, summary?.favorite, page?.favorite]
+  );
 
   /* ── ⌘⇧L: copy this page for an agent ───────────────────────────── */
   //
@@ -783,54 +836,57 @@ function PageSurface({
   }
 
   return (
-    <div className="relative min-h-0 flex-1">
-      {/* The recording state is pinned to the CORNER of the surface, outside the
-          flow and out of scrolling: it stays in the same place when you
-          goes down into the document, and doesn't push anything. Same place as in the
-          notebook, except that it is on the right — the left is occupied by the
-          secondary sidebar. */}
-      {/* The avatars of other readers are near the recording state, and
-          this is the right place: both answer the same question — “where in
-          is this document, and am I alone on it? ". */}
-      {/* The PATH, the opposite of the recording state: both are
-          pinned out of feed and out of scroll, and share the same
-          line. It only appears on a subpage — see page-breadcrumb.tsx. */}
-      {/* The reservation on the right: the state is a checkmark at rest and its text does not
-          unfolds only when hovering, over, on its own background (MIN-282) —
-          plus the ⋯, which opens publication and export (MIN-283). */}
-      <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-11rem)] items-center">
-        <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
-      </div>
-
-      <div className="absolute top-3 right-3.5 z-10 flex items-center gap-1.5">
-        <PagePresence userIds={present} members={members} />
-        <PageStatus
-          state={autosave.state}
-          updatedAt={autosave.savedAt ?? summary?.updated_at ?? page.updated_at}
-          lastEdit={
-            lastEditName && lastEditAt
-              ? { name: lastEditName, at: lastEditAt }
-              : null
-          }
-          onOpenHistory={() => setHistoryOpen(true)}
-        />
-        <IssueActionsMenu
-          searchable={false}
-          // The key is ONLY displayed there: ⌘⇧L aims at the open page, which is
-          // this one and not the tree line we are flying over.
-          actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
-          trigger={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 text-muted-foreground/70 hover:text-foreground"
-              aria-label={t("pageOptions")}
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          }
-        />
-      </div>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {/* A structural, non-scrolling header: breadcrumb on the left; presence,
+          versions, comments, and document actions on the right. */}
+      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
+        <div className="flex min-w-0 flex-1 items-center">
+          <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <PagePresence userIds={present} members={members} />
+          <PageStatus
+            state={autosave.state}
+            updatedAt={autosave.savedAt ?? summary?.updated_at ?? page.updated_at}
+            lastEdit={
+              lastEditName && lastEditAt
+                ? { name: lastEditName, at: lastEditAt }
+                : null
+            }
+            onOpenHistory={() => openHistory("versions")}
+          />
+          <Tooltip disableHoverableContent>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("comments")}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => openHistory("activity")}
+              >
+                <MessageSquare className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t("comments")}</TooltipContent>
+          </Tooltip>
+          <IssueActionsMenu
+            searchable={false}
+            // The key is ONLY displayed there: ⌘⇧L aims at the open page, which is
+            // this one and not the tree line we are flying over.
+            actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={t("pageOptions")}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            }
+          />
+        </div>
+      </AppContentHeader>
       {documentMenu.dialogs}
 
       {/* The table of contents floats at the right edge of the PANEL, therefore out of the
@@ -838,99 +894,97 @@ function PageSurface({
           in the document, and it's scrolling through it. */}
       <PageToc editor={editor} scrollRef={scrollRef} />
 
-      <div ref={scrollRef} className="scrollbar-quiet h-full overflow-y-auto">
-      {/* The COLUMN of the document. She carries two things, and she's the only one
-          be able to carry them together: the GUTTER reserve on the left (56 px,
-          the exact width of the handle and the `+`) and the positioning of which
-          the chrome is used to place itself there. Title and blocks therefore share the
-          same left edge, and the hover margin falls into the reserve instead
-          to shift the body under the title. */}
-      <div className="relative mx-auto w-full max-w-3xl px-6 py-10 md:pl-24 md:pr-10">
-        <PageHeader
-          title={title}
-          icon={icon}
-          // A NEW page — without a name and without content — puts the cursor in its
-          // title. The test is about what the page IS, not how
-          // which we arrived at: it's true that we come from the `/page` of the body
-          // of the parent, of the `+` of the sidebar or of the menu of a line of the tree,
-          // and that avoids making a “I have just been created” travel through
-          // three components and navigation.
-          autoFocus={!title && isEmptyDoc(page.content)}
-          onTitleChange={(next) => {
-            setEdited((current) => ({ ...current, title: next }));
-            // The sidebar, breadcrumbs and subpage block read the cache
-            // of the LIST: without this local writing, they only moved one
-            // second later, at group recording — we typed a title
-            // looking at the old one in the left column.
-            previewPage(pageId, { title: next });
-            schedule({ title: next });
-          }}
-          onIconChange={(next) => {
-            setEdited((current) => ({ ...current, icon: next }));
-            previewPage(pageId, { icon: next });
-            schedule({ icon: next });
-            void flush();
-          }}
-          onEnter={openBodyLine}
-          onDown={focusBodyStart}
-          fieldRef={titleFieldRef}
-        />
-        {/* Between the title and the body: above the document, because it is
-            of the document it is talking about, and in the flow, because an overwrite
-            silent is exactly what we refuse — it only closes when
-            gesture from its reader. */}
-        <PageConflictBanner
-          conflicts={autosave.conflicts}
-          onRestore={autosave.restore}
-          onDismiss={autosave.dismiss}
-        />
-        <div ref={bodyRef} className="mt-6">
-          {/* What “assign a task” means when it comes off a page
-              rather than the notebook: the prompt names the page, and the navigation
-              waits for what is pending to be written (MIN-274). */}
-          <PageTaskSurface
-            projectId={projectId}
-            pageTitle={title}
-            flush={flush}
-          >
-            <PageEditor
-              initialContent={(page.content as JSONContent | null) ?? null}
-              onChange={(content) => {
-                contentRef.current = content;
-                schedule({ content });
-              }}
-              pages={lookup}
-              uploads={uploads}
-              mentions={mentions}
-              mentionLinks={mentionSources.links}
-              editorRef={editorRef}
-              onEditor={setEditor}
-              onSubpagesRemoved={onSubpagesRemoved}
-              onLeaveTop={focusTitleEnd}
-              onComment={onComment}
-            />
-          </PageTaskSurface>
+      <div
+        ref={scrollRef}
+        className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto"
+      >
+        {/* The COLUMN of the document. She carries two things, and she's the only one
+            be able to carry them together: the GUTTER reserve on the left (56 px,
+            the exact width of the handle and the `+`) and the positioning of which
+            the chrome is used to place itself there. Title and blocks therefore share the
+            same left edge, and the hover margin falls into the reserve instead
+            to shift the body under the title. */}
+        <div className="relative mx-auto w-full max-w-3xl px-6 py-10 md:pl-24 md:pr-10">
+          <PageHeader
+            title={title}
+            icon={icon}
+            // A NEW page — without a name and without content — puts the cursor in its
+            // title. The test is about what the page IS, not how
+            // which we arrived at: it's true that we come from the `/page` of the body
+            // of the parent, of the `+` of the sidebar or of the menu of a line of the tree,
+            // and that avoids making a “I have just been created” travel through
+            // three components and navigation.
+            autoFocus={!title && isEmptyDoc(page.content)}
+            onTitleChange={(next) => {
+              setEdited((current) => ({ ...current, title: next }));
+              // The sidebar, breadcrumbs and subpage block read the cache
+              // of the LIST: without this local writing, they only moved one
+              // second later, at group recording — we typed a title
+              // looking at the old one in the left column.
+              previewPage(pageId, { title: next });
+              schedule({ title: next });
+            }}
+            onIconChange={(next) => {
+              setEdited((current) => ({ ...current, icon: next }));
+              previewPage(pageId, { icon: next });
+              schedule({ icon: next });
+              void flush();
+            }}
+            onEnter={openBodyLine}
+            onDown={focusBodyStart}
+            fieldRef={titleFieldRef}
+          />
+          {/* Between the title and the body: above the document, because it is
+              of the document it is talking about, and in the flow, because an overwrite
+              silent is exactly what we refuse — it only closes when
+              gesture from its reader. */}
+          <PageConflictBanner
+            conflicts={autosave.conflicts}
+            onRestore={autosave.restore}
+            onDismiss={autosave.dismiss}
+          />
+          <div ref={bodyRef} className="mt-6">
+            {/* What “assign a task” means when it comes off a page
+                rather than the notebook: the prompt names the page, and the navigation
+                waits for what is pending to be written (MIN-274). */}
+            <PageTaskSurface
+              projectId={projectId}
+              pageTitle={title}
+              flush={flush}
+            >
+              <PageEditor
+                initialContent={(page.content as JSONContent | null) ?? null}
+                onChange={(content) => {
+                  contentRef.current = content;
+                  schedule({ content });
+                }}
+                pages={lookup}
+                uploads={uploads}
+                mentions={mentions}
+                mentionLinks={mentionSources.links}
+                editorRef={editorRef}
+                onEditor={setEditor}
+                onSubpagesRemoved={onSubpagesRemoved}
+                onLeaveTop={focusTitleEnd}
+                onComment={onComment}
+              />
+            </PageTaskSurface>
+          </div>
         </div>
-        {/* At the foot of the DOCUMENT, in the same column as it: “which relies
-            on this page? » asks oneself when one has finished reading it, not in
-            a piece of furniture that would constantly gain width. Absent while
-            no one cites the page (MIN-279). */}
-        <PageBacklinks projectId={projectId} pageId={pageId} />
-      </div>
       </div>
 
       {/* The announced account is the REAL account: the page that we see disappear
           plus all her descendants, who leave with her without being on screen.
           Saying “this page” when five are gone is trash
           a surprise rather than a trickle. */}
-      {/* History, opened from the “modified by” line in the header —
-          where the question arises. Mounted only when requested: it
-          pulls a second editor with him. */}
+      {/* Activity and versions share one panel. It is mounted only when one of
+          the header shortcuts requests it because it may render a second editor. */}
       {historyOpen ? (
         <PageHistorySheet
           projectId={projectId}
           pageId={pageId}
           open={historyOpen}
+          initialTab={historyTab}
           onOpenChange={setHistoryOpen}
           onRestored={onRestored}
         />

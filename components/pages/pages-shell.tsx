@@ -30,9 +30,11 @@ import { PageTree } from "@/components/pages/page-tree";
 import { PagePresenceProvider } from "@/components/pages/page-presence";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
-import { isPageCycleError, type PageSummary } from "@/lib/pages-api";
+import { isPageCycleError } from "@/lib/pages-api";
 import { rememberLastPage } from "@/lib/pages-last-open";
 import { markDraftPage } from "@/lib/pages-draft";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
+import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 import {
   Tooltip,
   TooltipContent,
@@ -114,7 +116,7 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
  * to be granted a wait.
  */
   const toggleFavorite = useCallback(
-    (page: PageSummary) => {
+    (page: PageMenuTarget) => {
       void updatePage(page.id, { favorite: !page.favorite }).catch(
         (err: unknown) => {
           toast.error(
@@ -127,7 +129,7 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
   );
 
   const trash = useCallback(
-    (page: PageSummary) => {
+    (page: PageMenuTarget) => {
       void (async () => {
         try {
           const trashed = await trashPage(page.id);
@@ -186,11 +188,11 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-7"
+                className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
                 aria-label={t("newPage")}
                 onClick={() => void create(null)}
               >
-                <Plus className="size-4" />
+                <Plus className="size-[18px]" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("newPage")}</TooltipContent>

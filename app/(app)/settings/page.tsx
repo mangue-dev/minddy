@@ -33,13 +33,14 @@ import { AccountGitConnectionsSection } from "@/components/settings/account-git-
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
 import { AccountAnalyticsSection } from "@/components/settings/account-analytics-section";
 import { AccountDataSection } from "@/components/settings/account-data-section";
-import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import { ACCOUNT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 
 export default function AccountSettingsPage() {
   const t = useTranslations("Account");
   const tAutomations = useTranslations("Automations");
   const { user } = useAuth();
+  useAssistantContext(user ? { settings: "account" } : null);
   // The attention badge of the “Security” tab (MIN-132): as long as 2FA
   // is inactive, the recommendation must be visible from the other tabs.
   // Without that it only exists for those who think to look for it — that is to say
@@ -120,10 +121,6 @@ export default function AccountSettingsPage() {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
-      // A single card: the installation of the App that the projects reuse
-      // to link a deposit, and the account under which YOU act on a PR
-      // (MIN-144), are two levels of the same forge account. Separated, they
-      // forced themselves to quote each other to be understood.
       content: <AccountGitConnectionsSection />,
     },
     {
@@ -155,12 +152,6 @@ export default function AccountSettingsPage() {
       defaultTab={ACCOUNT_SETTINGS_DEFAULT_TAB}
       tabs={tabs}
       filterPlaceholder={(count) => t("filterPlaceholder", { count })}
-      topSlot={
-        <SettingsAssistantPrompt
-          projectId={null}
-          placeholder={t("assistantPromptPlaceholder")}
-        />
-      }
     />
   );
 }
