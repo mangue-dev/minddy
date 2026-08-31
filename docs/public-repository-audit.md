@@ -1,6 +1,6 @@
 # Repository publication audit
 
-Last reviewed: August 28, 2026. Scope: the complete canonical Git namespace,
+Last reviewed: August 31, 2026. Scope: the complete canonical Git namespace,
 the launch candidate tree, release material, licensing, bundled assets, example
 data, documentation, support paths, and the boundary between the public core
 and private managed operations.
@@ -10,19 +10,20 @@ replace credential revocation when a real credential is found.
 
 ## Current decision
 
-**Publication remains blocked pending GitHub's retained-reference cleanup.**
+**The retained-history blocker is cleared; publication still requires the exact
+final candidate checks.**
 
 The repository-controlled branches and tags were rewritten and pushed on
-August 28, 2026. A clean reconstruction of the publishable namespace passes
-both the public-repository check and Gitleaks across all history. A fresh mirror
-of GitHub still exposes the old objects through 94 server-owned
-`refs/pull/*/head` references. Those references retain 18 forbidden internal
-paths and two synthetic PEM delimiter fragments from `problems.md`. Repository
-administrators cannot update or delete those refs directly, so GitHub Support
-must purge them and invalidate cached views before publication.
+August 28, 2026. GitHub Support subsequently removed the affected pull-request
+references, ran server-side garbage collection, and cleared the repository
+cache. On August 31, a fresh disposable mirror of GitHub passed the complete
+public-repository scan with 47 refs, 30,250 reachable objects, 17,154 blobs,
+zero unexpected unreachable objects, and no finding. Its inventory SHA-256 was
+`8e34b3b57e97f3c7e5f8fd9ab3dd4d76533d7ae11d25fcbf393ae2ff1ef9631c`.
 
 The canonical repository and its GHCR package remain private. Do not change
-either visibility until a fresh remote scan passes with no finding.
+either visibility until the exact final candidate has passed CI, artifact
+verification, and another fresh remote scan.
 
 ## History rewrite evidence
 
@@ -59,7 +60,7 @@ or credential fingerprint.
 
 | Finding class | Classification | Required action | State |
 | --- | --- | --- | --- |
-| Two PEM delimiter fragments in historical `problems.md` blobs | Synthetic, escaped test examples. Reconstructed payloads are 66 bytes and cannot be parsed as private keys. | Remove from public history; no credential rotation. | Removed from controlled refs; GitHub PR-ref purge pending. |
+| Two PEM delimiter fragments in historical `problems.md` blobs | Synthetic, escaped test examples. Reconstructed payloads are 66 bytes and cannot be parsed as private keys. | Remove from public history; no credential rotation. | Removed from controlled refs and GitHub-retained PR refs. |
 | APNs delimiter in historical `scripts/extract-apns-secret.mjs` | Converter example, not a key payload; it cannot be parsed as a private key. | Remove the obsolete internal helper from public history. | Complete. |
 | Provider-token and private-key samples in scanner/redaction tests | Deterministic, non-operational fixtures. | Keep narrow rule-and-path classifications; never exclude the test tree broadly. | Complete. |
 | Identifier in historical `scripts/seed-inbox.mjs` | Account identifier, not an authentication credential. The script and identifier are unnecessary for distribution. | Remove every historical version. | Complete. |
@@ -68,18 +69,13 @@ No parseable private key or active token was found in the rewritten namespace.
 The scanner output remains redacted; only aggregate evidence belongs in issue
 tracking or this repository.
 
-## GitHub retained-data escalation
+## GitHub retained-data cleanup
 
-The Support request must identify `mangue-dev/minddy`, state that 94 affected
-server-owned pull-request refs remain after a sensitive-data rewrite, and ask
-GitHub to remove the retired objects from PR refs, cached commit views, source
-archives, Actions caches, and server garbage-collection roots. It must include
-the two `git-filter-repo` first-changed commit identifiers without including any
-removed content or secret-shaped sample.
-
-After GitHub confirms cleanup, rerun the remote scanner from a disposable fresh
-mirror. Publication remains blocked unless it reports zero findings and zero
-unexpected unreachable objects.
+GitHub Support confirmed that it removed the affected pull-request references,
+ran garbage collection, and cleared the repository cache. The required
+post-cleanup disposable-mirror scan passed. Any future sensitive-data incident
+must still follow the removal policy and treat exposed credentials as
+compromised even when GitHub can remove retained objects.
 
 ## Current-tree publication review
 
@@ -109,7 +105,7 @@ rule-and-path pairs. There is no blanket test-tree exclusion.
 
 Before the final visibility change:
 
-1. obtain GitHub confirmation and repeat the fresh-mirror scan;
+1. retain the GitHub cleanup confirmation and passing fresh-mirror inventory;
 2. build and publish one immutable private release candidate from the rewritten
    production SHA;
 3. verify its source archives, manifests, checksums, OCI digest and signature,
