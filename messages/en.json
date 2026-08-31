@@ -2458,7 +2458,7 @@
     "fileDeleted": "Deleted {file}",
     "fileEdited": "Edited {file}",
     "reviewChangesShort": "Review",
-    "filesShowMore": "See more",
+    "filesShowMore": "{count, plural, one {View # more file} other {View # more files}}",
     "filesListTruncated": "List truncated",
     "diffTitle": "Session changes",
     "diffDescription": "The work the Numo agent has pushed on this session's branch.",

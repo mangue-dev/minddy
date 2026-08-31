@@ -2458,7 +2458,7 @@
     "fileDeleted": "Supprimé {file}",
     "fileEdited": "Modifié {file}",
     "reviewChangesShort": "Vérifier",
-    "filesShowMore": "En voir plus",
+    "filesShowMore": "{count, plural, one {Voir # fichier de plus} other {Voir # fichiers de plus}}",
     "filesListTruncated": "Liste tronquée",
     "diffTitle": "Modifications de la session",
     "diffDescription": "Le travail poussé par l'agent Numo sur la branche de cette session.",

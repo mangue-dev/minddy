@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { FilePen } from "lucide-react";
+import { ChevronDown, ChevronUp, Diff } from "lucide-react";
 import { Button, cn } from "mangue-ui";
 import type { AgentFileChange } from "@/lib/agent-api";
 import { changeTotals } from "@/lib/agent-changed-files";
 import { DiffCounters, FilePathLabel } from "@/components/pull-requests/pr-file-marks";
 
 const INITIAL_VISIBLE_FILES = 5;
-const MORE_FILES = 10;
 
 type ChangeKind = "created" | "deleted" | "edited";
 
@@ -45,11 +44,16 @@ function FileRow({
 }) {
   const content = (
     <>
-      <FilePathLabel path={file.path} previousPath={file.previousPath} />
+      <FilePathLabel
+        path={file.path}
+        previousPath={file.previousPath}
+        className="text-sm"
+      />
       <DiffCounters
         additions={file.additions}
         deletions={file.deletions}
         hideEmpty
+        className="text-sm"
       />
     </>
   );
@@ -59,21 +63,21 @@ function FileRow({
       <button
         type="button"
         onClick={() => onOpenFile(file.path)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+        className="flex w-full items-center gap-2 bg-background px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
       >
         {content}
       </button>
     );
   }
 
-  return <div className="flex w-full items-center gap-2 px-3 py-2">{content}</div>;
+  return <div className="flex w-full items-center gap-2 bg-background px-3 py-2.5">{content}</div>;
 }
 
 /**
  * Final map of files changed under the response of a round.
  *
  * The summary remains visible with a short list: five files initially, then
- * ten more with each request. The full diff remains accessible via Review;
+ * all remaining files when expanded. The full diff remains accessible via Review;
  * clicking a line directly opens the corresponding file in that same
  * sidebar.
  */
@@ -91,7 +95,7 @@ export function ChangedFilesBlock({
   className?: string;
 }) {
   const t = useTranslations("Agent");
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_FILES);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (files.length === 0) return null;
 
@@ -101,16 +105,21 @@ export function ChangedFilesBlock({
     files.length === 1
       ? t(SINGLE_FILE_KEYS[kind], { file: fileName(files[0].path) })
       : t(SUMMARY_KEYS[kind], { count: files.length });
-  const visibleFiles = files.length === 1 ? [] : files.slice(0, visibleCount);
-  const hasMore = visibleCount < files.length;
+  const visibleFiles =
+    files.length === 1
+      ? []
+      : isExpanded
+        ? files
+        : files.slice(0, INITIAL_VISIBLE_FILES);
+  const hasMore = files.length > INITIAL_VISIBLE_FILES;
 
   const reviewAction = onReview ? (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="sm"
       onClick={onReview}
-      className="h-7 px-2 text-xs"
+      className="h-7 px-2 text-sm"
     >
       {t("reviewChangesShort")}
     </Button>
@@ -121,18 +130,18 @@ export function ChangedFilesBlock({
       <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/50">
-            <FilePen className="size-5 text-muted-foreground" />
+            <Diff className="size-5 text-muted-foreground" aria-hidden />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">{summary}</p>
-            <DiffCounters additions={additions} deletions={deletions} className="mt-0.5 text-xs" />
+            <DiffCounters additions={additions} deletions={deletions} className="mt-0.5 text-sm" />
           </div>
         </div>
         {reviewAction ? <div className="shrink-0">{reviewAction}</div> : null}
       </div>
 
       {visibleFiles.length > 0 ? (
-        <div className="divide-y divide-border">
+        <div>
           {visibleFiles.map((file) => (
             <FileRow key={`${file.status}:${file.path}`} file={file} onOpenFile={onOpenFile} />
           ))}
@@ -142,15 +151,17 @@ export function ChangedFilesBlock({
       {hasMore ? (
         <button
           type="button"
-          onClick={() => setVisibleCount((count) => count + MORE_FILES)}
-          className="w-full border-t border-border px-3 py-2 text-left text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-expanded={isExpanded}
+          className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
         >
-          {t("filesShowMore")}
+          <span>{t("filesShowMore", { count: files.length - INITIAL_VISIBLE_FILES })}</span>
+          {isExpanded ? <ChevronUp className="size-4 shrink-0" aria-hidden /> : <ChevronDown className="size-4 shrink-0" aria-hidden />}
         </button>
       ) : null}
 
       {truncated ? (
-        <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+        <p className="border-t border-border px-3 py-1.5 text-sm text-muted-foreground">
           {t("filesListTruncated")}
         </p>
       ) : null}

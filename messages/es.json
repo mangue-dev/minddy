@@ -2456,7 +2456,7 @@
     "fileDeleted": "Suprimido {file}",
     "fileEdited": "Edición {file}",
     "reviewChangesShort": "Revisión",
-    "filesShowMore": "Ver más",
+    "filesShowMore": "{count, plural, one {Ver # archivo más} other {Ver # archivos más}}",
     "filesListTruncated": "Lista truncada",
     "diffTitle": "Cambios en la sesión",
     "diffDescription": "El trabajo que el agente Numo ha enviado a la rama de esta sesión.",
