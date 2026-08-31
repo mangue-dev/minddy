@@ -3493,6 +3493,7 @@
     "confirmCloseDescription": "Fecha o PR sem mesclá-lo e move o problema de volta para Todo.",
     "noDiff": "Nenhum diff para mostrar.",
     "fileCount": "{count, plural, one {# arquivo} other {# arquivos}}",
+    "displayOptions": "Exibição",
     "unified": "Unificado",
     "split": "Dividir",
     "viewOnGithub": "Ver no GitHub",

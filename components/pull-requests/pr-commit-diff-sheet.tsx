@@ -2,11 +2,12 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
+  SidePanel,
+  SidePanelBody,
+  SidePanelContent,
+  SidePanelDescription,
+  SidePanelHeader,
+  SidePanelTitle,
   Spinner,
 } from "mangue-ui";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
@@ -54,19 +55,16 @@ export function PrCommitDiffSheet({
   const title = (diff?.message ?? "").split("\n")[0].trim();
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      {/* Forced width in `!` for the same reason as the AgentDiffSheet: the
-          Sheet's default classes gain specificity, and a diff in
-          `max-w-sm` is unreadable. */}
-      <SheetContent
+    <SidePanel open={open} onOpenChange={onOpenChange}>
+      <SidePanelContent
         side="right"
-        className="flex !w-full flex-col gap-0 sm:!w-[92%] sm:!max-w-[880px]"
+        className="w-[min(880px,calc(100vw-2rem))]"
       >
-        <SheetHeader className="shrink-0 border-b border-border pr-12">
-          <SheetTitle className="truncate">
+        <SidePanelHeader>
+          <SidePanelTitle className="truncate">
             {title || t("commitDiffTitle")}
-          </SheetTitle>
-          <SheetDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          </SidePanelTitle>
+          <SidePanelDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono text-xs">{sha?.slice(0, 7)}</span>
             {diff ? (
               <span className="inline-flex items-center gap-1.5 font-medium tabular-nums">
@@ -78,13 +76,13 @@ export function PrCommitDiffSheet({
                 </span>
               </span>
             ) : null}
-          </SheetDescription>
-        </SheetHeader>
+          </SidePanelDescription>
+        </SidePanelHeader>
         {/* No padding at the TOP of the scrolling container: `position: sticky` is
             holds on its contents, not on its edge, and the file header of the
             diff would stop 16 px too low (MIN-182). It is given to each
             branch, where it scrolls with the content. */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <SidePanelBody className="min-h-0 px-4 pt-0 pb-4">
           {loading ? (
             <div className="flex h-full items-center justify-center">
               <Spinner className="size-5 text-muted-foreground" />
@@ -94,7 +92,7 @@ export function PrCommitDiffSheet({
           ) : diff.files.length === 0 ? (
             // An empty commit, or a merge commit whose first parent
             // already carries everything: the forge responds with zero files, it is not a
-            // panne.
+            // failure.
             <p className="pt-4 text-sm text-muted-foreground">{t("commitDiffEmpty")}</p>
           ) : (
             <PrDiff
@@ -106,8 +104,8 @@ export function PrCommitDiffSheet({
               className="pt-4"
             />
           )}
-        </div>
-      </SheetContent>
-    </Sheet>
+        </SidePanelBody>
+      </SidePanelContent>
+    </SidePanel>
   );
 }

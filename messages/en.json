@@ -3495,6 +3495,7 @@
     "confirmCloseDescription": "Closes the PR without merging it and moves the issue back to Todo.",
     "noDiff": "No diff to show.",
     "fileCount": "{count, plural, one {# file} other {# files}}",
+    "displayOptions": "Display",
     "unified": "Unified",
     "split": "Split",
     "viewOnGithub": "View on GitHub",

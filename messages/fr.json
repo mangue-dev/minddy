@@ -3495,6 +3495,7 @@
     "confirmCloseDescription": "La PR sera fermée sans être fusionnée et le ticket repassera en À faire.",
     "noDiff": "Aucun diff à afficher.",
     "fileCount": "{count, plural, one {# fichier} other {# fichiers}}",
+    "displayOptions": "Affichage",
     "unified": "Unifié",
     "split": "Côte à côte",
     "viewOnGithub": "Voir sur GitHub",

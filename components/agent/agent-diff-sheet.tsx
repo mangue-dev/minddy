@@ -3,11 +3,12 @@
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
+  SidePanel,
+  SidePanelBody,
+  SidePanelContent,
+  SidePanelDescription,
+  SidePanelHeader,
+  SidePanelTitle,
   Spinner,
 } from "mangue-ui";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
@@ -20,9 +21,8 @@ import type { PullRequestFile } from "@/lib/agent-api";
 /**
  * Diff view IN agent conversation: session changes without
  * leave the thread nor wait for the PR. Open by clicking a block file
- * “changed files” (wire as header), in a Sheet placed ABOVE the
- * conversation — which itself sometimes lives in Sheet (outcome modal): Radix
- * empile.
+ * “changed files” (wire as header), in a floating side panel placed ABOVE the
+ * conversation — which itself sometimes lives in a sheet (outcome modal).
  *
  * In the cloud, the content comes from /api/agent-runs/[runId]/diff: microVM during
  * the lathe, forge at rest. Locally, this route cannot read the disk of
@@ -69,7 +69,7 @@ export function AgentDiffSheet({
 
   /**
    * We arrive ON the clicked file. The anchor only exists once the diff is painted,
-   * and the diff arrives after the opening of the Sheet: the jump therefore waits for both.
+   * and the diff arrives after the panel opens: the jump therefore waits for both.
    *
    * Only once per opening (`jumped`), and that's the point: the difference
    * re-poll every 7 seconds during the round, and re-jump with each response
@@ -91,43 +91,42 @@ export function AgentDiffSheet({
   }, [open, focusPath, files]);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      {/* Forced width in `!`: the default classes of the Sheet (`data-[side=right]:w-3/4`,
-          `…sm:max-w-sm`) carry a higher specificity - without important, the view
-          diff would fall back to max-w-sm, unreadable for a diff. */}
-      <SheetContent
+    <SidePanel open={open} onOpenChange={onOpenChange}>
+      <SidePanelContent
         side="right"
-        className="flex !w-full flex-col gap-0 sm:!w-[92%] sm:!max-w-[880px]"
+        className="w-[min(880px,calc(100vw-2rem))]"
       >
-        <SheetHeader className="shrink-0 border-b border-border pr-12">
-          <SheetTitle>{t("diffTitle")}</SheetTitle>
+        <SidePanelHeader>
+          <SidePanelTitle>{t("diffTitle")}</SidePanelTitle>
           {/* What the line first says is WHERE this diff is going (origin → session).
               When it comes from the sandbox, it also says what it contains
               more than the forge: the work of the lathe, not yet advanced. */}
           {local ? (
-            <SheetDescription className="truncate text-xs">
+            <SidePanelDescription className="truncate text-xs">
               {branchName ? <span className="font-mono">{branchName}</span> : null}
               {branchName ? <span>{" · "}</span> : null}
               <span className={live ? "text-shimmer" : undefined}>
                 {t(live ? "diffLocalLive" : "diffLocalDescription")}
               </span>
-            </SheetDescription>
+            </SidePanelDescription>
           ) : branchName ? (
-            <SheetDescription className="truncate text-xs">
+            <SidePanelDescription className="truncate text-xs">
               <span className="font-mono">
                 {baseBranch ? `${baseBranch} → ${branchName}` : branchName}
               </span>
               {live ? <span className="text-shimmer">{` · ${t("diffLive")}`}</span> : null}
-            </SheetDescription>
+            </SidePanelDescription>
           ) : (
-            <SheetDescription>{live ? t("diffLive") : t("diffDescription")}</SheetDescription>
+            <SidePanelDescription>
+              {live ? t("diffLive") : t("diffDescription")}
+            </SidePanelDescription>
           )}
-        </SheetHeader>
+        </SidePanelHeader>
         {/* No padding at the TOP of the scrolling container: `position: sticky` is
             holds on its contents, not on its edge, and the file header of the
             diff would stop 16 px too low (MIN-182). It is given to each
             branch, where it scrolls with the content. */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <SidePanelBody className="min-h-0 px-4 pt-0 pb-4">
           {loading ? (
             <div className="flex h-full items-center justify-center">
               <Spinner className="size-5 text-muted-foreground" />
@@ -161,8 +160,8 @@ export function AgentDiffSheet({
               </PrEndpointProvider>
             </>
           )}
-        </div>
-      </SheetContent>
-    </Sheet>
+        </SidePanelBody>
+      </SidePanelContent>
+    </SidePanel>
   );
 }

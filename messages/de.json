@@ -3493,6 +3493,7 @@
     "confirmCloseDescription": "Schließt die PR, ohne sie zusammenzuführen, und verschiebt das Problem zurück nach Todo.",
     "noDiff": "Kein Unterschied zum Anzeigen.",
     "fileCount": "{count, plural, one {# Datei} other {# Dateien}}",
+    "displayOptions": "Darstellung",
     "unified": "Vereinheitlicht",
     "split": "Teilen",
     "viewOnGithub": "Auf GitHub anzeigen",

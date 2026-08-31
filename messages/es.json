@@ -3493,6 +3493,7 @@
     "confirmCloseDescription": "Cierra la PR sin fusionarla y mueve la incidencia de nuevo a Todo.",
     "noDiff": "No hay diferencia que mostrar.",
     "fileCount": "{count, plural, one {# archivo} other {# archivos}}",
+    "displayOptions": "Visualización",
     "unified": "Unificado",
     "split": "En paralelo",
     "viewOnGithub": "Ver en GitHub",

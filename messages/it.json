@@ -3493,6 +3493,7 @@
     "confirmCloseDescription": "Chiude la pull request senza unirla e riporta il ticket in Da fare.",
     "noDiff": "Nessun diff da mostrare.",
     "fileCount": "{count, plural, one {# file} other {# file}}",
+    "displayOptions": "Visualizzazione",
     "unified": "Unificato",
     "split": "Diviso",
     "viewOnGithub": "Visualizzazione su GitHub",
