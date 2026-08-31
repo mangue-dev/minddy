@@ -2416,6 +2416,21 @@ describe("un tour sur la machine de quelqu'un", () => {
   const resultOf = (callId: string) =>
     h.events.find((e) => e.type === "tool_result" && e.payload.id === callId);
 
+  it("persists an authoritative diff snapshot when a local turn is interrupted", async () => {
+    h.tick = 3_000;
+    h.interrupt = true;
+    const report = await runLocal({ repoMode: "current" });
+
+    expect(report.status).toBe("interrupted");
+    expect(report.changed?.diff).toMatchObject({ files: [], snapshot: true });
+    const artifact = h.files.find((file) => file.path.endsWith("/local-diff.json"));
+    expect(artifact).toBeTruthy();
+    expect(JSON.parse(artifact?.content ?? "{}")).toMatchObject({
+      files: [],
+      snapshot: true,
+    });
+  });
+
   it("n'exporte RIEN du journal de ses tools", async () => {
     await runLocal();
     // Neither the export on the opencode side, nor the writing on the base side: the complete output of

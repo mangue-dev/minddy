@@ -15,7 +15,10 @@ import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { runPrEndpoint } from "@/lib/agent-api";
 import { fileAnchorId } from "@/lib/pr-file-tree";
-import { useAgentRunDiffQuery } from "@/lib/use-agent-runs";
+import {
+  useAgentRunDiffQuery,
+  useDesktopAgentRunDiffQuery,
+} from "@/lib/use-agent-runs";
 import type { PullRequestFile } from "@/lib/agent-api";
 
 /**
@@ -61,11 +64,17 @@ export function AgentDiffSheet({
 }) {
   const t = useTranslations("Agent");
   const remote = useAgentRunDiffQuery(runId, open && !local, working);
-  const files = local ? localFiles : remote.files;
+  const desktop = useDesktopAgentRunDiffQuery(runId, open && local, working);
+  // During a turn, Realtime is fresher. At rest, the shell snapshot is the
+  // authoritative and larger source; old shells transparently keep using the
+  // event payload that was already available before this capability existed.
+  const settledLocal = !working ? desktop.diff : null;
+  const files = local ? (settledLocal?.files ?? localFiles) : remote.files;
   const provider = local ? undefined : remote.provider;
   const url = local ? null : remote.url;
   const live = local ? working && files.length > 0 : remote.live;
-  const loading = local ? false : remote.loading;
+  const loading = local ? desktop.loading && localFiles.length === 0 : remote.loading;
+  const truncated = local ? (settledLocal?.truncated ?? localTruncated) : false;
 
   /**
    * We arrive ON the clicked file. The anchor only exists once the diff is painted,
@@ -144,7 +153,7 @@ export function AgentDiffSheet({
             // it passes through the facade indexed by the run. Composing it does not
             // does not open — this view is read-only.
             <>
-              {local && localTruncated ? (
+              {local && truncated ? (
                 <p className="pt-4 text-xs text-muted-foreground">{t("diffLocalTruncated")}</p>
               ) : null}
               <PrEndpointProvider endpoint={runPrEndpoint(runId)}>

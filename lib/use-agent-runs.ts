@@ -20,6 +20,12 @@ import {
   type PrEndpoint,
   type PullRequestStateFilter,
 } from "./agent-api";
+import { getDesktopBridge } from "./desktop/bridge";
+import {
+  parseAgentLocalDiff,
+  type AgentLocalDiff,
+} from "./agent-local-diff";
+import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 
 /** Cache key for agent runs of an issue. */
 export function issueAgentRunsQueryKey(issueId: string) {
@@ -209,6 +215,38 @@ export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: b
     url: data?.url ?? null,
     live: data?.live === true,
     loading: enabled && isPending,
+  };
+}
+
+/**
+ * Full local diff retained by the desktop shell. It is read only while the
+ * review panel is open, and the settled key forces one final disk read when a
+ * running turn stops. Older shells return no source and the caller falls back
+ * to the persisted event payload.
+ */
+export function useDesktopAgentRunDiffQuery(
+  runId: string,
+  enabled: boolean,
+  working: boolean,
+): { diff: AgentLocalDiff | null; loading: boolean } {
+  const bridge = getDesktopBridge();
+  const supported = Boolean(bridge?.localRunDiff);
+  const { data, isPending } = useQuery({
+    queryKey: ["desktop-agent-run-diff", runId, working ? "live" : "settled"],
+    queryFn: async () => {
+      const raw = await getDesktopBridge()?.localRunDiff?.({ runId });
+      return raw
+        ? parseAgentLocalDiff(raw, { patchCap: DESKTOP_LOCAL_DIFF_PATCH_CAP })
+        : null;
+    },
+    enabled: enabled && supported,
+    refetchOnMount: "always",
+    refetchInterval: enabled && working ? 7000 : false,
+    retry: false,
+  });
+  return {
+    diff: data ?? null,
+    loading: enabled && supported && isPending,
   };
 }
 

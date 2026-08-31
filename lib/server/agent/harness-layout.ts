@@ -120,6 +120,17 @@ export function vmJobPath(layout: HarnessLayout): string {
   return `${layout.harnessDir}/job.json`;
 }
 
+/**
+ * Durable local diff snapshot for the conversation review surface.
+ *
+ * It lives outside the repository so it can never become part of the agent's
+ * commit. The desktop shell reads it lazily when the diff panel opens; cloud
+ * runs may write the same path inside their disposable VM, but never expose it.
+ */
+export function vmLocalDiffPath(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/local-diff.json`;
+}
+
 /** The root of the disk of a microVM run. One VM per run: that alone is enough. */
 export const CLOUD_SANDBOX_ROOT = "/vercel/sandbox";
 

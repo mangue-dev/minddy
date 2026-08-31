@@ -97,6 +97,7 @@ import {
   detachLocalRepo,
   localBranches,
 } from "./local-repo";
+import { readLocalRunDiff } from "./local-run-diff";
 import { buildAppMenu, copyDiagnosticReportWithConfirmation } from "./menu";
 import { openServerPicker } from "./server-picker";
 import {
@@ -1109,6 +1110,10 @@ function registerIpc(): void {
         )
       : [];
   });
+
+  ipcMain.handle("minddy:local-run-diff:read", (_event, input: unknown) =>
+    readLocalRunDiff(input),
+  );
 
   // A remote page does not receive a network proxy through the Electron bridge. She
   // can only request this bounded discovery: `local-models.ts` accepts

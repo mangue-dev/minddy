@@ -6,6 +6,7 @@ import {
   selectAgentSessionDiff,
   settledAgentLocalDiff,
 } from "./agent-local-diff";
+import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 import type { AgentRunEvent } from "./agent-api";
 
 function event(seq: number, diff: unknown): AgentRunEvent {
@@ -33,6 +34,16 @@ describe("a run's local diff", () => {
       ],
       truncated: false,
     });
+  });
+
+  it("allows the desktop reader to retain a larger on-demand patch", () => {
+    const patch = "x".repeat(300_000);
+    expect(parseAgentLocalDiff({
+      files: [{ filename: "large.ts", patch }],
+    }).files[0]?.patch).toHaveLength(240_000);
+    expect(parseAgentLocalDiff({
+      files: [{ filename: "large.ts", patch }],
+    }, { patchCap: DESKTOP_LOCAL_DIFF_PATCH_CAP }).files[0]?.patch).toHaveLength(300_000);
   });
 
   it("keeps the latest patch for a file edited across several turns", () => {

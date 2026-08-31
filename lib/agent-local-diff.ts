@@ -3,6 +3,7 @@ import type {
   AgentRunEvent,
   PullRequestFile,
 } from "./agent-api";
+import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 
 /** Form transported by the local direct and by the `files_changed` event. */
 export interface AgentLocalDiff {
@@ -16,11 +17,17 @@ const PATCH_CAP = 240_000;
 const STATUSES = new Set(["added", "removed", "renamed", "modified"]);
 
 /** Client boundary: a historical event or malformed Realtime message should never feed directly to the diff renderer. */
-export function parseAgentLocalDiff(raw: unknown): AgentLocalDiff {
+export function parseAgentLocalDiff(
+  raw: unknown,
+  opts: { patchCap?: number } = {},
+): AgentLocalDiff {
   const value = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   const rows = Array.isArray(value.files) ? value.files : [];
   const files: PullRequestFile[] = [];
-  let remaining = PATCH_CAP;
+  let remaining = Math.max(
+    1,
+    Math.min(opts.patchCap ?? PATCH_CAP, DESKTOP_LOCAL_DIFF_PATCH_CAP),
+  );
   let truncated = value.truncated === true;
   for (const item of rows) {
     if (!item || typeof item !== "object") continue;

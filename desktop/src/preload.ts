@@ -251,6 +251,12 @@ const bridge: DesktopBridge = {
     >;
   },
 
+  localRunDiff(input) {
+    return ipcRenderer.invoke("minddy:local-run-diff:read", input) as Promise<
+      Awaited<ReturnType<NonNullable<DesktopBridge["localRunDiff"]>>>
+    >;
+  },
+
   discoverLocalModels(input) {
     return ipcRenderer.invoke("minddy:local-models:discover", input) as Promise<
       Awaited<ReturnType<DesktopBridge["discoverLocalModels"]>>
