@@ -15,6 +15,18 @@ const trash = readFileSync(
   join(process.cwd(), "app/(app)/trash/page.tsx"),
   "utf8",
 );
+const billing = readFileSync(
+  join(process.cwd(), "app/(app)/billing/page.tsx"),
+  "utf8",
+);
+const statistics = readFileSync(
+  join(process.cwd(), "app/(app)/statistics/page.tsx"),
+  "utf8",
+);
+const admin = readFileSync(
+  join(process.cwd(), "components/admin/admin-dashboard.tsx"),
+  "utf8",
+);
 
 function tsxFiles(root: string): string[] {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
@@ -51,6 +63,19 @@ describe("application content header", () => {
     expect(trash).toContain("<AppContentHeader");
     expect(inbox).not.toContain('<header className="flex h-[60px]');
     expect(trash).not.toContain('<header className="flex h-[60px]');
+  });
+
+  it("uses fixed headers and faded scroll panes on account-level pages", () => {
+    for (const page of [billing, statistics, admin]) {
+      expect(page).toContain("<AppContentHeader");
+      expect(page).toContain("useScrollFade<HTMLDivElement>()");
+      expect(page).toContain("{...contentFade.scrollProps}");
+    }
+
+    expect(billing).toContain('t("manageSubscription")');
+    expect(billing).not.toContain('t("pageTitle")');
+    expect(statistics).not.toContain('t("subtitle")');
+    expect(admin).not.toContain('className="md:hidden"\n          contentClassName');
   });
 
   it("keeps every 60 px application strip on an audited chrome contract", () => {

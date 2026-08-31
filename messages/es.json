@@ -1541,7 +1541,6 @@
   "Stats": {
     "title": "Estadísticas",
     "titlePrefix": "Tus estadísticas,",
-    "subtitle": "Aquí está el rastro de todo lo que has avanzado.",
     "yearStory": "Tus últimos 12 meses",
     "heroTotalLabel": "incidencias y tareas completadas en los últimos 12 meses",
     "streakStory": "{count, plural, =0 {Todavía no hay ninguna racha} one {# día consecutivo} other {# días consecutivos}}",

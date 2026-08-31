@@ -1541,7 +1541,6 @@
   "Stats": {
     "title": "Statistiken",
     "titlePrefix": "Ihre Statistiken,",
-    "subtitle": "Hier sehen Sie alles, was Sie erreicht haben.",
     "yearStory": "Ihre letzten 12 Monate",
     "heroTotalLabel": "In den letzten 12 Monaten erledigte Probleme und Aufgaben",
     "streakStory": "{count, plural, =0 {Noch kein Streak} one {# Tag in Folge} other {# Tage in Folge}}",

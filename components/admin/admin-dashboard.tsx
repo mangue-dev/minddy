@@ -299,18 +299,18 @@ export function AdminDashboard() {
  name of the open tab. On desktop the rail is on the screen and the
  is already highlighted. */}
         <AppContentHeader
-          className="md:hidden"
           contentClassName="gap-2 px-4"
         >
           <Button
             variant="ghost"
             size="icon-sm"
+            className="md:hidden"
             aria-label={tCommon("back")}
             onClick={() => setMobileDetail(false)}
           >
             <ChevronLeft />
           </Button>
-          <span className="truncate text-sm font-medium">
+          <span className="truncate text-sm font-medium md:hidden">
             {t(`tabs.${active}`)}
           </span>
         </AppContentHeader>
