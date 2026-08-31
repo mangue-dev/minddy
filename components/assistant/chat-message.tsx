@@ -1,13 +1,19 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import { IconButton, toast } from "mangue-ui";
+import { IconButton, cn, toast } from "mangue-ui";
 import type {
   AssistantMention,
   AssistantMessage,
@@ -30,6 +36,7 @@ import {
   AdaptiveContextRow,
   type AdaptiveContextItem,
 } from "@/components/assistant/adaptive-context-row";
+import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-renderer";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -61,6 +68,9 @@ interface ChatMessageProps {
   showCopyButton?: boolean;
   /** Content placed between an assistant answer and its Copy button. */
   afterContent?: ReactNode;
+  /** Use the fenced-code component from Pages while preserving Streamdown for
+   * the rest of the response. Agent conversations opt into this renderer. */
+  usePageCodeBlock?: boolean;
 }
 
 // ── Copy button ───────────────────────────────────────────────────────
@@ -285,8 +295,18 @@ function UserText({
 // ── Assistant text renderer ───────────────────────────────────────────
 // For assistant responses: AI Elements Response (Streamdown).
 
-function AssistantText({ content }: { content: string }) {
-  return <MessageResponse>{content}</MessageResponse>;
+function AssistantText({
+  content,
+  usePageCodeBlock = false,
+}: {
+  content: string;
+  usePageCodeBlock?: boolean;
+}) {
+  return (
+    <MessageResponse components={usePageCodeBlock ? PAGE_CODE_COMPONENTS : undefined}>
+      {content}
+    </MessageResponse>
+  );
 }
 
 // ── Message components ────────────────────────────────────────────────
@@ -314,6 +334,7 @@ export const ChatMessage = memo(function ChatMessage({
   onSeedCreated,
   showCopyButton = true,
   afterContent,
+  usePageCodeBlock = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
 
@@ -366,8 +387,16 @@ export const ChatMessage = memo(function ChatMessage({
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             {message.content && (
               <>
-                <MessageContent className="chat-selectable relative px-0 py-0 text-sm leading-relaxed text-foreground">
-                  <AssistantText content={message.content} />
+                <MessageContent
+                  className={cn(
+                    "chat-selectable relative px-0 py-0 text-sm leading-relaxed text-foreground",
+                    usePageCodeBlock && "w-full",
+                  )}
+                >
+                  <AssistantText
+                    content={message.content}
+                    usePageCodeBlock={usePageCodeBlock}
+                  />
                 </MessageContent>
                 {afterContent ? <div className="w-full">{afterContent}</div> : null}
                 {showCopyButton && (

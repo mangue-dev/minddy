@@ -112,6 +112,7 @@ export function ChangedFilesBlock({
         ? files
         : files.slice(0, INITIAL_VISIBLE_FILES);
   const hasMore = files.length > INITIAL_VISIBLE_FILES;
+  const hasContentBelowHeader = visibleFiles.length > 0 || hasMore || truncated;
 
   const reviewAction = onReview ? (
     <Button
@@ -127,7 +128,12 @@ export function ChangedFilesBlock({
 
   return (
     <div className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}>
-      <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 px-3 py-2.5",
+          hasContentBelowHeader && "border-b border-border",
+        )}
+      >
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/50">
             <Diff className="size-5 text-muted-foreground" aria-hidden />

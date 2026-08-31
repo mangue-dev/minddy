@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
@@ -16,6 +16,7 @@ import {
   fetchPullRequestCommitsApi,
   fetchPrReviewCommentsApi,
   isAgentRunWorking,
+  type AgentSessionListItem,
   type PrEndpoint,
   type PullRequestStateFilter,
 } from "./agent-api";
@@ -315,6 +316,32 @@ export function useAllPullRequestsQuery(
 
 /** Cache key for the global list of agent sessions (Agents page). */
 export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
+
+type AgentSessionsData = { sessions: AgentSessionListItem[] };
+
+/** Update one conversation's pinned state in the shared sessions cache.
+ * The Agents list derives both its pinned group and its project groups from
+ * this query, so one synchronous cache write moves the row immediately. The
+ * previous field value is returned for a targeted rollback if the PATCH fails. */
+export function patchAgentConversationPinnedInCache(
+  queryClient: QueryClient,
+  runId: string,
+  pinned: boolean,
+): boolean | undefined {
+  const previous = queryClient.getQueryData<AgentSessionsData>(
+    allAgentSessionsQueryKey,
+  );
+  const session = previous?.sessions.find((item) => item.runId === runId);
+  if (!previous || !session) return undefined;
+
+  queryClient.setQueryData<AgentSessionsData>(allAgentSessionsQueryKey, {
+    ...previous,
+    sessions: previous.sessions.map((item) =>
+      item.runId === runId ? { ...item, pinned } : item,
+    ),
+  });
+  return session.pinned;
+}
 
 /** Lightweight cache key for the persistent navigation badge. */
 export const openPullRequestCountQueryKey = ["pull-requests", "open-count"] as const;

@@ -166,6 +166,7 @@ describe("TipTap code block node view", () => {
     const wrap = editor.view.dom.querySelector<HTMLButtonElement>(".code-block-node-wrap");
     expect(trigger?.textContent).toContain("TypeScript");
     expect(trigger?.querySelector(".lucide-code-2")).toBeNull();
+    expect(trigger?.querySelector(".lucide-chevrons-up-down")).not.toBeNull();
     expect(wrap?.getAttribute("aria-pressed")).toBe("true");
 
     wrap?.click();

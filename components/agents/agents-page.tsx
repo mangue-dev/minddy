@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Dialog,
@@ -36,7 +37,11 @@ import {
   type ProjectGroup,
 } from "@/components/sidebar-project-group";
 import { matchesFilter } from "@/components/sidebar-filter-field";
-import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
+import {
+  allAgentSessionsQueryKey,
+  patchAgentConversationPinnedInCache,
+  useAgentSessionsQuery,
+} from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
@@ -565,6 +570,7 @@ export function AgentsPage() {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { sessions, loading, refetch } = useAgentSessionsQuery();
   // Projects where the agent can work (linked repository) — only they carry the
@@ -616,6 +622,9 @@ export function AgentsPage() {
   const [renameTarget, setRenameTarget] = useState<AgentSessionListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentSessionListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Ignore an obsolete response if the same conversation is toggled again
+  // before its first pin request settles.
+  const pinMutationSequence = useRef(new Map<string, number>());
   // Go back to composing it NEW with each “New” (and with each pre-written text
   // received): without this, a message typed and then abandoned would drag on in the conversation
   // next “virgin” — which would no longer be.
@@ -891,14 +900,35 @@ export function AgentsPage() {
     await refetch();
   };
 
-  /** Pin a conversation for this account, then move it back to the top of the list. */
-  const togglePinnedSession = async (session: AgentSessionListItem) => {
-    try {
-      await setAgentConversationPinnedApi(session.runId, !session.pinned);
-      await refetch();
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
+  /** Move the conversation immediately, then persist the new pinned state.
+   * A rejected write restores only this conversation so concurrent optimistic
+   * changes to other rows remain intact. */
+  const togglePinnedSession = (session: AgentSessionListItem) => {
+    const nextPinned = !session.pinned;
+    const sequence = (pinMutationSequence.current.get(session.runId) ?? 0) + 1;
+    pinMutationSequence.current.set(session.runId, sequence);
+    const previousPinned = patchAgentConversationPinnedInCache(
+      queryClient,
+      session.runId,
+      nextPinned,
+    );
+
+    void setAgentConversationPinnedApi(session.runId, nextPinned)
+      .then(() => {
+        if (pinMutationSequence.current.get(session.runId) !== sequence) return;
+        void queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey });
+      })
+      .catch((err) => {
+        if (pinMutationSequence.current.get(session.runId) !== sequence) return;
+        if (previousPinned !== undefined) {
+          patchAgentConversationPinnedInCache(
+            queryClient,
+            session.runId,
+            previousPinned,
+          );
+        }
+        toast.error((err as Error).message);
+      });
   };
 
   /**

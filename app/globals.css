@@ -573,25 +573,30 @@ html[data-desktop-app] .zen-nav-hotzone {
   pointer-events: none;
 }
 
-/* TipTap code blocks use a node view so the header and copy control stay
-   available on pages and in the live editors. The code element remains the
-   editable content DOM; only the surrounding chrome is custom. */
-.ProseMirror .code-block-node-view {
-  --code-comment: #8b949e;
-  --code-keyword: #ff7b72;
-  --code-string: #a5d6ff;
-  --code-constant: #79c0ff;
-  --code-title: #d2a8ff;
-  --code-attr: #79c0ff;
-  --code-tag: #7ee787;
+/* Pages and Agent responses share this code-block surface. In TipTap, the code
+   element remains the editable content DOM; the same surrounding chrome is
+   reused with read-only highlighted content in an Agent conversation. */
+.code-block-node-view {
+  --code-block-border: #d0d7de;
+  --code-block-background: #f6f8fa;
+  --code-block-foreground: #1f2328;
+  --code-block-muted: #59636e;
+  --code-block-hover: rgb(31 35 40 / 8%);
   margin-block: 0.5rem;
   overflow: hidden;
-  border: 1px solid #343434;
+  border: 1px solid var(--code-block-border);
   border-radius: 1.5rem;
-  background: #202020;
-  color: #f5f5f5;
+  background: var(--code-block-background);
+  color: var(--code-block-foreground);
 }
-.ProseMirror .code-block-node-view > .code-block-node-header {
+.dark .code-block-node-view {
+  --code-block-border: #343434;
+  --code-block-background: #202020;
+  --code-block-foreground: #f5f5f5;
+  --code-block-muted: #a3a3a3;
+  --code-block-hover: rgb(255 255 255 / 8%);
+}
+.code-block-node-view > .code-block-node-header {
   display: flex;
   min-height: 2.5rem;
   align-items: center;
@@ -600,13 +605,13 @@ html[data-desktop-app] .zen-nav-hotzone {
   background: transparent;
   padding: 1rem 1rem 0.25rem;
 }
-.ProseMirror .code-block-node-language {
+.code-block-node-language {
   min-width: 0;
   flex: 1;
   border: 0;
   outline: 0;
   background: transparent;
-  color: #f5f5f5;
+  color: var(--code-block-foreground);
   cursor: text;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: inherit;
@@ -614,7 +619,8 @@ html[data-desktop-app] .zen-nav-hotzone {
   line-height: 1.2;
   text-transform: lowercase;
 }
-.ProseMirror .code-block-node-language-trigger {
+.code-block-node-language-trigger,
+.code-block-node-language-label {
   min-width: 0;
   width: max-content;
   max-width: min(24rem, calc(100vw - 2rem));
@@ -622,50 +628,59 @@ html[data-desktop-app] .zen-nav-hotzone {
   justify-content: flex-start;
   gap: 0.375rem;
   padding: 0;
-  color: #f5f5f5;
+  color: var(--code-block-foreground);
   font-size: inherit;
   font-weight: 400;
   line-height: 1.2;
 }
-.ProseMirror .code-block-node-language-trigger > span {
+.code-block-node-language-label {
+  display: flex;
+  height: 2rem;
+  max-width: 18rem;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.code-block-node-language-trigger > span {
   min-width: 0;
   max-width: 18rem;
 }
-.ProseMirror .code-block-node-language:read-only {
+.code-block-node-language:read-only {
   cursor: default;
 }
-.ProseMirror .code-block-node-actions {
+.code-block-node-actions {
   display: flex;
   margin-left: auto;
   align-items: center;
   gap: 0.125rem;
 }
-.ProseMirror .code-block-node-actions button {
-  color: #a3a3a3;
+.code-block-node-actions button {
+  color: var(--code-block-muted);
 }
-.ProseMirror .code-block-node-wrap[data-active="true"],
-.ProseMirror .code-block-node-actions button:hover {
-  background: rgb(255 255 255 / 8%);
-  color: #f5f5f5;
+.code-block-node-wrap[data-active="true"],
+.code-block-node-actions button:hover {
+  background: var(--code-block-hover);
+  color: var(--code-block-foreground);
 }
-.ProseMirror .code-block-node-copy {
+.code-block-node-copy {
   margin-left: auto;
 }
-.ProseMirror .code-block-node-copy[data-copied="true"] {
+.code-block-node-copy[data-copied="true"] {
   color: var(--primary);
 }
-.ProseMirror .code-block-node-copy:hover {
-  background: rgb(255 255 255 / 8%);
-  color: #f5f5f5;
+.code-block-node-copy:hover {
+  background: var(--code-block-hover);
+  color: var(--code-block-foreground);
 }
-.ProseMirror .code-block-node-view > pre {
+.code-block-node-view > pre {
   margin: 0;
   overflow-x: auto;
   border: 0;
   border-radius: 0;
   background: transparent;
   padding: 0.5rem 1rem 1rem;
-  color: #f5f5f5;
+  color: var(--code-block-foreground);
   font-family:
     ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas,
     "Liberation Mono", monospace;
@@ -673,24 +688,22 @@ html[data-desktop-app] .zen-nav-hotzone {
   font-variant-ligatures: none;
   line-height: 1.65;
 }
-.ProseMirror .code-block-node-view[data-wrapped="true"] > pre {
+.code-block-node-view[data-wrapped="true"] > pre {
   overflow-x: hidden;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.ProseMirror .code-block-node-view[data-wrapped="false"] > pre {
+.code-block-node-view[data-wrapped="false"] > pre {
   white-space: pre;
 }
-.ProseMirror
-  .code-block-node-view[data-overflowing="true"][data-expanded="false"]
-  > pre {
+.code-block-node-view[data-overflowing="true"][data-expanded="false"] > pre {
   max-height: 26.25rem;
   overflow-y: hidden;
 }
-.ProseMirror .code-block-node-view > pre > code {
+.code-block-node-view > pre > code {
   font-size: inherit;
 }
-.ProseMirror .code-block-node-expand {
+.code-block-node-expand {
   display: flex;
   min-height: 2.5rem;
   align-items: center;
@@ -698,9 +711,9 @@ html[data-desktop-app] .zen-nav-hotzone {
   background: transparent;
   padding: 0.25rem 1rem 1rem;
 }
-.ProseMirror .code-block-node-expand > button {
+.code-block-node-expand > button {
   gap: 0.25rem;
-  color: #a3a3a3;
+  color: var(--code-block-muted);
   font-size: 0.75rem;
 }
 
