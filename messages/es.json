@@ -4363,7 +4363,7 @@
   "NewVersion": {
     "title": "Una nueva versión está disponible",
     "refresh": "Actualizar",
-    "confirmTitle": "Esta acción actualizará la página actual",
+    "confirmTitle": "Hay una actualización disponible",
     "confirmDescription": "Guarda tu trabajo antes de actualizar la página.",
     "dismiss": "Despedida"
   },

@@ -202,7 +202,7 @@ function SecondarySidebarGutter({
           which crosses the entire screen. */}
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 h-[60px] border-b border-border"
+        className="secondary-sidebar-header-placeholder absolute inset-x-0 top-0 h-[60px] border-b border-border"
       />
       <div
         ref={setSlot}

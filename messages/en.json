@@ -4365,7 +4365,7 @@
   "NewVersion": {
     "title": "A new version is available",
     "refresh": "Refresh",
-    "confirmTitle": "This action will refresh the current page",
+    "confirmTitle": "An update is available",
     "confirmDescription": "Save your work before refreshing the page.",
     "dismiss": "Dismiss"
   },

@@ -4365,7 +4365,7 @@
   "NewVersion": {
     "title": "Une nouvelle version est disponible",
     "refresh": "Rafraîchir",
-    "confirmTitle": "Cette action va rafraîchir la page actuelle",
+    "confirmTitle": "Une mise à jour est disponible",
     "confirmDescription": "Enregistrez votre travail avant de rafraîchir la page.",
     "dismiss": "Fermer"
   },

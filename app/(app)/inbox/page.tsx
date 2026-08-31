@@ -35,6 +35,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
+import { AppContentHeader } from "@/components/app-content-header";
 import {
   AutomationAvatar,
   McpAvatar,
@@ -346,7 +347,7 @@ export default function InboxPage() {
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        <header className="flex h-[60px] shrink-0 items-center justify-end gap-4 px-4 md:px-6">
+        <AppContentHeader contentClassName="justify-end gap-4 px-4 md:px-6">
           <Button
             variant="ghost"
             size="icon-sm"
@@ -383,7 +384,7 @@ export default function InboxPage() {
               </IconButton>
             </ActionTooltip>
           </div>
-        </header>
+        </AppContentHeader>
 
         <div
           ref={contentFade.ref}

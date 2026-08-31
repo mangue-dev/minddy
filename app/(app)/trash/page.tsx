@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { EmptyScene } from "@/components/empty-scene";
+import { AppContentHeader } from "@/components/app-content-header";
 import { MentionChip } from "@/components/mention-chip";
 import { ProjectOrb } from "@/components/project-orb";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -321,7 +322,7 @@ export default function TrashPage() {
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        <header className="flex h-[60px] shrink-0 items-center justify-end gap-4 px-4 md:px-6">
+        <AppContentHeader contentClassName="justify-end gap-4 px-4 md:px-6">
           <Button
             variant="ghost"
             size="icon-sm"
@@ -336,7 +337,7 @@ export default function TrashPage() {
               {t("emptyTrash")}
             </Button>
           ) : null}
-        </header>
+        </AppContentHeader>
 
         <div
           ref={contentFade.ref}

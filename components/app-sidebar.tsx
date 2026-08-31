@@ -42,7 +42,6 @@ import {
   PopoverDescription,
   PopoverHeader,
   PopoverTitle,
-  PopoverTrigger,
   cn,
   type NavItem,
   type NavSection,
@@ -986,11 +985,14 @@ function ChangelogButton({
 function FooterRow({
   icon: Icon,
   label,
+  expandedLabel = label,
   onClick,
   collapsed,
   active = false,
   disabled = false,
   iconClassName,
+  iconCollapsedOnly = false,
+  centerLabel = false,
   trailingIcon: TrailingIcon,
   ariaControls,
   ariaExpanded,
@@ -998,6 +1000,7 @@ function FooterRow({
 }: {
   icon: LucideIcon;
   label: string;
+  expandedLabel?: string;
   onClick: () => void;
   collapsed: boolean;
   active?: boolean;
@@ -1014,6 +1017,8 @@ function FooterRow({
    */
   disabled?: boolean;
   iconClassName?: string;
+  iconCollapsedOnly?: boolean;
+  centerLabel?: boolean;
   trailingIcon?: LucideIcon;
   ariaControls?: string;
   ariaExpanded?: boolean;
@@ -1038,13 +1043,24 @@ function FooterRow({
         className,
       )}
     >
-      <Icon className={cn("size-[18px] shrink-0", iconClassName)} />
+      {collapsed || !iconCollapsedOnly ? (
+        <Icon className={cn("size-[18px] shrink-0", iconClassName)} />
+      ) : null}
       {/* `truncate` (so no line break): the label remains mounted
           while the bar animates from 56 to 256 px, and without it “Share a
           return” folds into three lines in the first images of the
           unfolding before laying flat again. Cut cleanly, it is simply
           cropped by the `overflow-hidden` of the bar — we see nothing. */}
-      {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+      {!collapsed && (
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate",
+            centerLabel && "text-center",
+          )}
+        >
+          {expandedLabel}
+        </span>
+      )}
       {!collapsed && TrailingIcon && <TrailingIcon className="size-4 shrink-0" />}
     </button>
   );
@@ -1175,93 +1191,60 @@ function UpdateFooterCard({
     </PopoverContent>
   );
 
-  // The full card does not fit in the 56 px rail, so it becomes an icon row
-  // with the same label, confirmation, and action.
-  if (collapsed) {
-    const row = (
-      <FooterRow
-        icon={
-          isWebUpdate
-            ? RefreshCw
-            : isStoreUpdate
-              ? ShoppingBag
-              : ready
-                ? ArrowDownToLine
-                : Loader2
-        }
-        iconClassName={ready ? "size-4 text-white" : "animate-spin"}
-        className={
-          ready
-            ? "ml-1 h-7 w-7 justify-center rounded-full bg-[#0085FF] p-0 text-white hover:bg-[#0085FF]/90 hover:text-white"
-            : undefined
-        }
-        label={label}
-        collapsed
-        disabled={!ready || pending}
-        ariaControls={
-          ready && !pending && !isStoreUpdate ? confirmationId : undefined
-        }
-        ariaExpanded={
-          ready && !pending && !isStoreUpdate
-            ? confirmationOpen
-            : undefined
-        }
-        onClick={
-          isStoreUpdate
-            ? applyUpdate
-            : () => handleConfirmationOpenChange(true)
-        }
-      />
-    );
-    if (isStoreUpdate) return row;
-    return (
-      <Popover
-        open={confirmationOpen}
-        onOpenChange={handleConfirmationOpenChange}
-      >
-        <PopoverAnchor asChild>
-          <div>{row}</div>
-        </PopoverAnchor>
-        {confirmation}
-      </Popover>
-    );
-  }
+  const row = (
+    <FooterRow
+      icon={
+        isWebUpdate
+          ? RefreshCw
+          : isStoreUpdate
+            ? ShoppingBag
+            : ready
+              ? ArrowDownToLine
+              : Loader2
+      }
+      iconClassName={!ready || pending ? "animate-spin" : undefined}
+      iconCollapsedOnly={ready && !pending}
+      centerLabel={ready}
+      className={
+        ready
+          ? cn(
+              "my-px h-[34px] bg-[#0085FF] text-white hover:bg-[#0085FF]/90 hover:text-white",
+              collapsed && "mx-px w-[34px] px-2",
+            )
+          : undefined
+      }
+      label={label}
+      expandedLabel={ready ? actionLabel : label}
+      collapsed={collapsed}
+      disabled={!ready || pending}
+      ariaControls={
+        ready && !pending && !isStoreUpdate ? confirmationId : undefined
+      }
+      ariaExpanded={
+        ready && !pending && !isStoreUpdate ? confirmationOpen : undefined
+      }
+      onClick={
+        isStoreUpdate
+          ? applyUpdate
+          : () => handleConfirmationOpenChange(true)
+      }
+    />
+  );
 
+  // Keep one 36 px action row in both sidebar modes. The rail shows its icon;
+  // the same blue surface widens in place and swaps to the action label when
+  // the sidebar expands, matching the geometry used by navigation rows.
+  if (isStoreUpdate) return row;
   return (
-    <div className="mb-1 rounded-xl border border-border p-1.5">
-      <p className="flex items-start gap-1.5 px-1 pt-1 text-pretty text-xs leading-snug text-foreground">
-        {!ready && <Loader2 className="mt-px size-3 shrink-0 animate-spin" />}
-        <span className="min-w-0">{label}</span>
-      </p>
-      {ready && (
-        isStoreUpdate ? (
-          <Button
-            size="sm"
-            className="mt-2 w-full cursor-pointer rounded-md bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
-            onClick={applyUpdate}
-          >
-            {actionLabel}
-          </Button>
-        ) : (
-          <Popover
-            open={confirmationOpen}
-            onOpenChange={handleConfirmationOpenChange}
-          >
-            <PopoverTrigger asChild>
-              <Button
-                size="sm"
-                disabled={pending}
-                className="mt-2 w-full cursor-pointer rounded-md bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
-              >
-                {pending && <Loader2 className="animate-spin" />}
-                {actionLabel}
-              </Button>
-            </PopoverTrigger>
-            {confirmation}
-          </Popover>
-        )
-      )}
-    </div>
+    <Popover
+      open={confirmationOpen}
+      onOpenChange={handleConfirmationOpenChange}
+    >
+      <PopoverAnchor asChild>
+        <div className="w-full">{row}</div>
+      </PopoverAnchor>
+      {confirmation}
+    </Popover>
   );
 }
 
