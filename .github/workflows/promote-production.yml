@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: "Green hand SHA to promote without merge or rewrite"
+        description: "Green main SHA to promote without merge or rewrite"
         required: true
         type: string
       checklist_version:
@@ -108,7 +108,10 @@ jobs:
         with:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          # The private half is released only after cloud-production approval.
+          # Checkout removes it during post-job cleanup.
+          ssh-key: ${{ secrets.PRODUCTION_DEPLOY_KEY }}
+          persist-credentials: true
 
       - name: Validate tested main SHA
         env:
@@ -121,7 +124,6 @@ jobs:
         run: |
           test "$GITHUB_REF" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git fetch origin main production
           test "$(git rev-parse origin/main)" = "$TARGET_SHA"
           git merge-base --is-ancestor origin/production "$TARGET_SHA"
@@ -163,10 +165,8 @@ jobs:
 
       - name: Fast-forward production
         env:
-          GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ inputs.sha }}
         run: |
-          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
           git push origin "$TARGET_SHA:refs/heads/production"
           test "$(git ls-remote origin refs/heads/production | cut -f1)" = "$TARGET_SHA"
 

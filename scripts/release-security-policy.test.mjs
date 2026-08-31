@@ -117,14 +117,15 @@ test("the deployment and workflow require the current version and three attestat
   assert.match(workflow, /github\.event\.repository\.private/);
   assert.match(workflow, /PRIVATE_TEST_RELEASE/);
 
-  const authenticatedRemote = workflow.indexOf(
-    'git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"',
+  const protectedCredential = workflow.indexOf(
+    "ssh-key: ${{ secrets.PRODUCTION_DEPLOY_KEY }}",
   );
   const protectedFetch = workflow.indexOf("git fetch origin main production");
   assert.ok(
-    authenticatedRemote !== -1 && authenticatedRemote < protectedFetch,
-    "the protected promotion authenticates before fetching private refs",
+    protectedCredential !== -1 && protectedCredential < protectedFetch,
+    "the protected promotion receives its dedicated credential before fetching refs",
   );
+  assert.doesNotMatch(workflow, /x-access-token:\$GH_TOKEN/);
 
   const preparation = deploy.indexOf('npm run release:prepare -- "$TARGET_VERSION"');
   const securityGate = deploy.indexOf("node scripts/release-security-policy.mjs");

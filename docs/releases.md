@@ -295,10 +295,11 @@ organization and publication is carried out by the CI.
 ## GitHub approvals and settings
 
 - `cloud-production` protects `Promote production` with required maintainers;
-  only he can advance `production` with the ephemeral `GITHUB_TOKEN`;
+  its dedicated deploy key is exposed only after approval and is the only
+  credential that can advance `production`;
 - `public-release` protects the tag, GitHub Release and Apple secrets;
-- `production` prohibits force-push and delete. His only writing actor
-  authorized is the promotion workflow;
+- `production` prohibits updates, force-pushes, and deletion for every human
+  identity. Its only writable deploy key belongs to the promotion workflow;
 - Git Vercel integration must publish an exactly named GitHub Deployment
   `Production`, otherwise the promotion ends in failure even if the branch has
   advanced. After restarting the Vercel deployment, rerunning the command verifies the
