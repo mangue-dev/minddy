@@ -2132,6 +2132,36 @@ html[data-desktop-platform="darwin"]
   -webkit-app-region: no-drag;
 }
 
+/* Content-pane headers remain a window handle on macOS. Declaring the drag
+   region on the header itself lets its interactive descendants reliably carve
+   out clickable no-drag areas while every empty part still moves the window. */
+html[data-desktop-platform="darwin"] .app-content-header {
+  -webkit-app-region: drag;
+}
+
+html[data-desktop-platform="darwin"] .app-content-header
+  :is(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    label,
+    summary,
+    [role="button"],
+    [role="link"],
+    [role="menuitem"],
+    [role="combobox"],
+    [role="tab"],
+    [role="option"],
+    [role="checkbox"],
+    [role="switch"],
+    [contenteditable="true"],
+    [tabindex]
+  ) {
+  -webkit-app-region: no-drag;
+}
+
 /* The secondary sidebar is teleported into the shell gutter. His line
    of title is therefore not in the same subtree as the fixed band of
    displacement, which otherwise covers it with its z-index. Place it above

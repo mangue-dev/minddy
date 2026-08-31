@@ -39,8 +39,11 @@ export interface DesktopNativePushRegistration {
 export interface DesktopBridge {
   /** The version of the shell (`app.getVersion()`), to display it. */
   readonly version: string;
-  /** The host platform, used only for platform-specific desktop chrome. */
-  readonly platform: NodeJS.Platform;
+  /**
+   * The host platform, used only for platform-specific desktop chrome.
+   * Optional because desktop shells released before 0.10.24 do not expose it.
+   */
+  readonly platform?: NodeJS.Platform;
   /** Open the shell-owned server and local-folder picker. */
   openServerPicker?(): void;
   /** Run an explicitly requested shell update check. */
@@ -222,6 +225,22 @@ declare global {
 export function getDesktopBridge(): DesktopBridge | null {
   if (typeof window === "undefined") return null;
   return window.minddy ?? null;
+}
+
+/**
+ * Resolve the shell platform while the deployed web app is running in an older
+ * desktop build. Those builds predate `DesktopBridge.platform`, but Chromium's
+ * platform string still distinguishes the three supported desktop families.
+ */
+export function desktopBridgePlatform(
+  bridge: Pick<DesktopBridge, "platform">,
+  browserPlatform: string,
+): NodeJS.Platform | null {
+  if (bridge.platform) return bridge.platform;
+  if (/^mac/i.test(browserPlatform)) return "darwin";
+  if (/^win/i.test(browserPlatform)) return "win32";
+  if (/linux/i.test(browserPlatform)) return "linux";
+  return null;
 }
 
 /**

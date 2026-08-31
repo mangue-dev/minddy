@@ -22,7 +22,7 @@ export function AppContentHeader({
   return (
     <div
       className={cn(
-        "sticky top-0 z-[35] h-[60px] shrink-0 overflow-x-auto overflow-y-hidden bg-background overscroll-x-contain",
+        "app-content-header sticky top-0 z-[35] h-[60px] shrink-0 overflow-x-auto overflow-y-hidden bg-background overscroll-x-contain",
         "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
