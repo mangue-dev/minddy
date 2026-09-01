@@ -369,6 +369,24 @@ async function capture({ locale, theme }) {
         `${locale}/${theme} — the open readiness trigger lost its state color (${readinessTrigger.background}).`,
       );
     }
+    await readinessPopover.getByTestId("pr-readiness-merge").click();
+    const mergeTitle = page.getByTestId("pr-merge-commit-title");
+    const mergeMessage = page.getByTestId("pr-merge-commit-message");
+    await mergeTitle.waitFor({ state: "visible" });
+    if (
+      (await mergeTitle.inputValue()) !==
+        "Add keyboard shortcuts to the command palette (#128)" ||
+      !(await mergeMessage.inputValue()).includes("Declare shortcuts on the action itself") ||
+      !(await mergeMessage.inputValue()).includes("Ignore contenteditable in the global listener")
+    ) {
+      throw new Error(
+        `${locale}/${theme} — squash defaults do not match the repository and PR commits.`,
+      );
+    }
+    await mergeTitle.fill("Editable squash title (#128)");
+    if ((await mergeTitle.inputValue()) !== "Editable squash title (#128)") {
+      throw new Error(`${locale}/${theme} — the squash commit title is not editable.`);
+    }
     await page.keyboard.press("Escape");
 
     await page

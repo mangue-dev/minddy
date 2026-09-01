@@ -589,6 +589,8 @@ export interface PullRequestRef {
   title?: string;
   body?: string | null;
   head?: string;
+  /** Provider-qualified head name used by the default merge commit title. */
+  headLabel?: string;
   base?: string;
   /** Head SHA — the EXACT diff served. Compared to the SHA that was reread by the last
    * Numo review to see if relaunch would have anything new to read. */
@@ -789,14 +791,18 @@ export function prFileRawUrl(
 export async function actOnPullRequestApi(
   prId: string,
   action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
-  method?: MergeMethod,
+  options: {
+    method?: MergeMethod;
+    commitTitle?: string;
+    commitMessage?: string;
+  } = {},
 ): Promise<{ ok: true; pr_state: PullRequestListItem["pr_state"] }> {
   trackEvent("pr_review_submitted", { verdict: action });
   return parseJson(
     await fetch(prEndpoint(prId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, method }),
+      body: JSON.stringify({ action, ...options }),
     }),
   );
 }

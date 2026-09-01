@@ -1723,6 +1723,8 @@ export interface PrActionBody {
    */
   postVerdict?: boolean;
   method?: string;
+  commitTitle?: string;
+  commitMessage?: string;
   title?: string;
   rerunRef?: { kind?: string; id?: number };
   /** `link_issue`: the ticket to attach to this PR (MIN-163). */
@@ -1929,8 +1931,37 @@ export async function prStateActionResponse(
           { status: 400 },
         );
       }
+      if (
+        typeof body.commitTitle === "string" &&
+        (!body.commitTitle.trim() || body.commitTitle.length > 256)
+      ) {
+        return NextResponse.json(
+          { error: "Commit title must contain between 1 and 256 characters" },
+          { status: 400 },
+        );
+      }
+      if (typeof body.commitMessage === "string" && body.commitMessage.length > 65_536) {
+        return NextResponse.json(
+          { error: "Commit message must not exceed 65,536 characters" },
+          { status: 400 },
+        );
+      }
+      if (
+        method === "rebase" &&
+        (typeof body.commitTitle === "string" || typeof body.commitMessage === "string")
+      ) {
+        return NextResponse.json(
+          { error: "Rebase merge does not create one editable commit" },
+          { status: 400 },
+        );
+      }
       await withPrOperation(`${scope.pr.id}:merge`, () =>
-        forge.mergePullRequest({ ...myCall, method }),
+        forge.mergePullRequest({
+          ...myCall,
+          method,
+          ...(typeof body.commitTitle === "string" ? { commitTitle: body.commitTitle } : {}),
+          ...(typeof body.commitMessage === "string" ? { commitMessage: body.commitMessage } : {}),
+        }),
       );
       await propagatePrState(scope, "merged", userId);
       // Record “accepted the PR” in the linked ticket activity.

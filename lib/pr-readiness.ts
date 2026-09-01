@@ -29,7 +29,22 @@ export interface RepositoryMergePolicy {
   linearHistoryRequired: boolean | null;
   mergeQueueRequired: boolean | null;
   autoMergeAllowed: boolean | null;
+  commitMessages: RepositoryCommitMessagePolicy;
   unavailableReason?: "forbidden" | "unknown";
+}
+
+export interface RepositoryCommitMessagePolicy {
+  github: {
+    squashTitle: "PR_TITLE" | "COMMIT_OR_PR_TITLE";
+    squashMessage: "PR_BODY" | "COMMIT_MESSAGES" | "BLANK";
+    mergeTitle: "PR_TITLE" | "MERGE_MESSAGE";
+    mergeMessage: "PR_BODY" | "PR_TITLE" | "BLANK";
+  } | null;
+  gitlab: {
+    squashTemplate: string | null;
+    mergeTemplate: string | null;
+    mergeCreatesCommit: boolean;
+  } | null;
 }
 
 export interface ReadinessCheck {
@@ -513,6 +528,10 @@ export interface GithubRepositoryPolicyInput {
   allow_squash_merge?: boolean;
   allow_rebase_merge?: boolean;
   allow_auto_merge?: boolean;
+  squash_merge_commit_title?: "PR_TITLE" | "COMMIT_OR_PR_TITLE";
+  squash_merge_commit_message?: "PR_BODY" | "COMMIT_MESSAGES" | "BLANK";
+  merge_commit_title?: "PR_TITLE" | "MERGE_MESSAGE";
+  merge_commit_message?: "PR_BODY" | "PR_TITLE" | "BLANK";
 }
 
 export interface GithubBranchPolicyInput {
@@ -608,6 +627,15 @@ export function mapGithubMergePolicy(
       rules.some((rule) => rule.type === "required_linear_history"),
     mergeQueueRequired: !!mergeQueue,
     autoMergeAllowed: repository.allow_auto_merge ?? false,
+    commitMessages: {
+      github: {
+        squashTitle: repository.squash_merge_commit_title ?? "COMMIT_OR_PR_TITLE",
+        squashMessage: repository.squash_merge_commit_message ?? "COMMIT_MESSAGES",
+        mergeTitle: repository.merge_commit_title ?? "MERGE_MESSAGE",
+        mergeMessage: repository.merge_commit_message ?? "PR_TITLE",
+      },
+      gitlab: null,
+    },
   };
 }
 
@@ -623,6 +651,8 @@ export interface GitlabProjectPolicyInput {
     | "enforce_for_all_users"
     | "enforce_with_owner_override"
     | string;
+  squash_commit_template?: string | null;
+  merge_commit_template?: string | null;
 }
 
 export function mapGitlabMergePolicy(
@@ -661,6 +691,14 @@ export function mapGitlabMergePolicy(
     // retain their bypass behavior.
     mergeQueueRequired: mergeTrainRequired,
     autoMergeAllowed: true,
+    commitMessages: {
+      github: null,
+      gitlab: {
+        squashTemplate: project.squash_commit_template ?? null,
+        mergeTemplate: project.merge_commit_template ?? null,
+        mergeCreatesCommit: project.merge_method !== "ff",
+      },
+    },
   };
 }
 
@@ -682,6 +720,7 @@ export function unavailableMergePolicy(
     linearHistoryRequired: null,
     mergeQueueRequired: null,
     autoMergeAllowed: null,
+    commitMessages: { github: null, gitlab: null },
     unavailableReason: reason,
   };
 }

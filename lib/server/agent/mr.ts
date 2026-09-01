@@ -833,14 +833,26 @@ export async function mergeMergeRequest(opts: {
   repoFullName: string;
   number: number;
   method?: "merge" | "squash" | "rebase";
+  commitTitle?: string;
+  commitMessage?: string;
 }): Promise<void> {
+  const customMessage = [opts.commitTitle?.trim(), opts.commitMessage?.trim()]
+    .filter(Boolean)
+    .join("\n\n");
   await glJson<unknown>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/merge`,
     opts.token,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ squash: opts.method === "squash" }),
+      body: JSON.stringify({
+        squash: opts.method === "squash",
+        ...(customMessage
+          ? opts.method === "squash"
+            ? { squash_commit_message: customMessage }
+            : { merge_commit_message: customMessage }
+          : {}),
+      }),
     },
   );
 }

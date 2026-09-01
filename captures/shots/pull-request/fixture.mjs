@@ -462,6 +462,15 @@ export const DETAIL_RESPONSE = {
     linearHistoryRequired: false,
     mergeQueueRequired: false,
     autoMergeAllowed: true,
+    commitMessages: {
+      github: {
+        squashTitle: "COMMIT_OR_PR_TITLE",
+        squashMessage: "COMMIT_MESSAGES",
+        mergeTitle: "MERGE_MESSAGE",
+        mergeMessage: "PR_TITLE",
+      },
+      gitlab: null,
+    },
   },
   reviewThreads: REVIEW_THREADS,
   readiness: {

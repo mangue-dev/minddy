@@ -29,6 +29,8 @@ export function PrDiffWorkers({ children }: { children: ReactNode }) {
       highlighterOptions={{
         theme: DIFF_THEMES,
         lineDiffType: DIFF_LINE_DIFF_TYPE,
+        tokenizeMaxLineLength: 1_000,
+        maxLineDiffLength: 2_000,
         // The JavaScript engine avoids a relative WASM URL that would break after
         // Turbopack moves the portable worker into the static asset directory.
         preferredHighlighter: "shiki-js",

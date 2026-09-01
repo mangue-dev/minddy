@@ -15,7 +15,7 @@ import {
  * In-app review of a pull request, indexed BY THE PR (MIN-143).
  * GET → metadata PR + files/patches + CI checks + approvals + methods
  * of merge offered by the forge.
- *  POST → { action: 'merge', method? }
+ *  POST → { action: 'merge', method?, commitTitle?, commitMessage? }
  *       | { action: 'close' }
  * | { action: 'reopen' } → closed → reopened (MIN-164)
  * | { action: 'ready_for_review' } → draft → ready

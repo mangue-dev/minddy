@@ -127,6 +127,10 @@ import { usePrReviewSession } from "@/lib/use-pr-review-session";
 import { usePrLive } from "@/lib/use-pr-live";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
+import {
+  defaultMergeCommitMessage,
+  type MergeCommitMessageDraft,
+} from "@/lib/pr-merge-message";
 import { LocalIssueRunConfirmation } from "@/components/agent/local-issue-run-confirmation";
 import {
   groupTimelineCommits,
@@ -580,6 +584,7 @@ export function PrDetail({
     checks,
     checksError,
     viewer,
+    mergePolicy,
     readiness,
     loading,
     refetch: refetchPr,
@@ -623,6 +628,8 @@ export function PrDetail({
   const [confirmAction, setConfirmAction] = useState<
     null | { kind: "merge"; method?: MergeMethod } | { kind: "close" }
   >(null);
+  const [mergeCommitDraft, setMergeCommitDraft] = useState<MergeCommitMessageDraft | null>(null);
+  const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
   const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
@@ -788,7 +795,11 @@ export function PrDetail({
 
   const act = async (
     action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
-    method?: MergeMethod,
+    mergeOptions: {
+      method?: MergeMethod;
+      commitTitle?: string;
+      commitMessage?: string;
+    } = {},
   ) => {
     if (acting) return;
     const optimisticState =
@@ -807,7 +818,7 @@ export function PrDetail({
     setActing(action);
     setConfirmAction(null);
     try {
-      const result = await actOnPullRequestApi(item.prId, action, method);
+      const result = await actOnPullRequestApi(item.prId, action, mergeOptions);
       onStateChange(item.prId, result.pr_state);
       toast.success(
         action === "merge"
@@ -830,6 +841,38 @@ export function PrDetail({
       setActing(null);
     }
   };
+
+  const openMergeConfirmation = useCallback(
+    (method: MergeMethod) => {
+      setConfirmAction({ kind: "merge", method });
+      setMergeCommitDraftEdited(false);
+      setMergeCommitDraft(
+        pr
+          ? defaultMergeCommitMessage({
+              provider: item.provider,
+              method,
+              pullRequest: pr,
+              commits,
+              policy: mergePolicy,
+            })
+          : null,
+      );
+    },
+    [commits, item.provider, mergePolicy, pr],
+  );
+
+  useEffect(() => {
+    if (confirmAction?.kind !== "merge" || !pr || mergeCommitDraftEdited) return;
+    setMergeCommitDraft(
+      defaultMergeCommitMessage({
+        provider: item.provider,
+        method: confirmAction.method ?? "squash",
+        pullRequest: pr,
+        commits,
+        policy: mergePolicy,
+      }),
+    );
+  }, [commits, confirmAction, item.provider, mergeCommitDraftEdited, mergePolicy, pr]);
 
   const handleReadinessAction = async (blocker: ReadinessBlocker) => {
     if (maintenanceAction) return;
@@ -1499,7 +1542,7 @@ export function PrDetail({
                 onAction={(blocker) => void handleReadinessAction(blocker)}
                 canMerge={!!canWrite}
                 merging={acting === "merge" || isWorking}
-                onMerge={(method) => setConfirmAction({ kind: "merge", method })}
+                onMerge={openMergeConfirmation}
               />
             ) : (
               <PrReadinessBadge readiness={null} />
@@ -1852,7 +1895,11 @@ export function PrDetail({
       <Dialog
         open={!!confirmAction}
         onOpenChange={(next) => {
-          if (!next && !acting) setConfirmAction(null);
+          if (!next && !acting) {
+            setConfirmAction(null);
+            setMergeCommitDraft(null);
+            setMergeCommitDraftEdited(false);
+          }
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -1866,16 +1913,71 @@ export function PrDetail({
               ? t("confirmMergeDescription")
               : t("confirmCloseDescription")}
           </p>
+          {confirmAction?.kind === "merge" && mergeCommitDraft ? (
+            <div className="grid gap-3">
+              <label className="grid gap-1.5 text-sm font-medium">
+                {t("mergeCommitTitle")}
+                <input
+                  data-testid="pr-merge-commit-title"
+                  value={mergeCommitDraft.title}
+                  maxLength={256}
+                  onChange={(event) => {
+                    setMergeCommitDraftEdited(true);
+                    setMergeCommitDraft((current) =>
+                      current ? { ...current, title: event.target.value } : current,
+                    );
+                  }}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                {t("mergeCommitMessage")}
+                <Textarea
+                  data-testid="pr-merge-commit-message"
+                  value={mergeCommitDraft.message}
+                  rows={5}
+                  maxLength={65_536}
+                  onChange={(event) => {
+                    setMergeCommitDraftEdited(true);
+                    setMergeCommitDraft((current) =>
+                      current ? { ...current, message: event.target.value } : current,
+                    );
+                  }}
+                  className="min-h-28 resize-y font-mono text-xs font-normal"
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">
+                {t("mergeCommitDefaultsHint", {
+                  provider: REPO_PROVIDERS[item.provider].displayName,
+                })}
+              </p>
+            </div>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
               {t("cancel")}
             </Button>
             <Button
               variant={confirmAction?.kind === "close" ? "destructive" : "default"}
-              disabled={!!acting}
+              disabled={
+                !!acting ||
+                (confirmAction?.kind === "merge" &&
+                  !!mergeCommitDraft &&
+                  !mergeCommitDraft.title.trim())
+              }
               onClick={() => {
                 if (!confirmAction) return;
-                if (confirmAction.kind === "merge") void act("merge", confirmAction.method);
+                if (confirmAction.kind === "merge") {
+                  void act("merge", {
+                    method: confirmAction.method,
+                    ...(mergeCommitDraft
+                      ? {
+                          commitTitle: mergeCommitDraft.title.trim(),
+                          commitMessage: mergeCommitDraft.message.trim(),
+                        }
+                      : {}),
+                  });
+                }
                 else void act("close");
               }}
             >

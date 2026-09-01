@@ -218,6 +218,8 @@ export interface Forge {
     number: number;
     /** Must belong to `mergeMethods` — valid caller, forge not inventing. */
     method?: MergeMethod;
+    commitTitle?: string;
+    commitMessage?: string;
   }): Promise<void>;
   updatePullRequestBranch(opts: {
     token: string;

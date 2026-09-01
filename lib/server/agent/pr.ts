@@ -48,6 +48,8 @@ export interface PullRequestRef {
   title?: string;
   body?: string | null;
   head?: string;
+  /** Provider-qualified head name used by GitHub's classic merge title. */
+  headLabel?: string;
   base?: string;
   /** Head SHA — immutable anchor to calculate the merge base (getMergeBaseSha). */
   headSha?: string;
@@ -339,7 +341,7 @@ interface RawPull {
   mergeable_state?: string | null;
   title?: string;
   body?: string | null;
-  head?: { ref?: string; sha?: string };
+  head?: { ref?: string; sha?: string; label?: string };
   base?: { ref?: string };
   commits?: number;
   user?: { login?: string; avatar_url?: string } | null;
@@ -365,6 +367,7 @@ function toRef(pr: RawPull): PullRequestRef {
     title: pr.title,
     body: pr.body ?? null,
     head: pr.head?.ref,
+    headLabel: pr.head?.label,
     base: pr.base?.ref,
     headSha: pr.head?.sha,
     commitCount: pr.commits,
@@ -1068,6 +1071,8 @@ export async function mergePullRequest(opts: {
   repoFullName: string;
   number: number;
   method?: "merge" | "squash" | "rebase";
+  commitTitle?: string;
+  commitMessage?: string;
 }): Promise<void> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   await ghJson<unknown>(
@@ -1076,7 +1081,11 @@ export async function mergePullRequest(opts: {
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ merge_method: opts.method ?? "squash" }),
+      body: JSON.stringify({
+        merge_method: opts.method ?? "squash",
+        ...(opts.commitTitle != null ? { commit_title: opts.commitTitle } : {}),
+        ...(opts.commitMessage != null ? { commit_message: opts.commitMessage } : {}),
+      }),
     },
   );
 }

@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge, cn, SegmentedControl, toast, useIsMobile } from "mangue-ui";
@@ -51,6 +59,10 @@ import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-thre
 import type { ReviewCommentReaction } from "@/lib/pr-review-reactions";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import {
+  estimatedDiffBodyHeight,
+  LARGE_DIFF_TOKEN_LIMIT,
+} from "@/lib/pr-diff-performance";
+import {
   anchorKey,
   commentAnchor,
   lineKind,
@@ -92,6 +104,7 @@ import {
 
 /** Number of lines that an arrow expands at once (like GitHub). */
 const EXPANSION_LINE_COUNT = 20;
+const DIFF_PRELOAD_MARGIN = "1400px 0px";
 
 type ViewType = "unified" | "split";
 
@@ -261,12 +274,54 @@ function trimTrailingNewline(content: string): string {
   return content.endsWith("\n") ? content.slice(0, -1) : content;
 }
 
+function DeferredDiffBody({
+  eager,
+  estimatedHeight,
+  children,
+}: {
+  eager: boolean;
+  estimatedHeight: number;
+  children: ReactNode;
+}) {
+  const [mounted, setMounted] = useState(eager);
+  const placeholderRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (mounted) return;
+    const node = placeholderRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setMounted(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setMounted(true);
+        observer.disconnect();
+      },
+      { rootMargin: DIFF_PRELOAD_MARGIN },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [mounted]);
+
+  if (mounted) return children;
+  return (
+    <div
+      ref={placeholderRef}
+      data-testid="pr-diff-deferred-body"
+      aria-hidden="true"
+      style={{ height: estimatedHeight, contentVisibility: "auto" }}
+    />
+  );
+}
+
 /**
  * A PR file: collapsible header + diff. Component apart because everything
  * the state (composers open, drafts, anchors actually rendered) is PAR
  * file — impossible to fit in parent's `files.map`.
  */
-function PrDiffFile({
+const PrDiffFile = memo(function PrDiffFile({
   file,
   fileDiff,
   viewType,
@@ -280,6 +335,7 @@ function PrDiffFile({
   expandableContext,
   canResolve,
   collapsed,
+  eager,
   onToggle,
   registerCard,
   reviewComments,
@@ -308,7 +364,8 @@ function PrDiffFile({
   /** Resolve a thread, separately: it is a write on the repository (MIN-144). */
   canResolve?: boolean;
   collapsed: boolean;
-  onToggle: () => void;
+  eager: boolean;
+  onToggle: (path: string) => void;
   /** Give the card to the parent, who is the one who knows how to scroll to it. */
   registerCard: (path: string, node: HTMLElement | null) => void;
   /** Review comments for THIS file (already filtered by parent). */
@@ -648,6 +705,9 @@ function PrDiffFile({
       // Duplicate assumed with the worker pool, which wins when it colors:
       // it's the main thread's fold, and it should render the same thing.
       lineDiffType: DIFF_LINE_DIFF_TYPE,
+      tokenizeMaxLineLength: 1_000,
+      tokenizeMaxLength: LARGE_DIFF_TOKEN_LIMIT,
+      maxLineDiffLength: 2_000,
       unsafeCSS: DIFF_UNSAFE_CSS,
       loadDiffFiles: expandable ? loadDiffFiles : undefined,
       enableGutterUtility: !readOnly,
@@ -687,7 +747,7 @@ function PrDiffFile({
     >
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => onToggle(file.filename)}
         className={cn(
           // Sticking to the top edge, everywhere: `top-0` and nothing else. The three
           // hosts have a container that starts under a header (the banner
@@ -717,7 +777,7 @@ function PrDiffFile({
         <DiffStatBar additions={file.additions} deletions={file.deletions} />
       </button>
       {collapsed ? null : (
-        <>
+        <DeferredDiffBody eager={eager} estimatedHeight={estimatedDiffBodyHeight(file)}>
           {fileDiff ? (
             <FileDiff<AnnotationMeta>
               fileDiff={fileDiff}
@@ -757,11 +817,11 @@ function PrDiffFile({
             reactions={reactions}
             readOnly={readOnly}
           />
-        </>
+        </DeferredDiffBody>
       )}
     </div>
   );
-}
+});
 
 /** Stable references: `?? []` / `?? () => {}` online would break the memos. */
 const NO_COMMENTS: PullRequestReviewComment[] = [];
@@ -941,13 +1001,13 @@ export function PrDiff({
   const totalAdd = files.reduce((s, f) => s + f.additions, 0);
   const totalDel = files.reduce((s, f) => s + f.deletions, 0);
 
-  const toggle = (path: string) =>
+  const toggle = useCallback((path: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
       return next;
-    });
+    }), []);
 
   return (
     <PrDiffWorkers>
@@ -1002,7 +1062,7 @@ export function PrDiff({
         </div>
 
         <div className="flex flex-col gap-3">
-          {files.map((f) => (
+          {files.map((f, index) => (
             <PrDiffFile
               key={f.filename}
               file={f}
@@ -1018,7 +1078,8 @@ export function PrDiff({
               expandableContext={expandableContext}
               canResolve={canResolve}
               collapsed={collapsed.has(f.filename)}
-              onToggle={() => toggle(f.filename)}
+              eager={index === 0}
+              onToggle={toggle}
               registerCard={registerCard}
               reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
               reviewThreads={reviewThreads}
