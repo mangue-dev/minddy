@@ -1594,6 +1594,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
+  const [zenSidebarLayerOpen, setZenSidebarLayerOpen] = useState(false);
 
   // Account/global options (statistics, feedback, theme, sign out). On desktop
   // they live in the sidebar footer; on mobile they move into the menu sheet +
@@ -1661,6 +1662,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {zen || compactDesktop ? (
             <ZenNavOverlay
               width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
+              pinned={zenSidebarLayerOpen}
             >
               <AppSidebar
                 sections={desktopSections}
@@ -1671,6 +1673,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 onSearch={() => handlePaletteOpenChange(true)}
                 onSearchWarm={warmPalette}
                 onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
+                onLayerOpenChange={setZenSidebarLayerOpen}
               />
               <SecondarySidebarSlot reserve={secondaryNav} />
             </ZenNavOverlay>

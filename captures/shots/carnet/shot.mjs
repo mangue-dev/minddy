@@ -1,5 +1,5 @@
 /**
- * scratchpad — Camille's task notebook, opened by G then N.
+ * scratchpad — Camille's task notebook, opened by Mod+Shift+K.
  *
  * See `intent.md`, especially for the window: it is the only capture that does not
  * does not take 1447 × 1085, because the modal is 90vw × 90vh when its content
@@ -33,8 +33,9 @@ async function capture({ locale, theme }) {
 
     // The shortcut that the landing quotes verbatim. We hit it on a board
     // stabilized, before any open surface: nothing to lose on the keyboard.
-    await page.keyboard.press("g");
-    await page.keyboard.press("n");
+    await page.keyboard.press(
+      process.platform === "darwin" ? "Meta+Shift+K" : "Control+Shift+K",
+    );
 
     const modal = page.getByRole("dialog").first();
     await modal.waitFor({ state: "visible", timeout: 10_000 });
@@ -69,20 +70,20 @@ async function capture({ locale, theme }) {
 
     if (check.missing.length > 0) {
       throw new Error(
-        `${locale}/${theme} — section(s) absente(s) : ${check.missing.join(", ")}. ` +
-          `Le carnet de démo a changé, ou la note ne s'est pas chargée.`,
+        `${locale}/${theme} — missing section(s) : ${check.missing.join(", ")}. ` +
+          `The demo notebook changed, or the note did not load.`,
       );
     }
     if (check.tasks !== TASK_COUNT) {
       throw new Error(
-        `${locale}/${theme} — ${check.tasks} tâches au lieu de ${TASK_COUNT}. ` +
-          `Relancer captures/world/seed/005-carnet.mjs, ou corriger l'intention.`,
+        `${locale}/${theme} — ${check.tasks} tasks instead of ${TASK_COUNT}. ` +
+          `Rerun captures/world/seed/005-carnet.mjs, or update the capture intent.`,
       );
     }
     if (check.struck < 3) {
       throw new Error(
-        `${locale}/${theme} — ${check.struck} tâche(s) barrée(s) : les états ne se ` +
-          `distinguent pas assez à l'œil.`,
+        `${locale}/${theme} — ${check.struck} crossed-out task(s): the states are not ` +
+          `visually distinct enough.`,
       );
     }
     // The hover comes LAST, just before the take, and it is checked in one
@@ -106,9 +107,9 @@ async function capture({ locale, theme }) {
       if (shown) break;
       if (attempt === 4) {
         throw new Error(
-          `${locale}/${theme} — le survol de section ne tient pas après quatre ` +
-            `tentatives : ni fond de section ni infobulle. L'image ne montrerait ` +
-            `pas l'action de section.`,
+          `${locale}/${theme} — the section hover did not persist after four ` +
+            `attempts: neither the section background nor the tooltip is visible. The image would ` +
+            `not show the section action.`,
         );
       }
       await page.mouse.move(10, 10);
@@ -127,7 +128,7 @@ const results = [];
 for (const variant of VARIANTS) {
   const r = await capture(variant);
   console.log(
-    `  ${r.locale}/${r.theme} → ${r.path} · ${r.tasks} tâches, ${r.struck} barrées, section survolée`,
+    `  ${r.locale}/${r.theme} → ${r.path} · ${r.tasks} tasks, ${r.struck} crossed out, section hovered`,
   );
   results.push(r);
 }
@@ -139,7 +140,7 @@ if (PUBLISH) {
     console.log(`  ${published.name} — ${(published.bytes / 1024).toFixed(0)} Ko`);
   }
   const { published } = await writeManifest();
-  console.log(`\nManifeste : ${published.length} variante(s) publiée(s).`);
+  console.log(`\nManifest: ${published.length} variant(s) published.`);
 } else {
-  console.log("\nRegarde les images, puis relance avec --publish pour les livrer.");
+  console.log("\nReview the images, then rerun with --publish to publish them.");
 }

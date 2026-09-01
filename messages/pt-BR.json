@@ -3,7 +3,7 @@
     "title": "Caderno de tarefas",
     "srDescription": "Seu caderno de tarefas pessoal.",
     "open": "Caderno de tarefas",
-    "openAria": "Abra o caderno de tarefas (G e depois N)",
+    "openAria": "Abra o caderno de tarefas ({shortcut})",
     "tasksLeft": "{count, plural, one {# tarefa restante} other {# tarefas restantes}}",
     "homeOpen": "Abra o caderno",
     "placeholder": "Escreva ou digite '/' para comandos…",

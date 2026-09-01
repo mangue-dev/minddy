@@ -5,7 +5,7 @@
 // sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar).
 //
 //   Global:      G H home · G I inbox · G R pull requests · G J agents · G U routines
-//                G A assistant (Numo) · G N notes
+//                G A assistant (Numo) · Mod+Shift+K notes
 //                G B all issues (every project) · G M my issues
 //   In a project: G P the project's own board · G O objectives · G T triage
 //                 G F feedback · G S project settings
@@ -36,6 +36,7 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import { trackEvent } from "@/lib/analytics";
 
 /** Leader key that arms a navigation chord. */
@@ -145,9 +146,6 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         case "a":
           toggleAssistantRef.current();
           return true;
-        case "n":
-          openScratchpadRef.current("shortcut");
-          return true;
         // B reaches the cross-project tickets board from anywhere, a project
         // included — the project's own board is G P. M is that same /all board
         // with the "Mes tickets" system view pre-selected (?view= one-shot).
@@ -187,6 +185,16 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (matchesModShiftCombo(e, "k")) {
+        // Always consume the shortcut, even when an existing dialog or text
+        // field means that the notebook should stay closed.
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (isTypingTarget(e.target) || isDialogOpen()) return;
+        openScratchpadRef.current("shortcut");
+        disarm();
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       // Second key of an armed chord: always consume it so it never reaches the

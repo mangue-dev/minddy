@@ -134,7 +134,7 @@ export function NewMenu({
             {!collapsed ? <span className="truncate">{issueAction.label}</span> : null}
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">
+        <TooltipContent side="top">
           <Kbd size="sm">{issueAction.shortcut}</Kbd>
         </TooltipContent>
       </Tooltip>
