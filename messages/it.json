@@ -3,7 +3,7 @@
     "title": "Taccuino delle attività",
     "srDescription": "Il tuo taccuino personale delle attività.",
     "open": "Taccuino delle attività",
-    "openAria": "Apri il taccuino delle attività ({shortcut})",
+    "openAria": "Apri il taccuino delle attività (G, poi N)",
     "tasksLeft": "{count, plural, one {# attività da fare} other {# attività da fare}}",
     "homeOpen": "Apri il taccuino",
     "placeholder": "Scrivi oppure digita '/' per i comandi…",

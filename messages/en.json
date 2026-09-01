@@ -3,7 +3,7 @@
     "title": "Task notebook",
     "srDescription": "Your personal task notebook.",
     "open": "Task notebook",
-    "openAria": "Open task notebook ({shortcut})",
+    "openAria": "Open task notebook (G then N)",
     "tasksLeft": "{count, plural, one {# task left} other {# tasks left}}",
     "homeOpen": "Open the notebook",
     "placeholder": "Write, or type '/' for commands…",

@@ -3,7 +3,7 @@
     "title": "Aufgabennotizbuch",
     "srDescription": "Ihr persönliches Aufgabennotizbuch.",
     "open": "Aufgabennotizbuch",
-    "openAria": "Aufgabennotizbuch öffnen ({shortcut})",
+    "openAria": "Aufgabennotizbuch öffnen (G, dann N)",
     "tasksLeft": "{count, plural, one {# Aufgabe übrig} other {# Aufgaben übrig}}",
     "homeOpen": "Notizbuch öffnen",
     "placeholder": "Schreiben oder „/“ für Befehle eingeben …",

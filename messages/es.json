@@ -3,7 +3,7 @@
     "title": "Cuaderno de tareas",
     "srDescription": "Tu cuaderno de tareas personal.",
     "open": "Cuaderno de tareas",
-    "openAria": "Abrir el cuaderno de tareas ({shortcut})",
+    "openAria": "Abrir el cuaderno de tareas (G y luego N)",
     "tasksLeft": "{count, plural, one {Queda # tarea} other {Quedan # tareas}}",
     "homeOpen": "Abrir el cuaderno",
     "placeholder": "Escribe o pulsa '/' para ver los comandos…",

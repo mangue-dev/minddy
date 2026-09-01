@@ -4,9 +4,9 @@ import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { NotebookPen } from "lucide-react";
 import { KbdSequence } from "@/components/ui/kbd";
-import { useModKey, useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadProgress } from "@/lib/use-scratchpad-query";
+import { CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import {
   Tooltip,
   TooltipContent,
@@ -23,8 +23,7 @@ export function ScratchpadTrigger({
   variant?: "header" | "sidebar";
 }) {
   const t = useTranslations("Scratchpad");
-  const modKey = useModKey();
-  const shortcut = useModShiftShortcut("N");
+  const tk = useTranslations("Keyboard");
   const { open } = useScratchpad();
   const { done, total } = useScratchpadProgress();
   // What's still on the list — completed tasks drop out (a badge that never
@@ -40,8 +39,8 @@ export function ScratchpadTrigger({
           size={left > 0 ? "sm" : "icon-sm"}
           aria-label={
             left > 0
-              ? `${t("openAria", { shortcut })} — ${t("tasksLeft", { count: left })}`
-              : t("openAria", { shortcut })
+              ? `${t("openAria")} — ${t("tasksLeft", { count: left })}`
+              : t("openAria")
           }
           onClick={() => open("click")}
           onPointerEnter={onWarm}
@@ -67,7 +66,8 @@ export function ScratchpadTrigger({
       <TooltipContent className="flex items-center gap-2">
         <span>{t("open")}</span>
         <KbdSequence
-          keys={[[modKey, "⇧", "N"]]}
+          keys={[[CHORD_PREFIX.toUpperCase()], ["N"]]}
+          separator={tk("then")}
           size="sm"
         />
       </TooltipContent>
