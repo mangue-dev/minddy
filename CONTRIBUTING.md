@@ -71,6 +71,29 @@ code-owner approval is required, and authors do not approve their own pull
 requests. Maintainers may decline changes that are out of scope, unsafe,
 insufficiently tested, or too costly to maintain.
 
+## Maintainer workflow shortcuts
+
+The repository includes a three-command workflow for maintainers who commit
+from the VS Code Source Control view:
+
+```bash
+npm run work:start -- "short work name"
+# Edit files, generate the commit message, and commit in VS Code.
+npm run work:pr
+# Merge the pull request on GitHub after its checks pass.
+npm run work:done
+```
+
+The start command creates a short-lived branch from the latest `origin/main`.
+The pull-request command pushes that branch, adds any missing DCO sign-offs,
+and creates or updates its pull request. The done command refuses to run until
+the pull request is merged, then synchronizes local `main` and removes the work
+branch. Repository VS Code settings add the required DCO sign-off to commits
+created from the Source Control view.
+
+Run `npm run deploy` separately from a clean, synchronized `main` only when the
+merged changes should reach production.
+
 ## Repository conventions
 
 - Use pnpm for dependencies and keep `pnpm-lock.yaml`, `package-lock.json`, and
