@@ -67,4 +67,20 @@ describe("pull request draft transitions", () => {
       title: "Draft: Improve review controls",
     });
   });
+
+  it("preserves a regular GitLab title beginning with Draft", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ title: "Drafting the API" }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    await convertMergeRequestToDraft({
+      token: "token", repoFullName: "mangue-dev/minddy", number: 42,
+    });
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({ title: "Draft: Drafting the API" });
+  });
 });

@@ -24,7 +24,6 @@ import type { CommitAuthor } from "@/lib/commit-authors";
 import { reviewFallbackPrefix } from "./review-copy";
 import {
   mapGithubMergePolicy,
-  unavailableMergePolicy,
   type GithubBranchPolicyInput,
   type GithubRepositoryPolicyInput,
   type GithubRuleInput,
@@ -517,11 +516,7 @@ export async function getRepositoryMergePolicy(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
     opts.token,
   );
-  const [branchSummary, branchResult, rules] = await Promise.all([
-    ghJson<{ protected?: boolean }>(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.base)}`,
-      opts.token,
-    ),
+  const [branchResult, rules] = await Promise.all([
     ghJson<GithubBranchPolicyInput>(
       `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.base)}/protection`,
       opts.token,
@@ -536,19 +531,16 @@ export async function getRepositoryMergePolicy(opts: {
     ).catch((error) => {
       // Older GitHub Enterprise instances do not expose rulesets. Branch
       // protection remains authoritative there.
-      if (error instanceof GithubApiError && error.status === 404) return [];
+      if (
+        error instanceof GithubApiError &&
+        (error.status === 403 || error.status === 404)
+      ) return [];
       throw error;
     }),
   ]);
-  // Reading legacy branch protection requires `Administration: read`, while
-  // active rulesets are available through the branch-rules endpoint. Do not
-  // discard a complete modern ruleset merely because the legacy endpoint is
-  // forbidden. Conversely, a protected branch with no readable ruleset remains
-  // unavailable: treating an unknown legacy protection as permissive would make
-  // Minddy offer a merge that GitHub can reject.
-  if (branchResult === "forbidden" && branchSummary.protected && rules.length === 0) {
-    return unavailableMergePolicy("github", "forbidden");
-  }
+  // Policy visibility is optional for existing installations. GitHub remains
+  // authoritative through the merge endpoint when these Administration-only
+  // reads are forbidden, while repository merge methods are still usable.
   return mapGithubMergePolicy(
     repository,
     branchResult === "forbidden" ? null : branchResult,

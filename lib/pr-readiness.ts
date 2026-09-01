@@ -296,7 +296,7 @@ export function reducePullRequestReadiness(
     add({
       id: "checks-unavailable",
       kind: "mergeability",
-      required: true,
+      required: input.policy?.checksMustPass === true,
       status: "unavailable",
       source: "checks",
       action: "open_forge",
@@ -570,11 +570,15 @@ export function mapGithubMergePolicy(
   if (repository.allow_squash_merge) methods.push("squash");
   if (repository.allow_merge_commit) methods.push("merge");
   if (repository.allow_rebase_merge) methods.push("rebase");
-  const ruleContexts =
-    rules
-      .find((rule) => rule.type === "required_status_checks")
-      ?.parameters?.required_status_checks?.map((check) => check.context)
-      .filter((context): context is string => !!context) ?? [];
+  const statusCheckRules = rules.filter(
+    (rule) => rule.type === "required_status_checks",
+  );
+  const ruleContexts = statusCheckRules.flatMap(
+    (rule) =>
+      rule.parameters?.required_status_checks
+        ?.map((check) => check.context)
+        .filter((context): context is string => !!context) ?? [],
+  );
   const branchContexts = [
     ...(branch?.required_status_checks?.contexts ?? []),
     ...(branch?.required_status_checks?.checks ?? [])
@@ -582,15 +586,18 @@ export function mapGithubMergePolicy(
       .filter((context): context is string => !!context),
   ];
   const contexts = [...new Set([...branchContexts, ...ruleContexts])];
-  const pullRequestRule = rules.find((rule) => rule.type === "pull_request");
-  const allowedByRule =
-    pullRequestRule?.parameters?.allowed_merge_methods?.filter(
-      (method): method is MergeMethod =>
-        method === "merge" || method === "squash" || method === "rebase",
-    );
-  const policyMethods = allowedByRule?.length
-    ? methods.filter((method) => allowedByRule.includes(method))
-    : methods;
+  const pullRequestRules = rules.filter((rule) => rule.type === "pull_request");
+  const allowedMethodSets = pullRequestRules
+    .map((rule) =>
+      rule.parameters?.allowed_merge_methods?.filter(
+        (method): method is MergeMethod =>
+          method === "merge" || method === "squash" || method === "rebase",
+      ),
+    )
+    .filter((allowed): allowed is MergeMethod[] => !!allowed?.length);
+  const policyMethods = methods.filter((method) =>
+    allowedMethodSets.every((allowed) => allowed.includes(method)),
+  );
   const mergeQueue = rules.find((rule) => rule.type === "merge_queue");
   const queueMethod = mergeQueue?.parameters?.merge_method?.toLowerCase() as
     MergeMethod | undefined;
@@ -600,8 +607,12 @@ export function mapGithubMergePolicy(
       : policyMethods;
   const branchApprovals =
     branch?.required_pull_request_reviews?.required_approving_review_count ?? 0;
-  const rulesetApprovals =
-    pullRequestRule?.parameters?.required_approving_review_count ?? 0;
+  const rulesetApprovals = Math.max(
+    0,
+    ...pullRequestRules.map(
+      (rule) => rule.parameters?.required_approving_review_count ?? 0,
+    ),
+  );
   return {
     provider: "github",
     available: true,
@@ -611,17 +622,21 @@ export function mapGithubMergePolicy(
     codeOwnerReviewRequired:
       (branch?.required_pull_request_reviews?.require_code_owner_reviews ??
         false) ||
-      (pullRequestRule?.parameters?.require_code_owner_review ?? false),
+      pullRequestRules.some(
+        (rule) => rule.parameters?.require_code_owner_review ?? false,
+      ),
     conversationsMustBeResolved:
       (branch?.required_conversation_resolution?.enabled ?? false) ||
-      (pullRequestRule?.parameters?.required_review_thread_resolution ?? false),
+      pullRequestRules.some(
+        (rule) => rule.parameters?.required_review_thread_resolution ?? false,
+      ),
     checksMustPass: contexts.length > 0,
     requiredCheckNames: contexts,
     branchMustBeUpToDate:
       (branch?.required_status_checks?.strict ?? false) ||
-      (rules.find((rule) => rule.type === "required_status_checks")?.parameters
-        ?.strict_required_status_checks_policy ??
-        false),
+      statusCheckRules.some(
+        (rule) => rule.parameters?.strict_required_status_checks_policy ?? false,
+      ),
     linearHistoryRequired:
       branch?.required_linear_history?.enabled ??
       rules.some((rule) => rule.type === "required_linear_history"),

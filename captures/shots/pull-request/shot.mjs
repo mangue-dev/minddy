@@ -726,7 +726,7 @@ async function capture({ locale, theme }) {
     await filesTab.click();
     if ((await filesTab.getAttribute("aria-selected")) !== "true") {
       throw new Error(
-        `${locale}/${theme} — l'onglet Fichiers n'est pas sélectionné.`,
+        `${locale}/${theme} — the Files tab is not selected.`,
       );
     }
 
@@ -979,7 +979,7 @@ for (const variant of VARIANTS) {
 }
 
 if (PUBLISH) {
-  console.log("\nLivraison sur la landing :");
+  console.log("\nPublishing to the landing page:");
   for (const { locale, theme, path } of results) {
     const published = await publishShot({
       slot: SLOT,
@@ -988,13 +988,13 @@ if (PUBLISH) {
       input: path,
     });
     console.log(
-      `  ${published.name} — ${(published.bytes / 1024).toFixed(0)} Ko`,
+      `  ${published.name} — ${(published.bytes / 1024).toFixed(0)} KB`,
     );
   }
   const { published } = await writeManifest();
-  console.log(`\nManifeste : ${published.length} variante(s) publiée(s).`);
+  console.log(`\nManifest: ${published.length} variant(s) published.`);
 } else {
   console.log(
-    "\nRegarde les images, puis relance avec --publish pour les livrer.",
+    "\nReview the images, then rerun with --publish to publish them.",
   );
 }

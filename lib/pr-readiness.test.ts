@@ -121,6 +121,18 @@ describe("reducePullRequestReadiness", () => {
       mergeAllowed: false,
     });
   });
+
+  it("does not block merging when optional check details are unreadable", () => {
+    const readiness = reducePullRequestReadiness(input({
+      policy: { ...policy, checksMustPass: false, requiredCheckNames: [] },
+      checks: null,
+      checksStatus: "forbidden",
+    }));
+    expect(readiness.mergeAllowed).toBe(true);
+    expect(readiness.blockers).toContainEqual(
+      expect.objectContaining({ id: "checks-unavailable", required: false }),
+    );
+  });
 });
 
 describe("provider merge policy mapping", () => {
@@ -169,6 +181,23 @@ describe("provider merge policy mapping", () => {
       conversationsMustBeResolved: true,
       checksMustPass: true,
       requiredCheckNames: ["Tests"],
+      branchMustBeUpToDate: true,
+    });
+  });
+
+  it("combines restrictions from every applicable GitHub ruleset", () => {
+    expect(mapGithubMergePolicy(
+      { allow_squash_merge: true, allow_merge_commit: true, allow_rebase_merge: true },
+      null,
+      [
+        { type: "required_status_checks", parameters: { required_status_checks: [{ context: "Tests" }] } },
+        { type: "required_status_checks", parameters: { strict_required_status_checks_policy: true, required_status_checks: [{ context: "Lint" }] } },
+        { type: "pull_request", parameters: { allowed_merge_methods: ["merge", "squash"], required_approving_review_count: 1 } },
+        { type: "pull_request", parameters: { allowed_merge_methods: ["squash", "rebase"], required_approving_review_count: 3, require_code_owner_review: true, required_review_thread_resolution: true } },
+      ],
+    )).toMatchObject({
+      methods: ["squash"], requiredApprovals: 3, codeOwnerReviewRequired: true,
+      conversationsMustBeResolved: true, requiredCheckNames: ["Tests", "Lint"],
       branchMustBeUpToDate: true,
     });
   });

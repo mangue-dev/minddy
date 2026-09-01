@@ -980,9 +980,9 @@ export async function enableMergeRequestAutoMerge(opts: {
   );
 }
 
-/** Title prefixes by which GitLab marks a draft MR (`WIP:` is
-    the old form, still accepted by the old authorities). */
-const DRAFT_TITLE_PREFIX = /^\s*(?:\[?draft\]?|\[?wip\]?)\s*:?\s*/i;
+/** Title prefixes by which GitLab marks a draft MR (`WIP:` is legacy). */
+const DRAFT_TITLE_PREFIX =
+  /^\s*(?:(?:\[draft\]|\[wip\])|(?:draft|wip)(?=\s|:))\s*:?\s*/i;
 
 /**
  * Switches a draft MR to “ready for review”. GitLab has no field
