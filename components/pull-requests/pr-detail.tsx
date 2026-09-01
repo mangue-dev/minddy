@@ -43,6 +43,7 @@ import {
   X,
 } from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import Link from "next/link";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
@@ -446,6 +447,7 @@ function ThreadComment({
   body,
   onQuoteReply,
   quotingNumo,
+  forceBot,
   reactions,
   activity,
 }: {
@@ -459,6 +461,8 @@ function ThreadComment({
   /** This message is from Numo: quote RAPPELLE (MIN-162), and the gesture is called
       otherwise — “Reply with quote” does not say it will re-roll a pass. */
   quotingNumo?: boolean;
+  /** Numo can use a provider account whose login does not expose a bot suffix. */
+  forceBot?: boolean;
   /** Absent when the forge has not been able to read them: nothing is then displayed. */
   reactions?: CommentReactions;
   /** Unrolled folded ABOVE the body, for the message which carries one — the
@@ -474,19 +478,19 @@ function ThreadComment({
   return (
     <PrActivityItem
       marker={
-        <UserAvatar
-          url={user?.avatar_url}
-          seed={user?.login ?? "?"}
+        <ForgeUserAvatar
+          user={user}
+          forceBot={forceBot}
           className="size-8 ring-4 ring-background"
         />
       }
     >
       <article
         data-testid="pr-activity-message"
-        className="group/comment relative overflow-visible rounded-lg border border-border bg-card shadow-xs"
+        className="group/comment relative overflow-visible rounded-lg border border-border bg-card shadow-xs [--activity-header:color-mix(in_oklab,var(--muted)_35%,var(--card))]"
       >
         <PrActivityBubblePointer />
-        <header className="relative flex min-h-10 items-center gap-2 rounded-t-lg border-b border-border bg-muted/35 px-3 py-2">
+        <header className="relative flex min-h-10 items-center gap-2 rounded-t-lg border-b border-border bg-[var(--activity-header)] px-3 py-2">
           <GitLogin
             login={user?.login}
             className="text-sm font-medium text-foreground"
@@ -1703,6 +1707,7 @@ export function PrDetail({
                           : undefined
                       }
                       reactions={threadReactions}
+                      forceBot={!!item.runId}
                     />
                   ) : null}
                   {feed.map((entry) => {
@@ -1737,6 +1742,7 @@ export function PrDetail({
                             : undefined
                         }
                         quotingNumo={isNumoComment(c.user?.login)}
+                        forceBot={isNumoComment(c.user?.login)}
                         reactions={threadReactions}
                       />
                     );

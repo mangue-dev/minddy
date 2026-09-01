@@ -39,6 +39,7 @@ const PR_URL = `https://github.com/${REPO}/pull/${PR_NUMBER}`;
 const OPENED_AT = "2026-07-14T16:42:00.000Z";
 const NUMO = { login: "numo-agent", avatar_url: null };
 const CAMILLE = { login: "camille-roy", avatar_url: null };
+const REVIEW_BOT = { login: "review-helper[bot]", avatar_url: null };
 
 /** +6 −1 */
 const PATCH_ACTIONS = `@@ -18,7 +18,12 @@ export interface PaletteAction {
@@ -327,7 +328,7 @@ export const REVIEW_COMMENTS = [
     in_reply_to_id: null,
     review_id: 9201,
     diff_hunk: PATCH_ACTIONS,
-    user: CAMILLE,
+    user: REVIEW_BOT,
     created_at: "2026-07-14T17:08:00.000Z",
     html_url: `${PR_URL}#discussion_r9101`,
   },
@@ -346,7 +347,7 @@ export const TIMELINE = [
   {
     id: "review:9201",
     kind: "reviewed",
-    actor: CAMILLE,
+    actor: REVIEW_BOT,
     createdAt: "2026-07-14T17:08:00.000Z",
     reviewState: "commented",
     body: "One inline point before merge.",

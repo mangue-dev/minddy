@@ -39,6 +39,7 @@ export function PrHunk({
   line,
   maxLines,
   className,
+  headerClassName,
 }: {
   /** Path of the commented file — it carries the anchor AND decides the grammar. */
   path: string;
@@ -49,6 +50,8 @@ export function PrHunk({
   /** Number of lines kept (the last ones). `0` = the whole hunk. */
   maxLines?: number;
   className?: string;
+  /** Optional density override for the file/line accordion header. */
+  headerClassName?: string;
 }) {
   const t = useTranslations("PullRequests");
   const resolvedTheme = useEffectiveColorScheme();
@@ -120,7 +123,7 @@ export function PrHunk({
   // nothing is worse than a label.
   if (!fileDiff) {
     return (
-      <div className={cn("px-2.5 py-1.5", className)} title={title}>
+      <div className={cn("px-2.5 py-1.5", headerClassName, className)} title={title}>
         {anchor}
       </div>
     );
@@ -129,6 +132,7 @@ export function PrHunk({
   return (
     <div className={cn("pr-diff-view diff-selectable overflow-clip", className)}>
       <button
+        data-testid="pr-hunk-header"
         type="button"
         onClick={() => setCollapsed((v) => !v)}
         aria-expanded={!collapsed}
@@ -136,6 +140,7 @@ export function PrHunk({
         className={cn(
           "flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-muted/60",
           collapsed ? null : "border-b border-border",
+          headerClassName,
         )}
       >
         {collapsed ? (

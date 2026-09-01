@@ -60,9 +60,19 @@ export function PrActivityItem({
 /** The small pointer that makes a bordered surface read as a message bubble. */
 export function PrActivityBubblePointer() {
   return (
-    <span
+    <svg
       aria-hidden
-      className="absolute -left-1.5 top-3 size-3 rotate-45 border-b border-l border-border bg-muted/35"
-    />
+      data-testid="pr-activity-bubble-pointer"
+      viewBox="0 0 10 18"
+      className="pointer-events-none absolute -left-[9px] top-[11px] z-10 h-[18px] w-[10px] overflow-visible"
+    >
+      {/* The open path draws only the two diagonals. Its fill overlaps the
+          card by one pixel, masking the vertical border where the notch joins. */}
+      <path
+        d="M10 0.5 L0.75 9 L10 17.5"
+        vectorEffect="non-scaling-stroke"
+        className="fill-[var(--activity-header)] stroke-border"
+      />
+    </svg>
   );
 }

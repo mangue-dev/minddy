@@ -24,8 +24,8 @@ import { PrHunk } from "@/components/pull-requests/pr-hunk";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { GitLogin } from "@/components/git/git-login";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { Markdown } from "@/components/markdown";
-import { UserAvatar } from "@/components/user-avatar";
 import {
   replyPrReviewCommentApi,
   setPrCommentReactionApi,
@@ -382,9 +382,8 @@ function CommentBody({
   return (
     <div className="group flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <UserAvatar
-          url={comment.user?.avatar_url}
-          seed={comment.user?.login ?? "?"}
+        <ForgeUserAvatar
+          user={comment.user}
           className="size-5"
         />
         <GitLogin

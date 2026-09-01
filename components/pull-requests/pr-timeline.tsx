@@ -29,6 +29,7 @@ import {
 import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { Markdown } from "@/components/markdown";
 import {
   PrActivityBubblePointer,
@@ -40,7 +41,6 @@ import {
   useReviewReplies,
   useThreadResolution,
 } from "@/components/pull-requests/pr-review-comments";
-import { UserAvatar } from "@/components/user-avatar";
 import {
   displayLineOf,
   groupReviewThreads,
@@ -170,9 +170,8 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
         {authors.length > 0 ? (
           <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
         ) : event.actor ? (
-          <UserAvatar
-            url={event.actor.avatar_url}
-            seed={event.actor.login}
+          <ForgeUserAvatar
+            user={event.actor}
             className="mt-0.5 size-4 shrink-0"
           />
         ) : null}
@@ -312,9 +311,8 @@ export function PrTimelineReview({
   return (
     <PrActivityItem
       marker={
-        <UserAvatar
-          url={event.actor?.avatar_url}
-          seed={event.actor?.login ?? "?"}
+        <ForgeUserAvatar
+          user={event.actor}
           className="size-8 ring-4 ring-background"
         />
       }
@@ -322,10 +320,10 @@ export function PrTimelineReview({
     >
       <article
         data-testid="pr-activity-review"
-        className="relative rounded-lg border border-border bg-card shadow-xs"
+        className="relative rounded-lg border border-border bg-card shadow-xs [--activity-header:color-mix(in_oklab,var(--muted)_35%,var(--card))]"
       >
         <PrActivityBubblePointer />
-        <header className="relative flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-border bg-muted/35 px-3 py-2">
+        <header className="relative flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-border bg-[var(--activity-header)] px-3 py-2">
           <GitLogin login={event.actor?.login} className="text-sm font-medium text-foreground" />
           <span className={cn("flex shrink-0 items-center gap-1 text-xs", state.className)}>
             {Icon ? <Icon className="size-3.5" /> : null}
@@ -407,6 +405,7 @@ export function ReviewCommentBlock({
           line={displayLineOf(comment)}
           diffHunk={comment.diff_hunk}
           className="pr-diff-view-inset border-b border-border bg-muted/15"
+          headerClassName="py-2.5"
         />
 
         <div className="px-3 py-3">

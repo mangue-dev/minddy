@@ -401,6 +401,13 @@ async function capture({ locale, theme }) {
       const messages = [...timeline.querySelectorAll('[data-testid="pr-activity-message"]')];
       const review = timeline.querySelector('[data-testid="pr-activity-review"]');
       const reviewThreads = timeline.querySelector('[data-testid="pr-activity-review-threads"]');
+      const pointer = messages[0]?.querySelector('[data-testid="pr-activity-bubble-pointer"]');
+      const pointerPath = pointer?.querySelector("path");
+      const messageHeader = messages[0]?.querySelector("header");
+      const reviewItem = review?.closest('[data-testid="pr-activity-item"]');
+      const botAvatar = reviewItem?.querySelector('[data-testid="pr-activity-marker"] img');
+      const botAvatarBox = botAvatar?.getBoundingClientRect();
+      const hunkHeader = reviewThreads?.querySelector('[data-testid="pr-hunk-header"]');
       const plainThread = reviewThreads?.querySelector(
         '[data-testid="review-thread-card"][data-variant="plain"]',
       );
@@ -415,6 +422,15 @@ async function capture({ locale, theme }) {
         messageCount: messages.length,
         reviewCount: review ? 1 : 0,
         reviewThreadCount: reviewThreads?.querySelectorAll(":scope > li").length ?? 0,
+        pointerElement: pointer?.tagName.toLowerCase() ?? null,
+        pointerPath: pointerPath?.getAttribute("d") ?? null,
+        pointerFill: pointerPath ? getComputedStyle(pointerPath).fill : null,
+        messageHeaderBackground: messageHeader
+          ? getComputedStyle(messageHeader).backgroundColor
+          : null,
+        botAvatarRadius: botAvatar ? Number.parseFloat(getComputedStyle(botAvatar).borderRadius) : null,
+        botAvatarWidth: botAvatarBox?.width ?? null,
+        hunkHeaderHeight: hunkHeader?.getBoundingClientRect().height ?? null,
         markerBeforeContent:
           !!markerBox && !!contentBox && markerBox.right <= contentBox.left,
         railHeight: Number.parseFloat(rail.height),
@@ -435,12 +451,45 @@ async function capture({ locale, theme }) {
       activityLayout.messageCount < 3 ||
       activityLayout.reviewCount !== 1 ||
       activityLayout.reviewThreadCount !== 1 ||
+      activityLayout.pointerElement !== "svg" ||
+      !activityLayout.pointerPath ||
+      activityLayout.pointerFill !== activityLayout.messageHeaderBackground ||
+      activityLayout.botAvatarRadius == null ||
+      activityLayout.botAvatarWidth == null ||
+      activityLayout.botAvatarRadius >= activityLayout.botAvatarWidth / 2 ||
+      activityLayout.hunkHeaderHeight == null ||
+      activityLayout.hunkHeaderHeight < 36 ||
       !activityLayout.markerBeforeContent ||
       activityLayout.railHeight < 100 ||
       activityLayout.plainThreadBorder?.some((width) => width !== "0px")
     ) {
       throw new Error(
         `${locale}/${theme} — the activity hierarchy is not a single avatar rail with flat review threads: ${JSON.stringify(activityLayout)}.`,
+      );
+    }
+    const activityTimeline = page.getByTestId("pr-activity-timeline");
+    await activityTimeline.evaluate((timeline) => {
+      const state = { childListMutations: 0, observer: null };
+      state.observer = new MutationObserver((records) => {
+        state.childListMutations += records.filter((record) => record.type === "childList").length;
+      });
+      state.observer.observe(timeline, { childList: true, subtree: true });
+      window.__prActivityMutationState = state;
+    });
+    await page
+      .getByTestId("pr-comment-composer-region")
+      .getByRole("textbox")
+      .pressSequentially("Stable activity rendering", { delay: 5 });
+    await page.waitForTimeout(50);
+    const activityMutations = await activityTimeline.evaluate(() => {
+      const state = window.__prActivityMutationState;
+      state?.observer?.disconnect();
+      delete window.__prActivityMutationState;
+      return state?.childListMutations ?? -1;
+    });
+    if (activityMutations !== 0) {
+      throw new Error(
+        `${locale}/${theme} — typing in the PR composer remounted activity HTML (${activityMutations} child-list mutations).`,
       );
     }
 

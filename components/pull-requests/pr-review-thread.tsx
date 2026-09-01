@@ -35,7 +35,7 @@ export function PrReviewCard({ run }: { run: PrReviewRunSummary }) {
   return (
     <PrActivityItem
       marker={
-        <span className="flex size-8 items-center justify-center rounded-full bg-card ring-4 ring-background">
+        <span className="flex size-8 items-center justify-center rounded-[6px] bg-card ring-4 ring-background">
           <NumoIcon animated={working} className="size-5" />
         </span>
       }

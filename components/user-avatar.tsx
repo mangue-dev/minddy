@@ -25,11 +25,13 @@ export function UserAvatar({
   seed,
   className,
   title,
+  shape = "circle",
 }: {
   url?: string | null;
   seed: string | null | undefined;
   className?: string;
   title?: string;
+  shape?: "circle" | "rounded";
 }) {
   const importedUrl = uploadedAvatarUrl(seed);
   if (!url && !importedUrl && !seed) {
@@ -46,7 +48,11 @@ export function UserAvatar({
       src={url || importedUrl || avatarDataUri(seed as string)}
       alt=""
       title={title}
-      className={cn("shrink-0 rounded-full object-cover", className)}
+      className={cn(
+        "shrink-0 object-cover",
+        shape === "rounded" ? "rounded-[6px]" : "rounded-full",
+        className,
+      )}
     />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ElementType, type JSX } from "react";
+import { memo, useMemo, type ElementType, type JSX } from "react";
 import ReactMarkdown, { type ExtraProps, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -153,7 +153,7 @@ function rehypeChain(
     every entity type. `members` remains the lightweight compatibility path for
     member and Numo mentions. Both paths render the same MentionChip component
     used while composing. */
-export function Markdown({
+function MarkdownRenderer({
   children,
   className,
   members,
@@ -357,3 +357,7 @@ export function Markdown({
     </div>
   );
 }
+
+/** Keep parsed HTML mounted when an unrelated parent state (such as a draft
+    comment) changes. Context updates and actual Markdown prop changes still render. */
+export const Markdown = memo(MarkdownRenderer);
