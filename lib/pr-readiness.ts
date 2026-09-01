@@ -63,11 +63,30 @@ export interface ReadinessBlocker {
   kind: ReadinessBlockerKind;
   required: boolean;
   status: "pending" | "blocked" | "unavailable";
-  source: "pull_request" | "repository" | "reviews" | "conversations" | "checks";
+  source:
+    "pull_request" | "repository" | "reviews" | "conversations" | "checks";
   action: ReadinessAction;
   count?: number;
   expected?: number;
   checkNames?: string[];
+}
+
+export type ReadinessPassedConditionKind =
+  | "mergeability"
+  | "reviewable"
+  | "checks"
+  | "approvals"
+  | "conversations"
+  | "branch"
+  | "policy";
+
+export interface ReadinessPassedCondition {
+  id: string;
+  kind: ReadinessPassedConditionKind;
+  required: boolean;
+  source: ReadinessBlocker["source"];
+  count?: number;
+  expected?: number;
 }
 
 export type PullRequestReadinessState =
@@ -87,6 +106,7 @@ export type PullRequestReadinessState =
 export interface PullRequestReadiness {
   state: PullRequestReadinessState;
   blockers: ReadinessBlocker[];
+  passed: ReadinessPassedCondition[];
   mergeAllowed: boolean;
   methods: MergeMethod[];
   preferredMethod: MergeMethod | null;
@@ -137,23 +157,41 @@ const BLOCKER_PRIORITY: ReadinessBlockerKind[] = [
  * the highest-priority summary. Pending work intentionally takes precedence over
  * failures so a running suite never appears final.
  */
-export function reducePullRequestReadiness(input: ReadinessInput): PullRequestReadiness {
+export function reducePullRequestReadiness(
+  input: ReadinessInput,
+): PullRequestReadiness {
   const methods = input.policy?.methods ?? [];
   const preferredMethod =
-    input.policy?.preferredMethod && methods.includes(input.policy.preferredMethod)
+    input.policy?.preferredMethod &&
+    methods.includes(input.policy.preferredMethod)
       ? input.policy.preferredMethod
-      : methods[0] ?? null;
+      : (methods[0] ?? null);
 
   if (input.merged) {
-    return { state: "merged", blockers: [], mergeAllowed: false, methods, preferredMethod };
+    return {
+      state: "merged",
+      blockers: [],
+      passed: [],
+      mergeAllowed: false,
+      methods,
+      preferredMethod,
+    };
   }
   if (input.state === "closed") {
-    return { state: "closed", blockers: [], mergeAllowed: false, methods, preferredMethod };
+    return {
+      state: "closed",
+      blockers: [],
+      passed: [],
+      mergeAllowed: false,
+      methods,
+      preferredMethod,
+    };
   }
 
   const blockers: ReadinessBlocker[] = [];
   const add = (blocker: ReadinessBlocker) => {
-    if (!blockers.some((existing) => existing.id === blocker.id)) blockers.push(blocker);
+    if (!blockers.some((existing) => existing.id === blocker.id))
+      blockers.push(blocker);
   };
 
   if (input.draft || input.mergeabilityReason === "draft") {
@@ -187,7 +225,8 @@ export function reducePullRequestReadiness(input: ReadinessInput): PullRequestRe
       id: "mergeability-unavailable",
       kind: "mergeability",
       required: true,
-      status: input.mergeabilityReason === "checking" ? "pending" : "unavailable",
+      status:
+        input.mergeabilityReason === "checking" ? "pending" : "unavailable",
       source: "pull_request",
       action: "open_forge",
     });
@@ -220,7 +259,9 @@ export function reducePullRequestReadiness(input: ReadinessInput): PullRequestRe
       required: true,
       status: "blocked",
       source: "repository",
-      action: input.policy?.mergeQueueRequired ? "enable_auto_merge" : "open_forge",
+      action: input.policy?.mergeQueueRequired
+        ? "enable_auto_merge"
+        : "open_forge",
     });
   }
 
@@ -233,7 +274,10 @@ export function reducePullRequestReadiness(input: ReadinessInput): PullRequestRe
       source: "checks",
       action: "open_forge",
     });
-  } else if (input.checksStatus === "forbidden" || input.checksStatus === "unavailable") {
+  } else if (
+    input.checksStatus === "forbidden" ||
+    input.checksStatus === "unavailable"
+  ) {
     add({
       id: "checks-unavailable",
       kind: "mergeability",
@@ -273,7 +317,10 @@ export function reducePullRequestReadiness(input: ReadinessInput): PullRequestRe
     }
   }
 
-  if ((input.changesRequested ?? 0) > 0 || input.mergeabilityReason === "changes_requested") {
+  if (
+    (input.changesRequested ?? 0) > 0 ||
+    input.mergeabilityReason === "changes_requested"
+  ) {
     add({
       id: "changes-requested",
       kind: "changes_requested",
@@ -303,7 +350,9 @@ export function reducePullRequestReadiness(input: ReadinessInput): PullRequestRe
   }
 
   if (input.reviewThreads) {
-    const unresolved = input.reviewThreads.filter((thread) => !thread.resolved).length;
+    const unresolved = input.reviewThreads.filter(
+      (thread) => !thread.resolved,
+    ).length;
     if (unresolved > 0) {
       const required =
         input.policy?.conversationsMustBeResolved === true ||
@@ -341,7 +390,9 @@ export function reducePullRequestReadiness(input: ReadinessInput): PullRequestRe
     });
   }
 
-  const genericPolicyIndex = blockers.findIndex((blocker) => blocker.id === "provider-policy");
+  const genericPolicyIndex = blockers.findIndex(
+    (blocker) => blocker.id === "provider-policy",
+  );
   if (
     genericPolicyIndex >= 0 &&
     blockers.some(
@@ -357,11 +408,96 @@ export function reducePullRequestReadiness(input: ReadinessInput): PullRequestRe
   const pendingChecks = blockers.find(
     (blocker) => blocker.kind === "checks" && blocker.status === "pending",
   );
-  const primary = pendingChecks ?? BLOCKER_PRIORITY.flatMap((kind) => blockers.filter((b) => b.kind === kind))[0];
+  const primary =
+    pendingChecks ??
+    BLOCKER_PRIORITY.flatMap((kind) =>
+      blockers.filter((b) => b.kind === kind),
+    )[0];
   const requiredBlocker = blockers.some((blocker) => blocker.required);
+  const passed: ReadinessPassedCondition[] = [];
+  const pass = (condition: ReadinessPassedCondition) => passed.push(condition);
+  if (!input.draft && input.mergeabilityReason !== "draft") {
+    pass({
+      id: "reviewable",
+      kind: "reviewable",
+      required: true,
+      source: "pull_request",
+    });
+  }
+  if (input.mergeabilityReason === "clean") {
+    pass({
+      id: "mergeable",
+      kind: "mergeability",
+      required: true,
+      source: "pull_request",
+    });
+  }
+  if (input.policy?.available) {
+    pass({
+      id: "policy-readable",
+      kind: "policy",
+      required: true,
+      source: "repository",
+    });
+  }
+  if (input.checksStatus === "loaded" && input.checks) {
+    const requiredChecks = input.checks.filter(
+      (check) => check.required === true,
+    );
+    if (
+      requiredChecks.every(
+        (check) => check.state === "success" || check.state === "neutral",
+      )
+    ) {
+      pass({
+        id: "checks-passed",
+        kind: "checks",
+        required:
+          input.policy?.checksMustPass === true || requiredChecks.length > 0,
+        source: "checks",
+        count: requiredChecks.length,
+      });
+    }
+  }
+  if (
+    input.policy?.requiredApprovals != null &&
+    input.policy.requiredApprovals > 0 &&
+    (input.approvals ?? 0) >= input.policy.requiredApprovals
+  ) {
+    pass({
+      id: "approvals-passed",
+      kind: "approvals",
+      required: true,
+      source: "reviews",
+      count: input.approvals ?? 0,
+      expected: input.policy.requiredApprovals,
+    });
+  }
+  if (input.policy?.conversationsMustBeResolved && input.reviewThreads) {
+    if (input.reviewThreads.every((thread) => thread.resolved)) {
+      pass({
+        id: "conversations-passed",
+        kind: "conversations",
+        required: true,
+        source: "conversations",
+      });
+    }
+  }
+  if (
+    input.policy?.branchMustBeUpToDate &&
+    input.mergeabilityReason === "clean"
+  ) {
+    pass({
+      id: "branch-current",
+      kind: "branch",
+      required: true,
+      source: "repository",
+    });
+  }
   return {
     state: primary ? PRIMARY_STATE[primary.kind] : "ready",
     blockers,
+    passed,
     mergeAllowed:
       input.canWrite &&
       !requiredBlocker &&
@@ -397,6 +533,11 @@ export interface GithubRuleInput {
   type?: string;
   parameters?: {
     merge_method?: "MERGE" | "SQUASH" | "REBASE" | string;
+    allowed_merge_methods?: Array<MergeMethod | string>;
+    required_approving_review_count?: number;
+    require_code_owner_review?: boolean;
+    required_review_thread_resolution?: boolean;
+    strict_required_status_checks_policy?: boolean;
     required_status_checks?: Array<{ context?: string }>;
   } | null;
 }
@@ -410,10 +551,11 @@ export function mapGithubMergePolicy(
   if (repository.allow_squash_merge) methods.push("squash");
   if (repository.allow_merge_commit) methods.push("merge");
   if (repository.allow_rebase_merge) methods.push("rebase");
-  const ruleContexts = rules
-    .find((rule) => rule.type === "required_status_checks")
-    ?.parameters?.required_status_checks?.map((check) => check.context)
-    .filter((context): context is string => !!context) ?? [];
+  const ruleContexts =
+    rules
+      .find((rule) => rule.type === "required_status_checks")
+      ?.parameters?.required_status_checks?.map((check) => check.context)
+      .filter((context): context is string => !!context) ?? [];
   const branchContexts = [
     ...(branch?.required_status_checks?.contexts ?? []),
     ...(branch?.required_status_checks?.checks ?? [])
@@ -421,22 +563,46 @@ export function mapGithubMergePolicy(
       .filter((context): context is string => !!context),
   ];
   const contexts = [...new Set([...branchContexts, ...ruleContexts])];
+  const pullRequestRule = rules.find((rule) => rule.type === "pull_request");
+  const allowedByRule =
+    pullRequestRule?.parameters?.allowed_merge_methods?.filter(
+      (method): method is MergeMethod =>
+        method === "merge" || method === "squash" || method === "rebase",
+    );
+  const policyMethods = allowedByRule?.length
+    ? methods.filter((method) => allowedByRule.includes(method))
+    : methods;
   const mergeQueue = rules.find((rule) => rule.type === "merge_queue");
-  const queueMethod = mergeQueue?.parameters?.merge_method?.toLowerCase() as MergeMethod | undefined;
-  const queueMethods = queueMethod && methods.includes(queueMethod) ? [queueMethod] : methods;
+  const queueMethod = mergeQueue?.parameters?.merge_method?.toLowerCase() as
+    MergeMethod | undefined;
+  const queueMethods =
+    queueMethod && policyMethods.includes(queueMethod)
+      ? [queueMethod]
+      : policyMethods;
+  const branchApprovals =
+    branch?.required_pull_request_reviews?.required_approving_review_count ?? 0;
+  const rulesetApprovals =
+    pullRequestRule?.parameters?.required_approving_review_count ?? 0;
   return {
     provider: "github",
     available: true,
     methods: queueMethods,
     preferredMethod: queueMethods[0] ?? null,
-    requiredApprovals:
-      branch?.required_pull_request_reviews?.required_approving_review_count ?? 0,
+    requiredApprovals: Math.max(branchApprovals, rulesetApprovals),
     codeOwnerReviewRequired:
-      branch?.required_pull_request_reviews?.require_code_owner_reviews ?? false,
-    conversationsMustBeResolved: branch?.required_conversation_resolution?.enabled ?? false,
+      (branch?.required_pull_request_reviews?.require_code_owner_reviews ??
+        false) ||
+      (pullRequestRule?.parameters?.require_code_owner_review ?? false),
+    conversationsMustBeResolved:
+      (branch?.required_conversation_resolution?.enabled ?? false) ||
+      (pullRequestRule?.parameters?.required_review_thread_resolution ?? false),
     checksMustPass: contexts.length > 0,
     requiredCheckNames: contexts,
-    branchMustBeUpToDate: branch?.required_status_checks?.strict ?? false,
+    branchMustBeUpToDate:
+      (branch?.required_status_checks?.strict ?? false) ||
+      (rules.find((rule) => rule.type === "required_status_checks")?.parameters
+        ?.strict_required_status_checks_policy ??
+        false),
     linearHistoryRequired:
       branch?.required_linear_history?.enabled ??
       rules.some((rule) => rule.type === "required_linear_history"),
@@ -454,7 +620,9 @@ export interface GitlabProjectPolicyInput {
   merge_trains_enabled?: boolean;
 }
 
-export function mapGitlabMergePolicy(project: GitlabProjectPolicyInput): RepositoryMergePolicy {
+export function mapGitlabMergePolicy(
+  project: GitlabProjectPolicyInput,
+): RepositoryMergePolicy {
   const squash = project.squash_option;
   const methods: MergeMethod[] =
     squash === "always"
@@ -476,7 +644,8 @@ export function mapGitlabMergePolicy(project: GitlabProjectPolicyInput): Reposit
     checksMustPass: project.only_allow_merge_if_pipeline_succeeds ?? false,
     requiredCheckNames: null,
     branchMustBeUpToDate: project.merge_method === "rebase_merge" ? true : null,
-    linearHistoryRequired: project.merge_method === "ff" || project.merge_method === "rebase_merge",
+    linearHistoryRequired:
+      project.merge_method === "ff" || project.merge_method === "rebase_merge",
     mergeQueueRequired: project.merge_trains_enabled ?? false,
     autoMergeAllowed: true,
   };
@@ -518,6 +687,7 @@ export function blockerFallbackUrl(
   if (blocker.kind === "conversations") return `${pullRequestUrl}#notes`;
   if (blocker.kind === "checks") return `${pullRequestUrl}/pipelines`;
   if (blocker.kind === "conflicts") return `${pullRequestUrl}/conflicts`;
-  if (blocker.kind === "branch") return `${pullRequestUrl}#merge-request-widget`;
+  if (blocker.kind === "branch")
+    return `${pullRequestUrl}#merge-request-widget`;
   return pullRequestUrl;
 }

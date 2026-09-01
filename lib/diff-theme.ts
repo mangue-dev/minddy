@@ -85,6 +85,19 @@ export const DIFF_LINE_DIFF_TYPE: LineDiffTypes = "word-alt";
 export const DIFF_RANGE_ATTRIBUTE = "data-pr-comment-range";
 
 export const DIFF_UNSAFE_CSS = `
+/* @pierre/diffs redeclares --diffs-bg on its shadow host. Mirror the app
+   surface inside the shadow tree so a dark Minddy theme cannot fall back to
+   the renderer's white default. */
+:host {
+  --diffs-light-bg: var(--minddy-diff-bg) !important;
+  --diffs-dark-bg: var(--minddy-diff-bg) !important;
+  --diffs-bg: var(--minddy-diff-bg) !important;
+  --diffs-light: var(--foreground) !important;
+  --diffs-dark: var(--foreground) !important;
+  --diffs-fg: var(--foreground) !important;
+  background-color: var(--minddy-diff-bg) !important;
+  color: var(--foreground) !important;
+}
 :host, [data-line], [data-code], [data-content] {
   user-select: text !important;
   -webkit-user-select: text !important;

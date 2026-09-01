@@ -672,6 +672,7 @@ export function ReviewThreadCard({
           )}
           {resolution && state ? (
             <Button
+              data-testid="resolve-conversation"
               variant="ghost"
               size="sm"
               disabled={pending}

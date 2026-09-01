@@ -9,7 +9,11 @@ import {
 } from "./pr-readiness";
 
 const policy = mapGithubMergePolicy(
-  { allow_squash_merge: true, allow_merge_commit: false, allow_rebase_merge: true },
+  {
+    allow_squash_merge: true,
+    allow_merge_commit: false,
+    allow_rebase_merge: true,
+  },
   {
     required_status_checks: { strict: true, contexts: ["test"] },
     required_pull_request_reviews: {
@@ -46,6 +50,19 @@ describe("reducePullRequestReadiness", () => {
       methods: ["squash", "rebase"],
       preferredMethod: "squash",
     });
+    expect(
+      reducePullRequestReadiness(input()).passed.map(
+        (condition) => condition.kind,
+      ),
+    ).toEqual([
+      "reviewable",
+      "mergeability",
+      "policy",
+      "checks",
+      "approvals",
+      "conversations",
+      "branch",
+    ]);
   });
 
   it("keeps simultaneous blockers instead of collapsing the provider refusal", () => {
@@ -55,7 +72,12 @@ describe("reducePullRequestReadiness", () => {
         approvals: 0,
         changesRequested: 1,
         reviewThreads: [
-          { rootCommentId: 1, threadId: "thread", resolved: false, resolvedBy: null },
+          {
+            rootCommentId: 1,
+            threadId: "thread",
+            resolved: false,
+            resolvedBy: null,
+          },
         ],
       }),
     );
@@ -88,7 +110,9 @@ describe("reducePullRequestReadiness", () => {
   });
 
   it("never presents computing or unavailable mergeability as ready", () => {
-    expect(reducePullRequestReadiness(input({ mergeabilityReason: "checking" }))).toMatchObject({
+    expect(
+      reducePullRequestReadiness(input({ mergeabilityReason: "checking" })),
+    ).toMatchObject({
       state: "status_unavailable",
       mergeAllowed: false,
     });
@@ -106,6 +130,45 @@ describe("provider merge policy mapping", () => {
       requiredApprovals: 2,
       checksMustPass: true,
       requiredCheckNames: ["test"],
+      branchMustBeUpToDate: true,
+    });
+  });
+
+  it("maps active GitHub rulesets without legacy branch-protection access", () => {
+    expect(
+      mapGithubMergePolicy(
+        {
+          allow_squash_merge: true,
+          allow_merge_commit: true,
+          allow_rebase_merge: true,
+        },
+        null,
+        [
+          {
+            type: "pull_request",
+            parameters: {
+              allowed_merge_methods: ["squash"],
+              required_approving_review_count: 1,
+              require_code_owner_review: true,
+              required_review_thread_resolution: true,
+            },
+          },
+          {
+            type: "required_status_checks",
+            parameters: {
+              strict_required_status_checks_policy: true,
+              required_status_checks: [{ context: "Tests" }],
+            },
+          },
+        ],
+      ),
+    ).toMatchObject({
+      methods: ["squash"],
+      requiredApprovals: 1,
+      codeOwnerReviewRequired: true,
+      conversationsMustBeResolved: true,
+      checksMustPass: true,
+      requiredCheckNames: ["Tests"],
       branchMustBeUpToDate: true,
     });
   });
@@ -136,9 +199,13 @@ describe("provider fallback links", () => {
       }),
     ).toBe("https://github.com/acme/repo/pull/42/files");
     expect(
-      blockerFallbackUrl("gitlab", "https://gitlab.com/acme/repo/-/merge_requests/42", {
-        kind: "checks",
-      }),
+      blockerFallbackUrl(
+        "gitlab",
+        "https://gitlab.com/acme/repo/-/merge_requests/42",
+        {
+          kind: "checks",
+        },
+      ),
     ).toBe("https://gitlab.com/acme/repo/-/merge_requests/42/pipelines");
   });
 });

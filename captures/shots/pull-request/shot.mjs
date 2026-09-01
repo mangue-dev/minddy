@@ -8,7 +8,13 @@
  * node captures/shots/pull-request/shot.mjs # produces the PNGs
  *   node captures/shots/pull-request/shot.mjs --publish   # + livre
  */
-import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
+import {
+  openPage,
+  settle,
+  shoot,
+  CAPTURE,
+  CAPTURE_VARIANTS,
+} from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 import {
   COMMENTS,
@@ -18,7 +24,10 @@ import {
   LIST_RESPONSE,
   PR_ID,
   PR_NUMBER,
+  REVIEW_COMMENTS,
+  REVIEW_THREADS,
   RUN_ID,
+  TIMELINE,
   TOTALS,
 } from "./fixture.mjs";
 
@@ -30,7 +39,11 @@ const PUBLISH = process.argv.includes("--publish");
 const VARIANTS = CAPTURE_VARIANTS;
 
 const json = (route, body) =>
-  route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
 
 /**
  * Readings responded to by capture. They are ALL indexed by the PR
@@ -48,6 +61,7 @@ const json = (route, body) =>
 async function serveFixture(page) {
   const served = [];
   const unexpected = [];
+  let reviewResolved = false;
 
   const on = (test, handler) =>
     page.route(
@@ -58,8 +72,7 @@ async function serveFixture(page) {
       },
     );
 
-  const under = (suffix) =>
-    new RegExp(`^/api/pull-requests/[^/]+${suffix}$`);
+  const under = (suffix) => new RegExp(`^/api/pull-requests/[^/]+${suffix}$`);
 
   // Safety net, installed FIRST and therefore consulted LAST: Playwright
   // tries its handlers in REVERSE order of registration, the most
@@ -74,19 +87,38 @@ async function serveFixture(page) {
     },
   );
 
-  await on((p) => p === "/api/pull-requests", (r) => json(r, LIST_RESPONSE));
-  await on((p) => under("").test(p), (r) => json(r, DETAIL_RESPONSE));
+  await on(
+    (p) => p === "/api/pull-requests",
+    (r) => json(r, LIST_RESPONSE),
+  );
+  await on(
+    (p) => under("").test(p),
+    (r) => json(r, DETAIL_RESPONSE),
+  );
   await on(
     (p) => under("/comments").test(p),
     // The wire is FLAT on the forge side: `comments` is the conversation, `timeline`
     // events (assignments, labels, etc.) and `reactions` emoji. Both
     // The latter are empty — the demo world has neither.
-    (r) => json(r, { comments: COMMENTS, timeline: [], reactions: [] }),
+    (r) => json(r, { comments: COMMENTS, timeline: TIMELINE, reactions: [] }),
   );
-  await on((p) => under("/commits").test(p), (r) => json(r, { commits: COMMITS, truncated: false }));
+  await on(
+    (p) => under("/commits").test(p),
+    (r) => json(r, { commits: COMMITS, truncated: false }),
+  );
   await on(
     (p) => under("/review-comments").test(p),
-    (r) => json(r, { comments: [], threads: [], reactions: [] }),
+    (r) => {
+      if (r.request().method() === "PATCH") {
+        reviewResolved = true;
+        return json(r, { ok: true, resolved: true });
+      }
+      return json(r, {
+        comments: reviewResolved ? [] : REVIEW_COMMENTS,
+        threads: reviewResolved ? [] : REVIEW_THREADS,
+        reactions: [],
+      });
+    },
   );
   // Rereading by Numo (MIN-168): no session on this PR, therefore nothing to
   // announce in the thread. The hook stops polling as soon as `working` is false.
@@ -99,11 +131,17 @@ async function serveFixture(page) {
 }
 
 async function capture({ locale, theme }) {
-  const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
+  const { browser, page } = await openPage({
+    theme,
+    locale,
+    viewport: VIEWPORT,
+  });
   try {
     const { served, unexpected } = await serveFixture(page);
 
-    await page.goto(`${CAPTURE.baseUrl}/pull-requests`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${CAPTURE.baseUrl}/pull-requests`, {
+      waitUntil: "domcontentloaded",
+    });
     await settle(page, { expect: `text=#${PR_NUMBER}` });
 
     // The header usage badge displays “…” as long as the billing
@@ -111,7 +149,10 @@ async function capture({ locale, theme }) {
     // photographed while loading. We wait for her to finish, whatever
     // the language — it is the character that we look for, not a wording.
     await page.waitForFunction(
-      () => ![...document.querySelectorAll("button")].some((b) => b.textContent?.trim() === "…"),
+      () =>
+        ![...document.querySelectorAll("button")].some(
+          (b) => b.textContent?.trim() === "…",
+        ),
       undefined,
       { timeout: 15_000 },
     );
@@ -121,7 +162,10 @@ async function capture({ locale, theme }) {
       const buttons = [...(header?.querySelectorAll("button") ?? [])]
         .filter((button) => getComputedStyle(button).display !== "none")
         .map((button) => ({
-          label: button.getAttribute("aria-label") || button.textContent?.trim() || "",
+          label:
+            button.getAttribute("aria-label") ||
+            button.textContent?.trim() ||
+            "",
           box: button.getBoundingClientRect().toJSON(),
         }));
       const overlaps = [];
@@ -129,7 +173,12 @@ async function capture({ locale, theme }) {
         for (let right = left + 1; right < buttons.length; right++) {
           const a = buttons[left].box;
           const b = buttons[right].box;
-          if (a.right > b.left && b.right > a.left && a.bottom > b.top && b.bottom > a.top) {
+          if (
+            a.right > b.left &&
+            b.right > a.left &&
+            a.bottom > b.top &&
+            b.bottom > a.top
+          ) {
             overlaps.push([buttons[left].label, buttons[right].label]);
           }
         }
@@ -137,11 +186,40 @@ async function capture({ locale, theme }) {
       return { overlaps, labels: buttons.map((button) => button.label) };
     });
     if (headerLayout.overlaps.length > 0) {
-      throw new Error(`${locale}/${theme} — overlapping PR header actions: ${JSON.stringify(headerLayout.overlaps)}`);
+      throw new Error(
+        `${locale}/${theme} — overlapping PR header actions: ${JSON.stringify(headerLayout.overlaps)}`,
+      );
     }
     if (headerLayout.labels.length < 2) {
-      throw new Error(`${locale}/${theme} — readiness and primary actions are missing from the PR header.`);
+      throw new Error(
+        `${locale}/${theme} — readiness and primary actions are missing from the PR header.`,
+      );
     }
+
+    const readinessControl = page.getByTestId("pr-readiness-control");
+    await readinessControl.click();
+    const readinessPopover = page.getByTestId("pr-readiness-popover");
+    await readinessPopover.waitFor({ state: "visible" });
+    if (
+      (await readinessPopover
+        .getByTestId("pr-readiness-condition-passed")
+        .count()) < 3
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the readiness popover does not list passed conditions.`,
+      );
+    }
+    if (await readinessPopover.getByTestId("pr-readiness-merge").isDisabled()) {
+      throw new Error(
+        `${locale}/${theme} — the ready PR cannot be merged from its readiness popover.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+
+    const resolveConversation = page.getByTestId("resolve-conversation");
+    await resolveConversation.waitFor({ state: "visible" });
+    await resolveConversation.click();
+    await resolveConversation.waitFor({ state: "detached" });
 
     // Files tab: designated by its rank, its wording is translated and carries
     // the file counter. This is the THIRD since a tab
@@ -151,7 +229,9 @@ async function capture({ locale, theme }) {
     const filesTab = page.getByRole("tab").nth(2);
     await filesTab.click();
     if ((await filesTab.getAttribute("aria-selected")) !== "true") {
-      throw new Error(`${locale}/${theme} — l'onglet Fichiers n'est pas sélectionné.`);
+      throw new Error(
+        `${locale}/${theme} — l'onglet Fichiers n'est pas sélectionné.`,
+      );
     }
 
     // The diff is rendered by a parser: we expect a line of code, not the title
@@ -161,7 +241,7 @@ async function capture({ locale, theme }) {
       .first()
       .waitFor({ state: "visible", timeout: 15_000 });
 
-    const selectable = await page.evaluate(() => {
+    const diffInspection = await page.evaluate(() => {
       const visit = (root) => {
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
         for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -176,7 +256,8 @@ async function capture({ locale, theme }) {
         return null;
       };
       const node = visit(document);
-      if (!node) return false;
+      if (!node)
+        return { selectable: false, hostBackground: null, hostChannels: null };
       const range = document.createRange();
       range.selectNodeContents(node);
       const selection = window.getSelection();
@@ -184,10 +265,44 @@ async function capture({ locale, theme }) {
       selection?.addRange(range);
       const selected = selection?.toString() ?? "";
       selection?.removeAllRanges();
-      return selected.includes("export type KeyHint");
+      const root = node.getRootNode();
+      const host = root instanceof ShadowRoot ? root.host : node.parentElement;
+      const background = host ? getComputedStyle(host).backgroundColor : null;
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (context && background) {
+        context.fillStyle = background;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return {
+        selectable: selected.includes("export type KeyHint"),
+        hostBackground: background,
+        hostChannels:
+          context && background
+            ? (() => {
+                const channels = context.getImageData(0, 0, 1, 1).data;
+                return [channels[0], channels[1], channels[2]];
+              })()
+            : null,
+      };
     });
-    if (!selectable) {
-      throw new Error(`${locale}/${theme} — diff code text cannot be selected and copied.`);
+    if (!diffInspection.selectable) {
+      throw new Error(
+        `${locale}/${theme} — diff code text cannot be selected and copied.`,
+      );
+    }
+    if (theme === "dark") {
+      const channels = diffInspection.hostChannels;
+      if (
+        !channels ||
+        channels.reduce((sum, channel) => sum + channel, 0) / 3 > 120
+      ) {
+        throw new Error(
+          `${locale}/${theme} — the diff shadow surface is not dark (${diffInspection.hostBackground}).`,
+        );
+      }
     }
 
     await page.mouse.move(120, 60);
@@ -243,7 +358,8 @@ async function capture({ locale, theme }) {
           missingFiles: files.filter((f) => !text.includes(f)),
           painted,
           hasTotals:
-            text.includes(`+${totals.additions}`) || text.includes(String(totals.additions)),
+            text.includes(`+${totals.additions}`) ||
+            text.includes(String(totals.additions)),
         };
       },
       { files: FILES.map((f) => f.filename), totals: TOTALS },
@@ -276,7 +392,13 @@ async function capture({ locale, theme }) {
 
     const path = `${OUT}/${locale}-${theme}.png`;
     await shoot(page, path);
-    return { path, locale, theme, painted: check.painted, served: served.length };
+    return {
+      path,
+      locale,
+      theme,
+      painted: check.painted,
+      served: served.length,
+    };
   } finally {
     await browser.close();
   }
@@ -299,11 +421,20 @@ for (const variant of VARIANTS) {
 if (PUBLISH) {
   console.log("\nLivraison sur la landing :");
   for (const { locale, theme, path } of results) {
-    const published = await publishShot({ slot: SLOT, lang: locale, theme, input: path });
-    console.log(`  ${published.name} — ${(published.bytes / 1024).toFixed(0)} Ko`);
+    const published = await publishShot({
+      slot: SLOT,
+      lang: locale,
+      theme,
+      input: path,
+    });
+    console.log(
+      `  ${published.name} — ${(published.bytes / 1024).toFixed(0)} Ko`,
+    );
   }
   const { published } = await writeManifest();
   console.log(`\nManifeste : ${published.length} variante(s) publiée(s).`);
 } else {
-  console.log("\nRegarde les images, puis relance avec --publish pour les livrer.");
+  console.log(
+    "\nRegarde les images, puis relance avec --publish pour les livrer.",
+  );
 }

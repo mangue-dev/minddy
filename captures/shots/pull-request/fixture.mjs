@@ -203,7 +203,10 @@ for (const file of FILES) {
 
 /** Sum of files — must be +58 −7, like the agent capture block. */
 export const TOTALS = FILES.reduce(
-  (acc, f) => ({ additions: acc.additions + f.additions, deletions: acc.deletions + f.deletions }),
+  (acc, f) => ({
+    additions: acc.additions + f.additions,
+    deletions: acc.deletions + f.deletions,
+  }),
   { additions: 0, deletions: 0 },
 );
 
@@ -310,6 +313,47 @@ export const COMMENTS = [
   },
 ];
 
+/** An unresolved line conversation recalled in the Conversation tab. */
+export const REVIEW_COMMENTS = [
+  {
+    id: 9101,
+    body: "Please keep the shortcut type next to the action contract so every new action declares its own hint.",
+    path: "lib/palette/actions.ts",
+    line: 27,
+    original_line: 27,
+    side: "RIGHT",
+    start_line: null,
+    start_side: null,
+    in_reply_to_id: null,
+    review_id: 9201,
+    diff_hunk: PATCH_ACTIONS,
+    user: CAMILLE,
+    created_at: "2026-07-14T17:08:00.000Z",
+    html_url: `${PR_URL}#discussion_r9101`,
+  },
+];
+
+export const REVIEW_THREADS = [
+  {
+    rootCommentId: 9101,
+    threadId: "PRRT_demo_9101",
+    resolved: false,
+    resolvedBy: null,
+  },
+];
+
+export const TIMELINE = [
+  {
+    id: "review:9201",
+    kind: "reviewed",
+    actor: CAMILLE,
+    createdAt: "2026-07-14T17:08:00.000Z",
+    reviewState: "commented",
+    body: "One inline point before merge.",
+    reviewId: 9201,
+  },
+];
+
 /**
  * The list item, such as /api/pull-requests would return it. `prId` is
  * now the key: it is he who the page selects and he who addresses
@@ -388,10 +432,37 @@ export const DETAIL_RESPONSE = {
     mergeQueueRequired: false,
     autoMergeAllowed: true,
   },
-  reviewThreads: [],
+  reviewThreads: REVIEW_THREADS,
   readiness: {
     state: "ready",
     blockers: [],
+    passed: [
+      {
+        id: "reviewable",
+        kind: "reviewable",
+        required: true,
+        source: "pull_request",
+      },
+      {
+        id: "mergeable",
+        kind: "mergeability",
+        required: true,
+        source: "pull_request",
+      },
+      {
+        id: "policy-readable",
+        kind: "policy",
+        required: true,
+        source: "repository",
+      },
+      {
+        id: "checks-passed",
+        kind: "checks",
+        required: false,
+        source: "checks",
+        count: 0,
+      },
+    ],
     mergeAllowed: true,
     methods: MERGE_METHODS,
     preferredMethod: "squash",

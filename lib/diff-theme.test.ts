@@ -7,4 +7,13 @@ describe("diff interaction styles", () => {
     expect(DIFF_UNSAFE_CSS).toContain("user-select: text !important");
     expect(DIFF_UNSAFE_CSS).toContain("-webkit-user-select: text !important");
   });
+
+  it("forces the application surface through the renderer shadow root", () => {
+    expect(DIFF_UNSAFE_CSS).toContain(
+      "--diffs-bg: var(--minddy-diff-bg) !important",
+    );
+    expect(DIFF_UNSAFE_CSS).toContain(
+      "background-color: var(--minddy-diff-bg) !important",
+    );
+  });
 });

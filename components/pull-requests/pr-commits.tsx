@@ -14,7 +14,7 @@ import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
 import type { PullRequestCommit } from "@/lib/agent-api";
 import { newestFirstPullRequestCommits } from "@/lib/pull-request-commits";
-import type { RepoProviderId } from "@/lib/repo-providers";
+import { REPO_PROVIDERS, type RepoProviderId } from "@/lib/repo-providers";
 import {
   Tooltip,
   TooltipContent,
@@ -266,7 +266,9 @@ function CommitRow({
               {t("commitVerified")}
             </Badge>
           </TooltipTrigger>
-          <TooltipContent side="bottom">{t("commitVerifiedHint")}</TooltipContent>
+          <TooltipContent side="bottom">
+            {t("commitVerifiedHint", { provider: REPO_PROVIDERS[provider].displayName })}
+          </TooltipContent>
         </Tooltip>
       ) : null}
       <div className="flex shrink-0 items-center">

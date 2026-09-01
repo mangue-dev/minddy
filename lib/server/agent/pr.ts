@@ -24,6 +24,7 @@ import type { CommitAuthor } from "@/lib/commit-authors";
 import { reviewFallbackPrefix } from "./review-copy";
 import {
   mapGithubMergePolicy,
+  unavailableMergePolicy,
   type GithubBranchPolicyInput,
   type GithubRepositoryPolicyInput,
   type GithubRuleInput,
@@ -496,12 +497,17 @@ export async function getRepositoryMergePolicy(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
     opts.token,
   );
-  const [branch, rules] = await Promise.all([
+  const [branchSummary, branchResult, rules] = await Promise.all([
+    ghJson<{ protected?: boolean }>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.base)}`,
+      opts.token,
+    ),
     ghJson<GithubBranchPolicyInput>(
       `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.base)}/protection`,
       opts.token,
     ).catch((error) => {
       if (error instanceof GithubApiError && error.status === 404) return null;
+      if (error instanceof GithubApiError && error.status === 403) return "forbidden" as const;
       throw error;
     }),
     ghJson<GithubRuleInput[]>(
@@ -514,7 +520,20 @@ export async function getRepositoryMergePolicy(opts: {
       throw error;
     }),
   ]);
-  return mapGithubMergePolicy(repository, branch, rules);
+  // Reading legacy branch protection requires `Administration: read`, while
+  // active rulesets are available through the branch-rules endpoint. Do not
+  // discard a complete modern ruleset merely because the legacy endpoint is
+  // forbidden. Conversely, a protected branch with no readable ruleset remains
+  // unavailable: treating an unknown legacy protection as permissive would make
+  // Minddy offer a merge that GitHub can reject.
+  if (branchResult === "forbidden" && branchSummary.protected && rules.length === 0) {
+    return unavailableMergePolicy("github", "forbidden");
+  }
+  return mapGithubMergePolicy(
+    repository,
+    branchResult === "forbidden" ? null : branchResult,
+    rules,
+  );
 }
 
 const FILES_PER_PAGE = 100;

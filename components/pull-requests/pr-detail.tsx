@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
@@ -37,7 +37,6 @@ import {
   Pencil,
   Reply,
   RotateCcw,
-  Send,
   X,
 } from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
@@ -65,10 +64,7 @@ import {
 } from "@/components/pull-requests/pr-review-thread";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
-import {
-  PrReadinessBadge,
-  PrReadinessPanel,
-} from "@/components/pull-requests/pr-readiness";
+import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
@@ -115,6 +111,7 @@ import {
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
 import { normalizeForgeInstant } from "@/lib/forge-time";
+import { REPO_PROVIDERS } from "@/lib/repo-providers";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { usePrReviewSession } from "@/lib/use-pr-review-session";
@@ -569,7 +566,6 @@ export function PrDetail({
     checks,
     checksError,
     viewer,
-    mergeMethods,
     readiness,
     loading,
     refetch: refetchPr,
@@ -593,6 +589,9 @@ export function PrDetail({
     reactions: reviewReactions,
     refetch: refetchReviewComments,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
+  const refreshReviewState = useCallback(async () => {
+    await Promise.all([refetchReviewComments(), refetchPr()]);
+  }, [refetchPr, refetchReviewComments]);
   // Live from THIS PR (MIN-161): the server pushes “this part has moved”
   // on `pull-request:{id}`, and these four caches will reread. This is what makes
   // such as a comment posted on github.com, a pushed commit, an approval or
@@ -711,11 +710,6 @@ export function PrDetail({
   // error was only caught on github.com (MIN-164). Merged, in
   // However, is definitive - the forge refuses, and there is nothing to offer.
   const canReopen = canWrite && item.pr_state === "closed";
-  // A red CI only blocks the merge in minddy: GitHub lets it pass if
-  // the branch is not protected, hence the “merge anyway” loophole.
-  const preferredMergeMethod = readiness?.preferredMethod ?? mergeMethods[0] ?? null;
-  const otherMethods = mergeMethods.filter((method) => method !== preferredMergeMethod);
-
   // When Numo finishes (the active run disappears from the list), refresh diff +
   // comments. Line comments are one of them: Numo can have
   // answered, and a new push changes the rows they anchor to. THE
@@ -830,7 +824,7 @@ export function PrDetail({
       return;
     }
     if (blocker.action === "resolve_conversations") {
-      setTab("files");
+      setTab("activity");
       return;
     }
     setMaintenanceAction(blocker.action);
@@ -1267,7 +1261,6 @@ export function PrDetail({
             the news, and it will take the place of the actions, at the end of the
             line (see the right cluster below). */}
         {!isTerminal ? <PrStateBadge state={badgeState} icon /> : null}
-        {!isTerminal ? <PrReadinessBadge readiness={readiness} /> : null}
         {isWorking ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
@@ -1445,80 +1438,22 @@ export function PrDetail({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {!canWrite ? null : isDraft ? (
-              // A draft PR does not merge: the gesture it calls for is
-              // to propose it.
-              <Button
-                size="sm"
-                onClick={() => void act("ready_for_review")}
-                disabled={!!acting || isWorking}
-              >
-                {acting === "ready_for_review" ? <Spinner /> : <Send />}
-                {t("readyForReview")}
-              </Button>
+            {readiness ? (
+              <PrReadinessControl
+                readiness={readiness}
+                providerName={REPO_PROVIDERS[item.provider].displayName}
+                fallbackUrl={(blocker) =>
+                  pr?.url ? blockerFallbackUrl(item.provider, pr.url, blocker) : null
+                }
+                canAct={canActOnBlocker}
+                acting={maintenanceAction}
+                onAction={(blocker) => void handleReadinessAction(blocker)}
+                canMerge={!!canWrite}
+                merging={acting === "merge" || isWorking}
+                onMerge={(method) => setConfirmAction({ kind: "merge", method })}
+              />
             ) : (
-              <div className="flex items-center">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={readiness?.mergeAllowed ? undefined : 0}>
-                      <Button
-                        size="sm"
-                        className={cn(otherMethods.length > 0 && "rounded-r-none")}
-                        onClick={() => {
-                          if (preferredMergeMethod) {
-                            setConfirmAction({ kind: "merge", method: preferredMergeMethod });
-                          }
-                        }}
-                        disabled={!readiness?.mergeAllowed || !!acting || isWorking || !preferredMergeMethod}
-                      >
-                        {acting === "merge" ? <Spinner /> : <Check />}
-                        {preferredMergeMethod
-                          ? t(
-                              preferredMergeMethod === "squash"
-                                ? "mergeMethodSquash"
-                                : preferredMergeMethod === "rebase"
-                                  ? "mergeMethodRebase"
-                                  : "mergeMethodMerge",
-                            )
-                          : t("merge")}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!readiness?.mergeAllowed ? (
-                    <TooltipContent side="bottom">{t("readinessChecklistHint")}</TooltipContent>
-                  ) : null}
-                </Tooltip>
-                {otherMethods.length > 0 ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="sm"
-                        aria-label={t("mergeMethodMenu")}
-                        className="rounded-l-none border-l border-primary-foreground/20 px-2"
-                        disabled={!readiness?.mergeAllowed || !!acting || isWorking}
-                      >
-                        <ChevronDown className="size-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {otherMethods.map((m) => (
-                        <DropdownMenuItem
-                          key={m}
-                          onSelect={() => setConfirmAction({ kind: "merge", method: m })}
-                        >
-                          {t(
-                            m === "squash"
-                              ? "mergeMethodSquash"
-                              : m === "rebase"
-                                ? "mergeMethodRebase"
-                                : "mergeMethodMerge",
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
-              </div>
+              <PrReadinessBadge readiness={null} />
             )}
           </div>
         )}
@@ -1652,18 +1587,6 @@ export function PrDetail({
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
 
-          {readiness ? (
-            <PrReadinessPanel
-              readiness={readiness}
-              fallbackUrl={(blocker) =>
-                pr?.url ? blockerFallbackUrl(item.provider, pr.url, blocker) : null
-              }
-              canAct={canActOnBlocker}
-              acting={maintenanceAction}
-              onAction={(blocker) => void handleReadinessAction(blocker)}
-            />
-          ) : null}
-
           <ChecksBanner
             checks={checks}
             error={checksError}
@@ -1740,6 +1663,11 @@ export function PrDetail({
                           key={entry.key}
                           event={entry.event}
                           comments={entry.comments}
+                          endpoint={prEndpoint(item.prId)}
+                          threadStates={reviewThreads}
+                          canComment={!!canComment}
+                          canResolve={!!canWrite}
+                          onChanged={refreshReviewState}
                         />
                       );
                     }
@@ -1800,7 +1728,7 @@ export function PrDetail({
                   reviewComments={reviewComments}
                   reviewThreads={reviewThreads}
                   reviewReactions={reviewReactions}
-                  onCommentPosted={refetchReviewComments}
+                  onCommentPosted={refreshReviewState}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">{t("prUnavailable")}</p>
@@ -1851,7 +1779,9 @@ export function PrDetail({
           <DialogHeader>
             <DialogTitle>{t("editPrTitle")}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">{t("editPrTitleHint")}</p>
+          <p className="text-sm text-muted-foreground">
+            {t("editPrTitleHint", { provider: REPO_PROVIDERS[item.provider].displayName })}
+          </p>
           <input
             value={titleDraft}
             onChange={(event) => setTitleDraft(event.target.value)}
