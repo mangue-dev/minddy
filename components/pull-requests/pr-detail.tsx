@@ -481,7 +481,7 @@ function ThreadComment({
         <ForgeUserAvatar
           user={user}
           forceBot={forceBot}
-          className="size-8 ring-4 ring-background"
+          className="mt-1 size-8 ring-4 ring-background"
         />
       }
     >
@@ -1191,7 +1191,14 @@ export function PrDetail({
     // line, composers — which PR he is talking about: which proxy to go through to
     // display an image of the forge, and which routes to ask for accounts
     // mentionable and hosting an attachment (MIN-162).
-    <PrEndpointProvider endpoint={prEndpoint(item.prId)}>
+    <PrEndpointProvider
+      endpoint={prEndpoint(item.prId)}
+      replyingUser={
+        viewer?.login
+          ? { login: viewer.login, avatar_url: viewer.avatarUrl ?? null }
+          : null
+      }
+    >
     <div className="flex h-full min-h-0 flex-col">
       {/* Header: back (mobile) · identifier · actions */}
       {/* Header WITHOUT border: it's the fade of the thread that says it continues

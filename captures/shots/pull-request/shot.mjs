@@ -403,7 +403,15 @@ async function capture({ locale, theme }) {
       const reviewThreads = timeline.querySelector('[data-testid="pr-activity-review-threads"]');
       const pointer = messages[0]?.querySelector('[data-testid="pr-activity-bubble-pointer"]');
       const pointerPath = pointer?.querySelector("path");
+      const pointerMask = messages[0]?.querySelector(
+        '[data-testid="pr-activity-bubble-border-mask"]',
+      );
       const messageHeader = messages[0]?.querySelector("header");
+      const messageBox = messages[0]?.getBoundingClientRect();
+      const pointerBox = pointer?.getBoundingClientRect();
+      const pointerMaskBox = pointerMask?.getBoundingClientRect();
+      const firstAvatar = items[0]?.querySelector('[data-testid="pr-activity-marker"] img');
+      const firstAvatarBox = firstAvatar?.getBoundingClientRect();
       const reviewItem = review?.closest('[data-testid="pr-activity-item"]');
       const botAvatar = reviewItem?.querySelector('[data-testid="pr-activity-marker"] img');
       const botAvatarBox = botAvatar?.getBoundingClientRect();
@@ -411,6 +419,16 @@ async function capture({ locale, theme }) {
       const plainThread = reviewThreads?.querySelector(
         '[data-testid="review-thread-card"][data-variant="plain"]',
       );
+      const commentAuthor = plainThread?.querySelector('[data-testid="review-comment-author"]');
+      const commentLogin = commentAuthor?.querySelector(':scope > span[title]');
+      const commentBody = plainThread?.querySelector('[data-testid="review-comment-body"]');
+      const commentBodyContent = commentBody?.firstElementChild;
+      const replyButton = plainThread?.querySelector('[data-testid="review-thread-reply"]');
+      const replyAvatar = replyButton?.querySelector("img");
+      const replyText = replyButton?.querySelector(":scope > span:last-child");
+      const replyButtonBox = replyButton?.getBoundingClientRect();
+      const replyAvatarBox = replyAvatar?.getBoundingClientRect();
+      const replyTextBox = replyText?.getBoundingClientRect();
       const firstMarker = items[0]?.querySelector('[data-testid="pr-activity-marker"]');
       const firstContent = items[0]?.querySelector('[data-testid="pr-activity-content"]');
       const markerBox = firstMarker?.getBoundingClientRect();
@@ -424,13 +442,59 @@ async function capture({ locale, theme }) {
         reviewThreadCount: reviewThreads?.querySelectorAll(":scope > li").length ?? 0,
         pointerElement: pointer?.tagName.toLowerCase() ?? null,
         pointerPath: pointerPath?.getAttribute("d") ?? null,
+        pointerMask: pointerMask ? 1 : 0,
         pointerFill: pointerPath ? getComputedStyle(pointerPath).fill : null,
+        pointerOutsideCard:
+          !!pointerBox && !!messageBox && Math.abs(pointerBox.right - messageBox.left) <= 0.5,
+        pointerAvatarGap:
+          pointerBox && firstAvatarBox ? pointerBox.left - firstAvatarBox.right : null,
+        pointerMaskCoversBorder:
+          !!pointerMaskBox &&
+          !!pointerBox &&
+          !!messageBox &&
+          pointerMaskBox.left <= messageBox.left &&
+          pointerMaskBox.right >= messageBox.left + 1 &&
+          Math.abs(pointerMaskBox.top - pointerBox.top) <= 0.5 &&
+          Math.abs(pointerMaskBox.height - pointerBox.height) <= 0.5,
+        pointerAvatarCenterDelta:
+          pointerBox && firstAvatarBox
+            ? Math.abs(
+                pointerBox.top + pointerBox.height / 2 -
+                  (firstAvatarBox.top + firstAvatarBox.height / 2),
+              )
+            : null,
         messageHeaderBackground: messageHeader
           ? getComputedStyle(messageHeader).backgroundColor
           : null,
         botAvatarRadius: botAvatar ? Number.parseFloat(getComputedStyle(botAvatar).borderRadius) : null,
         botAvatarWidth: botAvatarBox?.width ?? null,
         hunkHeaderHeight: hunkHeader?.getBoundingClientRect().height ?? null,
+        commentBodyLoginDelta:
+          commentLogin && commentBodyContent
+            ? Math.abs(
+                commentLogin.getBoundingClientRect().left -
+                  commentBodyContent.getBoundingClientRect().left,
+              )
+            : null,
+        replyAvatarWidth: replyAvatar?.getBoundingClientRect().width ?? null,
+        replyButtonRadius: replyButton
+          ? Number.parseFloat(getComputedStyle(replyButton).borderRadius)
+          : null,
+        replyButtonHeight: replyButtonBox?.height ?? null,
+        replyAvatarCenterDelta:
+          replyButtonBox && replyAvatarBox
+            ? Math.abs(
+                replyButtonBox.top + replyButtonBox.height / 2 -
+                  (replyAvatarBox.top + replyAvatarBox.height / 2),
+              )
+            : null,
+        replyTextCenterDelta:
+          replyButtonBox && replyTextBox
+            ? Math.abs(
+                replyButtonBox.top + replyButtonBox.height / 2 -
+                  (replyTextBox.top + replyTextBox.height / 2),
+              )
+            : null,
         markerBeforeContent:
           !!markerBox && !!contentBox && markerBox.right <= contentBox.left,
         railHeight: Number.parseFloat(rail.height),
@@ -453,12 +517,30 @@ async function capture({ locale, theme }) {
       activityLayout.reviewThreadCount !== 1 ||
       activityLayout.pointerElement !== "svg" ||
       !activityLayout.pointerPath ||
+      activityLayout.pointerMask !== 1 ||
       activityLayout.pointerFill !== activityLayout.messageHeaderBackground ||
+      !activityLayout.pointerOutsideCard ||
+      activityLayout.pointerAvatarGap == null ||
+      activityLayout.pointerAvatarGap < 6 ||
+      activityLayout.pointerAvatarGap > 7 ||
+      !activityLayout.pointerMaskCoversBorder ||
+      activityLayout.pointerAvatarCenterDelta == null ||
+      activityLayout.pointerAvatarCenterDelta > 0.5 ||
       activityLayout.botAvatarRadius == null ||
       activityLayout.botAvatarWidth == null ||
       activityLayout.botAvatarRadius >= activityLayout.botAvatarWidth / 2 ||
       activityLayout.hunkHeaderHeight == null ||
       activityLayout.hunkHeaderHeight < 36 ||
+      activityLayout.commentBodyLoginDelta == null ||
+      activityLayout.commentBodyLoginDelta > 0.5 ||
+      activityLayout.replyAvatarWidth !== 20 ||
+      activityLayout.replyButtonRadius == null ||
+      activityLayout.replyButtonHeight == null ||
+      activityLayout.replyButtonRadius < activityLayout.replyButtonHeight / 2 - 0.5 ||
+      activityLayout.replyAvatarCenterDelta == null ||
+      activityLayout.replyAvatarCenterDelta > 0.5 ||
+      activityLayout.replyTextCenterDelta == null ||
+      activityLayout.replyTextCenterDelta > 0.5 ||
       !activityLayout.markerBeforeContent ||
       activityLayout.railHeight < 100 ||
       activityLayout.plainThreadBorder?.some((width) => width !== "0px")

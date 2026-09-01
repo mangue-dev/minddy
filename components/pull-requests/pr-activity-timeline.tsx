@@ -37,7 +37,7 @@ export function PrActivityItem({
     <li
       data-testid="pr-activity-item"
       className={cn(
-        "relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-2.5 sm:gap-3",
+        "relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-4",
         className,
       )}
     >
@@ -60,19 +60,28 @@ export function PrActivityItem({
 /** The small pointer that makes a bordered surface read as a message bubble. */
 export function PrActivityBubblePointer() {
   return (
-    <svg
-      aria-hidden
-      data-testid="pr-activity-bubble-pointer"
-      viewBox="0 0 10 18"
-      className="pointer-events-none absolute -left-[9px] top-[11px] z-10 h-[18px] w-[10px] overflow-visible"
-    >
-      {/* The open path draws only the two diagonals. Its fill overlaps the
-          card by one pixel, masking the vertical border where the notch joins. */}
-      <path
-        d="M10 0.5 L0.75 9 L10 17.5"
-        vectorEffect="non-scaling-stroke"
-        className="fill-[var(--activity-header)] stroke-border"
+    <>
+      <svg
+        aria-hidden
+        data-testid="pr-activity-bubble-pointer"
+        viewBox="0 0 10 18"
+        className="pointer-events-none absolute -left-[11px] top-[10px] z-10 h-[18px] w-[10px] overflow-visible"
+      >
+        {/* The notch stays entirely outside the card. Only its two diagonals
+            are stroked, so no hidden diamond edge can bleed through. */}
+        <path
+          d="M10 0.5 L0.75 9 L10 17.5"
+          vectorEffect="non-scaling-stroke"
+          className="fill-[var(--activity-header)] stroke-border"
+        />
+      </svg>
+      {/* Cut the card border independently instead of pushing the notch into
+          the header. The one-pixel mask is the only part inside the card. */}
+      <span
+        aria-hidden
+        data-testid="pr-activity-bubble-border-mask"
+        className="pointer-events-none absolute -left-px top-[10px] z-20 h-[18px] w-0.5 bg-[var(--activity-header)]"
       />
-    </svg>
+    </>
   );
 }

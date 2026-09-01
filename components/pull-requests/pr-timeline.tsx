@@ -313,7 +313,7 @@ export function PrTimelineReview({
       marker={
         <ForgeUserAvatar
           user={event.actor}
-          className="size-8 ring-4 ring-background"
+          className="mt-1 size-8 ring-4 ring-background"
         />
       }
       contentClassName="flex flex-col gap-3"

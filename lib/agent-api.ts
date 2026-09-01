@@ -674,6 +674,8 @@ export interface PrViewer {
       Absent on a tab that remained open since a version before this field. */
   expired?: boolean;
   login: string | null;
+  /** Avatar of the connected forge account that will author human actions. */
+  avatarUrl?: string | null;
   /** `write` = merge/resolve, `read` = reviewer/comment, `none` = nothing. */
   capability: "write" | "read" | "none";
   /** The account under which Numo writes at the forge – enough to recognize SES

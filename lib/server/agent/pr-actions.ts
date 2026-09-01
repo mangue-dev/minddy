@@ -327,6 +327,8 @@ export interface PrViewer {
   configured: boolean;
   connected: boolean;
   login: string | null;
+  /** Avatar of the connected forge account that will author human actions. */
+  avatarUrl: string | null;
   capability: "write" | "read" | "none";
   /**
    * An account IS connected, but the forge refuses its token (401). Distinct from
@@ -375,6 +377,7 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
       connected: true,
       expired: false,
       login: actor.login,
+      avatarUrl: actor.avatarUrl,
       capability: actor.capability,
       numoLogin,
     };
@@ -389,6 +392,7 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
     connected: actor.reason === "noRepoAccess",
     expired: actor.reason === "expired",
     login: actor.login ?? null,
+    avatarUrl: null,
     capability: "none",
     numoLogin,
   };

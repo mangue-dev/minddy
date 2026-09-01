@@ -34,7 +34,7 @@ import {
   type PrEndpoint,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
-import { usePrEndpoint } from "@/lib/pr-endpoint-context";
+import { usePrEndpoint, usePrReplyingUser } from "@/lib/pr-endpoint-context";
 import { displayLineOf } from "@/lib/pr-review-threads";
 import {
   groupReactionsByComment,
@@ -381,7 +381,7 @@ function CommentBody({
   const list = reactions?.byComment.get(comment.id) ?? [];
   return (
     <div className="group flex flex-col gap-1">
-      <div className="flex items-center gap-2">
+      <div data-testid="review-comment-author" className="flex items-center gap-2">
         <ForgeUserAvatar
           user={comment.user}
           className="size-5"
@@ -406,9 +406,13 @@ function CommentBody({
           />
         ) : null}
       </div>
-      <Markdown className="text-sm text-foreground">{comment.body}</Markdown>
+      <div data-testid="review-comment-body" className="pl-7">
+        <Markdown className="text-sm text-foreground">{comment.body}</Markdown>
+      </div>
       {reactions && list.length > 0 ? (
-        <CommentReactionChips commentId={comment.id} reactions={reactions} list={list} />
+        <div className="pl-7">
+          <CommentReactionChips commentId={comment.id} reactions={reactions} list={list} />
+        </div>
       ) : null}
     </div>
   );
@@ -607,6 +611,7 @@ export function ReviewThreadCard({
   variant?: "card" | "plain";
 }) {
   const t = useTranslations("PullRequests");
+  const replyingUser = usePrReplyingUser();
   const [expanded, setExpanded] = useState(false);
   const state = thread.resolution;
   const resolved = !!state?.resolved;
@@ -675,8 +680,19 @@ export function ReviewThreadCard({
       ) : (
         <div className="flex items-center gap-1.5">
           {readOnly ? null : (
-            <Button variant="outline" size="sm" onClick={() => replies.start(thread.id)}>
-              {t("reply")}
+            <Button
+              data-testid="review-thread-reply"
+              variant="outline"
+              size="sm"
+              className="rounded-full leading-none"
+              onClick={() => replies.start(thread.id)}
+            >
+              {replyingUser ? (
+                <ForgeUserAvatar user={replyingUser} className="size-5" />
+              ) : null}
+              <span className="inline-flex h-5 items-center leading-none">
+                {t("reply")}
+              </span>
             </Button>
           )}
           {resolution && state ? (

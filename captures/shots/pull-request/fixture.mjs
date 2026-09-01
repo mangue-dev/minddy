@@ -264,6 +264,7 @@ export const VIEWER = {
   configured: true,
   connected: true,
   login: CAMILLE.login,
+  avatarUrl: null,
   capability: "write",
   numoLogin: NUMO.login,
 };
