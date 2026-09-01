@@ -165,6 +165,19 @@ export function isAgentRunResumable(
 }
 
 /**
+ * Whether the latest run in a newest-first list can reopen its conversation.
+ * Older checkpoints cannot be resumed after a newer run supersedes them.
+ */
+export function isLatestAgentRunResumable(
+  runs: readonly Pick<AgentRunSummary, "status" | "resumable">[],
+): boolean {
+  const latestRun = runs[0];
+  return latestRun
+    ? isAgentRunResumable(latestRun.status, latestRun.resumable)
+    : false;
+}
+
+/**
  * The pull request for a ticket, as the cards and sign read it.
  *
  * It was read on Numo's runs — which made it invisible as soon as

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { isAgentRunResumable } from "./agent-api";
+import {
+  isAgentRunResumable,
+  isLatestAgentRunResumable,
+} from "./agent-api";
 import { agentRunCanResume } from "./agent-run-resumability";
 
 describe("agent run resumability", () => {
@@ -13,5 +16,21 @@ describe("agent run resumability", () => {
     expect(isAgentRunResumable("failed", true)).toBe(true);
     expect(isAgentRunResumable("failed", false)).toBe(false);
     expect(isAgentRunResumable("completed")).toBe(true);
+  });
+
+  it("bases conversation availability on the latest run", () => {
+    expect(
+      isLatestAgentRunResumable([
+        { status: "failed", resumable: false },
+        { status: "failed", resumable: true },
+      ]),
+    ).toBe(false);
+    expect(
+      isLatestAgentRunResumable([
+        { status: "failed", resumable: true },
+        { status: "failed", resumable: false },
+      ]),
+    ).toBe(true);
+    expect(isLatestAgentRunResumable([])).toBe(false);
   });
 });

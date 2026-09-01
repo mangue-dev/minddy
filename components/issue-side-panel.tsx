@@ -63,7 +63,7 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import {
   handOffIssueApi,
-  isAgentRunResumable,
+  isLatestAgentRunResumable,
   isAgentRunWorking,
 } from "@/lib/agent-api";
 import {
@@ -279,11 +279,9 @@ export function IssueSidePanel({
     agentsAllowed && (repoLinkLoading || repoLink != null || desktopAvailable);
   const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
   const latestRun = runs[0] ?? null;
-  // A restartable conversation exists. Interrupted failed turns qualify when
-  // the server confirms that their checkpoint survived.
-  const hasAgentSession = runs.some((run) =>
-    isAgentRunResumable(run.status, run.resumable),
-  );
+  // Only the latest run can reopen its conversation; newer runs supersede any
+  // checkpoints retained by older runs.
+  const hasAgentSession = isLatestAgentRunResumable(runs);
 
   // Cycle (MIN-32): the panel reads the current cycle itself rather than
   // brought down by its four callers — the hook is already spoiled by the
