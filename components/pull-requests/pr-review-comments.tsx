@@ -592,6 +592,7 @@ export function ReviewThreadCard({
   resolution,
   reactions,
   readOnly,
+  variant = "card",
 }: {
   thread: PrReviewThread;
   replies: ReviewReplies;
@@ -603,6 +604,8 @@ export function ReviewThreadCard({
   /** The thread reads but does not respond — no git account, or no access to the
       deposit: the response would be sent under the identity of the bot (MIN-144). */
   readOnly?: boolean;
+  /** Activity already provides the surrounding code-comment surface. */
+  variant?: "card" | "plain";
 }) {
   const t = useTranslations("PullRequests");
   const [expanded, setExpanded] = useState(false);
@@ -635,7 +638,14 @@ export function ReviewThreadCard({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border bg-card px-3 py-2.5">
+    <div
+      data-testid="review-thread-card"
+      data-variant={variant}
+      className={cn(
+        "flex flex-col gap-3",
+        variant === "card" && "rounded-md border border-border bg-card px-3 py-2.5",
+      )}
+    >
       {/* Unfolded, the header FOLDED: the gesture must be reversible where it was
           done, otherwise the only way back is to reload the page. */}
       {resolved ? (

@@ -394,6 +394,83 @@ async function capture({ locale, theme }) {
       );
     }
 
+    const activityLayout = await page.evaluate(() => {
+      const timeline = document.querySelector('[data-testid="pr-activity-timeline"]');
+      if (!timeline) return null;
+      const items = [...timeline.querySelectorAll(':scope > [data-testid="pr-activity-item"]')];
+      const messages = [...timeline.querySelectorAll('[data-testid="pr-activity-message"]')];
+      const review = timeline.querySelector('[data-testid="pr-activity-review"]');
+      const reviewThreads = timeline.querySelector('[data-testid="pr-activity-review-threads"]');
+      const plainThread = reviewThreads?.querySelector(
+        '[data-testid="review-thread-card"][data-variant="plain"]',
+      );
+      const firstMarker = items[0]?.querySelector('[data-testid="pr-activity-marker"]');
+      const firstContent = items[0]?.querySelector('[data-testid="pr-activity-content"]');
+      const markerBox = firstMarker?.getBoundingClientRect();
+      const contentBox = firstContent?.getBoundingClientRect();
+      const rail = getComputedStyle(timeline, "::before");
+      const plainStyle = plainThread ? getComputedStyle(plainThread) : null;
+      return {
+        itemCount: items.length,
+        messageCount: messages.length,
+        reviewCount: review ? 1 : 0,
+        reviewThreadCount: reviewThreads?.querySelectorAll(":scope > li").length ?? 0,
+        markerBeforeContent:
+          !!markerBox && !!contentBox && markerBox.right <= contentBox.left,
+        railHeight: Number.parseFloat(rail.height),
+        plainThreadBorder:
+          plainStyle == null
+            ? null
+            : [
+                plainStyle.borderTopWidth,
+                plainStyle.borderRightWidth,
+                plainStyle.borderBottomWidth,
+                plainStyle.borderLeftWidth,
+              ],
+      };
+    });
+    if (
+      !activityLayout ||
+      activityLayout.itemCount < 4 ||
+      activityLayout.messageCount < 3 ||
+      activityLayout.reviewCount !== 1 ||
+      activityLayout.reviewThreadCount !== 1 ||
+      !activityLayout.markerBeforeContent ||
+      activityLayout.railHeight < 100 ||
+      activityLayout.plainThreadBorder?.some((width) => width !== "0px")
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the activity hierarchy is not a single avatar rail with flat review threads: ${JSON.stringify(activityLayout)}.`,
+      );
+    }
+
+    await page.setViewportSize({ width: 900, height: 1_000 });
+    await page.waitForTimeout(100);
+    const narrowLayout = await page
+      .getByTestId("pr-activity-timeline")
+      .evaluate((timeline) => {
+        const boundary = timeline.getBoundingClientRect();
+        const surfaces = [
+          ...timeline.querySelectorAll(
+            '[data-testid="pr-activity-message"], [data-testid="pr-activity-review"], [data-testid="pr-activity-review-threads"] > li > article',
+          ),
+        ];
+        return {
+          timelineOverflow: timeline.scrollWidth - timeline.clientWidth,
+          outsideSurfaces: surfaces
+            .map((surface) => surface.getBoundingClientRect())
+            .filter((box) => box.left < boundary.left - 1 || box.right > boundary.right + 1)
+            .length,
+        };
+      });
+    if (narrowLayout.timelineOverflow > 1 || narrowLayout.outsideSurfaces > 0) {
+      throw new Error(
+        `${locale}/${theme} — the activity timeline overflows a narrow split pane: ${JSON.stringify(narrowLayout)}.`,
+      );
+    }
+    await page.setViewportSize(VIEWPORT);
+    await page.waitForTimeout(100);
+
     const resolveConversation = page.getByTestId("resolve-conversation");
     await resolveConversation.waitFor({ state: "visible" });
     await resolveConversation.click();

@@ -30,6 +30,10 @@ import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
+import {
+  PrActivityBubblePointer,
+  PrActivityItem,
+} from "@/components/pull-requests/pr-activity-timeline";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
 import {
   ReviewThreadCard,
@@ -148,55 +152,50 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
   const authors = event.actors ?? [];
 
   return (
-    // `items-start` + imposed line height: the pad fits on the
-    // FIRST line of the text, and no longer floats there — it is exactly the height
-    // of a `text-sm` line (20 px), so no offset to correct. Center on
-    // the whole block would move it down as soon as a sentence passes the line.
-    <li className="flex items-start gap-2.5 px-1 py-0.5 text-sm leading-5 text-muted-foreground">
-      <span
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground/80",
-          verdict?.className,
-        )}
-        aria-hidden
-      >
-        <Icon className="size-3" />
-      </span>
-      {/* Authors in the plural when the fact has several — a co-signed commit
-, a multi-handed push. Otherwise the actor alone, which
- returns exactly the avatar from before. */}
-      {authors.length > 0 ? (
-        // 16 px centered in the 20 px line: the same setting as the pad.
-        <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
-      ) : event.actor ? (
-        <UserAvatar
-          url={event.actor.avatar_url}
-          seed={event.actor.login}
-          className="mt-0.5 size-4 shrink-0"
-        />
-      ) : null}
-      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+    <PrActivityItem
+      marker={
+        <span
+          className={cn(
+            "mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground/80 ring-4 ring-background",
+            verdict?.className,
+          )}
+          aria-hidden
+        >
+          <Icon className="size-3.5" />
+        </span>
+      }
+      contentClassName="py-1"
+    >
+      <div className="flex min-w-0 items-start gap-2 text-sm leading-5 text-muted-foreground">
         {authors.length > 0 ? (
-          <AuthorNames authors={authors} className="text-sm" />
+          <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
         ) : event.actor ? (
-          <GitLogin
-            login={event.actor.login}
-            className="font-medium text-foreground"
+          <UserAvatar
+            url={event.actor.avatar_url}
+            seed={event.actor.login}
+            className="mt-0.5 size-4 shrink-0"
           />
         ) : null}
-        <span className={cn("min-w-0", verdict?.className)}>
-          {timelineText(event, t)}
-        </span>
-        {normalizeForgeInstant(event.createdAt, now) ? (
-          <span className="shrink-0 text-xs text-muted-foreground/70">
-            {format.relativeTime(
-              normalizeForgeInstant(event.createdAt, now) as Date,
-              now,
-            )}
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          {authors.length > 0 ? (
+            <AuthorNames authors={authors} className="text-sm" />
+          ) : event.actor ? (
+            <GitLogin login={event.actor.login} className="font-medium text-foreground" />
+          ) : null}
+          <span className={cn("min-w-0", verdict?.className)}>
+            {timelineText(event, t)}
           </span>
-        ) : null}
-      </span>
-    </li>
+          {normalizeForgeInstant(event.createdAt, now) ? (
+            <span className="shrink-0 text-xs text-muted-foreground/70">
+              {format.relativeTime(
+                normalizeForgeInstant(event.createdAt, now) as Date,
+                now,
+              )}
+            </span>
+          ) : null}
+        </span>
+      </div>
+    </PrActivityItem>
   );
 }
 
@@ -279,16 +278,8 @@ const REVIEW_STATE: Record<
 };
 
 /**
- * A review submitted, rendered as a message: the verdict in the header, the body
- * below, and the points placed on the code folded afterward.
- *
- * These points live in the Files tab, on their line — but a review whose thread would ONLY show " requested changes”, without saying which ones,
- * would require you to change tabs to understand what just happened. They are
- * therefore recalled here, in extract, with their anchor: the detail (the hunk, the thread of
- * answers) remains in the diff.
- *
- * A NAKED review - no body, no point - does not deserve a card: it is
- * a fact, and the caller puts it online like the others.
+ * A submitted review with its body and code threads attached to one branch.
+ * Bare reviews remain compact timeline events and never create an empty card.
  */
 export function PrTimelineReview({
   event,
@@ -319,42 +310,49 @@ export function PrTimelineReview({
   const Icon = state.icon;
 
   return (
-    <li className="flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3">
-      <div className="flex items-center gap-2">
+    <PrActivityItem
+      marker={
         <UserAvatar
           url={event.actor?.avatar_url}
           seed={event.actor?.login ?? "?"}
-          className="size-5"
+          className="size-8 ring-4 ring-background"
         />
-        <GitLogin
-          login={event.actor?.login}
-          className="text-sm font-medium text-foreground"
-        />
-        <span
-          className={cn(
-            "flex shrink-0 items-center gap-1 text-xs",
-            state.className,
-          )}
-        >
-          {Icon ? <Icon className="size-3.5" /> : null}
-          {t(state.label)}
-        </span>
-        {normalizeForgeInstant(event.createdAt, now) ? (
-          <span className="shrink-0 text-xs text-muted-foreground/80">
-            {format.relativeTime(
-              normalizeForgeInstant(event.createdAt, now) as Date,
-              now,
-            )}
+      }
+      contentClassName="flex flex-col gap-3"
+    >
+      <article
+        data-testid="pr-activity-review"
+        className="relative rounded-lg border border-border bg-card shadow-xs"
+      >
+        <PrActivityBubblePointer />
+        <header className="relative flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-border bg-muted/35 px-3 py-2">
+          <GitLogin login={event.actor?.login} className="text-sm font-medium text-foreground" />
+          <span className={cn("flex shrink-0 items-center gap-1 text-xs", state.className)}>
+            {Icon ? <Icon className="size-3.5" /> : null}
+            {t(state.label)}
           </span>
+          {normalizeForgeInstant(event.createdAt, now) ? (
+            <span className="shrink-0 text-xs text-muted-foreground/80">
+              {format.relativeTime(
+                normalizeForgeInstant(event.createdAt, now) as Date,
+                now,
+              )}
+            </span>
+          ) : null}
+        </header>
+        {event.body ? (
+          <div className="px-3.5 py-3">
+            <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
+              {event.body}
+            </Markdown>
+          </div>
         ) : null}
-      </div>
-      {event.body ? (
-        <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
-          {event.body}
-        </Markdown>
-      ) : null}
+      </article>
       {comments.length > 0 ? (
-        <ul className="flex flex-col gap-2 pt-0.5">
+        <ul
+          data-testid="pr-activity-review-threads"
+          className="relative ml-3 flex flex-col gap-3 border-l border-border pl-4"
+        >
           {threads.map((thread) => (
             <ReviewCommentBlock
               key={thread.id}
@@ -366,7 +364,7 @@ export function PrTimelineReview({
           ))}
         </ul>
       ) : null}
-    </li>
+    </PrActivityItem>
   );
 }
 
@@ -401,24 +399,26 @@ export function ReviewCommentBlock({
 }) {
   const comment = thread.root;
   return (
-    <li className="flex flex-col gap-2 overflow-clip rounded-md border border-border bg-background pb-2">
-      <PrHunk
-        path={comment.path}
-        line={displayLineOf(comment)}
-        diffHunk={comment.diff_hunk}
-        // The block is in `bg-background` (this is what detaches it from the map
-        // review): the diff must take this background, not that of a card.
-        className="pr-diff-view-inset border-b border-border"
-      />
-
-      <div className="px-2">
-        <ReviewThreadCard
-          thread={thread}
-          replies={replies}
-          resolution={resolution}
-          readOnly={readOnly}
+    <li className="relative">
+      <span aria-hidden className="absolute -left-4 top-4 w-4 border-t border-border" />
+      <article className="overflow-clip rounded-lg border border-border bg-card shadow-xs">
+        <PrHunk
+          path={comment.path}
+          line={displayLineOf(comment)}
+          diffHunk={comment.diff_hunk}
+          className="pr-diff-view-inset border-b border-border bg-muted/15"
         />
-      </div>
+
+        <div className="px-3 py-3">
+          <ReviewThreadCard
+            thread={thread}
+            replies={replies}
+            resolution={resolution}
+            readOnly={readOnly}
+            variant="plain"
+          />
+        </div>
+      </article>
     </li>
   );
 }

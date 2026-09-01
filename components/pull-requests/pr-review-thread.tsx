@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import { cn, Spinner } from "mangue-ui";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
+import { PrActivityItem } from "@/components/pull-requests/pr-activity-timeline";
 import { formatModelName } from "@/lib/model-display";
 import type { PrReviewRunSummary } from "@/lib/pr-review-session";
 
@@ -32,13 +33,18 @@ export function PrReviewCard({ run }: { run: PrReviewRunSummary }) {
   const failed = run.status === "failed" || run.status === "canceled";
 
   return (
-    <li>
+    <PrActivityItem
+      marker={
+        <span className="flex size-8 items-center justify-center rounded-full bg-card ring-4 ring-background">
+          <NumoIcon animated={working} className="size-5" />
+        </span>
+      }
+    >
       <button
         type="button"
         onClick={() => router.push(`/agents?run=${run.runId}`)}
         className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
       >
-        <NumoIcon animated={working} className="size-5 shrink-0" />
         <span className="text-sm font-medium text-foreground">Numo</span>
         <span
           className={cn(
@@ -65,6 +71,6 @@ export function PrReviewCard({ run }: { run: PrReviewRunSummary }) {
           <ChevronRight className="size-3.5" />
         </span>
       </button>
-    </li>
+    </PrActivityItem>
   );
 }

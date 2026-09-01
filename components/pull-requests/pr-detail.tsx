@@ -54,6 +54,11 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import {
+  PrActivityBubblePointer,
+  PrActivityItem,
+  PrActivityTimeline,
+} from "@/components/pull-requests/pr-activity-timeline";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import {
   CommentReactionChips,
@@ -433,17 +438,7 @@ function buildFeed(
   return sortTimelineOlderFirst(entries);
 }
 
-/**
- * A thread entry: avatar, author, time, markdown body, reactions. Serves
- * as much to the description of the PR (the comment which OPENS the thread) as to the
- * comments that follow — on the GitHub side it's the same thing, and the thread doesn't read
- * like a thread only if its first message has the same shape as the others.
- *
- * This equality also applies to reactions (MIN-147): `commentId` is worth
- * `PR_BODY_COMMENT_ID` for the description, what the server translates into the
- * subject that every forge is waiting for. Reacting therefore works EVERYWHERE in PR — the thread
- * like the diff — instead of just comments anchored to a line of code.
- */
+/** A conversation message placed on the shared activity rail. */
 function ThreadComment({
   commentId,
   user,
@@ -477,64 +472,67 @@ function ThreadComment({
   const list = reactions?.byComment.get(commentId) ?? [];
 
   return (
-    <li className="group/comment flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3">
-      <div className="flex items-center gap-2">
+    <PrActivityItem
+      marker={
         <UserAvatar
           url={user?.avatar_url}
           seed={user?.login ?? "?"}
-          className="size-5"
+          className="size-8 ring-4 ring-background"
         />
-        <GitLogin
-          login={user?.login}
-          className="text-sm font-medium text-foreground"
-        />
-        {normalizeForgeInstant(createdAt, now) ? (
-          <span className="shrink-0 text-xs text-muted-foreground/80">
-            {format.relativeTime(normalizeForgeInstant(createdAt, now) as Date, now)}
-          </span>
-        ) : null}
-        <span className="min-w-0 flex-1" />
-        {/* The fallback of the header, for a message WITHOUT reaction: as soon as it
-            wears one, the palette moves down into the reaction band, with the
-            emoji she adds. Here it is revealed on hover, as
-            “Quote” to the right — a permanent palette under each message
-            would make a checkerboard of buttons. Returned anyway (and not mounted on
-            hover) to remain accessible on the keyboard. */}
-        {reactions?.canReact && list.length === 0 ? (
-          <ReactionPicker
-            className="-my-1 opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
-            onPick={reactionToggler(reactions, commentId, list)}
+      }
+    >
+      <article
+        data-testid="pr-activity-message"
+        className="group/comment relative overflow-visible rounded-lg border border-border bg-card shadow-xs"
+      >
+        <PrActivityBubblePointer />
+        <header className="relative flex min-h-10 items-center gap-2 rounded-t-lg border-b border-border bg-muted/35 px-3 py-2">
+          <GitLogin
+            login={user?.login}
+            className="text-sm font-medium text-foreground"
           />
-        ) : null}
-        {onQuoteReply ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-                className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
-                onClick={onQuoteReply}
-              >
-                <Reply className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
-      </div>
-      {/* The scroll is placed at a distance from the header: stuck to the name, it read
-          as a second signature line. */}
-      {activity ? <div className="pt-1.5">{activity}</div> : null}
-      <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
-        {body}
-      </Markdown>
-      {reactions && list.length > 0 ? (
-        <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
-      ) : null}
-    </li>
+          {normalizeForgeInstant(createdAt, now) ? (
+            <span className="shrink-0 text-xs text-muted-foreground/80">
+              {format.relativeTime(normalizeForgeInstant(createdAt, now) as Date, now)}
+            </span>
+          ) : null}
+          <span className="min-w-0 flex-1" />
+          {reactions?.canReact && list.length === 0 ? (
+            <ReactionPicker
+              className="-my-1 opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+              onPick={reactionToggler(reactions, commentId, list)}
+            />
+          ) : null}
+          {onQuoteReply ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+                  className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+                  onClick={onQuoteReply}
+                >
+                  <Reply className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+        </header>
+        <div className="flex flex-col gap-2 px-3.5 py-3">
+          {activity ? <div>{activity}</div> : null}
+          <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
+            {body}
+          </Markdown>
+          {reactions && list.length > 0 ? (
+            <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
+          ) : null}
+        </div>
+      </article>
+    </PrActivityItem>
   );
 }
 
@@ -1687,10 +1685,7 @@ export function PrDetail({
               ) : !prDescription && feed.length === 0 && !reviewCard ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
-                // Same cards as the issue comments (CommentCard): border,
-                // background card, avatar/author/time header then markdown body.
-                // The lines of activity are inserted between them, without a map.
-                <ul className="flex flex-col gap-3">
+                <PrActivityTimeline>
                   {prDescription ? (
                     <ThreadComment
                       // The body of the PR is not a commentary, but it
@@ -1750,7 +1745,7 @@ export function PrDetail({
                       and clickable: this is how we will see what the agent has
                       read, and answered. */}
                   {reviewCard ? <PrReviewCard run={reviewCard} /> : null}
-                </ul>
+                </PrActivityTimeline>
               )}
 
               {canComment ? (
