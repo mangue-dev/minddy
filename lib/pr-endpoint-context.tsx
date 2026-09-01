@@ -2,6 +2,12 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { PrEndpoint } from "@/lib/agent-api";
+import type { PrReviewThread } from "@/lib/pr-diff-anchors";
+
+export interface PrReviewThreadActions {
+  copyPrompt: (thread: PrReviewThread) => void;
+  launchNumo?: (thread: PrReviewThread) => void;
+}
 
 /**
  * What pull request is this piece of screen talking about? Nothing, anywhere else.
@@ -28,6 +34,7 @@ import type { PrEndpoint } from "@/lib/agent-api";
 interface PrContextValue {
   endpoint: PrEndpoint;
   replyingUser: { login: string; avatar_url: string | null } | null;
+  reviewThreadActions: PrReviewThreadActions | null;
 }
 
 const PrEndpointContext = createContext<PrContextValue | null>(null);
@@ -35,11 +42,14 @@ const PrEndpointContext = createContext<PrContextValue | null>(null);
 export function PrEndpointProvider({
   endpoint,
   replyingUser = null,
+  reviewThreadActions = null,
   children,
 }: {
   endpoint: PrEndpoint;
   /** Forge identity that will author comments created inside this PR surface. */
   replyingUser?: { login: string; avatar_url: string | null } | null;
+  /** Optional agent actions attached to review conversations in the PR view. */
+  reviewThreadActions?: PrReviewThreadActions | null;
   children: ReactNode;
 }) {
   const replyingLogin = replyingUser?.login ?? null;
@@ -50,8 +60,9 @@ export function PrEndpointProvider({
       replyingUser: replyingLogin
         ? { login: replyingLogin, avatar_url: replyingAvatarUrl }
         : null,
+      reviewThreadActions,
     }),
-    [endpoint, replyingLogin, replyingAvatarUrl],
+    [endpoint, replyingLogin, replyingAvatarUrl, reviewThreadActions],
   );
   return (
     <PrEndpointContext.Provider value={value}>
@@ -68,4 +79,9 @@ export function usePrEndpoint(): PrEndpoint | null {
 /** Forge identity used by reply affordances, absent outside a human PR session. */
 export function usePrReplyingUser(): PrContextValue["replyingUser"] {
   return useContext(PrEndpointContext)?.replyingUser ?? null;
+}
+
+/** Agent actions attached to review conversations, absent in read-only diffs. */
+export function usePrReviewThreadActions(): PrReviewThreadActions | null {
+  return useContext(PrEndpointContext)?.reviewThreadActions ?? null;
 }

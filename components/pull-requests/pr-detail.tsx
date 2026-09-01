@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
@@ -74,6 +74,7 @@ import {
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
+import { PrUnresolvedConversations } from "@/components/pull-requests/pr-unresolved-conversations";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
@@ -120,7 +121,6 @@ import {
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
 import {
-  conversationResolutionTab,
   findRerunnableChecks,
   type PullRequestDetailTab,
 } from "@/lib/pr-readiness-actions";
@@ -145,6 +145,10 @@ import {
   sortTimelineOlderFirst,
   type PrTimelineEvent,
 } from "@/lib/pr-timeline";
+import {
+  buildPullRequestFeedbackPrompt,
+  unresolvedReviewThreads,
+} from "@/lib/pr-unresolved-conversations";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
 import {
@@ -614,6 +618,10 @@ export function PrDetail({
     reactions: reviewReactions,
     refetch: refetchReviewComments,
   } = usePrReviewCommentsQuery(prEndpoint(item.prId));
+  const unresolvedThreads = useMemo(
+    () => unresolvedReviewThreads(reviewComments, reviewThreads),
+    [reviewComments, reviewThreads],
+  );
   const refreshReviewState = useCallback(async () => {
     await Promise.all([refetchReviewComments(), refetchPr()]);
   }, [refetchPr, refetchReviewComments]);
@@ -667,6 +675,7 @@ export function PrDetail({
     useState<ReasoningLevel | null>(null);
   const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<PullRequestDetailTab>("activity");
+  const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
   // Soft fade up and down the feed — the same as the agent conversation and
   // than the columns of the board: it only lights up on the side where there REMAINS some
   // something to see, what a fixed border cannot say.
@@ -891,7 +900,7 @@ export function PrDetail({
       return;
     }
     if (blocker.action === "resolve_conversations") {
-      setTab(conversationResolutionTab(item.provider));
+      setUnresolvedSidebarOpen(true);
       return;
     }
     setMaintenanceAction(blocker.action);
@@ -941,7 +950,7 @@ export function PrDetail({
   const canActOnBlocker = (blocker: ReadinessBlocker): boolean => {
     if (blocker.action === "mark_ready" || blocker.action === "update_branch") return canWrite;
     if (blocker.action === "approve") return canComment;
-    if (blocker.action === "resolve_conversations") return canWrite;
+    if (blocker.action === "resolve_conversations") return unresolvedThreads.length > 0;
     if (blocker.action === "rerun_checks") {
       return !!canWrite && findRerunnableChecks(checks?.checks, blocker).length > 0;
     }
@@ -959,6 +968,15 @@ export function PrDetail({
     // expected behavior: automatically checked.
     setRelaunch(verdict === "request_changes" && canRelaunch);
   };
+
+  const openFeedbackAgent = useCallback((prompt: string) => {
+    setReviewVerdict("request_changes");
+    setReviewMode("findings");
+    setReviewMessage(prompt);
+    setRelaunch(true);
+    setModel("");
+    setReasoningOverride(null);
+  }, []);
 
   /**
    * Mode toggle. The “correct remarks” prompt is PRE-WRITTEN but
@@ -1238,6 +1256,52 @@ export function PrDetail({
   // The tab counter counts what is READ — messages and reviews that
   // say something — not the lines of activity, which are context.
   const conversationCount = feed.filter((e) => e.kind !== "event").length;
+  const feedbackContext = useMemo(
+    () => ({
+      number: item.pr_number,
+      title: pr?.title ?? item.title ?? item.issue?.title ?? identifier,
+      url: pr?.url ?? item.pr_url,
+      base: pr?.base ?? null,
+      head: pr?.head ?? item.head_branch,
+    }),
+    [identifier, item.head_branch, item.issue?.title, item.pr_number, item.pr_url, item.title, pr],
+  );
+  const copyFeedbackThreadPrompt = useCallback(
+    async (thread: (typeof unresolvedThreads)[number]) => {
+      try {
+        await navigator.clipboard.writeText(
+          buildPullRequestFeedbackPrompt(feedbackContext, [thread]),
+        );
+        toast.success(t("unresolvedPromptCopied"));
+      } catch {
+        toast.error(t("unresolvedPromptCopyFailed"));
+      }
+    },
+    [feedbackContext, t],
+  );
+  const reviewThreadActions = useMemo(
+    () => ({
+      copyPrompt: (thread: (typeof unresolvedThreads)[number]) => {
+        void copyFeedbackThreadPrompt(thread);
+      },
+      launchNumo:
+        canRelaunch && !item.busyRunId
+          ? (thread: (typeof unresolvedThreads)[number]) => {
+              setUnresolvedSidebarOpen(false);
+              openFeedbackAgent(
+                buildPullRequestFeedbackPrompt(feedbackContext, [thread]),
+              );
+            }
+          : undefined,
+    }),
+    [
+      canRelaunch,
+      copyFeedbackThreadPrompt,
+      feedbackContext,
+      item.busyRunId,
+      openFeedbackAgent,
+    ],
+  );
 
   return (
     // The envelope tells the WHOLE panel — body, thread, activity, comments of
@@ -1251,6 +1315,7 @@ export function PrDetail({
           ? { login: viewer.login, avatar_url: viewer.avatarUrl ?? null }
           : null
       }
+      reviewThreadActions={reviewThreadActions}
     >
     <div className="flex h-full min-h-0 flex-col">
       {/* Header: back (mobile) · identifier · actions */}
@@ -1706,6 +1771,20 @@ export function PrDetail({
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
 
+          <PrUnresolvedConversations
+            endpoint={prEndpoint(item.prId)}
+            context={feedbackContext}
+            threads={unresolvedThreads}
+            canComment={!!canComment}
+            canResolve={!!canWrite}
+            canLaunch={canRelaunch && !item.busyRunId}
+            open={unresolvedSidebarOpen}
+            onOpenChange={setUnresolvedSidebarOpen}
+            onLaunch={openFeedbackAgent}
+            onThreadChanged={refreshReviewState}
+            onResolutionChanged={refetchPr}
+          />
+
           <ChecksBanner
             checks={checks}
             error={checksError}
@@ -1785,6 +1864,7 @@ export function PrDetail({
                           canComment={!!canComment}
                           canResolve={!!canWrite}
                           onChanged={refreshReviewState}
+                          onResolutionChanged={refetchPr}
                         />
                       );
                     }
@@ -1862,6 +1942,7 @@ export function PrDetail({
                   reviewThreads={reviewThreads}
                   reviewReactions={reviewReactions}
                   onCommentPosted={refreshReviewState}
+                  onThreadResolved={refetchPr}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">{t("prUnavailable")}</p>

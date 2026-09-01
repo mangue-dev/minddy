@@ -98,7 +98,27 @@ async function serveFixture(page) {
             mergeAllowed: false,
           },
         }
-      : DETAIL_RESPONSE;
+      : reviewResolved
+        ? DETAIL_RESPONSE
+        : {
+            ...DETAIL_RESPONSE,
+            readiness: {
+              ...DETAIL_RESPONSE.readiness,
+              state: "unresolved_conversations",
+              blockers: [
+                {
+                  id: "conversations-unresolved",
+                  kind: "conversations",
+                  required: true,
+                  status: "blocked",
+                  source: "conversations",
+                  action: "resolve_conversations",
+                  count: REVIEW_THREADS.length,
+                },
+              ],
+              mergeAllowed: false,
+            },
+          };
 
   const on = (test, handler) =>
     page.route(
@@ -155,12 +175,16 @@ async function serveFixture(page) {
     (p) => under("/review-comments").test(p),
     (r) => {
       if (r.request().method() === "PATCH") {
-        reviewResolved = true;
-        return json(r, { ok: true, resolved: true });
+        reviewResolved = r.request().postDataJSON().resolved;
+        return json(r, { ok: true, resolved: reviewResolved });
       }
       return json(r, {
-        comments: reviewResolved ? [] : REVIEW_COMMENTS,
-        threads: reviewResolved ? [] : REVIEW_THREADS,
+        comments: REVIEW_COMMENTS,
+        threads: REVIEW_THREADS.map((thread) => ({
+          ...thread,
+          resolved: reviewResolved,
+          resolvedBy: reviewResolved ? "camille" : null,
+        })),
         reactions: [],
       });
     },
@@ -328,6 +352,53 @@ async function capture({ locale, theme }) {
     await readinessControl.click();
     const readinessPopover = page.getByTestId("pr-readiness-popover");
     await readinessPopover.waitFor({ state: "visible" });
+    await readinessPopover.getByTestId("pr-readiness-action-resolve_conversations").click();
+    const unresolvedConversation = page.getByTestId("pr-unresolved-conversation");
+    await unresolvedConversation.waitFor({ state: "visible" });
+    if (
+      (await unresolvedConversation.getByRole("button").count()) < 3 ||
+      !(await unresolvedConversation.textContent())?.includes("lib/palette/actions.ts")
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the unresolved-conversation list is missing context or per-thread actions.`,
+      );
+    }
+    await unresolvedConversation.getByTestId("review-thread-actions").click();
+    const threadActionMenu = page.getByRole("menu");
+    const threadActionCount = await threadActionMenu.getByRole("menuitem").count();
+    if (threadActionCount !== 2) {
+      throw new Error(
+        `${locale}/${theme} — the split resolve button exposes ${threadActionCount} actions instead of prompt and Numo.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+    await page.getByTestId("pr-fix-all").click();
+    const fixAllMenu = page.getByRole("menu");
+    const fixAllCount = await fixAllMenu.getByRole("menuitem").count();
+    if (fixAllCount !== 2) {
+      throw new Error(
+        `${locale}/${theme} — the global fix menu exposes ${fixAllCount} actions instead of prompt and Numo.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+    await page.getByTestId("pr-resolve-outdated").click();
+    const outdatedConfirm = page.getByTestId("pr-resolve-outdated-confirm");
+    try {
+      await outdatedConfirm.waitFor({ state: "visible", timeout: 2_000 });
+    } catch {
+      throw new Error(
+        `${locale}/${theme} — outdated confirmation did not open (dialogs: ${await page.locator('[role="dialog"]').count()}, confirm buttons: ${await outdatedConfirm.count()}).`,
+      );
+    }
+    await outdatedConfirm.click();
+    await outdatedConfirm.waitFor({ state: "hidden" });
+    await page.getByTestId("pr-resolve-outdated").waitFor({ state: "detached" });
+    const unresolvedPanel = page.locator('[data-slot="side-panel-content"]');
+    await page.keyboard.press("Escape");
+    await unresolvedPanel.waitFor({ state: "hidden" });
+
+    await readinessControl.click();
+    await readinessPopover.waitFor({ state: "visible" });
     if (
       (await readinessPopover
         .getByTestId("pr-readiness-condition-passed")
@@ -437,8 +508,8 @@ async function capture({ locale, theme }) {
       const botAvatar = reviewItem?.querySelector('[data-testid="pr-activity-marker"] img');
       const botAvatarBox = botAvatar?.getBoundingClientRect();
       const hunkHeader = reviewThreads?.querySelector('[data-testid="pr-hunk-header"]');
-      const outdatedBadge = hunkHeader?.querySelector('[data-testid="pr-hunk-outdated"]');
-      const outdatedBadgeStyle = outdatedBadge ? getComputedStyle(outdatedBadge) : null;
+      const resolvedBadge = hunkHeader?.querySelector('[data-testid="pr-hunk-resolved"]');
+      const resolvedBadgeStyle = resolvedBadge ? getComputedStyle(resolvedBadge) : null;
       const hunkLineLabel = reviewThreads?.querySelector('[data-testid="pr-hunk-line-label"]');
       const renderedHunkLines = (() => {
         for (const host of reviewThreads?.querySelectorAll("*") ?? []) {
@@ -520,13 +591,13 @@ async function capture({ locale, theme }) {
         hunkHeaderHeight: hunkHeader?.getBoundingClientRect().height ?? null,
         hunkHeaderText: hunkHeader?.textContent?.replace(/\s+/g, " ").trim() ?? null,
         hunkLineLabel: hunkLineLabel?.textContent?.replace(/\s+/g, " ").trim() ?? null,
-        outdatedBadge: outdatedBadge ? 1 : 0,
-        outdatedBadgeHeight: outdatedBadge?.getBoundingClientRect().height ?? null,
-        outdatedBadgeFontSize: outdatedBadgeStyle
-          ? Number.parseFloat(outdatedBadgeStyle.fontSize)
+        resolvedBadge: resolvedBadge ? 1 : 0,
+        resolvedBadgeHeight: resolvedBadge?.getBoundingClientRect().height ?? null,
+        resolvedBadgeFontSize: resolvedBadgeStyle
+          ? Number.parseFloat(resolvedBadgeStyle.fontSize)
           : null,
-        outdatedBadgeCursor: outdatedBadgeStyle?.cursor ?? null,
-        outdatedBadgeUserSelect: outdatedBadgeStyle?.userSelect ?? null,
+        resolvedBadgeCursor: resolvedBadgeStyle?.cursor ?? null,
+        resolvedBadgeUserSelect: resolvedBadgeStyle?.userSelect ?? null,
         renderedHunkLines,
         commentBodyLoginDelta:
           commentLogin && commentBodyContent
@@ -603,13 +674,13 @@ async function capture({ locale, theme }) {
       activityLayout.botAvatarRadius >= activityLayout.botAvatarWidth / 2 ||
       activityLayout.hunkHeaderHeight == null ||
       activityLayout.hunkHeaderHeight < 36 ||
-      activityLayout.outdatedBadge !== 1 ||
-      activityLayout.outdatedBadgeHeight == null ||
-      activityLayout.outdatedBadgeHeight < 20 ||
-      activityLayout.outdatedBadgeFontSize == null ||
-      activityLayout.outdatedBadgeFontSize < 12 ||
-      activityLayout.outdatedBadgeCursor !== "default" ||
-      activityLayout.outdatedBadgeUserSelect !== "none" ||
+      activityLayout.resolvedBadge !== 1 ||
+      activityLayout.resolvedBadgeHeight == null ||
+      activityLayout.resolvedBadgeHeight < 20 ||
+      activityLayout.resolvedBadgeFontSize == null ||
+      activityLayout.resolvedBadgeFontSize < 12 ||
+      activityLayout.resolvedBadgeCursor !== "default" ||
+      activityLayout.resolvedBadgeUserSelect !== "none" ||
       activityLayout.renderedHunkLines?.length !== 2 ||
       !activityLayout.renderedHunkLines[0]?.includes("One key") ||
       !activityLayout.renderedHunkLines[1]?.includes("export type KeyHint") ||
@@ -640,25 +711,11 @@ async function capture({ locale, theme }) {
         `${locale}/${theme} — the activity hierarchy is not a single avatar rail with flat review threads: ${JSON.stringify(activityLayout)}.`,
       );
     }
-    const outdatedBadge = page.getByTestId("pr-hunk-outdated").first();
-    await outdatedBadge.hover();
-    const outdatedTooltip = page.getByRole("tooltip");
-    await outdatedTooltip.waitFor({ state: "visible" });
-    const tooltipText = (await outdatedTooltip.textContent())?.trim() ?? "";
-    const expectedTooltip = {
-      de: "Der referenzierte Code wurde nach dem Veröffentlichen dieses Kommentars geändert. Daher bezieht sich dieser Thread nicht mehr auf den aktuellen Diff.",
-      en: "The referenced code changed after this comment was posted, so this thread no longer applies to the current diff.",
-      es: "El código de referencia cambió después de publicar este comentario, por lo que este hilo ya no corresponde al diff actual.",
-      fr: "Le code référencé a changé après la publication de ce commentaire. Ce fil ne correspond donc plus au diff actuel.",
-      it: "Il codice di riferimento è cambiato dopo la pubblicazione di questo commento, quindi la discussione non si riferisce più al diff attuale.",
-      "pt-BR": "O código referenciado mudou depois que este comentário foi publicado. Por isso, esta discussão não corresponde mais ao diff atual.",
-    }[locale];
-    if (tooltipText !== expectedTooltip) {
+    if ((await page.getByTestId("pr-hunk-outdated").count()) !== 0) {
       throw new Error(
-        `${locale}/${theme} — outdated review tooltip is missing or inaccurate: ${tooltipText}`,
+        `${locale}/${theme} — a resolved review thread still displays the outdated badge.`,
       );
     }
-    await page.mouse.move(0, 0);
     const activityTimeline = page.getByTestId("pr-activity-timeline");
     await activityTimeline.evaluate((timeline) => {
       const state = { childListMutations: 0, observer: null };
@@ -712,10 +769,49 @@ async function capture({ locale, theme }) {
     await page.setViewportSize(VIEWPORT);
     await page.waitForTimeout(100);
 
-    const resolveConversation = page.getByTestId("resolve-conversation");
+    const resolvedThread = page
+      .getByTestId("pr-activity-review-threads")
+      .getByTestId("review-thread-card")
+      .filter({
+        has: page.getByText("Please keep the shortcut type", { exact: false }),
+      });
+    const heightBeforeReopen = await resolvedThread.evaluate(
+      (node) => node.getBoundingClientRect().height,
+    );
+    const resolveConversation = resolvedThread.getByTestId("resolve-conversation");
     await resolveConversation.waitFor({ state: "visible" });
+    const reopened = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        new URL(response.url()).pathname.endsWith("/review-comments"),
+    );
     await resolveConversation.click();
-    await resolveConversation.waitFor({ state: "detached" });
+    await reopened;
+    await page.waitForTimeout(200);
+    const heightAfterReopen = await resolvedThread.evaluate(
+      (node) => node.getBoundingClientRect().height,
+    );
+    if (Math.abs(heightAfterReopen - heightBeforeReopen) > 2) {
+      throw new Error(
+        `${locale}/${theme} — resolving a conversation still changes the thread height (${heightBeforeReopen} → ${heightAfterReopen}).`,
+      );
+    }
+    const resolvedAgain = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        new URL(response.url()).pathname.endsWith("/review-comments"),
+    );
+    await resolveConversation.click();
+    await resolvedAgain;
+    await page.waitForTimeout(200);
+    const heightAfterResolve = await resolvedThread.evaluate(
+      (node) => node.getBoundingClientRect().height,
+    );
+    if (Math.abs(heightAfterResolve - heightBeforeReopen) > 2) {
+      throw new Error(
+        `${locale}/${theme} — resolved content no longer stays in place (${heightBeforeReopen} → ${heightAfterResolve}).`,
+      );
+    }
 
     // Files tab: designated by its rank, its wording is translated and carries
     // the file counter. This is the THIRD since a tab

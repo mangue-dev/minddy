@@ -289,6 +289,7 @@ export function PrTimelineReview({
   canComment,
   canResolve,
   onChanged,
+  onResolutionChanged = onChanged,
 }: {
   event: PrTimelineEvent;
   /** The points of THIS review, already filtered by the caller. */
@@ -298,6 +299,8 @@ export function PrTimelineReview({
   canComment: boolean;
   canResolve: boolean;
   onChanged: () => unknown;
+  /** Refresh merge readiness without replacing the activity thread. */
+  onResolutionChanged?: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
@@ -305,7 +308,7 @@ export function PrTimelineReview({
   const state = REVIEW_STATE[event.reviewState ?? "commented"];
   const threads = groupReviewThreads(comments, threadStates);
   const replies = useReviewReplies(endpoint, onChanged);
-  const resolution = useThreadResolution(endpoint, onChanged);
+  const resolution = useThreadResolution(endpoint, onResolutionChanged);
   // Absent on “read again”: the map is already made of what the icon announces.
   const Icon = state.icon;
 
@@ -396,32 +399,57 @@ export function ReviewCommentBlock({
   resolution?: ReturnType<typeof useThreadResolution>;
   readOnly: boolean;
 }) {
-  const comment = thread.root;
   return (
     <li className="relative">
       <span aria-hidden className="absolute -left-4 top-4 w-4 border-t border-border" />
-      <article className="overflow-clip rounded-lg border border-border bg-card shadow-xs">
-        <PrHunk
-          path={comment.path}
-          line={displayLineOf(comment)}
-          startLine={displayStartLineOf(comment)}
-          side={comment.start_side ?? comment.side}
-          outdated={thread.resolution?.outdated ?? comment.line == null}
-          diffHunk={comment.diff_hunk}
-          className="pr-diff-view-inset border-b border-border bg-muted/15"
-          headerClassName="py-2.5"
-        />
-
-        <div className="px-3 py-3">
-          <ReviewThreadCard
-            thread={thread}
-            replies={replies}
-            resolution={resolution}
-            readOnly={readOnly}
-            variant="plain"
-          />
-        </div>
-      </article>
+      <ReviewConversationCard
+        thread={thread}
+        replies={replies}
+        resolution={resolution}
+        readOnly={readOnly}
+      />
     </li>
+  );
+}
+
+/** Full code-and-message surface shared by Activity and unresolved conversations. */
+export function ReviewConversationCard({
+  thread,
+  replies,
+  resolution,
+  readOnly,
+}: {
+  thread: ReturnType<
+    typeof groupReviewThreads<PullRequestReviewComment>
+  >[number];
+  replies: ReturnType<typeof useReviewReplies>;
+  resolution?: ReturnType<typeof useThreadResolution>;
+  readOnly: boolean;
+}) {
+  const comment = thread.root;
+  return (
+    <article className="overflow-clip rounded-lg border border-border bg-card shadow-xs">
+      <PrHunk
+        path={comment.path}
+        line={displayLineOf(comment)}
+        startLine={displayStartLineOf(comment)}
+        side={comment.start_side ?? comment.side}
+        outdated={thread.resolution?.outdated ?? comment.line == null}
+        resolved={thread.resolution?.resolved}
+        diffHunk={comment.diff_hunk}
+        className="pr-diff-view-inset border-b border-border bg-muted/15"
+        headerClassName="py-2.5"
+      />
+
+      <div className="px-3 py-3">
+        <ReviewThreadCard
+          thread={thread}
+          replies={replies}
+          resolution={resolution}
+          readOnly={readOnly}
+          variant="plain"
+        />
+      </div>
+    </article>
   );
 }

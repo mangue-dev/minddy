@@ -1,6 +1,5 @@
 import type { AgentRunPrResponse, PullRequestCheck } from "./agent-api";
 import type { ReadinessBlocker } from "./pr-readiness";
-import type { RepoProviderId } from "./repo-providers";
 
 export type PullRequestDetailTab = "activity" | "commits" | "files";
 type RerunnableCheck = PullRequestCheck & {
@@ -21,12 +20,6 @@ export function pullRequestRefetchInterval(
     return PULL_REQUEST_POLL_MS;
   }
   return false;
-}
-
-export function conversationResolutionTab(
-  provider: RepoProviderId,
-): PullRequestDetailTab {
-  return provider === "gitlab" ? "files" : "activity";
 }
 
 export function findRerunnableChecks(

@@ -342,6 +342,7 @@ const PrDiffFile = memo(function PrDiffFile({
   reviewThreads,
   reviewReactions,
   onCommentPosted,
+  onThreadResolved,
 }: {
   file: PullRequestFile;
   /** Diff analyzed from the file, absent when there is no patch (binary, image, etc.). */
@@ -377,6 +378,7 @@ const PrDiffFile = memo(function PrDiffFile({
       comment, as children are by root id. */
   reviewReactions: ReviewCommentReaction[];
   onCommentPosted: () => unknown;
+  onThreadResolved: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
 
@@ -403,7 +405,7 @@ const PrDiffFile = memo(function PrDiffFile({
   const instanceRef = useRef<FileDiffInstance<AnnotationMeta> | null>(null);
 
   const replies = useReviewReplies(endpoint, onCommentPosted);
-  const resolution = useThreadResolution(endpoint, onCommentPosted);
+  const resolution = useThreadResolution(endpoint, onThreadResolved);
   const reactions = useCommentReactions(endpoint, onCommentPosted, reviewReactions, !readOnly);
 
   const threads = useMemo(
@@ -848,6 +850,7 @@ export function PrDiff({
   reviewThreads = NO_THREADS,
   reviewReactions = NO_REACTIONS,
   onCommentPosted = noop,
+  onThreadResolved = onCommentPosted,
   className,
 }: {
   files: PullRequestFile[];
@@ -874,6 +877,8 @@ export function PrDiff({
   reviewReactions?: ReviewCommentReaction[];
   /** Refreshes comments after successful submission. */
   onCommentPosted?: () => unknown;
+  /** Refreshes merge readiness after resolving without replacing the diff. */
+  onThreadResolved?: () => unknown;
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
@@ -984,7 +989,7 @@ export function PrDiff({
   }, [diffText]);
 
   const orphanReplies = useReviewReplies(endpoint, onCommentPosted);
-  const orphanResolution = useThreadResolution(endpoint, onCommentPosted);
+  const orphanResolution = useThreadResolution(endpoint, onThreadResolved);
   const orphanReactions = useCommentReactions(
     endpoint,
     onCommentPosted,
@@ -1085,6 +1090,7 @@ export function PrDiff({
               reviewThreads={reviewThreads}
               reviewReactions={reviewReactions}
               onCommentPosted={onCommentPosted}
+              onThreadResolved={onThreadResolved}
             />
           ))}
           {orphanThreads.length > 0 ? (

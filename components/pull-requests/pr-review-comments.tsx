@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -15,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleCheck,
+  Copy,
   CornerDownRight,
   SmilePlus,
 } from "lucide-react";
@@ -34,8 +40,17 @@ import {
   type PrEndpoint,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
-import { usePrEndpoint, usePrReplyingUser } from "@/lib/pr-endpoint-context";
-import { displayLineOf, displayStartLineOf } from "@/lib/pr-review-threads";
+import {
+  usePrEndpoint,
+  usePrReplyingUser,
+  usePrReviewThreadActions,
+} from "@/lib/pr-endpoint-context";
+import { NumoIcon } from "@/components/numo-icon";
+import {
+  displayLineOf,
+  displayStartLineOf,
+  type ReviewThreadState,
+} from "@/lib/pr-review-threads";
 import {
   groupReactionsByComment,
   REVIEW_REACTIONS,
@@ -107,36 +122,71 @@ export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) 
 export type ReviewReplies = ReturnType<typeof useReviewReplies>;
 
 /**
- * Toggle “resolved/reopened” of a thread (MIN-139). Only one thread flying at a time,
- * like the answers: the list reloads afterwards, two simultaneous toggles
- * would overlap one another.
+ * Resolve or reopen a thread optimistically. Pending state is tracked per
+ * conversation so independent requests can run concurrently.
  */
 export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unknown) {
-  const [pendingId, setPendingId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const pendingRef = useRef(new Set<number>());
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(() => new Set());
 
-  const toggle = useCallback(
-    async (thread: PrReviewThread) => {
+  const setResolved = useCallback(
+    async (thread: PrReviewThread, resolved: boolean, refresh = true): Promise<boolean> => {
       const state = thread.resolution;
-      // Without a known state there is no thread id to give to the forge — the caller
-      // does not return the button in this case.
-      if (!state || pendingId != null) return;
-      setPendingId(thread.id);
+      // Without a known state there is no thread id to give to the forge. Track
+      // each request independently so several conversations can resolve at once.
+      if (!state || pendingRef.current.has(thread.id)) return false;
+      pendingRef.current.add(thread.id);
+      setPendingIds(new Set(pendingRef.current));
+
+      const queryKey = ["pr-review-comments", endpoint] as const;
+      const applyState = (value: boolean) => {
+        queryClient.setQueryData<{
+          comments: PullRequestReviewComment[];
+          threads: ReviewThreadState[];
+          reactions: ReviewCommentReaction[];
+        }>(queryKey, (current) =>
+          current
+            ? {
+                ...current,
+                threads: current.threads.map((candidate) =>
+                  candidate.threadId === state.threadId
+                    ? { ...candidate, resolved: value }
+                    : candidate,
+                ),
+              }
+            : current,
+        );
+      };
+
+      // Keep the card at the same height and update every PR surface immediately.
+      applyState(resolved);
       try {
         await setPrReviewThreadResolvedApi(endpoint, {
           threadId: state.threadId,
-          resolved: !state.resolved,
+          resolved,
         });
-        await onChanged();
+        if (refresh) await onChanged();
+        return true;
       } catch (err) {
+        applyState(state.resolved);
         toast.error((err as Error).message);
+        return false;
       } finally {
-        setPendingId(null);
+        pendingRef.current.delete(thread.id);
+        setPendingIds(new Set(pendingRef.current));
       }
     },
-    [endpoint, onChanged, pendingId],
+    [endpoint, onChanged, queryClient],
   );
 
-  return { pendingId, toggle };
+  const toggle = useCallback(
+    (thread: PrReviewThread) =>
+      setResolved(thread, !thread.resolution?.resolved),
+    [setResolved],
+  );
+
+  return { pendingIds, setResolved, toggle };
 }
 
 export type ThreadResolution = ReturnType<typeof useThreadResolution>;
@@ -579,11 +629,8 @@ export function LineComposer({
 /**
  * A thread: comments stacked, then “Reply” and “Resolve”.
  *
- * A RESOLVED thread becomes FOLDED — a single “✓ Resolved by X” line, unfoldable.
- * That's the whole point of MIN-139: as long as a processed thread was displayed exactly
- * like an open thread, resolving it would not have changed anything on screen. The fallback is
- * local and non-persistent: reopening the page folds again, which is indeed the
- * desired reading (“this point is settled, move on to the next one”).
+ * A resolved thread stays fully visible. Resolution changes its status and actions
+ * without collapsing the content or moving the surrounding activity timeline.
  *
  * `resolution` may be missing on wire (`thread.resolution === undefined`) when
  * the forge did not know how to tell the state: we then display NO affordance, rather
@@ -612,34 +659,14 @@ export function ReviewThreadCard({
 }) {
   const t = useTranslations("PullRequests");
   const replyingUser = usePrReplyingUser();
-  const [expanded, setExpanded] = useState(false);
+  const threadActions = usePrReviewThreadActions();
   const state = thread.resolution;
   const resolved = !!state?.resolved;
-  const pending = resolution?.pendingId === thread.id;
+  const pending = resolution?.pendingIds.has(thread.id) ?? false;
 
   const resolvedLabel = state?.resolvedBy
     ? t("threadResolvedBy", { name: state.resolvedBy })
     : t("threadResolved");
-
-  if (resolved && !expanded) {
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        className="flex w-full items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/70"
-      >
-        {/* The chevron says that the line is UNFOLDING — the same signal as the folding of the
-            expired wires just below. Without it, the resolved card reads like
-            a dead label and the thread seems lost. */}
-        <ChevronRight className="size-3.5 shrink-0" />
-        <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-        <span className="min-w-0 flex-1 truncate">{resolvedLabel}</span>
-        <span className="shrink-0 text-[11px] text-muted-foreground/80">
-          {t("showResolvedThread", { count: thread.comments.length })}
-        </span>
-      </button>
-    );
-  }
 
   return (
     <div
@@ -650,19 +677,6 @@ export function ReviewThreadCard({
         variant === "card" && "rounded-md border border-border bg-card px-3 py-2.5",
       )}
     >
-      {/* Unfolded, the header FOLDED: the gesture must be reversible where it was
-          done, otherwise the only way back is to reload the page. */}
-      {resolved ? (
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="flex items-center gap-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ChevronDown className="size-3.5 shrink-0" />
-          <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <span className="min-w-0 truncate">{resolvedLabel}</span>
-        </button>
-      ) : null}
       {thread.comments.map((c) => (
         <CommentBody key={c.id} comment={c} reactions={reactions} />
       ))}
@@ -679,6 +693,12 @@ export function ReviewThreadCard({
         />
       ) : (
         <div className="flex items-center gap-1.5">
+          {resolved ? (
+            <span className="mr-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="truncate">{resolvedLabel}</span>
+            </span>
+          ) : null}
           {readOnly ? null : (
             <Button
               data-testid="review-thread-reply"
@@ -696,24 +716,46 @@ export function ReviewThreadCard({
             </Button>
           )}
           {resolution && state ? (
-            <Button
-              data-testid="resolve-conversation"
-              variant="ghost"
-              size="sm"
-              disabled={pending}
-              // The unfolding is LOCAL, so it survives the switch: without this reset,
-              // a thread unfolded then reopened then re-resolved would remain unfolded — or
-              // it is the folding that causes a treated yarn to stop looking like a
-              // open wire. Reopening does not suffer: `resolved` returns to false,
-              // the map is full anyway.
-              onClick={() => {
-                setExpanded(false);
-                void resolution.toggle(thread);
-              }}
-            >
-              {pending ? <Spinner /> : null}
-              {resolved ? t("unresolveThread") : t("resolveThread")}
-            </Button>
+            <div className="flex items-center">
+              <Button
+                data-testid="resolve-conversation"
+                variant="outline"
+                size="sm"
+                className={cn(threadActions && "rounded-r-none")}
+                disabled={pending}
+                onClick={() => void resolution.toggle(thread)}
+              >
+                {pending ? <Spinner /> : null}
+                {resolved ? t("unresolveThread") : t("resolveThread")}
+              </Button>
+              {threadActions ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      data-testid="review-thread-actions"
+                      variant="outline"
+                      size="sm"
+                      className="-ml-px rounded-l-none px-2"
+                      aria-label={t("conversationActions")}
+                    >
+                      <ChevronDown className="size-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => threadActions.copyPrompt(thread)}>
+                      <Copy />
+                      {t("copyPromptShort")}
+                    </DropdownMenuItem>
+                    {threadActions.launchNumo ? (
+                      <DropdownMenuItem onSelect={() => threadActions.launchNumo?.(thread)}>
+                        <NumoIcon animated={false} />
+                        {t("launchNumoShort")}
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+            </div>
           ) : null}
         </div>
       )}
@@ -829,6 +871,7 @@ export function StaleThreads({
                   startLine={displayStartLineOf(thread.root)}
                   side={thread.root.start_side ?? thread.root.side}
                   outdated={thread.resolution?.outdated ?? thread.root.line == null}
+                  resolved={thread.resolution?.resolved}
                   diffHunk={thread.root.diff_hunk}
                   className="rounded-md border border-border"
                 />

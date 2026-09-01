@@ -4,7 +4,6 @@ import type { PullRequestCheck } from "./agent-api";
 import type { ReadinessBlocker } from "./pr-readiness";
 import {
   PULL_REQUEST_POLL_MS,
-  conversationResolutionTab,
   findRerunnableChecks,
   pullRequestRefetchInterval,
 } from "./pr-readiness-actions";
@@ -89,11 +88,6 @@ describe("pull request readiness interactions", () => {
         },
       }),
     ).toBe(false);
-  });
-
-  it("routes GitLab conversations to the files tab", () => {
-    expect(conversationResolutionTab("gitlab")).toBe("files");
-    expect(conversationResolutionTab("github")).toBe("activity");
   });
 
   it("reruns the required failing check named by the blocker", () => {

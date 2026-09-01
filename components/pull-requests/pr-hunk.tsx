@@ -47,6 +47,7 @@ export function PrHunk({
   startLine,
   side,
   outdated = false,
+  resolved = false,
   maxLines,
   className,
   headerClassName,
@@ -63,6 +64,8 @@ export function PrHunk({
   side?: "LEFT" | "RIGHT";
   /** Whether the forge says the referenced code is no longer current. */
   outdated?: boolean;
+  /** Whether the review conversation has already been resolved. */
+  resolved?: boolean;
   /** Number of lines kept (the last ones). `0` = the whole hunk. */
   maxLines?: number;
   className?: string;
@@ -150,7 +153,16 @@ export function PrHunk({
       : startLine != null && startLine < line
         ? t("lineAnchorRange", { start: startLine, end: line })
         : t("lineAnchor", { line });
-  const outdatedBadge = outdated ? (
+  const statusBadge = resolved ? (
+    <Badge
+      variant="secondary"
+      data-testid="pr-hunk-resolved"
+      data-diff-nonselectable
+      className="mr-2.5 shrink-0 cursor-default select-none border-emerald-600/25 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
+    >
+      {t("resolvedComment")}
+    </Badge>
+  ) : outdated ? (
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge
@@ -181,7 +193,7 @@ export function PrHunk({
           title={title}
         >
           {anchor}
-          {outdatedBadge}
+          {statusBadge}
         </div>
         {lineLabel ? (
           <div
@@ -220,7 +232,7 @@ export function PrHunk({
           )}
           {anchor}
         </button>
-        {outdatedBadge}
+        {statusBadge}
       </div>
       {collapsed ? null : (
         <>

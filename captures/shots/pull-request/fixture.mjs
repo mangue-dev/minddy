@@ -455,7 +455,7 @@ export const DETAIL_RESPONSE = {
     preferredMethod: "squash",
     requiredApprovals: 0,
     codeOwnerReviewRequired: false,
-    conversationsMustBeResolved: false,
+    conversationsMustBeResolved: true,
     checksMustPass: true,
     requiredCheckNames: ["Tests"],
     branchMustBeUpToDate: false,

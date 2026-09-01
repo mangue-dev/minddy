@@ -214,12 +214,12 @@ export function PrReadinessControl({
           className={cn(
             "shrink-0 gap-1.5",
             ready &&
-              "border-emerald-600/30 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 focus-visible:bg-emerald-600/15 data-[state=open]:bg-emerald-600/15 data-[state=open]:text-emerald-700 dark:text-emerald-400 dark:data-[state=open]:text-emerald-400",
+              "!border-emerald-600/30 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 focus-visible:bg-emerald-600/15 data-[state=open]:bg-emerald-600/15 data-[state=open]:text-emerald-700 dark:!border-emerald-400/30 dark:text-emerald-400 dark:data-[state=open]:text-emerald-400",
             pending &&
-              "border-amber-600/30 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 focus-visible:bg-amber-600/15 data-[state=open]:bg-amber-600/15 data-[state=open]:text-amber-700 dark:text-amber-400 dark:data-[state=open]:text-amber-400",
+              "!border-amber-600/30 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 focus-visible:bg-amber-600/15 data-[state=open]:bg-amber-600/15 data-[state=open]:text-amber-700 dark:!border-amber-400/30 dark:text-amber-400 dark:data-[state=open]:text-amber-400",
             !ready &&
               !pending &&
-              "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 focus-visible:bg-destructive/15 data-[state=open]:bg-destructive/15 data-[state=open]:text-destructive",
+              "!border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 focus-visible:bg-destructive/15 data-[state=open]:bg-destructive/15 data-[state=open]:text-destructive",
           )}
           aria-label={t(STATE_KEYS[readiness.state])}
         >
@@ -309,6 +309,7 @@ export function PrReadinessControl({
                 </div>
                 {available ? (
                   <Button
+                    data-testid={`pr-readiness-action-${blocker.action}`}
                     variant="outline"
                     size="sm"
                     disabled={acting !== null}
