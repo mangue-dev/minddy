@@ -2311,6 +2311,9 @@ export async function prAiReviewResponse(
   userId: string,
   requestedModel?: string | null,
   requestedReasoningLevel?: string | null,
+  localExec = false,
+  localWorktree = false,
+  localIssueContextConfirmed = false,
 ): Promise<Response> {
   try {
     await ensureAgentsAllowed(userId);
@@ -2341,6 +2344,9 @@ export async function prAiReviewResponse(
     model: chosen || null,
     forced: !!chosen,
     reasoningLevel,
+    localExec,
+    localWorktree,
+    localIssueContextConfirmed,
   });
   if (!result.ok) return await prLaunchErrorResponse(result);
 

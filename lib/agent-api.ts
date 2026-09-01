@@ -920,6 +920,11 @@ export async function requestPullRequestAiReviewApi(
   prId: string,
   model?: string,
   reasoningLevel?: ReasoningLevel,
+  local: {
+    localExec?: boolean;
+    localWorktree?: boolean;
+    localIssueContextConfirmed?: boolean;
+  } = {},
 ): Promise<{ ok: true; review: PrReviewRunSummary }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
@@ -930,6 +935,7 @@ export async function requestPullRequestAiReviewApi(
         action: "ai_review",
         ...(model === undefined ? {} : { model }),
         ...(reasoningLevel === undefined ? {} : { reasoningLevel }),
+        ...local,
       }),
     }),
   );

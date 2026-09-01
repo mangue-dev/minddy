@@ -315,7 +315,7 @@ export interface AgentRun {
   local_exec: boolean;
   /** The local run uses an isolated worktree rather than the attached checkout. */
   local_worktree: boolean;
-  /** The local user explicitly accepted the untrusted issue context for this run. */
+  /** The local user explicitly accepted untrusted issue or pull-request context. */
   local_issue_context_confirmed: boolean;
   /**
    * GENERATION of local execution lease (MIN-355) — the only revocation
@@ -494,8 +494,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
      * to zero: it only becomes something when the first token is issued.
      *
      * The third-party-content invariant is applied at the only writer of the
-     * column. Automated sources remain excluded; an issue can run locally only
-     * after the signed-in user acknowledges its untrusted context (MIN-439).
+     * column. Automated sources remain excluded; an issue or pull-request
+     * review can run locally only after the signed-in user acknowledges its
+     * untrusted context (MIN-439).
      */
     local_exec:
       input.localExec === true &&
@@ -508,7 +509,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
         localIssueContextConfirmed: input.localIssueContextConfirmed,
       }).ok,
     local_issue_context_confirmed:
-      input.issueId !== null && input.localIssueContextConfirmed === true,
+      (input.issueId != null || input.pullRequestId != null) &&
+      input.localIssueContextConfirmed === true,
     // This option only makes sense for a truly local run. The same
     // keeps `local_exec` closes automated/third-party entries.
     local_worktree:

@@ -276,3 +276,26 @@ describe("an explicit PR keeps priority", () => {
     });
   });
 });
+
+describe("a pull-request review session", () => {
+  it("preserves a confirmed local isolated launch", async () => {
+    const result = await launchAgentRun({
+      pullRequestId: PR_ID,
+      userId: USER_ID,
+      triggeredBy: "button",
+      localExec: true,
+      localWorktree: true,
+      localIssueContextConfirmed: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(h.created).toHaveLength(1);
+    expect(h.created[0]).toMatchObject({
+      pullRequestId: PR_ID,
+      intent: "review",
+      localExec: true,
+      localWorktree: true,
+      localIssueContextConfirmed: true,
+    });
+  });
+});

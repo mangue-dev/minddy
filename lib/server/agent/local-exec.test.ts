@@ -24,6 +24,8 @@ const h = vi.hoisted(() => ({
     routine_id: null,
     chain_id: null,
     pull_request_id: null,
+    issue_id: null,
+    local_issue_context_confirmed: false,
     created_by: "user-1",
     local_exec_device_id: "0123456789abcdef0123456789abcdef",
   } as {
@@ -36,6 +38,8 @@ const h = vi.hoisted(() => ({
     routine_id: string | null;
     chain_id: string | null;
     pull_request_id: string | null;
+    issue_id: string | null;
+    local_issue_context_confirmed: boolean;
     created_by?: string | null;
     local_exec_device_id?: string | null;
   } | null,
@@ -72,6 +76,8 @@ beforeEach(() => {
     routine_id: null,
     chain_id: null,
     pull_request_id: null,
+    issue_id: null,
+    local_issue_context_confirmed: false,
     created_by: USER_ID,
     local_exec_device_id: DEVICE_ID,
   };
@@ -123,12 +129,24 @@ describe("le bail d'exécution locale", () => {
       };
       expect(await issue()).toEqual({
         ok: false,
-        error: "third_party_context",
+        error: scope.pull_request_id
+          ? "issue_confirmation_required"
+          : "third_party_context",
       });
       // And the previous lease was not revoked by the way: we refuse BEFORE
       // to increment, otherwise a refusal would break the machine in place.
       expect(h.row?.gen).toBe(0);
     }
+  });
+
+  it("issues a lease for a manually confirmed pull-request review", async () => {
+    h.scope = {
+      ...h.scope!,
+      pull_request_id: "pr-1",
+      local_issue_context_confirmed: true,
+    };
+
+    await expect(issue()).resolves.toMatchObject({ ok: true, gen: 1 });
   });
 
   it("refuse de donner un bail à un run de microVM", async () => {

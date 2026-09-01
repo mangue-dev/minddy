@@ -5,11 +5,10 @@ import { localRunScope, rowMayRunLocally } from "./local-exec-scope";
 /**
  * MIN-360 — THE INVARIANT OF RUNS WITH THIRD-PARTY CONTENT.
  *
- * PURE logic, tested like [prune.test.ts](prune.test.ts): we call, on
- * assert. What it decides, on the other hand, is nothing minor — a run whose
- * context is text from a potential attacker which would start on a local
- * machine, it is a prompt injection which becomes a shell on the computer of the
- * developer.
+ * Pure logic, tested like [prune.test.ts](prune.test.ts): call it and assert.
+ * What it decides is not minor — starting a run whose context contains text
+ * from a potential attacker can turn prompt injection into a shell on the
+ * developer's computer.
  *
  * The case which motivated the module is the last of this file: `job.interactive`
  * is `!run.routine_id`, so **true** for a replay of pull request
@@ -22,21 +21,24 @@ const ctx = (over: Partial<Parameters<typeof localRunScope>[0]> = {}) => ({
 });
 
 describe("localRunScope", () => {
-  it("laisse passer ce que la personne lance elle-même", () => {
+  it("allows an interactive launch from the signed-in user", () => {
     expect(localRunScope(ctx())).toEqual({ ok: true });
     expect(localRunScope(ctx({ triggeredBy: "chat" }))).toEqual({ ok: true });
   });
 
-  it("refuse une relecture de pull request", () => {
-    // A fork's diff and comments are written by anyone. THE
-    // repository already recognizes this by refusing a `repo-write` token in these sessions.
+  it("requires explicit trust before reviewing a pull request locally", () => {
     expect(localRunScope(ctx({ pullRequestId: "pr-1" }))).toEqual({
       ok: false,
-      reason: "pull_request",
+      reason: "issue_confirmation",
     });
+    expect(
+      localRunScope(
+        ctx({ pullRequestId: "pr-1", localIssueContextConfirmed: true }),
+      ),
+    ).toEqual({ ok: true });
   });
 
-  it("refuse ce que personne n'a devant les yeux", () => {
+  it("refuses unattended launch sources", () => {
     expect(localRunScope(ctx({ routineId: "r-1" }))).toEqual({ ok: false, reason: "routine" });
     expect(localRunScope(ctx({ chainId: "c-1" }))).toEqual({ ok: false, reason: "chain" });
     expect(localRunScope(ctx({ triggeredBy: "automation" }))).toEqual({
@@ -49,7 +51,7 @@ describe("localRunScope", () => {
     });
   });
 
-  it("refuse une mention, même quand elle a l'air interne", () => {
+  it("refuses a mention even when it looks internal", () => {
     // A mention can come from a forge comment copied by a webhook, and
     // nothing here distinguishes the two.
     expect(localRunScope(ctx({ triggeredBy: "mention" }))).toEqual({
@@ -58,9 +60,9 @@ describe("localRunScope", () => {
     });
   });
 
-  it("refuse une source qu'il ne connaît pas — la liste est FERMÉE", () => {
-    // The gateway that we will write next year (public board, webhook of a
-    // other forge) must be refused by default, not authorized by forgetting.
+  it("refuses an unknown source because admission is closed by default", () => {
+    // A future entry point must be refused by default instead of becoming
+    // authorized simply because this predicate did not know about it.
     expect(localRunScope(ctx({ triggeredBy: "feedback_board" }))).toEqual({
       ok: false,
       reason: "trigger",
@@ -68,18 +70,18 @@ describe("localRunScope", () => {
     expect(localRunScope(ctx({ triggeredBy: "" }))).toEqual({ ok: false, reason: "trigger" });
   });
 
-  it("refuse dès la PREMIÈRE raison, et la nomme", () => {
-    // A chain run ON a pull request: the pattern rendered is the one that is
-    // tells the best story, and the order is stable so that the logs are stable too.
+  it("returns the first applicable refusal reason", () => {
+    // Automation remains forbidden even if a forged request claims that the
+    // pull-request context was accepted.
     expect(localRunScope(ctx({ pullRequestId: "pr-1", chainId: "c-1" }))).toEqual({
       ok: false,
-      reason: "pull_request",
+      reason: "chain",
     });
   });
 });
 
 describe("rowMayRunLocally", () => {
-  it("pose la même question d'une ligne de la base", () => {
+  it("applies the same rule to a persisted run", () => {
     expect(
       rowMayRunLocally({
         triggered_by: "button",
@@ -94,11 +96,21 @@ describe("rowMayRunLocally", () => {
         routine_id: null,
         chain_id: null,
         pull_request_id: "pr-1",
+        local_issue_context_confirmed: false,
       }),
-    ).toEqual({ ok: false, reason: "pull_request" });
+    ).toEqual({ ok: false, reason: "issue_confirmation" });
+    expect(
+      rowMayRunLocally({
+        triggered_by: "button",
+        routine_id: null,
+        chain_id: null,
+        pull_request_id: "pr-1",
+        local_issue_context_confirmed: true,
+      }),
+    ).toEqual({ ok: true });
   });
 
-  it("refuse une ligne muette", () => {
+  it("refuses a row without a known trigger", () => {
     // An absent column is not authorization: it is ignorance.
     expect(rowMayRunLocally({})).toEqual({ ok: false, reason: "trigger" });
   });

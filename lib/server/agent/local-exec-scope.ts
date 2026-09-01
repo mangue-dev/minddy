@@ -7,11 +7,10 @@
  * WHAT IT SAYS, AND WHY IT DOES NOT TRADE
  *
  * **A run whose context has not been written by the person running it never leaves
- * on a local machine without a deliberate trust decision.** Issue launches require
- * a separate acknowledgement; contexts that cannot be reviewed interactively stay
- * excluded. The `pr` anchor, a forge webhook, a
- * mention external, a routine, a string, the public feedback board: in
- * all these cases, the text that the model reads is **potential attacker text**.
+ * on a local machine without a deliberate trust decision.** Issue and pull-request
+ * launches require a separate acknowledgement; contexts that cannot be reviewed
+ * interactively stay excluded. A forge webhook, external mention, routine, chain,
+ * or public feedback board can all carry **potential attacker text**.
  *
  * The repository already recognizes it elsewhere, and it is this precedent which sets the rule:
  * a review session on a fork only receives one token `contents: read`,
@@ -46,7 +45,6 @@ export interface LocalRunContext {
 
 /** Why can't this run play on a local machine. */
 export type LocalRunScopeRefusal =
-  | "pull_request"
   | "routine"
   | "chain"
   | "trigger"
@@ -69,13 +67,12 @@ export type LocalRunScope = { ok: true } | { ok: false; reason: LocalRunScopeRef
  * risk and records a per-run acknowledgement before this predicate returns true.
  */
 export function localRunScope(ctx: LocalRunContext): LocalRunScope {
-  if (ctx.pullRequestId) return { ok: false, reason: "pull_request" };
   if (ctx.routineId) return { ok: false, reason: "routine" };
   if (ctx.chainId) return { ok: false, reason: "chain" };
   if (ctx.triggeredBy !== "button" && ctx.triggeredBy !== "chat") {
     return { ok: false, reason: "trigger" };
   }
-  if (ctx.issueId && ctx.localIssueContextConfirmed !== true) {
+  if ((ctx.issueId || ctx.pullRequestId) && ctx.localIssueContextConfirmed !== true) {
     return { ok: false, reason: "issue_confirmation" };
   }
   return { ok: true };

@@ -671,6 +671,8 @@ export function PrDetail({
   const reviewSession = usePrReviewSession(item.prId);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
   const [aiReviewModel, setAiReviewModel] = useState("");
+  const [aiReviewEnvironment, setAiReviewEnvironment] =
+    useState<AgentEnvironment>("cloud");
   const [aiReviewReasoningOverride, setAiReviewReasoningOverride] =
     useState<ReasoningLevel | null>(null);
   const [startingAiReview, setStartingAiReview] = useState(false);
@@ -687,12 +689,11 @@ export function PrDetail({
   // it is she who certifies, when sent, that we always respond to this message.
 
   const isWorking = !!item.activeRunId;
-  // The environment only makes sense for a classic agent restart. A
-  // PR rereading (`pullRequestId`) voluntarily remains in the cloud: the
-  // Content can come from a fork and should never become a local shell.
   const localRepo = useLocalRepo(item.project?.id ?? null);
   useEffect(() => {
-    setEnvironment(localRepo.ready ? "local" : "cloud");
+    const next = localRepo.ready ? "local" : "cloud";
+    setEnvironment(next);
+    setAiReviewEnvironment(next);
   }, [localRepo.ready]);
 
   const effectiveModel = model || defaultModel || providerDefaultModel;
@@ -707,6 +708,8 @@ export function PrDetail({
     aiReviewReasoningOverride ?? defaultReasoningLevel,
     aiReviewReasoningLevels,
   );
+  const aiReviewUsesLocal = aiReviewEnvironment === "local" && localRepo.ready;
+  const aiReviewBackendUnavailable = !aiReviewUsesLocal && !reviewExecutionConfigured;
   // What THIS git account can do on this repository (MIN-144). A human gesture leaves
   // of the person's account: without account, or without right, the affordance
   // DISAPPEARS — it’s the banner that explains, once, at the top.
@@ -1027,6 +1030,7 @@ export function PrDetail({
         : t("reviewSubmit");
 
   const [confirmLocalRelaunch, setConfirmLocalRelaunch] = useState(false);
+  const [confirmLocalAiReview, setConfirmLocalAiReview] = useState(false);
 
   const submitReview = async (localIssueContextConfirmed = false) => {
     if (!reviewVerdict || submitting || reviewHasNoEffect) return;
@@ -1082,12 +1086,12 @@ export function PrDetail({
    * those that Numo has not opened: re-reading only requires a diff, where
    * "relaunch Numo" needs a branch to inherit from.
    *
-   * The gesture passes through a dialogue because it now carries a CHOICE: the
-   * model. A big PR doesn't read like a one-liner, and it's at the moment
-   * of the click as we know — not in a setting set once and for all.
+   * The gesture passes through a dialog because it carries three launch choices:
+   * environment, model, and reasoning. They are frozen when the review session
+   * starts, just like a correction run launched from the request-changes dialog.
    */
   const openAiReviewDialog = () => {
-    if (!reviewExecutionConfigured) {
+    if (!reviewExecutionConfigured && !localRepo.available) {
       toast.error(tAgent("errorExecutionBackendUnavailable"));
       return;
     }
@@ -1101,14 +1105,28 @@ export function PrDetail({
    * Throws the pass and opens the backboard. The answer does not wait for him: it makes
    * the session, and this is the panel that shows the rest live.
    */
-  const startAiReview = async () => {
+  const startAiReview = async (localContextConfirmed = false) => {
     if (startingAiReview) return;
+    if (aiReviewBackendUnavailable) {
+      toast.error(tAgent("errorExecutionBackendUnavailable"));
+      return;
+    }
+    if (aiReviewUsesLocal && !localContextConfirmed) {
+      setConfirmLocalAiReview(true);
+      return;
+    }
     setStartingAiReview(true);
     try {
       await requestPullRequestAiReviewApi(
         item.prId,
         aiReviewModel,
         aiReviewReasoningLevel,
+        {
+          localExec: aiReviewUsesLocal,
+          // PR review always gets an isolated checkout at the provider's PR ref.
+          localWorktree: aiReviewUsesLocal,
+          localIssueContextConfirmed: localContextConfirmed,
+        },
       );
       setAiReviewDialog(false);
       // The pass is seen in the line: bring it back, otherwise it is played under a
@@ -2087,10 +2105,8 @@ export function PrDetail({
         </DialogContent>
       </Dialog>
 
-      {/* “Have it checked by Numo” — the only choice to make is the model, and
-          it is done HERE, with the click: the default of the instance suits most
-          time, a big PR sometimes deserves better. The choice is made for
-          next time; “mindy default” clears it. */}
+      {/* “Have it checked by Numo” uses the same compact launch controls and
+          ordering as “Request changes”: environment, model, then reasoning. */}
       <FormDialog
         open={aiReviewDialog}
         onOpenChange={(next) => {
@@ -2101,17 +2117,39 @@ export function PrDetail({
         className="sm:max-w-md"
         submitLabel={t("numoReviewStart")}
         submitIcon={startingAiReview ? <Spinner /> : <NumoIcon animated={false} />}
+        submitDisabled={aiReviewBackendUnavailable}
         submitting={startingAiReview}
         cancelLabel={t("cancel")}
         onCancel={() => setAiReviewDialog(false)}
         onSubmit={() => void startAiReview()}
       >
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-muted-foreground">{t("numoReviewModelLabel")}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {localRepo.linked ? (
+              <EnvironmentCombobox
+                value={aiReviewEnvironment}
+                onChange={setAiReviewEnvironment}
+                localAvailable={localRepo.available}
+                worktreeAvailable={false}
+                cloudAvailable={reviewExecutionConfigured}
+                executionBackend={executionBackend}
+                folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
+                needsAttach={localRepo.state?.status !== "ready"}
+                onAttach={() => {
+                  void localRepo.attach().then((next) => {
+                    if (next?.status === "ready") setAiReviewEnvironment("local");
+                    else if (next && next.status === "invalid") {
+                      toast.error(tAgent(LOCAL_REPO_ERROR_KEYS[next.reason]));
+                    }
+                  });
+                }}
+                disabled={startingAiReview || localRepo.busy}
+              />
+            ) : null}
             <ModelCombobox
               // Catalog of the platform key, filtered tool-calling: the review
               // runs on it regardless of the BYOK of the account (`review`).
               scope="review"
+              variant="compact"
               value={aiReviewModel}
               onChange={setAiReviewModel}
               defaultLabel={t("numoReviewModelInstance")}
@@ -2122,16 +2160,17 @@ export function PrDetail({
               freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
               disabled={startingAiReview}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-muted-foreground">{tAgent("reasoning")}</span>
             <ReasoningCombobox
               value={aiReviewReasoningLevel}
               onChange={setAiReviewReasoningOverride}
               disabled={startingAiReview}
               levels={aiReviewReasoningLevels}
-              variant="field"
             />
+            {aiReviewBackendUnavailable ? (
+              <p className="w-full text-xs text-amber-600 dark:text-amber-400">
+                {tAgent("errorExecutionBackendUnavailable")}
+              </p>
+            ) : null}
           </div>
       </FormDialog>
 
@@ -2328,6 +2367,15 @@ export function PrDetail({
         onConfirm={() => {
           setConfirmLocalRelaunch(false);
           void submitReview(true);
+        }}
+      />
+      <LocalIssueRunConfirmation
+        open={confirmLocalAiReview}
+        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : ""}
+        onOpenChange={setConfirmLocalAiReview}
+        onConfirm={() => {
+          setConfirmLocalAiReview(false);
+          void startAiReview(true);
         }}
       />
     </div>

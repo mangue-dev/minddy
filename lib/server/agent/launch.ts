@@ -311,10 +311,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // comes from the repository, the model of `pr_review_model`, and nothing is written on a
   // ticket (neither status, nor event, nor branch inheritance).
   if (input.pullRequestId) {
-    if (!capability("agentExecution").configured) {
+    const localExec = localExecRequested(input);
+    if (!localExec && !capability("agentExecution").configured) {
       return { ok: false, error: "executionBackendUnavailable" };
     }
-    return launchPrReviewRun(input, input.pullRequestId);
+    return launchPrReviewRun(input, input.pullRequestId, localExec);
   }
 
   const issueId = input.issueId ?? null;
@@ -710,6 +711,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 async function launchPrReviewRun(
   input: LaunchAgentInput,
   pullRequestId: string,
+  localExec: boolean,
 ): Promise<LaunchResult> {
   const pr = await loadPrRunContext(pullRequestId);
   if (!pr) return { ok: false, error: "prNotFound" };
@@ -808,6 +810,9 @@ async function launchPrReviewRun(
       intent: "review",
       // The base serves as a point of comparison to `git diff` in the sandbox.
       baseBranch: pr.baseBranch,
+      localExec,
+      localWorktree: localExec && input.localWorktree === true,
+      localIssueContextConfirmed: input.localIssueContextConfirmed === true,
       managedBudget: managedBudgetReservation(quota, input.budgetUsd),
     });
   } catch (err) {
@@ -826,7 +831,7 @@ async function launchPrReviewRun(
     throw err;
   }
 
-  kickAgentDrain(getServiceClient());
+  if (!run.local_exec) kickAgentDrain(getServiceClient());
   return { ok: true, run };
 }
 

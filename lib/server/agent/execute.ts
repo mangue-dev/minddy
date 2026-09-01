@@ -1600,7 +1600,9 @@ export async function executeAgentRun(
       repoTouched: run.checkpoint?.repoTouched === true,
       prInlineComments: run.checkpoint?.prInlineComments ?? 0,
       baseBranch,
-      workBranch,
+      // Local review worktrees fetch the provider's virtual PR ref. This works
+      // for fork heads too, without moving the attached checkout.
+      workBranch: prRun ? pullRequestHeadRef(prRun.provider, prRun.number) : workBranch,
       // A first turn whose branch has not yet been stamped cannot exist on the
       // remote. The harness can start directly from HEAD instead of paying for a
       // `git fetch` destined to return "ref does not exist". Without a linked

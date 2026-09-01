@@ -2542,7 +2542,7 @@
     "environmentLocalAttach": "Wählen Sie den Ordner aus, in dem Sie arbeiten möchten.",
     "environmentLocalDesktopHint": "Öffnen Sie die Desktop-App, um lokal zu arbeiten.",
     "environmentLocalDownload": "Laden Sie die App herunter",
-    "localIssueConfirmTitle": "Dieses Problem lokal ausführen?",
+    "localIssueConfirmTitle": "Lokal ausführen?",
     "localIssueConfirmDescription": "Der Inhalt des Problems oder der Pull-Anfrage ist möglicherweise nicht vertrauenswürdig. Der Agent kann Dateien in {folder} bearbeiten, aber Shell-Befehle, direkte Netzwerkanforderungen, geheime Dateien und Pfade außerhalb des Repositorys bleiben blockiert.",
     "localIssueConfirmCancel": "Zurück",
     "localIssueConfirmAction": "Lokal ausführen",

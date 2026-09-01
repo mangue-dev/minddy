@@ -2542,7 +2542,7 @@
     "environmentLocalAttach": "Escolha a pasta para trabalhar.",
     "environmentLocalDesktopHint": "Abra o aplicativo de desktop para trabalhar localmente.",
     "environmentLocalDownload": "Baixar o aplicativo",
-    "localIssueConfirmTitle": "Executar este problema localmente?",
+    "localIssueConfirmTitle": "Executar localmente?",
     "localIssueConfirmDescription": "O conteúdo do problema ou do pull request pode não ser confiável. O agente pode editar arquivos em {folder}, mas comandos shell, solicitações diretas de rede, arquivos secretos e caminhos fora do repositório permanecem bloqueados.",
     "localIssueConfirmCancel": "Voltar",
     "localIssueConfirmAction": "Executar localmente",

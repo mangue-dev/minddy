@@ -2542,7 +2542,7 @@
     "environmentLocalAttach": "Elige la carpeta en la que vas a trabajar.",
     "environmentLocalDesktopHint": "Abre la aplicación de escritorio para trabajar en local.",
     "environmentLocalDownload": "Descargar la aplicación",
-    "localIssueConfirmTitle": "¿Ejecutar esta incidencia localmente?",
+    "localIssueConfirmTitle": "¿Ejecutar localmente?",
     "localIssueConfirmDescription": "El contenido de la incidencia o la pull request puede no ser fiable. El agente puede editar archivos en {folder}, pero los comandos de shell, las solicitudes de red directas, los archivos secretos y las rutas externas al repositorio permanecen bloqueados.",
     "localIssueConfirmCancel": "Vuelve atrás",
     "localIssueConfirmAction": "Ejecutar localmente",

@@ -2542,7 +2542,7 @@
     "environmentLocalAttach": "Scegli la cartella in cui lavorare.",
     "environmentLocalDesktopHint": "Aprire l'app desktop per lavorare localmente.",
     "environmentLocalDownload": "Scarica l'app",
-    "localIssueConfirmTitle": "Eseguire questo ticket localmente?",
+    "localIssueConfirmTitle": "Eseguire localmente?",
     "localIssueConfirmDescription": "Il contenuto della richiesta di rilascio o di estrazione può non essere affidabile. L'agente può modificare i file in {folder}, ma i comandi shell, richieste di rete dirette, file segreti e percorsi fuori dal repository rimangono bloccati.",
     "localIssueConfirmCancel": "Torna indietro.",
     "localIssueConfirmAction": "Esegue localmente",

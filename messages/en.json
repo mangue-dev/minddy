@@ -2542,7 +2542,7 @@
     "environmentLocalAttach": "Pick the folder to work in.",
     "environmentLocalDesktopHint": "Open the desktop app to work locally.",
     "environmentLocalDownload": "Download the app",
-    "localIssueConfirmTitle": "Run this issue locally?",
+    "localIssueConfirmTitle": "Run locally?",
     "localIssueConfirmDescription": "Issue or pull request content may be untrusted. The agent can edit files in {folder}, but shell commands, direct network requests, secret files, and paths outside the repository stay blocked.",
     "localIssueConfirmCancel": "Go back",
     "localIssueConfirmAction": "Run locally",

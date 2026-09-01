@@ -2542,7 +2542,7 @@
     "environmentLocalAttach": "Choisir le dossier de travail.",
     "environmentLocalDesktopHint": "Ouvrez l'application de bureau pour travailler en local.",
     "environmentLocalDownload": "Télécharger l'application",
-    "localIssueConfirmTitle": "Lancer ce ticket en local ?",
+    "localIssueConfirmTitle": "Lancer en local ?",
     "localIssueConfirmDescription": "Le contenu du ticket ou de la pull request peut être malveillant. L'agent peut modifier les fichiers de {folder}, mais les commandes shell, les requêtes réseau directes, les fichiers secrets et les chemins hors du dépôt restent bloqués.",
     "localIssueConfirmCancel": "Revenir",
     "localIssueConfirmAction": "Lancer en local",
