@@ -79,4 +79,4 @@ export const BOARD_COLUMN_CLASS =
  * `useScrollFade`: nothing is placed on the content, therefore nothing to re-compose.
  */
 export const BOARD_SCROLLER_CLASS =
-  "flex gap-3 overflow-x-auto px-4 snap-x snap-mandatory sm:px-6 wide:snap-none";
+  "flex gap-3 overflow-x-auto px-4 after:w-1 after:shrink-0 after:content-[''] snap-x snap-mandatory sm:px-6 sm:after:w-3 wide:after:hidden wide:snap-none";

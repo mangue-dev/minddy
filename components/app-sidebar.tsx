@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -1326,6 +1327,7 @@ export function AppSidebar({
   onSearch,
   onSearchWarm,
   onScratchpadWarm,
+  onLayerOpenChange,
   overlay = false,
 }: {
   sections: AppNavSection[];
@@ -1336,6 +1338,7 @@ export function AppSidebar({
   onSearch: () => void;
   onSearchWarm?: () => void;
   onScratchpadWarm?: () => void;
+  onLayerOpenChange?: (open: boolean) => void;
   overlay?: boolean;
 }) {
   const reduce = useReducedMotion();
@@ -1347,6 +1350,13 @@ export function AppSidebar({
   const [hovered, setHovered] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const handleMenuOpenChange = useCallback(
+    (open: boolean) => {
+      setMenuOpen(open);
+      onLayerOpenChange?.(open);
+    },
+    [onLayerOpenChange],
+  );
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The bar itself, to know if the pointer returns to it (see below). */
   const railRef = useRef<HTMLElement>(null);
@@ -1356,6 +1366,10 @@ export function AppSidebar({
     if (closeTimer.current) clearTimeout(closeTimer.current);
     returnWatcher.current?.();
   }, []);
+  useEffect(
+    () => () => onLayerOpenChange?.(false),
+    [onLayerOpenChange],
+  );
 
   // Belt and suspenders: navigation dismantles the line that had the focus,
   // and a `blur` then has no one to reach. Without this reset, the
@@ -1712,7 +1726,7 @@ export function AppSidebar({
             collapsed={collapsed}
             currentProject={currentProject}
             projects={projects}
-            onMenuOpenChange={overlay ? setMenuOpen : undefined}
+            onMenuOpenChange={handleMenuOpenChange}
           />
         ) : (
           <AnimatePresence mode="wait" initial={false}>
@@ -1729,7 +1743,7 @@ export function AppSidebar({
                 collapsed={collapsed}
                 currentProject={currentProject}
                 projects={projects}
-                onMenuOpenChange={overlay ? setMenuOpen : undefined}
+                onMenuOpenChange={handleMenuOpenChange}
               />
             </motion.div>
           </AnimatePresence>
@@ -1739,7 +1753,7 @@ export function AppSidebar({
         <div className={cn("pt-2 pb-2.5", GUTTER)}>
           <SidebarFooter
             collapsed={collapsed}
-            onMenuOpenChange={overlay ? setMenuOpen : undefined}
+            onMenuOpenChange={handleMenuOpenChange}
           />
         </div>
       </motion.aside>

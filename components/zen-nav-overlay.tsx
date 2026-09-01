@@ -40,10 +40,13 @@ const HOTZONE = 12;
  */
 export function ZenNavOverlay({
   width,
+  pinned = false,
   children,
 }: {
   /** Block width: primary alone, or primary plus secondary. */
   width: number;
+  /** Keep navigation visible while one of its portaled layers is open. */
+  pinned?: boolean;
   children: ReactNode;
 }) {
   const reduce = useReducedMotion();
@@ -51,14 +54,16 @@ export function ZenNavOverlay({
   const [focusWithin, setFocusWithin] = useState(false);
   const panel = useRef<HTMLDivElement | null>(null);
 
-  const shown = open || focusWithin;
+  const shown = open || focusWithin || pinned;
 
   const openPanel = useCallback(() => setOpen(true), []);
   // Without grace period: the block follows the pointer, it does not make it wait.
   // The primary rail keeps one (70 ms) because it REMAINS on the screen one
   // when folded — a touch makes it beat. This one goes away entirely;
   // the only gesture that takes him off the screen is the one that really leaves him.
-  const closePanel = useCallback(() => setOpen(false), []);
+  const closePanel = useCallback(() => {
+    if (!pinned) setOpen(false);
+  }, [pinned]);
 
   // The macOS buttons follow the bar that houses them: put away, they leave
   // with her. See lib/use-window-buttons.ts for what “remove” means.
@@ -80,7 +85,7 @@ export function ZenNavOverlay({
  * block is open — when idle, it costs nothing.
  */
   useEffect(() => {
-    if (!open) return;
+    if (!open || pinned) return;
     const onMove = (e: PointerEvent) => {
       const el = panel.current;
       if (!el) return;
@@ -141,7 +146,7 @@ export function ZenNavOverlay({
       document.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onDocumentLeave);
     };
-  }, [open, width, closePanel]);
+  }, [open, pinned, width, closePanel]);
 
   // The keyboard focus, for the same reason, is listened to NATIVE on the block:
   // `focusin`/`focusout` go up the DOM, so they see the teleported bar

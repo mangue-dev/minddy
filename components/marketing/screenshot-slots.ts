@@ -104,9 +104,9 @@ const SLOTS = {
   },
   scratchpad: {
     id: "scratchpad",
-    route: "n'importe quelle page de l'app, carnet ouvert (G puis N)",
+    route: "any app page, task notebook open (Command/Ctrl + Shift + N)",
     shot:
-      "La modale du carnet de tâches : deux sections « ## », des tâches cochées et d'autres à faire, et une action de section visible au survol (« Copier la section en prompt » ou « Lancer un agent »).",
+      "The task notebook modal: two `##` sections, completed and pending tasks, and one section action visible on hover (copy as prompt or launch an agent).",
     altKey: "shotAlt_scratchpad",
     ratio: "4/3",
     src: null,

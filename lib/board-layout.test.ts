@@ -5,7 +5,7 @@ import path from "node:path";
 import { compile } from "tailwindcss";
 import { describe, expect, it } from "vitest";
 
-import { BOARD_COLUMN_CLASS } from "./board-layout";
+import { BOARD_COLUMN_CLASS, BOARD_SCROLLER_CLASS } from "./board-layout";
 
 /**
  * The width of a board column is decided in the CASCADE, not in the
@@ -172,5 +172,13 @@ describe("largeur d'une colonne de board", () => {
     // and made a column a third of the window.
     expect(await resolvedWidth(1400)).toBe("22rem");
     expect(await resolvedWidth(2400)).toBe("22rem");
+  });
+});
+
+describe("board scroller gutter", () => {
+  it("keeps a trailing flex spacer below the wide breakpoint", () => {
+    expect(BOARD_SCROLLER_CLASS).toContain("after:w-1");
+    expect(BOARD_SCROLLER_CLASS).toContain("sm:after:w-3");
+    expect(BOARD_SCROLLER_CLASS).toContain("wide:after:hidden");
   });
 });

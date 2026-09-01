@@ -32,7 +32,9 @@ describe("primary sidebar project context", () => {
   it("keeps project data and menu state wired through both sidebar branches", () => {
     expect(shell.match(/currentProject=\{currentProject\}/g)).toHaveLength(2);
     expect(shell.match(/projects=\{projects\}/g)).toHaveLength(2);
-    expect(sidebar).toContain("onMenuOpenChange={overlay ? setMenuOpen : undefined}");
+    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(3);
+    expect(shell).toContain("pinned={zenSidebarLayerOpen}");
+    expect(shell).toContain("onLayerOpenChange={setZenSidebarLayerOpen}");
   });
 
   it("keeps the current project tab when building switch destinations", () => {
