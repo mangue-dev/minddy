@@ -27,6 +27,16 @@ make the exception obvious from its surrounding code or fixture path.
   changes.
 - Review `git diff --check` and confirm that excluded paths are untouched.
 
+## DCO sign-offs
+
+- Every commit Codex creates or amends must include a `Signed-off-by` trailer
+  that exactly matches the commit author's name and email. Use
+  `git commit --signoff`, including when amending a commit.
+- Never use a generic Codex identity for the sign-off when the commit has a
+  different author. Before pushing or updating a pull request, verify every
+  non-merge commit in its range has the matching trailer and repair the
+  history when necessary.
+
 ## Minddy tools
 
 - Treat the Minddy MCP tools as available for issue work in this repository.

@@ -84,7 +84,16 @@ const args = process.argv.slice(2);
 if (args[0] === "auth" && args[1] === "status") process.exit(0);
 if (args[0] === "pr" && args[1] === "list") {
   if (args.includes("merged") && process.env.FAKE_PR_MERGED === "1") {
-    console.log("https://example.test/pull/1");
+    const { execFileSync } = await import("node:child_process");
+    const headRefOid = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    console.log(JSON.stringify([
+      { url: "https://example.test/pull/old", headRefOid: "1111111111111111111111111111111111111111" },
+      { url: "https://example.test/pull/1", headRefOid },
+    ]));
+  } else if (args.includes("merged") && process.env.FAKE_HISTORICAL_PR === "1") {
+    console.log(JSON.stringify([
+      { url: "https://example.test/pull/old", headRefOid: "1111111111111111111111111111111111111111" },
+    ]));
   }
   process.exit(0);
 }
@@ -110,13 +119,25 @@ process.exit(2);
     );
 
     run("git", ["add", "change.txt"], repository);
-    run("git", ["commit", "-m", "Add helpful fix"], repository);
+    run(
+      "git",
+      [
+        "-c",
+        "user.name=Contributing Author",
+        "-c",
+        "user.email=author@example.com",
+        "commit",
+        "-m",
+        "Add helpful fix",
+      ],
+      repository,
+    );
     run(process.execPath, [workflow, "pr"], repository, env);
 
     const commitMessage = run("git", ["show", "-s", "--format=%B"], repository);
     assert.match(
       commitMessage,
-      /Signed-off-by: Test Maintainer <maintainer@example\.com>/u,
+      /Signed-off-by: Contributing Author <author@example\.com>/u,
     );
     assert.equal(
       run("git", ["ls-remote", "--heads", "origin", "refs/heads/work/helpful-fix"], repository)
@@ -125,13 +146,13 @@ process.exit(2);
       true,
     );
 
-    const prematureDone = spawnSync(process.execPath, [workflow, "done"], {
+    const historicalDone = spawnSync(process.execPath, [workflow, "done"], {
       cwd: repository,
       encoding: "utf8",
-      env,
+      env: { ...env, FAKE_HISTORICAL_PR: "1" },
     });
-    assert.notEqual(prematureDone.status, 0);
-    assert.match(prematureDone.stderr, /pull request is not merged yet/u);
+    assert.notEqual(historicalDone.status, 0);
+    assert.match(historicalDone.stderr, /pull request is not merged yet/u);
     assert.equal(
       run("git", ["branch", "--show-current"], repository).trim(),
       "work/helpful-fix",

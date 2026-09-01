@@ -135,6 +135,28 @@ function unsignedCommits() {
   });
 }
 
+function signoffCurrentCommit() {
+  const metadata = git(
+    ["show", "-s", "--format=%an%x00%ae%x00%B", "HEAD"],
+    { capture: true },
+  );
+  const [authorName, authorEmail, ...messageParts] = metadata.split("\u0000");
+  if (hasExpectedSignoff(messageParts.join("\u0000"), authorName, authorEmail)) {
+    return;
+  }
+  git([
+    "commit",
+    "--amend",
+    "--no-edit",
+    "--trailer",
+    `Signed-off-by: ${authorName} <${authorEmail}>`,
+  ]);
+}
+
+function shellQuote(value) {
+  return `'${value.replaceAll("'", `'"'"'`)}'`;
+}
+
 function repairSignoffs() {
   const missing = unsignedCommits();
   if (missing.length === 0) {
@@ -142,7 +164,10 @@ function repairSignoffs() {
   }
 
   console.log(`Adding the required DCO sign-off to ${missing.length} commit(s)...`);
-  git(["rebase", "--signoff", "origin/main"]);
+  const repairCommand = [process.execPath, fileURLToPath(import.meta.url), "signoff-head"]
+    .map(shellQuote)
+    .join(" ");
+  git(["rebase", "--exec", repairCommand, "origin/main"]);
   const remaining = unsignedCommits();
   if (remaining.length > 0) {
     throw new Error(
@@ -256,7 +281,8 @@ function finishWork(args) {
     throw new Error("Run this command from the work branch after its pull request is merged.");
   }
 
-  const mergedUrl = gh(
+  const headRevision = git(["rev-parse", "HEAD"], { capture: true });
+  const mergedPullRequests = JSON.parse(gh(
     [
       "pr",
       "list",
@@ -265,14 +291,15 @@ function finishWork(args) {
       "--state",
       "merged",
       "--limit",
-      "1",
+      "100",
       "--json",
-      "url",
-      "--jq",
-      ".[0].url // empty",
+      "url,headRefOid",
     ],
     { capture: true },
-  );
+  ) || "[]");
+  const mergedUrl = mergedPullRequests.find(
+    (pullRequest) => pullRequest.headRefOid === headRevision,
+  )?.url;
   if (!mergedUrl) {
     throw new Error("The pull request is not merged yet. Merge it on GitHub, then try again.");
   }
@@ -324,6 +351,8 @@ export function main(argv = process.argv.slice(2)) {
     publishPullRequest(args);
   } else if (action === "done") {
     finishWork(args);
+  } else if (action === "signoff-head") {
+    signoffCurrentCommit();
   } else {
     throw new Error(`Unknown action: ${action}. Run the script with --help.`);
   }
