@@ -1330,10 +1330,16 @@ export async function listPullRequestReviews(opts: {
   number: number;
 }): Promise<PullRequestReviewSummary> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const reviews = await ghJson<RawReview[]>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100`,
-    opts.token,
-  );
+  const reviews: RawReview[] = [];
+  for (let page = 1; ; page++) {
+    const batch = await ghJson<RawReview[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews` +
+        `?per_page=100&page=${page}`,
+      opts.token,
+    );
+    reviews.push(...batch);
+    if (batch.length < 100) break;
+  }
   // The endpoint goes from oldest to newest: last written by
   // login gagne naturellement.
   const verdictByUser = new Map<string, "approved" | "changes_requested">();

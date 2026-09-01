@@ -127,10 +127,11 @@ describe("defaultMergeCommitMessage", () => {
     ).toBeNull();
   });
 
-  it("submits GitLab defaults only after the user edits them", () => {
+  it("submits forge defaults only after the user edits them", () => {
     expect(shouldSubmitCustomMergeMessage("gitlab", false)).toBe(false);
     expect(shouldSubmitCustomMergeMessage("gitlab", true)).toBe(true);
-    expect(shouldSubmitCustomMergeMessage("github", false)).toBe(true);
+    expect(shouldSubmitCustomMergeMessage("github", false)).toBe(false);
+    expect(shouldSubmitCustomMergeMessage("github", true)).toBe(true);
   });
 
   it("does not show a merge commit editor for GitLab fast-forward merges", () => {

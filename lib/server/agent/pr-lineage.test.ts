@@ -34,6 +34,8 @@ const h = vi.hoisted(() => ({
   activeCalls: [] as string[],
   /** The PR that `loadPrRunContext` returns, or null (PR gone). */
   pr: null as Record<string, unknown> | null,
+  /** Current forge response used before inheriting a branch without Numo lineage. */
+  livePr: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -85,6 +87,13 @@ vi.mock("./repo-access", () => ({
     projectId: PROJECT_ID,
     linkId: "link-1",
     connectionId: "conn-1",
+  })),
+  resolveRepoCloneTargetForRepo: vi.fn(async () => ({ token: "repo-token" })),
+}));
+
+vi.mock("./forge", () => ({
+  forgeFor: vi.fn(() => ({
+    getPullRequest: vi.fn(async () => h.livePr),
   })),
 }));
 
@@ -156,6 +165,14 @@ beforeEach(() => {
     headSha: "abc123",
     issueId: null,
   };
+  h.livePr = {
+    number: 51,
+    url: `https://github.com/${REPO}/pull/51`,
+    state: "open",
+    head: "minddy/agent/note-92275fe4",
+    headLabel: "mangue-dev:minddy/agent/note-92275fe4",
+    base: "main",
+  };
 });
 
 const relaunch = (over: Record<string, unknown> = {}) =>
@@ -187,17 +204,34 @@ describe("continuing a pull request without a ticket", () => {
 
   it("uses the current PR head when no prior Numo run exists", async () => {
     h.prLineage = null;
+    h.livePr = {
+      ...h.livePr,
+      head: "minddy/agent/note-current-head",
+      headLabel: "mangue-dev:minddy/agent/note-current-head",
+    };
 
     const result = await relaunch();
 
     expect(result.ok).toBe(true);
     expect(h.created).toHaveLength(1);
     expect(h.created[0]).toMatchObject({
-      branchName: "minddy/agent/note-92275fe4",
+      branchName: "minddy/agent/note-current-head",
       baseBranch: "main",
       prNumber: 51,
       prState: "open",
     });
+  });
+
+  it("refuses a fork head when no prior Numo run proves a writable lineage", async () => {
+    h.prLineage = null;
+    h.livePr = {
+      ...h.livePr,
+      head: "minddy/agent/note-92275fe4",
+      headLabel: "outside-contributor:minddy/agent/note-92275fe4",
+    };
+
+    await expect(relaunch()).resolves.toEqual({ ok: false, error: "prNoBranch" });
+    expect(h.created).toHaveLength(0);
   });
 
   it("refuses when a run is already working on this PR", async () => {

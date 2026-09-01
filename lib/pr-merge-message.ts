@@ -29,10 +29,10 @@ function commitMessages(commits: PullRequestCommit[]): string {
 }
 
 export function shouldSubmitCustomMergeMessage(
-  provider: "github" | "gitlab",
+  _provider: "github" | "gitlab",
   edited: boolean,
 ): boolean {
-  return provider === "github" || edited;
+  return edited;
 }
 
 /** Build the same editable defaults the forge derives before creating one commit. */
