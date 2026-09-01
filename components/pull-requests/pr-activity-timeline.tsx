@@ -61,26 +61,19 @@ export function PrActivityItem({
 export function PrActivityBubblePointer() {
   return (
     <>
-      <svg
-        aria-hidden
-        data-testid="pr-activity-bubble-pointer"
-        viewBox="0 0 10 18"
-        className="pointer-events-none absolute -left-[11px] top-[10px] z-10 h-[18px] w-[10px] overflow-visible"
-      >
-        {/* The notch stays entirely outside the card. Only its two diagonals
-            are stroked, so no hidden diamond edge can bleed through. */}
-        <path
-          d="M10 0.5 L0.75 9 L10 17.5"
-          vectorEffect="non-scaling-stroke"
-          className="fill-[var(--activity-header)] stroke-border"
-        />
-      </svg>
-      {/* Cut the card border independently instead of pushing the notch into
-          the header. The one-pixel mask is the only part inside the card. */}
+      {/* GitHub's timeline pattern uses two nested CSS triangles: the outer
+          triangle continues the card border and the inner one paints the
+          header. Starting after the 1rem corner keeps the seam on a straight
+          edge instead of intersecting the rounded corner. */}
       <span
         aria-hidden
-        data-testid="pr-activity-bubble-border-mask"
-        className="pointer-events-none absolute -left-px top-[10px] z-20 h-[18px] w-0.5 bg-[var(--activity-header)]"
+        data-testid="pr-activity-bubble-pointer"
+        className="pointer-events-none absolute -left-4 top-[15px] z-10 size-0 border-[8px] border-solid border-transparent border-r-border"
+      />
+      <span
+        aria-hidden
+        data-testid="pr-activity-bubble-pointer-fill"
+        className="pointer-events-none absolute -left-3.5 top-4 z-20 size-0 border-[7px] border-solid border-transparent border-r-[var(--activity-header)]"
       />
     </>
   );

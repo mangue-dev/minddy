@@ -684,7 +684,7 @@ export function ReviewThreadCard({
               data-testid="review-thread-reply"
               variant="outline"
               size="sm"
-              className="rounded-full leading-none"
+              className="rounded-full pl-[5px] pr-3 leading-none"
               onClick={() => replies.start(thread.id)}
             >
               {replyingUser ? (

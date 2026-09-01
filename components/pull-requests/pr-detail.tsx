@@ -481,7 +481,7 @@ function ThreadComment({
         <ForgeUserAvatar
           user={user}
           forceBot={forceBot}
-          className="mt-1 size-8 ring-4 ring-background"
+          className="mt-2 size-8 ring-4 ring-background"
         />
       }
     >

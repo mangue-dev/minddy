@@ -402,14 +402,13 @@ async function capture({ locale, theme }) {
       const review = timeline.querySelector('[data-testid="pr-activity-review"]');
       const reviewThreads = timeline.querySelector('[data-testid="pr-activity-review-threads"]');
       const pointer = messages[0]?.querySelector('[data-testid="pr-activity-bubble-pointer"]');
-      const pointerPath = pointer?.querySelector("path");
-      const pointerMask = messages[0]?.querySelector(
-        '[data-testid="pr-activity-bubble-border-mask"]',
+      const pointerFill = messages[0]?.querySelector(
+        '[data-testid="pr-activity-bubble-pointer-fill"]',
       );
       const messageHeader = messages[0]?.querySelector("header");
       const messageBox = messages[0]?.getBoundingClientRect();
       const pointerBox = pointer?.getBoundingClientRect();
-      const pointerMaskBox = pointerMask?.getBoundingClientRect();
+      const pointerFillBox = pointerFill?.getBoundingClientRect();
       const firstAvatar = items[0]?.querySelector('[data-testid="pr-activity-marker"] img');
       const firstAvatarBox = firstAvatar?.getBoundingClientRect();
       const reviewItem = review?.closest('[data-testid="pr-activity-item"]');
@@ -434,6 +433,10 @@ async function capture({ locale, theme }) {
       const markerBox = firstMarker?.getBoundingClientRect();
       const contentBox = firstContent?.getBoundingClientRect();
       const rail = getComputedStyle(timeline, "::before");
+      const messageStyle = messages[0] ? getComputedStyle(messages[0]) : null;
+      const pointerStyle = pointer ? getComputedStyle(pointer) : null;
+      const pointerFillStyle = pointerFill ? getComputedStyle(pointerFill) : null;
+      const replyButtonStyle = replyButton ? getComputedStyle(replyButton) : null;
       const plainStyle = plainThread ? getComputedStyle(plainThread) : null;
       return {
         itemCount: items.length,
@@ -441,21 +444,32 @@ async function capture({ locale, theme }) {
         reviewCount: review ? 1 : 0,
         reviewThreadCount: reviewThreads?.querySelectorAll(":scope > li").length ?? 0,
         pointerElement: pointer?.tagName.toLowerCase() ?? null,
-        pointerPath: pointerPath?.getAttribute("d") ?? null,
-        pointerMask: pointerMask ? 1 : 0,
-        pointerFill: pointerPath ? getComputedStyle(pointerPath).fill : null,
-        pointerOutsideCard:
-          !!pointerBox && !!messageBox && Math.abs(pointerBox.right - messageBox.left) <= 0.5,
+        pointerFillElement: pointerFill?.tagName.toLowerCase() ?? null,
+        pointerBorderColor: pointerStyle?.borderRightColor ?? null,
+        pointerFillColor: pointerFillStyle?.borderRightColor ?? null,
+        messageBorderColor: messageStyle?.borderLeftColor ?? null,
+        pointerSeamOverlap:
+          pointerBox && messageBox ? pointerBox.right - messageBox.left : null,
         pointerAvatarGap:
-          pointerBox && firstAvatarBox ? pointerBox.left - firstAvatarBox.right : null,
-        pointerMaskCoversBorder:
-          !!pointerMaskBox &&
+          pointerBox && firstAvatarBox
+            ? pointerBox.left + pointerBox.width / 2 - firstAvatarBox.right
+            : null,
+        pointerStartsAfterCorner:
           !!pointerBox &&
           !!messageBox &&
-          pointerMaskBox.left <= messageBox.left &&
-          pointerMaskBox.right >= messageBox.left + 1 &&
-          Math.abs(pointerMaskBox.top - pointerBox.top) <= 0.5 &&
-          Math.abs(pointerMaskBox.height - pointerBox.height) <= 0.5,
+          !!messageStyle &&
+          Math.abs(
+            pointerBox.top -
+              messageBox.top -
+              Number.parseFloat(messageStyle.borderTopLeftRadius),
+          ) <= 0.5,
+        pointerLayersCentered:
+          !!pointerBox &&
+          !!pointerFillBox &&
+          Math.abs(
+            pointerBox.top + pointerBox.height / 2 -
+              (pointerFillBox.top + pointerFillBox.height / 2),
+          ) <= 0.5,
         pointerAvatarCenterDelta:
           pointerBox && firstAvatarBox
             ? Math.abs(
@@ -481,6 +495,16 @@ async function capture({ locale, theme }) {
           ? Number.parseFloat(getComputedStyle(replyButton).borderRadius)
           : null,
         replyButtonHeight: replyButtonBox?.height ?? null,
+        replyPaddingLeft: replyButtonStyle?.paddingLeft ?? null,
+        replyPaddingRight: replyButtonStyle?.paddingRight ?? null,
+        replyAvatarInsetDelta:
+          replyButtonBox && replyAvatarBox
+            ? Math.abs(
+                replyAvatarBox.left -
+                  replyButtonBox.left -
+                  (replyAvatarBox.top - replyButtonBox.top),
+              )
+            : null,
         replyAvatarCenterDelta:
           replyButtonBox && replyAvatarBox
             ? Math.abs(
@@ -515,15 +539,18 @@ async function capture({ locale, theme }) {
       activityLayout.messageCount < 3 ||
       activityLayout.reviewCount !== 1 ||
       activityLayout.reviewThreadCount !== 1 ||
-      activityLayout.pointerElement !== "svg" ||
-      !activityLayout.pointerPath ||
-      activityLayout.pointerMask !== 1 ||
-      activityLayout.pointerFill !== activityLayout.messageHeaderBackground ||
-      !activityLayout.pointerOutsideCard ||
+      activityLayout.pointerElement !== "span" ||
+      activityLayout.pointerFillElement !== "span" ||
+      activityLayout.pointerBorderColor !== activityLayout.messageBorderColor ||
+      activityLayout.pointerFillColor !== activityLayout.messageHeaderBackground ||
+      activityLayout.pointerSeamOverlap == null ||
+      activityLayout.pointerSeamOverlap < 0.5 ||
+      activityLayout.pointerSeamOverlap > 1.5 ||
       activityLayout.pointerAvatarGap == null ||
-      activityLayout.pointerAvatarGap < 6 ||
-      activityLayout.pointerAvatarGap > 7 ||
-      !activityLayout.pointerMaskCoversBorder ||
+      activityLayout.pointerAvatarGap < 8 ||
+      activityLayout.pointerAvatarGap > 10 ||
+      !activityLayout.pointerStartsAfterCorner ||
+      !activityLayout.pointerLayersCentered ||
       activityLayout.pointerAvatarCenterDelta == null ||
       activityLayout.pointerAvatarCenterDelta > 0.5 ||
       activityLayout.botAvatarRadius == null ||
@@ -537,6 +564,10 @@ async function capture({ locale, theme }) {
       activityLayout.replyButtonRadius == null ||
       activityLayout.replyButtonHeight == null ||
       activityLayout.replyButtonRadius < activityLayout.replyButtonHeight / 2 - 0.5 ||
+      activityLayout.replyPaddingLeft !== "5px" ||
+      activityLayout.replyPaddingRight !== "12px" ||
+      activityLayout.replyAvatarInsetDelta == null ||
+      activityLayout.replyAvatarInsetDelta > 0.5 ||
       activityLayout.replyAvatarCenterDelta == null ||
       activityLayout.replyAvatarCenterDelta > 0.5 ||
       activityLayout.replyTextCenterDelta == null ||
