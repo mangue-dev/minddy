@@ -17,7 +17,7 @@ import { trackEvent } from "./analytics";
 type ScratchpadSource = "click" | "palette" | "shortcut" | "sidebar" | "home";
 
 /** Open state of the personal Notes modal, lifted so the header button, the
-    command palette and the Mod+Shift+N keyboard shortcut can all open it. */
+    command palette and the Mod+Shift+K keyboard shortcut can all open it. */
 interface ScratchpadContextValue {
   isOpen: boolean;
   /** `source` goes into analytics — do NOT plug directly into a

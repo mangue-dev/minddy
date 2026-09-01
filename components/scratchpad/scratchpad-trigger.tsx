@@ -24,7 +24,7 @@ export function ScratchpadTrigger({
 }) {
   const t = useTranslations("Scratchpad");
   const modKey = useModKey();
-  const shortcut = useModShiftShortcut("N");
+  const shortcut = useModShiftShortcut("K");
   const { open } = useScratchpad();
   const { done, total } = useScratchpadProgress();
   // What's still on the list — completed tasks drop out (a badge that never
@@ -67,7 +67,7 @@ export function ScratchpadTrigger({
       <TooltipContent className="flex items-center gap-2">
         <span>{t("open")}</span>
         <KbdSequence
-          keys={[[modKey, "⇧", "N"]]}
+          keys={[[modKey, "⇧", "K"]]}
           size="sm"
         />
       </TooltipContent>

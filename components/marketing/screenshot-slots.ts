@@ -104,7 +104,7 @@ const SLOTS = {
   },
   scratchpad: {
     id: "scratchpad",
-    route: "any app page, task notebook open (Command/Ctrl + Shift + N)",
+    route: "any app page, task notebook open (Command/Ctrl + Shift + K)",
     shot:
       "The task notebook modal: two `##` sections, completed and pending tasks, and one section action visible on hover (copy as prompt or launch an agent).",
     altKey: "shotAlt_scratchpad",

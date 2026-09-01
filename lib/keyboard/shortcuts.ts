@@ -42,7 +42,7 @@ export const CHEATSHEET: CheatsheetSection[] = [
       {
         id: "nav.notes",
         labelKey: "navNotes",
-        keys: [["mod", "⇧", "N"]],
+        keys: [["mod", "⇧", "K"]],
       },
       { id: "nav.allIssues", labelKey: "navAllIssues", keys: [["G"], ["B"]] },
       { id: "nav.myIssues", labelKey: "navMyIssues", keys: [["G"], ["M"]] },

@@ -5,7 +5,7 @@
 // sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar).
 //
 //   Global:      G H home · G I inbox · G R pull requests · G J agents · G U routines
-//                G A assistant (Numo) · Mod+Shift+N notes
+//                G A assistant (Numo) · Mod+Shift+K notes
 //                G B all issues (every project) · G M my issues
 //   In a project: G P the project's own board · G O objectives · G T triage
 //                 G F feedback · G S project settings
@@ -185,9 +185,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (matchesModShiftCombo(e, "n")) {
-        // Always suppress the browser-reserved action, even when an existing
-        // dialog or text field means that the notebook should stay closed.
+      if (matchesModShiftCombo(e, "k")) {
+        // Always consume the shortcut, even when an existing dialog or text
+        // field means that the notebook should stay closed.
         e.preventDefault();
         e.stopImmediatePropagation();
         if (isTypingTarget(e.target) || isDialogOpen()) return;

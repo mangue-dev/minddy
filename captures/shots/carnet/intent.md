@@ -6,7 +6,7 @@ the code agent directly on a section, without going through a ticket »*.
 
 ## What the image must show
 
-- The notebook modal, opened by the shortcut **Command/Ctrl + Shift + N** — the one that the
+- The notebook modal, opened by the shortcut **Command/Ctrl + Shift + K** — the one that the
 section text quotes verbatim.
 - **Two sections `##`** (“Before the release”, “Loose ends”) and their
 **nine tasks**, in the four states: checked and crossed out, in progress, to do,
