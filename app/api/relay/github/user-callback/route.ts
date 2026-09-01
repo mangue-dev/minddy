@@ -35,12 +35,7 @@ export async function GET(request: NextRequest) {
   const state = verifyCloudUserState(searchParams.get("state"));
   const code = searchParams.get("code");
 
-  const fail = (detail: string, status = 400) =>
-    relayCallbackPage({
-      title: "GitHub authorization failed",
-      detail: `${detail} Go back to your minddy instance and restart the authorization.`,
-      status,
-    });
+  const fail = (_detail: string, status = 400) => relayCallbackPage("github-failed", status);
 
   if ((!state && !claimState) || !code) {
     return fail("This authorization request is invalid or expired.");
@@ -70,11 +65,7 @@ export async function GET(request: NextRequest) {
         repositoryFullName: repository.fullName,
       });
       if (!binding.ok) return fail(binding.error, binding.status);
-      return relayCallbackPage({
-        title: "GitHub connected",
-        detail: `The installation ${binding.installationId}${binding.accountLogin ? ` (${binding.accountLogin})` : ""} is now bound to your minddy instance. You can close this page and return to your instance.`,
-        status: 200,
-      });
+      return relayCallbackPage("github-connected", 200);
     }
     if (!state) return fail("This authorization request is invalid or expired.");
     const account = await getGithubUserAccount(tokens.accessToken);
@@ -94,12 +85,7 @@ export async function GET(request: NextRequest) {
       `/api/git/github/relay-user-callback?delivery=${encodeURIComponent(deliveryId)}`,
       state.callbackOrigin,
     );
-    return relayCallbackPage({
-      title: "GitHub authorized",
-      detail: "Returning to your minddy instance…",
-      status: 200,
-      returnUrl,
-    });
+    return NextResponse.redirect(returnUrl);
   } catch (err) {
     console.error("[relay/github/user-callback] failed:", err);
     return fail("GitHub refused the authorization.");

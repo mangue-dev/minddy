@@ -24,12 +24,7 @@ export async function GET(request: NextRequest) {
   const state = verifyCloudGitlabState(searchParams.get("state"));
   const code = searchParams.get("code");
 
-  const fail = (detail: string, status = 400) =>
-    relayCallbackPage({
-      title: "GitLab connection failed",
-      detail: `${detail} Go back to your minddy instance and restart the connection.`,
-      status,
-    });
+  const fail = (_detail: string, status = 400) => relayCallbackPage("gitlab-failed", status);
 
   if (!state || !code) return fail("This connection request is invalid or expired.");
 
@@ -55,12 +50,7 @@ export async function GET(request: NextRequest) {
     if (state.returnPath) {
       returnUrl.searchParams.set("return", state.returnPath);
     }
-    return relayCallbackPage({
-      title: "GitLab connected",
-      detail: "Returning to your minddy instance…",
-      status: 200,
-      returnUrl,
-    });
+    return NextResponse.redirect(returnUrl);
   } catch (err) {
     console.error("[relay/gitlab/callback] failed:", err);
     return fail("GitLab refused the connection.");

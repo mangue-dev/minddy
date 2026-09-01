@@ -1,38 +1,29 @@
 import "server-only";
 
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+type RelayCallbackPage = "github-failed" | "github-connected" | "gitlab-failed";
 
-/** Renders the small relay callback page without accepting an HTML fragment. */
-export function relayCallbackPage(input: {
-  title: string;
-  detail: string;
-  status: number;
-  returnUrl?: URL;
-}): Response {
-  const returnUrl = input.returnUrl?.toString();
-  const document = createElement(
-    "html",
-    null,
-    createElement(
-      "body",
-      { style: { fontFamily: "system-ui", maxWidth: "32rem", margin: "4rem auto" } },
-      createElement("h1", null, input.title),
-      createElement("p", null, input.detail),
-      returnUrl
-        ? createElement(
-            "p",
-            null,
-            createElement("a", { href: returnUrl }, "Continue if nothing happens."),
-          )
-        : null,
-      returnUrl
-        ? createElement("meta", { httpEquiv: "refresh", content: `1;url=${returnUrl}` })
-        : null,
-    ),
-  );
+const CALLBACK_PAGES: Record<RelayCallbackPage, { title: string; detail: string }> = {
+  "github-failed": {
+    title: "GitHub authorization failed",
+    detail: "Go back to your minddy instance and restart the authorization.",
+  },
+  "github-connected": {
+    title: "GitHub connected",
+    detail: "The installation is now bound to your minddy instance. You can close this page.",
+  },
+  "gitlab-failed": {
+    title: "GitLab connection failed",
+    detail: "Go back to your minddy instance and restart the connection.",
+  },
+};
+
+/** Renders a relay callback page from a closed set of static documents. */
+export function relayCallbackPage(page: RelayCallbackPage, status: number): Response {
+  const copy = CALLBACK_PAGES[page];
   return new Response(
-    `<!doctype html>${renderToStaticMarkup(document)}`,
-    { status: input.status, headers: { "content-type": "text/html; charset=utf-8" } },
+    `<!doctype html><html><body style="font-family:system-ui;max-width:32rem;margin:4rem auto">
+      <h1>${copy.title}</h1><p>${copy.detail}</p>
+    </body></html>`,
+    { status, headers: { "content-type": "text/html; charset=utf-8" } },
   );
 }
