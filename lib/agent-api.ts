@@ -75,6 +75,8 @@ export type AgentRunStatus =
 export interface AgentRunSummary {
   id: string;
   status: AgentRunStatus;
+  /** Server-derived because checkpoints are intentionally never client-visible. */
+  resumable?: boolean;
   model: string | null;
   model_forced: boolean;
   /** Level of reasoning FROZEN at launch (MIN-122): the selector of a run
@@ -149,14 +151,30 @@ export function isAgentRunWorking(status: AgentRunStatus): boolean {
 
 /**
  * Can this specific run be resumed HOT (message in HIS conversation)? Yes
- * even when resting: your checkpoint and sandbox are preserved, you continue a round
- * moreover in the same context — it is the NORMAL gesture of a conversation. Alone
- * a boot error (`failed`: no repository/model) does not require recovery.
+ * even when resting: its checkpoint and sandbox are preserved, so the next round
+ * continues in the same context. A failed run relies on the server-derived flag
+ * because its checkpoint intentionally remains private.
  * Reminder: only the LAST run of the outcome can be repeated (the runs share the
  * branch) — the server refuses the others (`supersededRun`).
  */
-export function isAgentRunResumable(status: AgentRunStatus): boolean {
-  return status !== "failed";
+export function isAgentRunResumable(
+  status: AgentRunStatus,
+  resumable?: boolean,
+): boolean {
+  return resumable ?? status !== "failed";
+}
+
+/**
+ * Whether the latest run in a newest-first list can reopen its conversation.
+ * Older checkpoints cannot be resumed after a newer run supersedes them.
+ */
+export function isLatestAgentRunResumable(
+  runs: readonly Pick<AgentRunSummary, "status" | "resumable">[],
+): boolean {
+  const latestRun = runs[0];
+  return latestRun
+    ? isAgentRunResumable(latestRun.status, latestRun.resumable)
+    : false;
 }
 
 /**

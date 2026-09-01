@@ -6,6 +6,7 @@ import { getRun, requestInterrupt, type AgentRun } from "@/lib/server/agent/runs
 import { revokeRunKey } from "@/lib/server/agent/run-key";
 import { stopSandboxByName } from "@/lib/server/agent/sandbox";
 import { getServiceClient } from "@/lib/supabase-service";
+import { agentRunCanResume } from "@/lib/agent-run-resumability";
 
 /**
  * A conversation from the agent (MIN-46): READ it, RENAME it, PIN it,
@@ -31,6 +32,7 @@ function sanitizeRun(run: AgentRun) {
     // branch to push, so no “create a pull request” to propose.
     pull_request_id: run.pull_request_id,
     status: run.status,
+    resumable: agentRunCanResume(run),
     model: run.model,
     model_forced: run.model_forced,
     reasoning_level: run.reasoning_level,

@@ -37,7 +37,7 @@ vi.mock("@/lib/server/agent/runs", async (importOriginal) => ({
 vi.mock("@/lib/supabase-service", () => {
   const table = (rows: () => Array<Record<string, unknown>>) => {
     const q: Record<string, unknown> = {};
-    for (const verb of ["select", "eq", "gt", "order", "limit"]) {
+    for (const verb of ["select", "eq", "gt", "order", "limit", "in", "not"]) {
       q[verb] = () => q;
     }
     q.then = (resolve: (v: unknown) => unknown) => resolve({ data: rows(), error: null });
@@ -143,5 +143,21 @@ describe("/api/issues/[id]/agent — le panneau d'un ticket public", () => {
     expect(runs[0]).not.toHaveProperty("created_by");
     expect(runs[0]).not.toHaveProperty("chain_id");
     expect(runs[0]).not.toHaveProperty("routine_id");
+  });
+
+  it("exposes resumability without returning the private checkpoint", async () => {
+    h.runRows = [
+      runRow({
+        id: "interrupted",
+        created_by: "user-2",
+        status: "failed",
+        checkpoint: { messages: [] },
+      }),
+    ];
+    const { runs } = (await (await issueAgent()).json()) as {
+      runs: Array<Record<string, unknown>>;
+    };
+    expect(runs[0]?.resumable).toBe(true);
+    expect(runs[0]).not.toHaveProperty("checkpoint");
   });
 });

@@ -9,6 +9,7 @@ import {
   OPENCODE_PROVIDER_ID,
   MAX_SUBAGENT_MODELS,
   subagentAgentTable,
+  OPENCODE_BASH_TIMEOUT_MS,
 } from "./opencode-config";
 import { cloudLayout, layoutForRoot } from "../harness-layout";
 import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
@@ -444,6 +445,12 @@ describe("l'environnement du serveur", () => {
     const env = opencodeServerEnv(job());
     expect(env.OPENCODE_DISABLE_MODELS_FETCH).toBe("1");
     expect(env.OPENCODE_DISABLE_AUTOUPDATE).toBe("1");
+  });
+
+  it("applies the bash command timeout explicitly", () => {
+    expect(opencodeServerEnv(job()).OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS).toBe(
+      String(OPENCODE_BASH_TIMEOUT_MS),
+    );
   });
 });
 

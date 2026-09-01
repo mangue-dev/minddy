@@ -107,6 +107,11 @@ export interface ControlPlaneClient {
    */
   saveCheckpointQuietly(checkpoint: AgentCheckpoint): Promise<boolean>;
   /**
+   * Lightweight liveness signal, independent from checkpoint construction.
+   * Returns false only when the run has already been closed.
+   */
+  heartbeat(): Promise<boolean>;
+  /**
    * PUSH AN INCREMENT OF THE OPENCODE LOG (MIN-286, 2026-08-13).
    *
    * LIFT in case of failure, unlike comfort surfaces: what is lost
@@ -293,6 +298,20 @@ export function createControlPlaneClient(
           return false;
         }
         console.error("[agent-vm] periodic checkpoint failed:", (err as Error).message);
+        return true;
+      }
+    },
+
+    heartbeat: async () => {
+      try {
+        await request("POST", "/heartbeat");
+        return true;
+      } catch (err) {
+        if (err instanceof ControlPlaneError && err.status === 409) {
+          console.error("[agent-vm] run is no longer running — stopping");
+          return false;
+        }
+        console.error("[agent-vm] heartbeat failed:", (err as Error).message);
         return true;
       }
     },

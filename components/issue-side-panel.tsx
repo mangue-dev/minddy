@@ -61,7 +61,11 @@ import {
 } from "@/components/issue-context-menu";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
-import { handOffIssueApi, isAgentRunWorking } from "@/lib/agent-api";
+import {
+  handOffIssueApi,
+  isLatestAgentRunResumable,
+  isAgentRunWorking,
+} from "@/lib/agent-api";
 import {
   setAgentComposeDraft,
   type AgentComposeIntent,
@@ -275,8 +279,9 @@ export function IssueSidePanel({
     agentsAllowed && (repoLinkLoading || repoLink != null || desktopAvailable);
   const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
   const latestRun = runs[0] ?? null;
-  // A restartable conversation exists (at least one non-`failed` run).
-  const hasAgentSession = runs.some((r) => r.status !== "failed");
+  // Only the latest run can reopen its conversation; newer runs supersede any
+  // checkpoints retained by older runs.
+  const hasAgentSession = isLatestAgentRunResumable(runs);
 
   // Cycle (MIN-32): the panel reads the current cycle itself rather than
   // brought down by its four callers — the hook is already spoiled by the
