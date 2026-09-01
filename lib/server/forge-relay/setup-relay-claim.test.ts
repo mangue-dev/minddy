@@ -143,7 +143,7 @@ describe("GET /api/git/github/setup — relay claim branch", () => {
     expect(response.status).toBe(200);
     const html = await response.text();
     expect(html).toContain("GitHub connected");
-    expect(html).toContain("4242");
+    expect(html).not.toContain("4242");
     expect(fakeTables["forge_relay_installations"]?.[0]).toMatchObject({
       instance_id: INSTANCE_ID,
       installation_id: 4242,
@@ -196,7 +196,8 @@ describe("GET /api/git/github/setup — relay claim branch", () => {
     );
     expect(response.status).toBe(409);
     const html = await response.text();
-    expect(html).toContain("already connected");
+    expect(html).toContain("GitHub authorization failed");
+    expect(html).not.toContain("already connected");
     expect(fakeTables["forge_relay_installations"]).toHaveLength(0);
   });
 
@@ -212,7 +213,9 @@ describe("GET /api/git/github/setup — relay claim branch", () => {
     });
     const response = await confirmClaim(callbackRequest(swappedState));
     expect(response.status).toBe(409);
-    expect(await response.text()).toContain("does not match");
+    const html = await response.text();
+    expect(html).toContain("GitHub authorization failed");
+    expect(html).not.toContain("does not match");
     expect(fakeTables["forge_relay_installations"]).toHaveLength(0);
   });
 });

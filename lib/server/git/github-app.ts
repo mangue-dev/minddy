@@ -90,7 +90,7 @@ export function verifyGithubSignature(
   }
 }
 
-// --- Authentification de l'app ---------------------------------------------
+// --- App authentication ----------------------------------------------------
 
 function base64url(input: Buffer | string): string {
   return Buffer.from(input).toString("base64url");
@@ -154,7 +154,7 @@ export interface InstallationTokenScope {
   repositories?: string[];
   /** Stable GitHub repository ids. Prefer these at security boundaries. */
   repositoryIds?: number[];
-  /** Sous-ensemble des permissions de l'installation (voir ci-dessus). */
+  /** Subset of the installation permissions (see above). */
   permissions?: Record<string, "read" | "write">;
 }
 
@@ -216,7 +216,7 @@ export async function getInstallationToken(
   }
 
   const response = await fetch(
-    `${GITHUB_API_BASE}/app/installations/${installationId}/access_tokens`,
+    `${GITHUB_API_BASE}/app/installations/${encodeURIComponent(String(installationId))}/access_tokens`,
     {
       method: "POST",
       headers: {
@@ -549,7 +549,7 @@ export async function getIssuesPermission(
   try {
     requireCapability("github");
     const response = await fetch(
-      `${GITHUB_API_BASE}/app/installations/${installationId}`,
+      `${GITHUB_API_BASE}/app/installations/${encodeURIComponent(String(installationId))}`,
       { headers: githubHeaders(mintAppJwt()) },
     );
     if (!response.ok) return "none";
@@ -579,7 +579,7 @@ export async function getInstallationAccount(
   try {
     requireCapability("github");
     const response = await fetch(
-      `${GITHUB_API_BASE}/app/installations/${installationId}`,
+      `${GITHUB_API_BASE}/app/installations/${encodeURIComponent(String(installationId))}`,
       { headers: githubHeaders(mintAppJwt()) },
     );
     if (!response.ok) return null;

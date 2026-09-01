@@ -189,9 +189,10 @@ describe("GET /api/relay/github/user-callback", () => {
       getRequest(`https://cloud.example.com/api/relay/github/user-callback?code=oauth-code&state=${encodeURIComponent(state)}`),
     );
 
-    expect(response.status).toBe(200);
-    const html = await response.text();
-    expect(html).toContain("https://on-prem.example.com/api/git/github/relay-user-callback?delivery=");
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain(
+      "https://on-prem.example.com/api/git/github/relay-user-callback?delivery=",
+    );
 
     const row = fakeTables["forge_relay_user_deliveries"]?.[0] as Record<string, unknown>;
     expect(row).toMatchObject({ instance_id: INSTANCE_ID, user_id: "user-on-instance" });

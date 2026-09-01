@@ -7,6 +7,7 @@ import {
   createGitlabTokenDelivery,
   verifyCloudGitlabState,
 } from "@/lib/server/forge-relay/gitlab-broker";
+import { relayCallbackPage } from "@/lib/server/forge-relay/callback-page";
 
 /**
  * `GET /api/relay/gitlab/callback` — the redirect URI registered on Cloud's
@@ -23,19 +24,7 @@ export async function GET(request: NextRequest) {
   const state = verifyCloudGitlabState(searchParams.get("state"));
   const code = searchParams.get("code");
 
-  const page = (title: string, detail: string, status: number) =>
-    new NextResponse(
-      `<!doctype html><html><body style="font-family:system-ui;max-width:32rem;margin:4rem auto">
-        <h1>${title}</h1>${detail}
-      </body></html>`,
-      { status, headers: { "content-type": "text/html; charset=utf-8" } },
-    );
-  const fail = (detail: string, status = 400) =>
-    page(
-      "GitLab connection failed",
-      `<p>${detail}</p><p>Go back to your minddy instance and restart the connection.</p>`,
-      status,
-    );
+  const fail = (_detail: string, status = 400) => relayCallbackPage("gitlab-failed", status);
 
   if (!state || !code) return fail("This connection request is invalid or expired.");
 
@@ -61,13 +50,7 @@ export async function GET(request: NextRequest) {
     if (state.returnPath) {
       returnUrl.searchParams.set("return", state.returnPath);
     }
-    return page(
-      "GitLab connected",
-      `<p>Returning to your minddy instance…</p>
-       <p><a href="${returnUrl.toString()}">Continue if nothing happens.</a></p>
-       <meta http-equiv="refresh" content="1;url=${returnUrl.toString().replace(/"/g, "&quot;")}">`,
-      200,
-    );
+    return NextResponse.redirect(returnUrl);
   } catch (err) {
     console.error("[relay/gitlab/callback] failed:", err);
     return fail("GitLab refused the connection.");
