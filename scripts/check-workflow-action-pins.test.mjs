@@ -19,6 +19,9 @@ steps:
   - uses: actions/upload-artifact@${digest} # v4.6.2
     with:
       retention-days: 91
+  - uses: actions/upload-artifact@${digest} # v4.6.2
+    env:
+      retention-days: 7
 `);
 
   assert.deepEqual(
@@ -32,6 +35,10 @@ steps:
         line: 6,
         message: "artifact upload must declare literal retention-days between 1 and 90",
       },
+      {
+        line: 9,
+        message: "artifact upload must declare literal retention-days between 1 and 90",
+      },
     ],
   );
 });
@@ -43,7 +50,7 @@ steps:
   - uses: actions/upload-artifact@${digest} # v4.6.2
     with:
       name: evidence
-      retention-days: 7
+      retention-days: "7"
 `);
 
   assert.deepEqual(findings, []);
