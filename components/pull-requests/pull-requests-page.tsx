@@ -14,7 +14,7 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import { ChevronRight, GitPullRequest, ListFilter, Plus } from "lucide-react";
+import { GitPullRequest, Link2, ListFilter, Plus } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { NumoIcon } from "@/components/numo-icon";
@@ -305,8 +305,7 @@ function PrRow({
 }) {
   const t = useTranslations("PullRequests");
   // The PR identifier first — it's THIS line we're looking at; the ticket
-  // linked is read on the right, behind a chevron which indicates the relationship (same form as
-  // the sub-ticket in the exit card).
+  // linked is read on the right, behind a link icon that names the association.
   const identifier = prIdentifier(pr.provider, pr.pr_number);
   const linkedIssue =
     pr.issue && pr.project ? issueIdentifier(pr.project.key, pr.issue.number) : null;
@@ -333,7 +332,11 @@ function PrRow({
           <span className="shrink-0 text-foreground">{identifier}</span>
           {linkedIssue ? (
             <>
-              <ChevronRight className="size-3 shrink-0" aria-hidden />
+              <Link2
+                data-testid="pr-sidebar-issue-link-icon"
+                className="size-3 shrink-0"
+                aria-hidden
+              />
               <span className="truncate">{linkedIssue}</span>
             </>
           ) : null}

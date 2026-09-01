@@ -62,6 +62,43 @@ async function serveFixture(page) {
   const served = [];
   const unexpected = [];
   let reviewResolved = false;
+  let draft = false;
+
+  const listResponse = () => ({
+    ...LIST_RESPONSE,
+    pullRequests: LIST_RESPONSE.pullRequests.map((item) => ({
+      ...item,
+      pr_state: draft ? "draft" : "open",
+    })),
+  });
+  const detailResponse = () =>
+    draft
+      ? {
+          ...DETAIL_RESPONSE,
+          pr: {
+            ...DETAIL_RESPONSE.pr,
+            draft: true,
+            mergeable: false,
+            mergeableState: "blocked",
+            mergeabilityReason: "draft",
+          },
+          readiness: {
+            ...DETAIL_RESPONSE.readiness,
+            state: "draft",
+            blockers: [
+              {
+                id: "draft",
+                kind: "draft",
+                required: true,
+                status: "blocked",
+                source: "pull_request",
+                action: "mark_ready",
+              },
+            ],
+            mergeAllowed: false,
+          },
+        }
+      : DETAIL_RESPONSE;
 
   const on = (test, handler) =>
     page.route(
@@ -89,11 +126,19 @@ async function serveFixture(page) {
 
   await on(
     (p) => p === "/api/pull-requests",
-    (r) => json(r, LIST_RESPONSE),
+    (r) => json(r, listResponse()),
   );
   await on(
     (p) => under("").test(p),
-    (r) => json(r, DETAIL_RESPONSE),
+    (r) => {
+      if (r.request().method() === "POST") {
+        const body = r.request().postDataJSON();
+        if (body.action === "convert_to_draft") draft = true;
+        else if (body.action === "ready_for_review") draft = false;
+        return json(r, { ok: true, pr_state: draft ? "draft" : "open" });
+      }
+      return json(r, detailResponse());
+    },
   );
   await on(
     (p) => under("/comments").test(p),
@@ -196,6 +241,18 @@ async function capture({ locale, theme }) {
       );
     }
 
+    if (
+      (await page.getByTestId("pr-issue-link-icon").count()) !== 1 ||
+      (await page.getByTestId("pr-sidebar-issue-link-icon").count()) !== 1
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the PR-to-issue association is not represented as a link in both headers.`,
+      );
+    }
+
+    await page.getByTestId("pr-edit-title").hover();
+    await page.getByRole("tooltip").waitFor({ state: "visible" });
+
     const checksBanner = page.getByTestId("pr-checks");
     await checksBanner.locator("button").first().click();
     const requiredCheck = checksBanner.locator('[data-testid="pr-check"][data-required="true"]');
@@ -233,6 +290,7 @@ async function capture({ locale, theme }) {
       "pr-action-numo-review",
       "pr-action-approve",
       "pr-action-comment",
+      "pr-action-convert-to-draft",
       "pr-action-close",
     ];
     const actionTops = [];
@@ -243,7 +301,7 @@ async function capture({ locale, theme }) {
     }
     if (!actionTops.every((top, index) => index === 0 || top > actionTops[index - 1])) {
       throw new Error(
-        `${locale}/${theme} — overflow actions are not grouped Numo, review, then close.`,
+        `${locale}/${theme} — overflow actions are not grouped Numo, review, then PR state.`,
       );
     }
     if ((await page.getByRole("menu").locator('[role="separator"]').count()) !== 2) {
@@ -251,7 +309,20 @@ async function capture({ locale, theme }) {
         `${locale}/${theme} — overflow action sections are not separated correctly.`,
       );
     }
-    await page.keyboard.press("Escape");
+    await page.getByTestId("pr-action-convert-to-draft").click();
+    const openPullRequest = page.getByTestId("pr-ready-for-review");
+    await openPullRequest.waitFor({ state: "visible" });
+    if ((await page.getByTestId("pr-readiness-control").count()) !== 0) {
+      throw new Error(
+        `${locale}/${theme} — a draft still shows readiness instead of its open action.`,
+      );
+    }
+    await openPullRequest.click();
+    await page.getByTestId("pr-readiness-control").waitFor({ state: "visible" });
+    for (const toast of await page.locator('[data-sonner-toast]').all()) {
+      const close = toast.locator('[data-close-button]');
+      if (await close.count()) await close.click();
+    }
 
     const readinessControl = page.getByTestId("pr-readiness-control");
     await readinessControl.click();
@@ -299,6 +370,29 @@ async function capture({ locale, theme }) {
       );
     }
     await page.keyboard.press("Escape");
+
+    await page
+      .getByText("export type KeyHint", { exact: false })
+      .first()
+      .waitFor({ state: "visible", timeout: 15_000 });
+    const embeddedSelection = await page.evaluate(() => {
+      for (const host of document.querySelectorAll(".diff-selectable *")) {
+        const root = host.shadowRoot;
+        if (!root) continue;
+        const line = [...root.querySelectorAll("[data-line]")].find((candidate) =>
+          candidate.textContent?.includes("export type KeyHint"),
+        );
+        if (!line) continue;
+        const nodes = [line, ...line.querySelectorAll("*")];
+        return nodes.every((node) => getComputedStyle(node).userSelect !== "none");
+      }
+      return false;
+    });
+    if (!embeddedSelection) {
+      throw new Error(
+        `${locale}/${theme} — embedded review diff text still inherits user-select: none.`,
+      );
+    }
 
     const resolveConversation = page.getByTestId("resolve-conversation");
     await resolveConversation.waitFor({ state: "visible" });
@@ -367,11 +461,14 @@ async function capture({ locale, theme }) {
         : null;
       return {
         selectable: selected.includes("export type KeyHint"),
+        computedSelectable: [line, ...line.querySelectorAll("*")].every(
+          (node) => getComputedStyle(node).userSelect !== "none",
+        ),
         hostBackground: background,
         hostChannels,
       };
     });
-    if (!diffInspection.selectable) {
+    if (!diffInspection.selectable || !diffInspection.computedSelectable) {
       throw new Error(
         `${locale}/${theme} — diff code text cannot be selected and copied.`,
       );

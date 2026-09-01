@@ -302,6 +302,13 @@ export interface Forge {
     number: number;
     nodeId?: string;
   }): Promise<void>;
+  /** Open → draft. `nodeId` is required only by GitHub GraphQL. */
+  convertToDraft(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    nodeId?: string;
+  }): Promise<void>;
   closePullRequest(opts: {
     token: string;
     repoFullName: string;
@@ -524,6 +531,12 @@ const githubForge: Forge = {
     }
     return github.markPullRequestReadyForReview({ token: opts.token, nodeId: opts.nodeId });
   },
+  convertToDraft: async (opts) => {
+    if (!opts.nodeId) {
+      throw new GithubApiError("Pull request has no GraphQL id", 409);
+    }
+    return github.convertPullRequestToDraft({ token: opts.token, nodeId: opts.nodeId });
+  },
   closePullRequest: github.closePullRequest,
   reopenPullRequest: github.reopenPullRequest,
   listPullRequestComments: github.listPullRequestComments,
@@ -601,6 +614,7 @@ const gitlabForge: Forge = {
   listReviewMessages: gitlab.listMergeRequestReviewMessages,
   listChecks: gitlab.listMergeRequestChecks,
   markReadyForReview: gitlab.markMergeRequestReadyForReview,
+  convertToDraft: gitlab.convertMergeRequestToDraft,
   closePullRequest: gitlab.closeMergeRequest,
   reopenPullRequest: gitlab.reopenMergeRequest,
   listPullRequestComments: gitlab.listMergeRequestNotes,

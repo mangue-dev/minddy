@@ -38,7 +38,7 @@ export const DIFF_UNSAFE_CSS = `
   background-color: var(--minddy-diff-bg) !important;
   color: var(--foreground) !important;
 }
-:host, [data-line], [data-code], [data-content] {
+:host, :host * {
   user-select: text !important;
   -webkit-user-select: text !important;
 }

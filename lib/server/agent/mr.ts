@@ -942,6 +942,23 @@ export async function markMergeRequestReadyForReview(opts: {
   });
 }
 
+/** Switches an open merge request to draft using GitLab's title convention. */
+export async function convertMergeRequestToDraft(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<void> {
+  const path = `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`;
+  const mr = await glJson<RawMr>(path, opts.token);
+  const title = (mr.title ?? "").replace(DRAFT_TITLE_PREFIX, "").trim();
+  if (!title) throw new GitlabApiError("Merge request has no title to preserve", 422);
+  await glJson<unknown>(path, opts.token, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: `Draft: ${title}` }),
+  });
+}
+
 // ── Reviews formelles (MIN-138) ──────────────────────────────────────────────
 
 /** Does GitLab deny approval (MR author, or tier without the API)?

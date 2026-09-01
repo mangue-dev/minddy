@@ -32,6 +32,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  GitPullRequest,
+  GitPullRequestDraft,
+  Link2,
   MessageSquare,
   MoreHorizontal,
   Pencil,
@@ -608,7 +611,7 @@ export function PrDetail({
   usePrLive(item.prId);
 
   const [acting, setActing] = useState<
-    null | "merge" | "close" | "reopen" | "ready_for_review"
+    null | "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft"
   >(null);
   const [maintenanceAction, setMaintenanceAction] = useState<ReadinessAction | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -782,7 +785,7 @@ export function PrDetail({
   const reviewCard = reviewSession.run;
 
   const act = async (
-    action: "merge" | "close" | "reopen" | "ready_for_review",
+    action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
     method?: MergeMethod,
   ) => {
     if (acting) return;
@@ -793,6 +796,8 @@ export function PrDetail({
           ? "closed"
           : action === "ready_for_review"
             ? "open"
+            : action === "convert_to_draft"
+              ? "draft"
             : pr?.draft
               ? "draft"
               : "open";
@@ -809,7 +814,9 @@ export function PrDetail({
             ? t("closedToast")
             : action === "reopen"
               ? t("reopenedToast")
-              : t("readyForReviewToast"),
+              : action === "convert_to_draft"
+                ? t("convertedToDraftToast")
+                : t("readyForReviewToast"),
       );
       onRefetchList();
       await refetchPr();
@@ -1223,8 +1230,7 @@ export function PrDetail({
             <span className="shrink-0 text-foreground">{identifier}</span>
           )}
           {linkedIssue ? (
-            // The chevron alone does not indicate the relationship: hovering over it names it,
-            // exactly like “› MIN-42” on a sub-ticket.
+            // The link icon makes this a navigable association, not a dependency.
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -1234,7 +1240,11 @@ export function PrDetail({
                   }}
                   className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground hover:underline"
                 >
-                  <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+                  <Link2
+                    data-testid="pr-issue-link-icon"
+                    className="size-3.5 shrink-0"
+                    aria-hidden
+                  />
                   <span className="truncate">{linkedIssue}</span>
                 </button>
               </TooltipTrigger>
@@ -1382,7 +1392,7 @@ export function PrDetail({
                   data-testid="pr-more-actions"
                   variant="outline"
                   size="icon-sm"
-                  className="2xl:hidden"
+                  className={isDraft || !canWrite ? "2xl:hidden" : undefined}
                   aria-label={t("moreActions")}
                 >
                   {aiReviewActive ? <Spinner /> : <MoreHorizontal />}
@@ -1391,6 +1401,7 @@ export function PrDetail({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   data-testid="pr-action-numo-request"
+                  className="2xl:hidden"
                   onSelect={() => openReview("request_changes")}
                 >
                   <NumoIcon animated={false} />
@@ -1398,6 +1409,7 @@ export function PrDetail({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   data-testid="pr-action-numo-review"
+                  className="2xl:hidden"
                   disabled={
                     aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
                   }
@@ -1408,9 +1420,10 @@ export function PrDetail({
                 </DropdownMenuItem>
                 {canComment ? (
                   <>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="2xl:hidden" />
                     <DropdownMenuItem
                       data-testid="pr-action-approve"
+                      className="2xl:hidden"
                       onSelect={() => openReview("approve")}
                     >
                       <Check />
@@ -1418,6 +1431,7 @@ export function PrDetail({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       data-testid="pr-action-comment"
+                      className="2xl:hidden"
                       onSelect={() => openReview("comment")}
                     >
                       <MessageSquare />
@@ -1427,9 +1441,20 @@ export function PrDetail({
                 ) : null}
                 {canWrite ? (
                   <>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="2xl:hidden" />
+                    {!isDraft ? (
+                      <DropdownMenuItem
+                        data-testid="pr-action-convert-to-draft"
+                        disabled={!!acting || isWorking}
+                        onSelect={() => void act("convert_to_draft")}
+                      >
+                        {acting === "convert_to_draft" ? <Spinner /> : <GitPullRequestDraft />}
+                        {t("convertToDraft")}
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem
                       data-testid="pr-action-close"
+                      className="2xl:hidden"
                       variant="destructive"
                       disabled={!!acting || isWorking}
                       onSelect={() => setConfirmAction({ kind: "close" })}
@@ -1442,7 +1467,18 @@ export function PrDetail({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {readiness ? (
+            {isDraft && canWrite ? (
+              <Button
+                data-testid="pr-ready-for-review"
+                size="sm"
+                variant="outline"
+                disabled={!!acting || isWorking}
+                onClick={() => void act("ready_for_review")}
+              >
+                {acting === "ready_for_review" ? <Spinner /> : <GitPullRequest />}
+                {t("openPullRequest")}
+              </Button>
+            ) : readiness ? (
               <PrReadinessControl
                 readiness={readiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
@@ -1495,24 +1531,41 @@ export function PrDetail({
                 {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
               </h1>
               {canWrite ? (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="shrink-0"
-                  aria-label={t("editPrTitle")}
-                  onClick={() => {
-                    setTitleDraft(pr?.title ?? item.title ?? "");
-                    setEditingTitle(true);
-                  }}
-                >
-                  <Pencil className="size-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      data-testid="pr-edit-title"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0"
+                      aria-label={t("editPrTitle")}
+                      onClick={() => {
+                        setTitleDraft(pr?.title ?? item.title ?? "");
+                        setEditingTitle(true);
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{t("editPrTitle")}</TooltipContent>
+                </Tooltip>
               ) : pr?.url ? (
-                <Button variant="ghost" size="icon-sm" className="shrink-0" asChild>
-                  <a href={pr.url} target="_blank" rel="noreferrer" aria-label={t("editPrTitle")}>
-                    <ExternalLink className="size-4" />
-                  </a>
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      data-testid="pr-edit-title"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0"
+                      asChild
+                    >
+                      <a href={pr.url} target="_blank" rel="noreferrer" aria-label={t("editPrTitle")}>
+                        <ExternalLink className="size-4" />
+                      </a>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{t("editPrTitle")}</TooltipContent>
+                </Tooltip>
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">

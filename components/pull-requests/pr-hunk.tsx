@@ -127,7 +127,7 @@ export function PrHunk({
   }
 
   return (
-    <div className={cn("pr-diff-view overflow-clip", className)}>
+    <div className={cn("pr-diff-view diff-selectable overflow-clip", className)}>
       <button
         type="button"
         onClick={() => setCollapsed((v) => !v)}

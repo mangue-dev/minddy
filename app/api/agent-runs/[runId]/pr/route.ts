@@ -20,7 +20,7 @@ import {
  *
  * GET → metadata PR + files + checks + approvals + merge methods,
  * or `{ pr: null, files: [] }` if the run does not (yet) have a PR.
- * POST → merge | close | reopen | ready_for_review | review (see the route by prId).
+ * POST → merge | close | reopen | ready_for_review | convert_to_draft | review.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -59,7 +59,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "close" &&
     action !== "reopen" &&
     action !== "review" &&
-    action !== "ready_for_review"
+    action !== "ready_for_review" &&
+    action !== "convert_to_draft"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }

@@ -1845,10 +1845,10 @@ export async function prLinkIssueResponse(
   });
 }
 
-/** merge / close / reopen / ready_for_review — gestures that change the state of the PR. */
+/** Merge, close, reopen, and draft/review transitions for a pull request. */
 export async function prStateActionResponse(
   scope: PrScope,
-  action: "merge" | "close" | "reopen" | "ready_for_review",
+  action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
   body: PrActionBody,
   userId: string,
 ): Promise<NextResponse> {
@@ -1969,11 +1969,22 @@ export async function prStateActionResponse(
       // fetching one PR, so reread it before switching. This read uses the
       // installation token and works even when the actor has narrow access.
       const pr = await forge.getPullRequest(call);
-      await forge.markReadyForReview({ ...myCall, nodeId: pr.nodeId });
+      await withPrOperation(`${scope.pr.id}:review-state`, () =>
+        forge.markReadyForReview({ ...myCall, nodeId: pr.nodeId }),
+      );
       // A ready PR is ready for review, so move the ticket to review. It remained
       // in progress while the PR was a draft.
       await propagatePrState(scope, "open", userId);
       return NextResponse.json({ ok: true, pr_state: "open" });
+    }
+
+    if (action === "convert_to_draft") {
+      const pr = await forge.getPullRequest(call);
+      await withPrOperation(`${scope.pr.id}:review-state`, () =>
+        forge.convertToDraft({ ...myCall, nodeId: pr.nodeId }),
+      );
+      await propagatePrState(scope, "draft", userId);
+      return NextResponse.json({ ok: true, pr_state: "draft" });
     }
 
     await forge.closePullRequest(myCall);

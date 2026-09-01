@@ -1415,6 +1415,19 @@ export async function markPullRequestReadyForReview(opts: {
   );
 }
 
+/** Switches an open pull request back to draft through GitHub GraphQL. */
+export async function convertPullRequestToDraft(opts: {
+  token: string;
+  nodeId: string;
+}): Promise<void> {
+  await ghGraphql<unknown>(
+    opts.token,
+    "mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id})" +
+      "{pullRequest{number isDraft}}}",
+    { id: opts.nodeId },
+  );
+}
+
 /**
  * CI checks from the PR head: check runs (GitHub Actions & co) AND
  * commit statuses (the historical API), merged by `checks-core`.

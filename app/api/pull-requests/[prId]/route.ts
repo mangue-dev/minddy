@@ -19,6 +19,7 @@ import {
  *       | { action: 'close' }
  * | { action: 'reopen' } → closed → reopened (MIN-164)
  * | { action: 'ready_for_review' } → draft → ready
+ * | { action: 'convert_to_draft' } → open → draft
  *       | { action: 'review', verdict, message, relaunch?, model?, reasoningLevel?, localExec?, localWorktree? }
  *       | { action: 'ai_review', model?, reasoningLevel? }    → Numo relit (MIN-141)
  *       | { action: 'link_issue', issueId }                  → attaches a ticket (MIN-163)
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "review" &&
     action !== "ai_review" &&
     action !== "ready_for_review" &&
+    action !== "convert_to_draft" &&
     action !== "link_issue" &&
     action !== "update_branch" &&
     action !== "rerun_check" &&

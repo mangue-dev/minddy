@@ -1113,10 +1113,11 @@ nav[aria-label="Navigation"]
   -webkit-user-select: text !important;
 }
 
-/* Code remains selectable in full PR diffs and embedded review hunks. The
-   renderer also receives the matching rule inside its shadow root. */
-.pr-diff-view,
-.pr-diff-view *:not(button):not(input):not(textarea) {
+/* Every diff surface is selectable, including PR files, review hunks, commit
+   sheets, and agent-side diffs. The renderer receives the same override inside
+   its shadow root because the mangue-ui reset otherwise crosses the host. */
+.diff-selectable,
+.diff-selectable *:not(button):not(input):not(textarea) {
   user-select: text !important;
   -webkit-user-select: text !important;
 }

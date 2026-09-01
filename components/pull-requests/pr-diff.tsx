@@ -954,7 +954,7 @@ export function PrDiff({
       <div
         data-testid="pr-diff-view"
         data-color-scheme={resolvedTheme}
-        className={cn("pr-diff-view flex flex-col gap-2", className)}
+        className={cn("pr-diff-view diff-selectable flex flex-col gap-2", className)}
       >
         <div className="flex flex-col rounded-lg border border-border bg-muted/20">
           {/* Navigation and presentation answer different questions. Keeping
