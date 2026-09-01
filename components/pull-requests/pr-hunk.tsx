@@ -2,13 +2,14 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn, useIsMobile, useTheme } from "mangue-ui";
+import { cn, useIsMobile } from "mangue-ui";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import type { FileDiff as FileDiffInstance, PostRenderPhase } from "@pierre/diffs";
 import { PrDiffWorkers } from "@/components/pull-requests/pr-diff-workers";
 import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES, DIFF_UNSAFE_CSS } from "@/lib/diff-theme";
+import { useEffectiveColorScheme } from "@/components/pull-requests/use-effective-color-scheme";
 import { hunkPatch } from "@/lib/pr-diff-hunk";
 
 /**
@@ -50,7 +51,7 @@ export function PrHunk({
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useEffectiveColorScheme();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -66,17 +67,13 @@ export function PrHunk({
     return parsed?.files[0] ?? null;
   }, [path, diffHunk, maxLines]);
 
-  /**
-   * The same shadow cleanup as `pr-diff`, and for the same reason: the empty lib
-   * its `<pre>` upon disassembly but LEAVES it in the Shadow DOM, where its `hydrate`
-   * following takes it for an already painted rendering. In development, `reactStrictMode`
-   * goes back to the same node — the extract would be born empty.
-   */
+  /** Keep the embedded diff's Shadow DOM reusable across Strict Mode remounts. */
   const onPostRender = useCallback(
     (node: HTMLElement, _instance: FileDiffInstance, phase: PostRenderPhase) => {
+      node.style.colorScheme = resolvedTheme;
       if (phase === "unmount") node.shadowRoot?.replaceChildren();
     },
-    [],
+    [resolvedTheme],
   );
 
   const options = useMemo(

@@ -266,7 +266,7 @@ function ChecksBanner({
     : null;
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div data-testid="pr-checks" className="rounded-lg border border-border bg-card">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -294,21 +294,30 @@ function ChecksBanner({
               .filter(Boolean)
               .join(" · ");
             return (
-              <li key={c.name} className="flex items-center gap-2.5 px-3.5 py-2.5">
+              <li
+                key={c.name}
+                data-testid="pr-check"
+                data-required={c.required == null ? "unknown" : String(c.required)}
+                className="flex items-center gap-2.5 px-3.5 py-2.5"
+              >
                 <CheckDot state={c.state} />
                 <CheckLogo url={c.appAvatarUrl} provider={provider} />
                 <div className="min-w-0 flex-1">
                   <p className="flex min-w-0 items-center gap-1.5 text-sm">
                     <span className="truncate">{c.name}</span>
-                    <Badge variant="secondary" className="h-4 shrink-0 px-1.5 text-[9px]">
-                      {t(
-                        c.required === true
-                          ? "checkRequired"
-                          : c.required === false
-                            ? "checkOptional"
+                    {c.required !== false ? (
+                      <Badge
+                        data-testid="pr-check-requirement"
+                        variant="secondary"
+                        className="h-4 shrink-0 px-1.5 text-[9px]"
+                      >
+                        {t(
+                          c.required === true
+                            ? "checkRequired"
                             : "checkRequirednessUnknown",
-                      )}
-                    </Badge>
+                        )}
+                      </Badge>
+                    ) : null}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">{detail}</p>
                 </div>
@@ -1296,27 +1305,15 @@ export function PrDetail({
           <div className="ml-auto flex shrink-0 items-center justify-end gap-1.5">
             {/* ── Wide screen: each gesture has its name ─────────────────── */}
             <div className="hidden items-center gap-1.5 2xl:flex">
-              {/* “Request changes” has LEFT the menu: it’s the only one
-                  geste de review qui ne se contente pas de parler — il peut faire
-                  work Numo —, and this half requires NO identity
-                  git. Bury it under a chevron reserved for connected accounts
-                  made those who only have it lose the action. THE
-                  dialogue adapts: with an account, the verdict also goes. */}
+              {/* Request changes can launch Numo work and does not require a
+                  connected forge identity, so it remains directly available. */}
               <Button variant="outline" size="sm" onClick={() => openReview("request_changes")}>
                 <NumoIcon animated={false} />
                 {t("reviewRequestChanges")}
               </Button>
 
-              {/* Review — the verdicts that only TALK (approve,
-                  comment), therefore reserved for those who have a git account to sign them;
-                  then the rereading by Numo (MIN-141), separated because it does not
-                  asks nothing and leaves with the click.
-
-                  “Have it verified by Numo” REMAINS regardless of the git account:
-                  it is an AGENT’s gesture, it does not depend on any human identity.
-                  When it's the only entry that survives, the one-entry menu
-                  becomes a simple button — a chevron that opens only one line
-                  is a false promise. */}
+              {/* Approve and comment require a forge identity. Numo review does
+                  not, so it becomes a direct button when it is the only action. */}
               {canComment ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1337,8 +1334,7 @@ export function PrDetail({
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      // Already reread this diff, or a pass in progress: the entry remains
-                      // VISIBLE and turns gray, with its wording saying why.
+                      // Keep the entry visible while its label explains why it is disabled.
                       disabled={
                         aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
                       }
@@ -1359,9 +1355,7 @@ export function PrDetail({
                   onClick={openAiReviewDialog}
                 >
                   {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
-                  {/* Same four labels as the menu entry: it’s the SAME
-                      gesture, and this is the only affordance of one who has no
-                      compte git — elle ne doit pas en dire moins. */}
+                  {/* Use the same status-aware label as the menu entry. */}
                   {aiReviewLabel}
                 </Button>
               )}
@@ -1374,20 +1368,18 @@ export function PrDetail({
                   disabled={!!acting || isWorking}
                 >
                   {acting === "close" ? <Spinner /> : <X />}
-                  {t("close")}
+                  {t("closePullRequest")}
                 </Button>
               ) : null}
             </div>
 
-            {/* ── Narrow screen: the same gestures, under a “…” ───────────── */}
-            {/* A single flat menu, in the order of the wide line: request
-                changes, the verdicts that speak (if git account), the
-                rereading Numo, then close, detached because it finishes the
-                PR. Nothing is removed in passing — the narrow screen loses space,
-                not stocks. */}
+            {/* On narrow screens, actions stay available in one unlabeled menu.
+                Numo work comes first, human review verdicts form the second
+                section, and the destructive close action stays isolated last. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
+                  data-testid="pr-more-actions"
                   variant="outline"
                   size="icon-sm"
                   className="2xl:hidden"
@@ -1397,23 +1389,15 @@ export function PrDetail({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => openReview("request_changes")}>
+                <DropdownMenuItem
+                  data-testid="pr-action-numo-request"
+                  onSelect={() => openReview("request_changes")}
+                >
                   <NumoIcon animated={false} />
                   {t("reviewRequestChanges")}
                 </DropdownMenuItem>
-                {canComment ? (
-                  <>
-                    <DropdownMenuItem onSelect={() => openReview("approve")}>
-                      <Check />
-                      {t("reviewApprove")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => openReview("comment")}>
-                      <MessageSquare />
-                      {t("reviewComment")}
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
                 <DropdownMenuItem
+                  data-testid="pr-action-numo-review"
                   disabled={
                     aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
                   }
@@ -1422,16 +1406,36 @@ export function PrDetail({
                   <NumoIcon animated={false} />
                   {aiReviewLabel}
                 </DropdownMenuItem>
+                {canComment ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      data-testid="pr-action-approve"
+                      onSelect={() => openReview("approve")}
+                    >
+                      <Check />
+                      {t("reviewApprove")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid="pr-action-comment"
+                      onSelect={() => openReview("comment")}
+                    >
+                      <MessageSquare />
+                      {t("reviewComment")}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
                 {canWrite ? (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
+                      data-testid="pr-action-close"
                       variant="destructive"
                       disabled={!!acting || isWorking}
                       onSelect={() => setConfirmAction({ kind: "close" })}
                     >
                       <X />
-                      {t("close")}
+                      {t("closePullRequest")}
                     </DropdownMenuItem>
                   </>
                 ) : null}
@@ -1696,6 +1700,21 @@ export function PrDetail({
                 </ul>
               )}
 
+              {canComment ? (
+                <div data-testid="pr-comment-composer-region" className="pt-1">
+                  <PrCommentComposer
+                    endpoint={prEndpoint(item.prId)}
+                    value={commentBody}
+                    onChange={setCommentBody}
+                    onSubmit={() => void submitComment()}
+                    posting={posting}
+                    placeholder={t("commentPlaceholder")}
+                    submitLabel={t("postComment")}
+                    focusSignal={quoteFocus}
+                  />
+                </div>
+              ) : null}
+
             </TabsContent>
 
             <TabsContent value="commits" className="mt-4">
@@ -1737,42 +1756,6 @@ export function PrDetail({
           </Tabs>
         </div>
       </div>
-
-      {/* Composer — forge account mentions, attachments, preview
-          markdown (MIN-162).
-
-          OUTSIDE the scrolling area, and not at the end of the line: on a chatty PR,
-          a composer placed after the last message is won by scrolling, and we
-          loses it again as soon as we go back to read what we wanted to respond to. Pinned in
-          foot, it is where the discussion thread answers itself — that is already what
-          does the ticket panel (`SidePanelFooter`).
-
-          Only under the FIL tab: there is nothing to comment on opposite
-          a list of commits, and the Files tab has its own fields,
-          anchored to their line. ABSENT without a git account: the message would go under
-          the identity of the bot (MIN-144).
-
-          `dock-above-nav`: on mobile it is placed just above the bar
-          floating, therefore in the gradient that it projects — the class takes it out
-          (cf. globals.css). */}
-      {tab === "activity" && canComment ? (
-        <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
-          {/* Same column as the thread above: a full-width composer does not
-              would be more in line with what he is responding to. */}
-          <div className="mx-auto max-w-3xl">
-            <PrCommentComposer
-              endpoint={prEndpoint(item.prId)}
-              value={commentBody}
-              onChange={setCommentBody}
-              onSubmit={() => void submitComment()}
-              posting={posting}
-              placeholder={t("commentPlaceholder")}
-              submitLabel={t("postComment")}
-              focusSignal={quoteFocus}
-            />
-          </div>
-        </div>
-      ) : null}
 
       <Dialog open={editingTitle} onOpenChange={(open) => !maintenanceAction && setEditingTitle(open)}>
         <DialogContent className="sm:max-w-md">

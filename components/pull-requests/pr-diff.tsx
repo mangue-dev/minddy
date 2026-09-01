@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
-import { Badge, cn, SegmentedControl, toast, useIsMobile, useTheme } from "mangue-ui";
+import { Badge, cn, SegmentedControl, toast, useIsMobile } from "mangue-ui";
 import { ChevronDown, ChevronRight, WrapText } from "lucide-react";
 import { applyPatch } from "diff";
 import { getLineAnnotationName, parsePatchFiles } from "@pierre/diffs";
@@ -33,6 +33,7 @@ import {
   DIFF_THEMES,
   DIFF_UNSAFE_CSS,
 } from "@/lib/diff-theme";
+import { useEffectiveColorScheme } from "@/components/pull-requests/use-effective-color-scheme";
 import { PrImageDiff } from "@/components/pull-requests/pr-image-diff";
 import { PrFileTreeButton } from "@/components/pull-requests/pr-file-tree";
 import {
@@ -601,31 +602,18 @@ function PrDiffFile({
   );
 
   /**
-   * After each rendering of the lib (assembly, option change, unfolding):
-   * keep control of the instance, translate the unfolding bars, and raise
-   * which annotations found their line. The reading can be read in the shadows —
-   * one `<slot>` per placed annotation, named as the lib names it — because
-   * it is the only thing that tells the truth about the state of unfolding.
+   * After each renderer pass, keep the instance, localize expansion controls,
+   * enforce the painted color scheme, and record which annotations found a line.
    */
   const onPostRender = useCallback(
     (node: HTMLElement, instance: FileDiffInstance<AnnotationMeta>, phase: PostRenderPhase) => {
+      node.style.colorScheme = themeType;
       if (phase === "unmount") {
         instanceRef.current = null;
-        // Make the shadow proper — otherwise the FOLLOWING assembly on the same
-        // element thinks it is dealing with pre-rendered HTML.
-        //
-        // Unmounting the lib empties the `<pre>` but LEAVES it in the Shadow
-        // DOM. Its `hydrate` reads this as "the diff is already painted, I didn't
-        // to reconnect with it”: he skips the rendering, and we stay on the
-        // empty skeleton. In production it is not visible — React throws
-        // the element with the component. In development, `reactStrictMode`
-        // mounts, disassembles and reassembles ON THE SAME NODE: the diff was born empty,
-        // and it was necessary to fold then unfold the file (so two clicks) to
-        // obtain a new element which itself could be painted.
-        //
-        // Adopted style sheets live on `shadowRoot`, not among
-        // his children: they survive, and the next rendering reconstructs the
-        // rest (sprite, theme, code).
+        // The library leaves an empty `<pre>` in the Shadow DOM on unmount.
+        // Strict Mode can reuse the same host, and hydration would mistake that
+        // stale node for completed output. Clear children while preserving the
+        // adopted style sheets so the next pass paints normally.
         node.shadowRoot?.replaceChildren();
         return;
       }
@@ -641,7 +629,7 @@ function PrDiffFile({
       }
       setPlacedKeys((prev) => (sameKeys(prev, placed) ? prev : placed));
     },
-    [lineAnnotations, commentRanges, t],
+    [lineAnnotations, commentRanges, t, themeType],
   );
 
   const options = useMemo(
@@ -830,7 +818,7 @@ export function PrDiff({
 }) {
   const t = useTranslations("PullRequests");
   const locale = useLocale();
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useEffectiveColorScheme();
   const isMobile = useIsMobile();
   const [viewType, setViewType] = useState<ViewType>("unified");
   /**
@@ -963,7 +951,11 @@ export function PrDiff({
 
   return (
     <PrDiffWorkers>
-      <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
+      <div
+        data-testid="pr-diff-view"
+        data-color-scheme={resolvedTheme}
+        className={cn("pr-diff-view flex flex-col gap-2", className)}
+      >
         <div className="flex flex-col rounded-lg border border-border bg-muted/20">
           {/* Navigation and presentation answer different questions. Keeping
               them on separate rows makes the file tree the clear entry point

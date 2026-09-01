@@ -1,87 +1,27 @@
 import type { LineDiffTypes, ThemesType } from "@pierre/diffs";
 
 /**
- * Diff view skin (MIN-181) — which, from minddy's theme, must
- * cross the Shadow DOM border of `@pierre/diffs`.
+ * Diff chrome inherits Minddy's surface tokens across the Shadow DOM boundary,
+ * while Shiki supplies syntax colors. GitHub Dark Default gives unstyled code,
+ * identifiers, comments, and punctuation enough contrast on dark diff lines.
  *
- * Two halves, and they don't live in the same place:
- *
- * - **The colors of the FRAME** (background, green/red solids, line numbers) are
- * CSS variables `--diffs-*`, placed on `.pr-diff-view` in
- * [app/globals.css](../app/globals.css). Custom properties
- * CROSS the shadow boundary by inheritance: the lib reads them in its
- * `:host` without having to inject anything. They are written there, with the
- * other tokens in the repository, because they are expressed in `var(--card)`,
- * `var(--foreground)`… — the same as the rest of the app.
- *
- * - **CODE colors** (keywords, strings, comments) come from a
- * Shiki theme, chosen here. More house palette: Shiki colors by
- * TextMate grammar, and a complete theme says what ours approximated.
- *
- * Remains `unsafeCSS`, the only thing we REALLY inject into the shadows: two
- * rules of behavior, no decoration.
- */
-
-/**
- * The light/dark pairing changed to `options.theme`. Pierre's in-house themes
- * rather than a `github-*`: they are calibrated FOR this rendering - the y
- * tokens remain legible placed on the green and red solids of the diff, which is
- * exactly the problem which made us hold a palette in our hand.
- *
- * `themeType` (`"light" | "dark"`), happens separately: it forces the
- * `color-scheme` of the `:host`, therefore the branch that the tens of
- * `light-dark()` of the lib. Without it, they would follow the OS preference —
- * not the theme chosen in minddy.
+ * The renderer still receives both themes because worker-produced token colors
+ * use `light-dark()`. Each diff host must therefore force its effective
+ * `color-scheme`; otherwise a stale light scheme paints black tokens in dark mode.
  */
 export const DIFF_THEMES: ThemesType = {
   light: "pierre-light",
-  dark: "pierre-dark",
+  dark: "github-dark-default",
 };
 
 /**
- * How to mark, IN a modified line, what has actually changed. This
- * counts as much as the coloring: without this marking, a retouched line of a
- * character appears as entirely rewritten, and the eye must redo the
- * comparison itself.
- *
- * `word-alt` and not `char`: on code (indentation, punctuation), splitting
- * character by character produces a confetti of highlights which serves the
- * reading.
- *
- * Like `DIFF_THEMES`, this setting happens in TWO places — in the component and the
- * worker pool, which wins when it is there (see `PrDiffWorkers`). Hence the
- * constant: two diverging values ​​would give two renderings depending on whether
- * the coloring comes from the worker or the main thread.
+ * Mark changed words instead of every changed character. The same value is sent
+ * to the main renderer and worker pool so asynchronous highlighting cannot alter
+ * the diff semantics.
  */
 export const DIFF_LINE_DIFF_TYPE: LineDiffTypes = "word-alt";
 
-/**
- * CSS injected into the Shadow DOM (`options.unsafeCSS`). Two rules, and
- * both say where the comment "+" is NOT allowed to appear.
- *
- * 1. **An expanded context line is not in the diff.** GitHub returns
- * **422** (`line: could not be resolved`) on a comment placed there —
- * checked against the API. The lib precisely distinguishes `context` (in the patch)
- * from `context-expanded` (reduced by unfolding): the rule is therefore written as
- * a line of CSS, where it requested a set of change keys
- * recalculated each time rendered.
- *
- * 2. **In side-by-side, a context line only anchors to the RIGHT.** It
- * exists on both sides, but commenting context talks about the code as it
- * is AFTER the PR — that's GitHub's choice, and that that we already held.
- * Offering the "+" in the left gutter would produce a `side: LEFT` on
- * an unchanged line: accepted by the forge, but not what the person
- * thinks it denotes.
- *
- * The click is refused a second time on the JS side (`commentAnchor`): the CSS hides
- * the affordance, it does not guarantee the rule — a selection drag can
- * end up on an unfolded line without ever having hovered over the gutter.
- */
-/**
- * Attribute set by `pr-diff` on lines covered by a remark
- * MULTI-LINES. It lives here with the CSS rule that paints it: the two halves
- * only make sense together.
- */
+/** Attribute set on every line covered by a multi-line review comment. */
 export const DIFF_RANGE_ATTRIBUTE = "data-pr-comment-range";
 
 export const DIFF_UNSAFE_CSS = `

@@ -108,6 +108,16 @@ function mergeMethodKey(method: MergeMethod): MessageKey<"PullRequests"> {
       : "mergeMethodMerge";
 }
 
+function blockerMessageKey(
+  blocker: ReadinessBlocker,
+): MessageKey<"PullRequests"> {
+  if (blocker.id === "policy-unavailable") return "blockerPolicyUnavailable";
+  if (blocker.kind === "checks" && blocker.status === "pending") {
+    return "blockerChecksRunning";
+  }
+  return BLOCKER_KEYS[blocker.kind];
+}
+
 export function PrReadinessBadge({
   readiness,
 }: {
@@ -204,12 +214,12 @@ export function PrReadinessControl({
           className={cn(
             "shrink-0 gap-1.5",
             ready &&
-              "border-emerald-600/30 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 dark:text-emerald-400",
+              "border-emerald-600/30 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 focus-visible:bg-emerald-600/15 data-[state=open]:bg-emerald-600/15 data-[state=open]:text-emerald-700 dark:text-emerald-400 dark:data-[state=open]:text-emerald-400",
             pending &&
-              "border-amber-600/30 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 dark:text-amber-400",
+              "border-amber-600/30 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 focus-visible:bg-amber-600/15 data-[state=open]:bg-amber-600/15 data-[state=open]:text-amber-700 dark:text-amber-400 dark:data-[state=open]:text-amber-400",
             !ready &&
               !pending &&
-              "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
+              "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 focus-visible:bg-destructive/15 data-[state=open]:bg-destructive/15 data-[state=open]:text-destructive",
           )}
           aria-label={t(STATE_KEYS[readiness.state])}
         >
@@ -246,10 +256,17 @@ export function PrReadinessControl({
                   })}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {t(
-                    condition.required ? "blockerRequired" : "blockerOptional",
-                  )}{" "}
-                  · {t(SOURCE_KEYS[condition.source])}
+                  {condition.required || condition.kind !== "checks" ? (
+                    <>
+                      {t(
+                        condition.required
+                          ? "blockerRequired"
+                          : "blockerOptional",
+                      )}{" "}
+                      ·{" "}
+                    </>
+                  ) : null}
+                  {t(SOURCE_KEYS[condition.source])}
                 </p>
               </div>
             </li>
@@ -257,10 +274,7 @@ export function PrReadinessControl({
           {readiness.blockers.map((blocker) => {
             const available = canAct(blocker);
             const providerUrl = fallbackUrl(blocker);
-            const blockerKey =
-              blocker.id === "policy-unavailable"
-                ? "blockerPolicyUnavailable"
-                : BLOCKER_KEYS[blocker.kind];
+            const blockerKey = blockerMessageKey(blocker);
             return (
               <li
                 key={blocker.id}
@@ -280,10 +294,17 @@ export function PrReadinessControl({
                     })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {t(
-                      blocker.required ? "blockerRequired" : "blockerOptional",
-                    )}{" "}
-                    · {t(SOURCE_KEYS[blocker.source])}
+                    {blocker.required || blocker.kind !== "checks" ? (
+                      <>
+                        {t(
+                          blocker.required
+                            ? "blockerRequired"
+                            : "blockerOptional",
+                        )}{" "}
+                        ·{" "}
+                      </>
+                    ) : null}
+                    {t(SOURCE_KEYS[blocker.source])}
                   </p>
                 </div>
                 {available ? (

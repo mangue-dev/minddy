@@ -196,6 +196,63 @@ async function capture({ locale, theme }) {
       );
     }
 
+    const checksBanner = page.getByTestId("pr-checks");
+    await checksBanner.locator("button").first().click();
+    const requiredCheck = checksBanner.locator('[data-testid="pr-check"][data-required="true"]');
+    const optionalCheck = checksBanner.locator('[data-testid="pr-check"][data-required="false"]');
+    if (
+      (await requiredCheck.getByTestId("pr-check-requirement").count()) !== 1 ||
+      (await optionalCheck.getByTestId("pr-check-requirement").count()) !== 0
+    ) {
+      throw new Error(
+        `${locale}/${theme} — CI requiredness labels must appear only on required checks.`,
+      );
+    }
+
+    const composerPlacement = await page
+      .getByTestId("pr-comment-composer-region")
+      .evaluate((region) => ({
+        insideConversation: region.closest('[role="tabpanel"]') !== null,
+        position: getComputedStyle(region).position,
+        docked: region.classList.contains("dock-above-nav"),
+      }));
+    if (
+      !composerPlacement.insideConversation ||
+      composerPlacement.position === "fixed" ||
+      composerPlacement.position === "sticky" ||
+      composerPlacement.docked
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the conversation composer is still docked to the viewport.`,
+      );
+    }
+
+    await page.getByTestId("pr-more-actions").click();
+    const actionIds = [
+      "pr-action-numo-request",
+      "pr-action-numo-review",
+      "pr-action-approve",
+      "pr-action-comment",
+      "pr-action-close",
+    ];
+    const actionTops = [];
+    for (const id of actionIds) {
+      const box = await page.getByTestId(id).boundingBox();
+      if (!box) throw new Error(`${locale}/${theme} — overflow action ${id} is missing.`);
+      actionTops.push(box.y);
+    }
+    if (!actionTops.every((top, index) => index === 0 || top > actionTops[index - 1])) {
+      throw new Error(
+        `${locale}/${theme} — overflow actions are not grouped Numo, review, then close.`,
+      );
+    }
+    if ((await page.getByRole("menu").locator('[role="separator"]').count()) !== 2) {
+      throw new Error(
+        `${locale}/${theme} — overflow action sections are not separated correctly.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+
     const readinessControl = page.getByTestId("pr-readiness-control");
     await readinessControl.click();
     const readinessPopover = page.getByTestId("pr-readiness-popover");
@@ -212,6 +269,33 @@ async function capture({ locale, theme }) {
     if (await readinessPopover.getByTestId("pr-readiness-merge").isDisabled()) {
       throw new Error(
         `${locale}/${theme} — the ready PR cannot be merged from its readiness popover.`,
+      );
+    }
+    const readinessTrigger = await readinessControl.evaluate((button) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      const background = getComputedStyle(button).backgroundColor;
+      if (context) {
+        context.fillStyle = background;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return {
+        state: button.getAttribute("data-state"),
+        background,
+        channels: context
+          ? Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3))
+          : null,
+      };
+    });
+    if (
+      readinessTrigger.state !== "open" ||
+      !readinessTrigger.channels ||
+      readinessTrigger.channels.every((channel) => channel > 235)
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the open readiness trigger lost its state color (${readinessTrigger.background}).`,
       );
     }
     await page.keyboard.press("Escape");
@@ -243,9 +327,8 @@ async function capture({ locale, theme }) {
 
     const diffInspection = await page.evaluate(() => {
       const visit = (root) => {
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-          if (node.textContent?.includes("export type KeyHint")) return node;
+        for (const line of root.querySelectorAll("[data-line]")) {
+          if (line.textContent?.includes("export type KeyHint")) return line;
         }
         for (const element of root.querySelectorAll("*")) {
           if (element.shadowRoot) {
@@ -255,18 +338,21 @@ async function capture({ locale, theme }) {
         }
         return null;
       };
-      const node = visit(document);
-      if (!node)
+      const line = visit(document);
+      if (!line)
         return { selectable: false, hostBackground: null, hostChannels: null };
+      const root = line.getRootNode();
       const range = document.createRange();
-      range.selectNodeContents(node);
-      const selection = window.getSelection();
+      range.selectNodeContents(line);
+      const selection =
+        root instanceof ShadowRoot && typeof root.getSelection === "function"
+          ? root.getSelection()
+          : window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
       const selected = selection?.toString() ?? "";
       selection?.removeAllRanges();
-      const root = node.getRootNode();
-      const host = root instanceof ShadowRoot ? root.host : node.parentElement;
+      const host = root instanceof ShadowRoot ? root.host : line;
       const background = host ? getComputedStyle(host).backgroundColor : null;
       const canvas = document.createElement("canvas");
       canvas.width = 1;
@@ -276,21 +362,73 @@ async function capture({ locale, theme }) {
         context.fillStyle = background;
         context.fillRect(0, 0, 1, 1);
       }
+      const hostChannels = context && background
+        ? Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3))
+        : null;
       return {
         selectable: selected.includes("export type KeyHint"),
         hostBackground: background,
-        hostChannels:
-          context && background
-            ? (() => {
-                const channels = context.getImageData(0, 0, 1, 1).data;
-                return [channels[0], channels[1], channels[2]];
-              })()
-            : null,
+        hostChannels,
       };
     });
     if (!diffInspection.selectable) {
       throw new Error(
         `${locale}/${theme} — diff code text cannot be selected and copied.`,
+      );
+    }
+    await page.waitForTimeout(400);
+    const renderedIdentifier = await page.evaluate(() => {
+      const visit = (root) => {
+        for (const element of root.querySelectorAll("*")) {
+          if (element.shadowRoot) {
+            const found = visit(element.shadowRoot);
+            if (found) return found;
+          }
+          if (
+            element.hasAttribute("data-line") &&
+            element.textContent?.trim() === "id: string;"
+          ) {
+            return element;
+          }
+        }
+        return null;
+      };
+      const line = visit(document);
+      if (!line) return null;
+      const root = line.getRootNode();
+      const identifierNode = [...line.childNodes].find(
+        (child) => child.textContent?.trim().startsWith("id:") === true,
+      );
+      const element = identifierNode instanceof Element ? identifierNode : line;
+      const color = getComputedStyle(element).webkitTextFillColor;
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (context) {
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return {
+        color,
+        colorScheme:
+          root instanceof ShadowRoot
+            ? getComputedStyle(root.host).colorScheme
+            : null,
+        componentScheme: document
+          .querySelector('[data-testid="pr-diff-view"]')
+          ?.getAttribute("data-color-scheme"),
+        channels: context
+          ? Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3))
+          : null,
+      };
+    });
+    if (
+      renderedIdentifier?.colorScheme !== theme ||
+      renderedIdentifier.componentScheme !== theme
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the diff renderer is using ${renderedIdentifier?.colorScheme ?? "no"} color scheme.`,
       );
     }
     if (theme === "dark") {
@@ -303,10 +441,17 @@ async function capture({ locale, theme }) {
           `${locale}/${theme} — the diff shadow surface is not dark (${diffInspection.hostBackground}).`,
         );
       }
+      if (
+        !renderedIdentifier?.channels ||
+        renderedIdentifier.channels.reduce((sum, channel) => sum + channel, 0) / 3 < 150
+      ) {
+        throw new Error(
+          `${locale}/${theme} — unstyled diff identifiers are unreadable (${renderedIdentifier?.color}).`,
+        );
+      }
     }
 
     await page.mouse.move(120, 60);
-    await page.waitForTimeout(400);
 
     const check = await page.evaluate(
       ({ files, totals }) => {
