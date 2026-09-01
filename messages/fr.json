@@ -3,7 +3,7 @@
     "title": "Carnet de tâches",
     "srDescription": "Votre carnet de tâches personnel.",
     "open": "Carnet de tâches",
-    "openAria": "Ouvrir le carnet de tâches (G puis N)",
+    "openAria": "Ouvrir le carnet de tâches ({shortcut})",
     "tasksLeft": "{count, plural, one {# tâche à faire} other {# tâches à faire}}",
     "homeOpen": "Ouvrir le carnet",
     "placeholder": "Écrivez, ou tapez « / » pour les commandes…",

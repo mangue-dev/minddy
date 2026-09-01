@@ -1,5 +1,5 @@
 /**
- * scratchpad — Camille's task notebook, opened by G then N.
+ * scratchpad — Camille's task notebook, opened by Mod+Shift+N.
  *
  * See `intent.md`, especially for the window: it is the only capture that does not
  * does not take 1447 × 1085, because the modal is 90vw × 90vh when its content
@@ -33,8 +33,9 @@ async function capture({ locale, theme }) {
 
     // The shortcut that the landing quotes verbatim. We hit it on a board
     // stabilized, before any open surface: nothing to lose on the keyboard.
-    await page.keyboard.press("g");
-    await page.keyboard.press("n");
+    await page.keyboard.press(
+      process.platform === "darwin" ? "Meta+Shift+N" : "Control+Shift+N",
+    );
 
     const modal = page.getByRole("dialog").first();
     await modal.waitFor({ state: "visible", timeout: 10_000 });

@@ -39,7 +39,11 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "nav.agents", labelKey: "navAgents", keys: [["G"], ["J"]] },
       { id: "nav.routines", labelKey: "navRoutines", keys: [["G"], ["U"]] },
       { id: "nav.assistant", labelKey: "navAssistant", keys: [["G"], ["A"]] },
-      { id: "nav.notes", labelKey: "navNotes", keys: [["G"], ["N"]] },
+      {
+        id: "nav.notes",
+        labelKey: "navNotes",
+        keys: [["mod", "⇧", "N"]],
+      },
       { id: "nav.allIssues", labelKey: "navAllIssues", keys: [["G"], ["B"]] },
       { id: "nav.myIssues", labelKey: "navMyIssues", keys: [["G"], ["M"]] },
     ],
