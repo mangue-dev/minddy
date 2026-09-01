@@ -579,6 +579,19 @@ export async function handleControlPlaneRequest(opts: {
     return ok();
   }
 
+  if (method === "POST" && surface === "/heartbeat") {
+    const stamped = await stampRunResult(runId, {
+      last_activity_at: new Date().toISOString(),
+    });
+    if (stamped.failed) {
+      return { status: 503, body: { error: "heartbeat failed — retry" } };
+    }
+    if (!stamped.run) {
+      return { status: 409, body: { error: "run is no longer running" } };
+    }
+    return ok();
+  }
+
   if (method === "POST" && surface === "/diff") {
     if (!opts.local)
       return forbidden("local diff requires a local execution token");

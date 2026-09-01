@@ -238,6 +238,9 @@ export const ORPHAN_SETTLE_MS = 10_000;
  */
 export const SUPERVISOR_TURN_SOFT_DEADLINE_MS = 12 * 60 * 60_000;
 
+/** Protect the shared OpenCode process and sandbox from heavy tool-call bursts. */
+export const MAX_PARALLEL_SHELL_COMMANDS = 2;
+
 /**
  * THE OPENCODE STATUS BETWEEN TWO TOURS, carried by the checkpoint.
  *
@@ -1334,6 +1337,8 @@ export async function runOpencodeTurn(
       null;
     /** The non-deposit files already announced in the thread — one per turn, not one per access. */
     const outsideDirs = new Set<string>();
+    const pendingShellCalls = new Set<string>();
+    const activeShellCalls = new Set<string>();
     /**
      * ONE CUT THAT WE REQUESTED, and only one — the flag is CONSUMED.
      *
@@ -1510,6 +1515,13 @@ export async function runOpencodeTurn(
     const maybeSaveCheckpoint = async (): Promise<void> => {
       if (now() - lastSaveAt < SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS) return;
       lastSaveAt = now();
+      // Prove liveness before touching OpenCode. Checkpoint construction reads
+      // the OpenCode journal and can fail or time out independently; neither
+      // outcome should make a healthy, long-running supervisor look dead.
+      if (!(await cp.heartbeat())) {
+        runClosed = true;
+        return;
+      }
       try {
         const opencode = await syncJournal();
         // `lastFilesSha` remains at the start: nothing is pushed before the end
@@ -1952,6 +1964,30 @@ export async function runOpencodeTurn(
               job.layout.repoDir,
             );
           }
+          if (
+            out.permission.permission === "bash" &&
+            verdict.reply === "once" &&
+            out.permission.callId
+          ) {
+            const callId = out.permission.callId;
+            const alreadyCounted =
+              pendingShellCalls.has(callId) || activeShellCalls.has(callId);
+            if (
+              !alreadyCounted &&
+              pendingShellCalls.size + activeShellCalls.size >=
+                MAX_PARALLEL_SHELL_COMMANDS
+            ) {
+              verdict = {
+                reply: "reject",
+                reason: "shell_concurrency_limit",
+                message:
+                  `At most ${MAX_PARALLEL_SHELL_COMMANDS} shell commands may run in parallel. ` +
+                  "Wait for the current commands to finish, then retry this one.",
+              };
+            } else if (!alreadyCounted) {
+              pendingShellCalls.add(callId);
+            }
+          }
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
           }
@@ -2129,6 +2165,16 @@ export async function runOpencodeTurn(
            */
           if (event.payload.name === "update_plan") continue;
           if (event.type === "tool_call" && !child) toolsSeen += 1;
+          if (event.payload.name === "run_command") {
+            const callId = String(event.payload.id ?? "");
+            if (event.type === "tool_call" && pendingShellCalls.delete(callId)) {
+              activeShellCalls.add(callId);
+            }
+            if (event.type === "tool_result") {
+              pendingShellCalls.delete(callId);
+              activeShellCalls.delete(callId);
+            }
+          }
           // A `task` which ends without having made a girl (error, refusal)
           // would make its credit eternally open: the ceiling would close
           // on a tour that no longer delegates anything.
@@ -2389,6 +2435,10 @@ export async function runOpencodeTurn(
           subagents.finish(childSession);
         }
         if (out.idle && !child) {
+          // An idle session has no running shell tools. Clear any approval whose
+          // tool-result event was lost during an OpenCode permission cascade.
+          pendingShellCalls.clear();
+          activeShellCalls.clear();
           /**
            * THE SAFE BORDER, and the only place from which we speak to the model: the
            * session is idle, history is matched. A steering message

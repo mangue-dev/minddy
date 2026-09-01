@@ -1083,6 +1083,18 @@ describe("turn completion lands exactly once", () => {
 });
 
 describe("le checkpoint périodique fait aussi office de battement de cœur", () => {
+  it("updates liveness without rebuilding or replacing the checkpoint", async () => {
+    const res = await call("POST", "/heartbeat");
+    expect(res.status).toBe(200);
+    expect(h.stamped[0]).toHaveProperty("last_activity_at");
+    expect(h.stamped[0]).not.toHaveProperty("checkpoint");
+  });
+
+  it("tells a heartbeat sender to stop after the run closes", async () => {
+    h.stampReturnsNull = true;
+    expect((await call("POST", "/heartbeat")).status).toBe(409);
+  });
+
   it("horodate l'activité du run à chaque sauvegarde", async () => {
     // This is the only regular signal that a rook that lives in the VM produces, and
     // it is on him that the watchdog decides to question the platform.

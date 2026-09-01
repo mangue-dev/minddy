@@ -53,15 +53,16 @@ export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ runId: string }> };
 
-/** Resumable = everything except `failed` (repo/template bootstrap error). */
+/** Failed turns are resumable only when they retained a checkpoint. */
 const RESUMABLE: AgentRunStatus[] = [
   "queued",
   "running",
   "completed",
+  "failed",
   "canceled",
 ];
 /** Idle/completed statuses that require a restart (re-queue + kick). */
-const RESUME_FROM: AgentRunStatus[] = ["completed", "canceled"];
+const RESUME_FROM: AgentRunStatus[] = ["completed", "failed", "canceled"];
 const MAX_LEN = 4000;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -153,6 +154,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   if (!RESUMABLE.includes(run.status)) {
+    return NextResponse.json(
+      { error: "Run is not resumable" },
+      { status: 409 },
+    );
+  }
+  if (run.status === "failed" && !run.checkpoint) {
     return NextResponse.json(
       { error: "Run is not resumable" },
       { status: 409 },

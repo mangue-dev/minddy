@@ -140,8 +140,9 @@ beforeEach(() => {
 });
 
 describe("reapDeadVmRuns", () => {
-  it("ne touche à RIEN quand le process vit, si silencieux soit-il", async () => {
+  it("keeps a live process running regardless of its age", async () => {
     h.alive = true;
+    h.rows = [{ ...ROW, started_at: agoIso(10 * 60 * 60_000), last_activity_at: agoIso(10 * 60 * 60_000) }];
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(h.probes).toEqual([{ sandbox: "agent-run-1", command: "cmd-42" }]);
     expect(reaped).toBe(0);
@@ -149,21 +150,22 @@ describe("reapDeadVmRuns", () => {
     expect(h.events).toHaveLength(0);
   });
 
-  it("ne touche à RIEN quand la plateforme ne sait pas répondre", async () => {
+  it("allows a short platform probe outage", async () => {
     // microVM not found, session expired, API down. Concluding here would put
     // to the rest of the towers in full health, on the sole faith of silence.
     h.alive = null;
+    h.rows = [{ ...ROW, started_at: agoIso(10 * 60_000), last_activity_at: agoIso(10 * 60_000) }];
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(0);
     expect(h.stamped).toHaveLength(0);
   });
 
-  it("sur un process MORT : la ligne repose, et le fil le dit", async () => {
+  it("marks a dead process as failed and reports it in the thread", async () => {
     h.alive = false;
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(1);
     expect(h.stamped[0].fields).toMatchObject({
-      status: "completed",
+      status: "failed",
       loop_command_id: null,
     });
     expect(h.events[0]).toMatchObject({ runId: "run-1", type: "error" });
@@ -287,7 +289,7 @@ describe("reapDeadVmRuns", () => {
     expect(h.compute).toHaveLength(0);
   });
 
-  it("sans identifiant de commande, il n'interroge rien — mais il finit par conclure", async () => {
+  it("fails a run that never acquired a command identifier", async () => {
     // `startVmLoop` writes this identifier at the end of boot (~22 s). One line
     // which still does not have it after a quarter of an hour is a dead function
     // between the claim and the launch: there is no process to probe, and there is no
@@ -297,7 +299,7 @@ describe("reapDeadVmRuns", () => {
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(h.probes).toHaveLength(0);
     expect(reaped).toBe(1);
-    expect(h.stamped[0].fields).toMatchObject({ status: "completed" });
+    expect(h.stamped[0].fields).toMatchObject({ status: "failed" });
   });
 
   it("laisse un amorçage EN COURS tranquille", async () => {
@@ -310,22 +312,20 @@ describe("reapDeadVmRuns", () => {
     expect(reaped).toBe(0);
   });
 
-  it("l'ignorance ne dure pas TOUJOURS : au bout de deux heures, elle vaut décès", async () => {
+  it("recovers a cloud run after fifteen minutes without any liveness signal", async () => {
     // A destroyed microVM responds “not found” on each pass, so `null`,
     // so nothing: the run remained `running` until a human deleted it
     // base. What was missing was not a bolder verdict, it was a milestone.
     h.alive = null;
-    h.rows = [{ ...ROW, started_at: agoIso(3 * 60 * 60_000), last_activity_at: agoIso(3 * 60 * 60_000) }];
+    h.rows = [{ ...ROW, started_at: agoIso(16 * 60_000), last_activity_at: agoIso(16 * 60_000) }];
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(1);
     expect(h.events[0].payload.code).toBe("turnLost");
   });
 
-  it("mais elle dure assez pour un tour qui travaille en silence", async () => {
-    // An hour without a sign, the platform unreachable: a single round can
-    // last this (a never-ending `npm test`). We wait.
+  it("preserves the wider recovery window for disconnected local execution", async () => {
     h.alive = null;
-    h.rows = [{ ...ROW, started_at: agoIso(60 * 60_000), last_activity_at: agoIso(60 * 60_000) }];
+    h.rows = [{ ...ROW, local_exec: true, sandbox_id: null, loop_command_id: null, started_at: agoIso(60 * 60_000), last_activity_at: agoIso(60 * 60_000) }];
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(0);
   });

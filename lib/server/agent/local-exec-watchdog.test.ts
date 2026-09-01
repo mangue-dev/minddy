@@ -130,10 +130,10 @@ describe("un run qui joue sur la machine de l'utilisateur", () => {
     expect(h.probed).toEqual([]);
   });
 
-  it("est conclu au-delà de la borne, comme un run cloud dont l'API se tait", async () => {
+  it("fails beyond the local recovery threshold", async () => {
     const { reaped } = await reapDeadVmRuns(fakeService([localRow(180)]));
     expect(reaped).toBe(1);
-    expect(h.stamped[0]?.fields.status).toBe("completed");
+    expect(h.stamped[0]?.fields.status).toBe("failed");
     // The thread SAYS so — that's what distinguishes "the agent stopped and that's it"
     // why” of a conversation that no longer responds.
     expect(h.events).toEqual([{ runId: RUN_ID, type: "error" }]);
@@ -146,12 +146,12 @@ describe("un run qui joue sur la machine de l'utilisateur", () => {
     expect(h.computeLines).toEqual([]);
   });
 
-  it("laisse intacte la borne d'amorçage d'une microVM sans commande", async () => {
+  it("keeps the boot threshold for a cloud VM without a command", async () => {
     // The “never launched” branch keeps its meaning where it has one: a function
     // dead between the claim and the launch, the initiation of which lasts twenty seconds.
     const cloud = { ...localRow(20), local_exec: false };
     await reapDeadVmRuns(fakeService([cloud]));
-    expect(h.stamped[0]?.fields.status).toBe("completed");
+    expect(h.stamped[0]?.fields.status).toBe("failed");
     expect(h.computeLines).toHaveLength(1);
   });
 });

@@ -5,6 +5,9 @@ import { canonicalSql, readMigration } from "@/test/sql-migrations";
 const sql = canonicalSql(
   readMigration("20270106430000_atomic_agent_resume_budget.sql"),
 );
+const failedResumeSql = canonicalSql(
+  readMigration("20270106500000_resume_failed_agent_checkpoint.sql"),
+);
 
 describe("atomic agent resume budget migration", () => {
   it("serializes the reservation before re-queuing an inactive run", () => {
@@ -19,5 +22,14 @@ describe("atomic agent resume budget migration", () => {
   it("replaces the stale per-run reservation with the newly granted amount", () => {
     expect(sql).toContain("managed_budget_usd = v_granted");
     expect(sql).toContain("'state', 'no_budget'");
+  });
+
+  it("resumes failed turns only when a checkpoint survived", () => {
+    expect(failedResumeSql).toContain(
+      "v_run.status not in ('completed', 'failed', 'canceled')",
+    );
+    expect(failedResumeSql).toContain(
+      "v_run.status = 'failed' and v_run.checkpoint is null",
+    );
   });
 });
