@@ -321,10 +321,11 @@ export const REVIEW_COMMENTS = [
     id: 9101,
     body: "Please keep the shortcut type next to the action contract so every new action declares its own hint.",
     path: "lib/palette/actions.ts",
-    line: 27,
+    line: null,
     original_line: 27,
     side: "RIGHT",
     start_line: null,
+    original_start_line: 26,
     start_side: null,
     in_reply_to_id: null,
     review_id: 9201,
@@ -341,6 +342,7 @@ export const REVIEW_THREADS = [
     threadId: "PRRT_demo_9101",
     resolved: false,
     resolvedBy: null,
+    outdated: true,
   },
 ];
 

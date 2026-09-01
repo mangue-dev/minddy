@@ -375,6 +375,10 @@ async function capture({ locale, theme }) {
       .getByText("export type KeyHint", { exact: false })
       .first()
       .waitFor({ state: "visible", timeout: 15_000 });
+    await page
+      .getByTestId("pr-activity-review-threads")
+      .getByText("One key, optionally behind a modifier", { exact: false })
+      .waitFor({ state: "visible", timeout: 15_000 });
     const embeddedSelection = await page.evaluate(() => {
       for (const host of document.querySelectorAll(".diff-selectable *")) {
         const root = host.shadowRoot;
@@ -415,6 +419,8 @@ async function capture({ locale, theme }) {
       const botAvatar = reviewItem?.querySelector('[data-testid="pr-activity-marker"] img');
       const botAvatarBox = botAvatar?.getBoundingClientRect();
       const hunkHeader = reviewThreads?.querySelector('[data-testid="pr-hunk-header"]');
+      const outdatedBadge = hunkHeader?.querySelector('[data-testid="pr-hunk-outdated"]');
+      const hunkLineLabel = reviewThreads?.querySelector('[data-testid="pr-hunk-line-label"]');
       const plainThread = reviewThreads?.querySelector(
         '[data-testid="review-thread-card"][data-variant="plain"]',
       );
@@ -483,6 +489,9 @@ async function capture({ locale, theme }) {
         botAvatarRadius: botAvatar ? Number.parseFloat(getComputedStyle(botAvatar).borderRadius) : null,
         botAvatarWidth: botAvatarBox?.width ?? null,
         hunkHeaderHeight: hunkHeader?.getBoundingClientRect().height ?? null,
+        hunkHeaderText: hunkHeader?.textContent?.replace(/\s+/g, " ").trim() ?? null,
+        hunkLineLabel: hunkLineLabel?.textContent?.replace(/\s+/g, " ").trim() ?? null,
+        outdatedBadge: outdatedBadge ? 1 : 0,
         commentBodyLoginDelta:
           commentLogin && commentBodyContent
             ? Math.abs(
@@ -558,6 +567,12 @@ async function capture({ locale, theme }) {
       activityLayout.botAvatarRadius >= activityLayout.botAvatarWidth / 2 ||
       activityLayout.hunkHeaderHeight == null ||
       activityLayout.hunkHeaderHeight < 36 ||
+      activityLayout.outdatedBadge !== 1 ||
+      !activityLayout.hunkHeaderText?.startsWith("lib/palette/actions.ts") ||
+      activityLayout.hunkHeaderText.includes("26") ||
+      activityLayout.hunkHeaderText.includes("27") ||
+      !activityLayout.hunkLineLabel?.includes("26") ||
+      !activityLayout.hunkLineLabel?.includes("27") ||
       activityLayout.commentBodyLoginDelta == null ||
       activityLayout.commentBodyLoginDelta > 0.5 ||
       activityLayout.replyAvatarWidth !== 20 ||
@@ -580,6 +595,25 @@ async function capture({ locale, theme }) {
         `${locale}/${theme} — the activity hierarchy is not a single avatar rail with flat review threads: ${JSON.stringify(activityLayout)}.`,
       );
     }
+    const outdatedBadge = page.getByTestId("pr-hunk-outdated").first();
+    await outdatedBadge.hover();
+    const outdatedTooltip = page.getByRole("tooltip");
+    await outdatedTooltip.waitFor({ state: "visible" });
+    const tooltipText = (await outdatedTooltip.textContent())?.trim() ?? "";
+    const expectedTooltip = {
+      de: "Der referenzierte Code wurde nach dem Veröffentlichen dieses Kommentars geändert. Daher bezieht sich dieser Thread nicht mehr auf den aktuellen Diff.",
+      en: "The referenced code changed after this comment was posted, so this thread no longer applies to the current diff.",
+      es: "El código de referencia cambió después de publicar este comentario, por lo que este hilo ya no corresponde al diff actual.",
+      fr: "Le code référencé a changé après la publication de ce commentaire. Ce fil ne correspond donc plus au diff actuel.",
+      it: "Il codice di riferimento è cambiato dopo la pubblicazione di questo commento, quindi la discussione non si riferisce più al diff attuale.",
+      "pt-BR": "O código referenciado mudou depois que este comentário foi publicado. Por isso, esta discussão não corresponde mais ao diff atual.",
+    }[locale];
+    if (tooltipText !== expectedTooltip) {
+      throw new Error(
+        `${locale}/${theme} — outdated review tooltip is missing or inaccurate: ${tooltipText}`,
+      );
+    }
+    await page.mouse.move(0, 0);
     const activityTimeline = page.getByTestId("pr-activity-timeline");
     await activityTimeline.evaluate((timeline) => {
       const state = { childListMutations: 0, observer: null };

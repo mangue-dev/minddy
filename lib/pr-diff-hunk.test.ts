@@ -79,4 +79,43 @@ describe("hunkPatch", () => {
     expect(hunkPatch("a.ts", "pas un hunk du tout")).toBe("");
     expect(hunkPatch("a.ts", "@@ -1,0 +1,0 @@")).toBe("");
   });
+
+  it("keeps every line in a multi-line review range instead of only its end", () => {
+    const range = [
+      "@@ -233,12 +233,12 @@",
+      " context 233",
+      " context 234",
+      " context 235",
+      " selected 236",
+      " selected 237",
+      " selected 238",
+      " selected 239",
+      " selected 240",
+      " selected 241",
+      " selected 242",
+      " selected 243",
+      " selected 244",
+    ].join("\n");
+
+    const patch = hunkPatch("a.ts", range, 4, {
+      startLine: 236,
+      endLine: 244,
+      side: "RIGHT",
+    });
+
+    expect(patch).toContain(" selected 236");
+    expect(patch).toContain(" selected 244");
+    expect(patch.split("\n")[3]).toBe("@@ -233,12 +233,12 @@");
+  });
+
+  it("keeps the whole hunk when maxLines is zero, even with a focused range", () => {
+    const patch = hunkPatch("a.ts", HUNK, 0, {
+      startLine: 12,
+      endLine: 13,
+      side: "RIGHT",
+    });
+
+    expect(patch).toContain("   const a = 1;");
+    expect(patch).toContain("+  return a + b + c;");
+  });
 });

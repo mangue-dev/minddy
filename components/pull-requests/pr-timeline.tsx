@@ -43,6 +43,7 @@ import {
 } from "@/components/pull-requests/pr-review-comments";
 import {
   displayLineOf,
+  displayStartLineOf,
   groupReviewThreads,
   type ReviewThreadState,
 } from "@/lib/pr-review-threads";
@@ -403,6 +404,9 @@ export function ReviewCommentBlock({
         <PrHunk
           path={comment.path}
           line={displayLineOf(comment)}
+          startLine={displayStartLineOf(comment)}
+          side={comment.start_side ?? comment.side}
+          outdated={thread.resolution?.outdated ?? comment.line == null}
           diffHunk={comment.diff_hunk}
           className="pr-diff-view-inset border-b border-border bg-muted/15"
           headerClassName="py-2.5"

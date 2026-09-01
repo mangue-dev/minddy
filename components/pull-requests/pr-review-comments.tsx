@@ -35,7 +35,7 @@ import {
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
 import { usePrEndpoint, usePrReplyingUser } from "@/lib/pr-endpoint-context";
-import { displayLineOf } from "@/lib/pr-review-threads";
+import { displayLineOf, displayStartLineOf } from "@/lib/pr-review-threads";
 import {
   groupReactionsByComment,
   REVIEW_REACTIONS,
@@ -826,6 +826,9 @@ export function StaleThreads({
                 <PrHunk
                   path={thread.root.path}
                   line={line}
+                  startLine={displayStartLineOf(thread.root)}
+                  side={thread.root.start_side ?? thread.root.side}
+                  outdated={thread.resolution?.outdated ?? thread.root.line == null}
                   diffHunk={thread.root.diff_hunk}
                   maxLines={0}
                   className="rounded-md border border-border"

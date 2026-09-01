@@ -1284,6 +1284,7 @@ function toReviewComment(
     // GitLab anchors a note on ONE line (`old_line`/`new_line`): no range
     // to reread, and the UI does not offer any on this side either (MIN-181).
     start_line: null,
+    original_start_line: null,
     start_side: null,
     in_reply_to_id: rootId,
     // No review to attach this comment to: GitLab has no subject
@@ -1377,6 +1378,7 @@ export async function listMergeRequestDiffThreads(opts: {
       threadId: d.id,
       resolved: !!root.resolved,
       resolvedBy: root.resolved_by?.username ?? null,
+      outdated: lineOf(root.position).line == null && lineOf(root.original_position).line != null,
     });
   }
   return states;

@@ -225,6 +225,8 @@ export interface PullRequestReviewComment {
       remark made on lines 6 to 15 is reread as a remark on the
       15: the anchor is right, the beach has disappeared. */
   start_line: number | null;
+  /** First line at the original commit, retained after the thread becomes outdated. */
+  original_start_line: number | null;
   start_side: "LEFT" | "RIGHT" | null;
   /** Thread root (GitHub standardizes: replying to a reply points to the root). */
   in_reply_to_id: number | null;
@@ -1581,6 +1583,7 @@ interface RawReviewComment extends RawComment {
   original_line?: number | null;
   side?: string | null;
   start_line?: number | null;
+  original_start_line?: number | null;
   start_side?: string | null;
   in_reply_to_id?: number | null;
   diff_hunk?: string;
@@ -1600,6 +1603,7 @@ function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
     // 15 returns from the forge as a commentary on 15 — it is, in the sense
     // of the anchor, but the screen would no longer say anything about the beach.
     start_line: c.start_line ?? null,
+    original_start_line: c.original_start_line ?? null,
     start_side: c.start_side === "LEFT" ? "LEFT" : c.start_side === "RIGHT" ? "RIGHT" : null,
     in_reply_to_id: c.in_reply_to_id ?? null,
     review_id: c.pull_request_review_id ?? null,
@@ -1728,7 +1732,9 @@ interface RawReviewThreads {
           id?: string;
           isResolved?: boolean;
           resolvedBy?: { login?: string } | null;
-          comments?: { nodes?: Array<{ databaseId?: number | null }> };
+          comments?: {
+            nodes?: Array<{ databaseId?: number | null; outdated?: boolean }>;
+          };
         } | null>;
       };
     } | null;
@@ -1761,7 +1767,7 @@ export async function listPullRequestReviewThreads(opts: {
       pullRequest(number:$number){
         reviewThreads(first:100,after:$cursor){
           pageInfo{hasNextPage endCursor}
-          nodes{id isResolved resolvedBy{login} comments(first:1){nodes{databaseId}}}
+          nodes{id isResolved resolvedBy{login} comments(first:1){nodes{databaseId outdated}}}
         }
       }
     }
@@ -1778,7 +1784,8 @@ export async function listPullRequestReviewThreads(opts: {
     });
     const threads = data.repository?.pullRequest?.reviewThreads;
     for (const node of threads?.nodes ?? []) {
-      const rootCommentId = node?.comments?.nodes?.[0]?.databaseId;
+      const root = node?.comments?.nodes?.[0];
+      const rootCommentId = root?.databaseId;
       // A thread without a node id or without a readable root cannot be matched to anything: we
       // drop it rather than invent a key.
       if (!node?.id || rootCommentId == null) continue;
@@ -1787,6 +1794,7 @@ export async function listPullRequestReviewThreads(opts: {
         threadId: node.id,
         resolved: !!node.isResolved,
         resolvedBy: node.resolvedBy?.login ?? null,
+        outdated: !!root?.outdated,
       });
     }
     if (!threads?.pageInfo?.hasNextPage || !threads.pageInfo.endCursor) break;

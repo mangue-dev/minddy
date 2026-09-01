@@ -375,7 +375,9 @@ async function readPullRequest(
         line: thread.root.line,
         original_line: thread.root.original_line,
         side: thread.root.side,
-        outdated: thread.root.line == null,
+        start_line: thread.root.start_line,
+        original_start_line: thread.root.original_start_line,
+        outdated: thread.resolution?.outdated ?? thread.root.line == null,
         resolved: !!thread.resolution?.resolved,
         url: thread.root.html_url,
         comments: thread.comments.map((c) => ({

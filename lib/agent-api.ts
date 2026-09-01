@@ -1179,6 +1179,8 @@ export interface PullRequestReviewComment {
       the last. `null` for a single-line remark, and always
       `null` on the GitLab side, where a note is anchored on a line. */
   start_line: number | null;
+  /** First line at the original commit, retained when GitHub marks the thread outdated. */
+  original_start_line: number | null;
   start_side: "LEFT" | "RIGHT" | null;
   /** Root of the thread, or null if this comment IS the root. */
   in_reply_to_id: number | null;

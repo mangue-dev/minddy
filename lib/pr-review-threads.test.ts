@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PullRequestReviewComment } from "@/lib/agent-api";
 import {
   displayLineOf,
+  displayStartLineOf,
   groupReviewThreads,
   type ReviewThreadState,
 } from "@/lib/pr-review-threads";
@@ -20,6 +21,7 @@ function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestRevie
     original_line: 150,
     side: "RIGHT",
     start_line: null,
+    original_start_line: null,
     start_side: null,
     in_reply_to_id: null,
     review_id: null,
@@ -148,6 +150,14 @@ describe("groupReviewThreads — resolution state", () => {
     expect(threads[0].resolution).toBeUndefined();
   });
 
+  it("preserves the provider's explicit outdated state on the matched thread", () => {
+    const [thread] = groupReviewThreads(
+      [comment({ id: 10 })],
+      [state({ outdated: true })],
+    );
+    expect(thread.resolution?.outdated).toBe(true);
+  });
+
   it("suit la racine PROMUE d'un fil tronqué par la pagination", () => {
     // The orphan response becomes its own root: it is this id which
     // pairs, otherwise a cut wire would lose its resolution state.
@@ -164,5 +174,16 @@ describe("displayLineOf", () => {
   it("falls back to original_line when GitHub removed line", () => {
     expect(displayLineOf(comment({ line: null, original_line: 42 }))).toBe(42);
     expect(displayLineOf(comment({ line: 7, original_line: 42 }))).toBe(7);
+  });
+});
+
+describe("displayStartLineOf", () => {
+  it("falls back to original_start_line for an outdated multi-line comment", () => {
+    expect(
+      displayStartLineOf({ start_line: null, original_start_line: 236 }),
+    ).toBe(236);
+    expect(
+      displayStartLineOf({ start_line: 12, original_start_line: 236 }),
+    ).toBe(12);
   });
 });
