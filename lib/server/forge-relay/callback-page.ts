@@ -1,13 +1,7 @@
 import "server-only";
 
-function escapeHtmlText(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 /** Renders the small relay callback page without accepting an HTML fragment. */
 export function relayCallbackPage(input: {
@@ -16,17 +10,29 @@ export function relayCallbackPage(input: {
   status: number;
   returnUrl?: URL;
 }): Response {
-  const title = escapeHtmlText(input.title);
-  const detail = escapeHtmlText(input.detail);
-  const returnUrl = input.returnUrl ? escapeHtmlText(input.returnUrl.toString()) : null;
-  const continuation = returnUrl
-    ? `<p><a href="${returnUrl}">Continue if nothing happens.</a></p>
-       <meta http-equiv="refresh" content="1;url=${returnUrl}">`
-    : "";
+  const returnUrl = input.returnUrl?.toString();
+  const document = createElement(
+    "html",
+    null,
+    createElement(
+      "body",
+      { style: { fontFamily: "system-ui", maxWidth: "32rem", margin: "4rem auto" } },
+      createElement("h1", null, input.title),
+      createElement("p", null, input.detail),
+      returnUrl
+        ? createElement(
+            "p",
+            null,
+            createElement("a", { href: returnUrl }, "Continue if nothing happens."),
+          )
+        : null,
+      returnUrl
+        ? createElement("meta", { httpEquiv: "refresh", content: `1;url=${returnUrl}` })
+        : null,
+    ),
+  );
   return new Response(
-    `<!doctype html><html><body style="font-family:system-ui;max-width:32rem;margin:4rem auto">
-      <h1>${title}</h1><p>${detail}</p>${continuation}
-    </body></html>`,
+    `<!doctype html>${renderToStaticMarkup(document)}`,
     { status: input.status, headers: { "content-type": "text/html; charset=utf-8" } },
   );
 }

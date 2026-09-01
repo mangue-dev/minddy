@@ -213,8 +213,35 @@ export function isMissingCustomerError(error: unknown): boolean {
   );
 }
 
+type StripeRequestTarget =
+  | { resource: "customers" }
+  | { resource: "checkoutSessions" }
+  | { resource: "portalSessions" }
+  | { resource: "subscription"; subscriptionId: string }
+  | { resource: "balanceTransactions"; query: URLSearchParams };
+
+function stripeRequestUrl(target: StripeRequestTarget): URL {
+  switch (target.resource) {
+    case "customers":
+      return new URL("https://api.stripe.com/v1/customers");
+    case "checkoutSessions":
+      return new URL("https://api.stripe.com/v1/checkout/sessions");
+    case "portalSessions":
+      return new URL("https://api.stripe.com/v1/billing_portal/sessions");
+    case "subscription":
+      return new URL(
+        `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(target.subscriptionId)}`,
+      );
+    case "balanceTransactions": {
+      const url = new URL("https://api.stripe.com/v1/balance_transactions");
+      url.search = target.query.toString();
+      return url;
+    }
+  }
+}
+
 async function stripeRequest<T>(
-  path: string,
+  target: StripeRequestTarget,
   body?: URLSearchParams,
   /** Forced only where the verb is not deduced from the body (DELETE). */
   method?: "GET" | "POST" | "DELETE"
@@ -228,10 +255,7 @@ async function stripeRequest<T>(
       "Managed Stripe billing is disabled or incomplete; enable MINDDY_MANAGED_BILLING=1 with the full Stripe configuration.",
     );
   }
-  const url = new URL(path, "https://api.stripe.com");
-  if (url.origin !== "https://api.stripe.com" || !url.pathname.startsWith("/v1/")) {
-    throw new Error("Stripe API path escaped the configured origin.");
-  }
+  const url = stripeRequestUrl(target);
   const response = await fetch(url, {
     method: method ?? (body ? "POST" : "GET"),
     headers: {
@@ -246,7 +270,7 @@ async function stripeRequest<T>(
   };
   if (!response.ok) {
     throw new StripeApiError(
-      data.error?.message || `Stripe request failed: ${path}`,
+      data.error?.message || `Stripe request failed: ${url.pathname}`,
       data.error?.code ?? null,
       data.error?.param ?? null,
       response.status
@@ -262,7 +286,7 @@ export async function createStripeCustomer(params: {
   const body = new URLSearchParams();
   if (params.email) body.set("email", params.email);
   body.set("metadata[user_id]", params.userId);
-  return stripeRequest<StripeCustomer>("/v1/customers", body);
+  return stripeRequest<StripeCustomer>({ resource: "customers" }, body);
 }
 
 /*
@@ -303,7 +327,7 @@ export async function createStripeCheckoutSession(params: {
   body.set("subscription_data[metadata][user_id]", params.userId);
   body.set("subscription_data[metadata][plan_id]", params.planId);
 
-  return stripeRequest<StripeCheckoutSession>("/v1/checkout/sessions", body);
+  return stripeRequest<StripeCheckoutSession>({ resource: "checkoutSessions" }, body);
 }
 
 export async function createStripePortalSession(params: {
@@ -313,14 +337,14 @@ export async function createStripePortalSession(params: {
   const body = new URLSearchParams();
   body.set("customer", params.customerId);
   body.set("return_url", params.returnUrl);
-  return stripeRequest<StripePortalSession>("/v1/billing_portal/sessions", body);
+  return stripeRequest<StripePortalSession>({ resource: "portalSessions" }, body);
 }
 
 export async function fetchStripeSubscription(
   subscriptionId: string
 ): Promise<StripeSubscription> {
   return stripeRequest<StripeSubscription>(
-    `/v1/subscriptions/${subscriptionId}`
+    { resource: "subscription", subscriptionId },
   );
 }
 
@@ -339,7 +363,7 @@ export async function cancelStripeSubscription(
   subscriptionId: string
 ): Promise<StripeSubscription> {
   return stripeRequest<StripeSubscription>(
-    `/v1/subscriptions/${subscriptionId}`,
+    { resource: "subscription", subscriptionId },
     undefined,
     "DELETE"
   );
@@ -366,7 +390,7 @@ export async function setStripeCancelAtPeriodEnd(
   const body = new URLSearchParams();
   body.set("cancel_at_period_end", cancel ? "true" : "false");
   return stripeRequest<StripeSubscription>(
-    `/v1/subscriptions/${subscriptionId}`,
+    { resource: "subscription", subscriptionId },
     body
   );
 }
@@ -399,7 +423,7 @@ export async function listStripeBalanceTransactions(params: {
 
     const result: StripeList<StripeBalanceTransaction> & { has_more?: boolean } =
       await stripeRequest<StripeList<StripeBalanceTransaction> & { has_more?: boolean }>(
-        `/v1/balance_transactions?${query.toString()}`
+        { resource: "balanceTransactions", query },
       );
 
     transactions.push(...result.data);
