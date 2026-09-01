@@ -115,9 +115,10 @@ The audit verifies repository visibility and merge policy, secret scanning and
 push protection, private vulnerability reporting, Dependabot security updates
 and automated fixes, Actions allowlisting and SHA enforcement, read-only
 workflow tokens, external-contributor approval, CodeQL coverage, the two branch
-rulesets, the solo-compatible release approval, release ref restrictions, and
-the absence of open secret or high/critical dependency and code-scanning
-alerts. It prints no secret values.
+rulesets without exclusions, the sole verified writable production deploy key,
+the solo-compatible release approval, release ref restrictions, and the absence
+of open secret or high/critical dependency and code-scanning alerts. It prints
+no secret values.
 
 ## Verification
 

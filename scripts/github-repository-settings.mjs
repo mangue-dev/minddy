@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 
 const DEFAULT_REPOSITORY = "mangue-dev/minddy";
 const DEFAULT_REVIEWER = "mangue-dev";
+const PRODUCTION_DEPLOY_KEY = "Minddy production promotion";
 const REQUIRED_CHECKS = new Set([
   "Analyze (actions)",
   "Analyze (c-cpp)",
@@ -132,6 +133,7 @@ function verifyRulesets(repository) {
 
   assert(main?.enforcement === "active", "the Protect main ruleset is not active");
   assert(main.conditions.ref_name.include.includes("refs/heads/main"), "main is not targeted");
+  assert(main.conditions.ref_name.exclude.length === 0, "main is excluded from its ruleset");
   assert(main.bypass_actors.length === 0, "main has a bypass actor");
   const mainRules = new Map(main.rules.map((rule) => [rule.type, rule]));
   for (const type of ["deletion", "required_linear_history", "pull_request", "required_status_checks", "non_fast_forward"]) {
@@ -155,6 +157,10 @@ function verifyRulesets(repository) {
     production.conditions.ref_name.include.includes("refs/heads/production"),
     "production is not targeted",
   );
+  assert(
+    production.conditions.ref_name.exclude.length === 0,
+    "production is excluded from its ruleset",
+  );
   const productionRules = new Set(production.rules.map((rule) => rule.type));
   for (const type of ["update", "deletion", "required_linear_history", "non_fast_forward"]) {
     assert(productionRules.has(type), `production is missing the ${type} rule`);
@@ -164,6 +170,13 @@ function verifyRulesets(repository) {
       && production.bypass_actors[0].actor_type === "DeployKey"
       && production.bypass_actors[0].bypass_mode === "always",
     "production is not restricted to the promotion deploy key class",
+  );
+  const writableKeys = api(repository, "repos/{repository}/keys").filter((key) => !key.read_only);
+  assert(
+    writableKeys.length === 1
+      && writableKeys[0].title === PRODUCTION_DEPLOY_KEY
+      && writableKeys[0].verified,
+    `the sole writable deploy key is not the verified ${PRODUCTION_DEPLOY_KEY} key`,
   );
 }
 
@@ -191,7 +204,10 @@ function verify(repository, reviewer) {
   const privateReporting = api(repository, "repos/{repository}/private-vulnerability-reporting");
   assert(privateReporting.enabled, "private vulnerability reporting is disabled");
   const automatedFixes = api(repository, "repos/{repository}/automated-security-fixes");
-  assert(automatedFixes.enabled && !automatedFixes.paused, "Dependabot automated security fixes are disabled or paused");
+  assert(
+    automatedFixes === null || (automatedFixes.enabled && !automatedFixes.paused),
+    "Dependabot automated security fixes are disabled or paused",
+  );
 
   const actions = api(repository, "repos/{repository}/actions/permissions");
   assert(actions.enabled, "GitHub Actions is disabled");
