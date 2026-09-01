@@ -119,6 +119,11 @@ import {
   type ReadinessAction,
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
+import {
+  conversationResolutionTab,
+  findRerunnableChecks,
+  type PullRequestDetailTab,
+} from "@/lib/pr-readiness-actions";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { REPO_PROVIDERS } from "@/lib/repo-providers";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
@@ -129,6 +134,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import {
   defaultMergeCommitMessage,
+  shouldSubmitCustomMergeMessage,
   type MergeCommitMessageDraft,
 } from "@/lib/pr-merge-message";
 import { LocalIssueRunConfirmation } from "@/components/agent/local-issue-run-confirmation";
@@ -660,7 +666,7 @@ export function PrDetail({
   const [aiReviewReasoningOverride, setAiReviewReasoningOverride] =
     useState<ReasoningLevel | null>(null);
   const [startingAiReview, setStartingAiReview] = useState(false);
-  const [tab, setTab] = useState<"activity" | "commits" | "files">("activity");
+  const [tab, setTab] = useState<PullRequestDetailTab>("activity");
   // Soft fade up and down the feed — the same as the agent conversation and
   // than the columns of the board: it only lights up on the side where there REMAINS some
   // something to see, what a fixed border cannot say.
@@ -885,7 +891,7 @@ export function PrDetail({
       return;
     }
     if (blocker.action === "resolve_conversations") {
-      setTab("activity");
+      setTab(conversationResolutionTab(item.provider));
       return;
     }
     setMaintenanceAction(blocker.action);
@@ -894,11 +900,15 @@ export function PrDetail({
         await maintainPullRequestApi(item.prId, "update_branch");
         toast.success(t("branchUpdatedToast"));
       } else if (blocker.action === "rerun_checks") {
-        const check = checks?.checks.find(
-          (candidate) => candidate.state === "failure" && candidate.rerunRef,
+        const rerunnable = findRerunnableChecks(checks?.checks, blocker);
+        if (rerunnable.length === 0) return;
+        await Promise.all(
+          rerunnable.map((check) =>
+            maintainPullRequestApi(item.prId, "rerun_check", {
+              rerunRef: check.rerunRef,
+            }),
+          ),
         );
-        if (!check?.rerunRef) return;
-        await maintainPullRequestApi(item.prId, "rerun_check", { rerunRef: check.rerunRef });
         toast.success(t("checksRerunToast"));
       } else if (blocker.action === "enable_auto_merge") {
         await maintainPullRequestApi(item.prId, "enable_auto_merge");
@@ -933,7 +943,7 @@ export function PrDetail({
     if (blocker.action === "approve") return canComment;
     if (blocker.action === "resolve_conversations") return canWrite;
     if (blocker.action === "rerun_checks") {
-      return !!canWrite && !!checks?.checks.some((check) => check.state === "failure" && check.rerunRef);
+      return !!canWrite && findRerunnableChecks(checks?.checks, blocker).length > 0;
     }
     if (blocker.action === "enable_auto_merge") return !!canWrite;
     return false;
@@ -1706,7 +1716,7 @@ export function PrDetail({
           {/* GitHub style tabs: the thread on one side, the code on the other. */}
           <Tabs
             value={tab}
-            onValueChange={(v) => setTab(v as "activity" | "commits" | "files")}
+            onValueChange={(v) => setTab(v as PullRequestDetailTab)}
           >
             <TabsList variant="line" className={TAB_LIST_DENSE}>
               <TabsTrigger value="activity" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
@@ -1968,12 +1978,20 @@ export function PrDetail({
               onClick={() => {
                 if (!confirmAction) return;
                 if (confirmAction.kind === "merge") {
+                  const customMergeMessage =
+                    mergeCommitDraft &&
+                    shouldSubmitCustomMergeMessage(
+                      item.provider,
+                      mergeCommitDraftEdited,
+                    )
+                      ? mergeCommitDraft
+                      : null;
                   void act("merge", {
                     method: confirmAction.method,
-                    ...(mergeCommitDraft
+                    ...(customMergeMessage
                       ? {
-                          commitTitle: mergeCommitDraft.title.trim(),
-                          commitMessage: mergeCommitDraft.message.trim(),
+                          commitTitle: customMergeMessage.title.trim(),
+                          commitMessage: customMergeMessage.message.trim(),
                         }
                       : {}),
                   });

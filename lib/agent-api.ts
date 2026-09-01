@@ -612,6 +612,9 @@ export interface PullRequestRef {
   mergeabilityReason?: import("./pr-readiness").MergeabilityReason | null;
   mergeFlowActive?: boolean;
   reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  /** Fully rendered GitLab defaults for the merge dialog. */
+  defaultMergeCommitMessage?: string | null;
+  defaultSquashCommitMessage?: string | null;
 }
 
 /** Normalized status of a CI check (MIN-138) — mirror of `lib/server/agent/checks-core.ts`. */

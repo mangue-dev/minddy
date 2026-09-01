@@ -26,6 +26,7 @@ import {
   type AgentLocalDiff,
 } from "./agent-local-diff";
 import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
+import { pullRequestRefetchInterval } from "./pr-readiness-actions";
 
 /** Cache key for agent runs of an issue. */
 export function issueAgentRunsQueryKey(issueId: string) {
@@ -148,10 +149,6 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   };
 }
 
-/** Tracking rate of a CI in progress — a CI is counted in minutes, not in
-    seconds: slower than the diff (7 s) which follows an agent who writes. */
-const CHECKS_POLL_MS = 15_000;
-
 /**
  * PR of a run for the in-app review: metadata, files/patches, CI checks,
  * approvals and merge methods offered by the forge (MIN-138).
@@ -165,8 +162,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     queryKey: ["pull-request", prId],
     queryFn: () => fetchPullRequestApi(prId),
     enabled,
-    refetchInterval: (query) =>
-      query.state.data?.checks?.state === "pending" ? CHECKS_POLL_MS : false,
+    refetchInterval: (query) => pullRequestRefetchInterval(query.state.data),
   });
   return {
     pr: data?.pr ?? null,

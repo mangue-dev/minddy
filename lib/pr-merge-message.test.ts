@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { PullRequestCommit, PullRequestRef } from "./agent-api";
-import { defaultMergeCommitMessage } from "./pr-merge-message";
+import {
+  defaultMergeCommitMessage,
+  shouldSubmitCustomMergeMessage,
+} from "./pr-merge-message";
 import { mapGithubMergePolicy, mapGitlabMergePolicy } from "./pr-readiness";
 
 const pr: PullRequestRef = {
@@ -90,24 +93,44 @@ describe("defaultMergeCommitMessage", () => {
     });
   });
 
-  it("expands GitLab's configured squash template", () => {
+  it("uses GitLab's fully rendered squash default", () => {
     const result = defaultMergeCommitMessage({
       provider: "gitlab",
       method: "squash",
       pullRequest: {
         ...pr,
         url: "https://gitlab.com/mangue-dev/minddy/-/merge_requests/106",
+        defaultSquashCommitMessage:
+          "Make the pull request view autonomous\n\nReviewed-by: Ada",
       },
       commits: [commit("First change")],
-      policy: mapGitlabMergePolicy({
-        squash_commit_template: "%{title}\n\nSee %{local_reference}",
-      }),
+      policy: mapGitlabMergePolicy({}),
     });
 
     expect(result).toEqual({
       title: "Make the pull request view autonomous",
-      message: "See !106",
+      message: "Reviewed-by: Ada",
     });
+  });
+
+  it("defers to GitLab when a rendered default is unavailable", () => {
+    expect(
+      defaultMergeCommitMessage({
+        provider: "gitlab",
+        method: "merge",
+        pullRequest: pr,
+        commits: [commit("First change")],
+        policy: mapGitlabMergePolicy({
+          merge_commit_template: "%{title}\n\n%{approved_by}",
+        }),
+      }),
+    ).toBeNull();
+  });
+
+  it("submits GitLab defaults only after the user edits them", () => {
+    expect(shouldSubmitCustomMergeMessage("gitlab", false)).toBe(false);
+    expect(shouldSubmitCustomMergeMessage("gitlab", true)).toBe(true);
+    expect(shouldSubmitCustomMergeMessage("github", false)).toBe(true);
   });
 
   it("does not show a merge commit editor for GitLab fast-forward merges", () => {

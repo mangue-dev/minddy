@@ -79,6 +79,9 @@ export interface PullRequestRef {
   mergeabilityReason?: MergeabilityReason | null;
   mergeFlowActive?: boolean;
   reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  /** Fully rendered GitLab defaults for the merge dialog. */
+  defaultMergeCommitMessage?: string | null;
+  defaultSquashCommitMessage?: string | null;
 }
 
 /** Verdict of a review, in neutral vocabulary (GitHub: APPROVE / REQUEST_CHANGES / COMMENT). */
@@ -402,6 +405,16 @@ function githubMergeabilityReason(pr: RawPull): MergeabilityReason | null {
   }
 }
 
+export function refineGithubMergeabilityReason(
+  reason: MergeabilityReason | null | undefined,
+  reviewDecision: PullRequestRef["reviewDecision"],
+): MergeabilityReason | null | undefined {
+  if (reason !== "clean" && reason !== "policy") return reason;
+  if (reviewDecision === "CHANGES_REQUESTED") return "changes_requested";
+  if (reviewDecision === "REVIEW_REQUIRED") return "approval_required";
+  return reason;
+}
+
 /** PR open for `head` (run branch), or null. */
 export async function findOpenPullRequest(opts: {
   token: string;
@@ -484,8 +497,10 @@ export async function getPullRequest(opts: {
     ).catch(() => null);
     ref.mergeFlowActive = !!(flow?.node?.mergeQueueEntry || flow?.node?.autoMergeRequest);
     ref.reviewDecision = flow?.node?.reviewDecision ?? null;
-    if (ref.reviewDecision === "CHANGES_REQUESTED") ref.mergeabilityReason = "changes_requested";
-    if (ref.reviewDecision === "REVIEW_REQUIRED") ref.mergeabilityReason = "approval_required";
+    ref.mergeabilityReason = refineGithubMergeabilityReason(
+      ref.mergeabilityReason,
+      ref.reviewDecision,
+    );
   }
   return ref;
 }

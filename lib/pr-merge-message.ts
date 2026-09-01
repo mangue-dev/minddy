@@ -28,49 +28,11 @@ function commitMessages(commits: PullRequestCommit[]): string {
   return commits.map((commit) => commit.message.trim()).filter(Boolean).join("\n\n");
 }
 
-function gitlabReference(pr: PullRequestRef): { local: string; full: string } {
-  const local = `!${pr.number}`;
-  try {
-    const path = new URL(pr.url).pathname.replace(/^\/+|\/+$/g, "");
-    const project = path.split("/-/")[0] ?? "";
-    return { local, full: project ? `${project}${local}` : local };
-  } catch {
-    return { local, full: local };
-  }
-}
-
-function expandGitlabTemplate(
-  template: string,
-  pr: PullRequestRef,
-  commits: PullRequestCommit[],
-): string {
-  const reference = gitlabReference(pr);
-  const first = commits[0]?.message.trim() ?? pr.title ?? "";
-  const firstMultiline = commits.find((commit) => commit.message.includes("\n"));
-  const firstMultilineParts = splitCommitMessage(firstMultiline?.message ?? "");
-  const replacements: Record<string, string> = {
-    source_branch: pr.head ?? "",
-    target_branch: pr.base ?? "",
-    title: pr.title ?? "",
-    description: pr.body ?? "",
-    issues: "",
-    reference: reference.full,
-    local_reference: reference.local,
-    first_commit: first,
-    first_multiline_commit: firstMultiline?.message.trim() ?? pr.title ?? "",
-    first_multiline_commit_description: firstMultilineParts.message,
-    url: pr.url,
-    all_commits: commits.map((commit) => `* ${commit.message.trim()}`).join("\n"),
-  };
-  return template
-    .split("\n")
-    .filter((line) => {
-      const onlyVariable = /^\s*%\{([a-z_]+)\}\s*$/.exec(line);
-      return !onlyVariable || !!replacements[onlyVariable[1] ?? ""];
-    })
-    .join("\n")
-    .replace(/%\{([a-z_]+)\}/g, (match, key: string) => replacements[key] ?? match)
-    .trim();
+export function shouldSubmitCustomMergeMessage(
+  provider: "github" | "gitlab",
+  edited: boolean,
+): boolean {
+  return provider === "github" || edited;
 }
 
 /** Build the same editable defaults the forge derives before creating one commit. */
@@ -86,12 +48,11 @@ export function defaultMergeCommitMessage({
   if (provider === "gitlab") {
     const configured = policy?.commitMessages?.gitlab;
     if (method === "merge" && configured?.mergeCreatesCommit === false) return null;
-    const template =
+    const rendered =
       method === "squash"
-        ? configured?.squashTemplate ?? "%{title}"
-        : configured?.mergeTemplate ??
-          "Merge branch '%{source_branch}' into '%{target_branch}'\n\n%{title}\n\n%{issues}\n\nSee merge request %{reference}";
-    return splitCommitMessage(expandGitlabTemplate(template, pr, commits));
+        ? pr.defaultSquashCommitMessage
+        : pr.defaultMergeCommitMessage;
+    return rendered == null ? null : splitCommitMessage(rendered);
   }
 
   const configured = policy?.commitMessages?.github ?? {

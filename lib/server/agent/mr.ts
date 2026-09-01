@@ -93,6 +93,38 @@ async function glJson<T>(url: string, token: string, init?: RequestInit): Promis
   return data as T;
 }
 
+async function glGraphql<T>(
+  token: string,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const res = await fetch(`${GITLAB_HOST}/api/graphql`, {
+    method: "POST",
+    headers: {
+      ...gitlabHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  const payload = (await res.json()) as {
+    data?: T;
+    errors?: Array<{ message?: string }>;
+  };
+  if (!res.ok) {
+    throw new GitlabApiError(
+      payload.errors?.[0]?.message ?? `GitLab GraphQL error (${res.status})`,
+      res.status,
+    );
+  }
+  if (payload.errors?.length || !payload.data) {
+    throw new GitlabApiError(
+      payload.errors?.[0]?.message ?? "GitLab GraphQL returned no data",
+      422,
+    );
+  }
+  return payload.data;
+}
+
 /**
  * Paginated variant (offset via X-Next-Page), bounded by `maxPages`. `stopWhen`
  * (optional) bypasses the remaining pages as soon as the accumulation is sufficient —
@@ -334,11 +366,31 @@ export async function getMergeRequest(opts: {
   repoFullName: string;
   number: number;
 }): Promise<PullRequestRef> {
-  const mr = await glJson<RawMr>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
-    opts.token,
-  );
-  return toRef(mr);
+  const [mr, defaults] = await Promise.all([
+    glJson<RawMr>(
+      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
+      opts.token,
+    ),
+    glGraphql<{
+      project?: {
+        mergeRequest?: {
+          defaultMergeCommitMessage?: string | null;
+          defaultSquashCommitMessage?: string | null;
+        } | null;
+      } | null;
+    }>(
+      opts.token,
+      "query($projectPath:ID!,$iid:String!){project(fullPath:$projectPath){mergeRequest(iid:$iid){defaultMergeCommitMessage defaultSquashCommitMessage}}}",
+      { projectPath: opts.repoFullName, iid: String(opts.number) },
+    )
+      .then((data) => data.project?.mergeRequest ?? null)
+      .catch(() => null),
+  ]);
+  return {
+    ...toRef(mr),
+    defaultMergeCommitMessage: defaults?.defaultMergeCommitMessage ?? null,
+    defaultSquashCommitMessage: defaults?.defaultSquashCommitMessage ?? null,
+  };
 }
 
 export async function getRepositoryMergePolicy(opts: {
