@@ -77,6 +77,10 @@ export const BOARD_COLUMN_CLASS =
  * fade is now a layer drawn NEXT to the scroller
  * (`components/scroll-fade-edges.tsx`), driven by the `edges` that renders
  * `useScrollFade`: nothing is placed on the content, therefore nothing to re-compose.
+ *
+ * The scroll padding must match the visual padding while snapping is enabled.
+ * Without it, the browser snaps the first column to the scrollport itself on
+ * load, setting `scrollLeft` to 16 or 24 px and consuming the leading gutter.
  */
 export const BOARD_SCROLLER_CLASS =
-  "flex gap-3 overflow-x-auto px-4 after:w-1 after:shrink-0 after:content-[''] snap-x snap-mandatory sm:px-6 sm:after:w-3 wide:after:hidden wide:snap-none";
+  "flex gap-3 overflow-x-auto px-4 scroll-px-4 after:w-1 after:shrink-0 after:content-[''] snap-x snap-mandatory sm:px-6 sm:scroll-px-6 sm:after:w-3 wide:after:hidden wide:snap-none";

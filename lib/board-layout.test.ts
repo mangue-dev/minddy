@@ -181,4 +181,9 @@ describe("board scroller gutter", () => {
     expect(BOARD_SCROLLER_CLASS).toContain("sm:after:w-3");
     expect(BOARD_SCROLLER_CLASS).toContain("wide:after:hidden");
   });
+
+  it("matches scroll snap padding to the responsive visual gutter", () => {
+    expect(BOARD_SCROLLER_CLASS).toContain("px-4 scroll-px-4");
+    expect(BOARD_SCROLLER_CLASS).toContain("sm:px-6 sm:scroll-px-6");
+  });
 });
