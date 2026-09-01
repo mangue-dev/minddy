@@ -44,6 +44,19 @@ afterEach(() => {
 });
 
 describe("le client du plan de contrôle, sur une machine", () => {
+  it("sends a bodyless heartbeat and stops only on a closed run", async () => {
+    const cp = createControlPlaneClient(ORIGIN, () => "token");
+    await expect(cp.heartbeat()).resolves.toBe(true);
+    expect(calls.at(-1)).toMatchObject({
+      url: `${ORIGIN}/api/agent-vm/heartbeat`,
+      headers: { authorization: "Bearer token" },
+    });
+    expect(calls.at(-1)?.headers["content-type"]).toBeUndefined();
+
+    reply = { status: 409, body: { error: "closed" } };
+    await expect(cp.heartbeat()).resolves.toBe(false);
+  });
+
   it("porte le jeton sur une surface ordinaire ET sur le direct", async () => {
     const cp = createControlPlaneClient(ORIGIN, () => "jeton-du-bail");
     await cp.emit("status", { text: "x" });

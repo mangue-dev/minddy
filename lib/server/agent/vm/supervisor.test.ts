@@ -122,6 +122,7 @@ const h = {
   history: [] as Record<string, unknown>[],
   /** Checkpoints saved DURING THE TOUR (the heartbeat). */
   checkpoints: [] as Record<string, unknown>[],
+  heartbeats: 0,
   /** The plans mirrored to the ticket (`update_plan`). */
   plansSynced: [] as Record<string, unknown>[][],
   /** The control plan refuses the save: the run was concluded elsewhere. */
@@ -201,6 +202,10 @@ function cp(): ControlPlaneClient {
     },
     saveCheckpointQuietly: async (checkpoint) => {
       h.checkpoints.push(checkpoint as unknown as Record<string, unknown>);
+      return !h.runClosed;
+    },
+    heartbeat: async () => {
+      h.heartbeats++;
       return !h.runClosed;
     },
     pullSteering: async () => h.steering.splice(0).map((text) => ({ text })),
@@ -542,6 +547,7 @@ beforeEach(() => {
     { aggregate_id: "ses_neuve", seq: 4, type: "message.updated", data: {} },
   ];
   h.checkpoints = [];
+  h.heartbeats = 0;
   h.journal = [];
   h.plansSynced = [];
   h.runClosed = false;
@@ -1161,6 +1167,21 @@ describe("les garde-fous", () => {
     h.extraFrames = [permissionFrame("bash", { command: "npm test" })];
     await run();
     expect(h.permissionReplies).toEqual([{ id: "per_1", reply: "once" }]);
+  });
+
+  it("caps parallel shell command bursts", async () => {
+    h.extraFrames = [
+      permissionFrame("bash", { command: "npm test" }, "call_1", "per_1"),
+      permissionFrame("bash", { command: "npm run typecheck" }, "call_2", "per_2"),
+      permissionFrame("bash", { command: "npm run lint" }, "call_3", "per_3"),
+    ];
+    await run();
+    expect(h.permissionReplies.slice(0, 3).map((reply) => reply.reply)).toEqual([
+      "once",
+      "once",
+      "reject",
+    ]);
+    expect(h.permissionReplies[2].message).toContain("At most 2 shell commands");
   });
 
   it("refuse `git reset --hard` et dit pourquoi AU MODÈLE", async () => {
@@ -1833,6 +1854,7 @@ describe("la sauvegarde périodique", () => {
     h.tick = 130_000;
     await run();
     expect(h.checkpoints.length).toBeGreaterThan(0);
+    expect(h.heartbeats).toBeGreaterThan(0);
     const first = h.checkpoints[0] as { opencode?: { sessionId: string } };
     // What a repeater should reread: the opencode session and its log.
     expect(first.opencode?.sessionId).toBe(PARENT);
@@ -1844,6 +1866,20 @@ describe("la sauvegarde périodique", () => {
     h.tick = 0;
     await run();
     expect(h.checkpoints).toEqual([]);
+  });
+
+  it("heartbeats before journal synchronization can fail", async () => {
+    h.tick = 130_000;
+    await run(
+      {},
+      {},
+      {
+        appendJournal: async () => {
+          throw new Error("journal unavailable");
+        },
+      },
+    );
+    expect(h.heartbeats).toBeGreaterThan(0);
   });
 
   it("n'exporte le journal qu'une fois : la sauvegarde n'en fait pas un doublon", async () => {

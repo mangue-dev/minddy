@@ -168,6 +168,41 @@ describe("visibility — a personal run is not the project run", () => {
   });
 });
 
+describe("GET — resumability", () => {
+  it("exposes a failed run with a checkpoint as resumable without exposing the checkpoint", async () => {
+    getRun.mockResolvedValue({
+      id: RUN,
+      project_id: "proj-1",
+      created_by: "user-1",
+      routine_id: null,
+      chain_id: null,
+      pull_request_id: null,
+      status: "failed",
+      checkpoint: { messages: [] },
+    });
+
+    const body = await (await get()).json();
+    expect(body.run.resumable).toBe(true);
+    expect(body.run).not.toHaveProperty("checkpoint");
+  });
+
+  it("keeps a failed bootstrap without a checkpoint non-resumable", async () => {
+    getRun.mockResolvedValue({
+      id: RUN,
+      project_id: "proj-1",
+      created_by: "user-1",
+      routine_id: null,
+      chain_id: null,
+      pull_request_id: null,
+      status: "failed",
+      checkpoint: null,
+    });
+
+    const body = await (await get()).json();
+    expect(body.run.resumable).toBe(false);
+  });
+});
+
 describe("PATCH — renommer", () => {
   it("writes the run title", async () => {
     const res = await patch({ title: "  Migration Electron  " });

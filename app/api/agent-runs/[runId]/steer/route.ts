@@ -22,6 +22,7 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
+import { agentRunCanResume } from "@/lib/agent-run-resumability";
 
 /**
  * WARM restart of an agent run (MIN-46 + MIN-68): the user sends a
@@ -53,15 +54,8 @@ export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ runId: string }> };
 
-/** Resumable = everything except `failed` (repo/template bootstrap error). */
-const RESUMABLE: AgentRunStatus[] = [
-  "queued",
-  "running",
-  "completed",
-  "canceled",
-];
 /** Idle/completed statuses that require a restart (re-queue + kick). */
-const RESUME_FROM: AgentRunStatus[] = ["completed", "canceled"];
+const RESUME_FROM: AgentRunStatus[] = ["completed", "failed", "canceled"];
 const MAX_LEN = 4000;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -152,7 +146,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  if (!RESUMABLE.includes(run.status)) {
+  if (!agentRunCanResume(run)) {
     return NextResponse.json(
       { error: "Run is not resumable" },
       { status: 409 },

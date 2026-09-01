@@ -114,6 +114,26 @@ describe("le piège du snake_case", () => {
   });
 });
 
+describe("finite request timeouts", () => {
+  it("bounds journal synchronization", async () => {
+    const client = new OpencodeClient({
+      baseUrl: "http://127.0.0.1:4096",
+      directory: "/repo",
+      requestTimeoutMs: 20,
+      fetchImpl: ((_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(new Error("request aborted")),
+            { once: true },
+          );
+        })) as typeof fetch,
+    });
+
+    await expect(client.syncHistory()).rejects.toThrow(/aborted/);
+  });
+});
+
 describe("le flux d'events", () => {
   it("lit une frame SSE", () => {
     expect(parseFrame('data: {"type":"session.idle"}')).toEqual({ type: "session.idle" });

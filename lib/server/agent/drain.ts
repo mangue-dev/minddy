@@ -47,10 +47,11 @@ const DRAIN_TIME_BUDGET_MS = 270_000;
 const MIN_LAUNCH_BUDGET_MS = 120_000;
 /** Inactivity beyond which the microVM is cut off from an idle run. */
 const SANDBOX_IDLE_REAP_MS = 5 * 60_000;
-/** Idle runs from which the microVM can be shut down. `completed` = the only rest of the
- conversational model (the session keeps its sandbox for hot restart —
- without this reaping, each finished round would leak a microVM). */
-const RESTING_STATUSES = ["completed"];
+/**
+ * Idle runs whose microVM can be stopped. Completed sessions and failed turns
+ * with a checkpoint both retain their sandbox briefly for a warm resumption.
+ */
+const RESTING_STATUSES = ["completed", "failed"];
 
 /**
  * Inactivity reaper: cuts the microVM from runs AT IDLE (suspended or round finished)
@@ -142,24 +143,20 @@ export async function reapIdleSandboxes(
 const VM_LOOP_PROBE_AFTER_MS = 3 * 60_000;
 
 /**
- * Silence after which an INDETERMINED response ends up being worth a death.
- *
- * The rule remains "we do not conclude on a silence of the API" - but it does not
- * cannot be valid *forever*. A destroyed microVM (expired session,
- * platform which made it) responds "not found" on each pass, therefore
- * `null`, therefore nothing: the run remained `running` until a human deleted it
- * in base. What was missing was not a bolder verdict, it was
- * a TERMINAL: after two hours without the slightest sign of life from the loop AND without
- * that the platform only knows how to say that it exists, the API failure which
- * would explain both is no longer the reasonable hypothesis.
- *
- * Two hours = 24 times the checkpoint save interval (5 min), which is
- * the heartbeat of the loop. The assumed worst case — a single round that
- * lasts more than two hours during a total failure of the Sandbox API — puts the
- * session back to rest on its last checkpoint: it remains resumable, which
- * is exactly what the blocked run was not.
+ * Recovery threshold when neither the supervisor heartbeat nor the Sandbox
+ * probe can establish liveness. A healthy cloud turn may run for many hours:
+ * its lightweight heartbeat refreshes every two minutes, and a successful
+ * Sandbox probe always wins regardless of age. Fifteen minutes therefore means
+ * at least seven missed heartbeats plus repeated inconclusive platform probes.
  */
-const VM_LOOP_LOST_AFTER_MS = 2 * 60 * 60_000;
+const VM_LOOP_LOST_AFTER_MS = 15 * 60_000;
+
+/**
+ * Local execution cannot be probed while its host sleeps or disconnects. Keep
+ * the wider recovery window there; cloud runs have an independent platform
+ * probe and a two-minute supervisor heartbeat.
+ */
+const LOCAL_LOOP_LOST_AFTER_MS = 2 * 60 * 60_000;
 
 /**
  * Delay beyond which a run `running` WITHOUT a command identifier is deemed
@@ -266,37 +263,20 @@ export async function reapDeadVmRuns(
     if (alive === true) continue; // the process lives: we don’t touch anything.
     if (alive === null) {
       /**
-       * We don't KNOW — and there are now three ways to not know.
-       *
-       * **Without a command identifier**, there is nothing to query: the loop
-       * was never started, and after the boot timeout it's a fact, not a
-       * presumption. **With an identifier**, it is the platform that does not respond
-       *: we give it two hours before drawing a conclusion.
-       *
-       * **AND ON A MACHINE, WE WILL NEVER KNOW (MIN-355).** A local run has neither
-       * microVM nor command — there is no one to whom ask the question. It fell
-       * therefore in the first branch, that of "never launched", which is only based
-       * because a microVM boot lasts twenty seconds: three minutes of
-       * silence (the threshold of the request above) on a run a quarter of an hour old
-       * was enough to declare it dead, to publish “the agent has stopped”
-       * and to charge compute. A Mac that sleeps for four minutes loses its turn,
-       * where a cloud run whose API does not respond is entitled to two hours.
-       *
-       * We therefore give it the SAME limit as this case, and for the same reason: this
-       * which is missing is not a more daring verdict, it is a terminal. The harness
-       * writes `last_activity_at` every two minutes
-       * (`SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS`); two hours is sixty
-       * missed beats — and a turn that would come back afterwards, if it comes back,
-       * finds its session idle at its last checkpoint rather than a run
-       * `running` that no one plays.
+       * A cloud run has two independent signals: the supervisor heartbeat and
+       * the Sandbox command probe. Repeated loss of both reaches the shorter
+       * cloud recovery threshold. Local execution has no platform probe, so it
+       * keeps the wider window needed for a sleeping or disconnected machine.
+       * A cloud row without a command identifier uses the boot threshold because
+       * no loop was ever launched.
        */
-      // There is someone to question, or no one by nature: in both cases
-      // silence is what decides, and it has two hours. There remains the only case where
-      // a response was DUE and never came — a microVM without a command.
+      const loopLostAfterMs = row.local_exec
+        ? LOCAL_LOOP_LOST_AFTER_MS
+        : VM_LOOP_LOST_AFTER_MS;
       const lost =
         row.local_exec || row.loop_command_id
-          ? (agedMs(row.last_activity_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS &&
-            (agedMs(row.started_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS
+          ? (agedMs(row.last_activity_at) ?? 0) >= loopLostAfterMs &&
+            (agedMs(row.started_at) ?? 0) >= loopLostAfterMs
           : (agedMs(row.started_at) ?? 0) >= VM_LOOP_UNLAUNCHED_AFTER_MS;
       if (!lost) continue;
     }
@@ -324,7 +304,7 @@ export async function reapDeadVmRuns(
     const stamped = await stampRun(
       row.id,
       {
-        status: "completed",
+        status: "failed",
         error_message: "The agent process stopped unexpectedly",
         continuations: 0,
         attempts: 0,

@@ -53,6 +53,8 @@ export interface OpencodeClientOptions {
   fetchImpl?: typeof fetch;
   /** HTTP Basic credentials configured on the per-turn server. */
   auth?: { username: string; password: string };
+  /** Finite-request timeout override for tests. */
+  requestTimeoutMs?: number;
 }
 
 /**
@@ -63,6 +65,12 @@ const HEALTH_PROBE_TIMEOUT_MS = 2_000;
 
 /** Cadence of log lines while waiting for startup. */
 const HEALTH_PROGRESS_INTERVAL_MS = 15_000;
+
+/**
+ * Maximum duration of a finite OpenCode HTTP exchange. The event stream is
+ * intentionally excluded because it remains open for the whole turn.
+ */
+export const OPENCODE_REQUEST_TIMEOUT_MS = 30_000;
 
 /**
  * The local process goes from "connection refused" to ready in less than a second.
@@ -88,6 +96,7 @@ export class OpencodeClient {
   private readonly directory: string;
   private readonly http: typeof fetch;
   private readonly authorization: string | null;
+  private readonly requestTimeoutMs: number;
 
   constructor(opts: OpencodeClientOptions) {
     this.base = opts.baseUrl.replace(/\/+$/, "");
@@ -96,6 +105,7 @@ export class OpencodeClient {
     this.authorization = opts.auth
       ? `Basic ${Buffer.from(`${opts.auth.username}:${opts.auth.password}`).toString("base64")}`
       : null;
+    this.requestTimeoutMs = opts.requestTimeoutMs ?? OPENCODE_REQUEST_TIMEOUT_MS;
   }
 
   /** An INHERITANCE route (`/session/…`), always with `?directory=`. */
@@ -105,7 +115,7 @@ export class OpencodeClient {
   }
 
   private async json<T>(route: string, init?: RequestInit): Promise<T> {
-    const res = await this.request(route, init);
+    const res = await this.finiteRequest(route, init);
     const text = await res.text();
     if (!res.ok) throw new OpencodeHttpError(res.status, route, text);
     // A misspelled route returns the TUI page, not a 404: the message
@@ -120,6 +130,16 @@ export class OpencodeClient {
     const headers = new Headers(init?.headers);
     if (this.authorization) headers.set("authorization", this.authorization);
     return await this.http(route, { ...init, headers });
+  }
+
+  private async finiteRequest(
+    route: string,
+    init?: RequestInit,
+  ): Promise<Response> {
+    return await this.request(route, {
+      ...init,
+      signal: init?.signal ?? AbortSignal.timeout(this.requestTimeoutMs),
+    });
   }
 
   /**
@@ -194,7 +214,7 @@ export class OpencodeClient {
   async warmTools(model: string, provider = "minddy", agent = "build"): Promise<void> {
     const query = new URLSearchParams({ provider, model, agent });
     const route = this.legacy(`/experimental/tool?${query.toString()}`);
-    const res = await this.request(route);
+    const res = await this.finiteRequest(route);
     const body = await res.text();
     if (!res.ok) throw new OpencodeHttpError(res.status, route, body);
   }
@@ -206,7 +226,7 @@ export class OpencodeClient {
  */
   async promptAsync(sessionId: string, text: string): Promise<void> {
     const route = this.legacy(`/session/${sessionId}/prompt_async`);
-    const res = await this.request(route, {
+    const res = await this.finiteRequest(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ parts: [{ type: "text", text }] }),
@@ -217,7 +237,7 @@ export class OpencodeClient {
   /** Cuts the turn in flight. Measured at 40 ms, and without effect if nothing is running. */
   async abort(sessionId: string): Promise<void> {
     const route = this.legacy(`/session/${sessionId}/abort`);
-    await this.request(route, { method: "POST" }).catch(() => undefined);
+    await this.finiteRequest(route, { method: "POST" }).catch(() => undefined);
   }
 
   /**
@@ -235,7 +255,7 @@ export class OpencodeClient {
     message?: string,
   ): Promise<void> {
     const route = this.legacy(`/permission/${permissionId}/reply`);
-    const res = await this.request(route, {
+    const res = await this.finiteRequest(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reply, ...(message ? { message } : {}) }),
@@ -260,7 +280,7 @@ export class OpencodeClient {
  */
   async replyQuestion(questionId: string, answers: string[][]): Promise<void> {
     const route = this.legacy(`/question/${questionId}/reply`);
-    const res = await this.request(route, {
+    const res = await this.finiteRequest(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ answers }),
@@ -276,7 +296,7 @@ export class OpencodeClient {
  */
   async rejectQuestion(questionId: string): Promise<void> {
     const route = this.legacy(`/question/${questionId}/reject`);
-    await this.request(route, {
+    await this.finiteRequest(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{}",

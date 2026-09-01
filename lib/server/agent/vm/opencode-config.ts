@@ -845,6 +845,11 @@ export function opencodeServerEnv(
     OPENCODE_DISABLE_MODELS_FETCH: "1",
     OPENCODE_DISABLE_LSP_DOWNLOAD: "1",
     OPENCODE_DISABLE_EMBEDDED_WEB_UI: "1",
+    // OpenCode otherwise silently falls back to 120 seconds. Keep its built-in
+    // bash tool aligned with the product-level command ceiling.
+    OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS: String(
+      OPENCODE_BASH_TIMEOUT_MS,
+    ),
     /**
      * FFF builds a search index per project and starts its watcher at
      * first prompt. Our harness already uses the `glob` and `grep` tools
