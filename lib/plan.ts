@@ -63,11 +63,53 @@ export interface ParsedPlan {
   progress: PlanProgress;
 }
 
-// Groups: 1 = indentation, 2 = bullet + brackets prefix, 3 = state char, 4 = text.
-const TASK_LINE = /^(\s*)([-*+] \[)([ ~xX-])(\]\s+)(.*)$/;
 const FENCE_LINE = /^\s{0,3}(`{3,}|~{3,})/;
-// Groups: 1 = hashes (rank), 2 = heading text.
-const HEADING_LINE = /^\s{0,3}(#{1,6})\s+(.*)$/;
+
+interface TaskLineMatch {
+  indent: string;
+  prefix: string;
+  state: string;
+  separator: string;
+  text: string;
+}
+
+/** Parses one checkbox line without backtracking over attacker-controlled prose. */
+function matchTaskLine(line: string): TaskLineMatch | null {
+  let cursor = 0;
+  while (line[cursor] === " " || line[cursor] === "\t") cursor += 1;
+  const bullet = line[cursor];
+  if (!(bullet === "-" || bullet === "*" || bullet === "+")) return null;
+  if (line[cursor + 1] !== " " || line[cursor + 2] !== "[") return null;
+  const state = line[cursor + 3];
+  if (!(state === " " || state === "~" || state === "x" || state === "X" || state === "-")) {
+    return null;
+  }
+  if (line[cursor + 4] !== "]") return null;
+  let textAt = cursor + 5;
+  while (line[textAt] === " " || line[textAt] === "\t") textAt += 1;
+  if (textAt === cursor + 5) return null;
+  return {
+    indent: line.slice(0, cursor),
+    prefix: `${bullet} [`,
+    state,
+    separator: line.slice(cursor + 4, textAt),
+    text: line.slice(textAt),
+  };
+}
+
+/** Parses an ATX heading without overlapping regular-expression repetitions. */
+function matchHeadingLine(line: string): { hashes: string; text: string } | null {
+  let cursor = 0;
+  while (cursor < 3 && (line[cursor] === " " || line[cursor] === "\t")) cursor += 1;
+  const hashAt = cursor;
+  while (cursor - hashAt < 6 && line[cursor] === "#") cursor += 1;
+  if (cursor === hashAt || line[cursor] === "#") return null;
+  const hashes = line.slice(hashAt, cursor);
+  const separatorAt = cursor;
+  while (line[cursor] === " " || line[cursor] === "\t") cursor += 1;
+  if (cursor === separatorAt) return null;
+  return { hashes, text: line.slice(cursor) };
+}
 /** Heading text without its numbering, emoji or emphasis: "2. **Questions**" → "questions". */
 const headingKey = (text: string): string =>
   text
@@ -148,15 +190,15 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
     }
 
     if (!fence) {
-      const heading = line.match(HEADING_LINE);
+      const heading = matchHeadingLine(line);
       if (heading) {
-        const rank = heading[1].length;
+        const rank = heading.hashes.length;
         if (questionRank !== null && rank <= questionRank) questionRank = null;
-        if (isQuestionHeading(heading[2])) questionRank = rank;
+        if (isQuestionHeading(heading.text)) questionRank = rank;
       }
     }
 
-    const match = fence ? null : line.match(TASK_LINE);
+    const match = fence ? null : matchTaskLine(line);
     if (!match) {
       if (proseStart === null) proseStart = i;
       continue;
@@ -166,9 +208,9 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
     const task: PlanTask = {
       index: tasks.length,
       line: i,
-      depth: indentDepth(match[1]),
-      text: match[5].trim(),
-      state: STATE_BY_MARKER[match[3]],
+      depth: indentDepth(match.indent),
+      text: match.text.trim(),
+      state: STATE_BY_MARKER[match.state],
       question: questionRank !== null,
     };
     tasks.push(task);
@@ -206,9 +248,10 @@ export function setTaskState(
   state: PlanTaskState
 ): string {
   const lines = plan.split("\n");
-  const match = lines[line]?.match(TASK_LINE);
+  const match = lines[line] === undefined ? null : matchTaskLine(lines[line]);
   if (!match) return plan;
-  lines[line] = match[1] + match[2] + MARKER_BY_STATE[state] + match[4] + match[5];
+  lines[line] =
+    match.indent + match.prefix + MARKER_BY_STATE[state] + match.separator + match.text;
   return lines.join("\n");
 }
 
@@ -233,8 +276,8 @@ function findHeadingLine(
       continue;
     }
     if (fence || i < from) continue;
-    const heading = lines[i].match(HEADING_LINE);
-    if (heading && match(heading[2])) return i;
+    const heading = matchHeadingLine(lines[i]);
+    if (heading && match(heading.text)) return i;
   }
   return -1;
 }
@@ -292,8 +335,8 @@ export function appendToPlan(
   // One blank line between the block and its surroundings, except between two
   // checkbox lines — a gap there would split one list into two on screen.
   const joinsTasks =
-    TASK_LINE.test(head[head.length - 1] ?? "") &&
-    TASK_LINE.test(addition.split("\n")[0]);
+    matchTaskLine(head[head.length - 1] ?? "") !== null &&
+    matchTaskLine(addition.split("\n")[0]) !== null;
   const out = [...head];
   if (head.length > 0 && !joinsTasks) out.push("");
   out.push(...addition.split("\n"));
@@ -318,8 +361,10 @@ export function stripTaskStates(plan: string | null | undefined): string {
         fence = null;
     }
     if (fence) continue;
-    const match = lines[i].match(TASK_LINE);
-    if (match) lines[i] = match[1] + match[2] + " " + match[4] + match[5];
+    const match = matchTaskLine(lines[i]);
+    if (match) {
+      lines[i] = match.indent + match.prefix + " " + match.separator + match.text;
+    }
   }
   return lines.join("\n");
 }

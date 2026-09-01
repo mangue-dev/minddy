@@ -225,7 +225,7 @@ export async function getGithubUserInstallationRepository(
 ): Promise<GithubUserInstallationRepository | null> {
   requireCapability("github");
   const response = await fetch(
-    `${GITHUB_API_BASE}/user/installations/${installationId}/repositories?per_page=1`,
+    `${GITHUB_API_BASE}/user/installations/${encodeURIComponent(String(installationId))}/repositories?per_page=1`,
     { headers: githubHeaders(token) },
   );
   const data = (await response.json().catch(() => ({}))) as {

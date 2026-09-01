@@ -36,7 +36,9 @@ export function normalizeAgentBranchPrefix(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const prefix = `${trimmed.replace(/\/+$/g, "")}/`;
+  let end = trimmed.length;
+  while (end > 0 && trimmed[end - 1] === "/") end -= 1;
+  const prefix = `${trimmed.slice(0, end)}/`;
   if (prefix.length > MAX_PREFIX_LENGTH) return null;
   return isValidGitBranchName(`${prefix}branch`) ? prefix : null;
 }

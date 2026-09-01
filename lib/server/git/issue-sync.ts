@@ -57,8 +57,8 @@ import {
  * repository (updateIssueFields requires a project member). The events are
  * stamped `forge_sync` — which credits GitHub/GitLab in the timeline
  * rather than this person (same compromise as the code agent) AND, since the
- * status return, prevents the loop: a stamped write forges ne
- * do not go back to the forge.
+ * status return, prevents the loop: a forge-stamped write does not go back to
+ * the forge.
  */
 
 /** Hard backfill ceiling: beyond that, we do not import the history of a deposit. */
@@ -278,7 +278,9 @@ export async function applyRemoteIssue(
       // 409 = reissue of the webhook, the normal path: silence.
       if (result.errorKey !== "remoteIssueAlreadyImported") {
         console.error(
-          `[issue-sync] create failed for ${remote.repoFullName}#${remote.number}:`,
+          "[issue-sync] create failed for %s#%s:",
+          remote.repoFullName,
+          remote.number,
           result.errorKey ?? result.rawMessage,
         );
       }
@@ -346,7 +348,9 @@ export async function applyRemoteIssue(
     });
     if (!updated.ok) {
       console.error(
-        `[issue-sync] update failed for ${remote.repoFullName}#${remote.number}:`,
+        "[issue-sync] update failed for %s#%s:",
+        remote.repoFullName,
+        remote.number,
         updated.errorKey ?? updated.rawMessage,
       );
     }
@@ -555,7 +559,9 @@ export async function syncGithubIssueComment(comment: GithubIssueComment): Promi
       await applyGithubIssueComment(target, comment);
     } catch (error) {
       console.error(
-        `[issue-sync] GitHub comment ${comment.remoteCommentId} for target ${target.linkId} failed:`,
+        "[issue-sync] GitHub comment %s for target %s failed:",
+        comment.remoteCommentId,
+        target.linkId,
         (error as Error).message,
       );
     }
@@ -627,7 +633,10 @@ export async function syncGithubIssueDependency(
       }
     } catch (error) {
       console.error(
-        `[issue-sync] GitHub dependency ${dependency.blockingNumber}→${dependency.blockedNumber} failed for target ${target.linkId}:`,
+        "[issue-sync] GitHub dependency %s→%s failed for target %s:",
+        dependency.blockingNumber,
+        dependency.blockedNumber,
+        target.linkId,
         (error as Error).message,
       );
     }
@@ -959,8 +968,8 @@ export async function backfillRemoteIssues(
 async function runRemoteIssueBackfill(target: IssueSyncTarget): Promise<number> {
   if (!target.createdBy) return 0;
 
-  // Only one quota check for the entire batch: the limit is one
-  // garde-fou d'offre, pas un compteur exact (l'import CSV fait pareil).
+  // Only one quota check for the entire batch: the limit is a plan safeguard,
+  // not an exact counter (the CSV import follows the same policy).
   try {
     await ensureIssueLimit(target.projectId);
   } catch (err) {

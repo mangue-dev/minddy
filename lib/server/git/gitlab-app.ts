@@ -715,11 +715,13 @@ export async function rotateGitlabWebhookSecret(params: {
     const source = (connection as { source: string | null } | null)?.source ?? null;
     await ensureGitlabIssuesHook(token, params.externalRepoId, { secret, source });
     console.info(
-      `[gitlab-app] webhook secret rotated for project ${params.externalRepoId}`,
+      "[gitlab-app] webhook secret rotated for project %s",
+      params.externalRepoId,
     );
   } catch (err) {
     console.error(
-      `[gitlab-app] webhook secret rotation failed for project ${params.externalRepoId}:`,
+      "[gitlab-app] webhook secret rotation failed for project %s:",
+      params.externalRepoId,
       (err as Error).message,
     );
   }

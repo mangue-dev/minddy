@@ -173,7 +173,7 @@ explicit workflow notice. After downloading:
 # Always available:
 shasum -a 256 -c SHA256SUMS
 # Available for releases created after the repository becomes public:
-gh attestation verify minddy-v0.10.0-source.tar.gz --repo mangue-dev/minddy-issues
+gh attestation verify minddy-v0.10.0-source.tar.gz --repo mangue-dev/minddy
 ```
 
 A “reproducible build” here means that the recipe, Node/pnpm versions,
@@ -361,7 +361,7 @@ SemVer commits and validate their exact Git objects before publication:
    ```bash
    export CANDIDATE_BUNDLE=/secure/evidence/minddy-preflight.bundle
    export PUBLISH_DIR="$(mktemp -d)"
-   git clone git@github.com:mangue-dev/minddy-issues.git "$PUBLISH_DIR"
+   git clone git@github.com:mangue-dev/minddy.git "$PUBLISH_DIR"
    git -C "$PUBLISH_DIR" fetch "$CANDIDATE_BUNDLE" \
      "refs/tags/preflight/v$SOURCE_VERSION:refs/tags/preflight/v$SOURCE_VERSION" \
      "refs/tags/preflight/v$TARGET_VERSION:refs/tags/preflight/v$TARGET_VERSION"

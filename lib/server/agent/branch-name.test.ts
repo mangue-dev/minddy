@@ -52,6 +52,10 @@ describe("normalizeAgentBranchPrefix", () => {
     expect(normalizeAgentBranchPrefix(" team/numo// ")).toBe("team/numo/");
   });
 
+  it("handles long trailing slash runs in linear time", () => {
+    expect(normalizeAgentBranchPrefix(`team${"/".repeat(50_000)}`)).toBe("team/");
+  });
+
   it("rejects empty values and invalid git ref prefixes", () => {
     expect(normalizeAgentBranchPrefix(" ")).toBeNull();
     expect(normalizeAgentBranchPrefix("../release")).toBeNull();

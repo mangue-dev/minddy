@@ -59,7 +59,7 @@ signature before running it:
 
 ```bash
 cosign verify \
-  --certificate-identity 'https://github.com/mangue-dev/minddy-issues/.github/workflows/release.yml@refs/heads/production' \
+  --certificate-identity 'https://github.com/mangue-dev/minddy/.github/workflows/release.yml@refs/heads/production' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   "$IMAGE@$DIGEST"
 ```
@@ -68,7 +68,7 @@ For public releases, verify the GitHub SLSA provenance record and extract the
 registry-attached SPDX SBOM:
 
 ```bash
-gh attestation verify "oci://$IMAGE@$DIGEST" --repo mangue-dev/minddy-issues
+gh attestation verify "oci://$IMAGE@$DIGEST" --repo mangue-dev/minddy
 docker buildx imagetools inspect "$IMAGE@$DIGEST" \
   --format '{{ json .SBOM }}' > minddy-vX.Y.Z.sbom.spdx.json
 test -s minddy-vX.Y.Z.sbom.spdx.json

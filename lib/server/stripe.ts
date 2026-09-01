@@ -228,7 +228,11 @@ async function stripeRequest<T>(
       "Managed Stripe billing is disabled or incomplete; enable MINDDY_MANAGED_BILLING=1 with the full Stripe configuration.",
     );
   }
-  const response = await fetch(`https://api.stripe.com${path}`, {
+  const url = new URL(path, "https://api.stripe.com");
+  if (url.origin !== "https://api.stripe.com" || !url.pathname.startsWith("/v1/")) {
+    throw new Error("Stripe API path escaped the configured origin.");
+  }
+  const response = await fetch(url, {
     method: method ?? (body ? "POST" : "GET"),
     headers: {
       Authorization: `Bearer ${getStripeSecretKey()}`,

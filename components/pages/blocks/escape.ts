@@ -57,5 +57,5 @@ export function escapeHtmlAttribute(value: string): string {
 export function markdownLinkDestination(src: unknown): string | null {
   const url = normalizePageUrl(src);
   if (!url) return null;
-  return url.replace(/[()]/g, "\\$&");
+  return url.replace(/\\/g, "\\\\").replace(/[()]/g, "\\$&");
 }

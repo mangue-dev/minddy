@@ -32,6 +32,15 @@ date above:
 - GitHub merge policy: squash merge enabled; merge commits and rebase merges
   disabled; merged branches are deleted automatically.
 - GitHub Actions: enabled and restricted to selected actions.
+- GitHub Actions requires full commit SHA pins, gives workflow tokens read-only
+  permissions by default, prevents them from approving pull requests, and
+  requires approval before workflows from every external contributor run.
+- CodeQL default setup scans Actions, C/C++, and JavaScript/TypeScript.
+- Dependabot alerts, security updates, and automated security fixes are enabled.
+- Secret scanning, push protection, and private vulnerability reporting are
+  enabled. The only alert raised during activation was a deterministic scanner
+  fixture and was resolved as `used_in_tests`; no operational credential was
+  identified.
 - GitHub environments exist with the exact names `cloud-production`,
   `public-release`, `Preview`, and `Production`.
 - Vercel project `mangue-dev/minddy` uses `production` as its sole production
@@ -49,9 +58,10 @@ date above:
 
 1. The `main` ruleset applies to administrators and has no bypass actor. It:
    - requires every change to arrive through a squash-merged pull request;
-   - requires resolved conversations and a current successful
-     `Tests & typecheck`, `Dependencies audit`, and
-     `Developer Certificate of Origin` check from GitHub Actions;
+   - requires resolved conversations and current successful
+     `Tests & typecheck`, `Dependencies audit`,
+     `Developer Certificate of Origin`, and CodeQL analyses for Actions, C/C++,
+     and JavaScript/TypeScript from GitHub Actions;
    - requires linear history and prohibits deletion and force-pushes.
    The approving-review count is zero because this is a solo-maintained
    repository; the pull request, checks, DCO, and conversation trail remain
@@ -71,13 +81,43 @@ date above:
    - requires the reviewer to inspect the stable security-report reference,
      residual risks, and pentest decision before approval.
 4. Protect the `public-release` environment:
-   - require maintainer approval and disallow administrator bypass;
-   - allow deployments only from `production` and protected `v*` tags;
+   - require approval from `mangue-dev`, allow self-review for the solo
+     maintainer, and disallow administrator bypass;
+   - allow deployments only from the `production` branch and `v*` tags;
    - keep publication credentials only in this environment.
 5. In Actions → General, require approval for all external contributors. Never
    use `pull_request_target` to execute pull request code.
-6. Enable private vulnerability reporting, secret scanning, and push
-   protection when the repository plan or public visibility supports them.
+6. Keep CodeQL default setup enabled for Actions, C/C++, and
+   JavaScript/TypeScript. Triage its alerts together with Dependabot and secret
+   scanning; never dismiss a real credential as a test fixture.
+
+## Reproduce and audit the GitHub controls
+
+The repository settings script is the executable reference for the controls
+above. It requires an authenticated GitHub CLI session with repository
+administration and security-event access. To converge the security, Actions,
+CodeQL, and `public-release` settings, then verify the complete policy:
+
+```bash
+npm run check:github-settings -- --apply mangue-dev/minddy
+```
+
+The apply mode is idempotent. It does not create or replace the `main` and
+`production` rulesets owned by the promotion policy, and it does not delete
+unexpected environment policies. A mismatch still fails the final audit so a
+maintainer must review it deliberately. For the normal read-only audit, run:
+
+```bash
+npm run check:github-settings
+```
+
+The audit verifies repository visibility and merge policy, secret scanning and
+push protection, private vulnerability reporting, Dependabot security updates
+and automated fixes, Actions allowlisting and SHA enforcement, read-only
+workflow tokens, external-contributor approval, CodeQL coverage, the two branch
+rulesets, the solo-compatible release approval, release ref restrictions, and
+the absence of open secret or high/critical dependency and code-scanning
+alerts. It prints no secret values.
 
 ## Verification
 
