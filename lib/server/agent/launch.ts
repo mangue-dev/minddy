@@ -444,11 +444,20 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // here rather than leaving silently on a new branch, which would lose
   // the work that was precisely asked to be corrected.
   const inherited = continuePr
-    ? await inheritableWorkForPr({
+    ? (await inheritableWorkForPr({
         repoFullName: continuePr.repoFullName,
         prNumber: continuePr.number,
         provider: continuePr.provider,
-      })
+      })) ??
+      (continuePr.headBranch
+        ? {
+            branchName: continuePr.headBranch,
+            baseBranch: continuePr.baseBranch,
+            prNumber: continuePr.number,
+            prUrl: continuePr.url,
+            prState: continuePr.state,
+          }
+        : null)
     : null;
   if (continuePr && !inherited) return { ok: false, error: "prNoBranch" };
 

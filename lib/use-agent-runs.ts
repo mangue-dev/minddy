@@ -179,6 +179,9 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     // propose one that she would withdraw a second later.
     viewer: data?.viewer ?? null,
     mergeMethods: data?.mergeMethods ?? [],
+    mergePolicy: data?.mergePolicy ?? null,
+    readiness: data?.readiness ?? null,
+    readinessThreads: data?.reviewThreads ?? null,
     loading: enabled && isPending,
     refetch,
   };

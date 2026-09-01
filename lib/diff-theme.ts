@@ -85,6 +85,10 @@ export const DIFF_LINE_DIFF_TYPE: LineDiffTypes = "word-alt";
 export const DIFF_RANGE_ATTRIBUTE = "data-pr-comment-range";
 
 export const DIFF_UNSAFE_CSS = `
+:host, [data-line], [data-code], [data-content] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
 [data-line-type="context-expanded"] [data-gutter-utility-slot] { display: none; }
 [data-deletions] [data-line-type="context"] [data-gutter-utility-slot] { display: none; }
 

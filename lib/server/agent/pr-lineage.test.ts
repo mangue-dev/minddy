@@ -27,7 +27,7 @@ const h = vi.hoisted(() => ({
   /** Lineage rendered by the TICKET index, and by the PULL REQUEST index. */
   issueLineage: null as Record<string, unknown> | null,
   prLineage: null as Record<string, unknown> | null,
-  /** Runs actifs vus par chacune des deux gardes. */
+  /** Active runs seen by each uniqueness guard. */
   activeIssue: null as Record<string, unknown> | null,
   activePr: null as Record<string, unknown> | null,
   /** Which uniqueness guard was queried. */
@@ -46,7 +46,7 @@ vi.mock("@/lib/supabase-service", () => ({
       query.is = chain;
       query.insert = async () => ({ error: null });
       query.maybeSingle = async () => ({
-        data: { id: ISSUE_ID, project_id: PROJECT_ID, title: "Un ticket" },
+        data: { id: ISSUE_ID, project_id: PROJECT_ID, title: "A ticket" },
         error: null,
       });
       return query;
@@ -109,9 +109,9 @@ vi.mock("./quota", () => ({
 vi.mock("./model", () => ({
   AgentModelRequiredError: class AgentModelRequiredError extends Error {},
   getUserByok: vi.fn(async () => null),
-  resolveAgentModel: vi.fn(async () => ({ model: "modele/test", chosenByUser: false })),
+  resolveAgentModel: vi.fn(async () => ({ model: "model/test", chosenByUser: false })),
   resolveReasoningLevel: vi.fn(async () => "medium"),
-  resolvePrReviewModel: vi.fn(async () => ({ model: "modele/test", chosenByUser: false })),
+  resolvePrReviewModel: vi.fn(async () => ({ model: "model/test", chosenByUser: false })),
 }));
 
 vi.mock("./model-plan", () => ({ ensureModelInPlan: vi.fn(async () => {}) }));
@@ -120,7 +120,7 @@ vi.mock("./drain-chain", () => ({ chainAgentDrain: vi.fn(async () => {}) }));
 vi.mock("./issue-status-sync", () => ({ syncIssueStatusOnAgentStart: vi.fn(async () => {}) }));
 vi.mock("@/lib/server/issue-events", () => ({ insertEvents: vi.fn(async () => {}) }));
 vi.mock("@/lib/server/automations/hooks", () => ({ handOffToHuman: vi.fn(() => {}) }));
-vi.mock("@/lib/server/short-title", () => ({ generateShortTitle: vi.fn(async () => "Un titre") }));
+vi.mock("@/lib/server/short-title", () => ({ generateShortTitle: vi.fn(async () => "A title") }));
 // The drain leaves in `after()`: here it does not leave at all, nothing to observe.
 vi.mock("next/server", () => ({ after: vi.fn(() => {}) }));
 
@@ -163,12 +163,12 @@ const relaunch = (over: Record<string, unknown> = {}) =>
     continuePullRequestId: PR_ID,
     userId: USER_ID,
     triggeredBy: "button",
-    prompt: "Corrige le nommage",
+    prompt: "Fix the naming",
     ...over,
   });
 
-describe("reprise d'une pull request sans ticket", () => {
-  it("hérite de la branche portée par la PR, et reste un run carnet", async () => {
+describe("continuing a pull request without a ticket", () => {
+  it("inherits the branch from the PR and remains a notebook run", async () => {
     const result = await relaunch();
 
     expect(result.ok).toBe(true);
@@ -185,14 +185,22 @@ describe("reprise d'une pull request sans ticket", () => {
     });
   });
 
-  it("refuse quand la PR n'a aucune branche à reprendre", async () => {
+  it("uses the current PR head when no prior Numo run exists", async () => {
     h.prLineage = null;
 
-    await expect(relaunch()).resolves.toEqual({ ok: false, error: "prNoBranch" });
-    expect(h.created).toHaveLength(0);
+    const result = await relaunch();
+
+    expect(result.ok).toBe(true);
+    expect(h.created).toHaveLength(1);
+    expect(h.created[0]).toMatchObject({
+      branchName: "minddy/agent/note-92275fe4",
+      baseBranch: "main",
+      prNumber: 51,
+      prState: "open",
+    });
   });
 
-  it("refuse quand un run travaille déjà sur cette PR", async () => {
+  it("refuses when a run is already working on this PR", async () => {
     h.activePr = { id: "autre-run" };
 
     const result = await relaunch();
@@ -202,14 +210,14 @@ describe("reprise d'une pull request sans ticket", () => {
     expect(h.created).toHaveLength(0);
   });
 
-  it("refuse une PR disparue plutôt que d'ouvrir un run carnet à côté", async () => {
+  it("refuses a missing PR rather than opening an unrelated notebook run", async () => {
     h.pr = null;
 
     await expect(relaunch()).resolves.toEqual({ ok: false, error: "prNotFound" });
     expect(h.created).toHaveLength(0);
   });
 
-  it("exige une consigne : sans elle, la session n'a pas de mission", async () => {
+  it("requires an instruction so the session has a mission", async () => {
     await expect(relaunch({ prompt: "   " })).resolves.toEqual({
       ok: false,
       error: "promptRequired",
@@ -217,8 +225,8 @@ describe("reprise d'une pull request sans ticket", () => {
   });
 });
 
-describe("la PR explicite garde la priorité", () => {
-  it("lit la lignée de la PR quand elle est rattachée à un ticket", async () => {
+describe("an explicit PR keeps priority", () => {
+  it("reads the PR lineage when it is linked to a ticket", async () => {
     h.pr = { ...h.pr, issueId: ISSUE_ID };
     h.issueLineage = lineage({ branchName: "minddy/agent/min-249-f80dca09", prNumber: 49 });
     h.prLineage = lineage({ branchName: "minddy/agent/note-92275fe4", prNumber: 51 });

@@ -116,6 +116,33 @@ async function capture({ locale, theme }) {
       { timeout: 15_000 },
     );
 
+    const headerLayout = await page.evaluate(() => {
+      const header = document.querySelector(".app-content-header");
+      const buttons = [...(header?.querySelectorAll("button") ?? [])]
+        .filter((button) => getComputedStyle(button).display !== "none")
+        .map((button) => ({
+          label: button.getAttribute("aria-label") || button.textContent?.trim() || "",
+          box: button.getBoundingClientRect().toJSON(),
+        }));
+      const overlaps = [];
+      for (let left = 0; left < buttons.length; left++) {
+        for (let right = left + 1; right < buttons.length; right++) {
+          const a = buttons[left].box;
+          const b = buttons[right].box;
+          if (a.right > b.left && b.right > a.left && a.bottom > b.top && b.bottom > a.top) {
+            overlaps.push([buttons[left].label, buttons[right].label]);
+          }
+        }
+      }
+      return { overlaps, labels: buttons.map((button) => button.label) };
+    });
+    if (headerLayout.overlaps.length > 0) {
+      throw new Error(`${locale}/${theme} — overlapping PR header actions: ${JSON.stringify(headerLayout.overlaps)}`);
+    }
+    if (headerLayout.labels.length < 2) {
+      throw new Error(`${locale}/${theme} — readiness and primary actions are missing from the PR header.`);
+    }
+
     // Files tab: designated by its rank, its wording is translated and carries
     // the file counter. This is the THIRD since a tab
     // “Commit” slipped between Conversation and Files — aim for
@@ -133,6 +160,35 @@ async function capture({ locale, theme }) {
       .getByText("export type KeyHint", { exact: false })
       .first()
       .waitFor({ state: "visible", timeout: 15_000 });
+
+    const selectable = await page.evaluate(() => {
+      const visit = (root) => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          if (node.textContent?.includes("export type KeyHint")) return node;
+        }
+        for (const element of root.querySelectorAll("*")) {
+          if (element.shadowRoot) {
+            const found = visit(element.shadowRoot);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const node = visit(document);
+      if (!node) return false;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      const selected = selection?.toString() ?? "";
+      selection?.removeAllRanges();
+      return selected.includes("export type KeyHint");
+    });
+    if (!selectable) {
+      throw new Error(`${locale}/${theme} — diff code text cannot be selected and copied.`);
+    }
 
     await page.mouse.move(120, 60);
     await page.waitForTimeout(400);

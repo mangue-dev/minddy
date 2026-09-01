@@ -245,6 +245,7 @@ export const PR = {
   // does not have to carry this reservation — it is mergeable, and says so.
   mergeable: true,
   mergeableState: "clean",
+  mergeabilityReason: "clean",
   user: NUMO,
   createdAt: OPENED_AT,
 };
@@ -360,11 +361,39 @@ export const DETAIL_RESPONSE = {
   pr: PR,
   files: FILES,
   provider: "github",
-  // `checks: null` = NO known check, distinct from a read failure
-  // (`checksError`). The demo repository has no CI: the bar does not appear.
-  checks: null,
+  checks: {
+    checks: [],
+    state: null,
+    passing: 0,
+    total: 0,
+    startedAt: null,
+    completedAt: null,
+  },
   checksError: null,
   reviews: null,
   viewer: VIEWER,
   mergeMethods: MERGE_METHODS,
+  mergePolicy: {
+    provider: "github",
+    available: true,
+    methods: MERGE_METHODS,
+    preferredMethod: "squash",
+    requiredApprovals: 0,
+    codeOwnerReviewRequired: false,
+    conversationsMustBeResolved: false,
+    checksMustPass: false,
+    requiredCheckNames: [],
+    branchMustBeUpToDate: false,
+    linearHistoryRequired: false,
+    mergeQueueRequired: false,
+    autoMergeAllowed: true,
+  },
+  reviewThreads: [],
+  readiness: {
+    state: "ready",
+    blockers: [],
+    mergeAllowed: true,
+    methods: MERGE_METHODS,
+    preferredMethod: "squash",
+  },
 };

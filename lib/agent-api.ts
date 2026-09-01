@@ -606,6 +606,10 @@ export interface PullRequestRef {
   /** `clean` · `blocked` (repository requires approvals/checks) · `dirty` (conflict)
       · `unstable` (checks not required in failure) · `unknown`. */
   mergeableState?: string | null;
+  /** Provider refusal normalized to one actionable reason. */
+  mergeabilityReason?: import("./pr-readiness").MergeabilityReason | null;
+  mergeFlowActive?: boolean;
+  reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
 }
 
 /** Normalized status of a CI check (MIN-138) — mirror of `lib/server/agent/checks-core.ts`. */
@@ -623,6 +627,10 @@ export interface PullRequestCheck {
   /** The result in one line, as the forge formulates it. */
   description: string | null;
   durationMs: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  required: boolean | null;
+  rerunRef: { kind: "github_check_suite" | "gitlab_pipeline"; id: number } | null;
 }
 
 export interface ChecksSummary {
@@ -632,6 +640,8 @@ export interface ChecksSummary {
   /** Non-blocking checks (successful or neutral) — the `n` of “n/m passed”. */
   passing: number;
   total: number;
+  startedAt: string | null;
+  completedAt: string | null;
 }
 
 /** Merge methods offered by the forge of the linked repository. */
@@ -640,6 +650,7 @@ export type MergeMethod = "merge" | "squash" | "rebase";
 export interface PullRequestReviewSummary {
   approvals: number;
   changesRequested: number;
+  requiredApprovals?: number | null;
 }
 
 /**
@@ -681,6 +692,9 @@ export interface AgentRunPrResponse {
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];
+  mergePolicy?: import("./pr-readiness").RepositoryMergePolicy | null;
+  readiness?: import("./pr-readiness").PullRequestReadiness | null;
+  reviewThreads?: import("./pr-review-threads").ReviewThreadState[] | null;
 }
 
 export interface PullRequestFile {
@@ -781,6 +795,23 @@ export async function actOnPullRequestApi(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, method }),
+    }),
+  );
+}
+
+export async function maintainPullRequestApi(
+  prId: string,
+  action: "update_branch" | "rerun_check" | "update_title" | "enable_auto_merge",
+  payload: {
+    title?: string;
+    rerunRef?: PullRequestCheck["rerunRef"];
+  } = {},
+): Promise<{ ok: true; title?: string }> {
+  return parseJson(
+    await fetch(prEndpoint(prId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...payload }),
     }),
   );
 }

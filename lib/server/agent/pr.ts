@@ -22,6 +22,14 @@ import {
 } from "@/lib/pr-timeline";
 import type { CommitAuthor } from "@/lib/commit-authors";
 import { reviewFallbackPrefix } from "./review-copy";
+import {
+  mapGithubMergePolicy,
+  type GithubBranchPolicyInput,
+  type GithubRepositoryPolicyInput,
+  type GithubRuleInput,
+  type MergeabilityReason,
+  type RepositoryMergePolicy,
+} from "@/lib/pr-readiness";
 
 /**
  * GitHub Pull Request Operations for Code Agent (MIN-46): Open PR
@@ -65,6 +73,9 @@ export interface PullRequestRef {
       approvals or checks), `dirty` (conflict), `unstable` (optional checks are
       failing), or `unknown`. */
   mergeableState?: string | null;
+  mergeabilityReason?: MergeabilityReason | null;
+  mergeFlowActive?: boolean;
+  reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
 }
 
 /** Verdict of a review, in neutral vocabulary (GitHub: APPROVE / REQUEST_CHANGES / COMMENT). */
@@ -89,6 +100,7 @@ export interface ReviewSubmission {
 export interface PullRequestReviewSummary {
   approvals: number;
   changesRequested: number;
+  requiredApprovals?: number | null;
 }
 
 export interface PullRequestFile {
@@ -330,6 +342,7 @@ interface RawPull {
   user?: { login?: string; avatar_url?: string } | null;
   created_at?: string;
   updated_at?: string;
+  auto_merge?: object | null;
 }
 
 /**
@@ -359,7 +372,28 @@ function toRef(pr: RawPull): PullRequestRef {
     nodeId: pr.node_id,
     mergeable: pr.mergeable,
     mergeableState: pr.mergeable_state,
+    mergeabilityReason: githubMergeabilityReason(pr),
+    mergeFlowActive: !!pr.auto_merge,
   };
+}
+
+function githubMergeabilityReason(pr: RawPull): MergeabilityReason | null {
+  if (pr.draft) return "draft";
+  switch (pr.mergeable_state) {
+    case "clean":
+    case "unstable":
+      return "clean";
+    case "behind":
+      return "branch_out_of_date";
+    case "dirty":
+      return "conflicts";
+    case "blocked":
+      return "policy";
+    case "unknown":
+      return "checking";
+    default:
+      return pr.mergeable == null ? null : pr.mergeable ? "clean" : "policy";
+  }
 }
 
 /** PR open for `head` (run branch), or null. */
@@ -429,7 +463,58 @@ export async function getPullRequest(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
     opts.token,
   );
-  return toRef(pr);
+  const ref = toRef(pr);
+  if (pr.node_id) {
+    const flow = await ghGraphql<{
+      node?: {
+        mergeQueueEntry?: { id?: string } | null;
+        autoMergeRequest?: { enabledAt?: string } | null;
+        reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+      } | null;
+    }>(
+      opts.token,
+      "query($id:ID!){node(id:$id){... on PullRequest{mergeQueueEntry{id} autoMergeRequest{enabledAt} reviewDecision}}}",
+      { id: pr.node_id },
+    ).catch(() => null);
+    ref.mergeFlowActive = !!(flow?.node?.mergeQueueEntry || flow?.node?.autoMergeRequest);
+    ref.reviewDecision = flow?.node?.reviewDecision ?? null;
+    if (ref.reviewDecision === "CHANGES_REQUESTED") ref.mergeabilityReason = "changes_requested";
+    if (ref.reviewDecision === "REVIEW_REQUIRED") ref.mergeabilityReason = "approval_required";
+  }
+  return ref;
+}
+
+/** Repository method settings plus the protection rules of this PR's base branch. */
+export async function getRepositoryMergePolicy(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  base: string;
+}): Promise<RepositoryMergePolicy> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const repository = await ghJson<GithubRepositoryPolicyInput>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
+    opts.token,
+  );
+  const [branch, rules] = await Promise.all([
+    ghJson<GithubBranchPolicyInput>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.base)}/protection`,
+      opts.token,
+    ).catch((error) => {
+      if (error instanceof GithubApiError && error.status === 404) return null;
+      throw error;
+    }),
+    ghJson<GithubRuleInput[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/rules/branches/${encodeURIComponent(opts.base)}?per_page=100`,
+      opts.token,
+    ).catch((error) => {
+      // Older GitHub Enterprise instances do not expose rulesets. Branch
+      // protection remains authoritative there.
+      if (error instanceof GithubApiError && error.status === 404) return [];
+      throw error;
+    }),
+  ]);
+  return mapGithubMergePolicy(repository, branch, rules);
 }
 
 const FILES_PER_PAGE = 100;
@@ -975,6 +1060,87 @@ export async function mergePullRequest(opts: {
   );
 }
 
+export async function updatePullRequestBranch(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  headSha?: string;
+}): Promise<void> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  await ghJson<unknown>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/update-branch`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(opts.headSha ? { expected_head_sha: opts.headSha } : {}),
+    },
+  );
+}
+
+export async function rerunPullRequestCheck(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  ref: { kind: "github_check_suite" | "gitlab_pipeline"; id: number };
+}): Promise<void> {
+  if (opts.ref.kind !== "github_check_suite") {
+    throw new GithubApiError("Check cannot be rerun by GitHub", 409);
+  }
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  await ghJson<unknown>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/check-suites/${opts.ref.id}/rerequest`,
+    opts.token,
+    { method: "POST" },
+  );
+}
+
+export async function updatePullRequestTitle(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  title: string;
+}): Promise<PullRequestRef> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const pr = await ghJson<RawPull>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
+    opts.token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: opts.title }),
+    },
+  );
+  return toRef(pr);
+}
+
+export async function enablePullRequestMergeFlow(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  nodeId?: string;
+  method?: "merge" | "squash" | "rebase";
+  queue: boolean;
+  headSha?: string;
+}): Promise<void> {
+  if (!opts.nodeId) throw new GithubApiError("Pull request has no GraphQL id", 409);
+  if (opts.queue) {
+    await ghGraphql<unknown>(
+      opts.token,
+      "mutation($id:ID!){enqueuePullRequest(input:{pullRequestId:$id}){mergeQueueEntry{id}}}",
+      { id: opts.nodeId },
+    );
+    return;
+  }
+  const method = (opts.method ?? "squash").toUpperCase();
+  await ghGraphql<unknown>(
+    opts.token,
+    "mutation($id:ID!,$method:PullRequestMergeMethod!){enablePullRequestAutoMerge(" +
+      "input:{pullRequestId:$id,mergeMethod:$method}){pullRequest{id}}}",
+    { id: opts.nodeId, method },
+  );
+}
+
 export async function closePullRequest(opts: {
   token: string;
   repoFullName: string;
@@ -1244,6 +1410,7 @@ export async function listPullRequestChecks(opts: {
   token: string;
   repoFullName: string;
   sha: string;
+  requiredCheckNames?: readonly string[] | null;
 }): Promise<ChecksSummary> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${opts.sha}`;
@@ -1251,7 +1418,11 @@ export async function listPullRequestChecks(opts: {
     ghJson<{ check_runs?: RawCheckRun[] }>(`${base}/check-runs?per_page=100`, opts.token),
     ghJson<{ statuses?: RawCommitStatus[] }>(`${base}/status?per_page=100`, opts.token),
   ]);
-  return summarizeGithubChecks(runs.check_runs ?? [], statuses.statuses ?? []);
+  return summarizeGithubChecks(
+    runs.check_runs ?? [],
+    statuses.statuses ?? [],
+    opts.requiredCheckNames ?? null,
+  );
 }
 
 interface RawComment {

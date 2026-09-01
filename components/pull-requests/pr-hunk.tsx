@@ -8,7 +8,7 @@ import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import type { FileDiff as FileDiffInstance, PostRenderPhase } from "@pierre/diffs";
 import { PrDiffWorkers } from "@/components/pull-requests/pr-diff-workers";
-import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES } from "@/lib/diff-theme";
+import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES, DIFF_UNSAFE_CSS } from "@/lib/diff-theme";
 import { hunkPatch } from "@/lib/pr-diff-hunk";
 
 /**
@@ -95,6 +95,7 @@ export function PrHunk({
       // here (no `loadDiffFiles`: there is no surrounding file to load).
       hunkSeparators: "simple" as const,
       lineDiffType: DIFF_LINE_DIFF_TYPE,
+      unsafeCSS: DIFF_UNSAFE_CSS,
       onPostRender,
     }),
     [resolvedTheme, isMobile, onPostRender],

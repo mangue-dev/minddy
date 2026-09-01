@@ -33,6 +33,7 @@ import { Markdown } from "@/components/markdown";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayLineOf } from "@/lib/pr-review-threads";
+import { normalizeForgeInstant } from "@/lib/forge-time";
 import type { PrTimelineEvent, PrReviewState } from "@/lib/pr-timeline";
 import type { PullRequestReviewComment } from "@/lib/agent-api";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -169,9 +170,9 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
           <GitLogin login={event.actor.login} className="font-medium text-foreground" />
         ) : null}
         <span className={cn("min-w-0", verdict?.className)}>{timelineText(event, t)}</span>
-        {event.createdAt ? (
+        {normalizeForgeInstant(event.createdAt, now) ? (
           <span className="shrink-0 text-xs text-muted-foreground/70">
-            {format.relativeTime(new Date(event.createdAt), now)}
+            {format.relativeTime(normalizeForgeInstant(event.createdAt, now) as Date, now)}
           </span>
         ) : null}
       </span>
@@ -288,9 +289,9 @@ export function PrTimelineReview({
           {Icon ? <Icon className="size-3.5" /> : null}
           {t(state.label)}
         </span>
-        {event.createdAt ? (
+        {normalizeForgeInstant(event.createdAt, now) ? (
           <span className="shrink-0 text-xs text-muted-foreground/80">
-            {format.relativeTime(new Date(event.createdAt), now)}
+            {format.relativeTime(normalizeForgeInstant(event.createdAt, now) as Date, now)}
           </span>
         ) : null}
       </div>
@@ -350,7 +351,7 @@ export function ReviewCommentBlock({ comment }: { comment: PullRequestReviewComm
           />
           <GitLogin login={comment.user?.login} className="text-xs font-medium text-foreground" />
           <span className="shrink-0 text-[11px] text-muted-foreground/70">
-            {format.relativeTime(new Date(comment.created_at), now)}
+            {format.relativeTime(normalizeForgeInstant(comment.created_at, now) ?? now, now)}
           </span>
         </span>
         <Markdown className="text-sm text-foreground">{comment.body}</Markdown>

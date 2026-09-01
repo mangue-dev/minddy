@@ -16,14 +16,14 @@ const run = (over: Partial<RawCheckRun> & { name: string }): RawCheckRun => ({
 });
 
 describe("summarizeGithubChecks", () => {
-  it("agrège en succès quand tout passe", () => {
+  it("aggregates to success when every check passes", () => {
     const s = summarizeGithubChecks([run({ name: "build" }), run({ name: "test" })], []);
     expect(s.state).toBe("success");
     expect(s.passing).toBe(2);
     expect(s.total).toBe(2);
   });
 
-  it("un seul échec l'emporte sur tout le reste", () => {
+  it("aggregates to failure when no work is pending and one check failed", () => {
     const s = summarizeGithubChecks(
       [run({ name: "build" }), run({ name: "lint", conclusion: "failure" })],
       [],
@@ -34,7 +34,7 @@ describe("summarizeGithubChecks", () => {
     expect(s.checks[0].name).toBe("lint");
   });
 
-  it("un check en cours l'emporte sur les succès, mais pas sur un échec", () => {
+  it("keeps the aggregate pending while any check is still running", () => {
     expect(
       summarizeGithubChecks([run({ name: "a" }), run({ name: "b", status: "in_progress" })], [])
         .state,
@@ -44,15 +44,15 @@ describe("summarizeGithubChecks", () => {
         [run({ name: "a", conclusion: "failure" }), run({ name: "b", status: "queued" })],
         [],
       ).state,
-    ).toBe("failure");
+    ).toBe("pending");
   });
 
-  it("un run non terminé est en cours, quelle que soit sa conclusion", () => {
+  it("treats an incomplete run as pending regardless of its conclusion", () => {
     const s = summarizeGithubChecks([run({ name: "a", status: "queued", conclusion: null })], []);
     expect(s.checks[0].state).toBe("pending");
   });
 
-  it("compte `neutral` et `skipped` comme non bloquants — 5/5, pas 3/5", () => {
+  it("counts neutral and skipped checks as non-blocking", () => {
     const s = summarizeGithubChecks(
       [
         run({ name: "a" }),
@@ -68,7 +68,7 @@ describe("summarizeGithubChecks", () => {
     expect(s.total).toBe(5);
   });
 
-  it("traite `cancelled` et une conclusion inconnue comme un échec, jamais comme un succès", () => {
+  it("treats cancelled and unknown conclusions as failures", () => {
     expect(summarizeGithubChecks([run({ name: "a", conclusion: "cancelled" })], []).state).toBe(
       "failure",
     );
@@ -77,7 +77,7 @@ describe("summarizeGithubChecks", () => {
     ).toBe("failure");
   });
 
-  it("fusionne check runs et commit statuses, et le check run gagne sur le même nom", () => {
+  it("combines check runs and commit statuses with check runs winning by name", () => {
     const statuses: RawCommitStatus[] = [
       { context: "ci/vercel", state: "failure", target_url: "https://vercel" },
       { context: "build", state: "pending" },
@@ -88,7 +88,7 @@ describe("summarizeGithubChecks", () => {
     expect(s.checks.find((c) => c.name === "ci/vercel")?.state).toBe("failure");
   });
 
-  it("porte le logo de l'App, son nom, son résultat et sa durée", () => {
+  it("keeps the app logo, name, result, and duration", () => {
     const s = summarizeGithubChecks(
       [
         run({
@@ -108,7 +108,7 @@ describe("summarizeGithubChecks", () => {
     expect(c.durationMs).toBe(72_000);
   });
 
-  it("le logo de l'App n'est PAS l'avatar de son propriétaire (l'org `github`)", () => {
+  it("uses the app logo instead of its owner's avatar", () => {
     const owned = { owner: { avatar_url: "https://avatars/u/9919" } };
     // With an id, it’s the App logo that wins…
     expect(
@@ -122,7 +122,7 @@ describe("summarizeGithubChecks", () => {
     ).toBe("https://avatars/u/9919");
   });
 
-  it("une durée absente, nulle ou négative ne s'affiche pas", () => {
+  it("omits missing, zero, and negative durations", () => {
     const noEnd = run({ name: "a", started_at: "2026-08-01T15:25:57Z" });
     expect(summarizeGithubChecks([noEnd], []).checks[0].durationMs).toBeNull();
     // GitHub dates a skipped job with an end BEFORE its (measured) start.
@@ -134,7 +134,7 @@ describe("summarizeGithubChecks", () => {
     expect(summarizeGithubChecks([skipped], []).checks[0].durationMs).toBeNull();
   });
 
-  it("un commit status porte son logo et sa description, sans nom d'app", () => {
+  it("keeps a commit status logo and description without an app name", () => {
     const s = summarizeGithubChecks(
       [],
       [
@@ -154,7 +154,7 @@ describe("summarizeGithubChecks", () => {
     expect(c.durationMs).toBeNull();
   });
 
-  it("préfère html_url à details_url pour le lien du check", () => {
+  it("prefers html_url over details_url for the check link", () => {
     const s = summarizeGithubChecks(
       [run({ name: "a", html_url: "https://gh", details_url: "https://ext" })],
       [],
@@ -162,20 +162,20 @@ describe("summarizeGithubChecks", () => {
     expect(s.checks[0].url).toBe("https://gh");
   });
 
-  it("« aucun check » n'est pas « tout va bien » : state null", () => {
+  it("keeps no checks distinct from a successful suite", () => {
     const s = summarizeGithubChecks([], []);
     expect(s.state).toBeNull();
     expect(s.total).toBe(0);
   });
 
-  it("ignore les entrées sans nom exploitable", () => {
+  it("ignores entries without a usable name", () => {
     const s = summarizeGithubChecks([run({ name: "  " })], [{ context: "", state: "success" }]);
     expect(s.total).toBe(0);
   });
 });
 
 describe("summarizeGitlabPipelines", () => {
-  it("ne garde que le pipeline le plus récent — un échec déjà corrigé ne traîne pas", () => {
+  it("keeps only the latest pipeline", () => {
     const s = summarizeGitlabPipelines([
       { id: 20, status: "success", web_url: "https://gl/20" },
       { id: 19, status: "failed", web_url: "https://gl/19" },
@@ -186,7 +186,7 @@ describe("summarizeGitlabPipelines", () => {
     expect(s.checks[0].url).toBe("https://gl/20");
   });
 
-  it("le pipeline dit son CI et ce qu'il a fait tourner — le nom, sinon la branche", () => {
+  it("describes the pipeline with its name or branch", () => {
     const named = summarizeGitlabPipelines([
       { id: 20, status: "success", name: "Ruby 3.3", ref: "main" },
     ]).checks[0];
@@ -200,7 +200,7 @@ describe("summarizeGitlabPipelines", () => {
     ).toBe("main");
   });
 
-  it("mappe les états GitLab sur le vocabulaire commun", () => {
+  it("maps GitLab states to the common vocabulary", () => {
     expect(summarizeGitlabPipelines([{ id: 1, status: "running" }]).state).toBe("pending");
     expect(summarizeGitlabPipelines([{ id: 1, status: "failed" }]).state).toBe("failure");
     expect(summarizeGitlabPipelines([{ id: 1, status: "canceled" }]).state).toBe("failure");
@@ -211,7 +211,7 @@ describe("summarizeGitlabPipelines", () => {
     );
   });
 
-  it("aucun pipeline → state null", () => {
+  it("keeps no pipeline distinct from success", () => {
     expect(summarizeGitlabPipelines([]).state).toBeNull();
   });
 });

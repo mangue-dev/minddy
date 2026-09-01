@@ -46,7 +46,6 @@ import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import { isGitlabConfigured } from "@/lib/server/git/gitlab-app";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
 import {
-  findRunsForPr,
   lastReviewedShaForPullRequest,
   latestRunForPullRequest,
   syncPrState,
@@ -76,6 +75,11 @@ import {
   isForgeAssetId,
   SIGNED_ASSET_HOST,
 } from "@/lib/forge-image-assets";
+import {
+  reducePullRequestReadiness,
+  unavailableMergePolicy,
+  type RepositoryMergePolicy,
+} from "@/lib/pr-readiness";
 
 /**
  * Pull request review gestures (MIN-143), indexed by PR and not by run.
@@ -286,8 +290,28 @@ export async function authorizeRunPrRequest(
 
 /** Forge error → HTTP status (502 = the forge responded no, 500 = us). */
 export function forgeErrorResponse(err: unknown): NextResponse {
-  const status = isForgeApiError(err) ? 502 : 500;
-  return NextResponse.json({ error: (err as Error).message }, { status });
+  if (!isForgeApiError(err)) {
+    return NextResponse.json(
+      { error: (err as Error).message, code: "internalError" },
+      { status: 500 },
+    );
+  }
+  const code =
+    err.status === 401
+      ? "forgeUnauthorized"
+      : err.status === 403
+        ? "permissionDenied"
+        : err.status === 404
+          ? "forgeResourceNotFound"
+          : err.status === 409
+            ? "forgeConflict"
+            : err.status === 422
+              ? "forgeRejected"
+              : "forgeUnavailable";
+  const status = err.status === 401 || err.status === 403 || err.status === 404 || err.status === 409
+    ? err.status
+    : 502;
+  return NextResponse.json({ error: err.message, code }, { status });
 }
 
 // ── Detail ───────────────────────────────── ──────────────────────────────────
@@ -317,11 +341,10 @@ export interface PrViewer {
    * in the thread, and therefore offer to REPLY to him rather than mentioning a
    * bot account that wouldn't trigger anything.
    *
-   * **null on the GitLab side**, and this is the assumed consequence of MIN-146: there is no
-   * no free bot identity there, Numo gestures go from the account
-   * of the person who linked the deposit. No login distinguishes them, so we
-   * doesn't invent one — the screen falls back to the only sure reference, the message from
-   * summary of the current session.
+   * **null on the GitLab side**, which is the intentional consequence of MIN-146:
+   * there is no separate bot identity there. Numo actions use the account of the
+   * person who linked the repository. No login distinguishes them, so Minddy does
+   * not invent one; the screen falls back to the current session summary message.
    */
   numoLogin: string | null;
 }
@@ -330,8 +353,8 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
   const provider = scope.target.provider;
   const configured =
     provider === "github" ? isGithubUserAuthConfigured() : isGitlabConfigured();
-  // `scope.actor()` never rejects: a resolution failure is worth
-  // `capability: "none"`, exactement comme `reviews` vaut null.
+  // `scope.actor()` never rejects: a resolution failure produces
+  // `capability: "none"`, just as an unreadable review collection is `null`.
   // The bot's login is CONFIGURATION data, not identity: it does not
   // depends neither on the reader nor on the repository. It does not raise when the App is not
   // configured — the PR view should render anyway.
@@ -387,13 +410,26 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
     // need the head SHA, therefore a second step. A reading
     // failed approvals (GitLab tier without API, permission removed)
     // should not bring down the PR view: it is null, not zero.
-    const [pr, diff, reviews, viewer] = await Promise.all([
+    const [pr, diff, reviews, reviewThreads, viewer] = await Promise.all([
       forge.getPullRequest(call),
       forge.listPullRequestFiles(call),
       forge.listReviews(call).catch(() => null),
+      forge.listReviewThreads(call).catch(() => null),
       resolveViewer(scope),
     ]);
     const files = diff.files;
+
+    let mergePolicy: RepositoryMergePolicy;
+    try {
+      mergePolicy = pr.base
+        ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
+        : unavailableMergePolicy(scope.target.provider, "unknown");
+    } catch (error) {
+      mergePolicy = unavailableMergePolicy(
+        scope.target.provider,
+        isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
+      );
+    }
 
     // `checks: null` = UNKNOWN (permission denied, call failed), distinct from
     // `checks.total === 0` = “this repository has no CI”. `checksError` says
@@ -403,11 +439,38 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
     let checksError: "forbidden" | "unknown" | null = null;
     if (pr.headSha) {
       try {
-        checks = await forge.listChecks({ ...call, sha: pr.headSha });
+        checks = await forge.listChecks({
+          ...call,
+          sha: pr.headSha,
+          requiredCheckNames: mergePolicy.requiredCheckNames,
+          checksRequired: mergePolicy.checksMustPass,
+        });
       } catch (err) {
         checksError = isForgeApiError(err) && err.status === 403 ? "forbidden" : "unknown";
       }
     }
+
+    const readiness = reducePullRequestReadiness({
+      state: pr.state === "closed" ? "closed" : "open",
+      merged: !!pr.merged,
+      draft: !!pr.draft,
+      mergeabilityReason: pr.mergeabilityReason,
+      policy:
+        reviews?.requiredApprovals != null
+          ? { ...mergePolicy, requiredApprovals: reviews.requiredApprovals }
+          : mergePolicy,
+      checks: checks?.checks ?? null,
+      checksStatus: checksError === "forbidden"
+        ? "forbidden"
+        : checksError
+          ? "unavailable"
+          : "loaded",
+      approvals: reviews?.approvals ?? null,
+      changesRequested: reviews?.changesRequested ?? null,
+      reviewThreads,
+      canWrite: viewer.capability === "write",
+      mergeFlowActive: pr.mergeFlowActive,
+    });
 
     return NextResponse.json({
       pr,
@@ -416,8 +479,11 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
       checks,
       checksError,
       reviews,
+      reviewThreads,
       viewer,
-      mergeMethods: forge.mergeMethods,
+      mergeMethods: mergePolicy.methods,
+      mergePolicy,
+      readiness,
     });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -1404,7 +1470,7 @@ export async function prAttachmentResponse(
   });
 }
 
-// ── Comptes mentionnables ────────────────────────────────────────────────────
+// ── Mentionable accounts ─────────────────────────────────────────────────────
 
 /**
  * The accounts of the forge that can be mentioned on this PR (MIN-162).
@@ -1415,8 +1481,8 @@ export async function prAttachmentResponse(
  *
  * A failure is **empty list**, never an error: the “Members” permission
  * may be missing during installation (403), a GitLab third party may refuse the endpoint —
- * and we write a comment very well without suggestion. Compose him,
- * only ever inserts what has been typed.
+ * and comments still work without suggestions. The composer only inserts text
+ * that the user explicitly typed.
  */
 export async function prMembersResponse(scope: PrScope): Promise<NextResponse> {
   const members = await scope.forge.listRepoMembers(scope.call).catch((err) => {
@@ -1653,8 +1719,26 @@ export interface PrActionBody {
    */
   postVerdict?: boolean;
   method?: string;
+  title?: string;
+  rerunRef?: { kind?: string; id?: number };
   /** `link_issue`: the ticket to attach to this PR (MIN-163). */
   issueId?: string;
+}
+
+const ACTIVE_PR_OPERATIONS = new Set<string>();
+
+async function withPrOperation<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  if (ACTIVE_PR_OPERATIONS.has(key)) {
+    const error = new Error("Pull request operation already in progress");
+    error.name = "PrOperationInProgress";
+    throw error;
+  }
+  ACTIVE_PR_OPERATIONS.add(key);
+  try {
+    return await operation();
+  } finally {
+    ACTIVE_PR_OPERATIONS.delete(key);
+  }
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1778,16 +1862,72 @@ export async function prStateActionResponse(
   const myCall = actorCall(actor.actor, scope);
   try {
     if (action === "merge") {
-      // The method comes from the UI, which only offers `forge.mergeMethods`: we
-      // revalidate here rather than letting the forge refuse in 422 opaque.
-      const method = body.method as MergeMethod | undefined;
-      if (method && !forge.mergeMethods.includes(method)) {
+      const pr = await forge.getPullRequest(call);
+      let policy: RepositoryMergePolicy;
+      try {
+        policy = pr.base
+          ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
+          : unavailableMergePolicy(scope.target.provider, "unknown");
+      } catch (error) {
+        policy = unavailableMergePolicy(
+          scope.target.provider,
+          isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
+        );
+      }
+      const [reviews, reviewThreads, checksResult] = await Promise.all([
+        forge.listReviews(call).catch(() => null),
+        forge.listReviewThreads(call).catch(() => null),
+        pr.headSha
+          ? forge
+              .listChecks({
+                ...call,
+                sha: pr.headSha,
+                requiredCheckNames: policy.requiredCheckNames,
+                checksRequired: policy.checksMustPass,
+              })
+              .then((checks) => ({ checks, error: null as null | "forbidden" | "unavailable" }))
+              .catch((error) => ({
+                checks: null,
+                error:
+                  isForgeApiError(error) && error.status === 403
+                    ? ("forbidden" as const)
+                    : ("unavailable" as const),
+              }))
+          : Promise.resolve({ checks: null, error: "unavailable" as const }),
+      ]);
+      const readiness = reducePullRequestReadiness({
+        state: pr.state === "closed" ? "closed" : "open",
+        merged: !!pr.merged,
+        draft: !!pr.draft,
+        mergeabilityReason: pr.mergeabilityReason,
+        policy:
+          reviews?.requiredApprovals != null
+            ? { ...policy, requiredApprovals: reviews.requiredApprovals }
+            : policy,
+        checks: checksResult.checks?.checks ?? null,
+        checksStatus: checksResult.error ?? "loaded",
+        approvals: reviews?.approvals ?? null,
+        changesRequested: reviews?.changesRequested ?? null,
+        reviewThreads,
+        canWrite: true,
+        mergeFlowActive: pr.mergeFlowActive,
+      });
+      if (!readiness.mergeAllowed) {
+        return NextResponse.json(
+          { error: "Pull request is not ready to merge", code: "mergeBlocked", readiness },
+          { status: 409 },
+        );
+      }
+      const method = (body.method as MergeMethod | undefined) ?? policy.preferredMethod ?? undefined;
+      if (method && !policy.methods.includes(method)) {
         return NextResponse.json(
           { error: "Unsupported merge method", code: "unsupportedMergeMethod" },
           { status: 400 },
         );
       }
-      await forge.mergePullRequest({ ...myCall, method });
+      await withPrOperation(`${scope.pr.id}:merge`, () =>
+        forge.mergePullRequest({ ...myCall, method }),
+      );
       await propagatePrState(scope, "merged", userId);
       // Record “accepted the PR” in the linked ticket activity.
       if (scope.pr.issue_id) {
@@ -1850,7 +1990,99 @@ export async function prStateActionResponse(
     }
     return NextResponse.json({ ok: true, pr_state: "closed" });
   } catch (err) {
+    if (err instanceof Error && err.name === "PrOperationInProgress") {
+      return NextResponse.json({ error: err.message, code: "operationInProgress" }, { status: 409 });
+    }
     return forgeErrorResponse(err);
+  }
+}
+
+export async function prMaintenanceActionResponse(
+  scope: PrScope,
+  action: "update_branch" | "rerun_check" | "update_title" | "enable_auto_merge",
+  body: PrActionBody,
+): Promise<NextResponse> {
+  const actor = await requireActor(scope, "write");
+  if (!actor.ok) return actor.response;
+  const call = actorCall(actor.actor, scope);
+  try {
+    if (action === "update_branch") {
+      const pr = await scope.forge.getPullRequest(scope.call);
+      await withPrOperation(`${scope.pr.id}:update-branch`, () =>
+        scope.forge.updatePullRequestBranch({ ...call, headSha: pr.headSha }),
+      );
+      broadcastPrChanged(scope.pr.id, ["pr", "commits", "reviewComments"]);
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "rerun_check") {
+      const raw = body.rerunRef;
+      if (
+        !raw ||
+        !Number.isInteger(raw.id) ||
+        (raw.kind !== "github_check_suite" && raw.kind !== "gitlab_pipeline")
+      ) {
+        return NextResponse.json(
+          { error: "Invalid check rerun reference", code: "invalidRerunRef" },
+          { status: 400 },
+        );
+      }
+      const ref: { kind: "github_check_suite" | "gitlab_pipeline"; id: number } = {
+        kind: raw.kind,
+        id: raw.id as number,
+      };
+      await withPrOperation(`${scope.pr.id}:rerun:${ref.kind}:${ref.id}`, () =>
+        scope.forge.rerunPullRequestCheck({ ...call, ref }),
+      );
+      broadcastPrChanged(scope.pr.id, ["pr"]);
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "enable_auto_merge") {
+      const pr = await scope.forge.getPullRequest(scope.call);
+      const policy = pr.base
+        ? await scope.forge.getRepositoryMergePolicy({ ...scope.call, base: pr.base })
+        : unavailableMergePolicy(scope.target.provider, "unknown");
+      if (!policy.available || (!policy.mergeQueueRequired && !policy.autoMergeAllowed)) {
+        return NextResponse.json(
+          { error: "Merge flow is unavailable", code: "mergeFlowUnavailable" },
+          { status: 409 },
+        );
+      }
+      await withPrOperation(`${scope.pr.id}:merge-flow`, () =>
+        scope.forge.enablePullRequestMergeFlow({
+          ...call,
+          nodeId: pr.nodeId,
+          headSha: pr.headSha,
+          method: policy.preferredMethod ?? undefined,
+          queue: policy.mergeQueueRequired === true,
+        }),
+      );
+      broadcastPrChanged(scope.pr.id, ["pr"]);
+      return NextResponse.json({ ok: true });
+    }
+    const title = typeof body.title === "string" ? body.title.trim().slice(0, 256) : "";
+    if (!title) {
+      return NextResponse.json(
+        { error: "Pull request title is required", code: "titleRequired" },
+        { status: 400 },
+      );
+    }
+    const updated = await withPrOperation(`${scope.pr.id}:update-title`, () =>
+      scope.forge.updatePullRequestTitle({ ...call, title }),
+    );
+    await getServiceClient()
+      .from("pull_requests")
+      .update({ title: updated.title ?? title, updated_at: new Date().toISOString() })
+      .eq("id", scope.pr.id);
+    broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
+    return NextResponse.json({ ok: true, title: updated.title ?? title });
+  } catch (error) {
+    if (error instanceof Error && error.name === "PrOperationInProgress") {
+      return NextResponse.json(
+        { error: error.message, code: "operationInProgress" },
+        { status: 409 },
+      );
+    }
+    return forgeErrorResponse(error);
   }
 }
 
@@ -1888,16 +2120,16 @@ export async function prReviewResponse(
     typeof body.message === "string"
       ? body.message.trim().slice(0, MAX_COMMENT_BODY_LENGTH)
       : "";
-  // An empty comment has nothing to say, and both forges refuse it; a
-  // Naked approval goes very well without a message.
+  // An empty comment has nothing to say, and both providers reject it; a bare
+  // approval works without a message.
   if (!message && verdict !== "approve") {
     return NextResponse.json({ error: "Message required" }, { status: 400 });
   }
   // Relaunching Numo only makes sense when requesting changes: it needs
   // an instruction, and approving requires nothing.
   const relaunch = !!body.relaunch && verdict === "request_changes";
-  // Approving or commenting is SPEAK: without a verdict to be published, all that remains is
-  // Nothing. Only a request for changes has a second effect (relaunch).
+  // Approving or commenting publishes a verdict. Only a request for changes has
+  // the additional effect of relaunching Numo.
   const postVerdict = body.postVerdict !== false || verdict !== "request_changes";
   if (!postVerdict && !relaunch) {
     return NextResponse.json({ error: "Nothing to do", code: "noEffect" }, { status: 400 });
@@ -1927,18 +2159,8 @@ export async function prReviewResponse(
         { status: 409 },
       );
     }
-    // No run behind this PR: Numo has no branch to take.
-    const runs = await findRunsForPr({
-      repoFullName: scope.target.repoFullName,
-      prNumber: scope.pr.number,
-      provider: scope.target.provider,
-    });
-    if (runs.length === 0) {
-      return NextResponse.json({ error: "noAgentRun", code: "noAgentRun" }, { status: 409 });
-    }
-
     // Launch FIRST: its guards (already active run, quota, deposit) can
-    // refuse, and posting the review before them would leave an orphan review on
+    // reject the launch, and posting the review first would leave an orphan review on
     // the PR — duplicated on each user retry.
     const model =
       typeof body.model === "string" && body.model.trim()

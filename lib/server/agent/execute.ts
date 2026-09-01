@@ -25,7 +25,7 @@ import {
   buildInheritedPrMessage,
   buildInheritedBranchMessage,
   buildPrReviewContextMessage,
-  toPrLineThreads,
+  toActionablePrLineThreads,
   type AgentAnchor,
   type AgentRepoContext,
   type AgentResourceContext,
@@ -432,7 +432,7 @@ async function buildInheritedPrContext(
       // proposed. PR unreadable → we fall back to the state frozen at launch.
       state: pr ? prStateFromRef(pr) : run.pr_state,
       comments: comments.map((c) => ({ author: c.user?.login ?? null, body: c.body })),
-      lineThreads: toPrLineThreads(reviewComments, reviewThreads),
+      lineThreads: toActionablePrLineThreads(reviewComments, reviewThreads),
       previousSummary,
     },
   });

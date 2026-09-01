@@ -5,6 +5,7 @@ import {
   prAiReviewResponse,
   prDetailResponse,
   prLinkIssueResponse,
+  prMaintenanceActionResponse,
   prReviewResponse,
   prStateActionResponse,
   type PrActionBody,
@@ -65,7 +66,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "review" &&
     action !== "ai_review" &&
     action !== "ready_for_review" &&
-    action !== "link_issue"
+    action !== "link_issue" &&
+    action !== "update_branch" &&
+    action !== "rerun_check" &&
+    action !== "update_title" &&
+    action !== "enable_auto_merge"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
@@ -83,6 +88,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // Language is no longer a parameter: an agent session writes in that of
     // its launcher, resolved in the first chunk as for all the others.
     return prAiReviewResponse(auth.scope, auth.userId, body.model, body.reasoningLevel);
+  }
+  if (
+    action === "update_branch" ||
+    action === "rerun_check" ||
+    action === "update_title" ||
+    action === "enable_auto_merge"
+  ) {
+    return prMaintenanceActionResponse(auth.scope, action, body);
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);
 }
