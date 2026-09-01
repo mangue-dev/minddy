@@ -120,6 +120,65 @@ export function findWorkflowContainerPinningViolations(source, file = "<workflow
   return findings;
 }
 
+export function findArtifactRetentionViolations(source, file = "<workflow>") {
+  const lines = source.split(/\r?\n/u);
+  const findings = [];
+
+  for (const [index, line] of lines.entries()) {
+    const action = line.match(USES_LINE);
+    const reference = action?.[1] ?? action?.[2] ?? action?.[3];
+    if (!reference?.startsWith("actions/upload-artifact@")) continue;
+
+    let stepStart = index;
+    while (stepStart > 0 && !/^\s*-\s+\S/u.test(lines[stepStart])) stepStart -= 1;
+    const stepIndentation = lines[stepStart].match(/^\s*/u)?.[0].length ?? 0;
+    let stepEnd = lines.length;
+    for (let cursor = stepStart + 1; cursor < lines.length; cursor += 1) {
+      const candidate = lines[cursor];
+      const indentation = candidate.match(/^\s*/u)?.[0].length ?? 0;
+      if (
+        candidate.trim()
+        && (indentation < stepIndentation
+          || (indentation === stepIndentation && /^\s*-\s+\S/u.test(candidate)))
+      ) {
+        stepEnd = cursor;
+        break;
+      }
+    }
+
+    const inputIndentation = stepIndentation + 4;
+    let retentionDays = null;
+    let inInputs = false;
+    for (let cursor = stepStart + 1; cursor < stepEnd; cursor += 1) {
+      const candidate = lines[cursor];
+      const indentation = candidate.match(/^\s*/u)?.[0].length ?? 0;
+      if (indentation === stepIndentation + 2 && candidate.trim() === "with:") {
+        inInputs = true;
+        continue;
+      }
+      if (inInputs && candidate.trim() && indentation < inputIndentation) inInputs = false;
+      if (!inInputs || indentation !== inputIndentation) continue;
+      const retention = candidate.match(
+        /^\s*retention-days:\s*(["']?)(\d+)\1\s*(?:#.*)?$/u,
+      );
+      if (retention) retentionDays = Number(retention[2]);
+    }
+
+    if (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 90) {
+      findings.push(
+        finding(
+          file,
+          index + 1,
+          reference,
+          "artifact upload must declare literal retention-days between 1 and 90",
+        ),
+      );
+    }
+  }
+
+  return findings;
+}
+
 export function findDockerfileBaseImagePinningViolations(source, file = "Dockerfile") {
   const findings = [];
   const stages = new Set();
@@ -153,6 +212,7 @@ async function checkWorkflows(workflowsDirectory) {
     const source = await readFile(absolutePath, "utf8");
     const file = `.github/workflows/${filename}`;
     findings.push(...findActionPinningViolations(source, file));
+    findings.push(...findArtifactRetentionViolations(source, file));
     findings.push(...findWorkflowContainerPinningViolations(source, file));
   }
 
@@ -166,7 +226,9 @@ async function main() {
   findings.push(...findDockerfileBaseImagePinningViolations(dockerfile));
 
   if (findings.length === 0) {
-    console.log("All external workflow actions and container images are immutably pinned.");
+    console.log(
+      "All external workflow actions and container images are immutably pinned, with bounded artifact retention.",
+    );
     return;
   }
 

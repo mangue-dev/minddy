@@ -37,6 +37,10 @@ date above:
   requires approval before workflows from every external contributor run.
 - CodeQL default setup scans Actions, C/C++, and JavaScript/TypeScript.
 - Dependabot alerts, security updates, and automated security fixes are enabled.
+- Every Actions artifact upload declares its retention explicitly: CI security
+  evidence is kept for 7 days, cross-job intermediates for 1 day, and public
+  release bundles for 30 days. GitHub Release assets remain the durable public
+  distribution record.
 - Secret scanning, push protection, and private vulnerability reporting are
   enabled. The only alert raised during activation was a deterministic scanner
   fixture and was resolved as `used_in_tests`; no operational credential was
@@ -116,9 +120,9 @@ push protection, private vulnerability reporting, Dependabot security updates
 and automated fixes, Actions allowlisting and SHA enforcement, read-only
 workflow tokens, external-contributor approval, CodeQL coverage, the two branch
 rulesets without exclusions, the sole verified writable production deploy key,
-the solo-compatible release approval, release ref restrictions, and the absence
-of open secret or high/critical dependency and code-scanning alerts. It prints
-no secret values.
+the solo-compatible release approval, release ref restrictions, bounded
+artifact retention, and the absence of open secret or high/critical dependency
+and code-scanning alerts. It prints no secret values.
 
 ## Verification
 

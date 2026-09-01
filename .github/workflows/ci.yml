@@ -215,6 +215,7 @@ jobs:
           name: self-hosted-egress-reports
           path: ${{ runner.temp }}/self-hosted-egress-*.md
           if-no-files-found: error
+          retention-days: 7
 
   audit:
     name: Dependencies audit

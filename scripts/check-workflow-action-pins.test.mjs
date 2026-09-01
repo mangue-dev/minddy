@@ -3,10 +3,58 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  findArtifactRetentionViolations,
   findActionPinningViolations,
   findDockerfileBaseImagePinningViolations,
   findWorkflowContainerPinningViolations,
 } from "./check-workflow-action-pins.mjs";
+
+test("artifact uploads require explicit bounded retention", () => {
+  const digest = "a".repeat(40);
+  const findings = findArtifactRetentionViolations(`
+steps:
+  - uses: actions/upload-artifact@${digest} # v4.6.2
+    with:
+      name: missing-retention
+  - uses: actions/upload-artifact@${digest} # v4.6.2
+    with:
+      retention-days: 91
+  - uses: actions/upload-artifact@${digest} # v4.6.2
+    env:
+      retention-days: 7
+`);
+
+  assert.deepEqual(
+    findings.map(({ line, message }) => ({ line, message })),
+    [
+      {
+        line: 3,
+        message: "artifact upload must declare literal retention-days between 1 and 90",
+      },
+      {
+        line: 6,
+        message: "artifact upload must declare literal retention-days between 1 and 90",
+      },
+      {
+        line: 9,
+        message: "artifact upload must declare literal retention-days between 1 and 90",
+      },
+    ],
+  );
+});
+
+test("artifact uploads accept explicit bounded retention", () => {
+  const digest = "a".repeat(40);
+  const findings = findArtifactRetentionViolations(`
+steps:
+  - uses: actions/upload-artifact@${digest} # v4.6.2
+    with:
+      name: evidence
+      retention-days: "7"
+`);
+
+  assert.deepEqual(findings, []);
+});
 
 test("workflow action policy rejects mutable external references", () => {
   const findings = findActionPinningViolations(`
@@ -124,6 +172,7 @@ test("release-surface workflows and Dockerfile satisfy the repository pinning po
   for (const filename of workflowFiles) {
     const source = readFileSync(new URL(`../.github/workflows/${filename}`, import.meta.url), "utf8");
     findings.push(...findActionPinningViolations(source, `.github/workflows/${filename}`));
+    findings.push(...findArtifactRetentionViolations(source, `.github/workflows/${filename}`));
     findings.push(...findWorkflowContainerPinningViolations(source, `.github/workflows/${filename}`));
   }
 
