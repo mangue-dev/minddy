@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getRoutineForUser } from "@/lib/server/routines";
 import { runsForRoutine } from "@/lib/server/agent/runs";
+import { agentRunCanResume } from "@/lib/agent-run-resumability";
 
 /**
  * The “Previous Executions” of a Routine (MIN-185) — the ONLY place where
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     // Set by DB trigger, outside of type `AgentRun` — the list needs it to
     // tell when a passage has ended.
     out.completed_at = row.completed_at ?? null;
+    out.resumable = agentRunCanResume(run);
     return out;
   });
   return NextResponse.json({ runs });

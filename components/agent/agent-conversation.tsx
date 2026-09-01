@@ -286,17 +286,19 @@ export function AgentConversation({
 
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
   // Resolution of the run displayed: the one designated, otherwise the one working,
-  // otherwise the LAST run NO `failed` of the outcome — a conversation at rest occurs
-  // PUSHED (conversational model), it does not fall back on a blank composition.
-  // A `failed` run (dead at boot) has neither thread nor composer: take it by
-  // default would open a dead conversation without visible action - we dial at the
-  // place. The fallback is only used by callers WITHOUT a designated run (the modal of
-  // resumption): the Agents page always opens the run of the clicked line.
+  // otherwise the latest resumable run. A failed bootstrap has neither thread
+  // nor composer, while an interrupted turn with a surviving checkpoint must
+  // reopen normally. The fallback is only used by callers without a designated
+  // run; the Agents page always opens the clicked session directly.
   const liveRun = composing
     ? null
     : selectedId
       ? (knownRuns.find((r) => r.id === selectedId) ?? null)
-      : (activeRun ?? knownRuns.find((r) => r.status !== "failed") ?? null);
+      : (activeRun ??
+        knownRuns.find((run) =>
+          isAgentRunResumable(run.status, run.resumable),
+        ) ??
+        null);
   /**
    * What the SERVER does — the truth of the requests (thread polling, diff,
    * decision to discontinue). To be distinguished from `working`, which is what
@@ -320,14 +322,16 @@ export function AgentConversation({
   // Her PR is merged → run DELIVERED: waking her up would push on a branch already
   // in the database and would reopen a PR cycle on finished work (409 `prMerged`).
   const delivered = liveRun?.pr_state === "merged";
-  // Does the dial speak to this run? Yes even finished (hot restart) — alone
-  // `failed` has nothing to take back. But ONLY the last run can be repeated: the
-  // runs from an issue share the branch, and a past run remained in a state
+  // Does the composer speak to this run? Yes even when finished, and also after
+  // an interrupted failure whose checkpoint survived. But only the latest run
+  // can be resumed: runs from an issue share the branch, and a past run remained in a state
   // exceeded (his push would be rejected). We consult it; to continue, we launch
   // news. The server applies the same rules (409 `supersededRun` /
   // `prMerged`).
   const steerable = liveRun
-    ? isAgentRunResumable(liveRun.status) && isLatest && !delivered
+    ? isAgentRunResumable(liveRun.status, liveRun.resumable) &&
+      isLatest &&
+      !delivered
     : false;
 
   // Question ask_user ACTIVE (MIN-86): the last significant event of the thread is

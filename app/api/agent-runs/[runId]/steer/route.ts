@@ -22,6 +22,7 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
+import { agentRunCanResume } from "@/lib/agent-run-resumability";
 
 /**
  * WARM restart of an agent run (MIN-46 + MIN-68): the user sends a
@@ -53,14 +54,6 @@ export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ runId: string }> };
 
-/** Failed turns are resumable only when they retained a checkpoint. */
-const RESUMABLE: AgentRunStatus[] = [
-  "queued",
-  "running",
-  "completed",
-  "failed",
-  "canceled",
-];
 /** Idle/completed statuses that require a restart (re-queue + kick). */
 const RESUME_FROM: AgentRunStatus[] = ["completed", "failed", "canceled"];
 const MAX_LEN = 4000;
@@ -153,13 +146,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  if (!RESUMABLE.includes(run.status)) {
-    return NextResponse.json(
-      { error: "Run is not resumable" },
-      { status: 409 },
-    );
-  }
-  if (run.status === "failed" && !run.checkpoint) {
+  if (!agentRunCanResume(run)) {
     return NextResponse.json(
       { error: "Run is not resumable" },
       { status: 409 },

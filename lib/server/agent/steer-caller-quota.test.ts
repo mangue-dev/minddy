@@ -87,6 +87,25 @@ beforeEach(() => {
 });
 
 describe("POST /api/agent-runs/[runId]/steer", () => {
+  it("rejects a failed bootstrap that has no checkpoint", async () => {
+    run!.status = "failed";
+    run!.checkpoint = null;
+
+    const res = await POST(request(), params);
+    expect(res.status).toBe(409);
+    expect(messages).toHaveLength(0);
+    expect(checkAgentQuota).not.toHaveBeenCalled();
+  });
+
+  it("accepts a failed turn when its checkpoint survived", async () => {
+    run!.status = "failed";
+    run!.checkpoint = { messages: [] };
+
+    const res = await POST(request(), params);
+    expect(res.status).toBe(200);
+    expect(messages).toHaveLength(1);
+  });
+
   it("rejects a member whose plan does not include agents", async () => {
     quotas.set(MEMBER, {
       allowed: false,

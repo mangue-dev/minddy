@@ -19,6 +19,7 @@ import {
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
+import { agentRunCanResume } from "@/lib/agent-run-resumability";
 
 /** The `RUN_COLUMNS` columns this file needs to slice. */
 type RunRow = RunAnchors & {
@@ -81,14 +82,44 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // routine) or which relate to RA. Sorting is here because reading is
   // in service key — the `agent_runs_select` policy, which it bypasses, says the
   // same thing. The three visibility columns appear immediately in the payload.
-  const runs = ((data ?? []) as unknown as RunRow[])
-    .filter(
-      (run) =>
-        run.conversation
-          ? canReadConversationRecord(auth.user.id, run.conversation)
-          : isSharedRun(run) || run.created_by === auth.user.id,
-    )
-    .map(({ created_by: _c, chain_id: _ch, routine_id: _r, conversation: _v, ...rest }) => rest);
+  const visibleRuns = ((data ?? []) as unknown as RunRow[]).filter((run) =>
+    run.conversation
+      ? canReadConversationRecord(auth.user.id, run.conversation)
+      : isSharedRun(run) || run.created_by === auth.user.id,
+  );
+  // Checkpoints can reach several megabytes and must never enter a list payload.
+  // Fetch only the ids of failed rows that retained one; other statuses are
+  // resumable without consulting checkpoint state.
+  const failedIds = visibleRuns
+    .filter((run) => run.status === "failed")
+    .map((run) => String(run.id));
+  const { data: checkpointRows } =
+    failedIds.length > 0
+      ? await service
+          .from("agent_runs")
+          .select("id")
+          .in("id", failedIds)
+          .not("checkpoint", "is", null)
+      : { data: [] };
+  const failedWithCheckpoint = new Set(
+    ((checkpointRows ?? []) as Array<{ id: string }>).map((run) => run.id),
+  );
+  const runs = visibleRuns.map(
+    ({
+      created_by: _c,
+      chain_id: _ch,
+      routine_id: _r,
+      conversation: _v,
+      checkpoint: _checkpoint,
+      ...rest
+    }) => ({
+      ...rest,
+      resumable: agentRunCanResume({
+        status: String(rest.status),
+        checkpoint: failedWithCheckpoint.has(String(rest.id)) ? true : null,
+      }),
+    }),
+  );
   return NextResponse.json({ runs, pullRequest });
 }
 

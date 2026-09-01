@@ -32,4 +32,11 @@ describe("atomic agent resume budget migration", () => {
       "v_run.status = 'failed' and v_run.checkpoint is null",
     );
   });
+
+  it("keeps idle sandbox reaping indexed for completed and failed runs", () => {
+    expect(failedResumeSql).toContain("drop index if exists public.idx_agent_runs_idle_sandbox");
+    expect(failedResumeSql).toContain(
+      "where status in ('completed', 'failed') and sandbox_id is not null and sandbox_stopped_at is null",
+    );
+  });
 });

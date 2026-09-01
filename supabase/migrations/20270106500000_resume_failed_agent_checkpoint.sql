@@ -94,3 +94,12 @@ REVOKE ALL ON FUNCTION public.resume_agent_run_with_budget(
 GRANT EXECUTE ON FUNCTION public.resume_agent_run_with_budget(
   uuid, uuid, timestamptz, numeric, numeric, timestamptz
 ) TO service_role;
+
+-- Keep the periodic idle-sandbox reaper indexed after adding failed runs to
+-- its resting statuses. The former predicate covered completed runs only.
+DROP INDEX IF EXISTS public.idx_agent_runs_idle_sandbox;
+CREATE INDEX idx_agent_runs_idle_sandbox
+  ON public.agent_runs (last_activity_at)
+  WHERE status IN ('completed', 'failed')
+    AND sandbox_id IS NOT NULL
+    AND sandbox_stopped_at IS NULL;
