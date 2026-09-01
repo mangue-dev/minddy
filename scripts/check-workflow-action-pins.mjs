@@ -120,6 +120,46 @@ export function findWorkflowContainerPinningViolations(source, file = "<workflow
   return findings;
 }
 
+export function findArtifactRetentionViolations(source, file = "<workflow>") {
+  const lines = source.split(/\r?\n/u);
+  const findings = [];
+
+  for (const [index, line] of lines.entries()) {
+    const action = line.match(USES_LINE);
+    const reference = action?.[1] ?? action?.[2] ?? action?.[3];
+    if (!reference?.startsWith("actions/upload-artifact@")) continue;
+
+    const actionIndentation = line.match(/^\s*/u)?.[0].length ?? 0;
+    let retentionDays = null;
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      const candidate = lines[cursor];
+      const indentation = candidate.match(/^\s*/u)?.[0].length ?? 0;
+      if (
+        candidate.trim()
+        && (indentation < actionIndentation
+          || (indentation === actionIndentation && /^\s*-\s/u.test(candidate)))
+      ) {
+        break;
+      }
+      const retention = candidate.match(/^\s*retention-days:\s*(\d+)\s*(?:#.*)?$/u);
+      if (retention) retentionDays = Number(retention[1]);
+    }
+
+    if (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 90) {
+      findings.push(
+        finding(
+          file,
+          index + 1,
+          reference,
+          "artifact upload must declare literal retention-days between 1 and 90",
+        ),
+      );
+    }
+  }
+
+  return findings;
+}
+
 export function findDockerfileBaseImagePinningViolations(source, file = "Dockerfile") {
   const findings = [];
   const stages = new Set();
@@ -153,6 +193,7 @@ async function checkWorkflows(workflowsDirectory) {
     const source = await readFile(absolutePath, "utf8");
     const file = `.github/workflows/${filename}`;
     findings.push(...findActionPinningViolations(source, file));
+    findings.push(...findArtifactRetentionViolations(source, file));
     findings.push(...findWorkflowContainerPinningViolations(source, file));
   }
 
@@ -166,7 +207,9 @@ async function main() {
   findings.push(...findDockerfileBaseImagePinningViolations(dockerfile));
 
   if (findings.length === 0) {
-    console.log("All external workflow actions and container images are immutably pinned.");
+    console.log(
+      "All external workflow actions and container images are immutably pinned, with bounded artifact retention.",
+    );
     return;
   }
 
