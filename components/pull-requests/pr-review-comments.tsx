@@ -820,9 +820,9 @@ export function StaleThreads({
                     Rendered by the diff lib like the file just above, and
                     no longer in raw `<pre>`: an outdated thread speaks the same code
                     than the diff, it does not have to display in another language.
-                    `maxLines={0}` — the whole hunk: here he IS the only context,
-                    where in the activity thread it only recalls a line
-                    which you can read in the Files tab. */}
+                    The same short context rule applies here and in Activity:
+                    single-line comments retain a few preceding lines, while a
+                    multi-line comment displays exactly its selected range. */}
                 <PrHunk
                   path={thread.root.path}
                   line={line}
@@ -830,7 +830,6 @@ export function StaleThreads({
                   side={thread.root.start_side ?? thread.root.side}
                   outdated={thread.resolution?.outdated ?? thread.root.line == null}
                   diffHunk={thread.root.diff_hunk}
-                  maxLines={0}
                   className="rounded-md border border-border"
                 />
                 <ReviewThreadCard

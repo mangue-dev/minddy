@@ -1122,6 +1122,15 @@ nav[aria-label="Navigation"]
   -webkit-user-select: text !important;
 }
 
+/* Embedded diff chrome remains ordinary UI. This opt-out deliberately follows
+   the selectable rule so badges and future controls do not inherit its forced
+   text cursor while the surrounding source code stays copyable. */
+.diff-selectable [data-diff-nonselectable],
+.diff-selectable [data-diff-nonselectable] * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
 /* ─── Scratchpad (Notes) — always editable WYSIWYG surface ──────────────
    Check boxes (TaskList/TaskItem) and the “copy section” button
    (ProseMirror decoration placed on each title) do not have a style provided by

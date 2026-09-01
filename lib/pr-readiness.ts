@@ -618,6 +618,11 @@ export interface GitlabProjectPolicyInput {
   only_allow_merge_if_all_discussions_are_resolved?: boolean;
   approvals_before_merge?: number;
   merge_trains_enabled?: boolean;
+  merge_train_enforcement?:
+    | "allow_bypass"
+    | "enforce_for_all_users"
+    | "enforce_with_owner_override"
+    | string;
 }
 
 export function mapGitlabMergePolicy(
@@ -632,6 +637,10 @@ export function mapGitlabMergePolicy(
         : squash === "default_on"
           ? ["squash", "merge"]
           : ["merge", "squash"];
+  const mergeTrainRequired =
+    project.merge_trains_enabled === true &&
+    (project.merge_train_enforcement === "enforce_for_all_users" ||
+      project.merge_train_enforcement === "enforce_with_owner_override");
   return {
     provider: "gitlab",
     available: true,
@@ -646,7 +655,11 @@ export function mapGitlabMergePolicy(
     branchMustBeUpToDate: project.merge_method === "rebase_merge" ? true : null,
     linearHistoryRequired:
       project.merge_method === "ff" || project.merge_method === "rebase_merge",
-    mergeQueueRequired: project.merge_trains_enabled ?? false,
+    // Enabling merge trains exposes the capability but still allows direct
+    // merges by default. Only GitLab's enforcement setting makes the train a
+    // repository requirement; older instances omit this field and therefore
+    // retain their bypass behavior.
+    mergeQueueRequired: mergeTrainRequired,
     autoMergeAllowed: true,
   };
 }

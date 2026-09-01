@@ -189,6 +189,30 @@ describe("provider merge policy mapping", () => {
       linearHistoryRequired: true,
     });
   });
+
+  it("treats enabled GitLab merge trains as a capability until enforcement requires them", () => {
+    expect(
+      mapGitlabMergePolicy({ merge_trains_enabled: true }).mergeQueueRequired,
+    ).toBe(false);
+    expect(
+      mapGitlabMergePolicy({
+        merge_trains_enabled: true,
+        merge_train_enforcement: "allow_bypass",
+      }).mergeQueueRequired,
+    ).toBe(false);
+    expect(
+      mapGitlabMergePolicy({
+        merge_trains_enabled: true,
+        merge_train_enforcement: "enforce_for_all_users",
+      }).mergeQueueRequired,
+    ).toBe(true);
+    expect(
+      mapGitlabMergePolicy({
+        merge_trains_enabled: true,
+        merge_train_enforcement: "enforce_with_owner_override",
+      }).mergeQueueRequired,
+    ).toBe(true);
+  });
 });
 
 describe("provider fallback links", () => {

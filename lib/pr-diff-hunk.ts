@@ -43,8 +43,6 @@ export interface HunkFocusRange {
   endLine: number;
   /** GitHub numbers deletions on LEFT and additions/context on RIGHT. */
   side: "LEFT" | "RIGHT";
-  /** Context lines retained before the selected range. Defaults to three. */
-  contextLines?: number;
 }
 
 function parseHunk(diffHunk: string): ParsedHunk | null {
@@ -123,7 +121,11 @@ export function hunkPatch(
   let firstKeptIndex = maxLines > 0 ? Math.max(0, parsed.lines.length - maxLines) : 0;
   let lastKeptIndex = parsed.lines.length - 1;
 
-  if (maxLines !== 0 && focus && focus.startLine < focus.endLine) {
+  // A multi-line comment is already its own context: rendering anything before
+  // `startLine` makes the visible selection disagree with the forge anchor.
+  // Single-line comments do not receive a focus range and keep the short tail
+  // selected by `maxLines`, so they still show a few preceding lines.
+  if (focus && focus.startLine < focus.endLine) {
     const numberOf = (line: HunkPreviewLine) =>
       focus.side === "LEFT" ? line.oldLine : line.newLine;
     const startIndex = parsed.lines.findIndex(
@@ -133,7 +135,7 @@ export function hunkPatch(
       (line) => numberOf(line) === focus.endLine,
     );
     if (startIndex >= 0 && endIndex >= startIndex) {
-      firstKeptIndex = Math.max(0, startIndex - (focus.contextLines ?? 3));
+      firstKeptIndex = startIndex;
       lastKeptIndex = endIndex;
     }
   }

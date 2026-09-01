@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  Badge,
   cn,
   Tooltip,
   TooltipContent,
@@ -152,13 +153,15 @@ export function PrHunk({
   const outdatedBadge = outdated ? (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
+        <Badge
+          variant="secondary"
           data-testid="pr-hunk-outdated"
+          data-diff-nonselectable
           tabIndex={0}
-          className="mr-2.5 shrink-0 rounded-full border border-amber-500/50 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-700 outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-300"
+          className="mr-2.5 shrink-0 cursor-default select-none border-amber-500/50 bg-amber-500/10 text-amber-700 outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-300"
         >
           {t("outdatedComment")}
-        </span>
+        </Badge>
       </TooltipTrigger>
       <TooltipContent className="max-w-72 text-pretty">
         {t("outdatedCommentTooltip")}

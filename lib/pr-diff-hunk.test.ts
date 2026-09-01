@@ -105,17 +105,29 @@ describe("hunkPatch", () => {
 
     expect(patch).toContain(" selected 236");
     expect(patch).toContain(" selected 244");
-    expect(patch.split("\n")[3]).toBe("@@ -233,12 +233,12 @@");
+    expect(patch).not.toContain(" context 233");
+    expect(patch).not.toContain(" context 235");
+    expect(patch.split("\n")[3]).toBe("@@ -236,9 +236,9 @@");
   });
 
-  it("keeps the whole hunk when maxLines is zero, even with a focused range", () => {
+  it("keeps a multi-line selection exact even when maxLines is zero", () => {
     const patch = hunkPatch("a.ts", HUNK, 0, {
       startLine: 12,
       endLine: 13,
       side: "RIGHT",
     });
 
-    expect(patch).toContain("   const a = 1;");
+    expect(patch).not.toContain("   const a = 1;");
+    expect(patch).not.toContain("-  return a + b;");
+    expect(patch).toContain("+  const c = 3;");
+    expect(patch).toContain("+  return a + b + c;");
+  });
+
+  it("keeps a short leading context for a single-line comment", () => {
+    const patch = hunkPatch("a.ts", HUNK, 4);
+
+    expect(patch).not.toContain("   const a = 1;");
+    expect(patch).toContain("   const b = 2;");
     expect(patch).toContain("+  return a + b + c;");
   });
 });

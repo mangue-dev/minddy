@@ -420,7 +420,18 @@ async function capture({ locale, theme }) {
       const botAvatarBox = botAvatar?.getBoundingClientRect();
       const hunkHeader = reviewThreads?.querySelector('[data-testid="pr-hunk-header"]');
       const outdatedBadge = hunkHeader?.querySelector('[data-testid="pr-hunk-outdated"]');
+      const outdatedBadgeStyle = outdatedBadge ? getComputedStyle(outdatedBadge) : null;
       const hunkLineLabel = reviewThreads?.querySelector('[data-testid="pr-hunk-line-label"]');
+      const renderedHunkLines = (() => {
+        for (const host of reviewThreads?.querySelectorAll("*") ?? []) {
+          if (!host.shadowRoot) continue;
+          const lines = [...host.shadowRoot.querySelectorAll("[data-line]")].map((line) =>
+            line.textContent?.replace(/\s+/g, " ").trim(),
+          );
+          if (lines.some((line) => line?.includes("export type KeyHint"))) return lines;
+        }
+        return null;
+      })();
       const plainThread = reviewThreads?.querySelector(
         '[data-testid="review-thread-card"][data-variant="plain"]',
       );
@@ -492,6 +503,13 @@ async function capture({ locale, theme }) {
         hunkHeaderText: hunkHeader?.textContent?.replace(/\s+/g, " ").trim() ?? null,
         hunkLineLabel: hunkLineLabel?.textContent?.replace(/\s+/g, " ").trim() ?? null,
         outdatedBadge: outdatedBadge ? 1 : 0,
+        outdatedBadgeHeight: outdatedBadge?.getBoundingClientRect().height ?? null,
+        outdatedBadgeFontSize: outdatedBadgeStyle
+          ? Number.parseFloat(outdatedBadgeStyle.fontSize)
+          : null,
+        outdatedBadgeCursor: outdatedBadgeStyle?.cursor ?? null,
+        outdatedBadgeUserSelect: outdatedBadgeStyle?.userSelect ?? null,
+        renderedHunkLines,
         commentBodyLoginDelta:
           commentLogin && commentBodyContent
             ? Math.abs(
@@ -568,6 +586,15 @@ async function capture({ locale, theme }) {
       activityLayout.hunkHeaderHeight == null ||
       activityLayout.hunkHeaderHeight < 36 ||
       activityLayout.outdatedBadge !== 1 ||
+      activityLayout.outdatedBadgeHeight == null ||
+      activityLayout.outdatedBadgeHeight < 20 ||
+      activityLayout.outdatedBadgeFontSize == null ||
+      activityLayout.outdatedBadgeFontSize < 12 ||
+      activityLayout.outdatedBadgeCursor !== "default" ||
+      activityLayout.outdatedBadgeUserSelect !== "none" ||
+      activityLayout.renderedHunkLines?.length !== 2 ||
+      !activityLayout.renderedHunkLines[0]?.includes("One key") ||
+      !activityLayout.renderedHunkLines[1]?.includes("export type KeyHint") ||
       !activityLayout.hunkHeaderText?.startsWith("lib/palette/actions.ts") ||
       activityLayout.hunkHeaderText.includes("26") ||
       activityLayout.hunkHeaderText.includes("27") ||
