@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parsePatchFiles } from "@pierre/diffs";
-import { pullRequestDiffCacheKey } from "@/lib/pr-diff-cache";
+import {
+  pullRequestDiffCacheKey,
+  pullRequestHydratedDiffCacheKey,
+} from "@/lib/pr-diff-cache";
 
 const patch = (line: string) => `diff --git a/example.ts b/example.ts
 --- a/example.ts
@@ -34,5 +37,48 @@ describe("pullRequestDiffCacheKey", () => {
 
     expect(first.name).toBe(refreshed.name);
     expect(first.cacheKey).not.toBe(refreshed.cacheKey);
+  });
+
+  it("isolates different review hunks that point to the same path", () => {
+    const reviewHunk = (marker: string) => `diff --git a/example.ts b/example.ts
+--- a/example.ts
++++ b/example.ts
+@@ -1,2 +1,2 @@
+-old
++${marker}
+ context
+`;
+    const firstPatch = reviewHunk("first");
+    const secondPatch = reviewHunk("second");
+    const first = parsePatchFiles(firstPatch, pullRequestDiffCacheKey(firstPatch))[0].files[0];
+    const second = parsePatchFiles(secondPatch, pullRequestDiffCacheKey(secondPatch))[0].files[0];
+
+    expect(first.name).toBe(second.name);
+    expect(first.cacheKey).not.toBe(second.cacheKey);
+  });
+
+  it("changes the hydrated identity when either complete file side changes", () => {
+    const first = pullRequestHydratedDiffCacheKey(
+      "example.ts",
+      "old contents",
+      "example.ts",
+      "first contents",
+    );
+    const second = pullRequestHydratedDiffCacheKey(
+      "example.ts",
+      "old contents",
+      "example.ts",
+      "second contents",
+    );
+
+    expect(first).not.toBe(second);
+    expect(first).toBe(
+      pullRequestHydratedDiffCacheKey(
+        "example.ts",
+        "old contents",
+        "example.ts",
+        "first contents",
+      ),
+    );
   });
 });

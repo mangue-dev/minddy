@@ -14,9 +14,9 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import type { FileDiff as FileDiffInstance, PostRenderPhase } from "@pierre/diffs";
-import { PrDiffWorkers } from "@/components/pull-requests/pr-diff-workers";
 import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES, DIFF_UNSAFE_CSS } from "@/lib/diff-theme";
 import { useEffectiveColorScheme } from "@/components/pull-requests/use-effective-color-scheme";
+import { pullRequestDiffCacheKey } from "@/lib/pr-diff-cache";
 import { hunkPatch } from "@/lib/pr-diff-hunk";
 
 /**
@@ -103,7 +103,10 @@ export function PrHunk({
         : undefined,
     );
     if (!patch) return null;
-    const [parsed] = parsePatchFiles(patch);
+    // Review excerpts share the global worker pool with the full Files tab.
+    // A filename-only fallback key lets two different hunks for the same path
+    // reuse incompatible highlighted line arrays.
+    const [parsed] = parsePatchFiles(patch, pullRequestDiffCacheKey(patch));
     return parsed?.files[0] ?? null;
   }, [path, diffHunk, line, startLine, side, maxLines]);
 
@@ -256,9 +259,15 @@ export function PrHunk({
             </div>
           ) : null}
           {fileDiff ? (
-            <PrDiffWorkers>
-              <FileDiff fileDiff={fileDiff} options={options} />
-            </PrDiffWorkers>
+            // These excerpts are deliberately small. Keeping them off the
+            // singleton pool also prevents one conversation's hunk from
+            // contaminating another while the library's async cache settles.
+            <FileDiff
+              key={fileDiff.cacheKey}
+              fileDiff={fileDiff}
+              options={options}
+              disableWorkerPool
+            />
           ) : null}
         </>
       )}

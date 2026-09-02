@@ -62,7 +62,10 @@ import {
   estimatedDiffBodyHeight,
   LARGE_DIFF_TOKEN_LIMIT,
 } from "@/lib/pr-diff-performance";
-import { pullRequestDiffCacheKey } from "@/lib/pr-diff-cache";
+import {
+  pullRequestDiffCacheKey,
+  pullRequestHydratedDiffCacheKey,
+} from "@/lib/pr-diff-cache";
 import {
   anchorKey,
   commentAnchor,
@@ -532,9 +535,19 @@ const PrDiffFile = memo(function PrDiffFile({
           // and the click): without both versions, the lib cannot unfold anything.
           throw new Error("Patch does not apply to the base revision");
         }
+        const newContents = trimTrailingNewline(patched);
+        // @pierre/diffs mutates partial metadata during hydration and otherwise
+        // derives its full-file key from the partial patch alone. Tie that key
+        // to both loaded sides so a refreshed base cannot reuse stale arrays.
+        meta.cacheKey = pullRequestHydratedDiffCacheKey(
+          basePathOf(file),
+          oldContents,
+          meta.name,
+          newContents,
+        );
         return {
           oldFile: { name: basePathOf(file), contents: oldContents },
-          newFile: { name: meta.name, contents: trimTrailingNewline(patched) },
+          newFile: { name: meta.name, contents: newContents },
         };
       } catch (err) {
         // The lib swallows the failure (it logs it and leaves the diff in place):
@@ -783,6 +796,7 @@ const PrDiffFile = memo(function PrDiffFile({
         <DeferredDiffBody eager={eager} estimatedHeight={estimatedDiffBodyHeight(file)}>
           {fileDiff ? (
             <FileDiff<AnnotationMeta>
+              key={fileDiff.cacheKey}
               fileDiff={fileDiff}
               options={options}
               lineAnnotations={lineAnnotations}
