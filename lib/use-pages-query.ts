@@ -290,7 +290,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
           if (needsListRefresh) {
             void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
           }
-        });
+        })
         .catch(() => {
           const latest = readPages(queryClient, pid);
           if (latest) {
@@ -303,7 +303,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
           if (needsListRefresh) {
             void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
           }
-        })
+        });
       // This async function deliberately has no await on the optimistic path:
       // callers can navigate next microtask, while dependent work can await the
       // attached settlement and receive creation failures.
