@@ -22,6 +22,7 @@ import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
+import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { Routine } from "@/lib/routines-api";
@@ -75,6 +76,7 @@ export function RoutinesPanel({
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { projects } = useProjects();
@@ -148,7 +150,17 @@ export function RoutinesPanel({
     });
     // A FILTER in progress only shows what matches: an empty accordion
     // under a search would read as a result.
-    if (query.trim()) return found;
+    const ordered = found.map((group) => ({
+      ...group,
+      items: orderRoutinesWithinWeek(
+        group.items.map((routine) => ({
+          ...routine,
+          daysOfMonth: routine.days_of_month,
+        })),
+        locale,
+      ),
+    }));
+    if (query.trim()) return ordered;
 
     /**
  * Excluding the filter, ALL projects where you can add a routine have their
@@ -162,7 +174,7 @@ export function RoutinesPanel({
  * there is none, it is the empty state which holds the column, and it is
  * its button which opens the wizard.
  */
-    const seen = new Set(found.map((g) => g.key));
+    const seen = new Set(ordered.map((g) => g.key));
     const extra = projects
       .filter((p) => !seen.has(p.id) && canCreateIn(p.id))
       .map((p) => ({
@@ -176,9 +188,9 @@ export function RoutinesPanel({
         },
         items: [] as Routine[],
       }));
-    return [...found, ...extra];
+    return [...ordered, ...extra];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, projectById, projects, query, gitLinked, user?.id]);
+  }, [visible, projectById, projects, query, gitLinked, user?.id, locale]);
 
   const selected = routines.find((r) => r.id === selectedId) ?? null;
   const selectedIsOwner =

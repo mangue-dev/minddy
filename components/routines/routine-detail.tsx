@@ -75,6 +75,7 @@ import {
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
 import type { AgentRunSummary } from "@/lib/agent-api";
+import { formatRoutineRunDuration } from "@/lib/routine-run-metrics";
 import {
   Tooltip,
   TooltipContent,
@@ -544,19 +545,9 @@ export function RoutineDetail({
         </>
       )}
 
-      {/* ── Executions: ONE LINE per passage ─────────────────────────
-          Full width, its date and the status of its pull request. Not the thread:
-          Stacking conversations in a list makes both unreadable.
-          Opening a line opens the thread in its place.
-
-          At the HEAD, the transition to COMING — the same list, one notch earlier in the
-          time. Grayed out and without chevron: it has not produced anything, there is nothing to
-          open. It only appears if the routine is armed: a routine in
-          pause has no next passage, and announcing one would be wrong.
-
-          Absent during EDITING: we adjust the routine or we read what it reads
-          produced, never both at the same time — and the form needs
-          full height so as not to be read when scrolling. */}
+      {/* The run history is a real table: date, measured work time, share of
+          monthly usage, and outcome. The next occurrence stays immediately above
+          it because it is a schedule, not a run with metrics. */}
       {editing ? null : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 px-4 pt-2 pb-1.5">
@@ -577,69 +568,102 @@ export function RoutineDetail({
               {...listFade.scrollProps}
               className="min-h-0 flex-1 overflow-y-auto"
             >
-              {/* Nothing to frame when there is neither passage to come nor passage
-                  past: the list disappears entirely rather than leaving
-                  its top net all alone above the blank screen. */}
+              {/* Nothing is framed when there is neither a future nor a past run. */}
               {nextRunAtIso || runs.length > 0 ? (
-                <ul className="flex flex-col divide-y divide-border border-t border-border">
+                <div className="border-t border-border">
                   {nextRunAtIso ? <NextRunRow at={nextRunAtIso} /> : null}
-                  {runs.map((run) => (
-                    /* The entire line opens the passage — except the sweater badge
-                     request, which leads to the PR. Hence the EXTENDED button under the
-                     line rather than around it: a button within a button is not
-                     not valid HTML, and the badge must remain clickable to
-                     himself. The following `relative` elements are painted
-                     above it and keep their own clicks. */
-                    <li
-                      key={run.id}
-                      className="relative flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setOpenRunId(run.id)}
-                        aria-label={t("openRun", {
-                          date: format.dateTime(new Date(run.created_at), {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          }),
-                        })}
-                        className="absolute inset-0 outline-none"
-                      />
-                      <span className="pointer-events-none relative min-w-0 flex-1 truncate text-sm">
-                        {format.dateTime(new Date(run.created_at), {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </span>
-                      {/* The STATUS of the pull request when there is one — this is
-                        that a passage produces visible, and it is also the path
-                        towards her. Otherwise the state of the run, which responds to the same
-                        question d'un cran plus bas. */}
-                      {run.pr_state ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            router.push(`/pull-requests?run=${run.id}`)
-                          }
-                          className="relative shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <PrStateBadge state={run.pr_state} icon />
-                        </button>
-                      ) : (
-                        <span className="pointer-events-none relative shrink-0 text-xs text-muted-foreground">
-                          {tAgents(
-                            agentSessionStatusKey({
-                              status: run.status,
-                              prNumber: run.pr_number,
-                              prState: run.pr_state,
-                            }),
-                          )}
-                        </span>
-                      )}
-                      <ChevronRight className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
-                    </li>
-                  ))}
-                </ul>
+                  {runs.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[36rem] table-fixed text-left">
+                        <colgroup>
+                          <col className="w-[36%]" />
+                          <col className="w-[18%]" />
+                          <col className="w-[16%]" />
+                          <col className="w-[30%]" />
+                        </colgroup>
+                        <thead className="border-y border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+                          <tr>
+                            <th scope="col" className="px-4 py-2 font-medium">
+                              {t("runDate")}
+                            </th>
+                            <th scope="col" className="px-3 py-2 font-medium">
+                              {t("runDuration")}
+                            </th>
+                            <th scope="col" className="px-3 py-2 font-medium">
+                              {t("runUsage")}
+                            </th>
+                            <th scope="col" className="px-3 py-2 font-medium">
+                              {t("runResult")}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {runs.map((run) => {
+                            const date = format.dateTime(new Date(run.created_at), {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            });
+                            return (
+                              <tr
+                                key={run.id}
+                                className="group relative transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
+                              >
+                                <td className="px-4 py-2.5 text-sm">
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenRunId(run.id)}
+                                    aria-label={t("openRun", { date })}
+                                    className="absolute inset-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                                  />
+                                  <span className="pointer-events-none relative block truncate">
+                                    {date}
+                                  </span>
+                                </td>
+                                <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
+                                  {formatRoutineRunDuration(
+                                    run.started_at,
+                                    run.completed_at,
+                                  )}
+                                </td>
+                                <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
+                                  {formatRunUsagePercent(run.usage_percent, format)}
+                                </td>
+                                <td className="relative px-3 py-2.5">
+                                  <div className="flex min-w-0 items-center justify-between gap-2">
+                                    {/* A pull request is its own destination; otherwise
+                                        the status describes the run opened by the row. */}
+                                    {run.pr_state ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          router.push(`/pull-requests?run=${run.id}`)
+                                        }
+                                        className="relative z-10 shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                      >
+                                        <PrStateBadge state={run.pr_state} icon />
+                                      </button>
+                                    ) : (
+                                      <span className="pointer-events-none relative min-w-0 truncate text-xs text-muted-foreground">
+                                        {tAgents(
+                                          agentSessionStatusKey({
+                                            status: run.status,
+                                            prNumber: run.pr_number,
+                                            prState: run.pr_state,
+                                          }),
+                                        )}
+                                      </span>
+                                    )}
+                                    <ChevronRight className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
 
               {/* The gesture IS where the void is seen: “she has not yet
@@ -803,15 +827,33 @@ function NextRunRow({ at }: { at: string }) {
           : t("nextRunInDays", { days, time });
 
   return (
-    <li className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+    <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground">
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="min-w-0 truncate">{label}</span>
         </TooltipTrigger>
         <TooltipContent>{exact}</TooltipContent>
       </Tooltip>
-    </li>
+    </div>
   );
+}
+
+/** Formats a server-derived share while keeping BYOK/unavailable values distinct. */
+function formatRunUsagePercent(
+  percent: number | null | undefined,
+  format: ReturnType<typeof useFormatter>,
+): string {
+  if (percent == null || !Number.isFinite(percent) || percent < 0) return "—";
+  if (percent > 0 && percent < 0.1) {
+    return `<${format.number(0.001, {
+      style: "percent",
+      maximumFractionDigits: 1,
+    })}`;
+  }
+  return format.number(percent / 100, {
+    style: "percent",
+    maximumFractionDigits: percent < 1 ? 1 : 0,
+  });
 }
 
 /**
