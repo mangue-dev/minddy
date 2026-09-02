@@ -1297,6 +1297,33 @@ export async function listMergeRequestTimeline(opts: {
   );
 }
 
+interface RawGitlabDeployment {
+  sha?: string | null;
+  environment?: { external_url?: string | null } | null;
+}
+
+/** Latest successful GitLab deployment among the provider's bounded recent list. */
+export async function getLatestSuccessfulDeploymentUrl(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<string | null> {
+  const deployments = await glJson<RawGitlabDeployment[]>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/deployments` +
+      "?order_by=updated_at&sort=desc&status=success&per_page=100",
+    opts.token,
+  );
+  const value = deployments.find((deployment) => deployment.sha === opts.sha)
+    ?.environment?.external_url;
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Adds a note to the MR's conversation (author = the connected account). */
 export async function createMergeRequestNote(opts: {
   token: string;

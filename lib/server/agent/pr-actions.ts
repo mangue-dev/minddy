@@ -443,16 +443,34 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
     // still accepted (measured — “Resource not accessible by integration”).
     let checks = null;
     let checksError: "forbidden" | "unknown" | null = null;
+    let deploymentUrl: string | null = null;
     if (pr.headSha) {
-      try {
-        checks = await forge.listChecks({
+      const [checksResult, deploymentResult] = await Promise.allSettled([
+        forge.listChecks({
           ...call,
           sha: pr.headSha,
           requiredCheckNames: mergePolicy.requiredCheckNames,
           checksRequired: mergePolicy.checksMustPass,
-        });
-      } catch (err) {
-        checksError = isForgeApiError(err) && err.status === 403 ? "forbidden" : "unknown";
+        }),
+        forge.getLatestSuccessfulDeploymentUrl({
+          token: call.token,
+          repoFullName: call.repoFullName,
+          sha: pr.headSha,
+        }),
+      ]);
+      if (checksResult.status === "fulfilled") {
+        checks = checksResult.value;
+      } else {
+        const error = checksResult.reason;
+        checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
+      }
+      if (deploymentResult.status === "fulfilled") {
+        deploymentUrl = deploymentResult.value;
+      } else {
+        console.error(
+          "[pr-actions] deployment unreadable:",
+          (deploymentResult.reason as Error).message,
+        );
       }
     }
 
@@ -484,6 +502,7 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
       provider: scope.target.provider,
       checks,
       checksError,
+      deploymentUrl,
       reviews,
       reviewThreads,
       viewer,

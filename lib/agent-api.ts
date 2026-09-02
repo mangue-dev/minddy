@@ -702,6 +702,7 @@ export interface AgentRunPrResponse {
   provider?: RepoProviderId;
   checks?: ChecksSummary | null;
   checksError?: "forbidden" | "unknown" | null;
+  deploymentUrl?: string | null;
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];

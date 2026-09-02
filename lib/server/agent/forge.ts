@@ -345,6 +345,12 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PrTimelineEvent[]>;
+  /** Public URL of the latest successful deployment of the immutable PR head. */
+  getLatestSuccessfulDeploymentUrl(opts: {
+    token: string;
+    repoFullName: string;
+    sha: string;
+  }): Promise<string | null>;
   createPullRequestComment(opts: {
     token: string;
     repoFullName: string;
@@ -543,6 +549,7 @@ const githubForge: Forge = {
   reopenPullRequest: github.reopenPullRequest,
   listPullRequestComments: github.listPullRequestComments,
   listTimeline: github.listPullRequestTimeline,
+  getLatestSuccessfulDeploymentUrl: github.getLatestSuccessfulDeploymentUrl,
   createPullRequestComment: github.createPullRequestComment,
   listImageAssets: github.listPullRequestImageAssets,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
@@ -621,6 +628,7 @@ const gitlabForge: Forge = {
   reopenPullRequest: gitlab.reopenMergeRequest,
   listPullRequestComments: gitlab.listMergeRequestNotes,
   listTimeline: gitlab.listMergeRequestTimeline,
+  getLatestSuccessfulDeploymentUrl: gitlab.getLatestSuccessfulDeploymentUrl,
   createPullRequestComment: gitlab.createMergeRequestNote,
   // See the `listImageAssets` doc: the GitLab image mechanism is a
   // path relative to the project, not a signed asset. Nothing measured, therefore nothing

@@ -3672,6 +3672,7 @@
     "convertedToDraftToast": "Pull request convertida en borrador.",
     "review": "Revisión",
     "moreActions": "Acciones de la pull request",
+    "viewDeployment": "Ver despliegue",
     "reviewApprove": "Aprobar",
     "reviewRequestChanges": "Solicitar cambios",
     "reviewComment": "Comentar",

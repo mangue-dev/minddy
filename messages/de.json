@@ -3672,6 +3672,7 @@
     "convertedToDraftToast": "Pull-Request in einen Entwurf umgewandelt.",
     "review": "Überprüfen",
     "moreActions": "Pull-Anfrage-Aktionen",
+    "viewDeployment": "Bereitstellung anzeigen",
     "reviewApprove": "Genehmigen",
     "reviewRequestChanges": "Änderungen anfordern",
     "reviewComment": "Kommentieren",

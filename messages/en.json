@@ -3672,6 +3672,7 @@
     "convertedToDraftToast": "Pull request converted to draft.",
     "review": "Review",
     "moreActions": "Pull request actions",
+    "viewDeployment": "View deployment",
     "reviewApprove": "Approve",
     "reviewRequestChanges": "Request changes",
     "reviewComment": "Comment",
