@@ -606,18 +606,21 @@ export function RoutineDetail({
                             return (
                               <tr
                                 key={run.id}
-                                className="group relative transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
+                                onClick={() => setOpenRunId(run.id)}
+                                className="group cursor-pointer transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
                               >
                                 <td className="px-4 py-2.5 text-sm">
                                   <button
                                     type="button"
-                                    onClick={() => setOpenRunId(run.id)}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setOpenRunId(run.id);
+                                    }}
                                     aria-label={t("openRun", { date })}
-                                    className="absolute inset-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                                  />
-                                  <span className="pointer-events-none relative block truncate">
+                                    className="block w-full truncate rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  >
                                     {date}
-                                  </span>
+                                  </button>
                                 </td>
                                 <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
                                   {formatRoutineRunDuration(
@@ -635,9 +638,10 @@ export function RoutineDetail({
                                     {run.pr_state ? (
                                       <button
                                         type="button"
-                                        onClick={() =>
+                                        onClick={(event) => {
+                                          event.stopPropagation();
                                           router.push(`/pull-requests?run=${run.id}`)
-                                        }
+                                        }}
                                         className="relative z-10 shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                       >
                                         <PrStateBadge state={run.pr_state} icon />

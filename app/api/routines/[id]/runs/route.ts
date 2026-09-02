@@ -59,9 +59,11 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
 
   const [rows, billing] = await Promise.all([
     runsForRoutine(id),
-    getResolvedBilling(found.routine.owner_id),
+    found.isOwner
+      ? getResolvedBilling(found.routine.owner_id)
+      : Promise.resolve(null),
   ]);
-  const includedUsageUsd = billing.plan.includedUsageUsd;
+  const includedUsageUsd = billing?.plan.includedUsageUsd ?? 0;
   const runs = rows.map((run) => {
     const row = run as unknown as Record<string, unknown>;
     const out: Record<string, unknown> = {};
@@ -69,13 +71,14 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     // Set by DB trigger, outside of type `AgentRun` — the list needs it to
     // tell when a passage has ended.
     out.completed_at = row.completed_at ?? null;
-    // BYOK is deliberately shown as unavailable: it does not consume the
-    // owner's included Minddy usage budget. The plan amount itself stays server-side.
-    out.usage_percent = routineRunUsagePercent(
-      Number(row.cost_usd ?? 0),
+    // An exact ratio would let a member derive the owner's plan allowance from
+    // the already-visible cost. BYOK also consumes no included Minddy usage.
+    out.usage_percent = routineRunUsagePercent({
+      costUsd: Number(row.cost_usd ?? 0),
       includedUsageUsd,
-      row.key_mode === "byok" ? "byok" : "platform",
-    );
+      keyMode: row.key_mode === "byok" ? "byok" : "platform",
+      isOwner: found.isOwner,
+    });
     out.resumable = agentRunCanResume(run);
     return out;
   });

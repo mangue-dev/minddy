@@ -17,15 +17,21 @@ export function formatRoutineRunDuration(
 }
 
 /**
- * Share of included monthly usage consumed by one run. BYOK never consumes
- * included Minddy usage, and plans without a budget have no meaningful share.
+ * Share of included monthly usage consumed by one run. It is private to the
+ * owner; BYOK never consumes included Minddy usage, and plans without a budget
+ * have no meaningful share.
  */
 export function routineRunUsagePercent(
-  costUsd: number,
-  includedUsageUsd: number,
-  keyMode: "platform" | "byok",
+  input: {
+    costUsd: number;
+    includedUsageUsd: number;
+    keyMode: "platform" | "byok";
+    isOwner: boolean;
+  },
 ): number | null {
-  if (keyMode === "byok" || includedUsageUsd <= 0) return null;
-  return (Math.max(0, Number.isFinite(costUsd) ? costUsd : 0) /
-    includedUsageUsd) * 100;
+  if (!input.isOwner || input.keyMode === "byok" || input.includedUsageUsd <= 0) {
+    return null;
+  }
+  return (Math.max(0, Number.isFinite(input.costUsd) ? input.costUsd : 0) /
+    input.includedUsageUsd) * 100;
 }

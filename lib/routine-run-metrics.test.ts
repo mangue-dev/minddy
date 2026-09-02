@@ -29,10 +29,35 @@ describe("routine run metrics", () => {
   });
 
   it("calculates the run's share of the included monthly budget", () => {
-    expect(routineRunUsagePercent(0.25, 5, "platform")).toBe(5);
+    expect(
+      routineRunUsagePercent({
+        costUsd: 0.25,
+        includedUsageUsd: 5,
+        keyMode: "platform",
+        isOwner: true,
+      }),
+    ).toBe(5);
   });
 
   it("does not assign included usage to BYOK runs", () => {
-    expect(routineRunUsagePercent(0.25, 5, "byok")).toBeNull();
+    expect(
+      routineRunUsagePercent({
+        costUsd: 0.25,
+        includedUsageUsd: 5,
+        keyMode: "byok",
+        isOwner: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("does not reveal an owner's usage share to project members", () => {
+    expect(
+      routineRunUsagePercent({
+        costUsd: 0.25,
+        includedUsageUsd: 5,
+        keyMode: "platform",
+        isOwner: false,
+      }),
+    ).toBeNull();
   });
 });
