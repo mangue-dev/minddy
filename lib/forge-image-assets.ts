@@ -54,6 +54,32 @@
  */
 export const FORGE_ATTACHMENTS_BUCKET = "forge-attachments";
 
+const STORAGE_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const STORAGE_FILE_RE = /^[A-Za-z0-9._-]{1,140}$/;
+
+/** Stable same-origin URL written into forge comments instead of a Supabase URL. */
+export function forgeAttachmentProxyUrl(origin: string, storagePath: string): string {
+  const segments = storagePath.split("/").map(encodeURIComponent);
+  return new URL(`/api/pr-attachments/${segments.join("/")}`, origin).toString();
+}
+
+/** Converts the public route segments back to the only accepted storage key shape. */
+export function forgeAttachmentStoragePath(segments: string[]): string | null {
+  if (segments.length !== 3) return null;
+  const [prId, attachmentId, fileName] = segments;
+  if (
+    !STORAGE_UUID_RE.test(prId) ||
+    !STORAGE_UUID_RE.test(attachmentId) ||
+    !STORAGE_FILE_RE.test(fileName) ||
+    fileName === "." ||
+    fileName === ".."
+  ) {
+    return null;
+  }
+  return `${prId}/${attachmentId}/${fileName}`;
+}
+
 /**
  * What a hosted file adds to the comment body. An image INSERTS
  * (she looks at herself in the wire, here as at the forge); everything else becomes

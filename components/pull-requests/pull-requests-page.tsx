@@ -17,6 +17,7 @@ import {
 import { GitPullRequest, Link2, ListFilter, Plus } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
@@ -31,7 +32,6 @@ import {
   toggledSet,
   type ProjectGroup,
 } from "@/components/sidebar-project-group";
-import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
@@ -357,9 +357,8 @@ function PrRow({
         {pr.runId ? (
           <NumoIcon animated={false} className="size-3.5 shrink-0" />
         ) : pr.author ? (
-          <UserAvatar
-            url={pr.author.avatar_url}
-            seed={pr.author.login}
+          <ForgeUserAvatar
+            user={pr.author}
             className="size-3.5 shrink-0"
           />
         ) : null}

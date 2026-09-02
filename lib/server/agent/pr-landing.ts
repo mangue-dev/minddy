@@ -9,6 +9,7 @@ import { defaultLocale, type Locale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus,
 } from "@/lib/numo-default-status";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { numoPullRequestFooter } from "@/lib/numo-pr-footer";
 import { DEFAULT_AGENT_BRANCH_PREFIX } from "./branch-name";
 
 import { notifyPullRequestOpened } from "./pr-opened-notify";
@@ -507,7 +508,7 @@ export async function openPullRequestAfterPush(
     noteBranchPushed: (pushed: { pushed: boolean }) => Promise<void>;
   },
 ): Promise<{ result: unknown; success: boolean }> {
-  const { forge, issue, workBranch, baseBranch, prState } = ctx;
+  const { run, forge, issue, workBranch, baseBranch, locale, prState } = ctx;
   const { pushed, prTitle, body, fresh, jobsNote, noteBranchPushed } = opts;
   await assertPrLandingAuthority(ctx, fresh);
   const andJobs = (text: string) => (jobsNote ? `${text} ${jobsNote}` : text);
@@ -590,7 +591,18 @@ export async function openPullRequestAfterPush(
     // PR unreadable / reopening impossible (head branch deleted then
     // recreated by our push…) → we land on our own creation.
   }
-  const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · ${issue ? `issue ${issue.identifier}` : "note du carnet"}`;
+  const footer = numoPullRequestFooter({
+    locale,
+    model: run.model ?? "unknown",
+    environment: run.local_exec
+      ? run.local_worktree
+        ? "worktree"
+        : "local"
+      : "cloud",
+    reasoningLevel: run.reasoning_level,
+    issueIdentifier: issue?.identifier,
+  });
+  const prBody = `${body?.trim() || prTitle}\n\n---\n${footer}`;
   try {
     await assertPrLandingAuthority(ctx, fresh);
     const pr = await forge.ensurePullRequest({

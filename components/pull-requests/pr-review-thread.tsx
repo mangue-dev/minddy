@@ -10,6 +10,33 @@ import { PrActivityItem } from "@/components/pull-requests/pr-activity-timeline"
 import { formatModelName } from "@/lib/model-display";
 import type { PrReviewRunSummary } from "@/lib/pr-review-session";
 
+/** Prominent merge blocker shown above CI while the requested review is active. */
+export function PrPendingReviewCallout({ run }: { run: PrReviewRunSummary }) {
+  const t = useTranslations("PullRequests");
+  const router = useRouter();
+
+  return (
+    <div
+      data-testid="pr-pending-numo-review"
+      className="flex min-h-11 min-w-0 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
+    >
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-[5px] bg-amber-500/10 text-amber-600 dark:text-amber-400">
+        <NumoIcon animated className="size-3.5" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+        {t("numoReviewRunning")}
+      </span>
+      <button
+        type="button"
+        className="shrink-0 text-xs font-medium text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline"
+        onClick={() => router.push(`/agents?run=${run.runId}`)}
+      >
+        {t("numoReviewOpenSession")}
+      </button>
+    </div>
+  );
+}
+
 /**
  * Numo's reread IN the pull request thread (MIN-168): a card which
  * says if the agent is working, and which OPENS ITS SESSION when clicked.

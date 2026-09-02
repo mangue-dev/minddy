@@ -45,6 +45,7 @@ import {
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
@@ -69,6 +70,7 @@ import {
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
 import {
+  PrPendingReviewCallout,
   PrReviewCard,
 } from "@/components/pull-requests/pr-review-thread";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
@@ -84,7 +86,6 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
-import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
   EnvironmentCombobox,
@@ -122,6 +123,7 @@ import {
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import {
+  blockReadinessForNumoReview,
   blockerFallbackUrl,
   type ReadinessAction,
   type ReadinessBlocker,
@@ -580,6 +582,7 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
+  const router = useRouter();
   const isSend = useIsSendShortcut();
   const format = useFormatter();
   const {
@@ -772,6 +775,13 @@ export function PrDetail({
   }, [isWorking, refetchPr, refetchComments, refetchCommits, refetchReviewComments]);
 
   const aiReviewActive = reviewSession.active;
+  const effectiveReadiness = useMemo(
+    () =>
+      readiness
+        ? blockReadinessForNumoReview(readiness, aiReviewActive)
+        : null,
+    [aiReviewActive, readiness],
+  );
 
   // When the pass ends, what she wrote is ON PR: the summary
   // in the thread, points in the Files tab. The two surfaces
@@ -901,6 +911,10 @@ export function PrDetail({
 
   const handleReadinessAction = async (blocker: ReadinessBlocker) => {
     if (maintenanceAction) return;
+    if (blocker.action === "open_numo_review") {
+      if (reviewSession.run) router.push(`/agents?run=${reviewSession.run.runId}`);
+      return;
+    }
     if (blocker.action === "mark_ready") {
       await act("ready_for_review");
       return;
@@ -958,6 +972,7 @@ export function PrDetail({
   };
 
   const canActOnBlocker = (blocker: ReadinessBlocker): boolean => {
+    if (blocker.action === "open_numo_review") return !!reviewSession.run;
     if (blocker.action === "mark_ready" || blocker.action === "update_branch") return canWrite;
     if (blocker.action === "approve") return canComment;
     if (blocker.action === "resolve_conversations") return unresolvedThreads.length > 0;
@@ -1631,9 +1646,9 @@ export function PrDetail({
                 {acting === "ready_for_review" ? <Spinner /> : <GitPullRequest />}
                 {t("openPullRequest")}
               </Button>
-            ) : readiness ? (
+            ) : effectiveReadiness ? (
               <PrReadinessControl
-                readiness={readiness}
+                readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
                 fallbackUrl={(blocker) =>
                   pr?.url ? blockerFallbackUrl(item.provider, pr.url, blocker) : null
@@ -1744,9 +1759,8 @@ export function PrDetail({
                 )
               ) : author ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <UserAvatar
-                    url={author.avatar_url}
-                    seed={author.login}
+                  <ForgeUserAvatar
+                    user={author}
                     className="size-4"
                   />
                   {/* The merger phrase already NAMES the author (“X wants to merge
@@ -1796,6 +1810,10 @@ export function PrDetail({
           {/* The only place to say which Git account is in use (MIN-144).
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
+
+          {aiReviewActive && reviewSession.run ? (
+            <PrPendingReviewCallout run={reviewSession.run} />
+          ) : null}
 
           <PrUnresolvedConversations
             endpoint={prEndpoint(item.prId)}
@@ -2252,7 +2270,7 @@ export function PrDetail({
 
           <div
             className={cn(
-              "relative overflow-clip rounded-md border border-border transition-colors focus-within:border-ring",
+              "relative min-w-0 max-w-full overflow-clip rounded-md border border-border transition-colors focus-within:border-ring",
               reviewDrop.dragging && "border-brand",
             )}
             onPaste={pasteFileHandler(reviewUploads.addFiles)}
@@ -2274,7 +2292,7 @@ export function PrDetail({
               )}
               rows={reviewMode === "findings" ? 5 : 4}
               autoFocus
-              className="resize-none rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
+              className="min-w-0 w-full max-w-full resize-none whitespace-pre-wrap [overflow-wrap:anywhere] rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
             />
             <div className="absolute bottom-1.5 left-1.5 z-10">
               <AttachButton

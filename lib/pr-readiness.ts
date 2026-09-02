@@ -56,6 +56,7 @@ export interface ReadinessCheck {
 export type ReadinessBlockerKind =
   | "mergeability"
   | "draft"
+  | "numo_review"
   | "checks"
   | "changes_requested"
   | "approvals"
@@ -66,6 +67,7 @@ export type ReadinessBlockerKind =
 
 export type ReadinessAction =
   | "mark_ready"
+  | "open_numo_review"
   | "approve"
   | "resolve_conversations"
   | "update_branch"
@@ -106,7 +108,9 @@ export interface ReadinessPassedCondition {
 
 export type PullRequestReadinessState =
   | "ready"
+  | "numo_review_running"
   | "checks_running"
+  | "checks_failing"
   | "changes_requested"
   | "approval_required"
   | "unresolved_conversations"
@@ -145,6 +149,7 @@ export interface ReadinessInput {
 const PRIMARY_STATE: Record<ReadinessBlockerKind, PullRequestReadinessState> = {
   mergeability: "status_unavailable",
   draft: "draft",
+  numo_review: "numo_review_running",
   checks: "checks_running",
   changes_requested: "changes_requested",
   approvals: "approval_required",
@@ -157,6 +162,7 @@ const PRIMARY_STATE: Record<ReadinessBlockerKind, PullRequestReadinessState> = {
 const BLOCKER_PRIORITY: ReadinessBlockerKind[] = [
   "mergeability",
   "draft",
+  "numo_review",
   "checks",
   "changes_requested",
   "approvals",
@@ -510,7 +516,12 @@ export function reducePullRequestReadiness(
     });
   }
   return {
-    state: primary ? PRIMARY_STATE[primary.kind] : "ready",
+    state:
+      primary?.kind === "checks" && primary.status === "blocked"
+        ? "checks_failing"
+        : primary
+          ? PRIMARY_STATE[primary.kind]
+          : "ready",
     blockers,
     passed,
     mergeAllowed:
@@ -520,6 +531,46 @@ export function reducePullRequestReadiness(
       methods.length > 0,
     methods,
     preferredMethod,
+  };
+}
+
+/**
+ * Adds the client-known Numo review session to merge readiness.
+ *
+ * Review sessions are stored independently from forge state, so the server-side
+ * readiness response cannot include a session that started after it was read.
+ * The PR panel applies this final condition from its live review-session query:
+ * while Numo is reviewing, the header names that work and the merge controls
+ * remain unavailable. Keeping the condition in the readiness shape also makes
+ * it visible in the same checklist as every forge requirement.
+ */
+export function blockReadinessForNumoReview(
+  readiness: PullRequestReadiness,
+  active: boolean,
+): PullRequestReadiness {
+  if (
+    !active ||
+    readiness.state === "merged" ||
+    readiness.state === "closed"
+  ) {
+    return readiness;
+  }
+  const blocker: ReadinessBlocker = {
+    id: "numo-review-running",
+    kind: "numo_review",
+    required: true,
+    status: "pending",
+    source: "reviews",
+    action: "open_numo_review",
+  };
+  return {
+    ...readiness,
+    state: "numo_review_running",
+    mergeAllowed: false,
+    blockers: [
+      blocker,
+      ...readiness.blockers.filter((item) => item.id !== blocker.id),
+    ],
   };
 }
 

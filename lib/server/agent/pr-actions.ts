@@ -72,9 +72,11 @@ import {
 import { imageMimeType } from "@/lib/diff-binary";
 import {
   FORGE_ATTACHMENTS_BUCKET,
+  forgeAttachmentProxyUrl,
   isForgeAssetId,
   SIGNED_ASSET_HOST,
 } from "@/lib/forge-image-assets";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import {
   reducePullRequestReadiness,
   unavailableMergePolicy,
@@ -1395,17 +1397,18 @@ function sanitizeKeyPart(name: string): string {
  * allowlist ([lib/inline-safe.ts](../../inline-safe.ts)) is stored as
  * `application/octet-stream`.
  *
- * The client supplies the declared type, and the resulting URL is public,
- * stable, and served from our Supabase project domain. `text/html` would open as
- * a page, while a directly loaded `image/svg+xml` can execute scripts. Any
+ * The client supplies the declared type, and the resulting URL is public and
+ * stable. The file is served through the canonical Minddy origin, so comments
+ * never expose the underlying storage provider. `text/html` would open as a
+ * page, while a directly loaded `image/svg+xml` can execute scripts. Any
  * account with PR access could otherwise host phishing content under our name.
  * The PR gate decides who can write, not what can be served.
  */
 const servedAttachmentType = servedMimeType;
 
 /**
- * Hosts a file intended for a pull request comment (MIN-162) and renders
- * its public URL—the URL placed in the comment body.
+ * Hosts a file intended for a pull request comment (MIN-162) and renders its
+ * stable Minddy proxy URL—the URL placed in the comment body.
  *
  * The URL is public rather than signed because the comment goes to the forge.
  * Its reader may be a GitHub email notification or someone without a minddy
@@ -1462,9 +1465,8 @@ export async function prAttachmentResponse(
     return NextResponse.json({ error: "Upload failed" }, { status: 502 });
   }
 
-  const { data } = service.storage.from(FORGE_ATTACHMENTS_BUCKET).getPublicUrl(path);
   return NextResponse.json({
-    url: data.publicUrl,
+    url: forgeAttachmentProxyUrl(canonicalAppOrigin(), path),
     name,
     // Composing it deduces the markdown form: `![](…)` for an image, a link
     // named for the rest. It's the SERVED guy who decides, not the one who was

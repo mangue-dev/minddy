@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   blockerFallbackUrl,
+  blockReadinessForNumoReview,
   mapGithubMergePolicy,
   mapGitlabMergePolicy,
   reducePullRequestReadiness,
@@ -107,6 +108,36 @@ describe("reducePullRequestReadiness", () => {
         expect.objectContaining({ id: "checks-failed", status: "blocked" }),
       ]),
     );
+  });
+
+  it("reports failed checks once no check is still running", () => {
+    const readiness = reducePullRequestReadiness(
+      input({
+        mergeabilityReason: "checks",
+        checks: [{ name: "test", state: "failure", required: true }],
+      }),
+    );
+    expect(readiness).toMatchObject({
+      state: "checks_failing",
+      mergeAllowed: false,
+    });
+  });
+
+  it("blocks merge controls while Numo is reviewing the pull request", () => {
+    const ready = reducePullRequestReadiness(input());
+    const reviewing = blockReadinessForNumoReview(ready, true);
+
+    expect(reviewing).toMatchObject({
+      state: "numo_review_running",
+      mergeAllowed: false,
+    });
+    expect(reviewing.blockers[0]).toMatchObject({
+      id: "numo-review-running",
+      kind: "numo_review",
+      status: "pending",
+      action: "open_numo_review",
+    });
+    expect(blockReadinessForNumoReview(ready, false)).toBe(ready);
   });
 
   it("never presents computing or unavailable mergeability as ready", () => {

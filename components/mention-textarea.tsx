@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "mangue-ui";
-import { UserAvatar } from "@/components/user-avatar";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoAvatar } from "@/components/actor-avatars";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import {
@@ -520,7 +520,7 @@ export function MentionTextarea({
   };
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 max-w-full">
       {/* Each mention placed receives ITS pill, carried in its envelope. */}
       {slots.map(({ el, option }, index) =>
         createPortal(
@@ -607,7 +607,7 @@ export function MentionTextarea({
         }}
         onBlur={() => setTimeout(() => setQuery(null), 120)}
         className={cn(
-          "max-h-48 w-full overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+          "max-h-48 min-w-0 w-full max-w-full overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
           "[&:empty]:before:pointer-events-none [&:empty]:before:text-muted-foreground [&:empty]:before:content-[attr(aria-placeholder)]",
           className,
         )}
@@ -640,9 +640,11 @@ export function MentionTextarea({
               {option.type === "numo" ? (
                 <NumoAvatar />
               ) : option.type === "forge" ? (
-                <UserAvatar
-                  url={option.avatarUrl}
-                  seed={option.avatarSeed ?? option.id}
+                <ForgeUserAvatar
+                  user={{
+                    login: option.avatarSeed ?? option.id,
+                    avatar_url: option.avatarUrl ?? null,
+                  }}
                   className="size-5"
                 />
               ) : (

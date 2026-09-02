@@ -38,7 +38,9 @@ const STATE_KEYS: Record<
   MessageKey<"PullRequests">
 > = {
   ready: "readinessReady",
+  numo_review_running: "numoReviewRunning",
   checks_running: "readinessChecksRunning",
+  checks_failing: "readinessChecksFailing",
   changes_requested: "readinessChangesRequested",
   approval_required: "readinessApprovalRequired",
   unresolved_conversations: "readinessUnresolvedConversations",
@@ -57,6 +59,7 @@ const BLOCKER_KEYS: Record<
 > = {
   mergeability: "blockerMergeability",
   draft: "blockerDraft",
+  numo_review: "blockerNumoReviewRunning",
   checks: "blockerChecks",
   changes_requested: "blockerChangesRequested",
   approvals: "blockerApprovals",
@@ -68,6 +71,7 @@ const BLOCKER_KEYS: Record<
 
 const ACTION_KEYS: Record<ReadinessAction, MessageKey<"PullRequests">> = {
   mark_ready: "blockerActionMarkReady",
+  open_numo_review: "numoReviewOpenSession",
   approve: "blockerActionApprove",
   resolve_conversations: "blockerActionResolve",
   update_branch: "blockerActionUpdateBranch",
@@ -137,6 +141,7 @@ export function PrReadinessBadge({
   }
   const ready = readiness.state === "ready";
   const pending =
+    readiness.state === "numo_review_running" ||
     readiness.state === "checks_running" ||
     readiness.state === "status_unavailable";
   return (
@@ -194,6 +199,7 @@ export function PrReadinessControl({
   );
   const ready = readiness.state === "ready";
   const pending =
+    readiness.state === "numo_review_running" ||
     readiness.state === "checks_running" ||
     readiness.state === "status_unavailable";
   const statusIcon = ready ? (
