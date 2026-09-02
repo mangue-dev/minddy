@@ -232,7 +232,12 @@ export async function resolvePrReviewModel(opts: {
     const remembered = await getUserPrReviewModel(opts.userId);
     if (remembered) return { model: remembered, chosenByUser: true };
   }
-  return { model: await getInstancePrReviewModel(), chosenByUser: false };
+  const defaultModel = await getPrReviewDefaultModelForUser(opts.userId);
+  if (!defaultModel) {
+    const byok = await getUserByok(opts.userId, "agent");
+    throw new AgentModelRequiredError(byok?.provider ?? DEFAULT_AGENT_PROVIDER);
+  }
+  return { model: defaultModel, chosenByUser: false };
 }
 
 /** The default of the instance alone (without the choice of account) — what the UI displays
@@ -242,6 +247,29 @@ export async function getInstancePrReviewModel(): Promise<string> {
     (await getAppConfigValue(PR_REVIEW_MODEL_CONFIG_KEY))?.trim() ||
     aiModelFallback(PR_REVIEW_MODEL_CONFIG_KEY)
   );
+}
+
+/**
+ * Effective review default for an account.
+ *
+ * Platform runs use the instance's OpenRouter model. BYOK runs stay in the
+ * active provider's namespace: an account-level feature choice wins, followed
+ * by the provider-specific admin default and the provider registry fallback.
+ */
+export async function getPrReviewDefaultModelForUser(userId: string): Promise<string | null> {
+  const byok = await getUserByok(userId, "agent");
+  if (!byok) return getInstancePrReviewModel();
+
+  const chosen = byok.featureModels.pr_review_model?.trim();
+  if (chosen) return chosen;
+  if (byok.provider === "openrouter") return getInstancePrReviewModel();
+
+  const featureKey = byokFeatureDefaultModelKey(byok.provider, PR_REVIEW_MODEL_CONFIG_KEY);
+  const configured = (await getAppConfigValue(featureKey).catch(() => null))?.trim();
+  const fallback = aiModelFallback(featureKey).trim();
+  const providerDefault =
+    configured || fallback || (await resolveProviderDefaultModel(byok.provider));
+  return providerDefault || null;
 }
 
 /** Last review template chosen by this account, or null. */

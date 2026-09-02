@@ -38,9 +38,9 @@ const h = vi.hoisted(() => ({
   livePr: null as Record<string, unknown> | null,
   agentModelCalls: [] as Array<Record<string, unknown>>,
   reviewModelCalls: [] as Array<Record<string, unknown>>,
+  reviewResolvedModel: "model/review",
   quotaMode: "platform" as "platform" | "byok",
   byok: null as Record<string, unknown> | null,
-  byokDefaultModelCalls: [] as Array<[string, string]>,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -134,14 +134,7 @@ vi.mock("./model", () => ({
   resolveReasoningLevel: vi.fn(async () => "medium"),
   resolvePrReviewModel: vi.fn(async (input: Record<string, unknown>) => {
     h.reviewModelCalls.push(input);
-    return { model: "model/review", chosenByUser: false };
-  }),
-}));
-
-vi.mock("@/lib/server/ai-runtime", () => ({
-  resolveByokFeatureDefaultModel: vi.fn(async (provider: string, modelKey: string) => {
-    h.byokDefaultModelCalls.push([provider, modelKey]);
-    return "gpt-5.6-sol";
+    return { model: h.reviewResolvedModel, chosenByUser: false };
   }),
 }));
 
@@ -177,9 +170,9 @@ beforeEach(() => {
   h.activePr = null;
   h.agentModelCalls = [];
   h.reviewModelCalls = [];
+  h.reviewResolvedModel = "model/review";
   h.quotaMode = "platform";
   h.byok = null;
-  h.byokDefaultModelCalls = [];
   h.pr = {
     id: PR_ID,
     provider: "github",
@@ -333,6 +326,7 @@ describe("a pull-request review session", () => {
 
   it("uses a provider-compatible default review model for BYOK", async () => {
     h.quotaMode = "byok";
+    h.reviewResolvedModel = "gpt-5.6-sol";
     h.byok = {
       provider: "openai",
       apiKey: "user-key",
@@ -355,8 +349,5 @@ describe("a pull-request review session", () => {
       model: "gpt-5.6-sol",
       keyMode: "byok",
     });
-    expect(h.byokDefaultModelCalls).toEqual([
-      ["openai", "pr_review_model"],
-    ]);
   });
 });

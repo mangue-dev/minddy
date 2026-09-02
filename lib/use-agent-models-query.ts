@@ -21,10 +21,8 @@ import type { AgentExecutionBackend } from "@/lib/capabilities";
  * - `platform` → `/api/admin/models-catalog`, the OpenRouter platform key
  * without tool-calling filter, for the config admin (MIN-90). The admin's BYOK
  * has nothing to do there: `app_config` runs on the platform;
- * - `review` → `/api/agent/review-models`, the platform key WITH the filter
- * tool-calling, for choosing the review model of a PR: this pass
- * runs on the platform and forces a tool call, whatever the BYOK of the
- * account.
+ * - `review` → `/api/agent/review-models`, the active provider catalog used by
+ * the PR review run. Native BYOK accounts receive native model IDs.
  */
 
 export type AgentModelsScope = "user" | "platform" | "review";
@@ -132,10 +130,10 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
-  // The web server can never — and should — never attach a local address.
-  // The desktop app does this behind a bounded loopback bridge, then picks it
-  // receives exactly the same contract as a cloud catalog.
-  const bridge = scope === "user" && catalog.localEndpoint ? getDesktopBridge() : null;
+  // The web server never contacts a local address. The desktop app discovers
+  // both interactive-agent and PR-review catalogs through its bounded loopback
+  // bridge; the admin platform catalog must remain server-only.
+  const bridge = scope !== "platform" && catalog.localEndpoint ? getDesktopBridge() : null;
   if (!bridge || !catalog.localEndpoint) return catalog;
   const discovered = await bridge.discoverLocalModels(catalog.localEndpoint).catch(() => null);
   return discovered?.ok

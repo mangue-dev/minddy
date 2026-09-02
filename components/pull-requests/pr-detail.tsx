@@ -2313,8 +2313,7 @@ export function PrDetail({
               />
             ) : null}
             <ModelCombobox
-              // Catalog of the platform key, filtered tool-calling: the review
-              // runs on it regardless of the BYOK of the account (`review`).
+              // The review catalog follows the provider that will execute the run.
               scope="review"
               variant="compact"
               value={aiReviewModel}
