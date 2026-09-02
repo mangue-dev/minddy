@@ -1,4 +1,5 @@
 import type { AssistantMessage } from "./assistant-types";
+import { assistantMessageReasoning } from "./assistant-reasoning";
 
 /**
  * Breaking the Numo feed into TURN, on parity with the code agent feed
@@ -129,7 +130,11 @@ export function buildAssistantBlocks(
     // Nothing to fold (direct response without work, or empty turn) → messages such
     // what: an empty accordion would learn nothing. The ACTIVE tour keeps
     // on the other hand, its block, which houses the timer for the work in progress.
-    if (!isActive && folded.length === 0) {
+    if (
+      !isActive &&
+      folded.length === 0 &&
+      !assistantMessageReasoning(summary)
+    ) {
       for (const m of work) blocks.push({ kind: "message", message: m });
       work = [];
       return;

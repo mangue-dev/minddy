@@ -47,6 +47,9 @@ export interface AssistantMessage {
 // SSE events for streaming assistant responses
 export type AssistantSSEEvent =
   | { type: "content_delta"; data: { delta: string } }
+  | { type: "reasoning_start"; data: { started_at: string } }
+  | { type: "reasoning_tick"; data: { duration_ms: number } }
+  | { type: "reasoning_end"; data: { duration_ms: number; text: string } }
   | { type: "tool_call_start"; data: { id: string; name: string } }
   | {
       type: "tool_call_args_delta";

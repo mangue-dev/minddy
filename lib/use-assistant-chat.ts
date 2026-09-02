@@ -15,6 +15,7 @@ import type {
 import type { FileResourceInput, ResourceInput } from "./types";
 import { trackEvent } from "./analytics";
 import { durationBucket, errorReason, lengthBucket } from "./analytics-sanitize";
+import type { AssistantReasoning } from "./assistant-reasoning";
 
 // ── State ──────────────────────────────────────────────────────────────
 
@@ -32,6 +33,10 @@ interface ActiveToolCall {
   status: "running" | "complete";
   result?: unknown;
   success?: boolean;
+}
+
+export interface StreamingAssistantReasoning extends AssistantReasoning {
+  active: boolean;
 }
 
 type ToolCallResult = {
@@ -77,6 +82,7 @@ export interface AssistantChatState {
   status: AssistantStatus;
   messages: AssistantMessage[];
   streamingContent: string;
+  streamingReasoning: StreamingAssistantReasoning | null;
   activeToolCalls: ActiveToolCall[];
   toolCallResults: Map<string, ToolCallResult>;
   conversationId: string | null;
@@ -93,6 +99,7 @@ const initialState: AssistantChatState = {
   status: "idle",
   messages: [],
   streamingContent: "",
+  streamingReasoning: null,
   activeToolCalls: [],
   toolCallResults: new Map(),
   conversationId: null,
@@ -110,6 +117,9 @@ type Action =
       projectId: string | null;
     }
   | { type: "CONTENT_DELTA"; delta: string }
+  | { type: "REASONING_START" }
+  | { type: "REASONING_TICK"; durationMs: number }
+  | { type: "REASONING_END"; durationMs: number; text: string }
   | { type: "TOOL_CALL_START"; id: string; name: string }
   | { type: "TOOL_CALL_ARGS_DELTA"; id: string; delta: string }
   | {
@@ -154,6 +164,7 @@ function reducer(
         ...state,
         status: "streaming",
         streamingContent: "",
+        streamingReasoning: null,
         activeToolCalls: [],
         error: null,
       };
@@ -170,6 +181,41 @@ function reducer(
         ...state,
         status: "streaming",
         streamingContent: state.streamingContent + action.delta,
+      };
+
+    case "REASONING_START":
+      return {
+        ...state,
+        status: "streaming",
+        streamingReasoning: { active: true, text: "", durationMs: 0 },
+      };
+
+    case "REASONING_TICK":
+      if (!state.streamingReasoning?.active) return state;
+      return {
+        ...state,
+        streamingReasoning: {
+          ...state.streamingReasoning,
+          durationMs: Math.max(
+            state.streamingReasoning.durationMs,
+            action.durationMs,
+          ),
+        },
+      };
+
+    case "REASONING_END":
+      if (!state.streamingReasoning) return state;
+      return {
+        ...state,
+        streamingReasoning: {
+          ...state.streamingReasoning,
+          active: false,
+          text: action.text,
+          durationMs: Math.max(
+            state.streamingReasoning.durationMs,
+            action.durationMs,
+          ),
+        },
       };
 
     case "TOOL_CALL_START":
@@ -249,7 +295,14 @@ function reducer(
             : null,
         tool_call_id: null,
         tool_name: null,
-        metadata: {},
+        metadata: state.streamingReasoning?.text.trim()
+          ? {
+              reasoning: {
+                text: state.streamingReasoning.text,
+                durationMs: state.streamingReasoning.durationMs,
+              },
+            }
+          : {},
         created_at: new Date().toISOString(),
       };
 
@@ -257,6 +310,7 @@ function reducer(
         ...state,
         messages: [...state.messages, assistantMsg],
         streamingContent: "",
+        streamingReasoning: null,
         activeToolCalls: [],
       };
     }
@@ -287,6 +341,7 @@ function reducer(
         ...state,
         status: "idle",
         streamingContent: "",
+        streamingReasoning: null,
         activeToolCalls: [],
       };
 
@@ -295,16 +350,27 @@ function reducer(
         ...state,
         status: "generating_server",
         streamingContent: "",
+        streamingReasoning: null,
         activeToolCalls: [],
       };
 
     case "ERROR":
-      return { ...state, status: "error", error: action.message };
+      return {
+        ...state,
+        status: "error",
+        error: action.message,
+        streamingReasoning: state.streamingReasoning
+          ? { ...state.streamingReasoning, active: false }
+          : null,
+      };
 
     case "LOAD_HISTORY":
       return {
         ...state,
         messages: action.messages,
+        streamingContent: "",
+        streamingReasoning: null,
+        activeToolCalls: [],
         toolCallResults: buildToolCallResultsFromMessages(action.messages),
         conversationId: action.conversationId,
         conversationProjectId: action.projectId,
@@ -715,6 +781,22 @@ function handleSSEEvent(
       break;
     case "content_delta":
       dispatch({ type: "CONTENT_DELTA", delta: data.delta as string });
+      break;
+    case "reasoning_start":
+      dispatch({ type: "REASONING_START" });
+      break;
+    case "reasoning_tick":
+      dispatch({
+        type: "REASONING_TICK",
+        durationMs: data.duration_ms as number,
+      });
+      break;
+    case "reasoning_end":
+      dispatch({
+        type: "REASONING_END",
+        durationMs: data.duration_ms as number,
+        text: data.text as string,
+      });
       break;
     case "tool_call_start":
       dispatch({
