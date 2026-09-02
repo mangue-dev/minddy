@@ -31,6 +31,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Eye,
   ExternalLink,
   GitPullRequest,
   GitPullRequestDraft,
@@ -141,6 +142,7 @@ import { usePrLive } from "@/lib/use-pr-live";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
+import { reviewedFileCount, setFileReviewed } from "@/lib/pr-file-review";
 import {
   defaultMergeCommitMessage,
   shouldSubmitCustomMergeMessage,
@@ -650,6 +652,10 @@ export function PrDetail({
   const [mergeCommitDraft, setMergeCommitDraft] = useState<MergeCommitMessageDraft | null>(null);
   const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
   const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewFromFiles, setReviewFromFiles] = useState(false);
+  const [fileReviewActive, setFileReviewActive] = useState(false);
+  const [reviewedFiles, setReviewedFiles] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
   const [relaunch, setRelaunch] = useState(true);
@@ -802,6 +808,14 @@ export function PrDetail({
   const currentHeadSha = pr?.headSha ?? null;
   const reviewUpToDate =
     !!currentHeadSha && reviewSession.reviewedHeadSha === currentHeadSha;
+
+  // Review progress belongs to one exact diff. A force-push or a different PR
+  // invalidates every local file marker rather than carrying stale completion
+  // into code the viewer has not seen.
+  useEffect(() => {
+    setFileReviewActive(false);
+    setReviewedFiles(new Set());
+  }, [item.prId, currentHeadSha]);
 
   // Four labels for ONE gesture (have Numo proofread): they say where
   // is the pass. The same text serves the three affordances of the same gesture —
@@ -978,19 +992,42 @@ export function PrDetail({
     return false;
   };
 
-  const openReview = (verdict: ReviewVerdict) => {
+  const selectReviewVerdict = (verdict: ReviewVerdict) => {
     setReviewVerdict(verdict);
+    setReviewMode("write");
+    setRelaunch(verdict === "request_changes" && canRelaunch);
+  };
+
+  const resetReviewDraft = () => {
     setReviewMessage("");
     setReviewMode("write");
     setModel("");
     setReasoningOverride(null);
-    // Relaunch only makes sense when there is a request for change, and that is its
-    // expected behavior: automatically checked.
-    setRelaunch(verdict === "request_changes" && canRelaunch);
+  };
+
+  const openReview = (verdict: ReviewVerdict) => {
+    resetReviewDraft();
+    setReviewFromFiles(false);
+    selectReviewVerdict(verdict);
+    setReviewDialogOpen(true);
+  };
+
+  const startFileReview = () => {
+    setFileReviewActive(true);
+    setTab("files");
+  };
+
+  const finishFileReview = () => {
+    resetReviewDraft();
+    setReviewVerdict(null);
+    setReviewFromFiles(true);
+    setReviewDialogOpen(true);
   };
 
   const openFeedbackAgent = useCallback((prompt: string) => {
     setReviewVerdict("request_changes");
+    setReviewDialogOpen(true);
+    setReviewFromFiles(false);
     setReviewMode("findings");
     setReviewMessage(prompt);
     setRelaunch(true);
@@ -1036,16 +1073,19 @@ export function PrDetail({
   // button would send what the button refuses.
   const reviewSubmitDisabled =
     submitting ||
+    !reviewVerdict ||
     reviewUploads.uploading ||
     reviewHasNoEffect ||
     relaunchBackendUnavailable ||
     (!reviewMessage.trim() && reviewVerdict !== "approve");
   const reviewSubmitLabel =
-    reviewMode === "findings"
-      ? t("reviewFixSubmit")
-      : reviewVerdict === "request_changes" && relaunching
-        ? t("sendToNumo")
-        : t("reviewSubmit");
+    reviewFromFiles
+      ? t("reviewSubmit")
+      : reviewMode === "findings"
+        ? t("reviewFixSubmit")
+        : reviewVerdict === "request_changes" && relaunching
+          ? t("sendToNumo")
+          : t("reviewSubmit");
 
   const [confirmLocalRelaunch, setConfirmLocalRelaunch] = useState(false);
   const [confirmLocalAiReview, setConfirmLocalAiReview] = useState(false);
@@ -1089,7 +1129,13 @@ export function PrDetail({
             : t("reviewSubmittedToast"),
       );
       setReviewVerdict(null);
+      setReviewDialogOpen(false);
       setReviewMessage("");
+      if (reviewFromFiles) {
+        setFileReviewActive(false);
+        setReviewedFiles(new Set());
+        setReviewFromFiles(false);
+      }
       onRefetchList(); // brings up a possible new active run → polling the list.
       await Promise.all([refetchComments(), refetchPr()]);
     } catch (err) {
@@ -1239,6 +1285,7 @@ export function PrDetail({
   // the first question we ask ourselves before opening the Files tab.
   const additions = files.reduce((n, f) => n + f.additions, 0);
   const deletions = files.reduce((n, f) => n + f.deletions, 0);
+  const reviewedCount = reviewedFileCount(files, reviewedFiles);
 
   // The list knows the author (column `author_login`); the forge confirms it.
   // She wins as soon as she responds — same arbitration as for the state.
@@ -1807,7 +1854,7 @@ export function PrDetail({
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
 
           {reviewRequested ? (
-            <PrReviewRequestedCallout onReview={() => setTab("files")} />
+            <PrReviewRequestedCallout onReview={startFileReview} />
           ) : null}
 
           <PrUnresolvedConversations
@@ -1967,22 +2014,79 @@ export function PrDetail({
                   <Skeleton className="h-40 rounded-md" />
                 </div>
               ) : pr ? (
-                <PrDiff
-                  files={files}
-                  endpoint={prEndpoint(item.prId)}
-                  prUrl={pr.url}
-                  provider={item.provider}
-                  // Two distinct rights (MIN-144): comment on a line
-                  // request `read`, resolve a thread is a write to the
-                  // deposit. Confusing them would offer “Solve” for a 403.
-                  readOnly={!canComment}
-                  canResolve={canWrite}
-                  reviewComments={reviewComments}
-                  reviewThreads={reviewThreads}
-                  reviewReactions={reviewReactions}
-                  onCommentPosted={refreshReviewState}
-                  onThreadResolved={refetchPr}
-                />
+                <div className="flex flex-col gap-3">
+                  {canComment ? (
+                    <div
+                      data-testid="pr-file-review-toolbar"
+                      className="flex min-h-14 flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5"
+                    >
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand">
+                        <Eye className="size-4" />
+                      </span>
+                      <div className="min-w-48 flex-1">
+                        <p className="text-sm font-medium">
+                          {t(fileReviewActive ? "reviewInProgress" : "reviewFilesTitle")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {fileReviewActive
+                            ? t("reviewFileProgress", {
+                                reviewed: reviewedCount,
+                                total: files.length,
+                              })
+                            : t("reviewFilesHint")}
+                        </p>
+                      </div>
+                      <Button
+                        data-testid={fileReviewActive ? "pr-finish-review" : "pr-start-review"}
+                        variant={fileReviewActive ? "default" : "outline"}
+                        size="sm"
+                        onClick={fileReviewActive ? finishFileReview : startFileReview}
+                      >
+                        {fileReviewActive ? <Check /> : <Eye />}
+                        {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
+                      </Button>
+                    </div>
+                  ) : null}
+                  <PrDiff
+                    files={files}
+                    endpoint={prEndpoint(item.prId)}
+                    prUrl={pr.url}
+                    provider={item.provider}
+                    // Two distinct rights (MIN-144): comment on a line
+                    // request `read`, resolve a thread is a write to the
+                    // deposit. Confusing them would offer “Solve” for a 403.
+                    readOnly={!canComment}
+                    reviewMode={fileReviewActive}
+                    reviewedFiles={reviewedFiles}
+                    onFileReviewedChange={(path, reviewed) =>
+                      setReviewedFiles((current) => setFileReviewed(current, path, reviewed))
+                    }
+                    canResolve={canWrite}
+                    reviewComments={reviewComments}
+                    reviewThreads={reviewThreads}
+                    reviewReactions={reviewReactions}
+                    onCommentPosted={refreshReviewState}
+                    onThreadResolved={refetchPr}
+                  />
+                  {fileReviewActive && canComment ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5">
+                      <span className="text-xs text-muted-foreground">
+                        {t("reviewFileProgress", {
+                          reviewed: reviewedCount,
+                          total: files.length,
+                        })}
+                      </span>
+                      <Button
+                        data-testid="pr-finish-review-bottom"
+                        size="sm"
+                        onClick={finishFileReview}
+                      >
+                        <Check />
+                        {t("reviewFinish")}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground">{t("prUnavailable")}</p>
               )}
@@ -2198,24 +2302,36 @@ export function PrDetail({
       {/* Review dialogue — all three verdicts share the same form;
           only the box “and restart Numo” distinguishes the request for changes. */}
       <FormDialog
-        open={!!reviewVerdict}
+        open={reviewDialogOpen}
         onOpenChange={(next) => {
-          if (!next && !submitting) setReviewVerdict(null);
+          if (!next && !submitting) {
+            setReviewDialogOpen(false);
+            setReviewVerdict(null);
+            setReviewFromFiles(false);
+          }
         }}
-        title={t(
-          reviewVerdict === "approve"
-            ? "reviewApproveTitle"
-            : reviewVerdict === "comment"
-              ? "reviewCommentTitle"
-              : "reviewRequestChangesTitle",
-        )}
+        title={
+          reviewFromFiles
+            ? t("reviewFinishTitle")
+            : t(
+                reviewVerdict === "approve"
+                  ? "reviewApproveTitle"
+                  : reviewVerdict === "comment"
+                    ? "reviewCommentTitle"
+                    : "reviewRequestChangesTitle",
+              )
+        }
         className="sm:max-w-md"
         submitLabel={reviewSubmitLabel}
         submitDisabled={reviewSubmitDisabled}
         submitting={submitting}
         submitIcon={submitting ? <Spinner /> : null}
         cancelLabel={t("cancel")}
-        onCancel={() => setReviewVerdict(null)}
+        onCancel={() => {
+          setReviewDialogOpen(false);
+          setReviewVerdict(null);
+          setReviewFromFiles(false);
+        }}
         onSubmit={() => void submitReview()}
         dictation={{
           onTranscription: (text) =>
@@ -2223,6 +2339,70 @@ export function PrDetail({
           disabled: submitting,
         }}
       >
+          {reviewFromFiles ? (
+            <div
+              role="radiogroup"
+              aria-label={t("reviewDecision")}
+              className="grid gap-2"
+            >
+              {([
+                {
+                  verdict: "comment",
+                  label: t("reviewComment"),
+                  hint: t("reviewChoiceCommentHint"),
+                  icon: MessageSquare,
+                },
+                {
+                  verdict: "approve",
+                  label: t("reviewApprove"),
+                  hint: t("reviewChoiceApproveHint"),
+                  icon: Check,
+                },
+                {
+                  verdict: "request_changes",
+                  label: t("reviewRequestChanges"),
+                  hint: t("reviewChoiceChangesHint"),
+                  icon: X,
+                },
+              ] as const).map((choice) => {
+                const Icon = choice.icon;
+                const selected = reviewVerdict === choice.verdict;
+                return (
+                  <label
+                    key={choice.verdict}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                      selected ? "border-brand bg-brand/5" : "border-border",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name={`pr-review-verdict-${item.prId}`}
+                      value={choice.verdict}
+                      checked={selected}
+                      onChange={() => selectReviewVerdict(choice.verdict)}
+                      className="sr-only"
+                    />
+                    <span
+                      className={cn(
+                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
+                        selected
+                          ? "border-brand bg-brand text-brand-foreground"
+                          : "border-border text-muted-foreground",
+                      )}
+                    >
+                      <Icon className="size-3" />
+                    </span>
+                    <span className="grid gap-0.5">
+                      <span className="text-sm font-medium">{choice.label}</span>
+                      <span className="text-xs text-muted-foreground">{choice.hint}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+
           {/* The two modes of requesting changes. The second exists
               because the instructions are almost always the SAME — “take this
               that we wrote to you and correct it” — and that we retyped it by hand
@@ -2283,7 +2463,11 @@ export function PrDetail({
                 if (!reviewSubmitDisabled) void submitReview();
               }}
               placeholder={t(
-                reviewVerdict === "approve" ? "reviewApprovePlaceholder" : "reviewPlaceholder",
+                reviewFromFiles
+                  ? "reviewSummaryPlaceholder"
+                  : reviewVerdict === "approve"
+                    ? "reviewApprovePlaceholder"
+                    : "reviewPlaceholder",
               )}
               rows={reviewMode === "findings" ? 5 : 4}
               autoFocus

@@ -11,7 +11,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
-import { Badge, cn, SegmentedControl, toast, useIsMobile } from "mangue-ui";
+import { Badge, Checkbox, cn, SegmentedControl, toast, useIsMobile } from "mangue-ui";
 import { ChevronDown, ChevronRight, WrapText } from "lucide-react";
 import { applyPatch } from "diff";
 import { getLineAnnotationName, parsePatchFiles } from "@pierre/diffs";
@@ -336,6 +336,9 @@ const PrDiffFile = memo(function PrDiffFile({
   prUrl,
   provider,
   readOnly,
+  reviewMode,
+  reviewed,
+  onReviewedChange,
   expandableContext,
   canResolve,
   collapsed,
@@ -363,6 +366,10 @@ const PrDiffFile = memo(function PrDiffFile({
   provider?: RepoProviderId;
   /** Read only: neither “+” gutter nor “Reply”. */
   readOnly?: boolean;
+  /** Optional progress marker shown while the viewer is reviewing the PR. */
+  reviewMode?: boolean;
+  reviewed?: boolean;
+  onReviewedChange?: (reviewed: boolean) => void;
   /** Is the basic version rereadable by `endpoint`? Wrong for a difference
       local not pushed: proposing unfolding would then end in 404. */
   expandableContext: boolean;
@@ -761,9 +768,7 @@ const PrDiffFile = memo(function PrDiffFile({
       id={fileAnchorId(file.filename)}
       className="overflow-clip rounded-md border border-border"
     >
-      <button
-        type="button"
-        onClick={() => onToggle(file.filename)}
+      <div
         className={cn(
           // Sticking to the top edge, everywhere: `top-0` and nothing else. The three
           // hosts have a container that starts under a header (the banner
@@ -775,23 +780,39 @@ const PrDiffFile = memo(function PrDiffFile({
           // container, so the header of the next file chases the previous one by
           // arriving. This is the intended behavior, and it's free — especially
           // don't make a single floating header on top of the list.
-          "sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60",
+          "sticky top-0 z-10 flex w-full items-stretch bg-card",
           // The diff has the SAME background as the map (`--diffs-light-bg: var(--card)`):
           // without this trait, the pasted header would float in the middle of the code without
           // let's see where it starts.
           collapsed ? null : "border-b border-border",
         )}
       >
-        {collapsed ? (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        )}
-        <FilePathLabel path={file.filename} previousPath={file.previous_filename} />
-        <FileStatusBadge status={fileStatusOf(file)} />
-        <DiffCounters additions={file.additions} deletions={file.deletions} />
-        <DiffStatBar additions={file.additions} deletions={file.deletions} />
-      </button>
+        <button
+          type="button"
+          onClick={() => onToggle(file.filename)}
+          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
+        >
+          {collapsed ? (
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          )}
+          <FilePathLabel path={file.filename} previousPath={file.previous_filename} />
+          <FileStatusBadge status={fileStatusOf(file)} />
+          <DiffCounters additions={file.additions} deletions={file.deletions} />
+          <DiffStatBar additions={file.additions} deletions={file.deletions} />
+        </button>
+        {reviewMode && !readOnly && onReviewedChange ? (
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 border-l border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+            <Checkbox
+              checked={reviewed}
+              onCheckedChange={(value) => onReviewedChange(value === true)}
+              aria-label={t("fileReviewed")}
+            />
+            <span className="hidden sm:inline">{t("fileReviewed")}</span>
+          </label>
+        ) : null}
+      </div>
       {collapsed ? null : (
         <DeferredDiffBody eager={eager} estimatedHeight={estimatedDiffBodyHeight(file)}>
           {fileDiff ? (
@@ -859,6 +880,9 @@ export function PrDiff({
   prUrl,
   provider,
   readOnly = false,
+  reviewMode = false,
+  reviewedFiles,
+  onFileReviewedChange,
   expandableContext = true,
   canResolve = !readOnly,
   reviewComments = NO_COMMENTS,
@@ -877,6 +901,10 @@ export function PrDiff({
   /** Read only: no review comments (diff view without PR — the
       agent conversation; the review lives on the Pull requests page). */
   readOnly?: boolean;
+  /** Show optional per-file review progress controls. */
+  reviewMode?: boolean;
+  reviewedFiles?: ReadonlySet<string>;
+  onFileReviewedChange?: (path: string, reviewed: boolean) => void;
   /** Allow lazy loading of context out of hunk. */
   expandableContext?: boolean;
   /** Solve a thread, governed APART (MIN-144): comment request `read` on
@@ -1098,6 +1126,9 @@ export function PrDiff({
               prUrl={prUrl}
               provider={provider}
               readOnly={readOnly}
+              reviewMode={reviewMode}
+              reviewed={reviewedFiles?.has(f.filename) ?? false}
+              onReviewedChange={(reviewed) => onFileReviewedChange?.(f.filename, reviewed)}
               expandableContext={expandableContext}
               canResolve={canResolve}
               collapsed={collapsed.has(f.filename)}

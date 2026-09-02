@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Eye } from "lucide-react";
-import { cn, Spinner } from "mangue-ui";
+import { Button, cn, Spinner } from "mangue-ui";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import { PrActivityItem } from "@/components/pull-requests/pr-activity-timeline";
@@ -25,13 +25,14 @@ export function PrReviewRequestedCallout({ onReview }: { onReview: () => void })
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {t("reviewRequested")}
       </span>
-      <button
-        type="button"
-        className="shrink-0 text-xs font-medium text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline"
+      <Button
+        variant="ghost"
+        size="sm"
+        className="shrink-0"
         onClick={onReview}
       >
         {t("reviewRequestedAction")}
-      </button>
+      </Button>
     </div>
   );
 }
