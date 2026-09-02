@@ -16,8 +16,7 @@
 // the editor, the only surface capable of adopting a merged document.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -47,6 +46,8 @@ import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import {
   discardPageOnUnload,
   fetchPageApi,
+  fetchPageBacklinksApi,
+  fetchPageEventsApi,
   updatePageOnUnload,
 } from "@/lib/pages-api";
 import {
@@ -59,6 +60,7 @@ import {
 import { ancestorsOf, descendantIds } from "@/lib/pages";
 import {
   isPreparedPageData,
+  PAGE_NAVIGATION_FRESH_MS,
   pageKey,
   usePagesQuery,
 } from "@/lib/use-pages-query";
@@ -94,6 +96,16 @@ import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
 import { usePageWatch } from "@/lib/use-page-watch";
+import {
+  PAGE_ACTIVITY_FRESH_MS,
+  pageBacklinksKey,
+  pageEventsKey,
+} from "@/lib/page-activity-cache";
+import {
+  pageHref,
+  pagesHref,
+  pushPagesHistory,
+} from "@/lib/pages-navigation";
 import {
   usePageAutosave,
   type PageSaveState,
@@ -254,6 +266,7 @@ function PageSurface({
   onRestored: () => void;
 }) {
   const t = useTranslations("Pages");
+  const queryClient = useQueryClient();
   const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
   const {
@@ -298,11 +311,29 @@ function PageSurface({
   } = useQuery({
     queryKey: pageKey(pageId),
     queryFn: () => fetchPageApi(projectId, pageId),
+    staleTime: PAGE_NAVIGATION_FRESH_MS,
     refetchOnMount: (query) =>
       isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
   const readyForThisSurface =
     isFetchedAfterMount || isPreparedPageData(pageId, dataUpdatedAt);
+
+  const warmPageActivity = useCallback(() => {
+    void queryClient.prefetchQuery({
+      queryKey: pageEventsKey(pageId),
+      queryFn: () => fetchPageEventsApi(projectId, pageId),
+      staleTime: PAGE_ACTIVITY_FRESH_MS,
+    });
+    void queryClient.prefetchQuery({
+      queryKey: pageBacklinksKey(pageId),
+      queryFn: () => fetchPageBacklinksApi(projectId, pageId),
+      staleTime: PAGE_ACTIVITY_FRESH_MS,
+    });
+  }, [pageId, projectId, queryClient]);
+
+  useEffect(() => {
+    if (page) warmPageActivity();
+  }, [page, warmPageActivity]);
 
   // The LIST line is the source of the displayed title and icon: it is
   // it that the sidebar, the breadcrumbs and the subpage block read, and the
@@ -485,8 +516,11 @@ function PageSurface({
   // The same information is carried in two places: `parent_id` in base, and the
   // `subpage` block in this document. The column makes the truth, the block is
   // a view — and it is here that the view comes back down to the truth.
-  const router = useRouter();
-  const base = `/projects/${projectId}/pages`;
+  const base = pagesHref(projectId);
+  const openPage = useCallback(
+    (id: string) => pushPagesHistory(pageHref(projectId, id)),
+    [projectId]
+  );
 
   const lookup = useMemo<PagesLookup>(
     () => ({
@@ -496,7 +530,7 @@ function PageSurface({
         return row ? { id: row.id, title: row.title, icon: row.icon } : undefined;
       },
       href: (id) => `${base}/${id}`,
-      navigate: (id) => router.push(`${base}/${id}`),
+      navigate: openPage,
       create: async () => {
         try {
           const child = await createPage({ parent_id: pageId });
@@ -511,7 +545,7 @@ function PageSurface({
         // leave. Without this `flush`, navigation unmounts the editor with, in
         // the draft, a block that no one has yet recorded — the
         // subpage exists, its link in the parent does not.
-        void flushRef.current().finally(() => router.push(`${base}/${id}`));
+        void flushRef.current().finally(() => openPage(id));
       },
       duplicate: async (id) => {
         try {
@@ -534,7 +568,7 @@ function PageSurface({
         }
       },
     }),
-    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, router, t]
+    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, openPage, t]
   );
 
   /* ── Delete block moves page to trash ─────────────────────── */
@@ -654,13 +688,13 @@ function PageSurface({
           markDraftPage(child.id);
           void flushRef
             .current()
-            .finally(() => router.push(`${base}/${child.id}`));
+            .finally(() => openPage(child.id));
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("createFailed"));
         }
       })();
     },
-    [base, createPage, router, t]
+    [createPage, openPage, t]
   );
 
   const toggleFavoriteFromMenu = useCallback(
@@ -679,7 +713,7 @@ function PageSurface({
       void (async () => {
         try {
           const trashed = await trashPage(target.id);
-          router.push(base);
+          pushPagesHistory(base);
           toast.success(
             trashed > 1
               ? t("trashedWithChildren", { count: trashed })
@@ -690,7 +724,7 @@ function PageSurface({
         }
       })();
     },
-    [base, router, t, trashPage]
+    [base, t, trashPage]
   );
 
   const documentMenu = usePageDocumentMenu({
@@ -849,7 +883,11 @@ function PageSurface({
           versions, comments, and document actions on the right. */}
       <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
         <div className="flex min-w-0 flex-1 items-center">
-          <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
+          <PageBreadcrumb
+            trail={trail}
+            hrefFor={(id) => `${base}/${id}`}
+            onNavigate={openPage}
+          />
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <PagePresence userIds={present} members={members} />
@@ -870,6 +908,8 @@ function PageSurface({
                 size="icon-sm"
                 aria-label={t("comments")}
                 className="text-muted-foreground hover:text-foreground"
+                onMouseEnter={warmPageActivity}
+                onFocus={warmPageActivity}
                 onClick={() => openHistory("activity")}
               >
                 <MessageSquare className="size-3.5" />

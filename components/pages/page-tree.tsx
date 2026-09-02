@@ -39,6 +39,7 @@ import type { PageTreeNode } from "@/lib/pages";
 import { ancestorsOf, splitFavoritePageTree } from "@/lib/pages";
 import { dropModeAt, type PageDropMode } from "@/lib/pages-move";
 import { matchesFilter } from "@/components/sidebar-filter-field";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
 import {
   IssueActionsMenu,
   IssueContextMenu,
@@ -81,6 +82,8 @@ export interface PageTreeProps {
   /** Title line text filter — not empty, the tree becomes a list. */
   query: string;
   onCreateChild: (parentId: string) => void;
+  /** Switch documents inside the persistent Pages shell. */
+  onOpen: (pageId: string) => void;
   /** Fetch the body while pointer or keyboard intent precedes navigation. */
   onPrefetch: (pageId: string) => void;
   onMove: (dragId: string, targetId: string, mode: PageDropMode) => void;
@@ -96,6 +99,7 @@ export function PageTree({
   activePageId,
   query,
   onCreateChild,
+  onOpen,
   onPrefetch,
   onMove,
   onTrash,
@@ -237,6 +241,7 @@ export function PageTree({
             actions={actionsFor(page)}
             onToggle={() => {}}
             onCreateChild={createChild}
+            onOpen={onOpen}
             onPrefetch={onPrefetch}
           />
         ))}
@@ -268,6 +273,7 @@ export function PageTree({
             pinned={favoriteSection && node.favorite}
             onToggle={() => toggle(node.id)}
             onCreateChild={createChild}
+            onOpen={onOpen}
             onPrefetch={onPrefetch}
             onDragStart={() => setDragId(node.id)}
             onDragOverRow={(mode) => {
@@ -319,6 +325,7 @@ function PageRow({
   pinned = false,
   onToggle,
   onCreateChild,
+  onOpen,
   onPrefetch,
   onDragStart,
   onDragOverRow,
@@ -340,6 +347,7 @@ function PageRow({
   pinned?: boolean;
   onToggle: () => void;
   onCreateChild: (parentId: string) => void;
+  onOpen: (pageId: string) => void;
   onPrefetch: (pageId: string) => void;
   onDragStart?: () => void;
   onDragOverRow?: (mode: PageDropMode) => void;
@@ -444,9 +452,15 @@ function PageRow({
 
       <Link
         href={`/projects/${page.project_id}/pages/${page.id}`}
+        prefetch={false}
         data-sidebar-filter-result
         onMouseEnter={() => onPrefetch(page.id)}
         onFocus={() => onPrefetch(page.id)}
+        onClick={(event) => {
+          if (!isPlainNavigationClick(event)) return;
+          event.preventDefault();
+          onOpen(page.id);
+        }}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pr-1 text-left outline-none"
       >
         <span className="flex size-4 shrink-0 items-center justify-center text-sm leading-none">

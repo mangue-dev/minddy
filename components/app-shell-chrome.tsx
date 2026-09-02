@@ -60,6 +60,11 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { markDraftPage } from "@/lib/pages-draft";
 import {
+  pageHref,
+  pagesHref,
+  pushPagesHistory,
+} from "@/lib/pages-navigation";
+import {
   useAgentSessionsQuery,
   useOpenPullRequestCountQuery,
 } from "@/lib/use-agent-runs";
@@ -403,6 +408,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // display, and nothing else reports them once you leave the home.
   const { invitations } = useMyInvitations();
   const inboxCount = unreadCount + invitations.length;
+  const navigateToWikiPage = useCallback(
+    (projectId: string, pageId: string) => {
+      const href = pageHref(projectId, pageId);
+      const base = pagesHref(projectId);
+      if (pathname === base || pathname.startsWith(`${base}/`)) {
+        pushPagesHistory(href);
+      } else {
+        router.push(href);
+      }
+    },
+    [pathname, router]
+  );
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   // Zen mode (MIN-134): the paddle is the only switch, and the only output
   // with reloading — it therefore remains mounted, whatever is masked around it.
@@ -546,7 +563,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         try {
           const page = await createWikiPage({});
           markDraftPage(page.id);
-          router.push(`/projects/${projectId}/pages/${page.id}`);
+          navigateToWikiPage(projectId, page.id);
         } catch (err) {
           toast.error(
             err instanceof Error ? err.message : tPages("createFailed")
@@ -554,7 +571,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         }
       })();
     },
-    [createWikiPage, router, tPages]
+    [createWikiPage, navigateToWikiPage, tPages]
   );
 
   // Cross-project search (MIN-91): every ticket and objective of every project,
@@ -1278,8 +1295,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 contextId: page.project_id,
                 data: page,
                 href: `/projects/${page.project_id}/pages/${page.id}`,
-                onSelect: () =>
-                  router.push(`/projects/${page.project_id}/pages/${page.id}`),
+                onSelect: () => navigateToWikiPage(page.project_id, page.id),
               },
             ];
           }),
@@ -1288,7 +1304,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
       return groups;
     },
-    [projectById, router, openIssuePanel, t, ti, tPages]
+    [projectById, navigateToWikiPage, openIssuePanel, t, ti, tPages]
   );
 
   // Desktop: the full list, built only while the palette is open — closed, it

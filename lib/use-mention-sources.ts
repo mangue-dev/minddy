@@ -15,7 +15,7 @@
 // immediately quotable, and a deleted ticket ceases to be cited.
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { contentMentionScanner } from "@/lib/mention-scan";
@@ -32,6 +32,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
+import { pagesHref, pushPagesHistory } from "@/lib/pages-navigation";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
@@ -176,6 +177,7 @@ export function useMentionLinksFor(
   onOpenIssue?: (projectId: string, issueId: string) => void,
 ): MentionLinks {
   const router = useRouter();
+  const pathname = usePathname();
   const { openIssue, closeIssue } = useIssuePanelActions();
   const { issues, objectives, pages } = sources;
 
@@ -196,11 +198,21 @@ export function useMentionLinksFor(
           (onOpenIssue ?? openIssue)(target.projectId, target.issueId);
         } else {
           closeIssue();
-          router.push(target.href);
+          const targetProjectId = projectOf(type, id);
+          const base = targetProjectId ? pagesHref(targetProjectId) : null;
+          if (
+            type === "page" &&
+            base &&
+            (pathname === base || pathname.startsWith(`${base}/`))
+          ) {
+            pushPagesHistory(target.href);
+          } else {
+            router.push(target.href);
+          }
         }
       },
     };
-  }, [projectOf, router, onOpenIssue, openIssue, closeIssue]);
+  }, [projectOf, router, pathname, onOpenIssue, openIssue, closeIssue]);
 }
 
 /**

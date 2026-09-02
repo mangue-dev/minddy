@@ -31,6 +31,7 @@ import {
 } from "mangue-ui";
 import { FileText } from "lucide-react";
 import { foldPath } from "@/lib/pages";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
 
 export interface BreadcrumbPage {
   id: string;
@@ -41,16 +42,24 @@ export interface BreadcrumbPage {
 function Crumb({
   page,
   href,
+  onNavigate,
   className,
 }: {
   page: BreadcrumbPage;
   href: string;
+  onNavigate: (pageId: string) => void;
   className?: string;
 }) {
   const t = useTranslations("Pages");
   return (
     <Link
       href={href}
+      prefetch={false}
+      onClick={(event) => {
+        if (!isPlainNavigationClick(event)) return;
+        event.preventDefault();
+        onNavigate(page.id);
+      }}
       className={cn(
         "flex min-w-0 items-center gap-1 rounded transition-colors hover:text-foreground",
         className
@@ -71,11 +80,13 @@ function Separator() {
 export function PageBreadcrumb({
   trail,
   hrefFor,
+  onNavigate,
   className,
 }: {
   /** Ancestors, from ROOT to direct parent. Empty: nothing is returned. */
   trail: BreadcrumbPage[];
   hrefFor: (pageId: string) => string;
+  onNavigate: (pageId: string) => void;
   className?: string;
 }) {
   const t = useTranslations("Pages");
@@ -95,7 +106,12 @@ export function PageBreadcrumb({
         className
       )}
     >
-      <Crumb page={lead} href={hrefFor(lead.id)} className="max-w-[10rem]" />
+      <Crumb
+        page={lead}
+        href={hrefFor(lead.id)}
+        onNavigate={onNavigate}
+        className="max-w-[10rem]"
+      />
 
       {hidden.length > 0 && (
         <>
@@ -115,7 +131,15 @@ export function PageBreadcrumb({
             <DropdownMenuContent align="start" className="w-56">
               {hidden.map((page) => (
                 <DropdownMenuItem key={page.id} asChild>
-                  <Link href={hrefFor(page.id)}>
+                  <Link
+                    href={hrefFor(page.id)}
+                    prefetch={false}
+                    onClick={(event) => {
+                      if (!isPlainNavigationClick(event)) return;
+                      event.preventDefault();
+                      onNavigate(page.id);
+                    }}
+                  >
                     <span className="flex size-4 shrink-0 items-center justify-center text-xs leading-none">
                       {page.icon ?? <FileText className="size-3.5" />}
                     </span>
@@ -134,6 +158,7 @@ export function PageBreadcrumb({
           <Crumb
             page={page}
             href={hrefFor(page.id)}
+            onNavigate={onNavigate}
             className="max-w-[12rem] text-foreground/80"
           />
         </span>
