@@ -78,6 +78,8 @@ export interface PullRequestRef {
   mergeabilityReason?: MergeabilityReason | null;
   mergeFlowActive?: boolean;
   reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  /** Direct reviewer requests that are still pending at the forge. */
+  requestedReviewers?: Array<{ login: string; avatar_url: string | null }>;
   /** Fully rendered GitLab defaults for the merge dialog. */
   defaultMergeCommitMessage?: string | null;
   defaultSquashCommitMessage?: string | null;
@@ -347,6 +349,7 @@ interface RawPull {
   base?: { ref?: string };
   commits?: number;
   user?: { login?: string; avatar_url?: string } | null;
+  requested_reviewers?: Array<{ login?: string; avatar_url?: string | null }>;
   created_at?: string;
   updated_at?: string;
   auto_merge?: object | null;
@@ -382,6 +385,14 @@ function toRef(pr: RawPull): PullRequestRef {
     mergeableState: pr.mergeable_state,
     mergeabilityReason: githubMergeabilityReason(pr),
     mergeFlowActive: !!pr.auto_merge,
+    requestedReviewers: (pr.requested_reviewers ?? [])
+      .filter((reviewer): reviewer is { login: string; avatar_url?: string | null } =>
+        !!reviewer.login,
+      )
+      .map((reviewer) => ({
+        login: reviewer.login,
+        avatar_url: reviewer.avatar_url ?? null,
+      })),
   };
 }
 

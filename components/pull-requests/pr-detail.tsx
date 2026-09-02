@@ -45,7 +45,6 @@ import {
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
@@ -70,7 +69,7 @@ import {
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
 import {
-  PrPendingReviewCallout,
+  PrReviewRequestedCallout,
   PrReviewCard,
 } from "@/components/pull-requests/pr-review-thread";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
@@ -123,11 +122,12 @@ import {
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import {
-  blockReadinessForNumoReview,
+  blockReadinessForRequestedReview,
   blockerFallbackUrl,
   type ReadinessAction,
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
+import { viewerReviewIsRequested } from "@/lib/pr-review-request";
 import {
   findRerunnableChecks,
   type PullRequestDetailTab,
@@ -582,7 +582,6 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
-  const router = useRouter();
   const isSend = useIsSendShortcut();
   const format = useFormatter();
   const {
@@ -775,12 +774,13 @@ export function PrDetail({
   }, [isWorking, refetchPr, refetchComments, refetchCommits, refetchReviewComments]);
 
   const aiReviewActive = reviewSession.active;
+  const reviewRequested = viewerReviewIsRequested(pr, viewer);
   const effectiveReadiness = useMemo(
     () =>
       readiness
-        ? blockReadinessForNumoReview(readiness, aiReviewActive)
+        ? blockReadinessForRequestedReview(readiness, reviewRequested)
         : null,
-    [aiReviewActive, readiness],
+    [readiness, reviewRequested],
   );
 
   // When the pass ends, what she wrote is ON PR: the summary
@@ -911,10 +911,6 @@ export function PrDetail({
 
   const handleReadinessAction = async (blocker: ReadinessBlocker) => {
     if (maintenanceAction) return;
-    if (blocker.action === "open_numo_review") {
-      if (reviewSession.run) router.push(`/agents?run=${reviewSession.run.runId}`);
-      return;
-    }
     if (blocker.action === "mark_ready") {
       await act("ready_for_review");
       return;
@@ -972,7 +968,6 @@ export function PrDetail({
   };
 
   const canActOnBlocker = (blocker: ReadinessBlocker): boolean => {
-    if (blocker.action === "open_numo_review") return !!reviewSession.run;
     if (blocker.action === "mark_ready" || blocker.action === "update_branch") return canWrite;
     if (blocker.action === "approve") return canComment;
     if (blocker.action === "resolve_conversations") return unresolvedThreads.length > 0;
@@ -1811,8 +1806,8 @@ export function PrDetail({
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
 
-          {aiReviewActive && reviewSession.run ? (
-            <PrPendingReviewCallout run={reviewSession.run} />
+          {reviewRequested ? (
+            <PrReviewRequestedCallout onReview={() => setTab("files")} />
           ) : null}
 
           <PrUnresolvedConversations

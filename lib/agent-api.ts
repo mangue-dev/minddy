@@ -612,6 +612,8 @@ export interface PullRequestRef {
   mergeabilityReason?: import("./pr-readiness").MergeabilityReason | null;
   mergeFlowActive?: boolean;
   reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  /** Direct reviewer requests that are still pending at the forge. */
+  requestedReviewers?: Array<{ login: string; avatar_url: string | null }>;
   /** Fully rendered GitLab defaults for the merge dialog. */
   defaultMergeCommitMessage?: string | null;
   defaultSquashCommitMessage?: string | null;

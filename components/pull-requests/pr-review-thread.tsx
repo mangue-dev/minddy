@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Eye } from "lucide-react";
 import { cn, Spinner } from "mangue-ui";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
@@ -10,28 +10,27 @@ import { PrActivityItem } from "@/components/pull-requests/pr-activity-timeline"
 import { formatModelName } from "@/lib/model-display";
 import type { PrReviewRunSummary } from "@/lib/pr-review-session";
 
-/** Prominent merge blocker shown above CI while the requested review is active. */
-export function PrPendingReviewCallout({ run }: { run: PrReviewRunSummary }) {
+/** Prominent merge blocker shown when the current user's review is requested. */
+export function PrReviewRequestedCallout({ onReview }: { onReview: () => void }) {
   const t = useTranslations("PullRequests");
-  const router = useRouter();
 
   return (
     <div
-      data-testid="pr-pending-numo-review"
+      data-testid="pr-review-requested"
       className="flex min-h-11 min-w-0 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
     >
       <span className="flex size-5 shrink-0 items-center justify-center rounded-[5px] bg-amber-500/10 text-amber-600 dark:text-amber-400">
-        <NumoIcon animated className="size-3.5" />
+        <Eye className="size-3.5" />
       </span>
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
-        {t("numoReviewRunning")}
+        {t("reviewRequested")}
       </span>
       <button
         type="button"
         className="shrink-0 text-xs font-medium text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline"
-        onClick={() => router.push(`/agents?run=${run.runId}`)}
+        onClick={onReview}
       >
-        {t("numoReviewOpenSession")}
+        {t("reviewRequestedAction")}
       </button>
     </div>
   );

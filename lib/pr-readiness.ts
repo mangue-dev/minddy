@@ -56,7 +56,7 @@ export interface ReadinessCheck {
 export type ReadinessBlockerKind =
   | "mergeability"
   | "draft"
-  | "numo_review"
+  | "review_requested"
   | "checks"
   | "changes_requested"
   | "approvals"
@@ -67,7 +67,6 @@ export type ReadinessBlockerKind =
 
 export type ReadinessAction =
   | "mark_ready"
-  | "open_numo_review"
   | "approve"
   | "resolve_conversations"
   | "update_branch"
@@ -108,7 +107,7 @@ export interface ReadinessPassedCondition {
 
 export type PullRequestReadinessState =
   | "ready"
-  | "numo_review_running"
+  | "review_requested"
   | "checks_running"
   | "checks_failing"
   | "changes_requested"
@@ -149,7 +148,7 @@ export interface ReadinessInput {
 const PRIMARY_STATE: Record<ReadinessBlockerKind, PullRequestReadinessState> = {
   mergeability: "status_unavailable",
   draft: "draft",
-  numo_review: "numo_review_running",
+  review_requested: "review_requested",
   checks: "checks_running",
   changes_requested: "changes_requested",
   approvals: "approval_required",
@@ -162,7 +161,7 @@ const PRIMARY_STATE: Record<ReadinessBlockerKind, PullRequestReadinessState> = {
 const BLOCKER_PRIORITY: ReadinessBlockerKind[] = [
   "mergeability",
   "draft",
-  "numo_review",
+  "review_requested",
   "checks",
   "changes_requested",
   "approvals",
@@ -535,37 +534,35 @@ export function reducePullRequestReadiness(
 }
 
 /**
- * Adds the client-known Numo review session to merge readiness.
+ * Adds a review request addressed to the current forge account to readiness.
  *
- * Review sessions are stored independently from forge state, so the server-side
- * readiness response cannot include a session that started after it was read.
- * The PR panel applies this final condition from its live review-session query:
- * while Numo is reviewing, the header names that work and the merge controls
- * remain unavailable. Keeping the condition in the readiness shape also makes
- * it visible in the same checklist as every forge requirement.
+ * The server computes repository readiness before the resolved viewer is compared
+ * with the forge's pending reviewer list. The PR panel applies this final,
+ * user-specific condition so the header and checklist both explain why its merge
+ * controls remain unavailable until the requested review is submitted.
  */
-export function blockReadinessForNumoReview(
+export function blockReadinessForRequestedReview(
   readiness: PullRequestReadiness,
-  active: boolean,
+  requested: boolean,
 ): PullRequestReadiness {
   if (
-    !active ||
+    !requested ||
     readiness.state === "merged" ||
     readiness.state === "closed"
   ) {
     return readiness;
   }
   const blocker: ReadinessBlocker = {
-    id: "numo-review-running",
-    kind: "numo_review",
+    id: "viewer-review-requested",
+    kind: "review_requested",
     required: true,
     status: "pending",
     source: "reviews",
-    action: "open_numo_review",
+    action: "approve",
   };
   return {
     ...readiness,
-    state: "numo_review_running",
+    state: "review_requested",
     mergeAllowed: false,
     blockers: [
       blocker,
