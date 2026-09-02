@@ -164,6 +164,39 @@ describe("reducePullRequestReadiness", () => {
       expect.objectContaining({ id: "checks-unavailable", required: false }),
     );
   });
+
+  it("allows merging an outdated branch when the repository policy does not require updates", () => {
+    const readiness = reducePullRequestReadiness(
+      input({
+        mergeabilityReason: "branch_out_of_date",
+        policy: { ...policy, branchMustBeUpToDate: false },
+      }),
+    );
+
+    expect(readiness.mergeAllowed).toBe(true);
+    expect(readiness.blockers).toContainEqual(
+      expect.objectContaining({
+        id: "branch-out-of-date",
+        required: false,
+        status: "pending",
+      }),
+    );
+  });
+
+  it("blocks merging an outdated branch when the repository policy requires updates", () => {
+    const readiness = reducePullRequestReadiness(
+      input({ mergeabilityReason: "branch_out_of_date" }),
+    );
+
+    expect(readiness.mergeAllowed).toBe(false);
+    expect(readiness.blockers).toContainEqual(
+      expect.objectContaining({
+        id: "branch-out-of-date",
+        required: true,
+        status: "blocked",
+      }),
+    );
+  });
 });
 
 describe("provider merge policy mapping", () => {

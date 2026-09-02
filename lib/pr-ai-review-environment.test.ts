@@ -30,4 +30,17 @@ describe("Numo pull-request review environment", () => {
     expect(source).toContain("localWorktree: aiReviewUsesLocal");
     expect(source).toContain("localIssueContextConfirmed: localContextConfirmed");
   });
+
+  it("keeps review and correction actions available for local-only execution", () => {
+    expect(source).toContain(
+      "reviewExecutionConfigured || localRepo.available",
+    );
+    expect(source.match(/reviewUpToDate \|\| !reviewExecutionAvailable/g)).toHaveLength(3);
+
+    const relaunchGate = source.slice(
+      source.indexOf("const canRelaunch ="),
+      source.indexOf("// `item` comes from the list"),
+    );
+    expect(relaunchGate).toContain("reviewExecutionAvailable");
+  });
 });

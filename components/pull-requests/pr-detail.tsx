@@ -725,6 +725,8 @@ export function PrDetail({
   );
   const aiReviewUsesLocal = aiReviewEnvironment === "local" && localRepo.ready;
   const aiReviewBackendUnavailable = !aiReviewUsesLocal && !reviewExecutionConfigured;
+  const reviewExecutionAvailable =
+    reviewExecutionConfigured || localRepo.available;
   // What THIS git account can do on this repository (MIN-144). A human gesture leaves
   // of the person's account: without account, or without right, the affordance
   // DISAPPEARS — it’s the banner that explains, once, at the top.
@@ -754,7 +756,7 @@ export function PrDetail({
     item.pr_state !== "closed" &&
     !!pr?.head &&
     !!item.project &&
-    reviewExecutionConfigured;
+    reviewExecutionAvailable;
   // `item` comes from the list (DB value, possibly late by a webhook),
   // `pr` of the forge's GET (the truth): the forge wins as soon as it responds.
   const isDraft = pr?.draft ?? item.pr_state === "draft";
@@ -1556,7 +1558,7 @@ export function PrDetail({
                     <DropdownMenuItem
                       // Keep the entry visible while its label explains why it is disabled.
                       disabled={
-                        aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
+                        aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
                       }
                       onSelect={openAiReviewDialog}
                     >
@@ -1570,7 +1572,7 @@ export function PrDetail({
                   variant="outline"
                   size="sm"
                   disabled={
-                    aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
+                    aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
                   }
                   onClick={openAiReviewDialog}
                 >
@@ -1621,7 +1623,7 @@ export function PrDetail({
                   data-testid="pr-action-numo-review"
                   className="2xl:hidden"
                   disabled={
-                    aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
+                    aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
                   }
                   onSelect={openAiReviewDialog}
                 >

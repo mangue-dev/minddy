@@ -263,11 +263,12 @@ export function reducePullRequestReadiness(
     });
   }
   if (input.mergeabilityReason === "branch_out_of_date") {
+    const required = input.policy?.branchMustBeUpToDate === true;
     add({
       id: "branch-out-of-date",
       kind: "branch",
-      required: true,
-      status: "blocked",
+      required,
+      status: required ? "blocked" : "pending",
       source: "repository",
       action: "update_branch",
     });
@@ -434,6 +435,10 @@ export function reducePullRequestReadiness(
       blockers.filter((b) => b.kind === kind),
     )[0];
   const requiredBlocker = blockers.some((blocker) => blocker.required);
+  const mergeabilityAllowsMerge =
+    input.mergeabilityReason === "clean" ||
+    (input.mergeabilityReason === "branch_out_of_date" &&
+      input.policy?.branchMustBeUpToDate === false);
   const passed: ReadinessPassedCondition[] = [];
   const pass = (condition: ReadinessPassedCondition) => passed.push(condition);
   if (!input.draft && input.mergeabilityReason !== "draft") {
@@ -526,7 +531,7 @@ export function reducePullRequestReadiness(
     mergeAllowed:
       input.canWrite &&
       !requiredBlocker &&
-      input.mergeabilityReason === "clean" &&
+      mergeabilityAllowsMerge &&
       methods.length > 0,
     methods,
     preferredMethod,
