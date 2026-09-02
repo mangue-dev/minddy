@@ -123,6 +123,10 @@ const MAX_CONTENT_BYTES = 1_000_000;
 /** An emoji, not a sentence: we limit ourselves rather than validating an alphabet. */
 const MAX_ICON_LENGTH = 16;
 
+/** UUIDs supplied by the optimistic web client; invalid values are ignored. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * The columns of the LIST. The body is absent, deliberately: the sidebar
  * loads all the pages of the project at once (that's the whole point of the flat
@@ -585,6 +589,7 @@ export async function createPage({
     created_by: actorId,
     ...writtenBy(actorId, kind),
   };
+  if (typeof input.id === "string" && UUID_RE.test(input.id)) row.id = input.id;
   if (content !== undefined) row.content = content;
 
   const { data, error } = await service

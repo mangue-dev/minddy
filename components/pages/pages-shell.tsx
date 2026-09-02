@@ -56,7 +56,7 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
     return segment && segment !== "trash" ? segment : null;
   }, [pathname, base]);
 
-  const { pages, tree, loading, createPage, updatePage, trashPage } =
+  const { pages, tree, loading, createPage, prefetchPage, updatePage, trashPage } =
     usePagesQuery(projectId);
   const [query, setQuery] = useState("");
 
@@ -221,6 +221,7 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
             activePageId={activePageId}
             query={query}
             onCreateChild={(parentId) => void create(parentId)}
+            onPrefetch={prefetchPage}
             onMove={move}
             onTrash={trash}
             onToggleFavorite={toggleFavorite}

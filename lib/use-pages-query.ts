@@ -23,6 +23,7 @@ import {
   createPageApi,
   discardPageApi,
   duplicatePageApi,
+  fetchPageApi,
   fetchPagesApi,
   restorePageApi,
   trashPageApi,
@@ -37,6 +38,7 @@ import {
   type Page,
   type PageTreeNode,
 } from "./pages";
+import { buildOptimisticPage } from "./optimistic-page";
 
 export const pagesKey = (projectId: string) => ["pages", projectId] as const;
 
@@ -48,6 +50,54 @@ export const pagesKey = (projectId: string) => ["pages", projectId] as const;
  * edit of the editor will not see — see `updatePage`.
  */
 export const pageKey = (pageId: string) => ["page", pageId] as const;
+
+/** A prefetched body can be mounted directly for a short navigation window. */
+export const PAGE_NAVIGATION_FRESH_MS = 10_000;
+
+const preparedPages = new Map<string, number>();
+
+export function isRecentPageData(
+  updatedAt: number,
+  now = Date.now(),
+): boolean {
+  return updatedAt > 0 && now - updatedAt <= PAGE_NAVIGATION_FRESH_MS;
+}
+
+/** Mark explicit navigation intent so an unrelated recent cache is not trusted. */
+export function preparePageNavigation(pageId: string, now = Date.now()): void {
+  preparedPages.set(pageId, now + PAGE_NAVIGATION_FRESH_MS);
+}
+
+export function isPreparedPageData(
+  pageId: string,
+  updatedAt: number,
+  now = Date.now(),
+): boolean {
+  const preparedUntil = preparedPages.get(pageId) ?? 0;
+  if (preparedUntil < now) {
+    preparedPages.delete(pageId);
+    return false;
+  }
+  return isRecentPageData(updatedAt, now);
+}
+
+/** Creations that must settle before a PATCH or guarded discard can run. */
+const pendingCreations = new Map<string, Promise<Page>>();
+
+/** Warm the lightweight page tree before the Pages route mounts. */
+export function usePrefetchPages() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (projectId: string) => {
+      if (!projectId) return;
+      void queryClient.prefetchQuery({
+        queryKey: pagesKey(projectId),
+        queryFn: () => fetchPagesApi(projectId),
+      });
+    },
+    [queryClient],
+  );
+}
 
 function readPages(
   queryClient: QueryClient,
@@ -130,6 +180,7 @@ export interface UsePagesResult {
   loading: boolean;
   error: Error | null;
   createPage: (input?: CreatePageInput) => Promise<PageSummary>;
+  prefetchPage: (pageId: string) => void;
   /**
  * The title or icon that we TAPE, placed in the cache without asking anything from
  * anyone: everything that reads the list (the sidebar first and foremost) follows the
@@ -169,18 +220,113 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const createPage = useCallback(
     async (input: CreatePageInput = {}) => {
       const pid = projectId as string;
-      const page = await createPageApi(pid, input);
-      const { content: _content, ...summary } = page;
-      await hushPages(queryClient, pid);
-      const current = readPages(queryClient, pid);
-      // The line rendered by the server is placed in the cache immediately:
-      // the route that we open just after (a new page opens) must find
-      // its title in the tree without waiting for a refetch.
-      if (current) writePages(queryClient, pid, [...current, summary]);
-      else void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+      // Markdown projection only exists on the server. This path is used by the
+      // project wizard, not by the blank-page gestures optimized below.
+      if (input.markdown !== undefined && input.content === undefined) {
+        const page = await createPageApi(pid, input);
+        const { content: _content, ...summary } = page;
+        await hushPages(queryClient, pid);
+        const current = readPages(queryClient, pid);
+        if (current) writePages(queryClient, pid, [...current, summary]);
+        else void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+        queryClient.setQueryData(pageKey(page.id), page);
+        return summary;
+      }
+
+      const cached = readPages(queryClient, pid);
+      const current = cached ?? [];
+      const needsListRefresh = cached === undefined;
+      const optimistic = buildOptimisticPage(
+        pid,
+        { ...input, id: input.id ?? crypto.randomUUID() },
+        current,
+      );
+      const { content: _content, ...summary } = optimistic;
+
+      // Cancellation starts synchronously, before the optimistic row is written,
+      // so an older list response cannot erase the new page afterwards.
+      void queryClient.cancelQueries({ queryKey: pagesKey(pid) });
+      writePages(queryClient, pid, [...current, summary]);
+      preparePageNavigation(optimistic.id);
+      queryClient.setQueryData(pageKey(optimistic.id), optimistic);
+
+      // The POST owns the page query while it is in flight. PageView observes the
+      // optimistic body immediately, then receives the canonical server row on
+      // the same key without issuing a second GET.
+      const request = queryClient.fetchQuery({
+        queryKey: pageKey(optimistic.id),
+        queryFn: () =>
+          createPageApi(
+            pid,
+            { ...input, id: optimistic.id },
+            // Blank-page payloads are tiny enough for the browser's keepalive
+            // budget. Rich JSON bodies may exceed that budget and stay regular.
+            { keepalive: input.content === undefined },
+          ),
+        staleTime: 0,
+        retry: false,
+      });
+      pendingCreations.set(optimistic.id, request);
+      void request
+        .then((page) => {
+          const { content: _serverContent, ...serverSummary } = page;
+          const visibleSummary = withPreview(serverSummary);
+          const latest = readPages(queryClient, pid);
+          if (latest) {
+            writePages(
+              queryClient,
+              pid,
+              latest.map((row) =>
+                row.id === page.id ? visibleSummary : row,
+              ),
+            );
+          }
+          if (needsListRefresh) {
+            void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+          }
+        })
+        .catch((error: unknown) => {
+          const latest = readPages(queryClient, pid);
+          if (latest) {
+            writePages(
+              queryClient,
+              pid,
+              latest.filter((row) => row.id !== optimistic.id),
+            );
+          }
+          if (needsListRefresh) {
+            void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+          }
+          void import("mangue-ui").then(({ toast }) =>
+            toast.error(
+              error instanceof Error ? error.message : "Create failed",
+            ),
+          );
+        })
+        .finally(() => {
+          if (pendingCreations.get(optimistic.id) === request) {
+            pendingCreations.delete(optimistic.id);
+          }
+        });
+
+      // This async function deliberately has no await on the optimistic path:
+      // existing callers can keep awaiting it and still navigate next microtask.
       return summary;
     },
     [projectId, queryClient]
+  );
+
+  const prefetchPage = useCallback(
+    (pageId: string) => {
+      const pid = projectId as string;
+      preparePageNavigation(pageId);
+      void queryClient.prefetchQuery({
+        queryKey: pageKey(pageId),
+        queryFn: () => fetchPageApi(pid, pageId),
+        staleTime: PAGE_NAVIGATION_FRESH_MS,
+      });
+    },
+    [projectId, queryClient],
   );
 
   const previewPage = useCallback(
@@ -203,6 +349,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const updatePage = useCallback(
     async (pageId: string, input: UpdatePageInput) => {
       const pid = projectId as string;
+      await pendingCreations.get(pageId);
       await hushPages(queryClient, pid);
       const before = readPages(queryClient, pid);
       if (before) {
@@ -301,6 +448,12 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const discardPage = useCallback(
     async (pageId: string) => {
       const pid = projectId as string;
+      try {
+        await pendingCreations.get(pageId);
+      } catch {
+        // A creation that failed left no server row to discard.
+        return;
+      }
       await hushPages(queryClient, pid);
       const before = readPages(queryClient, pid);
       // The line leaves the tree IMMEDIATELY: the gesture that calls it is a
@@ -347,6 +500,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
     loading: enabled && isPending,
     error: (error as Error | null) ?? null,
     createPage,
+    prefetchPage,
     previewPage,
     duplicatePage,
     updatePage,

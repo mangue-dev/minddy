@@ -101,6 +101,8 @@ export async function fetchPageApi(
 }
 
 export interface CreatePageInput {
+  /** Client-assigned identity used by the optimistic page creation path. */
+  id?: string;
   title?: string;
   icon?: string | null;
   /** Sous-page : l'id du parent. Absent = page racine. */
@@ -117,13 +119,15 @@ export interface CreatePageInput {
 
 export async function createPageApi(
   projectId: string,
-  input: CreatePageInput = {}
+  input: CreatePageInput = {},
+  options: { keepalive?: boolean } = {},
 ): Promise<Page> {
   return json(
     await fetch(`/api/projects/${projectId}/pages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
+      keepalive: options.keepalive,
     }),
     "Create failed"
   );

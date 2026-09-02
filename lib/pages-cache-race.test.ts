@@ -86,4 +86,22 @@ describe("créer une page pendant que la liste est en vol", () => {
     const rows = client.getQueryData<Row[]>(pagesKey(PROJECT));
     expect(rows?.map((r) => r.id)).toEqual(["brief", "neuve"]);
   });
+
+  it("keeps the optimistic row when cancellation is not awaited", async () => {
+    const client = makeClient();
+    const list = slowList([BRIEF]);
+
+    const inFlight = client
+      .fetchQuery({ queryKey: pagesKey(PROJECT), queryFn: list.queryFn })
+      .catch(() => undefined);
+    client.setQueryData(pagesKey(PROJECT), [BRIEF]);
+
+    void client.cancelQueries({ queryKey: pagesKey(PROJECT) });
+    client.setQueryData(pagesKey(PROJECT), [BRIEF, CREATED]);
+    list.release();
+    await inFlight;
+
+    const rows = client.getQueryData<Row[]>(pagesKey(PROJECT));
+    expect(rows?.map((row) => row.id)).toEqual(["brief", "neuve"]);
+  });
 });

@@ -57,7 +57,11 @@ import {
   scheduleDraftDiscard,
 } from "@/lib/pages-draft";
 import { ancestorsOf, descendantIds } from "@/lib/pages";
-import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
+import {
+  isPreparedPageData,
+  pageKey,
+  usePagesQuery,
+} from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
@@ -280,21 +284,25 @@ function PageSurface({
     [mentionSources]
   );
 
-  // `refetchOnMount: "always"`: the editor only reads his document during editing,
-  // therefore this cache does not have the right to the window of freshness of the others. Without
-  // that, returning to a page less than five minutes after leaving it
-  // reopened on the body of the first load — a teammate, Numo, or a
-  // other tab has been able to write since, and nothing would have gone to ask for it.
+  // The editor reads its document only once. Cached bodies therefore refetch on
+  // every ordinary mount; the sole exception is the short window immediately
+  // after an intent prefetch or optimistic creation. That response is already
+  // the navigation's fresh read, so requesting it again would recreate the delay
+  // the prefetch just removed.
   const {
     data: page,
+    dataUpdatedAt,
     isPending,
     isFetchedAfterMount,
     error,
   } = useQuery({
     queryKey: pageKey(pageId),
     queryFn: () => fetchPageApi(projectId, pageId),
-    refetchOnMount: "always",
+    refetchOnMount: (query) =>
+      isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
+  const readyForThisSurface =
+    isFetchedAfterMount || isPreparedPageData(pageId, dataUpdatedAt);
 
   // The LIST line is the source of the displayed title and icon: it is
   // it that the sidebar, the breadcrumbs and the subpage block read, and the
@@ -358,7 +366,7 @@ function PageSurface({
     page,
     // The `version` which serves as a safeguard is NOT caught in the cache: it
     // only makes sense when it comes from the server, and from this montage.
-    fresh: isFetchedAfterMount,
+    fresh: readyForThisSurface,
     delayMs: SAVE_DELAY_MS,
     save: updatePage,
     editorRef,
@@ -367,8 +375,8 @@ function PageSurface({
   const { schedule, flush, takePending, reconcileRemote } = autosave;
 
   useEffect(() => {
-    if (page && isFetchedAfterMount) reconcileRemote(page);
-  }, [page, isFetchedAfterMount, reconcileRemote]);
+    if (page && readyForThisSurface) reconcileRemote(page);
+  }, [page, readyForThisSurface, reconcileRemote]);
 
   /* ── Departure: write, or act as if nothing had happened ───────────────
      Leave the page WRITE what remained — otherwise, type then click immediately
@@ -827,7 +835,7 @@ function PageSurface({
   // moment later could no longer correct. Hence the wait: on a
   // document, a skeleton moment is better than a previous version
   // displayed with the aplomb of the maid.
-  if (isPending || !page || !isFetchedAfterMount) {
+  if (isPending || !page || !readyForThisSurface) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <Spinner />

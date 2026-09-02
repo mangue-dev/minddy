@@ -81,6 +81,8 @@ export interface PageTreeProps {
   /** Title line text filter — not empty, the tree becomes a list. */
   query: string;
   onCreateChild: (parentId: string) => void;
+  /** Fetch the body while pointer or keyboard intent precedes navigation. */
+  onPrefetch: (pageId: string) => void;
   onMove: (dragId: string, targetId: string, mode: PageDropMode) => void;
   onTrash: (page: PageMenuTarget) => void;
   /** Pin/unpin. The favorite is SHARED by the project (lib/pages.ts). */
@@ -94,6 +96,7 @@ export function PageTree({
   activePageId,
   query,
   onCreateChild,
+  onPrefetch,
   onMove,
   onTrash,
   onToggleFavorite,
@@ -234,6 +237,7 @@ export function PageTree({
             actions={actionsFor(page)}
             onToggle={() => {}}
             onCreateChild={createChild}
+            onPrefetch={onPrefetch}
           />
         ))}
         {dialogs}
@@ -264,6 +268,7 @@ export function PageTree({
             pinned={favoriteSection && node.favorite}
             onToggle={() => toggle(node.id)}
             onCreateChild={createChild}
+            onPrefetch={onPrefetch}
             onDragStart={() => setDragId(node.id)}
             onDragOverRow={(mode) => {
               if (!dragId || dragId === node.id) return;
@@ -314,6 +319,7 @@ function PageRow({
   pinned = false,
   onToggle,
   onCreateChild,
+  onPrefetch,
   onDragStart,
   onDragOverRow,
   onDropRow,
@@ -334,6 +340,7 @@ function PageRow({
   pinned?: boolean;
   onToggle: () => void;
   onCreateChild: (parentId: string) => void;
+  onPrefetch: (pageId: string) => void;
   onDragStart?: () => void;
   onDragOverRow?: (mode: PageDropMode) => void;
   onDropRow?: (mode: PageDropMode) => void;
@@ -438,6 +445,8 @@ function PageRow({
       <Link
         href={`/projects/${page.project_id}/pages/${page.id}`}
         data-sidebar-filter-result
+        onMouseEnter={() => onPrefetch(page.id)}
+        onFocus={() => onPrefetch(page.id)}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pr-1 text-left outline-none"
       >
         <span className="flex size-4 shrink-0 items-center justify-center text-sm leading-none">
