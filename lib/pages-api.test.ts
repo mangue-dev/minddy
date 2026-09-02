@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   PageApiError,
   PageConflictError,
+  createPageApi,
   fetchPagesApi,
   isPageCycleError,
   updatePageApi,
@@ -38,6 +39,19 @@ afterEach(() => {
 });
 
 describe("pages-api", () => {
+  it("keeps optimistic creation alive across immediate navigation", async () => {
+    const body = { id: "page-1" };
+    mockFetch({ ok: true, status: 201, body });
+
+    await expect(
+      createPageApi("proj", { id: "page-1" }, { keepalive: true }),
+    ).resolves.toEqual(body);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/projects/proj/pages",
+      expect.objectContaining({ method: "POST", keepalive: true }),
+    );
+  });
+
   it("returns the flat list as-is", async () => {
     mockFetch({ ok: true, status: 200, body: [{ id: "p1" }] });
     await expect(fetchPagesApi("proj")).resolves.toEqual([{ id: "p1" }]);

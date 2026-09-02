@@ -18,10 +18,11 @@ import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import type { PageBacklink } from "@/lib/types";
-
-/** The trackbacks cache key — the one that the real-time bridge invalidates. */
-export const pageBacklinksKey = (pageId: string) =>
-  ["page-backlinks", pageId] as const;
+import {
+  PAGE_ACTIVITY_FRESH_MS,
+  pageBacklinksKey,
+} from "@/lib/page-activity-cache";
+import { pushPagesHistory } from "@/lib/pages-navigation";
 
 /** The shades of the two genres that have one, taken as is from Numo's
  context pills: a ticket is blue and an indigo page here like
@@ -45,10 +46,7 @@ export function PageBacklinks({
   const backlinks = useQuery({
     queryKey: pageBacklinksKey(pageId),
     queryFn: () => fetchPageBacklinksApi(projectId, pageId),
-    // A trackback is born from a writing made ELSEWHERE — in a ticket, in a
-    // other page. The cache from the previous time is therefore outdated by construction.
-    refetchOnMount: "always",
-    staleTime: 0,
+    staleTime: PAGE_ACTIVITY_FRESH_MS,
   });
 
   const items = backlinks.data ?? [];
@@ -90,14 +88,14 @@ function BacklinkPill({
       href={href}
       className="block min-w-0 max-w-full"
       onClick={(event) => {
-        if (
-          target?.kind !== "issue-panel" ||
-          !isPlainNavigationClick(event)
-        ) {
-          return;
+        if (!isPlainNavigationClick(event)) return;
+        if (target?.kind === "issue-panel") {
+          event.preventDefault();
+          openIssue(target.projectId, target.issueId);
+        } else if (item.kind === "page" && target) {
+          event.preventDefault();
+          pushPagesHistory(target.href);
         }
-        event.preventDefault();
-        openIssue(target.projectId, target.issueId);
       }}
     >
       <EntityPill radius="md" className="hover:bg-accent">

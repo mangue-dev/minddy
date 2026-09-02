@@ -16,8 +16,7 @@
 // the editor, the only surface capable of adopting a merged document.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -47,6 +46,8 @@ import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import {
   discardPageOnUnload,
   fetchPageApi,
+  fetchPageBacklinksApi,
+  fetchPageEventsApi,
   updatePageOnUnload,
 } from "@/lib/pages-api";
 import {
@@ -57,7 +58,12 @@ import {
   scheduleDraftDiscard,
 } from "@/lib/pages-draft";
 import { ancestorsOf, descendantIds } from "@/lib/pages";
-import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
+import {
+  isPreparedPageData,
+  PAGE_NAVIGATION_FRESH_MS,
+  pageKey,
+  usePagesQuery,
+} from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
@@ -90,6 +96,21 @@ import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
 import { usePageWatch } from "@/lib/use-page-watch";
+import {
+  PAGE_ACTIVITY_FRESH_MS,
+  pageBacklinksKey,
+  pageEventsKey,
+} from "@/lib/page-activity-cache";
+import {
+  pageHref,
+  pagesHref,
+  pushPagesHistory,
+  replacePagesHistory,
+} from "@/lib/pages-navigation";
+import {
+  afterPageCreation,
+  isPageCreationPending,
+} from "@/lib/page-creation-settlement";
 import {
   usePageAutosave,
   type PageSaveState,
@@ -250,6 +271,7 @@ function PageSurface({
   onRestored: () => void;
 }) {
   const t = useTranslations("Pages");
+  const queryClient = useQueryClient();
   const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
   const {
@@ -280,21 +302,43 @@ function PageSurface({
     [mentionSources]
   );
 
-  // `refetchOnMount: "always"`: the editor only reads his document during editing,
-  // therefore this cache does not have the right to the window of freshness of the others. Without
-  // that, returning to a page less than five minutes after leaving it
-  // reopened on the body of the first load — a teammate, Numo, or a
-  // other tab has been able to write since, and nothing would have gone to ask for it.
+  // The editor reads its document only once. Cached bodies therefore refetch on
+  // every ordinary mount; the sole exception is the short window immediately
+  // after an intent prefetch or optimistic creation. That response is already
+  // the navigation's fresh read, so requesting it again would recreate the delay
+  // the prefetch just removed.
   const {
     data: page,
+    dataUpdatedAt,
     isPending,
     isFetchedAfterMount,
     error,
   } = useQuery({
     queryKey: pageKey(pageId),
     queryFn: () => fetchPageApi(projectId, pageId),
-    refetchOnMount: "always",
+    staleTime: PAGE_NAVIGATION_FRESH_MS,
+    refetchOnMount: (query) =>
+      isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
+  const readyForThisSurface =
+    isFetchedAfterMount || isPreparedPageData(pageId, dataUpdatedAt);
+
+  const warmPageActivity = useCallback(() => {
+    void queryClient.prefetchQuery({
+      queryKey: pageEventsKey(pageId),
+      queryFn: () => fetchPageEventsApi(projectId, pageId),
+      staleTime: PAGE_ACTIVITY_FRESH_MS,
+    });
+    void queryClient.prefetchQuery({
+      queryKey: pageBacklinksKey(pageId),
+      queryFn: () => fetchPageBacklinksApi(projectId, pageId),
+      staleTime: PAGE_ACTIVITY_FRESH_MS,
+    });
+  }, [pageId, projectId, queryClient]);
+
+  useEffect(() => {
+    if (page) warmPageActivity();
+  }, [page, warmPageActivity]);
 
   // The LIST line is the source of the displayed title and icon: it is
   // it that the sidebar, the breadcrumbs and the subpage block read, and the
@@ -358,7 +402,7 @@ function PageSurface({
     page,
     // The `version` which serves as a safeguard is NOT caught in the cache: it
     // only makes sense when it comes from the server, and from this montage.
-    fresh: isFetchedAfterMount,
+    fresh: readyForThisSurface,
     delayMs: SAVE_DELAY_MS,
     save: updatePage,
     editorRef,
@@ -367,8 +411,8 @@ function PageSurface({
   const { schedule, flush, takePending, reconcileRemote } = autosave;
 
   useEffect(() => {
-    if (page && isFetchedAfterMount) reconcileRemote(page);
-  }, [page, isFetchedAfterMount, reconcileRemote]);
+    if (page && readyForThisSurface) reconcileRemote(page);
+  }, [page, readyForThisSurface, reconcileRemote]);
 
   /* ── Departure: write, or act as if nothing had happened ───────────────
      Leave the page WRITE what remained — otherwise, type then click immediately
@@ -435,14 +479,25 @@ function PageSurface({
       // fades away. `takePending` is not called — there is nothing to write.
       if (blankRef.current()) {
         forgetDraftPage(pageId);
-        discardPageOnUnload(projectId, pageId);
+        afterPageCreation(pageId, () =>
+          discardPageOnUnload(projectId, pageId)
+        );
         return;
       }
       const patch = takePending();
-      if (patch) updatePageOnUnload(projectId, pageId, patch);
+      if (patch) {
+        afterPageCreation(pageId, () =>
+          updatePageOnUnload(projectId, pageId, patch)
+        );
+      }
     };
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") void flushRef.current();
+      if (
+        document.visibilityState === "hidden" &&
+        !isPageCreationPending(pageId)
+      ) {
+        void flushRef.current();
+      }
     };
     window.addEventListener("pagehide", onHide);
     document.addEventListener("visibilitychange", onVisibility);
@@ -477,8 +532,11 @@ function PageSurface({
   // The same information is carried in two places: `parent_id` in base, and the
   // `subpage` block in this document. The column makes the truth, the block is
   // a view — and it is here that the view comes back down to the truth.
-  const router = useRouter();
-  const base = `/projects/${projectId}/pages`;
+  const base = pagesHref(projectId);
+  const openPage = useCallback(
+    (id: string) => pushPagesHistory(pageHref(projectId, id)),
+    [projectId]
+  );
 
   const lookup = useMemo<PagesLookup>(
     () => ({
@@ -488,10 +546,11 @@ function PageSurface({
         return row ? { id: row.id, title: row.title, icon: row.icon } : undefined;
       },
       href: (id) => `${base}/${id}`,
-      navigate: (id) => router.push(`${base}/${id}`),
+      navigate: openPage,
       create: async () => {
         try {
           const child = await createPage({ parent_id: pageId });
+          await child.settled;
           return child.id;
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("createFailed"));
@@ -503,7 +562,7 @@ function PageSurface({
         // leave. Without this `flush`, navigation unmounts the editor with, in
         // the draft, a block that no one has yet recorded — the
         // subpage exists, its link in the parent does not.
-        void flushRef.current().finally(() => router.push(`${base}/${id}`));
+        void flushRef.current().finally(() => openPage(id));
       },
       duplicate: async (id) => {
         try {
@@ -526,7 +585,7 @@ function PageSurface({
         }
       },
     }),
-    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, router, t]
+    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, openPage, t]
   );
 
   /* ── Delete block moves page to trash ─────────────────────── */
@@ -644,15 +703,22 @@ function PageSurface({
         try {
           const child = await createPage({ parent_id: parentId });
           markDraftPage(child.id);
+          void child.settled.catch((err: unknown) => {
+            forgetDraftPage(child.id);
+            if (window.location.pathname === pageHref(projectId, child.id)) {
+              replacePagesHistory(base);
+            }
+            toast.error(err instanceof Error ? err.message : t("createFailed"));
+          });
           void flushRef
             .current()
-            .finally(() => router.push(`${base}/${child.id}`));
+            .finally(() => openPage(child.id));
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("createFailed"));
         }
       })();
     },
-    [base, createPage, router, t]
+    [base, createPage, openPage, projectId, t]
   );
 
   const toggleFavoriteFromMenu = useCallback(
@@ -671,7 +737,7 @@ function PageSurface({
       void (async () => {
         try {
           const trashed = await trashPage(target.id);
-          router.push(base);
+          pushPagesHistory(base);
           toast.success(
             trashed > 1
               ? t("trashedWithChildren", { count: trashed })
@@ -682,7 +748,7 @@ function PageSurface({
         }
       })();
     },
-    [base, router, t, trashPage]
+    [base, t, trashPage]
   );
 
   const documentMenu = usePageDocumentMenu({
@@ -827,7 +893,7 @@ function PageSurface({
   // moment later could no longer correct. Hence the wait: on a
   // document, a skeleton moment is better than a previous version
   // displayed with the aplomb of the maid.
-  if (isPending || !page || !isFetchedAfterMount) {
+  if (isPending || !page || !readyForThisSurface) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <Spinner />
@@ -841,7 +907,11 @@ function PageSurface({
           versions, comments, and document actions on the right. */}
       <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
         <div className="flex min-w-0 flex-1 items-center">
-          <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
+          <PageBreadcrumb
+            trail={trail}
+            hrefFor={(id) => `${base}/${id}`}
+            onNavigate={openPage}
+          />
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <PagePresence userIds={present} members={members} />
@@ -862,6 +932,8 @@ function PageSurface({
                 size="icon-sm"
                 aria-label={t("comments")}
                 className="text-muted-foreground hover:text-foreground"
+                onMouseEnter={warmPageActivity}
+                onFocus={warmPageActivity}
                 onClick={() => openHistory("activity")}
               >
                 <MessageSquare className="size-3.5" />

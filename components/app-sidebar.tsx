@@ -85,6 +85,7 @@ import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
+import { usePrefetchPages } from "@/lib/use-pages-query";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
@@ -392,10 +393,15 @@ function SidebarRow({
   // /projects/<uuid>, so the section links (…/objectives) preheat it
   // also, what exactly is wanted.
   const prefetchProject = usePrefetchProject();
+  const prefetchPages = usePrefetchPages();
   const warm = item.href
     ? () => {
         const projectId = projectIdFromPath(item.href as string);
-        if (projectId) prefetchProject(projectId);
+        if (!projectId) return;
+        prefetchProject(projectId);
+        if (/\/pages(?:\/|$)/.test(item.href as string)) {
+          prefetchPages(projectId);
+        }
       }
     : undefined;
 

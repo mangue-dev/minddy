@@ -47,10 +47,10 @@ import { usePageComments } from "@/lib/use-page-comments";
 import type { PageThread } from "@/lib/page-comments";
 import type { EventContext } from "@/lib/describe-event";
 import { PageBacklinks } from "@/components/pages/page-backlinks";
-
-/** The log cache key for a page — the one that the real-time bridge invalidates. */
-export const pageEventsKey = (pageId: string) =>
-  ["page-events", pageId] as const;
+import {
+  PAGE_ACTIVITY_FRESH_MS,
+  pageEventsKey,
+} from "@/lib/page-activity-cache";
 
 export function PageActivity({
   projectId,
@@ -71,11 +71,7 @@ export function PageActivity({
     queryKey: pageEventsKey(pageId),
     queryFn: () => fetchPageEventsApi(projectId, pageId),
     enabled,
-    // Like history: the journal moves with each writing, its own like
-    // that of another. We ask for it again at the opening rather than painting a
-    // cache from the time before.
-    refetchOnMount: "always",
-    staleTime: 0,
+    staleTime: PAGE_ACTIVITY_FRESH_MS,
   });
 
   /**

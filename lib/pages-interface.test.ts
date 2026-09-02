@@ -98,4 +98,43 @@ describe("page interface regressions", () => {
     expect(editor).toContain("transaction.getMeta(MENTION_HYDRATION_META)");
     expect(view).toContain("scan: mentionSources.scan");
   });
+
+  it("keeps document switching inside the persistent Pages shell", () => {
+    const shell = source("components/pages/pages-shell.tsx");
+    const tree = source("components/pages/page-tree.tsx");
+    const detailRoute = source(
+      "app/(app)/projects/[id]/pages/[pageId]/page.tsx"
+    );
+
+    expect(shell).toContain("<PageView key={activePageId}");
+    expect(shell).toContain("onOpen={openPage}");
+    expect(tree).toContain("event.preventDefault();");
+    expect(tree).toContain("onOpen(page.id);");
+    expect(detailRoute).toContain("return null;");
+  });
+
+  it("warms activity data before the comments panel opens", () => {
+    const view = source("components/pages/page-view.tsx");
+    const activity = source("components/pages/page-activity.tsx");
+    const backlinks = source("components/pages/page-backlinks.tsx");
+
+    expect(view).toContain("queryClient.prefetchQuery({");
+    expect(view).toContain("pageEventsKey(pageId)");
+    expect(view).toContain("pageBacklinksKey(pageId)");
+    expect(activity).toContain("staleTime: PAGE_ACTIVITY_FRESH_MS");
+    expect(backlinks).toContain("staleTime: PAGE_ACTIVITY_FRESH_MS");
+    expect(activity).not.toContain('refetchOnMount: "always"');
+    expect(backlinks).not.toContain('refetchOnMount: "always"');
+  });
+
+  it("orders creation-dependent page work without persisting orphan links", () => {
+    const view = source("components/pages/page-view.tsx");
+    const pagesQuery = source("lib/use-pages-query.ts");
+
+    expect(view).toContain("await child.settled;");
+    expect(view).toContain("afterPageCreation(pageId");
+    expect(view).toContain("!isPageCreationPending(pageId)");
+    expect(pagesQuery).toContain("settled: request");
+    expect(pagesQuery).toContain("await waitForPageCreation(pageId)");
+  });
 });

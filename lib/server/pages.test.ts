@@ -362,6 +362,18 @@ beforeEach(() => {
 });
 
 describe("createPage", () => {
+  it("keeps a valid client-assigned id for optimistic reconciliation", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const result = await createPage({
+      projectId: PROJECT,
+      actorId: ACTOR,
+      input: { id, title: "Instant draft" },
+    });
+
+    expect(result).toMatchObject({ ok: true, page: { id } });
+    expect(rowOf(id).title).toBe("Instant draft");
+  });
+
   it("crée une page racine, avec une position en fin de fratrie", async () => {
     const first = await create("Guide");
     const second = await create("Onboarding");

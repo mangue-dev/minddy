@@ -15,7 +15,7 @@
 // above all, we have to ask ourselves which of the two is telling the truth.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -27,12 +27,20 @@ import { Plus } from "lucide-react";
 
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
+import { PageView } from "@/components/pages/page-view";
+import { PagesHome } from "@/components/pages/pages-home";
 import { PagePresenceProvider } from "@/components/pages/page-presence";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError } from "@/lib/pages-api";
 import { rememberLastPage } from "@/lib/pages-last-open";
-import { markDraftPage } from "@/lib/pages-draft";
+import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
+import {
+  pageHref,
+  pagesHref,
+  pushPagesHistory,
+  replacePagesHistory,
+} from "@/lib/pages-navigation";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 import {
@@ -41,24 +49,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export function PagesShell({ children }: { children: React.ReactNode }) {
+export function PagesShell() {
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
   const params = useParams<{ id: string }>();
   const projectId = params.id;
-  const router = useRouter();
   const pathname = usePathname();
 
-  const base = `/projects/${projectId}/pages`;
+  const base = pagesHref(projectId);
   const activePageId = useMemo(() => {
     const rest = pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1) : "";
     const segment = rest.split("/")[0];
     return segment && segment !== "trash" ? segment : null;
   }, [pathname, base]);
 
-  const { pages, tree, loading, createPage, updatePage, trashPage } =
+  const { pages, tree, byId, loading, createPage, prefetchPage, updatePage, trashPage } =
     usePagesQuery(projectId);
   const [query, setQuery] = useState("");
+
+  const openPage = useCallback(
+    (pageId: string) => pushPagesHistory(pageHref(projectId, pageId)),
+    [projectId]
+  );
 
   // The open page is retained HERE rather than in `PageView`: the shell
   // crosses navigations, so it sees the LAST state of the tab, y
@@ -78,12 +90,19 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
         // writing a letter destroys it (lib/pages-draft.ts). Create a page
         // is not saving it.
         markDraftPage(page.id);
-        router.push(`${base}/${page.id}`);
+        openPage(page.id);
+        void page.settled.catch((err: unknown) => {
+          forgetDraftPage(page.id);
+          if (window.location.pathname === pageHref(projectId, page.id)) {
+            replacePagesHistory(base);
+          }
+          toast.error(err instanceof Error ? err.message : t("createFailed"));
+        });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("createFailed"));
       }
     },
-    [createPage, pages, router, base, t]
+    [base, createPage, openPage, projectId, t]
   );
 
   const move = useCallback(
@@ -135,7 +154,7 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
           const trashed = await trashPage(page.id);
           // Open on a page that has just gone to the trash: we go back
           // to the list rather than leaving a ghost document on the screen.
-          if (activePageId === page.id) router.push(base);
+          if (activePageId === page.id) pushPagesHistory(base);
           // A NU toast, like everywhere else in the app. He wore a
           // “Cancel” button — the only one in the repository, and ringing sets it up
           // default button: among the other notifications, it does not
@@ -152,7 +171,7 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
         }
       })();
     },
-    [trashPage, activePageId, router, base, t]
+    [trashPage, activePageId, base, t]
   );
 
   // A project WITHOUT ANY pages has no tree to show, and a bar
@@ -221,6 +240,8 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
             activePageId={activePageId}
             query={query}
             onCreateChild={(parentId) => void create(parentId)}
+            onOpen={openPage}
+            onPrefetch={prefetchPage}
             onMove={move}
             onTrash={trash}
             onToggleFavorite={toggleFavorite}
@@ -237,7 +258,17 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
           bare || pathname !== base ? "flex" : "hidden"
         )}
       >
-        {children}
+        {activePageId ? (
+          <PageView key={activePageId} projectId={projectId} pageId={activePageId} />
+        ) : (
+          <PagesHome
+            projectId={projectId}
+            pages={pages}
+            byId={byId}
+            loading={loading}
+            onCreate={() => void create(null)}
+          />
+        )}
       </div>
     </div>
     </PagePresenceProvider>

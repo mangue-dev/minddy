@@ -21,9 +21,9 @@ export async function generateMetadata({
  * and its query cross the navigation.
  */
 export default function ProjectPagesLayout({
-  children,
+  children: _children,
 }: {
   children: React.ReactNode;
 }) {
-  return <PagesShell>{children}</PagesShell>;
+  return <PagesShell />;
 }
