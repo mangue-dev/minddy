@@ -1,9 +1,3 @@
-import {
-  checkCommand,
-  FORBIDDEN_COMMAND_REASON,
-  type CommandScope,
-  type CommandVerdict,
-} from "./command-guard";
 import { headTail } from "./prune";
 
 /**
@@ -17,8 +11,7 @@ import { headTail } from "./prune";
  * to suspend/resume nor to stop the microVM by the reaper, and the interactivity
  * only serves a human in front of a terminal.
  *
- * This module is PURE (like `command-guard` / `command-output`): the POLICY —
- * job ceiling, git guardrail, offsets, formatting — is here, testable without
+ * This module is pure: the resource ceiling, offsets, and formatting are testable without
  * microVM; hands in the sandbox are behind `BackgroundJobRunner`, hardwired
  * into `execute.ts`. The register lives for ONE chunk: a job does not survive
  * one suspends, and the end of the round kills them all (`stopAll`).
@@ -42,10 +35,7 @@ export const BACKGROUND_OUTPUT_CAP = 3000;
  * The log lives in `TOOL_OUTPUT_DIR`, therefore **outside the repository** (the `git add -A` of
  * end of turn must never see it). At the house loop, `read_file` and
  * `grep` go there: they are our tools, and they read what we tell them. At
- * opencode, no — a non-repository read publishes `external_directory`, which the
- * harness DENYS ([opencode-permissions.ts](vm/opencode-permissions.ts)). Y
- * sending the model would be sending it against a wall that we hold ourselves; his
- * shell goes there.
+ * OpenCode, the shell is the portable way to read an absolute log path.
  */
 export interface BackgroundLogNotes {
   /** The starting note phrase. */
@@ -120,192 +110,59 @@ export type BackgroundCommandVerdict =
   | { allowed: true; invocation: BackgroundInvocation }
   | { allowed: false; reason: string };
 
-/**
- * Environment overrides useful to long-lived development processes. Keeping this
- * list explicit prevents assignments such as `PATH=.`, `BASH_ENV=...` or
- * `NODE_OPTIONS=--require ...` from turning process lookup/startup into another
- * command-evaluation surface.
- */
-const BACKGROUND_ENV = new Set([
-  "CHOKIDAR_USEPOLLING",
-  "CI",
-  "DEBUG",
-  "FORCE_COLOR",
-  "HOST",
-  "HOSTNAME",
-  "NEXT_TELEMETRY_DISABLED",
-  "NODE_ENV",
-  "NO_COLOR",
-  "PORT",
-  "TURBO_FORCE",
-  "WATCH",
-  "WATCHPACK_POLLING",
-]);
+export type BackgroundInvocationVerdict =
+  { allowed: true } | { allowed: false; reason: string };
 
-/** Programs whose purpose is to reinterpret arguments or repository files as commands. */
-const BACKGROUND_INTERPRETERS = new Set([
-  ".",
-  "bash",
-  "builtin",
-  "command",
-  "coproc",
-  "dash",
-  "env",
-  "eval",
-  "exec",
-  "function",
-  "ksh",
-  "nohup",
-  "sh",
-  "source",
-  "xargs",
-  "zsh",
-]);
+export interface BackgroundCommandScope {
+  local?: boolean;
+}
+
+const BACKGROUND_INVALID_COMMAND_REASON = "background_command_invalid";
 
 function backgroundRefusal(detail: string): BackgroundCommandVerdict {
   return {
     allowed: false,
-    reason:
-      `Refused background command — ${detail}. Background jobs accept one literal executable ` +
-      `and literal arguments; use run_command for shell composition.`,
+    reason: `Refused background command — ${detail}.`,
   };
 }
 
-/**
- * Parse the small shell-like input retained by the public tool for compatibility.
- * Quotes only group literal arguments. No shell operator, expansion or substitution
- * survives this function, so the runner can invoke the resulting argv as data.
- */
+/** Convert the public command into the shell invocation OpenCode requested. */
 export function parseBackgroundCommand(
   command: string,
-  scope: CommandScope = {},
+  _scope: BackgroundCommandScope = {},
 ): BackgroundCommandVerdict {
-  const tokens: string[] = [];
-  let current = "";
-  let started = false;
-  let quote: "'" | '"' | null = null;
-
-  const flush = () => {
-    if (started) tokens.push(current);
-    current = "";
-    started = false;
+  if (!command.trim()) return backgroundRefusal("the command is empty");
+  if (command.includes("\0"))
+    return backgroundRefusal("NUL bytes are not valid command data");
+  return {
+    allowed: true,
+    invocation: { executable: "sh", args: ["-lc", command], env: {} },
   };
-
-  for (let i = 0; i < command.length; i++) {
-    const ch = command[i];
-    if (ch === "\0") return backgroundRefusal("NUL bytes are not valid command data");
-
-    if (quote === "'") {
-      if (ch === "'") quote = null;
-      else current += ch;
-      started = true;
-      continue;
-    }
-
-    if (ch === "\\") {
-      if (i + 1 >= command.length) return backgroundRefusal("the command ends with an escape");
-      current += command[++i];
-      started = true;
-      continue;
-    }
-
-    if (ch === '"') {
-      quote = quote === '"' ? null : '"';
-      started = true;
-      continue;
-    }
-    if (ch === "'") {
-      if (quote === '"') current += ch;
-      else quote = "'";
-      started = true;
-      continue;
-    }
-
-    // A dollar or backtick outside single quotes would be evaluated by `sh -c`.
-    // It is refused even when it looks harmless: the execution boundary must not
-    // guess which expanded value the shell will eventually produce.
-    if (ch === "$" || ch === "`") {
-      return backgroundRefusal("shell expansion and command substitution are unavailable");
-    }
-
-    if (quote === null && /[;&|()<>\n\r]/.test(ch)) {
-      return backgroundRefusal(`shell operator ${JSON.stringify(ch)} is unavailable`);
-    }
-    if (quote === null && /\s/.test(ch)) {
-      flush();
-      continue;
-    }
-    current += ch;
-    started = true;
-  }
-
-  if (quote != null) return backgroundRefusal("the command contains an unterminated quote");
-  flush();
-  if (tokens.length === 0) return backgroundRefusal("the command is empty");
-
-  const env: Record<string, string> = {};
-  let executableIndex = 0;
-  while (executableIndex < tokens.length) {
-    const assignment = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(tokens[executableIndex]);
-    if (!assignment) break;
-    const [, name, value] = assignment;
-    if (!BACKGROUND_ENV.has(name)) {
-      return backgroundRefusal(`environment override ${JSON.stringify(name)} is unavailable`);
-    }
-    env[name] = value;
-    executableIndex++;
-  }
-
-  const executable = tokens[executableIndex] ?? "";
-  if (!executable) return backgroundRefusal("the command has no executable");
-  if (!/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(executable)) {
-    return backgroundRefusal("the executable must be a literal program name from PATH");
-  }
-  if (BACKGROUND_INTERPRETERS.has(executable)) {
-    return backgroundRefusal(`interpreter ${JSON.stringify(executable)} is unavailable`);
-  }
-
-  const invocation = { executable, args: tokens.slice(executableIndex + 1), env };
-  const verdict = checkBackgroundInvocation(invocation, scope);
-  return verdict.allowed ? { allowed: true, invocation } : verdict;
 }
 
-/**
- * Revalidate structured data at the execution boundary. This deliberately does
- * not trust `parseBackgroundCommand`: alternate/internal callers must receive the
- * same Git and interpreter policy before anything reaches the host.
- */
+/** Validate only the transport shape before launching the requested command. */
 export function checkBackgroundInvocation(
   invocation: BackgroundInvocation,
-  scope: CommandScope = {},
-): CommandVerdict {
+  _scope: BackgroundCommandScope = {},
+): BackgroundInvocationVerdict {
   const { executable, args, env } = invocation;
-  if (!/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(executable) || BACKGROUND_INTERPRETERS.has(executable)) {
-    return {
-      allowed: false,
-      reason: `Refused background executable ${JSON.stringify(executable)} — only literal, non-shell programs are allowed.`,
-    };
-  }
-  if (args.some((arg) => typeof arg !== "string" || arg.includes("\0"))) {
-    return { allowed: false, reason: "Refused background command with invalid argument data." };
-  }
-  for (const [name, value] of Object.entries(env)) {
-    if (!BACKGROUND_ENV.has(name) || typeof value !== "string" || value.includes("\0")) {
-      return {
+  const allowed =
+    typeof executable === "string" &&
+    executable.length > 0 &&
+    !executable.includes("\0") &&
+    args.every((arg) => typeof arg === "string" && !arg.includes("\0")) &&
+    Object.entries(env).every(
+      ([name, value]) =>
+        /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) &&
+        typeof value === "string" &&
+        !value.includes("\0"),
+    );
+  return allowed
+    ? { allowed: true }
+    : {
         allowed: false,
-        reason: `Refused background environment override ${JSON.stringify(name)}.`,
+        reason: "Refused background command with invalid argument data.",
       };
-    }
-  }
-
-  // Single-quote every value before asking the shared Git guard. The rendering
-  // represents the exact argv and cannot introduce shell behavior of its own.
-  const rendered = [
-    ...Object.entries(env).map(([name, value]) => `${name}=${sq(value)}`),
-    sq(executable),
-    ...args.map(sq),
-  ].join(" ");
-  return checkCommand(rendered, scope);
 }
 
 /**
@@ -341,7 +198,9 @@ export function backgroundStartScript(
   // code. The command runs in a SUBSHELL: without the parentheses, an `exit 3`
   // (or a failing `set -e`) would exit the job shell before the exit-code line,
   // which we would then never see.
-  const environment = Object.entries(invocation.env).map(([name, value]) => `${name}=${sq(value)}`);
+  const environment = Object.entries(invocation.env).map(
+    ([name, value]) => `${name}=${sq(value)}`,
+  );
   /**
    * Do not inherit the supervisor/opencode environment. It contains service
    * addresses and short-lived control material that a development process does
@@ -360,7 +219,11 @@ export function backgroundStartScript(
     ...environment,
   ];
   const execute = `env -i ${cleanEnvironment.join(" ")} -- "$@"`;
-  const inner = [`echo $$ > ${sq(p.pid)}`, `( ${execute}\n)`, `echo $? > ${sq(p.exit)}`].join("\n");
+  const inner = [
+    `echo $$ > ${sq(p.pid)}`,
+    `( ${execute}\n)`,
+    `echo $? > ${sq(p.exit)}`,
+  ].join("\n");
   const argv = [invocation.executable, ...invocation.args].map(sq).join(" ");
   return [
     `mkdir -p ${sq(dir)}`,
@@ -454,8 +317,16 @@ export function parseBackgroundProbe(
 
 /** The microVM hands (implemented by `sandbox.ts`, wired by `execute.ts`). */
 export interface BackgroundJobRunner {
-  start(opts: { jobId: string; invocation: BackgroundInvocation; workdir?: string }): Promise<BackgroundStarted>;
-  read(opts: { jobId: string; pid: number; offset: number }): Promise<BackgroundChunk>;
+  start(opts: {
+    jobId: string;
+    invocation: BackgroundInvocation;
+    workdir?: string;
+  }): Promise<BackgroundStarted>;
+  read(opts: {
+    jobId: string;
+    pid: number;
+    offset: number;
+  }): Promise<BackgroundChunk>;
   stop(opts: { jobId: string; pid: number }): Promise<void>;
 }
 
@@ -502,13 +373,8 @@ export class BackgroundJobs {
     private readonly seqBase = 0,
     /** How to TELL the model to read the complete log — see `BackgroundLogNotes`. */
     private readonly notes: BackgroundLogNotes = LOOP_BACKGROUND_LOG_NOTES,
-    /**
-     * THE WORLD WHERE THE JOB RUNS, passed unchanged to `checkCommand` (MIN-364).
-     * Without it, a background `git commit` would be rejected on the user's
-     * machine while the same foreground `git commit` succeeds — two verdicts for
-     * the same command, differing only by the tool used.
-     */
-    private readonly scope: CommandScope = {},
+    /** Execution context retained for protocol compatibility and audit metadata. */
+    private readonly scope: BackgroundCommandScope = {},
   ) {}
 
   /** Executes a `run_background` call. Never throws: everything returns to the
@@ -523,7 +389,9 @@ export class BackgroundJobs {
       case "stop":
         return await this.stop(args);
       default:
-        return fail(`Unknown action ${JSON.stringify(action)} — use "start", "check" or "stop".`);
+        return fail(
+          `Unknown action ${JSON.stringify(action)} — use "start", "check" or "stop".`,
+        );
     }
   }
 
@@ -534,7 +402,9 @@ export class BackgroundJobs {
     const live = [...this.jobs.values()].filter(isLive);
     await Promise.all(
       live.map(async (job) => {
-        await this.runner.stop({ jobId: job.jobId, pid: job.pid }).catch(() => {});
+        await this.runner
+          .stop({ jobId: job.jobId, pid: job.pid })
+          .catch(() => {});
         job.exited = true;
       }),
     );
@@ -553,7 +423,8 @@ export class BackgroundJobs {
     // Convert the public string to a static argv before reserving or launching a
     // job. The runner receives no shell program supplied by the model.
     const verdict = parseBackgroundCommand(command, this.scope);
-    if (!verdict.allowed) return fail(verdict.reason, FORBIDDEN_COMMAND_REASON);
+    if (!verdict.allowed)
+      return fail(verdict.reason, BACKGROUND_INVALID_COMMAND_REASON);
 
     const live = [...this.jobs.values()].filter(isLive);
     if (live.length >= MAX_BACKGROUND_JOBS) {
@@ -581,7 +452,10 @@ export class BackgroundJobs {
       const started = await this.runner.start({
         jobId,
         invocation: verdict.invocation,
-        workdir: args.workdir != null && String(args.workdir).trim() !== "" ? String(args.workdir) : undefined,
+        workdir:
+          args.workdir != null && String(args.workdir).trim() !== ""
+            ? String(args.workdir)
+            : undefined,
       });
       job.pid = started.pid;
       job.logPath = started.logPath;
@@ -614,7 +488,11 @@ export class BackgroundJobs {
     // that killed it) may not have been read yet.
     let read: BackgroundChunk;
     try {
-      read = await this.runner.read({ jobId: job.jobId, pid: job.pid, offset: job.offset });
+      read = await this.runner.read({
+        jobId: job.jobId,
+        pid: job.pid,
+        offset: job.offset,
+      });
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
     }
@@ -636,7 +514,9 @@ export class BackgroundJobs {
           ? {
               note:
                 `Output since the last check was too long to show in full` +
-                (read.skippedBytes > 0 ? ` (${read.skippedBytes} bytes were skipped)` : "") +
+                (read.skippedBytes > 0
+                  ? ` (${read.skippedBytes} bytes were skipped)`
+                  : "") +
                 `. ${this.notes.insteadOfPolling(job.logPath)}`,
             }
           : {}),

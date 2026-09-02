@@ -17,15 +17,8 @@ import {
 /**
  * Project pull requests, visible and actionable from an ordinary run (MIN-267).
  *
- * `pr-tools.ts` serves one pull request for a review session: a run anchored to
- * a PR, without editing tools, that comments only on that PR. The other half was
- * missing: a ticket, notebook, or routine run could not even discover that pull
- * requests existed. “Give me an update on this week's PRs every Friday” was not
- * expressible; the routine could inspect the repository in a shell, which says
- * nothing about reviews, checks, or forge state.
- *
- * This tool family is therefore available to ticket and notebook anchors, but
- * never to review sessions, whose read-only nature remains a toolset property:
+ * `pr-tools.ts` serves actions anchored to the current review. This family
+ * serves project-wide pull-request discovery and actions from every anchor:
  *
  * - `list_pull_requests`: inventory read from `pull_requests`, not the forge. It
  *   matches the Pull Requests page and refreshes stale data lazily, so listing

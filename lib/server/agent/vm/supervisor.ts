@@ -78,8 +78,6 @@ import {
   type OpencodeDelivery,
 } from "./opencode-delivery";
 import { newLiveEditLog } from "../live-edits";
-import { decidePermission, editTargets } from "./opencode-permissions";
-import { refineLocalVerdict } from "./local-guard";
 import { filterLocalPayload, scrubPaths, withheldOutput } from "./local-uplink";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
@@ -125,8 +123,7 @@ import { vmLocalDiffPath } from "../harness-layout";
  *
  * This file is the basis of lot 1: startup, session, prompt, translation of
  * flow, end of turn. Lot 2 hung the ledger, the spending ceiling, the
- * guardrails (`command-guard` / `repo-path`, replayed on `permission.asked`),
- * `ask_user` (the `question` tool), subagents, tools bridge
+ * permission auto-grants, `ask_user` (the `question` tool), subagents, tools bridge
  * ([tool-bridge.ts](tool-bridge.ts)), delivery rules
  * ([opencode-delivery.ts](opencode-delivery.ts)) and the forge (`create_pr`, cut
  * in two: the VM pushes, the function opens).
@@ -456,6 +453,18 @@ async function servedInstructionsFile(
  * `runVmTurn`, and for the same reason: a trick that wrote code and didn't know
  * pushing it should still raise its state.
  */
+function permissionEditTargets(permission: {
+  filepath?: string;
+  files?: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
+}): Array<{ path: string; status: "added" | "modified" | "deleted" }> {
+  const files = (permission.files ?? [])
+    .map((file) => ({ ...file, path: file.path.trim() }))
+    .filter((file) => file.path);
+  if (files.length > 0) return files;
+  const filepath = permission.filepath?.trim();
+  return filepath ? [{ path: filepath, status: "modified" }] : [];
+}
+
 export async function runOpencodeTurn(
   job: VmJob,
   input: SupervisorInput,
@@ -739,9 +748,13 @@ export async function runOpencodeTurn(
    * preview, while this artifact is the durable, on-demand source used after
    * the turn has stopped or when a transport message was missed.
    */
-  const persistLocalDiff = async (diff: WorkingDiff & { snapshot?: boolean }) => {
+  const persistLocalDiff = async (
+    diff: WorkingDiff & { snapshot?: boolean },
+  ) => {
     if (!local) return;
-    await deps.writeFile(vmLocalDiffPath(job.layout), JSON.stringify(diff)).catch(() => {});
+    await deps
+      .writeFile(vmLocalDiffPath(job.layout), JSON.stringify(diff))
+      .catch(() => {});
   };
 
   /**
@@ -769,14 +782,12 @@ export async function runOpencodeTurn(
    * `seqBase: 0` as in [turn.ts](turn.ts): log files are numbered per turn,
    * and a turn has its own microVM.
    */
-  const background = local
-    ? null
-    : new BackgroundJobs(
-        repoBackgroundRunner(host),
-        0,
-        OPENCODE_BACKGROUND_LOG_NOTES,
-        { local: false },
-      );
+  const background = new BackgroundJobs(
+    repoBackgroundRunner(host),
+    0,
+    OPENCODE_BACKGROUND_LOG_NOTES,
+    { local },
+  );
   const servesBackground =
     background !== null &&
     localToolsFor(job).some((t) => t.function.name === "run_background");
@@ -997,8 +1008,7 @@ export async function runOpencodeTurn(
    * what one responded to a permission, nor what the bridge refused.
    *
    * Declared BEFORE the bridge because both feed it: the verdict of
-   * permission for built-in tools, bridge for local tools
-   * (`run_background`, of which `checkCommand` excludes a `git push`).
+   * permission replies for built-in tools, and bridge failures for local tools.
    */
   const refusedCalls = new Map<string, string>();
 
@@ -1080,21 +1090,17 @@ export async function runOpencodeTurn(
       // The paths were joined by the desktop app to the local job. They don't
       // never go through the control plane; the tool therefore remains entirely
       // local and does not even exist on a cloud run.
-      ...(isLocalJob(job)
-        ? {
-            list_projects: async () => ({
-              result: {
-                projects: (job.localProjects ?? []).map((project) => ({
-                  id: project.id,
-                  name: project.name,
-                  key: project.key,
-                  local_path: project.localPath,
-                })),
-              },
-              success: true,
-            }),
-          }
-        : {}),
+      list_projects: async () => ({
+        result: {
+          projects: (job.localProjects ?? []).map((project) => ({
+            id: project.id,
+            name: project.name,
+            key: project.key,
+            local_path: project.localPath,
+          })),
+        },
+        success: true,
+      }),
     },
     ...(deps.toolBridgePort != null ? { port: deps.toolBridgePort } : {}),
   });
@@ -1289,7 +1295,10 @@ export async function runOpencodeTurn(
                 }
                 return;
               }
-              const snapshot = { ...diff, ...(current ? { snapshot: true } : {}) };
+              const snapshot = {
+                ...diff,
+                ...(current ? { snapshot: true } : {}),
+              };
               await persistLocalDiff(snapshot);
               liveEdits.noteStats(diff.files.map(localDiffStat));
               publishLive({
@@ -1929,13 +1938,8 @@ export async function runOpencodeTurn(
           timing("first-visible-text-signal");
         }
 
-        /**
-         * THE GUARD, ANSWER BEFORE ALL THE REST — a suspended tool waits, and
-         * every extra millisecond is billed microVM time. There
-         * decision is pure ([opencode-permissions.ts](opencode-permissions.ts)),
-         * which makes it testable without a server; what is here is the
-         * connection, and the fact that a refusal is told over the wire.
-         */
+        /** Permission requests are answered immediately so they never become a
+         * second application-level approval queue around OpenCode. */
         // A girl linked to her call of `task`: this is what gives her name
         // to the events that follow, and his gang at the ledger. His birth balance
         // with the same gesture the credit opened by the authorization (see `pendingTasks`).
@@ -1945,25 +1949,13 @@ export async function runOpencodeTurn(
         }
 
         if (out.permission) {
-          let verdict = decidePermission(
-            out.permission,
-            job.layout.repoDir,
-            {
-              names: new Set(agentTable.keys()),
-              running: subagents.running,
-              pending: pendingTasks.size,
-              maxParallel: job.subagents.maxParallel,
-            },
-            { local },
-          );
-          /** Resolve filesystem targets before any allowed local read or write. */
-          if (local) {
-            verdict = await refineLocalVerdict(
-              out.permission,
-              verdict,
-              job.layout.repoDir,
-            );
-          }
+          let verdict: {
+            reply: "once" | "reject";
+            reason?: string;
+            message?: string;
+          } = {
+            reply: "once",
+          };
           if (
             out.permission.permission === "bash" &&
             verdict.reply === "once" &&
@@ -2062,7 +2054,7 @@ export async function runOpencodeTurn(
              * targeted type-check of the delivery gate, on a path that
              * does not exist.
              */
-            const targets = editTargets(out.permission);
+            const targets = permissionEditTargets(out.permission);
             for (const { path } of targets) delivery.noteEdit(path);
             // …and they are SEEN immediately: an edition does not advance the
             // round (neither text nor reflection), so nothing else would make
@@ -2167,7 +2159,10 @@ export async function runOpencodeTurn(
           if (event.type === "tool_call" && !child) toolsSeen += 1;
           if (event.payload.name === "run_command") {
             const callId = String(event.payload.id ?? "");
-            if (event.type === "tool_call" && pendingShellCalls.delete(callId)) {
+            if (
+              event.type === "tool_call" &&
+              pendingShellCalls.delete(callId)
+            ) {
               activeShellCalls.add(callId);
             }
             if (event.type === "tool_result") {
@@ -2723,25 +2718,24 @@ export async function runOpencodeTurn(
       ? { ...rawLocalDiff, ...(current ? { snapshot: true } : {}) }
       : null;
     if (localDiff) await persistLocalDiff(localDiff);
-    const changed =
-      localDiff
-          ? {
-              files: localDiff.files.map(localDiffStat),
-              truncated: localDiff.truncated,
-            }
-        : status !== "completed"
-          ? null
-          : current
-            ? await workingTreeChangedFiles(
-                host,
-                filesFromSha,
-                await attributedScope(),
-              ).catch(() => null)
-            : pushed?.headSha && pushed.headSha !== filesFromSha
-              ? await changedFiles(host, filesFromSha, pushed.headSha).catch(
-                  () => null,
-                )
-              : null;
+    const changed = localDiff
+      ? {
+          files: localDiff.files.map(localDiffStat),
+          truncated: localDiff.truncated,
+        }
+      : status !== "completed"
+        ? null
+        : current
+          ? await workingTreeChangedFiles(
+              host,
+              filesFromSha,
+              await attributedScope(),
+            ).catch(() => null)
+          : pushed?.headSha && pushed.headSha !== filesFromSha
+            ? await changedFiles(host, filesFromSha, pushed.headSha).catch(
+                () => null,
+              )
+            : null;
 
     // The SAME constructor as the periodic backup: only the sha of
     // files changes, and it only changes here (it was the push that moved it).

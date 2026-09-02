@@ -291,11 +291,9 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
 /**
  * The path RELATIVE to the repository, or `""` if the path is not in it.
  *
- * `metadata.filepath` of opencode is ABSOLUTE (measured, cf.
- * [opencode-permissions.ts](opencode-permissions.ts)) where the type-check and the
- * targeted mode of the test runner speaks in repository paths. What comes out of
- * deposit is not noted: permission will refuse it anyway, and a
- * `/etc/passwd` at the head of a typing error block wouldn't help anyone.
+ * `metadata.filepath` from OpenCode is absolute, while the type-check and the
+ * targeted test runner speak in repository paths. Paths outside the repository
+ * are irrelevant to delivery diagnostics and are omitted.
  */
 export function repoRelative(repoDir: string, filepath: string): string {
   const trimmed = filepath.trim();

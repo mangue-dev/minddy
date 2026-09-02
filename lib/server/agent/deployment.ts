@@ -1,6 +1,6 @@
 /**
  * Agent runs deployment affinity (MIN-165). PURE and testable — like
- * `command-guard`: the policy here, hands in `drain.ts` and the cron route.
+ * deployment policy here, with execution in `drain.ts` and the cron route.
  *
  * Preview and production share a single database, hence a single queue of runs. The
  * drain claim any run `queued` and the cron only runs in prod: a run

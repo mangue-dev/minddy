@@ -61,7 +61,11 @@ export const SCRATCHPAD_TOOL_NAMES = new Set([
 ]);
 
 /** Writes to the reread pull request (routed to `pr-tools.ts`). */
-export const PR_TOOL_NAMES = new Set(["comment_pr_line", "comment_pr", "reply_pr_thread"]);
+export const PR_TOOL_NAMES = new Set([
+  "comment_pr_line",
+  "comment_pr",
+  "reply_pr_thread",
+]);
 
 /**
  * Pull requests FROM THE PROJECT (routed to `project-pr-tools.ts`) — the inventory and
@@ -99,37 +103,20 @@ export function anchorForRun(run: {
   return run.pull_request_id ? "pr" : "notebook";
 }
 
-/** Any platform tool from a run of TICKET or NOTEBOOK — the two anchors
- * have exactly the same game (see `AGENT_TOOLS` / `NOTEBOOK_AGENT_TOOLS`). */
-const FULL_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
+/**
+ * Every platform tool served by the canonical harness.
+ *
+ * Anchors only provide context. They do not select a reduced routing table:
+ * the catalog announced to OpenCode and the catalog accepted by the control
+ * plane must remain identical for issue, notebook, and pull-request runs.
+ */
+const CANONICAL_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
   ...ISSUE_TOOL_NAMES,
   ...SCRATCHPAD_TOOL_NAMES,
+  ...PR_TOOL_NAMES,
   ...PROJECT_PR_TOOL_NAMES,
   "create_pr",
   "web_search",
-]);
-
-/**
- * What a REREAD pull request can call: minddy READERS, and the
- * three writes to the reread pull request. Nothing else — not a tool ticket,
- * not the notebook, not a page, not a goal, not a routine, not `create_pr`,
- * and not `web_search` (the proofreading game never served it).
- *
- * `read_attachment` is the pre-MIN-184 name of `read_resource`: it is no longer
- * announced anywhere, but a resumed checkpoint replays the old call — it lives
- * so wherever `read_resource` lives, here as in `ISSUE_TOOL_NAMES`.
- */
-const PR_REVIEW_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
-  "search_issues",
-  "read_issue",
-  "read_feedback",
-  "read_resource",
-  "read_attachment",
-  "list_pages",
-  "read_page",
-  "list_objectives",
-  "read_objective",
-  ...PR_TOOL_NAMES,
 ]);
 
 /**
@@ -151,16 +138,18 @@ const PR_REVIEW_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
  * by name, with what `agentToolsFor` ANNOUNCES for each anchor — both ne
  * can no longer diverge silently.
  */
-export const PLATFORM_TOOLS_BY_ANCHOR: Record<AgentAnchor, ReadonlySet<string>> = {
-  issue: FULL_PLATFORM_TOOL_NAMES,
-  notebook: FULL_PLATFORM_TOOL_NAMES,
-  pr: PR_REVIEW_PLATFORM_TOOL_NAMES,
+export const PLATFORM_TOOLS_BY_ANCHOR: Record<
+  AgentAnchor,
+  ReadonlySet<string>
+> = {
+  issue: CANONICAL_PLATFORM_TOOL_NAMES,
+  notebook: CANONICAL_PLATFORM_TOOL_NAMES,
+  pr: CANONICAL_PLATFORM_TOOL_NAMES,
 };
 
 /** ALL platform tools, anchors combined — “is this name subject to the
  * table? ". A name that is not there is not platform (file, control,
  * delegation): its handler decides, as before. */
-export const PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
-  ...FULL_PLATFORM_TOOL_NAMES,
-  ...PR_REVIEW_PLATFORM_TOOL_NAMES,
-]);
+export const PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set(
+  CANONICAL_PLATFORM_TOOL_NAMES,
+);

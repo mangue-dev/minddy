@@ -9,18 +9,25 @@ import { describe, expect, it } from "vitest";
  * launch mock `after()` for not starting a drain, and therefore cannot observe this temporal contract directly.
  */
 describe("lancement sans attendre le titre de session", () => {
-  const source = readFileSync(path.join(process.cwd(), "lib/server/agent/launch.ts"), "utf8");
+  const source = readFileSync(
+    path.join(process.cwd(), "lib/server/agent/launch.ts"),
+    "utf8",
+  );
 
   it("insère le run avec un titre provisoire puis persiste le titre en arrière-plan", () => {
     expect(source).toContain("const generatedTitle =");
-    expect(source).toContain("title: input.title?.trim() || null,");
+    expect(source).toContain(
+      "title: reviewPr ? prSessionTitle(reviewPr) : input.title?.trim() || null,",
+    );
     expect(source).not.toContain("await generatedTitle");
     expect(source).toContain("void generatedTitle");
     expect(source).toContain('.is("title", null)');
   });
 
   it("sort les écritures secondaires du chemin critique local", () => {
-    const localBookkeeping = source.slice(source.indexOf("if (run.local_exec) {"));
+    const localBookkeeping = source.slice(
+      source.indexOf("if (run.local_exec) {"),
+    );
     expect(localBookkeeping).toContain("after(() => {");
     expect(localBookkeeping).toContain("void recordLaunch().catch");
     expect(source).toContain("if (!run.local_exec) kickAgentDrain(service)");

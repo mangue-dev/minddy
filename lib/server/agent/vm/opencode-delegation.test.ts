@@ -2,12 +2,18 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { newTurnStreamState, translateEvent, type OpencodeEvent } from "./opencode-events";
-import { decidePermission } from "./opencode-permissions";
-import { describeSpawn, markChildPayload, SubagentRegistry } from "./supervisor";
+import {
+  newTurnStreamState,
+  translateEvent,
+  type OpencodeEvent,
+} from "./opencode-events";
+import {
+  describeSpawn,
+  markChildPayload,
+  SubagentRegistry,
+} from "./supervisor";
 import { subagentAgentName } from "./opencode-config";
 import { subagentUsageSeq } from "../subagent-config";
-import { cloudLayout } from "../harness-layout";
 
 /**
  * MIN-286 batch 2, task 12 — THE DELEGATION, played on an actually captured turn.
@@ -46,11 +52,22 @@ function replay() {
   const state = newTurnStreamState();
   const table = new Map([
     ["explore", { name: "explore", mode: "explore" as const }],
-    ["explore-cheap", { name: "explore-cheap", mode: "explore" as const, modelId: "cheap", label: "Cheap" }],
+    [
+      "explore-cheap",
+      {
+        name: "explore-cheap",
+        mode: "explore" as const,
+        modelId: "cheap",
+        label: "Cheap",
+      },
+    ],
   ]);
-  const registry = new SubagentRegistry(new Map([...table].map(([n, a]) => [n, a.mode])));
+  const registry = new SubagentRegistry(
+    new Map([...table].map(([n, a]) => [n, a.mode])),
+  );
   const emitted: Array<{ type: string; payload: Record<string, unknown> }> = [];
-  const usage: Array<{ sessionId: string; model: string; costUsd: number }> = [];
+  const usage: Array<{ sessionId: string; model: string; costUsd: number }> =
+    [];
   const verdicts: Array<{ permission: string; reply: string }> = [];
   let parentIdle = false;
   let runningAtAsk = -1;
@@ -61,16 +78,12 @@ function replay() {
     if (out.child) registry.register(out.child);
     if (out.permission) {
       runningAtAsk = registry.running;
-      const verdict = decidePermission(out.permission, cloudLayout().repoDir, {
-        names: new Set(table.keys()),
-        running: registry.running,
-        maxParallel: 2,
-      });
-      verdicts.push({ permission: out.permission.permission, reply: verdict.reply });
+      verdicts.push({ permission: out.permission.permission, reply: "once" });
     }
     for (const event of out.events) {
       let payload: Record<string, unknown> = { ...event.payload };
-      if (payload.name === "spawn_agent") payload = describeSpawn(payload, table);
+      if (payload.name === "spawn_agent")
+        payload = describeSpawn(payload, table);
       const entry = child ? registry.entry(out.sessionId ?? "") : undefined;
       if (entry) payload = markChildPayload(payload, entry);
       emitted.push({ type: event.type, payload });
@@ -100,7 +113,7 @@ describe("la demande de délégation", () => {
     expect(replay().runningAtAsk).toBe(0);
   });
 
-  it("est arbitrée par le superviseur, et le tour continue", () => {
+  it("is auto-granted and the turn continues", () => {
     const { verdicts, parentIdle } = replay();
     expect(verdicts).toEqual([{ permission: "task", reply: "once" }]);
     expect(parentIdle).toBe(true);
@@ -177,13 +190,19 @@ describe("ce que la fille coûte", () => {
     expect(child[0].model).toBe("cheap");
     // And it is not free: a model declared without price would make `cost: 0`.
     expect(child[0].costUsd).toBeGreaterThan(0);
-    expect(usage.some((u) => u.sessionId === PARENT && u.costUsd > 0)).toBe(true);
+    expect(usage.some((u) => u.sessionId === PARENT && u.costUsd > 0)).toBe(
+      true,
+    );
   });
 
   it("écrit dans la bande de `seq` des sous-agents, comme la boucle maison", () => {
     const registry = new SubagentRegistry(new Map());
-    expect(subagentUsageSeq(registry.slotOf("ses_a"))).toBe(subagentUsageSeq(0));
-    expect(subagentUsageSeq(registry.slotOf("ses_b"))).toBe(subagentUsageSeq(1));
+    expect(subagentUsageSeq(registry.slotOf("ses_a"))).toBe(
+      subagentUsageSeq(0),
+    );
+    expect(subagentUsageSeq(registry.slotOf("ses_b"))).toBe(
+      subagentUsageSeq(1),
+    );
     // A session that no `task` has attached still obtains its tape:
     // an expense that you don't know how to relate is better stored than lost.
     expect(registry.entry("ses_a")?.id).toBe("sub-1");

@@ -33,9 +33,9 @@
  * ─────────────────────── ──────────────────────── ──────────────────────────────
  * `repoDir` IS THE SECURITY ROOT
  *
- * `resolveWithin`, `assertNotGit`, `resolveReadable` ([repo-path.ts](repo-path.ts))
- * and `absoluteInRepo` ([opencode-permissions.ts](vm/opencode-permissions.ts))
- * all compare to this value. As long as it was a literal, its form was self-evident; it now arrives via JSON written elsewhere. `assertUsableLayout`
+ * `resolveWithin`, `assertNotGit`, and `resolveReadable`
+ * ([repo-path.ts](repo-path.ts)) compare to this value. As long as it was a
+ * literal, its form was self-evident; it now arrives via JSON written elsewhere. `assertUsableLayout`
  * is what takes over the role of the literal: a relative path or a final slash
  * would make these four functions silent rather than false —
  * `resolveWithin("repo", "../x")` does not come out of anything at all, since "nothing" is

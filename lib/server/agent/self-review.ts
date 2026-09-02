@@ -7,9 +7,8 @@ import { grepRepo, type RepoHost } from "./repo-host";
  * The system prompt has always asked, in step 4 of “How to work”:
  * “Run `git diff` and read your change end to end before replying”. It was a
  * politeness — nothing executed it, nothing verified that it had taken place. But the
- * repository applies the opposite rule everywhere else: git prohibitions are
- * ANNOUNCED as executed because they are (command-guard.ts, MIN-108), and
- * the end-of-turn type-check TALKS to the model instead of hoping it throws it
+ * repository applies the same rule elsewhere: the end-of-turn type-check talks
+ * to the model instead of hoping it runs one
  * (diagnostics.ts, MIN-110). This module applies the same doctrine to proofreading:
  * the round diff is put IN the context of the model before it responds.
  *

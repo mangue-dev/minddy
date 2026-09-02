@@ -43,25 +43,24 @@ const announced = (anchor: AgentAnchor) =>
  */
 const LEGACY_ALIASES = new Set(["read_attachment"]);
 
-describe("la table des tools par ancrage — annoncé et servi ne divergent pas", () => {
+describe("the platform catalog is identical for every anchor", () => {
   for (const anchor of ANCHORS) {
-    it(`sert exactement ce que l'ancrage « ${anchor} » annonce`, () => {
+    it(`serves exactly what the ${anchor} anchor announces`, () => {
       const served = PLATFORM_TOOLS_BY_ANCHOR[anchor];
       const offered = announced(anchor);
       // Nothing announced that is not served: the model would see a tool that refuses.
       expect([...offered].filter((name) => !served.has(name))).toEqual([]);
       // Nothing served that is not announced, historical aliases aside: it is
       // this way a writing tool entered a proofreading session.
-      expect([...served].filter((name) => !offered.has(name) && !LEGACY_ALIASES.has(name))).toEqual(
-        [],
-      );
+      expect(
+        [...served].filter(
+          (name) => !offered.has(name) && !LEGACY_ALIASES.has(name),
+        ),
+      ).toEqual([]);
     });
   }
 
-  it("ferme la RELECTURE aux écritures minddy, nommément", () => {
-    // The blacklist is written in full: the comparison above
-    // would follow `agentToolsFor` if someone added a write to it for
-    // proofreading. This says what the product PROMISES — zero writing.
+  it("keeps Minddy writes available during pull-request reviews", () => {
     for (const name of [
       "update_issue",
       "create_issue",
@@ -82,11 +81,14 @@ describe("la table des tools par ancrage — annoncé et servi ne divergent pas"
       "review_pull_request",
       "set_pull_request_state",
     ]) {
-      expect(PLATFORM_TOOLS_BY_ANCHOR.pr.has(name), `${name} servi à une relecture`).toBe(false);
+      expect(
+        PLATFORM_TOOLS_BY_ANCHOR.pr.has(name),
+        `${name} missing from a review`,
+      ).toBe(true);
     }
   });
 
-  it("garde à la relecture ses lecteurs et les trois écritures de SA pull request", () => {
+  it("keeps readers and anchored pull-request writes available", () => {
     for (const name of [
       "read_issue",
       "search_issues",
@@ -98,31 +100,46 @@ describe("la table des tools par ancrage — annoncé et servi ne divergent pas"
       "comment_pr_line",
       "reply_pr_thread",
     ]) {
-      expect(PLATFORM_TOOLS_BY_ANCHOR.pr.has(name), `${name} refusé à une relecture`).toBe(true);
+      expect(
+        PLATFORM_TOOLS_BY_ANCHOR.pr.has(name),
+        `${name} missing from a review`,
+      ).toBe(true);
     }
   });
 });
 
 describe("l'ancrage se lit sur la ligne du run", () => {
   it("ticket, relecture, carnet", () => {
-    expect(anchorForRun({ issue_id: "i-1", pull_request_id: null })).toBe("issue");
-    expect(anchorForRun({ issue_id: null, pull_request_id: "pr-1" })).toBe("pr");
-    expect(anchorForRun({ issue_id: null, pull_request_id: null })).toBe("notebook");
+    expect(anchorForRun({ issue_id: "i-1", pull_request_id: null })).toBe(
+      "issue",
+    );
+    expect(anchorForRun({ issue_id: null, pull_request_id: "pr-1" })).toBe(
+      "pr",
+    );
+    expect(anchorForRun({ issue_id: null, pull_request_id: null })).toBe(
+      "notebook",
+    );
     // The ticket wins, as in `execute.ts`.
-    expect(anchorForRun({ issue_id: "i-1", pull_request_id: "pr-1" })).toBe("issue");
+    expect(anchorForRun({ issue_id: "i-1", pull_request_id: "pr-1" })).toBe(
+      "issue",
+    );
   });
 });
 
-describe("sans dépôt lié (`repo: false`), la forge disparaît de l'annonce", () => {
+describe("repository context does not alter the announced catalog", () => {
   const names = (anchor: AgentAnchor) =>
-    agentToolsFor({ anchor, webSearch: true, chain: true, interactive: true, repo: false }).map(
-      (t) => t.function.name,
-    );
+    agentToolsFor({
+      anchor,
+      webSearch: true,
+      chain: true,
+      interactive: true,
+      repo: false,
+    }).map((t) => t.function.name);
 
-  it("ne sert NI `create_pr` NI l'inventaire des pull requests du projet", () => {
+  it("keeps forge tools visible without a linked repository", () => {
     for (const anchor of ["issue", "notebook"] as AgentAnchor[]) {
       const offered = names(anchor);
-      expect(offered, anchor).not.toContain("create_pr");
+      expect(offered, anchor).toContain("create_pr");
       for (const pr of [
         "list_pull_requests",
         "read_pull_request",
@@ -132,14 +149,19 @@ describe("sans dépôt lié (`repo: false`), la forge disparaît de l'annonce", 
         "review_pull_request",
         "set_pull_request_state",
       ]) {
-        expect(offered, `${anchor} : ${pr}`).not.toContain(pr);
+        expect(offered, `${anchor}: ${pr}`).toContain(pr);
       }
     }
   });
 
-  it("garde tout le reste — tickets, carnet, pages, objectifs", () => {
+  it("keeps ticket, notebook, page, and objective tools", () => {
     const offered = new Set(names("issue"));
-    for (const name of ["search_issues", "read_issue", "update_issue", "read_scratchpad"]) {
+    for (const name of [
+      "search_issues",
+      "read_issue",
+      "update_issue",
+      "read_scratchpad",
+    ]) {
       expect(offered.has(name), name).toBe(true);
     }
   });

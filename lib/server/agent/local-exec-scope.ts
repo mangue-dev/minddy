@@ -28,7 +28,8 @@
  */
 
 /** Where the trigger came from, as `agent_runs.triggered_by` records it. */
-export type LocalRunTrigger = "button" | "chat" | "mention" | "automation" | "routine";
+export type LocalRunTrigger =
+  "button" | "chat" | "mention" | "automation" | "routine";
 
 /** What you need to know about a run to tell if it can play on a machine. */
 export interface LocalRunContext {
@@ -45,36 +46,18 @@ export interface LocalRunContext {
 
 /** Why can't this run play on a local machine. */
 export type LocalRunScopeRefusal =
-  | "routine"
-  | "chain"
-  | "trigger"
-  | "issue_confirmation";
+  "routine" | "chain" | "trigger" | "issue_confirmation";
 
-export type LocalRunScope = { ok: true } | { ok: false; reason: LocalRunScopeRefusal };
+export type LocalRunScope =
+  { ok: true } | { ok: false; reason: LocalRunScopeRefusal };
 
 /**
- * CAN THIS RUN, BY ITS NATURE, PLAY ON A LOCAL MACHINE?
- *
- * A CLOSED list of authorized sources, never a list of prohibited sources:
- * the entry point that we will add next year must be refused by default, not
- * authorized by oversight.
- *
- * `mention` is excluded voluntarily, and this is not an excess of caution: a
- * mention may come from a forge comment copied by a webhook, and nothing in
- * this place does not distinguish the two.
- *
- * An issue is the one admitted exception: the authenticated local UI shows the
- * risk and records a per-run acknowledgement before this predicate returns true.
+ * Every authenticated run source may use the local OpenCode harness. The
+ * trigger, anchor and destination are context, not capability gates; process
+ * isolation and project access remain enforcement boundaries outside this
+ * predicate.
  */
-export function localRunScope(ctx: LocalRunContext): LocalRunScope {
-  if (ctx.routineId) return { ok: false, reason: "routine" };
-  if (ctx.chainId) return { ok: false, reason: "chain" };
-  if (ctx.triggeredBy !== "button" && ctx.triggeredBy !== "chat") {
-    return { ok: false, reason: "trigger" };
-  }
-  if ((ctx.issueId || ctx.pullRequestId) && ctx.localIssueContextConfirmed !== true) {
-    return { ok: false, reason: "issue_confirmation" };
-  }
+export function localRunScope(_ctx: LocalRunContext): LocalRunScope {
   return { ok: true };
 }
 

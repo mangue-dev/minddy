@@ -97,8 +97,18 @@ vi.mock("./run-key", async (importOriginal) => ({
 vi.mock("./model", () => ({
   resolveAgentApiKey: vi.fn(async () =>
     h.byokAvailable
-      ? { apiKey: "sk-user-byok", mode: "byok", provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1" }
-      : { apiKey: "sk-platform", mode: "platform", provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1" },
+      ? {
+          apiKey: "sk-user-byok",
+          mode: "byok",
+          provider: "openrouter",
+          baseUrl: "https://openrouter.ai/api/v1",
+        }
+      : {
+          apiKey: "sk-platform",
+          mode: "platform",
+          provider: "openrouter",
+          baseUrl: "https://openrouter.ai/api/v1",
+        },
   ),
 }));
 
@@ -174,9 +184,11 @@ vi.mock("./repo-access", () => ({
 }));
 
 vi.mock("./sandbox", () => ({
-  refreshAgentSandboxForgeAccess: vi.fn(async (name: string, target: { token: string }) => {
-    h.forgeRefreshes.push({ name, token: target.token });
-  }),
+  refreshAgentSandboxForgeAccess: vi.fn(
+    async (name: string, target: { token: string }) => {
+      h.forgeRefreshes.push({ name, token: target.token });
+    },
+  ),
   stopSandboxByName: vi.fn(async (name: string) => {
     h.stopped.push(name);
   }),
@@ -205,9 +217,15 @@ vi.mock("./pr-landing", async (importOriginal) => ({
         noteBranchPushed: (p: { pushed: boolean }) => Promise<void>;
       },
     ) => {
-      h.prLandings.push({ workBranch: ctx.workBranch, baseBranch: ctx.baseBranch });
+      h.prLandings.push({
+        workBranch: ctx.workBranch,
+        baseBranch: ctx.baseBranch,
+      });
       await opts.noteBranchPushed(opts.pushed);
-      return { result: { number: 12, url: "https://github.com/org/repo/pull/12" }, success: true };
+      return {
+        result: { number: 12, url: "https://github.com/org/repo/pull/12" },
+        success: true,
+      };
     },
   ),
 }));
@@ -230,13 +248,21 @@ vi.mock("./runs", async (importOriginal) => ({
     h.stamped.push(fields);
     return h.stampReturnsNull || h.stampFails ? null : (h.run as never);
   }),
-  stampRunResult: vi.fn(async (_runId: string, fields: Record<string, unknown>) => {
-    h.stamped.push(fields);
-    if (h.stampFails) return { run: null, failed: true };
-    return { run: h.stampReturnsNull ? null : (h.run as never), failed: false };
-  }),
+  stampRunResult: vi.fn(
+    async (_runId: string, fields: Record<string, unknown>) => {
+      h.stamped.push(fields);
+      if (h.stampFails) return { run: null, failed: true };
+      return {
+        run: h.stampReturnsNull ? null : (h.run as never),
+        failed: false,
+      };
+    },
+  ),
   pullPendingMessages: vi.fn(async () => [
-    { text: "relis @MIN-42", mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }] },
+    {
+      text: "relis @MIN-42",
+      mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }],
+    },
   ]),
   insertRunMessage: vi.fn(
     async (
@@ -262,7 +288,11 @@ vi.mock("./runs", async (importOriginal) => ({
     },
   ),
   appendRunJournal: vi.fn(
-    async (runId: string, sessionId: string, events: Record<string, unknown>[]) => {
+    async (
+      runId: string,
+      sessionId: string,
+      events: Record<string, unknown>[],
+    ) => {
       h.journal.push({ runId, sessionId, events });
     },
   ),
@@ -276,10 +306,12 @@ vi.mock("./runs", async (importOriginal) => ({
 
 vi.mock("./issue-tools", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./issue-tools")>()),
-  executeIssueTool: vi.fn(async (ctx: Record<string, unknown>, name: string) => {
-    h.issueCalls.push({ ctx, name });
-    return { result: { ok: true }, success: true };
-  }),
+  executeIssueTool: vi.fn(
+    async (ctx: Record<string, unknown>, name: string) => {
+      h.issueCalls.push({ ctx, name });
+      return { result: { ok: true }, success: true };
+    },
+  ),
 }));
 
 vi.mock("./scratchpad-tools", async (importOriginal) => ({
@@ -303,18 +335,25 @@ vi.mock("@/lib/supabase-service", () => ({
           eq: () => query,
           in: () => query,
           then: (resolve: (value: unknown) => unknown) =>
-            Promise.resolve({ data: h.revocableRuns, error: null }).then(resolve),
+            Promise.resolve({ data: h.revocableRuns, error: null }).then(
+              resolve,
+            ),
         };
         return query;
       }
       return {
-        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { key: "MIN" } }) }) }),
+        select: () => ({
+          eq: () => ({ maybeSingle: async () => ({ data: { key: "MIN" } }) }),
+        }),
       };
     },
   }),
 }));
 
-import { handleControlPlaneRequest, revokeMemberAgentAuthority } from "./control-plane";
+import {
+  handleControlPlaneRequest,
+  revokeMemberAgentAuthority,
+} from "./control-plane";
 import { CHANGED_FILES_CAP } from "./repo-host";
 
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
@@ -396,7 +435,10 @@ describe("active authority revocation", () => {
       provider_key_id: "key-from-active-turn",
     });
 
-    await revokeMemberAgentAuthority({ projectId: "proj-1", userId: "user-owner" });
+    await revokeMemberAgentAuthority({
+      projectId: "proj-1",
+      userId: "user-owner",
+    });
 
     expect(h.stamped).toContainEqual({
       status: "canceled",
@@ -408,7 +450,9 @@ describe("active authority revocation", () => {
   });
 
   it("stops and de-authorizes a running agent as soon as its creator is removed", async () => {
-    expect((await call("POST", "/tool/update_issue", { args: {} })).status).toBe(200);
+    expect(
+      (await call("POST", "/tool/update_issue", { args: {} })).status,
+    ).toBe(200);
     expect(h.issueCalls).toHaveLength(1);
 
     h.creatorHasAccess = false;
@@ -479,18 +523,30 @@ describe("le budget restant du tour", () => {
     h.run = { ...h.run!, budget_usd: 2, cost_usd: 0.4 };
     h.ledgerSpent = 1.2;
     const res = await call("GET", "/budget");
-    expect((res.body as { remainingUsd: number }).remainingUsd).toBeCloseTo(0.8, 6);
+    expect((res.body as { remainingUsd: number }).remainingUsd).toBeCloseTo(
+      0.8,
+      6,
+    );
   });
 
   it("laisse le compte gagner quand c'est lui qui borne", async () => {
     h.run = { ...h.run!, budget_usd: 10 };
-    h.quota = { unlimited: false, remaining: 0.5, allowed: true, mode: "platform" };
-    expect(await call("GET", "/budget").then((r) => r.body)).toEqual({ remainingUsd: 0.5 });
+    h.quota = {
+      unlimited: false,
+      remaining: 0.5,
+      allowed: true,
+      mode: "platform",
+    };
+    expect(await call("GET", "/budget").then((r) => r.body)).toEqual({
+      remainingUsd: 0.5,
+    });
   });
 
   it("rend `null` pour un BYOK cloud sans plafond de run", async () => {
     h.quota = { unlimited: true, allowed: true, mode: "byok" };
-    expect(await call("GET", "/budget").then((r) => r.body)).toEqual({ remainingUsd: null });
+    expect(await call("GET", "/budget").then((r) => r.body)).toEqual({
+      remainingUsd: null,
+    });
   });
 
   it("rend `null` quand la facturation est injoignable, jamais 0", async () => {
@@ -505,9 +561,16 @@ describe("le budget restant du tour", () => {
   it("uses only the unspent atomic reservation for a new platform run", async () => {
     h.run = { ...h.run!, managed_budget_usd: 1.5, cost_usd: 0.4 };
     h.ledgerSpent = 0.6;
-    h.quota = { unlimited: false, remaining: 9, allowed: true, mode: "platform" };
+    h.quota = {
+      unlimited: false,
+      remaining: 9,
+      allowed: true,
+      mode: "platform",
+    };
 
-    expect(await call("GET", "/budget").then((response) => response.body)).toEqual({
+    expect(
+      await call("GET", "/budget").then((response) => response.body),
+    ).toEqual({
       remainingUsd: 0.9,
     });
   });
@@ -515,10 +578,16 @@ describe("le budget restant du tour", () => {
 
 describe("le direct — le topic vient du run, pas du corps", () => {
   it("diffuse sur le run de l'OIDC même quand le corps en désigne un autre", async () => {
-    const res = await call("POST", "/stream", { text: "salut", runId: OTHER_RUN, topic: "x" });
+    const res = await call("POST", "/stream", {
+      text: "salut",
+      runId: OTHER_RUN,
+      topic: "x",
+    });
     expect(res.status).toBe(200);
     await Promise.all(h.afterWork.map((w) => w()));
-    expect(h.streams).toEqual([{ topic: `agent-run:${RUN_ID}`, event: "stream", text: "salut" }]);
+    expect(h.streams).toEqual([
+      { topic: `agent-run:${RUN_ID}`, event: "stream", text: "salut" },
+    ]);
   });
 
   it("confie la diffusion au canal de fond, au lieu de la détacher", async () => {
@@ -560,7 +629,12 @@ describe("le direct — le topic vient du run, pas du corps", () => {
         { path: "b.ts", status: "cosmique" }, // statut inconnu → modified
         { path: "", status: "added" }, // empty path → ignored
         "pas un objet",
-        { path: "c.ts", status: "renamed", previousPath: "old.ts", vole: "des octets" },
+        {
+          path: "c.ts",
+          status: "renamed",
+          previousPath: "old.ts",
+          vole: "des octets",
+        },
       ],
     });
     await Promise.all(h.afterWork.map((w) => w()));
@@ -584,7 +658,9 @@ describe("le direct — le topic vient du run, pas du corps", () => {
       })),
     });
     await Promise.all(h.afterWork.map((w) => w()));
-    expect((h.streamPayloads[0].files as unknown[]).length).toBe(CHANGED_FILES_CAP);
+    expect((h.streamPayloads[0].files as unknown[]).length).toBe(
+      CHANGED_FILES_CAP,
+    );
     expect(h.streamPayloads[0].filesTruncated).toBe(true);
   });
 
@@ -654,7 +730,10 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
    * this line brought down the consumption of the month in the account.
    */
   it("REFUSE un cost négatif, et n'écrit AUCUNE ligne", async () => {
-    const res = await call("POST", "/usage", { feature: "agent_code", cost: -500 });
+    const res = await call("POST", "/usage", {
+      feature: "agent_code",
+      cost: -500,
+    });
     expect(res.status).toBe(400);
     expect(h.recorded).toHaveLength(0);
     // The refusal is traced on the run: an expense which does not enter anywhere must be
@@ -664,7 +743,9 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
 
   it("refuse un montant impossible ou démesuré", async () => {
     for (const cost of [Number.NaN, Number.POSITIVE_INFINITY, 10_000]) {
-      expect((await call("POST", "/usage", { feature: "agent_code", cost })).status).toBe(400);
+      expect(
+        (await call("POST", "/usage", { feature: "agent_code", cost })).status,
+      ).toBe(400);
     }
     expect(h.recorded).toHaveLength(0);
   });
@@ -697,21 +778,32 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
     // The sum of the ledger is done on `cost`: it is enough that no line is written
     // is negative so that it never comes back down.
     for (const cost of [-1, -0.000001, Number.NaN, 1e9, 0.02]) {
-      await call("POST", "/usage", { feature: "agent_code", cost, completionTokens: 100_000 });
+      await call("POST", "/usage", {
+        feature: "agent_code",
+        cost,
+        completionTokens: 100_000,
+      });
     }
     expect(h.recorded).toHaveLength(1);
     expect(h.recorded.every((line) => (line.cost ?? 0) >= 0)).toBe(true);
   });
 
   it("range la ligne dans SA bande de seq, quel que soit l'index envoyé", async () => {
-    await call("POST", "/usage", { feature: "agent_code", cost: 0.01, seq: -42 });
+    await call("POST", "/usage", {
+      feature: "agent_code",
+      cost: 0.01,
+      seq: -42,
+    });
     expect(h.recorded[0].seq).toBe(0);
   });
 
   it("refuse une feature hors du périmètre de l'agent", async () => {
     // Without this refusal, a compromised VM would place its expense under `numo_chat` and
     // would take it out of the agent's counters — invisible where we look for it.
-    const res = await call("POST", "/usage", { feature: "numo_chat", cost: 10 });
+    const res = await call("POST", "/usage", {
+      feature: "numo_chat",
+      cost: 10,
+    });
     expect(res.status).toBe(400);
     expect(h.recorded).toHaveLength(0);
   });
@@ -719,7 +811,10 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
 
 describe("les events", () => {
   it("écrivent sur le run de l'OIDC", async () => {
-    await call("POST", "/events", { type: "tool_call", payload: { name: "read_file" } });
+    await call("POST", "/events", {
+      type: "tool_call",
+      payload: { name: "read_file" },
+    });
     expect(h.events).toEqual([{ runId: RUN_ID, type: "tool_call" }]);
   });
 
@@ -738,7 +833,9 @@ describe("le checkpoint", () => {
     // A VM that believes it has saved and continues working for a
     // conversation which is over.
     h.stampReturnsNull = true;
-    const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [1] } });
+    const res = await call("PUT", "/checkpoint", {
+      checkpoint: { messages: [1] },
+    });
     expect(res.status).toBe(409);
   });
 });
@@ -749,12 +846,19 @@ describe("steering et interruption — inchangés côté base", () => {
     // its ids travel alongside its text — that's what the supervisor
     // will repost to the model without making him guess them.
     expect((await call("GET", "/messages")).body).toEqual({
-      messages: [{ text: "relis @MIN-42", mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }] }],
+      messages: [
+        {
+          text: "relis @MIN-42",
+          mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }],
+        },
+      ],
     });
   });
 
   it("rendent le drapeau d'interruption", async () => {
-    expect((await call("GET", "/interrupt")).body).toEqual({ interrupted: true });
+    expect((await call("GET", "/interrupt")).body).toEqual({
+      interrupted: true,
+    });
   });
 
   /**
@@ -765,7 +869,9 @@ describe("steering et interruption — inchangés côté base", () => {
    * re-queue the run.
    */
   it("REMETTENT en file ce qui a été drainé sans être joué", async () => {
-    const res = await call("POST", "/messages", { messages: ["fais plutôt ça", "  ", ""] });
+    const res = await call("POST", "/messages", {
+      messages: ["fais plutôt ça", "  ", ""],
+    });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ requeued: 1 });
     // Without author: reinserted, it becomes an ordinary waiting message again.
@@ -787,7 +893,10 @@ describe("steering et interruption — inchangés côté base", () => {
   it("gardent les mentions d'un message remis en file, et ignorent une forme illisible", async () => {
     const res = await call("POST", "/messages", {
       messages: [
-        { text: "relis @MIN-42", mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }] },
+        {
+          text: "relis @MIN-42",
+          mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }],
+        },
         { text: "   " },
         { mentions: [] },
         42,
@@ -864,7 +973,9 @@ describe("les tools de plateforme", () => {
     expect(res.status).toBe(200);
     expect(h.prLandings).toEqual([{ workBranch: branch, baseBranch: "main" }]);
     // …and it is THIS branch that we record on the run line.
-    expect(h.stamped.find((f) => "branch_name" in f)).toMatchObject({ branch_name: branch });
+    expect(h.stamped.find((f) => "branch_name" in f)).toMatchObject({
+      branch_name: branch,
+    });
   });
 
   it("retombent sur la branche de la ligne quand la VM n'en envoie pas", async () => {
@@ -879,7 +990,9 @@ describe("les tools de plateforme", () => {
   });
 
   it("refusent un `create_pr` sans résultat de push — la VM seule sait si elle a poussé", async () => {
-    expect((await call("POST", "/tool/create_pr", { args: { title: "x" } })).status).toBe(400);
+    expect(
+      (await call("POST", "/tool/create_pr", { args: { title: "x" } })).status,
+    ).toBe(400);
     expect(h.prLandings).toHaveLength(0);
   });
 
@@ -896,29 +1009,27 @@ describe("les tools de plateforme", () => {
   it("ne servent PAS les tools de fichier — ils s'exécutent dans la VM", async () => {
     // 403 and not 404: the name is not in the game of this run, which is not the
     // same thing as “it doesn’t exist” (MIN-326).
-    for (const name of ["read_file", "edit_file", "run_command", "git_commit"]) {
-      expect((await call("POST", `/tool/${name}`, { args: {} })).status).toBe(403);
+    for (const name of [
+      "read_file",
+      "edit_file",
+      "run_command",
+      "git_commit",
+    ]) {
+      expect((await call("POST", `/tool/${name}`, { args: {} })).status).toBe(
+        403,
+      );
     }
   });
 });
 
-/**
- * MIN-326 — ANCHOR IS A CODE LOCK, NOT A PROMPT SENTENCE.
- *
- * `runPlatformTool` routed only to the NAME of the tool. A proofreading session —
- * the one that the entire repository claims is read-only, and the only one that
- * the content read comes from an unknown fork — could therefore write in tickets,
- * the notebook, the wiki and even in a planned ROUTINE, by a POST on
- * `/api/agent-vm/tool/<nom>` from its shell. An instruction slipped into a
- * `AGENTS.md` suffisait.
- */
-describe("l'ancrage du run ferme la surface `/tool/`", () => {
+/** MIN-492 — anchors provide context without narrowing the platform catalog. */
+describe("the run anchor does not narrow the `/tool/` surface", () => {
   /** A review session: `issue_id` null, an anchored pull request. */
   const review = () => {
     h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
   };
 
-  it("refuse à une RELECTURE toute écriture minddy, et n'écrit RIEN", async () => {
+  it("routes Minddy writes from a pull-request review", async () => {
     review();
     for (const name of [
       "create_issue",
@@ -935,51 +1046,75 @@ describe("l'ancrage du run ferme la surface `/tool/`", () => {
         args: { title: "x" },
         pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
       });
-      expect(res.status, name).toBe(403);
+      expect(res.status, name).not.toBe(403);
     }
-    expect(h.issueCalls).toEqual([]);
-    expect(h.scratchpadCalls).toEqual([]);
-    expect(h.prLandings).toEqual([]);
+    expect(h.issueCalls.length).toBeGreaterThan(0);
+    expect(h.scratchpadCalls).toContain("set_scratchpad");
+    expect(h.prLandings.length).toBeGreaterThan(0);
   });
 
   it("laisse à la relecture ses LECTEURS et les écritures de sa pull request", async () => {
     review();
-    expect((await call("POST", "/tool/read_issue", { args: {} })).status).toBe(200);
-    expect((await call("POST", "/tool/read_page", { args: { page: "p" } })).status).toBe(200);
+    expect((await call("POST", "/tool/read_issue", { args: {} })).status).toBe(
+      200,
+    );
+    expect(
+      (await call("POST", "/tool/read_page", { args: { page: "p" } })).status,
+    ).toBe(200);
     // `comment_pr` leaves for the forge: what matters here is that he is not refused
     // upstream — execution is covered by `pr-tools.test.ts`.
-    expect((await call("POST", "/tool/comment_pr", { args: { body: "ok" } })).status).not.toBe(403);
+    expect(
+      (await call("POST", "/tool/comment_pr", { args: { body: "ok" } })).status,
+    ).not.toBe(403);
   });
 
-  it("refuse les pull requests DU PROJET à une relecture — elle n'a que la sienne", async () => {
+  it("routes project pull-request tools from a review", async () => {
     review();
-    for (const name of ["list_pull_requests", "review_pull_request", "set_pull_request_state"]) {
-      expect((await call("POST", `/tool/${name}`, { args: { pull_request: 3 } })).status, name).toBe(
-        403,
-      );
+    for (const name of [
+      "list_pull_requests",
+      "review_pull_request",
+      "set_pull_request_state",
+    ]) {
+      expect(
+        (await call("POST", `/tool/${name}`, { args: { pull_request: 3 } }))
+          .status,
+        name,
+      ).not.toBe(403);
     }
   });
 
   it("ne retire rien à un run de TICKET — c'est le risque de régression", async () => {
-    for (const name of ["create_issue", "update_issue", "create_routine", "create_page"]) {
-      expect((await call("POST", `/tool/${name}`, { args: {} })).status, name).toBe(200);
+    for (const name of [
+      "create_issue",
+      "update_issue",
+      "create_routine",
+      "create_page",
+    ]) {
+      expect(
+        (await call("POST", `/tool/${name}`, { args: {} })).status,
+        name,
+      ).toBe(200);
     }
-    expect((await call("POST", "/tool/set_scratchpad", { args: { content: "x" } })).status).toBe(200);
+    expect(
+      (await call("POST", "/tool/set_scratchpad", { args: { content: "x" } }))
+        .status,
+    ).toBe(200);
     expect(h.scratchpadCalls).toEqual(["set_scratchpad"]);
   });
 });
 
 /**
- * MIN-421 — `/repo-auth` refreshes trusted infrastructure and returns no
- * credential. Reviews remain unable to rotate the transport to write access.
+ * `/repo-auth` refreshes trusted infrastructure and returns no credential.
  */
 describe("forge authentication refresh", () => {
-  it("refuses every refresh from a review session", async () => {
+  it("refreshes write access for a review session", async () => {
     h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
     const res = await call("POST", "/repo-auth");
-    expect(res.status).toBe(403);
-    // Nothing is minted when authorization fails.
-    expect(h.repoAccessAsked).toEqual([]);
+    expect(res.status).toBe(200);
+    expect(h.repoAccessAsked).toEqual(["repo-write"]);
+    expect(h.forgeRefreshes).toEqual([
+      { name: `agent-${RUN_ID}`, token: "tok-repo-write" },
+    ]);
   });
 
   it("rotates a repository-scoped token without returning it to an issue run", async () => {
@@ -1017,19 +1152,26 @@ describe("le carnet se ferme dès qu'un tiers a parlé au run", () => {
       "add_scratchpad_tasks",
       "update_scratchpad_task",
     ]) {
-      expect((await call("POST", `/tool/${name}`, { args: {} })).status, name).toBe(403);
+      expect(
+        (await call("POST", `/tool/${name}`, { args: {} })).status,
+        name,
+      ).toBe(403);
     }
     expect(h.scratchpadCalls).toEqual([]);
   });
 
   it("laisse les tools TICKET ouverts sur ce même run — l'acteur y est le lanceur, pas une note privée", async () => {
     h.steeredByOther = true;
-    expect((await call("POST", "/tool/update_issue", { args: {} })).status).toBe(200);
+    expect(
+      (await call("POST", "/tool/update_issue", { args: {} })).status,
+    ).toBe(200);
   });
 
   it("rejects a run with no authority-bearing owner", async () => {
     h.run = { ...h.run, created_by: null };
-    expect((await call("POST", "/tool/read_scratchpad", { args: {} })).status).toBe(409);
+    expect(
+      (await call("POST", "/tool/read_scratchpad", { args: {} })).status,
+    ).toBe(409);
     expect(h.scratchpadCalls).toEqual([]);
   });
 });
@@ -1044,13 +1186,18 @@ describe("la surface est fermée", () => {
 
   it("refuse un run qui n'existe pas", async () => {
     h.run = null;
-    expect((await call("POST", "/events", { type: "status" })).status).toBe(404);
+    expect((await call("POST", "/events", { type: "status" })).status).toBe(
+      404,
+    );
   });
 });
 
 describe("turn completion lands exactly once", () => {
   it("rests the session while the run is still active", async () => {
-    const res = await call("POST", "/rest", { status: "completed", costUsd: 0.1 });
+    const res = await call("POST", "/rest", {
+      status: "completed",
+      costUsd: 0.1,
+    });
     expect(res.status).toBe(200);
     expect(h.landed).toBe(1);
   });
@@ -1061,7 +1208,10 @@ describe("turn completion lands exactly once", () => {
     // thread, and a SECOND compute line to the ledger — the microVM half of the
     // invoice, counted twice.
     h.run = { ...h.run, status: "completed" };
-    const res = await call("POST", "/rest", { status: "completed", costUsd: 0.1 });
+    const res = await call("POST", "/rest", {
+      status: "completed",
+      costUsd: 0.1,
+    });
     expect(res.status).toBe(409);
     expect(h.landed).toBe(0);
   });
@@ -1072,7 +1222,9 @@ describe("turn completion lands exactly once", () => {
       call("POST", "/rest", { status: "completed", costUsd: 0.1 }),
     ]);
 
-    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      200, 409,
+    ]);
     expect(h.landed).toBe(1);
   });
 
@@ -1105,7 +1257,9 @@ describe("le checkpoint périodique fait aussi office de battement de cœur", ()
 
   it("dit 409 quand le run n'est plus en cours — la VM doit s'arrêter", async () => {
     h.stampReturnsNull = true;
-    const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
+    const res = await call("PUT", "/checkpoint", {
+      checkpoint: { messages: [] },
+    });
     expect(res.status).toBe(409);
   });
 
@@ -1119,7 +1273,9 @@ describe("le checkpoint périodique fait aussi office de battement de cœur", ()
    */
   it("dit 503 quand la BASE refuse — la VM doit retenter, pas mourir", async () => {
     h.stampFails = true;
-    const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
+    const res = await call("PUT", "/checkpoint", {
+      checkpoint: { messages: [] },
+    });
     expect(res.status).toBe(503);
   });
 });
@@ -1218,30 +1374,56 @@ describe("le plan de contrôle vu depuis une machine", () => {
     body: Record<string, unknown> | null = null,
     gen = LOCAL_GEN,
   ) =>
-    handleControlPlaneRequest({ runId: RUN_ID, method, surface, body, local: { gen } });
+    handleControlPlaneRequest({
+      runId: RUN_ID,
+      method,
+      surface,
+      body,
+      local: { gen },
+    });
 
   beforeEach(() => {
     h.run = { ...h.run!, local_exec: true, local_exec_gen: LOCAL_GEN };
   });
 
   it("sert les surfaces ordinaires d'un run local qui travaille", async () => {
-    expect((await callLocal("POST", "/events", { type: "assistant_message" })).status).toBe(200);
+    expect(
+      (await callLocal("POST", "/events", { type: "assistant_message" }))
+        .status,
+    ).toBe(200);
     expect(h.events).toHaveLength(1);
   });
 
   it("diffuse le patch local sur un message séparé et borné", async () => {
     const res = await callLocal("POST", "/diff", {
       files: [
-        { filename: "lib/a.ts", status: "modified", additions: 4.7, deletions: -2, patch: "@@\n+x" },
+        {
+          filename: "lib/a.ts",
+          status: "modified",
+          additions: 4.7,
+          deletions: -2,
+          patch: "@@\n+x",
+        },
         { filename: "", patch: "ignoré" },
       ],
     });
     expect(res.status).toBe(200);
     expect(h.afterWork).toHaveLength(1);
     await h.afterWork[0]();
-    expect(h.streams[0]).toMatchObject({ topic: `agent-run:${RUN_ID}`, event: "diff" });
+    expect(h.streams[0]).toMatchObject({
+      topic: `agent-run:${RUN_ID}`,
+      event: "diff",
+    });
     expect(h.streamPayloads[0]).toMatchObject({
-      files: [{ filename: "lib/a.ts", status: "modified", additions: 5, deletions: 0, patch: "@@\n+x" }],
+      files: [
+        {
+          filename: "lib/a.ts",
+          status: "modified",
+          additions: 5,
+          deletions: 0,
+          patch: "@@\n+x",
+        },
+      ],
       truncated: false,
     });
   });
@@ -1253,7 +1435,12 @@ describe("le plan de contrôle vu depuis une machine", () => {
   it("refuse un jeton dont la GÉNÉRATION a été dépassée — la révocation est là", async () => {
     // Issuing a token increments the generation (`issueLocalExecToken`): that of
     // the previous machine dies instantly, without us having anything to remember.
-    const res = await callLocal("POST", "/events", { type: "assistant_message" }, LOCAL_GEN - 1);
+    const res = await callLocal(
+      "POST",
+      "/events",
+      { type: "assistant_message" },
+      LOCAL_GEN - 1,
+    );
     expect(res.status).toBe(403);
     expect(h.events).toEqual([]);
   });
@@ -1262,7 +1449,10 @@ describe("le plan de contrôle vu depuis une machine", () => {
     // Shouldn't exist — so if it exists, it's our fault, and
     // it stops here rather than opening a second route on a cloud run.
     h.run = { ...h.run!, local_exec: false };
-    expect((await callLocal("POST", "/events", { type: "assistant_message" })).status).toBe(403);
+    expect(
+      (await callLocal("POST", "/events", { type: "assistant_message" }))
+        .status,
+    ).toBe(403);
     expect(h.events).toEqual([]);
   });
 
@@ -1278,7 +1468,10 @@ describe("le plan de contrôle vu depuis une machine", () => {
       ["GET", "/budget"],
       ["POST", "/llm-key"],
     ] as const) {
-      const res = await callLocal(method, surface, { type: "assistant_message", args: {} });
+      const res = await callLocal(method, surface, {
+        type: "assistant_message",
+        args: {},
+      });
       // 409 and not 403: this is the one that the control plan client already reads
       // like "stop", and it is not tried again.
       expect([surface, res.status]).toEqual([surface, 409]);
@@ -1325,11 +1518,19 @@ describe("le plan de contrôle vu depuis une machine", () => {
     it("caps a local platform key at the run's unspent reservation", async () => {
       h.run = { ...h.run!, managed_budget_usd: 1.2, cost_usd: 0.2 };
       h.ledgerSpent = 0.4;
-      h.quota = { unlimited: false, remaining: 7, allowed: true, mode: "platform" };
+      h.quota = {
+        unlimited: false,
+        remaining: 7,
+        allowed: true,
+        mode: "platform",
+      };
 
       const response = await callLocal("POST", "/llm-key");
 
-      expect(response.body).toEqual({ key: "sk-or-v1-clef-du-run", capUsd: 0.8 });
+      expect(response.body).toEqual({
+        key: "sk-or-v1-clef-du-run",
+        capUsd: 0.8,
+      });
       expect(h.minted).toEqual([{ runId: RUN_ID, capUsd: 0.8 }]);
     });
 
@@ -1387,25 +1588,37 @@ describe("le plan de contrôle vu depuis une machine", () => {
       "update_scratchpad_task",
       "set_scratchpad",
     ]) {
-      expect([name, (await callLocal("POST", `/tool/${name}`, { args: {} })).status]).toEqual([
+      expect([
         name,
-        200,
-      ]);
+        (await callLocal("POST", `/tool/${name}`, { args: {} })).status,
+      ]).toEqual([name, 200]);
     }
     expect(h.scratchpadCalls).toHaveLength(4);
   });
 
   it("revokes live broadcasts with the local execution generation", async () => {
-    const res = await callLocal("POST", "/stream", { text: "salut" }, LOCAL_GEN - 1);
+    const res = await callLocal(
+      "POST",
+      "/stream",
+      { text: "salut" },
+      LOCAL_GEN - 1,
+    );
     expect(res.status).toBe(403);
     expect(h.runReads).toBe(1);
     expect(h.afterWork).toEqual([]);
   });
 
   it("rejects completed cloud runs on every privileged surface", async () => {
-    h.run = { ...h.run!, status: "completed", local_exec: true, local_exec_gen: LOCAL_GEN };
+    h.run = {
+      ...h.run!,
+      status: "completed",
+      local_exec: true,
+      local_exec_gen: LOCAL_GEN,
+    };
     expect((await call("POST", "/repo-auth")).status).toBe(409);
-    expect((await call("POST", "/events", { type: "assistant_message" })).status).toBe(409);
+    expect(
+      (await call("POST", "/events", { type: "assistant_message" })).status,
+    ).toBe(409);
   });
 });
 
@@ -1414,21 +1627,42 @@ describe("the control plane seen from the built-in server sandbox", () => {
     method: string,
     surface: string,
     body: Record<string, unknown> | null = null,
-  ) => handleControlPlaneRequest({ runId: RUN_ID, method, surface, body, server: true });
+  ) =>
+    handleControlPlaneRequest({
+      runId: RUN_ID,
+      method,
+      surface,
+      body,
+      server: true,
+    });
 
   it("admits a running server job and rejects a desktop-local or completed job", async () => {
     h.run = { ...h.run!, local_exec: false, status: "running" };
-    expect((await callServer("POST", "/events", { type: "assistant_message" })).status).toBe(200);
+    expect(
+      (await callServer("POST", "/events", { type: "assistant_message" }))
+        .status,
+    ).toBe(200);
 
     h.run = { ...h.run!, local_exec: true, status: "running" };
-    expect((await callServer("POST", "/events", { type: "assistant_message" })).status).toBe(403);
+    expect(
+      (await callServer("POST", "/events", { type: "assistant_message" }))
+        .status,
+    ).toBe(403);
 
     h.run = { ...h.run!, local_exec: false, status: "completed" };
-    expect((await callServer("POST", "/events", { type: "assistant_message" })).status).toBe(409);
+    expect(
+      (await callServer("POST", "/events", { type: "assistant_message" }))
+        .status,
+    ).toBe(409);
   });
 
   it("never returns a provider key to a server sandbox", async () => {
-    h.run = { ...h.run!, local_exec: false, status: "running", key_mode: "byok" };
+    h.run = {
+      ...h.run!,
+      local_exec: false,
+      status: "running",
+      key_mode: "byok",
+    };
 
     const res = await callServer("POST", "/llm-key");
 

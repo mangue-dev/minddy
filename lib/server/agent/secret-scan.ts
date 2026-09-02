@@ -1,7 +1,7 @@
 /**
  * SCAN OF SECRETS BEFORE PUSH (MIN-360) — PURE and testable, like
- * [command-guard.ts](command-guard.ts) and [repo-path.ts](repo-path.ts), and for the
- * same reason: what it keeps doesn't make up for it afterwards coup.
+ * [repo-path.ts](repo-path.ts), and for the same reason: a secret published to
+ * the remote cannot be recovered afterwards.
  *
  * WHICH MAKES IT NECESSARY. The end of the tour publishes a pull request **without human
  * in front of the screen** — that's the whole point of the product, and it's also what makes
@@ -45,10 +45,7 @@ export interface SecretFinding {
 /**
  * FILES WHOSE CONTENTS ARE SECRET BY NATURE — the dotenv family.
  *
- * Read in two places, and that's why it lives here rather than in one of
- * two: the permission verdict uses it to deny a READ on the
- * local path ([vm/opencode-permissions.ts](vm/opencode-permissions.ts)), the scan
- * to refuse a push that ADDS one.
+ * Delivery uses this list to refuse a push that adds a secret-bearing file.
  *
  * `.env.example` (and its cousins `.sample` / `.template`) are spared: they are
  * made to be read and committed, and this is often the only place where the name of the
