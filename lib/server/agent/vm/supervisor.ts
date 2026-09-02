@@ -8,8 +8,10 @@ import {
   readFileAtRef,
   readWorkFile,
   repoBackgroundRunner,
+  revParseHead,
   sq,
   turnDiff,
+  turnDiffStat,
   type RepoHost,
 } from "../repo-host";
 import {
@@ -616,7 +618,8 @@ export async function runOpencodeTurn(
    * current, in the FIRST round, the function could not know it — this is the
    * HEAD of a machine she has never seen. The harness therefore resolves it itself.
    */
-  const filesFromSha = job.filesFromSha || current?.parent || "";
+  const filesFromSha =
+    job.filesFromSha || current?.parent || (await revParseHead(host));
 
   // ── The setting, set before the first server byte ───────────────────────
   // The anchor and tools files have separate destinations. A
@@ -1977,8 +1980,7 @@ export async function runOpencodeTurn(
             const alreadyCounted = pendingTasks.has(callId);
             if (
               !alreadyCounted &&
-              subagents.running + pendingTasks.size >=
-                job.subagents.maxParallel
+              subagents.running + pendingTasks.size >= job.subagents.maxParallel
             ) {
               verdict = {
                 reply: "reject",
@@ -2705,7 +2707,19 @@ export async function runOpencodeTurn(
      * request. Nothing about MIN-358's machinery dies: it changes
      * simply a trigger.
      */
-    if (job.writesToRepo && !current) {
+    const pendingCloneWork = async (): Promise<boolean> => {
+      if (!filesFromSha) return true;
+      const stat = await turnDiffStat(host, filesFromSha).catch(() => null);
+      // An unreadable diff must not strand work. The push path will surface a
+      // concrete Git error if the checkout is genuinely unusable.
+      return (
+        stat === null ||
+        stat.files.length > 0 ||
+        stat.lines > 0 ||
+        stat.untracked > 0
+      );
+    };
+    if (job.writesToRepo && !current && (await pendingCloneWork())) {
       try {
         pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
       } catch (err) {

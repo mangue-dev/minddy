@@ -16,6 +16,7 @@ import {
 import { SelfHostedSandbox } from "./self-hosted-sandbox";
 import { cloudLayout } from "./harness-layout";
 import {
+  anchorPullRequestBase,
   cloneRepo,
   clonePullRequest,
   revParseHead,
@@ -824,24 +825,23 @@ export async function executeAgentRun(
     // Use the forge's merge base for both cloud and local review checkouts. The
     // live base branch may have moved since the pull request was opened and is
     // therefore not a trustworthy review boundary.
-    const prBaseShaPromise =
-      prRun && !run.branch_name
-        ? forge!
-            .getMergeBaseSha({
-              token: target!.token,
-              repoFullName: target!.repoFullName,
-              number: prRun.number,
-              base: baseBranch,
-              head: prRun.headSha ?? prRun.headBranch ?? "",
-            })
-            .catch((err: unknown) => {
-              console.error(
-                `[agent] merge base unreadable for PR #${prRun.number}:`,
-                err,
-              );
-              return null;
-            })
-        : Promise.resolve(null);
+    const prBaseShaPromise = prRun
+      ? forge!
+          .getMergeBaseSha({
+            token: target!.token,
+            repoFullName: target!.repoFullName,
+            number: prRun.number,
+            base: baseBranch,
+            head: prRun.headSha ?? prRun.headBranch ?? "",
+          })
+          .catch((err: unknown) => {
+            console.error(
+              `[agent] merge base unreadable for PR #${prRun.number}:`,
+              err,
+            );
+            return null;
+          })
+      : Promise.resolve(null);
 
     /**
      * REMAINING usage budget at chunk entry. Snapshotted once here: the loop compares
@@ -1034,6 +1034,12 @@ export async function executeAgentRun(
     const { sandbox: sb, created: sandboxCreated } = sandboxResult;
     if (!localTurn && !sandboxCreated && sb) {
       sandboxRepoUrl = await configureSandboxRepo(sb);
+    }
+    if (!localTurn && sb && prRun && sandboxRepoUrl) {
+      await anchorPullRequestBase(sandboxHost(sb, cloudLayout()), {
+        authUrl: sandboxRepoUrl,
+        baseSha: await prBaseShaPromise,
+      });
     }
     const llmRelayUrl =
       selfHostedSandbox && sb instanceof SelfHostedSandbox
@@ -1706,11 +1712,9 @@ export async function executeAgentRun(
       // A review starts from the provider's virtual PR ref, including fork
       // heads, but delivers changes to the run's ordinary writable branch.
       ...(prRun && !run.branch_name
-        ? {
-            checkoutRef: pullRequestHeadRef(prRun.provider, prRun.number),
-            ...(prBaseSha ? { checkoutBaseSha: prBaseSha } : {}),
-          }
+        ? { checkoutRef: pullRequestHeadRef(prRun.provider, prRun.number) }
         : {}),
+      ...(prRun && prBaseSha ? { checkoutBaseSha: prBaseSha } : {}),
       // A first turn whose branch has not yet been stamped cannot exist on the
       // remote. The harness can start directly from HEAD instead of paying for a
       // `git fetch` destined to return "ref does not exist". Without a linked

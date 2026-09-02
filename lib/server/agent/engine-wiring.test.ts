@@ -106,6 +106,17 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
     // all letters (“`prompt` is empty on a RESUME round”).
     expect(source).toContain("if (run.checkpoint?.opencode?.sessionId)");
   });
+
+  it("restores the trusted PR base when a resumed review needs a fresh checkout", () => {
+    expect(source).toContain("const prBaseShaPromise = prRun");
+    expect(source).not.toContain(
+      "const prBaseShaPromise =\n      prRun && !run.branch_name",
+    );
+    expect(source).toContain("await anchorPullRequestBase(");
+    expect(source).toContain(
+      "...(prRun && prBaseSha ? { checkoutBaseSha: prBaseSha } : {})",
+    );
+  });
 });
 
 describe("vm/main.ts ne connaît plus qu'un moteur", () => {

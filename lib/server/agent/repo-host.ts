@@ -306,11 +306,30 @@ export async function clonePullRequest(
     );
   }
 
-  // SHA VALIDATED before entering a shell: it comes from a forge API, and `sq`
-  // alone would be enough, but a ref that is not a SHA has no place here anyway
-  // — a branch name would produce a tag that moves under the agent.
+  await anchorPullRequestBase(host, {
+    authUrl: opts.authUrl,
+    baseSha: opts.baseSha,
+  });
+}
+
+/**
+ * Restore the immutable review boundary after either an initial PR clone or a
+ * resumed work-branch clone. The operation is deliberately best-effort: losing
+ * the anchor degrades review accuracy, but must not make an otherwise usable
+ * checkout fail to start.
+ */
+export async function anchorPullRequestBase(
+  host: RepoHost,
+  opts: { authUrl: string; baseSha?: string | null },
+): Promise<void> {
+  // Validate before entering a shell. The value comes from a forge API, and
+  // `sq` alone would be sufficient, but a movable ref has no place here.
   const baseSha = opts.baseSha?.trim() ?? "";
   if (!/^[0-9a-f]{7,64}$/i.test(baseSha)) return;
+  const current = await host
+    .exec(`git rev-parse --verify ${sq(PR_BASE_TAG)}`)
+    .catch(() => null);
+  if (current?.exitCode === 0 && current.stdout.trim() === baseSha) return;
   const anchor = await host.exec(
     [
       `set -e`,

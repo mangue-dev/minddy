@@ -1,5 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -20,7 +26,9 @@ function git(cwd: string, args: string[]): string {
 }
 
 beforeAll(() => {
-  root = realpathSync(mkdtempSync(path.join(tmpdir(), "minddy-local-worktree-")));
+  root = realpathSync(
+    mkdtempSync(path.join(tmpdir(), "minddy-local-worktree-")),
+  );
   repo = path.join(root, "checkout");
   runRoot = path.join(root, "agent-runs", "run-1");
   git(root, ["init", "--initial-branch=main", repo]);
@@ -46,11 +54,26 @@ describe("prepareLocalWorktree", () => {
       baseBranch: "main",
       workBranch: "minddy/run-1",
     });
-    expect(result).toEqual({ ok: true, path: localWorktreePath(runRoot), reused: false });
-    expect(readFileSync(path.join(localWorktreePath(runRoot), "tracked.txt"), "utf8")).toBe("base\n");
-    expect(readFileSync(path.join(repo, "tracked.txt"), "utf8")).toBe("human WIP\n");
-    expect(readFileSync(path.join(repo, "notes.txt"), "utf8")).toBe("keep me\n");
-    expect(git(localWorktreePath(runRoot), ["branch", "--show-current"]).trim()).toBe("");
+    expect(result).toEqual({
+      ok: true,
+      path: localWorktreePath(runRoot),
+      reused: false,
+    });
+    expect(
+      readFileSync(
+        path.join(localWorktreePath(runRoot), "tracked.txt"),
+        "utf8",
+      ),
+    ).toBe("base\n");
+    expect(readFileSync(path.join(repo, "tracked.txt"), "utf8")).toBe(
+      "human WIP\n",
+    );
+    expect(readFileSync(path.join(repo, "notes.txt"), "utf8")).toBe(
+      "keep me\n",
+    );
+    expect(
+      git(localWorktreePath(runRoot), ["branch", "--show-current"]).trim(),
+    ).toBe("");
   });
 
   it("reuses the same checkout for the session's next turn", () => {
@@ -60,7 +83,11 @@ describe("prepareLocalWorktree", () => {
       baseBranch: "main",
       workBranch: "minddy/run-1",
     });
-    expect(result).toEqual({ ok: true, path: localWorktreePath(runRoot), reused: true });
+    expect(result).toEqual({
+      ok: true,
+      path: localWorktreePath(runRoot),
+      reused: true,
+    });
   });
 
   it("checks out a provider pull-request ref in an isolated review worktree", () => {
@@ -91,12 +118,86 @@ describe("prepareLocalWorktree", () => {
       path: localWorktreePath(reviewRunRoot),
       reused: false,
     });
-    expect(git(localWorktreePath(reviewRunRoot), ["rev-parse", "HEAD"]).trim()).toBe(review);
+    expect(
+      git(localWorktreePath(reviewRunRoot), ["rev-parse", "HEAD"]).trim(),
+    ).toBe(review);
     expect(
       git(localWorktreePath(reviewRunRoot), ["rev-parse", PR_BASE_TAG]).trim(),
     ).toBe(base);
     expect(() => git(repo, ["rev-parse", "--verify", PR_BASE_TAG])).toThrow();
-    expect(readFileSync(path.join(repo, "tracked.txt"), "utf8")).toBe("human WIP\n");
+    expect(readFileSync(path.join(repo, "tracked.txt"), "utf8")).toBe(
+      "human WIP\n",
+    );
+  });
+
+  it("preserves a committed review tip when the previous push did not bind a branch", () => {
+    const base = git(repo, ["rev-parse", "HEAD"]).trim();
+    const review = git(repo, [
+      "commit-tree",
+      `${base}^{tree}`,
+      "-p",
+      base,
+      "-m",
+      "review head",
+    ]).trim();
+    git(repo, ["update-ref", "refs/pull/8/head", review]);
+    const reviewRunRoot = path.join(root, "agent-runs", "review-retry");
+    const input = {
+      sourceRepo: repo,
+      runRoot: reviewRunRoot,
+      baseBranch: "main",
+      workBranch: "minddy/review-8",
+      checkoutRef: "refs/pull/8/head",
+      checkoutBaseSha: base,
+      authUrl: repo,
+    };
+
+    expect(prepareLocalWorktree(input).ok).toBe(true);
+    const worktree = localWorktreePath(reviewRunRoot);
+    writeFileSync(path.join(worktree, "tracked.txt"), "agent change\n");
+    git(worktree, ["add", "tracked.txt"]);
+    git(worktree, ["commit", "-m", "agent change"]);
+    const committedTip = git(worktree, ["rev-parse", "HEAD"]).trim();
+
+    expect(prepareLocalWorktree(input)).toEqual({
+      ok: true,
+      path: worktree,
+      reused: true,
+    });
+    expect(git(worktree, ["rev-parse", "HEAD"]).trim()).toBe(committedTip);
+    expect(readFileSync(path.join(worktree, "tracked.txt"), "utf8")).toBe(
+      "agent change\n",
+    );
+    expect(git(worktree, ["rev-parse", PR_BASE_TAG]).trim()).toBe(base);
+  });
+
+  it("restores the review base when resuming from an existing delivery branch", () => {
+    const base = git(repo, ["rev-parse", "HEAD"]).trim();
+    const branchTip = git(repo, [
+      "commit-tree",
+      `${base}^{tree}`,
+      "-p",
+      base,
+      "-m",
+      "delivery branch",
+    ]).trim();
+    const workBranch = "minddy/review-resume";
+    git(repo, ["update-ref", `refs/heads/${workBranch}`, branchTip]);
+    const reviewRunRoot = path.join(root, "agent-runs", "review-resume");
+
+    const result = prepareLocalWorktree({
+      sourceRepo: repo,
+      runRoot: reviewRunRoot,
+      baseBranch: "main",
+      workBranch,
+      checkoutBaseSha: base,
+      authUrl: repo,
+    });
+
+    expect(result.ok).toBe(true);
+    const worktree = localWorktreePath(reviewRunRoot);
+    expect(git(worktree, ["rev-parse", "HEAD"]).trim()).toBe(branchTip);
+    expect(git(worktree, ["rev-parse", PR_BASE_TAG]).trim()).toBe(base);
   });
 
   it("fails when an explicit pull-request ref cannot be fetched", () => {

@@ -202,6 +202,10 @@ const h = {
   /** The diff that `git diff` renders — empty except when a test wants to put a
    * secret (MIN-360: the scan that refuses the push). */
   diff: "",
+  /** Paths changed from the turn baseline, as `git diff --name-only` reports. */
+  changedPaths: ["a.ts"] as string[],
+  /** Working-tree status returned by Git. */
+  porcelain: " M a.ts\n",
   /** The conventions files present at the root of the repository (MIN-360). */
   repoInstructions: [] as string[],
   /** Optional working-tree contents keyed by convention path. */
@@ -343,10 +347,22 @@ function host(layout = LAYOUT) {
         return { exitCode: 0, stdout: " M a.ts\0", stderr: "" };
       }
       if (command.includes("status --porcelain"))
-        return { exitCode: 0, stdout: " M a.ts\n", stderr: "" };
+        return { exitCode: 0, stdout: h.porcelain, stderr: "" };
       if (command.includes("push") && !h.pushed) {
         return { exitCode: 1, stdout: "", stderr: "remote rejected" };
       }
+      if (command.includes("diff --numstat"))
+        return {
+          exitCode: 0,
+          stdout: h.changedPaths.map((path) => `1\t0\t${path}`).join("\n"),
+          stderr: "",
+        };
+      if (command.includes("diff --name-only"))
+        return {
+          exitCode: 0,
+          stdout: h.changedPaths.join("\n"),
+          stderr: "",
+        };
       if (command.includes("diff"))
         return { exitCode: 0, stdout: h.diff, stderr: "" };
       return { exitCode: 0, stdout: "", stderr: "" };
@@ -649,6 +665,8 @@ beforeEach(() => {
   h.toolCalls = [];
   h.exec = [];
   h.diff = "";
+  h.changedPaths = ["a.ts"];
+  h.porcelain = " M a.ts\n";
   h.repoInstructions = [];
   h.repoInstructionContents = {};
   h.prBaseInstructions = [];
@@ -1164,6 +1182,16 @@ describe("le tour", () => {
     expect(report.workBranch).toBe("minddy/agent/min-42-abcd1234");
   });
 
+  it("does not push an unchanged writable pull-request checkout", async () => {
+    h.changedPaths = [];
+    h.porcelain = "";
+
+    const report = await run({ writesToRepo: true, anchor: "pr" });
+
+    expect(report.pushed).toBeNull();
+    expect(h.exec.some((command) => command.includes("git push"))).toBe(false);
+  });
+
   it("ne pousse RIEN sur une session de relecture", async () => {
     const report = await run({ writesToRepo: false, anchor: "pr" });
     expect(report.pushed).toBeNull();
@@ -1371,9 +1399,7 @@ describe("les garde-fous", () => {
       id: "per_task_1",
       reply: "reject",
     });
-    expect(h.permissionReplies[0].message).toContain(
-      "At most 0 sub-agents",
-    );
+    expect(h.permissionReplies[0].message).toContain("At most 0 sub-agents");
   });
 
   it("caps parallel delegation bursts before children are registered", async () => {
@@ -1401,9 +1427,7 @@ describe("les garde-fous", () => {
     expect(h.permissionReplies.slice(0, 3).map((reply) => reply.reply)).toEqual(
       ["once", "once", "reject"],
     );
-    expect(h.permissionReplies[2].message).toContain(
-      "At most 2 sub-agents",
-    );
+    expect(h.permissionReplies[2].message).toContain("At most 2 sub-agents");
   });
 
   it("auto-grants shell commands without parsing their intent", async () => {

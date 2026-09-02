@@ -48,37 +48,52 @@ export function prepareLocalWorktree(opts: {
     git(source, ["worktree", "prune"]);
     const registered = git(source, ["worktree", "list", "--porcelain"])
       .split("\n")
-      .some((line) => line.startsWith("worktree ") && path.resolve(line.slice(9)) === wanted);
+      .some(
+        (line) =>
+          line.startsWith("worktree ") &&
+          path.resolve(line.slice(9)) === wanted,
+      );
     if (registered) {
-      // Ordinary implementation runs keep their detached local tip between
-      // turns. Only a review ref is immutable input that should be reseeded.
-      if (opts.checkoutRef?.trim()) prepareReviewRefs(destination, opts);
+      // A failed push leaves a committed tip in this worktree while the server
+      // still has no branch_name. Re-checking out checkoutRef here would discard
+      // that recoverable work. Only repair the independent review-base anchor.
+      prepareReviewBase(destination, opts);
       return { ok: true, path: destination, reused: true };
     }
     if (existsSync(destination)) {
       return {
         ok: false,
-        message: "The isolated worktree folder already exists but is not registered by Git.",
+        message:
+          "The isolated worktree folder already exists but is not registered by Git.",
       };
     }
 
     mkdirSync(path.dirname(destination), { recursive: true });
-    const base = localBaseRef(source, opts.runRoot, opts.baseBranch, opts.authUrl);
+    const base = localBaseRef(
+      source,
+      opts.runRoot,
+      opts.baseBranch,
+      opts.authUrl,
+    );
     git(source, ["worktree", "add", "--detach", destination, base]);
 
     // A resumed session may have already pushed its branch from another
     // machine. Resume this tip is the local counterpart of `cloneRepo`; the absence
     // branch is normal for the first round and leaves the base checkouted.
-    prepareReviewRefs(destination, opts);
+    prepareReviewCheckout(destination, opts);
+    prepareReviewBase(destination, opts);
     return { ok: true, path: destination, reused: false };
   } catch {
     // Raw git diagnostics may contain the authenticated URL. THE
     // launcher log therefore only receives a pattern without secrets.
-    return { ok: false, message: "Git could not create the isolated worktree." };
+    return {
+      ok: false,
+      message: "Git could not create the isolated worktree.",
+    };
   }
 }
 
-function prepareReviewRefs(
+function prepareReviewCheckout(
   destination: string,
   opts: {
     workBranch: string;
@@ -92,14 +107,29 @@ function prepareReviewRefs(
   const checkoutRef = requiredCheckoutRef || opts.workBranch.trim();
 
   if (requiredCheckoutRef) {
-    if (!authUrl) throw new Error("A pull-request checkout requires a remote URL");
+    if (!authUrl)
+      throw new Error("A pull-request checkout requires a remote URL");
     git(destination, ["fetch", "--quiet", authUrl, requiredCheckoutRef]);
     git(destination, ["checkout", "--detach", "FETCH_HEAD"]);
   } else if (authUrl && checkoutRef) {
-    const fetched = tryGit(destination, ["fetch", "--quiet", authUrl, checkoutRef]);
+    const fetched = tryGit(destination, [
+      "fetch",
+      "--quiet",
+      authUrl,
+      checkoutRef,
+    ]);
     if (fetched) git(destination, ["checkout", "--detach", "FETCH_HEAD"]);
   }
+}
 
+function prepareReviewBase(
+  destination: string,
+  opts: {
+    checkoutBaseSha?: string;
+    authUrl?: string;
+  },
+): void {
+  const authUrl = opts.authUrl?.trim();
   const baseSha = opts.checkoutBaseSha?.trim() ?? "";
   if (!authUrl || !/^[0-9a-f]{7,64}$/i.test(baseSha)) return;
   if (tryGit(destination, ["fetch", "--quiet", authUrl, baseSha])) {
@@ -107,10 +137,14 @@ function prepareReviewRefs(
     // pseudoref lives in this worktree's own Git directory instead, so parallel
     // local reviews cannot overwrite one another or alter the attached checkout.
     const gitDir = git(destination, ["rev-parse", "--git-dir"]).trim();
-    writeFileSync(path.join(path.resolve(destination, gitDir), PR_BASE_TAG), `${baseSha}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    });
+    writeFileSync(
+      path.join(path.resolve(destination, gitDir), PR_BASE_TAG),
+      `${baseSha}\n`,
+      {
+        encoding: "utf8",
+        mode: 0o600,
+      },
+    );
   }
 }
 
@@ -130,7 +164,14 @@ function localBaseRef(
   const branch = baseBranch?.trim();
   if (!branch) return "HEAD";
   const localRef = `refs/heads/${branch}`;
-  if (tryGit(sourceRepo, ["rev-parse", "--verify", "--quiet", `${localRef}^{commit}`])) {
+  if (
+    tryGit(sourceRepo, [
+      "rev-parse",
+      "--verify",
+      "--quiet",
+      `${localRef}^{commit}`,
+    ])
+  ) {
     return localRef;
   }
   if (!authUrl?.trim()) return localRef;
