@@ -58,11 +58,12 @@ import { useSearchIndex } from "@/lib/use-search-index";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
-import { markDraftPage } from "@/lib/pages-draft";
+import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
 import {
   pageHref,
   pagesHref,
   pushPagesHistory,
+  replacePagesHistory,
 } from "@/lib/pages-navigation";
 import {
   useAgentSessionsQuery,
@@ -564,6 +565,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           const page = await createWikiPage({});
           markDraftPage(page.id);
           navigateToWikiPage(projectId, page.id);
+          void page.settled.catch((err: unknown) => {
+            forgetDraftPage(page.id);
+            if (window.location.pathname === pageHref(projectId, page.id)) {
+              replacePagesHistory(pagesHref(projectId));
+            }
+            toast.error(
+              err instanceof Error ? err.message : tPages("createFailed")
+            );
+          });
         } catch (err) {
           toast.error(
             err instanceof Error ? err.message : tPages("createFailed")

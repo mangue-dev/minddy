@@ -34,11 +34,12 @@ import { usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError } from "@/lib/pages-api";
 import { rememberLastPage } from "@/lib/pages-last-open";
-import { markDraftPage } from "@/lib/pages-draft";
+import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
 import {
   pageHref,
   pagesHref,
   pushPagesHistory,
+  replacePagesHistory,
 } from "@/lib/pages-navigation";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
@@ -90,11 +91,18 @@ export function PagesShell() {
         // is not saving it.
         markDraftPage(page.id);
         openPage(page.id);
+        void page.settled.catch((err: unknown) => {
+          forgetDraftPage(page.id);
+          if (window.location.pathname === pageHref(projectId, page.id)) {
+            replacePagesHistory(base);
+          }
+          toast.error(err instanceof Error ? err.message : t("createFailed"));
+        });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("createFailed"));
       }
     },
-    [createPage, openPage, t]
+    [base, createPage, openPage, projectId, t]
   );
 
   const move = useCallback(

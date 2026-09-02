@@ -126,4 +126,15 @@ describe("page interface regressions", () => {
     expect(activity).not.toContain('refetchOnMount: "always"');
     expect(backlinks).not.toContain('refetchOnMount: "always"');
   });
+
+  it("orders creation-dependent page work without persisting orphan links", () => {
+    const view = source("components/pages/page-view.tsx");
+    const pagesQuery = source("lib/use-pages-query.ts");
+
+    expect(view).toContain("await child.settled;");
+    expect(view).toContain("afterPageCreation(pageId");
+    expect(view).toContain("!isPageCreationPending(pageId)");
+    expect(pagesQuery).toContain("settled: request");
+    expect(pagesQuery).toContain("await waitForPageCreation(pageId)");
+  });
 });

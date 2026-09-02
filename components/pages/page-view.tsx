@@ -105,7 +105,12 @@ import {
   pageHref,
   pagesHref,
   pushPagesHistory,
+  replacePagesHistory,
 } from "@/lib/pages-navigation";
+import {
+  afterPageCreation,
+  isPageCreationPending,
+} from "@/lib/page-creation-settlement";
 import {
   usePageAutosave,
   type PageSaveState,
@@ -474,14 +479,25 @@ function PageSurface({
       // fades away. `takePending` is not called — there is nothing to write.
       if (blankRef.current()) {
         forgetDraftPage(pageId);
-        discardPageOnUnload(projectId, pageId);
+        afterPageCreation(pageId, () =>
+          discardPageOnUnload(projectId, pageId)
+        );
         return;
       }
       const patch = takePending();
-      if (patch) updatePageOnUnload(projectId, pageId, patch);
+      if (patch) {
+        afterPageCreation(pageId, () =>
+          updatePageOnUnload(projectId, pageId, patch)
+        );
+      }
     };
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") void flushRef.current();
+      if (
+        document.visibilityState === "hidden" &&
+        !isPageCreationPending(pageId)
+      ) {
+        void flushRef.current();
+      }
     };
     window.addEventListener("pagehide", onHide);
     document.addEventListener("visibilitychange", onVisibility);
@@ -534,6 +550,7 @@ function PageSurface({
       create: async () => {
         try {
           const child = await createPage({ parent_id: pageId });
+          await child.settled;
           return child.id;
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("createFailed"));
@@ -686,6 +703,13 @@ function PageSurface({
         try {
           const child = await createPage({ parent_id: parentId });
           markDraftPage(child.id);
+          void child.settled.catch((err: unknown) => {
+            forgetDraftPage(child.id);
+            if (window.location.pathname === pageHref(projectId, child.id)) {
+              replacePagesHistory(base);
+            }
+            toast.error(err instanceof Error ? err.message : t("createFailed"));
+          });
           void flushRef
             .current()
             .finally(() => openPage(child.id));
@@ -694,7 +718,7 @@ function PageSurface({
         }
       })();
     },
-    [createPage, openPage, t]
+    [base, createPage, openPage, projectId, t]
   );
 
   const toggleFavoriteFromMenu = useCallback(
