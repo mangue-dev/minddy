@@ -16,6 +16,9 @@ import {
 } from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 import type { HarnessLayout } from "./harness-layout";
+import { PR_BASE_TAG } from "./pr-refs";
+
+export { PR_BASE_TAG } from "./pr-refs";
 
 /**
  * Agent's HANDS on the repository — clone, read, edit, search, jobs
@@ -239,7 +242,7 @@ export async function cloneRepo(
  * untouched by the PR. `baseSha` is the base of the diff served by the FORGE
  * (`getMergeBaseSha`: the live merge base on GitHub, `diff_refs.base_sha` on
  * GitLab): we fetch it into the clone at depth 1 — one commit, under a second —
- * and mark it with the `PR_BASE_TAG` tag. From then on, `git diff pr-base` IS the
+ * and mark it with the `PR_BASE_TAG` ref. From then on, `git diff PR_BASE` IS the
  * pull request's change, and counts exactly the same files as the bootstrap's
  * "Files changed" list.
  *
@@ -248,8 +251,6 @@ export async function cloneRepo(
  * still runs — the prompt then describes the `origin/<base>` fallback and what
  * it means. A review that does not start costs more than a cautious review.
  */
-/** Tag marking the base of the forge-served diff in the review clone. */
-export const PR_BASE_TAG = "pr-base";
 export async function clonePullRequest(
   host: RepoHost,
   opts: {
@@ -261,7 +262,7 @@ export async function clonePullRequest(
     headBranch: string | null;
     /** Local name under which the head is checked out. */
     localBranch: string;
-    /** Base of the diff served by the forge, to mark as `pr-base` (see header). */
+    /** Base of the diff served by the forge, to mark as `PR_BASE` (see header). */
     baseSha?: string | null;
   },
 ): Promise<void> {
@@ -866,11 +867,11 @@ export async function readWorkFile(
  * A REVIEW session is checked out at the pull request HEAD, which on a fork
  * belongs to the PR author — that is, on a public repository, to anyone. Reading
  * repository instructions there would let a stranger write into the session's
- * system prompt. Only the BASE is authoritative, and that is what the `pr-base`
- * tag designates.
+ * system prompt. Only the BASE is authoritative, and that is what the `PR_BASE`
+ * ref designates.
  *
  * `git show` rather than a checkout: nothing moves in the tree, so the review's
- * `git diff pr-base` remains exactly the PR change. Returns null if the ref or
+ * `git diff PR_BASE` remains exactly the PR change. Returns null if the ref or
  * path does not exist — a normal case (no `AGENTS.md`, or the base anchor was not
  * fetched), and a review without conventions is better than one using the
  * attacker's conventions.

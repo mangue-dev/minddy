@@ -821,6 +821,27 @@ export async function executeAgentRun(
         prompt: run.prompt,
         branchPrefix,
       });
+    // Use the forge's merge base for both cloud and local review checkouts. The
+    // live base branch may have moved since the pull request was opened and is
+    // therefore not a trustworthy review boundary.
+    const prBaseShaPromise =
+      prRun && !run.branch_name
+        ? forge!
+            .getMergeBaseSha({
+              token: target!.token,
+              repoFullName: target!.repoFullName,
+              number: prRun.number,
+              base: baseBranch,
+              head: prRun.headSha ?? prRun.headBranch ?? "",
+            })
+            .catch((err: unknown) => {
+              console.error(
+                `[agent] merge base unreadable for PR #${prRun.number}:`,
+                err,
+              );
+              return null;
+            })
+        : Promise.resolve(null);
 
     /**
      * REMAINING usage budget at chunk entry. Snapshotted once here: the loop compares
@@ -989,21 +1010,7 @@ export async function executeAgentRun(
               // deletion from the PR. Best-effort on both sides — an unreadable merge
               // base degrades the review but does not cancel it. The head is given by
               // its SHA: on a fork, its branch name does not exist here.
-              const baseSha = await forge!
-                .getMergeBaseSha({
-                  token: target!.token,
-                  repoFullName: target!.repoFullName,
-                  number: prRun.number,
-                  base: baseBranch,
-                  head: prRun.headSha ?? prRun.headBranch ?? "",
-                })
-                .catch((err: unknown) => {
-                  console.error(
-                    `[agent] merge base unreadable for PR #${prRun.number}:`,
-                    err,
-                  );
-                  return null;
-                });
+              const baseSha = await prBaseShaPromise;
               await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
                 authUrl: sandboxRepoUrl,
                 baseBranch,
@@ -1320,7 +1327,7 @@ export async function executeAgentRun(
       //
       // THE ANCHOR DECIDES THE SOURCE (MIN-328): during a review, the clone is at
       // the pull request HEAD — the author's repository, not the project repository.
-      // Instructions are then read at the base (`pr-base`), or not at all.
+      // Instructions are then read at the base (`PR_BASE`), or not at all.
       // `prRun`, not `anchor`: the CLONE decides, and `prRun` makes us clone the
       // head (see `onCreate`).
       //
@@ -1608,6 +1615,7 @@ export async function executeAgentRun(
      * run row is reread on every control-plane call, which is why the journal lives
      * outside it.
      */
+    const prBaseSha = await prBaseShaPromise;
     const pointer = run.checkpoint?.opencode;
     const opencodeJournal = pointer?.sessionId
       ? {
@@ -1698,7 +1706,10 @@ export async function executeAgentRun(
       // A review starts from the provider's virtual PR ref, including fork
       // heads, but delivers changes to the run's ordinary writable branch.
       ...(prRun && !run.branch_name
-        ? { checkoutRef: pullRequestHeadRef(prRun.provider, prRun.number) }
+        ? {
+            checkoutRef: pullRequestHeadRef(prRun.provider, prRun.number),
+            ...(prBaseSha ? { checkoutBaseSha: prBaseSha } : {}),
+          }
         : {}),
       // A first turn whose branch has not yet been stamped cannot exist on the
       // remote. The harness can start directly from HEAD instead of paying for a

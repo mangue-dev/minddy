@@ -399,6 +399,10 @@ export async function runAssignment(
           typeof assignment.job.checkoutRef === "string"
             ? assignment.job.checkoutRef
             : undefined,
+        checkoutBaseSha:
+          typeof assignment.job.checkoutBaseSha === "string"
+            ? assignment.job.checkoutBaseSha
+            : undefined,
         authUrl: assignment.job.authUrl,
       })
     : null;

@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
+import { PR_BASE_TAG } from "../server/agent/pr-refs";
 
 /**
  * CHECKOUT ISOLATED FROM A LOCAL TOWER.
@@ -33,6 +35,7 @@ export function prepareLocalWorktree(opts: {
   baseBranch?: string | null;
   workBranch: string;
   checkoutRef?: string;
+  checkoutBaseSha?: string;
   authUrl?: string;
 }): LocalWorktreeResult {
   const destination = localWorktreePath(opts.runRoot);
@@ -47,6 +50,9 @@ export function prepareLocalWorktree(opts: {
       .split("\n")
       .some((line) => line.startsWith("worktree ") && path.resolve(line.slice(9)) === wanted);
     if (registered) {
+      // Ordinary implementation runs keep their detached local tip between
+      // turns. Only a review ref is immutable input that should be reseeded.
+      if (opts.checkoutRef?.trim()) prepareReviewRefs(destination, opts);
       return { ok: true, path: destination, reused: true };
     }
     if (existsSync(destination)) {
@@ -63,16 +69,48 @@ export function prepareLocalWorktree(opts: {
     // A resumed session may have already pushed its branch from another
     // machine. Resume this tip is the local counterpart of `cloneRepo`; the absence
     // branch is normal for the first round and leaves the base checkouted.
-    const checkoutRef = opts.checkoutRef?.trim() || opts.workBranch.trim();
-    if (opts.authUrl?.trim() && checkoutRef) {
-      const fetched = tryGit(destination, ["fetch", "--quiet", opts.authUrl, checkoutRef]);
-      if (fetched) git(destination, ["checkout", "--detach", "FETCH_HEAD"]);
-    }
+    prepareReviewRefs(destination, opts);
     return { ok: true, path: destination, reused: false };
   } catch {
     // Raw git diagnostics may contain the authenticated URL. THE
     // launcher log therefore only receives a pattern without secrets.
     return { ok: false, message: "Git could not create the isolated worktree." };
+  }
+}
+
+function prepareReviewRefs(
+  destination: string,
+  opts: {
+    workBranch: string;
+    checkoutRef?: string;
+    checkoutBaseSha?: string;
+    authUrl?: string;
+  },
+): void {
+  const authUrl = opts.authUrl?.trim();
+  const requiredCheckoutRef = opts.checkoutRef?.trim();
+  const checkoutRef = requiredCheckoutRef || opts.workBranch.trim();
+
+  if (requiredCheckoutRef) {
+    if (!authUrl) throw new Error("A pull-request checkout requires a remote URL");
+    git(destination, ["fetch", "--quiet", authUrl, requiredCheckoutRef]);
+    git(destination, ["checkout", "--detach", "FETCH_HEAD"]);
+  } else if (authUrl && checkoutRef) {
+    const fetched = tryGit(destination, ["fetch", "--quiet", authUrl, checkoutRef]);
+    if (fetched) git(destination, ["checkout", "--detach", "FETCH_HEAD"]);
+  }
+
+  const baseSha = opts.checkoutBaseSha?.trim() ?? "";
+  if (!authUrl || !/^[0-9a-f]{7,64}$/i.test(baseSha)) return;
+  if (tryGit(destination, ["fetch", "--quiet", authUrl, baseSha])) {
+    // Tags and ordinary refs are shared by every linked worktree. An uppercase
+    // pseudoref lives in this worktree's own Git directory instead, so parallel
+    // local reviews cannot overwrite one another or alter the attached checkout.
+    const gitDir = git(destination, ["rev-parse", "--git-dir"]).trim();
+    writeFileSync(path.join(path.resolve(destination, gitDir), PR_BASE_TAG), `${baseSha}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
   }
 }
 

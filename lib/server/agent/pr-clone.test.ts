@@ -13,7 +13,7 @@ import { cloudLayout } from "./harness-layout";
  * base: a commit merged into it since the opening of the PR comes out REVERSED, and
  * the reread publicly commented it as a removal of the PR. On
  * therefore brings the base of the diff served by the forge into the clone (a commit, at
- * depth 1) and we mark it `pr-base`.
+ * depth 1) and we mark it with the stable review-base ref.
  *
  * The setting is a `RepoHost` in memory which does not execute anything: what matters here
  * is the SEQUENCE of commands issued, and the fact that an anchor failure does not cause
@@ -48,8 +48,8 @@ const BASE = {
 
 const SHA = "9a1f0c2e5b7d4a3f8e6c1b0d9a8f7e6c5b4a3d2e";
 
-describe("clonePullRequest — l'ancre du diff", () => {
-  it("amène la base de la forge à profondeur 1 et la marque `pr-base`", async () => {
+describe("clonePullRequest — diff anchor", () => {
+  it("fetches the forge base at depth 1 and marks the stable review ref", async () => {
     const { host, commands } = fakeHost();
     await clonePullRequest(host, { ...BASE, baseSha: SHA });
 

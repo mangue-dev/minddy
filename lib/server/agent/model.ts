@@ -215,11 +215,10 @@ export const PR_REVIEW_MODEL_CONFIG_KEY = "pr_review_model";
  * The model which will reread, in three steps: what was chosen FOR THIS
  * SESSION, otherwise the last choice of the account, otherwise the default of the instance.
  *
- * The catalog is that of the OpenRouter platform key in the three cases — the
- * review runs on it, including for a BYOK account (a native `gpt-…` id would not
- * would be routable). It is therefore ALWAYS paid on the minddy quota, which also subjects it to the model ceiling of the plan - hence `chosenByUser`: the ceiling
- * concerns the first two stages (a model named by someone), never on
- * the third. The instance default is deliberately worth an expensive model, and running into it would leave a Go account with no path to a review.
+ * The first two stages are explicit user choices and therefore remain subject
+ * to the plan ceiling. The instance default is not: launch maps that fallback
+ * to the active BYOK provider when needed, so a native endpoint never receives
+ * an incompatible OpenRouter model identifier.
  */
 export async function resolvePrReviewModel(opts: {
   perCall?: string | null;

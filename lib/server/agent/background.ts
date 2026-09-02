@@ -232,7 +232,12 @@ export function backgroundStartScript(
     `if command -v setsid >/dev/null 2>&1; then`,
     `  setsid sh -c ${sq(inner)} minddy-background ${argv} > ${sq(p.log)} 2>&1 < /dev/null &`,
     `else`,
-    `  sh -c ${sq(inner)} minddy-background ${argv} > ${sq(p.log)} 2>&1 < /dev/null &`,
+    `  if set -m 2>/dev/null; then`,
+    `    sh -c ${sq(inner)} minddy-background ${argv} > ${sq(p.log)} 2>&1 < /dev/null &`,
+    `  else`,
+    `    echo "Could not create a process group for the background job" >&2`,
+    `    exit 1`,
+    `  fi`,
     `fi`,
     // The job writes its PID on its first line: a few tenths of a second is enough.
     `i=0`,

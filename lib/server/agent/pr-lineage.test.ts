@@ -38,6 +38,9 @@ const h = vi.hoisted(() => ({
   livePr: null as Record<string, unknown> | null,
   agentModelCalls: [] as Array<Record<string, unknown>>,
   reviewModelCalls: [] as Array<Record<string, unknown>>,
+  quotaMode: "platform" as "platform" | "byok",
+  byok: null as Record<string, unknown> | null,
+  byokDefaultModelCalls: [] as Array<[string, string]>,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -109,17 +112,21 @@ vi.mock("@/lib/server/git/repo-links", () => ({
 }));
 
 vi.mock("./quota", () => ({
-  checkAgentQuota: vi.fn(async () => ({
-    allowed: true,
-    mode: "platform",
-    cap: 5,
-    periodStart: "2026-08-01T00:00:00.000Z",
-  })),
+  checkAgentQuota: vi.fn(async () =>
+    h.quotaMode === "byok"
+      ? { allowed: true, mode: "byok", cap: null, periodStart: null }
+      : {
+          allowed: true,
+          mode: "platform",
+          cap: 5,
+          periodStart: "2026-08-01T00:00:00.000Z",
+        },
+  ),
 }));
 
 vi.mock("./model", () => ({
   AgentModelRequiredError: class AgentModelRequiredError extends Error {},
-  getUserByok: vi.fn(async () => null),
+  getUserByok: vi.fn(async () => h.byok),
   resolveAgentModel: vi.fn(async (input: Record<string, unknown>) => {
     h.agentModelCalls.push(input);
     return { model: "model/agent", chosenByUser: false };
@@ -128,6 +135,13 @@ vi.mock("./model", () => ({
   resolvePrReviewModel: vi.fn(async (input: Record<string, unknown>) => {
     h.reviewModelCalls.push(input);
     return { model: "model/review", chosenByUser: false };
+  }),
+}));
+
+vi.mock("@/lib/server/ai-runtime", () => ({
+  resolveByokFeatureDefaultModel: vi.fn(async (provider: string, modelKey: string) => {
+    h.byokDefaultModelCalls.push([provider, modelKey]);
+    return "gpt-5.6-sol";
   }),
 }));
 
@@ -163,6 +177,9 @@ beforeEach(() => {
   h.activePr = null;
   h.agentModelCalls = [];
   h.reviewModelCalls = [];
+  h.quotaMode = "platform";
+  h.byok = null;
+  h.byokDefaultModelCalls = [];
   h.pr = {
     id: PR_ID,
     provider: "github",
@@ -312,5 +329,34 @@ describe("a pull-request review session", () => {
       { perCall: undefined, userId: USER_ID },
     ]);
     expect(h.agentModelCalls).toEqual([]);
+  });
+
+  it("uses a provider-compatible default review model for BYOK", async () => {
+    h.quotaMode = "byok";
+    h.byok = {
+      provider: "openai",
+      apiKey: "user-key",
+      baseUrl: "https://api.openai.com/v1",
+      enabledSurfaces: ["agent"],
+      featureModels: {},
+    };
+
+    const result = await launchAgentRun({
+      pullRequestId: PR_ID,
+      userId: USER_ID,
+      triggeredBy: "button",
+      localExec: true,
+      localIssueContextConfirmed: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(h.created[0]).toMatchObject({
+      pullRequestId: PR_ID,
+      model: "gpt-5.6-sol",
+      keyMode: "byok",
+    });
+    expect(h.byokDefaultModelCalls).toEqual([
+      ["openai", "pr_review_model"],
+    ]);
   });
 });

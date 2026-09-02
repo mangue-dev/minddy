@@ -6,13 +6,17 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { localWorktreePath, prepareLocalWorktree } from "./local-worktree";
+import { PR_BASE_TAG } from "../server/agent/pr-refs";
 
 let root = "";
 let repo = "";
 let runRoot = "";
 
 function git(cwd: string, args: string[]): string {
-  return execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
+  return execFileSync("git", ["-C", cwd, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 }
 
 beforeAll(() => {
@@ -25,7 +29,7 @@ beforeAll(() => {
   writeFileSync(path.join(repo, "tracked.txt"), "base\n");
   git(repo, ["add", "tracked.txt"]);
   git(repo, ["commit", "-m", "base"]);
-  // The decor that counts: this checkout carries uncommitted work.
+  // The important setup detail: this checkout carries uncommitted work.
   writeFileSync(path.join(repo, "tracked.txt"), "human WIP\n");
   writeFileSync(path.join(repo, "notes.txt"), "keep me\n");
 });
@@ -35,7 +39,7 @@ afterAll(() => {
 });
 
 describe("prepareLocalWorktree", () => {
-  it("crée un checkout détaché par run sans prendre le WIP du dépôt attaché", () => {
+  it("creates a detached checkout without taking the attached repository's WIP", () => {
     const result = prepareLocalWorktree({
       sourceRepo: repo,
       runRoot,
@@ -49,7 +53,7 @@ describe("prepareLocalWorktree", () => {
     expect(git(localWorktreePath(runRoot), ["branch", "--show-current"]).trim()).toBe("");
   });
 
-  it("réutilise le même checkout pour le tour suivant de la session", () => {
+  it("reuses the same checkout for the session's next turn", () => {
     const result = prepareLocalWorktree({
       sourceRepo: repo,
       runRoot,
@@ -78,6 +82,7 @@ describe("prepareLocalWorktree", () => {
       baseBranch: "main",
       workBranch: "minddy/review-7",
       checkoutRef: "refs/pull/7/head",
+      checkoutBaseSha: base,
       authUrl: repo,
     });
 
@@ -87,6 +92,28 @@ describe("prepareLocalWorktree", () => {
       reused: false,
     });
     expect(git(localWorktreePath(reviewRunRoot), ["rev-parse", "HEAD"]).trim()).toBe(review);
+    expect(
+      git(localWorktreePath(reviewRunRoot), ["rev-parse", PR_BASE_TAG]).trim(),
+    ).toBe(base);
+    expect(() => git(repo, ["rev-parse", "--verify", PR_BASE_TAG])).toThrow();
     expect(readFileSync(path.join(repo, "tracked.txt"), "utf8")).toBe("human WIP\n");
+  });
+
+  it("fails when an explicit pull-request ref cannot be fetched", () => {
+    const missingRefRunRoot = path.join(root, "agent-runs", "review-missing");
+
+    const result = prepareLocalWorktree({
+      sourceRepo: repo,
+      runRoot: missingRefRunRoot,
+      baseBranch: "main",
+      workBranch: "minddy/review-missing",
+      checkoutRef: "refs/pull/404/head",
+      authUrl: repo,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message: "Git could not create the isolated worktree.",
+    });
   });
 });

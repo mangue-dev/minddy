@@ -100,6 +100,10 @@ describe("a job's lifecycle shell", () => {
       "/vercel/sandbox/tool-output",
     );
     expect(script).toContain("setsid sh -c");
+    expect(script).toContain("if set -m 2>/dev/null; then");
+    expect(script).toContain(
+      "Could not create a process group for the background job",
+    );
     // stdin closed: a job waiting for an entry would die instead of holding the
     // microVM; stdout/stderr in the log, otherwise the launcher would wait for its end.
     expect(script).toMatch(
@@ -138,7 +142,7 @@ describe("a job's lifecycle shell", () => {
     expect(script).toContain("echo $? >");
   });
 
-  it("sonde à partir de l'offset, borne l'incrément par la queue", () => {
+  it("probes from the offset and caps the incremental output from the tail", () => {
     const script = backgroundProbeScript(paths, 4242, 100, 32_000);
     expect(script).toContain("tail -c +101");
     expect(script).toContain("head -c $((size - 100))");
@@ -148,9 +152,9 @@ describe("a job's lifecycle shell", () => {
     );
   });
 
-  it("juge la vie du job sur son ÉTAT, pas sur `kill -0` (les zombies de la microVM)", () => {
-    // Le PID 1 de la microVM ne moissonne pas : un job mort y reste ZOMBIE, et
-    // `kill -0` succeeds for it—a crashed server would be reported as “running”.
+  it("checks job liveness from its STATE instead of `kill -0`", () => {
+    // The microVM's PID 1 does not reap children: a dead job remains a ZOMBIE,
+    // and `kill -0` succeeds for it, so a crashed server would appear to be running.
     for (const script of [
       backgroundProbeScript(paths, 4242, 0, 100),
       backgroundStopScript(4242),
@@ -161,7 +165,7 @@ describe("a job's lifecycle shell", () => {
     }
   });
 
-  it("arrête le GROUPE quand le PID en est le chef, jamais le nôtre sinon", () => {
+  it("stops the process GROUP only when the PID is its leader", () => {
     const script = backgroundStopScript(4242);
     expect(script).toContain("ps -o pgid= -p 4242");
     expect(script).toContain(
@@ -174,8 +178,8 @@ describe("a job's lifecycle shell", () => {
   });
 });
 
-describe("lecture de la sonde", () => {
-  it("sépare l'en-tête du log, même si le log contient l'en-tête", () => {
+describe("probe parsing", () => {
+  it("separates the header from the log even when the log contains the header", () => {
     const stdout = `${BACKGROUND_PROBE_HEADER} 120 1 -\nready\n${BACKGROUND_PROBE_HEADER} fake\n`;
     const read = parseBackgroundProbe(stdout, {
       offset: 100,
@@ -188,7 +192,7 @@ describe("lecture de la sonde", () => {
     expect(read.skippedBytes).toBe(0);
   });
 
-  it("rend le code de sortie d'un job terminé, et compte ce qui a été sauté", () => {
+  it("returns a completed job's exit code and counts skipped bytes", () => {
     const read = parseBackgroundProbe(
       `${BACKGROUND_PROBE_HEADER} 90000 0 1\nboom\n`,
       {
@@ -201,7 +205,7 @@ describe("lecture de la sonde", () => {
     expect(read.skippedBytes).toBe(58_000);
   });
 
-  it("ne prête pas de code de sortie à un job vivant", () => {
+  it("does not assign an exit code to a running job", () => {
     const read = parseBackgroundProbe(
       `${BACKGROUND_PROBE_HEADER} 10 1 0\nhi\n`,
       {
@@ -212,7 +216,7 @@ describe("lecture de la sonde", () => {
     expect(read.exitCode).toBeNull();
   });
 
-  it("lève si la sonde n'a pas répondu (microVM partie)", () => {
+  it("throws when the probe did not respond", () => {
     expect(() =>
       parseBackgroundProbe("sh: 1: kill: not found\n", {
         offset: 0,
@@ -301,8 +305,8 @@ describe("run_background — static command boundary", () => {
   });
 });
 
-describe("run_background — plafond de jobs", () => {
-  it(`refuse au-delà de ${MAX_BACKGROUND_JOBS} jobs vivants, en nommant ceux qui tournent`, async () => {
+describe("run_background — job ceiling", () => {
+  it(`refuses more than ${MAX_BACKGROUND_JOBS} running jobs and names active jobs`, async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     for (let i = 0; i < MAX_BACKGROUND_JOBS; i++) {
@@ -318,7 +322,7 @@ describe("run_background — plafond de jobs", () => {
     expect(String(asRecord(out.result).error)).toContain("bg-1");
   });
 
-  it("libère la place dès qu'un job est arrêté", async () => {
+  it("releases a slot as soon as a job stops", async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     for (let i = 0; i < MAX_BACKGROUND_JOBS; i++) {
@@ -333,7 +337,7 @@ describe("run_background — plafond de jobs", () => {
     ).toBe(true);
   });
 
-  it("compte les slots AVANT de lancer : deux starts simultanés ne passent pas en double", async () => {
+  it("reserves slots before launch so concurrent starts cannot exceed the ceiling", async () => {
     const { runner, starts } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     // The tool-calls of a round go to Promise.all — the ceiling must hold.
@@ -347,8 +351,8 @@ describe("run_background — plafond de jobs", () => {
   });
 });
 
-describe("run_background — `check` renvoie l'incrément, pas tout depuis le début", () => {
-  it("ne rend que ce qui a été écrit depuis la sonde précédente", async () => {
+describe("run_background — incremental `check` output", () => {
+  it("returns only output written since the previous probe", async () => {
     const { runner, procs } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     await jobs.handle({ action: "start", command: "npm run dev" });
@@ -367,7 +371,7 @@ describe("run_background — `check` renvoie l'incrément, pas tout depuis le d�
     expect(String(asRecord(third.result).output)).toMatch(/nothing new/i);
   });
 
-  it("borne un watcher bavard et renvoie vers le log complet", async () => {
+  it("caps a noisy watcher and points to the complete log", async () => {
     const { runner, procs } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     await jobs.handle({ action: "start", command: "npm run watch" });
@@ -385,7 +389,7 @@ describe("run_background — `check` renvoie l'incrément, pas tout depuis le d�
     expect(String(asRecord(next.result).output)).toMatch(/nothing new/i);
   });
 
-  it("dit qu'un job est mort, avec son code de sortie (échec = `success` faux)", async () => {
+  it("reports a dead job with its exit code and a false success value", async () => {
     const { runner, procs } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     await jobs.handle({ action: "start", command: "npm run dev" });
@@ -400,7 +404,7 @@ describe("run_background — `check` renvoie l'incrément, pas tout depuis le d�
     expect(asRecord(out.result).exit_code).toBe(1);
     expect(asRecord(out.result).output).toContain("EADDRINUSE");
     expect(out.success).toBe(false);
-    // Un job mort ne tient plus de place.
+    // A dead job no longer occupies a slot.
     expect(jobs.liveCount()).toBe(0);
   });
 });
@@ -413,8 +417,8 @@ describe("run_background — `check` renvoie l'incrément, pas tout depuis le d�
  * that we hold ourselves — and sending it to `read_file`, a tool that does not exist
  * there.
  */
-describe("run_background — où lire le log complet, selon le moteur", () => {
-  it("envoie la boucle maison sur `read_file` / `grep`", async () => {
+describe("run_background — complete log location by engine", () => {
+  it("directs the built-in loop to `read_file` and `grep`", async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     const out = await jobs.handle({ action: "start", command: "npm run dev" });
@@ -423,7 +427,7 @@ describe("run_background — où lire le log complet, selon le moteur", () => {
     );
   });
 
-  it("envoie opencode sur son SHELL, jamais sur `read`", async () => {
+  it("directs OpenCode to its SHELL instead of `read`", async () => {
     const { runner, procs } = fakeRunner();
     const jobs = new BackgroundJobs(runner, 0, OPENCODE_BACKGROUND_LOG_NOTES);
     const started = await jobs.handle({
@@ -443,8 +447,8 @@ describe("run_background — où lire le log complet, selon le moteur", () => {
   });
 });
 
-describe("run_background — jobs d'un autre tour", () => {
-  it("explique qu'un job_id inconnu ne survit pas au tour", async () => {
+describe("run_background — jobs from another turn", () => {
+  it("explains that an unknown job ID does not survive the turn", async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     for (const action of ["check", "stop"] as const) {
@@ -456,14 +460,14 @@ describe("run_background — jobs d'un autre tour", () => {
     }
   });
 
-  it("numérote les jobs par tranche de continuation (pas de log écrasé)", async () => {
+  it("numbers jobs by continuation range so logs are not overwritten", async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs(runner, 2000);
     const out = await jobs.handle({ action: "start", command: "npm run dev" });
     expect(asRecord(out.result).job_id).toBe("bg-2001");
   });
 
-  it("refuse une action inconnue", async () => {
+  it("refuses an unknown action", async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     const out = await jobs.handle({ action: "write_stdin", job_id: "bg-1" });
@@ -474,8 +478,8 @@ describe("run_background — jobs d'un autre tour", () => {
   });
 });
 
-describe("run_background — fin de tour", () => {
-  it("tue tous les jobs vivants, une seule fois chacun", async () => {
+describe("run_background — end of turn", () => {
+  it("kills every running job exactly once", async () => {
     const { runner, procs } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
     await jobs.handle({ action: "start", command: "npm run dev" });
@@ -489,7 +493,7 @@ describe("run_background — fin de tour", () => {
     expect(procs.get("bg-1")!.killed).toBe(1);
   });
 
-  it("ne lève jamais, même si la microVM ne répond plus", async () => {
+  it("never throws even when the microVM no longer responds", async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs({
       ...runner,
@@ -501,7 +505,7 @@ describe("run_background — fin de tour", () => {
     await expect(jobs.stopAll()).resolves.toBe(1);
   });
 
-  it("remonte une erreur de lancement comme une erreur de tool", async () => {
+  it("reports a launch failure as a tool error", async () => {
     const { runner } = fakeRunner();
     const jobs = new BackgroundJobs({
       ...runner,

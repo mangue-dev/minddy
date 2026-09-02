@@ -351,7 +351,7 @@ type InstructionSource = "worktree" | "pr-base";
  * auto-discovery (MIN-360 and MIN-364).
  *
  * A write session uses the working tree. A pull-request review uses only the
- * trusted `pr-base` ref for both discovery and later reads (MIN-427). Discovering
+ * trusted `PR_BASE` ref for both discovery and later reads (MIN-427). Discovering
  * from the head would let a contributor add or delete a nested instruction file
  * and thereby change the privileged instruction document even if content reads
  * themselves were pinned to the base.
@@ -418,7 +418,7 @@ async function findInstructionFiles(
  * The wrapper labels repository instructions as project data rather than
  * privileged orders. The supervisor reads and caps the files itself because
  * OpenCode would otherwise load every named file in full on every round.
- * Pull-request reviews use `pr-base` throughout and never fall back to head.
+ * Pull-request reviews use the review-base source throughout and never fall back to head.
  */
 async function servedInstructionsFile(
   host: RepoHost,

@@ -14,15 +14,15 @@ import { cloudLayout } from "./harness-layout";
  * general conventions": a takeover of the prompt, offered to anyone
  * who knows how to open a pull request.
  *
- * Only the BASE is authoritative, and it is in the clone under the tag `pr-base`
- * (cf. `clonePullRequest`). No tag brought back → no instructions at all.
+ * Only the BASE is authoritative, and it is in the clone under the ref `PR_BASE`
+ * (cf. `clonePullRequest`). No ref brought back → no instructions at all.
  */
 
 /** The clone of a reread: a working tree (the head) and refs (the base). */
 function reviewHost(opts: {
   /** Working tree = HEAD of the PR: what the attacker controls. */
   head: Record<string, string>;
-  /** Content readable by `git show pr-base:<path>` — the base, or nothing. */
+  /** Content readable by `git show PR_BASE:<path>` — the base, or nothing. */
   base?: Record<string, string>;
 }): RepoHost & { commands: string[] } {
   const commands: string[] = [];

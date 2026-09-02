@@ -48,6 +48,7 @@ import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
 import { agentRunTitleSource } from "./run-title";
 import type { AssistantMention } from "@/lib/assistant-types";
+import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 
 /**
  * SINGLE entry point to start a COLD run (MIN-46 + MIN-68). Called by
@@ -490,7 +491,18 @@ export async function launchAgentRun(
           userId: input.userId,
           surface: aiSurface,
         });
-    model = resolved.model;
+    if (reviewPr && !resolved.chosenByUser && quota.mode === "byok" && byok) {
+      const providerModel =
+        byok.featureModels.pr_review_model?.trim() ||
+        (await resolveByokFeatureDefaultModel(
+          byok.provider,
+          "pr_review_model",
+        ));
+      if (!providerModel) throw new AgentModelRequiredError(byok.provider);
+      model = providerModel;
+    } else {
+      model = resolved.model;
+    }
     // Ceiling of the plan model (minddy quota only): it concerns what the user
     // CHOSE — not the defaults chosen by minddy itself, whose instance
     // answers. The picker is already graying these models; this refusal catches the case where the

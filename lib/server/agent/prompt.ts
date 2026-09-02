@@ -579,7 +579,7 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
  * the base, and any commit merged into it since the PR was opened shows
  * inverted, like a pull request delete. It contradicted in passing
  * the “Files changed” list served just above, which comes from the forge and
- * said nothing about it. The base to compare is therefore BROUGHT into the clone (tag `pr-base`,
+ * said nothing about it. The base to compare is therefore BROUGHT into the clone (ref `PR_BASE`,
  * cf. `clonePullRequest`), and what remains here is the fallback, said for what it
  * is worth: a diff which can carry commits which are not from the PR.
  */
@@ -616,7 +616,7 @@ This pull request is context, not a capability profile. You may inspect, edit, t
 - \`search_pages\` / \`list_pages\` / \`read_page\` — the project's WIKI, in markdown (search first when you are after a subject). Read it before calling a change wrong on style or structure: a convention written by the team is the standard here, and "this does not follow the convention" is only a finding if the convention exists.
 
 ## How to read the diff
-The repository is checked out on the pull request's head. The tag \`${PR_BASE_TAG}\` marks the commit the FORGE diffed from — so \`git diff ${PR_BASE_TAG}\` is this pull request's change, and it lists exactly the files the "Files changed" section of your context lists. So:
+The repository is checked out on the pull request's head. The ref \`${PR_BASE_TAG}\` marks the commit the FORGE diffed from — so \`git diff ${PR_BASE_TAG}\` is this pull request's change, and it lists exactly the files the "Files changed" section of your context lists. So:
 1. **Start with \`git diff ${PR_BASE_TAG}\`** and read it end to end. (The clone is shallow: this diff works, but three-dot diffs and deep \`git log\` have no common history to walk.)
    \`origin/<base>\` is NOT that anchor: it is the LIVE tip of the base branch, which may have moved since this pull request opened. A commit merged into the base since then shows up in \`git diff origin/<base>\` **inverted**, as if this pull request had reverted it — comment on that and you are blaming an author, publicly, for a change they did not make. Use \`origin/<base>\` only if \`git rev-parse -q --verify ${PR_BASE_TAG}\` comes back empty (the anchor could not be fetched); then the "Files changed" list is what defines the scope, a file in the diff but absent from that list comes from the base and not from this pull request (\`git log origin/<base> -1 -- <file>\` confirms it), and you leave it alone.
 2. **Then OPEN the code the diff does not show.** This is the part the diff cannot give you: the definition of a function whose call changed, the other callers of a signature that moved, the counterpart of a contract (the message catalogue behind a key, the consumer of a payload field, the migration behind a column). \`grep\` for the symbols the diff touches and read what comes back.
@@ -1180,7 +1180,7 @@ export function buildPrReviewContextMessage(input: {
   parts.push(
     `# ${term === "merge request" ? "Merge" : "Pull"} request #${pr.number} — ${pr.title?.trim() || "(untitled)"}\n\n` +
       `Repository **${repo.fullName}**, merging **${pr.headBranch ?? "(unknown head)"}** into **${pr.baseBranch}**.${stateNote}\n\n` +
-      `The repository in your sandbox is checked out on this ${term}'s head, and the tag \`${PR_BASE_TAG}\` marks the commit the forge diffed from. Start with \`git diff ${PR_BASE_TAG}\` — that, and not \`git diff origin/${pr.baseBranch}\`, is this ${term}'s change: \`origin/${pr.baseBranch}\` is the live tip of the base branch and can carry commits that are not part of this ${term}. Then open what the diff does not show.`,
+      `The repository in your sandbox is checked out on this ${term}'s head, and the ref \`${PR_BASE_TAG}\` marks the commit the forge diffed from. Start with \`git diff ${PR_BASE_TAG}\` — that, and not \`git diff origin/${pr.baseBranch}\`, is this ${term}'s change: \`origin/${pr.baseBranch}\` is the live tip of the base branch and can carry commits that are not part of this ${term}. Then open what the diff does not show.`,
   );
 
   const body = pr.body?.trim();

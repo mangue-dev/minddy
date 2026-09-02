@@ -280,6 +280,8 @@ export interface VmJob {
    * commits and pushes to `workBranch`; PR virtual refs are read-only inputs.
    */
   checkoutRef?: string;
+  /** Forge-provided merge base to expose as the trusted `PR_BASE` ref. */
+  checkoutBaseSha?: string;
   /**
    * Can the working branch already exist on the remote?
    *

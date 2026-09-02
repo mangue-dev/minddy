@@ -308,7 +308,7 @@ function host(layout = LAYOUT) {
           stderr: "",
         };
       }
-      const baseRead = /^git show 'pr-base:([^']+)'$/.exec(command.trim());
+      const baseRead = /^git show 'PR_BASE:([^']+)'$/.exec(command.trim());
       if (baseRead) {
         const path = baseRead[1];
         const content = h.prBaseInstructionContents[path];
@@ -677,7 +677,7 @@ function permissionFrame(
   });
 }
 
-describe("le décor, posé avant le premier octet de serveur", () => {
+describe("the environment prepared before the server's first byte", () => {
   it("écrit l'ancrage et les 32 tools de domaine hors du dépôt", async () => {
     await run();
     const anchor = h.files.find((f) => f.path === ANCHOR_FILE);
@@ -802,12 +802,12 @@ describe("le décor, posé avant le premier octet de serveur", () => {
     expect(
       h.exec.some(
         (command) =>
-          command.includes("git ls-tree") && command.includes("pr-base"),
+          command.includes("git ls-tree") && command.includes("PR_BASE"),
       ),
     ).toBe(true);
     expect(
       h.exec.some((command) =>
-        command.includes("git show 'pr-base:AGENTS.md'"),
+        command.includes("git show 'PR_BASE:AGENTS.md'"),
       ),
     ).toBe(true);
   });
