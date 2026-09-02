@@ -48,6 +48,22 @@ describe("buildAssistantBlocks", () => {
     expect(blocks.map((b) => b.kind)).toEqual(["message", "message"]);
   });
 
+  it("keeps reasoning as work while leaving the direct answer outside", () => {
+    const blocks = buildAssistantBlocks([
+      msg("u1", "user", "explain this"),
+      msg("a1", "assistant", "Here is the answer.", {
+        metadata: {
+          reasoning: { text: "I checked the context.", durationMs: 900 },
+        },
+      }),
+    ]);
+    const [turn] = turns(blocks);
+
+    expect(blocks.map((block) => block.kind)).toEqual(["message", "turn"]);
+    expect(turn.work).toEqual([]);
+    expect(turn.summary?.id).toBe("a1");
+  });
+
   it("replie le travail du tour et garde la réponse finale dehors", () => {
     const blocks = buildAssistantBlocks([
       msg("u1", "user", "crée un ticket"),

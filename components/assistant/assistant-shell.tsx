@@ -79,6 +79,8 @@ import {
 } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
+import { ReasoningBlock } from "@/components/agent/reasoning-block";
+import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
 
 const STARTERS = [
   {
@@ -437,7 +439,9 @@ export const AssistantShell = forwardRef<
       buildAssistantBlocks(state.messages, {
         active: isBusy || Boolean(activeAskUser),
         pendingWork:
-          state.activeToolCalls.length > 0 || state.streamingContent.length > 0,
+          state.activeToolCalls.length > 0 ||
+          state.streamingContent.length > 0 ||
+          Boolean(state.streamingReasoning),
       }),
     [
       state.messages,
@@ -445,6 +449,7 @@ export const AssistantShell = forwardRef<
       activeAskUser,
       state.activeToolCalls.length,
       state.streamingContent.length,
+      state.streamingReasoning,
     ]
   );
 
@@ -469,7 +474,9 @@ export const AssistantShell = forwardRef<
   const activeTurnHasWork =
     lastBlock?.kind === "turn" &&
     lastBlock.active &&
-    (lastBlock.work.length > 0 || state.activeToolCalls.length > 0);
+    (lastBlock.work.length > 0 ||
+      state.activeToolCalls.length > 0 ||
+      Boolean(state.streamingReasoning));
 
   const allToolCallsComplete =
     state.activeToolCalls.length > 0 &&
@@ -477,6 +484,7 @@ export const AssistantShell = forwardRef<
   const showThinking =
     isStreaming &&
     !state.streamingContent &&
+    !state.streamingReasoning &&
     (state.activeToolCalls.length === 0 || allToolCallsComplete) &&
     !activeTurnHasWork;
 
@@ -495,6 +503,19 @@ export const AssistantShell = forwardRef<
         showCopyButton={copyButtonIds.has(msg.id)}
       />
     );
+
+  const renderReasoning = (
+    id: string,
+    reasoning: ReturnType<typeof assistantMessageReasoning>,
+  ) =>
+    reasoning ? (
+      <ReasoningBlock
+        key={id}
+        active={false}
+        durationMs={reasoning.durationMs}
+        text={reasoning.text}
+      />
+    ) : null;
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-muted/30">
@@ -731,7 +752,14 @@ export const AssistantShell = forwardRef<
                     // under the accordion — where the final message will remain.
                     const streamingIsWork =
                       block.active && state.activeToolCalls.length > 0;
-                    const hasWork = block.work.length > 0 || streamingIsWork;
+                    const summaryReasoning = assistantMessageReasoning(
+                      block.summary,
+                    );
+                    const hasWork =
+                      block.work.length > 0 ||
+                      Boolean(summaryReasoning) ||
+                      Boolean(state.streamingReasoning) ||
+                      streamingIsWork;
                     return (
                       <div key={block.key} className="flex flex-col gap-3">
                         {hasWork && (
@@ -740,7 +768,26 @@ export const AssistantShell = forwardRef<
                             endedAt={block.endedAt}
                             active={block.active}
                           >
-                            {block.work.map((msg) => renderMessage(msg))}
+                            {block.work.map((msg) => (
+                              <div key={msg.id} className="flex flex-col gap-3">
+                                {renderReasoning(
+                                  `reasoning-${msg.id}`,
+                                  assistantMessageReasoning(msg),
+                                )}
+                                {renderMessage(msg)}
+                              </div>
+                            ))}
+                            {renderReasoning(
+                              `reasoning-${block.summary?.id ?? block.key}`,
+                              summaryReasoning,
+                            )}
+                            {state.streamingReasoning ? (
+                              <ReasoningBlock
+                                active={state.streamingReasoning.active}
+                                durationMs={state.streamingReasoning.durationMs}
+                                text={state.streamingReasoning.text}
+                              />
+                            ) : null}
                             {streamingIsWork && (
                               <StreamingMessage
                                 content={state.streamingContent}

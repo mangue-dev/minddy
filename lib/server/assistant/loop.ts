@@ -22,6 +22,8 @@ import {
   reasoningMaxTokens,
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
+import type { AssistantReasoning } from "@/lib/assistant-reasoning";
+import { AssistantReasoningStream } from "./reasoning-stream";
 
 // ── OpenRouter streaming agent loop (ported from AutoKap's assistant) ───
 
@@ -52,6 +54,7 @@ export interface GenerationInfo {
 
 export interface ProcessChatResult {
   fullContent: string;
+  finalReasoning: AssistantReasoning | null;
   allToolCalls: AssistantToolCall[];
   generations: GenerationInfo[];
 }
@@ -166,6 +169,7 @@ export async function processChat(
 
   const generations: GenerationInfo[] = [];
   let finalContent = "";
+  let finalReasoning: AssistantReasoning | null = null;
   const allToolCalls: AssistantToolCall[] = [];
   let continueLoop = true;
   let roundCount = 0;
@@ -232,75 +236,87 @@ export async function processChat(
       number,
       { id: string; name: string; arguments: string }
     > = new Map();
+    const reasoningStream = new AssistantReasoningStream(emitter);
+    let roundReasoning: AssistantReasoning | null = null;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
-        if (data === "[DONE]") continue;
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") continue;
 
-        let parsed;
-        try {
-          parsed = JSON.parse(data);
-        } catch {
-          continue;
-        }
+          let parsed;
+          try {
+            parsed = JSON.parse(data);
+          } catch {
+            continue;
+          }
 
-        if (parsed.id && !generationId) {
-          generationId = parsed.id;
-        }
-        if (parsed.model) {
-          modelUsed = parsed.model;
-        }
-        if (parsed.usage) {
-          usageInfo = parsed.usage;
-        }
+          if (parsed.id && !generationId) {
+            generationId = parsed.id;
+          }
+          if (parsed.model) {
+            modelUsed = parsed.model;
+          }
+          if (parsed.usage) {
+            usageInfo = parsed.usage;
+          }
 
-        const delta = parsed.choices?.[0]?.delta;
-        if (!delta) continue;
+          const delta = parsed.choices?.[0]?.delta;
+          if (!delta) continue;
 
-        if (delta.content) {
-          fullContent += delta.content;
-          emitter.emit("content_delta", { delta: delta.content });
-        }
+          if (typeof delta.reasoning === "string" && delta.reasoning) {
+            reasoningStream.push(delta.reasoning);
+          }
 
-        if (delta.tool_calls) {
-          for (const tc of delta.tool_calls) {
-            const idx = tc.index ?? 0;
-            if (!toolCallAccumulators.has(idx)) {
-              toolCallAccumulators.set(idx, {
-                id: tc.id || "",
-                name: tc.function?.name || "",
-                arguments: "",
-              });
-              if (tc.id && tc.function?.name) {
-                emitter.emit("tool_call_start", {
-                  id: tc.id,
-                  name: tc.function.name,
+          if (delta.content) {
+            roundReasoning = reasoningStream.finish();
+            fullContent += delta.content;
+            emitter.emit("content_delta", { delta: delta.content });
+          }
+
+          if (delta.tool_calls) {
+            roundReasoning = reasoningStream.finish();
+            for (const tc of delta.tool_calls) {
+              const idx = tc.index ?? 0;
+              if (!toolCallAccumulators.has(idx)) {
+                toolCallAccumulators.set(idx, {
+                  id: tc.id || "",
+                  name: tc.function?.name || "",
+                  arguments: "",
+                });
+                if (tc.id && tc.function?.name) {
+                  emitter.emit("tool_call_start", {
+                    id: tc.id,
+                    name: tc.function.name,
+                  });
+                }
+              }
+
+              const acc = toolCallAccumulators.get(idx)!;
+              if (tc.id) acc.id = tc.id;
+              if (tc.function?.name) acc.name = tc.function.name;
+              if (tc.function?.arguments) {
+                acc.arguments += tc.function.arguments;
+                emitter.emit("tool_call_args_delta", {
+                  id: acc.id,
+                  delta: tc.function.arguments,
                 });
               }
-            }
-
-            const acc = toolCallAccumulators.get(idx)!;
-            if (tc.id) acc.id = tc.id;
-            if (tc.function?.name) acc.name = tc.function.name;
-            if (tc.function?.arguments) {
-              acc.arguments += tc.function.arguments;
-              emitter.emit("tool_call_args_delta", {
-                id: acc.id,
-                delta: tc.function.arguments,
-              });
             }
           }
         }
       }
+    } finally {
+      roundReasoning = reasoningStream.finish();
     }
 
     generations.push({
@@ -336,6 +352,9 @@ export async function processChat(
           role: "assistant",
           content: fullContent || null,
           tool_calls: assistantToolCalls,
+          ...(roundReasoning
+            ? { metadata: { reasoning: roundReasoning } }
+            : {}),
         })
         .select("id")
         .single();
@@ -467,8 +486,14 @@ export async function processChat(
       toolCallAccumulators.clear();
     } else {
       finalContent = fullContent;
+      finalReasoning = roundReasoning;
     }
   }
 
-  return { fullContent: finalContent, allToolCalls, generations };
+  return {
+    fullContent: finalContent,
+    finalReasoning,
+    allToolCalls,
+    generations,
+  };
 }

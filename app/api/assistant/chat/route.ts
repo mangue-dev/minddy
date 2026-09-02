@@ -682,6 +682,9 @@ export async function POST(request: NextRequest) {
               conversation_id: finalConvId,
               role: "assistant",
               content: result.fullContent,
+              ...(result.finalReasoning
+                ? { metadata: { reasoning: result.finalReasoning } }
+                : {}),
             })
             .select("id")
             .single();
