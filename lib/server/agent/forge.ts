@@ -333,7 +333,7 @@ export interface Forge {
  * reopening, merge.
  *
  * Aside from comments, as with the two forges: GitHub serves a feed
- * of typed events (`issues/{n}/timeline`), GitLab system notes in
+ * of typed events (`issues/{n}/timeline`, including deployments), GitLab system notes in
  * English mixed with messages. The common vocabulary is
  * `lib/pr-timeline` — and the caller merges the two lists by date.
  *

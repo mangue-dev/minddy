@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Check,
@@ -17,6 +18,7 @@ import {
   Lock,
   LockOpen,
   Milestone,
+  Rocket,
   SquarePen,
   Tag,
   Trash2,
@@ -73,6 +75,8 @@ const KIND_ICON: Record<PrTimelineEvent["kind"], typeof Check> = {
   review_requested: Eye,
   review_request_removed: Eye,
   committed: GitCommitHorizontal,
+  deployed: Rocket,
+  deployment_environment_changed: Rocket,
   force_pushed: Upload,
   branch_deleted: Trash2,
   branch_restored: GitBranch,
@@ -106,6 +110,8 @@ const KIND_MESSAGE: Record<
   review_requested: "timelineReviewRequested",
   review_request_removed: "timelineReviewRequestRemoved",
   committed: "timelineCommitted",
+  deployed: "timelineDeployed",
+  deployment_environment_changed: "timelineDeploymentEnvironmentChanged",
   force_pushed: "timelineForcePushed",
   branch_deleted: "timelineBranchDeleted",
   branch_restored: "timelineBranchRestored",
@@ -167,7 +173,11 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
       }
       contentClassName="py-1"
     >
-      <div className="flex min-w-0 items-start gap-2 text-sm leading-5 text-muted-foreground">
+      <div
+        data-testid="pr-timeline-event"
+        data-kind={event.kind}
+        className="flex min-w-0 items-start gap-2 text-sm leading-5 text-muted-foreground"
+      >
         {authors.length > 0 ? (
           <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
         ) : event.actor ? (
@@ -185,6 +195,27 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
           <span className={cn("min-w-0", verdict?.className)}>
             {timelineText(event, t)}
           </span>
+          {event.kind === "committed" && event.body ? (
+            <span className="min-w-0 truncate font-medium text-foreground">
+              {event.body}
+            </span>
+          ) : null}
+          {event.kind === "committed" && event.sha ? (
+            event.url ? (
+              <a
+                href={event.url}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 font-mono text-xs text-foreground hover:underline"
+              >
+                {event.sha.slice(0, 7)}
+              </a>
+            ) : (
+              <span className="shrink-0 font-mono text-xs text-foreground">
+                {event.sha.slice(0, 7)}
+              </span>
+            )
+          ) : null}
           {normalizeForgeInstant(event.createdAt, now) ? (
             <span className="shrink-0 text-xs text-muted-foreground/70">
               {format.relativeTime(
@@ -344,7 +375,10 @@ export function PrTimelineReview({
         </header>
         {event.body ? (
           <div className="px-3.5 py-3">
-            <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
+            <Markdown
+              allowRawHtml
+              className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
+            >
               {event.body}
             </Markdown>
           </div>
@@ -427,6 +461,13 @@ export function ReviewConversationCard({
   readOnly: boolean;
 }) {
   const comment = thread.root;
+  const resolved = !!thread.resolution?.resolved;
+  const [collapsed, setCollapsed] = useState(resolved);
+
+  useEffect(() => {
+    setCollapsed(resolved);
+  }, [resolved]);
+
   return (
     <article className="overflow-clip rounded-lg border border-border bg-card shadow-xs">
       <PrHunk
@@ -436,20 +477,24 @@ export function ReviewConversationCard({
         side={comment.start_side ?? comment.side}
         outdated={thread.resolution?.outdated ?? comment.line == null}
         resolved={thread.resolution?.resolved}
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
         diffHunk={comment.diff_hunk}
         className="pr-diff-view-inset border-b border-border bg-muted/15"
         headerClassName="py-2.5"
       />
 
-      <div className="px-3 py-3">
-        <ReviewThreadCard
-          thread={thread}
-          replies={replies}
-          resolution={resolution}
-          readOnly={readOnly}
-          variant="plain"
-        />
-      </div>
+      {collapsed ? null : (
+        <div className="px-3 py-3">
+          <ReviewThreadCard
+            thread={thread}
+            replies={replies}
+            resolution={resolution}
+            readOnly={readOnly}
+            variant="plain"
+          />
+        </div>
+      )}
     </article>
   );
 }

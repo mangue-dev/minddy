@@ -51,6 +51,8 @@ export function PrHunk({
   maxLines,
   className,
   headerClassName,
+  collapsed: controlledCollapsed,
+  onCollapsedChange,
 }: {
   /** Path of the commented file — it carries the anchor AND decides the grammar. */
   path: string;
@@ -71,11 +73,20 @@ export function PrHunk({
   className?: string;
   /** Optional density override for the file/line accordion header. */
   headerClassName?: string;
+  /** Controlled state used when the whole surrounding conversation folds. */
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
   const resolvedTheme = useEffectiveColorScheme();
   const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(false);
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const collapsed = controlledCollapsed ?? localCollapsed;
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    if (controlledCollapsed == null) setLocalCollapsed(next);
+    onCollapsedChange?.(next);
+  };
 
   /**
    * The fragment, analyzed once. `null` when there is no hunk, or when the
@@ -184,7 +195,7 @@ export function PrHunk({
   // Without an extract (GitLab does not serve any), the header has nothing left to fold:
   // it becomes an anchor line again, without chevron or gesture. A button that doesn't
   // nothing is worse than a label.
-  if (!fileDiff) {
+  if (!fileDiff && controlledCollapsed == null && !onCollapsedChange) {
     return (
       <div className={className}>
         <div
@@ -220,7 +231,7 @@ export function PrHunk({
         <button
           data-testid="pr-hunk-toggle"
           type="button"
-          onClick={() => setCollapsed((v) => !v)}
+          onClick={toggleCollapsed}
           aria-expanded={!collapsed}
           title={title}
           className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1.5 text-left outline-none"
@@ -244,9 +255,11 @@ export function PrHunk({
               {lineLabel}
             </div>
           ) : null}
-          <PrDiffWorkers>
-            <FileDiff fileDiff={fileDiff} options={options} />
-          </PrDiffWorkers>
+          {fileDiff ? (
+            <PrDiffWorkers>
+              <FileDiff fileDiff={fileDiff} options={options} />
+            </PrDiffWorkers>
+          ) : null}
         </>
       )}
     </div>

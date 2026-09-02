@@ -3458,6 +3458,8 @@
     "timelineReviewRequested": "a demandé une review à {login}",
     "timelineReviewRequestRemoved": "a retiré la demande de review à {login}",
     "timelineCommitted": "{count, plural, one {a poussé # commit} other {a poussé # commits}}",
+    "timelineDeployed": "a déployé cette pull request",
+    "timelineDeploymentEnvironmentChanged": "a modifié l’environnement de déploiement",
     "timelineForcePushed": "a forcé la branche",
     "timelineBranchDeleted": "a supprimé la branche",
     "timelineBranchRestored": "a rétabli la branche",

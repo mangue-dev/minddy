@@ -3458,6 +3458,8 @@
     "timelineReviewRequested": "eine Bewertung angefordert {login}",
     "timelineReviewRequestRemoved": "die Überprüfungsanfrage für entfernt {login}",
     "timelineCommitted": "{count, plural, one {# Commit gepusht} other {# Commits gepusht}}",
+    "timelineDeployed": "hat diesen Pull Request bereitgestellt",
+    "timelineDeploymentEnvironmentChanged": "hat die Bereitstellungsumgebung geändert",
     "timelineForcePushed": "Erzwungenes Pushen des Zweigs",
     "timelineBranchDeleted": "Löschen des Zweigs",
     "timelineBranchRestored": "Wiederherstellen des Zweigs",

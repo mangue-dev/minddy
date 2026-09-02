@@ -77,6 +77,12 @@ import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests
 import { PrUnresolvedConversations } from "@/components/pull-requests/pr-unresolved-conversations";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { FormDialog } from "@/components/form-dialog";
+import {
+  AttachButton,
+  DropOverlay,
+  pasteFileHandler,
+  useFileDrop,
+} from "@/components/resources";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
@@ -131,6 +137,7 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { usePrReviewSession } from "@/lib/use-pr-review-session";
 import { usePrLive } from "@/lib/use-pr-live";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { useForgeUploads } from "@/lib/use-forge-uploads";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import {
   defaultMergeCommitMessage,
@@ -139,7 +146,6 @@ import {
 } from "@/lib/pr-merge-message";
 import { LocalIssueRunConfirmation } from "@/components/agent/local-issue-run-confirmation";
 import {
-  groupTimelineCommits,
   groupTimelineReviews,
   resolveCommitActors,
   sortTimelineOlderFirst,
@@ -394,9 +400,8 @@ type FeedEntry =
  * - a commit is signed by its forge ACCOUNT, not by the written `user.name`
  * inside (`resolveCommitActors`): the timeline only knows the second, and
  * the list of commits — already loaded for its tab — is the first one;
- * - CONSECUTIVE commits fold into a single “pushed N commits”
- * (`groupTimelineCommits`), otherwise a PR of twenty commits would drown out the
- *    trois messages qui comptent ;
+ * - commits remain separate, matching GitHub's activity feed and preserving
+ *   each commit message and SHA;
  * - reviews without a body by the same author fold in the same way
  * (`groupTimelineReviews`): at GitHub, a single point IS a review,
  * and a pass from Numo drops a dozen in a row;
@@ -426,12 +431,7 @@ function buildFeed(
     comment,
   }));
 
-  // Order matters: counts first, otherwise grouping commits
-  // would compare git names where two pushes from the same account should meet
-  // recognize.
-  const events = groupTimelineReviews(
-    groupTimelineCommits(resolveCommitActors(timeline, commits)),
-  );
+  const events = groupTimelineReviews(resolveCommitActors(timeline, commits));
   for (const event of events) {
     if (event.kind === "reviewed") {
       const own = (event.reviewIds ?? []).flatMap((id) => commentsByReview.get(id) ?? []);
@@ -542,7 +542,10 @@ function ThreadComment({
         </header>
         <div className="flex flex-col gap-2 px-3.5 py-3">
           {activity ? <div>{activity}</div> : null}
-          <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
+          <Markdown
+            allowRawHtml
+            className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
+          >
             {body}
           </Markdown>
           {reactions && list.length > 0 ? (
@@ -665,6 +668,10 @@ export function PrDetail({
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
+  const reviewUploads = useForgeUploads(prEndpoint(item.prId), (transform) =>
+    setReviewMessage((draft) => transform(draft)),
+  );
+  const reviewDrop = useFileDrop(reviewUploads.addFiles);
   // Numo rereads the PR (MIN-141): a SESSION, not a blocking call — it is
   // plays IN the thread, in place of its future verdict message, and survives a
   // rechargement.
@@ -1019,6 +1026,7 @@ export function PrDetail({
   // button would send what the button refuses.
   const reviewSubmitDisabled =
     submitting ||
+    reviewUploads.uploading ||
     reviewHasNoEffect ||
     relaunchBackendUnavailable ||
     (!reviewMessage.trim() && reviewVerdict !== "approve");
@@ -1033,7 +1041,7 @@ export function PrDetail({
   const [confirmLocalAiReview, setConfirmLocalAiReview] = useState(false);
 
   const submitReview = async (localIssueContextConfirmed = false) => {
-    if (!reviewVerdict || submitting || reviewHasNoEffect) return;
+    if (!reviewVerdict || submitting || reviewUploads.uploading || reviewHasNoEffect) return;
     if (relaunchBackendUnavailable) {
       toast.error(tAgent("errorExecutionBackendUnavailable"));
       return;
@@ -2242,25 +2250,39 @@ export function PrDetail({
             </Tabs>
           ) : null}
 
-          <Textarea
-            value={reviewMessage}
-            onChange={(e) => setReviewMessage(e.target.value)}
-            // Same shortcut as the other composers of the app, adjustment of
-            // account included: ⌘/Ctrl+Enter send (or Enter only), Shift+Enter
-            // goes to the line. The button is only accessible if the review has
-            // what to leave — the guard is his, read again here.
-            onKeyDown={(e) => {
-              if (!isSend(e)) return;
-              e.preventDefault();
-              if (!reviewSubmitDisabled) void submitReview();
-            }}
-            placeholder={t(
-              reviewVerdict === "approve" ? "reviewApprovePlaceholder" : "reviewPlaceholder",
+          <div
+            className={cn(
+              "relative overflow-clip rounded-md border border-border transition-colors focus-within:border-ring",
+              reviewDrop.dragging && "border-brand",
             )}
-            rows={reviewMode === "findings" ? 5 : 4}
-            autoFocus
-            className="resize-none bg-card"
-          />
+            onPaste={pasteFileHandler(reviewUploads.addFiles)}
+            {...reviewDrop.handlers}
+          >
+            <DropOverlay show={reviewDrop.dragging} />
+            <Textarea
+              value={reviewMessage}
+              onChange={(e) => setReviewMessage(e.target.value)}
+              // Match the shortcut used by every other composer: the active
+              // send mode submits, while Shift+Enter keeps a newline.
+              onKeyDown={(e) => {
+                if (!isSend(e)) return;
+                e.preventDefault();
+                if (!reviewSubmitDisabled) void submitReview();
+              }}
+              placeholder={t(
+                reviewVerdict === "approve" ? "reviewApprovePlaceholder" : "reviewPlaceholder",
+              )}
+              rows={reviewMode === "findings" ? 5 : 4}
+              autoFocus
+              className="resize-none rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
+            />
+            <div className="absolute bottom-1.5 left-1.5 z-10">
+              <AttachButton
+                onFiles={reviewUploads.addFiles}
+                disabled={submitting || reviewUploads.uploading}
+              />
+            </div>
+          </div>
 
           {/* What this mode REALLY does, once said: text is a
               deposit for Numo, not a review — nothing leaves under your name. */}

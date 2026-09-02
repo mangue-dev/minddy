@@ -62,6 +62,7 @@ import {
   estimatedDiffBodyHeight,
   LARGE_DIFF_TOKEN_LIMIT,
 } from "@/lib/pr-diff-performance";
+import { pullRequestDiffCacheKey } from "@/lib/pr-diff-cache";
 import {
   anchorKey,
   commentAnchor,
@@ -131,7 +132,7 @@ export function toUnifiedDiff(f: PullRequestFile): string {
   const base = basePathOf(f);
   const oldPath = f.status === "added" ? "/dev/null" : `a/${base}`;
   const newPath = f.status === "removed" ? "/dev/null" : `b/${f.filename}`;
-  return `diff --git a/${base} b/${f.filename}\n--- ${oldPath}\n+++ ${newPath}\n${f.patch}\n`;
+  return `diff --git a/${base} b/${f.filename}\n--- ${oldPath}\n+++ ${newPath}\n${f.patch.replace(/\n+$/, "")}`;
 }
 
 /**
@@ -968,21 +969,24 @@ export function PrDiff({
    * merged): recreating them at each `refetch` would erase under the fingers what
    * the user has just unfolded.
    */
+  // Keep exactly one separator between files and no empty raw line at the end;
+  // @pierre/diffs treats an unprefixed blank line as an invalid diff record.
   const diffText = useMemo(() => files.map(toUnifiedDiff).filter(Boolean).join("\n"), [files]);
 
   /**
-   * Parse once, then index by path. The lib names each file
-   * according to the `b/` side of the `diff --git` that we write — therefore `file.filename`,
-   * for an added, deleted or renamed file as for the others.
+   * Parse once, then index by path. The library names each file from the `b/`
+   * side of the generated `diff --git`, so it matches `file.filename` for
+   * added, deleted, renamed, and modified files alike.
    *
-   * No cache prefix: it would index the coloring on a stable key
-   * while the content of a PR changes under us (a pushed commit, a
-   * review restarted).
+   * The explicit content key is essential. Without one, FileDiff falls back
+   * to the file name, and a worker result from the previous PR head can be
+   * combined with fresh hunks for the same path. That stale line/hunk pairing
+   * is what triggers DiffHunksRenderer's null-line exception.
    */
   const parsedByPath = useMemo(() => {
     const map = new Map<string, FileDiffMetadata>();
     if (!diffText) return map;
-    for (const patch of parsePatchFiles(diffText)) {
+    for (const patch of parsePatchFiles(diffText, pullRequestDiffCacheKey(diffText))) {
       for (const parsed of patch.files) map.set(parsed.name, parsed);
     }
     return map;

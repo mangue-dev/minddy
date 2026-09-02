@@ -333,6 +333,16 @@ async function capture({ locale, theme }) {
         `${locale}/${theme} — overflow action sections are not separated correctly.`,
       );
     }
+    await page.getByTestId("pr-action-comment").click();
+    const reviewDialog = page.getByRole("dialog");
+    await reviewDialog.waitFor({ state: "visible" });
+    if ((await reviewDialog.locator('input[type="file"][multiple]').count()) !== 1) {
+      throw new Error(
+        `${locale}/${theme} — the comment review dialog has no attachment input.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+    await page.getByTestId("pr-more-actions").click();
     await page.getByTestId("pr-action-convert-to-draft").click();
     const openPullRequest = page.getByTestId("pr-ready-for-review");
     await openPullRequest.waitFor({ state: "visible" });
@@ -460,14 +470,53 @@ async function capture({ locale, theme }) {
     }
     await page.keyboard.press("Escape");
 
+    const activityReviewThreads = page.getByTestId("pr-activity-review-threads");
+    const resolvedToggle = activityReviewThreads.getByTestId("pr-hunk-toggle");
+    await resolvedToggle.waitFor({ state: "visible", timeout: 15_000 });
+    if (
+      (await resolvedToggle.getAttribute("aria-expanded")) !== "false" ||
+      (await activityReviewThreads.getByTestId("review-thread-card").count()) !== 0
+    ) {
+      throw new Error(
+        `${locale}/${theme} — a resolved activity conversation is not fully collapsed.`,
+      );
+    }
+    await resolvedToggle.click();
     await page
       .getByText("export type KeyHint", { exact: false })
       .first()
       .waitFor({ state: "visible", timeout: 15_000 });
-    await page
-      .getByTestId("pr-activity-review-threads")
+    await activityReviewThreads
       .getByText("One key, optionally behind a modifier", { exact: false })
       .waitFor({ state: "visible", timeout: 15_000 });
+    const htmlDetails = page.getByTestId("pr-activity-timeline").locator("details");
+    if (
+      (await htmlDetails.count()) !== 1 ||
+      (await htmlDetails.locator("summary").textContent()) !== "Implementation note"
+    ) {
+      throw new Error(
+        `${locale}/${theme} — sanitized GitHub details markup is not rendered in comments.`,
+      );
+    }
+    await htmlDetails.locator("summary").click();
+    if (!(await htmlDetails.evaluate((details) => details.open))) {
+      throw new Error(
+        `${locale}/${theme} — GitHub details markup does not expand interactively.`,
+      );
+    }
+    await htmlDetails.locator("summary").click();
+    const timelineEvents = page.getByTestId("pr-timeline-event");
+    const timelineEventText = (await timelineEvents.allTextContents()).join(" ");
+    if (
+      (await page.locator('[data-testid="pr-timeline-event"][data-kind="committed"]').count()) !== 2 ||
+      (await page.locator('[data-testid="pr-timeline-event"][data-kind="deployed"]').count()) !== 1 ||
+      !timelineEventText.includes(COMMITS[0].sha.slice(0, 7)) ||
+      !timelineEventText.includes(COMMITS[1].sha.slice(0, 7))
+    ) {
+      throw new Error(
+        `${locale}/${theme} — commits are grouped or the deployment event is missing.`,
+      );
+    }
     const embeddedSelection = await page.evaluate(() => {
       for (const host of document.querySelectorAll(".diff-selectable *")) {
         const root = host.shadowRoot;
@@ -769,15 +818,11 @@ async function capture({ locale, theme }) {
     await page.setViewportSize(VIEWPORT);
     await page.waitForTimeout(100);
 
-    const resolvedThread = page
-      .getByTestId("pr-activity-review-threads")
+    const resolvedThread = activityReviewThreads
       .getByTestId("review-thread-card")
       .filter({
         has: page.getByText("Please keep the shortcut type", { exact: false }),
       });
-    const heightBeforeReopen = await resolvedThread.evaluate(
-      (node) => node.getBoundingClientRect().height,
-    );
     const resolveConversation = resolvedThread.getByTestId("resolve-conversation");
     await resolveConversation.waitFor({ state: "visible" });
     const reopened = page.waitForResponse(
@@ -788,12 +833,12 @@ async function capture({ locale, theme }) {
     await resolveConversation.click();
     await reopened;
     await page.waitForTimeout(200);
-    const heightAfterReopen = await resolvedThread.evaluate(
-      (node) => node.getBoundingClientRect().height,
-    );
-    if (Math.abs(heightAfterReopen - heightBeforeReopen) > 2) {
+    if (
+      (await resolvedToggle.getAttribute("aria-expanded")) !== "true" ||
+      !(await resolvedThread.isVisible())
+    ) {
       throw new Error(
-        `${locale}/${theme} — resolving a conversation still changes the thread height (${heightBeforeReopen} → ${heightAfterReopen}).`,
+        `${locale}/${theme} — reopening a conversation did not keep its content expanded.`,
       );
     }
     const resolvedAgain = page.waitForResponse(
@@ -804,12 +849,12 @@ async function capture({ locale, theme }) {
     await resolveConversation.click();
     await resolvedAgain;
     await page.waitForTimeout(200);
-    const heightAfterResolve = await resolvedThread.evaluate(
-      (node) => node.getBoundingClientRect().height,
-    );
-    if (Math.abs(heightAfterResolve - heightBeforeReopen) > 2) {
+    if (
+      (await resolvedToggle.getAttribute("aria-expanded")) !== "false" ||
+      (await activityReviewThreads.getByTestId("review-thread-card").count()) !== 0
+    ) {
       throw new Error(
-        `${locale}/${theme} — resolved content no longer stays in place (${heightBeforeReopen} → ${heightAfterResolve}).`,
+        `${locale}/${theme} — resolving a conversation did not collapse its comments.`,
       );
     }
 

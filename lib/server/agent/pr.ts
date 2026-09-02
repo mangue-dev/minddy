@@ -1567,8 +1567,8 @@ const TIMELINE_PER_PAGE = 100;
 const TIMELINE_MAX_PAGES = 10;
 
 /**
- * PR ACTIVITY (MIN-159) — reviews submitted, commits pushed, labels,
- * assignments, renames, draft ↔ ready, close, merge.
+ * PR ACTIVITY (MIN-159) — reviews submitted, commits pushed, deployments,
+ * labels, assignments, renames, draft ↔ ready, close, merge.
  *
  * On GitHub a PR is an issue, and it all lives under `issues/{n}/timeline`:
  * a heterogeneous flow where each `event` has its own form. Normalization is

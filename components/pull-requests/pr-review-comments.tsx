@@ -457,7 +457,9 @@ function CommentBody({
         ) : null}
       </div>
       <div data-testid="review-comment-body" className="pl-7">
-        <Markdown className="text-sm text-foreground">{comment.body}</Markdown>
+        <Markdown allowRawHtml className="text-sm text-foreground">
+          {comment.body}
+        </Markdown>
       </div>
       {reactions && list.length > 0 ? (
         <div className="pl-7">

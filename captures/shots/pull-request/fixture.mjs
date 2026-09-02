@@ -51,7 +51,7 @@ const PATCH_ACTIONS = `@@ -18,7 +18,12 @@ export interface PaletteAction {
 +  shortcut?: KeyHint;
 +  run: (ctx: PaletteContext) => void;
  }
-
+${" "}
 +/** One key, optionally behind a modifier or a \`g\`-style prefix. */
 +export type KeyHint = { keys: string[]; sequence?: boolean };
 +
@@ -64,7 +64,7 @@ const PATCH_ROW = `@@ -1,11 +1,19 @@
 +import { KeyHintBadge } from "@/components/palette/key-hint";
 +import type { KeyHint } from "@/lib/palette/actions";
  import type { PaletteAction } from "@/lib/palette/actions";
-
+${" "}
 -export function PaletteRow({ action }: Props) {
 +export function PaletteRow({ action, active }: Props) {
    return (
@@ -97,15 +97,15 @@ const PATCH_ROW = `@@ -1,11 +1,19 @@
 /** +38 −4 */
 const PATCH_PROVIDER = `@@ -3,5 +3,6 @@ export function PaletteProvider({ children }: Props) {
  import { useRouter } from "next/navigation";
-
+${" "}
  import { ACTIONS, type PaletteAction } from "@/lib/palette/actions";
 +import { matchesHint } from "@/lib/palette/keys";
-
+${" "}
  const PaletteContext = createContext<PaletteApi | null>(null);
 @@ -41,13 +42,46 @@ export function PaletteProvider({ children }: Props) {
    const [open, setOpen] = useState(false);
    const router = useRouter();
-
+${" "}
 +  /**
 +   * A two-key sequence keeps its prefix for 900 ms. Any other key,
 +   * or the timeout, drops it — a stale \`g\` must never swallow a
@@ -308,7 +308,7 @@ export const COMMENTS = [
   },
   {
     id: 9002,
-    body: "Good catch — `isContentEditable` is now the first check of the handler, before the ⌘K branch. Pushed to the same branch.",
+    body: "Good catch — `isContentEditable` is now the first check of the handler, before the ⌘K branch. Pushed to the same branch.\n\n<details><summary>Implementation note</summary>The guard also covers nested editor nodes.</details>",
     user: NUMO,
     created_at: "2026-07-14T17:19:00.000Z",
     html_url: `${PR_URL}#issuecomment-9002`,
@@ -348,6 +348,16 @@ export const REVIEW_THREADS = [
 
 export const TIMELINE = [
   {
+    id: `commit:${COMMITS[0].sha}`,
+    kind: "committed",
+    actor: NUMO,
+    createdAt: COMMITS[0].authoredAt,
+    sha: COMMITS[0].sha,
+    commitCount: 1,
+    body: "Declare shortcuts on the action itself",
+    url: `https://github.com/${REPO}/commit/${COMMITS[0].sha}`,
+  },
+  {
     id: "review:9201",
     kind: "reviewed",
     actor: REVIEW_BOT,
@@ -355,6 +365,23 @@ export const TIMELINE = [
     reviewState: "commented",
     body: "One inline point before merge.",
     reviewId: 9201,
+  },
+  {
+    id: `commit:${COMMITS[1].sha}`,
+    kind: "committed",
+    actor: NUMO,
+    createdAt: COMMITS[1].authoredAt,
+    sha: COMMITS[1].sha,
+    commitCount: 1,
+    body: "Ignore contenteditable in the global listener",
+    url: `https://github.com/${REPO}/commit/${COMMITS[1].sha}`,
+  },
+  {
+    id: "event:deployed-1",
+    kind: "deployed",
+    actor: { login: "vercel", avatar_url: null },
+    createdAt: "2026-07-14T17:20:00.000Z",
+    sha: HEAD_SHA,
   },
 ];
 
