@@ -1634,20 +1634,12 @@ export function PrDetail({
                   <>
                     <DropdownMenuSeparator className="2xl:hidden" />
                     <DropdownMenuItem
-                      data-testid="pr-action-approve"
+                      data-testid="pr-action-start-review"
                       className="2xl:hidden"
-                      onSelect={() => openReview("approve")}
+                      onSelect={startFileReview}
                     >
-                      <Check />
-                      {t("reviewApprove")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      data-testid="pr-action-comment"
-                      className="2xl:hidden"
-                      onSelect={() => openReview("comment")}
-                    >
-                      <MessageSquare />
-                      {t("reviewComment")}
+                      <Eye />
+                      {t("reviewStart")}
                     </DropdownMenuItem>
                   </>
                 ) : null}
