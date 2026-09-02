@@ -740,13 +740,10 @@ export async function executeAgentRun(
     // This identity may need the forge on the process's first turn. It depends on
     // no other context, so starting it here overlaps quota, preferences, issue,
     // and prompt construction. Without a repository there is nothing to resolve:
-    // the default identity travels, and no one will ever commit for the model
-    // anyway (current-checkout mode commits nothing).
-    const committerPromise = run.pull_request_id
-      ? Promise.resolve(defaultCommitterIdentity())
-      : target
-        ? resolveCommitterIdentity(target)
-        : Promise.resolve(defaultCommitterIdentity());
+    // the default identity travels, and current-checkout mode commits nothing.
+    const committerPromise = target
+      ? resolveCommitterIdentity(target)
+      : Promise.resolve(defaultCommitterIdentity());
 
     // Run anchor, with THREE values: minddy issue, NOTEBOOK (MIN-84, the launcher's
     // note is the instruction), or PULL REQUEST (MIN-168 — review context on
@@ -1408,8 +1405,12 @@ export async function executeAgentRun(
     // The local worktree is on the user's machine, but not in their checkout: it
     // therefore follows clone rules (the harness delivers the commit), while the
     // historical mode retains current-repository protection.
+    // Local PR reviews are always isolated, including runs created before this
+    // invariant was persisted at launch. Their checkout must consume checkoutRef
+    // and start from the reviewed head rather than the user's current branch.
     const currentRepo =
-      (localTurn && !run.local_worktree) || isCurrentRepoJob({ repoMode });
+      (localTurn && !run.local_worktree && !prRun) ||
+      isCurrentRepoJob({ repoMode });
     const opencodeInput = {
       anchorInstructions: buildOpencodeAnchor({
         locale: commentLocale,
@@ -1711,12 +1712,7 @@ export async function executeAgentRun(
        * repository that existed before it.
        */
       repoMode,
-      /**
-       * A review commits NOTHING: resolving the App bot would cost a provider call
-       * for an identity nobody will use. Elsewhere it is the process-memoized bot
-       * (see `getGithubBotCommitIdentity`).
-       */
-      committer: prRun ? defaultCommitterIdentity() : await committerPromise,
+      committer: await committerPromise,
       // This URL is credential-free in Vercel sandboxes and points at the
       // run-scoped trusted relay in self-hosted sandboxes. Only desktop-local
       // execution retains the legacy authenticated URL on the user's machine.

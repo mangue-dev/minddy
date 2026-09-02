@@ -137,3 +137,17 @@ describe("sub-agent capacity is anchor-independent", () => {
     );
   });
 });
+
+describe("commit identity is capability-independent", () => {
+  const source = read("execute.ts");
+
+  it("resolves the forge-backed identity for every repository run", () => {
+    expect(source).toContain(
+      "const committerPromise = target\n      ? resolveCommitterIdentity(target)",
+    );
+    expect(source).toContain("committer: await committerPromise");
+    expect(source).not.toContain(
+      "committer: prRun ? defaultCommitterIdentity()",
+    );
+  });
+});

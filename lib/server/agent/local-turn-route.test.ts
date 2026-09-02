@@ -268,6 +268,15 @@ describe("POST /api/desktop/local-turn", () => {
     }
   });
 
+  it("isolates a queued PR review even when its persisted flag predates the invariant", async () => {
+    h.run = row({ pull_request_id: "pr-1", local_worktree: false });
+
+    const response = await direct();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ localWorktree: true });
+  });
+
   it("joue un run BYOK sans plafond ni mint de la plateforme", async () => {
     h.run = row({ key_mode: "byok" });
     expect((await direct()).status).toBe(200);
@@ -445,6 +454,12 @@ describe("la préparation locale d'`execute.ts`", () => {
   it("laisse le harness résoudre la baseline du diff qu'il est seul à connaître", () => {
     expect(source).toContain(
       'const baselineHead = host ? await revParseHead(host) : "";',
+    );
+  });
+
+  it("treats a local PR review as isolated while composing its anchor", () => {
+    expect(source).toContain(
+      "(localTurn && !run.local_worktree && !prRun)",
     );
   });
 

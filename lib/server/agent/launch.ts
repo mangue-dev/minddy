@@ -10,6 +10,7 @@ import { insertEvents } from "@/lib/server/issue-events";
 import {
   getUserByok,
   resolveAgentModel,
+  resolvePrReviewModel,
   resolveReasoningLevel,
   AgentModelRequiredError,
 } from "./model";
@@ -479,11 +480,16 @@ export async function launchAgentRun(
 
   let model: string;
   try {
-    const resolved = await resolveAgentModel({
-      perRunModel: input.model,
-      userId: input.userId,
-      surface: aiSurface,
-    });
+    const resolved = reviewPr
+      ? await resolvePrReviewModel({
+          perCall: input.model,
+          userId: input.userId,
+        })
+      : await resolveAgentModel({
+          perRunModel: input.model,
+          userId: input.userId,
+          surface: aiSurface,
+        });
     model = resolved.model;
     // Ceiling of the plan model (minddy quota only): it concerns what the user
     // CHOSE — not the defaults chosen by minddy itself, whose instance
@@ -579,10 +585,13 @@ export async function launchAgentRun(
       // The destination is frozen on the canonical run, independently of its anchor.
       localExec,
       localIssueContextConfirmed: input.localIssueContextConfirmed === true,
-      // A worktree without a linked repository has nothing to branch from the
-      // forge and nowhere to push: the current-checkout mode is the only honest
-      // shape, so the request is dropped rather than frozen into a dead end.
-      localWorktree: localExec && !!link && input.localWorktree === true,
+      // PR reviews must start from their forge head without moving or editing the
+      // user's attached checkout. Other local runs keep the explicitly selected
+      // isolation mode. A repository link is required in both cases.
+      localWorktree:
+        localExec &&
+        !!link &&
+        (reviewPr !== null || input.localWorktree === true),
       managedBudget: managedBudgetReservation(quota, input.budgetUsd),
     });
   } catch (err) {

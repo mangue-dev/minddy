@@ -631,11 +631,11 @@ export async function runOpencodeTurn(
   timing("harness-files-ready");
   // Repository conventions are independent of the proxy and bridge. Start their
   // discovery now, then await the complete document immediately before server
-  // startup. A read-only PR review is checked out at an untrusted head, so its
-  // only authoritative instruction source is the trusted base ref (MIN-427).
-  const instructionSource: InstructionSource = job.writesToRepo
-    ? "worktree"
-    : "pr-base";
+  // startup. A PR review is checked out at an untrusted head even when the agent
+  // may edit it, so its only authoritative instruction source is the trusted
+  // base ref (MIN-427).
+  const instructionSource: InstructionSource =
+    job.anchor === "pr" ? "pr-base" : "worktree";
   const servedInstructionsPromise = servedInstructionsFile(
     host,
     deps.writeFile,
