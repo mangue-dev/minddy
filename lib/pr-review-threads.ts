@@ -30,6 +30,8 @@ export interface ReviewThreadState {
   resolved: boolean;
   /** Who has resolved, when the forge says it — the header of a folded wire names it. */
   resolvedBy: string | null;
+  /** The forge can no longer attach the thread to the current version of the diff. */
+  outdated?: boolean;
 }
 
 /** A review thread: the root and its responses, from oldest to most recent. */
@@ -112,4 +114,15 @@ export function groupReviewThreads<T extends ReviewCommentLike>(
  */
 export function displayLineOf(comment: { line: number | null; original_line: number | null }): number | null {
   return comment.line ?? comment.original_line;
+}
+
+/**
+ * First line to display for a multi-line comment. GitHub clears `start_line`
+ * when the referenced code changes, while preserving `original_start_line`.
+ */
+export function displayStartLineOf(comment: {
+  start_line: number | null;
+  original_start_line: number | null;
+}): number | null {
+  return comment.start_line ?? comment.original_start_line;
 }

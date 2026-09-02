@@ -24,6 +24,7 @@ import type {
 } from "./pr";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { ChecksSummary } from "./checks-core";
+import type { RepositoryMergePolicy } from "@/lib/pr-readiness";
 
 /**
  * Provider abstraction of agent PR/MR operations (MIN-69). Each provider
@@ -129,6 +130,13 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestRef>;
+  /** Repository/project merge settings and base-branch protection rules. */
+  getRepositoryMergePolicy(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    base: string;
+  }): Promise<RepositoryMergePolicy>;
   /** Diff files, with their patches. PAGINED and BOUNDED (MIN-168):
  `truncated` says that the list stops at the ceiling - a PR of 300 files
  of which 100 were only shown without saying it led to the conclusion that it was a third of the
@@ -210,6 +218,35 @@ export interface Forge {
     number: number;
     /** Must belong to `mergeMethods` — valid caller, forge not inventing. */
     method?: MergeMethod;
+    commitTitle?: string;
+    commitMessage?: string;
+  }): Promise<void>;
+  updatePullRequestBranch(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    headSha?: string;
+  }): Promise<void>;
+  rerunPullRequestCheck(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    ref: { kind: "github_check_suite" | "gitlab_pipeline"; id: number };
+  }): Promise<void>;
+  updatePullRequestTitle(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    title: string;
+  }): Promise<PullRequestRef>;
+  enablePullRequestMergeFlow(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    nodeId?: string;
+    method?: MergeMethod;
+    queue: boolean;
+    headSha?: string;
   }): Promise<void>;
   /**
  * Submits a formal review. `published: "comment"` in return = the forge has
@@ -256,10 +293,19 @@ export interface Forge {
     repoFullName: string;
     number: number;
     sha: string;
+    requiredCheckNames?: readonly string[] | null;
+    checksRequired?: boolean | null;
   }): Promise<ChecksSummary>;
   /** Draft → ready for review. `nodeId` is only read by GitHub (key from
  GraphQL mutation); GitLab removes the `Draft:` prefix from the title. */
   markReadyForReview(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    nodeId?: string;
+  }): Promise<void>;
+  /** Open → draft. `nodeId` is required only by GitHub GraphQL. */
+  convertToDraft(opts: {
     token: string;
     repoFullName: string;
     number: number;
@@ -287,7 +333,7 @@ export interface Forge {
  * reopening, merge.
  *
  * Aside from comments, as with the two forges: GitHub serves a feed
- * of typed events (`issues/{n}/timeline`), GitLab system notes in
+ * of typed events (`issues/{n}/timeline`, including deployments), GitLab system notes in
  * English mixed with messages. The common vocabulary is
  * `lib/pr-timeline` — and the caller merges the two lists by date.
  *
@@ -457,6 +503,7 @@ const githubForge: Forge = {
   deleteBranch: github.deleteBranch,
   ensurePullRequest: github.ensurePullRequest,
   getPullRequest: github.getPullRequest,
+  getRepositoryMergePolicy: github.getRepositoryMergePolicy,
   listPullRequestFiles: github.listPullRequestFiles,
   listPullRequestCommits: github.listPullRequestCommits,
   listPullRequestCommitExtras: github.listPullRequestCommitExtras,
@@ -469,6 +516,10 @@ const githubForge: Forge = {
   getFileAtRef: github.getFileAtRef,
   getFileBytesAtRef: github.getFileBytesAtRef,
   mergePullRequest: github.mergePullRequest,
+  updatePullRequestBranch: github.updatePullRequestBranch,
+  rerunPullRequestCheck: github.rerunPullRequestCheck,
+  updatePullRequestTitle: github.updatePullRequestTitle,
+  enablePullRequestMergeFlow: github.enablePullRequestMergeFlow,
   submitReview: github.submitPullRequestReview,
   listReviews: github.listPullRequestReviews,
   listReviewMessages: github.listPullRequestReviewMessages,
@@ -481,6 +532,12 @@ const githubForge: Forge = {
       throw new GithubApiError("Pull request has no GraphQL id", 409);
     }
     return github.markPullRequestReadyForReview({ token: opts.token, nodeId: opts.nodeId });
+  },
+  convertToDraft: async (opts) => {
+    if (!opts.nodeId) {
+      throw new GithubApiError("Pull request has no GraphQL id", 409);
+    }
+    return github.convertPullRequestToDraft({ token: opts.token, nodeId: opts.nodeId });
   },
   closePullRequest: github.closePullRequest,
   reopenPullRequest: github.reopenPullRequest,
@@ -539,6 +596,7 @@ const gitlabForge: Forge = {
   deleteBranch: gitlab.deleteBranch,
   ensurePullRequest: gitlab.ensureMergeRequest,
   getPullRequest: gitlab.getMergeRequest,
+  getRepositoryMergePolicy: gitlab.getRepositoryMergePolicy,
   listPullRequestFiles: gitlab.listMergeRequestChanges,
   listPullRequestCommits: gitlab.listMergeRequestCommits,
   listPullRequestCommitExtras: gitlab.listMergeRequestCommitExtras,
@@ -549,11 +607,16 @@ const gitlabForge: Forge = {
   getFileAtRef: gitlab.getFileAtRef,
   getFileBytesAtRef: gitlab.getFileBytesAtRef,
   mergePullRequest: gitlab.mergeMergeRequest,
+  updatePullRequestBranch: gitlab.rebaseMergeRequest,
+  rerunPullRequestCheck: gitlab.rerunMergeRequestCheck,
+  updatePullRequestTitle: gitlab.updateMergeRequestTitle,
+  enablePullRequestMergeFlow: gitlab.enableMergeRequestAutoMerge,
   submitReview: gitlab.submitMergeRequestReview,
   listReviews: gitlab.listMergeRequestApprovals,
   listReviewMessages: gitlab.listMergeRequestReviewMessages,
   listChecks: gitlab.listMergeRequestChecks,
   markReadyForReview: gitlab.markMergeRequestReadyForReview,
+  convertToDraft: gitlab.convertMergeRequestToDraft,
   closePullRequest: gitlab.closeMergeRequest,
   reopenPullRequest: gitlab.reopenMergeRequest,
   listPullRequestComments: gitlab.listMergeRequestNotes,

@@ -79,4 +79,55 @@ describe("hunkPatch", () => {
     expect(hunkPatch("a.ts", "pas un hunk du tout")).toBe("");
     expect(hunkPatch("a.ts", "@@ -1,0 +1,0 @@")).toBe("");
   });
+
+  it("keeps every line in a multi-line review range instead of only its end", () => {
+    const range = [
+      "@@ -233,12 +233,12 @@",
+      " context 233",
+      " context 234",
+      " context 235",
+      " selected 236",
+      " selected 237",
+      " selected 238",
+      " selected 239",
+      " selected 240",
+      " selected 241",
+      " selected 242",
+      " selected 243",
+      " selected 244",
+    ].join("\n");
+
+    const patch = hunkPatch("a.ts", range, 4, {
+      startLine: 236,
+      endLine: 244,
+      side: "RIGHT",
+    });
+
+    expect(patch).toContain(" selected 236");
+    expect(patch).toContain(" selected 244");
+    expect(patch).not.toContain(" context 233");
+    expect(patch).not.toContain(" context 235");
+    expect(patch.split("\n")[3]).toBe("@@ -236,9 +236,9 @@");
+  });
+
+  it("keeps a multi-line selection exact even when maxLines is zero", () => {
+    const patch = hunkPatch("a.ts", HUNK, 0, {
+      startLine: 12,
+      endLine: 13,
+      side: "RIGHT",
+    });
+
+    expect(patch).not.toContain("   const a = 1;");
+    expect(patch).not.toContain("-  return a + b;");
+    expect(patch).toContain("+  const c = 3;");
+    expect(patch).toContain("+  return a + b + c;");
+  });
+
+  it("keeps a short leading context for a single-line comment", () => {
+    const patch = hunkPatch("a.ts", HUNK, 4);
+
+    expect(patch).not.toContain("   const a = 1;");
+    expect(patch).toContain("   const b = 2;");
+    expect(patch).toContain("+  return a + b + c;");
+  });
 });

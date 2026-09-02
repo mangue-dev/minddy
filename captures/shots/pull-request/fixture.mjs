@@ -39,6 +39,7 @@ const PR_URL = `https://github.com/${REPO}/pull/${PR_NUMBER}`;
 const OPENED_AT = "2026-07-14T16:42:00.000Z";
 const NUMO = { login: "numo-agent", avatar_url: null };
 const CAMILLE = { login: "camille-roy", avatar_url: null };
+const REVIEW_BOT = { login: "review-helper[bot]", avatar_url: null };
 
 /** +6 −1 */
 const PATCH_ACTIONS = `@@ -18,7 +18,12 @@ export interface PaletteAction {
@@ -50,7 +51,7 @@ const PATCH_ACTIONS = `@@ -18,7 +18,12 @@ export interface PaletteAction {
 +  shortcut?: KeyHint;
 +  run: (ctx: PaletteContext) => void;
  }
-
+${" "}
 +/** One key, optionally behind a modifier or a \`g\`-style prefix. */
 +export type KeyHint = { keys: string[]; sequence?: boolean };
 +
@@ -63,7 +64,7 @@ const PATCH_ROW = `@@ -1,11 +1,19 @@
 +import { KeyHintBadge } from "@/components/palette/key-hint";
 +import type { KeyHint } from "@/lib/palette/actions";
  import type { PaletteAction } from "@/lib/palette/actions";
-
+${" "}
 -export function PaletteRow({ action }: Props) {
 +export function PaletteRow({ action, active }: Props) {
    return (
@@ -96,15 +97,15 @@ const PATCH_ROW = `@@ -1,11 +1,19 @@
 /** +38 −4 */
 const PATCH_PROVIDER = `@@ -3,5 +3,6 @@ export function PaletteProvider({ children }: Props) {
  import { useRouter } from "next/navigation";
-
+${" "}
  import { ACTIONS, type PaletteAction } from "@/lib/palette/actions";
 +import { matchesHint } from "@/lib/palette/keys";
-
+${" "}
  const PaletteContext = createContext<PaletteApi | null>(null);
 @@ -41,13 +42,46 @@ export function PaletteProvider({ children }: Props) {
    const [open, setOpen] = useState(false);
    const router = useRouter();
-
+${" "}
 +  /**
 +   * A two-key sequence keeps its prefix for 900 ms. Any other key,
 +   * or the timeout, drops it — a stale \`g\` must never swallow a
@@ -203,7 +204,10 @@ for (const file of FILES) {
 
 /** Sum of files — must be +58 −7, like the agent capture block. */
 export const TOTALS = FILES.reduce(
-  (acc, f) => ({ additions: acc.additions + f.additions, deletions: acc.deletions + f.deletions }),
+  (acc, f) => ({
+    additions: acc.additions + f.additions,
+    deletions: acc.deletions + f.deletions,
+  }),
   { additions: 0, deletions: 0 },
 );
 
@@ -245,6 +249,7 @@ export const PR = {
   // does not have to carry this reservation — it is mergeable, and says so.
   mergeable: true,
   mergeableState: "clean",
+  mergeabilityReason: "clean",
   user: NUMO,
   createdAt: OPENED_AT,
 };
@@ -259,6 +264,7 @@ export const VIEWER = {
   configured: true,
   connected: true,
   login: CAMILLE.login,
+  avatarUrl: null,
   capability: "write",
   numoLogin: NUMO.login,
 };
@@ -302,10 +308,80 @@ export const COMMENTS = [
   },
   {
     id: 9002,
-    body: "Good catch — `isContentEditable` is now the first check of the handler, before the ⌘K branch. Pushed to the same branch.",
+    body: "Good catch — `isContentEditable` is now the first check of the handler, before the ⌘K branch. Pushed to the same branch.\n\n<details><summary>Implementation note</summary>The guard also covers nested editor nodes.</details>",
     user: NUMO,
     created_at: "2026-07-14T17:19:00.000Z",
     html_url: `${PR_URL}#issuecomment-9002`,
+  },
+];
+
+/** An unresolved line conversation recalled in the Conversation tab. */
+export const REVIEW_COMMENTS = [
+  {
+    id: 9101,
+    body: "Please keep the shortcut type next to the action contract so every new action declares its own hint.",
+    path: "lib/palette/actions.ts",
+    line: null,
+    original_line: 27,
+    side: "RIGHT",
+    start_line: null,
+    original_start_line: 26,
+    start_side: null,
+    in_reply_to_id: null,
+    review_id: 9201,
+    diff_hunk: PATCH_ACTIONS,
+    user: REVIEW_BOT,
+    created_at: "2026-07-14T17:08:00.000Z",
+    html_url: `${PR_URL}#discussion_r9101`,
+  },
+];
+
+export const REVIEW_THREADS = [
+  {
+    rootCommentId: 9101,
+    threadId: "PRRT_demo_9101",
+    resolved: false,
+    resolvedBy: null,
+    outdated: true,
+  },
+];
+
+export const TIMELINE = [
+  {
+    id: `commit:${COMMITS[0].sha}`,
+    kind: "committed",
+    actor: NUMO,
+    createdAt: COMMITS[0].authoredAt,
+    sha: COMMITS[0].sha,
+    commitCount: 1,
+    body: "Declare shortcuts on the action itself",
+    url: `https://github.com/${REPO}/commit/${COMMITS[0].sha}`,
+  },
+  {
+    id: "review:9201",
+    kind: "reviewed",
+    actor: REVIEW_BOT,
+    createdAt: "2026-07-14T17:08:00.000Z",
+    reviewState: "commented",
+    body: "One inline point before merge.",
+    reviewId: 9201,
+  },
+  {
+    id: `commit:${COMMITS[1].sha}`,
+    kind: "committed",
+    actor: NUMO,
+    createdAt: COMMITS[1].authoredAt,
+    sha: COMMITS[1].sha,
+    commitCount: 1,
+    body: "Ignore contenteditable in the global listener",
+    url: `https://github.com/${REPO}/commit/${COMMITS[1].sha}`,
+  },
+  {
+    id: "event:deployed-1",
+    kind: "deployed",
+    actor: { login: "vercel", avatar_url: null },
+    createdAt: "2026-07-14T17:20:00.000Z",
+    sha: HEAD_SHA,
   },
 ];
 
@@ -360,11 +436,102 @@ export const DETAIL_RESPONSE = {
   pr: PR,
   files: FILES,
   provider: "github",
-  // `checks: null` = NO known check, distinct from a read failure
-  // (`checksError`). The demo repository has no CI: the bar does not appear.
-  checks: null,
+  checks: {
+    checks: [
+      {
+        name: "Tests",
+        state: "success",
+        url: `${PR_URL}/checks`,
+        appName: "GitHub Actions",
+        appAvatarUrl: null,
+        description: null,
+        durationMs: 92_000,
+        startedAt: "2026-07-14T16:43:00.000Z",
+        completedAt: "2026-07-14T16:44:32.000Z",
+        required: true,
+        rerunRef: null,
+      },
+      {
+        name: "Preview",
+        state: "success",
+        url: `${PR_URL}/checks`,
+        appName: "Vercel",
+        appAvatarUrl: null,
+        description: null,
+        durationMs: 48_000,
+        startedAt: "2026-07-14T16:43:05.000Z",
+        completedAt: "2026-07-14T16:43:53.000Z",
+        required: false,
+        rerunRef: null,
+      },
+    ],
+    state: "success",
+    passing: 2,
+    total: 2,
+    startedAt: "2026-07-14T16:43:00.000Z",
+    completedAt: "2026-07-14T16:44:32.000Z",
+  },
   checksError: null,
   reviews: null,
   viewer: VIEWER,
   mergeMethods: MERGE_METHODS,
+  mergePolicy: {
+    provider: "github",
+    available: true,
+    methods: MERGE_METHODS,
+    preferredMethod: "squash",
+    requiredApprovals: 0,
+    codeOwnerReviewRequired: false,
+    conversationsMustBeResolved: true,
+    checksMustPass: true,
+    requiredCheckNames: ["Tests"],
+    branchMustBeUpToDate: false,
+    linearHistoryRequired: false,
+    mergeQueueRequired: false,
+    autoMergeAllowed: true,
+    commitMessages: {
+      github: {
+        squashTitle: "COMMIT_OR_PR_TITLE",
+        squashMessage: "COMMIT_MESSAGES",
+        mergeTitle: "MERGE_MESSAGE",
+        mergeMessage: "PR_TITLE",
+      },
+      gitlab: null,
+    },
+  },
+  reviewThreads: REVIEW_THREADS,
+  readiness: {
+    state: "ready",
+    blockers: [],
+    passed: [
+      {
+        id: "reviewable",
+        kind: "reviewable",
+        required: true,
+        source: "pull_request",
+      },
+      {
+        id: "mergeable",
+        kind: "mergeability",
+        required: true,
+        source: "pull_request",
+      },
+      {
+        id: "policy-readable",
+        kind: "policy",
+        required: true,
+        source: "repository",
+      },
+      {
+        id: "checks-passed",
+        kind: "checks",
+        required: true,
+        source: "checks",
+        count: 1,
+      },
+    ],
+    mergeAllowed: true,
+    methods: MERGE_METHODS,
+    preferredMethod: "squash",
+  },
 };

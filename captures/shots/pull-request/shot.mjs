@@ -8,7 +8,13 @@
  * node captures/shots/pull-request/shot.mjs # produces the PNGs
  *   node captures/shots/pull-request/shot.mjs --publish   # + livre
  */
-import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
+import {
+  openPage,
+  settle,
+  shoot,
+  CAPTURE,
+  CAPTURE_VARIANTS,
+} from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 import {
   COMMENTS,
@@ -18,7 +24,10 @@ import {
   LIST_RESPONSE,
   PR_ID,
   PR_NUMBER,
+  REVIEW_COMMENTS,
+  REVIEW_THREADS,
   RUN_ID,
+  TIMELINE,
   TOTALS,
 } from "./fixture.mjs";
 
@@ -30,7 +39,11 @@ const PUBLISH = process.argv.includes("--publish");
 const VARIANTS = CAPTURE_VARIANTS;
 
 const json = (route, body) =>
-  route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
 
 /**
  * Readings responded to by capture. They are ALL indexed by the PR
@@ -48,6 +61,64 @@ const json = (route, body) =>
 async function serveFixture(page) {
   const served = [];
   const unexpected = [];
+  let reviewResolved = false;
+  let draft = false;
+
+  const listResponse = () => ({
+    ...LIST_RESPONSE,
+    pullRequests: LIST_RESPONSE.pullRequests.map((item) => ({
+      ...item,
+      pr_state: draft ? "draft" : "open",
+    })),
+  });
+  const detailResponse = () =>
+    draft
+      ? {
+          ...DETAIL_RESPONSE,
+          pr: {
+            ...DETAIL_RESPONSE.pr,
+            draft: true,
+            mergeable: false,
+            mergeableState: "blocked",
+            mergeabilityReason: "draft",
+          },
+          readiness: {
+            ...DETAIL_RESPONSE.readiness,
+            state: "draft",
+            blockers: [
+              {
+                id: "draft",
+                kind: "draft",
+                required: true,
+                status: "blocked",
+                source: "pull_request",
+                action: "mark_ready",
+              },
+            ],
+            mergeAllowed: false,
+          },
+        }
+      : reviewResolved
+        ? DETAIL_RESPONSE
+        : {
+            ...DETAIL_RESPONSE,
+            readiness: {
+              ...DETAIL_RESPONSE.readiness,
+              state: "unresolved_conversations",
+              blockers: [
+                {
+                  id: "conversations-unresolved",
+                  kind: "conversations",
+                  required: true,
+                  status: "blocked",
+                  source: "conversations",
+                  action: "resolve_conversations",
+                  count: REVIEW_THREADS.length,
+                },
+              ],
+              mergeAllowed: false,
+            },
+          };
 
   const on = (test, handler) =>
     page.route(
@@ -58,8 +129,7 @@ async function serveFixture(page) {
       },
     );
 
-  const under = (suffix) =>
-    new RegExp(`^/api/pull-requests/[^/]+${suffix}$`);
+  const under = (suffix) => new RegExp(`^/api/pull-requests/[^/]+${suffix}$`);
 
   // Safety net, installed FIRST and therefore consulted LAST: Playwright
   // tries its handlers in REVERSE order of registration, the most
@@ -74,19 +144,50 @@ async function serveFixture(page) {
     },
   );
 
-  await on((p) => p === "/api/pull-requests", (r) => json(r, LIST_RESPONSE));
-  await on((p) => under("").test(p), (r) => json(r, DETAIL_RESPONSE));
+  await on(
+    (p) => p === "/api/pull-requests",
+    (r) => json(r, listResponse()),
+  );
+  await on(
+    (p) => under("").test(p),
+    (r) => {
+      if (r.request().method() === "POST") {
+        const body = r.request().postDataJSON();
+        if (body.action === "convert_to_draft") draft = true;
+        else if (body.action === "ready_for_review") draft = false;
+        return json(r, { ok: true, pr_state: draft ? "draft" : "open" });
+      }
+      return json(r, detailResponse());
+    },
+  );
   await on(
     (p) => under("/comments").test(p),
     // The wire is FLAT on the forge side: `comments` is the conversation, `timeline`
     // events (assignments, labels, etc.) and `reactions` emoji. Both
     // The latter are empty — the demo world has neither.
-    (r) => json(r, { comments: COMMENTS, timeline: [], reactions: [] }),
+    (r) => json(r, { comments: COMMENTS, timeline: TIMELINE, reactions: [] }),
   );
-  await on((p) => under("/commits").test(p), (r) => json(r, { commits: COMMITS, truncated: false }));
+  await on(
+    (p) => under("/commits").test(p),
+    (r) => json(r, { commits: COMMITS, truncated: false }),
+  );
   await on(
     (p) => under("/review-comments").test(p),
-    (r) => json(r, { comments: [], threads: [], reactions: [] }),
+    (r) => {
+      if (r.request().method() === "PATCH") {
+        reviewResolved = r.request().postDataJSON().resolved;
+        return json(r, { ok: true, resolved: reviewResolved });
+      }
+      return json(r, {
+        comments: REVIEW_COMMENTS,
+        threads: REVIEW_THREADS.map((thread) => ({
+          ...thread,
+          resolved: reviewResolved,
+          resolvedBy: reviewResolved ? "camille" : null,
+        })),
+        reactions: [],
+      });
+    },
   );
   // Rereading by Numo (MIN-168): no session on this PR, therefore nothing to
   // announce in the thread. The hook stops polling as soon as `working` is false.
@@ -99,11 +200,17 @@ async function serveFixture(page) {
 }
 
 async function capture({ locale, theme }) {
-  const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
+  const { browser, page } = await openPage({
+    theme,
+    locale,
+    viewport: VIEWPORT,
+  });
   try {
     const { served, unexpected } = await serveFixture(page);
 
-    await page.goto(`${CAPTURE.baseUrl}/pull-requests`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${CAPTURE.baseUrl}/pull-requests`, {
+      waitUntil: "domcontentloaded",
+    });
     await settle(page, { expect: `text=#${PR_NUMBER}` });
 
     // The header usage badge displays “…” as long as the billing
@@ -111,10 +218,645 @@ async function capture({ locale, theme }) {
     // photographed while loading. We wait for her to finish, whatever
     // the language — it is the character that we look for, not a wording.
     await page.waitForFunction(
-      () => ![...document.querySelectorAll("button")].some((b) => b.textContent?.trim() === "…"),
+      () =>
+        ![...document.querySelectorAll("button")].some(
+          (b) => b.textContent?.trim() === "…",
+        ),
       undefined,
       { timeout: 15_000 },
     );
+
+    const headerLayout = await page.evaluate(() => {
+      const header = document.querySelector(".app-content-header");
+      const buttons = [...(header?.querySelectorAll("button") ?? [])]
+        .filter((button) => getComputedStyle(button).display !== "none")
+        .map((button) => ({
+          label:
+            button.getAttribute("aria-label") ||
+            button.textContent?.trim() ||
+            "",
+          box: button.getBoundingClientRect().toJSON(),
+        }));
+      const overlaps = [];
+      for (let left = 0; left < buttons.length; left++) {
+        for (let right = left + 1; right < buttons.length; right++) {
+          const a = buttons[left].box;
+          const b = buttons[right].box;
+          if (
+            a.right > b.left &&
+            b.right > a.left &&
+            a.bottom > b.top &&
+            b.bottom > a.top
+          ) {
+            overlaps.push([buttons[left].label, buttons[right].label]);
+          }
+        }
+      }
+      return { overlaps, labels: buttons.map((button) => button.label) };
+    });
+    if (headerLayout.overlaps.length > 0) {
+      throw new Error(
+        `${locale}/${theme} — overlapping PR header actions: ${JSON.stringify(headerLayout.overlaps)}`,
+      );
+    }
+    if (headerLayout.labels.length < 2) {
+      throw new Error(
+        `${locale}/${theme} — readiness and primary actions are missing from the PR header.`,
+      );
+    }
+
+    if (
+      (await page.getByTestId("pr-issue-link-icon").count()) !== 1 ||
+      (await page.getByTestId("pr-sidebar-issue-link-icon").count()) !== 1
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the PR-to-issue association is not represented as a link in both headers.`,
+      );
+    }
+
+    await page.getByTestId("pr-edit-title").hover();
+    await page.getByRole("tooltip").waitFor({ state: "visible" });
+
+    const checksBanner = page.getByTestId("pr-checks");
+    await checksBanner.locator("button").first().click();
+    const requiredCheck = checksBanner.locator('[data-testid="pr-check"][data-required="true"]');
+    const optionalCheck = checksBanner.locator('[data-testid="pr-check"][data-required="false"]');
+    if (
+      (await requiredCheck.getByTestId("pr-check-requirement").count()) !== 1 ||
+      (await optionalCheck.getByTestId("pr-check-requirement").count()) !== 0
+    ) {
+      throw new Error(
+        `${locale}/${theme} — CI requiredness labels must appear only on required checks.`,
+      );
+    }
+
+    const composerPlacement = await page
+      .getByTestId("pr-comment-composer-region")
+      .evaluate((region) => ({
+        insideConversation: region.closest('[role="tabpanel"]') !== null,
+        position: getComputedStyle(region).position,
+        docked: region.classList.contains("dock-above-nav"),
+      }));
+    if (
+      !composerPlacement.insideConversation ||
+      composerPlacement.position === "fixed" ||
+      composerPlacement.position === "sticky" ||
+      composerPlacement.docked
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the conversation composer is still docked to the viewport.`,
+      );
+    }
+
+    await page.getByTestId("pr-more-actions").click();
+    const actionIds = [
+      "pr-action-numo-request",
+      "pr-action-numo-review",
+      "pr-action-approve",
+      "pr-action-comment",
+      "pr-action-convert-to-draft",
+      "pr-action-close",
+    ];
+    const actionTops = [];
+    for (const id of actionIds) {
+      const box = await page.getByTestId(id).boundingBox();
+      if (!box) throw new Error(`${locale}/${theme} — overflow action ${id} is missing.`);
+      actionTops.push(box.y);
+    }
+    if (!actionTops.every((top, index) => index === 0 || top > actionTops[index - 1])) {
+      throw new Error(
+        `${locale}/${theme} — overflow actions are not grouped Numo, review, then PR state.`,
+      );
+    }
+    if ((await page.getByRole("menu").locator('[role="separator"]').count()) !== 2) {
+      throw new Error(
+        `${locale}/${theme} — overflow action sections are not separated correctly.`,
+      );
+    }
+    await page.getByTestId("pr-action-comment").click();
+    const reviewDialog = page.getByRole("dialog");
+    await reviewDialog.waitFor({ state: "visible" });
+    if ((await reviewDialog.locator('input[type="file"][multiple]').count()) !== 1) {
+      throw new Error(
+        `${locale}/${theme} — the comment review dialog has no attachment input.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+    await page.getByTestId("pr-more-actions").click();
+    await page.getByTestId("pr-action-convert-to-draft").click();
+    const openPullRequest = page.getByTestId("pr-ready-for-review");
+    await openPullRequest.waitFor({ state: "visible" });
+    if ((await page.getByTestId("pr-readiness-control").count()) !== 0) {
+      throw new Error(
+        `${locale}/${theme} — a draft still shows readiness instead of its open action.`,
+      );
+    }
+    await openPullRequest.click();
+    await page.getByTestId("pr-readiness-control").waitFor({ state: "visible" });
+    for (const toast of await page.locator('[data-sonner-toast]').all()) {
+      const close = toast.locator('[data-close-button]');
+      if (await close.count()) await close.click();
+    }
+
+    const readinessControl = page.getByTestId("pr-readiness-control");
+    await readinessControl.click();
+    const readinessPopover = page.getByTestId("pr-readiness-popover");
+    await readinessPopover.waitFor({ state: "visible" });
+    await readinessPopover.getByTestId("pr-readiness-action-resolve_conversations").click();
+    const unresolvedConversation = page.getByTestId("pr-unresolved-conversation");
+    await unresolvedConversation.waitFor({ state: "visible" });
+    if (
+      (await unresolvedConversation.getByRole("button").count()) < 3 ||
+      !(await unresolvedConversation.textContent())?.includes("lib/palette/actions.ts")
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the unresolved-conversation list is missing context or per-thread actions.`,
+      );
+    }
+    await unresolvedConversation.getByTestId("review-thread-actions").click();
+    const threadActionMenu = page.getByRole("menu");
+    const threadActionCount = await threadActionMenu.getByRole("menuitem").count();
+    if (threadActionCount !== 2) {
+      throw new Error(
+        `${locale}/${theme} — the split resolve button exposes ${threadActionCount} actions instead of prompt and Numo.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+    await page.getByTestId("pr-fix-all").click();
+    const fixAllMenu = page.getByRole("menu");
+    const fixAllCount = await fixAllMenu.getByRole("menuitem").count();
+    if (fixAllCount !== 2) {
+      throw new Error(
+        `${locale}/${theme} — the global fix menu exposes ${fixAllCount} actions instead of prompt and Numo.`,
+      );
+    }
+    await page.keyboard.press("Escape");
+    await page.getByTestId("pr-resolve-outdated").click();
+    const outdatedConfirm = page.getByTestId("pr-resolve-outdated-confirm");
+    try {
+      await outdatedConfirm.waitFor({ state: "visible", timeout: 2_000 });
+    } catch {
+      throw new Error(
+        `${locale}/${theme} — outdated confirmation did not open (dialogs: ${await page.locator('[role="dialog"]').count()}, confirm buttons: ${await outdatedConfirm.count()}).`,
+      );
+    }
+    await outdatedConfirm.click();
+    await outdatedConfirm.waitFor({ state: "hidden" });
+    await page.getByTestId("pr-resolve-outdated").waitFor({ state: "detached" });
+    const unresolvedPanel = page.locator('[data-slot="side-panel-content"]');
+    await page.keyboard.press("Escape");
+    await unresolvedPanel.waitFor({ state: "hidden" });
+
+    await readinessControl.click();
+    await readinessPopover.waitFor({ state: "visible" });
+    if (
+      (await readinessPopover
+        .getByTestId("pr-readiness-condition-passed")
+        .count()) < 3
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the readiness popover does not list passed conditions.`,
+      );
+    }
+    if (await readinessPopover.getByTestId("pr-readiness-merge").isDisabled()) {
+      throw new Error(
+        `${locale}/${theme} — the ready PR cannot be merged from its readiness popover.`,
+      );
+    }
+    const readinessTrigger = await readinessControl.evaluate((button) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      const background = getComputedStyle(button).backgroundColor;
+      if (context) {
+        context.fillStyle = background;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return {
+        state: button.getAttribute("data-state"),
+        background,
+        channels: context
+          ? Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3))
+          : null,
+      };
+    });
+    if (
+      readinessTrigger.state !== "open" ||
+      !readinessTrigger.channels ||
+      readinessTrigger.channels.every((channel) => channel > 235)
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the open readiness trigger lost its state color (${readinessTrigger.background}).`,
+      );
+    }
+    await readinessPopover.getByTestId("pr-readiness-merge").click();
+    const mergeTitle = page.getByTestId("pr-merge-commit-title");
+    const mergeMessage = page.getByTestId("pr-merge-commit-message");
+    await mergeTitle.waitFor({ state: "visible" });
+    if (
+      (await mergeTitle.inputValue()) !==
+        "Add keyboard shortcuts to the command palette (#128)" ||
+      !(await mergeMessage.inputValue()).includes("Declare shortcuts on the action itself") ||
+      !(await mergeMessage.inputValue()).includes("Ignore contenteditable in the global listener")
+    ) {
+      throw new Error(
+        `${locale}/${theme} — squash defaults do not match the repository and PR commits.`,
+      );
+    }
+    await mergeTitle.fill("Editable squash title (#128)");
+    if ((await mergeTitle.inputValue()) !== "Editable squash title (#128)") {
+      throw new Error(`${locale}/${theme} — the squash commit title is not editable.`);
+    }
+    await page.keyboard.press("Escape");
+
+    const activityReviewThreads = page.getByTestId("pr-activity-review-threads");
+    const resolvedToggle = activityReviewThreads.getByTestId("pr-hunk-toggle");
+    await resolvedToggle.waitFor({ state: "visible", timeout: 15_000 });
+    if (
+      (await resolvedToggle.getAttribute("aria-expanded")) !== "false" ||
+      (await activityReviewThreads.getByTestId("review-thread-card").count()) !== 0
+    ) {
+      throw new Error(
+        `${locale}/${theme} — a resolved activity conversation is not fully collapsed.`,
+      );
+    }
+    await resolvedToggle.click();
+    await page
+      .getByText("export type KeyHint", { exact: false })
+      .first()
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await activityReviewThreads
+      .getByText("One key, optionally behind a modifier", { exact: false })
+      .waitFor({ state: "visible", timeout: 15_000 });
+    const htmlDetails = page.getByTestId("pr-activity-timeline").locator("details");
+    if (
+      (await htmlDetails.count()) !== 1 ||
+      (await htmlDetails.locator("summary").textContent()) !== "Implementation note"
+    ) {
+      throw new Error(
+        `${locale}/${theme} — sanitized GitHub details markup is not rendered in comments.`,
+      );
+    }
+    await htmlDetails.locator("summary").click();
+    if (!(await htmlDetails.evaluate((details) => details.open))) {
+      throw new Error(
+        `${locale}/${theme} — GitHub details markup does not expand interactively.`,
+      );
+    }
+    await htmlDetails.locator("summary").click();
+    const timelineEvents = page.getByTestId("pr-timeline-event");
+    const timelineEventText = (await timelineEvents.allTextContents()).join(" ");
+    if (
+      (await page.locator('[data-testid="pr-timeline-event"][data-kind="committed"]').count()) !== 2 ||
+      (await page.locator('[data-testid="pr-timeline-event"][data-kind="deployed"]').count()) !== 1 ||
+      !timelineEventText.includes(COMMITS[0].sha.slice(0, 7)) ||
+      !timelineEventText.includes(COMMITS[1].sha.slice(0, 7))
+    ) {
+      throw new Error(
+        `${locale}/${theme} — commits are grouped or the deployment event is missing.`,
+      );
+    }
+    const embeddedSelection = await page.evaluate(() => {
+      for (const host of document.querySelectorAll(".diff-selectable *")) {
+        const root = host.shadowRoot;
+        if (!root) continue;
+        const line = [...root.querySelectorAll("[data-line]")].find((candidate) =>
+          candidate.textContent?.includes("export type KeyHint"),
+        );
+        if (!line) continue;
+        const nodes = [line, ...line.querySelectorAll("*")];
+        return nodes.every((node) => getComputedStyle(node).userSelect !== "none");
+      }
+      return false;
+    });
+    if (!embeddedSelection) {
+      throw new Error(
+        `${locale}/${theme} — embedded review diff text still inherits user-select: none.`,
+      );
+    }
+
+    const activityLayout = await page.evaluate(() => {
+      const timeline = document.querySelector('[data-testid="pr-activity-timeline"]');
+      if (!timeline) return null;
+      const items = [...timeline.querySelectorAll(':scope > [data-testid="pr-activity-item"]')];
+      const messages = [...timeline.querySelectorAll('[data-testid="pr-activity-message"]')];
+      const review = timeline.querySelector('[data-testid="pr-activity-review"]');
+      const reviewThreads = timeline.querySelector('[data-testid="pr-activity-review-threads"]');
+      const pointer = messages[0]?.querySelector('[data-testid="pr-activity-bubble-pointer"]');
+      const pointerFill = messages[0]?.querySelector(
+        '[data-testid="pr-activity-bubble-pointer-fill"]',
+      );
+      const messageHeader = messages[0]?.querySelector("header");
+      const messageBox = messages[0]?.getBoundingClientRect();
+      const pointerBox = pointer?.getBoundingClientRect();
+      const pointerFillBox = pointerFill?.getBoundingClientRect();
+      const firstAvatar = items[0]?.querySelector('[data-testid="pr-activity-marker"] img');
+      const firstAvatarBox = firstAvatar?.getBoundingClientRect();
+      const reviewItem = review?.closest('[data-testid="pr-activity-item"]');
+      const botAvatar = reviewItem?.querySelector('[data-testid="pr-activity-marker"] img');
+      const botAvatarBox = botAvatar?.getBoundingClientRect();
+      const hunkHeader = reviewThreads?.querySelector('[data-testid="pr-hunk-header"]');
+      const resolvedBadge = hunkHeader?.querySelector('[data-testid="pr-hunk-resolved"]');
+      const resolvedBadgeStyle = resolvedBadge ? getComputedStyle(resolvedBadge) : null;
+      const hunkLineLabel = reviewThreads?.querySelector('[data-testid="pr-hunk-line-label"]');
+      const renderedHunkLines = (() => {
+        for (const host of reviewThreads?.querySelectorAll("*") ?? []) {
+          if (!host.shadowRoot) continue;
+          const lines = [...host.shadowRoot.querySelectorAll("[data-line]")].map((line) =>
+            line.textContent?.replace(/\s+/g, " ").trim(),
+          );
+          if (lines.some((line) => line?.includes("export type KeyHint"))) return lines;
+        }
+        return null;
+      })();
+      const plainThread = reviewThreads?.querySelector(
+        '[data-testid="review-thread-card"][data-variant="plain"]',
+      );
+      const commentAuthor = plainThread?.querySelector('[data-testid="review-comment-author"]');
+      const commentLogin = commentAuthor?.querySelector(':scope > span[title]');
+      const commentBody = plainThread?.querySelector('[data-testid="review-comment-body"]');
+      const commentBodyContent = commentBody?.firstElementChild;
+      const replyButton = plainThread?.querySelector('[data-testid="review-thread-reply"]');
+      const replyAvatar = replyButton?.querySelector("img");
+      const replyText = replyButton?.querySelector(":scope > span:last-child");
+      const replyButtonBox = replyButton?.getBoundingClientRect();
+      const replyAvatarBox = replyAvatar?.getBoundingClientRect();
+      const replyTextBox = replyText?.getBoundingClientRect();
+      const firstMarker = items[0]?.querySelector('[data-testid="pr-activity-marker"]');
+      const firstContent = items[0]?.querySelector('[data-testid="pr-activity-content"]');
+      const markerBox = firstMarker?.getBoundingClientRect();
+      const contentBox = firstContent?.getBoundingClientRect();
+      const rail = getComputedStyle(timeline, "::before");
+      const messageStyle = messages[0] ? getComputedStyle(messages[0]) : null;
+      const pointerStyle = pointer ? getComputedStyle(pointer) : null;
+      const pointerFillStyle = pointerFill ? getComputedStyle(pointerFill) : null;
+      const replyButtonStyle = replyButton ? getComputedStyle(replyButton) : null;
+      const plainStyle = plainThread ? getComputedStyle(plainThread) : null;
+      return {
+        itemCount: items.length,
+        messageCount: messages.length,
+        reviewCount: review ? 1 : 0,
+        reviewThreadCount: reviewThreads?.querySelectorAll(":scope > li").length ?? 0,
+        pointerElement: pointer?.tagName.toLowerCase() ?? null,
+        pointerFillElement: pointerFill?.tagName.toLowerCase() ?? null,
+        pointerBorderColor: pointerStyle?.borderRightColor ?? null,
+        pointerFillColor: pointerFillStyle?.borderRightColor ?? null,
+        messageBorderColor: messageStyle?.borderLeftColor ?? null,
+        pointerSeamOverlap:
+          pointerBox && messageBox ? pointerBox.right - messageBox.left : null,
+        pointerAvatarGap:
+          pointerBox && firstAvatarBox
+            ? pointerBox.left + pointerBox.width / 2 - firstAvatarBox.right
+            : null,
+        pointerStartsAfterCorner:
+          !!pointerBox &&
+          !!messageBox &&
+          !!messageStyle &&
+          Math.abs(
+            pointerBox.top -
+              messageBox.top -
+              Number.parseFloat(messageStyle.borderTopLeftRadius),
+          ) <= 0.5,
+        pointerLayersCentered:
+          !!pointerBox &&
+          !!pointerFillBox &&
+          Math.abs(
+            pointerBox.top + pointerBox.height / 2 -
+              (pointerFillBox.top + pointerFillBox.height / 2),
+          ) <= 0.5,
+        pointerAvatarCenterDelta:
+          pointerBox && firstAvatarBox
+            ? Math.abs(
+                pointerBox.top + pointerBox.height / 2 -
+                  (firstAvatarBox.top + firstAvatarBox.height / 2),
+              )
+            : null,
+        messageHeaderBackground: messageHeader
+          ? getComputedStyle(messageHeader).backgroundColor
+          : null,
+        botAvatarRadius: botAvatar ? Number.parseFloat(getComputedStyle(botAvatar).borderRadius) : null,
+        botAvatarWidth: botAvatarBox?.width ?? null,
+        hunkHeaderHeight: hunkHeader?.getBoundingClientRect().height ?? null,
+        hunkHeaderText: hunkHeader?.textContent?.replace(/\s+/g, " ").trim() ?? null,
+        hunkLineLabel: hunkLineLabel?.textContent?.replace(/\s+/g, " ").trim() ?? null,
+        resolvedBadge: resolvedBadge ? 1 : 0,
+        resolvedBadgeHeight: resolvedBadge?.getBoundingClientRect().height ?? null,
+        resolvedBadgeFontSize: resolvedBadgeStyle
+          ? Number.parseFloat(resolvedBadgeStyle.fontSize)
+          : null,
+        resolvedBadgeCursor: resolvedBadgeStyle?.cursor ?? null,
+        resolvedBadgeUserSelect: resolvedBadgeStyle?.userSelect ?? null,
+        renderedHunkLines,
+        commentBodyLoginDelta:
+          commentLogin && commentBodyContent
+            ? Math.abs(
+                commentLogin.getBoundingClientRect().left -
+                  commentBodyContent.getBoundingClientRect().left,
+              )
+            : null,
+        replyAvatarWidth: replyAvatar?.getBoundingClientRect().width ?? null,
+        replyButtonRadius: replyButton
+          ? Number.parseFloat(getComputedStyle(replyButton).borderRadius)
+          : null,
+        replyButtonHeight: replyButtonBox?.height ?? null,
+        replyPaddingLeft: replyButtonStyle?.paddingLeft ?? null,
+        replyPaddingRight: replyButtonStyle?.paddingRight ?? null,
+        replyAvatarInsetDelta:
+          replyButtonBox && replyAvatarBox
+            ? Math.abs(
+                replyAvatarBox.left -
+                  replyButtonBox.left -
+                  (replyAvatarBox.top - replyButtonBox.top),
+              )
+            : null,
+        replyAvatarCenterDelta:
+          replyButtonBox && replyAvatarBox
+            ? Math.abs(
+                replyButtonBox.top + replyButtonBox.height / 2 -
+                  (replyAvatarBox.top + replyAvatarBox.height / 2),
+              )
+            : null,
+        replyTextCenterDelta:
+          replyButtonBox && replyTextBox
+            ? Math.abs(
+                replyButtonBox.top + replyButtonBox.height / 2 -
+                  (replyTextBox.top + replyTextBox.height / 2),
+              )
+            : null,
+        markerBeforeContent:
+          !!markerBox && !!contentBox && markerBox.right <= contentBox.left,
+        railHeight: Number.parseFloat(rail.height),
+        plainThreadBorder:
+          plainStyle == null
+            ? null
+            : [
+                plainStyle.borderTopWidth,
+                plainStyle.borderRightWidth,
+                plainStyle.borderBottomWidth,
+                plainStyle.borderLeftWidth,
+              ],
+      };
+    });
+    if (
+      !activityLayout ||
+      activityLayout.itemCount < 4 ||
+      activityLayout.messageCount < 3 ||
+      activityLayout.reviewCount !== 1 ||
+      activityLayout.reviewThreadCount !== 1 ||
+      activityLayout.pointerElement !== "span" ||
+      activityLayout.pointerFillElement !== "span" ||
+      activityLayout.pointerBorderColor !== activityLayout.messageBorderColor ||
+      activityLayout.pointerFillColor !== activityLayout.messageHeaderBackground ||
+      activityLayout.pointerSeamOverlap == null ||
+      activityLayout.pointerSeamOverlap < 0.5 ||
+      activityLayout.pointerSeamOverlap > 1.5 ||
+      activityLayout.pointerAvatarGap == null ||
+      activityLayout.pointerAvatarGap < 8 ||
+      activityLayout.pointerAvatarGap > 10 ||
+      !activityLayout.pointerStartsAfterCorner ||
+      !activityLayout.pointerLayersCentered ||
+      activityLayout.pointerAvatarCenterDelta == null ||
+      activityLayout.pointerAvatarCenterDelta > 0.5 ||
+      activityLayout.botAvatarRadius == null ||
+      activityLayout.botAvatarWidth == null ||
+      activityLayout.botAvatarRadius >= activityLayout.botAvatarWidth / 2 ||
+      activityLayout.hunkHeaderHeight == null ||
+      activityLayout.hunkHeaderHeight < 36 ||
+      activityLayout.resolvedBadge !== 1 ||
+      activityLayout.resolvedBadgeHeight == null ||
+      activityLayout.resolvedBadgeHeight < 20 ||
+      activityLayout.resolvedBadgeFontSize == null ||
+      activityLayout.resolvedBadgeFontSize < 12 ||
+      activityLayout.resolvedBadgeCursor !== "default" ||
+      activityLayout.resolvedBadgeUserSelect !== "none" ||
+      activityLayout.renderedHunkLines?.length !== 2 ||
+      !activityLayout.renderedHunkLines[0]?.includes("One key") ||
+      !activityLayout.renderedHunkLines[1]?.includes("export type KeyHint") ||
+      !activityLayout.hunkHeaderText?.startsWith("lib/palette/actions.ts") ||
+      activityLayout.hunkHeaderText.includes("26") ||
+      activityLayout.hunkHeaderText.includes("27") ||
+      !activityLayout.hunkLineLabel?.includes("26") ||
+      !activityLayout.hunkLineLabel?.includes("27") ||
+      activityLayout.commentBodyLoginDelta == null ||
+      activityLayout.commentBodyLoginDelta > 0.5 ||
+      activityLayout.replyAvatarWidth !== 20 ||
+      activityLayout.replyButtonRadius == null ||
+      activityLayout.replyButtonHeight == null ||
+      activityLayout.replyButtonRadius < activityLayout.replyButtonHeight / 2 - 0.5 ||
+      activityLayout.replyPaddingLeft !== "5px" ||
+      activityLayout.replyPaddingRight !== "12px" ||
+      activityLayout.replyAvatarInsetDelta == null ||
+      activityLayout.replyAvatarInsetDelta > 0.5 ||
+      activityLayout.replyAvatarCenterDelta == null ||
+      activityLayout.replyAvatarCenterDelta > 0.5 ||
+      activityLayout.replyTextCenterDelta == null ||
+      activityLayout.replyTextCenterDelta > 0.5 ||
+      !activityLayout.markerBeforeContent ||
+      activityLayout.railHeight < 100 ||
+      activityLayout.plainThreadBorder?.some((width) => width !== "0px")
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the activity hierarchy is not a single avatar rail with flat review threads: ${JSON.stringify(activityLayout)}.`,
+      );
+    }
+    if ((await page.getByTestId("pr-hunk-outdated").count()) !== 0) {
+      throw new Error(
+        `${locale}/${theme} — a resolved review thread still displays the outdated badge.`,
+      );
+    }
+    const activityTimeline = page.getByTestId("pr-activity-timeline");
+    await activityTimeline.evaluate((timeline) => {
+      const state = { childListMutations: 0, observer: null };
+      state.observer = new MutationObserver((records) => {
+        state.childListMutations += records.filter((record) => record.type === "childList").length;
+      });
+      state.observer.observe(timeline, { childList: true, subtree: true });
+      window.__prActivityMutationState = state;
+    });
+    await page
+      .getByTestId("pr-comment-composer-region")
+      .getByRole("textbox")
+      .pressSequentially("Stable activity rendering", { delay: 5 });
+    await page.waitForTimeout(50);
+    const activityMutations = await activityTimeline.evaluate(() => {
+      const state = window.__prActivityMutationState;
+      state?.observer?.disconnect();
+      delete window.__prActivityMutationState;
+      return state?.childListMutations ?? -1;
+    });
+    if (activityMutations !== 0) {
+      throw new Error(
+        `${locale}/${theme} — typing in the PR composer remounted activity HTML (${activityMutations} child-list mutations).`,
+      );
+    }
+
+    await page.setViewportSize({ width: 900, height: 1_000 });
+    await page.waitForTimeout(100);
+    const narrowLayout = await page
+      .getByTestId("pr-activity-timeline")
+      .evaluate((timeline) => {
+        const boundary = timeline.getBoundingClientRect();
+        const surfaces = [
+          ...timeline.querySelectorAll(
+            '[data-testid="pr-activity-message"], [data-testid="pr-activity-review"], [data-testid="pr-activity-review-threads"] > li > article',
+          ),
+        ];
+        return {
+          timelineOverflow: timeline.scrollWidth - timeline.clientWidth,
+          outsideSurfaces: surfaces
+            .map((surface) => surface.getBoundingClientRect())
+            .filter((box) => box.left < boundary.left - 1 || box.right > boundary.right + 1)
+            .length,
+        };
+      });
+    if (narrowLayout.timelineOverflow > 1 || narrowLayout.outsideSurfaces > 0) {
+      throw new Error(
+        `${locale}/${theme} — the activity timeline overflows a narrow split pane: ${JSON.stringify(narrowLayout)}.`,
+      );
+    }
+    await page.setViewportSize(VIEWPORT);
+    await page.waitForTimeout(100);
+
+    const resolvedThread = activityReviewThreads
+      .getByTestId("review-thread-card")
+      .filter({
+        has: page.getByText("Please keep the shortcut type", { exact: false }),
+      });
+    const resolveConversation = resolvedThread.getByTestId("resolve-conversation");
+    await resolveConversation.waitFor({ state: "visible" });
+    const reopened = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        new URL(response.url()).pathname.endsWith("/review-comments"),
+    );
+    await resolveConversation.click();
+    await reopened;
+    await page.waitForTimeout(200);
+    if (
+      (await resolvedToggle.getAttribute("aria-expanded")) !== "true" ||
+      !(await resolvedThread.isVisible())
+    ) {
+      throw new Error(
+        `${locale}/${theme} — reopening a conversation did not keep its content expanded.`,
+      );
+    }
+    const resolvedAgain = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        new URL(response.url()).pathname.endsWith("/review-comments"),
+    );
+    await resolveConversation.click();
+    await resolvedAgain;
+    await page.waitForTimeout(200);
+    if (
+      (await resolvedToggle.getAttribute("aria-expanded")) !== "false" ||
+      (await activityReviewThreads.getByTestId("review-thread-card").count()) !== 0
+    ) {
+      throw new Error(
+        `${locale}/${theme} — resolving a conversation did not collapse its comments.`,
+      );
+    }
 
     // Files tab: designated by its rank, its wording is translated and carries
     // the file counter. This is the THIRD since a tab
@@ -124,7 +866,9 @@ async function capture({ locale, theme }) {
     const filesTab = page.getByRole("tab").nth(2);
     await filesTab.click();
     if ((await filesTab.getAttribute("aria-selected")) !== "true") {
-      throw new Error(`${locale}/${theme} — l'onglet Fichiers n'est pas sélectionné.`);
+      throw new Error(
+        `${locale}/${theme} — the Files tab is not selected.`,
+      );
     }
 
     // The diff is rendered by a parser: we expect a line of code, not the title
@@ -134,8 +878,136 @@ async function capture({ locale, theme }) {
       .first()
       .waitFor({ state: "visible", timeout: 15_000 });
 
-    await page.mouse.move(120, 60);
+    const diffInspection = await page.evaluate(() => {
+      const visit = (root) => {
+        for (const line of root.querySelectorAll("[data-line]")) {
+          if (line.textContent?.includes("export type KeyHint")) return line;
+        }
+        for (const element of root.querySelectorAll("*")) {
+          if (element.shadowRoot) {
+            const found = visit(element.shadowRoot);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const line = visit(document);
+      if (!line)
+        return { selectable: false, hostBackground: null, hostChannels: null };
+      const root = line.getRootNode();
+      const range = document.createRange();
+      range.selectNodeContents(line);
+      const selection =
+        root instanceof ShadowRoot && typeof root.getSelection === "function"
+          ? root.getSelection()
+          : window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      const selected = selection?.toString() ?? "";
+      selection?.removeAllRanges();
+      const host = root instanceof ShadowRoot ? root.host : line;
+      const background = host ? getComputedStyle(host).backgroundColor : null;
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (context && background) {
+        context.fillStyle = background;
+        context.fillRect(0, 0, 1, 1);
+      }
+      const hostChannels = context && background
+        ? Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3))
+        : null;
+      return {
+        selectable: selected.includes("export type KeyHint"),
+        computedSelectable: [line, ...line.querySelectorAll("*")].every(
+          (node) => getComputedStyle(node).userSelect !== "none",
+        ),
+        hostBackground: background,
+        hostChannels,
+      };
+    });
+    if (!diffInspection.selectable || !diffInspection.computedSelectable) {
+      throw new Error(
+        `${locale}/${theme} — diff code text cannot be selected and copied.`,
+      );
+    }
     await page.waitForTimeout(400);
+    const renderedIdentifier = await page.evaluate(() => {
+      const visit = (root) => {
+        for (const element of root.querySelectorAll("*")) {
+          if (element.shadowRoot) {
+            const found = visit(element.shadowRoot);
+            if (found) return found;
+          }
+          if (
+            element.hasAttribute("data-line") &&
+            element.textContent?.trim() === "id: string;"
+          ) {
+            return element;
+          }
+        }
+        return null;
+      };
+      const line = visit(document);
+      if (!line) return null;
+      const root = line.getRootNode();
+      const identifierNode = [...line.childNodes].find(
+        (child) => child.textContent?.trim().startsWith("id:") === true,
+      );
+      const element = identifierNode instanceof Element ? identifierNode : line;
+      const color = getComputedStyle(element).webkitTextFillColor;
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (context) {
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return {
+        color,
+        colorScheme:
+          root instanceof ShadowRoot
+            ? getComputedStyle(root.host).colorScheme
+            : null,
+        componentScheme: document
+          .querySelector('[data-testid="pr-diff-view"]')
+          ?.getAttribute("data-color-scheme"),
+        channels: context
+          ? Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3))
+          : null,
+      };
+    });
+    if (
+      renderedIdentifier?.colorScheme !== theme ||
+      renderedIdentifier.componentScheme !== theme
+    ) {
+      throw new Error(
+        `${locale}/${theme} — the diff renderer is using ${renderedIdentifier?.colorScheme ?? "no"} color scheme.`,
+      );
+    }
+    if (theme === "dark") {
+      const channels = diffInspection.hostChannels;
+      if (
+        !channels ||
+        channels.reduce((sum, channel) => sum + channel, 0) / 3 > 120
+      ) {
+        throw new Error(
+          `${locale}/${theme} — the diff shadow surface is not dark (${diffInspection.hostBackground}).`,
+        );
+      }
+      if (
+        !renderedIdentifier?.channels ||
+        renderedIdentifier.channels.reduce((sum, channel) => sum + channel, 0) / 3 < 150
+      ) {
+        throw new Error(
+          `${locale}/${theme} — unstyled diff identifiers are unreadable (${renderedIdentifier?.color}).`,
+        );
+      }
+    }
+
+    await page.mouse.move(120, 60);
 
     const check = await page.evaluate(
       ({ files, totals }) => {
@@ -187,7 +1059,8 @@ async function capture({ locale, theme }) {
           missingFiles: files.filter((f) => !text.includes(f)),
           painted,
           hasTotals:
-            text.includes(`+${totals.additions}`) || text.includes(String(totals.additions)),
+            text.includes(`+${totals.additions}`) ||
+            text.includes(String(totals.additions)),
         };
       },
       { files: FILES.map((f) => f.filename), totals: TOTALS },
@@ -220,7 +1093,13 @@ async function capture({ locale, theme }) {
 
     const path = `${OUT}/${locale}-${theme}.png`;
     await shoot(page, path);
-    return { path, locale, theme, painted: check.painted, served: served.length };
+    return {
+      path,
+      locale,
+      theme,
+      painted: check.painted,
+      served: served.length,
+    };
   } finally {
     await browser.close();
   }
@@ -241,13 +1120,22 @@ for (const variant of VARIANTS) {
 }
 
 if (PUBLISH) {
-  console.log("\nLivraison sur la landing :");
+  console.log("\nPublishing to the landing page:");
   for (const { locale, theme, path } of results) {
-    const published = await publishShot({ slot: SLOT, lang: locale, theme, input: path });
-    console.log(`  ${published.name} — ${(published.bytes / 1024).toFixed(0)} Ko`);
+    const published = await publishShot({
+      slot: SLOT,
+      lang: locale,
+      theme,
+      input: path,
+    });
+    console.log(
+      `  ${published.name} — ${(published.bytes / 1024).toFixed(0)} KB`,
+    );
   }
   const { published } = await writeManifest();
-  console.log(`\nManifeste : ${published.length} variante(s) publiée(s).`);
+  console.log(`\nManifest: ${published.length} variant(s) published.`);
 } else {
-  console.log("\nRegarde les images, puis relance avec --publish pour les livrer.");
+  console.log(
+    "\nReview the images, then rerun with --publish to publish them.",
+  );
 }

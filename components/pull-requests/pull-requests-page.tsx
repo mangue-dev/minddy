@@ -14,9 +14,10 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import { ChevronRight, GitPullRequest, ListFilter, Plus } from "lucide-react";
+import { GitPullRequest, Link2, ListFilter, Plus } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
@@ -31,7 +32,6 @@ import {
   toggledSet,
   type ProjectGroup,
 } from "@/components/sidebar-project-group";
-import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
@@ -305,8 +305,7 @@ function PrRow({
 }) {
   const t = useTranslations("PullRequests");
   // The PR identifier first — it's THIS line we're looking at; the ticket
-  // linked is read on the right, behind a chevron which indicates the relationship (same form as
-  // the sub-ticket in the exit card).
+  // linked is read on the right, behind a link icon that names the association.
   const identifier = prIdentifier(pr.provider, pr.pr_number);
   const linkedIssue =
     pr.issue && pr.project ? issueIdentifier(pr.project.key, pr.issue.number) : null;
@@ -333,7 +332,11 @@ function PrRow({
           <span className="shrink-0 text-foreground">{identifier}</span>
           {linkedIssue ? (
             <>
-              <ChevronRight className="size-3 shrink-0" aria-hidden />
+              <Link2
+                data-testid="pr-sidebar-issue-link-icon"
+                className="size-3 shrink-0"
+                aria-hidden
+              />
               <span className="truncate">{linkedIssue}</span>
             </>
           ) : null}
@@ -354,9 +357,8 @@ function PrRow({
         {pr.runId ? (
           <NumoIcon animated={false} className="size-3.5 shrink-0" />
         ) : pr.author ? (
-          <UserAvatar
-            url={pr.author.avatar_url}
-            seed={pr.author.login}
+          <ForgeUserAvatar
+            user={pr.author}
             className="size-3.5 shrink-0"
           />
         ) : null}

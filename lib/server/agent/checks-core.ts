@@ -6,7 +6,7 @@
  *
  * The common vocabulary is reduced to four states, because that's all that
  * the display can say: in progress, successful, failed, neutral. The nuances of both
- * forges (`cancelled`, `timed_out`, `skipped`, `manual`…) s'y replient.
+ * providers (`cancelled`, `timed_out`, `skipped`, `manual`…) map into them.
  */
 
 export type CheckState = "pending" | "success" | "failure" | "neutral";
@@ -17,31 +17,39 @@ export interface PullRequestCheck {
   /** Check page at the forge, when it exists. */
   url: string | null;
   /** The integration that produced the check — “GitHub Actions”, “Socket
-      Security »… `null` when the NAME of the check already carries it (the commit statuses
-      s'appellent « Vercel – ui »). */
+      Security”… `null` when the check name already carries it (commit statuses
+      are named things such as “Vercel – ui”). */
   appName: string | null;
-  /** Its logo, served by the forge. `null` = no logo to display (GitLab does not
-      exposes none): the UI falls back to the forge icon. */
+  /** Its logo, served by the provider. `null` means no logo is available (GitLab
+      exposes none), so the UI falls back to the provider icon. */
   appAvatarUrl: string | null;
-  /** The result in one line, as the forge formulates it (“Deployment has
-      completed”). Empty for most GitHub Actions jobs: they are not
-      tell only by their condition and duration. */
+  /** The one-line result supplied by the provider (“Deployment has completed”).
+      Empty for most GitHub Actions jobs, which communicate through state and duration. */
   description: string | null;
   /** Duration measured, when the forge gives the two limits. */
   durationMs: number | null;
+  /** Start and end instants are kept so running checks can tick live in the UI. */
+  startedAt: string | null;
+  completedAt: string | null;
+  /** `null` means the provider or current token did not expose requiredness. */
+  required: boolean | null;
+  /** Opaque provider action used by the server to retry this check safely. */
+  rerunRef: { kind: "github_check_suite" | "gitlab_pipeline"; id: number } | null;
 }
 
 export interface ChecksSummary {
   checks: PullRequestCheck[];
   /**
-   * Aggregated state: a failure trumps all, then a check in progress, otherwise
-   * successful. `null` = no check at all (deposit without CI) — distinct from
+   * Aggregated state: pending takes precedence while work remains, then failure,
+   * otherwise success. `null` means no check at all (repository without CI) — distinct from
    * `checks: null` on the API side, which means “we could not read”.
    */
   state: CheckState | null;
   /** Non-blocking checks (successful OR neutral) — the `n` of “n/m passed”. */
   passing: number;
   total: number;
+  startedAt: string | null;
+  completedAt: string | null;
 }
 
 /** Display order: what requires action first. */
@@ -60,7 +68,7 @@ export interface RawCheckApp {
   owner?: { avatar_url?: string | null } | null;
 }
 
-/** Check run GitHub (`GET /commits/{sha}/check-runs`, `filter=latest` by default). */
+/** GitHub check run (`GET /commits/{sha}/check-runs`, `filter=latest` by default). */
 export interface RawCheckRun {
   name?: string;
   status?: string; // queued | in_progress | completed | waiting | requested | pending
@@ -73,9 +81,10 @@ export interface RawCheckRun {
   output?: { title?: string | null } | null;
   started_at?: string | null;
   completed_at?: string | null;
+  check_suite?: { id?: number | null } | null;
 }
 
-/** Commit status GitHub (`GET /commits/{sha}/status`). */
+/** GitHub commit status (`GET /commits/{sha}/status`). */
 export interface RawCommitStatus {
   context?: string;
   state?: string; // pending | success | failure | error
@@ -87,7 +96,7 @@ export interface RawCommitStatus {
   creator?: { avatar_url?: string | null } | null;
 }
 
-/** Pipeline GitLab (`GET /merge_requests/:iid/pipelines`). */
+/** GitLab pipeline (`GET /merge_requests/:iid/pipelines`). */
 export interface RawPipeline {
   id?: number;
   status?: string; // created | waiting_for_resource | preparing | pending | running | success | failed | canceled | skipped | manual | scheduled
@@ -95,9 +104,12 @@ export interface RawPipeline {
   ref?: string | null;
   /** Name of the pipeline when the project gives one (`workflow:name`). */
   name?: string | null;
+  created_at?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
 }
 
-/** Marque du CI de GitLab — un nom propre, donc jamais traduit. */
+/** GitLab CI brand name, which is never translated. */
 const GITLAB_CI_APP = "GitLab CI/CD";
 
 /**
@@ -105,8 +117,8 @@ const GITLAB_CI_APP = "GitLab CI/CD";
  * the avatar of the owner ACCOUNT (the `github` organization for GitHub Actions,
  * therefore the octocat instead of the Actions logo). The App logo lives under `/in/{id}`,
  * and this is exactly the URL that GitHub itself serves in the `avatar_url` of
- * commit statuses (measured: `in/8329` for Vercel). `s=48` because we display it
- * en 20 px : sans lui, GitHub renvoie l'original en 460 px.
+ * commit statuses (measured: `in/8329` for Vercel). `s=48` avoids fetching the
+ * original 460 px image for a 20 px display slot.
  */
 function githubAppAvatar(app: RawCheckApp | null | undefined): string | null {
   if (app?.id) return `https://avatars.githubusercontent.com/in/${app.id}?s=48`;
@@ -165,7 +177,7 @@ function pipelineState(status: string | undefined): CheckState {
     case "skipped":
     case "manual":
       // A manual job not triggered is not a failure: it awaits a decision
-      // humaine que minddy ne prend pas.
+      // that Minddy does not make on the user's behalf.
       return "neutral";
     case "failed":
     case "canceled":
@@ -180,20 +192,28 @@ function summarize(checks: PullRequestCheck[]): ChecksSummary {
   const sorted = [...checks].sort(
     (a, b) => SEVERITY[a.state] - SEVERITY[b.state] || a.name.localeCompare(b.name),
   );
-  const state: CheckState | null = sorted.some((c) => c.state === "failure")
-    ? "failure"
-    : sorted.some((c) => c.state === "pending")
-      ? "pending"
+  // Pending takes precedence in the aggregate even while another check is red:
+  // the suite is still changing and must not look final.
+  const state: CheckState | null = sorted.some((c) => c.state === "pending")
+    ? "pending"
+    : sorted.some((c) => c.state === "failure")
+      ? "failure"
       : sorted.length > 0
         ? "success"
         : null;
+  const starts = sorted.map((check) => check.startedAt).filter((value): value is string => !!value);
+  const ends = sorted.map((check) => check.completedAt).filter((value): value is string => !!value);
   return {
     checks: sorted,
     state,
     // Neutral counts as non-blocking: “5/5” on a CI whose two jobs are
-    // sautéed tells the truth, “3/5” would make it seem like two failures.
+    // skipped tells the truth; “3/5” would make two checks look failed.
     passing: sorted.filter((c) => c.state === "success" || c.state === "neutral").length,
     total: sorted.length,
+    startedAt: starts.sort()[0] ?? null,
+    completedAt: sorted.some((check) => check.state === "pending")
+      ? null
+      : ends.sort().at(-1) ?? null,
   };
 }
 
@@ -201,12 +221,14 @@ function summarize(checks: PullRequestCheck[]): ChecksSummary {
  * GitHub: merges check runs (GitHub Actions & co) and commit statuses
  * (the historical API, still used by many integrations). Same name
  * can happen on both sides — the check run wins, it carries the highest state
- * detailed and this is what GitHub displays.
+ * detailed state and is what GitHub displays.
  */
 export function summarizeGithubChecks(
   runs: RawCheckRun[],
   statuses: RawCommitStatus[],
+  requiredCheckNames: readonly string[] | null = null,
 ): ChecksSummary {
+  const required = requiredCheckNames ? new Set(requiredCheckNames) : null;
   const byName = new Map<string, PullRequestCheck>();
   for (const s of statuses) {
     const name = text(s.context);
@@ -222,6 +244,10 @@ export function summarizeGithubChecks(
       description: text(s.description),
       // The historical API only dates the status installation, not the work behind it.
       durationMs: null,
+      startedAt: null,
+      completedAt: null,
+      required: required?.has(name) ?? null,
+      rerunRef: null,
     });
   }
   for (const r of runs) {
@@ -235,6 +261,12 @@ export function summarizeGithubChecks(
       appAvatarUrl: githubAppAvatar(r.app),
       description: text(r.output?.title),
       durationMs: elapsedMs(r.started_at, r.completed_at),
+      startedAt: r.started_at ?? null,
+      completedAt: r.completed_at ?? null,
+      required: required?.has(name) ?? null,
+      rerunRef: r.check_suite?.id
+        ? { kind: "github_check_suite", id: r.check_suite.id }
+        : null,
     });
   }
   return summarize([...byName.values()]);
@@ -243,16 +275,18 @@ export function summarizeGithubChecks(
 /**
  * GitLab: an MR carries a LIST of pipelines, from the most recent to the oldest,
  * and only the last one by ref describes the current state — keep the previous ones
- * would drag out the failure of an already corrected push indefinitely. The name displayed is
- * the pipeline number: GitLab does not present the details by job here (it would be necessary
- * a call by pipeline, for a view that minddy does not unfold).
+ * would keep a failure from an already corrected push visible indefinitely. The displayed name
+ * is the pipeline number: GitLab does not return job-level details here, which would require
+ * another request for a detail view that Minddy does not currently expand.
  *
- * No logo by integration on this side — at GitLab, the CI IS GitLab: the UI
- * falls on the forge icon. No duration either: this list does not give
- * than `created_at`/`updated_at`, and their gap is not the duration of the pipeline
- * (a raise extends it afterwards).
+ * There is no integration logo on this side — GitLab itself provides the CI — so the UI
+ * falls back to the provider icon. Timing comes from the detailed pipeline response; the
+ * list response's `created_at`/`updated_at` gap is not a reliable pipeline duration.
  */
-export function summarizeGitlabPipelines(pipelines: RawPipeline[]): ChecksSummary {
+export function summarizeGitlabPipelines(
+  pipelines: RawPipeline[],
+  required: boolean | null = null,
+): ChecksSummary {
   const latest = pipelines[0];
   if (!latest?.id) return summarize([]);
   return summarize([
@@ -266,6 +300,10 @@ export function summarizeGitlabPipelines(pipelines: RawPipeline[]): ChecksSummar
       // its name when the project gives one, otherwise the branch.
       description: text(latest.name) ?? text(latest.ref),
       durationMs: null,
+      startedAt: latest.started_at ?? latest.created_at ?? null,
+      completedAt: latest.finished_at ?? null,
+      required,
+      rerunRef: { kind: "gitlab_pipeline", id: latest.id },
     },
   ]);
 }

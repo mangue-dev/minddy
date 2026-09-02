@@ -1,7 +1,13 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { PrEndpoint } from "@/lib/agent-api";
+import type { PrReviewThread } from "@/lib/pr-diff-anchors";
+
+export interface PrReviewThreadActions {
+  copyPrompt: (thread: PrReviewThread) => void;
+  launchNumo?: (thread: PrReviewThread) => void;
+}
 
 /**
  * What pull request is this piece of screen talking about? Nothing, anywhere else.
@@ -25,21 +31,57 @@ import type { PrEndpoint } from "@/lib/agent-api";
  * passes through the `agent-runs/[runId]/pr/*` facades, and this is what gives it
  * exactly the same composition as the PR panel.
  */
-const PrEndpointContext = createContext<PrEndpoint | null>(null);
+interface PrContextValue {
+  endpoint: PrEndpoint;
+  replyingUser: { login: string; avatar_url: string | null } | null;
+  reviewThreadActions: PrReviewThreadActions | null;
+}
+
+const PrEndpointContext = createContext<PrContextValue | null>(null);
 
 export function PrEndpointProvider({
   endpoint,
+  replyingUser = null,
+  reviewThreadActions = null,
   children,
 }: {
   endpoint: PrEndpoint;
+  /** Forge identity that will author comments created inside this PR surface. */
+  replyingUser?: { login: string; avatar_url: string | null } | null;
+  /** Optional agent actions attached to review conversations in the PR view. */
+  reviewThreadActions?: PrReviewThreadActions | null;
   children: ReactNode;
 }) {
+  const replyingLogin = replyingUser?.login ?? null;
+  const replyingAvatarUrl = replyingUser?.avatar_url ?? null;
+  const value = useMemo<PrContextValue>(
+    () => ({
+      endpoint,
+      replyingUser: replyingLogin
+        ? { login: replyingLogin, avatar_url: replyingAvatarUrl }
+        : null,
+      reviewThreadActions,
+    }),
+    [endpoint, replyingLogin, replyingAvatarUrl, reviewThreadActions],
+  );
   return (
-    <PrEndpointContext.Provider value={endpoint}>{children}</PrEndpointContext.Provider>
+    <PrEndpointContext.Provider value={value}>
+      {children}
+    </PrEndpointContext.Provider>
   );
 }
 
 /** `null` out of a pull request view — a ticket comment does not have one. */
 export function usePrEndpoint(): PrEndpoint | null {
-  return useContext(PrEndpointContext);
+  return useContext(PrEndpointContext)?.endpoint ?? null;
+}
+
+/** Forge identity used by reply affordances, absent outside a human PR session. */
+export function usePrReplyingUser(): PrContextValue["replyingUser"] {
+  return useContext(PrEndpointContext)?.replyingUser ?? null;
+}
+
+/** Agent actions attached to review conversations, absent in read-only diffs. */
+export function usePrReviewThreadActions(): PrReviewThreadActions | null {
+  return useContext(PrEndpointContext)?.reviewThreadActions ?? null;
 }

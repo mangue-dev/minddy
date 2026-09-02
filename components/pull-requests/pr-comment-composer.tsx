@@ -100,10 +100,10 @@ export function PrCommentComposer({
   const canPost = !!body && !posting && !uploads.uploading;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 max-w-full flex-col gap-2">
       <div
         className={cn(
-          "relative w-full border border-border transition-colors focus-within:border-ring",
+          "relative min-w-0 w-full max-w-full border border-border transition-colors focus-within:border-ring",
           // The wire dial carries the radius of the Numo field on the page
           // Agents (`chat-input`, rounded-2xl): it's the same gesture, the same
           // space on the screen, there was no reason for it to have another
@@ -165,8 +165,10 @@ export function PrCommentComposer({
           />
         </div>
         {tab === "preview" ? (
-          <div className={cn(line ? "px-3 py-2" : "px-3.5 py-2.5")}>
-            <p className="whitespace-pre-wrap text-foreground">{plainMarkdown(value)}</p>
+          <div className={cn("min-w-0 max-w-full", line ? "px-3 py-2" : "px-3.5 py-2.5")}>
+            <p className="max-w-full whitespace-pre-wrap [overflow-wrap:anywhere] text-foreground">
+              {plainMarkdown(value)}
+            </p>
           </div>
         ) : null}
 

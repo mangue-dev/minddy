@@ -228,6 +228,7 @@ html[data-desktop-app] .zen-nav-hotzone {
    redefines), and the force component `color-scheme` according to the resolved theme of
    minddy. The branch that `light-dark()` chooses is therefore already the right one. */
 .pr-diff-view {
+  --minddy-diff-bg: var(--card);
   --diffs-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --diffs-font-size: 13px;
   --diffs-line-height: 20px;
@@ -265,6 +266,7 @@ html[data-desktop-app] .zen-nav-hotzone {
    around — and the diff must take this background, otherwise it goes there blank on
    gray. A variable, the rest comes from `.pr-diff-view`, which we carry with it. */
 .pr-diff-view-inset {
+  --minddy-diff-bg: var(--background);
   --diffs-light-bg: var(--background);
   --diffs-dark-bg: var(--background);
 }
@@ -1109,6 +1111,24 @@ nav[aria-label="Navigation"]
   *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
   user-select: text !important;
   -webkit-user-select: text !important;
+}
+
+/* Every diff surface is selectable, including PR files, review hunks, commit
+   sheets, and agent-side diffs. The renderer receives the same override inside
+   its shadow root because the mangue-ui reset otherwise crosses the host. */
+.diff-selectable,
+.diff-selectable *:not(button):not(input):not(textarea) {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Embedded diff chrome remains ordinary UI. This opt-out deliberately follows
+   the selectable rule so badges and future controls do not inherit its forced
+   text cursor while the surrounding source code stays copyable. */
+.diff-selectable [data-diff-nonselectable],
+.diff-selectable [data-diff-nonselectable] * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
 /* ─── Scratchpad (Notes) — always editable WYSIWYG surface ──────────────

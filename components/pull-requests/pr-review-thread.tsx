@@ -2,12 +2,40 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronRight } from "lucide-react";
-import { cn, Spinner } from "mangue-ui";
+import { ChevronRight, Eye } from "lucide-react";
+import { Button, cn, Spinner } from "mangue-ui";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
+import { PrActivityItem } from "@/components/pull-requests/pr-activity-timeline";
 import { formatModelName } from "@/lib/model-display";
 import type { PrReviewRunSummary } from "@/lib/pr-review-session";
+
+/** Prominent merge blocker shown when the current user's review is requested. */
+export function PrReviewRequestedCallout({ onReview }: { onReview: () => void }) {
+  const t = useTranslations("PullRequests");
+
+  return (
+    <div
+      data-testid="pr-review-requested"
+      className="flex min-h-11 min-w-0 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
+    >
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-[5px] bg-amber-500/10 text-amber-600 dark:text-amber-400">
+        <Eye className="size-3.5" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+        {t("reviewRequested")}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="shrink-0"
+        onClick={onReview}
+      >
+        {t("reviewRequestedAction")}
+      </Button>
+    </div>
+  );
+}
 
 /**
  * Numo's reread IN the pull request thread (MIN-168): a card which
@@ -32,13 +60,18 @@ export function PrReviewCard({ run }: { run: PrReviewRunSummary }) {
   const failed = run.status === "failed" || run.status === "canceled";
 
   return (
-    <li>
+    <PrActivityItem
+      marker={
+        <span className="flex size-8 items-center justify-center rounded-[6px] bg-card ring-4 ring-background">
+          <NumoIcon animated={working} className="size-5" />
+        </span>
+      }
+    >
       <button
         type="button"
         onClick={() => router.push(`/agents?run=${run.runId}`)}
         className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
       >
-        <NumoIcon animated={working} className="size-5 shrink-0" />
         <span className="text-sm font-medium text-foreground">Numo</span>
         <span
           className={cn(
@@ -65,6 +98,6 @@ export function PrReviewCard({ run }: { run: PrReviewRunSummary }) {
           <ChevronRight className="size-3.5" />
         </span>
       </button>
-    </li>
+    </PrActivityItem>
   );
 }

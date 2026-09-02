@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { BotBadge } from "@/components/git/git-login";
-import { UserAvatar } from "@/components/user-avatar";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { parseForgeLogin } from "@/lib/repo-providers";
 import type { CommitAuthor } from "@/lib/commit-authors";
 import {
@@ -47,14 +47,19 @@ export function AuthorStack({
                 // at the bottom detaches the one above: without it, two dark photos
                 // read like a single spot.
                 i > 0 && "-ml-1.5 ring-2 ring-card",
-                "shrink-0 rounded-full",
+                "shrink-0",
+                author.login && parseForgeLogin(author.login).isBot
+                  ? "rounded-[6px]"
+                  : "rounded-full",
               )}
               // Stacked from first to last, with the main author IN FRONT.
               style={{ zIndex: authors.length - i }}
             >
-              <UserAvatar
-                url={author.avatar_url}
-                seed={author.login ?? author.name}
+              <ForgeUserAvatar
+                user={{
+                  login: author.login ?? author.name,
+                  avatar_url: author.avatar_url,
+                }}
                 className={size}
               />
             </span>

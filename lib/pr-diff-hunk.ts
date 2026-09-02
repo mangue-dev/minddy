@@ -37,6 +37,14 @@ interface ParsedHunk {
   newStart: number;
 }
 
+export interface HunkFocusRange {
+  /** First and last file lines covered by the review comment. */
+  startLine: number;
+  endLine: number;
+  /** GitHub numbers deletions on LEFT and additions/context on RIGHT. */
+  side: "LEFT" | "RIGHT";
+}
+
 function parseHunk(diffHunk: string): ParsedHunk | null {
   const raw = (diffHunk ?? "").split("\n");
   const start = raw.findIndex((l) => HEADER.test(l));
@@ -102,17 +110,44 @@ export function hunkPreview(diffHunk: string, maxLines = 4): HunkPreviewLine[] {
  * Empty string when there is nothing to return (no hunk, or an empty hunk):
  * the caller then does not display a snippet.
  */
-export function hunkPatch(path: string, diffHunk: string, maxLines = 4): string {
+export function hunkPatch(
+  path: string,
+  diffHunk: string,
+  maxLines = 4,
+  focus?: HunkFocusRange,
+): string {
   const parsed = parseHunk(diffHunk);
   if (!parsed) return "";
-  const kept = maxLines > 0 ? parsed.lines.slice(-maxLines) : parsed.lines;
+  let firstKeptIndex = maxLines > 0 ? Math.max(0, parsed.lines.length - maxLines) : 0;
+  let lastKeptIndex = parsed.lines.length - 1;
+
+  // A multi-line comment is already its own context: rendering anything before
+  // `startLine` makes the visible selection disagree with the forge anchor.
+  // Single-line comments do not receive a focus range and keep the short tail
+  // selected by `maxLines`, so they still show a few preceding lines.
+  if (focus && focus.startLine < focus.endLine) {
+    const numberOf = (line: HunkPreviewLine) =>
+      focus.side === "LEFT" ? line.oldLine : line.newLine;
+    const startIndex = parsed.lines.findIndex(
+      (line) => numberOf(line) === focus.startLine,
+    );
+    const endIndex = parsed.lines.findLastIndex(
+      (line) => numberOf(line) === focus.endLine,
+    );
+    if (startIndex >= 0 && endIndex >= startIndex) {
+      firstKeptIndex = startIndex;
+      lastKeptIndex = endIndex;
+    }
+  }
+
+  const kept = parsed.lines.slice(firstKeptIndex, lastKeptIndex + 1);
   if (kept.length === 0) return "";
 
   // The cursor at the START of the slice: each line pushed aside moved the
   // side to which it belongs, and only that one.
   let oldStart = parsed.oldStart;
   let newStart = parsed.newStart;
-  for (const line of parsed.lines.slice(0, parsed.lines.length - kept.length)) {
+  for (const line of parsed.lines.slice(0, firstKeptIndex)) {
     if (line.type !== "add") oldStart++;
     if (line.type !== "del") newStart++;
   }

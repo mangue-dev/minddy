@@ -17,6 +17,12 @@ import { fromGitlabSystemNotes, type PrTimelineEvent } from "@/lib/pr-timeline";
 import { resolveDiffPosition } from "./mr-position";
 import { summarizeGitlabPipelines, type ChecksSummary, type RawPipeline } from "./checks-core";
 import { reviewFallbackPrefix } from "./review-copy";
+import {
+  mapGitlabMergePolicy,
+  type GitlabProjectPolicyInput,
+  type MergeabilityReason,
+  type RepositoryMergePolicy,
+} from "@/lib/pr-readiness";
 import type {
   PullRequestRef,
   PullRequestFile,
@@ -85,6 +91,38 @@ async function glJson<T>(url: string, token: string, init?: RequestInit): Promis
   }
   if (!res.ok) throw new GitlabApiError(errorMessage(data, res.status), res.status);
   return data as T;
+}
+
+async function glGraphql<T>(
+  token: string,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const res = await fetch(`${GITLAB_HOST}/api/graphql`, {
+    method: "POST",
+    headers: {
+      ...gitlabHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  const payload = (await res.json()) as {
+    data?: T;
+    errors?: Array<{ message?: string }>;
+  };
+  if (!res.ok) {
+    throw new GitlabApiError(
+      payload.errors?.[0]?.message ?? `GitLab GraphQL error (${res.status})`,
+      res.status,
+    );
+  }
+  if (payload.errors?.length || !payload.data) {
+    throw new GitlabApiError(
+      payload.errors?.[0]?.message ?? "GitLab GraphQL returned no data",
+      422,
+    );
+  }
+  return payload.data;
 }
 
 /**
@@ -159,6 +197,7 @@ interface RawMr {
   detailed_merge_status?: string | null;
   /** L'API historique : can_be_merged | cannot_be_merged | unchecked | checking. */
   merge_status?: string | null;
+  merge_when_pipeline_succeeds?: boolean;
 }
 
 /**
@@ -166,30 +205,64 @@ interface RawMr {
  * that the UI only has one language to read. `undefined` = unknown (GitLab calculates
  * also asynchronously: `unchecked` / `checking` on first reading).
  */
-function toMergeable(mr: RawMr): { mergeable?: boolean | null; mergeableState?: string | null } {
+function toMergeable(mr: RawMr): {
+  mergeable?: boolean | null;
+  mergeableState?: string | null;
+  mergeabilityReason?: MergeabilityReason | null;
+} {
   const detailed = mr.detailed_merge_status;
   if (!detailed) {
     // Fallback to historical API when the instance is older than 15.6.
-    if (mr.merge_status === "can_be_merged") return { mergeable: true, mergeableState: "clean" };
-    if (mr.merge_status === "cannot_be_merged") {
-      return { mergeable: false, mergeableState: "dirty" };
+    if (mr.merge_status === "can_be_merged") {
+      return { mergeable: true, mergeableState: "clean", mergeabilityReason: "clean" };
     }
-    return { mergeable: null, mergeableState: "unknown" };
+    if (mr.merge_status === "cannot_be_merged") {
+      return { mergeable: false, mergeableState: "dirty", mergeabilityReason: "conflicts" };
+    }
+    return { mergeable: null, mergeableState: "unknown", mergeabilityReason: "checking" };
   }
-  if (detailed === "mergeable") return { mergeable: true, mergeableState: "clean" };
+  if (detailed === "mergeable") {
+    return { mergeable: true, mergeableState: "clean", mergeabilityReason: "clean" };
+  }
   switch (detailed) {
-    case "broken_status":
     case "conflict":
-      return { mergeable: false, mergeableState: "dirty" };
+      return { mergeable: false, mergeableState: "dirty", mergeabilityReason: "conflicts" };
     case "checking":
     case "unchecked":
     case "preparing":
-      return { mergeable: null, mergeableState: "unknown" };
+      return { mergeable: null, mergeableState: "unknown", mergeabilityReason: "checking" };
+    case "not_approved":
+      return { mergeable: false, mergeableState: "blocked", mergeabilityReason: "approval_required" };
+    case "broken_status":
+    case "ci_must_pass":
+    case "ci_still_running":
+    case "status_checks_must_pass":
+      return { mergeable: false, mergeableState: "blocked", mergeabilityReason: "checks" };
+    case "discussions_not_resolved":
+      return {
+        mergeable: false,
+        mergeableState: "blocked",
+        mergeabilityReason: "unresolved_conversations",
+      };
+    case "need_rebase":
+      return {
+        mergeable: false,
+        mergeableState: "blocked",
+        mergeabilityReason: "branch_out_of_date",
+      };
+    case "draft_status":
+      return { mergeable: false, mergeableState: "blocked", mergeabilityReason: "draft" };
+    case "requested_changes":
+      return {
+        mergeable: false,
+        mergeableState: "blocked",
+        mergeabilityReason: "changes_requested",
+      };
     default:
       // `not_approved`, `blocked_status`, `ci_must_pass`, `discussions_not_resolved`,
       // `need_rebase`, `draft_status`, and `requested_changes` are all refusals
       // from the repository itself, which the UI presents as “merge blocked”.
-      return { mergeable: false, mergeableState: "blocked" };
+      return { mergeable: false, mergeableState: "blocked", mergeabilityReason: "policy" };
   }
 }
 
@@ -217,6 +290,7 @@ function toRef(mr: RawMr): PullRequestRef {
     // `nodeId` remains empty: it is a GraphQL GitHub key, with no useful equivalent
     // here (the GitLab draft switch is done by the title — see below).
     ...toMergeable(mr),
+    mergeFlowActive: !!mr.merge_when_pipeline_succeeds,
   };
 }
 
@@ -239,7 +313,7 @@ export async function findOpenMergeRequest(opts: {
  * GitLab responds 409 “Another open merge request already exists” in this case.
  *
  * GitHub parity on EMPTY branch: GitLab accepts MR without any commits —
- * we refuse ourselves in 422 (the same status as the “No commits between…” of
+ * Minddy rejects it with 422 (the same status as GitHub's “No commits between…”),
  * GitHub), otherwise the agent would open an empty MR and push the ticket for review.
  */
 export async function ensureMergeRequest(opts: {
@@ -292,11 +366,44 @@ export async function getMergeRequest(opts: {
   repoFullName: string;
   number: number;
 }): Promise<PullRequestRef> {
-  const mr = await glJson<RawMr>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
+  const [mr, defaults] = await Promise.all([
+    glJson<RawMr>(
+      `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
+      opts.token,
+    ),
+    glGraphql<{
+      project?: {
+        mergeRequest?: {
+          defaultMergeCommitMessage?: string | null;
+          defaultSquashCommitMessage?: string | null;
+        } | null;
+      } | null;
+    }>(
+      opts.token,
+      "query($projectPath:ID!,$iid:String!){project(fullPath:$projectPath){mergeRequest(iid:$iid){defaultMergeCommitMessage defaultSquashCommitMessage}}}",
+      { projectPath: opts.repoFullName, iid: String(opts.number) },
+    )
+      .then((data) => data.project?.mergeRequest ?? null)
+      .catch(() => null),
+  ]);
+  return {
+    ...toRef(mr),
+    defaultMergeCommitMessage: defaults?.defaultMergeCommitMessage ?? null,
+    defaultSquashCommitMessage: defaults?.defaultSquashCommitMessage ?? null,
+  };
+}
+
+export async function getRepositoryMergePolicy(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  base: string;
+}): Promise<RepositoryMergePolicy> {
+  const project = await glJson<GitlabProjectPolicyInput>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}`,
     opts.token,
   );
-  return toRef(mr);
+  return mapGitlabMergePolicy(project);
 }
 
 interface RawDiff {
@@ -778,6 +885,85 @@ export async function mergeMergeRequest(opts: {
   repoFullName: string;
   number: number;
   method?: "merge" | "squash" | "rebase";
+  commitTitle?: string;
+  commitMessage?: string;
+}): Promise<void> {
+  const customMessage = [opts.commitTitle?.trim(), opts.commitMessage?.trim()]
+    .filter(Boolean)
+    .join("\n\n");
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/merge`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        squash: opts.method === "squash",
+        ...(customMessage
+          ? opts.method === "squash"
+            ? { squash_commit_message: customMessage }
+            : { merge_commit_message: customMessage }
+          : {}),
+      }),
+    },
+  );
+}
+
+export async function rebaseMergeRequest(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  headSha?: string;
+}): Promise<void> {
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/rebase`,
+    opts.token,
+    { method: "PUT" },
+  );
+}
+
+export async function rerunMergeRequestCheck(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  ref: { kind: "github_check_suite" | "gitlab_pipeline"; id: number };
+}): Promise<void> {
+  if (opts.ref.kind !== "gitlab_pipeline") {
+    throw new GitlabApiError("Pipeline cannot be retried by GitLab", 409);
+  }
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/pipelines/${opts.ref.id}/retry`,
+    opts.token,
+    { method: "POST" },
+  );
+}
+
+export async function updateMergeRequestTitle(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  title: string;
+}): Promise<PullRequestRef> {
+  const mr = await glJson<RawMr>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: opts.title }),
+    },
+  );
+  return toRef(mr);
+}
+
+export async function enableMergeRequestAutoMerge(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  nodeId?: string;
+  method?: "merge" | "squash" | "rebase";
+  queue: boolean;
+  headSha?: string;
 }): Promise<void> {
   await glJson<unknown>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/merge`,
@@ -785,14 +971,18 @@ export async function mergeMergeRequest(opts: {
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ squash: opts.method === "squash" }),
+      body: JSON.stringify({
+        auto_merge: true,
+        squash: opts.method === "squash",
+        ...(opts.headSha ? { sha: opts.headSha } : {}),
+      }),
     },
   );
 }
 
-/** Title prefixes by which GitLab marks a draft MR (`WIP:` is
-    the old form, still accepted by the old authorities). */
-const DRAFT_TITLE_PREFIX = /^\s*(?:\[?draft\]?|\[?wip\]?)\s*:?\s*/i;
+/** Title prefixes by which GitLab marks a draft MR (`WIP:` is legacy). */
+const DRAFT_TITLE_PREFIX =
+  /^\s*(?:(?:\[draft\]|\[wip\])|(?:draft|wip)(?=\s|:))\s*:?\s*/i;
 
 /**
  * Switches a draft MR to “ready for review”. GitLab has no field
@@ -813,6 +1003,23 @@ export async function markMergeRequestReadyForReview(opts: {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title }),
+  });
+}
+
+/** Switches an open merge request to draft using GitLab's title convention. */
+export async function convertMergeRequestToDraft(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<void> {
+  const path = `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`;
+  const mr = await glJson<RawMr>(path, opts.token);
+  const title = (mr.title ?? "").replace(DRAFT_TITLE_PREFIX, "").trim();
+  if (!title) throw new GitlabApiError("Merge request has no title to preserve", 422);
+  await glJson<unknown>(path, opts.token, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: `Draft: ${title}` }),
   });
 }
 
@@ -898,6 +1105,7 @@ export async function submitMergeRequestReview(opts: {
 
 interface RawApprovals {
   approved_by?: Array<{ user?: { username?: string } | null }> | null;
+  approvals_required?: number | null;
 }
 
 /**
@@ -915,7 +1123,11 @@ export async function listMergeRequestApprovals(opts: {
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/approvals`,
     opts.token,
   );
-  return { approvals: (data.approved_by ?? []).length, changesRequested: 0 };
+  return {
+    approvals: (data.approved_by ?? []).length,
+    changesRequested: 0,
+    requiredApprovals: data.approvals_required ?? null,
+  };
 }
 
 /**
@@ -938,12 +1150,20 @@ export async function listMergeRequestChecks(opts: {
   token: string;
   repoFullName: string;
   number: number;
+  checksRequired?: boolean | null;
 }): Promise<ChecksSummary> {
   const pipelines = await glJson<RawPipeline[]>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/pipelines`,
     opts.token,
   );
-  return summarizeGitlabPipelines(pipelines ?? []);
+  const latest = pipelines?.[0];
+  const detailed = latest?.id
+    ? await glJson<RawPipeline>(
+        `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/pipelines/${latest.id}`,
+        opts.token,
+      ).catch(() => latest)
+    : latest;
+  return summarizeGitlabPipelines(detailed ? [detailed] : [], opts.checksRequired ?? null);
 }
 
 export async function closeMergeRequest(opts: {
@@ -1128,6 +1348,7 @@ function toReviewComment(
     // GitLab anchors a note on ONE line (`old_line`/`new_line`): no range
     // to reread, and the UI does not offer any on this side either (MIN-181).
     start_line: null,
+    original_start_line: null,
     start_side: null,
     in_reply_to_id: rootId,
     // No review to attach this comment to: GitLab has no subject
@@ -1221,6 +1442,7 @@ export async function listMergeRequestDiffThreads(opts: {
       threadId: d.id,
       resolved: !!root.resolved,
       resolvedBy: root.resolved_by?.username ?? null,
+      outdated: lineOf(root.position).line == null && lineOf(root.original_position).line != null,
     });
   }
   return states;

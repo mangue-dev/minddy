@@ -19,7 +19,8 @@ import { ensureModelInPlan } from "./model-plan";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { checkAgentQuota, type AgentQuota } from "./quota";
 import { loadPrRunContext, type PrRunContext } from "./pr-run";
-import { resolveProjectLinkForRepo } from "./repo-access";
+import { resolveProjectLinkForRepo, resolveRepoCloneTargetForRepo } from "./repo-access";
+import { forgeFor } from "./forge";
 import {
   createRun,
   activeRunForChain,
@@ -33,6 +34,7 @@ import {
   type AgentRun,
   type AgentRunTrigger,
   type CreateRunInput,
+  type InheritableWork,
 } from "./runs";
 import { requestedRunReservationUsd } from "./run-key";
 import { drainAgentRuns } from "./drain";
@@ -248,6 +250,60 @@ function isManagedBudgetUnavailableError(error: unknown): boolean {
   return error instanceof Error && error.name === "ManagedBudgetUnavailableError";
 }
 
+/**
+ * A PR branch is writable through the base repository only when GitHub reports
+ * that its qualified head belongs to that repository owner. A fork may use the
+ * same unqualified branch name, but pushing that name to the base repository
+ * would not update the pull request.
+ */
+function githubHeadBelongsToBaseRepository(repoFullName: string, headLabel: string | undefined) {
+  const baseOwner = repoFullName.split("/", 1)[0]?.trim().toLowerCase();
+  const headOwner = headLabel?.split(":", 1)[0]?.trim().toLowerCase();
+  return !!baseOwner && !!headOwner && baseOwner === headOwner;
+}
+
+async function currentWritablePrWork(
+  pr: PrRunContext,
+  userId: string,
+): Promise<InheritableWork | null> {
+  if (!pr.headBranch) return null;
+
+  if (pr.provider === "github") {
+    const target = await resolveRepoCloneTargetForRepo({
+      userId,
+      provider: pr.provider,
+      repoFullName: pr.repoFullName,
+    });
+    if (!target) return null;
+    const current = await forgeFor(pr.provider).getPullRequest({
+      token: target.token,
+      repoFullName: pr.repoFullName,
+      number: pr.number,
+    });
+    if (
+      !current.head ||
+      !githubHeadBelongsToBaseRepository(pr.repoFullName, current.headLabel)
+    ) {
+      return null;
+    }
+    return {
+      branchName: current.head,
+      baseBranch: current.base ?? pr.baseBranch,
+      prNumber: pr.number,
+      prUrl: current.url ?? pr.url,
+      prState: pr.state,
+    };
+  }
+
+  return {
+    branchName: pr.headBranch,
+    baseBranch: pr.baseBranch,
+    prNumber: pr.number,
+    prUrl: pr.url,
+    prState: pr.state,
+  };
+}
+
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
   const service = getServiceClient();
 
@@ -255,10 +311,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // comes from the repository, the model of `pr_review_model`, and nothing is written on a
   // ticket (neither status, nor event, nor branch inheritance).
   if (input.pullRequestId) {
-    if (!capability("agentExecution").configured) {
+    const localExec = localExecRequested(input);
+    if (!localExec && !capability("agentExecution").configured) {
       return { ok: false, error: "executionBackendUnavailable" };
     }
-    return launchPrReviewRun(input, input.pullRequestId);
+    return launchPrReviewRun(input, input.pullRequestId, localExec);
   }
 
   const issueId = input.issueId ?? null;
@@ -444,11 +501,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // here rather than leaving silently on a new branch, which would lose
   // the work that was precisely asked to be corrected.
   const inherited = continuePr
-    ? await inheritableWorkForPr({
+    ? (await inheritableWorkForPr({
         repoFullName: continuePr.repoFullName,
         prNumber: continuePr.number,
         provider: continuePr.provider,
-      })
+      })) ?? (await currentWritablePrWork(continuePr, input.userId))
     : null;
   if (continuePr && !inherited) return { ok: false, error: "prNoBranch" };
 
@@ -654,6 +711,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 async function launchPrReviewRun(
   input: LaunchAgentInput,
   pullRequestId: string,
+  localExec: boolean,
 ): Promise<LaunchResult> {
   const pr = await loadPrRunContext(pullRequestId);
   if (!pr) return { ok: false, error: "prNotFound" };
@@ -752,6 +810,9 @@ async function launchPrReviewRun(
       intent: "review",
       // The base serves as a point of comparison to `git diff` in the sandbox.
       baseBranch: pr.baseBranch,
+      localExec,
+      localWorktree: localExec && input.localWorktree === true,
+      localIssueContextConfirmed: input.localIssueContextConfirmed === true,
       managedBudget: managedBudgetReservation(quota, input.budgetUsd),
     });
   } catch (err) {
@@ -770,7 +831,7 @@ async function launchPrReviewRun(
     throw err;
   }
 
-  kickAgentDrain(getServiceClient());
+  if (!run.local_exec) kickAgentDrain(getServiceClient());
   return { ok: true, run };
 }
 

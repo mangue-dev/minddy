@@ -10,10 +10,11 @@ import {
 } from "mangue-ui";
 import { Check, Copy, ExternalLink, ShieldCheck } from "lucide-react";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
+import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
 import type { PullRequestCommit } from "@/lib/agent-api";
 import { newestFirstPullRequestCommits } from "@/lib/pull-request-commits";
-import type { RepoProviderId } from "@/lib/repo-providers";
+import { REPO_PROVIDERS, type RepoProviderId } from "@/lib/repo-providers";
 import {
   Tooltip,
   TooltipContent,
@@ -229,17 +230,20 @@ function CommitRow({
         ) : null}
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
           <AuthorNames authors={authors} />
-          {commit.authoredAt ? (
+          {normalizeForgeInstant(commit.authoredAt, now) ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
                   {t("committedAt", {
-                    time: format.relativeTime(new Date(commit.authoredAt), now),
+                    time: format.relativeTime(
+                      normalizeForgeInstant(commit.authoredAt, now) as Date,
+                      now,
+                    ),
                   })}
                 </span>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                {format.dateTime(new Date(commit.authoredAt), {
+                {format.dateTime(normalizeForgeInstant(commit.authoredAt, now) as Date, {
                   dateStyle: "long",
                   timeStyle: "short",
                 })}
@@ -262,7 +266,9 @@ function CommitRow({
               {t("commitVerified")}
             </Badge>
           </TooltipTrigger>
-          <TooltipContent side="bottom">{t("commitVerifiedHint")}</TooltipContent>
+          <TooltipContent side="bottom">
+            {t("commitVerifiedHint", { provider: REPO_PROVIDERS[provider].displayName })}
+          </TooltipContent>
         </Tooltip>
       ) : null}
       <div className="flex shrink-0 items-center">

@@ -2,13 +2,21 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn, useIsMobile, useTheme } from "mangue-ui";
+import {
+  Badge,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  useIsMobile,
+} from "mangue-ui";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import type { FileDiff as FileDiffInstance, PostRenderPhase } from "@pierre/diffs";
-import { PrDiffWorkers } from "@/components/pull-requests/pr-diff-workers";
-import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES } from "@/lib/diff-theme";
+import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES, DIFF_UNSAFE_CSS } from "@/lib/diff-theme";
+import { useEffectiveColorScheme } from "@/components/pull-requests/use-effective-color-scheme";
+import { pullRequestDiffCacheKey } from "@/lib/pr-diff-cache";
 import { hunkPatch } from "@/lib/pr-diff-hunk";
 
 /**
@@ -36,8 +44,15 @@ export function PrHunk({
   path,
   diffHunk,
   line,
+  startLine,
+  side,
+  outdated = false,
+  resolved = false,
   maxLines,
   className,
+  headerClassName,
+  collapsed: controlledCollapsed,
+  onCollapsedChange,
 }: {
   /** Path of the commented file — it carries the anchor AND decides the grammar. */
   path: string;
@@ -45,14 +60,33 @@ export function PrHunk({
   diffHunk?: string | null;
   /** Aimed line, when you know it — it completes the anchor of the header. */
   line?: number | null;
+  /** First line for a multi-line comment. */
+  startLine?: number | null;
+  /** Side used to find the selected range inside the unified hunk. */
+  side?: "LEFT" | "RIGHT";
+  /** Whether the forge says the referenced code is no longer current. */
+  outdated?: boolean;
+  /** Whether the review conversation has already been resolved. */
+  resolved?: boolean;
   /** Number of lines kept (the last ones). `0` = the whole hunk. */
   maxLines?: number;
   className?: string;
+  /** Optional density override for the file/line accordion header. */
+  headerClassName?: string;
+  /** Controlled state used when the whole surrounding conversation folds. */
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useEffectiveColorScheme();
   const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(false);
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const collapsed = controlledCollapsed ?? localCollapsed;
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    if (controlledCollapsed == null) setLocalCollapsed(next);
+    onCollapsedChange?.(next);
+  };
 
   /**
    * The fragment, analyzed once. `null` when there is no hunk, or when the
@@ -60,23 +94,29 @@ export function PrHunk({
    * as before, rather than displaying an empty box.
    */
   const fileDiff = useMemo(() => {
-    const patch = hunkPatch(path, diffHunk ?? "", maxLines);
+    const patch = hunkPatch(
+      path,
+      diffHunk ?? "",
+      maxLines,
+      startLine != null && line != null && startLine < line
+        ? { startLine, endLine: line, side: side ?? "RIGHT" }
+        : undefined,
+    );
     if (!patch) return null;
-    const [parsed] = parsePatchFiles(patch);
+    // Review excerpts share the global worker pool with the full Files tab.
+    // A filename-only fallback key lets two different hunks for the same path
+    // reuse incompatible highlighted line arrays.
+    const [parsed] = parsePatchFiles(patch, pullRequestDiffCacheKey(patch));
     return parsed?.files[0] ?? null;
-  }, [path, diffHunk, maxLines]);
+  }, [path, diffHunk, line, startLine, side, maxLines]);
 
-  /**
-   * The same shadow cleanup as `pr-diff`, and for the same reason: the empty lib
-   * its `<pre>` upon disassembly but LEAVES it in the Shadow DOM, where its `hydrate`
-   * following takes it for an already painted rendering. In development, `reactStrictMode`
-   * goes back to the same node — the extract would be born empty.
-   */
+  /** Keep the embedded diff's Shadow DOM reusable across Strict Mode remounts. */
   const onPostRender = useCallback(
     (node: HTMLElement, _instance: FileDiffInstance, phase: PostRenderPhase) => {
+      node.style.colorScheme = resolvedTheme;
       if (phase === "unmount") node.shadowRoot?.replaceChildren();
     },
-    [],
+    [resolvedTheme],
   );
 
   const options = useMemo(
@@ -95,6 +135,7 @@ export function PrHunk({
       // here (no `loadDiffFiles`: there is no surrounding file to load).
       hunkSeparators: "simple" as const,
       lineDiffType: DIFF_LINE_DIFF_TYPE,
+      unsafeCSS: DIFF_UNSAFE_CSS,
       onPostRender,
     }),
     [resolvedTheme, isMobile, onPostRender],
@@ -105,52 +146,130 @@ export function PrHunk({
   const dir = slash === -1 ? "" : path.slice(0, slash + 1);
   const name = slash === -1 ? path : path.slice(slash + 1);
 
-  // The anchor, painted in two pieces. The colon is not text to
-  // translate: both catalogs write `{path}:{line}`, and it is this
-  // this form that we assemble here to be able to blur the file.
+  // The path is painted in two pieces so a long directory can fade while the
+  // filename remains prominent. The line range has its own row below, like on
+  // GitHub, instead of being compressed into `path:lastLine`.
   const anchor = (
     <span className="min-w-0 flex-1 truncate font-mono text-xs">
       <span className="text-muted-foreground">{dir}</span>
       <span className="font-medium text-foreground">{name}</span>
-      {line != null ? <span className="text-muted-foreground">:{line}</span> : null}
     </span>
   );
-  const title = line != null ? t("staleAnchor", { path, line }) : path;
+  const title =
+    line != null
+      ? startLine != null && startLine < line
+        ? t("staleRangeAnchor", { path, start: startLine, end: line })
+        : t("staleAnchor", { path, line })
+      : path;
+  const lineLabel =
+    line == null
+      ? null
+      : startLine != null && startLine < line
+        ? t("lineAnchorRange", { start: startLine, end: line })
+        : t("lineAnchor", { line });
+  const statusBadge = resolved ? (
+    <Badge
+      variant="secondary"
+      data-testid="pr-hunk-resolved"
+      data-diff-nonselectable
+      className="mr-2.5 shrink-0 cursor-default select-none border-emerald-600/25 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
+    >
+      {t("resolvedComment")}
+    </Badge>
+  ) : outdated ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant="secondary"
+          data-testid="pr-hunk-outdated"
+          data-diff-nonselectable
+          tabIndex={0}
+          className="mr-2.5 shrink-0 cursor-default select-none border-amber-500/50 bg-amber-500/10 text-amber-700 outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-300"
+        >
+          {t("outdatedComment")}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-72 text-pretty">
+        {t("outdatedCommentTooltip")}
+      </TooltipContent>
+    </Tooltip>
+  ) : null;
 
   // Without an extract (GitLab does not serve any), the header has nothing left to fold:
   // it becomes an anchor line again, without chevron or gesture. A button that doesn't
   // nothing is worse than a label.
-  if (!fileDiff) {
+  if (!fileDiff && controlledCollapsed == null && !onCollapsedChange) {
     return (
-      <div className={cn("px-2.5 py-1.5", className)} title={title}>
-        {anchor}
+      <div className={className}>
+        <div
+          data-testid="pr-hunk-header"
+          className={cn("flex items-center px-2.5 py-1.5", headerClassName)}
+          title={title}
+        >
+          {anchor}
+          {statusBadge}
+        </div>
+        {lineLabel ? (
+          <div
+            data-testid="pr-hunk-line-label"
+            className="px-2.5 pb-1.5 font-mono text-[11px] text-muted-foreground"
+          >
+            {lineLabel}
+          </div>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className={cn("pr-diff-view overflow-clip", className)}>
-      <button
-        type="button"
-        onClick={() => setCollapsed((v) => !v)}
-        aria-expanded={!collapsed}
-        title={title}
+    <div className={cn("pr-diff-view diff-selectable overflow-clip", className)}>
+      <div
+        data-testid="pr-hunk-header"
         className={cn(
-          "flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-muted/60",
+          "flex w-full items-center transition-colors hover:bg-muted/60",
           collapsed ? null : "border-b border-border",
+          headerClassName,
         )}
       >
-        {collapsed ? (
-          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-        )}
-        {anchor}
-      </button>
+        <button
+          data-testid="pr-hunk-toggle"
+          type="button"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          title={title}
+          className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1.5 text-left outline-none"
+        >
+          {collapsed ? (
+            <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          )}
+          {anchor}
+        </button>
+        {statusBadge}
+      </div>
       {collapsed ? null : (
-        <PrDiffWorkers>
-          <FileDiff fileDiff={fileDiff} options={options} />
-        </PrDiffWorkers>
+        <>
+          {lineLabel ? (
+            <div
+              data-testid="pr-hunk-line-label"
+              className="px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground"
+            >
+              {lineLabel}
+            </div>
+          ) : null}
+          {fileDiff ? (
+            // These excerpts are deliberately small. Keeping them off the
+            // singleton pool also prevents one conversation's hunk from
+            // contaminating another while the library's async cache settles.
+            <FileDiff
+              key={fileDiff.cacheKey}
+              fileDiff={fileDiff}
+              options={options}
+              disableWorkerPool
+            />
+          ) : null}
+        </>
       )}
     </div>
   );

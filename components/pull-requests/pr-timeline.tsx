@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Check,
@@ -17,6 +18,7 @@ import {
   Lock,
   LockOpen,
   Milestone,
+  Rocket,
   SquarePen,
   Tag,
   Trash2,
@@ -29,12 +31,27 @@ import {
 import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
+import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { Markdown } from "@/components/markdown";
+import {
+  PrActivityBubblePointer,
+  PrActivityItem,
+} from "@/components/pull-requests/pr-activity-timeline";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
-import { UserAvatar } from "@/components/user-avatar";
-import { displayLineOf } from "@/lib/pr-review-threads";
+import {
+  ReviewThreadCard,
+  useReviewReplies,
+  useThreadResolution,
+} from "@/components/pull-requests/pr-review-comments";
+import {
+  displayLineOf,
+  displayStartLineOf,
+  groupReviewThreads,
+  type ReviewThreadState,
+} from "@/lib/pr-review-threads";
+import { normalizeForgeInstant } from "@/lib/forge-time";
 import type { PrTimelineEvent, PrReviewState } from "@/lib/pr-timeline";
-import type { PullRequestReviewComment } from "@/lib/agent-api";
+import type { PrEndpoint, PullRequestReviewComment } from "@/lib/agent-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
@@ -58,6 +75,8 @@ const KIND_ICON: Record<PrTimelineEvent["kind"], typeof Check> = {
   review_requested: Eye,
   review_request_removed: Eye,
   committed: GitCommitHorizontal,
+  deployed: Rocket,
+  deployment_environment_changed: Rocket,
   force_pushed: Upload,
   branch_deleted: Trash2,
   branch_restored: GitBranch,
@@ -91,6 +110,8 @@ const KIND_MESSAGE: Record<
   review_requested: "timelineReviewRequested",
   review_request_removed: "timelineReviewRequestRemoved",
   committed: "timelineCommitted",
+  deployed: "timelineDeployed",
+  deployment_environment_changed: "timelineDeploymentEnvironmentChanged",
   force_pushed: "timelineForcePushed",
   branch_deleted: "timelineBranchDeleted",
   branch_restored: "timelineBranchRestored",
@@ -128,54 +149,84 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
   const now = useNow();
   // A NUE review — approved without a word — arrives here rather than on the map: it
   // then keeps the icon and the color of its verdict, the only carriers of meaning.
-  const verdict = event.kind === "reviewed" ? REVIEW_STATE[event.reviewState ?? "commented"] : null;
+  const verdict =
+    event.kind === "reviewed"
+      ? REVIEW_STATE[event.reviewState ?? "commented"]
+      : null;
   const Icon = verdict?.icon ?? KIND_ICON[event.kind] ?? History;
   // `actors` is only filled on commits: everywhere else a fact has a
   // sole author, and the stack falls back to the original rendering.
   const authors = event.actors ?? [];
 
   return (
-    // `items-start` + imposed line height: the pad fits on the
-    // FIRST line of the text, and no longer floats there — it is exactly the height
-    // of a `text-sm` line (20 px), so no offset to correct. Center on
-    // the whole block would move it down as soon as a sentence passes the line.
-    <li className="flex items-start gap-2.5 px-1 py-0.5 text-sm leading-5 text-muted-foreground">
-      <span
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground/80",
-          verdict?.className,
-        )}
-        aria-hidden
+    <PrActivityItem
+      marker={
+        <span
+          className={cn(
+            "mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground/80 ring-4 ring-background",
+            verdict?.className,
+          )}
+          aria-hidden
+        >
+          <Icon className="size-3.5" />
+        </span>
+      }
+      contentClassName="py-1"
+    >
+      <div
+        data-testid="pr-timeline-event"
+        data-kind={event.kind}
+        className="flex min-w-0 items-start gap-2 text-sm leading-5 text-muted-foreground"
       >
-        <Icon className="size-3" />
-      </span>
-      {/* Authors in the plural when the fact has several — a co-signed commit
-, a multi-handed push. Otherwise the actor alone, which
- returns exactly the avatar from before. */}
-      {authors.length > 0 ? (
-        // 16 px centered in the 20 px line: the same setting as the pad.
-        <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
-      ) : event.actor ? (
-        <UserAvatar
-          url={event.actor.avatar_url}
-          seed={event.actor.login}
-          className="mt-0.5 size-4 shrink-0"
-        />
-      ) : null}
-      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
         {authors.length > 0 ? (
-          <AuthorNames authors={authors} className="text-sm" />
+          <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
         ) : event.actor ? (
-          <GitLogin login={event.actor.login} className="font-medium text-foreground" />
+          <ForgeUserAvatar
+            user={event.actor}
+            className="mt-0.5 size-4 shrink-0"
+          />
         ) : null}
-        <span className={cn("min-w-0", verdict?.className)}>{timelineText(event, t)}</span>
-        {event.createdAt ? (
-          <span className="shrink-0 text-xs text-muted-foreground/70">
-            {format.relativeTime(new Date(event.createdAt), now)}
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          {authors.length > 0 ? (
+            <AuthorNames authors={authors} className="text-sm" />
+          ) : event.actor ? (
+            <GitLogin login={event.actor.login} className="font-medium text-foreground" />
+          ) : null}
+          <span className={cn("min-w-0", verdict?.className)}>
+            {timelineText(event, t)}
           </span>
-        ) : null}
-      </span>
-    </li>
+          {event.kind === "committed" && event.body ? (
+            <span className="min-w-0 truncate font-medium text-foreground">
+              {event.body}
+            </span>
+          ) : null}
+          {event.kind === "committed" && event.sha ? (
+            event.url ? (
+              <a
+                href={event.url}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 font-mono text-xs text-foreground hover:underline"
+              >
+                {event.sha.slice(0, 7)}
+              </a>
+            ) : (
+              <span className="shrink-0 font-mono text-xs text-foreground">
+                {event.sha.slice(0, 7)}
+              </span>
+            )
+          ) : null}
+          {normalizeForgeInstant(event.createdAt, now) ? (
+            <span className="shrink-0 text-xs text-muted-foreground/70">
+              {format.relativeTime(
+                normalizeForgeInstant(event.createdAt, now) as Date,
+                now,
+              )}
+            </span>
+          ) : null}
+        </span>
+      </div>
+    </PrActivityItem>
   );
 }
 
@@ -200,11 +251,16 @@ function timelineText(
     case "review_request_removed":
       return t(KIND_MESSAGE[event.kind], { login: event.subject ?? "—" });
     case "renamed":
-      return t("timelineRenamed", { from: event.from ?? "—", to: event.to ?? "—" });
+      return t("timelineRenamed", {
+        from: event.from ?? "—",
+        to: event.to ?? "—",
+      });
     case "milestoned":
       return t("timelineMilestoned", { name: event.name ?? "—" });
     case "cross_referenced":
-      return t("timelineCrossReferenced", { reference: event.reference ?? "—" });
+      return t("timelineCrossReferenced", {
+        reference: event.reference ?? "—",
+      });
     // A review that lands ONLINE has neither body nor point: its verdict is
     // everything she says, and it's the same word as on her card.
     case "reviewed":
@@ -224,7 +280,11 @@ function timelineText(
  */
 const REVIEW_STATE: Record<
   PrReviewState,
-  { label: MessageKey<"PullRequests">; icon: typeof Check | null; className: string }
+  {
+    label: MessageKey<"PullRequests">;
+    icon: typeof Check | null;
+    className: string;
+  }
 > = {
   approved: {
     label: "timelineReviewApproved",
@@ -249,64 +309,98 @@ const REVIEW_STATE: Record<
 };
 
 /**
- * A review submitted, rendered as a message: the verdict in the header, the body
- * below, and the points placed on the code folded afterward.
- *
- * These points live in the Files tab, on their line — but a review whose thread would ONLY show " requested changes”, without saying which ones,
- * would require you to change tabs to understand what just happened. They are
- * therefore recalled here, in extract, with their anchor: the detail (the hunk, the thread of
- * answers) remains in the diff.
- *
- * A NAKED review - no body, no point - does not deserve a card: it is
- * a fact, and the caller puts it online like the others.
+ * A submitted review with its body and code threads attached to one branch.
+ * Bare reviews remain compact timeline events and never create an empty card.
  */
 export function PrTimelineReview({
   event,
   comments,
+  endpoint,
+  threadStates,
+  canComment,
+  canResolve,
+  onChanged,
+  onResolutionChanged = onChanged,
 }: {
   event: PrTimelineEvent;
   /** The points of THIS review, already filtered by the caller. */
   comments: PullRequestReviewComment[];
+  endpoint: PrEndpoint;
+  threadStates: ReviewThreadState[];
+  canComment: boolean;
+  canResolve: boolean;
+  onChanged: () => unknown;
+  /** Refresh merge readiness without replacing the activity thread. */
+  onResolutionChanged?: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
   const now = useNow();
   const state = REVIEW_STATE[event.reviewState ?? "commented"];
+  const threads = groupReviewThreads(comments, threadStates);
+  const replies = useReviewReplies(endpoint, onChanged);
+  const resolution = useThreadResolution(endpoint, onResolutionChanged);
   // Absent on “read again”: the map is already made of what the icon announces.
   const Icon = state.icon;
 
   return (
-    <li className="flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3">
-      <div className="flex items-center gap-2">
-        <UserAvatar
-          url={event.actor?.avatar_url}
-          seed={event.actor?.login ?? "?"}
-          className="size-5"
+    <PrActivityItem
+      marker={
+        <ForgeUserAvatar
+          user={event.actor}
+          className="mt-2 size-8 ring-4 ring-background"
         />
-        <GitLogin login={event.actor?.login} className="text-sm font-medium text-foreground" />
-        <span className={cn("flex shrink-0 items-center gap-1 text-xs", state.className)}>
-          {Icon ? <Icon className="size-3.5" /> : null}
-          {t(state.label)}
-        </span>
-        {event.createdAt ? (
-          <span className="shrink-0 text-xs text-muted-foreground/80">
-            {format.relativeTime(new Date(event.createdAt), now)}
+      }
+      contentClassName="flex flex-col gap-3"
+    >
+      <article
+        data-testid="pr-activity-review"
+        className="relative rounded-lg border border-border bg-card shadow-xs [--activity-header:color-mix(in_oklab,var(--muted)_35%,var(--card))]"
+      >
+        <PrActivityBubblePointer />
+        <header className="relative flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-border bg-[var(--activity-header)] px-3 py-2">
+          <GitLogin login={event.actor?.login} className="text-sm font-medium text-foreground" />
+          <span className={cn("flex shrink-0 items-center gap-1 text-xs", state.className)}>
+            {Icon ? <Icon className="size-3.5" /> : null}
+            {t(state.label)}
           </span>
+          {normalizeForgeInstant(event.createdAt, now) ? (
+            <span className="shrink-0 text-xs text-muted-foreground/80">
+              {format.relativeTime(
+                normalizeForgeInstant(event.createdAt, now) as Date,
+                now,
+              )}
+            </span>
+          ) : null}
+        </header>
+        {event.body ? (
+          <div className="px-3.5 py-3">
+            <Markdown
+              allowRawHtml
+              className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
+            >
+              {event.body}
+            </Markdown>
+          </div>
         ) : null}
-      </div>
-      {event.body ? (
-        <Markdown className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit">
-          {event.body}
-        </Markdown>
-      ) : null}
+      </article>
       {comments.length > 0 ? (
-        <ul className="flex flex-col gap-2 pt-0.5">
-          {comments.map((c) => (
-            <ReviewCommentBlock key={c.id} comment={c} />
+        <ul
+          data-testid="pr-activity-review-threads"
+          className="relative ml-3 flex flex-col gap-3 border-l border-border pl-4"
+        >
+          {threads.map((thread) => (
+            <ReviewCommentBlock
+              key={thread.id}
+              thread={thread}
+              replies={replies}
+              resolution={canResolve ? resolution : undefined}
+              readOnly={!canComment}
+            />
           ))}
         </ul>
       ) : null}
-    </li>
+    </PrActivityItem>
   );
 }
 
@@ -326,35 +420,81 @@ export function PrTimelineReview({
  * the extract disappears and the anchor `fichier:ligne` alone carries the context: the
  * block is still read.
  */
-export function ReviewCommentBlock({ comment }: { comment: PullRequestReviewComment }) {
-  const format = useFormatter();
-  const now = useNow();
+export function ReviewCommentBlock({
+  thread,
+  replies,
+  resolution,
+  readOnly,
+}: {
+  thread: ReturnType<
+    typeof groupReviewThreads<PullRequestReviewComment>
+  >[number];
+  replies: ReturnType<typeof useReviewReplies>;
+  resolution?: ReturnType<typeof useThreadResolution>;
+  readOnly: boolean;
+}) {
+  return (
+    <li className="relative">
+      <span aria-hidden className="absolute -left-4 top-4 w-4 border-t border-border" />
+      <ReviewConversationCard
+        thread={thread}
+        replies={replies}
+        resolution={resolution}
+        readOnly={readOnly}
+      />
+    </li>
+  );
+}
+
+/** Full code-and-message surface shared by Activity and unresolved conversations. */
+export function ReviewConversationCard({
+  thread,
+  replies,
+  resolution,
+  readOnly,
+}: {
+  thread: ReturnType<
+    typeof groupReviewThreads<PullRequestReviewComment>
+  >[number];
+  replies: ReturnType<typeof useReviewReplies>;
+  resolution?: ReturnType<typeof useThreadResolution>;
+  readOnly: boolean;
+}) {
+  const comment = thread.root;
+  const resolved = !!thread.resolution?.resolved;
+  const [collapsed, setCollapsed] = useState(resolved);
+
+  useEffect(() => {
+    setCollapsed(resolved);
+  }, [resolved]);
 
   return (
-    <li className="overflow-clip rounded-md border border-border bg-background">
+    <article className="overflow-clip rounded-lg border border-border bg-card shadow-xs">
       <PrHunk
         path={comment.path}
         line={displayLineOf(comment)}
+        startLine={displayStartLineOf(comment)}
+        side={comment.start_side ?? comment.side}
+        outdated={thread.resolution?.outdated ?? comment.line == null}
+        resolved={thread.resolution?.resolved}
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
         diffHunk={comment.diff_hunk}
-        // The block is in `bg-background` (this is what detaches it from the map
-        // review): the diff must take this background, not that of a card.
-        className="pr-diff-view-inset border-b border-border"
+        className="pr-diff-view-inset border-b border-border bg-muted/15"
+        headerClassName="py-2.5"
       />
 
-      <div className="flex flex-col gap-1 px-2.5 py-2">
-        <span className="flex items-center gap-1.5">
-          <UserAvatar
-            url={comment.user?.avatar_url}
-            seed={comment.user?.login ?? "?"}
-            className="size-4"
+      {collapsed ? null : (
+        <div className="px-3 py-3">
+          <ReviewThreadCard
+            thread={thread}
+            replies={replies}
+            resolution={resolution}
+            readOnly={readOnly}
+            variant="plain"
           />
-          <GitLogin login={comment.user?.login} className="text-xs font-medium text-foreground" />
-          <span className="shrink-0 text-[11px] text-muted-foreground/70">
-            {format.relativeTime(new Date(comment.created_at), now)}
-          </span>
-        </span>
-        <Markdown className="text-sm text-foreground">{comment.body}</Markdown>
-      </div>
-    </li>
+        </div>
+      )}
+    </article>
   );
 }

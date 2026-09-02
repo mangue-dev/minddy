@@ -1297,7 +1297,8 @@ export function registerMinddyTools(
               // the first. Without it, “these ten lines are false” reads
               // as a point on the last one (MIN-181).
               start_line: thread.root.start_line,
-              outdated: thread.root.line == null,
+              original_start_line: thread.root.original_start_line,
+              outdated: thread.resolution?.outdated ?? thread.root.line == null,
               // `true` = the thread has been marked resolved: the point is set.
               // `false` includes "unknown state" — the forge didn't say it.
               resolved: !!thread.resolution?.resolved,

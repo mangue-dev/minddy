@@ -22,6 +22,14 @@ import {
 } from "@/lib/pr-timeline";
 import type { CommitAuthor } from "@/lib/commit-authors";
 import { reviewFallbackPrefix } from "./review-copy";
+import {
+  mapGithubMergePolicy,
+  type GithubBranchPolicyInput,
+  type GithubRepositoryPolicyInput,
+  type GithubRuleInput,
+  type MergeabilityReason,
+  type RepositoryMergePolicy,
+} from "@/lib/pr-readiness";
 
 /**
  * GitHub Pull Request Operations for Code Agent (MIN-46): Open PR
@@ -39,6 +47,8 @@ export interface PullRequestRef {
   title?: string;
   body?: string | null;
   head?: string;
+  /** Provider-qualified head name used by GitHub's classic merge title. */
+  headLabel?: string;
   base?: string;
   /** Head SHA — immutable anchor to calculate the merge base (getMergeBaseSha). */
   headSha?: string;
@@ -65,6 +75,14 @@ export interface PullRequestRef {
       approvals or checks), `dirty` (conflict), `unstable` (optional checks are
       failing), or `unknown`. */
   mergeableState?: string | null;
+  mergeabilityReason?: MergeabilityReason | null;
+  mergeFlowActive?: boolean;
+  reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  /** Direct reviewer requests that are still pending at the forge. */
+  requestedReviewers?: Array<{ login: string; avatar_url: string | null }>;
+  /** Fully rendered GitLab defaults for the merge dialog. */
+  defaultMergeCommitMessage?: string | null;
+  defaultSquashCommitMessage?: string | null;
 }
 
 /** Verdict of a review, in neutral vocabulary (GitHub: APPROVE / REQUEST_CHANGES / COMMENT). */
@@ -89,6 +107,7 @@ export interface ReviewSubmission {
 export interface PullRequestReviewSummary {
   approvals: number;
   changesRequested: number;
+  requiredApprovals?: number | null;
 }
 
 export interface PullRequestFile {
@@ -212,6 +231,8 @@ export interface PullRequestReviewComment {
       remark made on lines 6 to 15 is reread as a remark on the
       15: the anchor is right, the beach has disappeared. */
   start_line: number | null;
+  /** First line at the original commit, retained after the thread becomes outdated. */
+  original_start_line: number | null;
   start_side: "LEFT" | "RIGHT" | null;
   /** Thread root (GitHub standardizes: replying to a reply points to the root). */
   in_reply_to_id: number | null;
@@ -324,12 +345,14 @@ interface RawPull {
   mergeable_state?: string | null;
   title?: string;
   body?: string | null;
-  head?: { ref?: string; sha?: string };
+  head?: { ref?: string; sha?: string; label?: string };
   base?: { ref?: string };
   commits?: number;
   user?: { login?: string; avatar_url?: string } | null;
+  requested_reviewers?: Array<{ login?: string; avatar_url?: string | null }>;
   created_at?: string;
   updated_at?: string;
+  auto_merge?: object | null;
 }
 
 /**
@@ -349,6 +372,7 @@ function toRef(pr: RawPull): PullRequestRef {
     title: pr.title,
     body: pr.body ?? null,
     head: pr.head?.ref,
+    headLabel: pr.head?.label,
     base: pr.base?.ref,
     headSha: pr.head?.sha,
     commitCount: pr.commits,
@@ -359,7 +383,46 @@ function toRef(pr: RawPull): PullRequestRef {
     nodeId: pr.node_id,
     mergeable: pr.mergeable,
     mergeableState: pr.mergeable_state,
+    mergeabilityReason: githubMergeabilityReason(pr),
+    mergeFlowActive: !!pr.auto_merge,
+    requestedReviewers: (pr.requested_reviewers ?? [])
+      .filter((reviewer): reviewer is { login: string; avatar_url?: string | null } =>
+        !!reviewer.login,
+      )
+      .map((reviewer) => ({
+        login: reviewer.login,
+        avatar_url: reviewer.avatar_url ?? null,
+      })),
   };
+}
+
+function githubMergeabilityReason(pr: RawPull): MergeabilityReason | null {
+  if (pr.draft) return "draft";
+  switch (pr.mergeable_state) {
+    case "clean":
+    case "unstable":
+      return "clean";
+    case "behind":
+      return "branch_out_of_date";
+    case "dirty":
+      return "conflicts";
+    case "blocked":
+      return "policy";
+    case "unknown":
+      return "checking";
+    default:
+      return pr.mergeable == null ? null : pr.mergeable ? "clean" : "policy";
+  }
+}
+
+export function refineGithubMergeabilityReason(
+  reason: MergeabilityReason | null | undefined,
+  reviewDecision: PullRequestRef["reviewDecision"],
+): MergeabilityReason | null | undefined {
+  if (reason !== "clean" && reason !== "policy") return reason;
+  if (reviewDecision === "CHANGES_REQUESTED") return "changes_requested";
+  if (reviewDecision === "REVIEW_REQUIRED") return "approval_required";
+  return reason;
 }
 
 /** PR open for `head` (run branch), or null. */
@@ -429,7 +492,71 @@ export async function getPullRequest(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
     opts.token,
   );
-  return toRef(pr);
+  const ref = toRef(pr);
+  if (pr.node_id) {
+    const flow = await ghGraphql<{
+      node?: {
+        mergeQueueEntry?: { id?: string } | null;
+        autoMergeRequest?: { enabledAt?: string } | null;
+        reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+      } | null;
+    }>(
+      opts.token,
+      "query($id:ID!){node(id:$id){... on PullRequest{mergeQueueEntry{id} autoMergeRequest{enabledAt} reviewDecision}}}",
+      { id: pr.node_id },
+    ).catch(() => null);
+    ref.mergeFlowActive = !!(flow?.node?.mergeQueueEntry || flow?.node?.autoMergeRequest);
+    ref.reviewDecision = flow?.node?.reviewDecision ?? null;
+    ref.mergeabilityReason = refineGithubMergeabilityReason(
+      ref.mergeabilityReason,
+      ref.reviewDecision,
+    );
+  }
+  return ref;
+}
+
+/** Repository method settings plus the protection rules of this PR's base branch. */
+export async function getRepositoryMergePolicy(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  base: string;
+}): Promise<RepositoryMergePolicy> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const repository = await ghJson<GithubRepositoryPolicyInput>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
+    opts.token,
+  );
+  const [branchResult, rules] = await Promise.all([
+    ghJson<GithubBranchPolicyInput>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${encodeURIComponent(opts.base)}/protection`,
+      opts.token,
+    ).catch((error) => {
+      if (error instanceof GithubApiError && error.status === 404) return null;
+      if (error instanceof GithubApiError && error.status === 403) return "forbidden" as const;
+      throw error;
+    }),
+    ghJson<GithubRuleInput[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/rules/branches/${encodeURIComponent(opts.base)}?per_page=100`,
+      opts.token,
+    ).catch((error) => {
+      // Older GitHub Enterprise instances do not expose rulesets. Branch
+      // protection remains authoritative there.
+      if (
+        error instanceof GithubApiError &&
+        (error.status === 403 || error.status === 404)
+      ) return [];
+      throw error;
+    }),
+  ]);
+  // Policy visibility is optional for existing installations. GitHub remains
+  // authoritative through the merge endpoint when these Administration-only
+  // reads are forbidden, while repository merge methods are still usable.
+  return mapGithubMergePolicy(
+    repository,
+    branchResult === "forbidden" ? null : branchResult,
+    rules,
+  );
 }
 
 const FILES_PER_PAGE = 100;
@@ -962,6 +1089,8 @@ export async function mergePullRequest(opts: {
   repoFullName: string;
   number: number;
   method?: "merge" | "squash" | "rebase";
+  commitTitle?: string;
+  commitMessage?: string;
 }): Promise<void> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   await ghJson<unknown>(
@@ -970,8 +1099,93 @@ export async function mergePullRequest(opts: {
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ merge_method: opts.method ?? "squash" }),
+      body: JSON.stringify({
+        merge_method: opts.method ?? "squash",
+        ...(opts.commitTitle != null ? { commit_title: opts.commitTitle } : {}),
+        ...(opts.commitMessage != null ? { commit_message: opts.commitMessage } : {}),
+      }),
     },
+  );
+}
+
+export async function updatePullRequestBranch(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  headSha?: string;
+}): Promise<void> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  await ghJson<unknown>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/update-branch`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(opts.headSha ? { expected_head_sha: opts.headSha } : {}),
+    },
+  );
+}
+
+export async function rerunPullRequestCheck(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  ref: { kind: "github_check_suite" | "gitlab_pipeline"; id: number };
+}): Promise<void> {
+  if (opts.ref.kind !== "github_check_suite") {
+    throw new GithubApiError("Check cannot be rerun by GitHub", 409);
+  }
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  await ghJson<unknown>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/check-suites/${opts.ref.id}/rerequest`,
+    opts.token,
+    { method: "POST" },
+  );
+}
+
+export async function updatePullRequestTitle(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  title: string;
+}): Promise<PullRequestRef> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const pr = await ghJson<RawPull>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
+    opts.token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: opts.title }),
+    },
+  );
+  return toRef(pr);
+}
+
+export async function enablePullRequestMergeFlow(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  nodeId?: string;
+  method?: "merge" | "squash" | "rebase";
+  queue: boolean;
+  headSha?: string;
+}): Promise<void> {
+  if (!opts.nodeId) throw new GithubApiError("Pull request has no GraphQL id", 409);
+  if (opts.queue) {
+    await ghGraphql<unknown>(
+      opts.token,
+      "mutation($id:ID!){enqueuePullRequest(input:{pullRequestId:$id}){mergeQueueEntry{id}}}",
+      { id: opts.nodeId },
+    );
+    return;
+  }
+  const method = (opts.method ?? "squash").toUpperCase();
+  await ghGraphql<unknown>(
+    opts.token,
+    "mutation($id:ID!,$method:PullRequestMergeMethod!){enablePullRequestAutoMerge(" +
+      "input:{pullRequestId:$id,mergeMethod:$method}){pullRequest{id}}}",
+    { id: opts.nodeId, method },
   );
 }
 
@@ -1127,10 +1341,16 @@ export async function listPullRequestReviews(opts: {
   number: number;
 }): Promise<PullRequestReviewSummary> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const reviews = await ghJson<RawReview[]>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100`,
-    opts.token,
-  );
+  const reviews: RawReview[] = [];
+  for (let page = 1; ; page++) {
+    const batch = await ghJson<RawReview[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews` +
+        `?per_page=100&page=${page}`,
+      opts.token,
+    );
+    reviews.push(...batch);
+    if (batch.length < 100) break;
+  }
   // The endpoint goes from oldest to newest: last written by
   // login gagne naturellement.
   const verdictByUser = new Map<string, "approved" | "changes_requested">();
@@ -1230,6 +1450,19 @@ export async function markPullRequestReadyForReview(opts: {
   );
 }
 
+/** Switches an open pull request back to draft through GitHub GraphQL. */
+export async function convertPullRequestToDraft(opts: {
+  token: string;
+  nodeId: string;
+}): Promise<void> {
+  await ghGraphql<unknown>(
+    opts.token,
+    "mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id})" +
+      "{pullRequest{number isDraft}}}",
+    { id: opts.nodeId },
+  );
+}
+
 /**
  * CI checks from the PR head: check runs (GitHub Actions & co) AND
  * commit statuses (the historical API), merged by `checks-core`.
@@ -1244,6 +1477,7 @@ export async function listPullRequestChecks(opts: {
   token: string;
   repoFullName: string;
   sha: string;
+  requiredCheckNames?: readonly string[] | null;
 }): Promise<ChecksSummary> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${opts.sha}`;
@@ -1251,7 +1485,11 @@ export async function listPullRequestChecks(opts: {
     ghJson<{ check_runs?: RawCheckRun[] }>(`${base}/check-runs?per_page=100`, opts.token),
     ghJson<{ statuses?: RawCommitStatus[] }>(`${base}/status?per_page=100`, opts.token),
   ]);
-  return summarizeGithubChecks(runs.check_runs ?? [], statuses.statuses ?? []);
+  return summarizeGithubChecks(
+    runs.check_runs ?? [],
+    statuses.statuses ?? [],
+    opts.requiredCheckNames ?? null,
+  );
 }
 
 interface RawComment {
@@ -1340,8 +1578,8 @@ const TIMELINE_PER_PAGE = 100;
 const TIMELINE_MAX_PAGES = 10;
 
 /**
- * PR ACTIVITY (MIN-159) — reviews submitted, commits pushed, labels,
- * assignments, renames, draft ↔ ready, close, merge.
+ * PR ACTIVITY (MIN-159) — reviews submitted, commits pushed, deployments,
+ * labels, assignments, renames, draft ↔ ready, close, merge.
  *
  * On GitHub a PR is an issue, and it all lives under `issues/{n}/timeline`:
  * a heterogeneous flow where each `event` has its own form. Normalization is
@@ -1378,6 +1616,7 @@ interface RawReviewComment extends RawComment {
   original_line?: number | null;
   side?: string | null;
   start_line?: number | null;
+  original_start_line?: number | null;
   start_side?: string | null;
   in_reply_to_id?: number | null;
   diff_hunk?: string;
@@ -1397,6 +1636,7 @@ function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
     // 15 returns from the forge as a commentary on 15 — it is, in the sense
     // of the anchor, but the screen would no longer say anything about the beach.
     start_line: c.start_line ?? null,
+    original_start_line: c.original_start_line ?? null,
     start_side: c.start_side === "LEFT" ? "LEFT" : c.start_side === "RIGHT" ? "RIGHT" : null,
     in_reply_to_id: c.in_reply_to_id ?? null,
     review_id: c.pull_request_review_id ?? null,
@@ -1525,7 +1765,9 @@ interface RawReviewThreads {
           id?: string;
           isResolved?: boolean;
           resolvedBy?: { login?: string } | null;
-          comments?: { nodes?: Array<{ databaseId?: number | null }> };
+          comments?: {
+            nodes?: Array<{ databaseId?: number | null; outdated?: boolean }>;
+          };
         } | null>;
       };
     } | null;
@@ -1558,7 +1800,7 @@ export async function listPullRequestReviewThreads(opts: {
       pullRequest(number:$number){
         reviewThreads(first:100,after:$cursor){
           pageInfo{hasNextPage endCursor}
-          nodes{id isResolved resolvedBy{login} comments(first:1){nodes{databaseId}}}
+          nodes{id isResolved resolvedBy{login} comments(first:1){nodes{databaseId outdated}}}
         }
       }
     }
@@ -1575,7 +1817,8 @@ export async function listPullRequestReviewThreads(opts: {
     });
     const threads = data.repository?.pullRequest?.reviewThreads;
     for (const node of threads?.nodes ?? []) {
-      const rootCommentId = node?.comments?.nodes?.[0]?.databaseId;
+      const root = node?.comments?.nodes?.[0];
+      const rootCommentId = root?.databaseId;
       // A thread without a node id or without a readable root cannot be matched to anything: we
       // drop it rather than invent a key.
       if (!node?.id || rootCommentId == null) continue;
@@ -1584,6 +1827,7 @@ export async function listPullRequestReviewThreads(opts: {
         threadId: node.id,
         resolved: !!node.isResolved,
         resolvedBy: node.resolvedBy?.login ?? null,
+        outdated: !!root?.outdated,
       });
     }
     if (!threads?.pageInfo?.hasNextPage || !threads.pageInfo.endCursor) break;

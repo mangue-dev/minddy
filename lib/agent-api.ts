@@ -589,6 +589,8 @@ export interface PullRequestRef {
   title?: string;
   body?: string | null;
   head?: string;
+  /** Provider-qualified head name used by the default merge commit title. */
+  headLabel?: string;
   base?: string;
   /** Head SHA — the EXACT diff served. Compared to the SHA that was reread by the last
    * Numo review to see if relaunch would have anything new to read. */
@@ -606,6 +608,15 @@ export interface PullRequestRef {
   /** `clean` · `blocked` (repository requires approvals/checks) · `dirty` (conflict)
       · `unstable` (checks not required in failure) · `unknown`. */
   mergeableState?: string | null;
+  /** Provider refusal normalized to one actionable reason. */
+  mergeabilityReason?: import("./pr-readiness").MergeabilityReason | null;
+  mergeFlowActive?: boolean;
+  reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  /** Direct reviewer requests that are still pending at the forge. */
+  requestedReviewers?: Array<{ login: string; avatar_url: string | null }>;
+  /** Fully rendered GitLab defaults for the merge dialog. */
+  defaultMergeCommitMessage?: string | null;
+  defaultSquashCommitMessage?: string | null;
 }
 
 /** Normalized status of a CI check (MIN-138) — mirror of `lib/server/agent/checks-core.ts`. */
@@ -623,6 +634,10 @@ export interface PullRequestCheck {
   /** The result in one line, as the forge formulates it. */
   description: string | null;
   durationMs: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  required: boolean | null;
+  rerunRef: { kind: "github_check_suite" | "gitlab_pipeline"; id: number } | null;
 }
 
 export interface ChecksSummary {
@@ -632,6 +647,8 @@ export interface ChecksSummary {
   /** Non-blocking checks (successful or neutral) — the `n` of “n/m passed”. */
   passing: number;
   total: number;
+  startedAt: string | null;
+  completedAt: string | null;
 }
 
 /** Merge methods offered by the forge of the linked repository. */
@@ -640,6 +657,7 @@ export type MergeMethod = "merge" | "squash" | "rebase";
 export interface PullRequestReviewSummary {
   approvals: number;
   changesRequested: number;
+  requiredApprovals?: number | null;
 }
 
 /**
@@ -663,6 +681,8 @@ export interface PrViewer {
       Absent on a tab that remained open since a version before this field. */
   expired?: boolean;
   login: string | null;
+  /** Avatar of the connected forge account that will author human actions. */
+  avatarUrl?: string | null;
   /** `write` = merge/resolve, `read` = reviewer/comment, `none` = nothing. */
   capability: "write" | "read" | "none";
   /** The account under which Numo writes at the forge – enough to recognize SES
@@ -681,6 +701,9 @@ export interface AgentRunPrResponse {
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];
+  mergePolicy?: import("./pr-readiness").RepositoryMergePolicy | null;
+  readiness?: import("./pr-readiness").PullRequestReadiness | null;
+  reviewThreads?: import("./pr-review-threads").ReviewThreadState[] | null;
 }
 
 export interface PullRequestFile {
@@ -772,15 +795,36 @@ export function prFileRawUrl(
 
 export async function actOnPullRequestApi(
   prId: string,
-  action: "merge" | "close" | "reopen" | "ready_for_review",
-  method?: MergeMethod,
+  action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
+  options: {
+    method?: MergeMethod;
+    commitTitle?: string;
+    commitMessage?: string;
+  } = {},
 ): Promise<{ ok: true; pr_state: PullRequestListItem["pr_state"] }> {
   trackEvent("pr_review_submitted", { verdict: action });
   return parseJson(
     await fetch(prEndpoint(prId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, method }),
+      body: JSON.stringify({ action, ...options }),
+    }),
+  );
+}
+
+export async function maintainPullRequestApi(
+  prId: string,
+  action: "update_branch" | "rerun_check" | "update_title" | "enable_auto_merge",
+  payload: {
+    title?: string;
+    rerunRef?: PullRequestCheck["rerunRef"];
+  } = {},
+): Promise<{ ok: true; title?: string }> {
+  return parseJson(
+    await fetch(prEndpoint(prId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...payload }),
     }),
   );
 }
@@ -878,6 +922,11 @@ export async function requestPullRequestAiReviewApi(
   prId: string,
   model?: string,
   reasoningLevel?: ReasoningLevel,
+  local: {
+    localExec?: boolean;
+    localWorktree?: boolean;
+    localIssueContextConfirmed?: boolean;
+  } = {},
 ): Promise<{ ok: true; review: PrReviewRunSummary }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
@@ -888,6 +937,7 @@ export async function requestPullRequestAiReviewApi(
         action: "ai_review",
         ...(model === undefined ? {} : { model }),
         ...(reasoningLevel === undefined ? {} : { reasoningLevel }),
+        ...local,
       }),
     }),
   );
@@ -1146,6 +1196,8 @@ export interface PullRequestReviewComment {
       the last. `null` for a single-line remark, and always
       `null` on the GitLab side, where a note is anchored on a line. */
   start_line: number | null;
+  /** First line at the original commit, retained when GitHub marks the thread outdated. */
+  original_start_line: number | null;
   start_side: "LEFT" | "RIGHT" | null;
   /** Root of the thread, or null if this comment IS the root. */
   in_reply_to_id: number | null;

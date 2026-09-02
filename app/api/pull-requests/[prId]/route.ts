@@ -5,6 +5,7 @@ import {
   prAiReviewResponse,
   prDetailResponse,
   prLinkIssueResponse,
+  prMaintenanceActionResponse,
   prReviewResponse,
   prStateActionResponse,
   type PrActionBody,
@@ -14,12 +15,13 @@ import {
  * In-app review of a pull request, indexed BY THE PR (MIN-143).
  * GET → metadata PR + files/patches + CI checks + approvals + methods
  * of merge offered by the forge.
- *  POST → { action: 'merge', method? }
+ *  POST → { action: 'merge', method?, commitTitle?, commitMessage? }
  *       | { action: 'close' }
  * | { action: 'reopen' } → closed → reopened (MIN-164)
  * | { action: 'ready_for_review' } → draft → ready
+ * | { action: 'convert_to_draft' } → open → draft
  *       | { action: 'review', verdict, message, relaunch?, model?, reasoningLevel?, localExec?, localWorktree? }
- *       | { action: 'ai_review', model?, reasoningLevel? }    → Numo relit (MIN-141)
+ *       | { action: 'ai_review', model?, reasoningLevel?, localExec?, localWorktree? } → Numo relit (MIN-141)
  *       | { action: 'link_issue', issueId }                  → attaches a ticket (MIN-163)
  *
  * `ai_review` returns a 202 with the agent SESSION anchored to this PR (MIN-168):
@@ -65,7 +67,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "review" &&
     action !== "ai_review" &&
     action !== "ready_for_review" &&
-    action !== "link_issue"
+    action !== "convert_to_draft" &&
+    action !== "link_issue" &&
+    action !== "update_branch" &&
+    action !== "rerun_check" &&
+    action !== "update_title" &&
+    action !== "enable_auto_merge"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
@@ -82,7 +89,23 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (action === "ai_review") {
     // Language is no longer a parameter: an agent session writes in that of
     // its launcher, resolved in the first chunk as for all the others.
-    return prAiReviewResponse(auth.scope, auth.userId, body.model, body.reasoningLevel);
+    return prAiReviewResponse(
+      auth.scope,
+      auth.userId,
+      body.model,
+      body.reasoningLevel,
+      body.localExec === true,
+      body.localWorktree === true,
+      body.localIssueContextConfirmed === true,
+    );
+  }
+  if (
+    action === "update_branch" ||
+    action === "rerun_check" ||
+    action === "update_title" ||
+    action === "enable_auto_merge"
+  ) {
+    return prMaintenanceActionResponse(auth.scope, action, body);
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);
 }

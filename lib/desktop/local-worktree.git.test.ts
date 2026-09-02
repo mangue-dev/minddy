@@ -58,4 +58,34 @@ describe("prepareLocalWorktree", () => {
     });
     expect(result).toEqual({ ok: true, path: localWorktreePath(runRoot), reused: true });
   });
+
+  it("checks out a provider pull-request ref in an isolated review worktree", () => {
+    const base = git(repo, ["rev-parse", "HEAD"]).trim();
+    const review = git(repo, [
+      "commit-tree",
+      `${base}^{tree}`,
+      "-p",
+      base,
+      "-m",
+      "review head",
+    ]).trim();
+    git(repo, ["update-ref", "refs/pull/7/head", review]);
+    const reviewRunRoot = path.join(root, "agent-runs", "review-1");
+
+    const result = prepareLocalWorktree({
+      sourceRepo: repo,
+      runRoot: reviewRunRoot,
+      baseBranch: "main",
+      workBranch: "refs/pull/7/head",
+      authUrl: repo,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      path: localWorktreePath(reviewRunRoot),
+      reused: false,
+    });
+    expect(git(localWorktreePath(reviewRunRoot), ["rev-parse", "HEAD"]).trim()).toBe(review);
+    expect(readFileSync(path.join(repo, "tracked.txt"), "utf8")).toBe("human WIP\n");
+  });
 });

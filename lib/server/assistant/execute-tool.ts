@@ -1802,7 +1802,8 @@ export async function executeTool(
               // First line of a multi-line remark (`line` = the
               // last) — without it, the target range is reduced to one point.
               start_line: thread.root.start_line,
-              outdated: thread.root.line == null,
+              original_start_line: thread.root.original_start_line,
+              outdated: thread.resolution?.outdated ?? thread.root.line == null,
               // Thread marked resolved = point set (`false` also covers the unknown).
               resolved: !!thread.resolution?.resolved,
               diff_hunk: thread.root.diff_hunk,

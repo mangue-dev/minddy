@@ -85,6 +85,17 @@ describe("fromGithubTimeline", () => {
         event: "cross-referenced",
         source: { issue: { number: 42, html_url: "https://github.com/o/r/issues/42" } },
       },
+      {
+        id: 7,
+        event: "deployed",
+        actor: { login: "vercel" },
+        commit_id: "abc123",
+      },
+      {
+        id: 8,
+        event: "deployment_environment_changed",
+        actor: { login: "vercel" },
+      },
     ]);
     expect(events.map((e) => e.kind)).toEqual([
       "labeled",
@@ -93,6 +104,8 @@ describe("fromGithubTimeline", () => {
       "renamed",
       "milestoned",
       "cross_referenced",
+      "deployed",
+      "deployment_environment_changed",
     ]);
     expect(events[0].label).toEqual({ name: "bug", color: "d73a4a" });
     expect(events[1].subject).toBe("carol");
@@ -100,6 +113,7 @@ describe("fromGithubTimeline", () => {
     expect(events[3]).toMatchObject({ from: "Vieux titre", to: "Nouveau titre" });
     expect(events[4].name).toBe("v1");
     expect(events[5].reference).toBe("#42");
+    expect(events[6].sha).toBe("abc123");
   });
 
   it("drops noise that GitHub itself does not display and unknown events", () => {

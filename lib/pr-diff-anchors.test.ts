@@ -44,6 +44,7 @@ function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestRevie
     original_line: 150,
     side: "RIGHT",
     start_line: null,
+    original_start_line: null,
     start_side: null,
     in_reply_to_id: null,
     review_id: null,

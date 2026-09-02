@@ -67,9 +67,9 @@ export type LocalRunAdmission = { ok: true } | { ok: false; reason: LocalRunRefu
  * the deployment environment. This is what allows it to be broken in a test.
  */
 export function admitLocalRun(opts: { keyMode: "platform" | "byok" }): LocalRunAdmission {
-  // A local BYOK is an interactive gesture by the user. Contexts without
-  // monitoring (routine, automation, mention, review) are already excluded by
-  // `localRunScope`; they continue to run in the cloud.
+  // A local BYOK is an interactive gesture by the user. Unattended contexts
+  // (routine, automation, mention) are already excluded by `localRunScope`;
+  // they continue to run in the cloud.
   if (opts.keyMode === "byok") return { ok: true };
   if (!runKeyMintingEnabled()) return { ok: false, reason: "no_mint" };
   return { ok: true };

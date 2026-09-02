@@ -1,6 +1,6 @@
-// Construction PURE des prompts (sans DB, sans import server-only) : testable en
-// node/vitest, comme prune.ts / caching.ts. Ne rien y mettre qui touche aux secrets
-// or at the base — the caller already provides all the context.
+// Pure prompt construction (no database or server-only imports), testable in
+// Node/Vitest like prune.ts and caching.ts. Do not add access to secrets or the
+// database; the caller already provides all context.
 
 import { groupReviewThreads, type ReviewCommentLike, type ReviewThreadState } from "@/lib/pr-review-threads";
 // The tag lives with the clone that places it (`clonePullRequest`): a single source
@@ -148,7 +148,7 @@ export function minddyToolsBlock(opts: { images: boolean; routine: boolean }): s
 - \`create_routine\` — schedule a job that runs BY ITSELF, on a cadence, without anyone launching it (a weekly security review, a monthly dependency sweep). Only when the user asks for something RECURRING; a one-off piece of work is just work. Only the project's owner can create one.`
   }
 - **The project's OBJECTIVES** — the goals its tickets are grouped under, and the reason a ticket exists at all. \`list_objectives\` — all of them with their status, their target date and their progress (weighted by effort, the bar the team reads). \`read_objective\` — one in full: the goal as it was written, the tickets it groups, its thread. \`read_issue\` tells you which objective the ticket you work on belongs to; when it belongs to none, that ticket counts in NO progress bar and fills no cycle. So a ticket you create or touch gets its objective — \`create_issue\` and \`update_issue\` take one, by name or by id. \`create_objective\` / \`update_objective\` / \`comment_objective\` write the goal itself: creating one is a product decision, so only when the user asks; comment it when what you did concerns the whole goal, not one of its tickets.
-- \`search_pages\` — full text over the project's WIKI, titles AND bodies, each hit with the passage that matched. This is the way in when you have a subject rather than a page: "y a-t-il une convention pour X", "où est écrite la décision sur Y". \`list_pages\` — the same wiki as a map: its pages (ids, titles, parents), no bodies. \`read_page\` — one of them in markdown. This is where the team's own documentation lives: conventions, architecture decisions and their why, runbooks, specs. When something is non-obvious — a pattern to follow, a convention you would otherwise infer from two files, "pourquoi c'est fait comme ça" — LOOK IN THE WIKI before deciding. \`create_page\` / \`append_to_page\` / \`edit_page_text\` write it, and only when the user asked for documentation: what you did in this run belongs in the pull request, never in a page. Never rewrite a page whole (\`update_page\`) to change part of it — a teammate may be editing that very document. When the page has an outline, placeholder, or incomplete section, replace that passage with finished, reader-ready prose through \`edit_page_text\`; do not append a parallel "to add" list unless a draft or checklist was explicitly requested. \`append_to_page\` is for a distinct new section or decision at the end.
+- \`search_pages\` — full text over the project's WIKI, titles AND bodies, each hit with the passage that matched. This is the way in when you have a subject rather than a page: "is there a convention for X?", "where is the decision about Y documented?". \`list_pages\` — the same wiki as a map: its pages (ids, titles, parents), no bodies. \`read_page\` — one of them in markdown. This is where the team's own documentation lives: conventions, architecture decisions and their why, runbooks, specs. When something is non-obvious — a pattern to follow, a convention you would otherwise infer from two files, "why is it done this way?" — LOOK IN THE WIKI before deciding. \`create_page\` / \`append_to_page\` / \`edit_page_text\` write it, and only when the user asked for documentation: what you did in this run belongs in the pull request, never in a page. Never rewrite a page whole (\`update_page\`) to change part of it — a teammate may be editing that very document. When the page has an outline, placeholder, or incomplete section, replace that passage with finished, reader-ready prose through \`edit_page_text\`; do not append a parallel "to add" list unless a draft or checklist was explicitly requested. \`append_to_page\` is for a distinct new section or decision at the end.
 - \`read_scratchpad\` — the LIVE state of the user's notebook (their personal notes doc): full markdown + every checkbox task with a stable \`task_index\`, and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index. \`add_scratchpad_tasks\` — append tasks. \`set_scratchpad\` — rewrite the whole notebook (the only way to DELETE a task).
 - **The project's pull requests** — all of them, not just this session's. \`list_pull_requests\` — the inventory (state, author, branches, dates, the ticket each implements), filterable by \`state\` / \`author\` / \`updated_since\`: that is how you report on a week. \`read_pull_request\` — one of them in full (CI checks, approvals, files, review threads, conversation), with the diff only when you pass \`include_diff\`. \`comment_pull_request\` / \`comment_pull_request_line\` / \`reply_pull_request_thread\` — write in its conversation, on a line of its diff, or inside a review thread. \`review_pull_request\` — submit a FORMAL verdict (\`approve\` / \`request_changes\` / \`comment\`). \`set_pull_request_state\` — merge it, close it, reopen it, or take it out of draft. See Pull requests of the project below.`;
 }
@@ -317,7 +317,7 @@ ${NOTEBOOK_RULES}
 ## Tickets of the project
 - This session is not anchored to a ticket, but the project's tickets are yours to read and edit. \`search_issues\` finds the one the user means, then \`read_issue\`, \`update_issue\`, \`write_issue_plan\`, \`append_to_plan\` and \`edit_issue_text\` take its identifier in \`issue\` — they have no default target here, so always pass it.
 - \`update_issue\` renames, rewrites the description or re-estimates the effort. Do it when the user asks, or when the ticket's own words have become wrong — not as a drive-by tidy-up. To fix ONE sentence of a long description, \`edit_issue_text\` patches it in place instead of re-emitting the whole text.
-- **When the user asks for a plan** on a ticket ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work. Never write a ticket's plan unprompted: it belongs to the user.
+- **When the user asks for a plan** on a ticket ("prepare a plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work. Never write a ticket's plan unprompted: it belongs to the user.
 - ${PLAN_CLOSURE_RULE}
 - ${PLAN_EDIT_RULE}
 - ${STATUS_RULE}
@@ -328,7 +328,7 @@ ${gitPrLines}`
     : `## The ticket
 - Your first message carries a SNAPSHOT of the ticket. It goes stale: whenever fresh state matters — the user mentions a comment, a resource, an edit you haven't seen, or you need the current plan — call \`read_issue\` instead of guessing. Open the files that matter to the request (specs, mockups, logs) with \`read_resource\`.
 - **The ticket may carry an implementation plan** (markdown checkbox tasks: \`- [ ]\` pending, \`- [~]\` in progress, \`- [x]\` done, \`- [-]\` cancelled). When asked to implement a ticket that ships a plan, follow it, and reuse its task wording VERBATIM as your \`update_plan\` steps — your progress then mirrors onto the ticket's plan automatically.
-- **When the user asks for a plan** ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work — reply and stop unless they also asked to implement. Decide rather than ask: on an unresolved detail, pick the most reasonable option and state the assumption in the context. If something is genuinely blocking, \`${n.ask}\` while you still have the turn; only park it under a \`## Questions\` heading of the plan (checkboxes there are open questions, excluded from progress) when the answer can wait.
+- **When the user asks for a plan** ("prepare a plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work — reply and stop unless they also asked to implement. Decide rather than ask: on an unresolved detail, pick the most reasonable option and state the assumption in the context. If something is genuinely blocking, \`${n.ask}\` while you still have the turn; only park it under a \`## Questions\` heading of the plan (checkboxes there are open questions, excluded from progress) when the answer can wait.
 - ${PLAN_CLOSURE_RULE}
 - Never write the ticket's plan unprompted: it belongs to the user. Your session checklist (\`update_plan\`) is yours; the ticket plan (\`write_issue_plan\`) only changes on their request.
 - ${PLAN_EDIT_RULE}
@@ -623,7 +623,7 @@ This is a CONVERSATION, not a one-shot pass. You read, you comment on the pull r
 - \`comment_pr_line\` — post one remark ANCHORED to a line of the diff. \`comment_pr\` — post your summary in the pull request's conversation. \`reply_pr_thread\` — reply inside an existing review thread.
 - \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_resource\` — open a resource of the ticket; a link is fetched through the outbound-network guard and comes back as capped content, a page of the wiki as its id and title (read it with \`read_page\`), a file as text inline (${attachments} via a signed URL you can curl).
 - \`list_objectives\` / \`read_objective\` — the project's goals, and the one the ticket belongs to: what the change was ultimately for. Read-only in a review, like the wiki.
-- \`search_pages\` / \`list_pages\` / \`read_page\` — the project's WIKI, in markdown (search first when you are after a subject). Read it before calling a change wrong on style or structure: a convention written by the team is the standard here, and "ça ne suit pas la convention" is only a finding if the convention exists. Read-only in a review; pages are never written from here.
+- \`search_pages\` / \`list_pages\` / \`read_page\` — the project's WIKI, in markdown (search first when you are after a subject). Read it before calling a change wrong on style or structure: a convention written by the team is the standard here, and "this does not follow the convention" is only a finding if the convention exists. Read-only in a review; pages are never written from here.
 
 ## How to read the diff
 The repository is checked out on the pull request's head. The tag \`${PR_BASE_TAG}\` marks the commit the FORGE diffed from — so \`git diff ${PR_BASE_TAG}\` is this pull request's change, and it lists exactly the files the "Files changed" section of your context lists. So:
@@ -736,6 +736,16 @@ export function toPrLineThreads(
       body: c.body,
     })),
   }));
+}
+
+/** Unresolved comments that still map to the current PR head and can be fixed. */
+export function toActionablePrLineThreads(
+  comments: PrReviewCommentLike[],
+  states?: ReviewThreadState[],
+): InheritedPrLineThread[] {
+  return toPrLineThreads(comments, states).filter(
+    (thread) => thread.resolved !== true && thread.line != null,
+  );
 }
 
 export interface InheritedPrContext {

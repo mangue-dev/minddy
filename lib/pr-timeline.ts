@@ -1,7 +1,8 @@
 /**
  * The ACTIVITY of a pull request — anything that happened to it that is not a
- * message: reviews submitted, commits pushed, labels, assignments, requests for
- * review, renames, draft passages ↔ ready, close, reopen, merge.
+ * message: reviews submitted, commits pushed, deployments, labels,
+ * assignments, requests for review, renames, draft passages ↔ ready, close,
+ * reopen, merge.
  *
  * Deliberately PUR and shared client/server, like `pr-review-threads`: the
  * two forges describe these facts in very different forms (events
@@ -30,6 +31,8 @@ export type PrTimelineKind =
   | "review_requested"
   | "review_request_removed"
   | "committed"
+  | "deployed"
+  | "deployment_environment_changed"
   | "force_pushed"
   | "branch_deleted"
   | "branch_restored"
@@ -266,6 +269,8 @@ const GITHUB_EVENT_KIND: Record<string, PrTimelineKind> = {
   review_requested: "review_requested",
   review_request_removed: "review_request_removed",
   committed: "committed",
+  deployed: "deployed",
+  deployment_environment_changed: "deployment_environment_changed",
   head_ref_force_pushed: "force_pushed",
   head_ref_deleted: "branch_deleted",
   head_ref_restored: "branch_restored",
@@ -314,6 +319,8 @@ export interface RawGithubTimelineEvent {
   message?: string;
   html_url?: string;
   url?: string;
+  commit_id?: string | null;
+  commit_url?: string | null;
   state?: string;
   body?: string | null;
   label?: { name?: string; color?: string | null } | null;
@@ -329,8 +336,8 @@ export interface RawGithubTimelineEvent {
 
 /**
  * GitHub Timeline → minddy activity. Unknown AND not ignored events
- * disappear silently: GitHub adds them regularly (projects,
- * deployments, transfers), and an invented `kind` would not go anywhere.
+ * disappear silently: GitHub adds them regularly (projects, transfers), and
+ * an invented `kind` would not go anywhere.
  *
  * `committed` is the twisted case: it is not an outcome event but an object
  * COMMIT injected into stream — no `id`, no `actor`, a date in
@@ -411,8 +418,13 @@ export function fromGithubTimeline(raw: RawGithubTimelineEvent[]): PrTimelineEve
       base.reference = issue?.number ? `#${issue.number}` : null;
       base.name = issue?.title ?? null;
       base.url = issue?.html_url ?? null;
-    } else if (kind === "merged" || kind === "closed") {
-      base.sha = e.sha ?? null;
+    } else if (
+      kind === "merged" ||
+      kind === "closed" ||
+      kind === "deployed" ||
+      kind === "deployment_environment_changed"
+    ) {
+      base.sha = e.sha ?? e.commit_id ?? null;
       base.url = e.html_url ?? null;
     }
     events.push(base);

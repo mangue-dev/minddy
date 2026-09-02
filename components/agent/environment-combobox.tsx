@@ -70,6 +70,7 @@ export function EnvironmentCombobox({
   folder,
   needsAttach = false,
   localAvailable = true,
+  worktreeAvailable = true,
   cloudAvailable = true,
   /** True when the sandbox EXISTS but the project has no linked repository:
    * the cloud entry is shown greyed, and choosing it reopens the repository
@@ -90,6 +91,8 @@ export function EnvironmentCombobox({
   needsAttach?: boolean;
   /** False in the browser: the choice is visible but requires the Mac app. */
   localAvailable?: boolean;
+  /** False when local execution is always isolated by the caller. */
+  worktreeAvailable?: boolean;
   /** False for a private BYOK endpoint: it cannot exit to a microVM. */
   cloudAvailable?: boolean;
   /** True when the sandbox EXISTS but the project has no linked repository:
@@ -253,34 +256,36 @@ export function EnvironmentCombobox({
                 )}
               />
             </CommandItem>
-            <CommandItem
-              value="worktree"
-              aria-disabled={!localAvailable}
-              className={cn(!localAvailable && "cursor-not-allowed opacity-50")}
-              onSelect={() => {
-                if (localAvailable) pick("worktree");
-              }}
-            >
-              {needsAttach ? (
-                <FolderPlus className="size-4 shrink-0 text-muted-foreground" />
-              ) : (
-                <GitBranch className="size-4 shrink-0 text-muted-foreground" />
-              )}
-              <span className="flex-1">
-                <span className="block">{t("environmentWorktree")}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {needsAttach
-                    ? t("environmentLocalAttach")
-                    : t("environmentWorktreeHint", { folder: folder ?? "" })}
-                </span>
-              </span>
-              <Check
-                className={cn(
-                  "size-4 shrink-0",
-                  value === "worktree" && !needsAttach ? "opacity-100" : "opacity-0",
+            {worktreeAvailable ? (
+              <CommandItem
+                value="worktree"
+                aria-disabled={!localAvailable}
+                className={cn(!localAvailable && "cursor-not-allowed opacity-50")}
+                onSelect={() => {
+                  if (localAvailable) pick("worktree");
+                }}
+              >
+                {needsAttach ? (
+                  <FolderPlus className="size-4 shrink-0 text-muted-foreground" />
+                ) : (
+                  <GitBranch className="size-4 shrink-0 text-muted-foreground" />
                 )}
-              />
-            </CommandItem>
+                <span className="flex-1">
+                  <span className="block">{t("environmentWorktree")}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {needsAttach
+                      ? t("environmentLocalAttach")
+                      : t("environmentWorktreeHint", { folder: folder ?? "" })}
+                  </span>
+                </span>
+                <Check
+                  className={cn(
+                    "size-4 shrink-0",
+                    value === "worktree" && !needsAttach ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </CommandItem>
+            ) : null}
           </CommandList>
         </Command>
       </PopoverContent>

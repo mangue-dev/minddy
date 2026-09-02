@@ -1,9 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
-import { Badge, cn, SegmentedControl, toast, useIsMobile, useTheme } from "mangue-ui";
+import { Badge, Checkbox, cn, SegmentedControl, toast, useIsMobile } from "mangue-ui";
 import { ChevronDown, ChevronRight, WrapText } from "lucide-react";
 import { applyPatch } from "diff";
 import { getLineAnnotationName, parsePatchFiles } from "@pierre/diffs";
@@ -33,6 +41,7 @@ import {
   DIFF_THEMES,
   DIFF_UNSAFE_CSS,
 } from "@/lib/diff-theme";
+import { useEffectiveColorScheme } from "@/components/pull-requests/use-effective-color-scheme";
 import { PrImageDiff } from "@/components/pull-requests/pr-image-diff";
 import { PrFileTreeButton } from "@/components/pull-requests/pr-file-tree";
 import {
@@ -49,6 +58,14 @@ import {
 import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-threads";
 import type { ReviewCommentReaction } from "@/lib/pr-review-reactions";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import {
+  estimatedDiffBodyHeight,
+  LARGE_DIFF_TOKEN_LIMIT,
+} from "@/lib/pr-diff-performance";
+import {
+  pullRequestDiffCacheKey,
+  pullRequestHydratedDiffCacheKey,
+} from "@/lib/pr-diff-cache";
 import {
   anchorKey,
   commentAnchor,
@@ -91,6 +108,7 @@ import {
 
 /** Number of lines that an arrow expands at once (like GitHub). */
 const EXPANSION_LINE_COUNT = 20;
+const DIFF_PRELOAD_MARGIN = "1400px 0px";
 
 type ViewType = "unified" | "split";
 
@@ -117,7 +135,7 @@ export function toUnifiedDiff(f: PullRequestFile): string {
   const base = basePathOf(f);
   const oldPath = f.status === "added" ? "/dev/null" : `a/${base}`;
   const newPath = f.status === "removed" ? "/dev/null" : `b/${f.filename}`;
-  return `diff --git a/${base} b/${f.filename}\n--- ${oldPath}\n+++ ${newPath}\n${f.patch}\n`;
+  return `diff --git a/${base} b/${f.filename}\n--- ${oldPath}\n+++ ${newPath}\n${f.patch.replace(/\n+$/, "")}`;
 }
 
 /**
@@ -260,12 +278,54 @@ function trimTrailingNewline(content: string): string {
   return content.endsWith("\n") ? content.slice(0, -1) : content;
 }
 
+function DeferredDiffBody({
+  eager,
+  estimatedHeight,
+  children,
+}: {
+  eager: boolean;
+  estimatedHeight: number;
+  children: ReactNode;
+}) {
+  const [mounted, setMounted] = useState(eager);
+  const placeholderRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (mounted) return;
+    const node = placeholderRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setMounted(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setMounted(true);
+        observer.disconnect();
+      },
+      { rootMargin: DIFF_PRELOAD_MARGIN },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [mounted]);
+
+  if (mounted) return children;
+  return (
+    <div
+      ref={placeholderRef}
+      data-testid="pr-diff-deferred-body"
+      aria-hidden="true"
+      style={{ height: estimatedHeight, contentVisibility: "auto" }}
+    />
+  );
+}
+
 /**
  * A PR file: collapsible header + diff. Component apart because everything
  * the state (composers open, drafts, anchors actually rendered) is PAR
  * file — impossible to fit in parent's `files.map`.
  */
-function PrDiffFile({
+const PrDiffFile = memo(function PrDiffFile({
   file,
   fileDiff,
   viewType,
@@ -276,15 +336,20 @@ function PrDiffFile({
   prUrl,
   provider,
   readOnly,
+  reviewMode,
+  reviewed,
+  onReviewedChange,
   expandableContext,
   canResolve,
   collapsed,
+  eager,
   onToggle,
   registerCard,
   reviewComments,
   reviewThreads,
   reviewReactions,
   onCommentPosted,
+  onThreadResolved,
 }: {
   file: PullRequestFile;
   /** Diff analyzed from the file, absent when there is no patch (binary, image, etc.). */
@@ -301,13 +366,18 @@ function PrDiffFile({
   provider?: RepoProviderId;
   /** Read only: neither “+” gutter nor “Reply”. */
   readOnly?: boolean;
+  /** Optional progress marker shown while the viewer is reviewing the PR. */
+  reviewMode?: boolean;
+  reviewed?: boolean;
+  onReviewedChange?: (reviewed: boolean) => void;
   /** Is the basic version rereadable by `endpoint`? Wrong for a difference
       local not pushed: proposing unfolding would then end in 404. */
   expandableContext: boolean;
   /** Resolve a thread, separately: it is a write on the repository (MIN-144). */
   canResolve?: boolean;
   collapsed: boolean;
-  onToggle: () => void;
+  eager: boolean;
+  onToggle: (path: string) => void;
   /** Give the card to the parent, who is the one who knows how to scroll to it. */
   registerCard: (path: string, node: HTMLElement | null) => void;
   /** Review comments for THIS file (already filtered by parent). */
@@ -319,6 +389,7 @@ function PrDiffFile({
       comment, as children are by root id. */
   reviewReactions: ReviewCommentReaction[];
   onCommentPosted: () => unknown;
+  onThreadResolved: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
 
@@ -345,7 +416,7 @@ function PrDiffFile({
   const instanceRef = useRef<FileDiffInstance<AnnotationMeta> | null>(null);
 
   const replies = useReviewReplies(endpoint, onCommentPosted);
-  const resolution = useThreadResolution(endpoint, onCommentPosted);
+  const resolution = useThreadResolution(endpoint, onThreadResolved);
   const reactions = useCommentReactions(endpoint, onCommentPosted, reviewReactions, !readOnly);
 
   const threads = useMemo(
@@ -471,9 +542,19 @@ function PrDiffFile({
           // and the click): without both versions, the lib cannot unfold anything.
           throw new Error("Patch does not apply to the base revision");
         }
+        const newContents = trimTrailingNewline(patched);
+        // @pierre/diffs mutates partial metadata during hydration and otherwise
+        // derives its full-file key from the partial patch alone. Tie that key
+        // to both loaded sides so a refreshed base cannot reuse stale arrays.
+        meta.cacheKey = pullRequestHydratedDiffCacheKey(
+          basePathOf(file),
+          oldContents,
+          meta.name,
+          newContents,
+        );
         return {
           oldFile: { name: basePathOf(file), contents: oldContents },
-          newFile: { name: meta.name, contents: trimTrailingNewline(patched) },
+          newFile: { name: meta.name, contents: newContents },
         };
       } catch (err) {
         // The lib swallows the failure (it logs it and leaves the diff in place):
@@ -601,31 +682,18 @@ function PrDiffFile({
   );
 
   /**
-   * After each rendering of the lib (assembly, option change, unfolding):
-   * keep control of the instance, translate the unfolding bars, and raise
-   * which annotations found their line. The reading can be read in the shadows —
-   * one `<slot>` per placed annotation, named as the lib names it — because
-   * it is the only thing that tells the truth about the state of unfolding.
+   * After each renderer pass, keep the instance, localize expansion controls,
+   * enforce the painted color scheme, and record which annotations found a line.
    */
   const onPostRender = useCallback(
     (node: HTMLElement, instance: FileDiffInstance<AnnotationMeta>, phase: PostRenderPhase) => {
+      node.style.colorScheme = themeType;
       if (phase === "unmount") {
         instanceRef.current = null;
-        // Make the shadow proper — otherwise the FOLLOWING assembly on the same
-        // element thinks it is dealing with pre-rendered HTML.
-        //
-        // Unmounting the lib empties the `<pre>` but LEAVES it in the Shadow
-        // DOM. Its `hydrate` reads this as "the diff is already painted, I didn't
-        // to reconnect with it”: he skips the rendering, and we stay on the
-        // empty skeleton. In production it is not visible — React throws
-        // the element with the component. In development, `reactStrictMode`
-        // mounts, disassembles and reassembles ON THE SAME NODE: the diff was born empty,
-        // and it was necessary to fold then unfold the file (so two clicks) to
-        // obtain a new element which itself could be painted.
-        //
-        // Adopted style sheets live on `shadowRoot`, not among
-        // his children: they survive, and the next rendering reconstructs the
-        // rest (sprite, theme, code).
+        // The library leaves an empty `<pre>` in the Shadow DOM on unmount.
+        // Strict Mode can reuse the same host, and hydration would mistake that
+        // stale node for completed output. Clear children while preserving the
+        // adopted style sheets so the next pass paints normally.
         node.shadowRoot?.replaceChildren();
         return;
       }
@@ -641,7 +709,7 @@ function PrDiffFile({
       }
       setPlacedKeys((prev) => (sameKeys(prev, placed) ? prev : placed));
     },
-    [lineAnnotations, commentRanges, t],
+    [lineAnnotations, commentRanges, t, themeType],
   );
 
   const options = useMemo(
@@ -660,6 +728,9 @@ function PrDiffFile({
       // Duplicate assumed with the worker pool, which wins when it colors:
       // it's the main thread's fold, and it should render the same thing.
       lineDiffType: DIFF_LINE_DIFF_TYPE,
+      tokenizeMaxLineLength: 1_000,
+      tokenizeMaxLength: LARGE_DIFF_TOKEN_LIMIT,
+      maxLineDiffLength: 2_000,
       unsafeCSS: DIFF_UNSAFE_CSS,
       loadDiffFiles: expandable ? loadDiffFiles : undefined,
       enableGutterUtility: !readOnly,
@@ -697,9 +768,7 @@ function PrDiffFile({
       id={fileAnchorId(file.filename)}
       className="overflow-clip rounded-md border border-border"
     >
-      <button
-        type="button"
-        onClick={onToggle}
+      <div
         className={cn(
           // Sticking to the top edge, everywhere: `top-0` and nothing else. The three
           // hosts have a container that starts under a header (the banner
@@ -711,27 +780,44 @@ function PrDiffFile({
           // container, so the header of the next file chases the previous one by
           // arriving. This is the intended behavior, and it's free — especially
           // don't make a single floating header on top of the list.
-          "sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60",
+          "sticky top-0 z-10 flex w-full items-stretch bg-card",
           // The diff has the SAME background as the map (`--diffs-light-bg: var(--card)`):
           // without this trait, the pasted header would float in the middle of the code without
           // let's see where it starts.
           collapsed ? null : "border-b border-border",
         )}
       >
-        {collapsed ? (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        )}
-        <FilePathLabel path={file.filename} previousPath={file.previous_filename} />
-        <FileStatusBadge status={fileStatusOf(file)} />
-        <DiffCounters additions={file.additions} deletions={file.deletions} />
-        <DiffStatBar additions={file.additions} deletions={file.deletions} />
-      </button>
+        <button
+          type="button"
+          onClick={() => onToggle(file.filename)}
+          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
+        >
+          {collapsed ? (
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          )}
+          <FilePathLabel path={file.filename} previousPath={file.previous_filename} />
+          <FileStatusBadge status={fileStatusOf(file)} />
+          <DiffCounters additions={file.additions} deletions={file.deletions} />
+          <DiffStatBar additions={file.additions} deletions={file.deletions} />
+        </button>
+        {reviewMode && !readOnly && onReviewedChange ? (
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 border-l border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+            <Checkbox
+              checked={reviewed}
+              onCheckedChange={(value) => onReviewedChange(value === true)}
+              aria-label={t("fileReviewed")}
+            />
+            <span className="hidden sm:inline">{t("fileReviewed")}</span>
+          </label>
+        ) : null}
+      </div>
       {collapsed ? null : (
-        <>
+        <DeferredDiffBody eager={eager} estimatedHeight={estimatedDiffBodyHeight(file)}>
           {fileDiff ? (
             <FileDiff<AnnotationMeta>
+              key={fileDiff.cacheKey}
               fileDiff={fileDiff}
               options={options}
               lineAnnotations={lineAnnotations}
@@ -769,11 +855,11 @@ function PrDiffFile({
             reactions={reactions}
             readOnly={readOnly}
           />
-        </>
+        </DeferredDiffBody>
       )}
     </div>
   );
-}
+});
 
 /** Stable references: `?? []` / `?? () => {}` online would break the memos. */
 const NO_COMMENTS: PullRequestReviewComment[] = [];
@@ -794,12 +880,16 @@ export function PrDiff({
   prUrl,
   provider,
   readOnly = false,
+  reviewMode = false,
+  reviewedFiles,
+  onFileReviewedChange,
   expandableContext = true,
   canResolve = !readOnly,
   reviewComments = NO_COMMENTS,
   reviewThreads = NO_THREADS,
   reviewReactions = NO_REACTIONS,
   onCommentPosted = noop,
+  onThreadResolved = onCommentPosted,
   className,
 }: {
   files: PullRequestFile[];
@@ -811,6 +901,10 @@ export function PrDiff({
   /** Read only: no review comments (diff view without PR — the
       agent conversation; the review lives on the Pull requests page). */
   readOnly?: boolean;
+  /** Show optional per-file review progress controls. */
+  reviewMode?: boolean;
+  reviewedFiles?: ReadonlySet<string>;
+  onFileReviewedChange?: (path: string, reviewed: boolean) => void;
   /** Allow lazy loading of context out of hunk. */
   expandableContext?: boolean;
   /** Solve a thread, governed APART (MIN-144): comment request `read` on
@@ -826,11 +920,13 @@ export function PrDiff({
   reviewReactions?: ReviewCommentReaction[];
   /** Refreshes comments after successful submission. */
   onCommentPosted?: () => unknown;
+  /** Refreshes merge readiness after resolving without replacing the diff. */
+  onThreadResolved?: () => unknown;
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
   const locale = useLocale();
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useEffectiveColorScheme();
   const isMobile = useIsMobile();
   const [viewType, setViewType] = useState<ViewType>("unified");
   /**
@@ -915,28 +1011,31 @@ export function PrDiff({
    * merged): recreating them at each `refetch` would erase under the fingers what
    * the user has just unfolded.
    */
+  // Keep exactly one separator between files and no empty raw line at the end;
+  // @pierre/diffs treats an unprefixed blank line as an invalid diff record.
   const diffText = useMemo(() => files.map(toUnifiedDiff).filter(Boolean).join("\n"), [files]);
 
   /**
-   * Parse once, then index by path. The lib names each file
-   * according to the `b/` side of the `diff --git` that we write — therefore `file.filename`,
-   * for an added, deleted or renamed file as for the others.
+   * Parse once, then index by path. The library names each file from the `b/`
+   * side of the generated `diff --git`, so it matches `file.filename` for
+   * added, deleted, renamed, and modified files alike.
    *
-   * No cache prefix: it would index the coloring on a stable key
-   * while the content of a PR changes under us (a pushed commit, a
-   * review restarted).
+   * The explicit content key is essential. Without one, FileDiff falls back
+   * to the file name, and a worker result from the previous PR head can be
+   * combined with fresh hunks for the same path. That stale line/hunk pairing
+   * is what triggers DiffHunksRenderer's null-line exception.
    */
   const parsedByPath = useMemo(() => {
     const map = new Map<string, FileDiffMetadata>();
     if (!diffText) return map;
-    for (const patch of parsePatchFiles(diffText)) {
+    for (const patch of parsePatchFiles(diffText, pullRequestDiffCacheKey(diffText))) {
       for (const parsed of patch.files) map.set(parsed.name, parsed);
     }
     return map;
   }, [diffText]);
 
   const orphanReplies = useReviewReplies(endpoint, onCommentPosted);
-  const orphanResolution = useThreadResolution(endpoint, onCommentPosted);
+  const orphanResolution = useThreadResolution(endpoint, onThreadResolved);
   const orphanReactions = useCommentReactions(
     endpoint,
     onCommentPosted,
@@ -953,17 +1052,21 @@ export function PrDiff({
   const totalAdd = files.reduce((s, f) => s + f.additions, 0);
   const totalDel = files.reduce((s, f) => s + f.deletions, 0);
 
-  const toggle = (path: string) =>
+  const toggle = useCallback((path: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
       return next;
-    });
+    }), []);
 
   return (
     <PrDiffWorkers>
-      <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
+      <div
+        data-testid="pr-diff-view"
+        data-color-scheme={resolvedTheme}
+        className={cn("pr-diff-view diff-selectable flex flex-col gap-2", className)}
+      >
         <div className="flex flex-col rounded-lg border border-border bg-muted/20">
           {/* Navigation and presentation answer different questions. Keeping
               them on separate rows makes the file tree the clear entry point
@@ -1010,7 +1113,7 @@ export function PrDiff({
         </div>
 
         <div className="flex flex-col gap-3">
-          {files.map((f) => (
+          {files.map((f, index) => (
             <PrDiffFile
               key={f.filename}
               file={f}
@@ -1023,15 +1126,20 @@ export function PrDiff({
               prUrl={prUrl}
               provider={provider}
               readOnly={readOnly}
+              reviewMode={reviewMode}
+              reviewed={reviewedFiles?.has(f.filename) ?? false}
+              onReviewedChange={(reviewed) => onFileReviewedChange?.(f.filename, reviewed)}
               expandableContext={expandableContext}
               canResolve={canResolve}
               collapsed={collapsed.has(f.filename)}
-              onToggle={() => toggle(f.filename)}
+              eager={index === 0}
+              onToggle={toggle}
               registerCard={registerCard}
               reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
               reviewThreads={reviewThreads}
               reviewReactions={reviewReactions}
               onCommentPosted={onCommentPosted}
+              onThreadResolved={onThreadResolved}
             />
           ))}
           {orphanThreads.length > 0 ? (
