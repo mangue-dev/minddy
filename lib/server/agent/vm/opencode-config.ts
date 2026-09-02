@@ -370,9 +370,19 @@ function reasoningOptions(job: VmJob): Record<string, unknown> | null {
   return { reasoning: { effort: job.reasoningLevel } };
 }
 
-/** OpenCode permissions are auto-granted; infrastructure boundaries live outside the model path. */
+/**
+ * OpenCode permissions are auto-granted. Cap- and audit-bearing operations stay
+ * observable so the supervisor can account for them before granting the request;
+ * every other native capability is granted directly by OpenCode.
+ */
 function permissions(_job: VmJob): Record<string, PermissionRule> {
-  return { "*": "allow" };
+  return {
+    edit: "ask",
+    task: "ask",
+    bash: "ask",
+    external_directory: "ask",
+    "*": "allow",
+  };
 }
 
 /** The global map of integrated people — permission, not withdrawal (§4). */

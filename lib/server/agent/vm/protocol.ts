@@ -276,6 +276,11 @@ export interface VmJob {
   baseBranch: string;
   workBranch: string;
   /**
+   * Optional remote ref used only to seed a fresh checkout. The run always
+   * commits and pushes to `workBranch`; PR virtual refs are read-only inputs.
+   */
+  checkoutRef?: string;
+  /**
    * Can the working branch already exist on the remote?
    *
    * False on the first round of a new run: the current repository mode then starts from

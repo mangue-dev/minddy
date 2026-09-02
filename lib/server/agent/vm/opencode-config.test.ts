@@ -202,10 +202,20 @@ describe("canonical OpenCode capabilities", () => {
       buildOpencodeConfig(job({ controlToken: "local-token" })),
     ];
     for (const cfg of variants) {
-      expect(cfg.permission).toEqual({ "*": "allow" });
+      expect(cfg.permission).toEqual({
+        edit: "ask",
+        task: "ask",
+        bash: "ask",
+        external_directory: "ask",
+        "*": "allow",
+      });
       expect(cfg.tools).toEqual({});
       expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools).toEqual({});
       expect(cfg.agent[OPENCODE_PRIMARY_AGENT].permission).toEqual({
+        edit: "ask",
+        task: "ask",
+        bash: "ask",
+        external_directory: "ask",
         "*": "allow",
       });
     }
@@ -256,7 +266,13 @@ describe("les sous-agents", () => {
     // Cascading delegation is structural, never a prompt sentence.
     expect(cfg.agent.general.tools?.["*"]).toBe(false);
     expect(cfg.agent.general.tools?.task).toBeUndefined();
-    expect(cfg.agent.general.permission).toEqual({ "*": "allow" });
+    expect(cfg.agent.general.permission).toEqual({
+      edit: "ask",
+      task: "ask",
+      bash: "ask",
+      external_directory: "ask",
+      "*": "allow",
+    });
   });
 
   it("fait de `explore` une lecture seule PAR SON JEU DE TOOLS", () => {
@@ -322,8 +338,14 @@ describe("les sous-agents", () => {
     ).toBeUndefined();
   });
 
-  it("auto-grants delegation", () => {
-    expect(buildOpencodeConfig(job()).permission).toEqual({ "*": "allow" });
+  it("keeps accounting signals observable while auto-granting the catalog", () => {
+    expect(buildOpencodeConfig(job()).permission).toEqual({
+      edit: "ask",
+      task: "ask",
+      bash: "ask",
+      external_directory: "ask",
+      "*": "allow",
+    });
   });
 
   it("donne un agent par (mode × modèle offert), puisque `task` n'a pas de `model`", () => {

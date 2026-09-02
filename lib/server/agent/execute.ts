@@ -57,7 +57,6 @@ import {
   loadPrReviewBoot,
   loadPrRunContext,
   pullRequestHeadRef,
-  pullRequestLocalBranch,
 } from "./pr-run";
 import {
   resolveAgentApiKey,
@@ -816,16 +815,15 @@ export async function executeAgentRun(
     // base" for the only consumer that reads it on a local turn.
     const baseBranch =
       (prRun?.baseBranch || run.base_branch) ?? target?.defaultBranch ?? "";
-    const workBranch = prRun
-      ? pullRequestLocalBranch(prRun)
-      : (run.branch_name ??
-        generatedAgentBranchName({
-          runId: run.id,
-          issueIdentifier: issue?.identifier,
-          conversationTitle: run.title,
-          prompt: run.prompt,
-          branchPrefix,
-        }));
+    const workBranch =
+      run.branch_name ??
+      generatedAgentBranchName({
+        runId: run.id,
+        issueIdentifier: issue?.identifier,
+        conversationTitle: run.title,
+        prompt: run.prompt,
+        branchPrefix,
+      });
 
     /**
      * REMAINING usage budget at chunk entry. Snapshotted once here: the loop compares
@@ -979,13 +977,14 @@ export async function executeAgentRun(
           }),
           onCreate: async (fresh) => {
             sandboxRepoUrl = await configureSandboxRepo(fresh);
-            if (prRun) {
+            if (prRun && !run.branch_name) {
               // A PR run always has its repository — the launch resolves the project
               // THROUGH the link — so `target`/`forge` are non-null here by
               // construction; the assertions only surface that invariant.
               // By the PR's SERVER REF, not the branch name: on a fork, the head branch
-              // does not exist in the base repository (see `clonePullRequest`). No
-              // committer identity needs resolving — nothing will be committed.
+              // does not exist in the base repository (see `clonePullRequest`). The
+              // checkout is named after the writable run branch, so later commits
+              // never target the provider's read-only virtual ref.
               //
               // The diff base is requested from the FORGE (MIN-258), not inferred from
               // the clone: `origin/<base>` is a moving tip, and diffing against it would
@@ -1694,11 +1693,12 @@ export async function executeAgentRun(
       repoTouched: run.checkpoint?.repoTouched === true,
       prInlineComments: run.checkpoint?.prInlineComments ?? 0,
       baseBranch,
-      // Local review worktrees fetch the provider's virtual PR ref. This works
-      // for fork heads too, without moving the attached checkout.
-      workBranch: prRun
-        ? pullRequestHeadRef(prRun.provider, prRun.number)
-        : workBranch,
+      workBranch,
+      // A review starts from the provider's virtual PR ref, including fork
+      // heads, but delivers changes to the run's ordinary writable branch.
+      ...(prRun && !run.branch_name
+        ? { checkoutRef: pullRequestHeadRef(prRun.provider, prRun.number) }
+        : {}),
       // A first turn whose branch has not yet been stamped cannot exist on the
       // remote. The harness can start directly from HEAD instead of paying for a
       // `git fetch` destined to return "ref does not exist". Without a linked

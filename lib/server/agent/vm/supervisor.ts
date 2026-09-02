@@ -34,7 +34,11 @@ import {
   type RepoState,
   type TurnPaths,
 } from "../current-repo";
-import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
+import {
+  BackgroundJobs,
+  OPENCODE_BACKGROUND_LOG_NOTES,
+  type BackgroundJobRunner,
+} from "../background";
 // The SAME normalization as the home loop: `update_plan` is a tool for
 // control, and both engines must derive the same event `plan_update`.
 import { normalizePlan } from "../agent-contract";
@@ -103,6 +107,7 @@ import {
   type WorkingDiff,
 } from "../working-diff";
 import { vmLocalDiffPath } from "../harness-layout";
+import { registeredBackgroundRunner } from "./child-registry";
 
 /**
  * THE SUPERVISOR (MIN-286, lot 1) — what `runVmTurn` becomes when the loop
@@ -283,6 +288,8 @@ export interface SupervisorDeps {
    * `startLlmProxy`.
    */
   startProxy?(job: VmJob): Promise<LlmProxy>;
+  /** Overrides the background process runner in tests. */
+  backgroundRunner?(host: RepoHost): BackgroundJobRunner;
   /** The tools bridge ([tool-bridge.ts](tool-bridge.ts)). Injected for a test. */
   startToolBridge?(opts: {
     job: VmJob;
@@ -782,8 +789,13 @@ export async function runOpencodeTurn(
    * `seqBase: 0` as in [turn.ts](turn.ts): log files are numbered per turn,
    * and a turn has its own microVM.
    */
+  const baseBackgroundRunner =
+    deps.backgroundRunner?.(host) ?? repoBackgroundRunner(host);
+  const backgroundRunner = local
+    ? registeredBackgroundRunner(baseBackgroundRunner, job.layout.harnessDir)
+    : baseBackgroundRunner;
   const background = new BackgroundJobs(
-    repoBackgroundRunner(host),
+    backgroundRunner,
     0,
     OPENCODE_BACKGROUND_LOG_NOTES,
     { local },
@@ -1956,6 +1968,27 @@ export async function runOpencodeTurn(
           } = {
             reply: "once",
           };
+          if (
+            out.permission.permission === "task" &&
+            verdict.reply === "once" &&
+            out.permission.callId
+          ) {
+            const callId = out.permission.callId;
+            const alreadyCounted = pendingTasks.has(callId);
+            if (
+              !alreadyCounted &&
+              subagents.running + pendingTasks.size >=
+                job.subagents.maxParallel
+            ) {
+              verdict = {
+                reply: "reject",
+                reason: "subagent_concurrency_limit",
+                message:
+                  `At most ${job.subagents.maxParallel} sub-agents may run in parallel. ` +
+                  "Wait for the current sub-agents to finish, then retry this delegation.",
+              };
+            }
+          }
           if (
             out.permission.permission === "bash" &&
             verdict.reply === "once" &&

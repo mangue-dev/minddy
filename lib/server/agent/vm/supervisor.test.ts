@@ -22,6 +22,7 @@ import { startToolBridge } from "./tool-bridge";
 import type { ControlPlaneClient } from "./control-plane-client";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
+import { repoBackgroundRunner } from "../repo-host";
 
 /**
  * MIN-286 lot 1 — the supervisor, played from start to finish on a FAKE server
@@ -515,6 +516,9 @@ function deps(): SupervisorDeps {
         h.proxyClosed = true;
       },
     }),
+    // Process registration is covered by child-registry.test.ts. Supervisor
+    // tests use synthetic PIDs, so keep their runner entirely in memory.
+    backgroundRunner: (runnerHost) => repoBackgroundRunner(runnerHost),
     // The tools bridge is the REAL one ([tool-bridge.ts](tool-bridge.ts)), on a
     // ephemeral port — as in production since MIN-354, where no more ports
     // is not written in hard copy. We only intercept it to KEEP the tools that the
@@ -1352,6 +1356,57 @@ describe("les garde-fous", () => {
     );
   });
 
+  it("enforces a zero sub-agent resource ceiling", async () => {
+    h.extraFrames = [
+      permissionFrame(
+        "task",
+        { subagent_type: "general" },
+        "call_task_1",
+        "per_task_1",
+      ),
+    ];
+    await run({
+      subagents: { ...job().subagents, maxParallel: 0 },
+    });
+    expect(h.permissionReplies[0]).toMatchObject({
+      id: "per_task_1",
+      reply: "reject",
+    });
+    expect(h.permissionReplies[0].message).toContain(
+      "At most 0 sub-agents",
+    );
+  });
+
+  it("caps parallel delegation bursts before children are registered", async () => {
+    h.extraFrames = [
+      permissionFrame(
+        "task",
+        { subagent_type: "general" },
+        "call_task_1",
+        "per_task_1",
+      ),
+      permissionFrame(
+        "task",
+        { subagent_type: "general" },
+        "call_task_2",
+        "per_task_2",
+      ),
+      permissionFrame(
+        "task",
+        { subagent_type: "general" },
+        "call_task_3",
+        "per_task_3",
+      ),
+    ];
+    await run();
+    expect(h.permissionReplies.slice(0, 3).map((reply) => reply.reply)).toEqual(
+      ["once", "once", "reject"],
+    );
+    expect(h.permissionReplies[2].message).toContain(
+      "At most 2 sub-agents",
+    );
+  });
+
   it("auto-grants shell commands without parsing their intent", async () => {
     h.extraFrames = [
       permissionFrame("bash", { command: "git reset --hard" }),
@@ -1841,7 +1896,13 @@ describe("la forge", () => {
       permission: Record<string, string>;
       agent: Record<string, { tools: Record<string, boolean> }>;
     };
-    expect(config.permission).toEqual({ "*": "allow" });
+    expect(config.permission).toEqual({
+      edit: "ask",
+      task: "ask",
+      bash: "ask",
+      external_directory: "ask",
+      "*": "allow",
+    });
     for (const tool of ["edit", "write", "apply_patch"]) {
       expect(config.agent.build.tools[tool]).toBeUndefined();
     }

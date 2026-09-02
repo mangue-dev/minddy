@@ -76,7 +76,8 @@ describe("prepareLocalWorktree", () => {
       sourceRepo: repo,
       runRoot: reviewRunRoot,
       baseBranch: "main",
-      workBranch: "refs/pull/7/head",
+      workBranch: "minddy/review-7",
+      checkoutRef: "refs/pull/7/head",
       authUrl: repo,
     });
 

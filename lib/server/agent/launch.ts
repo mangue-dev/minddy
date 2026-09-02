@@ -418,11 +418,8 @@ export async function launchAgentRun(
   const byokPromise = getUserByok(input.userId, aiSurface);
 
   // Read BEFORE the link gate: a local run is the only one allowed to launch
-  // without a linked repository (see below), so the request must be resolved
-  // first. `localExecRequested` folds in the third-party-content scope
-  // (button/chat only, no PR/routine/chain anchor, and explicit confirmation
-  // for issue content) — a no-repository run is therefore always an
-  // interactive one, never an automation.
+  // without a linked repository (see below), so its authenticated destination
+  // request must be resolved first.
   const localExec = localExecRequested(input);
   const link = await linkPromise;
   // A LOCAL run can do without a linked repository: it plays on the folder

@@ -32,6 +32,7 @@ export function prepareLocalWorktree(opts: {
   runRoot: string;
   baseBranch?: string | null;
   workBranch: string;
+  checkoutRef?: string;
   authUrl?: string;
 }): LocalWorktreeResult {
   const destination = localWorktreePath(opts.runRoot);
@@ -62,8 +63,9 @@ export function prepareLocalWorktree(opts: {
     // A resumed session may have already pushed its branch from another
     // machine. Resume this tip is the local counterpart of `cloneRepo`; the absence
     // branch is normal for the first round and leaves the base checkouted.
-    if (opts.authUrl?.trim() && opts.workBranch.trim()) {
-      const fetched = tryGit(destination, ["fetch", "--quiet", opts.authUrl, opts.workBranch]);
+    const checkoutRef = opts.checkoutRef?.trim() || opts.workBranch.trim();
+    if (opts.authUrl?.trim() && checkoutRef) {
+      const fetched = tryGit(destination, ["fetch", "--quiet", opts.authUrl, checkoutRef]);
       if (fetched) git(destination, ["checkout", "--detach", "FETCH_HEAD"]);
     }
     return { ok: true, path: destination, reused: false };

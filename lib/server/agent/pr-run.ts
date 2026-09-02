@@ -104,16 +104,6 @@ export function pullRequestHeadRef(provider: RepoProviderId, number: number): st
     : `refs/pull/${number}/head`;
 }
 
-/**
- * LOCAL name of the review branch in the sandbox. It is not a branch of
- * work: nothing will be committed or pushed (see `writesToRepo` in
- * `execute.ts`). We nevertheless keep the name of the head branch when we
- * knows — the agent reads `git status` and must recognize the PR it rereads.
- */
-export function pullRequestLocalBranch(pr: PrRunContext): string {
-  return pr.headBranch?.trim() || `pr-${pr.number}`;
-}
-
 // ── What the repository does not contain ───────────────────── ─────────────────────
 
 /** Last comments on the ticket uploaded — beyond that, the primer would not keep any
