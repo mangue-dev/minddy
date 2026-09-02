@@ -702,6 +702,7 @@ export interface AgentRunPrResponse {
   provider?: RepoProviderId;
   checks?: ChecksSummary | null;
   checksError?: "forbidden" | "unknown" | null;
+  deploymentUrl?: string | null;
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];
@@ -1054,7 +1055,6 @@ export async function fetchOpenPullRequestCountApi(): Promise<{ count: number }>
 export async function fetchPullRequestCommentsApi(prId: string): Promise<{
   comments: PullRequestComment[];
   timeline: PrTimelineEvent[];
-  deploymentUrl: string | null;
   reactions: ReviewCommentReaction[];
 }> {
   return parseJson(await fetch(`${prEndpoint(prId)}/comments`));

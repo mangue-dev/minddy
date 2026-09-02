@@ -600,6 +600,7 @@ export function PrDetail({
     files,
     checks,
     checksError,
+    deploymentUrl,
     viewer,
     mergePolicy,
     readiness,
@@ -609,7 +610,6 @@ export function PrDetail({
   const {
     comments,
     timeline,
-    deploymentUrl,
     reactions: commentReactions,
     loading: commentsLoading,
     refetch: refetchComments,

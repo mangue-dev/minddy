@@ -443,16 +443,34 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
     // still accepted (measured — “Resource not accessible by integration”).
     let checks = null;
     let checksError: "forbidden" | "unknown" | null = null;
+    let deploymentUrl: string | null = null;
     if (pr.headSha) {
-      try {
-        checks = await forge.listChecks({
+      const [checksResult, deploymentResult] = await Promise.allSettled([
+        forge.listChecks({
           ...call,
           sha: pr.headSha,
           requiredCheckNames: mergePolicy.requiredCheckNames,
           checksRequired: mergePolicy.checksMustPass,
-        });
-      } catch (err) {
-        checksError = isForgeApiError(err) && err.status === 403 ? "forbidden" : "unknown";
+        }),
+        forge.getLatestSuccessfulDeploymentUrl({
+          token: call.token,
+          repoFullName: call.repoFullName,
+          sha: pr.headSha,
+        }),
+      ]);
+      if (checksResult.status === "fulfilled") {
+        checks = checksResult.value;
+      } else {
+        const error = checksResult.reason;
+        checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
+      }
+      if (deploymentResult.status === "fulfilled") {
+        deploymentUrl = deploymentResult.value;
+      } else {
+        console.error(
+          "[pr-actions] deployment unreadable:",
+          (deploymentResult.reason as Error).message,
+        );
       }
     }
 
@@ -484,6 +502,7 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
       provider: scope.target.provider,
       checks,
       checksError,
+      deploymentUrl,
       reviews,
       reviewThreads,
       viewer,
@@ -728,24 +747,12 @@ export async function prCommitFileBytesResponse(
  */
 export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const [comments, timeline, deploymentUrl, actor] = await Promise.all([
+    const [comments, timeline, actor] = await Promise.all([
       scope.forge.listPullRequestComments(scope.call),
       scope.forge.listTimeline(scope.call).catch((err) => {
         console.error("[pr-actions] timeline unreadable:", (err as Error).message);
         return [];
       }),
-      scope.pr.head_sha
-        ? scope.forge
-            .getLatestSuccessfulDeploymentUrl({
-              token: scope.call.token,
-              repoFullName: scope.call.repoFullName,
-              sha: scope.pr.head_sha,
-            })
-            .catch((err) => {
-              console.error("[pr-actions] deployment unreadable:", (err as Error).message);
-              return null;
-            })
-        : null,
       scope.actor(),
     ]);
     const viewerIsActor = actor.kind === "actor";
@@ -761,7 +768,7 @@ export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> 
         console.error("[pr-actions] conversation reactions unreadable:", (err as Error).message);
         return [];
       });
-    return NextResponse.json({ comments, timeline, deploymentUrl, reactions });
+    return NextResponse.json({ comments, timeline, reactions });
   } catch (err) {
     return forgeErrorResponse(err);
   }

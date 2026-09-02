@@ -169,6 +169,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     files: data?.files ?? [],
     checks: data?.checks ?? null,
     checksError: data?.checksError ?? null,
+    deploymentUrl: data?.deploymentUrl ?? null,
     reviews: data?.reviews ?? null,
     // Who I am for this PR (MIN-144). `null` as long as the GET has not
     // answered: the UI then does not offer any writing gesture, rather than
@@ -425,7 +426,6 @@ export function usePrCommentsQuery(prId: string | null) {
     // The activity (MIN-159) travels with the messages: it is the SAME thread, ordered
     // by date — serving it separately would cause it to be a time late.
     timeline: data?.timeline ?? [],
-    deploymentUrl: data?.deploymentUrl ?? null,
     // The reactions (MIN-147) travel with the comments, as on the review side:
     // they go UNDER a message, and the PR body has its own there.
     reactions: data?.reactions ?? [],
