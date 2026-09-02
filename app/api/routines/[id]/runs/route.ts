@@ -4,6 +4,8 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getRoutineForUser } from "@/lib/server/routines";
 import { runsForRoutine } from "@/lib/server/agent/runs";
 import { agentRunCanResume } from "@/lib/agent-run-resumability";
+import { getResolvedBilling } from "@/lib/server/billing-accounts";
+import { routineRunUsagePercent } from "@/lib/routine-run-metrics";
 
 /**
  * The “Previous Executions” of a Routine (MIN-185) — the ONLY place where
@@ -41,6 +43,7 @@ const RUN_FIELDS = [
   "cost_usd",
   "outcome",
   "error_message",
+  "started_at",
   "created_at",
   "updated_at",
   "awaiting_input",
@@ -54,7 +57,13 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
   const found = await getRoutineForUser(id, auth.user.id);
   if (!found) return NextResponse.json({ error: "routineNotFound" }, { status: 404 });
 
-  const rows = await runsForRoutine(id);
+  const [rows, billing] = await Promise.all([
+    runsForRoutine(id),
+    found.isOwner
+      ? getResolvedBilling(found.routine.owner_id)
+      : Promise.resolve(null),
+  ]);
+  const includedUsageUsd = billing?.plan.includedUsageUsd ?? 0;
   const runs = rows.map((run) => {
     const row = run as unknown as Record<string, unknown>;
     const out: Record<string, unknown> = {};
@@ -62,6 +71,14 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     // Set by DB trigger, outside of type `AgentRun` — the list needs it to
     // tell when a passage has ended.
     out.completed_at = row.completed_at ?? null;
+    // An exact ratio would let a member derive the owner's plan allowance from
+    // the already-visible cost. BYOK also consumes no included Minddy usage.
+    out.usage_percent = routineRunUsagePercent({
+      costUsd: Number(row.cost_usd ?? 0),
+      includedUsageUsd,
+      keyMode: row.key_mode === "byok" ? "byok" : "platform",
+      isOwner: found.isOwner,
+    });
     out.resumable = agentRunCanResume(run);
     return out;
   });

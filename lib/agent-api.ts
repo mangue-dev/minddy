@@ -102,6 +102,8 @@ export interface AgentRunSummary {
   cost_usd: number;
   outcome: string | null;
   error_message: string | null;
+  /** First moment at which execution work actually started. */
+  started_at?: string | null;
   created_at: string;
   updated_at: string;
   /**
@@ -111,6 +113,8 @@ export interface AgentRunSummary {
    * `last_read_at` of the session).
    */
   completed_at: string | null;
+  /** Share of the owner's included monthly usage spent by this run. */
+  usage_percent?: number | null;
   /** The last round ended on an ask_user: the run WAITS for the response from
    * the user → YELLOW point (same reading rules as unread). */
   awaiting_input: boolean;
