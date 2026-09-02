@@ -42,6 +42,7 @@ import {
 } from "@/components/issue-property-fields";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
+import { ObjectiveMomentum } from "@/components/objective-momentum";
 import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import {
@@ -562,6 +563,8 @@ export function ObjectiveDetail({
               projectId={projectId}
             />
           </div>
+
+          <ObjectiveMomentum objective={objective} issues={issues} />
 
           <IssueActivity
             items={items}
