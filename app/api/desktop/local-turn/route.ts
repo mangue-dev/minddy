@@ -317,7 +317,11 @@ export async function POST(request: NextRequest) {
       projectId: run.project_id,
       repoFullName: prepared.repoFullName,
       repoPreviousNames,
-      localWorktree: run.local_worktree === true,
+      // Reviews must consume their PR checkoutRef in an isolated worktree. The
+      // pull-request fallback also protects queued runs created before launch
+      // started persisting this invariant.
+      localWorktree:
+        run.local_worktree === true || run.pull_request_id != null,
       projects,
       diagnostics: { ...timings, total: Date.now() - startedAt },
       // The lease travels IN the job (`controlToken`), and not next to it: a local job

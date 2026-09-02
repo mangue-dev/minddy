@@ -23,7 +23,10 @@ import { LEGACY_TOOL_NAMES, buildOpencodeAnchor } from "./opencode-anchor";
 const variants = [
   { label: "ticket", args: { anchor: "issue" as const, interactive: true } },
   { label: "carnet", args: { anchor: "notebook" as const, interactive: true } },
-  { label: "routine", args: { anchor: "notebook" as const, interactive: false } },
+  {
+    label: "routine",
+    args: { anchor: "notebook" as const, interactive: false },
+  },
   { label: "relecture", args: { anchor: "pr" as const, interactive: true } },
 ];
 
@@ -52,21 +55,40 @@ describe("buildOpencodeAnchor — aucun nom de tool de la boucle maison", () => 
     it(`ne cite aucun tool inexistant chez opencode (${label})`, () => {
       const text = buildOpencodeAnchor({ ...FULL, ...args });
       for (const name of LEGACY_TOOL_NAMES) {
-        expect(text, `« ${name} » ne doit pas être servi à opencode`).not.toContain(`\`${name}\``);
+        expect(
+          text,
+          `« ${name} » ne doit pas être servi à opencode`,
+        ).not.toContain(`\`${name}\``);
       }
     });
   }
 
   it("nomme bien les tools d'opencode à la place", () => {
-    const text = buildOpencodeAnchor({ ...FULL, anchor: "issue", interactive: true });
-    for (const name of ["read", "bash", "grep", "glob", "edit", "task", "question"]) {
+    const text = buildOpencodeAnchor({
+      ...FULL,
+      anchor: "issue",
+      interactive: true,
+    });
+    for (const name of [
+      "read",
+      "bash",
+      "grep",
+      "glob",
+      "edit",
+      "task",
+      "question",
+    ]) {
       expect(text).toContain(`\`${name}\``);
     }
   });
 });
 
 describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
-  const text = buildOpencodeAnchor({ ...FULL, anchor: "issue", interactive: true });
+  const text = buildOpencodeAnchor({
+    ...FULL,
+    anchor: "issue",
+    interactive: true,
+  });
 
   it("porte les règles dures mot pour mot", () => {
     for (const rule of [
@@ -74,7 +96,7 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
       "**A plan that already exists is never rewritten whole.**",
       "**A plan is only as good as what it does NOT forget.**",
       "**Anchored remarks are rationed**",
-      "**The harness owns git",
+      "**Git is available through the shell.**",
       "**a check you did not run is a check nobody ran**",
       "**Behaviour you add or change comes WITH ITS TEST, in the same turn.**",
       "**If `glob` cannot find a file or directory the user explicitly named, do not conclude it is absent:**",
@@ -100,7 +122,7 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
     ]) {
       expect(text, tool).toContain(`\`${tool}\``);
     }
-    expect(text).toContain("The harness owns git, and your shell enforces it.");
+    expect(text).toContain("native shell and file tools are fully available");
   });
 
   it("dit la langue de réponse et le ticket comme ancrage", () => {
@@ -110,7 +132,11 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
 });
 
 describe("buildOpencodeAnchor — les écarts mesurés d'opencode", () => {
-  const text = buildOpencodeAnchor({ ...FULL, anchor: "issue", interactive: true });
+  const text = buildOpencodeAnchor({
+    ...FULL,
+    anchor: "issue",
+    interactive: true,
+  });
 
   it("dit que la délégation BLOQUE, contre la doctrine de la boucle maison", () => {
     expect(text).toContain("BLOCKS until the child is done");
@@ -120,14 +146,15 @@ describe("buildOpencodeAnchor — les écarts mesurés d'opencode", () => {
   });
 
   /**
- * MIN-286 batch 3 — `run_background` is stored in tool local, so it is de
- * US: the opencode prompt says nothing about it, and this is where it must be described. A tool served that the anchor does not present is a tool that the
- * model never uses — the doctrine “run the code for real”
- * would then go back to a `&` without safeguards.
- */
+   * MIN-286 batch 3 — `run_background` is stored in tool local, so it is de
+   * US: the opencode prompt says nothing about it, and this is where it must be described. A tool served that the anchor does not present is a tool that the
+   * model never uses — the doctrine “run the code for real”
+   * would then go back to a `&` without safeguards.
+   */
   it("décrit `run_background` et la boucle lancer → sonder → curl → arrêter", () => {
     expect(text).toContain("`run_background`");
-    for (const action of ["`start`", "`check`", "`stop`"]) expect(text).toContain(action);
+    for (const action of ["`start`", "`check`", "`stop`"])
+      expect(text).toContain(action);
     // And it `curl` with the OPENCODE shell, not with the home loop one.
     expect(text).toMatch(/`curl` it with `bash`/);
     expect(text).toMatch(/killed when the turn ends/i);
@@ -150,27 +177,39 @@ describe("buildOpencodeAnchor — les écarts mesurés d'opencode", () => {
   });
 
   it("plafonne la recherche web du tour, filles comprises", () => {
-    expect(text).toContain("You get 5 searches for this turn, shared with your sub-agents");
+    expect(text).toContain(
+      "You get 5 searches for this turn, shared with your sub-agents",
+    );
   });
 });
 
-describe("buildOpencodeAnchor — une routine et une relecture ne promettent rien de faux", () => {
-  it("une routine n'a pas de question à poser", () => {
-    const text = buildOpencodeAnchor({ ...FULL, anchor: "notebook", interactive: false });
+describe("buildOpencodeAnchor — trigger and anchor context", () => {
+  it("keeps native questions available to a routine", () => {
+    const text = buildOpencodeAnchor({
+      ...FULL,
+      anchor: "notebook",
+      interactive: false,
+    });
     expect(text).toContain("## This session is a ROUTINE");
-    expect(text).toContain("`question` is not in your tool set");
-    expect(text).not.toContain("ENDS your turn");
+    expect(text).toContain("native `question` tool");
+    expect(text).toContain("suspend cleanly");
   });
 
-  it("une relecture garde sa persona en lecture seule", () => {
-    const text = buildOpencodeAnchor({ ...FULL, anchor: "pr", interactive: true });
+  it("keeps pull-request review as context without reducing capabilities", () => {
+    const text = buildOpencodeAnchor({
+      ...FULL,
+      anchor: "pr",
+      interactive: true,
+    });
     expect(text).toContain("review a pull request");
-    // It does not launch anything in the background: the tool is neither served nor announced.
-    expect(text).not.toContain("run_background");
-    expect(text).toContain("You cannot change the code, and that is structural.");
-    // Neither ticket anchoring, nor git, nor delegation: these are the gestures that it does not have.
-    expect(text).not.toContain("## Git and pull requests");
-    expect(text).not.toContain("## Delegating to sub-agents");
+    expect(text).toContain("context, not a capability profile");
+    expect(text).toContain(
+      "edit, test, delegate, ask the user, use background jobs",
+    );
+    expect(text).toContain(
+      "native editing, web, planning, skill, question and delegation tools",
+    );
+    expect(text).not.toContain("You cannot change the code");
   });
 });
 
@@ -184,7 +223,11 @@ describe("buildOpencodeAnchor — une routine et une relecture ne promettent rie
  * the user), and a six-month history window (the repository is complete).
  */
 describe("buildOpencodeAnchor — le mode dépôt courant", () => {
-  const clone = buildOpencodeAnchor({ ...FULL, anchor: "issue", interactive: true });
+  const clone = buildOpencodeAnchor({
+    ...FULL,
+    anchor: "issue",
+    interactive: true,
+  });
   const current = buildOpencodeAnchor({
     ...FULL,
     anchor: "issue",
@@ -199,42 +242,45 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
   });
 
   /**
- * MIN-364 (§1 of the audit of 2026-08-15) — THE DEFECT WHICH WAS NOT A
- * ARBITRATION: no one committed.
- *
- * The harness no longer commits in current deposit mode (D2bis-B), and the anchor
- * however promised “the harness delivers YOUR work by committing” two
- * proposals after a “never commit”. The model finished its turns on
- * “it’s delivered” and nothing was.
- */
-  it("dit que RIEN n'est commité pour le modèle, et que la livraison est sa phrase", () => {
+   * MIN-364 (§1 of the audit of 2026-08-15) — THE DEFECT WHICH WAS NOT A
+   * ARBITRATION: no one committed.
+   *
+   * The harness no longer commits in current deposit mode (D2bis-B), and the anchor
+   * however promised “the harness delivers YOUR work by committing” two
+   * proposals after a “never commit”. The model finished its turns on
+   * “it’s delivered” and nothing was.
+   */
+  it("describes delivery without claiming a hidden git denial", () => {
     expect(current).toContain("Nothing is committed for you here");
     expect(current).not.toContain("delivers YOUR work by committing");
-    // The cloud commits for real: its sentence does not move.
-    expect(clone).toContain("it commits and pushes whatever you changed");
+    expect(clone).toContain("Git is available through the shell");
+    expect(clone).toContain("commit, push, or use `create_pr`");
   });
 
-  it("rend le commit au modèle SUR DEMANDE, sans lui rendre le `git add -A`", () => {
+  it("keeps current-checkout commit guidance without enforcing it as an ACL", () => {
     expect(current).toContain("You commit only when they ask you to");
     expect(current).toContain("never `git add -A`");
-    expect(current).toContain("`create_pr` owns the remote");
+    expect(current).toContain("`create_pr` is the integrated path");
+    expect(current).toContain("shell does not enforce these workflow choices");
   });
 
   it("retire `git status` du rôle de diff, et nomme le cas des deux mains", () => {
     expect(current).toContain("`git status` is NOT your diff here");
-    expect(current).toContain("Use the built-in file editing tools for repository writes");
+    expect(current).toContain(
+      "Use the built-in file editing tools for repository writes",
+    );
     expect(current).toContain("not claimed in your diff");
     expect(current).toContain("goes out with your pull request");
   });
 
   /**
- * MIN-364 (D7) — QUESTION NO LONGER KILLS THE TURN ON A MACHINE.
- *
- * "that ends your turn" pushes the model to finish everything before asking, and
- * makes him read his own turn as lost the moment he asks. Both
- * behavior are false when the tool blocks and returns the response in its
- * result.
- */
+   * MIN-364 (D7) — QUESTION NO LONGER KILLS THE TURN ON A MACHINE.
+   *
+   * "that ends your turn" pushes the model to finish everything before asking, and
+   * makes him read his own turn as lost the moment he asks. Both
+   * behavior are false when the tool blocks and returns the response in its
+   * result.
+   */
   it("dit que la question SUSPEND le tour, là où le cloud dit qu'elle le termine", () => {
     expect(current).toContain("SUSPENDS your turn — it does not end it");
     expect(current).toContain("comes back to you as the tool's own result");
@@ -247,17 +293,19 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
   });
 
   /**
- * MIN-364 (decision D5) — THE DISC IS OPEN, AND HOLDING IS A RULE OF
- * PROMPT, NOT A WALL.
- *
- * This is an assumed choice: the front wall only caught in any case the honest
- * tools (twenty of the thirty measured commands reach an external
- * folder without publishing anything other than `bash`). What would NOT be assumed is describing it elsewhere as a guarantee — hence the test:
- * the rule must be written as a request, and writing elsewhere must go through a REAL question.
- */
+   * MIN-364 (decision D5) — THE DISC IS OPEN, AND HOLDING IS A RULE OF
+   * PROMPT, NOT A WALL.
+   *
+   * This is an assumed choice: the front wall only caught in any case the honest
+   * tools (twenty of the thirty measured commands reach an external
+   * folder without publishing anything other than `bash`). What would NOT be assumed is describing it elsewhere as a guarantee — hence the test:
+   * the rule must be written as a request, and writing elsewhere must go through a REAL question.
+   */
   it("ouvre le disque et demande de DEMANDER avant d'écrire ailleurs", () => {
     expect(current).toContain("the whole disk is within reach");
-    expect(current).toContain("ASK before you WRITE anywhere outside this folder");
+    expect(current).toContain(
+      "ASK before you WRITE anywhere outside this folder",
+    );
     expect(current).toContain("`question`");
     // The head rule can no longer say “stay in the repository”: a rule
     // false in a prompt weakens twenty others.
@@ -274,24 +322,11 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
     expect(clone).toContain("You have history, for the last 6 months");
   });
 
-  /**
- * SHELL'S GUARD IS NO LONGER THE SAME ON BOTH SIDES (MIN-364), and that's
- * the only thing D6 changes. This test ANCHORES the list served on each side
- * to the one that `command-guard` actually executes: the local round had, before
- * this batch, the git block of the CLOUD — therefore the list which refuses `git commit` — because
- * that the anchor was read on a `repoMode` that the machine replaces.
- */
-  it("annonce EXACTEMENT ce que `command-guard` refuse de chaque côté", () => {
-    expect(clone).toContain("`git commit`, `git push`, `git reset`");
-    // In current deposit `git commit` is no longer in the refusal list…
-    expect(current).toContain("REFUSES what would destroy work that is not yours");
-    expect(current).toContain("plus `git push`, which belongs to `create_pr`");
-    expect(current).not.toContain("`git commit`, `git push`, `git reset`");
-    // …and both sides always refuse what destroys.
+  it("states that command methods are not application-filtered", () => {
     for (const text of [clone, current]) {
-      expect(text).toContain("`git reset`");
-      expect(text).toContain("`git clean -f`");
-      expect(text).toContain("`--amend`");
+      expect(text).toContain("does not classify commands or hide tools");
+      expect(text).not.toContain("REFUSES what would destroy");
+      expect(text).not.toContain("shell enforces it");
     }
   });
 });

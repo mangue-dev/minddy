@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentToolsFor, SUBAGENT_CONTROL_TOOLS } from "./tools";
+import { agentToolsFor } from "./tools";
 
 /**
  * MIN-115: the toolset of a run is no longer fixed. The `gpt-*` models
@@ -12,12 +12,15 @@ import { agentToolsFor, SUBAGENT_CONTROL_TOOLS } from "./tools";
 const names = (opts: Parameters<typeof agentToolsFor>[0]) =>
   agentToolsFor(opts).map((t) => t.function.name);
 
-const STRING_EDIT = ["edit_file", "apply_edits", "write_file"];
 describe("agentToolsFor — web_search (inchangé)", () => {
   it("retire web_search hors OpenRouter, quelle que soit l'interface d'édition", () => {
     for (const model of ["openai/gpt-5.6-luna", "deepseek/deepseek-v4-flash"]) {
-      expect(names({ anchor: "issue", webSearch: false, model })).not.toContain("web_search");
-      expect(names({ anchor: "issue", webSearch: true, model })).toContain("web_search");
+      expect(names({ anchor: "issue", webSearch: false, model })).not.toContain(
+        "web_search",
+      );
+      expect(names({ anchor: "issue", webSearch: true, model })).toContain(
+        "web_search",
+      );
     }
   });
 
@@ -38,12 +41,16 @@ describe("agentToolsFor — web_search (inchangé)", () => {
   });
 });
 
-describe("agentToolsFor — projets locaux", () => {
-  it("ne sert la découverte des chemins que sur la machine de l'utilisateur", () => {
-    expect(names({ anchor: "issue", webSearch: true })).not.toContain("list_projects");
-    const local = agentToolsFor({ anchor: "issue", webSearch: true, local: true }).find(
-      (tool) => tool.function.name === "list_projects",
+describe("agentToolsFor — local project context", () => {
+  it("keeps project discovery in the canonical catalog", () => {
+    expect(names({ anchor: "issue", webSearch: true })).toContain(
+      "list_projects",
     );
+    const local = agentToolsFor({
+      anchor: "issue",
+      webSearch: true,
+      local: true,
+    }).find((tool) => tool.function.name === "list_projects");
     expect(local?.function.description).toContain("local_path");
     expect(local?.function.description).toContain("without asking the user");
   });
@@ -72,7 +79,11 @@ const MINDDY_TOOLS = [
 describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
   for (const anchor of ["issue", "notebook"] as const) {
     it(`serves the repository validation and pull request tools (anchor ${anchor})`, () => {
-      const served = names({ anchor, webSearch: true, model: "openai/gpt-5.6-luna" });
+      const served = names({
+        anchor,
+        webSearch: true,
+        model: "openai/gpt-5.6-luna",
+      });
       for (const tool of MINDDY_TOOLS) expect(served).toContain(tool);
       expect(served).toContain("validate_changes");
       expect(served).toContain("create_pr");
@@ -83,8 +94,9 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
 
   it("dit la cible par défaut selon l'ancrage, sur les tools ciblables", () => {
     const describeTool = (anchor: "issue" | "notebook", name: string) =>
-      agentToolsFor({ anchor, webSearch: true }).find((t) => t.function.name === name)!
-        .function.description;
+      agentToolsFor({ anchor, webSearch: true }).find(
+        (t) => t.function.name === name,
+      )!.function.description;
 
     for (const name of [
       "read_issue",
@@ -100,7 +112,9 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
     }
     // The other tool tickets have no target: no targeting phrase.
     for (const name of ["search_issues", "create_issue", "read_resource"]) {
-      expect(describeTool("notebook", name)).not.toMatch(/`issue` is (OPTIONAL|REQUIRED)/);
+      expect(describeTool("notebook", name)).not.toMatch(
+        /`issue` is (OPTIONAL|REQUIRED)/,
+      );
     }
   });
 
@@ -111,8 +125,9 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
    */
   it("rend `issue` obligatoire AU SCHÉMA sur un run de carnet", () => {
     const params = (anchor: "issue" | "notebook" | "pr", name: string) =>
-      agentToolsFor({ anchor, webSearch: true }).find((t) => t.function.name === name)!.function
-        .parameters;
+      agentToolsFor({ anchor, webSearch: true }).find(
+        (t) => t.function.name === name,
+      )!.function.parameters;
 
     for (const name of [
       "read_issue",
@@ -124,7 +139,8 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
       expect(params("notebook", name).required).toContain("issue");
       // What the tool already required does not disappear in passing.
       const before = params("issue", name).required ?? [];
-      for (const field of before) expect(params("notebook", name).required).toContain(field);
+      for (const field of before)
+        expect(params("notebook", name).required).toContain(field);
       // Ticket anchor: `issue` is OPTIONAL, and the schema must remain so.
       expect(params("issue", name).required ?? []).not.toContain("issue");
     }
@@ -153,9 +169,15 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
       const description = agentToolsFor({ anchor, webSearch: true }).find(
         (t) => t.function.name === "update_issue",
       )!.function;
-      expect(description.description).toMatch(/CANNOT change a ticket's STATUS/);
-      expect(Object.keys(description.parameters.properties)).not.toContain("status");
-      expect(Object.keys(description.parameters.properties)).not.toContain("priority");
+      expect(description.description).toMatch(
+        /CANNOT change a ticket's STATUS/,
+      );
+      expect(Object.keys(description.parameters.properties)).not.toContain(
+        "status",
+      );
+      expect(Object.keys(description.parameters.properties)).not.toContain(
+        "priority",
+      );
     }
   });
 
@@ -167,12 +189,13 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
     expect(tool.description).toMatch(/account setting, not a parameter/);
   });
 
-  it("reformule create_pr selon l'ancrage (le carnet n'a pas de ticket)", () => {
+  it("uses the same create_pr definition for every anchor", () => {
     const pr = (anchor: "issue" | "notebook") =>
-      agentToolsFor({ anchor, webSearch: true }).find((t) => t.function.name === "create_pr")!
-        .function.description;
-    expect(pr("issue")).toMatch(/this ticket's working branch/);
-    expect(pr("notebook")).toMatch(/this session's working branch/);
+      agentToolsFor({ anchor, webSearch: true }).find(
+        (t) => t.function.name === "create_pr",
+      )!.function.description;
+    expect(pr("issue")).toMatch(/this run's working branch/);
+    expect(pr("notebook")).toBe(pr("issue"));
   });
 });
 
@@ -204,13 +227,9 @@ describe("agentToolsFor — les objectifs", () => {
     });
   }
 
-  it("donne à une relecture les deux LECTEURS, et aucune écriture d'objectif", () => {
+  it("keeps objective readers and writers in pull-request runs", () => {
     const served = names({ anchor: "pr", webSearch: false });
-    expect(served).toContain("list_objectives");
-    expect(served).toContain("read_objective");
-    for (const tool of ["create_objective", "update_objective", "comment_objective"]) {
-      expect(served).not.toContain(tool);
-    }
+    for (const tool of OBJECTIVE_TOOLS) expect(served).toContain(tool);
   });
 
   it("laisse rattacher un ticket à un objectif, à la création comme à la mise à jour", () => {
@@ -222,9 +241,9 @@ describe("agentToolsFor — les objectifs", () => {
       expect(Object.keys(params(name).properties)).toContain("objective");
     }
     // `update_issue` can detach; `create_issue` has nothing to detach.
-    expect(
-      JSON.stringify(params("update_issue").properties.objective),
-    ).toMatch(/null to detach/);
+    expect(JSON.stringify(params("update_issue").properties.objective)).toMatch(
+      /null to detach/,
+    );
   });
 
   it("n'exige jamais un objectif inventé : la référence vient de list_objectives", () => {
@@ -232,19 +251,24 @@ describe("agentToolsFor — les objectifs", () => {
     const objectiveRef = (name: string) =>
       String(
         (
-          tools.find((t) => t.function.name === name)!.function.parameters.properties
-            .objective as { description: string }
+          tools.find((t) => t.function.name === name)!.function.parameters
+            .properties.objective as { description: string }
         ).description,
       );
-    for (const name of ["create_issue", "update_issue", "read_objective", "comment_objective"]) {
+    for (const name of [
+      "create_issue",
+      "update_issue",
+      "read_objective",
+      "comment_objective",
+    ]) {
       expect(objectiveRef(name)).toMatch(/list_objectives/);
     }
     // And `create_objective` says it's not up to him to invent a goal.
     expect(
-      tools.find((t) => t.function.name === "create_objective")!.function.description,
+      tools.find((t) => t.function.name === "create_objective")!.function
+        .description,
     ).toMatch(/ONLY when the user asks/);
   });
-
 });
 
 describe("agentToolsFor — read_resource et les images", () => {
@@ -274,8 +298,12 @@ describe("agentToolsFor — read_resource et les images", () => {
   });
 
   it("routes links through the outbound guard instead of shell fetching", () => {
-    expect(description(false)).toContain("fetched by this tool through the outbound-network guard");
-    expect(description(false)).toContain("unsafe/private targets and redirect hops are refused");
+    expect(description(false)).toContain(
+      "fetched by this tool through the outbound-network guard",
+    );
+    expect(description(false)).toContain(
+      "unsafe/private targets and redirect hops are refused",
+    );
     expect(description(false)).toContain("never fetch the link separately");
     expect(description(false)).not.toContain("A LINK returns its url");
   });
@@ -300,44 +328,21 @@ const _MINDDY_AND_CONTROL = [
   "agent_status",
   "list_agents",
 ];
-/**
- * MIN-168: the game of a REREADING session. What matters here is not
- * what it contains but what it does NOT contain: reading only a review
- * is a property of the TOOLSET, not a prompt phrase that a template can
- * ignore. A `edit_file` which returns by mistake in this game would be enough to
- * have the agent write into someone's filing.
- */
-describe("agentToolsFor — ancrage pull request", () => {
-  const served = names({ anchor: "pr", webSearch: true, model: "openai/gpt-5.6-luna" });
+describe("agentToolsFor — pull-request anchor", () => {
+  const served = names({
+    anchor: "pr",
+    webSearch: true,
+    model: "openai/gpt-5.6-luna",
+  });
 
-  it("n'offre AUCUN moyen d'écrire dans le dépôt", () => {
+  it("offers editing, delivery, background, delegation and project tools", () => {
     for (const tool of [
-      ...STRING_EDIT,
-      "apply_patch",
-      "move_file",
-      "delete_file",
       "validate_changes",
       "create_pr",
-    ]) {
-      expect(served).not.toContain(tool);
-    }
-  });
-
-  it("n'offre ni délégation, ni jobs de fond, ni checklist, ni question", () => {
-    for (const tool of [
-      ...SUBAGENT_CONTROL_TOOLS,
       "run_background",
       "update_plan",
-      "ask_user",
       "report_verdict",
       "web_search",
-    ]) {
-      expect(served).not.toContain(tool);
-    }
-  });
-
-  it("n'offre aucune écriture minddy ni le carnet", () => {
-    for (const tool of [
       "update_issue",
       "write_issue_plan",
       "create_issue",
@@ -346,27 +351,26 @@ describe("agentToolsFor — ancrage pull request", () => {
       "update_scratchpad_task",
       "set_scratchpad",
     ]) {
-      expect(served).not.toContain(tool);
+      expect(served).toContain(tool);
     }
   });
 
-  it("offre les lecteurs minddy et les trois écritures de PR", () => {
-    // File readers and shell are RENDERED BY OPENCODE since
-    // MIN-286: they are no longer declared here, so no more checking here.
+  it("offers both anchored and project-level pull-request tools", () => {
     for (const tool of [
-      "search_issues",
-      "read_issue",
-      "read_resource",
       "comment_pr_line",
       "comment_pr",
       "reply_pr_thread",
+      "comment_pull_request_line",
+      "comment_pull_request",
+      "reply_pull_request_thread",
+      "review_pull_request",
     ]) {
       expect(served).toContain(tool);
     }
     expect(new Set(served).size).toBe(served.length);
   });
 
-  it("dit les DEUX cas de ciblage : PR avec ticket, et PR sans", () => {
+  it("describes both issue-targeting cases", () => {
     const readIssue = agentToolsFor({ anchor: "pr", webSearch: false }).find(
       (t) => t.function.name === "read_issue",
     );
@@ -378,8 +382,23 @@ describe("agentToolsFor — ancrage pull request", () => {
     expect(d).toMatch(/never requires a ticket/);
   });
 
-  it("`report_verdict` reste absent même dans une chaîne", () => {
-    const inChain = names({ anchor: "pr", webSearch: false, chain: true });
-    expect(inChain).not.toContain("report_verdict");
+  it("matches every other anchor and execution context", () => {
+    const variants = [
+      names({
+        anchor: "issue",
+        webSearch: true,
+        interactive: true,
+        local: false,
+      }),
+      names({
+        anchor: "notebook",
+        webSearch: true,
+        interactive: false,
+        local: false,
+      }),
+      names({ anchor: "pr", webSearch: true, interactive: true, local: true }),
+    ];
+    for (const variant of variants)
+      expect([...variant].sort()).toEqual([...served].sort());
   });
 });

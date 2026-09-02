@@ -11,7 +11,9 @@ import {
   noteHarnessChild,
   parseChildRegistry,
   readHarnessChildren,
+  registeredBackgroundRunner,
 } from "./child-registry";
+import type { BackgroundJobRunner } from "../background";
 
 /**
  * MIN-293 — THE RECORD OF WHAT SURVIVES THE HARNESS.
@@ -137,6 +139,81 @@ describe("registry file", () => {
   });
 
   it("returns an empty list when nothing was registered", () => {
+    expect(readHarnessChildren(dir)).toEqual([]);
+  });
+});
+
+describe("registeredBackgroundRunner", () => {
+  function runner(events: string[]): BackgroundJobRunner {
+    return {
+      start: async () => {
+        events.push("start");
+        return { pid: 4242, logPath: "/tmp/bg.log" };
+      },
+      read: async () => ({
+        chunk: "",
+        nextOffset: 0,
+        running: false,
+        exitCode: 0,
+        skippedBytes: 0,
+      }),
+      stop: async () => {
+        events.push("stop");
+      },
+    };
+  }
+
+  it("registers a local process before returning it to the tool", async () => {
+    const events: string[] = [];
+    const wrapped = registeredBackgroundRunner(
+      runner(events),
+      dir,
+      () => "birth-4242",
+    );
+    await wrapped.start({
+      jobId: "bg-1",
+      invocation: { executable: "npm", args: ["run", "dev"], env: {} },
+    });
+    expect(readHarnessChildren(dir)).toEqual([
+      {
+        pid: 4242,
+        birth: "birth-4242",
+        kind: "background",
+        label: "npm run dev",
+      },
+    ]);
+  });
+
+  it("forgets a process when it exits or is stopped", async () => {
+    const events: string[] = [];
+    const wrapped = registeredBackgroundRunner(
+      runner(events),
+      dir,
+      () => "birth-4242",
+    );
+    const opts = {
+      jobId: "bg-1",
+      invocation: { executable: "npm", args: ["run", "dev"], env: {} },
+    };
+    const started = await wrapped.start(opts);
+    await wrapped.read({ jobId: opts.jobId, pid: started.pid, offset: 0 });
+    expect(readHarnessChildren(dir)).toEqual([]);
+
+    await wrapped.start(opts);
+    await wrapped.stop({ jobId: opts.jobId, pid: started.pid });
+    expect(readHarnessChildren(dir)).toEqual([]);
+  });
+
+  it("stops a process whose identity cannot be recorded", async () => {
+    const events: string[] = [];
+    const wrapped = registeredBackgroundRunner(runner(events), dir, () => null);
+    await expect(
+      wrapped.start({
+        jobId: "bg-1",
+        invocation: { executable: "npm", args: ["run", "dev"], env: {} },
+      }),
+    ).rejects.toThrow("identity could not be recorded");
+    expect(events).toEqual(["start", "stop"]);
     expect(readHarnessChildren(dir)).toEqual([]);
   });
 });

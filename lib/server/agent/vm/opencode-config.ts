@@ -67,8 +67,7 @@ import { isLocalJob, type VmJob } from "./protocol";
  * list them, it is `GET /experimental/tool`, the REST catalog — the one that
  * read our probes, not the one the model reads. The measure was right;
  * the place to read it was not
- *    ([opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts),
- *    docs/harness-opencode.md §2.32).
+ *    (historical measurements in docs/harness-opencode.md §2.32).
  *
  * 5. **`agent.<id>.prompt` REPLACES the built-in system prompt**, and the
  * `instructions` are FILE PATHS whose contents are added to the
@@ -194,7 +193,12 @@ interface OpencodeModelDef {
   modalities?: { input: string[]; output: string[] };
   reasoning?: boolean;
   options?: Record<string, unknown>;
-  cost?: { input: number; output: number; cache_read?: number; cache_write?: number };
+  cost?: {
+    input: number;
+    output: number;
+    cache_read?: number;
+    cache_write?: number;
+  };
   limit?: { context: number; output: number };
 }
 
@@ -232,12 +236,7 @@ interface OpencodeModelDef {
  * `skills.paths` NAMES them, and survives `OPENCODE_DISABLE_EXTERNAL_SKILLS`
  * (measured, [opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
  */
-const DISABLED_BUILTINS = ["todowrite", "websearch", "skill"] as const;
-
-/** Prompt-callable capabilities that are unsafe on a user's host. */
-const LOCAL_DISABLED_BUILTINS = ["bash", "webfetch"] as const;
-
-/** WRITE built-ins, removed from a session that is not writing (replay). */
+/** Native editing tools exposed by OpenCode according to the selected model. */
 const WRITE_BUILTINS = ["edit", "write", "apply_patch"] as const;
 
 /** What a sub-agent `explore` has the right to do, and nothing else. */
@@ -330,7 +329,9 @@ function modelDef(job: VmJob): OpencodeModelDef {
  * exactly like `spawn_agent` without `thinking_effort`.
  */
 function providerModels(job: VmJob): Record<string, OpencodeModelDef> {
-  const models: Record<string, OpencodeModelDef> = { [job.model]: modelDef(job) };
+  const models: Record<string, OpencodeModelDef> = {
+    [job.model]: modelDef(job),
+  };
   const pricing = job.subagents.pricing ?? {};
   for (const entry of subagentAgentTable(job)) {
     if (!entry.modelId || models[entry.modelId]) continue;
@@ -342,10 +343,16 @@ function providerModels(job: VmJob): Record<string, OpencodeModelDef> {
       cost: {
         input: price.inputUsdPerMTok,
         output: price.outputUsdPerMTok,
-        ...(price.cacheReadUsdPerMTok != null ? { cache_read: price.cacheReadUsdPerMTok } : {}),
-        ...(price.cacheWriteUsdPerMTok != null ? { cache_write: price.cacheWriteUsdPerMTok } : {}),
+        ...(price.cacheReadUsdPerMTok != null
+          ? { cache_read: price.cacheReadUsdPerMTok }
+          : {}),
+        ...(price.cacheWriteUsdPerMTok != null
+          ? { cache_write: price.cacheWriteUsdPerMTok }
+          : {}),
       },
-      ...(reasoningOptions(job) ? { reasoning: true, options: reasoningOptions(job)! } : {}),
+      ...(reasoningOptions(job)
+        ? { reasoning: true, options: reasoningOptions(job)! }
+        : {}),
     };
   }
   return models;
@@ -364,93 +371,23 @@ function reasoningOptions(job: VmJob): Record<string, unknown> | null {
 }
 
 /**
- * The permissions of the round — an ACL, last winning rule, `resource` overall.
- *
- * What they are NOT: order guardrail. `command-guard.ts` and
- * `repo-path.ts` remain pure functions replayed by the supervisor on
- * `POST /permission/:id/reply` — hence `bash: "ask"`, which is what GIVES IT the
- * hand. A global ACL cannot say “`rm -rf` outside the repository”, and a
- * rule that approves everything would take away the supervisor's point of control.
+ * OpenCode permissions are auto-granted. Cap- and audit-bearing operations stay
+ * observable so the supervisor can account for them before granting the request;
+ * every other native capability is granted directly by OpenCode.
  */
-function permissions(job: VmJob): Record<string, PermissionRule> {
-  /**
-   * `ask` AND NOT `allow` on a session which writes, and that is not
-   * caution: `.git/` is not protected by anyone at opencode — measured, a
-   * `write` over `<repository>/.git/config` overwrote it. `ask` is what gives the hand
-   * to the supervisor, who replays `assertNotGit` and `resolveWithin`
-   * ([opencode-permissions.ts](opencode-permissions.ts)).
-   */
-  const write: PermissionAction = job.writesToRepo ? "ask" : "deny";
-  const local = isLocalJob(job);
+function permissions(_job: VmJob): Record<string, PermissionRule> {
   return {
-    /**
-     * `read` (MIN-360) — `allow` in microVM, `ask` on someone's machine.
-     *
-     * `allow` was not neutral: opencode BOOK `{"*.env": "ask", "*.env.*":
-     * "ask", "*.env.example": "allow"}` in its default ruleset, our rules
-     * are concatenated AFTER, and the last one to match wins — our `allow`
-     * therefore deleted the question on `.env`. On a disposable clone, without
-     * stake ; in current deposit mode, this is the user's real `.env`.
-     *
-     * We don't hand over their glob: we take the hand. A global `ask` passes
-     * each reading by `decidePermission`, which is ours, tested, and does not depend
-     * neither the concatenation order nor the glob semantics of a version.
-     * The cost is one local loop HTTP round trip per read — the same
-     * that `bash` has always paid.
-     */
-    read: local ? "ask" : "allow",
-    glob: "allow",
-    grep: "allow",
-    /**
-     * ⚠ THERE IS NO `list` HERE, AND THIS IS DELIBERATE (MIN-363).
-     *
-     * The `list: "allow"` line lived there; it didn't solve anything. **There is no
-     * no tool `list` in 1.18.16.** Found on `GET /experimental/tool` of a
-     * bare server (agent `build`, non-`gpt-*` model, therefore without `apply_patch`):
-     * `invalid question bash read glob grep edit write task webfetch todowrite
-     * skill`, and nothing else. It is `read` on a directory that lists
-     * (docs/harness-opencode.md §3.1). An ACL placed on an action that does not exist
-     * you never see yourself failing: it reads like a guarantee.
-     */
-    // Cloud commands retain the existing command guard. Local runs have no
-    // prompt-callable shell because it would inherit the host's authority.
-    bash: local ? "deny" : "ask",
-    edit: write,
-    // Second curtain only: permission `question` is NOT consulted
-    // (measure). What really takes `ask_user` out of a routine is the game of
-     // the agent's tools (`primaryTools`).
-    question: job.interactive ? "ask" : "deny",
-    /**
-     * Cloud webfetch is bounded by the microVM firewall. Local webfetch is
-     * removed because application-level URL classification cannot constrain
-     * redirects, DNS rebinding, or arbitrary services reachable from the host.
-     */
-    webfetch: local ? "deny" : "allow",
-    websearch: "deny",
-    todowrite: "deny",
-    /**
-     * `ask` AND NOT `allow`: the permission request for a `task` bears the
-     * `subagent_type` requested (measured: `patterns: ["explore-cheap"]`,
-     * `metadata: {description, subagent_type}`), and it arrives BEFORE
-     * that opencode does not resolve the agent. It is therefore the only place from which to hold the
-     * two things that the config does not know how to say: the PARALLELISM CEILING
-     * (`maxParallel`, set to `app_config`) and the word to the model when it
-     * asks for a subagent that doesn't exist — "this is what's offered"
-     * rather than “Unknown agent type”.
-     */
+    edit: "ask",
     task: "ask",
-    /** External paths are outside the capability set in every run mode. */
-    external_directory: "deny",
+    bash: "ask",
+    external_directory: "ask",
+    "*": "allow",
   };
 }
 
 /** The global map of integrated people — permission, not withdrawal (§4). */
-function toolMap(job: VmJob): Record<string, boolean> {
-  const map: Record<string, boolean> = {};
-  for (const name of DISABLED_BUILTINS) map[name] = false;
-  if (isLocalJob(job)) for (const name of LOCAL_DISABLED_BUILTINS) map[name] = false;
-  if (!job.writesToRepo) for (const name of WRITE_BUILTINS) map[name] = false;
-  return map;
+function toolMap(_job: VmJob): Record<string, boolean> {
+  return {};
 }
 
 /**
@@ -461,24 +398,8 @@ function toolMap(job: VmJob): Record<string, boolean> {
  * rocker is measured identical (docs/harness-opencode.md §2.3), so the
  * redeclaring here would just create a second place where it can diverge.
  */
-function primaryTools(job: VmJob): Record<string, boolean> {
-  const tools: Record<string, boolean> = {};
-  for (const name of DISABLED_BUILTINS) tools[name] = false;
-  if (isLocalJob(job)) for (const name of LOCAL_DISABLED_BUILTINS) tools[name] = false;
-  if (!job.writesToRepo) for (const name of WRITE_BUILTINS) tools[name] = false;
-  // Delegation is the `task` tool: it disappears when the turn has no
-  // subagents to give, rather than being served and refusing.
-  tools.task = job.subagents.maxParallel > 0;
-  /**
-   * `ask_user` DOES NOT EXIST FOR A ROUTINE (MIN-185): no one will respond to
-   * 9 a.m. The WITHDRAWAL is here and not just in the ACL, because the
-   * permission `question` is not consulted — measured: with `question: "ask"`
-   * in config, no `permission.asked` is published, the tool runs and
-   * directly publishes `question.asked`. Only the agent toolset
-   * retire vraiment (§4).
-   */
-  tools.question = job.interactive;
-  return tools;
+function primaryTools(_job: VmJob): Record<string, boolean> {
+  return {};
 }
 
 /**
@@ -505,8 +426,7 @@ function primaryTools(job: VmJob): Record<string, boolean> {
  * agents would inflate the tool description by 700 lines. The offer therefore becomes
  * **curated favorites**, already passed to the plan ceiling by `scopeSubagentModels`
  * — the ceiling is thus held BY CONSTRUCTION, there is no longer any free id to
- * refuse. What a model would request outside the list returns as a tool error by
- * the supervisor, who gives him the offer again ([opencode-permissions.ts](opencode-permissions.ts)).
+ * refuse. A model can only select the curated agent types declared here.
  *
  * The reading only of `explore` remains a property of the TOOLSET coupled with a
  * ACL — not a prompt phrase that a model can ignore, same doctrine as
@@ -527,13 +447,19 @@ export interface SubagentAgentEntry {
 }
 
 /** The agent name of a mode and model. `null` = the run model. */
-export function subagentAgentName(mode: "explore" | "implement", modelId: string | null): string {
+export function subagentAgentName(
+  mode: "explore" | "implement",
+  modelId: string | null,
+): string {
   const base = mode === "explore" ? "explore" : "general";
   if (!modelId) return base;
   // An agent name also serves as a permission PATTERN (`permission.task`), where it
   // is compared to the glob: we therefore only leave letters, numbers and
   // dashes. The slug does not have to be reversible — the supervisor keeps the table.
-  const slug = modelId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const slug = modelId
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
   return `${base}-${slug}`;
 }
 
@@ -569,7 +495,9 @@ export function subagentAgentTable(job: VmJob): SubagentAgentEntry[] {
  * without `cost` renders `cost: 0` to opencode (§1), so a free girl at
  * ledger. Not offering it is the only choice that doesn't lie.
  */
-function subagentModelChoices(job: VmJob): Array<{ id: string; label: string; useCase?: string }> {
+function subagentModelChoices(
+  job: VmJob,
+): Array<{ id: string; label: string; useCase?: string }> {
   if (!job.subagents.models) return [];
   const pricing = job.subagents.pricing ?? {};
   return job.subagents.favorites
@@ -591,20 +519,21 @@ function subagentModelChoices(job: VmJob): Array<{ id: string; label: string; us
  *
  * `web_search` is the only exception, and that is `subagentToolsFor`.
  */
-function subagentTools(job: VmJob, mode: "explore" | "implement"): Record<string, boolean> {
+function subagentTools(
+  job: VmJob,
+  mode: "explore" | "implement",
+): Record<string, boolean> {
   const tools: Record<string, boolean> = { "*": false };
   for (const name of EXPLORE_TOOLS) tools[name] = true;
   if (mode === "explore") return tools;
 
-  if (!isLocalJob(job)) {
-    tools.bash = true;
-    tools.webfetch = true;
-  }
+  tools.bash = true;
+  tools.webfetch = true;
   // The three writing interfaces are open together: it is opencode which
   // slice according to the model OF THE GIRL (`apply_patch` on the `gpt-*`, the tools
   // per chain otherwise), and it decides before this game applies. In
   // designating one here would freeze it on the PARENT model.
-  if (job.writesToRepo) for (const name of WRITE_BUILTINS) tools[name] = true;
+  for (const name of WRITE_BUILTINS) tools[name] = true;
   if (job.webSearch) tools.web_search = true;
   return tools;
 }
@@ -621,13 +550,8 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
       description: subagentDescription(entry, job),
       tools: subagentTools(job, entry.mode),
       permission: explore
-        ? // `read` follows the same rule as the parent (MIN-360), and it's here
-          // that she matters the most: a `explore` girl only has that to do.
-          { "*": "deny", read: isLocalJob(job) ? "ask" : "allow", grep: "allow", glob: "allow" }
-        : // A girl does not delegate (one-level hierarchy, coupled with
-          // `subagent_depth: 1` of opencode) and does not ask questions: it
-          // reports to the parent, who decides.
-          { ...permissions(job), task: "deny", question: "deny" },
+        ? { "*": "deny", read: "allow", grep: "allow", glob: "allow" }
+        : permissions(job),
       ...(entry.modelId ? { model: modelRef(entry.modelId) } : {}),
     };
   }
@@ -690,7 +614,10 @@ export function buildOpencodeConfig(
      * the plugins from the repository, because it's the same feedback. We therefore return them
      * explicitly: named, at the root, and without executing anything.
      */
-    instructions: [opencodeAnchorFile(job.layout), ...(opts.repoInstructionFiles ?? [])],
+    instructions: [
+      opencodeAnchorFile(job.layout),
+      ...(opts.repoInstructionFiles ?? []),
+    ],
     provider: {
       [OPENCODE_PROVIDER_ID]: {
         npm: OPENCODE_PROVIDER_NPM,

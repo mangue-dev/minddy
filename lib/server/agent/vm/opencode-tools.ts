@@ -141,11 +141,9 @@ export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
  * `run_background` was the only one until then: `bash` does not have a background mode, and the register
  * opencode jobs serves `task`, not the shell. The withdrawal that held until now — say
  * to the model to launch its server in `&` in the persistent shell — carried the
- * doctrine (“run the code for real”) without any of its safeguards:
- * nothing killed the server before `git add -A`, its output was not limited by
- * no one, and `checkCommand` did not see the order placed. The tool is therefore
- * rested, and it is [background.ts](../background.ts) unchanged which holds it — the
- * policy is pure, only the wiring is new.
+ * doctrine (“run the code for real”) without lifecycle management: nothing
+ * killed the server before delivery and its output was not bounded. The tool is
+ * therefore backed by [background.ts](../background.ts).
  *
  * It crosses the same bridge as domain tools: the generated file is
  * identical, it is the bridge which executes it instead of forwarding it.
@@ -175,34 +173,24 @@ export function domainToolsFor(job: VmJob): AgentToolDef[] {
  * personne.
  */
 export function localToolsFor(job: VmJob): AgentToolDef[] {
-  return toolsFor(job).filter(
-    (t) => LOCAL_TOOL_NAMES.has(t.function.name) && localToolAllowed(job, t.function.name),
-  );
+  return toolsFor(job).filter((t) => LOCAL_TOOL_NAMES.has(t.function.name));
 }
 
 /**
  * Everything we WRITE in the tools folder: domain + local. A session of
- * replay does not have `run_background` (`PR_REVIEW_TOOLS` does not carry it), and it is
- * `agentToolsFor` which says so — not a second condition here.
+ * The canonical manifest is rendered for every anchor without a second filter here.
  */
 function bridgedToolsFor(job: VmJob): AgentToolDef[] {
   return toolsFor(job).filter(
     (t) =>
       DOMAIN_TOOL_NAMES.has(t.function.name) ||
-      (LOCAL_TOOL_NAMES.has(t.function.name) && localToolAllowed(job, t.function.name)),
+      LOCAL_TOOL_NAMES.has(t.function.name),
   );
 }
 
 /** Exact per-run capability set enforced by both generation and dispatch. */
 export function bridgedToolNamesFor(job: VmJob): ReadonlySet<string> {
   return new Set(bridgedToolsFor(job).map((tool) => tool.function.name));
-}
-
-function localToolAllowed(job: VmJob, name: string): boolean {
-  if (!isLocalJob(job)) return true;
-  // Each of these ultimately executes host commands or exposes paths outside
-  // the assigned repository. Local runs keep only control-only local tools.
-  return !["run_background", "validate_changes", "list_projects"].includes(name);
 }
 
 function toolsFor(job: VmJob): AgentToolDef[] {
@@ -266,11 +254,17 @@ const OPENCODE_NAME_FOR: Record<string, string> = {
   spawn_agent: "task",
 };
 
-const OPENCODE_NAME_RE = new RegExp(`\\b(${Object.keys(OPENCODE_NAME_FOR).join("|")})\\b`, "g");
+const OPENCODE_NAME_RE = new RegExp(
+  `\\b(${Object.keys(OPENCODE_NAME_FOR).join("|")})\\b`,
+  "g",
+);
 
 /** A description of `tools.ts`, resized to the names that opencode actually uses. */
 export function retargetToolNames(text: string): string {
-  return text.replace(OPENCODE_NAME_RE, (name) => OPENCODE_NAME_FOR[name] ?? name);
+  return text.replace(
+    OPENCODE_NAME_RE,
+    (name) => OPENCODE_NAME_FOR[name] ?? name,
+  );
 }
 
 /**
@@ -308,7 +302,9 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
       return describe("tool.schema.boolean()");
     case "array": {
       if (!schema.items) throw new Error(`${path}: tableau sans \`items\``);
-      return describe(`tool.schema.array(${schemaExpression(schema.items, `${path}[]`)})`);
+      return describe(
+        `tool.schema.array(${schemaExpression(schema.items, `${path}[]`)})`,
+      );
     }
     case "object": {
       const properties = schema.properties ?? {};
@@ -329,7 +325,10 @@ function argsBlock(def: AgentToolDef): string {
   const { properties, required } = def.function.parameters;
   const req = new Set(required ?? []);
   const entries = Object.entries(properties).map(([name, raw]) => {
-    const expr = schemaExpression(raw as JsonSchema, `${def.function.name}.${name}`);
+    const expr = schemaExpression(
+      raw as JsonSchema,
+      `${def.function.name}.${name}`,
+    );
     return `    ${JSON.stringify(name)}: ${expr}${req.has(name) ? "" : ".optional()"},`;
   });
   return entries.length ? `{\n${entries.join("\n")}\n  }` : "{}";

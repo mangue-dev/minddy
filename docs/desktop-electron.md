@@ -440,7 +440,7 @@ code locally — but this is not implied:
 
 - **explicit opt-in, per project**, with a screen that says what this allows, and
   never a fault;
-- [command-guard.ts](../lib/server/agent/command-guard.ts) and
+- `command-guard.ts` (removed by MIN-492) and
   [repo-path.ts](../lib/server/agent/repo-path.ts) still applies, but
   we must stop describing them as “comfort”: on the local path, they are
   the only remaining safeguards;

@@ -101,34 +101,40 @@ describe("le jeu de tools de domaine sort de tools.ts, pas d'une liste", () => {
     expect(domain.length).toBeGreaterThan(25);
   });
 
-  it("hérite des retraits structurels au lieu de les redire", () => {
-    // A ROUTINE does not have `create_routine`, an off-chain session does not have
-    // `report_verdict`, a run without web does not have `web_search`. These three rules
-    // live in `agentToolsFor` and have to cross without a line here.
-    const routine = domainToolsFor(job({ interactive: false })).map((t) => t.function.name);
-    expect(routine).not.toContain("create_routine");
+  it("keeps trigger-independent tools while honoring provider web availability", () => {
+    const routine = domainToolsFor(job({ interactive: false })).map(
+      (t) => t.function.name,
+    );
+    expect(routine).toContain("create_routine");
 
-    const chain = domainToolsFor(job({ chain: true })).map((t) => t.function.name);
+    const chain = domainToolsFor(job({ chain: true })).map(
+      (t) => t.function.name,
+    );
     expect(chain).toContain("report_verdict");
-    expect(domainToolsFor(job()).map((t) => t.function.name)).not.toContain("report_verdict");
+    expect(domainToolsFor(job()).map((t) => t.function.name)).toContain(
+      "report_verdict",
+    );
 
-    const noWeb = domainToolsFor(job({ webSearch: false })).map((t) => t.function.name);
+    const noWeb = domainToolsFor(job({ webSearch: false })).map(
+      (t) => t.function.name,
+    );
     expect(noWeb).not.toContain("web_search");
   });
 
-  it("suit l'ancrage — une relecture n'écrit ni ticket ni carnet", () => {
-    const review = domainToolsFor(job({ anchor: "pr", writesToRepo: false })).map(
-      (t) => t.function.name,
+  it("keeps the domain catalog identical for pull-request runs", () => {
+    const review = domainToolsFor(
+      job({ anchor: "pr", writesToRepo: false }),
+    ).map((t) => t.function.name);
+    expect(review).toEqual(
+      domainToolsFor(job()).map((tool) => tool.function.name),
     );
-    expect(review).toContain("comment_pr_line");
-    expect(review).toContain("read_issue");
-    for (const forbidden of ["update_issue", "create_pr", "set_scratchpad", "create_issue"]) {
-      expect(review).not.toContain(forbidden);
-    }
   });
 
   it("emporte la phrase de ciblage de l'ancrage dans la description", () => {
-    const notebook = named(domainToolsFor(job({ anchor: "notebook" })), "read_issue");
+    const notebook = named(
+      domainToolsFor(job({ anchor: "notebook" })),
+      "read_issue",
+    );
     expect(notebook?.function.description).toContain("`issue` is REQUIRED");
     const issue = named(domainToolsFor(job()), "read_issue");
     expect(issue?.function.description).toContain("`issue` is OPTIONAL");
@@ -166,13 +172,17 @@ describe("la traduction d'un schéma", () => {
     expect(expr).toContain('"step": tool.schema.string(),');
     // What is not required is optional — that's exactly what the form
     // of bare object of opencode does NOT know how to say, and why we emit zod.
-    expect(expr).toContain('"status": tool.schema.enum(["pending","completed"]).optional(),');
+    expect(expr).toContain(
+      '"status": tool.schema.enum(["pending","completed"]).optional(),',
+    );
   });
 
   it("LÈVE sur un schéma qu'elle ne sait pas traduire", () => {
     // A silent `any` would be a tool whose model no longer knows the form.
     // Better a ride that doesn't start than a parameter that disappears quietly.
-    expect(() => schemaExpression({ type: "tuple" } as never)).toThrow(/sans traduction/);
+    expect(() => schemaExpression({ type: "tuple" } as never)).toThrow(
+      /sans traduction/,
+    );
     expect(() => schemaExpression({ type: "array" })).toThrow(/items/);
   });
 
@@ -188,7 +198,8 @@ describe("la traduction d'un schéma", () => {
 });
 
 describe("le fichier généré", () => {
-  const file = () => renderOpencodeTool(named(domainToolsFor(job()), "read_issue")!);
+  const file = () =>
+    renderOpencodeTool(named(domainToolsFor(job()), "read_issue")!);
 
   it("emploie la forme `tool()`, la seule qui sache dire « optionnel »", () => {
     expect(file()).toContain('import { tool } from "@opencode-ai/plugin"');
@@ -198,7 +209,9 @@ describe("le fichier généré", () => {
 
   it("lit l'adresse du superviseur dans l'environnement, jamais en dur", () => {
     const content = file();
-    expect(content).toContain(`process.env[${JSON.stringify(SUPERVISOR_URL_ENV)}]`);
+    expect(content).toContain(
+      `process.env[${JSON.stringify(SUPERVISOR_URL_ENV)}]`,
+    );
     // The port is chosen at runtime: a hard URL would be wrong on one turn
     // two, and a control plane origin here would bypass the counters.
     expect(content).not.toContain("https://");
@@ -219,7 +232,9 @@ describe("le fichier généré", () => {
     // The generated tool does not DECIDE anything: it is the bridge header which distinguishes
     // an ordinary response of a model to show (MIN-286 lot 3, §2.22).
     expect(content).toContain('res.headers.get("x-minddy-attachments")');
-    expect(content).toContain("return { output: envelope.output, attachments: envelope.attachments };");
+    expect(content).toContain(
+      "return { output: envelope.output, attachments: envelope.attachments };",
+    );
     // An illegible envelope falls on the text: a lost model is worth
     // mieux qu'un round perdu.
     expect(content).toContain("return text;");
@@ -235,7 +250,9 @@ describe("le fichier généré", () => {
         parameters: { type: "object", properties: {} },
       },
     });
-    expect(content).toContain('description: "dit \\"bonjour\\"\\net saute une ligne"');
+    expect(content).toContain(
+      'description: "dit \\"bonjour\\"\\net saute une ligne"',
+    );
   });
 });
 
@@ -252,38 +269,48 @@ describe("où les fichiers sont posés", () => {
   });
 
   /**
- * The LOCAL tools (folder §3.2), which the supervisor executes in the microVM:
- * `run_background`, because `bash` does not have a background mode, and `update_plan`,
- * which is a CONTROL tool — it does not execute anything, it emits the event that the thread
- * renders as a checklist. Stored on the domain side, it went back to the control plane and y
- * received a 404 on each call.
- *
- * They are generated like the others — the bridge executes them instead of making them
- * follow —, and a REVIEW session does not have `run_background` : she doesn't
- * throw anything in the background, and `PR_REVIEW_TOOLS` doesn't carry it.
- */
-  it("`run_background` est servi au ticket et au carnet, jamais à une relecture", () => {
-    for (const anchor of ["issue", "notebook"] as const) {
-      expect(localToolsFor(job({ anchor })).map((t) => t.function.name)).toEqual([
+   * The LOCAL tools (folder §3.2), which the supervisor executes in the microVM:
+   * `run_background`, because `bash` does not have a background mode, and `update_plan`,
+   * which is a CONTROL tool — it does not execute anything, it emits the event that the thread
+   * renders as a checklist. Stored on the domain side, it went back to the control plane and y
+   * received a 404 on each call.
+   *
+   * They are generated like the others — the bridge executes them instead of making them
+   * follow —, and a REVIEW session does not have `run_background` : she doesn't
+   * throw anything in the background, and `PR_REVIEW_TOOLS` doesn't carry it.
+   */
+  it("serves the same local tools to every anchor", () => {
+    for (const anchor of ["issue", "notebook", "pr"] as const) {
+      expect(
+        localToolsFor(job({ anchor })).map((t) => t.function.name),
+      ).toEqual([
         "run_background",
         "update_plan",
         "validate_changes",
+        "list_projects",
       ]);
       expect(opencodeToolFiles(job({ anchor })).map((f) => f.path)).toContain(
         `${TOOL_DIR}/run_background.ts`,
       );
     }
-    expect(localToolsFor(job({ anchor: "pr" }))).toEqual([]);
-    expect(opencodeToolFiles(job({ anchor: "pr" })).map((f) => f.path)).not.toContain(
-      `${TOOL_DIR}/run_background.ts`,
-    );
   });
 
-  it("keeps only control-only local tools on a host", () => {
+  it("keeps shell-backed tools on a local host", () => {
     const local = job({ controlToken: "bail-hs256" });
-    expect(localToolsFor(local).map((t) => t.function.name)).toEqual(["update_plan"]);
-    for (const name of ["run_background", "validate_changes", "list_projects"]) {
-      expect(opencodeToolFiles(local).map((f) => f.path)).not.toContain(`${TOOL_DIR}/${name}.ts`);
+    expect(localToolsFor(local).map((t) => t.function.name)).toEqual([
+      "run_background",
+      "update_plan",
+      "validate_changes",
+      "list_projects",
+    ]);
+    for (const name of [
+      "run_background",
+      "validate_changes",
+      "list_projects",
+    ]) {
+      expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
+        `${TOOL_DIR}/${name}.ts`,
+      );
     }
     expect(domainToolsFor(local).map((t) => t.function.name)).toEqual(
       domainToolsFor(job()).map((t) => t.function.name),
@@ -317,20 +344,23 @@ describe("les descriptions, dites avec les noms d'opencode", () => {
     );
 
   it("renomme les tools de la boucle maison, sans toucher aux nôtres", () => {
-    expect(retargetToolNames("use run_command for those, it gives you the exit code")).toBe(
-      "use bash for those, it gives you the exit code",
-    );
-    expect(retargetToolNames("exactly like edit_file, but on the minddy ticket")).toBe(
-      "exactly like edit, but on the minddy ticket",
-    );
+    expect(
+      retargetToolNames(
+        "use run_command for those, it gives you the exit code",
+      ),
+    ).toBe("use bash for those, it gives you the exit code");
+    expect(
+      retargetToolNames("exactly like edit_file, but on the minddy ticket"),
+    ).toBe("exactly like edit, but on the minddy ticket");
     // Our domain tools keep their name: they are the ones served.
-    expect(retargetToolNames("get the id from read_issue, then read_page")).toBe(
-      "get the id from read_issue, then read_page",
-    );
+    expect(
+      retargetToolNames("get the id from read_issue, then read_page"),
+    ).toBe("get the id from read_issue, then read_page");
   });
 
   it("ne laisse aucun nom de l'ancien harnais dans un tool généré", () => {
-    const dead = /\b(run_command|read_file|write_file|edit_file|list_dir|ask_user|spawn_agent)\b/;
+    const dead =
+      /\b(run_command|read_file|write_file|edit_file|list_dir|ask_user|spawn_agent)\b/;
     for (const anchor of ["issue", "notebook", "pr"] as const) {
       for (const file of opencodeToolFiles(job({ anchor, imageInput: true }))) {
         expect(dead.test(file.content), `${anchor}: ${file.path}`).toBe(false);
@@ -347,6 +377,8 @@ describe("les descriptions, dites avec les noms d'opencode", () => {
   });
 
   it("dit `read` pour aller chercher les octets d'une pièce jointe", () => {
-    expect(servedDescription("read_resource")).toContain("download them with bash");
+    expect(servedDescription("read_resource")).toContain(
+      "download them with bash",
+    );
   });
 });

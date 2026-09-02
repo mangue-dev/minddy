@@ -1,7 +1,18 @@
 import { cap, toolArgSummary } from "../tool-summary";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
-import type { PermissionAsk } from "./opencode-permissions";
 import type { AgentEventType } from "@/lib/agent-api";
+
+export interface PermissionAsk {
+  id: string;
+  sessionId: string;
+  permission: string;
+  callId: string;
+  command?: string;
+  filepath?: string;
+  files?: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
+  subagentType?: string;
+  url?: string;
+}
 
 /**
  * THE OPENCODE FLOW, TRANSLATED INTO OUR WIRE (MIN-286, batch 1).
@@ -108,11 +119,7 @@ export interface Translation {
    * supervisor, who only makes it a breakdown if he hasn't asked for anything.
    */
   aborted?: true;
-  /**
-   * A tool awaits the verdict of the harness (`permission.asked`). This is where
-   * `command-guard` and `repo-path` are executed — cf.
-   * [opencode-permissions.ts](opencode-permissions.ts).
-   */
+  /** A tool awaits OpenCode's permission reply; the supervisor auto-grants it. */
   permission?: PermissionAsk;
   /** The model asks its questions (`question.asked`): this is our `ask_user`. */
   question?: { id: string; callId: string; questions: AskUserQuestion[] };
@@ -170,7 +177,12 @@ const TOOL_NAMES: Record<string, string> = {
 const TOOL_ARGS: Record<string, Record<string, string>> = {
   read: { filePath: "path" },
   write: { filePath: "path" },
-  edit: { filePath: "path", oldString: "old_string", newString: "new_string", replaceAll: "replace_all" },
+  edit: {
+    filePath: "path",
+    oldString: "old_string",
+    newString: "new_string",
+    replaceAll: "replace_all",
+  },
   bash: { command: "command", workdir: "workdir" },
   grep: { include: "glob" },
   task: { subagent_type: "mode", description: "task" },
@@ -212,37 +224,37 @@ const TOOL_ARGS: Record<string, Record<string, string>> = {
  * the reason why the field is reserved for `webfetch`: on a `bash`,
  * `patterns` carries the COMMAND, and copying it into “url” would be a lying field.
  *
- * Empty rather than guessed: a URL that cannot be read causes the fetch to be REFUSED
- * ([opencode-permissions.ts](opencode-permissions.ts)), and this is the correct outcome.
+ * Empty rather than guessed: audit data must not invent a destination.
  */
 /**
  * THE PATH OF A REQUEST, AND IT IS NOT IN THE SAME PLACE ACCORDING TO THE TOOL (MIN-360).
  *
- * A writing publishes `metadata.filepath`, ABSOLUTE (measure no. 2 of
- * [opencode-permissions.ts](opencode-permissions.ts)). **A READING publishes a
+ * A writing publishes `metadata.filepath`, absolute. **A reading publishes a
  * `metadata` VIDE** : `ReadTool` appelle
  * `ask({permission: "read", patterns: [<chemin relatif au worktree>], always: ["*"],
  * metadata: {}})` — found in binary 1.18.16.
  *
- * Without this fallback, the local path reading verdict would never see a
- * path, and would refuse **100% of readings** while believing to keep the `.env`. THE
- * field therefore retains only one meaning — “the path of which this request speaks” — and
- * this is where we go to look for him where he is.
+ * The field retains one meaning for audit events: “the path this request refers to.”
  */
 function permissionPath(
   props: Record<string, unknown>,
   metadata: Record<string, unknown>,
 ): string {
-  if (typeof metadata.filepath === "string" && metadata.filepath.trim()) return metadata.filepath;
+  if (typeof metadata.filepath === "string" && metadata.filepath.trim())
+    return metadata.filepath;
   // `external_directory` carries its path into `metadata.parentDir` (measured,
   // MIN-364): without it, the trace on the wire would say “the agent is removed from the file”
   // without ever saying where - therefore exactly the opposite of what is asked of him.
   if (String(props.permission ?? "") === "external_directory") {
-    return typeof metadata.parentDir === "string" ? metadata.parentDir.trim() : "";
+    return typeof metadata.parentDir === "string"
+      ? metadata.parentDir.trim()
+      : "";
   }
   if (String(props.permission ?? "") !== "read") return "";
   const patterns = Array.isArray(props.patterns) ? props.patterns : [];
-  const first = patterns.find((p) => typeof p === "string" && p.trim() && p !== "*");
+  const first = patterns.find(
+    (p) => typeof p === "string" && p.trim() && p !== "*",
+  );
   return typeof first === "string" ? first.trim() : "";
 }
 
@@ -251,7 +263,8 @@ function permissionUrl(
   metadata: Record<string, unknown>,
 ): string {
   if (String(props.permission ?? "") !== "webfetch") return "";
-  if (typeof metadata.url === "string" && metadata.url.trim()) return metadata.url.trim();
+  if (typeof metadata.url === "string" && metadata.url.trim())
+    return metadata.url.trim();
   const patterns = Array.isArray(props.patterns) ? props.patterns : [];
   const first = patterns.find((p) => typeof p === "string" && p.trim());
   return typeof first === "string" ? first.trim() : "";
@@ -275,7 +288,8 @@ function permissionFiles(
     const type = String(entry.type ?? "");
     out.push({
       path,
-      status: type === "add" ? "added" : type === "delete" ? "deleted" : "modified",
+      status:
+        type === "add" ? "added" : type === "delete" ? "deleted" : "modified",
     });
   }
   return out;
@@ -293,7 +307,9 @@ export function ourToolArgs(
 ): Record<string, unknown> {
   const table = TOOL_ARGS[opencodeName];
   if (!table) return input;
-  return Object.fromEntries(Object.entries(input).map(([k, v]) => [table[k] ?? k, v]));
+  return Object.fromEntries(
+    Object.entries(input).map(([k, v]) => [table[k] ?? k, v]),
+  );
 }
 
 /** Length of preview persisted in `tool_result` — the same as the loop. */
@@ -387,7 +403,10 @@ export function newTurnStreamState(): TurnStreamState {
 }
 
 /** The text bag of a session, created on demand. */
-function partsOf(state: TurnStreamState, sessionId: string): Map<string, string> {
+function partsOf(
+  state: TurnStreamState,
+  sessionId: string,
+): Map<string, string> {
   let parts = state.textByPart.get(sessionId);
   if (!parts) {
     parts = new Map();
@@ -422,7 +441,10 @@ function sessionOf(props: Record<string, unknown>): string {
  * ignored, not kill a two-hour tour. What is not recognized does not produce
  * nothing — that's what `events: []` means.
  */
-export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Translation {
+export function translateEvent(
+  event: OpencodeEvent,
+  state: TurnStreamState,
+): Translation {
   const props = event.properties ?? {};
   const sessionId = sessionOf(props);
 
@@ -441,7 +463,11 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
        * bag of the round — it makes the thought meter tick, and that's it.
        */
       if (state.partKind.get(partId) === "reasoning") {
-        return { sessionId, events: [], reasoning: reasoningTick(state, partId) };
+        return {
+          sessionId,
+          events: [],
+          reasoning: reasoningTick(state, partId),
+        };
       }
       const parts = partsOf(state, sessionId);
       const text = (parts.get(partId) ?? "") + delta;
@@ -465,7 +491,8 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
         if (partId && text) partsOf(state, sessionId).set(partId, text);
         return { sessionId, events: [], ...(text ? { liveText: text } : {}) };
       }
-      if (part.type === "reasoning") return reasoningPart(state, sessionId, part, partId);
+      if (part.type === "reasoning")
+        return reasoningPart(state, sessionId, part, partId);
       if (part.type !== "tool") return { sessionId, events: [] };
 
       const stateNode = (part.state ?? {}) as Record<string, unknown>;
@@ -477,7 +504,8 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
         opencodeName,
         (stateNode.input ?? {}) as Record<string, unknown>,
       );
-      if (callId && Object.keys(input).length > 0) state.toolInputByCall.set(callId, input);
+      if (callId && Object.keys(input).length > 0)
+        state.toolInputByCall.set(callId, input);
 
       /**
        * THE ATTACHMENT OF A GIRL, to read on ALL statuses from `task`.
@@ -501,19 +529,33 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           sessionId,
           ...(child ? { child } : {}),
           events: [
-            { type: "tool_call", payload: { id: callId, name, ...toolArgSummary(name, input) } },
+            {
+              type: "tool_call",
+              payload: { id: callId, name, ...toolArgSummary(name, input) },
+            },
           ],
         };
       }
 
       if (status === "completed" || status === "error") {
         const success = status === "completed";
-        const raw = success ? stateNode.output : (stateNode.error ?? stateNode.output);
-        const preview = cap(typeof raw === "string" ? raw : JSON.stringify(raw ?? ""), PREVIEW_MAX);
-        const shell = opencodeName === "bash" ? shellOf(stateNode, input) : undefined;
+        const raw = success
+          ? stateNode.output
+          : (stateNode.error ?? stateNode.output);
+        const preview = cap(
+          typeof raw === "string" ? raw : JSON.stringify(raw ?? ""),
+          PREVIEW_MAX,
+        );
+        const shell =
+          opencodeName === "bash" ? shellOf(stateNode, input) : undefined;
         return {
           sessionId,
-          events: [{ type: "tool_result", payload: { id: callId, name, success, preview } }],
+          events: [
+            {
+              type: "tool_result",
+              payload: { id: callId, name, success, preview },
+            },
+          ],
           ...(shell ? { shell } : {}),
         };
       }
@@ -538,7 +580,8 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       // hence the two guards, who do not do the same job.
       if (!finish) return { sessionId, events: [] };
       const messageId = String(info.id ?? "");
-      if (!messageId || state.billed.has(messageId)) return { sessionId, events: [] };
+      if (!messageId || state.billed.has(messageId))
+        return { sessionId, events: [] };
       state.billed.add(messageId);
 
       // A round is finished: we KEEP our text (this is the answer for the round) before
@@ -575,7 +618,9 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
 
       return {
         sessionId,
-        events: narration ? [{ type: "thinking", payload: { text: cap(narration, 2000) } }] : [],
+        events: narration
+          ? [{ type: "thinking", payload: { text: cap(narration, 2000) } }]
+          : [],
         usage: {
           messageId,
           sessionId,
@@ -647,7 +692,11 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
             : typeof props.message === "string"
               ? props.message
               : JSON.stringify(error).slice(0, 1000);
-      return { sessionId, events: [{ type: "error", payload: { message } }], error: message };
+      return {
+        sessionId,
+        events: [{ type: "error", payload: { message } }],
+        error: message,
+      };
     }
 
     /**
@@ -668,7 +717,8 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       const rememberedPath = state.toolInputByCall.get(callId)?.path;
       const filepath =
         eventPath ||
-        (String(props.permission ?? "") === "read" && typeof rememberedPath === "string"
+        (String(props.permission ?? "") === "read" &&
+        typeof rememberedPath === "string"
           ? rememberedPath.trim()
           : "");
       return {
@@ -679,7 +729,9 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           sessionId,
           permission: String(props.permission ?? ""),
           callId,
-          ...(typeof metadata.command === "string" ? { command: metadata.command } : {}),
+          ...(typeof metadata.command === "string"
+            ? { command: metadata.command }
+            : {}),
           ...(filepath ? { filepath } : {}),
           ...(files.length > 0 ? { files } : {}),
           ...(url ? { url } : {}),
@@ -733,7 +785,10 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
  * (it will arrive suddenly, folded, with the end of part `thinking`). What comes out
  * from here is the only useful fact: it thinks, and since when.
  */
-function reasoningTick(state: TurnStreamState, partId: string): { active: boolean; startedAt: number } {
+function reasoningTick(
+  state: TurnStreamState,
+  partId: string,
+): { active: boolean; startedAt: number } {
   return { active: true, startedAt: state.reasoningStart.get(partId) ?? 0 };
 }
 
@@ -761,19 +816,29 @@ function reasoningPart(
 
   const time = (part.time ?? {}) as Record<string, unknown>;
   const start = typeof time.start === "number" ? time.start : 0;
-  if (start && !state.reasoningStart.has(partId)) state.reasoningStart.set(partId, start);
+  if (start && !state.reasoningStart.has(partId))
+    state.reasoningStart.set(partId, start);
   const end = typeof time.end === "number" ? time.end : 0;
-  if (!end) return { sessionId, events: [], reasoning: reasoningTick(state, partId) };
+  if (!end)
+    return { sessionId, events: [], reasoning: reasoningTick(state, partId) };
 
   // The part is closed: its trace leaves on the wire under the SAME type and the SAME form as
   // that of the house loop (`thinking` + `kind: "reasoning"`), so that the thread
   // fold it as before and a run from three months ago reads the same again.
   const text = typeof part.text === "string" ? part.text.trim() : "";
-  const durationMs = Math.max(0, end - (state.reasoningStart.get(partId) ?? end));
+  const durationMs = Math.max(
+    0,
+    end - (state.reasoningStart.get(partId) ?? end),
+  );
   return {
     sessionId,
-    events: text ? [{ type: "thinking", payload: { kind: "reasoning", text, durationMs } }] : [],
-    reasoning: { active: false, startedAt: state.reasoningStart.get(partId) ?? 0 },
+    events: text
+      ? [{ type: "thinking", payload: { kind: "reasoning", text, durationMs } }]
+      : [],
+    reasoning: {
+      active: false,
+      startedAt: state.reasoningStart.get(partId) ?? 0,
+    },
   };
 }
 
@@ -788,9 +853,12 @@ function childOf(
   stateNode: Record<string, unknown>,
   callId: string,
   input: Record<string, unknown>,
-): { sessionId: string; callId: string; agent: string; model?: string } | undefined {
+):
+  | { sessionId: string; callId: string; agent: string; model?: string }
+  | undefined {
   const metadata = (stateNode.metadata ?? {}) as Record<string, unknown>;
-  const sessionId = typeof metadata.sessionId === "string" ? metadata.sessionId : "";
+  const sessionId =
+    typeof metadata.sessionId === "string" ? metadata.sessionId : "";
   if (!sessionId || !callId) return undefined;
   const model = (metadata.model ?? {}) as Record<string, unknown>;
   const modelId = typeof model.modelID === "string" ? model.modelID : "";
@@ -817,7 +885,8 @@ function shellOf(
   const metadata = (stateNode.metadata ?? {}) as Record<string, unknown>;
   const exit = metadata.exit;
   const command = typeof input.command === "string" ? input.command.trim() : "";
-  if (!command || typeof exit !== "number" || !Number.isFinite(exit)) return undefined;
+  if (!command || typeof exit !== "number" || !Number.isFinite(exit))
+    return undefined;
   return { command, exit };
 }
 
@@ -836,5 +905,7 @@ export function liveTextOf(state: TurnStreamState, sessionId: string): string {
  */
 export function replyOf(state: TurnStreamState, sessionId: string): string {
   const current = liveTextOf(state, sessionId);
-  return (current.trim() ? current : (state.lastRoundText.get(sessionId) ?? "")).trim();
+  return (
+    current.trim() ? current : (state.lastRoundText.get(sessionId) ?? "")
+  ).trim();
 }

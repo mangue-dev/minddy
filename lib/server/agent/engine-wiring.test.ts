@@ -75,24 +75,28 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
   });
 
   /**
- * MIN-286 — THE MEMORY OF AN OPENCODE RUN GOES DOWN INTO THE VM.
- *
- * The event log is ALL the memory of a run run by opencode, and
- * it did not go down: `job.opencode` remained `undefined`, the supervisor
- * created a new session, and each turn left without a line of his
- * conversation. The writing path was complete from start to finish - the
- * supervisor exports, the control plan stamps, `AgentCheckpoint` the
- * declares -, so nothing was visible: no error, no guy protesting, just an amnesiac agent from one turn to the next. the other.
- */
+   * MIN-286 — THE MEMORY OF AN OPENCODE RUN GOES DOWN INTO THE VM.
+   *
+   * The event log is ALL the memory of a run run by opencode, and
+   * it did not go down: `job.opencode` remained `undefined`, the supervisor
+   * created a new session, and each turn left without a line of his
+   * conversation. The writing path was complete from start to finish - the
+   * supervisor exports, the control plan stamps, `AgentCheckpoint` the
+   * declares -, so nothing was visible: no error, no guy protesting, just an amnesiac agent from one turn to the next. the other.
+   */
   /**
- * MIN-286 (2026-08-13) — the log no longer goes down from the LINE of the run: it
- * is gathered from `agent_run_journal`, where the supervisor writes it as an append.
- * The line only keeps the pointer, because it is reread on each call du
- * control plane and that the log carries the complete output of each tool.
- */
+   * MIN-286 (2026-08-13) — the log no longer goes down from the LINE of the run: it
+   * is gathered from `agent_run_journal`, where the supervisor writes it as an append.
+   * The line only keeps the pointer, because it is reread on each call du
+   * control plane and that the log carries the complete output of each tool.
+   */
   it("rassemble le journal du tour précédent depuis sa table", () => {
-    expect(source).toContain("events: await loadRunJournal(run.id, pointer.sessionId)");
-    expect(source).toContain("...(opencodeJournal ? { opencode: opencodeJournal } : {})");
+    expect(source).toContain(
+      "events: await loadRunJournal(run.id, pointer.sessionId)",
+    );
+    expect(source).toContain(
+      "...(opencodeJournal ? { opencode: opencodeJournal } : {})",
+    );
   });
 
   it("n'amorce pas un tour REPRIS : sa demande arrive par le steering", () => {
@@ -101,6 +105,17 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
     // as if she had just arrived. This is what `VmJob.opencodeInput` promises in
     // all letters (“`prompt` is empty on a RESUME round”).
     expect(source).toContain("if (run.checkpoint?.opencode?.sessionId)");
+  });
+
+  it("restores the trusted PR base when a resumed review needs a fresh checkout", () => {
+    expect(source).toContain("const prBaseShaPromise = prRun");
+    expect(source).not.toContain(
+      "const prBaseShaPromise =\n      prRun && !run.branch_name",
+    );
+    expect(source).toContain("await anchorPullRequestBase(");
+    expect(source).toContain(
+      "...(prRun && prBaseSha ? { checkoutBaseSha: prBaseSha } : {})",
+    );
   });
 });
 
@@ -123,19 +138,27 @@ describe("vm/main.ts ne connaît plus qu'un moteur", () => {
   });
 });
 
-/**
- * MIN-286 — A REVIEW DOES NOT DELEGATE, AND THE JOB MUST SAY SO.
- *
- * At opencode, it is the concurrent cap that decides whether to serve the tool
- * `task` (`primaryTools`, [vm/opencode-config.ts](vm/opencode-config.ts)). The
- * two prompts already set the condition; the job had lost it — a rereading therefore received a delegation tool which its anchoring does not describe,
- * which `PR_REVIEW_TOOLS` refuses, and whose daughters EDIT the deposit of a run
- * supposed to write nothing there.
- */
-describe("le plafond de sous-agents suit l'ancrage", () => {
+describe("sub-agent capacity is anchor-independent", () => {
   const source = read("execute.ts");
 
-  it("ferme la délégation d'un run qui n'écrit pas dans le dépôt", () => {
-    expect(source).toContain("maxParallel: writesToRepo ? subagentMaxParallel : 0");
+  it("passes the configured resource ceiling to every run", () => {
+    expect(source).toContain("maxParallel: subagentMaxParallel");
+    expect(source).not.toContain(
+      "maxParallel: writesToRepo ? subagentMaxParallel : 0",
+    );
+  });
+});
+
+describe("commit identity is capability-independent", () => {
+  const source = read("execute.ts");
+
+  it("resolves the forge-backed identity for every repository run", () => {
+    expect(source).toContain(
+      "const committerPromise = target\n      ? resolveCommitterIdentity(target)",
+    );
+    expect(source).toContain("committer: await committerPromise");
+    expect(source).not.toContain(
+      "committer: prRun ? defaultCommitterIdentity()",
+    );
   });
 });

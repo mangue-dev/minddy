@@ -3,38 +3,34 @@ import { describe, expect, it } from "vitest";
 import { executionPolicyFor } from "./policy";
 
 describe("executionPolicyFor", () => {
-  it("ne change pas les capacites lorsqu'un ticket devient contexte", () => {
-    const general = executionPolicyFor({
-      hasIssueContext: false,
-      reviewingPullRequest: false,
-      unattended: false,
-    });
-    const withIssue = executionPolicyFor({
-      hasIssueContext: true,
-      reviewingPullRequest: false,
-      unattended: false,
-    });
-    expect(withIssue).toEqual({ ...general, defaultIssueTarget: true });
+  it("keeps capabilities identical across anchors and triggers", () => {
+    const combinations = [
+      {
+        hasIssueContext: false,
+        reviewingPullRequest: false,
+        unattended: false,
+      },
+      { hasIssueContext: true, reviewingPullRequest: false, unattended: false },
+      { hasIssueContext: false, reviewingPullRequest: true, unattended: false },
+      { hasIssueContext: false, reviewingPullRequest: false, unattended: true },
+    ];
+
+    for (const input of combinations) {
+      expect(executionPolicyFor(input)).toMatchObject({
+        interaction: "interactive",
+        repository: "write",
+        projectData: "write",
+      });
+    }
   });
 
-  it("rend une revue de PR techniquement read-only", () => {
+  it("keeps delivery and implicit issue targeting as metadata", () => {
     expect(
       executionPolicyFor({
         hasIssueContext: true,
-        reviewingPullRequest: true,
-        unattended: false,
-      }),
-    ).toMatchObject({ repository: "read", projectData: "read", delivery: "none" });
-  });
-
-  it("exprime une routine par son interaction et sa livraison", () => {
-    expect(
-      executionPolicyFor({
-        hasIssueContext: false,
         reviewingPullRequest: false,
         unattended: true,
       }),
-    ).toMatchObject({ interaction: "unattended", delivery: "auto_pr" });
+    ).toMatchObject({ defaultIssueTarget: true, delivery: "auto_pr" });
   });
 });
-

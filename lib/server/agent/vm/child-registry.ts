@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import type { BackgroundJobRunner } from "../background";
 
 /**
  * WHAT SURVIVES THE HARNESS, AND HOW WE FIND IT (MIN-293).
@@ -137,6 +138,49 @@ export function forgetHarnessChild(harnessDir: string, pid: number): void {
     harnessDir,
     readHarnessChildren(harnessDir).filter((c) => c.pid !== pid),
   );
+}
+
+/**
+ * Adds crash recovery to host background jobs without changing their tool
+ * contract. A process is registered before its PID is returned to the model,
+ * and removed as soon as it is observed stopped or explicitly terminated.
+ */
+export function registeredBackgroundRunner(
+  runner: BackgroundJobRunner,
+  harnessDir: string,
+  birthOf: (pid: number) => string | null = processBirthMarker,
+): BackgroundJobRunner {
+  return {
+    start: async (opts) => {
+      const started = await runner.start(opts);
+      const birth = birthOf(started.pid);
+      if (!birth) {
+        await runner.stop({ jobId: opts.jobId, pid: started.pid }).catch(() => {});
+        throw new Error(
+          `Background process identity could not be recorded for pid ${started.pid}`,
+        );
+      }
+      noteHarnessChild(harnessDir, {
+        pid: started.pid,
+        birth,
+        kind: "background",
+        label: [opts.invocation.executable, ...opts.invocation.args].join(" "),
+      });
+      return started;
+    },
+    read: async (opts) => {
+      const result = await runner.read(opts);
+      if (!result.running) forgetHarnessChild(harnessDir, opts.pid);
+      return result;
+    },
+    stop: async (opts) => {
+      try {
+        await runner.stop(opts);
+      } finally {
+        forgetHarnessChild(harnessDir, opts.pid);
+      }
+    },
+  };
 }
 
 /**

@@ -104,9 +104,7 @@ export interface ToolBridge {
  * neither the control plane nor opencode have — the repository, for `create_pr` (the VM
  * pushes, the function opens).
  */
-export type SupervisorTool = (
-  args: Record<string, unknown>,
-) => Promise<{
+export type SupervisorTool = (args: Record<string, unknown>) => Promise<{
   result: unknown;
   success: boolean;
   followUp?: string;
@@ -123,11 +121,8 @@ interface ToolOutcome {
   followUp?: string;
   images?: Array<{ url: string; name?: string }>;
   /**
-   * WHY the harness refused, in the vocabulary of `agent_run_events` —
-   * `forbidden_command` on a `run_background` that `checkCommand` has discarded
-   * (MIN-108). The model reads the pattern in plain text in `result.error`; This
-   * This field is used to ensure that the refusal remains MEASURABLE in base, as it was
-   * in the home loop, which rested it on its `tool_result`.
+   * A structured failure reason for `agent_run_events`. Resource ceilings and
+   * transport failures remain measurable even though commands are not classified.
    */
   reason?: string;
 }

@@ -120,14 +120,23 @@ describe("le modèle et son fournisseur", () => {
     // not support image input). Inform the user. » and the model warns
     // the user of a limit that does not exist.
     const withImages = buildOpencodeConfig(job({ imageInput: true }));
-    const model = withImages.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
+    const model =
+      withImages.provider[OPENCODE_PROVIDER_ID].models[
+        "deepseek/deepseek-v4-flash"
+      ];
     expect(model.attachment).toBe(true);
-    expect(model.modalities).toEqual({ input: ["text", "image"], output: ["text"] });
+    expect(model.modalities).toEqual({
+      input: ["text", "image"],
+      output: ["text"],
+    });
 
     // And the opposite: a run whose model does not see the images does not announce it
     // not — the control plan will not help him either.
     const without = buildOpencodeConfig(job({ imageInput: false }));
-    const blind = without.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
+    const blind =
+      without.provider[OPENCODE_PROVIDER_ID].models[
+        "deepseek/deepseek-v4-flash"
+      ];
     expect(blind.attachment).toBe(false);
     expect(blind.modalities).toEqual({ input: ["text"], output: ["text"] });
   });
@@ -143,7 +152,10 @@ describe("le modèle et son fournisseur", () => {
         },
       }),
     );
-    expect(cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"].cost).toEqual({
+    expect(
+      cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"]
+        .cost,
+    ).toEqual({
       input: 3,
       output: 15,
       cache_read: 0.3,
@@ -156,13 +168,15 @@ describe("le modèle et son fournisseur", () => {
     // supervisor to write the usage in `estimated` — not the config to lie.
     const cfg = buildOpencodeConfig(job({ pricing: undefined }));
     expect(
-      cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"].cost,
+      cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"]
+        .cost,
     ).toBeUndefined();
   });
 
   it("passe le raisonnement sous sa forme IMBRIQUÉE, la seule qui survive", () => {
     const cfg = buildOpencodeConfig(job({ reasoningLevel: "high" }));
-    const model = cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
+    const model =
+      cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
     expect(model.options).toEqual({ reasoning: { effort: "high" } });
     expect(model.reasoning).toBe(true);
     // Measured: `reasoning_effort` flat is REMOVED from the body by opencode on
@@ -171,62 +185,39 @@ describe("le modèle et son fournisseur", () => {
   });
 
   it("ne dit rien du raisonnement quand il est coupé", () => {
-    const model =
-      buildOpencodeConfig(job({ reasoningLevel: "off" })).provider[OPENCODE_PROVIDER_ID].models[
-        "deepseek/deepseek-v4-flash"
-      ];
+    const model = buildOpencodeConfig(job({ reasoningLevel: "off" })).provider[
+      OPENCODE_PROVIDER_ID
+    ].models["deepseek/deepseek-v4-flash"];
     expect(model.options).toBeUndefined();
     expect(model.reasoning).toBeUndefined();
   });
 });
 
-describe("ce que le tour a le droit de faire", () => {
-  it("laisse le shell en `ask` — c'est ce qui donne la main à command-guard", () => {
-    // The command rule is NOT a global ACL: `command-guard.ts` remains
-    // a pure function that the supervisor replays on /permission/:id/reply. A
-    // permission `allow` would silently remove his checkpoint.
-    expect(buildOpencodeConfig(job()).permission.bash).toBe("ask");
-  });
-
-  it("refuse l'écriture et retire les tools d'écriture sur une relecture", () => {
-    const cfg = buildOpencodeConfig(job({ writesToRepo: false, anchor: "pr" }));
-    expect(cfg.permission.edit).toBe("deny");
-    // Two halves of the same guarantee: the ACL AND the absence of the tool. Measure :
-    // `tools: {x: false}` does not remove the integrated, it places a `deny` — this is the
-    // set of agent tools that makes it disappear.
-    for (const name of ["edit", "write", "apply_patch"]) {
-      expect(cfg.tools[name]).toBe(false);
-      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools?.[name]).toBe(false);
-    }
-  });
-
-  it("laisse l'écriture en `ask` — c'est ce qui protège `.git/`", () => {
-    // Measured: `.git/` is not kept by anyone at opencode, a `write` on
-    // `<repository>/.git/config` overwrites it. `ask` is what gives the hand to
-    // supervisor, which replays `assertNotGit` and `resolveWithin`.
-    const cfg = buildOpencodeConfig(job({ writesToRepo: true }));
-    expect(cfg.permission.edit).toBe("ask");
-    expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools?.edit).toBeUndefined();
-  });
-
-  it("coupe la question quand personne ne peut répondre (routine)", () => {
-    const routine = buildOpencodeConfig(job({ interactive: false }));
-    // REMOVAL of the tool, not just the ACL: measured, permission
-    // `question` is not consulted — the tool runs and publishes its question.
-    expect(routine.agent[OPENCODE_PRIMARY_AGENT].tools?.question).toBe(false);
-    expect(routine.permission.question).toBe("deny");
-    const interactive = buildOpencodeConfig(job({ interactive: true }));
-    expect(interactive.agent[OPENCODE_PRIMARY_AGENT].tools?.question).toBe(true);
-    expect(interactive.permission.question).toBe("ask");
-  });
-
-  it("éteint les intégrés qui n'ont pas de lecteur chez nous", () => {
-    const cfg = buildOpencodeConfig(job());
-    // `todowrite`: our checklist is the ticket plan. `websearch`: it does not
-    // would affect neither the tour limit nor the billing. `skill`: there is none.
-    for (const name of ["todowrite", "websearch", "skill"]) {
-      expect(cfg.tools[name]).toBe(false);
-      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools?.[name]).toBe(false);
+describe("canonical OpenCode capabilities", () => {
+  it("auto-grants model actions without removing native tools", () => {
+    const variants = [
+      buildOpencodeConfig(job()),
+      buildOpencodeConfig(job({ writesToRepo: false, anchor: "pr" })),
+      buildOpencodeConfig(job({ interactive: false })),
+      buildOpencodeConfig(job({ controlToken: "local-token" })),
+    ];
+    for (const cfg of variants) {
+      expect(cfg.permission).toEqual({
+        edit: "ask",
+        task: "ask",
+        bash: "ask",
+        external_directory: "ask",
+        "*": "allow",
+      });
+      expect(cfg.tools).toEqual({});
+      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools).toEqual({});
+      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].permission).toEqual({
+        edit: "ask",
+        task: "ask",
+        bash: "ask",
+        external_directory: "ask",
+        "*": "allow",
+      });
     }
   });
 });
@@ -244,8 +235,16 @@ describe("les sous-agents", () => {
   const favorites = (): VmJob["subagents"] => ({
     models: true,
     favorites: [
-      { id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", use_case: "Middle gear." },
-      { id: "anthropic/claude-opus-4.8", label: "Claude Opus 4.8", use_case: "Hard analysis." },
+      {
+        id: "anthropic/claude-haiku-4.5",
+        label: "Claude Haiku 4.5",
+        use_case: "Middle gear.",
+      },
+      {
+        id: "anthropic/claude-opus-4.8",
+        label: "Claude Opus 4.8",
+        use_case: "Hard analysis.",
+      },
     ],
     maxParallel: 2,
     allowedIds: [],
@@ -253,24 +252,38 @@ describe("les sous-agents", () => {
     maxMultiplier: null,
     pricing: {
       "anthropic/claude-haiku-4.5": { inputUsdPerMTok: 1, outputUsdPerMTok: 5 },
-      "anthropic/claude-opus-4.8": { inputUsdPerMTok: 15, outputUsdPerMTok: 75 },
+      "anthropic/claude-opus-4.8": {
+        inputUsdPerMTok: 15,
+        outputUsdPerMTok: 75,
+      },
     },
   });
 
-  it("tient la hiérarchie à UN niveau", () => {
+  it("keeps delegation depth bounded by OpenCode", () => {
     const cfg = buildOpencodeConfig(job());
     expect(cfg.subagent_depth).toBe(1);
     // The joker removes `task` from the girl's game, and the ACL says it again: the
     // Cascading delegation is structural, never a prompt sentence.
     expect(cfg.agent.general.tools?.["*"]).toBe(false);
     expect(cfg.agent.general.tools?.task).toBeUndefined();
-    expect(cfg.agent.general.permission?.task).toBe("deny");
+    expect(cfg.agent.general.permission).toEqual({
+      edit: "ask",
+      task: "ask",
+      bash: "ask",
+      external_directory: "ask",
+      "*": "allow",
+    });
   });
 
   it("fait de `explore` une lecture seule PAR SON JEU DE TOOLS", () => {
     const explore = buildOpencodeConfig(job()).agent.explore;
     expect(explore.mode).toBe("subagent");
-    expect(explore.tools).toEqual({ "*": false, read: true, grep: true, glob: true });
+    expect(explore.tools).toEqual({
+      "*": false,
+      read: true,
+      grep: true,
+      glob: true,
+    });
     expect(explore.permission?.["*"]).toBe("deny");
   });
 
@@ -281,19 +294,25 @@ describe("les sous-agents", () => {
     const cfg = buildOpencodeConfig(job());
     for (const agent of [cfg.agent.explore, cfg.agent.general]) {
       expect(agent.tools?.["*"]).toBe(false);
-      for (const name of ["update_issue", "create_pr", "update_plan", "read_scratchpad"]) {
+      for (const name of [
+        "update_issue",
+        "create_pr",
+        "update_plan",
+        "read_scratchpad",
+      ]) {
         expect(agent.tools?.[name]).toBeUndefined();
       }
     }
     // `web_search` is the only exception, and it is that of `subagentToolsFor`:
     // it is charged and capped by us, not forbidden to a girl.
     expect(cfg.agent.general.tools?.web_search).toBe(true);
-    expect(buildOpencodeConfig(job({ webSearch: false })).agent.general.tools?.web_search).toBe(
-      undefined,
-    );
+    expect(
+      buildOpencodeConfig(job({ webSearch: false })).agent.general.tools
+        ?.web_search,
+    ).toBe(undefined);
   });
 
-  it("ouvre les TROIS interfaces d'écriture à une fille qui écrit", () => {
+  it("keeps all three editing interfaces for implementation sub-agents", () => {
     // It is opencode which decides according to the model OF THE GIRL (`apply_patch` on
     // the `gpt-*`): designating one here would freeze it on that of the parent.
     const cfg = buildOpencodeConfig(job());
@@ -303,23 +322,30 @@ describe("les sous-agents", () => {
     }
     const review = buildOpencodeConfig(job({ writesToRepo: false }));
     for (const name of ["edit", "write", "apply_patch"]) {
-      expect(review.agent.general.tools?.[name]).toBeUndefined();
+      expect(review.agent.general.tools?.[name]).toBe(true);
     }
   });
 
-  it("retire la délégation quand le tour n'a pas de fille à donner", () => {
+  it("does not hide delegation through a run-mode tool profile", () => {
     const none = job({
       subagents: { ...job().subagents, maxParallel: 0 },
     });
-    expect(buildOpencodeConfig(none).agent[OPENCODE_PRIMARY_AGENT].tools?.task).toBe(false);
-    expect(buildOpencodeConfig(job()).agent[OPENCODE_PRIMARY_AGENT].tools?.task).toBe(true);
+    expect(
+      buildOpencodeConfig(none).agent[OPENCODE_PRIMARY_AGENT].tools?.task,
+    ).toBeUndefined();
+    expect(
+      buildOpencodeConfig(job()).agent[OPENCODE_PRIMARY_AGENT].tools?.task,
+    ).toBeUndefined();
   });
 
-  it("laisse le superviseur arbitrer chaque délégation", () => {
-    // `ask` and not `allow`: the request has `subagent_type` and arrives BEFORE
-    // until opencode resolves the agent — that's the only place to get the
-    // simultaneous ceiling and return the offer to the model with the wrong name.
-    expect(buildOpencodeConfig(job()).permission.task).toBe("ask");
+  it("keeps accounting signals observable while auto-granting the catalog", () => {
+    expect(buildOpencodeConfig(job()).permission).toEqual({
+      edit: "ask",
+      task: "ask",
+      bash: "ask",
+      external_directory: "ask",
+      "*": "allow",
+    });
   });
 
   it("donne un agent par (mode × modèle offert), puisque `task` n'a pas de `model`", () => {
@@ -353,7 +379,8 @@ describe("les sous-agents", () => {
       if (name === OPENCODE_PRIMARY_AGENT) continue;
       expect(agent.description?.length ?? 0).toBeGreaterThan(20);
     }
-    const haiku = cfg.agent["general-anthropic-claude-haiku-4-5"].description ?? "";
+    const haiku =
+      cfg.agent["general-anthropic-claude-haiku-4-5"].description ?? "";
     expect(haiku).toContain("Claude Haiku 4.5");
     expect(haiku).toContain("Middle gear.");
   });
@@ -363,21 +390,37 @@ describe("les sous-agents", () => {
     // ledger. Not offering it is the only choice that doesn't lie.
     const cfg = buildOpencodeConfig(job({ subagents: favorites() }));
     const models = cfg.provider[OPENCODE_PROVIDER_ID].models;
-    expect(models["anthropic/claude-haiku-4.5"].cost).toEqual({ input: 1, output: 5 });
-    expect(models["anthropic/claude-opus-4.8"].cost).toEqual({ input: 15, output: 75 });
+    expect(models["anthropic/claude-haiku-4.5"].cost).toEqual({
+      input: 1,
+      output: 5,
+    });
+    expect(models["anthropic/claude-opus-4.8"].cost).toEqual({
+      input: 15,
+      output: 75,
+    });
 
     const unpriced = favorites();
-    unpriced.pricing = { "anthropic/claude-haiku-4.5": { inputUsdPerMTok: 1, outputUsdPerMTok: 5 } };
+    unpriced.pricing = {
+      "anthropic/claude-haiku-4.5": { inputUsdPerMTok: 1, outputUsdPerMTok: 5 },
+    };
     const partial = buildOpencodeConfig(job({ subagents: unpriced }));
     expect(partial.agent["general-anthropic-claude-opus-4-8"]).toBeUndefined();
-    expect(partial.provider[OPENCODE_PROVIDER_ID].models["anthropic/claude-opus-4.8"]).toBeUndefined();
+    expect(
+      partial.provider[OPENCODE_PROVIDER_ID].models[
+        "anthropic/claude-opus-4.8"
+      ],
+    ).toBeUndefined();
   });
 
   it("n'offre AUCUN autre modèle en BYOK", () => {
     // Same all-or-nothing rule as the `model` field of `spawn_agent`: one run
     // BYOK Anthropic cannot run `deepseek/…`.
-    const byok = buildOpencodeConfig(job({ subagents: { ...favorites(), models: false } }));
-    expect(Object.keys(byok.agent).sort()).toEqual([OPENCODE_PRIMARY_AGENT, "explore", "general"].sort());
+    const byok = buildOpencodeConfig(
+      job({ subagents: { ...favorites(), models: false } }),
+    );
+    expect(Object.keys(byok.agent).sort()).toEqual(
+      [OPENCODE_PRIMARY_AGENT, "explore", "general"].sort(),
+    );
     expect(Object.keys(byok.provider[OPENCODE_PROVIDER_ID].models)).toEqual([
       "deepseek/deepseek-v4-flash",
     ]);
@@ -387,35 +430,51 @@ describe("les sous-agents", () => {
     // Each model costs two agents and two lines in the tool description
     // `task`: an admin setting of thirty would make it grow silently.
     const many = favorites();
-    many.favorites = Array.from({ length: MAX_SUBAGENT_MODELS + 4 }, (_, i) => ({
-      id: `vendor/model-${i}`,
-      label: `Model ${i}`,
-      use_case: "x",
-    }));
+    many.favorites = Array.from(
+      { length: MAX_SUBAGENT_MODELS + 4 },
+      (_, i) => ({
+        id: `vendor/model-${i}`,
+        label: `Model ${i}`,
+        use_case: "x",
+      }),
+    );
     many.pricing = Object.fromEntries(
-      many.favorites.map((f) => [f.id, { inputUsdPerMTok: 1, outputUsdPerMTok: 2 }]),
+      many.favorites.map((f) => [
+        f.id,
+        { inputUsdPerMTok: 1, outputUsdPerMTok: 2 },
+      ]),
     );
     const cfg = buildOpencodeConfig(job({ subagents: many }));
-    expect(subagentAgentTable(job({ subagents: many })).filter((a) => a.modelId)).toHaveLength(
-      MAX_SUBAGENT_MODELS * 2,
+    expect(
+      subagentAgentTable(job({ subagents: many })).filter((a) => a.modelId),
+    ).toHaveLength(MAX_SUBAGENT_MODELS * 2);
+    expect(Object.keys(cfg.agent)).toHaveLength(
+      1 + 2 + MAX_SUBAGENT_MODELS * 2,
     );
-    expect(Object.keys(cfg.agent)).toHaveLength(1 + 2 + MAX_SUBAGENT_MODELS * 2);
   });
 
   it("ne se propose jamais lui-même comme modèle de fille", () => {
     // The run model is already `explore` / `general`: restore it under a
     // second name would offer the same thing twice.
     const same = favorites();
-    same.favorites = [{ id: "deepseek/deepseek-v4-flash", label: "Same", use_case: "x" }];
-    same.pricing = { "deepseek/deepseek-v4-flash": { inputUsdPerMTok: 1, outputUsdPerMTok: 2 } };
-    expect(subagentAgentTable(job({ subagents: same })).filter((a) => a.modelId)).toEqual([]);
+    same.favorites = [
+      { id: "deepseek/deepseek-v4-flash", label: "Same", use_case: "x" },
+    ];
+    same.pricing = {
+      "deepseek/deepseek-v4-flash": { inputUsdPerMTok: 1, outputUsdPerMTok: 2 },
+    };
+    expect(
+      subagentAgentTable(job({ subagents: same })).filter((a) => a.modelId),
+    ).toEqual([]);
   });
 });
 
 describe("l'environnement du serveur", () => {
   it("passe tout par l'environnement, sans un seul fichier de config", () => {
     const env = opencodeServerEnv(job());
-    expect(JSON.parse(env.OPENCODE_CONFIG_CONTENT)).toEqual(buildOpencodeConfig(job()));
+    expect(JSON.parse(env.OPENCODE_CONFIG_CONTENT)).toEqual(
+      buildOpencodeConfig(job()),
+    );
     expect(env.OPENCODE_DB).toBe(opencodeDbPath(LAYOUT));
   });
 
@@ -423,7 +482,9 @@ describe("l'environnement du serveur", () => {
     // Otherwise the `git add -A` at the end of the turn takes away the basis of the conversation
     // in a commit of the user's repository (same rule as the harness).
     expect(opencodeDbPath(LAYOUT).startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
-    expect(opencodeAnchorFile(LAYOUT).startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
+    expect(opencodeAnchorFile(LAYOUT).startsWith(`${LAYOUT.repoDir}/`)).toBe(
+      false,
+    );
   });
 
   it("ramène les TROIS dossiers d'opencode sous le harness, pas seulement la config", () => {
@@ -435,7 +496,11 @@ describe("l'environnement du serveur", () => {
      * entire git repositories in the tour commit.
      */
     const env = opencodeServerEnv(job());
-    for (const dir of [env.XDG_CONFIG_HOME, env.XDG_DATA_HOME, env.XDG_CACHE_HOME]) {
+    for (const dir of [
+      env.XDG_CONFIG_HOME,
+      env.XDG_DATA_HOME,
+      env.XDG_CACHE_HOME,
+    ]) {
       expect(dir.startsWith(`${LAYOUT.harnessDir}/`)).toBe(true);
       expect(dir.startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
     }
@@ -448,9 +513,9 @@ describe("l'environnement du serveur", () => {
   });
 
   it("applies the bash command timeout explicitly", () => {
-    expect(opencodeServerEnv(job()).OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS).toBe(
-      String(OPENCODE_BASH_TIMEOUT_MS),
-    );
+    expect(
+      opencodeServerEnv(job()).OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS,
+    ).toBe(String(OPENCODE_BASH_TIMEOUT_MS));
   });
 });
 
@@ -479,7 +544,9 @@ describe("aucun secret ne peut entrer dans la config", () => {
   it("ne laisse pas fuiter le token de forge de l'URL de push", () => {
     // `authUrl` carries an ephemeral token from the forge. He has nothing to do in a
     // config read by the harness — and it would end up in the server logs.
-    expect(opencodeServerEnv(job()).OPENCODE_CONFIG_CONTENT).not.toContain("ghs_TOKEN_SECRET");
+    expect(opencodeServerEnv(job()).OPENCODE_CONFIG_CONTENT).not.toContain(
+      "ghs_TOKEN_SECRET",
+    );
   });
 
   it("n'emporte rien du job qui ne serve pas à opencode", () => {
@@ -516,12 +583,20 @@ describe("aucun secret ne peut entrer dans la config", () => {
  * tools folder — each rewriting the decor of the other.
  */
 describe("un run qui ne vit pas dans une microVM", () => {
-  const LOCAL = layoutForRoot("/Users/dev/Library/Application Support/minddy/runs/r-7", "/Users/dev/oc");
+  const LOCAL = layoutForRoot(
+    "/Users/dev/Library/Application Support/minddy/runs/r-7",
+    "/Users/dev/oc",
+  );
   const local = () => job({ layout: LOCAL });
 
   it("pose TOUT l'état d'opencode sous le harness DE CE RUN", () => {
     const env = opencodeServerEnv(local());
-    for (const value of [env.OPENCODE_DB, env.XDG_CONFIG_HOME, env.XDG_DATA_HOME, env.XDG_CACHE_HOME]) {
+    for (const value of [
+      env.OPENCODE_DB,
+      env.XDG_CONFIG_HOME,
+      env.XDG_DATA_HOME,
+      env.XDG_CACHE_HOME,
+    ]) {
       expect(value.startsWith(`${LOCAL.harnessDir}/`)).toBe(true);
     }
     // And nothing points to the microVM anymore.
@@ -533,14 +608,24 @@ describe("un run qui ne vit pas dans une microVM", () => {
   // the client's `directory`, not the environment. Nothing to be assured here.
 
   it("fait lire l'ancrage là où le superviseur l'écrit", () => {
-    expect(buildOpencodeConfig(local()).instructions).toEqual([opencodeAnchorFile(LOCAL)]);
+    expect(buildOpencodeConfig(local()).instructions).toEqual([
+      opencodeAnchorFile(LOCAL),
+    ]);
   });
 
   it("ne partage aucun de ces chemins avec un autre run", () => {
-    const other = layoutForRoot("/Users/dev/Library/Application Support/minddy/runs/r-8", "/Users/dev/oc");
+    const other = layoutForRoot(
+      "/Users/dev/Library/Application Support/minddy/runs/r-8",
+      "/Users/dev/oc",
+    );
     const mine = opencodeServerEnv(local());
     const theirs = opencodeServerEnv(job({ layout: other }));
-    for (const key of ["OPENCODE_DB", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME"] as const) {
+    for (const key of [
+      "OPENCODE_DB",
+      "XDG_CONFIG_HOME",
+      "XDG_DATA_HOME",
+      "XDG_CACHE_HOME",
+    ] as const) {
       expect(mine[key]).not.toBe(theirs[key]);
     }
   });
@@ -591,49 +676,41 @@ describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
   });
 
   it("rend explicitement les conventions du dépôt qu'elle vient de lui retirer", () => {
-    const repoFiles = [`${LAYOUT.repoDir}/AGENTS.md`, `${LAYOUT.repoDir}/CLAUDE.md`];
+    const repoFiles = [
+      `${LAYOUT.repoDir}/AGENTS.md`,
+      `${LAYOUT.repoDir}/CLAUDE.md`,
+    ];
     const cfg = buildOpencodeConfig(job(), { repoInstructionFiles: repoFiles });
     // The minddy anchor FIRST: it's ours, and it's non-negotiable.
-    expect(cfg.instructions).toEqual([opencodeAnchorFile(LAYOUT), ...repoFiles]);
+    expect(cfg.instructions).toEqual([
+      opencodeAnchorFile(LAYOUT),
+      ...repoFiles,
+    ]);
   });
 
   it("n'invente aucun fichier quand le superviseur n'en a trouvé aucun", () => {
-    expect(buildOpencodeConfig(job()).instructions).toEqual([opencodeAnchorFile(LAYOUT)]);
+    expect(buildOpencodeConfig(job()).instructions).toEqual([
+      opencodeAnchorFile(LAYOUT),
+    ]);
   });
 });
 
-describe("les permissions du chemin local (MIN-360)", () => {
+describe("local and cloud capability parity", () => {
   const cloud = () => buildOpencodeConfig(job());
-  const onMachine = () => buildOpencodeConfig(job({ controlToken: "jeton-de-bail" }));
+  const onMachine = () =>
+    buildOpencodeConfig(job({ controlToken: "jeton-de-bail" }));
 
-  it("passe `read` en `ask` sur une machine, et le laisse en `allow` en microVM", () => {
-    // `allow` erased the `*.env ask` that opencode delivers: our rules are
-    // concatenated AFTER, and the last one to match wins.
-    expect(cloud().permission.read).toBe("allow");
-    expect(onMachine().permission.read).toBe("ask");
-  });
-
-  it("applique la même règle aux filles `explore`, dont c'est tout le métier", () => {
-    // The literal of subagents is the SECOND place where the line was written,
-    // and it is precisely that of agents who only read.
-    expect(cloud().agent.explore.permission?.read).toBe("allow");
-    expect(onMachine().agent.explore.permission?.read).toBe("ask");
-  });
-
-  it("removes prompt-callable shell and direct fetch capabilities on a host", () => {
-    expect(cloud().permission.webfetch).toBe("allow");
-    expect(cloud().permission.bash).toBe("ask");
-    for (const name of ["bash", "webfetch"]) {
-      expect(onMachine().permission[name]).toBe("deny");
-      expect(onMachine().tools[name]).toBe(false);
-      expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].tools?.[name]).toBe(false);
-      expect(onMachine().agent.general.tools?.[name]).toBeUndefined();
-    }
-  });
-
-  it("keeps external directories denied in every execution environment", () => {
-    expect(cloud().permission.external_directory).toBe("deny");
-    expect(onMachine().permission.external_directory).toBe("deny");
-    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.external_directory).toBe("deny");
+  it("keeps native tools and permissions identical", () => {
+    expect(onMachine().permission).toEqual(cloud().permission);
+    expect(onMachine().tools).toEqual(cloud().tools);
+    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT]).toEqual(
+      cloud().agent[OPENCODE_PRIMARY_AGENT],
+    );
+    expect(onMachine().agent.explore.tools).toEqual(
+      cloud().agent.explore.tools,
+    );
+    expect(onMachine().agent.general.tools).toEqual(
+      cloud().agent.general.tools,
+    );
   });
 });

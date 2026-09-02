@@ -5,7 +5,7 @@ import { formatSecretFindings, isSecretFile, scanDiff, scanSecrets } from "./sec
 /**
  * MIN-360 — SCAN OF SECRETS BEFORE PUSH.
  *
- * Like [command-guard.test.ts](command-guard.test.ts), the test that counts is
+ * The test that counts is
  * not the list of finds: it is the list of what should NOT be found a.
  * This door is HARD — it refuses pushing — so a false positive blocks an entire round
  *, and a guardrail that blocks rounds ends up being removed.

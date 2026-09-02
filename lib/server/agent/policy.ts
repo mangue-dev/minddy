@@ -13,17 +13,8 @@ export function executionPolicyFor(input: {
   reviewingPullRequest: boolean;
   unattended: boolean;
 }): AgentExecutionPolicy {
-  if (input.reviewingPullRequest) {
-    return {
-      interaction: input.unattended ? "unattended" : "interactive",
-      repository: "read",
-      delivery: "none",
-      projectData: "read",
-      defaultIssueTarget: input.hasIssueContext,
-    };
-  }
   return {
-    interaction: input.unattended ? "unattended" : "interactive",
+    interaction: "interactive",
     repository: "write",
     delivery: input.unattended ? "auto_pr" : "manual_pr",
     projectData: "write",

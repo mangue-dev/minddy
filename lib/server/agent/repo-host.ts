@@ -2,7 +2,6 @@ import {
   backgroundProbeScript,
   backgroundStartScript,
   backgroundStopScript,
-  checkBackgroundInvocation,
   parseBackgroundProbe,
   BACKGROUND_FETCH_BYTES,
   type BackgroundChunk,
@@ -11,9 +10,15 @@ import {
   type BackgroundPaths,
 } from "./background";
 import { grepPathspecs, globPathspecs, expandBraces } from "./git-pathspec";
-import { isInvalidRegexError, looksLikeIntendedAlternation } from "./grep-pattern";
+import {
+  isInvalidRegexError,
+  looksLikeIntendedAlternation,
+} from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 import type { HarnessLayout } from "./harness-layout";
+import { PR_BASE_TAG } from "./pr-refs";
+
+export { PR_BASE_TAG } from "./pr-refs";
 
 /**
  * Agent's HANDS on the repository — clone, read, edit, search, jobs
@@ -113,7 +118,10 @@ export function sq(value: string): string {
  * A command fragment, rather than an environment: that is what `RepoHost.exec`
  * can transport.
  */
-export function gitIdentityFlags(committer: { name: string; email: string }): string {
+export function gitIdentityFlags(committer: {
+  name: string;
+  email: string;
+}): string {
   return `-c ${sq(`user.email=${committer.email}`)} -c ${sq(`user.name=${committer.name}`)}`;
 }
 
@@ -140,7 +148,9 @@ export const HISTORY_WINDOW_DAYS = 180;
 
 /** Clone's `--shallow-since` bound, as a short ISO date (UTC). */
 export function historySince(now: Date = new Date()): string {
-  const since = new Date(now.getTime() - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const since = new Date(
+    now.getTime() - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
   return since.toISOString().slice(0, 10);
 }
 
@@ -179,7 +189,8 @@ export async function cloneRepo(
   // exists (it is the Sandbox home), but on an ordinary machine it does not.
   await host.mkdir(root).catch(() => {});
   const wipe = await host.exec(`rm -rf ${sq(repoDir)}`, { cwd: root });
-  if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
+  if (wipe.exitCode !== 0)
+    throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
 
   const since = historySince();
   const clone = await host.exec(
@@ -187,7 +198,8 @@ export async function cloneRepo(
       ` ${sq(opts.authUrl)} ${sq(repoDir)}`,
     { cwd: root, timeoutMs: 180_000 },
   );
-  if (clone.exitCode !== 0) throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
+  if (clone.exitCode !== 0)
+    throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
 
   const setup = [
     `set -e`,
@@ -199,7 +211,8 @@ export async function cloneRepo(
     `fi`,
   ].join("\n");
   const branch = await host.exec(setup, { timeoutMs: 120_000 });
-  if (branch.exitCode !== 0) throw new Error(`branch setup failed: ${branch.stderr || branch.stdout}`);
+  if (branch.exitCode !== 0)
+    throw new Error(`branch setup failed: ${branch.stderr || branch.stdout}`);
 }
 
 /**
@@ -229,7 +242,7 @@ export async function cloneRepo(
  * untouched by the PR. `baseSha` is the base of the diff served by the FORGE
  * (`getMergeBaseSha`: the live merge base on GitHub, `diff_refs.base_sha` on
  * GitLab): we fetch it into the clone at depth 1 — one commit, under a second —
- * and mark it with the `PR_BASE_TAG` tag. From then on, `git diff pr-base` IS the
+ * and mark it with the `PR_BASE_TAG` ref. From then on, `git diff PR_BASE` IS the
  * pull request's change, and counts exactly the same files as the bootstrap's
  * "Files changed" list.
  *
@@ -238,8 +251,6 @@ export async function cloneRepo(
  * still runs — the prompt then describes the `origin/<base>` fallback and what
  * it means. A review that does not start costs more than a cautious review.
  */
-/** Tag marking the base of the forge-served diff in the review clone. */
-export const PR_BASE_TAG = "pr-base";
 export async function clonePullRequest(
   host: RepoHost,
   opts: {
@@ -251,20 +262,22 @@ export async function clonePullRequest(
     headBranch: string | null;
     /** Local name under which the head is checked out. */
     localBranch: string;
-    /** Base of the diff served by the forge, to mark as `pr-base` (see header). */
+    /** Base of the diff served by the forge, to mark as `PR_BASE` (see header). */
     baseSha?: string | null;
   },
 ): Promise<void> {
   const { root, repoDir } = host.layout;
   await host.mkdir(root).catch(() => {});
   const wipe = await host.exec(`rm -rf ${sq(repoDir)}`, { cwd: root });
-  if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
+  if (wipe.exitCode !== 0)
+    throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
 
   const clone = await host.exec(
     `git clone --depth 1 --branch ${sq(opts.baseBranch)} ${sq(opts.authUrl)} ${sq(repoDir)}`,
     { cwd: root, timeoutMs: 180_000 },
   );
-  if (clone.exitCode !== 0) throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
+  if (clone.exitCode !== 0)
+    throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
 
   const fallback = opts.headBranch?.trim()
     ? [
@@ -288,14 +301,35 @@ export async function clonePullRequest(
   ].join("\n");
   const head = await host.exec(setup, { timeoutMs: 120_000 });
   if (head.exitCode !== 0) {
-    throw new Error(`pull request checkout failed: ${head.stderr || head.stdout}`);
+    throw new Error(
+      `pull request checkout failed: ${head.stderr || head.stdout}`,
+    );
   }
 
-  // SHA VALIDATED before entering a shell: it comes from a forge API, and `sq`
-  // alone would be enough, but a ref that is not a SHA has no place here anyway
-  // — a branch name would produce a tag that moves under the agent.
+  await anchorPullRequestBase(host, {
+    authUrl: opts.authUrl,
+    baseSha: opts.baseSha,
+  });
+}
+
+/**
+ * Restore the immutable review boundary after either an initial PR clone or a
+ * resumed work-branch clone. The operation is deliberately best-effort: losing
+ * the anchor degrades review accuracy, but must not make an otherwise usable
+ * checkout fail to start.
+ */
+export async function anchorPullRequestBase(
+  host: RepoHost,
+  opts: { authUrl: string; baseSha?: string | null },
+): Promise<void> {
+  // Validate before entering a shell. The value comes from a forge API, and
+  // `sq` alone would be sufficient, but a movable ref has no place here.
   const baseSha = opts.baseSha?.trim() ?? "";
   if (!/^[0-9a-f]{7,64}$/i.test(baseSha)) return;
+  const current = await host
+    .exec(`git rev-parse --verify ${sq(PR_BASE_TAG)}`)
+    .catch(() => null);
+  if (current?.exitCode === 0 && current.stdout.trim() === baseSha) return;
   const anchor = await host.exec(
     [
       `set -e`,
@@ -324,7 +358,9 @@ export async function clonePullRequest(
  */
 async function baseTipSha(host: RepoHost, baseBranch: string): Promise<string> {
   try {
-    const res = await host.exec(`git rev-parse --verify ${sq(`refs/remotes/origin/${baseBranch}`)}`);
+    const res = await host.exec(
+      `git rev-parse --verify ${sq(`refs/remotes/origin/${baseBranch}`)}`,
+    );
     return res.exitCode === 0 ? res.stdout.trim() : "";
   } catch {
     return "";
@@ -371,17 +407,24 @@ export async function commitAndPush(
      */
     committer: { name: string; email: string };
   },
-): Promise<{ committed: boolean; remoteUpdated: boolean; headSha: string; pushed: boolean }> {
+): Promise<{
+  committed: boolean;
+  remoteUpdated: boolean;
+  headSha: string;
+  pushed: boolean;
+}> {
   const status = await host.exec(`git status --porcelain`);
   const dirty = status.stdout.trim().length > 0;
 
   if (dirty) {
     const staged = await host.exec(`git add -A`);
-    if (staged.exitCode !== 0) throw new Error(`git add failed: ${staged.stderr || staged.stdout}`);
+    if (staged.exitCode !== 0)
+      throw new Error(`git add failed: ${staged.stderr || staged.stdout}`);
     const commit = await host.exec(
       `git ${gitIdentityFlags(opts.committer)} commit -m ${sq(opts.message)}`,
     );
-    if (commit.exitCode !== 0) throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);
+    if (commit.exitCode !== 0)
+      throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);
   }
 
   const head = await host.exec(`git rev-parse HEAD`);
@@ -403,15 +446,22 @@ export async function commitAndPush(
     `git ls-remote ${sq(opts.authUrl)} ${sq(`refs/heads/${opts.workBranch}`)}`,
     { timeoutMs: 60_000 },
   );
-  const remoteSha = remote.exitCode === 0 ? remote.stdout.trim().split(/\s/)[0] ?? "" : "";
+  const remoteSha =
+    remote.exitCode === 0 ? (remote.stdout.trim().split(/\s/)[0] ?? "") : "";
 
   const push = await host.exec(
     `git push ${sq(opts.authUrl)} ${sq(`HEAD:refs/heads/${opts.workBranch}`)}`,
     { timeoutMs: 120_000 },
   );
-  if (push.exitCode !== 0) throw new Error(`git push failed: ${push.stderr || push.stdout}`);
+  if (push.exitCode !== 0)
+    throw new Error(`git push failed: ${push.stderr || push.stdout}`);
 
-  return { committed: dirty, remoteUpdated: remoteSha !== headSha, headSha, pushed: true };
+  return {
+    committed: dirty,
+    remoteUpdated: remoteSha !== headSha,
+    headSha,
+    pushed: true,
+  };
 }
 
 // ── Per-turn diff (event `files_changed`, MIN-46) ────────────────────────────
@@ -537,8 +587,12 @@ export async function turnDiffStat(
   const only = pathspec(scope);
   try {
     const [numstat, names, porcelain] = await Promise.all([
-      host.exec(`git diff --numstat ${sq(fromSha)}${only}`, { timeoutMs: 30_000 }),
-      host.exec(`git diff --name-only --diff-filter=d ${sq(fromSha)}${only}`, { timeoutMs: 30_000 }),
+      host.exec(`git diff --numstat ${sq(fromSha)}${only}`, {
+        timeoutMs: 30_000,
+      }),
+      host.exec(`git diff --name-only --diff-filter=d ${sq(fromSha)}${only}`, {
+        timeoutMs: 30_000,
+      }),
       host.exec(`git status --porcelain${only}`, { timeoutMs: 30_000 }),
     ]);
     if (numstat.exitCode !== 0 || names.exitCode !== 0) return null;
@@ -550,7 +604,10 @@ export async function turnDiffStat(
       // would make it invisible.
       lines += m[1] === "-" || m[2] === "-" ? 1 : Number(m[1]) + Number(m[2]);
     }
-    const files = names.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
+    const files = names.stdout
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
     const untracked =
       porcelain.exitCode === 0
         ? porcelain.stdout.split("\n").filter((l) => l.startsWith("??")).length
@@ -581,7 +638,9 @@ export async function turnTouchedPaths(
   const only = pathspec(scope);
   try {
     const [names, porcelain] = await Promise.all([
-      host.exec(`git diff --name-only ${sq(fromSha)}${only}`, { timeoutMs: 30_000 }),
+      host.exec(`git diff --name-only ${sq(fromSha)}${only}`, {
+        timeoutMs: 30_000,
+      }),
       host.exec(`git status --porcelain${only}`, { timeoutMs: 30_000 }),
     ]);
     const paths = new Set<string>();
@@ -616,7 +675,8 @@ export async function changedFiles(
   fromSha: string,
   toSha: string,
 ): Promise<{ files: ChangedFile[]; truncated: boolean }> {
-  if (!fromSha || !toSha || fromSha === toSha) return { files: [], truncated: false };
+  if (!fromSha || !toSha || fromSha === toSha)
+    return { files: [], truncated: false };
   return diffToChangedFiles(host, fromSha, sq(toSha), "");
 }
 
@@ -641,13 +701,16 @@ export async function workingTreeChangedFiles(
   const only = pathspec(scope);
   const tracked = await diffToChangedFiles(host, fromSha, "", only);
 
-    // Untracked files, which `git diff` ignores by construction. `--porcelain`
-    // marks them `??`, and they all count as “added”.
+  // Untracked files, which `git diff` ignores by construction. `--porcelain`
+  // marks them `??`, and they all count as “added”.
   let untracked: string[] = [];
   try {
-    const status = await host.exec(`git status --porcelain --untracked-files=all${only}`, {
-      timeoutMs: 30_000,
-    });
+    const status = await host.exec(
+      `git status --porcelain --untracked-files=all${only}`,
+      {
+        timeoutMs: 30_000,
+      },
+    );
     if (status.exitCode === 0) {
       untracked = status.stdout
         .split("\n")
@@ -665,11 +728,19 @@ export async function workingTreeChangedFiles(
     ...tracked.files,
     ...untracked
       .filter((path) => !seen.has(path))
-      .map((path): ChangedFile => ({ path, status: "added", additions: 0, deletions: 0 })),
+      .map((path): ChangedFile => ({
+        path,
+        status: "added",
+        additions: 0,
+        deletions: 0,
+      })),
   ].sort((a, b) => a.path.localeCompare(b.path));
 
   const truncated = tracked.truncated || files.length > CHANGED_FILES_CAP;
-  return { files: truncated ? files.slice(0, CHANGED_FILES_CAP) : files, truncated };
+  return {
+    files: truncated ? files.slice(0, CHANGED_FILES_CAP) : files,
+    truncated,
+  };
 }
 
 /** Shared body: two `git diff` passes, producing a `ChangedFile` list. */
@@ -682,7 +753,9 @@ async function diffToChangedFiles(
   const to = target ? ` ${target}` : "";
   try {
     const [nameStatus, numstat] = await Promise.all([
-      host.exec(`git diff --name-status --find-renames ${sq(fromSha)}${to}${only}`),
+      host.exec(
+        `git diff --name-status --find-renames ${sq(fromSha)}${to}${only}`,
+      ),
       host.exec(`git diff --numstat --find-renames ${sq(fromSha)}${to}${only}`),
     ]);
     if (nameStatus.exitCode !== 0) return { files: [], truncated: false };
@@ -693,9 +766,14 @@ async function diffToChangedFiles(
       if (!line.trim()) continue;
       const parts = line.split("\t");
       if (parts.length < 3) continue;
-      const additions = parts[0] === "-" ? 0 : Number.parseInt(parts[0], 10) || 0;
-      const deletions = parts[1] === "-" ? 0 : Number.parseInt(parts[1], 10) || 0;
-      counts.set(numstatNewPath(parts.slice(2).join("\t")), { additions, deletions });
+      const additions =
+        parts[0] === "-" ? 0 : Number.parseInt(parts[0], 10) || 0;
+      const deletions =
+        parts[1] === "-" ? 0 : Number.parseInt(parts[1], 10) || 0;
+      counts.set(numstatNewPath(parts.slice(2).join("\t")), {
+        additions,
+        deletions,
+      });
     }
 
     const files: ChangedFile[] = [];
@@ -734,7 +812,10 @@ async function diffToChangedFiles(
 
     files.sort((a, b) => a.path.localeCompare(b.path));
     const truncated = files.length > CHANGED_FILES_CAP;
-    return { files: truncated ? files.slice(0, CHANGED_FILES_CAP) : files, truncated };
+    return {
+      files: truncated ? files.slice(0, CHANGED_FILES_CAP) : files,
+      truncated,
+    };
   } catch {
     return { files: [], truncated: false };
   }
@@ -791,7 +872,10 @@ function writablePath(host: RepoHost, relPath: string): string {
 
 /** Reads the RAW content of a repository file (utf8), or null if it does not exist.
     Used by editing (`edit_file`), which needs the exact unannotated content. */
-export async function readWorkFile(host: RepoHost, relPath: string): Promise<string | null> {
+export async function readWorkFile(
+  host: RepoHost,
+  relPath: string,
+): Promise<string | null> {
   return host.readFile(repoPath(host, relPath));
 }
 
@@ -802,11 +886,11 @@ export async function readWorkFile(host: RepoHost, relPath: string): Promise<str
  * A REVIEW session is checked out at the pull request HEAD, which on a fork
  * belongs to the PR author — that is, on a public repository, to anyone. Reading
  * repository instructions there would let a stranger write into the session's
- * system prompt. Only the BASE is authoritative, and that is what the `pr-base`
- * tag designates.
+ * system prompt. Only the BASE is authoritative, and that is what the `PR_BASE`
+ * ref designates.
  *
  * `git show` rather than a checkout: nothing moves in the tree, so the review's
- * `git diff pr-base` remains exactly the PR change. Returns null if the ref or
+ * `git diff PR_BASE` remains exactly the PR change. Returns null if the ref or
  * path does not exist — a normal case (no `AGENTS.md`, or the base anchor was not
  * fetched), and a review without conventions is better than one using the
  * attacker's conventions.
@@ -820,9 +904,12 @@ export async function readFileAtRef(
   // filename computed by `instructionFilesFor` — both still go through `sq`, as
   // does everything that enters a shell here.
   const cleaned = relPath.trim().replace(/^\.\//, "");
-  if (!cleaned || cleaned.startsWith("/") || cleaned.split("/").includes("..")) return null;
+  if (!cleaned || cleaned.startsWith("/") || cleaned.split("/").includes(".."))
+    return null;
   try {
-    const res = await host.exec(`git show ${sq(`${ref}:${cleaned}`)}`, { timeoutMs: 20_000 });
+    const res = await host.exec(`git show ${sq(`${ref}:${cleaned}`)}`, {
+      timeoutMs: 20_000,
+    });
     return res.exitCode === 0 ? res.stdout : null;
   } catch {
     return null;
@@ -840,7 +927,9 @@ export async function writeToolOutput(
   name: string,
   content: string,
 ): Promise<string> {
-  const safe = name.replace(/[^A-Za-z0-9._-]/g, "-").replace(/^\.+$/, "output") || "output";
+  const safe =
+    name.replace(/[^A-Za-z0-9._-]/g, "-").replace(/^\.+$/, "output") ||
+    "output";
   const dir = host.layout.toolOutputDir;
   const abs = `${dir}/${safe}`;
   await host.mkdir(dir).catch(() => {});
@@ -861,7 +950,10 @@ const BACKGROUND_PROBE_TIMEOUT_MS = 30_000;
  * directory READABLE by `read_file`/`grep`: a server's full log remains
  * accessible even when the probe returned only its tail (MIN-107).
  */
-function backgroundPaths(layout: HarnessLayout, jobId: string): BackgroundPaths {
+function backgroundPaths(
+  layout: HarnessLayout,
+  jobId: string,
+): BackgroundPaths {
   const safe = jobId.replace(/[^A-Za-z0-9._-]/g, "-") || "job";
   return {
     log: `${layout.toolOutputDir}/${safe}.log`,
@@ -878,17 +970,12 @@ export async function startBackground(
   host: RepoHost,
   opts: { jobId: string; invocation: BackgroundInvocation; cwd?: string },
 ): Promise<{ pid: number; logPath: string }> {
-  if (host.processIsolation !== "sandbox") {
-    throw new Error(
-      "Background jobs are unavailable on a host-backed repository because model-controlled processes require sandbox isolation.",
-    );
-  }
-  // Defense in depth at the host boundary: internal callers cannot bypass the
-  // public tool's parser and smuggle a shell interpreter or forbidden Git argv.
-  const verdict = checkBackgroundInvocation(opts.invocation, { local: false });
-  if (!verdict.allowed) throw new Error(verdict.reason);
   const p = backgroundPaths(host.layout, opts.jobId);
-  const launcher = backgroundStartScript(p, opts.invocation, host.layout.toolOutputDir);
+  const launcher = backgroundStartScript(
+    p,
+    opts.invocation,
+    host.layout.toolOutputDir,
+  );
 
   const res = await host.exec(launcher, {
     cwd: opts.cwd,
@@ -897,7 +984,9 @@ export async function startBackground(
   const pid = Number.parseInt(res.stdout.trim(), 10);
   if (!Number.isInteger(pid) || pid <= 0) {
     const detail = (res.stderr || res.stdout).trim().slice(0, 300);
-    throw new Error(`Could not start the background job${detail ? `: ${detail}` : "."}`);
+    throw new Error(
+      `Could not start the background job${detail ? `: ${detail}` : "."}`,
+    );
   }
   return { pid, logPath: p.log };
 }
@@ -915,9 +1004,12 @@ export async function readBackgroundSince(
   const p = backgroundPaths(host.layout, opts.jobId);
   const offset = Math.max(0, Math.floor(opts.offset));
   const maxBytes = Math.max(1, Math.floor(opts.maxBytes));
-  const res = await host.exec(backgroundProbeScript(p, opts.pid, offset, maxBytes), {
-    timeoutMs: BACKGROUND_PROBE_TIMEOUT_MS,
-  });
+  const res = await host.exec(
+    backgroundProbeScript(p, opts.pid, offset, maxBytes),
+    {
+      timeoutMs: BACKGROUND_PROBE_TIMEOUT_MS,
+    },
+  );
   try {
     return parseBackgroundProbe(res.stdout, { offset, maxBytes });
   } catch {
@@ -931,8 +1023,13 @@ export async function readBackgroundSince(
  * Stops a job: SIGTERM, grace period, then SIGKILL (script in `background.ts`).
  * Never throws for a process that is already dead.
  */
-export async function stopBackground(host: RepoHost, pid: number): Promise<void> {
-  await host.exec(backgroundStopScript(pid), { timeoutMs: BACKGROUND_PROBE_TIMEOUT_MS });
+export async function stopBackground(
+  host: RepoHost,
+  pid: number,
+): Promise<void> {
+  await host.exec(backgroundStopScript(pid), {
+    timeoutMs: BACKGROUND_PROBE_TIMEOUT_MS,
+  });
 }
 
 export interface ReadWindow {
@@ -978,7 +1075,10 @@ export async function readWorkFileWindow(
 
   const numbered = slice.map((line, i) => {
     const n = startLine + i;
-    const text = line.length > READ_MAX_LINE_CHARS ? `${line.slice(0, READ_MAX_LINE_CHARS)}… [line truncated]` : line;
+    const text =
+      line.length > READ_MAX_LINE_CHARS
+        ? `${line.slice(0, READ_MAX_LINE_CHARS)}… [line truncated]`
+        : line;
     return `${n}\t${text}`;
   });
 
@@ -1009,7 +1109,11 @@ export async function writeWorkFile(
  * on either side, and overwriting an existing destination. Uses git so the
  * commit/PR captures the rename.
  */
-export async function moveWorkFile(host: RepoHost, from: string, to: string): Promise<void> {
+export async function moveWorkFile(
+  host: RepoHost,
+  from: string,
+  to: string,
+): Promise<void> {
   const src = writablePath(host, from);
   const dst = writablePath(host, to);
   const dstDir = dst.slice(0, dst.lastIndexOf("/"));
@@ -1022,18 +1126,23 @@ export async function moveWorkFile(host: RepoHost, from: string, to: string): Pr
     `git mv ${sq(src)} ${sq(dst)} 2>/dev/null || mv ${sq(src)} ${sq(dst)}`,
   ].join("\n");
   const res = await host.exec(cmd);
-  if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "move failed");
+  if (res.exitCode !== 0)
+    throw new Error(res.stderr.trim() || res.stdout.trim() || "move failed");
 }
 
 /** Deletes a tracked or new file (`git rm`). Rejects paths outside the repository / `.git/`. */
-export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<void> {
+export async function deleteWorkFile(
+  host: RepoHost,
+  relPath: string,
+): Promise<void> {
   const abs = writablePath(host, relPath);
   const cmd = [
     `test -e ${sq(abs)} || { echo "file not found" >&2; exit 3; }`,
     `git rm -f ${sq(abs)} 2>/dev/null || rm -f ${sq(abs)}`,
   ].join("\n");
   const res = await host.exec(cmd);
-  if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "delete failed");
+  if (res.exitCode !== 0)
+    throw new Error(res.stderr.trim() || res.stdout.trim() || "delete failed");
 }
 
 /** Lists a repository directory — or the run output directory, to find stored
@@ -1045,7 +1154,10 @@ export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<v
  * claims that it exists and is empty, which is doubly false, and the model would
  * conclude there is nothing to look for there.
  */
-export async function listDir(host: RepoHost, relPath = "."): Promise<string | null> {
+export async function listDir(
+  host: RepoHost,
+  relPath = ".",
+): Promise<string | null> {
   const res = await host.exec(`ls -1Ap ${sq(readablePath(host, relPath))}`);
   return res.exitCode === 0 ? res.stdout : null;
 }
@@ -1115,7 +1227,10 @@ export interface GrepResult {
  * Only exception (MIN-109): a pattern refused as regex is re-run in literal
  * (`-F`), and the return SAYS (`retriedAsLiteral`).
  */
-export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepResult> {
+export async function grepRepo(
+  host: RepoHost,
+  opts: GrepOptions,
+): Promise<GrepResult> {
   // Does the `path` target a file readable OUTSIDE the repository (a tool output filed,
   // MIN-107) ? git grep sees nothing there — we move on to system grep.
   const outside = opts.path ? readableOutsideRepo(host, opts.path) : null;
@@ -1133,15 +1248,16 @@ export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepR
     ];
     return `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}`;
   };
-  const { res, retriedAsLiteral, retriedAsRegex } = await runGrepWithLiteralFallback(
-    host,
-    build,
-    opts,
-  );
+  const { res, retriedAsLiteral, retriedAsRegex } =
+    await runGrepWithLiteralFallback(host, build, opts);
 
   // git grep: 0 = matches, 1 = no matches, ≥2 = ERROR (invalid regex/option…).
   if (res.exitCode >= 2) {
-    return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
+    return {
+      output: "",
+      ok: false,
+      error: (res.stderr || res.stdout).trim().slice(0, 500),
+    };
   }
   if (res.exitCode === 1 && specs.length > 0) {
     // Nothing found UNDER A FILTER: did the filter only retain one file?
@@ -1150,7 +1266,13 @@ export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepR
       `git ls-files --cached --others --exclude-standard -- ${specs.join(" ")}`,
     );
     if (listed.exitCode === 0 && listed.stdout.trim() === "") {
-      return { output: "", ok: true, retriedAsLiteral, retriedAsRegex, noFilesInScope: true };
+      return {
+        output: "",
+        ok: true,
+        retriedAsLiteral,
+        retriedAsRegex,
+        noFilesInScope: true,
+      };
     }
   }
   return {
@@ -1171,7 +1293,11 @@ async function runGrepWithLiteralFallback(
   host: RepoHost,
   build: (literal: boolean) => string,
   opts: GrepOptions,
-): Promise<{ res: ShellResult; retriedAsLiteral: boolean; retriedAsRegex?: boolean }> {
+): Promise<{
+  res: ShellResult;
+  retriedAsLiteral: boolean;
+  retriedAsRegex?: boolean;
+}> {
   const literal = opts.fixedStrings === true;
   const res = await host.exec(build(literal));
   if (literal) {
@@ -1184,7 +1310,8 @@ async function runGrepWithLiteralFallback(
       const retry = await host.exec(build(false));
       // A refused regex is no better than the literal: we keep the
       // first result rather than trading “nothing found” for an error.
-      if (retry.exitCode < 2) return { res: retry, retriedAsLiteral: false, retriedAsRegex: true };
+      if (retry.exitCode < 2)
+        return { res: retry, retriedAsLiteral: false, retriedAsRegex: true };
     }
     return { res, retriedAsLiteral: false };
   }
@@ -1219,7 +1346,8 @@ function capGrepLines(output: string, headLimit?: number): string {
     Raised if a `..` tried to exit. */
 function readableOutsideRepo(host: RepoHost, path: string): string | null {
   const dirs = readableDirs(host.layout);
-  if (!dirs.some((dir) => path === dir || path.startsWith(`${dir}/`))) return null;
+  if (!dirs.some((dir) => path === dir || path.startsWith(`${dir}/`)))
+    return null;
   return readablePath(host, path);
 }
 
@@ -1251,13 +1379,14 @@ async function grepOutside(
     ];
     return `grep ${flags.join(" ")} -e ${sq(opts.pattern)} -- ${sq(absPath)}`;
   };
-  const { res, retriedAsLiteral, retriedAsRegex } = await runGrepWithLiteralFallback(
-    host,
-    build,
-    opts,
-  );
+  const { res, retriedAsLiteral, retriedAsRegex } =
+    await runGrepWithLiteralFallback(host, build, opts);
   if (res.exitCode >= 2) {
-    return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
+    return {
+      output: "",
+      ok: false,
+      error: (res.stderr || res.stdout).trim().slice(0, 500),
+    };
   }
   if (res.exitCode === 1 && includes.length > 0) {
     // Same question as on the deposit side, asked with the SAME filter: a reason which
@@ -1267,7 +1396,13 @@ async function grepOutside(
       `grep --color=never -I -r -l -E ${includes.join(" ")} -e ${sq(".")} -- ${sq(absPath)}`,
     );
     if (probe.stdout.trim() === "") {
-      return { output: "", ok: true, retriedAsLiteral, retriedAsRegex, noFilesInScope: true };
+      return {
+        output: "",
+        ok: true,
+        retriedAsLiteral,
+        retriedAsRegex,
+        noFilesInScope: true,
+      };
     }
   }
   return {
@@ -1339,7 +1474,12 @@ export function repoBackgroundRunner(host: RepoHost): BackgroundJobRunner {
         cwd: workdir ? resolveWithin(host.layout.repoDir, workdir) : undefined,
       }),
     read: ({ jobId, pid, offset }) =>
-      readBackgroundSince(host, { jobId, pid, offset, maxBytes: BACKGROUND_FETCH_BYTES }),
+      readBackgroundSince(host, {
+        jobId,
+        pid,
+        offset,
+        maxBytes: BACKGROUND_FETCH_BYTES,
+      }),
     stop: ({ pid }) => stopBackground(host, pid),
   };
 }

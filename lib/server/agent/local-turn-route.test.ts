@@ -115,29 +115,44 @@ vi.mock("@/lib/server/agent/execute", () => ({
   executeAgentRun: vi.fn(
     async (
       _run: unknown,
-      opts: { onLocalAssignment?: (job: unknown, meta: { repoFullName: string }) => void },
+      opts: {
+        onLocalAssignment?: (
+          job: unknown,
+          meta: { repoFullName: string },
+        ) => void;
+      },
     ) => {
       h.calls.push("prepare");
       if (!h.prepares) return "failed";
-      opts.onLocalAssignment?.({
-        protocolVersion: 2,
-        runId: "run-1",
-        model: "anthropic/claude-sonnet-5",
-        repoMode: "clone",
-        authUrl: "https://x-access-token:ghs_x@github.com/mangue-dev/minddy.git",
-      }, { repoFullName: "mangue-dev/minddy" });
+      opts.onLocalAssignment?.(
+        {
+          protocolVersion: 2,
+          runId: "run-1",
+          model: "anthropic/claude-sonnet-5",
+          repoMode: "clone",
+          authUrl:
+            "https://x-access-token:ghs_x@github.com/mangue-dev/minddy.git",
+        },
+        { repoFullName: "mangue-dev/minddy" },
+      );
       return "detached";
     },
   ),
 }));
 
 vi.mock("@/lib/server/agent/local-exec", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/server/agent/local-exec")>();
+  const actual =
+    await importOriginal<typeof import("@/lib/server/agent/local-exec")>();
   return {
     ...actual,
     issueLocalExecToken: vi.fn(async () => {
       h.calls.push("lease");
-      return { ok: true as const, token: "bail.hs256", gen: 3, expiresInSeconds: 900 };
+      return {
+        ok: true as const,
+        token: "bail.hs256",
+        gen: 3,
+        expiresInSeconds: 900,
+      };
     }),
   };
 });
@@ -147,14 +162,18 @@ async function POST(body: unknown) {
   return route.POST(
     new NextRequest("https://minddy.test/api/desktop/local-turn", {
       method: "POST",
-      headers: { origin: "https://minddy.test", "content-type": "application/json" },
+      headers: {
+        origin: "https://minddy.test",
+        "content-type": "application/json",
+      },
       body: JSON.stringify(body),
     }),
   );
 }
 
 const DEVICE_ID = "0123456789abcdef0123456789abcdef";
-const direct = (runId = "run-1") => POST({ runId, deviceId: DEVICE_ID, projectIds: [] });
+const direct = (runId = "run-1") =>
+  POST({ runId, deviceId: DEVICE_ID, projectIds: [] });
 
 function row(over: Record<string, unknown> = {}) {
   return {
@@ -216,7 +235,8 @@ describe("POST /api/desktop/local-turn", () => {
      * this test, only says that they are talking about the same thing — and the first time they
      * diverged, the refusal said “update the app”.
      */
-    const { parseLocalTurnAssignment } = await import("@/lib/desktop/local-turn");
+    const { parseLocalTurnAssignment } =
+      await import("@/lib/desktop/local-turn");
     const body = await (await direct()).json();
     const parsed = parseLocalTurnAssignment(body);
 
@@ -233,10 +253,7 @@ describe("POST /api/desktop/local-turn", () => {
     expect(h.calls).toEqual([]);
   });
 
-  it("refuse un run à CONTEXTE TIERS avant tout claim", async () => {
-    // An anchor `pr`, webhook, routine, or string run reads text
-    // potential attacker. In microVM, an injection costs a disposable VM; in
-    // local, it's a shell on the developer's machine.
+  it("claims every local run source through the same harness", async () => {
     for (const over of [
       { pull_request_id: "pr-1" },
       { routine_id: "rt-1" },
@@ -246,9 +263,18 @@ describe("POST /api/desktop/local-turn", () => {
     ]) {
       h.calls.length = 0;
       h.run = row(over);
-      expect((await direct()).status).toBe(409);
-      expect(h.calls, JSON.stringify(over)).toEqual([]);
+      expect((await direct()).status).toBe(200);
+      expect(h.calls.length, JSON.stringify(over)).toBeGreaterThan(0);
     }
+  });
+
+  it("isolates a queued PR review even when its persisted flag predates the invariant", async () => {
+    h.run = row({ pull_request_id: "pr-1", local_worktree: false });
+
+    const response = await direct();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ localWorktree: true });
   });
 
   it("joue un run BYOK sans plafond ni mint de la plateforme", async () => {
@@ -327,11 +353,20 @@ describe("POST /api/desktop/local-turn", () => {
 
   it("borne et valide ce qu'une machine annonce", async () => {
     for (const body of [
-      { deviceId: "court", projectIds: ["11111111-2222-4333-8444-555555555555"] },
-      { deviceId: "0123456789abcdef0123456789abcdef", projectIds: ["pas-un-uuid"] },
+      {
+        deviceId: "court",
+        projectIds: ["11111111-2222-4333-8444-555555555555"],
+      },
       {
         deviceId: "0123456789abcdef0123456789abcdef",
-        projectIds: Array.from({ length: 51 }, () => "11111111-2222-4333-8444-555555555555"),
+        projectIds: ["pas-un-uuid"],
+      },
+      {
+        deviceId: "0123456789abcdef0123456789abcdef",
+        projectIds: Array.from(
+          { length: 51 },
+          () => "11111111-2222-4333-8444-555555555555",
+        ),
       },
     ]) {
       expect((await POST(body)).status).toBe(400);
@@ -383,7 +418,7 @@ describe("la préparation locale d'`execute.ts`", () => {
 
   it("does not wake a microVM for a local turn", () => {
     expect(source).toContain(
-      "localTurn ? { sandbox: null, created: false } : await getOrCreateAgentSandbox(",
+      "const sandboxResult = localTurn\n      ? { sandbox: null, created: false }\n      : await getOrCreateAgentSandbox({",
     );
   });
 
@@ -391,9 +426,9 @@ describe("la préparation locale d'`execute.ts`", () => {
     const local = source.slice(source.indexOf("if (localTurn) {"));
     expect(local).toContain("opts.onLocalAssignment?.(assignment, {");
     // The microVM loop comes AFTER, and is therefore never reached.
-    expect(local.indexOf("opts.onLocalAssignment?.(assignment, {")).toBeLessThan(
-      local.indexOf("startVmLoop("),
-    );
+    expect(
+      local.indexOf("opts.onLocalAssignment?.(assignment, {"),
+    ).toBeLessThan(local.indexOf("startVmLoop("));
   });
 
   /**
@@ -411,18 +446,30 @@ describe("la préparation locale d'`execute.ts`", () => {
    * garde ici.
    */
   it("RETIRE le layout du cloud avant de rendre l'affectation", () => {
-    expect(source).toContain("const { layout: _cloudLayout, ...assignment } = job;");
+    expect(source).toContain(
+      "const { layout: _cloudLayout, ...assignment } = job;",
+    );
   });
 
   it("laisse le harness résoudre la baseline du diff qu'il est seul à connaître", () => {
-    expect(source).toContain('const baselineHead = host ? await revParseHead(host) : "";');
+    expect(source).toContain(
+      'const baselineHead = host ? await revParseHead(host) : "";',
+    );
+  });
+
+  it("treats a local PR review as isolated while composing its anchor", () => {
+    expect(source).toContain(
+      "(localTurn && !run.local_worktree && !prRun)",
+    );
   });
 
   it("n'écrit AUCUN nom de microVM sur la ligne d'un run local", () => {
     // `handleControlPlaneRequest` compares `sandbox_id` to the signed name of
     // the caller, and the watchdog questions the platform about this name:
     // an invented value would make both lie false.
-    expect(source).toContain("...(sandbox ? { sandbox_id: sandboxName(sandbox)");
+    expect(source).toContain(
+      "...(sandbox\n        ? { sandbox_id: sandboxName(sandbox), sandbox_stopped_at: null }\n        : {})",
+    );
   });
 
   it("prépare en parallèle les lectures qui précèdent le job local", () => {
@@ -430,20 +477,28 @@ describe("la préparation locale d'`execute.ts`", () => {
     // launched before waiting for the target, otherwise each round trip lengthens the
     // time between the sending of the first token.
     const prepareAt = source.indexOf("const targetPromise = run.repo_link_id");
-    const endpointAt = source.indexOf("const endpointPromise = resolveAgentApiKey(");
+    const endpointAt = source.indexOf(
+      "const endpointPromise = resolveAgentApiKey(",
+    );
     const targetAwaitAt = source.indexOf("const target = await targetPromise;");
     expect(prepareAt).toBeGreaterThan(-1);
     expect(endpointAt).toBeGreaterThan(prepareAt);
     expect(targetAwaitAt).toBeGreaterThan(endpointAt);
-    expect(source).toContain("const [issue, prRun, prefs, quotaAndLedger, endpoint] = await Promise.all([");
+    expect(source).toContain(
+      "const [issue, prRun, prefs, quotaAndLedger, endpoint] = await Promise.all([",
+    );
   });
 
   it("mints a least-privilege repository token for a local turn", () => {
     // The full target remains server-side for forge API operations. The local
     // execution transport receives only the read/write profile required by the
     // run, just like the cloud firewall.
-    expect(source).toContain("const vmTarget = target\n      ? await resolveRepoCloneTarget(");
-    expect(source).toContain('policy.repository === "read" ? "repo-read" : "repo-write"');
+    expect(source).toContain(
+      "const vmTarget = target\n      ? await resolveRepoCloneTarget(",
+    );
+    expect(source).toContain(
+      'policy.repository === "read" ? "repo-read" : "repo-write"',
+    );
   });
 
   it("ne minte pas de clé fournisseur avant de rendre un job local", () => {
@@ -458,17 +513,24 @@ describe("la préparation locale d'`execute.ts`", () => {
 
   it("recouvre l'event de démarrage et ne publie pas de sandbox cloud en local", () => {
     expect(source).toContain("if (!localTurn) await runningEvent");
-    expect(source).toContain('if (sandbox) await emit("status", { phase: "sandbox_ready" })');
+    expect(source).toContain(
+      'if (sandbox) await emit("status", { phase: "sandbox_ready" })',
+    );
     const localStart = source.indexOf("if (localTurn) {");
-    const local = source.slice(localStart, source.indexOf("if (!sandbox) throw", localStart));
+    const local = source.slice(
+      localStart,
+      source.indexOf("if (!sandbox) throw", localStart),
+    );
     expect(local).not.toContain("last_activity_at: new Date().toISOString()");
   });
 
   it("ne recharge pas les ressources du ticket pour une reprise opencode", () => {
     // Local tour memory lives in SQLite: boot prompt is not
     // rebuilt, so its resources should not delay steering.
-    expect(source).toContain("includePromptContext: !run.checkpoint?.opencode?.sessionId");
-    expect(source).toContain("includePromptContext\n      ? service");
+    expect(source).toContain(
+      "includePromptContext: !run.checkpoint?.opencode?.sessionId",
+    );
+    expect(source).toContain("includePromptContext\n        ? service");
     expect(source).toContain("Promise.resolve({ data: [] })");
   });
 });

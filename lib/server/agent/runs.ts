@@ -489,14 +489,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     loop_in_vm: loopInVm,
     agent_engine: engine,
     /**
-     * THE EXECUTION ENVIRONMENT (MIN-355), placed here and never elsewhere — even
-     * doctrine than the two lines above. The lease generation leaves
-     * to zero: it only becomes something when the first token is issued.
-     *
-     * The third-party-content invariant is applied at the only writer of the
-     * column. Automated sources remain excluded; an issue or pull-request
-     * review can run locally only after the signed-in user acknowledges its
-     * untrusted context (MIN-439).
+     * THE EXECUTION ENVIRONMENT (MIN-355, MIN-492), written once at launch.
+     * The authenticated user chooses the destination; trigger and anchor data
+     * remain context and do not silently move the run back to the cloud.
      */
     local_exec:
       input.localExec === true &&
@@ -511,8 +506,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     local_issue_context_confirmed:
       (input.issueId != null || input.pullRequestId != null) &&
       input.localIssueContextConfirmed === true,
-    // This option only makes sense for a truly local run. The same
-    // keeps `local_exec` closes automated/third-party entries.
+    // This option only makes sense for a truly local run.
     local_worktree:
       input.localWorktree === true &&
       input.localExec === true &&

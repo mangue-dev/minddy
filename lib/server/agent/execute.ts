@@ -7,18 +7,39 @@ import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
-import { getOrCreateAgentSandbox, sandboxHost, sandboxName, type Sandbox } from "./sandbox";
+import {
+  getOrCreateAgentSandbox,
+  sandboxHost,
+  sandboxName,
+  type Sandbox,
+} from "./sandbox";
 import { SelfHostedSandbox } from "./self-hosted-sandbox";
 import { cloudLayout } from "./harness-layout";
-import { cloneRepo, clonePullRequest, revParseHead, repoBackgroundRunner } from "./repo-host";
+import {
+  anchorPullRequestBase,
+  cloneRepo,
+  clonePullRequest,
+  revParseHead,
+  repoBackgroundRunner,
+} from "./repo-host";
 import { BackgroundJobs } from "./background";
 import { scopeSubagentModels } from "./subagent-config";
-import { getSubagentFavorites, maxParallelSubagents } from "./subagent-app-config";
+import {
+  getSubagentFavorites,
+  maxParallelSubagents,
+} from "./subagent-app-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { SecretRedactor } from "./redact";
-import { readRepoInstructions, REPO_INSTRUCTION_FILES, type InstructionsState } from "./repo-instructions";
+import {
+  readRepoInstructions,
+  REPO_INSTRUCTION_FILES,
+  type InstructionsState,
+} from "./repo-instructions";
 import type { AgentChatMessage, EmitAgentEvent } from "./agent-contract";
-import { isWebSearchEnabled, MAX_WEB_SEARCHES_PER_TURN } from "@/lib/server/web-search";
+import {
+  isWebSearchEnabled,
+  MAX_WEB_SEARCHES_PER_TURN,
+} from "@/lib/server/web-search";
 import {
   buildAgentContextMessage,
   buildNotebookContextMessage,
@@ -33,7 +54,11 @@ import {
 import { buildOpencodeAnchor } from "./opencode-anchor";
 import { executionPolicyFor } from "./policy";
 import { promptWithMentions } from "@/lib/agent-mentions";
-import { loadPrReviewBoot, loadPrRunContext, pullRequestHeadRef, pullRequestLocalBranch } from "./pr-run";
+import {
+  loadPrReviewBoot,
+  loadPrRunContext,
+  pullRequestHeadRef,
+} from "./pr-run";
 import {
   resolveAgentApiKey,
   getModelContextWindow,
@@ -41,7 +66,11 @@ import {
   getModelPricing,
   supportsImageInput,
 } from "./model";
-import { agentSandboxName, buildAgentNetworkPolicy, AGENT_LLM_PLACEHOLDER_KEY } from "./network-policy";
+import {
+  agentSandboxName,
+  buildAgentNetworkPolicy,
+  AGENT_LLM_PLACEHOLDER_KEY,
+} from "./network-policy";
 import { startVmLoop } from "./vm-launch";
 import {
   isCurrentRepoJob,
@@ -55,11 +84,7 @@ import { priorConversationLostNote } from "@/lib/server/runtime-locale-copy";
 import { forgeFor, type Forge } from "./forge";
 import { prStateFromRef } from "./pull-requests";
 import type { RepoProviderId } from "@/lib/repo-providers";
-import {
-  resolveRunPrefs,
-  prTerm,
-  SANDBOX_USAGE_SEQ_BASE,
-} from "./pr-landing";
+import { resolveRunPrefs, prTerm, SANDBOX_USAGE_SEQ_BASE } from "./pr-landing";
 import {
   stampRun,
   appendEvent,
@@ -75,7 +100,10 @@ import {
 } from "./runs";
 import { checkAgentQuota } from "./quota";
 import { generatedAgentBranchName } from "./branch-name";
-import { resolveServerExecSecret, signServerExecToken } from "./server-exec-token";
+import {
+  resolveServerExecSecret,
+  signServerExecToken,
+} from "./server-exec-token";
 import { resolveAgentExecutionTarget } from "@/lib/agent-execution-target";
 import { planBootstrapRetry } from "./retry";
 
@@ -99,7 +127,9 @@ function runWasLaunchedWithoutRepository(run: AgentRun): boolean {
 
 /** The tightest of the provided ceilings (omitted values impose no limit). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
-  const defined = values.filter((v): v is number => v != null && Number.isFinite(v));
+  const defined = values.filter(
+    (v): v is number => v != null && Number.isFinite(v),
+  );
   return defined.length > 0 ? Math.min(...defined) : undefined;
 }
 
@@ -154,11 +184,7 @@ const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
  * this value, and it tells the drain to "go to the next one".
  */
 export type ExecuteOutcome =
-  | "completed"
-  | "suspended"
-  | "interrupted"
-  | "failed"
-  | "detached";
+  "completed" | "suspended" | "interrupted" | "failed" | "detached";
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -209,22 +235,15 @@ function userPromptFromMessages(messages: AgentChatMessage[]): string {
         : // A primer only has text (the images arrive via the tools); this
           // fallback ensures that “[object Object]” is never rendered in a template.
           (m.content ?? [])
-            .map((part) => ("text" in part && typeof part.text === "string" ? part.text : ""))
+            .map((part) =>
+              "text" in part && typeof part.text === "string" ? part.text : "",
+            )
             .join(""),
     )
     .map((text) => text.trim())
     .filter(Boolean)
     .join("\n\n");
 }
-
-
-
-
-
-
-
-
-
 
 interface IssueContext {
   identifier: string;
@@ -245,45 +264,57 @@ async function loadIssueContext(
 ): Promise<IssueContext> {
   const service = getServiceClient();
   const includePromptContext = opts.includePromptContext !== false;
-  const [{ data: issue }, { data: project }, { data: attachmentRows }] = await Promise.all([
-    service
-      .from("issues")
-      // A resumed opencode session already has its start in its local database.
-      // Rereading neither the long markdown nor the plan can influence your next one
-      // prompt; it was transport and decoding before each first token.
-      .select(includePromptContext ? "number, title, description, plan" : "number, title")
-      .is("deleted_at", null)
-      .eq("id", issueId)
-      .maybeSingle(),
-    service.from("projects").select("key, name").eq("id", run.project_id).maybeSingle(),
-    includePromptContext
-      ? service
-          .from("attachments")
-          .select(
-            "id, kind, page_id, file_name, mime_type, size_bytes, page:pages(title)",
-          )
-          .eq("issue_id", issueId)
-          .order("created_at", { ascending: true })
-      : Promise.resolve({ data: [] }),
-  ]);
+  const [{ data: issue }, { data: project }, { data: attachmentRows }] =
+    await Promise.all([
+      service
+        .from("issues")
+        // A resumed opencode session already has its start in its local database.
+        // Rereading neither the long markdown nor the plan can influence your next one
+        // prompt; it was transport and decoding before each first token.
+        .select(
+          includePromptContext
+            ? "number, title, description, plan"
+            : "number, title",
+        )
+        .is("deleted_at", null)
+        .eq("id", issueId)
+        .maybeSingle(),
+      service
+        .from("projects")
+        .select("key, name")
+        .eq("id", run.project_id)
+        .maybeSingle(),
+      includePromptContext
+        ? service
+            .from("attachments")
+            .select(
+              "id, kind, page_id, file_name, mime_type, size_bytes, page:pages(title)",
+            )
+            .eq("issue_id", issueId)
+            .order("created_at", { ascending: true })
+        : Promise.resolve({ data: [] }),
+    ]);
   const key = (project as { key?: string } | null)?.key ?? "ISSUE";
   const number = (issue as { number?: number } | null)?.number ?? 0;
   return {
     identifier: `${key}-${number}`,
     title: (issue as { title?: string } | null)?.title ?? "Untitled",
-    description: (issue as { description?: string | null } | null)?.description ?? null,
+    description:
+      (issue as { description?: string | null } | null)?.description ?? null,
     plan: (issue as { plan?: string | null } | null)?.plan ?? null,
     projectName: (project as { name?: string } | null)?.name ?? null,
     projectKey: key,
-    resources: ((attachmentRows ?? []) as Array<{
-      id: string;
-      kind: string | null;
-      page_id: string | null;
-      file_name: string | null;
-      mime_type: string | null;
-      size_bytes: number | null;
-      page: unknown;
-    }>).map((a) =>
+    resources: (
+      (attachmentRows ?? []) as Array<{
+        id: string;
+        kind: string | null;
+        page_id: string | null;
+        file_name: string | null;
+        mime_type: string | null;
+        size_bytes: number | null;
+        page: unknown;
+      }>
+    ).map((a) =>
       a.kind === "link"
         ? {
             id: a.id,
@@ -291,21 +322,21 @@ async function loadIssueContext(
             name: a.file_name ?? "link",
           }
         : a.kind === "page"
-        ? {
-            id: a.id,
-            kind: "page" as const,
-            // The title is LIVE: the value above is a snapshot, whereas this one
-            // is read at run time rather than when the attachment was added.
-            name: joinedPage(a.page)?.title?.trim() || a.file_name || "page",
-            pageId: a.page_id,
-          }
-        : {
-            id: a.id,
-            kind: "file" as const,
-            name: a.file_name ?? "attachment",
-            mimeType: a.mime_type ?? "application/octet-stream",
-            sizeBytes: a.size_bytes ?? 0,
-          }
+          ? {
+              id: a.id,
+              kind: "page" as const,
+              // The title is LIVE: the value above is a snapshot, whereas this one
+              // is read at run time rather than when the attachment was added.
+              name: joinedPage(a.page)?.title?.trim() || a.file_name || "page",
+              pageId: a.page_id,
+            }
+          : {
+              id: a.id,
+              kind: "file" as const,
+              name: a.file_name ?? "attachment",
+              mimeType: a.mime_type ?? "application/octet-stream",
+              sizeBytes: a.size_bytes ?? 0,
+            },
     ),
   };
 }
@@ -369,57 +400,63 @@ async function buildInheritedPrContext(
       run.created_at,
     ).catch(() => false);
     if (!inherited) return null;
-    const previousSummary = await previousRunSummaryForIssue(issueId, run.id).catch(
-      () => null,
-    );
+    const previousSummary = await previousRunSummaryForIssue(
+      issueId,
+      run.id,
+    ).catch(() => null);
     return buildInheritedBranchMessage({ repo: opts.repo, previousSummary });
   }
   const number = run.pr_number;
 
-  const [pr, comments, reviewComments, reviewThreads, previousSummary] = await Promise.all([
-    opts.forge
-      .getPullRequest({ token: opts.token, repoFullName: opts.repoFullName, number })
-      .catch(() => null),
-    opts.forge
-      .listPullRequestComments({
-        token: opts.token,
-        repoFullName: opts.repoFullName,
-        number,
-      })
-      .catch(() => []),
-    // Comments anchored to the code: the agent must see what it is asked to do
-    // LINE BY LINE, not just the conversation thread.
-    opts.forge
-      .listPullRequestReviewComments({
-        token: opts.token,
-        repoFullName: opts.repoFullName,
-        number,
-      })
-      .catch(() => []),
-    // RESOLVED threads (MIN-139): without them the agent would reread an already
-    // resolved point as an active request. Best-effort — missing state is “unknown”,
-    // so the threads remain unmarked, as before.
-    opts.forge
-      .listReviewThreads({
-        token: opts.token,
-        repoFullName: opts.repoFullName,
-        number,
-      })
-      .catch(() => []),
-    // The lineage thread: by issue when there is one, by pull request otherwise
-    // (a resumed notebook PR — MIN-292).
-    (issueId
-      ? previousRunSummaryForIssue(issueId, run.id)
-      : previousRunSummaryForPr(
-          {
-            repoFullName: opts.repoFullName,
-            prNumber: number,
-            provider: opts.provider,
-          },
-          run.id,
-        )
-    ).catch(() => null),
-  ]);
+  const [pr, comments, reviewComments, reviewThreads, previousSummary] =
+    await Promise.all([
+      opts.forge
+        .getPullRequest({
+          token: opts.token,
+          repoFullName: opts.repoFullName,
+          number,
+        })
+        .catch(() => null),
+      opts.forge
+        .listPullRequestComments({
+          token: opts.token,
+          repoFullName: opts.repoFullName,
+          number,
+        })
+        .catch(() => []),
+      // Comments anchored to the code: the agent must see what it is asked to do
+      // LINE BY LINE, not just the conversation thread.
+      opts.forge
+        .listPullRequestReviewComments({
+          token: opts.token,
+          repoFullName: opts.repoFullName,
+          number,
+        })
+        .catch(() => []),
+      // RESOLVED threads (MIN-139): without them the agent would reread an already
+      // resolved point as an active request. Best-effort — missing state is “unknown”,
+      // so the threads remain unmarked, as before.
+      opts.forge
+        .listReviewThreads({
+          token: opts.token,
+          repoFullName: opts.repoFullName,
+          number,
+        })
+        .catch(() => []),
+      // The lineage thread: by issue when there is one, by pull request otherwise
+      // (a resumed notebook PR — MIN-292).
+      (issueId
+        ? previousRunSummaryForIssue(issueId, run.id)
+        : previousRunSummaryForPr(
+            {
+              repoFullName: opts.repoFullName,
+              prNumber: number,
+              provider: opts.provider,
+            },
+            run.id,
+          )
+      ).catch(() => null),
+    ]);
 
   return buildInheritedPrMessage({
     repo: opts.repo,
@@ -431,7 +468,10 @@ async function buildInheritedPrContext(
       // Calling a draft `open` would hide from the agent that this work was never
       // proposed. PR unreadable → we fall back to the state frozen at launch.
       state: pr ? prStateFromRef(pr) : run.pr_state,
-      comments: comments.map((c) => ({ author: c.user?.login ?? null, body: c.body })),
+      comments: comments.map((c) => ({
+        author: c.user?.login ?? null,
+        body: c.body,
+      })),
       lineThreads: toActionablePrLineThreads(reviewComments, reviewThreads),
       previousSummary,
     },
@@ -443,10 +483,18 @@ async function buildInheritedPrContext(
  * (cleaned of markdown, bounded), otherwise a generic. PRs are squash-merged
  * by default — the message doesn't need to be perfect, just readable.
  */
-export function commitMessageFromReply(reply: string, identifier: string): string {
-  const firstLine = reply.split("\n").find((l) => l.trim())?.trim() ?? "";
+export function commitMessageFromReply(
+  reply: string,
+  identifier: string,
+): string {
+  const firstLine =
+    reply
+      .split("\n")
+      .find((l) => l.trim())
+      ?.trim() ?? "";
   const cleaned = firstLine.replace(/[#*_`>]+/g, "").trim();
-  if (cleaned.length >= 8) return cleaned.length <= 72 ? cleaned : `${cleaned.slice(0, 69)}…`;
+  if (cleaned.length >= 8)
+    return cleaned.length <= 72 ? cleaned : `${cleaned.slice(0, 69)}…`;
   return `wip(${identifier}): agent update`;
 }
 
@@ -526,7 +574,9 @@ export async function executeAgentRun(
    * than the other would make the separation partly wrong.
    */
   const usageFeature = run.routine_id ? "routine_code" : "agent_code";
-  const sandboxUsageFeature = run.routine_id ? "routine_compute" : "sandbox_compute";
+  const sandboxUsageFeature = run.routine_id
+    ? "routine_compute"
+    : "sandbox_compute";
   let sandbox: Sandbox | null = null;
   /**
    * A platform run key minted before Sandbox creation is not persisted until the
@@ -597,7 +647,10 @@ export async function executeAgentRun(
   };
 
   try {
-    const runningEvent = emit("status", { status: "running", continuation: run.continuations });
+    const runningEvent = emit("status", {
+      status: "running",
+      continuation: run.continuations,
+    });
     // Cloud must show the sandbox opening before waking it. Locally, the UI already
     // knows the status from the claim: let this write happen during context reads,
     // then await it before returning.
@@ -669,10 +722,17 @@ export async function executeAgentRun(
     // `null` target = no linked repository: only a local turn can be here, and
     // everything forge-shaped below degrades to a no-repo session.
     const target = await targetPromise;
-    if (target ? !repoTargetMatchesRun(run, target) : !runWasLaunchedWithoutRepository(run)) {
-      throw new Error("Run repository binding changed during execution preparation");
+    if (
+      target
+        ? !repoTargetMatchesRun(run, target)
+        : !runWasLaunchedWithoutRepository(run)
+    ) {
+      throw new Error(
+        "Run repository binding changed during execution preparation",
+      );
     }
-    if (!target && !localTurn) throw new Error("No repository linked to this project");
+    if (!target && !localTurn)
+      throw new Error("No repository linked to this project");
     if (target) {
       secrets.addAuthUrl(target.authUrl);
       secrets.add(target.token);
@@ -681,17 +741,14 @@ export async function executeAgentRun(
     // This identity may need the forge on the process's first turn. It depends on
     // no other context, so starting it here overlaps quota, preferences, issue,
     // and prompt construction. Without a repository there is nothing to resolve:
-    // the default identity travels, and no one will ever commit for the model
-    // anyway (current-checkout mode commits nothing).
-    const committerPromise = run.pull_request_id
-      ? Promise.resolve(defaultCommitterIdentity())
-      : target
-        ? resolveCommitterIdentity(target)
-        : Promise.resolve(defaultCommitterIdentity());
+    // the default identity travels, and current-checkout mode commits nothing.
+    const committerPromise = target
+      ? resolveCommitterIdentity(target)
+      : Promise.resolve(defaultCommitterIdentity());
 
     // Run anchor, with THREE values: minddy issue, NOTEBOOK (MIN-84, the launcher's
-    // note is the instruction), or PULL REQUEST (MIN-168 — a read-only review
-    // session on the repository).
+    // note is the instruction), or PULL REQUEST (MIN-168 — review context on
+    // the repository, with the canonical capability manifest).
     const [issue, prRun, prefs, quotaAndLedger, endpoint] = await Promise.all([
       issuePromise,
       prRunPromise,
@@ -702,7 +759,9 @@ export async function executeAgentRun(
     // A run anchored to a PR whose row disappeared must NOT fall back to a notebook
     // run: it would believe it is allowed to create and push to a branch.
     if (run.pull_request_id && !prRun) {
-      throw new Error("The pull request this review was anchored to no longer exists");
+      throw new Error(
+        "The pull request this review was anchored to no longer exists",
+      );
     }
     const anchor: AgentAnchor = issue ? "issue" : prRun ? "pr" : "notebook";
     const policy = executionPolicyFor({
@@ -724,7 +783,9 @@ export async function executeAgentRun(
         )
       : null;
     if (target && (!vmTarget || !repoTargetMatchesRun(run, vmTarget))) {
-      throw new Error("Run repository binding changed before credential issuance");
+      throw new Error(
+        "Run repository binding changed before credential issuance",
+      );
     }
     if (vmTarget) {
       secrets.addAuthUrl(vmTarget.authUrl);
@@ -750,17 +811,37 @@ export async function executeAgentRun(
     // selected at launch and the run's working branch. Without a linked
     // repository there is no default branch to fall back to: `""` means "no
     // base" for the only consumer that reads it on a local turn.
-    const baseBranch = (prRun?.baseBranch || run.base_branch) ?? target?.defaultBranch ?? "";
-    const workBranch = prRun
-      ? pullRequestLocalBranch(prRun)
-      : run.branch_name ??
-        generatedAgentBranchName({
-          runId: run.id,
-          issueIdentifier: issue?.identifier,
-          conversationTitle: run.title,
-          prompt: run.prompt,
-          branchPrefix,
-        });
+    const baseBranch =
+      (prRun?.baseBranch || run.base_branch) ?? target?.defaultBranch ?? "";
+    const workBranch =
+      run.branch_name ??
+      generatedAgentBranchName({
+        runId: run.id,
+        issueIdentifier: issue?.identifier,
+        conversationTitle: run.title,
+        prompt: run.prompt,
+        branchPrefix,
+      });
+    // Use the forge's merge base for both cloud and local review checkouts. The
+    // live base branch may have moved since the pull request was opened and is
+    // therefore not a trustworthy review boundary.
+    const prBaseShaPromise = prRun
+      ? forge!
+          .getMergeBaseSha({
+            token: target!.token,
+            repoFullName: target!.repoFullName,
+            number: prRun.number,
+            base: baseBranch,
+            head: prRun.headSha ?? prRun.headBranch ?? "",
+          })
+          .catch((err: unknown) => {
+            console.error(
+              `[agent] merge base unreadable for PR #${prRun.number}:`,
+              err,
+            );
+            return null;
+          })
+      : Promise.resolve(null);
 
     /**
      * REMAINING usage budget at chunk entry. Snapshotted once here: the loop compares
@@ -788,7 +869,8 @@ export async function executeAgentRun(
     const serverControlToken = selfHostedSandbox
       ? (() => {
           const secret = resolveServerExecSecret();
-          if (!secret) throw new Error("server execution secret is not configured");
+          if (!secret)
+            throw new Error("server execution secret is not configured");
           return signServerExecToken(run.id, secret);
         })()
       : null;
@@ -824,7 +906,9 @@ export async function executeAgentRun(
             runBudgetUsd: run.budget_usd,
             runSpentUsd: Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
             accountRemainingUsd:
-              quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
+              quotaNow && !quotaNow.unlimited
+                ? Math.max(0, quotaNow.remaining ?? 0)
+                : undefined,
             reservedBudgetUsd:
               run.managed_budget_usd == null
                 ? null
@@ -866,9 +950,8 @@ export async function executeAgentRun(
      *    The model still reads them; only the minddy wrapper is missing, and the
      *    byte count remains zero.
      *
-     * Background jobs follow the same rule: `run_background` is not provided on a
-     * machine (see `agentToolsFor`), and this function's registry has only ever
-     * been used for a safety-net `stopAll` on the detached path.
+     * Background jobs are created by the local supervisor. This function does not
+     * start a second registry for a local assignment.
      *
      * ⚠ **The function STARTS nothing in this case**: it prepares and returns the
      * assignment through `onLocalAssignment`. Presence, claiming, and routing
@@ -889,76 +972,74 @@ export async function executeAgentRun(
       }
       return vmTarget.remoteUrl;
     };
-    const sandboxResult = localTurn ? { sandbox: null, created: false } : await getOrCreateAgentSandbox({
-      name: agentSandboxName(run.id),
-      // Both LLM and forge credentials stay in the trusted network layer. The VM
-      // receives placeholder/request data and a credential-free Git remote only.
-      networkPolicy: buildAgentNetworkPolicy({
-        baseUrl,
-        llmKey: vmKey,
-        appOrigin: agentControlOrigin(),
-        ...(vmTarget
-          ? {
-              forge: {
-                provider: vmTarget.provider,
-                repoFullName: vmTarget.repoFullName,
-                token: vmTarget.token,
-                origin: new URL(vmTarget.remoteUrl).origin,
-              },
+    const sandboxResult = localTurn
+      ? { sandbox: null, created: false }
+      : await getOrCreateAgentSandbox({
+          name: agentSandboxName(run.id),
+          // Both LLM and forge credentials stay in the trusted network layer. The VM
+          // receives placeholder/request data and a credential-free Git remote only.
+          networkPolicy: buildAgentNetworkPolicy({
+            baseUrl,
+            llmKey: vmKey,
+            appOrigin: agentControlOrigin(),
+            ...(vmTarget
+              ? {
+                  forge: {
+                    provider: vmTarget.provider,
+                    repoFullName: vmTarget.repoFullName,
+                    token: vmTarget.token,
+                    origin: new URL(vmTarget.remoteUrl).origin,
+                  },
+                }
+              : {}),
+          }),
+          onCreate: async (fresh) => {
+            sandboxRepoUrl = await configureSandboxRepo(fresh);
+            if (prRun && !run.branch_name) {
+              // A PR run always has its repository — the launch resolves the project
+              // THROUGH the link — so `target`/`forge` are non-null here by
+              // construction; the assertions only surface that invariant.
+              // By the PR's SERVER REF, not the branch name: on a fork, the head branch
+              // does not exist in the base repository (see `clonePullRequest`). The
+              // checkout is named after the writable run branch, so later commits
+              // never target the provider's read-only virtual ref.
+              //
+              // The diff base is requested from the FORGE (MIN-258), not inferred from
+              // the clone: `origin/<base>` is a moving tip, and diffing against it would
+              // make every commit merged into the base since the PR opened look like a
+              // deletion from the PR. Best-effort on both sides — an unreadable merge
+              // base degrades the review but does not cancel it. The head is given by
+              // its SHA: on a fork, its branch name does not exist here.
+              const baseSha = await prBaseShaPromise;
+              await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
+                authUrl: sandboxRepoUrl,
+                baseBranch,
+                headRef: pullRequestHeadRef(prRun.provider, prRun.number),
+                headBranch: prRun.headBranch,
+                localBranch: workBranch,
+                baseSha,
+              });
+              return;
             }
-          : {}),
-      }),
-      onCreate: async (fresh) => {
-        sandboxRepoUrl = await configureSandboxRepo(fresh);
-        if (prRun) {
-          // A PR run always has its repository — the launch resolves the project
-          // THROUGH the link — so `target`/`forge` are non-null here by
-          // construction; the assertions only surface that invariant.
-          // By the PR's SERVER REF, not the branch name: on a fork, the head branch
-          // does not exist in the base repository (see `clonePullRequest`). No
-          // committer identity needs resolving — nothing will be committed.
-          //
-          // The diff base is requested from the FORGE (MIN-258), not inferred from
-          // the clone: `origin/<base>` is a moving tip, and diffing against it would
-          // make every commit merged into the base since the PR opened look like a
-          // deletion from the PR. Best-effort on both sides — an unreadable merge
-          // base degrades the review but does not cancel it. The head is given by
-          // its SHA: on a fork, its branch name does not exist here.
-          const baseSha = await forge!
-            .getMergeBaseSha({
-              token: target!.token,
-              repoFullName: target!.repoFullName,
-              number: prRun.number,
-              base: baseBranch,
-              head: prRun.headSha ?? prRun.headBranch ?? "",
-            })
-            .catch((err: unknown) => {
-              console.error(`[agent] merge base unreadable for PR #${prRun.number}:`, err);
-              return null;
+            // The committer identity is no longer written into the clone (MIN-358): it
+            // travels in the job and is supplied with `git -c`, on the only command
+            // that commits. A value used in one place cannot leak into someone's repo.
+            await cloneRepo(sandboxHost(fresh, cloudLayout()), {
+              authUrl: sandboxRepoUrl,
+              baseBranch,
+              workBranch,
             });
-          await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
-            authUrl: sandboxRepoUrl,
-            baseBranch,
-            headRef: pullRequestHeadRef(prRun.provider, prRun.number),
-            headBranch: prRun.headBranch,
-            localBranch: workBranch,
-            baseSha,
-          });
-          return;
-        }
-        // The committer identity is no longer written into the clone (MIN-358): it
-        // travels in the job and is supplied with `git -c`, on the only command
-        // that commits. A value used in one place cannot leak into someone's repo.
-        await cloneRepo(sandboxHost(fresh, cloudLayout()), {
-          authUrl: sandboxRepoUrl,
-          baseBranch,
-          workBranch,
+          },
         });
-      },
-    });
     const { sandbox: sb, created: sandboxCreated } = sandboxResult;
     if (!localTurn && !sandboxCreated && sb) {
       sandboxRepoUrl = await configureSandboxRepo(sb);
+    }
+    if (!localTurn && sb && prRun && sandboxRepoUrl) {
+      await anchorPullRequestBase(sandboxHost(sb, cloudLayout()), {
+        authUrl: sandboxRepoUrl,
+        baseSha: await prBaseShaPromise,
+      });
     }
     const llmRelayUrl =
       selfHostedSandbox && sb instanceof SelfHostedSandbox
@@ -996,7 +1077,9 @@ export async function executeAgentRun(
       // useless: `handleControlPlaneRequest` compares `sandbox_id` with the
       // caller's signed name, and the watchdog queries the platform by that name.
       // An invented value would make both of them lie.
-      ...(sandbox ? { sandbox_id: sandboxName(sandbox), sandbox_stopped_at: null } : {}),
+      ...(sandbox
+        ? { sandbox_id: sandboxName(sandbox), sandbox_stopped_at: null }
+        : {}),
       base_branch: baseBranch,
       // MIN-223: what is needed to revoke the run key when the VM is suspended.
       // Written EVEN when minting failed (null) — otherwise we would retain the
@@ -1013,7 +1096,6 @@ export async function executeAgentRun(
     if (run.provider_key_id && run.provider_key_id !== vmKeyHash) {
       await revokeRunKey(run.provider_key_id);
     }
-
 
     // The machine is ready. This is the only thing the thread could not infer:
     // between `status: running` at the top of this chunk and the agent's first
@@ -1039,13 +1121,18 @@ export async function executeAgentRun(
     // BYOK — search then uses the SAME key as the run and therefore the same bill).
     // The tool is not offered elsewhere (see agentToolsFor). Per-chunk cap, and one
     // `web_search` ledger row per search.
-    const webSearchAllowed = provider === "openrouter" && (await isWebSearchEnabled());
+    const webSearchAllowed =
+      provider === "openrouter" && (await isWebSearchEnabled());
 
     // CAN the run's model SEE images (MIN-111)? Resolve this here, before bootstrap,
     // for the same reason as web_search: the prompt must describe only what the
     // run can actually do. This also lets `read_resource` return a mockup instead
     // of its metadata.
-    const imageInput = await supportsImageInput(run.model, provider, apiKey).catch(() => false);
+    const imageInput = await supportsImageInput(
+      run.model,
+      provider,
+      apiKey,
+    ).catch(() => false);
 
     // Subagents (MIN-112): resolve settings HERE, before bootstrap, for the same
     // reason as `web_search` and images — the system prompt must describe only
@@ -1058,13 +1145,14 @@ export async function executeAgentRun(
     // for an hour and never throws): it validates an ID and FILTERS for tool
     // calling — a subagent that cannot call tools cannot do anything.
     const subagentModels = provider === "openrouter";
-    const [rawFavorites, subagentMaxParallel, subagentCatalog] = await Promise.all([
-      getSubagentFavorites().catch(() => []),
-      maxParallelSubagents().catch(() => 2),
-      subagentModels && run.created_by
-        ? getAgentModelsForUser(run.created_by).catch(() => null)
-        : Promise.resolve(null),
-    ]);
+    const [rawFavorites, subagentMaxParallel, subagentCatalog] =
+      await Promise.all([
+        getSubagentFavorites().catch(() => []),
+        maxParallelSubagents().catch(() => 2),
+        subagentModels && run.created_by
+          ? getAgentModelsForUser(run.created_by).catch(() => null)
+          : Promise.resolve(null),
+      ]);
     // The plan's model cap also applies to children: the catalog served here has
     // already been filtered, and favorites above the cap are removed from the
     // prompt. Without this, `spawn_agent` would reopen from below what the picker
@@ -1086,7 +1174,10 @@ export async function executeAgentRun(
         await Promise.all(
           subagentFavorites.map(
             async (f) =>
-              [f.id, await getModelPricing(f.id, provider, apiKey).catch(() => null)] as const,
+              [
+                f.id,
+                await getModelPricing(f.id, provider, apiKey).catch(() => null),
+              ] as const,
           ),
         )
       ).flatMap(([id, pricing]) => (pricing ? [[id, pricing] as const] : [])),
@@ -1185,7 +1276,11 @@ export async function executeAgentRun(
               // No linked repository → no repo block: the context names the
               // attached folder instead (see the builder).
               repo: target
-                ? { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch }
+                ? {
+                    fullName: target.repoFullName,
+                    defaultBranch: baseBranch,
+                    workBranch,
+                  }
                 : null,
               projectName: issue.projectName,
               resources: issue.resources,
@@ -1194,7 +1289,11 @@ export async function executeAgentRun(
             })
           : buildNotebookContextMessage({
               repo: target
-                ? { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch }
+                ? {
+                    fullName: target.repoFullName,
+                    defaultBranch: baseBranch,
+                    workBranch,
+                  }
                 : null,
               projectName: project.name,
               numoDefaultStatus,
@@ -1220,7 +1319,11 @@ export async function executeAgentRun(
               token: target.token,
               repoFullName: target.repoFullName,
               provider: target.provider,
-              repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
+              repo: {
+                fullName: target.repoFullName,
+                defaultBranch: baseBranch,
+                workBranch,
+              },
             })
           : null;
       if (inheritedPr) messages.push({ role: "user", content: inheritedPr });
@@ -1230,7 +1333,7 @@ export async function executeAgentRun(
       //
       // THE ANCHOR DECIDES THE SOURCE (MIN-328): during a review, the clone is at
       // the pull request HEAD — the author's repository, not the project repository.
-      // Instructions are then read at the base (`pr-base`), or not at all.
+      // Instructions are then read at the base (`PR_BASE`), or not at all.
       // `prRun`, not `anchor`: the CLONE decides, and `prRun` makes us clone the
       // head (see `onCreate`).
       //
@@ -1264,7 +1367,9 @@ export async function executeAgentRun(
         messages.push({
           role: "user",
           content: promptWithMentions(
-            issue ? run.prompt.trim() : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
+            issue
+              ? run.prompt.trim()
+              : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
             run.prompt_mentions,
           ),
         });
@@ -1313,8 +1418,12 @@ export async function executeAgentRun(
     // The local worktree is on the user's machine, but not in their checkout: it
     // therefore follows clone rules (the harness delivers the commit), while the
     // historical mode retains current-repository protection.
+    // Local PR reviews are always isolated, including runs created before this
+    // invariant was persisted at launch. Their checkout must consume checkoutRef
+    // and start from the reviewed head rather than the user's current branch.
     const currentRepo =
-      (localTurn && !run.local_worktree) || isCurrentRepoJob({ repoMode });
+      (localTurn && !run.local_worktree && !prRun) ||
+      isCurrentRepoJob({ repoMode });
     const opencodeInput = {
       anchorInstructions: buildOpencodeAnchor({
         locale: commentLocale,
@@ -1328,8 +1437,8 @@ export async function executeAgentRun(
         webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
         chain: !!run.chain_id,
         images: imageInput,
-        // A review does not delegate, and a turn without room for a child must not
-        // read a section describing a tool the config does not provide.
+        // A turn without room for a child must not read a section describing a
+        // tool the config cannot schedule.
         ...(writesToRepo && subagentMaxParallel > 0
           ? {
               subagents: {
@@ -1441,7 +1550,9 @@ export async function executeAgentRun(
     //
     /** Remaining account usage budget. `undefined` with BYOK. */
     const accountRemainingUsd =
-      quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined;
+      quotaNow && !quotaNow.unlimited
+        ? Math.max(0, quotaNow.remaining ?? 0)
+        : undefined;
     /**
      * What the run has already spent across all completed chunks — the amount
      * deducted from its cap.
@@ -1471,7 +1582,9 @@ export async function executeAgentRun(
      * spend five times its cap.
      */
     const runCapRemainingUsd =
-      run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd) - runSpentUsd);
+      run.budget_usd == null
+        ? undefined
+        : Math.max(0, Number(run.budget_usd) - runSpentUsd);
     const budgetUsd = minDefined(accountRemainingUsd, runCapRemainingUsd);
     /**
      * THE SAME CALCULATION, REREAD DURING THE CHUNK (MIN-224).
@@ -1508,6 +1621,7 @@ export async function executeAgentRun(
      * run row is reread on every control-plane call, which is why the journal lives
      * outside it.
      */
+    const prBaseSha = await prBaseShaPromise;
     const pointer = run.checkpoint?.opencode;
     const opencodeJournal = pointer?.sessionId
       ? {
@@ -1548,7 +1662,7 @@ export async function executeAgentRun(
       ...(modelPricing ? { pricing: modelPricing } : {}),
       anchor,
       writesToRepo,
-      interactive: !run.routine_id,
+      interactive: true,
       chain: !!run.chain_id,
       imageInput,
       webSearch: webSearchAllowed,
@@ -1559,20 +1673,14 @@ export async function executeAgentRun(
       subagents: {
         models: subagentModels,
         favorites: subagentFavorites,
-        /**
-         * A REVIEW DOES NOT DELEGATE, and this cap enforces that in opencode: the
-         * config serves the `task` tool whenever it is > 0
-         * ([opencode-config.ts](vm/opencode-config.ts), `primaryTools`). Both
-         * prompts already impose the same condition (l.1308 and l.1442), but the
-         * job had lost it: the model received a delegation tool its anchor did not
-         * describe and `PR_REVIEW_TOOLS` refused, and a review could open two child
-         * sessions that EDIT.
-         */
-        maxParallel: writesToRepo ? subagentMaxParallel : 0,
+        /** Explicit resource ceiling shared by every run source. */
+        maxParallel: subagentMaxParallel,
         allowedIds: subagentScope.allowedIds,
         abovePlanIds: subagentScope.abovePlanIds,
         maxMultiplier: subagentScope.maxMultiplier,
-        ...(Object.keys(subagentPricing).length > 0 ? { pricing: subagentPricing } : {}),
+        ...(Object.keys(subagentPricing).length > 0
+          ? { pricing: subagentPricing }
+          : {}),
       },
       /**
        * THE PREVIOUS TURN'S OPENCODE JOURNAL — it is the memory of a run led by
@@ -1600,28 +1708,26 @@ export async function executeAgentRun(
       repoTouched: run.checkpoint?.repoTouched === true,
       prInlineComments: run.checkpoint?.prInlineComments ?? 0,
       baseBranch,
-      // Local review worktrees fetch the provider's virtual PR ref. This works
-      // for fork heads too, without moving the attached checkout.
-      workBranch: prRun ? pullRequestHeadRef(prRun.provider, prRun.number) : workBranch,
+      workBranch,
+      // A review starts from the provider's virtual PR ref, including fork
+      // heads, but delivers changes to the run's ordinary writable branch.
+      ...(prRun && !run.branch_name
+        ? { checkoutRef: pullRequestHeadRef(prRun.provider, prRun.number) }
+        : {}),
+      ...(prRun && prBaseSha ? { checkoutBaseSha: prBaseSha } : {}),
       // A first turn whose branch has not yet been stamped cannot exist on the
       // remote. The harness can start directly from HEAD instead of paying for a
       // `git fetch` destined to return "ref does not exist". Without a linked
       // repository there is no remote at all: the answer is always no.
-      remoteWorkMayExist: target != null && (run.branch_name != null || run.continuations > 0),
+      remoteWorkMayExist:
+        target != null && (run.branch_name != null || run.continuations > 0),
       /**
        * THE FUNCTION CAN PRODUCE ONLY A CLONE (MIN-358). It created the microVM and
        * cloned into it; the `current` mode belongs to a launcher that works in a
        * repository that existed before it.
        */
       repoMode,
-      /**
-       * A review commits NOTHING: resolving the App bot would cost a provider call
-       * for an identity nobody will use. Elsewhere it is the process-memoized bot
-       * (see `getGithubBotCommitIdentity`).
-       */
-      committer: prRun
-        ? defaultCommitterIdentity()
-        : await committerPromise,
+      committer: await committerPromise,
       // This URL is credential-free in Vercel sandboxes and points at the
       // run-scoped trusted relay in self-hosted sandboxes. Only desktop-local
       // execution retains the legacy authenticated URL on the user's machine.
@@ -1712,7 +1818,9 @@ export async function executeAgentRun(
     // Redacted BEFORE any use (MIN-239): a rejected `git clone` copies the entire
     // clone URL — including the token — into stderr, and this message goes into the
     // `error` event and then `agent_runs.error_message`, which the UI displays.
-    const message = secrets.redact(err instanceof Error ? err.message : String(err));
+    const message = secrets.redact(
+      err instanceof Error ? err.message : String(err),
+    );
     await emit("error", { message });
     /**
      * Run spending READ FROM THE LEDGER (MIN-215), to be written on this path's

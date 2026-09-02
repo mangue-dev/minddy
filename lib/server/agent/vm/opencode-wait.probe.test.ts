@@ -23,8 +23,8 @@ import {
  *
  * Does NOT run with `npm test`: `describe.skipIf` skips it until
  * `MDY_OPENCODE_WAIT_PROBE=1` is not posed. It is SEPARATE from
- * [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts) because
- * it does not cost the same thing: here we pay for wall time — the wait
+ * capability probes because it does not cost the same thing: here we pay for
+ * wall time — the wait
  * IS the measure — and, in its last case, a real round of model.
  *
  * MDY_OPENCODE_WAIT_PROBE=1 npx vitest run \

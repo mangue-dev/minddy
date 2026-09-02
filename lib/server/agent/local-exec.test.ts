@@ -56,12 +56,16 @@ vi.mock("./runs", () => ({
 }));
 
 import { admitLocalRun, issueLocalExecToken } from "./local-exec";
-import { resolveLocalExecSecret, verifyLocalExecToken } from "./local-exec-token";
+import {
+  resolveLocalExecSecret,
+  verifyLocalExecToken,
+} from "./local-exec-token";
 
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
 const USER_ID = "user-1";
 const DEVICE_ID = "0123456789abcdef0123456789abcdef";
-const issue = () => issueLocalExecToken({ runId: RUN_ID, userId: USER_ID, deviceId: DEVICE_ID });
+const issue = () =>
+  issueLocalExecToken({ runId: RUN_ID, userId: USER_ID, deviceId: DEVICE_ID });
 
 beforeEach(() => {
   h.row = { local: true, gen: 0 };
@@ -89,8 +93,15 @@ describe("le bail d'exécution locale", () => {
     const issued = await issue();
     expect(issued.ok).toBe(true);
     if (!issued.ok) return;
-    const verified = verifyLocalExecToken(issued.token, resolveLocalExecSecret()!);
-    expect(verified).toMatchObject({ ok: true, runId: RUN_ID, gen: issued.gen });
+    const verified = verifyLocalExecToken(
+      issued.token,
+      resolveLocalExecSecret()!,
+    );
+    expect(verified).toMatchObject({
+      ok: true,
+      runId: RUN_ID,
+      gen: issued.gen,
+    });
   });
 
   it("périme le jeton précédent en émettant le suivant", async () => {
@@ -104,15 +115,7 @@ describe("le bail d'exécution locale", () => {
     expect(h.row?.gen).toBe(second.gen);
   });
 
-  /**
-   * MIN-360 — THE SECOND CURTAIN, IN THE PLACE THAT MATTERS.
-   *
-   * `createRun` is the only writer of `local_exec` and already applies
-   * the invariant. This control is what means that **without a token, no machine
-   * cannot play this run**: a column written by a migration, a
-   * back office or a future launch path is not enough to open the door.
-   */
-  it("refuse un bail à un run dont le contexte vient d'ailleurs", async () => {
+  it("issues a lease independently of anchor and trigger", async () => {
     for (const scope of [
       { pull_request_id: "pr-1" },
       { routine_id: "r-1" },
@@ -127,19 +130,11 @@ describe("le bail d'exécution locale", () => {
         pull_request_id: null,
         ...scope,
       };
-      expect(await issue()).toEqual({
-        ok: false,
-        error: scope.pull_request_id
-          ? "issue_confirmation_required"
-          : "third_party_context",
-      });
-      // And the previous lease was not revoked by the way: we refuse BEFORE
-      // to increment, otherwise a refusal would break the machine in place.
-      expect(h.row?.gen).toBe(0);
+      await expect(issue()).resolves.toMatchObject({ ok: true });
     }
   });
 
-  it("issues a lease for a manually confirmed pull-request review", async () => {
+  it("keeps compatibility with a confirmed pull-request review", async () => {
     h.scope = {
       ...h.scope!,
       pull_request_id: "pr-1",
@@ -171,17 +166,28 @@ describe("le bail d'exécution locale", () => {
 
   it("binds lease issuance to the run creator and claiming desktop", async () => {
     await expect(
-      issueLocalExecToken({ runId: RUN_ID, userId: "user-2", deviceId: DEVICE_ID }),
+      issueLocalExecToken({
+        runId: RUN_ID,
+        userId: "user-2",
+        deviceId: DEVICE_ID,
+      }),
     ).resolves.toEqual({ ok: false, error: "wrong_member" });
     await expect(
-      issueLocalExecToken({ runId: RUN_ID, userId: USER_ID, deviceId: "f".repeat(32) }),
+      issueLocalExecToken({
+        runId: RUN_ID,
+        userId: USER_ID,
+        deviceId: "f".repeat(32),
+      }),
     ).resolves.toEqual({ ok: false, error: "wrong_machine" });
     expect(h.row?.gen).toBe(0);
   });
 
   it("refuses a lease after membership or repository authority is revoked", async () => {
     h.authorized = false;
-    await expect(issue()).resolves.toEqual({ ok: false, error: "authority_revoked" });
+    await expect(issue()).resolves.toEqual({
+      ok: false,
+      error: "authority_revoked",
+    });
     expect(h.row?.gen).toBe(1);
   });
 });
@@ -193,7 +199,7 @@ describe("le bail d'exécution locale", () => {
  * early by `localRunScope`. The platform maintains its mint requirement.
  */
 describe("qui a le droit de jouer sur la machine de l'utilisateur", () => {
-  const withProvisioning = <T,>(value: string | undefined, run: () => T): T => {
+  const withProvisioning = <T>(value: string | undefined, run: () => T): T => {
     const saved = process.env.OPENROUTER_PROVISIONING_KEY;
     if (value === undefined) delete process.env.OPENROUTER_PROVISIONING_KEY;
     else process.env.OPENROUTER_PROVISIONING_KEY = value;
@@ -219,13 +225,19 @@ describe("qui a le droit de jouer sur la machine de l'utilisateur", () => {
     // Without mint, the caller would fall back on the platform key — UNCAPED, and
     // shared with Numo, transcription, embeddings and catalog.
     withProvisioning(undefined, () => {
-      expect(admitLocalRun({ keyMode: "platform" })).toEqual({ ok: false, reason: "no_mint" });
+      expect(admitLocalRun({ keyMode: "platform" })).toEqual({
+        ok: false,
+        reason: "no_mint",
+      });
     });
     // A variable set to EMPTY counts as absent — this is already the rule of
     // `runKeyMintingEnabled`, and two readings which would differ on this
     // would give a local run without a key.
     withProvisioning("   ", () => {
-      expect(admitLocalRun({ keyMode: "platform" })).toEqual({ ok: false, reason: "no_mint" });
+      expect(admitLocalRun({ keyMode: "platform" })).toEqual({
+        ok: false,
+        reason: "no_mint",
+      });
     });
   });
 });

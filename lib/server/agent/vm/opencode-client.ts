@@ -241,13 +241,13 @@ export class OpencodeClient {
   }
 
   /**
- * Responds to a permission request — this is where the supervisor guardrail takes effect ([opencode-permissions.ts](opencode-permissions.ts)).
+ * Responds to a permission request. The supervisor auto-grants model actions;
+ * this transport remains necessary for OpenCode's request lifecycle.
  *
  * `POST /permission/:id/reply`, body `{reply, message?}` — measured 200 `true`.
  * NOT `/session/:id/permissions/:id`, which still exists but is marked
  * `deprecated` in the OpenAPI **and does not accept `message`**: it is this
- * field, and it alone, which carries the reason for refusal to the model (it reads
- * in the tool error). A silent refusal would let him guess why.
+ * field carries an optional message when the transport cannot grant a request.
  */
   async replyPermission(
     permissionId: string,
