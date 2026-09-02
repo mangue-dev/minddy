@@ -609,6 +609,7 @@ export function PrDetail({
   const {
     comments,
     timeline,
+    deploymentUrl,
     reactions: commentReactions,
     loading: commentsLoading,
     refetch: refetchComments,
@@ -1506,6 +1507,33 @@ export function PrDetail({
           // merged (nothing before it) as closed (the button before it): it is
           // always in the same place that we read what became of her.
           <div className="ml-auto flex items-center gap-1.5">
+            {deploymentUrl ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    data-testid="pr-more-actions"
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label={t("moreActions")}
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <a
+                      data-testid="pr-action-view-deployment"
+                      href={deploymentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink />
+                      {t("viewDeployment")}
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
             {canReopen ? (
               <Button
                 variant="outline"
@@ -1604,13 +1632,33 @@ export function PrDetail({
                   data-testid="pr-more-actions"
                   variant="outline"
                   size="icon-sm"
-                  className={isDraft || !canWrite ? "2xl:hidden" : undefined}
+                  className={
+                    !deploymentUrl && (isDraft || !canWrite) ? "2xl:hidden" : undefined
+                  }
                   aria-label={t("moreActions")}
                 >
                   {aiReviewActive ? <Spinner /> : <MoreHorizontal />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {deploymentUrl ? (
+                  <DropdownMenuItem asChild>
+                    <a
+                      data-testid="pr-action-view-deployment"
+                      href={deploymentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink />
+                      {t("viewDeployment")}
+                    </a>
+                  </DropdownMenuItem>
+                ) : null}
+                {deploymentUrl ? (
+                  <DropdownMenuSeparator
+                    className={canWrite && !isDraft ? undefined : "2xl:hidden"}
+                  />
+                ) : null}
                 <DropdownMenuItem
                   data-testid="pr-action-numo-request"
                   className="2xl:hidden"

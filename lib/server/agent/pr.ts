@@ -1610,6 +1610,75 @@ export async function listPullRequestTimeline(opts: {
   return fromGithubTimeline(all);
 }
 
+interface RawGithubDeployment {
+  id?: number;
+  created_at?: string | null;
+}
+
+interface RawGithubDeploymentStatus {
+  state?: string | null;
+  environment_url?: string | null;
+  target_url?: string | null;
+}
+
+/** Only browser-safe deployment destinations cross the API boundary. */
+function httpDeploymentUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Latest successful GitHub deployment of one immutable PR head.
+ *
+ * A deployment object does not carry the public environment URL. GitHub puts
+ * that URL on its latest status, so resolving the header action takes one list
+ * request and one bounded batch of status requests. The newest deployment with
+ * a usable URL wins; older environments remain a fallback when the latest
+ * deployment has not published a destination.
+ */
+export async function getLatestSuccessfulDeploymentUrl(opts: {
+  token: string;
+  repoFullName: string;
+  sha: string;
+}): Promise<string | null> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const deployments = await ghJson<RawGithubDeployment[]>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
+      `?sha=${encodeURIComponent(opts.sha)}&per_page=10`,
+    opts.token,
+  );
+  const newest = deployments
+    .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
+      Number.isInteger(deployment.id),
+    )
+    .sort((a, b) => {
+      const byDate = Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
+      return Number.isFinite(byDate) && byDate !== 0 ? byDate : b.id - a.id;
+    });
+
+  const statuses = await Promise.all(
+    newest.map(async (deployment) => {
+      try {
+        const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
+          `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${deployment.id}/statuses?per_page=1`,
+          opts.token,
+        );
+        if (latest?.state !== "success") return null;
+        return httpDeploymentUrl(latest.environment_url) ?? httpDeploymentUrl(latest.target_url);
+      } catch {
+        // A stale deployment can disappear while its siblings remain readable.
+        return null;
+      }
+    }),
+  );
+  return statuses.find((url): url is string => url !== null) ?? null;
+}
+
 interface RawReviewComment extends RawComment {
   path?: string;
   line?: number | null;

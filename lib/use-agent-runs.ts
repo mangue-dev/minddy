@@ -425,6 +425,7 @@ export function usePrCommentsQuery(prId: string | null) {
     // The activity (MIN-159) travels with the messages: it is the SAME thread, ordered
     // by date — serving it separately would cause it to be a time late.
     timeline: data?.timeline ?? [],
+    deploymentUrl: data?.deploymentUrl ?? null,
     // The reactions (MIN-147) travel with the comments, as on the review side:
     // they go UNDER a message, and the PR body has its own there.
     reactions: data?.reactions ?? [],

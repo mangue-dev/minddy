@@ -1054,6 +1054,7 @@ export async function fetchOpenPullRequestCountApi(): Promise<{ count: number }>
 export async function fetchPullRequestCommentsApi(prId: string): Promise<{
   comments: PullRequestComment[];
   timeline: PrTimelineEvent[];
+  deploymentUrl: string | null;
   reactions: ReviewCommentReaction[];
 }> {
   return parseJson(await fetch(`${prEndpoint(prId)}/comments`));

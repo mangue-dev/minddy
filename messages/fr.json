@@ -3672,6 +3672,7 @@
     "convertedToDraftToast": "Pull request repassée en brouillon.",
     "review": "Review",
     "moreActions": "Actions de la pull request",
+    "viewDeployment": "Voir le déploiement",
     "reviewApprove": "Approuver",
     "reviewRequestChanges": "Demander des changements",
     "reviewComment": "Commenter",
