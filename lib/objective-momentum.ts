@@ -1,6 +1,7 @@
 import { effortToPoints, statusCompletionCredit } from "./cycle";
 import { isClosedStatus } from "./issue-constants";
 import type { IssueEffort, IssueStatus } from "./issue-constants";
+import type { ObjectiveStatus } from "./objective-validation";
 
 const DAY_MS = 86_400_000;
 const RECENT_DAYS = 7;
@@ -13,7 +14,8 @@ export type ObjectiveMomentumState =
   | "slowing"
   | "stalled"
   | "not_started"
-  | "complete";
+  | "complete"
+  | "canceled";
 
 export type ObjectiveTargetPace = "on_track" | "at_risk" | "overdue";
 
@@ -45,6 +47,7 @@ export interface ObjectiveMomentumIssue {
 
 interface ObjectiveMomentumSource {
   id: string;
+  status: ObjectiveStatus;
   created_at: string;
   target_date: string | null;
 }
@@ -62,8 +65,23 @@ function validTimestamp(value: string | null | undefined): number | null {
 
 function endOfTargetDay(value: string): number | null {
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
-  const timestamp = new Date(dateOnly ? `${value}T23:59:59.999` : value).getTime();
-  return Number.isFinite(timestamp) ? timestamp : null;
+  if (dateOnly) {
+    const timestamp = new Date(`${value}T23:59:59.999`).getTime();
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  // DateTimePicker stores a date-only selection as local midnight serialized
+  // through toISOString(). Rebuild the end of that same local calendar day;
+  // comparing the serialized midnight directly would mark it overdue at 00:00.
+  const target = new Date(value);
+  if (!Number.isFinite(target.getTime())) return null;
+  const isLocalMidnight =
+    target.getHours() === 0 &&
+    target.getMinutes() === 0 &&
+    target.getSeconds() === 0 &&
+    target.getMilliseconds() === 0;
+  if (isLocalMidnight) target.setHours(23, 59, 59, 999);
+  return target.getTime();
 }
 
 function momentumState({
@@ -109,8 +127,9 @@ export function objectiveMomentum(
   const remaining = linked.filter(
     (issue) => !isClosedStatus(issue.status as IssueStatus),
   );
+  const canceled = objective.status === "canceled";
 
-  const completions: Completion[] = linked.flatMap((issue) => {
+  const completions: Completion[] = (canceled ? [] : linked).flatMap((issue) => {
     if (issue.status !== "done") return [];
     const at = validTimestamp(issue.completed_at);
     if (at === null || at < createdAt || at > nowMs) return [];
@@ -152,6 +171,7 @@ export function objectiveMomentum(
   let forecastDays: number | null = null;
   let forecastDate: string | null = null;
   if (
+    !canceled &&
     remainingPoints > 0 &&
     observedDays >= RECENT_DAYS &&
     forecastCompletions.length >= 2 &&
@@ -166,7 +186,7 @@ export function objectiveMomentum(
   const targetAt = objective.target_date
     ? endOfTargetDay(objective.target_date)
     : null;
-  if (remaining.length > 0 && targetAt !== null) {
+  if (!canceled && remaining.length > 0 && targetAt !== null) {
     if (targetAt < nowMs) targetPace = "overdue";
     else if (forecastDate) {
       targetPace = new Date(forecastDate).getTime() <= targetAt ? "on_track" : "at_risk";
@@ -180,13 +200,15 @@ export function objectiveMomentum(
   );
 
   return {
-    state: momentumState({
-      linkedIssues: linked.length,
-      remainingIssues: remaining.length,
-      completedTotal: completions.length,
-      recentCompleted,
-      previousCompleted,
-    }),
+    state: canceled
+      ? "canceled"
+      : momentumState({
+          linkedIssues: linked.length,
+          remainingIssues: remaining.length,
+          completedTotal: completions.length,
+          recentCompleted,
+          previousCompleted,
+        }),
     linkedIssues: linked.length,
     remainingIssues: remaining.length,
     recentCompleted,

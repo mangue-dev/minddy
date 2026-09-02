@@ -6,6 +6,7 @@ import {
   Activity,
   CalendarClock,
   Check,
+  CircleSlash2,
   Minus,
   TrendingDown,
   TrendingUp,
@@ -57,6 +58,11 @@ const STATE_META: Record<
     icon: Check,
     className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
+  canceled: {
+    key: "momentumCanceled",
+    icon: CircleSlash2,
+    className: "bg-muted text-muted-foreground",
+  },
 };
 
 /**
@@ -83,8 +89,11 @@ export function ObjectiveMomentum({
   const StateIcon = state.icon;
   const maxWeek = Math.max(1, ...insight.weeks.map((week) => week.completed));
   const titleId = `objective-momentum-${objective.id}`;
+  const canceled = insight.state === "canceled";
+  const SummaryIcon = canceled ? CircleSlash2 : CalendarClock;
 
   const forecast = (() => {
+    if (canceled) return t("momentumCanceledSummary");
     if (insight.linkedIssues === 0) return t("momentumEmpty");
     if (insight.remainingIssues === 0) return t("momentumAllClosed");
     if (insight.targetPace === "overdue") {
@@ -135,7 +144,7 @@ export function ObjectiveMomentum({
         </span>
       </div>
 
-      {insight.linkedIssues > 0 ? (
+      {insight.linkedIssues > 0 && !canceled ? (
         <>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("momentumRecentComparison", {
@@ -204,7 +213,7 @@ export function ObjectiveMomentum({
       ) : null}
 
       <div className="mt-4 flex items-start gap-2 border-t border-border/60 pt-3 text-sm text-muted-foreground">
-        <CalendarClock className="mt-0.5 size-4 shrink-0" />
+        <SummaryIcon className="mt-0.5 size-4 shrink-0" />
         <p>{forecast}</p>
       </div>
     </section>

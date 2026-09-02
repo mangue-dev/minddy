@@ -4,6 +4,7 @@ import { objectiveMomentum } from "./objective-momentum";
 const NOW = new Date("2026-09-02T12:00:00.000Z");
 const OBJECTIVE = {
   id: "objective-1",
+  status: "in_progress" as const,
   created_at: "2026-07-01T12:00:00.000Z",
   target_date: null,
 };
@@ -110,6 +111,58 @@ describe("objectiveMomentum", () => {
     expect(result.targetPace).toBe("at_risk");
   });
 
+  it("keeps a local-midnight ISO target valid through the full target day", () => {
+    const now = new Date(2026, 8, 2, 12, 0, 0, 0);
+    const target = new Date(2026, 8, 2, 0, 0, 0, 0).toISOString();
+    const result = objectiveMomentum(
+      { ...OBJECTIVE, target_date: target },
+      [issue({ id: 1, status: "todo" })],
+      now,
+    );
+
+    expect(result.targetPace).toBeNull();
+  });
+
+  it("preserves an explicitly selected target time", () => {
+    const now = new Date(2026, 8, 2, 12, 0, 0, 0);
+    const target = new Date(2026, 8, 2, 10, 0, 0, 0).toISOString();
+    const result = objectiveMomentum(
+      { ...OBJECTIVE, target_date: target },
+      [issue({ id: 1, status: "todo" })],
+      now,
+    );
+
+    expect(result.targetPace).toBe("overdue");
+  });
+
+  it("keeps a same-day forecast on track for an ISO target", () => {
+    const now = new Date(2026, 8, 2, 12, 0, 0, 0);
+    const result = objectiveMomentum(
+      {
+        ...OBJECTIVE,
+        created_at: new Date(2026, 7, 26, 12, 0, 0, 0).toISOString(),
+        target_date: new Date(2026, 8, 3, 0, 0, 0, 0).toISOString(),
+      },
+      [
+        issue({
+          id: 1,
+          completedAt: new Date(2026, 7, 30, 8, 0, 0, 0).toISOString(),
+          effort: "xl",
+        }),
+        issue({
+          id: 2,
+          completedAt: new Date(2026, 8, 1, 8, 0, 0, 0).toISOString(),
+          effort: "xl",
+        }),
+        issue({ id: 3, status: "todo", effort: "xs" }),
+      ],
+      now,
+    );
+
+    expect(result.forecastDays).toBe(1);
+    expect(result.targetPace).toBe("on_track");
+  });
+
   it("does not forecast from a single completion", () => {
     const result = objectiveMomentum(
       OBJECTIVE,
@@ -136,5 +189,32 @@ describe("objectiveMomentum", () => {
 
     expect(result.state).toBe("complete");
     expect(result.remainingIssues).toBe(0);
+  });
+
+  it("suppresses momentum and forecasts for a canceled objective", () => {
+    const result = objectiveMomentum(
+      {
+        ...OBJECTIVE,
+        status: "canceled",
+        target_date: "2026-08-01",
+      },
+      [
+        issue({ id: 1, completedAt: "2026-09-01T08:00:00.000Z" }),
+        issue({ id: 2, completedAt: "2026-08-29T08:00:00.000Z" }),
+        issue({ id: 3, status: "todo" }),
+      ],
+      NOW,
+    );
+
+    expect(result).toMatchObject({
+      state: "canceled",
+      recentCompleted: 0,
+      previousCompleted: 0,
+      lastCompletionAt: null,
+      forecastDate: null,
+      forecastDays: null,
+      targetPace: null,
+    });
+    expect(result.weeks.every((week) => week.completed === 0)).toBe(true);
   });
 });
