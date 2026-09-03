@@ -6,7 +6,6 @@ import {
   askingSection,
   buildPrReviewSystemPrompt,
   chainSection,
-  GIT_REFUSALS_CURRENT_REPO,
   grepPatternNote,
   introBlock,
   minddyToolsBlock,
@@ -68,26 +67,25 @@ import { responseLanguageInstruction } from "@/lib/locale-language";
 export interface OpencodeAnchorInput {
   locale?: string | null;
   anchor?: AgentAnchor;
-  /** False for a ROUTINE passage: no `question`, and the PR mandate. */
+  /** False for a routine passage; this changes context, not capabilities. */
   interactive?: boolean;
   webSearch?: boolean;
   webSearchMax?: number;
   chain?: boolean;
   images?: boolean;
   /**
- * DOES THE TURN PLAY IN THE USER CHECKOUT (MIN-358)?
- *
- * Three lines of the git block become false in current repository mode, and
- * each costs human labor when not said: the repository is
- * no longer disposable, `git status` is no longer the model diff, and the history
- * is no longer a six-month window (see `gitOwnershipBlock`).
- */
+   * DOES THE TURN PLAY IN THE USER CHECKOUT (MIN-358)?
+   *
+   * Three lines of the git block become false in current repository mode, and
+   * each costs human labor when not said: the repository is
+   * no longer disposable, `git status` is no longer the model diff, and the history
+   * is no longer a six-month window (see `gitOwnershipBlock`).
+   */
   currentRepo?: boolean;
   /**
    * Does this run have a LINKED FORGE REPOSITORY? `true` by default. `false`
    * for a local run on a project with no linked repository (MIN-local-norepo):
-   * no push, no pull request — `create_pr` is not served, and every sentence
-   * that promises a remote goes.
+   * no push destination or pull request to open.
    */
   hasRepo?: boolean;
   /** Is delegation offered, and on which models? Absent = no `task`. */
@@ -101,23 +99,11 @@ export interface OpencodeAnchorInput {
 const n = OPENCODE_TOOL_NAMES;
 
 /**
- * WHAT HARNESS CHANGES TO OPENCODE TOOLS. Only deviations: each
- * line exists because a model that doesn't read it is actually wrong — it
- * attempts a `git commit` (refused), it looks for a batch edit (non-existent), it
- * waits for an answer after a question (the round is over), or it calls the
- * `websearch` of opencode (turned off, and out of our counters).
+ * What the harness adds to OpenCode's native tool documentation.
  */
 function harnessDeltas(input: OpencodeAnchorInput): string {
-  const routine = input.interactive === false;
-  const hasRepo = input.hasRepo !== false;
   const lines = [
-    // The denial list is that of `command-guard`, and it IS NOT the same
-    // on both sides from D6: `git commit` is returned to the model in deposit mode
-    // fluent. Repeating it here without the scope would make the harness say the opposite of what
-    // that it executes — the defect in §1 of the audit, one line below.
-    input.currentRepo === true
-      ? `- **Your shell enforces what git may not do here.** ${GIT_REFUSALS_CURRENT_REPO(n, hasRepo)} See ${hasRepo ? "Git and pull requests" : "Git"} below for who delivers.`
-      : `- **The harness owns git, and your shell enforces it.** \`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapped in \`bash -c\` included. Read-only git and \`git add\` are free. See ${hasRepo ? "Git and pull requests" : "Git"} below for what happens instead.`,
+    `- **OpenCode's native shell and file tools are fully available.** The harness does not classify commands or hide tools by anchor, trigger, or environment. Authentication, isolation, budgets, and audit logging remain external boundaries.`,
     `- ${shellOutputNote(n)}`,
     `- **To rename or remove a file, use \`${n.shell}\`** (\`mv\`, \`rm\`): the end-of-turn commit picks them up like any other change.`,
     `- **There is no batch-edit tool.** One \`edit\` call changes one place; chain them rather than looking for a multi-edit. Read the file before editing it, and copy \`oldString\` verbatim from what \`${n.read}\` showed.`,
@@ -125,28 +111,26 @@ function harnessDeltas(input: OpencodeAnchorInput): string {
     // `bash` does not have a background mode: this tool comes from us, so the prompt
     // of opencode says nothing about it and this is where it describes itself.
     `${backgroundToolNote(n)}`,
-    `- **\`update_plan\` is this session's checklist**, and the only one: any local todo list is off, because your checklist MIRRORS onto the ticket's plan. Keep exactly one step \`in_progress\`; skip it for trivial or conversational turns.`,
+    `- **\`update_plan\` mirrors this session's checklist onto the ticket plan.** OpenCode's native planning tools remain available; use \`update_plan\` when the plan must be visible in minddy.`,
   ];
   if (input.webSearch) {
     lines.push(
-      `- **\`web_search\` is the only way to the web** — the built-in web search is off, and the sandbox has no other internet access. Read the repo first (package.json, the lockfile, the dependency's own files, the repo's docs) and search only when the answer isn't there. Each search costs money: one focused query, never the same one twice.${
+      `- **\`web_search\` is minddy's metered search tool.** OpenCode's native web tools remain available. Read the repo first (package.json, the lockfile, the dependency's own files, the repo's docs) and search only when the answer isn't there. Each minddy search costs money: one focused query, never the same one twice.${
         input.webSearchMax != null
           ? ` You get ${input.webSearchMax} searches for this turn, shared with your sub-agents — past that every call comes back as an error.`
           : ""
       }`,
     );
   }
-  if (!routine) {
-    lines.push(
-      // MIN-364 (D7): the question BLOCKS on the user's machine, and it
-      // there's nothing to do about that — the opencode tool already blocks itself.
-      // Telling him the opposite would make him finish everything before asking, and read his
-      // own turn as lost at the moment he asks.
-      input.currentRepo === true
-        ? `- **\`${n.ask}\` SUSPENDS your turn — it does not end it.** The call blocks, the user answers, and their answer comes back to you as the tool's own result: you keep your context, your plan and your open files. Ask the moment the answer changes what you would write, and put everything blocking the same piece of work in ONE call.`
-        : `- **\`${n.ask}\` ENDS your turn.** It is not a blocking prompt: the questions go to the user, the session goes to sleep, and their answers open your next turn. So ask everything blocking the same piece of work in ONE call, and never call it for something you can decide yourself.`,
-    );
-  }
+  lines.push(
+    // MIN-364 (D7): the question BLOCKS on the user's machine, and it
+    // there's nothing to do about that — the opencode tool already blocks itself.
+    // Telling him the opposite would make him finish everything before asking, and read his
+    // own turn as lost at the moment he asks.
+    input.currentRepo === true
+      ? `- **\`${n.ask}\` SUSPENDS your turn — it does not end it.** The call blocks, the user answers, and their answer comes back to you as the tool's own result: you keep your context, your plan and your open files. Ask the moment the answer changes what you would write, and put everything blocking the same piece of work in ONE call.`
+      : `- **\`${n.ask}\` ENDS your turn.** It is not a blocking prompt: the questions go to the user, the session goes to sleep, and their answers open your next turn. So ask everything blocking the same piece of work in ONE call, and never call it for something you can decide yourself.`,
+  );
   return `## What minddy's harness changes about your tools
 ${lines.join("\n")}`;
 }
@@ -184,21 +168,24 @@ function delegationSection(input: OpencodeAnchorInput): string {
 - **Delegate when** the work is broad but its conclusion is short (find every caller of X, map how a feature is wired), or when a task would flood your context with output you do not need to keep.
 - **Do NOT delegate** a change you can make in two tool calls: briefing a child and reading its report costs more than doing it yourself, and it leaves you trusting a summary where you could have read the code.
 - **\`${n.spawn}\` BLOCKS until the child is done.** There is nothing to poll and nothing to wait for by hand — when the call returns, the report is there. Several children of the SAME round run at once; a round that calls it once waits for that one.
-- **One writer at a time.** \`explore\` types are read-only and parallelise freely. A \`general\` type edits the repository, so while one is in flight your own editing tools are refused${
-    hasRepo ? " and so is `create_pr`" : ""
-  } — the sandbox is shared, and the harness commits everything it finds at the end of the turn, half-written work included.
+- **Coordinate writers.** \`explore\` types are read-only and parallelise freely. A \`general\` type can edit the shared repository, so give writers disjoint ownership and wait for their reports before publishing${
+    hasRepo ? " or calling `create_pr`" : ""
+  }.
 - **The report is all you get back.** The child cannot ask you anything and you cannot ask it a follow-up, so write \`prompt\` as a complete briefing — what to do, where (paths, symbols), what not to touch, and the exact shape of the answer you need. When a claim from a report matters, check it in the repository yourself.
 - It has none of your context: not this conversation, not the ticket, not the notebook, not the pull request — and it cannot delegate further.${modelsNote}`;
 }
 
 /**
- * The complete anchor of a turn. A REVIEW session keeps her persona to herself
- * (MIN-168): neither editing, nor git, nor pull request to open — serving the anchor of the
- * under amputated would make her promise gestures that she cannot do.
+ * The complete anchor of a turn. A PR uses review-specific instructions while
+ * retaining the same OpenCode capabilities as every other anchor.
  */
 export function buildOpencodeAnchor(input: OpencodeAnchorInput): string {
   if (input.anchor === "pr") {
-    return buildPrReviewSystemPrompt({ locale: input.locale, images: input.images, n });
+    return buildPrReviewSystemPrompt({
+      locale: input.locale,
+      images: input.images,
+      n,
+    });
   }
   const routine = input.interactive === false;
   const notebook = input.anchor === "notebook";

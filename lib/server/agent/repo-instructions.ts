@@ -289,8 +289,8 @@ function formatTouchedInstructions(
  * banner “Follow them; they override the general conventions”: a take on
  * control offered to anyone who knows how to open a PR.
  *
- * Only the BASE is authoritative, and it is in the clone under the tag `pr-base`
- * (see `clonePullRequest`). No tag brought back → no instructions: a reread
+ * Only the BASE is authoritative, and it is in the clone under the ref `PR_BASE`
+ * (see `clonePullRequest`). No ref brought back → no instructions: a reread
  * without conventions is a slightly less fine rereading, a rereading with
  * attacker conventions is no longer a proofreading.
  */

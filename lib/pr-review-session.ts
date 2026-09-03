@@ -39,8 +39,8 @@ export interface PrReviewSession {
  * as long as they are equal, restarting would repay a run for the same code. */
   reviewedHeadSha: string | null;
   model: {
-    /** Default set in /admin: what “default” is worth in the picker. */
-    instance: string;
+    /** Effective default for the active provider, or null when one must be selected. */
+    instance: string | null;
     /** Dernier choix du compte, ou null s'il n'en a jamais fait. */
     preferred: string | null;
   };

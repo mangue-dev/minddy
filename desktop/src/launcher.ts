@@ -395,6 +395,14 @@ export async function runAssignment(
         runRoot: localRunRoot(userData, assignment.runId),
         baseBranch: typeof assignment.job.baseBranch === "string" ? assignment.job.baseBranch : null,
         workBranch: typeof assignment.job.workBranch === "string" ? assignment.job.workBranch : "",
+        checkoutRef:
+          typeof assignment.job.checkoutRef === "string"
+            ? assignment.job.checkoutRef
+            : undefined,
+        checkoutBaseSha:
+          typeof assignment.job.checkoutBaseSha === "string"
+            ? assignment.job.checkoutBaseSha
+            : undefined,
         authUrl: assignment.job.authUrl,
       })
     : null;

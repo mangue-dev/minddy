@@ -36,6 +36,11 @@ const h = vi.hoisted(() => ({
   pr: null as Record<string, unknown> | null,
   /** Current forge response used before inheriting a branch without Numo lineage. */
   livePr: null as Record<string, unknown> | null,
+  agentModelCalls: [] as Array<Record<string, unknown>>,
+  reviewModelCalls: [] as Array<Record<string, unknown>>,
+  reviewResolvedModel: "model/review",
+  quotaMode: "platform" as "platform" | "byok",
+  byok: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -107,20 +112,30 @@ vi.mock("@/lib/server/git/repo-links", () => ({
 }));
 
 vi.mock("./quota", () => ({
-  checkAgentQuota: vi.fn(async () => ({
-    allowed: true,
-    mode: "platform",
-    cap: 5,
-    periodStart: "2026-08-01T00:00:00.000Z",
-  })),
+  checkAgentQuota: vi.fn(async () =>
+    h.quotaMode === "byok"
+      ? { allowed: true, mode: "byok", cap: null, periodStart: null }
+      : {
+          allowed: true,
+          mode: "platform",
+          cap: 5,
+          periodStart: "2026-08-01T00:00:00.000Z",
+        },
+  ),
 }));
 
 vi.mock("./model", () => ({
   AgentModelRequiredError: class AgentModelRequiredError extends Error {},
-  getUserByok: vi.fn(async () => null),
-  resolveAgentModel: vi.fn(async () => ({ model: "model/test", chosenByUser: false })),
+  getUserByok: vi.fn(async () => h.byok),
+  resolveAgentModel: vi.fn(async (input: Record<string, unknown>) => {
+    h.agentModelCalls.push(input);
+    return { model: "model/agent", chosenByUser: false };
+  }),
   resolveReasoningLevel: vi.fn(async () => "medium"),
-  resolvePrReviewModel: vi.fn(async () => ({ model: "model/test", chosenByUser: false })),
+  resolvePrReviewModel: vi.fn(async (input: Record<string, unknown>) => {
+    h.reviewModelCalls.push(input);
+    return { model: h.reviewResolvedModel, chosenByUser: false };
+  }),
 }));
 
 vi.mock("./model-plan", () => ({ ensureModelInPlan: vi.fn(async () => {}) }));
@@ -153,6 +168,11 @@ beforeEach(() => {
   h.prLineage = lineage();
   h.activeIssue = null;
   h.activePr = null;
+  h.agentModelCalls = [];
+  h.reviewModelCalls = [];
+  h.reviewResolvedModel = "model/review";
+  h.quotaMode = "platform";
+  h.byok = null;
   h.pr = {
     id: PR_ID,
     provider: "github",
@@ -278,13 +298,13 @@ describe("an explicit PR keeps priority", () => {
 });
 
 describe("a pull-request review session", () => {
-  it("preserves a confirmed local isolated launch", async () => {
+  it("uses the dedicated review model and always isolates local checkout", async () => {
     const result = await launchAgentRun({
       pullRequestId: PR_ID,
       userId: USER_ID,
       triggeredBy: "button",
       localExec: true,
-      localWorktree: true,
+      localWorktree: false,
       localIssueContextConfirmed: true,
     });
 
@@ -293,9 +313,41 @@ describe("a pull-request review session", () => {
     expect(h.created[0]).toMatchObject({
       pullRequestId: PR_ID,
       intent: "review",
+      model: "model/review",
       localExec: true,
       localWorktree: true,
       localIssueContextConfirmed: true,
+    });
+    expect(h.reviewModelCalls).toEqual([
+      { perCall: undefined, userId: USER_ID },
+    ]);
+    expect(h.agentModelCalls).toEqual([]);
+  });
+
+  it("uses a provider-compatible default review model for BYOK", async () => {
+    h.quotaMode = "byok";
+    h.reviewResolvedModel = "gpt-5.6-sol";
+    h.byok = {
+      provider: "openai",
+      apiKey: "user-key",
+      baseUrl: "https://api.openai.com/v1",
+      enabledSurfaces: ["agent"],
+      featureModels: {},
+    };
+
+    const result = await launchAgentRun({
+      pullRequestId: PR_ID,
+      userId: USER_ID,
+      triggeredBy: "button",
+      localExec: true,
+      localIssueContextConfirmed: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(h.created[0]).toMatchObject({
+      pullRequestId: PR_ID,
+      model: "gpt-5.6-sol",
+      keyMode: "byok",
     });
   });
 });

@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   AGENT_TOOLS,
   NOTEBOOK_AGENT_TOOLS,
-  PR_REVIEW_TOOLS,
+  CANONICAL_AGENT_TOOLS,
   type AgentToolDef,
 } from "./tools";
 
@@ -60,7 +60,8 @@ function toolMetaKeys(): Set<string> {
   };
   visit(src);
   const found = literal as ts.ObjectLiteralExpression | null;
-  if (!found) throw new Error("TOOL_META introuvable dans tool-call-display.tsx");
+  if (!found)
+    throw new Error("TOOL_META introuvable dans tool-call-display.tsx");
   const keys = new Set<string>();
   for (const prop of found.properties) {
     const name = prop.name;
@@ -78,15 +79,15 @@ describe("les lignes du fil d'un run", () => {
     const served = new Set([
       ...names(AGENT_TOOLS),
       ...names(NOTEBOOK_AGENT_TOOLS),
-      ...names(PR_REVIEW_TOOLS),
+      ...names(CANONICAL_AGENT_TOOLS),
     ]);
     /**
- * `update_plan` and `ask_user` are CONTROL tools: the first never
- * ever becomes a `tool_call` (it starts as an `plan_update` event, rendered by the
- * card above the composer), the second becomes an event `question`. They
- * therefore do not have a line to carry — `ask_user` has one anyway, for the
- * past questions from Numo's thread.
- */
+     * `update_plan` and `ask_user` are CONTROL tools: the first never
+     * ever becomes a `tool_call` (it starts as an `plan_update` event, rendered by the
+     * card above the composer), the second becomes an event `question`. They
+     * therefore do not have a line to carry — `ask_user` has one anyway, for the
+     * past questions from Numo's thread.
+     */
     served.delete("update_plan");
     expect([...served].filter((name) => !keys.has(name)).sort()).toEqual([]);
   });

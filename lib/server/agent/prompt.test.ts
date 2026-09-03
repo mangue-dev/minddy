@@ -583,7 +583,7 @@ describe("buildPrReviewContextMessage", () => {
     const msg = buildPrReviewContextMessage(base);
     expect(msg).toContain("acme/app");
     expect(msg).toContain("feat/search");
-    expect(msg).toContain("git diff pr-base");
+    expect(msg).toContain("git diff PR_BASE");
     expect(msg).not.toContain("```diff");
   });
 
@@ -595,9 +595,9 @@ describe("buildPrReviewContextMessage", () => {
    * in the meantime, and these files appeared REVERSED — replaying them
    * commented publicly as PR deletions.
    */
-  it("ancre le diff sur la base de la forge, pas sur le tip vivant", () => {
+  it("anchors the diff to the forge base instead of the live tip", () => {
     const msg = buildPrReviewContextMessage(base);
-    expect(msg).toContain("`pr-base`");
+    expect(msg).toContain("`PR_BASE`");
     expect(msg).not.toMatch(/Start with `git diff origin\/main`/);
     // And `origin/main` remains NAMED, for what it is: the trap must be said,
     // not just avoided — the model knows the command and would attempt it alone.

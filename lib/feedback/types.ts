@@ -130,6 +130,8 @@ export type FeedbackPostSource = "board" | "api" | "internal";
     they therefore live here, pure, rather than in the core server. */
 export const FEEDBACK_TITLE_MAX = 200;
 export const FEEDBACK_BODY_MAX = 10_000;
+/** Maximum display-name length accepted by the feedback integration API. */
+export const FEEDBACK_USER_NAME_MAX = 200;
 
 /**
  * What a return dictation can affect: the title and the body, nothing else.

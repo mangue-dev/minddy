@@ -60,6 +60,7 @@ export function FormDialog({
   /** Direct connection: the transcript is delivered to the state which controls the input. */
   dictation?: {
     onTranscription: (text: string) => void;
+    feature?: "feedback_voice";
     disabled?: boolean;
     onProcessingChange?: (processing: boolean) => void;
     autoStart?: boolean;
@@ -118,6 +119,7 @@ export function FormDialogActions({
   onCancel?: () => void;
   dictation?: {
     onTranscription: (text: string) => void;
+    feature?: "feedback_voice";
     disabled?: boolean;
     onProcessingChange?: (processing: boolean) => void;
     autoStart?: boolean;
@@ -129,6 +131,7 @@ export function FormDialogActions({
       {dictation ? (
         <DictateButton
           onTranscription={dictation.onTranscription}
+          feature={dictation.feature}
           disabled={dictation.disabled || submitting}
           onProcessingChange={dictation.onProcessingChange}
           autoStart={dictation.autoStart}

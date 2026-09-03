@@ -31,7 +31,7 @@ import {
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import {
-  getInstancePrReviewModel,
+  getPrReviewDefaultModelForUser,
   getUserPrReviewModel,
   rememberPrReviewModel,
 } from "./model";
@@ -2462,8 +2462,8 @@ function toReviewRunSummary(run: AgentRun): PrReviewRunSummary {
  * integer for exactly the same code, and the menu entry grays out. This is the
  * server that says it, not the screen that guesses it.
  *
- * `model.instance` is the default set in /admin (what “default” means
- * in the picker); `model.preferred` is the last choice of the account.
+ * `model.instance` is the effective default for the account's active provider;
+ * `model.preferred` is the account's last explicit choice.
  */
 export async function prReviewRunResponse(
   scope: PrScope,
@@ -2472,7 +2472,7 @@ export async function prReviewRunResponse(
   const [run, reviewedHeadSha, instance, preferred] = await Promise.all([
     latestRunForPullRequest(scope.pr.id),
     lastReviewedShaForPullRequest(scope.pr.id),
-    getInstancePrReviewModel(),
+    getPrReviewDefaultModelForUser(userId),
     getUserPrReviewModel(userId),
   ]);
   const session: PrReviewSession = {

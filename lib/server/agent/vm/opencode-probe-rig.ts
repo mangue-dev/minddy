@@ -10,8 +10,8 @@ import { OPENCODE_VERSION } from "./opencode-version";
  * THE SHARED DECOR OF PERMISSION PROBES (MIN-362).
  *
  * This module is not loaded by ANY production path: it only exists for
- * [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts) and
- * [opencode-wait.probe.test.ts](opencode-wait.probe.test.ts), which measure the
+ * [opencode-wait.probe.test.ts](opencode-wait.probe.test.ts) and capability
+ * probes, which measure the
  * behavior of the true binary `opencode-ai@${OPENCODE_VERSION}` and keep these
  * measurements from bump to bump. He lives here, next to them, because the setting
  * IS the difficult half of the measurement — and a setting copied into two

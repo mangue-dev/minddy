@@ -839,13 +839,6 @@ export async function handleControlPlaneRequest(opts: {
     // Mint a fresh repository credential for trusted infrastructure. The
     // requesting process receives only an acknowledgement; the credential is
     // rotated in the Vercel firewall or self-hosted runner relay.
-    /** A review never pushes, so it cannot rotate infrastructure to write access.
-     * The refusal is explicit because this is an authorization boundary. */
-    if (anchorForRun(run) === "pr") {
-      return forbidden(
-        "a review session never pushes, so it gets no repository token",
-      );
-    }
     const [{ resolveRepoCloneTarget }, { refreshAgentSandboxForgeAccess }] =
       await Promise.all([import("./repo-access"), import("./sandbox")]);
     // `repo-write`, not `full`: the trusted relay uses it only for Git smart HTTP.
@@ -1205,11 +1198,6 @@ async function runPrTool(
  * those of the rereading: the forge and its token do not enter the VM, and the
  * liste se lit en base.
  *
- * `pull_request_id` not null = REREADING session: these tools are neither
- * offered (`agentToolsFor`) nor wired (`vm/turn.ts`), and the refusal here is the
- * third lock — the one that holds even if a checkpoint from before replays a
- * appel.
- *
  * The anchor counter makes the same round trip as up there, and it's the SAME
  * ceiling: “5 per run”, all pull requests combined.
  *
@@ -1228,9 +1216,6 @@ async function runProjectPrTool(
   args: Record<string, unknown>,
   body: Record<string, unknown>,
 ): Promise<ControlPlaneResult> {
-  if (run.pull_request_id) {
-    return bad(`${name} is not available in a pull request review session`);
-  }
   const [{ executeProjectPrTool }, { resolveRepoCloneTarget }] =
     await Promise.all([import("./project-pr-tools"), import("./repo-access")]);
   const { locale } = await runPrefsFor(run);

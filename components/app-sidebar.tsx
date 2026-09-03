@@ -190,6 +190,11 @@ const WhatsNewDialog = dynamic(
   { ssr: false },
 );
 
+const ProductFeedbackDialog = dynamic(
+  () => import("@/components/product-feedback-dialog").then((m) => m.ProductFeedbackDialog),
+  { ssr: false },
+);
+
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
 /** Minddy mark for web, Windows, Linux, and the collapsed macOS rail. */
@@ -864,9 +869,11 @@ function ChangelogTimelineMarker({
 }
 
 function ChangelogButton({
+  productFeedbackIntegrationEnabled,
   productFeedbackUrl,
   onMenuOpenChange,
 }: {
+  productFeedbackIntegrationEnabled: boolean;
   productFeedbackUrl: string | null;
   onMenuOpenChange?: (open: boolean) => void;
 }) {
@@ -876,6 +883,8 @@ function ChangelogButton({
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackDialogMounted, setFeedbackDialogMounted] = useState(false);
   const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
 
   useEffect(() => {
@@ -943,17 +952,22 @@ function ChangelogButton({
               {t("viewFullChangelog")}
             </span>
           </DropdownMenuItem>
-          {productFeedbackUrl ? (
+          {productFeedbackIntegrationEnabled || productFeedbackUrl ? (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => {
                   handleMenuOpenChange(false);
-                  window.open(
-                    productFeedbackUrl,
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
+                  if (productFeedbackIntegrationEnabled) {
+                    setFeedbackDialogMounted(true);
+                    setFeedbackDialogOpen(true);
+                  } else if (productFeedbackUrl) {
+                    window.open(
+                      productFeedbackUrl,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                  }
                 }}
                 className="cursor-pointer py-1.5 max-[1199px]:py-1.5"
               >
@@ -961,7 +975,9 @@ function ChangelogButton({
                 <span className="min-w-0 flex-1 truncate">
                   {t("shareFeedback")}
                 </span>
-                <ArrowUpRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                {!productFeedbackIntegrationEnabled ? (
+                  <ArrowUpRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                ) : null}
               </DropdownMenuItem>
             </>
           ) : null}
@@ -982,6 +998,12 @@ function ChangelogButton({
       </DropdownMenu>
       {dialogMounted ? (
         <WhatsNewDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      ) : null}
+      {feedbackDialogMounted ? (
+        <ProductFeedbackDialog
+          open={feedbackDialogOpen}
+          onOpenChange={setFeedbackDialogOpen}
+        />
       ) : null}
     </>
   );
@@ -1260,7 +1282,7 @@ function SidebarFooter({
   collapsed: boolean;
   onMenuOpenChange?: (open: boolean) => void;
 }) {
-  const { productFeedbackUrl } = useRuntimeConfig();
+  const { productFeedbackIntegrationEnabled, productFeedbackUrl } = useRuntimeConfig();
   return (
     <div className="flex flex-col gap-0.5">
       {/* Update actions stay above the stable account/status row. */}
@@ -1289,6 +1311,7 @@ function SidebarFooter({
               onOpenChange={onMenuOpenChange}
             />
             <ChangelogButton
+              productFeedbackIntegrationEnabled={productFeedbackIntegrationEnabled}
               productFeedbackUrl={productFeedbackUrl}
               onMenuOpenChange={onMenuOpenChange}
             />

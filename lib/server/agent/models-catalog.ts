@@ -1,10 +1,10 @@
 import "server-only";
 
 import {
+  getPrReviewDefaultModelForUser,
   getRootDefaultModel,
   resolveAgentApiKey,
   resolveProviderDefaultModel,
-  userHasByokKey,
 } from "./model";
 import { getBaselinePricing, getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
 import { listOpenRouterIndex } from "./openrouter-index";
@@ -381,21 +381,15 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   }
 }
 
-/**
- * Catalog of the PR review: the platform-compatible catalog with the plan
- * ceiling when the run uses minddy's quota. BYOK removes that ceiling, just as
- * it does for the code-agent picker.
- */
+/** Catalog of models the account can actually use for a PR review. */
 export async function getPrReviewModelCatalog(userId: string): Promise<AgentModelsCatalog> {
-  const [models, hasByok] = await Promise.all([
-    getPlatformModelCatalog(),
-    userHasByokKey(userId),
+  const [catalog, defaultModel] = await Promise.all([
+    getAgentModelsForUser(userId),
+    getPrReviewDefaultModelForUser(userId),
   ]);
-  const limit = hasByok ? null : await getModelPlanLimit(userId);
   return {
-    provider: DEFAULT_AGENT_PROVIDER,
-    defaultModel: null,
-    ...(await withMultipliers(models, limit)),
+    ...catalog,
+    defaultModel,
   };
 }
 

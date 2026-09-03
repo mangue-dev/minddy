@@ -67,9 +67,8 @@ export type LocalRunAdmission = { ok: true } | { ok: false; reason: LocalRunRefu
  * the deployment environment. This is what allows it to be broken in a test.
  */
 export function admitLocalRun(opts: { keyMode: "platform" | "byok" }): LocalRunAdmission {
-  // A local BYOK is an interactive gesture by the user. Unattended contexts
-  // (routine, automation, mention) are already excluded by `localRunScope`;
-  // they continue to run in the cloud.
+  // The local destination was chosen by the authenticated user at launch. BYOK
+  // needs no platform-key mint regardless of what later resumes the run.
   if (opts.keyMode === "byok") return { ok: true };
   if (!runKeyMintingEnabled()) return { ok: false, reason: "no_mint" };
   return { ok: true };
@@ -78,11 +77,9 @@ export function admitLocalRun(opts: { keyMode: "platform" | "byok" }): LocalRunA
 /**
  * DOES THE FLAG REQUESTED BY THE PAGE SURVIVE LAUNCH? (MIN-359, MIN-360)
  *
- * `localExec` arrives in the body of a POST: it is a REQUEST, not a fact.
- * This function confronts it with what the run IS — and the nature of the run, it,
- * is decided once and for all by
- * [local-exec-scope.ts](local-exec-scope.ts), which is also what `createRun`
- * applies to writing the column and what issuing the lease rechecks.
+ * `localExec` arrives in an authenticated launch request and becomes a frozen
+ * run destination. This function keeps the shared validation hook used by
+ * persistence and lease issuance without turning trigger labels into profiles.
  *
  * Three readings of the same invariant, only one writing: this is what was missing
  * in MIN-359, where the predicate knew neither the `pr` anchor nor the input gates

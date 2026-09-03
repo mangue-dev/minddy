@@ -3,7 +3,6 @@ import {
   CREATE_ROUTINE_DESCRIPTION,
   CREATE_ROUTINE_PARAMETERS,
 } from "@/lib/server/routine-tool-schema";
-import { PROJECT_PR_TOOL_NAMES } from "./platform-tool-names";
 // Type ONLY (therefore deleted during compilation): the anchor is declared in the module
 // prompts, which is the one that translates it into text.
 import type { AgentAnchor } from "./prompt";
@@ -51,16 +50,12 @@ import type { AgentAnchor } from "./prompt";
  * `PR_TOOLS` below, which are the three writings of a
  * REVIEW session on THE pull request that it is rereading.
  *
- * Minddy tools are used at BOTH anchors (MIN-125): the run anchor
- * only decides on the DEFAULT TARGET of the tools ticket (the run ticket,
- * otherwise `issue` is mandatory) and the formulation of `create_pr`. Hence two
- * games which only differ in this way: `AGENT_TOOLS` (ticket run) and
- * `NOTEBOOK_AGENT_TOOLS` (run carnet).
+ * Minddy tools are used at every anchor. The run anchor only decides the
+ * default target of issue tools; it never selects a different catalog.
  *
  * NO end of tour tool: the tour ends when the agent responds in text
- * (natural ending, like a conversation). Commits are harness driven
- * (commit+push at suspend and at the end of each turn) — no tool commit exposed,
- * to keep commits clean.
+ * (natural ending, like a conversation). Native OpenCode Git workflows remain
+ * available alongside the integrated `create_pr` delivery tool.
  */
 
 export type AgentToolDef = {
@@ -93,20 +88,20 @@ const CORE_TOOLS: AgentToolDef[] = [
     type: "function",
     function: {
       name: "run_background",
-      description:
-        `Run a long-lived command in the background — a dev server, a watcher, a build that keeps running — and keep working while it runs. This is how you SEE your work run: start the server, then use run_command to curl it ('curl -s --retry 5 --retry-connrefused http://localhost:3000/'), read what it answered, and stop the job. Three actions: 'start' (needs 'command'; returns a job_id, the pid and the path of its log file), 'check' (needs 'job_id'; returns whether it is still running and ONLY what it wrote since your previous check), 'stop' (needs 'job_id'; kills it). Give a server a moment to boot before the first check. NO stdin: a command that waits for input hangs forever — pass its non-interactive flags (--yes, --no-interactive, CI=1). Not for commands that finish on their own: use run_command for those, it gives you the exit code. Background jobs do NOT survive the end of a turn (all of them are killed then), so start what you need in the same turn you use it. At most ${MAX_BACKGROUND_JOBS} jobs run at a time.`,
+      description: `Run a long-lived command in the background — a dev server, a watcher, a build that keeps running — and keep working while it runs. This is how you SEE your work run: start the server, then use run_command to curl it ('curl -s --retry 5 --retry-connrefused http://localhost:3000/'), read what it answered, and stop the job. Three actions: 'start' (needs 'command'; returns a job_id, the pid and the path of its log file), 'check' (needs 'job_id'; returns whether it is still running and ONLY what it wrote since your previous check), 'stop' (needs 'job_id'; kills it). Give a server a moment to boot before the first check. NO stdin: a command that waits for input hangs forever — pass its non-interactive flags (--yes, --no-interactive, CI=1). Not for commands that finish on their own: use run_command for those, it gives you the exit code. Background jobs do NOT survive the end of a turn (all of them are killed then), so start what you need in the same turn you use it. At most ${MAX_BACKGROUND_JOBS} jobs run at a time.`,
       parameters: {
         type: "object",
         properties: {
           action: {
             type: "string",
             enum: ["start", "check", "stop"],
-            description: "'start' a job, 'check' its recent output, or 'stop' it.",
+            description:
+              "'start' a job, 'check' its recent output, or 'stop' it.",
           },
           command: {
             type: "string",
             description:
-              "For 'start': one literal executable followed by literal arguments, e.g. 'npm run dev'. Shell operators, expansion, shell interpreters, and shell scripts are rejected. Ignored otherwise.",
+              "For 'start': the shell command to run, for example 'npm run dev' or 'npm run dev -- --port 3100'. Ignored otherwise.",
           },
           workdir: {
             type: "string",
@@ -115,7 +110,8 @@ const CORE_TOOLS: AgentToolDef[] = [
           },
           job_id: {
             type: "string",
-            description: "For 'check' and 'stop': the job_id returned by 'start'.",
+            description:
+              "For 'check' and 'stop': the job_id returned by 'start'.",
           },
         },
         required: ["action"],
@@ -156,7 +152,10 @@ const CORE_TOOLS: AgentToolDef[] = [
             items: {
               type: "object",
               properties: {
-                step: { type: "string", description: "Short description of the step." },
+                step: {
+                  type: "string",
+                  description: "Short description of the step.",
+                },
                 status: {
                   type: "string",
                   enum: ["pending", "in_progress", "completed", "cancelled"],
@@ -187,7 +186,12 @@ const READ_RESOURCE_DESCRIPTION_WITH_IMAGES =
   "Open one resource of the ticket (or of one of its comments) by id — get the id from read_issue. A LINK is fetched by this tool through the outbound-network guard and returns capped readable content; unsafe/private targets and redirect hops are refused, so never fetch the link separately with run_command or curl. A PAGE of the project's wiki returns its page_id and title — read the document itself with read_page. A FILE that is an IMAGE (png, jpeg, webp, gif) comes back as the image itself, attached to the result: you actually see it. When the ticket carries a mockup, a screenshot or a diagram, open it BEFORE writing the code it describes, and say what you see — a layout you were shown beats a layout you were told about. Text files come back inline (capped); other binaries and oversized files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
 
 /** Backlog task states, such as tools accept them. */
-const SCRATCHPAD_TASK_STATES = ["pending", "in_progress", "completed", "cancelled"];
+const SCRATCHPAD_TASK_STATES = [
+  "pending",
+  "in_progress",
+  "completed",
+  "cancelled",
+];
 
 /** Ticket reference accepted wherever a tool takes `issue`. */
 const ISSUE_REF_DESCRIPTION =
@@ -226,8 +230,8 @@ const PAGE_BODY_DESCRIPTION =
   "'# ' is the page title), bold/italic/inline code, links, bullet and numbered " +
   "lists, task lists ('- [ ]' / '- [x]'), quotes, fenced code blocks, horizontal " +
   "rules, <details><summary>…</summary>…</details> collapsibles, " +
-  "<aside data-type=\"callout\" data-page-callout-color=\"blue\" " +
-  "data-page-callout-icon=\"💡\">…</aside> callouts, and " +
+  '<aside data-type="callout" data-page-callout-color="blue" ' +
+  'data-page-callout-icon="💡">…</aside> callouts, and ' +
   "'[[page:<page_id>]]' on its own line to link another page. Anything else " +
   "degrades to plain text. " +
   PAGE_FILES_DESCRIPTION;
@@ -268,7 +272,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
           include_all_comments: {
             type: "boolean",
-            description: "Return the FULL comment thread instead of the last 15 (default false).",
+            description:
+              "Return the FULL comment thread instead of the last 15 (default false).",
           },
         },
       },
@@ -320,10 +325,14 @@ const MINDDY_TOOLS: AgentToolDef[] = [
         type: "object",
         properties: {
           issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
-          title: { type: "string", description: "New title. Concise, imperative." },
+          title: {
+            type: "string",
+            description: "New title. Concise, imperative.",
+          },
           description: {
             type: "string",
-            description: "New description in markdown — REPLACES the current one entirely.",
+            description:
+              "New description in markdown — REPLACES the current one entirely.",
           },
           effort: {
             type: "string",
@@ -351,7 +360,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
         properties: {
           plan: {
             type: "string",
-            description: "The complete plan in markdown (context + '- [ ]' tasks + verification).",
+            description:
+              "The complete plan in markdown (context + '- [ ]' tasks + verification).",
           },
           issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
         },
@@ -405,7 +415,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           },
           new_string: {
             type: "string",
-            description: "What replaces it. An empty string deletes the passage.",
+            description:
+              "What replaces it. An empty string deletes the passage.",
           },
           replace_all: {
             type: "boolean",
@@ -487,11 +498,13 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           markdown: { type: "string", description: PAGE_BODY_DESCRIPTION },
           icon: {
             type: "string",
-            description: "A single emoji shown next to the title. Omit for the default.",
+            description:
+              "A single emoji shown next to the title. Omit for the default.",
           },
           parent_page_id: {
             type: "string",
-            description: "Nest it under this page (from list_pages). Omit for a root page.",
+            description:
+              "Nest it under this page (from list_pages). Omit for a root page.",
           },
         },
         required: ["title", "markdown"],
@@ -515,7 +528,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           },
           version: {
             type: "number",
-            description: "The version from read_page. Always pass it with markdown.",
+            description:
+              "The version from read_page. Always pass it with markdown.",
           },
           title: { type: "string", description: "New title, plain text." },
           icon: { type: "string", description: "New emoji icon." },
@@ -561,7 +575,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           },
           new_string: {
             type: "string",
-            description: "What replaces it. An empty string deletes the passage.",
+            description:
+              "What replaces it. An empty string deletes the passage.",
           },
           replace_all: {
             type: "boolean",
@@ -613,7 +628,10 @@ const MINDDY_TOOLS: AgentToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Objective name. Short, concrete." },
+          name: {
+            type: "string",
+            description: "Objective name. Short, concrete.",
+          },
           description: {
             type: "string",
             description:
@@ -626,7 +644,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           },
           target_date: {
             type: "string",
-            description: "Optional target date, 'YYYY-MM-DD'. Only when one was named.",
+            description:
+              "Optional target date, 'YYYY-MM-DD'. Only when one was named.",
           },
         },
         required: ["name", "description"],
@@ -646,7 +665,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           name: { type: "string", description: "New name." },
           description: {
             type: "string",
-            description: "New description in markdown — REPLACES the current one entirely.",
+            description:
+              "New description in markdown — REPLACES the current one entirely.",
           },
           status: {
             type: "string",
@@ -655,7 +675,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           },
           target_date: {
             type: "string",
-            description: "New target date, 'YYYY-MM-DD'. Pass null to clear it.",
+            description:
+              "New target date, 'YYYY-MM-DD'. Pass null to clear it.",
           },
         },
         required: ["objective"],
@@ -674,7 +695,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           objective: { type: "string", description: OBJECTIVE_REF_DESCRIPTION },
           body: {
             type: "string",
-            description: "Markdown, short: a few sentences or short bullets, no headings.",
+            description:
+              "Markdown, short: a few sentences or short bullets, no headings.",
           },
         },
         required: ["objective", "body"],
@@ -690,10 +712,14 @@ const MINDDY_TOOLS: AgentToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          title: { type: "string", description: "Ticket title. Concise, imperative." },
+          title: {
+            type: "string",
+            description: "Ticket title. Concise, imperative.",
+          },
           description: {
             type: "string",
-            description: "Ticket description in markdown (context, scope, acceptance).",
+            description:
+              "Ticket description in markdown (context, scope, acceptance).",
           },
           priority: {
             type: "string",
@@ -730,16 +756,19 @@ const MINDDY_TOOLS: AgentToolDef[] = [
         properties: {
           ok: {
             type: "boolean",
-            description: "Does the work pass? false when anything must be fixed before it ships.",
+            description:
+              "Does the work pass? false when anything must be fixed before it ships.",
           },
           summary: {
             type: "string",
-            description: "Two or three sentences: what you checked, and what you concluded.",
+            description:
+              "Two or three sentences: what you checked, and what you concluded.",
           },
           blockers: {
             type: "array",
             items: { type: "string" },
-            description: "One line per thing that must change. Empty array when ok is true.",
+            description:
+              "One line per thing that must change. Empty array when ok is true.",
           },
         },
         // The three in `required` ON PURPOSE: a field outside `required` of a
@@ -773,7 +802,10 @@ const MINDDY_TOOLS: AgentToolDef[] = [
             items: {
               type: "object",
               properties: {
-                text: { type: "string", description: "The task label, one line." },
+                text: {
+                  type: "string",
+                  description: "The task label, one line.",
+                },
                 state: {
                   type: "string",
                   enum: SCRATCHPAD_TASK_STATES,
@@ -815,7 +847,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
               properties: {
                 task_index: {
                   type: "number",
-                  description: "0-based task index, in document order (from read_scratchpad).",
+                  description:
+                    "0-based task index, in document order (from read_scratchpad).",
                 },
                 state: {
                   type: "string",
@@ -872,8 +905,7 @@ const PR_TOOLS: AgentToolDef[] = [
     type: "function",
     function: {
       name: "comment_pr_line",
-      description:
-        `Post a review comment ANCHORED to one line of this pull request's diff — the way a reviewer points at the exact code they mean. Use it for a concrete problem you can point at; anything you cannot anchor goes in your summary instead.\n\nThe line must be a line the DIFF shows, not just any line of the file: 'line' is numbered in the NEW file for side 'RIGHT' (an added line, or an unchanged context line of the diff) and in the OLD file for side 'LEFT' (a removed line). If the anchor does not resolve, the call comes back with the commentable line ranges of that file — pick one of them, or fold the point into your summary. Nothing is posted on a failed anchor.\n\nAt most ${AI_REVIEW_MAX_INLINE_COMMENTS} line comments per review, hard: the result tells you how many you have left. Spend them on what matters most — fifteen anchored remarks is not a review, it is noise.`,
+      description: `Post a review comment ANCHORED to one line of this pull request's diff — the way a reviewer points at the exact code they mean. Use it for a concrete problem you can point at; anything you cannot anchor goes in your summary instead.\n\nThe line must be a line the DIFF shows, not just any line of the file: 'line' is numbered in the NEW file for side 'RIGHT' (an added line, or an unchanged context line of the diff) and in the OLD file for side 'LEFT' (a removed line). If the anchor does not resolve, the call comes back with the commentable line ranges of that file — pick one of them, or fold the point into your summary. Nothing is posted on a failed anchor.\n\nAt most ${AI_REVIEW_MAX_INLINE_COMMENTS} line comments per review, hard: the result tells you how many you have left. Spend them on what matters most — fifteen anchored remarks is not a review, it is noise.`,
       parameters: {
         type: "object",
         properties: {
@@ -932,7 +964,8 @@ const PR_TOOLS: AgentToolDef[] = [
         properties: {
           comment_id: {
             type: "number",
-            description: "Numeric id of a review comment of the thread you are replying to.",
+            description:
+              "Numeric id of a review comment of the thread you are replying to.",
           },
           body: { type: "string", description: "The reply, in markdown." },
         },
@@ -964,13 +997,17 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
         properties: {
           state: {
             type: "array",
-            items: { type: "string", enum: ["draft", "open", "merged", "closed"] },
+            items: {
+              type: "string",
+              enum: ["draft", "open", "merged", "closed"],
+            },
             description:
               "Keep only these states. Omit for all of them. 'draft' and 'open' are both alive; a merged pull request is never 'closed' here.",
           },
           author: {
             type: "string",
-            description: "Keep only the pull requests opened by this forge login (exact, case-insensitive).",
+            description:
+              "Keep only the pull requests opened by this forge login (exact, case-insensitive).",
           },
           updated_since: {
             type: "string",
@@ -996,11 +1033,13 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
         properties: {
           pull_request: {
             type: "number",
-            description: "Number of the pull request, as list_pull_requests returns it.",
+            description:
+              "Number of the pull request, as list_pull_requests returns it.",
           },
           include_diff: {
             type: "boolean",
-            description: "Include each file's patch (truncated past ~4000 characters). Default false.",
+            description:
+              "Include each file's patch (truncated past ~4000 characters). Default false.",
           },
         },
         required: ["pull_request"],
@@ -1016,7 +1055,10 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          pull_request: { type: "number", description: "Number of the pull request." },
+          pull_request: {
+            type: "number",
+            description: "Number of the pull request.",
+          },
           body: { type: "string", description: "The message, in markdown." },
         },
         required: ["pull_request", "body"],
@@ -1027,28 +1069,34 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
     type: "function",
     function: {
       name: "comment_pull_request_line",
-      description:
-        `Post a remark ANCHORED to one line of a pull request's diff. The line must be a line the DIFF shows: 'line' is numbered in the NEW file for side 'RIGHT' (an added or unchanged line of the diff) and in the OLD file for side 'LEFT' (a removed line). If the anchor does not resolve, the call comes back with that file's commentable ranges and nothing is posted — pick one of them, or make the point in comment_pull_request.\n\nAt most ${AI_REVIEW_MAX_INLINE_COMMENTS} anchored remarks per run, ACROSS EVERY pull request: the result tells you how many are left. Spend them on what matters most.`,
+      description: `Post a remark ANCHORED to one line of a pull request's diff. The line must be a line the DIFF shows: 'line' is numbered in the NEW file for side 'RIGHT' (an added or unchanged line of the diff) and in the OLD file for side 'LEFT' (a removed line). If the anchor does not resolve, the call comes back with that file's commentable ranges and nothing is posted — pick one of them, or make the point in comment_pull_request.\n\nAt most ${AI_REVIEW_MAX_INLINE_COMMENTS} anchored remarks per run, ACROSS EVERY pull request: the result tells you how many are left. Spend them on what matters most.`,
       parameters: {
         type: "object",
         properties: {
-          pull_request: { type: "number", description: "Number of the pull request." },
+          pull_request: {
+            type: "number",
+            description: "Number of the pull request.",
+          },
           path: {
             type: "string",
-            description: "Repo-relative path, exactly as the diff names it (for a renamed file, either name works).",
+            description:
+              "Repo-relative path, exactly as the diff names it (for a renamed file, either name works).",
           },
           line: {
             type: "number",
-            description: "The line to anchor to, numbered in the NEW file for 'RIGHT' and the OLD file for 'LEFT'.",
+            description:
+              "The line to anchor to, numbered in the NEW file for 'RIGHT' and the OLD file for 'LEFT'.",
           },
           side: {
             type: "string",
             enum: ["LEFT", "RIGHT"],
-            description: "'RIGHT' for a line the pull request adds or leaves unchanged, 'LEFT' for one it removes. Defaults to 'RIGHT'.",
+            description:
+              "'RIGHT' for a line the pull request adds or leaves unchanged, 'LEFT' for one it removes. Defaults to 'RIGHT'.",
           },
           body: {
             type: "string",
-            description: "One or two sentences in markdown: what is wrong and what to do instead. Address the code, not the author.",
+            description:
+              "One or two sentences in markdown: what is wrong and what to do instead. Address the code, not the author.",
           },
         },
         required: ["pull_request", "path", "line", "body"],
@@ -1064,10 +1112,14 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          pull_request: { type: "number", description: "Number of the pull request." },
+          pull_request: {
+            type: "number",
+            description: "Number of the pull request.",
+          },
           comment_id: {
             type: "number",
-            description: "Numeric id of a review comment of the thread you are replying to.",
+            description:
+              "Numeric id of a review comment of the thread you are replying to.",
           },
           body: { type: "string", description: "The reply, in markdown." },
         },
@@ -1084,7 +1136,10 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          pull_request: { type: "number", description: "Number of the pull request." },
+          pull_request: {
+            type: "number",
+            description: "Number of the pull request.",
+          },
           verdict: {
             type: "string",
             enum: ["approve", "request_changes", "comment"],
@@ -1092,7 +1147,8 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
           },
           body: {
             type: "string",
-            description: "Why, in markdown. Required — a verdict without its reasons is not a review.",
+            description:
+              "Why, in markdown. Required — a verdict without its reasons is not a review.",
           },
         },
         required: ["pull_request", "verdict", "body"],
@@ -1108,7 +1164,10 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          pull_request: { type: "number", description: "Number of the pull request." },
+          pull_request: {
+            type: "number",
+            description: "Number of the pull request.",
+          },
           state: {
             type: "string",
             enum: ["merged", "closed", "open", "ready_for_review"],
@@ -1127,12 +1186,12 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
   },
 ];
 
-/** `create_pr` — same tool, formulated according to the anchor (the notebook has no ticket). */
-const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
+/** Integrated pull-request delivery for the current run's working branch. */
+const CREATE_PR_TOOL: AgentToolDef = {
   type: "function",
   function: {
     name: "create_pr",
-    description: `Open the pull request for ${anchor === "issue" ? "this ticket's" : "this session's"} working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. This tool only commits, pushes, and opens or updates the PR; it does not run type-checks or tests. Use validate_changes for an explicit local preflight. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.`,
+    description: `Open the pull request for this run's working branch. Use it when the user asks for a pull request, or when you have completed a reviewable piece of work and want to submit it. This tool only commits, pushes, and opens or updates the PR; it does not run type-checks or tests. Use validate_changes for an explicit local preflight. If a pull request already exists for this branch it is NOT duplicated — pushes update it automatically (and a rejected/closed one is reopened), so you never need this tool more than once per branch. Fails if the branch has no changes.`,
     parameters: {
       type: "object",
       properties: {
@@ -1149,7 +1208,7 @@ const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
       required: ["title"],
     },
   },
-});
+};
 
 /** Validation is explicit; publishing a pull request does not run it implicitly. */
 const VALIDATE_CHANGES_TOOL: AgentToolDef = {
@@ -1177,97 +1236,29 @@ const LIST_LOCAL_PROJECTS_TOOL: AgentToolDef = {
   },
 };
 
-/** Jeu complet d'un run de TICKET. */
-export const AGENT_TOOLS: AgentToolDef[] = [
+/**
+ * The canonical OpenCode capability manifest. Anchors only change contextual
+ * descriptions and default targets; they never remove a tool from this catalog.
+ */
+export const CANONICAL_AGENT_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS,
   ...MINDDY_TOOLS,
-  ...PROJECT_PR_TOOLS,
-  VALIDATE_CHANGES_TOOL,
-  CREATE_PR_TOOL("issue"),
-];
-
-/** Complete game of a CARNET run (MIN-84) — same tools minddy, `create_pr` without ticket. */
-export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [
-  ...CORE_TOOLS,
-  ...MINDDY_TOOLS,
-  ...PROJECT_PR_TOOLS,
-  VALIDATE_CHANGES_TOOL,
-  CREATE_PR_TOOL("notebook"),
-];
-
-/** What a proofreading session keeps from the heart: READ, research, execute. */
-const PR_REVIEW_CORE_TOOL_NAMES: ReadonlySet<string> = new Set([
-  "read_file",
-  "list_dir",
-  "glob",
-  "grep",
-  "run_command",
-]);
-
-/**
- * Minddy readers of a proofread: the ticket that the PR implements.
- *
- * `read_feedback` en fait partie (MIN-245) parce que `read_issue` PROMET
- * `linked_feedback` — « the user requests from the product's feedback board that
- * this ticket implements”. Without it, a replay reads identifiers that it
- * has no way of opening, even though that is precisely where the
- * PR had to resolve. He does not read anything from the deposit and does not write anywhere: he does not
- * Do not touch the read-only session.
- */
-const PR_REVIEW_MINDDY_TOOL_NAMES: ReadonlySet<string> = new Set([
-  "search_issues",
-  "read_issue",
-  "read_feedback",
-  "read_resource",
-  // The WIKI in reading (MIN-273): a rereading which judges “it does not respect the
-  // convention” needs to be able to read the convention. Page entries
-  // remain outside, like those of ticket — rereading does not authorize rewriting.
-  "list_pages",
-  "read_page",
-  // OBJECTIVES in reading (MIN-287): “does this PR serve the purpose of the
-  // ticket? » cannot be judged without the goal. Goal entries remain
-  // outside, like those of ticket and page.
-  "list_objectives",
-  "read_objective",
-]);
-
-/**
- * Complete game of a REVIEW session (MIN-168). What is not said there
- * that she is:
- * - **no edition** (`edit_file`, `apply_edits`, `write_file`, `apply_patch`,
- * `move_file`, `delete_file`) nor `create_pr`: a review does not affect the
- * repository, and read-only is a property of the TOOLSET — not one
- * prompt phrase that a model can ignore (same doctrine as the subagent
- * `explore`). The harness doesn't commit or push for her either
- * (`writesToRepo`, execute.ts): two halves of the same guarantee;
- * - **no minddy writing** (`update_issue`, `write_issue_plan`,
- * `create_issue`) nor notebook: rereading a PR does not authorize rewriting the
- * team tickets or anyone's grades;
- * - **no delegation** nor `run_background`: a review fits into a
- * session, and a server left alive has nothing to do there;
- * - **no `update_plan`, no `ask_user`, no `report_verdict`**: the
- * checklist has no reader here, the question arises in the PR thread,
- * and the verdict is written in the body of the summary (MIN-141).
- * There remain the readers, the shell (type-check, targeted test), the minddy readers and
- * the three scriptures of PR.
- */
-export const PR_REVIEW_TOOLS: AgentToolDef[] = [
-  ...CORE_TOOLS.filter((t) => PR_REVIEW_CORE_TOOL_NAMES.has(t.function.name)),
-  ...MINDDY_TOOLS.filter((t) => PR_REVIEW_MINDDY_TOOL_NAMES.has(t.function.name)),
   ...PR_TOOLS,
+  ...PROJECT_PR_TOOLS,
+  VALIDATE_CHANGES_TOOL,
+  CREATE_PR_TOOL,
 ];
 
-/** Both editing interfaces, mutually EXCLUSIVE (MIN-115). */
+/** Compatibility exports backed by the same canonical catalog. */
+export const AGENT_TOOLS: AgentToolDef[] = CANONICAL_AGENT_TOOLS;
+export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = CANONICAL_AGENT_TOOLS;
 
-/**
- * Ce qu'un run SANS INTERLOCUTEUR n'a pas (MIN-185) — cf. `agentToolsFor`, qui
- * documents both whys. The list is here, alongside other exclusions
- * structural, so that it can be found by searching for “who removes a tool?” ".
- */
-const NON_INTERACTIVE_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
-  "ask_user",
-  "create_routine",
-]);
+/** Stable names used by parity tests and generated capability snapshots. */
+export const CANONICAL_AGENT_TOOL_NAMES: readonly string[] = Object.freeze(
+  [...CANONICAL_AGENT_TOOLS, LIST_LOCAL_PROJECTS_TOOL]
+    .map((tool) => tool.function.name)
+    .sort(),
+);
 
 /** Tools that take a `issue`: their DEFAULT TARGET depends on the anchor. */
 const TARGETABLE_ISSUE_TOOLS = new Set([
@@ -1295,8 +1286,7 @@ const TARGET_SUFFIX: Record<AgentAnchor, string> = {
     " `issue` is OPTIONAL: omit it to act on the ticket this session is anchored to, pass it to target ANOTHER ticket of the project.",
   notebook:
     " `issue` is REQUIRED: this session is not anchored to a ticket, so name the one you mean — resolve it with search_issues first.",
-  pr:
-    " `issue` defaults to the ticket this pull request implements, when it has one — your context says so at the top. MANY PULL REQUESTS HAVE NO TICKET: there, omitting `issue` is refused, and you must name the ticket you mean (find it with search_issues) or do without one — reviewing a pull request never requires a ticket.",
+  pr: " `issue` defaults to the ticket this pull request implements, when it has one — your context says so at the top. MANY PULL REQUESTS HAVE NO TICKET: there, omitting `issue` is refused, and you must name the ticket you mean (find it with search_issues) or do without one — reviewing a pull request never requires a ticket.",
 };
 
 /** `issue` pushed into `required`, without losing those that the tool already carries. */
@@ -1309,7 +1299,8 @@ function withRequiredIssue(
 }
 
 /**
- * Set of tools for a run, depending on its anchoring, its model and access to the web.
+ * Canonical Minddy tool catalog. Anchors and run sources only affect contextual
+ * descriptions; provider support may add the metered `web_search` integration.
  *
  * `web_search` goes through the OpenRouter plugin: it is only offered on one run
  * which talks to OpenRouter (quota minddy or BYOK OpenRouter). An OpenAI BYOK /
@@ -1320,10 +1311,8 @@ function withRequiredIssue(
  * research on minddy's key would amount to paying for the web for use by
  * otherwise unlimited. The tool then simply disappears.
  *
- * `apply_patch` (MIN-115) obeys the same all-or-nothing logic: the models
- * `gpt-*` receive it INSTEAD of `edit_file`/`apply_edits`/`write_file`, the
- * others don't see it. Serving both games together would cause the model to hesitate
- * between two ways of doing exactly the same thing.
+ * Native OpenCode file and web tools are configured separately and are never
+ * removed because Minddy exposes an adjacent integration.
  */
 export function agentToolsFor(opts: {
   anchor: AgentAnchor;
@@ -1359,22 +1348,7 @@ export function agentToolsFor(opts: {
    * tool without reader is an invitation to use it for nothing.
    */
   chain?: boolean;
-  /**
-   * Can anyone ANSWER this run? False for a ROUTINE passage
-   * (MIN-185), and two tools then disappear — by the TOOLS SET, never
-   * by a prompt sentence, same doctrine as reading only a session
-   * de relecture :
-   *
-   * - **`ask_user`**: no one is in front of the screen at 9 a.m. A
-   * question would leave the run stuck waiting until we pass —
-   * a frozen microVM and work never delivered. Routine decides, and
-   * documents his choice in his response.
-   * - **`create_routine`**: a routine is not self-replicating. Without this
-   * exclusion, a poorly formulated routine poses a routine every night, and
-   * nothing in the product makes up for it.
-   *
-   * `undefined` is “interactive”: all historical callers are.
-   */
+  /** Historical interaction metadata. It no longer removes questions or tools. */
   interactive?: boolean;
   /**
    * DOES THE TOUR PLAY ON THE USER’S MACHINE (MIN-293, then MIN-364)?
@@ -1402,26 +1376,11 @@ export function agentToolsFor(opts: {
    */
   local?: boolean;
 }): AgentToolDef[] {
-  const baseTools =
-    opts.anchor === "issue"
-      ? AGENT_TOOLS
-      : opts.anchor === "pr"
-        ? PR_REVIEW_TOOLS
-        : NOTEBOOK_AGENT_TOOLS;
-  const tools = opts.local ? [...baseTools, LIST_LOCAL_PROJECTS_TOOL] : baseTools;
+  const tools = [...CANONICAL_AGENT_TOOLS, LIST_LOCAL_PROJECTS_TOOL];
   return tools
     .filter((t) => {
       const name = t.function.name;
       if (name === "web_search") return opts.webSearch;
-      if (name === "report_verdict") return opts.chain === true;
-      if (NON_INTERACTIVE_FORBIDDEN_TOOLS.has(name)) return opts.interactive !== false;
-      // No linked repository → no forge: the delivery tool and the project-PR
-      // inventory would only ever fail, so they are not announced (same
-      // all-or-nothing rule as `web_search`).
-      if (opts.repo === false) {
-        if (name === "create_pr") return false;
-        if (PROJECT_PR_TOOL_NAMES.has(name)) return false;
-      }
       return true;
     })
     .map((t) => {
@@ -1429,7 +1388,10 @@ export function agentToolsFor(opts: {
       if (opts.images === true && name === "read_resource") {
         return {
           ...t,
-          function: { ...t.function, description: READ_RESOURCE_DESCRIPTION_WITH_IMAGES },
+          function: {
+            ...t.function,
+            description: READ_RESOURCE_DESCRIPTION_WITH_IMAGES,
+          },
         };
       }
       if (name === "spawn_agent" && opts.subagentModels !== true) {
@@ -1478,7 +1440,9 @@ export function agentToolsFor(opts: {
 /** `spawn_agent` without its `model` field — the model sentence leaves with it. */
 function withoutModelField(tool: AgentToolDef): AgentToolDef {
   const properties = Object.fromEntries(
-    Object.entries(tool.function.parameters.properties).filter(([key]) => key !== "model"),
+    Object.entries(tool.function.parameters.properties).filter(
+      ([key]) => key !== "model",
+    ),
   );
   return {
     ...tool,

@@ -4,8 +4,8 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
 
 /**
  * Agent microVM network policy (MIN-223). PURE and testable without
- * sandbox — like `command-guard.ts` and `repo-path.ts`, this is logic that
- * keep something that you can't get back after the fact.
+ * sandbox — like `repo-path.ts`, this is infrastructure logic that preserves
+ * a boundary the model process cannot grant itself.
  *
  * THE PRINCIPLE, AND IT IS UNUSUAL: **the microVM does not hold any secrets OF
  * MINDDY.** No LLM key, no Supabase key, no identity token. It's not a
