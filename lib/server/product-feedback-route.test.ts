@@ -84,6 +84,23 @@ describe("POST /api/product-feedback", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("constrains the optional display name to the integration contract", async () => {
+    H.getAuthedUser.mockResolvedValueOnce({
+      ok: true,
+      user: {
+        id: "user-1",
+        email: "ada@example.test",
+        user_metadata: { full_name: "A".repeat(201) },
+      },
+    });
+
+    await POST(request({ title: "A useful idea" }) as never);
+
+    const options = vi.mocked(fetch).mock.calls[0]?.[1];
+    const forwarded = JSON.parse(String(options?.body));
+    expect(forwarded.user.name).toBe("A".repeat(200));
+  });
+
   it("reports an unavailable integration without exposing a secret", async () => {
     delete process.env.MINDDY_FEEDBACK_KEY;
 

@@ -4,6 +4,7 @@ import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import {
   FEEDBACK_BODY_MAX,
   FEEDBACK_TITLE_MAX,
+  FEEDBACK_USER_NAME_MAX,
 } from "@/lib/feedback/types";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     auth.user.user_metadata as AuthNameMeta,
     auth.user.email,
     "",
-  );
+  ).slice(0, FEEDBACK_USER_NAME_MAX);
   const user = {
     external_id: auth.user.id,
     ...(auth.user.email ? { email: auth.user.email } : {}),
