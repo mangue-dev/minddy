@@ -20,6 +20,10 @@ import { BYOK_MODEL_KEYS, byokFeatureDefaultModelKey } from "@/lib/ai-surfaces";
 import { DEFAULT_SUBAGENT_FAVORITES } from "@/lib/subagent-favorites";
 import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
+import {
+  modelCatalogCapabilityForKey,
+  type ModelCatalogCapability,
+} from "@/lib/model-catalog-capability";
 
 /**
  * `model` → id `provider/model` chosen in the platform key catalog;
@@ -48,6 +52,8 @@ export interface AiConfigField {
   fallback: string;
   /** Section the field is grouped under in the dashboard. */
   group: AiConfigGroup;
+  /** Restricts the admin picker to models usable by this runtime call. */
+  catalogCapability?: ModelCatalogCapability;
   /**
  * Trims the OpenRouter suffix (MIN-263) on a `model` field that would otherwise accept one. See `MODEL_SUFFIXES` for the reason for each exclusion.
  */
@@ -179,7 +185,13 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "byok_default_model_google", kind: "modelId", fallback: byokFallback("google"), group: "byok" },
   // Voice (dictation → ticket)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
-  { key: "transcription_model", kind: "model", fallback: "openai/whisper-large-v3", group: "voice" },
+  {
+    key: "transcription_model",
+    kind: "model",
+    fallback: "openai/whisper-large-v3",
+    group: "voice",
+    catalogCapability: "transcription",
+  },
   // Landing dictation demo (MIN-150): the only AI call we offer to a
   // visitor WITHOUT ACCOUNT. The flag cuts it everywhere at once, without
   // deployment — this is the last resort safeguard if the endpoint is open
@@ -193,7 +205,13 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // everywhere at once — the microphone disappears, the writing remains.
   { key: "feedback_voice_enabled", kind: "flag", fallback: "true", group: "feedback" },
   { key: "feedback_analysis_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback" },
-  { key: "feedback_embedding_model", kind: "model", fallback: "openai/text-embedding-3-small", group: "feedback" },
+  {
+    key: "feedback_embedding_model",
+    kind: "model",
+    fallback: "openai/text-embedding-3-small",
+    group: "feedback",
+    catalogCapability: "embedding",
+  },
 ];
 
 /**
@@ -219,6 +237,7 @@ for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openroute
       kind: "modelId",
       fallback,
       group: "byok",
+      catalogCapability: modelCatalogCapabilityForKey(modelKey),
       adminLabel: `${provider.label} · ${modelKey}`,
     });
   }

@@ -30,6 +30,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Agent Searchable Model Picker (MIN-46). Catalog search
@@ -84,6 +85,7 @@ export function ModelCombobox({
   disabledTooltip,
   variant = "field",
   scope = "user",
+  capability = "text",
 }: {
   /** "" = follows my default template; otherwise a model id. */
   value: string;
@@ -112,9 +114,11 @@ export function ModelCombobox({
    * `platform` = the OpenRouter platform key, for the admin config.
    */
   scope?: AgentModelsScope;
+  /** Runtime capability used to filter the platform admin catalog. */
+  capability?: ModelCatalogCapability;
 }) {
   const { provider, models, maxMultiplier, planId, recommended, loading } =
-    useAgentModelsQuery(scope);
+    useAgentModelsQuery(scope, capability);
   const locale = useLocale();
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);

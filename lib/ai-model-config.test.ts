@@ -56,4 +56,17 @@ describe("registre des réglages IA × catalogues i18n", () => {
     ).map((f) => f.key);
     expect(diverging).toEqual([]);
   });
+
+  it("assigns non-text catalog capabilities to the matching runtime fields", () => {
+    const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
+    expect(byKey.get("transcription_model")?.catalogCapability).toBe("transcription");
+    expect(byKey.get("feedback_embedding_model")?.catalogCapability).toBe("embedding");
+    expect(byKey.get("assistant_model")?.catalogCapability).toBeUndefined();
+    expect(byKey.get("byok_default_openai_transcription_model")?.catalogCapability).toBe(
+      "transcription",
+    );
+    expect(byKey.get("byok_default_google_feedback_embedding_model")?.catalogCapability).toBe(
+      "embedding",
+    );
+  });
 });

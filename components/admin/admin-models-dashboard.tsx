@@ -398,6 +398,7 @@ function ByokModelRow({
         <div className="flex min-w-0 items-center gap-2 sm:w-72">
           <ByokModelCombobox
             provider={provider}
+            capability={field.catalogCapability ?? "text"}
             value={saved}
             defaultLabel={defaultLabel}
             onChange={(next) => void select(next)}
@@ -592,6 +593,7 @@ function ModelRow({
           <div className="flex min-w-0 items-center gap-2">
             <ModelCombobox
               scope="platform"
+              capability={field.catalogCapability ?? "text"}
               value={saved}
               onChange={(next) => void select(next)}
               disabled={busy}

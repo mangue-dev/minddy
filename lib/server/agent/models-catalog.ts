@@ -28,6 +28,7 @@ import {
 } from "@/lib/agent-providers";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
+import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Code agent template catalog (MIN-46), resolved according to the provider
@@ -121,9 +122,10 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
 }
 
 /**
- * OpenRouter: the catalog comes from the shared index (`openrouter-index.ts`),
- * filtered on tool-calling. Only one reading of `/models` is used here, the loop's abilities
- * and the plan cap prices.
+ * OpenRouter: the catalog comes from the shared index (`openrouter-index.ts`).
+ * Text models are filtered on tool-calling; specialized admin catalogs instead
+ * match the requested output capability. Only one reading of `/models` is used
+ * here, by the loop capabilities and plan-cap pricing as well.
  *
  * Two exclusions in addition to tool-calling, and neither reads in
  * `supported_parameters` :
@@ -139,12 +141,28 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
  * `sortById`, with those of other providers: same reason as referrals,
  * and same limit — we put away what we OFFER, not what we accept.
  */
-async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
+function supportsCatalogCapability(
+  model: Awaited<ReturnType<typeof listOpenRouterIndex>>[number],
+  capability: ModelCatalogCapability,
+): boolean {
+  if (capability === "transcription") {
+    return model.outputModalities.includes("transcription");
+  }
+  if (capability === "embedding") {
+    return model.outputModalities.includes("embeddings");
+  }
+  return model.tools && model.textOutput;
+}
+
+async function listOpenRouter(
+  apiKey?: string,
+  capability: ModelCatalogCapability = "text",
+): Promise<AgentModelEntry[]> {
   const index = await listOpenRouterIndex(apiKey);
   if (index.length === 0) throw new Error("empty index");
   return sortById(
     index
-      .filter((m) => m.tools && m.textOutput && !m.router)
+      .filter((m) => supportsCatalogCapability(m, capability) && !m.router)
       .map((m) => ({ id: m.id, name: m.name, reasoning: m.reasoning })),
   );
 }
@@ -401,28 +419,34 @@ export async function getPrReviewModelCatalog(userId: string): Promise<AgentMode
  * proposing the Anthropic catalog of an admin in BYOK would cause ids
  * to be written unusable in runtime.
  *
- * The tool-calling filter is PRESERVED: almost all settings admin
- * (Number, assignment, classification, analysis) force a tool call and would break
- * on a model that does not do so. There remain two non-conversational settings —
- * transcription and embeddings — which the OpenRouter catalog does NOT expose in any way
- * (its `/models` only lists chat models): they are adjusted by
- * the free entry of the picker, and this is the only way possible.
+ * The tool-calling filter is preserved for text settings: almost all admin
+ * settings force a tool call and would break on a model that does not support
+ * one. Transcription and embedding settings receive their own capability-
+ * filtered catalogs from the same full OpenRouter index.
  *
  * Same robustness contract as the user catalog: never raises.
  */
 /**
- * The catalog of the admin dashboard: that of the platform key, each model
- * LOCATED on the minddy cost scale.
+ * The capability-aware catalog of the admin dashboard, using the platform key.
  *
- * The multiplier is the working information: this is where we choose the
- * models that minddy pays for, and in particular the selection recommended, whose order
- * follows these prices. However, no ceiling is attached (`maxMultiplier: null`) —
- * a billing plan does not apply to an instance setting, and graying out
- * expensive models on an admin screen would not make sense. No
- * `recommended` either: we come to settle `app_config`, not follow advice.
+ * Text models are located on the Minddy conversational cost scale. Specialized
+ * models use different pricing units, so they deliberately have no multiplier.
+ * No ceiling or recommendations apply: this screen configures `app_config`
+ * rather than choosing a model for a billed user run.
  */
-export async function getAdminModelCatalog(): Promise<AgentModelsCatalog> {
-  const [models, baseline] = await Promise.all([getPlatformModelCatalog(), getBaselinePricing()]);
+export async function getAdminModelCatalog(
+  capability: ModelCatalogCapability = "text",
+): Promise<AgentModelsCatalog> {
+  const models = await getPlatformModelCatalog(capability);
+  if (capability !== "text") {
+    return {
+      provider: DEFAULT_AGENT_PROVIDER,
+      defaultModel: null,
+      models,
+      maxMultiplier: null,
+    };
+  }
+  const baseline = await getBaselinePricing();
   return {
     provider: DEFAULT_AGENT_PROVIDER,
     defaultModel: null,
@@ -431,17 +455,19 @@ export async function getAdminModelCatalog(): Promise<AgentModelsCatalog> {
   };
 }
 
-export async function getPlatformModelCatalog(): Promise<AgentModelEntry[]> {
+export async function getPlatformModelCatalog(
+  capability: ModelCatalogCapability = "text",
+): Promise<AgentModelEntry[]> {
   if (!isManagedAiEnabled()) return [];
   const baseUrl = normalizeBaseUrl(resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!);
   const apiKey = process.env.OPENROUTER_API_KEY;
 
-  const cacheKey = `platform|${baseUrl}`;
+  const cacheKey = `platform|${baseUrl}|${capability}`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.models;
 
   try {
-    const models = await listOpenRouter(apiKey);
+    const models = await listOpenRouter(apiKey, capability);
     cache.set(cacheKey, { at: Date.now(), models });
     return models;
   } catch {

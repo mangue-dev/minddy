@@ -21,6 +21,7 @@ import {
   useByokModelsQuery,
 } from "@/lib/use-byok-models-query";
 import type { ByokCatalogProvider } from "@/lib/byok-model-catalog";
+import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Searchable picker for a NATIVE BYOK model id (MIN-416). Replaces the old
@@ -28,14 +29,16 @@ import type { ByokCatalogProvider } from "@/lib/byok-model-catalog";
  * provider and comes from the public OpenRouter index — it works with no
  * provider API key configured at all.
  *
- * Free entry stays available (`useCustomLabel`): OpenRouter does not mirror
- * everything a native endpoint serves (OpenAI's transcription models, the
- * embedding families…), and an id pasted by hand must remain writable.
+ * Free entry stays available (`useCustomLabel`): OpenRouter may not mirror
+ * everything a native endpoint serves, and an id pasted by hand must remain
+ * writable. The capability prop keeps text, transcription, and embedding
+ * families separated.
  * The “default” option clears the setting — it then follows the product
  * fallback instead of being pinned to its current value.
  */
 export function ByokModelCombobox({
   provider,
+  capability = "text",
   value,
   defaultLabel,
   onChange,
@@ -45,6 +48,8 @@ export function ByokModelCombobox({
   loadingLabel,
 }: {
   provider: ByokCatalogProvider;
+  /** Runtime capability required by this configuration row. */
+  capability?: ModelCatalogCapability;
   /** Native id, or "" = follows the product default. */
   value: string;
   defaultLabel: string;
@@ -55,7 +60,7 @@ export function ByokModelCombobox({
   useCustomLabel: (query: string) => string;
   loadingLabel: string;
 }) {
-  const { models, loading } = useByokModelsQuery(provider);
+  const { models, loading } = useByokModelsQuery(provider, capability);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 

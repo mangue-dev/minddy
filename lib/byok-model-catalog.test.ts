@@ -7,14 +7,15 @@ import {
 } from "./byok-model-catalog";
 
 const INDEX = [
-  { id: "anthropic/claude-sonnet-5", name: "Claude Sonnet 5", router: false, textOutput: true },
+  { id: "anthropic/claude-sonnet-5", name: "Claude Sonnet 5", router: false, textOutput: true, outputModalities: ["text"] },
   // Dated snapshot of the bare id above → deduplicated away.
   { id: "anthropic/claude-sonnet-5-20260114", name: "Claude Sonnet 5 (snapshot)", router: false, textOutput: true },
   // Deferred-rate variant → deduplicated away.
   { id: "anthropic/claude-haiku-4.5:batch", name: "Claude Haiku 4.5 (batch)", router: false, textOutput: true },
   { id: "anthropic/claude-haiku-4.5", name: "Claude Haiku 4.5", router: false, textOutput: true },
   // Embedding → excluded from a chat picker.
-  { id: "openai/text-embedding-3-small", name: "OpenAI Embedding", router: false, textOutput: true },
+  { id: "openai/text-embedding-3-small", name: "OpenAI Embedding", router: false, textOutput: false, outputModalities: ["embeddings"] },
+  { id: "openai/whisper-large-v3", name: "Whisper", router: false, textOutput: false, outputModalities: ["transcription"] },
   { id: "openai/gpt-5.6-sol", name: "GPT-5.6 Sol", router: false, textOutput: true },
   { id: "google/gemini-3.5-flash", name: "Gemini 3.5 Flash", router: false, textOutput: true },
   // Image output → excluded even though it declares itself textual.
@@ -46,6 +47,15 @@ describe("byokModelsForProvider", () => {
     expect(byokModelsForProvider(INDEX.filter((m) => !m.id.startsWith("google/")), "google")).toEqual(
       [],
     );
+  });
+
+  it("returns only models matching a non-text capability", () => {
+    expect(byokModelsForProvider(INDEX, "openai", "transcription").map((m) => m.id)).toEqual([
+      "whisper-large-v3",
+    ]);
+    expect(byokModelsForProvider(INDEX, "openai", "embedding").map((m) => m.id)).toEqual([
+      "text-embedding-3-small",
+    ]);
   });
 });
 

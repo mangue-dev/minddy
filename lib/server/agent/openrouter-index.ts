@@ -26,7 +26,10 @@ import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
  * attribution when you have one.
  */
 
-const MODELS_URL = "https://openrouter.ai/api/v1/models";
+// OpenRouter defaults this endpoint to text output. The admin also needs the
+// transcription and embedding families, so the shared index must request all
+// modalities before its consumers apply their own capability filters.
+const MODELS_URL = "https://openrouter.ai/api/v1/models?output_modalities=all";
 const MAX_MODELS_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 /** Same duration as the old catalog cache: the list moves slowly. */
@@ -39,6 +42,8 @@ export interface OpenRouterModelInfo {
   contextLength: number | null;
   /** `architecture.input_modalities` contains `image` → we can SHOW him a model. */
   imageInput: boolean;
+  /** Output capabilities published by OpenRouter for catalog filtering. */
+  outputModalities: string[];
   /**
  * `architecture.output_modalities` contains ONLY `text`. A model that renders
  * image, audio, or video has no place in a code agent picker
@@ -169,6 +174,7 @@ async function fetchIndex(apiKey?: string): Promise<void> {
       name: m.name ?? m.id,
       contextLength: m.context_length && m.context_length > 0 ? m.context_length : null,
       imageInput: (m.architecture?.input_modalities ?? []).includes("image"),
+      outputModalities: outputs,
       textOutput: outputs.every((o) => o === "text"),
       router: m.architecture?.tokenizer === "Router" || !!m.alias_target,
       tools: !m.supported_parameters?.length || m.supported_parameters.includes("tools"),

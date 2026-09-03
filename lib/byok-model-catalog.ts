@@ -2,8 +2,8 @@
  * The model list of a NATIVE BYOK provider (OpenAI, Anthropic, Google), as
  * the admin "Models" tab proposes it (MIN-416).
  *
- * Source: the public OpenRouter index (`/api/v1/models`, readable without a
- * key — see lib/server/agent/openrouter-index.ts). Each entry carries a
+ * Source: the public OpenRouter index (`/api/v1/models?output_modalities=all`,
+ * readable without a key — see lib/server/agent/openrouter-index.ts). Each entry carries a
  * `vendor/model` id; a BYOK field expects the PROVIDER's own namespace
  * (`claude-sonnet-5`, not `anthropic/claude-sonnet-5`), so the prefix is
  * stripped after filtering. This keeps the list automatically current —
@@ -15,6 +15,7 @@
  */
 import { dedupeModelVariants } from "@/lib/model-variants";
 import { BYOK_MODEL_KEYS, type ByokModelKey } from "@/lib/ai-surfaces";
+import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /** Providers whose native ids can be derived from an OpenRouter `vendor/…` id. */
 export const BYOK_CATALOG_PROVIDERS = ["openai", "anthropic", "google"] as const;
@@ -28,7 +29,7 @@ const VENDOR_PREFIXES: Record<ByokCatalogProvider, string> = {
   google: "google/",
 };
 
-/** Same exclusion as the platform catalogs: embeddings, audio, image… are not conversational picks. */
+/** Non-conversational names excluded only from text-model pickers. */
 const NON_CHAT_RE =
   /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
@@ -40,6 +41,8 @@ export interface ByokCatalogSourceModel {
   router?: boolean;
   /** Models whose output is not text have no place in a settings picker. */
   textOutput?: boolean;
+  /** Output capabilities published by OpenRouter. */
+  outputModalities?: string[];
 }
 
 export interface ByokCatalogEntry {
@@ -51,19 +54,29 @@ export interface ByokCatalogEntry {
 
 /**
  * The provider's native models, derived from an OpenRouter-shaped list:
- * filtered on the vendor prefix, cleared of routers / non-text output /
- * non-chat ids and version duplicates, then stripped of the prefix.
+ * filtered on the vendor prefix and requested capability, cleared of routers
+ * and version duplicates, then stripped of the prefix.
  */
 export function byokModelsForProvider(
   models: readonly ByokCatalogSourceModel[],
   provider: ByokCatalogProvider,
+  capability: ModelCatalogCapability = "text",
 ): ByokCatalogEntry[] {
   const prefix = VENDOR_PREFIXES[provider];
   return dedupeModelVariants(
     models
-      .filter((m) => m.router !== true && m.textOutput !== false)
+      .filter((m) => {
+        if (m.router === true) return false;
+        if (capability === "transcription") {
+          return m.outputModalities?.includes("transcription") === true;
+        }
+        if (capability === "embedding") {
+          return m.outputModalities?.includes("embeddings") === true;
+        }
+        return m.textOutput !== false;
+      })
       .filter((m) => m.id.startsWith(prefix))
-      .filter((m) => !NON_CHAT_RE.test(m.id.slice(prefix.length)))
+      .filter((m) => capability !== "text" || !NON_CHAT_RE.test(m.id.slice(prefix.length)))
       .map((m) => ({ id: m.id.slice(prefix.length), name: m.name ?? m.id })),
   ).sort((a, b) => a.id.localeCompare(b.id));
 }
