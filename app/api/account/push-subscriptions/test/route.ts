@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createTranslator } from "next-intl";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -67,11 +67,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("pushDeviceDisabled") }, { status: 409 });
   }
 
-  const locale = toPushLocale(
-    typeof auth.user.user_metadata?.locale === "string"
-      ? auth.user.user_metadata.locale
-      : null,
-  );
+  // The request locale is the live interface locale. JWT user metadata can lag
+  // behind a language switch until the session token is refreshed.
+  const locale = toPushLocale(await getLocale());
   const tPush = createTranslator({
     locale,
     messages: pushMessages(locale),
