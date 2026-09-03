@@ -121,6 +121,14 @@ export interface AssistantMention {
   icon?: string | null;
 }
 
+/** A repository skill explicitly attached to one Numo message. */
+export interface AssistantSkillSelection {
+  /** Repository-relative SKILL.md entrypoint; it is the stable selection id. */
+  path: string;
+  name: string;
+  description: string;
+}
+
 /**
  * Structured "what the user is currently looking at" context, attached to a
  * chat request so Numo can resolve deictic references ("this ticket", "this
@@ -220,6 +228,8 @@ export interface AssistantChatRequest {
    * of instructions attached to this message (same mechanics as the mentions).
    */
   command?: AssistantCommandId;
+  /** Repository entrypoints selected through the slash or add menu. */
+  skillPaths?: string[];
   /**
    * The browser's IANA zone (MIN-185). Without it, "creates a routine every
    * Mondays at 1 p.m." would go into UTC without anyone knowing — and would find out weeks later, when the routine runs. This is

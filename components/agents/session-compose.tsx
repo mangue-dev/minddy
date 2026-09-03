@@ -53,6 +53,7 @@ import { MentionLinksProvider } from "@/components/mention-links";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
+import { useRepositorySkills } from "@/lib/use-repository-skills";
 
 /**
  * DRAFT selector of the conversation. Mandatory: without ticket, only the
@@ -283,6 +284,11 @@ export function SessionCompose({
   useEffect(() => {
     setEnvironment(localEndpoint || localRepo.ready ? "local" : "cloud");
   }, [localEndpoint, localRepo.ready]);
+  const repositorySkills = useRepositorySkills(
+    projectId || null,
+    environment,
+    "new-session",
+  );
 
   const launch = async (
     message: string,
@@ -470,6 +476,7 @@ export function SessionCompose({
             onSend={(message, attachments, mentions) => void launch(message, attachments, mentions)}
             mentionables={mentionables}
             onMentionQuery={onMentionQuery}
+            skills={projectId ? repositorySkills.skills : undefined}
             disabled={launching}
             // Without a project, nothing to clone: ​​sending is blocked (the text remains
             // freely editable) and the button tooltip says what is missing —

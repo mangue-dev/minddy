@@ -1,3 +1,5 @@
+import { REPOSITORY_SKILL_ROOTS } from "@/lib/repository-skills";
+
 import type { HarnessLayout } from "../harness-layout";
 import { RUN_COMMAND_TIMEOUT_MS } from "../tools";
 import { isLocalJob, type VmJob } from "./protocol";
@@ -169,6 +171,7 @@ export interface OpencodeConfig {
   subagent_depth: number;
   default_agent: string;
   instructions: string[];
+  skills: { paths: string[] };
   provider: Record<
     string,
     {
@@ -219,22 +222,10 @@ interface OpencodeModelDef {
  * - `websearch`: it would neither carry the turn ceiling (`webSearchMax`) nor the
  * billing ([web-search.ts](../../web-search.ts)) — and it is definitely not
  * way not served on OpenRouter. Our domain `web_search` replaces it.
- * - `skill`: **and the reason written here was false** (MIN-364, lot 9). He said
- * “the skills read the microVM disk; there are none.” Measure :
- * the discovery reads **`$HOME`**, which the harness does not relocate — so, on
- * a Mac, `~/.claude/skills/` and `~/.agents/skills/`, plus the rise of the
- * session folder up to the root of the repository.
- *
- * So it’s not “nothing” that we’re removing, it’s **the Claude Code skills of
- * the user AND those of the repository**. And it is the second half which decides:
- * a `SKILL.md` is written by anyone who can commit, it is INSTRUCTED by
- * nature, and it enters the context without passing through our border note
- * ([repo-instructions.ts](../repo-instructions.ts)) — that is, exactly
- * the injection surface that batch 6 has just closed for `AGENTS.md`.
- *
- * The lever exists the day Minddy wants to serve HER skills:
- * `skills.paths` NAMES them, and survives `OPENCODE_DISABLE_EXTERNAL_SKILLS`
- * (measured, [opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
+ * Repository skills are the deliberate exception. Implicit discovery stays
+ * disabled because it also scans `$HOME`; `skills.paths` names only the known
+ * roots inside this turn's checkout. The model then loads a skill only through
+ * the native `skill` tool after the user selects it.
  */
 /** Native editing tools exposed by OpenCode according to the selected model. */
 const WRITE_BUILTINS = ["edit", "write", "apply_patch"] as const;
@@ -387,7 +378,7 @@ function permissions(_job: VmJob): Record<string, PermissionRule> {
 
 /** The global map of integrated people — permission, not withdrawal (§4). */
 function toolMap(_job: VmJob): Record<string, boolean> {
-  return {};
+  return { skill: true };
 }
 
 /**
@@ -399,7 +390,7 @@ function toolMap(_job: VmJob): Record<string, boolean> {
  * redeclaring here would just create a second place where it can diverge.
  */
 function primaryTools(_job: VmJob): Record<string, boolean> {
-  return {};
+  return { skill: true };
 }
 
 /**
@@ -605,6 +596,11 @@ export function buildOpencodeConfig(
     small_model: ref,
     subagent_depth: 1,
     default_agent: OPENCODE_PRIMARY_AGENT,
+    skills: {
+      paths: REPOSITORY_SKILL_ROOTS.map(
+        (root) => `${job.layout.repoDir}/${root}`,
+      ),
+    },
     /**
      * The minddy anchor, THEN the repository conventions (MIN-360).
      *
@@ -724,25 +720,10 @@ export function opencodeServerEnv(
      */
     OPENCODE_DISABLE_DEFAULT_PLUGINS: "1",
     /**
-     * THE THIRD HATCH (MIN-364, lot 9) — the one that was missing, and of which
-     * the absence was only visible because another setting covered it.
-     *
-     * Opencode skills discovery reads **`$HOME`** (`~/.claude/skills/`,
-     * `~/.agents/skills/`) and goes back from the session folder to the root of the repository.
-     * The harness relocates `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and
-     * `XDG_CACHE_HOME` — **but not `HOME`**, which must remain the user's
-     * the user so that his `PATH`, his `nvm`, his `~/.gitconfig` work.
-     *
-     * Today `tools.skill` is at `false`, so nothing is loading. But the
-     * day when someone passes it to `true` thinking of offering “the skills of
-     * deposit”, he ALSO opens the Claude Code skills file of his
-     * owner — without any line saying so. This hatch means that
-     * that day, you will have to NAME what you are serving (`skills.paths`, measured as the
-     * only selective form) instead of taking everything.
-     *
-     * Measured: `OPENCODE_DISABLE_EXTERNAL_SKILLS` cuts implicit discovery
-     * ENTIRE and lets `skills.paths` pass
-     * ([opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
+     * Keep implicit discovery disabled even though the native skill tool is
+     * enabled. OpenCode otherwise scans `$HOME` as well as the repository. The
+     * explicit `skills.paths` in `buildOpencodeConfig` survive this flag and
+     * limit discovery to the checkout roots synchronized by Minddy.
      */
     OPENCODE_DISABLE_EXTERNAL_SKILLS: "1",
     /**

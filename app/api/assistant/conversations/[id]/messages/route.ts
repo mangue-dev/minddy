@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 
 export async function GET(
   request: NextRequest,
@@ -33,5 +34,10 @@ export async function GET(
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  return Response.json(data);
+  return Response.json(
+    data?.map((message) => ({
+      ...message,
+      metadata: publicSkillsMetadata(message.metadata),
+    })),
+  );
 }

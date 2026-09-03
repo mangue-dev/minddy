@@ -10,6 +10,7 @@ import type {
   AssistantToolCall,
   AssistantChatRequest,
   AssistantPageContext,
+  AssistantSkillSelection,
   ConversationStatus,
 } from "./assistant-types";
 import type { FileResourceInput, ResourceInput } from "./types";
@@ -142,6 +143,7 @@ type Action =
       context?: AssistantPageContext | null;
       attachments?: ResourceInput[];
       mentions?: AssistantMention[];
+      skills?: AssistantSkillSelection[];
     }
   | { type: "DONE" }
   | { type: "GENERATING_SERVER" }
@@ -329,6 +331,7 @@ function reducer(
             ? { attachments: action.attachments }
             : {}),
           ...(action.mentions?.length ? { mentions: action.mentions } : {}),
+          ...(action.skills?.length ? { skills: action.skills } : {}),
         },
         context: action.context ?? null,
         created_at: new Date().toISOString(),
@@ -516,6 +519,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         mentions?: AssistantMention[];
         /** The “/” command placed at the top of the message (slash menu). */
         command?: AssistantCommandId;
+        /** Repository skills explicitly attached to this message. */
+        skills?: AssistantSkillSelection[];
       },
     ) => {
       if (!message.trim()) return;
@@ -529,6 +534,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         has_project_scope: projectId !== null,
         attachment_count: options?.attachments?.length ?? 0,
         has_command: !!options?.command,
+        skill_count: options?.skills?.length ?? 0,
       });
       const startedAt = performance.now();
       let toolCalls = 0;
@@ -553,6 +559,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         context: options?.pageContext ?? null,
         attachments: options?.attachments,
         mentions: options?.mentions,
+        skills: options?.skills,
       });
       dispatch({ type: "START_STREAMING" });
 
@@ -565,6 +572,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(files.length ? { attachments: files } : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
           ...(options?.command ? { command: options.command } : {}),
+          ...(options?.skills?.length
+            ? { skillPaths: options.skills.map((skill) => skill.path) }
+            : {}),
           // The browser's time zone travels with each message: Numo has it
           // need to set a routine at the time we tell him (MIN-185).
           ...(browserTimezone() ? { timezone: browserTimezone() } : {}),

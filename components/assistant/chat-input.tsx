@@ -21,7 +21,7 @@ import {
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
-import { ArrowUp, Paperclip, Plus, Square } from "lucide-react";
+import { ArrowUp, Layers, Paperclip, Plus, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionChip } from "@/components/mention-chip";
@@ -33,9 +33,12 @@ import {
 } from "@/components/mention-suggest";
 import {
   SlashMenu,
-  filterCommands,
+  filterSlashOptions,
+  repositorySkillOptions,
   type SlashCommandOption,
+  type SlashMenuOption,
 } from "@/components/assistant/slash-menu";
+import { SkillChip } from "@/components/assistant/skill-chip";
 import {
   ResourcePills,
   DropOverlay,
@@ -56,6 +59,7 @@ import {
   filterMentionItems,
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
+import { composerMenuTrigger } from "@/lib/assistant-slash-options";
 import {
   useAttachmentUploads,
   type PendingResource,
@@ -67,6 +71,10 @@ import type {
   AssistantPinnedContext,
 } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
+import {
+  MAX_SELECTED_SKILLS,
+  type RepositorySkillSummary,
+} from "@/lib/repository-skills";
 import {
   Tooltip,
   TooltipContent,
@@ -83,6 +91,7 @@ const ATTACHMENT_SHORTCUT_KEY = "a";
  which React carries the real pill (MentionChip). Composing it does not redraw
  so it is not a pill “like” the one in the context — it is the same. */
 const MENTION_SLOT_CLASS = "inline-block align-baseline";
+const SKILL_SLOT_CLASS = "mx-0.5 inline-block max-w-full align-baseline";
 
 /** The pill of a “/” command placed at the top of the message: same geometry as
  the pill of mention, without a figure — the “/” is enough to say what it is.
@@ -140,6 +149,26 @@ function createMentionNode(option: MentionOption): HTMLSpanElement {
   return pill;
 }
 
+function skillFromNode(node: HTMLElement): RepositorySkillSummary | null {
+  const path = node.dataset.skillPath;
+  const name = node.dataset.skillName;
+  const description = node.dataset.skillDescription;
+  const source = node.dataset.skillSource as RepositorySkillSummary["source"] | undefined;
+  if (!path || !name || description === undefined || !source) return null;
+  return { path, name, description, source };
+}
+
+function createSkillNode(skill: RepositorySkillSummary): HTMLSpanElement {
+  const pill = document.createElement("span");
+  pill.contentEditable = "false";
+  pill.dataset.skillPath = skill.path;
+  pill.dataset.skillName = skill.name;
+  pill.dataset.skillDescription = skill.description;
+  pill.dataset.skillSource = skill.source;
+  pill.className = SKILL_SLOT_CLASS;
+  return pill;
+}
+
 export interface ChatInputContextAttachments {
   resources: ResourceLike[];
   pending: PendingResource[];
@@ -154,6 +183,8 @@ interface ChatInputProps {
     mentions: AssistantMention[],
     /** The “/” command placed at the top of the message, when there is one. */
     command?: AssistantCommandId,
+    /** Repository skills explicitly attached to this message. */
+    skills?: RepositorySkillSummary[],
   ) => void | boolean;
   onAbort?: () => void;
   disabled?: boolean;
@@ -211,6 +242,8 @@ interface ChatInputProps {
    * its canonical id leaves with the sending (4th argument of `onSend`).
    */
   commands?: SlashCommandOption[];
+  /** Agent Skills discovered in the active project's linked repository. */
+  skills?: RepositorySkillSummary[];
   /**
    * Text to seed the editor with on mount (caret placed at the end, ready to
    * edit). Used by the agent launch composer to pre-write "Work on MIN-42".
@@ -266,6 +299,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onMentionQuery,
       onAddContext,
       commands,
+      skills,
       initialValue,
       leadingControls,
       beam,
@@ -348,7 +382,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     // same case. The Numo cat keeps its button hidden as long as it generates.
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
     const hasMentionMenu = mentionables !== undefined || !!onAddContext;
-    const canAdd = canAttach || !!onAddContext;
+    const hasSkillMenu = skills !== undefined;
+    const canAdd = canAttach || !!onAddContext || hasSkillMenu;
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
     });
@@ -422,6 +457,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             return;
           }
 
+          if (element.dataset.skillName) {
+            parts.push(`/${element.dataset.skillName}`);
+            return;
+          }
+
           if (element.tagName === "BR") {
             parts.push("\n");
             return;
@@ -448,6 +488,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         editorRef.current.innerHTML = "";
         setIsEmpty(true);
         setMentionSlots([]);
+        setSkillSlots([]);
         setSlashQuery(null);
       }
     }, []);
@@ -465,6 +506,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [mentionSlots, setMentionSlots] = useState<
       Array<{ el: HTMLElement; option: MentionOption }>
     >([]);
+    const [skillSlots, setSkillSlots] = useState<
+      Array<{ el: HTMLElement; skill: RepositorySkillSummary }>
+    >([]);
 
     const syncMentionSlots = useCallback(() => {
       const el = editorRef.current;
@@ -478,6 +522,25 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         return found
           .map((node) => ({ el: node, option: mentionFromNode(node) }))
           .filter((s): s is { el: HTMLElement; option: MentionOption } => !!s.option);
+      });
+    }, []);
+
+    const syncSkillSlots = useCallback(() => {
+      const el = editorRef.current;
+      const found = el
+        ? [...el.querySelectorAll<HTMLElement>("[data-skill-path]")]
+        : [];
+      setSkillSlots((prev) => {
+        const unchanged =
+          prev.length === found.length &&
+          prev.every((slot, index) => slot.el === found[index]);
+        if (unchanged) return prev;
+        return found
+          .map((node) => ({ el: node, skill: skillFromNode(node) }))
+          .filter(
+            (slot): slot is { el: HTMLElement; skill: RepositorySkillSummary } =>
+              slot.skill !== null,
+          );
       });
     }, []);
 
@@ -612,6 +675,67 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [onAddContext, syncMentionSlots],
     );
 
+    const availableSkills = useMemo(() => {
+      if (skillSlots.length >= MAX_SELECTED_SKILLS) return [];
+      const selected = new Set(skillSlots.map((slot) => slot.skill.path));
+      return (skills ?? []).filter((skill) => !selected.has(skill.path));
+    }, [skillSlots, skills]);
+
+    const addMenuSkillOptions = useMemo(
+      () =>
+        filterSlashOptions(
+          repositorySkillOptions(availableSkills),
+          addMenuQuery,
+        ).filter((option) => option.kind === "skill"),
+      [addMenuQuery, availableSkills],
+    );
+
+    const placeSkill = useCallback(
+      (skill: RepositorySkillSummary, replaceEditor = false) => {
+        const el = editorRef.current;
+        if (!el) return;
+        const alreadySelected = [
+          ...el.querySelectorAll<HTMLElement>("[data-skill-path]"),
+        ].some((node) => node.dataset.skillPath === skill.path);
+        if (alreadySelected) {
+          setAddMenuOpen(false);
+          setAddMenuQuery("");
+          return;
+        }
+        if (
+          el.querySelectorAll("[data-skill-path]").length >= MAX_SELECTED_SKILLS
+        ) {
+          return;
+        }
+        if (replaceEditor) {
+          el.innerHTML = "";
+        } else {
+          const current = el.textContent ?? "";
+          if (current && !/[\s ]$/.test(current)) {
+            el.appendChild(document.createTextNode(" "));
+          }
+        }
+        const pill = createSkillNode(skill);
+        const space = document.createTextNode(" ");
+        el.append(pill, space);
+        const selection = window.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          range.setStart(space, 1);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        el.focus();
+        setIsEmpty(false);
+        setSlashQuery(null);
+        setAddMenuOpen(false);
+        setAddMenuQuery("");
+        syncSkillSlots();
+      },
+      [syncSkillSlots],
+    );
+
     /** The mentions actually made in the text, duplicated. */
     const collectMentions = useCallback((): AssistantMention[] => {
       const el = editorRef.current;
@@ -636,16 +760,32 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return out;
     }, []);
 
-    // ── Commandes « / » ─────────────────────────────────────────────
-    // The menu only lives as long as the ENTIRE message is “/request”: a
+    const collectSkills = useCallback((): RepositorySkillSummary[] => {
+      const el = editorRef.current;
+      if (!el) return [];
+      const seen = new Set<string>();
+      const selected: RepositorySkillSummary[] = [];
+      for (const node of el.querySelectorAll<HTMLElement>("[data-skill-path]")) {
+        const skill = skillFromNode(node);
+        if (!skill || seen.has(skill.path)) continue;
+        seen.add(skill.path);
+        selected.push(skill);
+      }
+      return selected;
+    }, []);
+
+    // ── Commands “/” and skills “$” ─────────────────────────────────
+    // The menu only lives as long as the ENTIRE message is “/request” or “$skill”: a
     // single line of bare text, no pill already placed. The detection is read again
     // so from the full editor — not from the caret like the mentions:
-    // a command only exists at the top of the message.
-    const [slashQuery, setSlashQuery] = useState<string | null>(null);
+    // a trigger only exists at the top of the message.
+    const [slashQuery, setSlashQuery] = useState<
+      ReturnType<typeof composerMenuTrigger>
+    >(null);
     const [slashIndex, setSlashIndex] = useState(0);
 
-    const readSlash = useCallback((): string | null => {
-      if (!commands?.length) return null;
+    const readSlash = useCallback((): ReturnType<typeof composerMenuTrigger> => {
+      if (!commands?.length && skills === undefined) return null;
       const el = editorRef.current;
       if (!el) return null;
       // Only text nodes — no pill already placed, no return to the
@@ -656,22 +796,34 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (last instanceof HTMLElement && last.tagName === "BR") nodes.pop();
       if (nodes.some((n) => n.nodeType !== Node.TEXT_NODE)) return null;
       const text = nodes.map((n) => n.textContent ?? "").join("");
-      return text.startsWith("/") ? text.slice(1) : null;
-    }, [commands]);
+      const trigger = composerMenuTrigger(text);
+      if (trigger?.prefix === "$" && skills === undefined) return null;
+      return trigger;
+    }, [commands, skills]);
 
     // Reread on typing only: Escape closes the menu, and it does not reopen
     // only at the next character typed — not at the slightest movement of the caret.
     const refreshSlash = useCallback(() => {
       const next = readSlash();
-      setSlashQuery((prev) => (prev === next ? prev : next));
+      setSlashQuery((prev) =>
+        prev?.prefix === next?.prefix && prev?.query === next?.query ? prev : next,
+      );
     }, [readSlash]);
 
     const slashOptions = useMemo(
       () =>
-        slashQuery === null || !commands?.length
+        slashQuery === null
           ? []
-          : filterCommands(commands, slashQuery),
-      [slashQuery, commands],
+          : filterSlashOptions(
+              slashQuery.prefix === "$"
+                ? repositorySkillOptions(availableSkills)
+                : [
+                    ...(commands ?? []),
+                    ...repositorySkillOptions(availableSkills),
+                  ],
+              slashQuery.query,
+            ),
+      [slashQuery, commands, availableSkills],
     );
     const slashOpen = slashOptions.length > 0;
     const activeSlash = Math.min(
@@ -712,6 +864,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       setIsEmpty(false);
     }, []);
 
+    const insertSlashOption = useCallback(
+      (option: SlashMenuOption) => {
+        if (option.kind === "skill") {
+          placeSkill(option.skill, true);
+        } else {
+          insertCommand(option);
+        }
+      },
+      [insertCommand, placeSkill],
+    );
+
     /** The command actually placed at the top of the message, if there is one. */
     const collectCommand = useCallback((): AssistantCommandId | undefined => {
       const node =
@@ -722,7 +885,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
       if (!value || disabled || sendDisabled || uploads.uploading) return;
-      const accepted = onSend(value, uploads.inputs, collectMentions(), collectCommand());
+      const accepted = onSend(
+        value,
+        uploads.inputs,
+        collectMentions(),
+        collectCommand(),
+        collectSkills(),
+      );
       if (accepted === false) return;
       clearEditor();
       uploads.clear();
@@ -741,6 +910,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       uploads,
       collectMentions,
       collectCommand,
+      collectSkills,
     ]);
 
     const handleKeyDown = useCallback(
@@ -758,7 +928,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           }
           if (e.key === "Enter" || e.key === "Tab") {
             e.preventDefault();
-            insertCommand(slashOptions[activeSlash]);
+            insertSlashOption(slashOptions[activeSlash]);
             return;
           }
           if (e.key === "Escape") {
@@ -816,7 +986,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         slashOpen,
         slashOptions,
         activeSlash,
-        insertCommand,
+        insertSlashOption,
       ]
     );
 
@@ -832,7 +1002,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       refreshMention();
       refreshSlash();
       syncMentionSlots();
-    }, [refreshMention, refreshSlash, syncMentionSlots]);
+      syncSkillSlots();
+    }, [refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots]);
 
     /**
      * Pastes only the text provided by the clipboard. The editors of
@@ -879,9 +1050,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         refreshMention();
         refreshSlash();
         syncMentionSlots();
+        syncSkillSlots();
         el.focus();
       },
-      [refreshMention, refreshSlash, syncMentionSlots],
+      [refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots],
     );
 
     const handlePaste = useCallback(
@@ -1029,6 +1201,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             `${option.type}:${option.id}:${index}`,
           ),
         )}
+        {skillSlots.map(({ el, skill }) =>
+          createPortal(<SkillChip name={skill.name} />, el, skill.path),
+        )}
         {/* The list of mentions lives OUTSIDE the surface of the composer: this one
  is `overflow-hidden` (the border, the drop zone), it would cut it. */}
         {mentionOpen && (
@@ -1040,13 +1215,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             className="left-3"
           />
         )}
-        {/* The slash menu shares the place (and reasons for being out of the
- surface) of the mentions list; both cannot be opened at the same time — one requires a "/" at the top of the message, and the other requires a "@" while typing. */}
+        {/* The command/skill menu shares the mention list's floating position.
+        It opens for “/” or “$” at the start, while mentions use “@” at the caret. */}
         {slashOpen && (
           <SlashMenu
             options={slashOptions}
+            prefix={slashQuery?.prefix ?? "/"}
             activeIndex={activeSlash}
-            onPick={insertCommand}
+            onPick={insertSlashOption}
             onHover={setSlashIndex}
             className="left-3"
           />
@@ -1134,15 +1310,21 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       e.target.value = "";
                     }}
                   />
-                  {hasMentionMenu ? (
+                  {hasMentionMenu || hasSkillMenu ? (
                     <div ref={addMenuAnchorRef} className="shrink-0">
                       <SearchMenu
                         open={addMenuOpen}
                         onOpenChange={handleAddMenuOpenChange}
                         align="start"
                         container={addMenuContainer}
-                        tooltip={t("addFilesOrContext")}
-                        searchPlaceholder={t("addContext")}
+                        tooltip={
+                          hasSkillMenu
+                            ? t("addFilesContextOrSkills")
+                            : t("addFilesOrContext")
+                        }
+                        searchPlaceholder={
+                          hasSkillMenu ? t("addContextOrSkills") : t("addContext")
+                        }
                         searchValue={addMenuQuery}
                         onSearchValueChange={setAddMenuQuery}
                         shouldFilter={false}
@@ -1154,7 +1336,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                             variant="ghost"
                             disabled={disabled}
                             className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
-                            aria-label={t("addFilesOrContext")}
+                            aria-label={
+                              hasSkillMenu
+                                ? t("addFilesContextOrSkills")
+                                : t("addFilesOrContext")
+                            }
                           >
                             <Plus className="size-4" />
                           </Button>
@@ -1188,27 +1374,53 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                             </CommandItem>
                           </CommandGroup>
                         )}
-                        {canAttach && !!mentionables?.length && <CommandSeparator />}
-                        <CommandGroup>
-                          {addContextOptions.map((option) => (
-                            <CommandItem
-                              key={`${option.type}:${option.id}`}
-                              value={`${option.label} ${option.detail ?? ""} ${(option.keywords ?? []).join(" ")}`}
-                              onSelect={() => addContextOption(option)}
-                              className="gap-2"
-                            >
-                              <MentionFigure option={option} />
-                              <span className="min-w-0 truncate">
-                                {option.label}
-                                {option.detail && (
-                                  <span className="ml-1.5 text-muted-foreground">
-                                    {option.detail}
+                        {canAttach &&
+                          (addContextOptions.length > 0 ||
+                            addMenuSkillOptions.length > 0) && <CommandSeparator />}
+                        {addMenuSkillOptions.length > 0 && (
+                          <CommandGroup heading={t("skills")}>
+                            {addMenuSkillOptions.map((option) => (
+                              <CommandItem
+                                key={option.id}
+                                value={`${option.label} ${option.description}`}
+                                onSelect={() => placeSkill(option.skill)}
+                                className="gap-2"
+                              >
+                                <Layers className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <span className="min-w-0">
+                                  <span className="block truncate">{option.label}</span>
+                                  <span className="block truncate text-xs text-muted-foreground">
+                                    {option.description}
                                   </span>
-                                )}
-                              </span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                        {addContextOptions.length > 0 &&
+                          addMenuSkillOptions.length > 0 && <CommandSeparator />}
+                        {addContextOptions.length > 0 && (
+                          <CommandGroup>
+                            {addContextOptions.map((option) => (
+                              <CommandItem
+                                key={`${option.type}:${option.id}`}
+                                value={`${option.label} ${option.detail ?? ""} ${(option.keywords ?? []).join(" ")}`}
+                                onSelect={() => addContextOption(option)}
+                                className="gap-2"
+                              >
+                                <MentionFigure option={option} />
+                                <span className="min-w-0 truncate">
+                                  {option.label}
+                                  {option.detail && (
+                                    <span className="ml-1.5 text-muted-foreground">
+                                      {option.detail}
+                                    </span>
+                                  )}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
                       </SearchMenu>
                     </div>
                   ) : (

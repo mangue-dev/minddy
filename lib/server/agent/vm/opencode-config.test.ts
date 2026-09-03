@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { REPOSITORY_SKILL_ROOTS } from "@/lib/repository-skills";
+
 import {
   buildOpencodeConfig,
   opencodeServerEnv,
@@ -194,7 +196,7 @@ describe("le modèle et son fournisseur", () => {
 });
 
 describe("canonical OpenCode capabilities", () => {
-  it("auto-grants model actions without removing native tools", () => {
+  it("auto-grants model actions and explicitly enables repository skills", () => {
     const variants = [
       buildOpencodeConfig(job()),
       buildOpencodeConfig(job({ writesToRepo: false, anchor: "pr" })),
@@ -209,8 +211,8 @@ describe("canonical OpenCode capabilities", () => {
         external_directory: "ask",
         "*": "allow",
       });
-      expect(cfg.tools).toEqual({});
-      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools).toEqual({});
+      expect(cfg.tools).toEqual({ skill: true });
+      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools).toEqual({ skill: true });
       expect(cfg.agent[OPENCODE_PRIMARY_AGENT].permission).toEqual({
         edit: "ask",
         task: "ask",
@@ -564,6 +566,7 @@ describe("aucun secret ne peut entrer dans la config", () => {
         "permission",
         "plugin",
         "provider",
+        "skills",
         "small_model",
         "subagent_depth",
         "tool_output",
@@ -658,13 +661,23 @@ describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
       // OpenCode and our tools are explicitly declared by the harness.
       expect(env.OPENCODE_DISABLE_DEFAULT_PLUGINS).toBe("1");
       expect(env.OPENCODE_DISABLE_FFF).toBe("1");
-      // MIN-364, lot 9: `skill` must never implicitly pick up the
-      // skills Claude Code / HOME agents nor those of the depot. The day when
-      // Minddy uses them, they go through `skills.paths`, explicitly named.
+      // Implicit discovery remains closed: selected repository skills are
+      // exposed only through the explicit `skills.paths` configuration.
       expect(env.OPENCODE_DISABLE_EXTERNAL_SKILLS).toBe("1");
       // `ask_user` is tool `question`. His presence is now a contract
       // of the local path (D7), not an effect of the client `cli` chosen by default.
       expect(env.OPENCODE_ENABLE_QUESTION_TOOL).toBe("1");
+    }
+  });
+
+  it("exposes only the known repository skill roots in cloud and local jobs", () => {
+    for (const j of [job(), job({ controlToken: "local-control-token" })]) {
+      const config = buildOpencodeConfig(j);
+      expect(config.skills.paths).toEqual(
+        REPOSITORY_SKILL_ROOTS.map((root) => `${j.layout.repoDir}/${root}`),
+      );
+      expect(config.tools.skill).toBe(true);
+      expect(config.agent[OPENCODE_PRIMARY_AGENT].tools?.skill).toBe(true);
     }
   });
 
