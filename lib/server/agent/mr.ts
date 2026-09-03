@@ -188,6 +188,8 @@ interface RawMr {
   description?: string | null;
   source_branch?: string;
   target_branch?: string;
+  source_project_id?: number | null;
+  target_project_id?: number | null;
   sha?: string | null;
   diff_refs?: { base_sha?: string; start_sha?: string; head_sha?: string } | null;
   author?: { username?: string; avatar_url?: string | null } | null;
@@ -268,6 +270,8 @@ function toMergeable(mr: RawMr): {
 
 function toRef(mr: RawMr): PullRequestRef {
   const merged = mr.state === "merged" || !!mr.merged_at;
+  const projectIdentityKnown =
+    Number.isInteger(mr.source_project_id) && Number.isInteger(mr.target_project_id);
   return {
     number: mr.iid,
     url: mr.web_url,
@@ -279,6 +283,9 @@ function toRef(mr: RawMr): PullRequestRef {
     title: mr.title,
     body: mr.description ?? null,
     head: mr.source_branch,
+    headFromBaseRepository: projectIdentityKnown
+      ? mr.source_project_id === mr.target_project_id
+      : undefined,
     base: mr.target_branch,
     headSha: mr.sha ?? mr.diff_refs?.head_sha,
     user: mr.author

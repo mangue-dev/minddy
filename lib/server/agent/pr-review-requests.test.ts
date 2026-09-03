@@ -35,4 +35,29 @@ describe("getPullRequest review requests", () => {
       ],
     });
   });
+
+  it.each([
+    ["mangue-dev/minddy", true],
+    ["outside-contributor/minddy", false],
+  ])("identifies whether the head repository %s is the base repository", async (fullName, same) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValueOnce(
+        Response.json({
+          number: 119,
+          html_url: "https://github.com/mangue-dev/minddy/pull/119",
+          state: "open",
+          head: { ref: "main", repo: { full_name: fullName } },
+        }),
+      ),
+    );
+
+    await expect(
+      getPullRequest({
+        token: "token",
+        repoFullName: "mangue-dev/minddy",
+        number: 119,
+      }),
+    ).resolves.toMatchObject({ headFromBaseRepository: same });
+  });
 });

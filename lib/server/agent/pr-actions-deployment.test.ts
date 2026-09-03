@@ -27,6 +27,7 @@ describe("pull request detail deployment", () => {
           url: "https://gitlab.example.com/acme/app/-/merge_requests/42",
           state: "open",
           head: "feature/preview",
+          headFromBaseRepository: true,
           headSha: "live-head",
         }),
         listPullRequestFiles: async () => ({ files: [], truncated: false }),
@@ -66,6 +67,7 @@ describe("pull request detail deployment", () => {
           url: "https://github.com/acme/app/pull/42",
           state: "open",
           head: "feature/preview",
+          headFromBaseRepository: true,
           headSha: "live-head",
         }),
         listPullRequestFiles: async () => ({ files: [], truncated: false }),
@@ -89,5 +91,48 @@ describe("pull request detail deployment", () => {
     const body = await response.json();
 
     expect(body.deploymentUrl).toBe("https://feature-preview.example.com/");
+  });
+
+  it("does not look up an unqualified branch name for a fork pull request", async () => {
+    const getLatestSuccessfulDeploymentUrl = vi
+      .fn()
+      .mockResolvedValue("https://immutable-head.example.com/");
+    const scope = {
+      pr: { head_sha: "stored-head" },
+      target: { provider: "github" },
+      call: { token: "token", repoFullName: "acme/app", number: 42 },
+      actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
+      forge: {
+        getPullRequest: async () => ({
+          number: 42,
+          url: "https://github.com/acme/app/pull/42",
+          state: "open",
+          head: "main",
+          headFromBaseRepository: false,
+          headSha: "fork-head",
+        }),
+        listPullRequestFiles: async () => ({ files: [], truncated: false }),
+        listReviews: async () => null,
+        listReviewThreads: async () => null,
+        listChecks: async () => ({
+          checks: [],
+          deploymentUrl: null,
+          state: "success",
+          passing: 0,
+          total: 0,
+          startedAt: null,
+          completedAt: null,
+        }),
+        getLatestSuccessfulDeploymentUrl,
+      },
+    } as unknown as PrScope;
+
+    const response = await prDetailResponse(scope);
+    const body = await response.json();
+
+    expect(body.deploymentUrl).toBe("https://immutable-head.example.com/");
+    expect(getLatestSuccessfulDeploymentUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ branch: undefined, sha: "fork-head" }),
+    );
   });
 });

@@ -456,7 +456,7 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
           token: call.token,
           repoFullName: call.repoFullName,
           number: call.number,
-          branch: pr.head,
+          branch: pr.headFromBaseRepository ? pr.head : undefined,
           sha: pr.headSha,
         }),
       ]);

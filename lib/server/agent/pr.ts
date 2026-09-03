@@ -49,6 +49,8 @@ export interface PullRequestRef {
   head?: string;
   /** Provider-qualified head name used by GitHub's classic merge title. */
   headLabel?: string;
+  /** `true` only when the forge confirms that the head branch lives in the base repository. */
+  headFromBaseRepository?: boolean;
   base?: string;
   /** Head SHA — immutable anchor to calculate the merge base (getMergeBaseSha). */
   headSha?: string;
@@ -345,7 +347,12 @@ interface RawPull {
   mergeable_state?: string | null;
   title?: string;
   body?: string | null;
-  head?: { ref?: string; sha?: string; label?: string };
+  head?: {
+    ref?: string;
+    sha?: string;
+    label?: string;
+    repo?: { full_name?: string | null } | null;
+  };
   base?: { ref?: string };
   commits?: number;
   user?: { login?: string; avatar_url?: string } | null;
@@ -362,7 +369,8 @@ interface RawPull {
  * which does not read them, but callers must distinguish `undefined` (“no
  * information”) from `false` (“definitely not mergeable”).
  */
-function toRef(pr: RawPull): PullRequestRef {
+function toRef(pr: RawPull, baseRepoFullName: string): PullRequestRef {
+  const headRepoFullName = pr.head?.repo?.full_name?.trim().toLowerCase();
   return {
     number: pr.number,
     url: pr.html_url,
@@ -373,6 +381,9 @@ function toRef(pr: RawPull): PullRequestRef {
     body: pr.body ?? null,
     head: pr.head?.ref,
     headLabel: pr.head?.label,
+    headFromBaseRepository: headRepoFullName
+      ? headRepoFullName === baseRepoFullName.trim().toLowerCase()
+      : undefined,
     base: pr.base?.ref,
     headSha: pr.head?.sha,
     commitCount: pr.commits,
@@ -436,7 +447,7 @@ export async function findOpenPullRequest(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls?state=open&head=${owner}:${encodeURIComponent(opts.head)}`,
     opts.token,
   );
-  return pulls.length > 0 ? toRef(pulls[0]) : null;
+  return pulls.length > 0 ? toRef(pulls[0], opts.repoFullName) : null;
 }
 
 /**
@@ -467,7 +478,7 @@ export async function ensurePullRequest(opts: {
         }),
       },
     );
-    return toRef(created);
+    return toRef(created, opts.repoFullName);
   } catch (err) {
     // 422 “A pull request already exists” → we find and return the existing one.
     if (err instanceof GithubApiError && err.status === 422) {
@@ -492,7 +503,7 @@ export async function getPullRequest(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
     opts.token,
   );
-  const ref = toRef(pr);
+  const ref = toRef(pr, opts.repoFullName);
   if (pr.node_id) {
     const flow = await ghGraphql<{
       node?: {
@@ -929,7 +940,7 @@ export async function listPullRequests(opts: {
     );
     // The *list* endpoint does not return `merged`: `toRef` falls back to
     // `merged_at`, only signal available here to distinguish merged/refused.
-    pulls.push(...batch.map(toRef));
+    pulls.push(...batch.map((pull) => toRef(pull, opts.repoFullName)));
     if (batch.length < 100) break;
     if (page === MAX_PR_PAGES) truncated = true;
   }
@@ -1159,7 +1170,7 @@ export async function updatePullRequestTitle(opts: {
       body: JSON.stringify({ title: opts.title }),
     },
   );
-  return toRef(pr);
+  return toRef(pr, opts.repoFullName);
 }
 
 export async function enablePullRequestMergeFlow(opts: {
@@ -1227,7 +1238,7 @@ export async function reopenPullRequest(opts: {
       body: JSON.stringify({ state: "open" }),
     },
   );
-  return toRef(pr);
+  return toRef(pr, opts.repoFullName);
 }
 
 // ── Reviews formelles (MIN-138) ──────────────────────────────────────────────
