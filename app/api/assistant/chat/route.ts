@@ -16,6 +16,10 @@ import type {
 } from "@/lib/assistant-types";
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { commandNote, parseCommand } from "@/lib/server/assistant/commands";
+import {
+  parseSelectedSkillPaths,
+  skillsNote,
+} from "@/lib/server/assistant/skills";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   ASSISTANT_TOOLS,
@@ -48,6 +52,8 @@ import {
   resolveAiRuntime,
 } from "@/lib/server/ai-runtime";
 import type { AttachmentInput } from "@/lib/types";
+import { loadProjectRepositorySkills } from "@/lib/server/repository-skills";
+import type { RepositorySkill } from "@/lib/repository-skills";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -277,6 +283,10 @@ export async function POST(request: NextRequest) {
   let pageContext = parsePageContext(body.pageContext);
   const mentions = parseMentions(body.mentions);
   const command = parseCommand(body.command);
+  const skillPaths = parseSelectedSkillPaths(body.skillPaths);
+  if (skillPaths === null) {
+    return Response.json({ error: "Invalid repository skills" }, { status: 400 });
+  }
   if (!message.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
@@ -348,6 +358,32 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Project not found" }, { status: 404 });
     }
     project = data;
+  }
+
+  if (skillPaths.length > 0 && !project) {
+    return Response.json(
+      { error: "Repository skills require a project conversation" },
+      { status: 400 },
+    );
+  }
+  let selectedSkills: RepositorySkill[] = [];
+  if (project && skillPaths.length > 0) {
+    try {
+      const loaded = await loadProjectRepositorySkills(project.id, skillPaths);
+      if (!loaded) {
+        return Response.json(
+          { error: "One or more repository skills are no longer available" },
+          { status: 400 },
+        );
+      }
+      selectedSkills = loaded;
+    } catch (error) {
+      console.error("[repository-skills] selection failed:", (error as Error).message);
+      return Response.json(
+        { error: "Repository skills could not be loaded" },
+        { status: 502 },
+      );
+    }
   }
 
   // When the page context points at another project (stale client state),
@@ -472,6 +508,7 @@ export async function POST(request: NextRequest) {
       ...(attachments.length > 0 ? { attachments } : {}),
       ...(mentions.length > 0 ? { mentions } : {}),
       ...(command ? { command } : {}),
+      ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
     },
   });
 
@@ -582,7 +619,7 @@ export async function POST(request: NextRequest) {
       const sanitized =
         sanitizeAssistantMessageContent(msg.content) +
         (msg.role === "user"
-          ? mentionsNote(msg.metadata) + commandNote(msg.metadata)
+          ? mentionsNote(msg.metadata) + commandNote(msg.metadata) + skillsNote(msg.metadata)
           : "");
       const atts = rowAttachments(msg);
       let content: string | ChatContentPart[] = sanitized;

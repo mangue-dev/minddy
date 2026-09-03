@@ -61,6 +61,7 @@ import {
   withPinnedContext,
 } from "@/lib/assistant-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { MentionLinksProvider } from "@/components/mention-links";
 import { useSlashCommands } from "@/components/assistant/slash-menu";
 import { useProjects } from "@/lib/projects-context";
@@ -70,6 +71,7 @@ import type {
   AssistantMessage,
   AssistantPageContext,
   AssistantPinnedContext,
+  AssistantSkillSelection,
 } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import {
@@ -120,6 +122,7 @@ export interface AssistantShellHandle {
       mentions?: AssistantMention[];
       command?: AssistantCommandId;
       attachments?: ResourceInput[];
+      skills?: AssistantSkillSelection[];
     },
   ) => void;
   /** Pre-fill the composer without sending. */
@@ -287,6 +290,7 @@ export const AssistantShell = forwardRef<
               ...(opts?.attachments?.length
                 ? { attachments: opts.attachments }
                 : {}),
+              ...(opts?.skills?.length ? { skills: opts.skills } : {}),
             }),
       fill: (text) => chatInputRef.current?.fill(text),
     }),
@@ -299,6 +303,7 @@ export const AssistantShell = forwardRef<
       attachments: ResourceInput[] = [],
       mentions: AssistantMention[] = [],
       command?: AssistantCommandId,
+      skills: AssistantSkillSelection[] = [],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
       sendMessage(projectId, message, {
@@ -306,12 +311,14 @@ export const AssistantShell = forwardRef<
         attachments,
         mentions,
         command,
+        skills,
       });
     },
     [aiAvailability.available, aiAvailability.loading, projectId, sendMessage]
   );
 
   const slashCommands = useSlashCommands();
+  const repositorySkills = useRepositorySkills(projectId);
 
   // Response sent from an ask_user question card (MIN-86): leaves as
   // a normal user message — the tool result “awaiting_user_response” is
@@ -890,6 +897,8 @@ export const AssistantShell = forwardRef<
                   onMentionQuery={onMentionQuery}
                   onAddContext={addPinned}
                   commands={slashCommands}
+                  skills={projectId ? repositorySkills.skills : undefined}
+                  onSkillQuery={projectId ? repositorySkills.request : undefined}
                   contextSlot={(attachments: ChatInputContextAttachments) => (
                     <AssistantContextBar
                       chips={chips}

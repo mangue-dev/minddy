@@ -6,11 +6,15 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { SquarePen, type LucideIcon } from "lucide-react";
+import { Sparkles, SquarePen, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui";
 import type { AssistantCommandId } from "@/lib/assistant-types";
+import type { RepositorySkillSummary } from "@/lib/repository-skills";
+
+export { filterSlashOptions } from "@/lib/assistant-slash-options";
 
 export interface SlashCommandOption {
+  kind: "command";
   id: AssistantCommandId;
   /** What is written after the “/” — localized (“create issue” / “create ticket”). */
   label: string;
@@ -20,6 +24,17 @@ export interface SlashCommandOption {
   /** Search terms in addition to the label (the alias of the other language). */
   keywords?: string[];
 }
+
+export interface SlashSkillOption {
+  kind: "skill";
+  id: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  skill: RepositorySkillSummary;
+}
+
+export type SlashMenuOption = SlashCommandOption | SlashSkillOption;
 
 /**
  * The “/” commands offered by Numo composers (MIN-159) — ids
@@ -35,6 +50,7 @@ export function useSlashCommands(): SlashCommandOption[] {
   return useMemo(
     () => [
       {
+        kind: "command" as const,
         id: "create-issue",
         label: t("slashCreateIssueLabel"),
         description: t("slashCreateIssueDescription"),
@@ -46,21 +62,20 @@ export function useSlashCommands(): SlashCommandOption[] {
   );
 }
 
-/** Commands that match the query typed after the “/”. */
-export function filterCommands(
-  options: SlashCommandOption[],
-  query: string,
-): SlashCommandOption[] {
-  const q = query.trim().toLowerCase();
-  return options.filter((o) =>
-    q
-      ? [o.label, ...(o.keywords ?? [])].some((term) =>
-          term.toLowerCase().includes(q),
-        )
-      : true,
-  );
+export function repositorySkillOptions(
+  skills: readonly RepositorySkillSummary[],
+): SlashSkillOption[] {
+  return skills.map((skill) => ({
+    kind: "skill",
+    id: skill.path,
+    label: skill.name,
+    description: skill.description,
+    icon: Sparkles,
+    skill,
+  }));
 }
 
+/** Commands that match the query typed after the “/”. */
 export function SlashMenu({
   options,
   activeIndex,
@@ -68,9 +83,9 @@ export function SlashMenu({
   onHover,
   className,
 }: {
-  options: SlashCommandOption[];
+  options: SlashMenuOption[];
   activeIndex: number;
-  onPick: (option: SlashCommandOption) => void;
+  onPick: (option: SlashMenuOption) => void;
   onHover: (index: number) => void;
   className?: string;
 }) {

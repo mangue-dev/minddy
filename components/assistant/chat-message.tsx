@@ -18,6 +18,7 @@ import type {
   AssistantMention,
   AssistantMessage,
   AssistantPageContext,
+  AssistantSkillSelection,
 } from "@/lib/assistant-types";
 import {
   Message,
@@ -39,6 +40,7 @@ import {
 } from "@/components/assistant/adaptive-context-row";
 import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-renderer";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { SkillChip } from "@/components/assistant/skill-chip";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -224,15 +226,69 @@ function rehypeUserMentions(mentions: AssistantMention[]) {
   return () => (tree: UserMarkdownNode) => walk(tree);
 }
 
+/** Replace only skills persisted on this message; arbitrary slash text stays text. */
+function rehypeUserSkills(skills: AssistantSkillSelection[]) {
+  const sorted = skills
+    .map((skill, index) => ({ skill, index }))
+    .sort((a, b) => b.skill.name.length - a.skill.name.length);
+
+  const split = (value: string): UserMarkdownNode[] => {
+    const pattern = sorted.map(({ skill }) => escapeRegExp(skill.name)).join("|");
+    if (!pattern) return [{ type: "text", value }];
+    const re = new RegExp(`(^|\\s)/(${pattern})(?=\\s|$)`, "g");
+    const out: UserMarkdownNode[] = [];
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(value)) !== null) {
+      if (match.index > last) {
+        out.push({ type: "text", value: value.slice(last, match.index) });
+      }
+      if (match[1]) out.push({ type: "text", value: match[1] });
+      const found = sorted.find(({ skill }) => skill.name === match?.[2]);
+      out.push(
+        found
+          ? {
+              type: "element",
+              tagName: "span",
+              properties: { "data-skill-index": String(found.index) },
+              children: [],
+            }
+          : { type: "text", value: match[0] },
+      );
+      last = match.index + match[0].length;
+    }
+    if (last < value.length) out.push({ type: "text", value: value.slice(last) });
+    return out;
+  };
+
+  const walk = (node: UserMarkdownNode) => {
+    if (!node.children || node.tagName === "code" || node.tagName === "pre") return;
+    const next: UserMarkdownNode[] = [];
+    for (const child of node.children) {
+      if (child.type === "text" && child.value?.includes("/")) {
+        next.push(...split(child.value));
+      } else {
+        walk(child);
+        next.push(child);
+      }
+    }
+    node.children = next;
+  };
+
+  return () => (tree: UserMarkdownNode) => walk(tree);
+}
+
 /** The bubble text, with the “@” rendered as pills. The mentions are
  persisted on the message metadata (name + id): we therefore do not have to
  guess which member “@Clément” referred to at the time of sending. */
 function UserText({
   content,
   mentions,
+  skills,
 }: {
   content: string;
   mentions: AssistantMention[];
+  skills: AssistantSkillSelection[];
 }) {
   // A mentioned project shows its true face. Its orb takes shape from
   // of its id alone: ​​even a project that has become inaccessible keeps its own, alone
@@ -252,6 +308,7 @@ function UserText({
         rehypePlugins={[
           [rehypeSanitize, defaultSchema],
           ...(mentions.length > 0 ? [rehypeUserMentions(mentions)] : []),
+          ...(skills.length > 0 ? [rehypeUserSkills(skills)] : []),
         ]}
         components={{
           a: MarkdownLink,
@@ -262,7 +319,15 @@ function UserText({
               ],
             );
             const mention = Number.isInteger(index) ? mentions[index] : undefined;
-            if (!mention) return <span>{children}</span>;
+            if (!mention) {
+              const skillIndex = Number(
+                (node?.properties as Record<string, unknown> | undefined)?.[
+                  "data-skill-index"
+                ],
+              );
+              const skill = Number.isInteger(skillIndex) ? skills[skillIndex] : undefined;
+              return skill ? <SkillChip name={skill.name} /> : <span>{children}</span>;
+            }
             return (
               <MentionChip
                 type={mention.type}
@@ -377,6 +442,11 @@ export const ChatMessage = memo(function ChatMessage({
                     mentions={
                       Array.isArray(message.metadata?.mentions)
                         ? (message.metadata.mentions as AssistantMention[])
+                        : []
+                    }
+                    skills={
+                      Array.isArray(message.metadata?.skills)
+                        ? (message.metadata.skills as AssistantSkillSelection[])
                         : []
                     }
                   />
