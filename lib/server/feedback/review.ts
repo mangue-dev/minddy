@@ -15,6 +15,10 @@ import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { setFeedbackPostCategories } from "@/lib/server/feedback/set-post-categories";
 import { emitFeedbackFieldChanges } from "@/lib/server/feedback/events";
 import {
+  notifyFeedbackTransition,
+  type FeedbackNotificationPost,
+} from "@/lib/server/feedback/notify";
+import {
   decideFeedbackReview,
   resolveFeedbackReviewMode,
   type FeedbackReviewMode,
@@ -224,7 +228,7 @@ async function publishWithoutReview(postId: string): Promise<void> {
   const now = new Date().toISOString();
   const { data: fresh } = await service
     .from("feedback_posts")
-    .select("review_state")
+    .select("id, project_id, source, review_state, status")
     .is("deleted_at", null)
     .eq("id", postId)
     .maybeSingle();
@@ -237,12 +241,25 @@ async function publishWithoutReview(postId: string): Promise<void> {
   // Only a pending post is promoted: a team decision (published / discarded
   // by hand) is authentic, as everywhere else in the magazine.
   if (fresh.review_state === "pending") updates.review_state = "published";
-  await service
+  const { data: updated, error } = await service
     .from("feedback_posts")
     .update(updates)
     .is("deleted_at", null)
     .eq("id", postId)
-    .is("merged_into_id", null);
+    .is("merged_into_id", null)
+    .select("id, project_id, source, review_state, status")
+    .maybeSingle();
+  if (error) {
+    console.error("[feedback-review] publish without review failed:", error.message);
+    return;
+  }
+  if (updated) {
+    await notifyFeedbackTransition(
+      service,
+      fresh as FeedbackNotificationPost,
+      updated as FeedbackNotificationPost
+    );
+  }
 }
 
 /** Batch pass (hourly cron): catches up with anything the immediate review missed. */
@@ -529,15 +546,31 @@ async function reviewOne(
   }
   if (decision.forcePrivate) updates.is_public = false;
 
-  const { error: updError } = await service
+  const { data: updated, error: updError } = await service
     .from("feedback_posts")
     .update(updates)
     .is("deleted_at", null)
     .eq("id", post.id)
-    .is("merged_into_id", null);
+    .is("merged_into_id", null)
+    .select("id, project_id, source, review_state, status")
+    .maybeSingle();
   if (updError) {
     console.error("[feedback-review] update failed:", updError.message);
     return false;
+  }
+
+  if (updated) {
+    await notifyFeedbackTransition(
+      service,
+      {
+        id: post.id,
+        project_id: post.project_id,
+        source: post.source,
+        review_state: currentReviewState,
+        status: currentStatus,
+      },
+      updated as FeedbackNotificationPost
+    );
   }
 
   // Merge last: the post already has its moderation decision, so nothing

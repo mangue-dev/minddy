@@ -6,6 +6,7 @@ import {
 } from "@/lib/server/integration-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { readAnalyzeOption } from "@/lib/feedback/analyze-option";
+import { FEEDBACK_USER_NAME_MAX } from "@/lib/feedback/types";
 import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
 import {
   createFeedbackPost,
@@ -34,7 +35,6 @@ import {
 // title/body.
 const USER_EXTERNAL_ID_MAX = 255;
 const USER_EMAIL_MAX = 254;
-const USER_NAME_MAX = 200;
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateIntegration(request);
@@ -125,11 +125,11 @@ export async function POST(request: NextRequest) {
   if (userEmail && (userEmail.length > USER_EMAIL_MAX || !userEmail.includes("@"))) {
     return publicApiError(422, "invalid_email", "user.email must be a valid email address.");
   }
-  if (userName.length > USER_NAME_MAX) {
+  if (userName.length > FEEDBACK_USER_NAME_MAX) {
     return publicApiError(
       422,
       "name_too_long",
-      `user.name must be at most ${USER_NAME_MAX} characters.`
+      `user.name must be at most ${FEEDBACK_USER_NAME_MAX} characters.`
     );
   }
 

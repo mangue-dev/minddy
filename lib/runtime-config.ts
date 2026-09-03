@@ -75,6 +75,7 @@ export function resolveRuntimeConfig(env: RuntimeConfigEnvironment): RuntimeConf
       supabaseAnonKey,
       siteName,
       contactEmail,
+      productFeedbackIntegrationEnabled: !!env.MINDDY_FEEDBACK_KEY?.trim(),
       productFeedbackUrl: optionalUrl(
         env.MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL,
         "MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL",

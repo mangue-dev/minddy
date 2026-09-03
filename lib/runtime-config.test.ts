@@ -10,6 +10,7 @@ const baseEnvironment = {
   OPENROUTER_API_KEY: "provider-secret-that-must-not-reach-the-browser",
   MINDDY_PUBLIC_SITE_NAME: "Acme Tickets",
   MINDDY_PUBLIC_CONTACT_EMAIL: "support@example.test",
+  MINDDY_FEEDBACK_KEY: "mdy_server-only-feedback-key",
   MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL: "https://feedback.example.test/board",
   MINDDY_PUBLIC_POSTHOG_KEY: "posthog-public-key",
   MINDDY_PUBLIC_POSTHOG_HOST: "https://analytics.example.test",
@@ -33,6 +34,8 @@ describe("resolveRuntimeConfig", () => {
       supabaseAnonKey: "anon-key-a",
       siteName: "Acme Tickets",
       contactEmail: "support@example.test",
+      productFeedbackIntegrationEnabled: true,
+      productFeedbackUrl: "https://feedback.example.test/board",
     });
     expect(second).toMatchObject({
       appUrl: "https://other.example.test",
@@ -53,7 +56,19 @@ describe("resolveRuntimeConfig", () => {
     const serialized = JSON.stringify(resolveRuntimeConfig(baseEnvironment).public);
 
     expect(serialized).toContain("anon-key-a");
+    expect(serialized).toContain('"productFeedbackIntegrationEnabled":true');
+    expect(serialized).not.toContain(baseEnvironment.MINDDY_FEEDBACK_KEY);
     expect(serialized).not.toContain(baseEnvironment.SUPABASE_SERVICE_ROLE_KEY);
     expect(serialized).not.toContain(baseEnvironment.OPENROUTER_API_KEY);
+  });
+
+  it("keeps the public link fallback when the feedback integration is disabled", () => {
+    const config = resolveRuntimeConfig({
+      ...baseEnvironment,
+      MINDDY_FEEDBACK_KEY: "   ",
+    }).public;
+
+    expect(config.productFeedbackIntegrationEnabled).toBe(false);
+    expect(config.productFeedbackUrl).toBe("https://feedback.example.test/board");
   });
 });

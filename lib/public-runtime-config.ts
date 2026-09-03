@@ -5,6 +5,7 @@ export interface PublicRuntimeConfig {
   supabaseAnonKey: string;
   siteName: string;
   contactEmail: string;
+  productFeedbackIntegrationEnabled: boolean;
   productFeedbackUrl: string | null;
   posthog: { key: string | null; host: string | null; allowLocalhost: boolean };
   vapidPublicKey: string | null;

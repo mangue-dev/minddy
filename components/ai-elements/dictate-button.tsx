@@ -55,6 +55,8 @@ export interface DictateButtonProps {
   ref?: Ref<DictateButtonHandle>;
   /** Called with the transcribed text when recording completes. */
   onTranscription: (text: string) => void;
+  /** Optional usage-ledger attribution for a specialized dictation surface. */
+  feature?: "feedback_voice";
   /**
    * Overrides the default sending to `/api/transcribe`. Receives the plug and
    * local, makes the transcribed text — or `null` when the caller has already said
@@ -188,6 +190,7 @@ function pickRecorderMimeType(): string | undefined {
 export function DictateButton({
   ref,
   onTranscription,
+  feature,
   uploadAudio,
   floating = false,
   disabled = false,
@@ -278,6 +281,7 @@ export function DictateButton({
       // short clips (a lone "bonjour" comes back as "hello") — pinning the
       // language keeps the transcription in the user's language, untranslated.
       formData.append("lang", locale);
+      if (feature) formData.append("feature", feature);
 
       try {
         const res = await fetch("/api/transcribe", {
@@ -313,7 +317,7 @@ export function DictateButton({
         if (isMountedRef.current) setStatus("idle");
       }
     },
-    [onTranscription, t, locale],
+    [feature, onTranscription, t, locale],
   );
 
   const stopRecording = useCallback(() => {
