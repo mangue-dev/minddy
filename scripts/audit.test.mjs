@@ -14,6 +14,7 @@ const silentStream = { write() {} };
 
 test("classifies registry transport failures as transient", () => {
   assert.equal(isTransientAuditFailure("ERR_SOCKET_TIMEOUT registry request failed"), true);
+  assert.equal(isTransientAuditFailure("npm warn audit network timeout at: registry"), true);
   assert.equal(isTransientAuditFailure("audit request failed, reason: socket hang up"), true);
   assert.equal(isTransientAuditFailure("503 Service Unavailable"), true);
   assert.equal(isTransientAuditFailure("found 1 high severity vulnerability"), false);

@@ -35,6 +35,7 @@ const ATTEMPT_TIMEOUT_MS = 90_000;
 
 const TRANSIENT_AUDIT_FAILURES = [
   /\b(?:ERR_SOCKET_TIMEOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENETUNREACH|ENOTFOUND)\b/i,
+  /\bnetwork timeout\b/i,
   /\bsocket hang up\b/i,
   /\bERR_PNPM_AUDIT_BAD_RESPONSE\b/i,
   /\b(?:HTTP|status(?: code)?)\s*(?:429|5\d\d)\b/i,
