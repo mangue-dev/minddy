@@ -49,6 +49,8 @@ export interface PullRequestRef {
   head?: string;
   /** Provider-qualified head name used by GitHub's classic merge title. */
   headLabel?: string;
+  /** `true` only when the forge confirms that the head branch lives in the base repository. */
+  headFromBaseRepository?: boolean;
   base?: string;
   /** Head SHA — immutable anchor to calculate the merge base (getMergeBaseSha). */
   headSha?: string;
@@ -345,7 +347,12 @@ interface RawPull {
   mergeable_state?: string | null;
   title?: string;
   body?: string | null;
-  head?: { ref?: string; sha?: string; label?: string };
+  head?: {
+    ref?: string;
+    sha?: string;
+    label?: string;
+    repo?: { full_name?: string | null } | null;
+  };
   base?: { ref?: string };
   commits?: number;
   user?: { login?: string; avatar_url?: string } | null;
@@ -362,7 +369,8 @@ interface RawPull {
  * which does not read them, but callers must distinguish `undefined` (“no
  * information”) from `false` (“definitely not mergeable”).
  */
-function toRef(pr: RawPull): PullRequestRef {
+function toRef(pr: RawPull, baseRepoFullName: string): PullRequestRef {
+  const headRepoFullName = pr.head?.repo?.full_name?.trim().toLowerCase();
   return {
     number: pr.number,
     url: pr.html_url,
@@ -373,6 +381,9 @@ function toRef(pr: RawPull): PullRequestRef {
     body: pr.body ?? null,
     head: pr.head?.ref,
     headLabel: pr.head?.label,
+    headFromBaseRepository: headRepoFullName
+      ? headRepoFullName === baseRepoFullName.trim().toLowerCase()
+      : undefined,
     base: pr.base?.ref,
     headSha: pr.head?.sha,
     commitCount: pr.commits,
@@ -436,7 +447,7 @@ export async function findOpenPullRequest(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls?state=open&head=${owner}:${encodeURIComponent(opts.head)}`,
     opts.token,
   );
-  return pulls.length > 0 ? toRef(pulls[0]) : null;
+  return pulls.length > 0 ? toRef(pulls[0], opts.repoFullName) : null;
 }
 
 /**
@@ -467,7 +478,7 @@ export async function ensurePullRequest(opts: {
         }),
       },
     );
-    return toRef(created);
+    return toRef(created, opts.repoFullName);
   } catch (err) {
     // 422 “A pull request already exists” → we find and return the existing one.
     if (err instanceof GithubApiError && err.status === 422) {
@@ -492,7 +503,7 @@ export async function getPullRequest(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
     opts.token,
   );
-  const ref = toRef(pr);
+  const ref = toRef(pr, opts.repoFullName);
   if (pr.node_id) {
     const flow = await ghGraphql<{
       node?: {
@@ -929,7 +940,7 @@ export async function listPullRequests(opts: {
     );
     // The *list* endpoint does not return `merged`: `toRef` falls back to
     // `merged_at`, only signal available here to distinguish merged/refused.
-    pulls.push(...batch.map(toRef));
+    pulls.push(...batch.map((pull) => toRef(pull, opts.repoFullName)));
     if (batch.length < 100) break;
     if (page === MAX_PR_PAGES) truncated = true;
   }
@@ -1159,7 +1170,7 @@ export async function updatePullRequestTitle(opts: {
       body: JSON.stringify({ title: opts.title }),
     },
   );
-  return toRef(pr);
+  return toRef(pr, opts.repoFullName);
 }
 
 export async function enablePullRequestMergeFlow(opts: {
@@ -1227,7 +1238,7 @@ export async function reopenPullRequest(opts: {
       body: JSON.stringify({ state: "open" }),
     },
   );
-  return toRef(pr);
+  return toRef(pr, opts.repoFullName);
 }
 
 // ── Reviews formelles (MIN-138) ──────────────────────────────────────────────
@@ -1495,7 +1506,7 @@ export async function listPullRequestChecks(opts: {
 interface RawComment {
   id: number;
   body?: string;
-  user?: { login?: string; avatar_url?: string } | null;
+  user?: { login?: string; avatar_url?: string; type?: string } | null;
   created_at: string;
   html_url: string;
 }
@@ -1633,7 +1644,40 @@ function httpDeploymentUrl(value: string | null | undefined): string | null {
 }
 
 /**
- * Latest successful GitHub deployment of one immutable PR head.
+ * Vercel only publishes its stable branch URL in the official PR comment. Its
+ * GitHub Deployment and Deployment Status both point at the immutable commit
+ * deployment. Read the visible Ready/Preview table rather than Vercel's private
+ * signed comment metadata, and trust only the canonical GitHub App account.
+ */
+async function getVercelBranchPreviewUrl(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<string | null> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  try {
+    const comments = await ghJson<RawComment[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${opts.number}/comments?per_page=100`,
+      opts.token,
+    );
+    for (const comment of [...comments].reverse()) {
+      if (comment.user?.login !== "vercel[bot]" || comment.user.type !== "Bot") continue;
+      for (const line of (comment.body ?? "").split("\n")) {
+        if (!/!\[Ready\]\([^)]+\)\s+\[Ready\]\([^)]+\)/u.test(line)) continue;
+        const preview = line.match(/\[Preview\]\((https?:\/\/[^)\s]+)\)/u)?.[1];
+        const url = httpDeploymentUrl(preview);
+        if (url) return url;
+      }
+    }
+  } catch {
+    // PR comments are an optional Vercel-specific source; deployments still work without them.
+  }
+  return null;
+}
+
+/**
+ * Latest successful GitHub deployment of a PR branch, with its immutable head
+ * as a fallback.
  *
  * A deployment object does not carry the public environment URL. GitHub puts
  * that URL on its latest status, so resolving the header action takes one list
@@ -1644,39 +1688,53 @@ function httpDeploymentUrl(value: string | null | undefined): string | null {
 export async function getLatestSuccessfulDeploymentUrl(opts: {
   token: string;
   repoFullName: string;
+  number: number;
+  branch?: string;
   sha: string;
 }): Promise<string | null> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const deployments = await ghJson<RawGithubDeployment[]>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
-      `?sha=${encodeURIComponent(opts.sha)}&per_page=10`,
-    opts.token,
-  );
-  const newest = deployments
-    .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
-      Number.isInteger(deployment.id),
-    )
-    .sort((a, b) => {
-      const byDate = Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
-      return Number.isFinite(byDate) && byDate !== 0 ? byDate : b.id - a.id;
-    });
+  const vercelBranchUrl = opts.branch ? await getVercelBranchPreviewUrl(opts) : null;
+  if (vercelBranchUrl) return vercelBranchUrl;
 
-  const statuses = await Promise.all(
-    newest.map(async (deployment) => {
-      try {
-        const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
-          `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${deployment.id}/statuses?per_page=1`,
-          opts.token,
-        );
-        if (latest?.state !== "success") return null;
-        return httpDeploymentUrl(latest.environment_url) ?? httpDeploymentUrl(latest.target_url);
-      } catch {
-        // A stale deployment can disappear while its siblings remain readable.
-        return null;
-      }
-    }),
-  );
-  return statuses.find((url): url is string => url !== null) ?? null;
+  const references = [
+    ...(opts.branch ? [{ parameter: "ref", value: opts.branch }] : []),
+    { parameter: "sha", value: opts.sha },
+  ];
+
+  for (const reference of references) {
+    const deployments = await ghJson<RawGithubDeployment[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
+        `?${reference.parameter}=${encodeURIComponent(reference.value)}&per_page=10`,
+      opts.token,
+    );
+    const newest = deployments
+      .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
+        Number.isInteger(deployment.id),
+      )
+      .sort((a, b) => {
+        const byDate = Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
+        return Number.isFinite(byDate) && byDate !== 0 ? byDate : b.id - a.id;
+      });
+
+    const statuses = await Promise.all(
+      newest.map(async (deployment) => {
+        try {
+          const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${deployment.id}/statuses?per_page=1`,
+            opts.token,
+          );
+          if (latest?.state !== "success") return null;
+          return httpDeploymentUrl(latest.environment_url) ?? httpDeploymentUrl(latest.target_url);
+        } catch {
+          // A stale deployment can disappear while its siblings remain readable.
+          return null;
+        }
+      }),
+    );
+    const url = statuses.find((candidate): candidate is string => candidate !== null);
+    if (url) return url;
+  }
+  return null;
 }
 
 interface RawReviewComment extends RawComment {

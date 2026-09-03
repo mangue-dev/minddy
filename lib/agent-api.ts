@@ -595,6 +595,8 @@ export interface PullRequestRef {
   head?: string;
   /** Provider-qualified head name used by the default merge commit title. */
   headLabel?: string;
+  /** `true` only when the forge confirms that the head branch lives in the base repository. */
+  headFromBaseRepository?: boolean;
   base?: string;
   /** Head SHA — the EXACT diff served. Compared to the SHA that was reread by the last
    * Numo review to see if relaunch would have anything new to read. */
@@ -646,6 +648,8 @@ export interface PullRequestCheck {
 
 export interface ChecksSummary {
   checks: PullRequestCheck[];
+  /** Stable branch or pull-request preview advertised by a successful check. */
+  deploymentUrl?: string | null;
   /** Aggregate: failure wins, then “in progress”. `null` = no check. */
   state: CheckState | null;
   /** Non-blocking checks (successful or neutral) — the `n` of “n/m passed”. */

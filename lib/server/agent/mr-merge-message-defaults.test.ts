@@ -14,6 +14,8 @@ function restMergeRequest() {
     title: "Improve merge readiness",
     source_branch: "feature/readiness",
     target_branch: "main",
+    source_project_id: 10,
+    target_project_id: 10,
     detailed_merge_status: "mergeable",
   };
 }
@@ -94,5 +96,25 @@ describe("GitLab merge message defaults", () => {
       defaultMergeCommitMessage: null,
       defaultSquashCommitMessage: null,
     });
+  });
+
+  it("identifies a merge request whose head belongs to a fork", async () => {
+    const fork = {
+      ...restMergeRequest(),
+      source_project_id: 20,
+      target_project_id: 10,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) =>
+        String(input).endsWith("/api/graphql")
+          ? Response.json({ data: { project: { mergeRequest: null } } })
+          : Response.json(fork),
+      ),
+    );
+
+    await expect(
+      getMergeRequest({ token: "token", repoFullName: "acme/app", number: 42 }),
+    ).resolves.toMatchObject({ headFromBaseRepository: false });
   });
 });

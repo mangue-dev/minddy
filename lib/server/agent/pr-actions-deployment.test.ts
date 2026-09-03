@@ -9,6 +9,7 @@ describe("pull request detail deployment", () => {
       .mockResolvedValue("https://preview.example.com/live");
     const listChecks = vi.fn().mockResolvedValue({
       checks: [],
+      deploymentUrl: null,
       state: "success",
       passing: 0,
       total: 0,
@@ -25,6 +26,8 @@ describe("pull request detail deployment", () => {
           number: 42,
           url: "https://gitlab.example.com/acme/app/-/merge_requests/42",
           state: "open",
+          head: "feature/preview",
+          headFromBaseRepository: true,
           headSha: "live-head",
         }),
         listPullRequestFiles: async () => ({ files: [], truncated: false }),
@@ -43,10 +46,93 @@ describe("pull request detail deployment", () => {
     expect(getLatestSuccessfulDeploymentUrl).toHaveBeenCalledWith({
       token: "token",
       repoFullName: "acme/app",
+      number: 42,
+      branch: "feature/preview",
       sha: "live-head",
     });
     expect(listChecks).toHaveBeenCalledWith(
       expect.objectContaining({ sha: "live-head" }),
+    );
+  });
+
+  it("prefers a stable preview advertised by a successful check", async () => {
+    const scope = {
+      pr: { head_sha: "stored-head" },
+      target: { provider: "github" },
+      call: { token: "token", repoFullName: "acme/app", number: 42 },
+      actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
+      forge: {
+        getPullRequest: async () => ({
+          number: 42,
+          url: "https://github.com/acme/app/pull/42",
+          state: "open",
+          head: "feature/preview",
+          headFromBaseRepository: true,
+          headSha: "live-head",
+        }),
+        listPullRequestFiles: async () => ({ files: [], truncated: false }),
+        listReviews: async () => null,
+        listReviewThreads: async () => null,
+        listChecks: async () => ({
+          checks: [],
+          deploymentUrl: "https://feature-preview.example.com/",
+          state: "success",
+          passing: 0,
+          total: 0,
+          startedAt: null,
+          completedAt: null,
+        }),
+        getLatestSuccessfulDeploymentUrl: async () =>
+          "https://immutable-commit.example.com/",
+      },
+    } as unknown as PrScope;
+
+    const response = await prDetailResponse(scope);
+    const body = await response.json();
+
+    expect(body.deploymentUrl).toBe("https://feature-preview.example.com/");
+  });
+
+  it("does not look up an unqualified branch name for a fork pull request", async () => {
+    const getLatestSuccessfulDeploymentUrl = vi
+      .fn()
+      .mockResolvedValue("https://immutable-head.example.com/");
+    const scope = {
+      pr: { head_sha: "stored-head" },
+      target: { provider: "github" },
+      call: { token: "token", repoFullName: "acme/app", number: 42 },
+      actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
+      forge: {
+        getPullRequest: async () => ({
+          number: 42,
+          url: "https://github.com/acme/app/pull/42",
+          state: "open",
+          head: "main",
+          headFromBaseRepository: false,
+          headSha: "fork-head",
+        }),
+        listPullRequestFiles: async () => ({ files: [], truncated: false }),
+        listReviews: async () => null,
+        listReviewThreads: async () => null,
+        listChecks: async () => ({
+          checks: [],
+          deploymentUrl: null,
+          state: "success",
+          passing: 0,
+          total: 0,
+          startedAt: null,
+          completedAt: null,
+        }),
+        getLatestSuccessfulDeploymentUrl,
+      },
+    } as unknown as PrScope;
+
+    const response = await prDetailResponse(scope);
+    const body = await response.json();
+
+    expect(body.deploymentUrl).toBe("https://immutable-head.example.com/");
+    expect(getLatestSuccessfulDeploymentUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ branch: undefined, sha: "fork-head" }),
     );
   });
 });

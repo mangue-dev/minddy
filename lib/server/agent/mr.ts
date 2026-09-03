@@ -188,6 +188,8 @@ interface RawMr {
   description?: string | null;
   source_branch?: string;
   target_branch?: string;
+  source_project_id?: number | null;
+  target_project_id?: number | null;
   sha?: string | null;
   diff_refs?: { base_sha?: string; start_sha?: string; head_sha?: string } | null;
   author?: { username?: string; avatar_url?: string | null } | null;
@@ -268,6 +270,8 @@ function toMergeable(mr: RawMr): {
 
 function toRef(mr: RawMr): PullRequestRef {
   const merged = mr.state === "merged" || !!mr.merged_at;
+  const projectIdentityKnown =
+    Number.isInteger(mr.source_project_id) && Number.isInteger(mr.target_project_id);
   return {
     number: mr.iid,
     url: mr.web_url,
@@ -279,6 +283,9 @@ function toRef(mr: RawMr): PullRequestRef {
     title: mr.title,
     body: mr.description ?? null,
     head: mr.source_branch,
+    headFromBaseRepository: projectIdentityKnown
+      ? mr.source_project_id === mr.target_project_id
+      : undefined,
     base: mr.target_branch,
     headSha: mr.sha ?? mr.diff_refs?.head_sha,
     user: mr.author
@@ -1298,14 +1305,17 @@ export async function listMergeRequestTimeline(opts: {
 }
 
 interface RawGitlabDeployment {
+  ref?: string | null;
   sha?: string | null;
   environment?: { external_url?: string | null } | null;
 }
 
-/** Latest successful GitLab deployment among the provider's bounded recent list. */
+/** Latest successful GitLab branch deployment, with the immutable head as a fallback. */
 export async function getLatestSuccessfulDeploymentUrl(opts: {
   token: string;
   repoFullName: string;
+  number: number;
+  branch?: string;
   sha: string;
 }): Promise<string | null> {
   const deployments = await glJson<RawGitlabDeployment[]>(
@@ -1313,15 +1323,25 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
       "?order_by=updated_at&sort=desc&status=success&per_page=100",
     opts.token,
   );
-  const value = deployments.find((deployment) => deployment.sha === opts.sha)
-    ?.environment?.external_url;
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
-  } catch {
-    return null;
+  const matches = [
+    ...(opts.branch
+      ? [deployments.filter((deployment) => deployment.ref === opts.branch)]
+      : []),
+    deployments.filter((deployment) => deployment.sha === opts.sha),
+  ];
+  for (const candidates of matches) {
+    for (const deployment of candidates) {
+      const value = deployment.environment?.external_url;
+      if (!value) continue;
+      try {
+        const url = new URL(value);
+        if (url.protocol === "https:" || url.protocol === "http:") return url.toString();
+      } catch {
+        // Keep looking: an older deployment for this ref can still be usable.
+      }
+    }
   }
+  return null;
 }
 
 /** Adds a note to the MR's conversation (author = the connected account). */

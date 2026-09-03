@@ -345,10 +345,12 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PrTimelineEvent[]>;
-  /** Public URL of the latest successful deployment of the immutable PR head. */
+  /** Public URL of the latest successful deployment of the PR branch, then its head. */
   getLatestSuccessfulDeploymentUrl(opts: {
     token: string;
     repoFullName: string;
+    number: number;
+    branch?: string;
     sha: string;
   }): Promise<string | null>;
   createPullRequestComment(opts: {

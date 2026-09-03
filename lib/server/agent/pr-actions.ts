@@ -455,17 +455,20 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
         forge.getLatestSuccessfulDeploymentUrl({
           token: call.token,
           repoFullName: call.repoFullName,
+          number: call.number,
+          branch: pr.headFromBaseRepository ? pr.head : undefined,
           sha: pr.headSha,
         }),
       ]);
       if (checksResult.status === "fulfilled") {
         checks = checksResult.value;
+        deploymentUrl = checksResult.value.deploymentUrl ?? null;
       } else {
         const error = checksResult.reason;
         checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
       }
       if (deploymentResult.status === "fulfilled") {
-        deploymentUrl = deploymentResult.value;
+        deploymentUrl ??= deploymentResult.value;
       } else {
         console.error(
           "[pr-actions] deployment unreadable:",
