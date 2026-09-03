@@ -21,7 +21,7 @@ import {
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
-import { ArrowUp, Paperclip, Plus, Sparkles, Square } from "lucide-react";
+import { ArrowUp, Layers, Paperclip, Plus, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionChip } from "@/components/mention-chip";
@@ -1367,6 +1367,28 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         {canAttach &&
                           (addContextOptions.length > 0 ||
                             addMenuSkillOptions.length > 0) && <CommandSeparator />}
+                        {addMenuSkillOptions.length > 0 && (
+                          <CommandGroup heading={t("skills")}>
+                            {addMenuSkillOptions.map((option) => (
+                              <CommandItem
+                                key={option.id}
+                                value={`${option.label} ${option.description}`}
+                                onSelect={() => placeSkill(option.skill)}
+                                className="gap-2"
+                              >
+                                <Layers className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <span className="min-w-0">
+                                  <span className="block truncate">{option.label}</span>
+                                  <span className="block truncate text-xs text-muted-foreground">
+                                    {option.description}
+                                  </span>
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                        {addContextOptions.length > 0 &&
+                          addMenuSkillOptions.length > 0 && <CommandSeparator />}
                         {addContextOptions.length > 0 && (
                           <CommandGroup>
                             {addContextOptions.map((option) => (
@@ -1384,28 +1406,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                                       {option.detail}
                                     </span>
                                   )}
-                                </span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        )}
-                        {addContextOptions.length > 0 &&
-                          addMenuSkillOptions.length > 0 && <CommandSeparator />}
-                        {addMenuSkillOptions.length > 0 && (
-                          <CommandGroup heading={t("skills")}>
-                            {addMenuSkillOptions.map((option) => (
-                              <CommandItem
-                                key={option.id}
-                                value={`${option.label} ${option.description}`}
-                                onSelect={() => placeSkill(option.skill)}
-                                className="gap-2"
-                              >
-                                <Sparkles className="size-4 shrink-0 text-brand" />
-                                <span className="min-w-0">
-                                  <span className="block truncate">{option.label}</span>
-                                  <span className="block truncate text-xs text-muted-foreground">
-                                    {option.description}
-                                  </span>
                                 </span>
                               </CommandItem>
                             ))}

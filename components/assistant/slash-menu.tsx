@@ -6,7 +6,7 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkles, SquarePen, type LucideIcon } from "lucide-react";
+import { Layers, SquarePen, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui";
 import type { AssistantCommandId } from "@/lib/assistant-types";
 import type { RepositorySkillSummary } from "@/lib/repository-skills";
@@ -70,7 +70,7 @@ export function repositorySkillOptions(
     id: skill.path,
     label: skill.name,
     description: skill.description,
-    icon: Sparkles,
+    icon: Layers,
     skill,
   }));
 }
