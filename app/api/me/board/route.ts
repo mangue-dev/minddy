@@ -112,11 +112,12 @@ export async function GET(request: NextRequest) {
 
   // Integrations across my projects — feeds the cross-project integration
   // filter (issues carry integration_id). Read via the service client like
-  // members, then bucketed by project. Only id/name/project_id are exposed.
+  // members, then bucketed by project. Kind and revocation state let the client
+  // hide integrations that cannot match a living board ticket.
   const { data: integrationRows } = projectIds.length
     ? await service
         .from("integrations")
-        .select("id, name, project_id")
+        .select("id, name, project_id, kind, revoked_at")
         .in("project_id", projectIds)
         .order("name", { ascending: true })
     : { data: [] as IntegrationRef[] };

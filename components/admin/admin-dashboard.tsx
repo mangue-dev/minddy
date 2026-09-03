@@ -299,7 +299,7 @@ export function AdminDashboard() {
  name of the open tab. On desktop the rail is on the screen and the
  is already highlighted. */}
         <AppContentHeader
-          contentClassName="gap-2 px-4"
+          contentClassName="gap-2"
         >
           <Button
             variant="ghost"

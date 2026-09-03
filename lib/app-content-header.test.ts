@@ -46,6 +46,20 @@ describe("application content header", () => {
     expect(source).toContain("h-[60px] shrink-0");
     expect(source).toContain("overflow-x-auto overflow-y-hidden");
     expect(source).toContain("overscroll-x-contain");
+    expect(source).toContain("items-center px-3.5");
+  });
+
+  it("owns equal edge padding instead of letting pages widen it", () => {
+    const files = [
+      ...tsxFiles(join(process.cwd(), "app/(app)")),
+      ...tsxFiles(join(process.cwd(), "components")),
+    ];
+    const overrides = files.filter((file) => {
+      const content = readFileSync(file, "utf8");
+      return /<AppContentHeader[^>]*contentClassName="[^"]*px-/m.test(content);
+    });
+
+    expect(overrides).toEqual([]);
   });
 
   it("moves the macOS window from empty space without swallowing controls", () => {

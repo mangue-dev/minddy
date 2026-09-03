@@ -1,6 +1,7 @@
 import { cn } from "mangue-ui/lib/utils";
 import { avatarDataUri } from "@/lib/avatar";
 import { uploadedAvatarUrl } from "@/lib/avatar-source";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * Circular user avatar: a Lorelei portrait generated from `seed`, or the
@@ -43,11 +44,10 @@ export function UserAvatar({
     );
   }
   // eslint-disable-next-line @next/next/no-img-element
-  return (
+  const avatar = (
     <img
       src={url || importedUrl || avatarDataUri(seed as string)}
       alt=""
-      title={title}
       className={cn(
         "shrink-0 object-cover",
         shape === "rounded" ? "rounded-[6px]" : "rounded-full",
@@ -55,4 +55,5 @@ export function UserAvatar({
       )}
     />
   );
+  return title ? <AppTooltip label={title}>{avatar}</AppTooltip> : avatar;
 }

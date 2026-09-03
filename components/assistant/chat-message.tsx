@@ -38,6 +38,7 @@ import {
   type AdaptiveContextItem,
 } from "@/components/assistant/adaptive-context-row";
 import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-renderer";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -88,21 +89,22 @@ function CopyButton({ text }: { text: string }) {
   }, [text, tc]);
 
   return (
-    <IconButton
-      type="button"
-      onClick={handleCopy}
-      variant="ghost"
-      size="sm"
-      aria-label={tc("copy")}
-      className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
-      title={tc("copy")}
-    >
-      {copied ? (
-        <Check className="size-3 text-brand" />
-      ) : (
-        <Copy className="size-3" />
-      )}
-    </IconButton>
+    <AppTooltip label={tc("copy")}>
+      <IconButton
+        type="button"
+        onClick={handleCopy}
+        variant="ghost"
+        size="sm"
+        aria-label={tc("copy")}
+        className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+      >
+        {copied ? (
+          <Check className="size-3 text-brand" />
+        ) : (
+          <Copy className="size-3" />
+        )}
+      </IconButton>
+    </AppTooltip>
   );
 }
 

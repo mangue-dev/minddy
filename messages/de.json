@@ -2490,6 +2490,7 @@
     "fileEdited": "Bearbeitet {file}",
     "reviewChangesShort": "Überprüfen",
     "filesShowMore": "{count, plural, one {# weitere Datei anzeigen} other {# weitere Dateien anzeigen}}",
+    "filesHide": "{count, plural, one {# Datei ausblenden} other {# Dateien ausblenden}}",
     "filesListTruncated": "Liste abgeschnitten",
     "diffTitle": "Sitzungsänderungen",
     "diffDescription": "Die Arbeit, die der Numo-Agent an den Zweig dieser Sitzung gepusht hat.",

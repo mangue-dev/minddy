@@ -61,7 +61,7 @@ describe("page interface regressions", () => {
       'className="relative flex min-h-0 flex-1 flex-col"'
     );
     expect(view).toContain(
-      '<AppContentHeader contentClassName="gap-2 px-4 md:px-6">'
+      '<AppContentHeader contentClassName="gap-2">'
     );
     expect(view).toContain('onOpenHistory={() => openHistory("versions")}');
     expect(view).toContain('onClick={() => openHistory("activity")}');

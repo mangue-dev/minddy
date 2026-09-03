@@ -347,7 +347,7 @@ export default function InboxPage() {
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        <AppContentHeader contentClassName="justify-end gap-4 px-4 md:px-6">
+        <AppContentHeader contentClassName="justify-end gap-4">
           <Button
             variant="ghost"
             size="icon-sm"

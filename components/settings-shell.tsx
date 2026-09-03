@@ -368,7 +368,7 @@ function SettingsTabs({
             secondary rail already names the active tab, while the blank header
             gives the settings cards the expected top breathing room. */}
         <AppContentHeader
-          contentClassName="gap-2 px-4"
+          contentClassName="gap-2"
         >
           <Button
             variant="ghost"

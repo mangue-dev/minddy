@@ -86,6 +86,7 @@ import {
   useReviewReplies,
   useThreadResolution,
 } from "@/components/pull-requests/pr-review-comments";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * Diff view of a PR (MIN-66, passed to `@pierre/diffs` in MIN-181): list of
@@ -1084,21 +1085,22 @@ export function PrDiff({
               {t("displayOptions")}
             </span>
             <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setWrapChoice(!wrap)}
-                aria-pressed={wrap}
-                aria-label={t("wrapLines")}
-                title={t("wrapLines")}
-                className={cn(
-                  "flex size-7 items-center justify-center rounded-md border transition-colors",
-                  wrap
-                    ? "border-brand/40 bg-brand/10 text-brand"
-                    : "border-border text-muted-foreground hover:bg-muted",
-                )}
-              >
-                <WrapText className="size-3.5" />
-              </button>
+              <AppTooltip label={t("wrapLines")}>
+                <button
+                  type="button"
+                  onClick={() => setWrapChoice(!wrap)}
+                  aria-pressed={wrap}
+                  aria-label={t("wrapLines")}
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-md border transition-colors",
+                    wrap
+                      ? "border-brand/40 bg-brand/10 text-brand"
+                      : "border-border text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  <WrapText className="size-3.5" />
+                </button>
+              </AppTooltip>
               <SegmentedControl
                 className="w-40"
                 value={viewType}

@@ -379,7 +379,7 @@ export function SessionCompose({
  the message already written jumped down at the time of recovery.
  The title follows the same fate: “New conversation” gives way to the
  title that the agent gives it, without anything moving. */}
-      <AppContentHeader contentClassName="gap-2 px-4">
+      <AppContentHeader contentClassName="gap-2">
         {/* Under `md` only: the conversations column is hidden behind
  this pane, you need a return path. Above, the two coexist. */}
         {onBack ? (

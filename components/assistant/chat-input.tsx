@@ -1212,19 +1212,25 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       </SearchMenu>
                     </div>
                   ) : (
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      disabled={disabled || !userId}
-                      onClick={() => fileInputRef.current?.click()}
-                      className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
-                      aria-label={tAttach("addFiles")}
-                      aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
-                      title={tAttach("addFiles")}
-                    >
-                      <Plus className="size-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            disabled={disabled || !userId}
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                            aria-label={tAttach("addFiles")}
+                            aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
+                          >
+                            <Plus className="size-4" />
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{tAttach("addFiles")}</TooltipContent>
+                    </Tooltip>
                   )}
                 </>
               )}
@@ -1232,15 +1238,20 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
-                <Button
-                  size="icon-sm"
-                  variant="default"
-                  onClick={onAbort}
-                  className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-                  title={t("stop")}
-                >
-                  <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon-sm"
+                      variant="default"
+                      onClick={onAbort}
+                      aria-label={t("stop")}
+                      className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                    >
+                      <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{t("stop")}</TooltipContent>
+                </Tooltip>
               ) : (
                 <>
                   {!isStreaming && (

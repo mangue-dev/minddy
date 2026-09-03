@@ -150,15 +150,15 @@ export default function StatisticsPage() {
   );
 
   const header = (
-    <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
-      <h1 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+    <AppContentHeader contentClassName="gap-2">
+      <h1 className="flex min-w-0 items-center gap-1.5 text-base font-medium">
         <span>{t("titlePrefix")}</span>
         <MentionChip
           type="member"
           id={user?.id ?? "current-user"}
           label={userName}
           avatarSeed={avatarSource}
-          className="font-sans"
+          className="font-sans text-[0.95em]"
         />
       </h1>
     </AppContentHeader>

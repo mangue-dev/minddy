@@ -2,18 +2,28 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { PlainMarkdownLink } from "@/components/markdown-link";
 import {
   handleMarkdownLinkClick,
   MarkdownLinkMark,
 } from "@/components/markdown-link-mark";
 import {
+  isVercelAgentReviewUrl,
   MARKDOWN_LINK_CLASS,
   markdownLinkIconUrl,
   markdownLinkPresentation,
 } from "@/lib/markdown-link";
+
+vi.mock("mangue-ui", () => ({
+  cn: (...classes: Array<string | undefined>) =>
+    classes.filter(Boolean).join(" "),
+}));
 
 describe("Markdown links", () => {
   it("routes public web links through the same-origin favicon endpoint", () => {
@@ -22,6 +32,20 @@ describe("Markdown links", () => {
     );
     expect(markdownLinkIconUrl("mailto:hello@example.com")).toBeNull();
     expect(markdownLinkIconUrl("/projects/one")).toBeNull();
+  });
+
+  it("recognizes only Vercel Agent review actions", () => {
+    expect(
+      isVercelAgentReviewUrl(
+        "https://vercel.com/vercel-agent/request-review?owner=example&repo=app&pr=1",
+      ),
+    ).toBe(true);
+    expect(
+      isVercelAgentReviewUrl(
+        "https://vercel.example/vercel-agent/request-review?owner=example",
+      ),
+    ).toBe(false);
+    expect(isVercelAgentReviewUrl("https://vercel.com/dashboard")).toBe(false);
   });
 
   it("adds the shared class and icon to TipTap-rendered links", () => {
@@ -74,5 +98,94 @@ describe("Markdown links", () => {
     );
     expect(css).toContain("--markdown-link-icon");
     expect(css).toContain("%3Ccircle cx='12' cy='12' r='10'/%3E");
+  });
+
+  it("preserves a forge image button without the enriched link decoration", () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        PlainMarkdownLink,
+        {
+          href: "https://example.com/actions/request-review",
+          target: "_blank",
+          rel: "noreferrer",
+        },
+        createElement(
+          "picture",
+          null,
+          createElement("source", {
+            media: "(prefers-color-scheme: dark)",
+            srcSet: "https://agents-vade-review.vercel.sh/request-review-dark.svg",
+          }),
+          createElement("img", {
+            src: "https://agents-vade-review.vercel.sh/request-review-light.svg",
+            alt: "Request Review",
+          }),
+        ),
+      ),
+    );
+
+    expect(html).toContain("<picture>");
+    expect(html).toContain('alt="Request Review"');
+    expect(html).toContain("text-primary underline underline-offset-2");
+    expect(html).not.toContain(MARKDOWN_LINK_CLASS);
+    expect(html).not.toContain("--markdown-link-icon");
+  });
+
+  it("removes Vercel's review action when its image fails", async () => {
+    const completeDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      "complete",
+    );
+    Object.defineProperty(HTMLImageElement.prototype, "complete", {
+      configurable: true,
+      get: () => false,
+    });
+    (
+      window as typeof window & { IS_REACT_ACT_ENVIRONMENT: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement("div");
+    const root = createRoot(container);
+
+    try {
+      await act(async () => {
+        root.render(
+          createElement(
+            PlainMarkdownLink,
+            {
+              href: "https://vercel.com/vercel-agent/request-review?owner=example",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            createElement("img", {
+              src: "https://agents-vade-review.vercel.sh/request-review-light.svg",
+              alt: "Request Review",
+            }),
+          ),
+        );
+      });
+
+      const image = container.querySelector("img");
+      expect(image).not.toBeNull();
+      expect(container.querySelector("a")?.className).toContain("invisible");
+
+      await act(async () => {
+        image?.dispatchEvent(new Event("error"));
+      });
+
+      expect(container.querySelector("a")).toBeNull();
+      expect(container.querySelector("img")).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      if (completeDescriptor) {
+        Object.defineProperty(
+          HTMLImageElement.prototype,
+          "complete",
+          completeDescriptor,
+        );
+      }
+      delete (
+        window as typeof window & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+      ).IS_REACT_ACT_ENVIRONMENT;
+    }
   });
 });

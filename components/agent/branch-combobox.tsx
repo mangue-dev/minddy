@@ -24,6 +24,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * Picker of the BASE branch of an agent session — the counterpart of
@@ -222,9 +223,9 @@ export function BranchCombobox({
                   ) : null}
                   <CommandItem value={branch} onSelect={() => select(branch)}>
                   <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate" title={branch}>
-                    {branch}
-                  </span>
+                  <AppTooltip label={branch}>
+                    <span className="flex-1 truncate">{branch}</span>
+                  </AppTooltip>
                   {branch === defaultBranch ? (
                     <span className="shrink-0 text-xs text-muted-foreground/70">
                       {defaultHint}

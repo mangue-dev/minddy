@@ -40,6 +40,7 @@ import {
 } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { PushDevice } from "@/lib/types";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * “Push notifications” (MIN-183) — the card by which you turn on, turn off and
@@ -428,14 +429,15 @@ export function AccountPushDevicesSection() {
                     }
                     onCheckedChange={(v) => void toggleDevice(device, v)}
                   />
-                  <IconButton
-                    size="sm"
-                    aria-label={t("remove")}
-                    title={t("remove")}
-                    onClick={() => setToRemove(device)}
-                  >
-                    <Trash2 className="size-4" />
-                  </IconButton>
+                  <AppTooltip label={t("remove")}>
+                    <IconButton
+                      size="sm"
+                      aria-label={t("remove")}
+                      onClick={() => setToRemove(device)}
+                    >
+                      <Trash2 className="size-4" />
+                    </IconButton>
+                  </AppTooltip>
                 </>
               }
             />

@@ -49,6 +49,7 @@ import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
+import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 import {
   Tooltip,
   TooltipContent,
@@ -388,17 +389,24 @@ function ObjectivesInner() {
   // really loaded: purging before the arrival of the objectives would leave the effect
   // above fall back on the first, and the link would be lost cold.
   //
-  // The filter changes to “all” with it: a link to a completed objective
-  // wouldn't open anything as long as the column only shows assets — and that's
-  // precisely a closed objective that we come to reread from a notification.
+  // Keep the current lens when it already contains the target. Completed or
+  // canceled objectives still widen it so the deep link always opens.
   useEffect(() => {
     if (!openParam) return;
     if (!objectives.some((o) => o.id === openParam)) return;
-    setState("all");
+    if (
+      deepLinkNeedsAllFilter(
+        objectives,
+        (objective) => objective.id === openParam,
+        (objective) => matchesState(objective, state),
+      )
+    ) {
+      setState("all");
+    }
     setSelectedId(openParam);
     setMobileDetail(true);
     router.replace(pathname);
-  }, [openParam, objectives, pathname, router]);
+  }, [openParam, objectives, pathname, router, state]);
 
   // “Save current view” (⌘K): The open lens in the view pane
   // right is a SELECTION on the page, not an overlay — it makes

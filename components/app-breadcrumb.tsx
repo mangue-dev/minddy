@@ -20,6 +20,7 @@ import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import type { Project } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { objectiveBreadcrumbLabel } from "@/lib/objective-board-route";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 interface BreadcrumbObjective {
   id: string;
@@ -408,13 +409,14 @@ export function AppBreadcrumb({
           levelKey={`objective-${objective?.id ?? ""}`}
         >
           {project && objective ? (
-            <Link
-              href={`/projects/${project.id}/objectives?open=${objective.id}`}
-              title={objective.name}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {objectiveBreadcrumbLabel(objective.name)}
-            </Link>
+            <AppTooltip label={objective.name}>
+              <Link
+                href={`/projects/${project.id}/objectives?open=${objective.id}`}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {objectiveBreadcrumbLabel(objective.name)}
+              </Link>
+            </AppTooltip>
           ) : null}
         </BreadcrumbLevel>
 

@@ -1,5 +1,20 @@
 export const MARKDOWN_LINK_CLASS = "markdown-link";
 
+/** Vercel bot action whose remote image is not guaranteed to remain available. */
+export function isVercelAgentReviewUrl(href: string | undefined): boolean {
+  if (!href) return false;
+  try {
+    const url = new URL(href);
+    return (
+      url.protocol === "https:" &&
+      (url.hostname === "vercel.com" || url.hostname === "www.vercel.com") &&
+      url.pathname === "/vercel-agent/request-review"
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** The same-origin image endpoint used by every rendered Markdown link. */
 export function markdownLinkIconUrl(href: string | undefined): string | null {
   if (!href) return null;

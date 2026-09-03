@@ -360,7 +360,7 @@ export function RoutineDetail({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* The title and controls share the same 60 px bar as every detail pane. */}
-      <AppContentHeader contentClassName="gap-2 px-4">
+      <AppContentHeader contentClassName="gap-2">
         <Button
           variant="ghost"
           size="icon-sm"

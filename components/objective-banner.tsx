@@ -103,7 +103,7 @@ export function ObjectiveBoardHeader({
     objective.status !== "canceled";
 
   return (
-    <AppContentHeader contentClassName="gap-5 px-4 md:px-6">
+    <AppContentHeader contentClassName="gap-5">
       <Button asChild variant="ghost" size="icon-sm">
         <Link
           href={`/projects/${projectId}/objectives?open=${objective.id}`}

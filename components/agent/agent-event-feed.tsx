@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChangedFilesBlock } from "./changed-files-block";
 import { ReasoningBlock } from "./reasoning-block";
@@ -1397,17 +1398,18 @@ export function AgentEventFeed({
  of bottom wire, which would wash him out if he went down into it. */}
       {edges.end ? (
         <div className="sticky bottom-10 z-10 flex h-0 min-h-0 items-end justify-center">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label={tc("scrollToBottom")}
-            title={tc("scrollToBottom")}
-            onClick={scrollToEnd}
-            className="rounded-full bg-background shadow-sm dark:bg-background dark:hover:bg-muted"
-          >
-            <ArrowDown className="size-4" />
-          </Button>
+          <AppTooltip label={tc("scrollToBottom")}>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={tc("scrollToBottom")}
+              onClick={scrollToEnd}
+              className="rounded-full bg-background shadow-sm dark:bg-background dark:hover:bg-muted"
+            >
+              <ArrowDown className="size-4" />
+            </Button>
+          </AppTooltip>
         </div>
       ) : null}
     </div>

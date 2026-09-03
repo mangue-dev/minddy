@@ -423,12 +423,14 @@ function AssigneePick({
       className="size-6"
     />
   ) : (
-    <span
-      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60"
-      title={tField("unassigned")}
-    >
-      <User className="size-3.5" />
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60">
+          <User className="size-3.5" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{tField("unassigned")}</TooltipContent>
+    </Tooltip>
   );
   if (!onChange) return avatar;
   const options: PickerOption[] = members.map((m) => ({

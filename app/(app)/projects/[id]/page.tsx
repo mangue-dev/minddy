@@ -36,6 +36,7 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
+import { boardIntegrationFacets } from "@/lib/board-integrations";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import { cycleCompletionPercent } from "@/lib/cycle";
 import { useBoardViews } from "@/lib/use-board-views";
@@ -698,7 +699,7 @@ function ProjectBoard() {
               members={members}
               categories={categories}
               objectives={objectives}
-              integrations={integrations}
+              integrations={boardIntegrationFacets(integrations, issues)}
               dirty={dirty}
               onCreateView={handleCreateView}
               onUpdateActiveView={saveActiveView}

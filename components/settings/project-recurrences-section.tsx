@@ -28,6 +28,7 @@ import { recurrenceLabel } from "@/lib/recurrence-label";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCreate } from "@/lib/create-context";
 import type { RecurringIssue } from "@/lib/types";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * The recurrences of a project, gathered in one place (MIN-136): what the
@@ -168,12 +169,11 @@ export function ProjectRecurrencesSection({
                       className="size-6"
                     />
                   ) : (
-                    <span
-                      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60"
-                      title={tField("unassigned")}
-                    >
-                      <User className="size-3.5" />
-                    </span>
+                    <AppTooltip label={tField("unassigned")}>
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60">
+                        <User className="size-3.5" />
+                      </span>
+                    </AppTooltip>
                   )}
 
                   <Select
@@ -198,16 +198,19 @@ export function ProjectRecurrencesSection({
                   </Select>
 
                   {/* As an icon, like the actions in the category list. */}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={busyId === row.id}
-                    title={t("stop")}
-                    aria-label={t("stopAria", { ref })}
-                    onClick={() => void stop(row)}
-                  >
-                    <CircleSlash />
-                  </Button>
+                  <AppTooltip label={t("stop")}>
+                    <span className="inline-flex">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={busyId === row.id}
+                        aria-label={t("stopAria", { ref })}
+                        onClick={() => void stop(row)}
+                      >
+                        <CircleSlash />
+                      </Button>
+                    </span>
+                  </AppTooltip>
                 </>
               }
             />

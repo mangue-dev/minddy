@@ -8,7 +8,10 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
 import { CodeBlock } from "@/components/code-block";
-import { MarkdownLink } from "@/components/markdown-link";
+import {
+  MarkdownLink,
+  PlainMarkdownLink,
+} from "@/components/markdown-link";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { useMentionLinks, type MentionLinks } from "@/components/mention-links";
@@ -161,6 +164,7 @@ function MarkdownRenderer({
   mentionScan,
   mentionLinks,
   allowRawHtml = false,
+  linkVariant = "app",
 }: {
   children: string;
   className?: string;
@@ -171,6 +175,8 @@ function MarkdownRenderer({
   mentionLinks?: MentionLinks;
   /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
   allowRawHtml?: boolean;
+  /** Forge-authored PR content keeps conventional links and image buttons intact. */
+  linkVariant?: "app" | "plain";
 }) {
   // null outside of a PR view: images in a ticket comment are already
   // served by minddy, they have nothing to proxify.
@@ -201,9 +207,11 @@ function MarkdownRenderer({
         rehypePlugins={rehypeChain(scan, allowRawHtml)}
         components={{
           p: styled("p", "my-3"),
-          a: (props) => (
-            <MarkdownLink {...props} target="_blank" rel="noreferrer" />
-          ),
+          a: (props) => {
+            const LinkRenderer =
+              linkVariant === "plain" ? PlainMarkdownLink : MarkdownLink;
+            return <LinkRenderer {...props} target="_blank" rel="noreferrer" />;
+          },
           /* A nested list gets tighter (`[&_ul]`, `[&_ol]`): spacing
              between paragraphs would cascade into a list that falls apart. */
           ul: styled("ul", "my-3 list-disc pl-5 [&_ol]:my-1 [&_ul]:my-1"),

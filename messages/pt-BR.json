@@ -2490,6 +2490,7 @@
     "fileEdited": "Editado {file}",
     "reviewChangesShort": "Revisar",
     "filesShowMore": "{count, plural, one {Ver mais # arquivo} other {Ver mais # arquivos}}",
+    "filesHide": "{count, plural, one {Ocultar # arquivo} other {Ocultar # arquivos}}",
     "filesListTruncated": "Lista truncada",
     "diffTitle": "Alterações de sessão",
     "diffDescription": "O trabalho que o agente Numo enviou à branch desta sessão.",

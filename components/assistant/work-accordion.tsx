@@ -6,7 +6,6 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  cn,
 } from "mangue-ui";
 import { ChevronRight } from "lucide-react";
 
@@ -72,11 +71,17 @@ export function WorkAccordion({
       : t("workedForSeconds", { seconds });
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="group flex w-full items-center gap-1.5 pb-2.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-        <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-        <span className={cn(active && "text-shimmer")}>{label}</span>
-      </CollapsibleTrigger>
+    <Collapsible open={open} onOpenChange={active ? undefined : setOpen}>
+      {active ? (
+        <div className="flex w-full items-center pb-2.5 text-xs font-medium text-muted-foreground">
+          <span className="text-shimmer">{label}</span>
+        </div>
+      ) : (
+        <CollapsibleTrigger className="group flex w-full items-center gap-1.5 pb-2.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
+          <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+          <span>{label}</span>
+        </CollapsibleTrigger>
+      )}
       {/* Full-width fixed border under the toggle: separates the indicator from the
  messages. Always visible (open as closed), it does not move —
  the content animates below. */}

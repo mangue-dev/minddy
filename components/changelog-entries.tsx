@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import { formatChangelogAge, formatChangelogDate } from "@/lib/changelog";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * The list of deliveries, as it appears — shared by the page
@@ -41,13 +42,14 @@ export function ChangelogEntries({
           id={entry.id}
           className="scroll-mt-24 border-b border-border py-8 first:pt-0 last:border-b-0"
         >
-          <time
-            dateTime={entry.date}
-            title={formatChangelogDate(entry.date, locale)}
-            className="mb-3 block font-mono text-xs text-muted-foreground"
-          >
-            {formatChangelogAge(entry.date, locale)}
-          </time>
+          <AppTooltip label={formatChangelogDate(entry.date, locale)}>
+            <time
+              dateTime={entry.date}
+              className="mb-3 block w-fit font-mono text-xs text-muted-foreground"
+            >
+              {formatChangelogAge(entry.date, locale)}
+            </time>
+          </AppTooltip>
           <h2 className="mb-3 text-xl font-semibold tracking-tight text-balance sm:text-2xl">
             {entry.title}
           </h2>

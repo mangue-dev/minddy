@@ -3,6 +3,7 @@
 import { Button, cn } from "mangue-ui";
 import { ArrowDownIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import {
   createContext,
   useCallback,
@@ -157,21 +158,22 @@ export const ConversationScrollButton = ({
 
   return (
     !isAtBottom && (
-      <Button
-        aria-label={tc("scrollToBottom")}
-        title={tc("scrollToBottom")}
-        className={cn(
-          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted",
-          className
-        )}
-        onClick={scrollToBottom}
-        size="icon"
-        type="button"
-        variant="outline"
-        {...props}
-      >
-        <ArrowDownIcon className="size-4" />
-      </Button>
+      <AppTooltip label={tc("scrollToBottom")}>
+        <Button
+          aria-label={tc("scrollToBottom")}
+          className={cn(
+            "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted",
+            className
+          )}
+          onClick={scrollToBottom}
+          size="icon"
+          type="button"
+          variant="outline"
+          {...props}
+        >
+          <ArrowDownIcon className="size-4" />
+        </Button>
+      </AppTooltip>
     )
   );
 };

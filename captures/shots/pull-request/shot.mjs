@@ -312,8 +312,7 @@ async function capture({ locale, theme }) {
     const actionIds = [
       "pr-action-numo-request",
       "pr-action-numo-review",
-      "pr-action-approve",
-      "pr-action-comment",
+      "pr-action-start-review",
       "pr-action-convert-to-draft",
       "pr-action-close",
     ];
@@ -331,14 +330,6 @@ async function capture({ locale, theme }) {
     if ((await page.getByRole("menu").locator('[role="separator"]').count()) !== 2) {
       throw new Error(
         `${locale}/${theme} — overflow action sections are not separated correctly.`,
-      );
-    }
-    await page.getByTestId("pr-action-comment").click();
-    const reviewDialog = page.getByRole("dialog");
-    await reviewDialog.waitFor({ state: "visible" });
-    if ((await reviewDialog.locator('input[type="file"][multiple]').count()) !== 1) {
-      throw new Error(
-        `${locale}/${theme} — the comment review dialog has no attachment input.`,
       );
     }
     await page.keyboard.press("Escape");
@@ -574,7 +565,7 @@ async function capture({ locale, theme }) {
         '[data-testid="review-thread-card"][data-variant="plain"]',
       );
       const commentAuthor = plainThread?.querySelector('[data-testid="review-comment-author"]');
-      const commentLogin = commentAuthor?.querySelector(':scope > span[title]');
+      const commentLogin = commentAuthor?.children[1];
       const commentBody = plainThread?.querySelector('[data-testid="review-comment-body"]');
       const commentBodyContent = commentBody?.firstElementChild;
       const replyButton = plainThread?.querySelector('[data-testid="review-thread-reply"]');
