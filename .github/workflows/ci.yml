@@ -220,7 +220,8 @@ jobs:
   audit:
     name: Dependencies audit
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Leave enough time for two bounded retries when the npm audit endpoint is transiently unavailable.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -234,7 +235,7 @@ jobs:
         with:
           node-version: 24
 
-      #No installation: the audit reads the lockfiles, it does not need
+      # No installation: the audit reads the lockfiles, it does not need
       # the tree. The three lockfiles of the repository are covered by this script.
       - name: Audit (high+)
         run: node scripts/audit.mjs
