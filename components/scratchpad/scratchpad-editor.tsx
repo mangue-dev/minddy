@@ -45,6 +45,11 @@ import { useDictation } from "@/components/scratchpad/use-dictation";
 import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { noteTyping, trackPointerFreshness } from "@/lib/keyboard/hover-keys";
+import {
+  handleMarkdownLinkClick,
+  MarkdownLinkMark,
+} from "@/components/markdown-link-mark";
+import { MarkdownLinkMenu } from "@/components/markdown-link-menu";
 
 /** mm:ss for the dictation timer. */
 function formatTime(ms: number): string {
@@ -60,7 +65,6 @@ const PROSE = cn(
   "text-base leading-relaxed break-words outline-none",
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
   "[&_p]:my-2",
-  "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_li]:my-0.5",
@@ -83,6 +87,7 @@ const PROSE = cn(
  */
 const EDITOR_PROPS = {
   attributes: { class: PROSE },
+  handleClick: handleMarkdownLinkClick,
   // Keep the caret off the bottom edge: ProseMirror scrolls it into view
   // with this much room to spare, so writing at the end of a long note
   // happens comfortably above the fold instead of on the last visible pixel
@@ -417,7 +422,9 @@ export function ScratchpadEditor({
           heading: { levels: [1, 2, 3] },
           paragraph: false,
           codeBlock: false,
+          link: false,
         }),
+        MarkdownLinkMark,
         // Lowlight code block instead of the StarterKit one (same node,
         // same attributes): fences highlight live in the notebook, like
         // everywhere a committed block is read (components/code-block-lowlight).
@@ -568,6 +575,7 @@ export function ScratchpadEditor({
         }}
       >
         <EditorContent editor={editor} />
+        <MarkdownLinkMenu editor={editor} />
 
         {dictating && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">

@@ -28,6 +28,7 @@ import {
   type JSONContent,
 } from "@tiptap/react";
 import { NodeRange } from "@tiptap/extension-node-range";
+import type { EditorView } from "@tiptap/pm/view";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import {
@@ -66,6 +67,7 @@ import {
 } from "@/components/pages/page-comment-bubble";
 import { focusDocumentEnd } from "@/components/pages/block-actions";
 import { handleNodeLinkClick } from "@/components/editor-node-link";
+import { handleMarkdownLinkClick } from "@/components/markdown-link-mark";
 import { insertNotionCalloutPaste } from "@/lib/pages-callout-paste";
 import {
   MentionLinksProvider,
@@ -80,6 +82,7 @@ import {
   type PagesLookup,
 } from "@/components/pages/pages-lookup";
 import { TitleBridge } from "@/components/pages/title-bridge";
+import { MarkdownLinkMenu } from "@/components/markdown-link-menu";
 
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
 
@@ -94,15 +97,6 @@ const PROSE = cn(
   "text-base leading-relaxed break-words outline-none",
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
   "[&_p]:my-2",
-  // TEXT links. `:not(.editor-node-link)` excludes rendered anchors
-  // by a node view (the subpage block, the pill of a mention):
-  // `.ProseMirror a` has stronger specificity than a utility class
-  // placed on the anchor, so without this exception a block can NOT be
-  // depict — he inherited the color of the ties and wore a second
-  // underline over his.
-  "[&_a:not(.editor-node-link)]:text-primary",
-  "[&_a:not(.editor-node-link)]:underline",
-  "[&_a:not(.editor-node-link)]:underline-offset-2",
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
@@ -133,8 +127,8 @@ const EDITOR_PROPS = {
   // Clicking on the anchor of a node view does not belong to the Link extension:
   // the why, and the two navigations that he avoided, are in
   // components/editor-node-link.ts.
-  handleClick: (_view: unknown, _pos: number, event: MouseEvent) =>
-    handleNodeLinkClick(event),
+  handleClick: (view: EditorView, pos: number, event: MouseEvent) =>
+    handleNodeLinkClick(event) || handleMarkdownLinkClick(view, pos, event),
   // Writing expires the pointer: as long as you have not moved the mouse again, the
   // task that it hovers no longer takes ⇧A/⇧P (see hover-keys.ts). Same rule
   // than the notebook, and for the same reason — a page is editable from start to finish
@@ -498,6 +492,7 @@ export function PageEditor({
         <PageCommentBubble editor={editor} onComment={onComment} />
       )}
       <EditorContent editor={editor} />
+      <MarkdownLinkMenu editor={editor} />
       {/* The RESERVE at the bottom: around ten empty lines under the last
  block, clickable, which return the cursor to the end of the document.
  This is NOT around ten empty paragraphs — these would start in

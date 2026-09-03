@@ -24,6 +24,11 @@ import {
   type MentionLinks,
 } from "@/components/mention-links";
 import { handleNodeLinkClick } from "@/components/editor-node-link";
+import {
+  handleMarkdownLinkClick,
+  MarkdownLinkMark,
+} from "@/components/markdown-link-mark";
+import { MarkdownLinkMenu } from "@/components/markdown-link-menu";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { MentionScan } from "@/lib/mention-scan";
 
@@ -53,13 +58,6 @@ const PROSE = cn(
   "text-sm leading-relaxed break-words outline-none",
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
   "[&_p]:my-2",
-  // TEXT links. `:not(.editor-node-link)` excludes the anchor from a view of
-  // node — the pill of a mention that leads somewhere: `.ProseMirror a` a
-  // a stronger specificity than the class placed on the anchor, therefore without this
-  // exception the pill inherited the color of the links and an underline.
-  "[&_a:not(.editor-node-link)]:text-primary",
-  "[&_a:not(.editor-node-link)]:underline",
-  "[&_a:not(.editor-node-link)]:underline-offset-2",
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_li]:my-0.5",
@@ -81,8 +79,8 @@ const EDITOR_PROPS: EditorProps = {
   // Clicking on the pill of a mention does not belong to the Link extension:
   // it grabs all `<a>` of the document and opens it in a new tab, which
   // did TWO navigations for one click (components/editor-node-link.ts).
-  handleClick: (_view: unknown, _pos: number, event: MouseEvent) =>
-    handleNodeLinkClick(event),
+  handleClick: (view, pos, event) =>
+    handleNodeLinkClick(event) || handleMarkdownLinkClick(view, pos, event),
 };
 
 /**
@@ -146,7 +144,9 @@ export function MarkdownEditor({
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         codeBlock: false,
+        link: false,
       }),
+      MarkdownLinkMark,
       codeBlockEditorExtension(),
       Arrows,
       ...(hasMentions
@@ -265,6 +265,7 @@ export function MarkdownEditor({
  is what gives them their destination without crossing anything manually. Same layout as the lookup of the subpages of a page. */}
       <MentionLinksProvider value={mentions?.links ?? null}>
         <EditorContent editor={editor} />
+        <MarkdownLinkMenu editor={editor} />
       </MentionLinksProvider>
     </div>
   );

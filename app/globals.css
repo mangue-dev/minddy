@@ -85,6 +85,36 @@ html[data-desktop-app] .zen-nav-hotzone {
   text-align: left;
 }
 
+/* Every Markdown renderer uses the same link treatment. The image endpoint
+   returns either the site's favicon or the blue globe used as its fallback. */
+a.markdown-link {
+  color: #0085FF;
+  text-decoration: none;
+}
+
+a.markdown-link:hover,
+a.markdown-link:focus-visible {
+  color: #0085FF;
+  text-decoration: none;
+}
+
+a.markdown-link::before {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-inline-end: 0.3em;
+  border-radius: 2px;
+  background-image: var(
+    --markdown-link-icon,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230085FF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20'/%3E%3C/svg%3E")
+  );
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  vertical-align: -0.08em;
+}
+
 /* ── Inter arrows, which Google does not serve ──────────────────────────────
    `next/font/google` only loads from Inter the subsets published by
    Google, and NONE covers the arrow block: the Latin range puts “↑” there

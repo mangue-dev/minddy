@@ -180,11 +180,10 @@ export function MentionChip({
     // A real anchor preserves modified clicks, middle clicks, and the browser's
     // "open in new tab" command. Only an ordinary click uses `onNavigate`.
     //
-    // `NODE_LINK_CLASS`: in a publisher, this is the mark by which
-    // l'extension Link laisse l'ancre tranquille — sans elle, un clic ouvrait un
-    // new tab IN ADDITION to navigation (components/editor-node-link.ts).
-    // `no-underline` goes with it: the text surfaces paint their links, and
-    // an underlined pill is no longer a pill.
+    // `NODE_LINK_CLASS` tells an editor's Link extension to leave this anchor
+    // alone; otherwise one click would open a new tab in addition to navigating
+    // in-app (components/editor-node-link.ts). `no-underline` keeps the chip a
+    // chip even inside a surrounding text surface.
     <a
       href={href}
       style={tone}

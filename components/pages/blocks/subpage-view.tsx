@@ -45,12 +45,9 @@ export function SubpageView({ node, selected }: NodeViewProps) {
   const orphan = !!pageId && !page && lookup?.ready === true;
   const href = page && lookup?.href ? lookup.href(page.id) : null;
 
-  // The typography of the BODY, said explicitly: the block is a line of the
-  // document, pas un titre. `text-base font-normal` parce qu'un poids plus lourd
-  // make it read as a section; `text-foreground no-underline` because
-  // the editor paints ALL his `<a>` as `text-primary` with an underline of his own
-  // (page-editor.tsx, `PROSE`) — without these two, this link inherited the
-  // color of the text links and had two superimposed lines.
+  // State the BODY typography explicitly: the block is a document line, not a
+  // title. A heavier weight would make it read as a section. It intentionally
+  // remains distinct from ordinary Markdown links, which use their own class.
   //
   // The only underlining is therefore ours, and it is PALER than the text:
   // he says “this leads elsewhere” without demanding the eye, as in Notion. A

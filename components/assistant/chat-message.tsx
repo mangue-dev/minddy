@@ -30,6 +30,7 @@ import { contextChips } from "@/lib/assistant-context";
 import { useProjects } from "@/lib/projects-context";
 import { orbSeedOr } from "@/lib/project-orb-colors";
 import { MentionChip } from "@/components/mention-chip";
+import { MarkdownLink } from "@/components/markdown-link";
 import { useMentionLinks } from "@/components/mention-links";
 import { ResourcePills, type ResourceLike } from "@/components/resources";
 import {
@@ -251,6 +252,7 @@ function UserText({
           ...(mentions.length > 0 ? [rehypeUserMentions(mentions)] : []),
         ]}
         components={{
+          a: MarkdownLink,
           span: ({ node, children }) => {
             const index = Number(
               (node?.properties as Record<string, unknown> | undefined)?.[

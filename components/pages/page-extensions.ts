@@ -19,6 +19,7 @@
 
 import type { AnyExtension, Extensions, NodeViewRenderer } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { MarkdownLinkMark } from "@/components/markdown-link-mark";
 import UniqueID from "@tiptap/extension-unique-id";
 import { Markdown } from "tiptap-markdown";
 import { MentionNodeBase } from "@/components/mention-node";
@@ -85,7 +86,9 @@ export function pageExtensions(
       bulletList: false,
       orderedList: false,
       listItem: false,
+      link: false,
     }),
+    MarkdownLinkMark,
     ...blockExtensions({ headless, nodeViews, extensions }),
     ...pageColorExtensions(),
     PageBlockShortcuts,
