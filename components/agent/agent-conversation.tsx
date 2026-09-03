@@ -79,6 +79,7 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
+import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { LocalIssueRunConfirmation } from "./local-issue-run-confirmation";
 
 interface PendingLocalIssueLaunch {
@@ -625,6 +626,18 @@ export function AgentConversation({
   useEffect(() => {
     setEnvironment(localEndpoint || localRepo.ready ? "local" : "cloud");
   }, [localEndpoint, localRepo.ready]);
+  const skillEnvironment: AgentEnvironment = liveRun
+    ? liveRun.local_exec
+      ? liveRun.local_worktree
+        ? "worktree"
+        : "local"
+      : "cloud"
+    : environment;
+  const repositorySkills = useRepositorySkills(
+    projectId,
+    skillEnvironment,
+    liveRun?.id ?? `compose-${composeInputRevision}`,
+  );
 
   const launch = async (
     message: string,
@@ -1007,6 +1020,7 @@ export function AgentConversation({
                     disabled={!steerable}
                     mentionables={mentionables}
                     onMentionQuery={onMentionQuery}
+                    skills={repositorySkills.skills}
                     placeholder={
                       steerable
                         ? working
@@ -1058,6 +1072,7 @@ export function AgentConversation({
                   }
                   mentionables={mentionables}
                   onMentionQuery={onMentionQuery}
+                  skills={repositorySkills.skills}
                   disabled={launching}
                   sendDisabled={
                     environment === "cloud" && !cloudExecutionConfigured

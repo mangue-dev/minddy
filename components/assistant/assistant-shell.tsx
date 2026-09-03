@@ -318,7 +318,11 @@ export const AssistantShell = forwardRef<
   );
 
   const slashCommands = useSlashCommands();
-  const repositorySkills = useRepositorySkills(projectId);
+  const repositorySkills = useRepositorySkills(
+    projectId,
+    "cloud",
+    state.conversationId,
+  );
 
   // Response sent from an ask_user question card (MIN-86): leaves as
   // a normal user message — the tool result “awaiting_user_response” is
@@ -898,7 +902,6 @@ export const AssistantShell = forwardRef<
                   onAddContext={addPinned}
                   commands={slashCommands}
                   skills={projectId ? repositorySkills.skills : undefined}
-                  onSkillQuery={projectId ? repositorySkills.request : undefined}
                   contextSlot={(attachments: ChatInputContextAttachments) => (
                     <AssistantContextBar
                       chips={chips}

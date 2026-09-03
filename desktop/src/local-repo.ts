@@ -11,6 +11,8 @@ import {
   type LocalRepoState,
 } from "@/lib/desktop/local-repo";
 import type { LocalProject, LocalTurnProject } from "@/lib/desktop/local-turn";
+import { listLocalRepositorySkills } from "@/lib/desktop/repository-skills";
+import type { RepositorySkillSummary } from "@/lib/repository-skills";
 import { readLocalRepos, writeLocalRepos } from "./repo-store";
 
 /**
@@ -149,4 +151,13 @@ export function localBranches(
   } catch {
     return [];
   }
+}
+
+/** Skills from the attached checkout, revalidated before every synchronization. */
+export async function localSkills(
+  projectId: string,
+  expected: ExpectedRepo | null,
+): Promise<RepositorySkillSummary[]> {
+  const state = describeLocalRepo(projectId, expected);
+  return state.status === "ready" ? listLocalRepositorySkills(state.path) : [];
 }

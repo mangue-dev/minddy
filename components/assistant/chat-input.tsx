@@ -243,8 +243,6 @@ interface ChatInputProps {
   commands?: SlashCommandOption[];
   /** Agent Skills discovered in the active project's linked repository. */
   skills?: RepositorySkillSummary[];
-  /** Requests lazy repository discovery when a skill picker becomes relevant. */
-  onSkillQuery?: (active: boolean) => void;
   /**
    * Text to seed the editor with on mount (caret placed at the end, ready to
    * edit). Used by the agent launch composer to pre-write "Work on MIN-42".
@@ -301,7 +299,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onAddContext,
       commands,
       skills,
-      onSkillQuery,
       initialValue,
       leadingControls,
       beam,
@@ -384,7 +381,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     // same case. The Numo cat keeps its button hidden as long as it generates.
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
     const hasMentionMenu = mentionables !== undefined || !!onAddContext;
-    const hasSkillMenu = skills !== undefined || !!onSkillQuery;
+    const hasSkillMenu = skills !== undefined;
     const canAdd = canAttach || !!onAddContext || hasSkillMenu;
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
@@ -402,10 +399,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       (open: boolean) => {
         setAddMenuOpen(open);
         if (open) onMentionQuery?.(true);
-        if (open) onSkillQuery?.(true);
         else setAddMenuQuery("");
       },
-      [onMentionQuery, onSkillQuery],
+      [onMentionQuery],
     );
 
     const addContextOptions = useMemo(
@@ -786,7 +782,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [slashIndex, setSlashIndex] = useState(0);
 
     const readSlash = useCallback((): string | null => {
-      if (!commands?.length && !skills?.length && !onSkillQuery) return null;
+      if (!commands?.length && skills === undefined) return null;
       const el = editorRef.current;
       if (!el) return null;
       // Only text nodes — no pill already placed, no return to the
@@ -798,15 +794,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (nodes.some((n) => n.nodeType !== Node.TEXT_NODE)) return null;
       const text = nodes.map((n) => n.textContent ?? "").join("");
       return text.startsWith("/") ? text.slice(1) : null;
-    }, [commands, skills, onSkillQuery]);
+    }, [commands, skills]);
 
     // Reread on typing only: Escape closes the menu, and it does not reopen
     // only at the next character typed — not at the slightest movement of the caret.
     const refreshSlash = useCallback(() => {
       const next = readSlash();
       setSlashQuery((prev) => (prev === next ? prev : next));
-      onSkillQuery?.(next !== null);
-    }, [readSlash, onSkillQuery]);
+    }, [readSlash]);
 
     const slashOptions = useMemo(
       () =>
@@ -1284,7 +1279,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   setSlashQuery(null);
                   mentionActiveRef.current = false;
                   onMentionQuery?.(false);
-                  onSkillQuery?.(false);
                 }, 120);
               }}
               className="min-h-[24px] whitespace-pre-wrap break-words text-sm leading-relaxed outline-none [&:empty]:before:pointer-events-none [&:empty]:before:text-muted-foreground [&:empty]:before:content-[attr(aria-placeholder)]"
