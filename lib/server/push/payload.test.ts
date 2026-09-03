@@ -84,6 +84,7 @@ describe("buildPushPayload", () => {
     expect(payload).toEqual({
       title: "MIN-42 · Réparer le sélecteur de cycle",
       body: fr.Inbox.lineComment.replace("{actor}", "Alice"),
+      lang: "fr-FR",
       url: `/projects/${PROJECT}?issue=${ISSUE}`,
       tag: `/projects/${PROJECT}?issue=${ISSUE}`,
     });
@@ -143,6 +144,7 @@ describe("buildPushPayload", () => {
     expect(numo).toEqual({
       title: "Décisions produit",
       body: fr.Inbox.linePageMention.replace("{actor}", "Numo"),
+      lang: "fr-FR",
       url: `/projects/${PROJECT}/pages/pg#b2`,
       tag: `/projects/${PROJECT}/pages/pg#b2`,
     });

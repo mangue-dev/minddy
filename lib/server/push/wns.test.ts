@@ -11,6 +11,7 @@ import {
 const PAYLOAD: PushPayload = {
   title: "MIN-476 <ready>",
   body: "Alice & Bob said \"hello\"",
+  lang: "en-GB",
   url: "/projects/p?issue=i&tab=comments",
   tag: "issue-i",
 };

@@ -26,6 +26,7 @@ vi.mock("@/lib/server/api-auth", () => ({
   })),
 }));
 vi.mock("next-intl/server", () => ({
+  getLocale: vi.fn(async () => "fr"),
   getTranslations: vi.fn(async () => (key: string) => key),
   createTranslator: vi.fn(() => (key: string) => key),
 }));
@@ -69,7 +70,13 @@ describe("POST /api/account/push-subscriptions/test", () => {
     expect(H.sendPushToUser).toHaveBeenCalledWith(
       { service: true },
       "user-1",
-      expect.any(Function),
+      {
+        title: "minddy",
+        body: "Les notifications fonctionnent sur cet appareil.",
+        lang: "fr-FR",
+        url: "/inbox",
+        tag: "minddy-test",
+      },
       { onlyDeviceId: "device-1" },
     );
   });
