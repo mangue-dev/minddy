@@ -8,6 +8,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
 import { CodeBlock } from "@/components/code-block";
+import { MarkdownLink } from "@/components/markdown-link";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { useMentionLinks, type MentionLinks } from "@/components/mention-links";
@@ -200,13 +201,8 @@ function MarkdownRenderer({
         rehypePlugins={rehypeChain(scan, allowRawHtml)}
         components={{
           p: styled("p", "my-3"),
-          a: ({ node, ...props }) => (
-            <a
-              className="text-primary underline underline-offset-2"
-              target="_blank"
-              rel="noreferrer"
-              {...props}
-            />
+          a: (props) => (
+            <MarkdownLink {...props} target="_blank" rel="noreferrer" />
           ),
           /* A nested list gets tighter (`[&_ul]`, `[&_ol]`): spacing
              between paragraphs would cascade into a list that falls apart. */

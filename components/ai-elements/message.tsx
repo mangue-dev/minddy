@@ -5,6 +5,7 @@ import { code } from "@streamdown/code";
 import type { ComponentProps, HTMLAttributes } from "react";
 import { memo } from "react";
 import { Streamdown } from "streamdown";
+import { MARKDOWN_LINK_COMPONENTS } from "@/components/markdown-link";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: "user" | "assistant" | "system" | "tool";
@@ -46,13 +47,18 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 const streamdownPlugins = { code };
 
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
+  ({ className, components, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
         "streamdown-compact size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
       plugins={streamdownPlugins}
+      components={
+        components
+          ? { ...MARKDOWN_LINK_COMPONENTS, ...components }
+          : MARKDOWN_LINK_COMPONENTS
+      }
       {...props}
     />
   ),
