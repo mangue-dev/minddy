@@ -9,6 +9,7 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import type { AgentExecutionBackend } from "@/lib/capabilities";
+import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Model catalog for the picker (MIN-46). `staleTime` long: the catalog
@@ -19,8 +20,8 @@ import type { AgentExecutionBackend } from "@/lib/capabilities";
  * - `user` (default) → `/api/agent/models`, the ACTIVE provider of the account (its
  * BYOK or the platform key): what ITS agent can launch;
  * - `platform` → `/api/admin/models-catalog`, the OpenRouter platform key
- * without tool-calling filter, for the config admin (MIN-90). The admin's BYOK
- * has nothing to do there: `app_config` runs on the platform;
+ * filtered by the requested runtime capability for the config admin (MIN-90).
+ * The admin's BYOK has nothing to do there: `app_config` runs on the platform;
  * - `review` → `/api/agent/review-models`, the active provider catalog used by
  * the PR review run. Native BYOK accounts receive native model IDs.
  */
@@ -80,7 +81,10 @@ interface AgentModelsResult {
   };
 }
 
-async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsResult> {
+async function fetchAgentModels(
+  scope: AgentModelsScope,
+  capability: ModelCatalogCapability,
+): Promise<AgentModelsResult> {
   const empty = {
     provider: DEFAULT_AGENT_PROVIDER,
     defaultModel: null,
@@ -92,7 +96,11 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     executionBackend: null,
     routineSchedulingConfigured: false,
   };
-  const res = await fetch(SCOPE_ENDPOINTS[scope]);
+  const endpoint =
+    scope === "platform"
+      ? `${SCOPE_ENDPOINTS[scope]}?capability=${encodeURIComponent(capability)}`
+      : SCOPE_ENDPOINTS[scope];
+  const res = await fetch(endpoint);
   if (!res.ok) return empty;
   const data = (await res.json()) as {
     provider?: AgentProviderId;
@@ -141,11 +149,15 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     : catalog;
 }
 
-export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
+export function useAgentModelsQuery(
+  scope: AgentModelsScope = "user",
+  capability: ModelCatalogCapability = "text",
+) {
   const { data, isPending } = useQuery({
     // One scope = one catalog: the two should never share a cache.
-    queryKey: scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope],
-    queryFn: () => fetchAgentModels(scope),
+    queryKey:
+      scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope, capability],
+    queryFn: () => fetchAgentModels(scope, capability),
     // Cloud catalogs are hidden on the server side; one minute allows
     // revenge to Ollama / LM Studio, freshly started, appears quickly without
     // refresh button nor local access from the cloud.

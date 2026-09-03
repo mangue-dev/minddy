@@ -36,7 +36,7 @@ const PAYLOAD = {
       name: "DeepSeek V4 Flash",
       context_length: 163840,
       supported_parameters: ["tools", "reasoning"],
-      architecture: { input_modalities: ["text"] },
+      architecture: { input_modalities: ["text"], output_modalities: ["text"] },
       // The real object published by OpenRouter: the efforts come from the HEAVIEST
       // at the lightest, and `none` is the word for “do not reason”.
       reasoning: {
@@ -51,7 +51,7 @@ const PAYLOAD = {
       name: "Claude Opus 5",
       context_length: 200000,
       supported_parameters: ["tools"],
-      architecture: { input_modalities: ["text", "image"] },
+      architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] },
       // The Claudes: they reason, but do not publish any enumeration.
       reasoning: { mandatory: false },
       pricing: { prompt: "0.000005", completion: "0.000025" },
@@ -59,6 +59,20 @@ const PAYLOAD = {
     {
       id: "some/embedding-model",
       name: "Embeddings",
+      supported_parameters: [],
+      architecture: { input_modalities: ["text"], output_modalities: ["embeddings"] },
+      pricing: { prompt: "0.00000002", completion: "0" },
+    },
+    {
+      id: "openai/whisper-large-v3",
+      name: "Whisper Large V3",
+      supported_parameters: [],
+      architecture: { input_modalities: ["audio"], output_modalities: ["transcription"] },
+      pricing: { prompt: "0", completion: "0" },
+    },
+    {
+      id: "some/unknown-output",
+      name: "Unknown Output",
       supported_parameters: [],
       pricing: { prompt: "0.00000002", completion: "0" },
     },
@@ -149,6 +163,15 @@ describe("getOpenRouterModelInfo", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("requests every output modality from OpenRouter", async () => {
+    const { listOpenRouterIndex, fetchMock } = await freshIndex();
+    await listOpenRouterIndex();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://openrouter.ai/api/v1/models?output_modalities=all",
+      expect.any(Object),
+    );
+  });
+
   it("déduplique les demandes concurrentes", async () => {
     // When starting an invocation, the catalog, loop and cap
     // request the index in the same millisecond.
@@ -185,11 +208,21 @@ describe("aiguillages et modalités de sortie", () => {
     expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.textOutput).toBe(true);
   });
 
-  it("répute textuel un modèle qui n'annonce aucune sortie", async () => {
+  it("treats a model with no declared output as textual", async () => {
     // The absence of an announcement is not an admission: it should not do so
     // disappear from the picker.
     const { getOpenRouterModelInfo } = await freshIndex();
-    expect((await getOpenRouterModelInfo("some/embedding-model"))?.textOutput).toBe(true);
+    expect((await getOpenRouterModelInfo("some/unknown-output"))?.textOutput).toBe(true);
+  });
+
+  it("preserves transcription and embedding output modalities", async () => {
+    const { getOpenRouterModelInfo } = await freshIndex();
+    expect((await getOpenRouterModelInfo("some/embedding-model"))?.outputModalities).toEqual([
+      "embeddings",
+    ]);
+    expect((await getOpenRouterModelInfo("openai/whisper-large-v3"))?.outputModalities).toEqual([
+      "transcription",
+    ]);
   });
 
   it("garde tout de même les aiguillages dans l'index", async () => {

@@ -6,6 +6,7 @@ import {
   type ByokCatalogEntry,
   type ByokCatalogProvider,
 } from "@/lib/byok-model-catalog";
+import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * The native model list of a BYOK provider (MIN-416), for the admin
@@ -19,6 +20,7 @@ import {
  */
 export async function getByokModelCatalog(
   provider: ByokCatalogProvider,
+  capability: ModelCatalogCapability = "text",
 ): Promise<ByokCatalogEntry[]> {
-  return byokModelsForProvider(await listOpenRouterIndex(), provider);
+  return byokModelsForProvider(await listOpenRouterIndex(), provider, capability);
 }

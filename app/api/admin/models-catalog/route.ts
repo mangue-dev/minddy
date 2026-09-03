@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
 import { getAdminModelCatalog } from "@/lib/server/agent/models-catalog";
+import { isModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Admin dashboard template catalog (`/admin` → “Templates” tab).
@@ -11,13 +12,12 @@ import { getAdminModelCatalog } from "@/lib/server/agent/models-catalog";
  * ACTIVE of the account (its BYOK), while the `app_config` models are running
  * still on the OpenRouter platform key — offer the Anthropic catalog
  * of an admin in BYOK would cause runtime to write unusable ids. And he doesn't
- * not filter on tool-calling, since the config also covers the
- * transcription and embeddings.
+ * Capability-aware filtering keeps conversational, transcription, and
+ * embedding settings on separate compatible model lists.
  *
- * Each model carries its cost multiplier, without a ceiling in front: it is
- * here we choose what minddy pays — the cost scale is the information
- * work, while no billing plan applies to a setting
- * d'instance.
+ * Conversational models carry their cost multiplier without a plan ceiling.
+ * Non-text model pricing uses different units, so those catalogs do not show
+ * a misleading comparison against the conversational baseline.
  */
 
 export const runtime = "nodejs";
@@ -29,5 +29,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return NextResponse.json(await getAdminModelCatalog());
+  const capability = request.nextUrl.searchParams.get("capability") ?? "text";
+  if (!isModelCatalogCapability(capability)) {
+    return NextResponse.json({ error: "Unknown model capability" }, { status: 400 });
+  }
+
+  return NextResponse.json(await getAdminModelCatalog(capability));
 }

@@ -24,6 +24,7 @@ function entry(over: Partial<OpenRouterModelInfo> & { id: string }): OpenRouterM
     name: over.id,
     contextLength: 200000,
     imageInput: false,
+    outputModalities: ["text"],
     textOutput: true,
     router: false,
     tools: true,
@@ -48,6 +49,19 @@ const INDEX: OpenRouterModelInfo[] = [
   // Non-textual outputs, `tools` declared anyway.
   entry({ id: "google/gemini-3-pro-image", textOutput: false }),
   entry({ id: "openai/gpt-audio", textOutput: false }),
+  entry({
+    id: "openai/whisper-large-v3",
+    outputModalities: ["transcription"],
+    textOutput: false,
+    tools: false,
+  }),
+  entry({
+    id: "openai/text-embedding-3-small",
+    outputModalities: ["embeddings"],
+    textOutput: false,
+    tools: false,
+    pricing: { inputUsdPerMTok: 0.02, outputUsdPerMTok: 0 },
+  }),
   // No tool-calling: the exclusion that already existed.
   entry({ id: "some/no-tools", tools: false }),
 ];
@@ -346,6 +360,26 @@ describe("recommended models", () => {
 });
 
 describe("getAdminModelCatalog", () => {
+  it("offers only transcription models to a transcription picker", async () => {
+    const { getAdminModelCatalog } = await freshCatalog();
+    const catalog = await getAdminModelCatalog("transcription");
+    expect(catalog.models.map((model) => model.id)).toEqual(["openai/whisper-large-v3"]);
+  });
+
+  it("offers only embedding models to an embedding picker", async () => {
+    const { getAdminModelCatalog } = await freshCatalog();
+    const catalog = await getAdminModelCatalog("embedding");
+    expect(catalog.models.map((model) => model.id)).toEqual([
+      "openai/text-embedding-3-small",
+    ]);
+  });
+
+  it("does not compare non-text pricing to the conversational baseline", async () => {
+    const { getAdminModelCatalog } = await freshCatalog();
+    const catalog = await getAdminModelCatalog("embedding");
+    expect(catalog.models[0]?.multiplier).toBeUndefined();
+  });
+
   it("places each model on Minddy's cost scale", async () => {
     // This is the working information on the screen: we choose what minddy
     // pays, and the sorting of the recommended selection is read there.
