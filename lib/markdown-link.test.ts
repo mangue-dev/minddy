@@ -13,6 +13,7 @@ import {
   MarkdownLinkMark,
 } from "@/components/markdown-link-mark";
 import {
+  isVercelAgentReviewUrl,
   MARKDOWN_LINK_CLASS,
   markdownLinkIconUrl,
   markdownLinkPresentation,
@@ -30,6 +31,20 @@ describe("Markdown links", () => {
     );
     expect(markdownLinkIconUrl("mailto:hello@example.com")).toBeNull();
     expect(markdownLinkIconUrl("/projects/one")).toBeNull();
+  });
+
+  it("recognizes only Vercel Agent review actions", () => {
+    expect(
+      isVercelAgentReviewUrl(
+        "https://vercel.com/vercel-agent/request-review?owner=example&repo=app&pr=1",
+      ),
+    ).toBe(true);
+    expect(
+      isVercelAgentReviewUrl(
+        "https://vercel.example/vercel-agent/request-review?owner=example",
+      ),
+    ).toBe(false);
+    expect(isVercelAgentReviewUrl("https://vercel.com/dashboard")).toBe(false);
   });
 
   it("adds the shared class and icon to TipTap-rendered links", () => {
@@ -89,7 +104,7 @@ describe("Markdown links", () => {
       createElement(
         PlainMarkdownLink,
         {
-          href: "https://vercel.com/vercel-agent/request-review?owner=example",
+          href: "https://example.com/actions/request-review",
           target: "_blank",
           rel: "noreferrer",
         },
@@ -113,5 +128,29 @@ describe("Markdown links", () => {
     expect(html).toContain("text-primary underline underline-offset-2");
     expect(html).not.toContain(MARKDOWN_LINK_CLASS);
     expect(html).not.toContain("--markdown-link-icon");
+  });
+
+  it("replaces Vercel's unavailable review image with a native action", () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        PlainMarkdownLink,
+        {
+          href: "https://vercel.com/vercel-agent/request-review?owner=example",
+          target: "_blank",
+          rel: "noreferrer",
+        },
+        createElement("img", {
+          src: "https://agents-vade-review.vercel.sh/request-review-light.svg",
+          alt: "Request Review",
+        }),
+      ),
+    );
+
+    expect(html).toContain("Request Vercel Agent Review");
+    expect(html).toContain("inline-flex");
+    expect(html).toContain("no-underline");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("agents-vade-review.vercel.sh");
+    expect(html).not.toContain(MARKDOWN_LINK_CLASS);
   });
 });
