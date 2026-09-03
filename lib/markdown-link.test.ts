@@ -2,9 +2,12 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { PlainMarkdownLink } from "@/components/markdown-link";
 import {
   handleMarkdownLinkClick,
   MarkdownLinkMark,
@@ -14,6 +17,11 @@ import {
   markdownLinkIconUrl,
   markdownLinkPresentation,
 } from "@/lib/markdown-link";
+
+vi.mock("mangue-ui", () => ({
+  cn: (...classes: Array<string | undefined>) =>
+    classes.filter(Boolean).join(" "),
+}));
 
 describe("Markdown links", () => {
   it("routes public web links through the same-origin favicon endpoint", () => {
@@ -74,5 +82,36 @@ describe("Markdown links", () => {
     );
     expect(css).toContain("--markdown-link-icon");
     expect(css).toContain("%3Ccircle cx='12' cy='12' r='10'/%3E");
+  });
+
+  it("preserves a forge image button without the enriched link decoration", () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        PlainMarkdownLink,
+        {
+          href: "https://vercel.com/vercel-agent/request-review?owner=example",
+          target: "_blank",
+          rel: "noreferrer",
+        },
+        createElement(
+          "picture",
+          null,
+          createElement("source", {
+            media: "(prefers-color-scheme: dark)",
+            srcSet: "https://agents-vade-review.vercel.sh/request-review-dark.svg",
+          }),
+          createElement("img", {
+            src: "https://agents-vade-review.vercel.sh/request-review-light.svg",
+            alt: "Request Review",
+          }),
+        ),
+      ),
+    );
+
+    expect(html).toContain("<picture>");
+    expect(html).toContain('alt="Request Review"');
+    expect(html).toContain("text-primary underline underline-offset-2");
+    expect(html).not.toContain(MARKDOWN_LINK_CLASS);
+    expect(html).not.toContain("--markdown-link-icon");
   });
 });

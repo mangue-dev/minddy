@@ -85,8 +85,8 @@ html[data-desktop-app] .zen-nav-hotzone {
   text-align: left;
 }
 
-/* Every Markdown renderer uses the same link treatment. The image endpoint
-   returns either the site's favicon or the blue globe used as its fallback. */
+/* App-authored Markdown uses the shared enriched link treatment. Forge-authored
+   pull request content opts out so linked badges and image buttons stay intact. */
 a.markdown-link {
   color: #0085FF;
   text-decoration: none;

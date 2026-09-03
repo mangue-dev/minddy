@@ -548,6 +548,7 @@ function ThreadComment({
           {activity ? <div>{activity}</div> : null}
           <Markdown
             allowRawHtml
+            linkVariant="plain"
             className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
           >
             {body}
@@ -811,6 +812,10 @@ export function PrDetail({
   const currentHeadSha = pr?.headSha ?? null;
   const reviewUpToDate =
     !!currentHeadSha && reviewSession.reviewedHeadSha === currentHeadSha;
+  const completedReviewSessionHref =
+    reviewSession.run?.status === "completed"
+      ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
+      : null;
 
   // Review progress belongs to one exact diff. A force-push or a different PR
   // invalidates every local file marker rather than carrying stale completion
@@ -834,8 +839,8 @@ export function PrDetail({
         : t("aiReview");
 
   // The card reports an active or interrupted review. A completed run has
-  // already posted its summary and line comments into the PR, so retaining a
-  // second “agent finished” banner would duplicate the outcome indefinitely.
+  // already posted its outcome into the PR, so the persistent banner disappears;
+  // its session remains available from the PR actions instead.
   const reviewCard =
     reviewSession.run?.status === "completed" ? null : reviewSession.run;
 
@@ -1587,21 +1592,41 @@ export function PrDetail({
                       <NumoIcon animated={false} />
                       {aiReviewLabel}
                     </DropdownMenuItem>
+                    {completedReviewSessionHref ? (
+                      <DropdownMenuItem asChild>
+                        <Link href={completedReviewSessionHref}>
+                          <NumoIcon animated={false} />
+                          {t("numoReviewOpenSession")}
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={
-                    aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
-                  }
-                  onClick={openAiReviewDialog}
-                >
-                  {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
-                  {/* Use the same status-aware label as the menu entry. */}
-                  {aiReviewLabel}
-                </Button>
+                <>
+                  {!reviewUpToDate || !completedReviewSessionHref ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
+                      }
+                      onClick={openAiReviewDialog}
+                    >
+                      {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
+                      {/* Use the same status-aware label as the menu entry. */}
+                      {aiReviewLabel}
+                    </Button>
+                  ) : null}
+                  {completedReviewSessionHref ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={completedReviewSessionHref}>
+                        <NumoIcon animated={false} />
+                        {t("numoReviewOpenSession")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </>
               )}
 
               {canWrite ? (
@@ -1672,6 +1697,17 @@ export function PrDetail({
                   <NumoIcon animated={false} />
                   {aiReviewLabel}
                 </DropdownMenuItem>
+                {completedReviewSessionHref ? (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      data-testid="pr-action-numo-session"
+                      href={completedReviewSessionHref}
+                    >
+                      <NumoIcon animated={false} />
+                      {t("numoReviewOpenSession")}
+                    </Link>
+                  </DropdownMenuItem>
+                ) : null}
                 {canComment ? (
                   <>
                     <DropdownMenuSeparator className="2xl:hidden" />

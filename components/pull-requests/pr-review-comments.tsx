@@ -462,7 +462,11 @@ function CommentBody({
         ) : null}
       </div>
       <div data-testid="review-comment-body" className="pl-7">
-        <Markdown allowRawHtml className="text-sm text-foreground">
+        <Markdown
+          allowRawHtml
+          linkVariant="plain"
+          className="text-sm text-foreground"
+        >
           {comment.body}
         </Markdown>
       </div>

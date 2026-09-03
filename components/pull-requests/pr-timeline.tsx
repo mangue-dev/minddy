@@ -377,6 +377,7 @@ export function PrTimelineReview({
           <div className="px-3.5 py-3">
             <Markdown
               allowRawHtml
+              linkVariant="plain"
               className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
             >
               {event.body}

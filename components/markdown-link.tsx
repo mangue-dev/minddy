@@ -33,4 +33,18 @@ export function MarkdownLink({
   );
 }
 
+/** Standard text link for surfaces that must preserve forge-authored layouts. */
+export function PlainMarkdownLink({
+  node: _node,
+  className,
+  ...props
+}: MarkdownLinkProps) {
+  return (
+    <a
+      className={cn("text-primary underline underline-offset-2", className)}
+      {...props}
+    />
+  );
+}
+
 export const MARKDOWN_LINK_COMPONENTS = { a: MarkdownLink };
