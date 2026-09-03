@@ -646,6 +646,8 @@ export interface PullRequestCheck {
 
 export interface ChecksSummary {
   checks: PullRequestCheck[];
+  /** Stable branch or pull-request preview advertised by a successful check. */
+  deploymentUrl?: string | null;
   /** Aggregate: failure wins, then “in progress”. `null` = no check. */
   state: CheckState | null;
   /** Non-blocking checks (successful or neutral) — the `n` of “n/m passed”. */

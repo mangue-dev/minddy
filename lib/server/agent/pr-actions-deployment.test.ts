@@ -9,6 +9,7 @@ describe("pull request detail deployment", () => {
       .mockResolvedValue("https://preview.example.com/live");
     const listChecks = vi.fn().mockResolvedValue({
       checks: [],
+      deploymentUrl: null,
       state: "success",
       passing: 0,
       total: 0,
@@ -51,5 +52,42 @@ describe("pull request detail deployment", () => {
     expect(listChecks).toHaveBeenCalledWith(
       expect.objectContaining({ sha: "live-head" }),
     );
+  });
+
+  it("prefers a stable preview advertised by a successful check", async () => {
+    const scope = {
+      pr: { head_sha: "stored-head" },
+      target: { provider: "github" },
+      call: { token: "token", repoFullName: "acme/app", number: 42 },
+      actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
+      forge: {
+        getPullRequest: async () => ({
+          number: 42,
+          url: "https://github.com/acme/app/pull/42",
+          state: "open",
+          head: "feature/preview",
+          headSha: "live-head",
+        }),
+        listPullRequestFiles: async () => ({ files: [], truncated: false }),
+        listReviews: async () => null,
+        listReviewThreads: async () => null,
+        listChecks: async () => ({
+          checks: [],
+          deploymentUrl: "https://feature-preview.example.com/",
+          state: "success",
+          passing: 0,
+          total: 0,
+          startedAt: null,
+          completedAt: null,
+        }),
+        getLatestSuccessfulDeploymentUrl: async () =>
+          "https://immutable-commit.example.com/",
+      },
+    } as unknown as PrScope;
+
+    const response = await prDetailResponse(scope);
+    const body = await response.json();
+
+    expect(body.deploymentUrl).toBe("https://feature-preview.example.com/");
   });
 });

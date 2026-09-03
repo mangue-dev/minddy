@@ -39,6 +39,8 @@ export interface PullRequestCheck {
 
 export interface ChecksSummary {
   checks: PullRequestCheck[];
+  /** Stable branch or pull-request preview advertised by a successful check. */
+  deploymentUrl?: string | null;
   /**
    * Aggregated state: pending takes precedence while work remains, then failure,
    * otherwise success. `null` means no check at all (repository without CI) — distinct from
@@ -78,7 +80,11 @@ export interface RawCheckRun {
   app?: RawCheckApp | null;
   /** The result as the App formulates it. `title` is empty on GitHub jobs
       Actions, filled by integrations that have something to say. */
-  output?: { title?: string | null } | null;
+  output?: {
+    title?: string | null;
+    summary?: string | null;
+    text?: string | null;
+  } | null;
   started_at?: string | null;
   completed_at?: string | null;
   check_suite?: { id?: number | null } | null;
@@ -188,7 +194,10 @@ function pipelineState(status: string | undefined): CheckState {
   }
 }
 
-function summarize(checks: PullRequestCheck[]): ChecksSummary {
+function summarize(
+  checks: PullRequestCheck[],
+  deploymentUrl: string | null = null,
+): ChecksSummary {
   const sorted = [...checks].sort(
     (a, b) => SEVERITY[a.state] - SEVERITY[b.state] || a.name.localeCompare(b.name),
   );
@@ -205,6 +214,7 @@ function summarize(checks: PullRequestCheck[]): ChecksSummary {
   const ends = sorted.map((check) => check.completedAt).filter((value): value is string => !!value);
   return {
     checks: sorted,
+    deploymentUrl,
     state,
     // Neutral counts as non-blocking: “5/5” on a CI whose two jobs are
     // skipped tells the truth; “3/5” would make two checks look failed.
@@ -215,6 +225,71 @@ function summarize(checks: PullRequestCheck[]): ChecksSummary {
       ? null
       : ends.sort().at(-1) ?? null,
   };
+}
+
+function httpUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value.replaceAll("&amp;", "&"));
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** First browser URL shortly after a Markdown or HTML label. */
+function urlAfterLabel(body: string, label: RegExp): string | null {
+  const match = label.exec(body);
+  if (!match) return null;
+  const nearby = body.slice(match.index + match[0].length, match.index + match[0].length + 600);
+  const raw = nearby.match(/https?:\/\/[^\s<>'")\]]+/i)?.[0];
+  return httpUrl(raw);
+}
+
+/**
+ * Deployment providers do not expose one uniform GitHub field. Prefer explicit,
+ * stable branch/PR links from successful check output, then successful preview
+ * statuses and the Firebase action's documented Deploy Preview check URL.
+ *
+ * A generic “Preview URL” deliberately comes last: Cloudflare publishes both an
+ * immutable Preview URL and a stable Branch Preview URL in the same output.
+ */
+function githubPreviewUrl(runs: RawCheckRun[], statuses: RawCommitStatus[]): string | null {
+  const successfulRuns = runs.filter(
+    (run) => run.status === "completed" && run.conclusion === "success",
+  );
+  const bodies = successfulRuns.map((run) =>
+    [run.output?.title, run.output?.summary, run.output?.text].filter(Boolean).join("\n"),
+  );
+  const labels = [
+    /branch\s+preview\s+url\s*:?/i,
+    /pull\s+request\s+preview(?:\s+url)?\s*:?/i,
+    /pr\s+preview(?:\s+url)?\s*:?/i,
+    /deploy\s+preview(?:\s+url)?\s*:?/i,
+    /preview\s+url\s*:?/i,
+  ];
+  for (const label of labels) {
+    for (const body of bodies) {
+      const url = urlAfterLabel(body, label);
+      if (url) return url;
+    }
+  }
+
+  for (const status of statuses) {
+    if (status.state !== "success") continue;
+    const signal = `${status.context ?? ""} ${status.description ?? ""}`;
+    if (!/\b(?:deploy(?:ment)?[\s_-]+)?preview\b/i.test(signal)) continue;
+    const url = httpUrl(status.target_url);
+    if (url) return url;
+  }
+
+  for (const run of successfulRuns) {
+    if (text(run.name)?.toLowerCase() !== "deploy preview") continue;
+    if (text(run.output?.title)?.toLowerCase() !== "deploy preview succeeded") continue;
+    const url = httpUrl(run.details_url);
+    if (url) return url;
+  }
+  return null;
 }
 
 /**
@@ -269,7 +344,7 @@ export function summarizeGithubChecks(
         : null,
     });
   }
-  return summarize([...byName.values()]);
+  return summarize([...byName.values()], githubPreviewUrl(runs, statuses));
 }
 
 /**

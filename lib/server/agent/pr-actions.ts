@@ -462,12 +462,13 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
       ]);
       if (checksResult.status === "fulfilled") {
         checks = checksResult.value;
+        deploymentUrl = checksResult.value.deploymentUrl ?? null;
       } else {
         const error = checksResult.reason;
         checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
       }
       if (deploymentResult.status === "fulfilled") {
-        deploymentUrl = deploymentResult.value;
+        deploymentUrl ??= deploymentResult.value;
       } else {
         console.error(
           "[pr-actions] deployment unreadable:",

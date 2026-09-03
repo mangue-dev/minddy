@@ -168,6 +168,85 @@ describe("summarizeGithubChecks", () => {
     expect(s.total).toBe(0);
   });
 
+  it("prefers Cloudflare's stable branch preview over its immutable deployment", () => {
+    const s = summarizeGithubChecks(
+      [
+        run({
+          name: "Cloudflare Pages",
+          app: { slug: "cloudflare-workers-and-pages", name: "Cloudflare Workers and Pages" },
+          output: {
+            title: "Deployed successfully",
+            summary: `<table>
+              <tr><td><strong>Preview URL:</strong></td><td>
+                <a href='https://f83b7653.example.pages.dev'>immutable</a>
+              </td></tr>
+              <tr><td><strong>Branch Preview URL:</strong></td><td>
+                <a href='https://feature-example.pages.dev'>branch</a>
+              </td></tr>
+            </table>`,
+          },
+        }),
+      ],
+      [],
+    );
+
+    expect(s.deploymentUrl).toBe("https://feature-example.pages.dev/");
+  });
+
+  it("uses Netlify's successful deploy-preview commit status", () => {
+    const s = summarizeGithubChecks([], [
+      {
+        context: "netlify/example/deploy-preview",
+        state: "success",
+        description: "Deploy Preview ready!",
+        target_url: "https://deploy-preview-42--example.netlify.app",
+      },
+    ]);
+
+    expect(s.deploymentUrl).toBe("https://deploy-preview-42--example.netlify.app/");
+  });
+
+  it("uses the successful Firebase Deploy Preview check destination", () => {
+    const s = summarizeGithubChecks(
+      [
+        run({
+          name: "Deploy Preview",
+          details_url: "https://example--pr42-random.web.app",
+          output: {
+            title: "Deploy preview succeeded",
+            summary: "[example--pr42-random.web.app](https://example--pr42-random.web.app)",
+          },
+        }),
+      ],
+      [],
+    );
+
+    expect(s.deploymentUrl).toBe("https://example--pr42-random.web.app/");
+  });
+
+  it("ignores failed previews and Vercel's deployment inspector status", () => {
+    const s = summarizeGithubChecks(
+      [
+        run({
+          name: "Deploy Preview",
+          conclusion: "failure",
+          details_url: "https://failed.example.com",
+          output: { title: "Deploy preview failed" },
+        }),
+      ],
+      [
+        {
+          context: "Vercel",
+          state: "success",
+          description: "Deployment has completed",
+          target_url: "https://vercel.com/acme/example/inspect",
+        },
+      ],
+    );
+
+    expect(s.deploymentUrl).toBeNull();
+  });
+
   it("ignores entries without a usable name", () => {
     const s = summarizeGithubChecks([run({ name: "  " })], [{ context: "", state: "success" }]);
     expect(s.total).toBe(0);
