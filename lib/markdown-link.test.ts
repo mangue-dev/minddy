@@ -2,7 +2,8 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createElement } from "react";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { Editor } from "@tiptap/core";
@@ -130,27 +131,61 @@ describe("Markdown links", () => {
     expect(html).not.toContain("--markdown-link-icon");
   });
 
-  it("replaces Vercel's unavailable review image with a native action", () => {
-    const html = renderToStaticMarkup(
-      createElement(
-        PlainMarkdownLink,
-        {
-          href: "https://vercel.com/vercel-agent/request-review?owner=example",
-          target: "_blank",
-          rel: "noreferrer",
-        },
-        createElement("img", {
-          src: "https://agents-vade-review.vercel.sh/request-review-light.svg",
-          alt: "Request Review",
-        }),
-      ),
+  it("removes Vercel's review action when its image fails", async () => {
+    const completeDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      "complete",
     );
+    Object.defineProperty(HTMLImageElement.prototype, "complete", {
+      configurable: true,
+      get: () => false,
+    });
+    (
+      window as typeof window & { IS_REACT_ACT_ENVIRONMENT: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement("div");
+    const root = createRoot(container);
 
-    expect(html).toContain("Request Vercel Agent Review");
-    expect(html).toContain("inline-flex");
-    expect(html).toContain("no-underline");
-    expect(html).not.toContain("<img");
-    expect(html).not.toContain("agents-vade-review.vercel.sh");
-    expect(html).not.toContain(MARKDOWN_LINK_CLASS);
+    try {
+      await act(async () => {
+        root.render(
+          createElement(
+            PlainMarkdownLink,
+            {
+              href: "https://vercel.com/vercel-agent/request-review?owner=example",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            createElement("img", {
+              src: "https://agents-vade-review.vercel.sh/request-review-light.svg",
+              alt: "Request Review",
+            }),
+          ),
+        );
+      });
+
+      const image = container.querySelector("img");
+      expect(image).not.toBeNull();
+      expect(container.querySelector("a")?.className).toContain("invisible");
+
+      await act(async () => {
+        image?.dispatchEvent(new Event("error"));
+      });
+
+      expect(container.querySelector("a")).toBeNull();
+      expect(container.querySelector("img")).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      if (completeDescriptor) {
+        Object.defineProperty(
+          HTMLImageElement.prototype,
+          "complete",
+          completeDescriptor,
+        );
+      }
+      delete (
+        window as typeof window & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+      ).IS_REACT_ACT_ENVIRONMENT;
+    }
   });
 });

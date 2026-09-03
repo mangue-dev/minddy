@@ -1,6 +1,12 @@
 "use client";
 
-import type { ComponentPropsWithoutRef, CSSProperties } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+} from "react";
 import type { ExtraProps } from "react-markdown";
 import { cn } from "mangue-ui";
 import {
@@ -10,6 +16,53 @@ import {
 } from "@/lib/markdown-link";
 
 type MarkdownLinkProps = ComponentPropsWithoutRef<"a"> & ExtraProps;
+
+function VercelAgentReviewLink({
+  href,
+  className,
+  children,
+  tabIndex,
+  ...props
+}: Omit<MarkdownLinkProps, "node">) {
+  const anchorRef = useRef<HTMLAnchorElement>(null);
+  const [imageState, setImageState] = useState<"loading" | "loaded" | "failed">(
+    "loading",
+  );
+
+  useEffect(() => {
+    const image = anchorRef.current?.querySelector("img");
+    if (!image) {
+      setImageState("failed");
+    } else if (image.complete) {
+      setImageState(image.naturalWidth > 0 ? "loaded" : "failed");
+    }
+  }, [href]);
+
+  if (imageState === "failed") return null;
+
+  return (
+    <a
+      {...props}
+      ref={anchorRef}
+      href={href}
+      aria-hidden={imageState === "loaded" ? undefined : true}
+      tabIndex={imageState === "loaded" ? tabIndex : -1}
+      className={cn(
+        "inline-block no-underline",
+        imageState !== "loaded" && "invisible pointer-events-none",
+        className,
+      )}
+      onLoadCapture={(event) => {
+        if (event.target instanceof HTMLImageElement) setImageState("loaded");
+      }}
+      onErrorCapture={(event) => {
+        if (event.target instanceof HTMLImageElement) setImageState("failed");
+      }}
+    >
+      {children}
+    </a>
+  );
+}
 
 /** The common visual treatment for links rendered from Markdown. */
 export function MarkdownLink({
@@ -44,24 +97,13 @@ export function PlainMarkdownLink({
 }: MarkdownLinkProps) {
   if (isVercelAgentReviewUrl(href)) {
     return (
-      <a
+      <VercelAgentReviewLink
         href={href}
-        className={cn(
-          "inline-flex min-h-8 items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground no-underline shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          className,
-        )}
+        className={className}
         {...props}
       >
-        <svg
-          aria-hidden="true"
-          className="size-3.5 shrink-0"
-          viewBox="0 0 24 21"
-          fill="currentColor"
-        >
-          <path d="M12 0 24 21H0L12 0Z" />
-        </svg>
-        <span>Request Vercel Agent Review</span>
-      </a>
+        {children}
+      </VercelAgentReviewLink>
     );
   }
 
