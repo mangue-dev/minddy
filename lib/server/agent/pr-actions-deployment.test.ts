@@ -25,6 +25,7 @@ describe("pull request detail deployment", () => {
           number: 42,
           url: "https://gitlab.example.com/acme/app/-/merge_requests/42",
           state: "open",
+          head: "feature/preview",
           headSha: "live-head",
         }),
         listPullRequestFiles: async () => ({ files: [], truncated: false }),
@@ -43,6 +44,7 @@ describe("pull request detail deployment", () => {
     expect(getLatestSuccessfulDeploymentUrl).toHaveBeenCalledWith({
       token: "token",
       repoFullName: "acme/app",
+      branch: "feature/preview",
       sha: "live-head",
     });
     expect(listChecks).toHaveBeenCalledWith(

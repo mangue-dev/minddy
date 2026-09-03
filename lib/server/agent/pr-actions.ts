@@ -455,6 +455,7 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
         forge.getLatestSuccessfulDeploymentUrl({
           token: call.token,
           repoFullName: call.repoFullName,
+          branch: pr.head,
           sha: pr.headSha,
         }),
       ]);

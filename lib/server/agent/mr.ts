@@ -1298,14 +1298,16 @@ export async function listMergeRequestTimeline(opts: {
 }
 
 interface RawGitlabDeployment {
+  ref?: string | null;
   sha?: string | null;
   environment?: { external_url?: string | null } | null;
 }
 
-/** Latest successful GitLab deployment among the provider's bounded recent list. */
+/** Latest successful GitLab branch deployment, with the immutable head as a fallback. */
 export async function getLatestSuccessfulDeploymentUrl(opts: {
   token: string;
   repoFullName: string;
+  branch?: string;
   sha: string;
 }): Promise<string | null> {
   const deployments = await glJson<RawGitlabDeployment[]>(
@@ -1313,15 +1315,25 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
       "?order_by=updated_at&sort=desc&status=success&per_page=100",
     opts.token,
   );
-  const value = deployments.find((deployment) => deployment.sha === opts.sha)
-    ?.environment?.external_url;
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
-  } catch {
-    return null;
+  const matches = [
+    ...(opts.branch
+      ? [deployments.filter((deployment) => deployment.ref === opts.branch)]
+      : []),
+    deployments.filter((deployment) => deployment.sha === opts.sha),
+  ];
+  for (const candidates of matches) {
+    for (const deployment of candidates) {
+      const value = deployment.environment?.external_url;
+      if (!value) continue;
+      try {
+        const url = new URL(value);
+        if (url.protocol === "https:" || url.protocol === "http:") return url.toString();
+      } catch {
+        // Keep looking: an older deployment for this ref can still be usable.
+      }
+    }
   }
+  return null;
 }
 
 /** Adds a note to the MR's conversation (author = the connected account). */

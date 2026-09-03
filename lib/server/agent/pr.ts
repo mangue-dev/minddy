@@ -1633,7 +1633,8 @@ function httpDeploymentUrl(value: string | null | undefined): string | null {
 }
 
 /**
- * Latest successful GitHub deployment of one immutable PR head.
+ * Latest successful GitHub deployment of a PR branch, with its immutable head
+ * as a fallback.
  *
  * A deployment object does not carry the public environment URL. GitHub puts
  * that URL on its latest status, so resolving the header action takes one list
@@ -1644,39 +1645,49 @@ function httpDeploymentUrl(value: string | null | undefined): string | null {
 export async function getLatestSuccessfulDeploymentUrl(opts: {
   token: string;
   repoFullName: string;
+  branch?: string;
   sha: string;
 }): Promise<string | null> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const deployments = await ghJson<RawGithubDeployment[]>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
-      `?sha=${encodeURIComponent(opts.sha)}&per_page=10`,
-    opts.token,
-  );
-  const newest = deployments
-    .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
-      Number.isInteger(deployment.id),
-    )
-    .sort((a, b) => {
-      const byDate = Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
-      return Number.isFinite(byDate) && byDate !== 0 ? byDate : b.id - a.id;
-    });
+  const references = [
+    ...(opts.branch ? [{ parameter: "ref", value: opts.branch }] : []),
+    { parameter: "sha", value: opts.sha },
+  ];
 
-  const statuses = await Promise.all(
-    newest.map(async (deployment) => {
-      try {
-        const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
-          `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${deployment.id}/statuses?per_page=1`,
-          opts.token,
-        );
-        if (latest?.state !== "success") return null;
-        return httpDeploymentUrl(latest.environment_url) ?? httpDeploymentUrl(latest.target_url);
-      } catch {
-        // A stale deployment can disappear while its siblings remain readable.
-        return null;
-      }
-    }),
-  );
-  return statuses.find((url): url is string => url !== null) ?? null;
+  for (const reference of references) {
+    const deployments = await ghJson<RawGithubDeployment[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
+        `?${reference.parameter}=${encodeURIComponent(reference.value)}&per_page=10`,
+      opts.token,
+    );
+    const newest = deployments
+      .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
+        Number.isInteger(deployment.id),
+      )
+      .sort((a, b) => {
+        const byDate = Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
+        return Number.isFinite(byDate) && byDate !== 0 ? byDate : b.id - a.id;
+      });
+
+    const statuses = await Promise.all(
+      newest.map(async (deployment) => {
+        try {
+          const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${deployment.id}/statuses?per_page=1`,
+            opts.token,
+          );
+          if (latest?.state !== "success") return null;
+          return httpDeploymentUrl(latest.environment_url) ?? httpDeploymentUrl(latest.target_url);
+        } catch {
+          // A stale deployment can disappear while its siblings remain readable.
+          return null;
+        }
+      }),
+    );
+    const url = statuses.find((candidate): candidate is string => candidate !== null);
+    if (url) return url;
+  }
+  return null;
 }
 
 interface RawReviewComment extends RawComment {
