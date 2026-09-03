@@ -11,7 +11,7 @@ import { localizedHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { MINDDY_FEEDBACK_URL, MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
+import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 
 /**
@@ -57,9 +57,6 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       { href: "/self-hosting", labelKey: "navMenu_selfHosting_title" },
       { href: MINDDY_REPOSITORY_URL, labelKey: "footerRepository", external: true },
       { href: "/changelog", labelKey: "footerChangelog" },
-      // The feedback board is a separate site (feedback.minddy.app): visitors
-      // are not signed in there through SSO, hence the plain external link.
-      { href: MINDDY_FEEDBACK_URL, labelKey: "footerShareFeedback", external: true },
       // Comparisons (MIN-93). They are NOWHERE else in the
       // navigation: without these three links, each page would only have the sitemap
       // to be discovered, and an internal link is worth more than a line of XML.
