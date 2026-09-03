@@ -75,15 +75,17 @@ export function repositorySkillOptions(
   }));
 }
 
-/** Commands that match the query typed after the “/”. */
+/** Commands or skills that match the query typed after the active trigger. */
 export function SlashMenu({
   options,
+  prefix = "/",
   activeIndex,
   onPick,
   onHover,
   className,
 }: {
   options: SlashMenuOption[];
+  prefix?: "/" | "$";
   activeIndex: number;
   onPick: (option: SlashMenuOption) => void;
   onHover: (index: number) => void;
@@ -116,7 +118,7 @@ export function SlashMenu({
         >
           <option.icon className="size-4 shrink-0 text-muted-foreground" />
           <span className="min-w-0">
-            <span className="block truncate">/{option.label}</span>
+            <span className="block truncate">{prefix}{option.label}</span>
             <span className="block truncate text-xs text-muted-foreground">
               {option.description}
             </span>

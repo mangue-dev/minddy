@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { filterSlashOptions } from "./assistant-slash-options";
+import {
+  composerMenuTrigger,
+  filterSlashOptions,
+} from "./assistant-slash-options";
 
 const command = {
   kind: "command",
@@ -22,5 +25,18 @@ describe("Numo slash options", () => {
     expect(filterSlashOptions([command, ...skills], "ticket")).toEqual([command]);
     expect(filterSlashOptions([command, ...skills], "signed")).toEqual(skills);
     expect(filterSlashOptions([command, ...skills], "release")).toEqual(skills);
+  });
+
+  it("recognizes slash commands and Codex-style dollar skill triggers", () => {
+    expect(composerMenuTrigger("/release")).toEqual({
+      prefix: "/",
+      query: "release",
+    });
+    expect(composerMenuTrigger("$release")).toEqual({
+      prefix: "$",
+      query: "release",
+    });
+    expect(composerMenuTrigger("use $release")).toBeNull();
+    expect(composerMenuTrigger("$release\nnow")).toBeNull();
   });
 });

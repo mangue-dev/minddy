@@ -59,6 +59,7 @@ import {
   filterMentionItems,
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
+import { composerMenuTrigger } from "@/lib/assistant-slash-options";
 import {
   useAttachmentUploads,
   type PendingResource,
@@ -773,15 +774,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return selected;
     }, []);
 
-    // ── Commandes « / » ─────────────────────────────────────────────
-    // The menu only lives as long as the ENTIRE message is “/request”: a
+    // ── Commands “/” and skills “$” ─────────────────────────────────
+    // The menu only lives as long as the ENTIRE message is “/request” or “$skill”: a
     // single line of bare text, no pill already placed. The detection is read again
     // so from the full editor — not from the caret like the mentions:
-    // a command only exists at the top of the message.
-    const [slashQuery, setSlashQuery] = useState<string | null>(null);
+    // a trigger only exists at the top of the message.
+    const [slashQuery, setSlashQuery] = useState<
+      ReturnType<typeof composerMenuTrigger>
+    >(null);
     const [slashIndex, setSlashIndex] = useState(0);
 
-    const readSlash = useCallback((): string | null => {
+    const readSlash = useCallback((): ReturnType<typeof composerMenuTrigger> => {
       if (!commands?.length && skills === undefined) return null;
       const el = editorRef.current;
       if (!el) return null;
@@ -793,14 +796,18 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (last instanceof HTMLElement && last.tagName === "BR") nodes.pop();
       if (nodes.some((n) => n.nodeType !== Node.TEXT_NODE)) return null;
       const text = nodes.map((n) => n.textContent ?? "").join("");
-      return text.startsWith("/") ? text.slice(1) : null;
+      const trigger = composerMenuTrigger(text);
+      if (trigger?.prefix === "$" && skills === undefined) return null;
+      return trigger;
     }, [commands, skills]);
 
     // Reread on typing only: Escape closes the menu, and it does not reopen
     // only at the next character typed — not at the slightest movement of the caret.
     const refreshSlash = useCallback(() => {
       const next = readSlash();
-      setSlashQuery((prev) => (prev === next ? prev : next));
+      setSlashQuery((prev) =>
+        prev?.prefix === next?.prefix && prev?.query === next?.query ? prev : next,
+      );
     }, [readSlash]);
 
     const slashOptions = useMemo(
@@ -808,11 +815,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         slashQuery === null
           ? []
           : filterSlashOptions(
-              [
-                ...(commands ?? []),
-                ...repositorySkillOptions(availableSkills),
-              ],
-              slashQuery,
+              slashQuery.prefix === "$"
+                ? repositorySkillOptions(availableSkills)
+                : [
+                    ...(commands ?? []),
+                    ...repositorySkillOptions(availableSkills),
+                  ],
+              slashQuery.query,
             ),
       [slashQuery, commands, availableSkills],
     );
@@ -1206,11 +1215,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             className="left-3"
           />
         )}
-        {/* The slash menu shares the place (and reasons for being out of the
- surface) of the mentions list; both cannot be opened at the same time — one requires a "/" at the top of the message, and the other requires a "@" while typing. */}
+        {/* The command/skill menu shares the mention list's floating position.
+        It opens for “/” or “$” at the start, while mentions use “@” at the caret. */}
         {slashOpen && (
           <SlashMenu
             options={slashOptions}
+            prefix={slashQuery?.prefix ?? "/"}
             activeIndex={activeSlash}
             onPick={insertSlashOption}
             onHover={setSlashIndex}
