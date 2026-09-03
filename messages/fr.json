@@ -1685,7 +1685,7 @@
     "feedbackTitlePlaceholder": "Résumez votre retour",
     "feedbackDescriptionLabel": "Description (facultative)",
     "feedbackDescriptionPlaceholder": "Ajoutez du contexte, des exemples ou le résultat attendu.",
-    "feedbackSent": "Retour partagé",
+    "feedbackSent": "Retour partagé. Merci !",
     "feedbackSubmitError": "Impossible de partager votre retour. Vérifiez votre connexion et réessayez.",
     "feedbackRateLimited": "Vous avez partagé plusieurs idées. Patientez un instant avant de réessayer.",
     "whatsNew": "Nouveautés",

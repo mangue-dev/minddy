@@ -7,10 +7,7 @@ import {
   isFeedbackReviewEnabled,
   reviewFeedbackPost,
 } from "@/lib/server/feedback/review";
-import {
-  insertNotifications,
-  projectMemberIds,
-} from "@/lib/server/notifications";
+import { notifyFeedbackTransition } from "@/lib/server/feedback/notify";
 import {
   emitFeedbackCreated,
   emitFeedbackFieldChanges,
@@ -216,27 +213,9 @@ export async function createFeedbackPost(input: {
     }
   }
 
-  // Inbox (MIN-82): feedback that ARRIVES (public board / API) prevents any
-  // the team — without that, you only discover the feedback by opening the board. There
-  // internal entry does not notify (the team is already aware: it writes it).
-  if (input.source !== "internal") {
-    try {
-      const members = await projectMemberIds(service, input.projectId);
-      await insertNotifications(
-        service,
-        [...members].map((uid) => ({
-          user_id: uid,
-          project_id: input.projectId,
-          type: "feedback_new" as const,
-          issue_id: null,
-          feedback_post_id: post.id,
-          actor_id: null,
-        }))
-      );
-    } catch (e) {
-      console.error("[feedback-posts] notify failed:", (e as Error).message);
-    }
-  }
+  // Unreviewed external feedback notifies immediately. Pending feedback waits
+  // for the review transition so spam never reaches the inbox.
+  await notifyFeedbackTransition(service, null, post);
 
   if (!input.authorId) return { ok: true, post };
 
@@ -368,6 +347,12 @@ export async function updateFeedbackPostFields(params: {
     viaAssistant: params.viaAssistant,
     mcpKeyId: params.mcpKeyId,
   });
+
+  await notifyFeedbackTransition(
+    service,
+    before as FeedbackPostRow,
+    data as FeedbackPostRow
+  );
 
   return { ok: true, post: data as FeedbackPostRow };
 }

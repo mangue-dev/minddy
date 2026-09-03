@@ -1685,7 +1685,7 @@
     "feedbackTitlePlaceholder": "Fassen Sie Ihr Feedback zusammen",
     "feedbackDescriptionLabel": "Beschreibung (optional)",
     "feedbackDescriptionPlaceholder": "Fügen Sie Kontext, Beispiele oder das gewünschte Ergebnis hinzu.",
-    "feedbackSent": "Feedback geteilt",
+    "feedbackSent": "Feedback geteilt. Danke!",
     "feedbackSubmitError": "Feedback konnte nicht geteilt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "feedbackRateLimited": "Sie haben mehrere Ideen geteilt. Warten Sie kurz und versuchen Sie es erneut.",
     "whatsNew": "Was ist neu",

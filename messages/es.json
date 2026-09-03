@@ -1685,7 +1685,7 @@
     "feedbackTitlePlaceholder": "Resume tu sugerencia",
     "feedbackDescriptionLabel": "Descripción (opcional)",
     "feedbackDescriptionPlaceholder": "Añade contexto, ejemplos o el resultado que esperas.",
-    "feedbackSent": "Sugerencia compartida",
+    "feedbackSent": "Sugerencia compartida. ¡Gracias!",
     "feedbackSubmitError": "No se pudo compartir tu sugerencia. Comprueba la conexión e inténtalo de nuevo.",
     "feedbackRateLimited": "Has compartido varias ideas. Espera un momento e inténtalo de nuevo.",
     "whatsNew": "¿Qué hay de nuevo?",

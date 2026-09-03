@@ -25,6 +25,7 @@ export function ProductFeedbackDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
 
   const close = () => {
     setTitle("");
@@ -32,8 +33,13 @@ export function ProductFeedbackDialog({
     onOpenChange(false);
   };
 
+  const requestClose = () => {
+    if (submitting || transcribing) return;
+    close();
+  };
+
   const handleOpenChange = (nextOpen: boolean) => {
-    if (submitting) return;
+    if (submitting || transcribing) return;
     if (!nextOpen) close();
     else onOpenChange(true);
   };
@@ -71,7 +77,7 @@ export function ProductFeedbackDialog({
       description={t("feedbackDialogDescription")}
       onSubmit={submit}
       submitLabel={t("shareFeedback")}
-      submitDisabled={!title.trim()}
+      submitDisabled={!title.trim() || transcribing}
       submitting={submitting}
       submitIcon={
         submitting ? (
@@ -81,8 +87,16 @@ export function ProductFeedbackDialog({
         )
       }
       cancelLabel={tc("cancel")}
-      onCancel={close}
+      onCancel={requestClose}
       className="sm:max-w-lg"
+      dictation={{
+        feature: "feedback_voice",
+        onTranscription: (text) => {
+          setDescription((value) => `${value}${value ? "\n\n" : ""}${text}`);
+        },
+        disabled: submitting,
+        onProcessingChange: setTranscribing,
+      }}
     >
       <div className="flex flex-col gap-1.5">
         <label htmlFor={titleId} className="text-sm font-medium">
