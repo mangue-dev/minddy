@@ -57,7 +57,7 @@ export function BoardLoadingSkeleton({
     >
       <AppContentHeader
         data-board-skeleton-header
-        contentClassName="gap-2 px-4 md:px-6"
+        contentClassName="gap-2"
       >
         <div className="flex shrink-0 items-center gap-1">
           {VIEW_WIDTHS.map((width, index) => (

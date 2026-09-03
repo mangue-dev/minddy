@@ -929,13 +929,19 @@ function ChangelogButton({
                     `entry_${entry.id}_title` as MessageKey<"Changelog">,
                   )}
                 </span>
-                <time
-                  dateTime={entry.date}
-                  title={formatChangelogDate(entry.date, locale)}
-                  className="shrink-0 text-xs tabular-nums text-muted-foreground"
-                >
-                  {formatChangelogAge(entry.date, locale)}
-                </time>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <time
+                      dateTime={entry.date}
+                      className="shrink-0 text-xs tabular-nums text-muted-foreground"
+                    >
+                      {formatChangelogAge(entry.date, locale)}
+                    </time>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {formatChangelogDate(entry.date, locale)}
+                  </TooltipContent>
+                </Tooltip>
               </li>
             ))}
           </ol>

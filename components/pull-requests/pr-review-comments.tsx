@@ -398,19 +398,24 @@ export function ReactionPicker({
       </Tooltip>
       <PopoverContent align="start" sideOffset={6} className="flex w-auto gap-0.5 p-1">
         {REVIEW_REACTIONS.map((content) => (
-          <button
-            key={content}
-            type="button"
-            aria-label={t(REACTION_LABELS[content])}
-            title={t(REACTION_LABELS[content])}
-            onClick={() => {
-              setOpen(false);
-              onPick(content);
-            }}
-            className="rounded-md px-1.5 py-1 text-base leading-none transition-colors hover:bg-muted"
-          >
-            {REVIEW_REACTION_EMOJI[content]}
-          </button>
+          <Tooltip key={content}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={t(REACTION_LABELS[content])}
+                onClick={() => {
+                  setOpen(false);
+                  onPick(content);
+                }}
+                className="rounded-md px-1.5 py-1 text-base leading-none transition-colors hover:bg-muted"
+              >
+                {REVIEW_REACTION_EMOJI[content]}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {t(REACTION_LABELS[content])}
+            </TooltipContent>
+          </Tooltip>
         ))}
       </PopoverContent>
     </Popover>
@@ -675,7 +680,7 @@ export function ReviewThreadCard({
       data-testid="review-thread-card"
       data-variant={variant}
       className={cn(
-        "flex flex-col gap-3",
+        "flex flex-col gap-3 font-sans",
         variant === "card" && "rounded-md border border-border bg-card px-3 py-2.5",
       )}
     >

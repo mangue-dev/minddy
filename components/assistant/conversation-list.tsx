@@ -18,6 +18,7 @@ import { History, Loader2, Plus, Trash2 } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { fetchConversations, deleteConversation } from "@/lib/assistant-api";
 import type { Conversation } from "@/lib/assistant-types";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 interface ConversationWithProject extends Conversation {
   project?: { name: string } | null;
@@ -195,25 +196,26 @@ export function ConversationList({
                   {conv.status === "generating" && (
                     <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary group-hover:hidden" />
                   )}
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPendingDelete(conv.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                  <AppTooltip label={t("deleteConversation")}>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
                         e.stopPropagation();
                         setPendingDelete(conv.id);
-                      }
-                    }}
-                    aria-disabled={deletingId === conv.id}
-                    className="hidden shrink-0 cursor-pointer rounded p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive group-hover:flex"
-                    title={t("deleteConversation")}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </span>
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.stopPropagation();
+                          setPendingDelete(conv.id);
+                        }
+                      }}
+                      aria-disabled={deletingId === conv.id}
+                      className="hidden shrink-0 cursor-pointer rounded p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive group-hover:flex"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </span>
+                  </AppTooltip>
                 </Button>
               ))}
             </div>

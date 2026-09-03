@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { FileMinus, FilePen, FilePlus, FileSymlink } from "lucide-react";
 import { FILE_STATUS_LABELS, type FileStatus } from "@/lib/pr-file-tree";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * The four marks of a file in a diff: what happened to it, its
@@ -50,10 +51,12 @@ export function FileStatusIcon({
   const Icon = STATUS_ICONS[status];
   const label = t(FILE_STATUS_LABELS[status]);
   return (
-    <span className={cn("shrink-0", STATUS_COLORS[status], className)} title={label}>
+    <AppTooltip label={label}>
+      <span className={cn("shrink-0", STATUS_COLORS[status], className)}>
       <Icon className="size-3.5" aria-hidden />
       <span className="sr-only">{label}</span>
-    </span>
+      </span>
+    </AppTooltip>
   );
 }
 
@@ -76,14 +79,13 @@ export function FilePathLabel({
   const dir = slash === -1 ? "" : path.slice(0, slash + 1);
   const name = slash === -1 ? path : path.slice(slash + 1);
   return (
-    <span
-      className={cn("min-w-0 flex-1 truncate font-mono text-xs", className)}
-      title={previousPath ? `${previousPath} → ${path}` : path}
-    >
+    <AppTooltip label={previousPath ? `${previousPath} → ${path}` : path}>
+      <span className={cn("min-w-0 flex-1 truncate font-mono text-xs", className)}>
       {previousPath ? <span className="text-muted-foreground">{previousPath} → </span> : null}
       <span className="text-muted-foreground">{dir}</span>
       <span className="font-medium">{name}</span>
-    </span>
+      </span>
+    </AppTooltip>
   );
 }
 
@@ -110,20 +112,14 @@ export function DiffCounters({
   return (
     <span className={cn("flex shrink-0 items-center gap-1 text-[11px] tabular-nums", className)}>
       {hideEmpty && additions === 0 ? null : (
-        <span
-          className="text-emerald-600 dark:text-emerald-400"
-          title={t("linesAdded", { count: additions })}
-        >
-          +{additions}
-        </span>
+        <AppTooltip label={t("linesAdded", { count: additions })}>
+          <span className="text-emerald-600 dark:text-emerald-400">+{additions}</span>
+        </AppTooltip>
       )}
       {hideEmpty && deletions === 0 ? null : (
-        <span
-          className="text-red-600 dark:text-red-400"
-          title={t("linesRemoved", { count: deletions })}
-        >
-          −{deletions}
-        </span>
+        <AppTooltip label={t("linesRemoved", { count: deletions })}>
+          <span className="text-red-600 dark:text-red-400">−{deletions}</span>
+        </AppTooltip>
       )}
     </span>
   );

@@ -46,6 +46,7 @@ import type {
   Objective,
   Project,
 } from "@/lib/types";
+import { boardIntegrationFacets } from "@/lib/board-integrations";
 
 /** Remembered "the Cycle tab is selected" flag — deliberately OUTSIDE the view
     system's storage: useBoardViews self-heals unknown view ids by rewriting
@@ -321,8 +322,12 @@ function GlobalBoardInner() {
     [objectivesByProject]
   );
   const allIntegrations = useMemo(
-    () => Object.values(integrationsByProject).flat(),
-    [integrationsByProject]
+    () =>
+      boardIntegrationFacets(
+        Object.values(integrationsByProject).flat(),
+        scopedIssues,
+      ),
+    [integrationsByProject, scopedIssues]
   );
 
   const filtered = useMemo(

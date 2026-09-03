@@ -22,6 +22,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "mangue-ui";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 export type PillRadius = "full" | "md";
 
@@ -121,19 +122,20 @@ export function EntityPill({
               : "opacity-0 group-hover/pill:opacity-100 has-[:focus-visible]:opacity-100"
           )}
         >
-          <button
-            type="button"
-            aria-label={action.label}
-            title={action.label}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              action.onClick();
-            }}
-            className="pointer-events-auto flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none"
-          >
-            {action.icon}
-          </button>
+          <AppTooltip label={action.label}>
+            <button
+              type="button"
+              aria-label={action.label}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                action.onClick();
+              }}
+              className="pointer-events-auto flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none"
+            >
+              {action.icon}
+            </button>
+          </AppTooltip>
         </span>
       )}
     </span>

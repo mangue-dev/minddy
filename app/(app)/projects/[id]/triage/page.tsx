@@ -445,7 +445,7 @@ export default function TriagePage() {
  continues above, and a separate bar would cut it off from the
  it caps (same part as the pull request and the
  agent conversation). */}
-            <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
+            <AppContentHeader contentClassName="gap-2">
               <Button
                 variant="ghost"
                 size="icon-sm"

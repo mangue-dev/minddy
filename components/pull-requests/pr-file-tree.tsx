@@ -7,6 +7,12 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { PullRequestFile } from "@/lib/agent-api";
 import { buildFileTree, type FileTreeNode } from "@/lib/pr-file-tree";
 import { DiffCounters, FileStatusIcon } from "@/components/pull-requests/pr-file-marks";
+import { AppTooltip } from "@/components/ui/app-tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * "What does this PR touch, and take me to this file" (MIN-182) —
@@ -135,18 +141,16 @@ function TreeRows({
           );
         }
 
+        const fullPath = node.file.previous_filename
+          ? `${node.file.previous_filename} → ${node.path}`
+          : node.path;
+
         return (
           <li key={node.path}>
+            <AppTooltip label={fullPath}>
             <button
               type="button"
               onClick={() => onSelect(node.path)}
-              // The ENTIRE path, including renaming: the line says the name, this
-              // hover says where it comes from.
-              title={
-                node.file.previous_filename
-                  ? `${node.file.previous_filename} → ${node.path}`
-                  : node.path
-              }
               className={ROW_CLASS}
             >
               <Rails depth={depth} />
@@ -160,6 +164,7 @@ function TreeRows({
                 className="ml-2 pt-px"
               />
             </button>
+            </AppTooltip>
           </li>
         );
       })}
@@ -234,23 +239,29 @@ export function PrFileTreeButton({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          ref={triggerRef}
-          type="button"
-          title={t("fileTreeHint")}
-          className="group -mx-1.5 flex min-w-0 items-center rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
-        >
-          <span className="truncate">{t("fileCount", { count: files.length })}</span>
-          <span className="ml-2 shrink-0 tabular-nums text-emerald-600 dark:text-emerald-400">
-            +{totalAdditions}
-          </span>
-          <span className="ml-1 shrink-0 tabular-nums text-red-600 dark:text-red-400">
-            −{totalDeletions}
-          </span>
-          <ChevronDown className="ml-1 size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              ref={triggerRef}
+              type="button"
+              className="group -mx-1.5 flex min-w-0 items-center rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground"
+            >
+              <span className="truncate">
+                {t("fileCount", { count: files.length })}
+              </span>
+              <span className="ml-2 shrink-0 tabular-nums text-emerald-600 dark:text-emerald-400">
+                +{totalAdditions}
+              </span>
+              <span className="ml-1 shrink-0 tabular-nums text-red-600 dark:text-red-400">
+                −{totalDeletions}
+              </span>
+              <ChevronDown className="ml-1 size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t("fileTreeHint")}</TooltipContent>
+      </Tooltip>
       <PopoverContent
         align="start"
         container={container}

@@ -598,6 +598,8 @@ export interface IntegrationRef {
   id: string;
   name: string;
   project_id: string;
+  kind: IntegrationKind;
+  revoked_at: string | null;
 }
 
 /**

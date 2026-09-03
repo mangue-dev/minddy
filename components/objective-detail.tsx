@@ -385,7 +385,7 @@ export function ObjectiveDetail({
  above (same part as triage and pull request). It does not NAME
  the objective - the left column designates it, the title writes it in big
  just below - it only describes what we DO there. */}
-      <AppContentHeader contentClassName="gap-1.5 px-4 md:px-6">
+      <AppContentHeader contentClassName="gap-1.5">
         <Button
           variant="ghost"
           size="icon-sm"

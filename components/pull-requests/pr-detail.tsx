@@ -833,17 +833,11 @@ export function PrDetail({
         ? t("numoReviewRerun")
         : t("aiReview");
 
-  /**
-   * The proofreading session card, or nothing: it is there as soon as a
-   * session exists on this PR, and it REMAINS there once completed (MIN-168).
-   *
-   * Before, it disappeared when the verdict message arrived — it was not used
-   * than to hold the place of this message. Now it leads elsewhere: to
-   * session that produced the review, and the conversation that we can continue there.
-   * Erasing it would remove the only gateway to what has happened.
-   * actually happened.
-   */
-  const reviewCard = reviewSession.run;
+  // The card reports an active or interrupted review. A completed run has
+  // already posted its summary and line comments into the PR, so retaining a
+  // second “agent finished” banner would duplicate the outcome indefinitely.
+  const reviewCard =
+    reviewSession.run?.status === "completed" ? null : reviewSession.run;
 
   const act = async (
     action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
@@ -1408,7 +1402,7 @@ export function PrDetail({
       {/* Header WITHOUT border: it's the fade of the thread that says it continues
           above, and a separate bar would cut it off from what it covers (even
           party than the agent conversation). */}
-      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
+      <AppContentHeader contentClassName="gap-2">
         <Button
           variant="ghost"
           size="icon-sm"

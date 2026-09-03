@@ -5,9 +5,6 @@ import { useTranslations } from "next-intl";
 import {
   Badge,
   cn,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   useIsMobile,
 } from "mangue-ui";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -18,6 +15,12 @@ import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES, DIFF_UNSAFE_CSS } from "@/lib/diff-th
 import { useEffectiveColorScheme } from "@/components/pull-requests/use-effective-color-scheme";
 import { pullRequestDiffCacheKey } from "@/lib/pr-diff-cache";
 import { hunkPatch } from "@/lib/pr-diff-hunk";
+import { AppTooltip } from "@/components/ui/app-tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * The code snippet of a review comment — the `diff_hunk` that the forge
@@ -201,14 +204,15 @@ export function PrHunk({
   if (!fileDiff && controlledCollapsed == null && !onCollapsedChange) {
     return (
       <div className={className}>
-        <div
-          data-testid="pr-hunk-header"
-          className={cn("flex items-center px-2.5 py-1.5", headerClassName)}
-          title={title}
-        >
-          {anchor}
-          {statusBadge}
-        </div>
+        <AppTooltip label={title}>
+          <div
+            data-testid="pr-hunk-header"
+            className={cn("flex items-center px-2.5 py-1.5", headerClassName)}
+          >
+            {anchor}
+            {statusBadge}
+          </div>
+        </AppTooltip>
         {lineLabel ? (
           <div
             data-testid="pr-hunk-line-label"
@@ -231,21 +235,22 @@ export function PrHunk({
           headerClassName,
         )}
       >
-        <button
-          data-testid="pr-hunk-toggle"
-          type="button"
-          onClick={toggleCollapsed}
-          aria-expanded={!collapsed}
-          title={title}
-          className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1.5 text-left outline-none"
-        >
-          {collapsed ? (
-            <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-          )}
-          {anchor}
-        </button>
+        <AppTooltip label={title}>
+          <button
+            data-testid="pr-hunk-toggle"
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={!collapsed}
+            className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1.5 text-left outline-none"
+          >
+            {collapsed ? (
+              <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+            )}
+            {anchor}
+          </button>
+        </AppTooltip>
         {statusBadge}
       </div>
       {collapsed ? null : (

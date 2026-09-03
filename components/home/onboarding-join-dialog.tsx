@@ -13,6 +13,7 @@ import {
 } from "mangue-ui";
 import { Copy, Share2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * “Join a project”, from step 1 of onboarding and from step
@@ -79,9 +80,9 @@ export function OnboardingJoinDialog({
             <p className="text-xs font-medium text-muted-foreground">
               {t("joinEmailLabel")}
             </p>
-            <p className="truncate font-mono text-sm text-foreground" title={email}>
-              {email}
-            </p>
+            <AppTooltip label={email}>
+              <p className="truncate font-mono text-sm text-foreground">{email}</p>
+            </AppTooltip>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" size="sm" onClick={() => void copy()} disabled={!email}>

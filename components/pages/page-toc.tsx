@@ -33,6 +33,7 @@ import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import { cn } from "mangue-ui";
 import { revealBlock } from "@/components/pages/block-actions";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import { readHeadings, sameHeadings, type TocEntry } from "@/lib/pages-toc";
 
 /** Below, the table does not appear: see the header. */
@@ -221,12 +222,11 @@ neither of the two layers having to reorganize itself. */}
           const current = entry.id === activeId;
           const level = Math.min(entry.level, 3);
           return (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => goTo(entry.pos)}
-              title={entry.text}
-              className={cn(
+            <AppTooltip key={entry.id} label={entry.text}>
+              <button
+                type="button"
+                onClick={() => goTo(entry.pos)}
+                className={cn(
                 "flex h-7 w-full shrink-0 items-center rounded-md px-2 outline-none",
                 "transition-colors hover:bg-muted",
                 "focus-visible:ring-2 focus-visible:ring-ring"
@@ -243,7 +243,8 @@ neither of the two layers having to reorganize itself. */}
               >
                 {entry.text}
               </span>
-            </button>
+              </button>
+            </AppTooltip>
           );
         })}
       </nav>

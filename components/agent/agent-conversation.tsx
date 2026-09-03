@@ -878,7 +878,7 @@ export function AgentConversation({
     <MentionLinksProvider value={links}>
       <div className="flex h-full flex-col overflow-hidden">
         {/* Host title on the left and session actions on the shared 60 px line. */}
-        <AppContentHeader contentClassName="gap-2 px-4">
+        <AppContentHeader contentClassName="gap-2">
           {headerTitle ??
             (liveRun ? (
               <ModelBadge model={liveRun.model} className="min-w-0 shrink" />

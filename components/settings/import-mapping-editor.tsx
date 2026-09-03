@@ -32,6 +32,7 @@ import {
   type ImportMember,
 } from "@/lib/import/types";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * The import preview mapping table: where each column in the
@@ -359,13 +360,14 @@ function Row({
             // `aria-hidden` on the sign, the word `sr-only` just after:
             // “asterisk” read aloud doesn’t teach anyone anything.
             <>
-              <span
-                className="ml-0.5 font-medium text-amber-600 dark:text-amber-500"
-                aria-hidden
-                title={t("importValueToPlace")}
-              >
-                *
-              </span>
+              <AppTooltip label={t("importValueToPlace")}>
+                <span
+                  className="ml-0.5 font-medium text-amber-600 dark:text-amber-500"
+                  aria-hidden
+                >
+                  *
+                </span>
+              </AppTooltip>
               <span className="sr-only"> — {t("importValueToPlace")}</span>
             </>
           )}

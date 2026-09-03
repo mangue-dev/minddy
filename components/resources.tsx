@@ -41,6 +41,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * Saved rows (with id) and just-added composer entries (without) alike, in the
@@ -115,18 +116,21 @@ export function AttachButton({
           e.target.value = "";
         }}
       />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t("attach")}
-        title={t("attach")}
-        disabled={disabled}
-        onClick={() => inputRef.current?.click()}
-        className={cn("rounded-full text-muted-foreground", className)}
-      >
-        <Paperclip className="size-4" />
-      </Button>
+      <AppTooltip label={t("attach")}>
+        <span className="inline-flex">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("attach")}
+            disabled={disabled}
+            onClick={() => inputRef.current?.click()}
+            className={cn("rounded-full text-muted-foreground", className)}
+          >
+            <Paperclip className="size-4" />
+          </Button>
+        </span>
+      </AppTooltip>
     </>
   );
 }
@@ -739,7 +743,6 @@ export function ResourcePills({
                     </ResourceFigure>
                   )}
             <span
-              title={fullName}
               className={cn(
                 "truncate",
                 "min-w-0 font-medium text-foreground/80",
@@ -759,14 +762,15 @@ export function ResourcePills({
               // INTERNAL navigation — a wiki page is not a link to
               // the outside, and opening it in a tab would lose the context of the
               // ticket we are currently reading.
-              <Link
-                href={pageHref}
-                title={label}
-                aria-label={label}
-                className="flex min-w-0 items-center gap-[inherit] no-underline"
-              >
-                {body}
-              </Link>
+              <AppTooltip label={label}>
+                <Link
+                  href={pageHref}
+                  aria-label={label}
+                  className="flex min-w-0 items-center gap-[inherit] no-underline"
+                >
+                  {body}
+                </Link>
+              </AppTooltip>
             ) : pageId ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -780,35 +784,42 @@ export function ResourcePills({
                 <TooltipContent>{t("pageUnavailable")}</TooltipContent>
               </Tooltip>
             ) : url ? (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={url}
-                aria-label={label}
-                className="flex min-w-0 items-center gap-[inherit] no-underline"
-              >
-                {body}
-              </a>
+              <AppTooltip label={url}>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="flex min-w-0 items-center gap-[inherit] no-underline"
+                >
+                  {body}
+                </a>
+              </AppTooltip>
             ) : previewKind && path ? (
-              <button
-                type="button"
-                onClick={() => setPreview(a)}
-                title={label}
-                className="flex min-w-0 items-center gap-[inherit]"
-              >
-                {body}
-              </button>
+              <AppTooltip label={label}>
+                <button
+                  type="button"
+                  onClick={() => setPreview(a)}
+                  className="flex min-w-0 items-center gap-[inherit]"
+                >
+                  {body}
+                </button>
+              </AppTooltip>
             ) : path ? (
-              <a
-                href={fileHref?.(a, "download") ?? attachmentFileUrl(path, true)}
-                title={label}
-                className="flex min-w-0 items-center gap-[inherit] no-underline"
-              >
-                {body}
-              </a>
+              <AppTooltip label={label}>
+                <a
+                  href={fileHref?.(a, "download") ?? attachmentFileUrl(path, true)}
+                  className="flex min-w-0 items-center gap-[inherit] no-underline"
+                >
+                  {body}
+                </a>
+              </AppTooltip>
             ) : (
-              <span className="flex min-w-0 items-center gap-[inherit]">{body}</span>
+              <AppTooltip label={fullName}>
+                <span className="flex min-w-0 items-center gap-[inherit]">
+                  {body}
+                </span>
+              </AppTooltip>
             )}
           </>
         );
@@ -856,9 +867,11 @@ export function ResourcePills({
             <ResourceFigure>
               <Spinner className="size-4 text-muted-foreground" />
             </ResourceFigure>
-            <span className="min-w-0 truncate" title={p.file_name}>
-              <CompactResourceName name={p.file_name} />
-            </span>
+            <AppTooltip label={p.file_name}>
+              <span className="min-w-0 truncate">
+                <CompactResourceName name={p.file_name} />
+              </span>
+            </AppTooltip>
           </EntityPill>
         ))}
 

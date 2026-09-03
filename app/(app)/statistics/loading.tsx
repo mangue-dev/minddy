@@ -5,7 +5,7 @@ import { StatsSkeleton } from "@/components/stats/stats-skeleton";
 export default function StatisticsLoading() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <AppContentHeader contentClassName="px-4 md:px-6">
+      <AppContentHeader>
         <Skeleton className="h-5 w-56 max-w-full" />
       </AppContentHeader>
       <div className="min-h-0 flex-1 overflow-y-auto">

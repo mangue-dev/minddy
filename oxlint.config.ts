@@ -23,8 +23,12 @@ export default defineConfig({
     "public/**",
     ".next/**",
   ],
-  jsPlugins: [{ name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" }],
+  jsPlugins: [
+    { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
+    { name: "minddy", specifier: "./tools/oxlint/minddy/index.ts" },
+  ],
   rules: {
+    "minddy/no-native-title": "error",
     // ── anti-slop: held at zero, therefore enforceable ──────────────────────────
     "anti-slop/no-chained-type-assertions": "off", // 199 — `as X as Y` invents evidence
     "anti-slop/no-object-parameters": "error",

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Badge, cn } from "mangue-ui";
 import { parseForgeLogin } from "@/lib/repo-providers";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * A forge login, rendered as GitHub renders it: the name, and — if the account is
@@ -10,8 +11,8 @@ import { parseForgeLogin } from "@/lib/repo-providers";
  * The suffix says an account TYPE, not a name; writing it raw makes it read
  * like a copying error, and lengthens an already tight line.
  *
- * The BRUT login remains carried by `title`: he is the one we are looking for to find
- * the account at the forge, and the tablet must not make it untraceable.
+ * The raw login remains available in an app tooltip: it is the value used to find
+ * the account at the forge, and the pill must not make it untraceable.
  *
  * Only one place for this rule, because a forge login appears in
  * five views (PR thread, line comments, list of PRs, its filter
@@ -30,12 +31,13 @@ export function GitLogin({
 
   // A single template for both cases: these logins all live in one line
   // tight, and it is the name—never the pastille—that must give way.
-  return (
-    <span className="inline-flex min-w-0 items-center gap-1" title={login ?? undefined}>
+  const content = (
+    <span className="inline-flex min-w-0 items-center gap-1">
       <span className={cn("min-w-0 truncate", className)}>{parsed?.name ?? "—"}</span>
       {parsed?.isBot ? <BotBadge /> : null}
     </span>
   );
+  return login ? <AppTooltip label={login}>{content}</AppTooltip> : content;
 }
 
 /**

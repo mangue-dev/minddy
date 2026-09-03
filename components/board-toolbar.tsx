@@ -355,17 +355,21 @@ function FiltersPopover({
         <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("assignee")}</p>
         {lockedToMe ? (
           /* System view: nothing else to pick — one non-interactive locked row. */
-          <div
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
-            aria-disabled
-            title={t("myViewLockedHint")}
-          >
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <CircleUser className="size-4 shrink-0 text-muted-foreground" />
-              {tf("assignedToMe")}
-            </span>
-            <Lock className="size-3.5 shrink-0 text-muted-foreground" />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
+                aria-disabled
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-2">
+                  <CircleUser className="size-4 shrink-0 text-muted-foreground" />
+                  {tf("assignedToMe")}
+                </span>
+                <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>{t("myViewLockedHint")}</TooltipContent>
+          </Tooltip>
         ) : (
           <>
             <ToggleRow
@@ -802,7 +806,7 @@ export function BoardToolbar({
 
   return (
     <>
-      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
+      <AppContentHeader contentClassName="gap-2">
         {/* Views bar — pills (views + Cycle) are drag-reorderable; the "+"
             stays fixed at the end. */}
         <div className="flex shrink-0 items-center gap-1">
@@ -1142,7 +1146,7 @@ function ViewChip({
   const { setNodeRef, style, attributes, listeners, isDragging } = useTabSortable(
     view.id
   );
-  return (
+  const tab = (
     <button
       type="button"
       ref={setNodeRef}
@@ -1151,7 +1155,6 @@ function ViewChip({
       {...listeners}
       onClick={onSelect}
       onContextMenu={onContextMenu}
-      title={generating ? t("viewGenerating") : undefined}
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       {generating && (
@@ -1164,6 +1167,12 @@ function ViewChip({
       {isSystem ? t("myView") : view.name}
     </button>
   );
+  return generating ? (
+    <Tooltip>
+      <TooltipTrigger asChild>{tab}</TooltipTrigger>
+      <TooltipContent>{t("viewGenerating")}</TooltipContent>
+    </Tooltip>
+  ) : tab;
 }
 
 /** The (non-view) Cycle pill — reorderable like the view pills. */

@@ -161,7 +161,11 @@ export function ChangedFilesBlock({
           aria-expanded={isExpanded}
           className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
         >
-          <span>{t("filesShowMore", { count: files.length - INITIAL_VISIBLE_FILES })}</span>
+          <span>
+            {t(isExpanded ? "filesHide" : "filesShowMore", {
+              count: files.length - INITIAL_VISIBLE_FILES,
+            })}
+          </span>
           {isExpanded ? <ChevronUp className="size-4 shrink-0" aria-hidden /> : <ChevronDown className="size-4 shrink-0" aria-hidden />}
         </button>
       ) : null}

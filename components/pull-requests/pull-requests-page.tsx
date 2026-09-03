@@ -46,6 +46,7 @@ import type {
   PullRequestListResponse,
   PullRequestStateFilter,
 } from "@/lib/agent-api";
+import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 
 const PrDetail = dynamic(
   () => import("@/components/pull-requests/pr-detail").then((m) => m.PrDetail),
@@ -472,14 +473,14 @@ export function PullRequestsPage() {
 
   // Deep-links: `?pr=<id>` (direct, MIN-143) and `?run=<id>` (historical — the
   // issue sidebar and all links already in circulation speak in run).
-  // Both preselect the PR and switch the filter to “all” to
-  // that it is visible whatever its state.
+  // Both preselect the PR. The status filter is widened later only if the
+  // loaded target is not already visible in the default “open” lens.
   const searchParams = useSearchParams();
   const runParam = searchParams.get("run");
   const prParam = searchParams.get("pr");
   const deepLink = prParam ?? runParam;
 
-  const [filter, setFilter] = useState<PullRequestStateFilter>(deepLink ? "all" : "open");
+  const [filter, setFilter] = useState<PullRequestStateFilter>("open");
   const [author, setAuthor] = useState<string>(AUTHOR_ALL);
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
@@ -516,7 +517,6 @@ export function PullRequestsPage() {
   useEffect(() => {
     if (!deepLink) return;
     if (prParam) setSelectedPrId(prParam);
-    setFilter("all");
     setMobileDetail(true);
   }, [deepLink, prParam]);
 
@@ -532,6 +532,22 @@ export function PullRequestsPage() {
         : null,
     [runParam, prParam, pullRequests],
   );
+
+  useEffect(() => {
+    if (!deepLink) return;
+    if (
+      deepLinkNeedsAllFilter(
+        pullRequests,
+        (pullRequest) =>
+          prParam
+            ? pullRequest.prId === prParam
+            : !!runParam && pullRequest.runIds.includes(runParam),
+        (pullRequest) => matchesStateFilter(pullRequest.pr_state, filter),
+      )
+    ) {
+      setFilter("all");
+    }
+  }, [deepLink, filter, prParam, pullRequests, runParam]);
   // Authors present in the loaded page — the menu only offers what we have.
   const authors = useMemo(() => {
     const seen = new Map<string, { login: string; avatar_url: string | null }>();

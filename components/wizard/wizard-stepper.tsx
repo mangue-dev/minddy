@@ -1,4 +1,5 @@
 import { cn } from "mangue-ui";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
  * Wizard steps indicator (MIN-62), ported from AutoKap (wizard-stepper.tsx):
@@ -16,7 +17,7 @@ export function WizardStepper({
   className?: string;
   /** Makes past steps clickable to jump directly to them. */
   onStepClick?: (step: number) => void;
-  /** Accessible label / native tooltip of a step (its title). */
+  /** Accessible label and app tooltip for a step. */
   getStepLabel?: (step: number) => string;
 }) {
   return (
@@ -43,6 +44,16 @@ export function WizardStepper({
         );
 
         const label = getStepLabel?.(stepNumber);
+        const stepButton = (
+          <button
+            type="button"
+            onClick={() => onStepClick?.(stepNumber)}
+            aria-label={label}
+            className="group -my-2 flex cursor-pointer items-center px-0.5 py-2"
+          >
+            {bar}
+          </button>
+        );
 
         return (
           <li
@@ -51,15 +62,11 @@ export function WizardStepper({
             aria-current={active ? "step" : undefined}
           >
             {clickable ? (
-              <button
-                type="button"
-                onClick={() => onStepClick?.(stepNumber)}
-                aria-label={label}
-                title={label}
-                className="group -my-2 flex cursor-pointer items-center px-0.5 py-2"
-              >
-                {bar}
-              </button>
+              label ? (
+                <AppTooltip label={label}>{stepButton}</AppTooltip>
+              ) : (
+                stepButton
+              )
             ) : (
               <span className="-my-2 flex items-center px-0.5 py-2">{bar}</span>
             )}

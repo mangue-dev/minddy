@@ -140,6 +140,7 @@ import type {
 import type { TeamFeedbackUserOption } from "@/app/api/projects/[id]/feedback/users/route";
 import { trackEvent } from "@/lib/analytics";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 import {
   Tooltip,
   TooltipContent,
@@ -537,27 +538,48 @@ function ReviewBadges({
         </Badge>
       )}
       {reviewFailed && (
-        <Badge
-          variant="secondary"
-          icon={<TriangleAlert />}
-          title={t("reviewFailedHint")}
-          className={cn("text-muted-foreground", className)}
-        >
-          {t("reviewFailed")}
-        </Badge>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge
+              variant="secondary"
+              icon={<TriangleAlert />}
+              className={cn("text-muted-foreground", className)}
+            >
+              {t("reviewFailed")}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>{t("reviewFailedHint")}</TooltipContent>
+        </Tooltip>
       )}
       {sensitivity && (
-        <Badge
-          variant="secondary"
-          icon={<ShieldAlert />}
-          title={moderationReason ?? undefined}
-          className={cn(
-            "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
-            className
-          )}
-        >
-          {t("sensitive")}
-        </Badge>
+        moderationReason ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant="secondary"
+                icon={<ShieldAlert />}
+                className={cn(
+                  "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
+                  className
+                )}
+              >
+                {t("sensitive")}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{moderationReason}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Badge
+            variant="secondary"
+            icon={<ShieldAlert />}
+            className={cn(
+              "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
+              className
+            )}
+          >
+            {t("sensitive")}
+          </Badge>
+        )
       )}
     </>
   );
@@ -768,7 +790,7 @@ export function FeedbackTeamPage() {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
-  const now = useNow();
+  const now = useNow({ updateInterval: 60_000 });
   // Mounts with the page: warm the deferred editor chunk once painted, so a
   // team reply never waits on tiptap (markdown-editor-lazy.tsx).
   useIdleMarkdownEditorPreload();
@@ -970,8 +992,8 @@ export function FeedbackTeamPage() {
   // opens the detail on mobile, then strips the param so a background list
   // refetch can't snap the selection back (same idiom as the objectives ?open).
   //
-  // The filter returns to “all”: the targeted return can be delivered, declined or
-  // discarded, and the link should open it regardless of its state.
+  // Keep the current filters when they already contain the target. A delivered,
+  // declined, discarded, or review-hidden target still widens the list.
   //
   // We EXPECT the list to carry the targeted return, like the objectives page
   // wait for his. Cold (new tab, saved view, tracked notification
@@ -982,12 +1004,22 @@ export function FeedbackTeamPage() {
   useEffect(() => {
     if (!postParam) return;
     if (!posts.some((p) => p.id === postParam)) return;
-    setState("all");
-    setOnlyToReview(false);
+    if (
+      deepLinkNeedsAllFilter(
+        posts,
+        (post) => post.id === postParam,
+        (post) =>
+          matchesStateFilter(post, state) &&
+          (!onlyToReview || needsHumanReview(post)),
+      )
+    ) {
+      setState("all");
+      setOnlyToReview(false);
+    }
     setSelectedId(postParam);
     setMobileDetail(true);
     router.replace(pathname);
-  }, [postParam, posts, pathname, router]);
+  }, [postParam, posts, pathname, router, state, onlyToReview]);
 
   // Invalidates the list AND all project details (prefix): a merge/undo
   // also changes the canonical post, not just the one we are looking at. THE
@@ -1567,7 +1599,7 @@ function FeedbackDetail({
           WITHOUT border: it is the fading of the content which says that it continues
           above, and a separate bar would cut it off from what it covers (even
           part as the pull request and the agent conversation). */}
-      <AppContentHeader contentClassName="gap-2 px-4 md:px-6">
+      <AppContentHeader contentClassName="gap-2">
         <Button
           variant="ghost"
           size="icon-sm"

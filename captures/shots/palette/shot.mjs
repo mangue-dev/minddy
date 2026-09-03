@@ -41,7 +41,10 @@ const VIEWPORT = { width: 1736, height: 1085 };
  * demo world ticket titles, and it is also the name of the public board
  * on the interface side — this is what brings up a page AND tickets.
  */
-const QUERY = "board";
+// In English, "board" also matches the word "keyboard" in two settings
+// actions. The extra letter keeps the intended public-board action and four
+// tickets in frame without changing the query used by the other locales.
+const QUERY_BY_LOCALE = { en: "board l" };
 
 /**
  * A ticket result can be recognized by its identifier. No word limit
@@ -55,6 +58,7 @@ const PUBLISH = process.argv.includes("--publish");
 const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
+  const query = QUERY_BY_LOCALE[locale] ?? "board";
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
   try {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
@@ -77,12 +81,12 @@ async function capture({ locale, theme }) {
     // that the element is ready before each touch.
     const input = dialog.getByRole("textbox").first();
     await input.waitFor({ state: "visible", timeout: 10_000 });
-    await input.pressSequentially(QUERY, { delay: 60 });
+    await input.pressSequentially(query, { delay: 60 });
 
     const typed = await input.inputValue();
-    if (typed !== QUERY) {
+    if (typed !== query) {
       throw new Error(
-        `${locale}/${theme} — search input contains "${typed}" instead of "${QUERY}".`,
+        `${locale}/${theme} — search input contains "${typed}" instead of "${query}".`,
       );
     }
 
@@ -122,8 +126,8 @@ async function capture({ locale, theme }) {
 
     if (check.issues < 3 || check.actions < 1) {
       throw new Error(
-        `${locale}/${theme} — the palette shows ${check.actions} action(s) and ` +
-          `${check.issues} issue(s) for "${QUERY}". This shot requires both result types; ` +
+          `${locale}/${theme} — the palette shows ${check.actions} action(s) and ` +
+          `${check.issues} issue(s) for "${query}". This shot requires both result types; ` +
           `choose a different query.`,
       );
     }
