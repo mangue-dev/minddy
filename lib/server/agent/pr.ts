@@ -1495,7 +1495,7 @@ export async function listPullRequestChecks(opts: {
 interface RawComment {
   id: number;
   body?: string;
-  user?: { login?: string; avatar_url?: string } | null;
+  user?: { login?: string; avatar_url?: string; type?: string } | null;
   created_at: string;
   html_url: string;
 }
@@ -1633,6 +1633,38 @@ function httpDeploymentUrl(value: string | null | undefined): string | null {
 }
 
 /**
+ * Vercel only publishes its stable branch URL in the official PR comment. Its
+ * GitHub Deployment and Deployment Status both point at the immutable commit
+ * deployment. Read the visible Ready/Preview table rather than Vercel's private
+ * signed comment metadata, and trust only the canonical GitHub App account.
+ */
+async function getVercelBranchPreviewUrl(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+}): Promise<string | null> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  try {
+    const comments = await ghJson<RawComment[]>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${opts.number}/comments?per_page=100`,
+      opts.token,
+    );
+    for (const comment of [...comments].reverse()) {
+      if (comment.user?.login !== "vercel[bot]" || comment.user.type !== "Bot") continue;
+      for (const line of (comment.body ?? "").split("\n")) {
+        if (!/!\[Ready\]\([^)]+\)\s+\[Ready\]\([^)]+\)/u.test(line)) continue;
+        const preview = line.match(/\[Preview\]\((https?:\/\/[^)\s]+)\)/u)?.[1];
+        const url = httpDeploymentUrl(preview);
+        if (url) return url;
+      }
+    }
+  } catch {
+    // PR comments are an optional Vercel-specific source; deployments still work without them.
+  }
+  return null;
+}
+
+/**
  * Latest successful GitHub deployment of a PR branch, with its immutable head
  * as a fallback.
  *
@@ -1645,10 +1677,14 @@ function httpDeploymentUrl(value: string | null | undefined): string | null {
 export async function getLatestSuccessfulDeploymentUrl(opts: {
   token: string;
   repoFullName: string;
+  number: number;
   branch?: string;
   sha: string;
 }): Promise<string | null> {
   const { owner, repo } = splitRepo(opts.repoFullName);
+  const vercelBranchUrl = opts.branch ? await getVercelBranchPreviewUrl(opts) : null;
+  if (vercelBranchUrl) return vercelBranchUrl;
+
   const references = [
     ...(opts.branch ? [{ parameter: "ref", value: opts.branch }] : []),
     { parameter: "sha", value: opts.sha },

@@ -44,6 +44,7 @@ describe("pull request detail deployment", () => {
     expect(getLatestSuccessfulDeploymentUrl).toHaveBeenCalledWith({
       token: "token",
       repoFullName: "acme/app",
+      number: 42,
       branch: "feature/preview",
       sha: "live-head",
     });

@@ -349,6 +349,7 @@ export interface Forge {
   getLatestSuccessfulDeploymentUrl(opts: {
     token: string;
     repoFullName: string;
+    number: number;
     branch?: string;
     sha: string;
   }): Promise<string | null>;

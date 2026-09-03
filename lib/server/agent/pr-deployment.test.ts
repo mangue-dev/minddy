@@ -15,9 +15,75 @@ function json(value: unknown, status = 200) {
 }
 
 describe("pull request deployment URLs", () => {
+  it("returns the stable Vercel branch URL from the official ready PR comment", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) {
+        return json([
+          {
+            id: 1,
+            body:
+              "| minddy | ![Ready](https://vercel.com/ready.svg) [Ready](https://vercel.com/acme/app/deployment) | [Preview](https://app-git-feature-preview-acme.vercel.app) | now |",
+            user: { login: "vercel[bot]", type: "Bot" },
+            created_at: "2026-09-03T10:00:00Z",
+            html_url: "https://github.com/acme/app/pull/42#issuecomment-1",
+          },
+        ]);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "abc",
+      }),
+    ).resolves.toBe("https://app-git-feature-preview-acme.vercel.app/");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores branch URLs outside an official ready Vercel bot row", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) {
+        return json([
+          {
+            body:
+              "| app | ![Ready](https://vercel.com/ready.svg) [Ready](https://vercel.com/acme/app/deployment) | [Preview](https://untrusted.example.com) | now |",
+            user: { login: "vercel[bot]", type: "User" },
+          },
+          {
+            body:
+              "| app | ![Building](https://vercel.com/building.svg) [Building](https://vercel.com/acme/app/deployment) | [Preview](https://pending.example.com) | now |",
+            user: { login: "vercel[bot]", type: "Bot" },
+          },
+        ]);
+      }
+      if (url.includes("ref=feature%2Fpreview")) return json([]);
+      if (url.includes("sha=abc")) return json([{ id: 1 }]);
+      return json([{ state: "success", environment_url: "https://commit.example.com" }]);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "abc",
+      }),
+    ).resolves.toBe("https://commit.example.com/");
+  });
+
   it("returns the newest successful GitHub branch environment URL", async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
       if (url.includes("/deployments?")) {
         return json([
           { id: 10, created_at: "2026-09-02T10:00:00Z" },
@@ -39,17 +105,22 @@ describe("pull request deployment URLs", () => {
       getGithubDeploymentUrl({
         token: "token",
         repoFullName: "acme/app",
+        number: 42,
         branch: "feature/preview",
         sha: "abc 123",
       }),
     ).resolves.toBe("https://preview.example.com/pr-42");
 
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("ref=feature%2Fpreview");
+    const deploymentCall = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .find((url) => url.includes("/deployments?"));
+    expect(deploymentCall).toContain("ref=feature%2Fpreview");
   });
 
   it("falls back to the GitHub head when the branch has no usable deployment", async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
       if (url.includes("ref=feature%2Fpreview")) return json([{ id: 2 }]);
       if (url.includes("sha=abc")) return json([{ id: 1 }]);
       if (url.includes("/deployments/2/statuses")) return json([{ state: "failure" }]);
@@ -61,6 +132,7 @@ describe("pull request deployment URLs", () => {
       getGithubDeploymentUrl({
         token: "token",
         repoFullName: "acme/app",
+        number: 42,
         branch: "feature/preview",
         sha: "abc",
       }),
@@ -86,7 +158,12 @@ describe("pull request deployment URLs", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      getGithubDeploymentUrl({ token: "token", repoFullName: "acme/app", sha: "abc" }),
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        sha: "abc",
+      }),
     ).resolves.toBe("https://deploy.example.com/output");
   });
 
@@ -106,7 +183,12 @@ describe("pull request deployment URLs", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      getGitlabDeploymentUrl({ token: "token", repoFullName: "acme/app", sha: "abc" }),
+      getGitlabDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        sha: "abc",
+      }),
     ).resolves.toBe("https://preview.example.com/mr-42");
 
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
@@ -137,6 +219,7 @@ describe("pull request deployment URLs", () => {
       getGitlabDeploymentUrl({
         token: "token",
         repoFullName: "acme/app",
+        number: 42,
         branch: "feature/preview",
         sha: "abc",
       }),
@@ -152,7 +235,12 @@ describe("pull request deployment URLs", () => {
     );
 
     await expect(
-      getGitlabDeploymentUrl({ token: "token", repoFullName: "acme/app", sha: "abc" }),
+      getGitlabDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        sha: "abc",
+      }),
     ).resolves.toBeNull();
   });
 });
