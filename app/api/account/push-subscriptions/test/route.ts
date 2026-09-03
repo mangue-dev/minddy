@@ -9,6 +9,7 @@ import { isApnsConfigured } from "@/lib/server/push/apns";
 import { isWnsConfigured } from "@/lib/server/push/wns";
 import { pushMessages, toPushLocale } from "@/lib/server/push/payload";
 import { sendPushToUser } from "@/lib/server/push/send";
+import { intlLocaleByLocale } from "@/i18n/config";
 
 /**
  * POST /api/account/push-subscriptions/test — rings ONE device (MIN-183).
@@ -18,8 +19,8 @@ import { sendPushToUser } from "@/lib/server/push/send";
  * stopped worker, or operating-system notification settings. This test makes
  * the result immediate, and a 410 becomes a visible purge instead of a mystery.
  *
- * The notification is sent in the language of the DEVICE, not that of the tab
- * that triggers the test: it verifies what this device will actually receive.
+ * The notification follows the account's interface language, just like every
+ * regular push, even when the selected device subscribed under an older locale.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   // belonging to another account invisible.
   const { data: device, error } = await auth.supabase
     .from("push_subscriptions")
-    .select("id, endpoint, transport, locale, enabled")
+    .select("id, endpoint, transport, enabled")
     .eq("id", deviceId)
     .maybeSingle();
 
@@ -66,7 +67,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("pushDeviceDisabled") }, { status: 409 });
   }
 
-  const locale = toPushLocale(device.locale as string | null);
+  const locale = toPushLocale(
+    typeof auth.user.user_metadata?.locale === "string"
+      ? auth.user.user_metadata.locale
+      : null,
+  );
   const tPush = createTranslator({
     locale,
     messages: pushMessages(locale),
@@ -78,12 +83,13 @@ export async function POST(request: NextRequest) {
   const tally = await sendPushToUser(
     getServiceClient(),
     auth.user.id,
-    () => ({
+    {
       title: tPush("testTitle"),
       body: tPush("testBody"),
+      lang: intlLocaleByLocale[locale],
       url: "/inbox",
       tag: "minddy-test",
-    }),
+    },
     { onlyDeviceId: device.id as string }
   );
 

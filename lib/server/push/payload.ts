@@ -9,7 +9,11 @@ import de from "@/messages/de.json";
 import ptBR from "@/messages/pt-BR.json";
 import it from "@/messages/it.json";
 import es from "@/messages/es.json";
-import { supportedLocaleForTag, type Locale } from "@/i18n/config";
+import {
+  intlLocaleByLocale,
+  supportedLocaleForTag,
+  type Locale,
+} from "@/i18n/config";
 import { displayName } from "@/lib/display-name";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import {
@@ -37,9 +41,10 @@ import type { NotificationRow } from "@/lib/server/notifications";
  * statically imported works everywhere — that's already the recipe for tests
  * (lib/describe-event-smart-assign.test.ts).
  *
- * And the language is not that of the request anyway: it's the one de
- * SUBSCRIPTION, captured by device when subscribing to it. Someone else's cookie
- * `NEXT_LOCALE` is unreadable from a background job.
+ * The language is not that of the triggering request. It is the recipient's
+ * account-level interface preference, captured from `user_metadata.locale` at
+ * the notification insertion point. That preference remains available to
+ * background jobs and keeps every device aligned with the Minddy interface.
  *
  * ## Hydration in LOT
  *
@@ -53,6 +58,8 @@ import type { NotificationRow } from "@/lib/server/notifications";
 export interface PushPayload {
   title: string;
   body: string;
+  /** BCP 47 language tag for notification renderers. */
+  lang: string;
   /** Relative path — the service worker resolves it to its origin. */
   url: string;
   /** Browser-side grouping: a burst on the same target REPLACES au
@@ -313,6 +320,7 @@ export function buildPushPayload(
   return {
     title,
     body: t(notificationLineKey(row.type, !!row.via_assistant), { actor }),
+    lang: intlLocaleByLocale[locale],
     url,
     tag: url,
   };

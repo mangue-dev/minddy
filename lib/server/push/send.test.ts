@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { PushLocale, PushPayload } from "./payload";
+import type { PushPayload } from "./payload";
 
 /**
  * MIN-183 — maintenance of the subscription base.
@@ -37,6 +37,7 @@ const webPushError = (statusCode: number) =>
 const PAYLOAD: PushPayload = {
   title: "MIN-42 · Repair the selector",
   body: "Alice commented",
+  lang: "fr-FR",
   url: "/projects/p/?issue=i",
   tag: "/projects/p/?issue=i",
 };
@@ -94,7 +95,7 @@ describe("sendPushToUser", () => {
     H.send.mockResolvedValue(undefined);
     const { service, ops } = stubService(ONE_DEVICE);
 
-    const tally = await sendPushToUser(service, "u1", () => PAYLOAD);
+    const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally).toEqual({ sent: 1, gone: 0, failed: 0 });
     expect(H.send).toHaveBeenCalledTimes(1);
@@ -123,7 +124,7 @@ describe("sendPushToUser", () => {
       },
     ]);
 
-    const tally = await sendPushToUser(service, "u1", () => PAYLOAD);
+    const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally).toEqual({ sent: 1, gone: 0, failed: 0 });
     expect(H.sendApns).toHaveBeenCalledWith(`apns:${"ab".repeat(32)}`, PAYLOAD);
@@ -148,7 +149,7 @@ describe("sendPushToUser", () => {
       },
     ]);
 
-    expect(await sendPushToUser(service, "u1", () => PAYLOAD)).toEqual({
+    expect(await sendPushToUser(service, "u1", PAYLOAD)).toEqual({
       sent: 0,
       gone: 1,
       failed: 0,
@@ -170,7 +171,7 @@ describe("sendPushToUser", () => {
       },
     ]);
 
-    expect(await sendPushToUser(service, "u1", () => PAYLOAD)).toEqual({
+    expect(await sendPushToUser(service, "u1", PAYLOAD)).toEqual({
       sent: 0,
       gone: 1,
       failed: 0,
@@ -192,7 +193,7 @@ describe("sendPushToUser", () => {
       },
     ]);
 
-    expect(await sendPushToUser(service, "u1", () => PAYLOAD)).toEqual({
+    expect(await sendPushToUser(service, "u1", PAYLOAD)).toEqual({
       sent: 0,
       gone: 0,
       failed: 1,
@@ -208,7 +209,7 @@ describe("sendPushToUser", () => {
     H.send.mockRejectedValue(webPushError(status));
     const { service, ops } = stubService(ONE_DEVICE);
 
-    const tally = await sendPushToUser(service, "u1", () => PAYLOAD);
+    const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally).toEqual({ sent: 0, gone: 1, failed: 0 });
     expect(ops).toEqual([{ table: "push_subscriptions", op: "delete", args: null }]);
@@ -221,7 +222,7 @@ describe("sendPushToUser", () => {
     H.send.mockRejectedValue(webPushError(403));
     const { service, ops } = stubService(ONE_DEVICE);
 
-    const tally = await sendPushToUser(service, "u1", () => PAYLOAD);
+    const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally).toEqual({ sent: 0, gone: 0, failed: 1 });
     expect(ops).toEqual([]);
@@ -232,7 +233,7 @@ describe("sendPushToUser", () => {
     H.send.mockRejectedValue(webPushError(status));
     const { service, ops } = stubService(ONE_DEVICE);
 
-    const tally = await sendPushToUser(service, "u1", () => PAYLOAD);
+    const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally).toEqual({ sent: 0, gone: 0, failed: 1 });
     expect(ops).toEqual([
@@ -240,21 +241,21 @@ describe("sendPushToUser", () => {
     ]);
   });
 
-  it("builds the payload once per language rather than once per device", async () => {
+  it("uses one account-localized payload across devices with stale locale values", async () => {
     H.send.mockResolvedValue(undefined);
     const { service } = stubService([
       { id: "d1", endpoint: "https://push.example/1", p256dh: "k", auth: "a", locale: "fr" },
       { id: "d2", endpoint: "https://push.example/2", p256dh: "k", auth: "a", locale: "fr-FR" },
       { id: "d3", endpoint: "https://push.example/3", p256dh: "k", auth: "a", locale: "en" },
     ]);
-    // Explicit signature: without it, `mock.calls` is typed on an empty tuple
-    // and reading `c[0]` doesn't compile.
-    const payloadFor = vi.fn<(locale: PushLocale) => PushPayload>(() => PAYLOAD);
-
-    const tally = await sendPushToUser(service, "u1", payloadFor);
+    const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally.sent).toBe(3);
-    expect(payloadFor.mock.calls.map((c) => c[0]).sort()).toEqual(["en", "fr"]);
+    expect(H.send.mock.calls.map((call) => JSON.parse(call[1]))).toEqual([
+      PAYLOAD,
+      PAYLOAD,
+      PAYLOAD,
+    ]);
   });
 
   it("sends only to the device selected by its persisted id", async () => {
@@ -264,7 +265,7 @@ describe("sendPushToUser", () => {
       { id: "d2", endpoint: "https://push.example/2", p256dh: "k", auth: "a", locale: "fr" },
     ]);
 
-    const tally = await sendPushToUser(service, "u1", () => PAYLOAD, {
+    const tally = await sendPushToUser(service, "u1", PAYLOAD, {
       onlyDeviceId: "d2",
     });
 
@@ -276,7 +277,7 @@ describe("sendPushToUser", () => {
 
   it("does not push when the payload is null", async () => {
     const { service, ops } = stubService(ONE_DEVICE);
-    const tally = await sendPushToUser(service, "u1", () => null);
+    const tally = await sendPushToUser(service, "u1", null);
     expect(tally).toEqual({ sent: 0, gone: 0, failed: 0 });
     expect(H.send).not.toHaveBeenCalled();
     expect(ops).toEqual([]);
@@ -287,7 +288,7 @@ describe("sendPushToUser", () => {
     vi.stubEnv("VAPID_PRIVATE_KEY", "");
     const { service, ops } = stubService(ONE_DEVICE);
 
-    const tally = await sendPushToUser(service, "u1", () => PAYLOAD);
+    const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally).toEqual({ sent: 0, gone: 0, failed: 0 });
     expect(H.send).not.toHaveBeenCalled();

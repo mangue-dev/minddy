@@ -18,8 +18,8 @@ import { sendPushToUser } from "@/lib/server/push/send";
 import { sendInvitationEmail } from "@/lib/server/invitation-email";
 import { capability } from "@/lib/server/capabilities";
 import type { Invitation } from "@/lib/types";
-import type { Locale } from "@/i18n/config";
-import { pushMessages } from "@/lib/server/push/payload";
+import { intlLocaleByLocale, type Locale } from "@/i18n/config";
+import { pushMessages, toPushLocale } from "@/lib/server/push/payload";
 
 /**
  * Shared project-membership cores, used by /api/projects/[id]/members and the
@@ -301,21 +301,27 @@ function pushInvitation(inviteeId: string, inviterId: string): void {
   if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
     const service = getServiceClient();
-    const inviters = await fetchAuthUsersById(service, [inviterId]);
+    const [inviters, { data: inviteeData }] = await Promise.all([
+      fetchAuthUsersById(service, [inviterId]),
+      service.auth.admin.getUserById(inviteeId),
+    ]);
     const inviterName = displayName(toNamed(inviters.get(inviterId)), "");
+    const locale = toPushLocale(
+      typeof inviteeData?.user?.user_metadata?.locale === "string"
+        ? inviteeData.user.user_metadata.locale
+        : null,
+    );
+    const messages = pushMessages(locale);
+    const t = createTranslator({ locale, messages, namespace: "Inbox" });
 
-    await sendPushToUser(service, inviteeId, (locale) => {
-      const messages = pushMessages(locale);
-      const t = createTranslator({ locale, messages, namespace: "Inbox" });
-      return {
-        // The title is the NAME OF THE THING everywhere else (the ticket, the
-        // back) ; for an invitation, the thing is the inbox itself, where the
-        // response is given.
-        title: t("groupInvitations"),
-        body: t("lineInvitation", { actor: inviterName || t("someone") }),
-        url: "/inbox",
-        tag: "/inbox",
-      };
+    await sendPushToUser(service, inviteeId, {
+      // The title names the destination because an invitation has no issue,
+      // page, or other target entity of its own.
+      title: t("groupInvitations"),
+      body: t("lineInvitation", { actor: inviterName || t("someone") }),
+      lang: intlLocaleByLocale[locale],
+      url: "/inbox",
+      tag: "/inbox",
     });
   });
 }

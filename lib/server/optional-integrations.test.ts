@@ -118,7 +118,13 @@ describe("missing integrations", () => {
 
   it("opens no push transport and hides forges", async () => {
     expect(configureWebPush()).toBe(false);
-    expect(await sendApnsNotification("apns:device", { title: "T", body: "B", url: "/", tag: "test" }))
+    expect(await sendApnsNotification("apns:device", {
+      title: "T",
+      body: "B",
+      lang: "en-GB",
+      url: "/",
+      tag: "test",
+    }))
       .toEqual({ status: 0, reason: "NotConfigured" });
     expect(isGithubAppConfigured()).toBe(false);
     expect(isGitlabConfigured()).toBe(false);

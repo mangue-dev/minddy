@@ -35,6 +35,9 @@ self.addEventListener("push", (event) => {
   const title = data.title || "minddy";
   const options = {
     body: data.body || "",
+    // Declaring the content language lets the platform choose the matching
+    // localization for surrounding system UI where supported.
+    lang: data.lang || "",
     icon: ICON,
     badge: ICON,
     // The `tag` is the destination path: two notifications on the same

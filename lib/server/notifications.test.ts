@@ -35,7 +35,26 @@ const H = vi.hoisted(() => ({
   loadPushContext: vi.fn<(service: unknown, rows: unknown) => Promise<never>>(
     async () => ({}) as never
   ),
-  buildPushPayload: vi.fn(() => ({ title: "T", body: "B", url: "/u", tag: "/u" })),
+  toPushLocale: vi.fn((raw: string | null | undefined) => {
+    if (raw?.toLowerCase().startsWith("fr")) return "fr";
+    if (raw?.toLowerCase().startsWith("de")) return "de";
+    return "en";
+  }),
+  buildPushPayload: vi.fn<
+    (context: unknown, row: unknown, locale: string) => {
+      title: string;
+      body: string;
+      lang: string;
+      url: string;
+      tag: string;
+    }
+  >(() => ({
+    title: "T",
+    body: "B",
+    lang: "en-GB",
+    url: "/u",
+    tag: "/u",
+  })),
 }));
 
 vi.mock("next/server", () => ({ after: H.after }));
@@ -43,6 +62,7 @@ vi.mock("./push/send", () => ({ sendPushToUser: H.sendPushToUser }));
 vi.mock("./push/payload", () => ({
   loadPushContext: H.loadPushContext,
   buildPushPayload: H.buildPushPayload,
+  toPushLocale: H.toPushLocale,
 }));
 
 const { insertNotifications } = await import("./notifications");
@@ -132,11 +152,17 @@ beforeEach(() => {
   H.sendPushToUser.mockClear();
   H.loadPushContext.mockClear();
   H.buildPushPayload.mockClear();
+  H.toPushLocale.mockClear();
 });
 
 describe("insertNotifications — volet push (MIN-183)", () => {
   it("pushes to each recipient after a successful insert", async () => {
-    const { service, inserted } = stubService({});
+    const { service, inserted } = stubService({
+      prefs: {
+        [ALICE]: { locale: "fr" },
+        [BOB]: { locale: "de-DE" },
+      },
+    });
 
     await insertNotifications(service, [commentRow(ALICE), commentRow(BOB)]);
 
@@ -147,6 +173,10 @@ describe("insertNotifications — volet push (MIN-183)", () => {
 
     await runScheduledWork();
     expect(H.sendPushToUser.mock.calls.map((c) => c[1])).toEqual([ALICE, BOB]);
+    expect(H.buildPushPayload.mock.calls.map((call) => call[2])).toEqual([
+      "fr",
+      "de",
+    ]);
     // Just one hydration for the whole lot.
     expect(H.loadPushContext).toHaveBeenCalledTimes(1);
   });

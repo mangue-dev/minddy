@@ -10,7 +10,12 @@ import {
 import { afterOrNow } from "@/lib/server/after-safe";
 import { isPushConfigured } from "@/lib/server/push/vapid";
 import { isApnsConfigured } from "@/lib/server/push/apns";
-import { buildPushPayload, loadPushContext } from "@/lib/server/push/payload";
+import {
+  buildPushPayload,
+  loadPushContext,
+  toPushLocale,
+  type PushLocale,
+} from "@/lib/server/push/payload";
 import { sendPushToUser } from "@/lib/server/push/send";
 
 export interface NotificationRow {
@@ -87,15 +92,21 @@ export async function insertNotifications(
   // producer funnels through. Fail-open — a prefs read error never censors.
   const userIds = [...new Set(rows.map((r) => r.user_id))];
   const prefsById = new Map<string, NotificationPrefs>();
+  const localeByUserId = new Map<string, PushLocale>();
   await Promise.all(
     userIds.map(async (uid) => {
       try {
         const { data } = await service.auth.admin.getUserById(uid);
-        prefsById.set(
+        const metadata = (data?.user?.user_metadata ?? null) as Record<
+          string,
+          unknown
+        > | null;
+        prefsById.set(uid, resolveNotificationPrefs(metadata));
+        localeByUserId.set(
           uid,
-          resolveNotificationPrefs(
-            (data?.user?.user_metadata ?? null) as Record<string, unknown> | null
-          )
+          toPushLocale(
+            typeof metadata?.locale === "string" ? metadata.locale : null,
+          ),
         );
       } catch (e) {
         console.error("[notifications] prefs read failed:", (e as Error).message);
@@ -186,20 +197,29 @@ export async function insertNotifications(
   // request (automation cascades, end of agent run, crons). A `void`
   // detached would die with the response, in “TypeError: fetch failed” (cf.
   // lib/server/after-safe.ts).
-  if (inserted.length > 0) pushNotifications(service, inserted);
+  if (inserted.length > 0) {
+    pushNotifications(service, inserted, localeByUserId);
+  }
 }
 
 /** The push pane of `insertNotifications`, isolated to read alone. Best-effort
  end-to-end: Nothing that follows goes back to the caller. */
-function pushNotifications(service: SupabaseClient, kept: NotificationRow[]): void {
+function pushNotifications(
+  service: SupabaseClient,
+  kept: NotificationRow[],
+  localeByUserId: ReadonlyMap<string, PushLocale>,
+): void {
   if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
     const ctx = await loadPushContext(service, kept);
     // Sequential by recipient: `sendPushToUser` already parallelizes by
     // device, and an insert is rarely aimed at more than a handful of people.
     for (const row of kept) {
-      await sendPushToUser(service, row.user_id, (locale) =>
-        buildPushPayload(ctx, row, locale)
+      const locale = localeByUserId.get(row.user_id) ?? "en";
+      await sendPushToUser(
+        service,
+        row.user_id,
+        buildPushPayload(ctx, row, locale),
       );
     }
   });

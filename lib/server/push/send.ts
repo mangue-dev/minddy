@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { configureWebPush } from "./vapid";
 import { sendApnsNotification } from "./apns";
 import { sendWnsNotification } from "./wns";
-import { toPushLocale, type PushLocale, type PushPayload } from "./payload";
+import type { PushPayload } from "./payload";
 import { sendPinnedWebPushNotification } from "./web";
 
 /**
@@ -46,7 +46,6 @@ export interface PushSubscriptionRow {
   transport?: "web" | "apns" | "wns";
   p256dh: string | null;
   auth: string | null;
-  locale: string | null;
 }
 
 const CONCURRENCY = 5;
@@ -197,7 +196,7 @@ export async function activeSubscriptionsOf(
 ): Promise<PushSubscriptionRow[]> {
   const { data, error } = await service
     .from("push_subscriptions")
-    .select("id, endpoint, transport, p256dh, auth, locale")
+    .select("id, endpoint, transport, p256dh, auth")
     .eq("user_id", userId)
     .eq("enabled", true);
   if (error) {
@@ -210,14 +209,14 @@ export async function activeSubscriptionsOf(
 /**
  * Pushes to all active devices in an account.
  *
- * `payloadFor` is called once per language rather than once per device. Two phones
- * using the same locale share the wording and one next-intl formatter. Returning
- * `null` for a disappeared target sends nothing for that language.
+ * The payload is already localized from the account's interface preference by
+ * the caller. Every active device receives those same words, so an old locale
+ * captured when a device subscribed cannot make notifications drift from the UI.
  */
 export async function sendPushToUser(
   service: SupabaseClient,
   userId: string,
-  payloadFor: (locale: PushLocale) => PushPayload | null,
+  payload: PushPayload | null,
   opts: { onlyDeviceId?: string } = {}
 ): Promise<{ sent: number; gone: number; failed: number }> {
   const tally = { sent: 0, gone: 0, failed: 0 };
@@ -226,18 +225,9 @@ export async function sendPushToUser(
     subs = subs.filter((subscription) => subscription.id === opts.onlyDeviceId);
   }
   if (subs.length === 0) return tally;
+  if (!payload) return tally;
 
-  const payloads = new Map<PushLocale, PushPayload | null>();
-  const payloadCached = (locale: PushLocale): PushPayload | null => {
-    if (!payloads.has(locale)) payloads.set(locale, payloadFor(locale));
-    return payloads.get(locale) ?? null;
-  };
-
-  const tasks = subs.flatMap((sub) => {
-    const payload = payloadCached(toPushLocale(sub.locale));
-    if (!payload) return [];
-    return [() => sendToSubscription(service, sub, payload)];
-  });
+  const tasks = subs.map((sub) => () => sendToSubscription(service, sub, payload));
 
   for (const outcome of await inBatches(tasks)) {
     if (outcome === "sent") tally.sent++;
