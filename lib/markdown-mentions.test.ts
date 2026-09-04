@@ -23,6 +23,11 @@ describe("markdown persisted mentions", () => {
         id: "page-roadmap",
         label: "Roadmap",
       },
+      {
+        type: "objective",
+        id: "objective-roadmap",
+        label: "Roadmap",
+      },
     ];
     const mentionLinks: MentionLinks = {
       href: (type, id) => `/${type}/${id}`,
@@ -31,7 +36,7 @@ describe("markdown persisted mentions", () => {
 
     const html = renderToStaticMarkup(
       createElement(Markdown, {
-        children: "Plan @Roadmap, document **@Roadmap**",
+        children: "Plan @Roadmap, document **@Roadmap**, revisit _@Roadmap_",
         resolvedMentions,
         mentionLinks,
       }),
@@ -39,5 +44,8 @@ describe("markdown persisted mentions", () => {
 
     expect(html).toContain('href="/objective/objective-roadmap"');
     expect(html).toContain('href="/page/page-roadmap"');
+    expect(html.match(/href="\/objective\/objective-roadmap"/g)).toHaveLength(
+      2,
+    );
   });
 });

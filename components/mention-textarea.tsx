@@ -269,14 +269,17 @@ function serialize(root: HTMLElement): string {
   return parts.join("");
 }
 
-function collectAssistantMentions(root: HTMLElement): AssistantMention[] {
+function collectAssistantMentions(
+  root: HTMLElement,
+  preserveOccurrences: boolean,
+): AssistantMention[] {
   const seen = new Set<string>();
   const mentions: AssistantMention[] = [];
   for (const node of root.querySelectorAll<HTMLElement>("[data-mention-id]")) {
     const option = slotOption(node);
     if (!option || option.type === "numo" || option.type === "forge") continue;
     const key = `${option.type}:${option.id}`;
-    if (seen.has(key)) continue;
+    if (!preserveOccurrences && seen.has(key)) continue;
     seen.add(key);
     mentions.push({
       type: option.type,
@@ -306,6 +309,7 @@ export function MentionTextarea({
   members = [],
   mentions,
   hydrationMentions = EMPTY_ASSISTANT_MENTIONS,
+  preserveMentionOccurrences = false,
   forgeMembers,
   onMentionQuery,
   focusSignal,
@@ -330,6 +334,8 @@ export function MentionTextarea({
   mentions?: MarkdownEditorMentions;
   /** Persisted identities used before live sources when rebuilding saved tokens. */
   hydrationMentions?: AssistantMention[];
+  /** Keep DOM occurrence order when homonymous identities must round-trip. */
+  preserveMentionOccurrences?: boolean;
   /**__KEEP_NL_TOKEN__ * The FORGE accounts (MIN-162). Present = this field writes a comment__KEEP_NL_TOKEN__ * from pull request: suggestions come from there, and `members` is ignored.__KEEP_NL_TOKEN__ * A `@` ends up there at GitHub, where quoting a minddy member without a git account does not__KEEP_NL_TOKEN__ * would notify anyone — so the two sources don't mix never.__KEEP_NL_TOKEN__ */
   forgeMembers?: Array<{
     login: string;
@@ -625,9 +631,9 @@ export function MentionTextarea({
     (el: HTMLElement) => {
       const text = serialize(el);
       emitted.current = text;
-      onChange(text, collectAssistantMentions(el));
+      onChange(text, collectAssistantMentions(el, preserveMentionOccurrences));
     },
-    [onChange],
+    [onChange, preserveMentionOccurrences],
   );
 
   /** Restores the content from the text: each recognized mention becomes a __KEEP_NL_TOKEN__ envelope, the rest of the text nodes and line breaks. */

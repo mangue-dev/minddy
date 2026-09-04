@@ -6,7 +6,6 @@ import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionLinksProvider } from "@/components/mention-links";
 import { MentionTextarea } from "@/components/mention-textarea";
 import type { AssistantMention } from "@/lib/assistant-types";
-import { containsMentionToken } from "@/lib/mention-token";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
@@ -54,18 +53,9 @@ export function RoutinePromptField({
 
   const update = (text: string, resolvedMentions: AssistantMention[]) => {
     const nextText = text.slice(0, MAX_PROMPT_LENGTH);
-    const nextResolvedMentions = resolvedMentions.filter((mention) =>
-      containsMentionToken(nextText, mention.label),
-    );
-    const resolved = new Set(
-      nextResolvedMentions.map((mention) => `${mention.type}:${mention.id}`),
-    );
-    const preserved = mentions.filter(
-      (mention) =>
-        containsMentionToken(nextText, mention.label) &&
-        !resolved.has(`${mention.type}:${mention.id}`),
-    );
-    onChange(nextText, [...nextResolvedMentions, ...preserved]);
+    // The editor emits the exact chip occurrences from its DOM. Re-inferring
+    // them from labels would make "Alice" ambiguous with "Alice Smith".
+    onChange(nextText, text === nextText ? resolvedMentions : []);
   };
 
   return (
@@ -77,6 +67,7 @@ export function RoutinePromptField({
           onChange={update}
           mentions={mentionSupport}
           hydrationMentions={mentions}
+          preserveMentionOccurrences
           skills={repositorySkills.skills}
           loadSkill={repositorySkills.load}
           disabled={disabled}

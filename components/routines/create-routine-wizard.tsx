@@ -11,7 +11,10 @@ import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { SettingsRow } from "@/components/settings/settings-ui";
-import { WizardDialog, type WizardStep } from "@/components/wizard/wizard-dialog";
+import {
+  WizardDialog,
+  type WizardStep,
+} from "@/components/wizard/wizard-dialog";
 import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
 import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
@@ -19,9 +22,16 @@ import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
-import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
+import {
+  useAgentModelsQuery,
+  useReasoningLevelsFor,
+} from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import { createRoutineApi, runRoutineNowApi, type Routine } from "@/lib/routines-api";
+import {
+  createRoutineApi,
+  runRoutineNowApi,
+  type Routine,
+} from "@/lib/routines-api";
 import {
   browserTimezone,
   describeSchedule,
@@ -29,7 +39,10 @@ import {
   weekdayName,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
-import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import {
+  nearestReasoningLevel,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
 import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
@@ -59,7 +72,11 @@ type StepId = "project" | "job" | "model" | "schedule" | "done";
 /** Pre-written instructions for step `job` — the blank page is the real one
     obstacle of this step, and these three describe what a routine does
     better: return to what we never look at spontaneously. */
-const EXAMPLE_KEYS = ["exampleSecurity", "exampleDeps", "exampleTests"] as const;
+const EXAMPLE_KEYS = [
+  "exampleSecurity",
+  "exampleDeps",
+  "exampleTests",
+] as const;
 
 export function CreateRoutineWizard({
   open,
@@ -81,7 +98,8 @@ export function CreateRoutineWizard({
   const locale = useLocale();
   const { user } = useAuth();
   const { projects } = useProjects();
-  const { projectIds: gitLinked, loading: gitLoading } = useGitLinkedProjectsQuery();
+  const { projectIds: gitLinked, loading: gitLoading } =
+    useGitLinkedProjectsQuery();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
 
@@ -92,19 +110,21 @@ export function CreateRoutineWizard({
    */
   const eligible = useMemo(
     () =>
-      projects.filter(
-        (p) => p.owner_id === user?.id && gitLinked.has(p.id),
-      ),
+      projects.filter((p) => p.owner_id === user?.id && gitLinked.has(p.id)),
     [projects, gitLinked, user?.id],
   );
 
-  const [chosenProjectId, setChosenProjectId] = useState(initialProjectId ?? "");
+  const [chosenProjectId, setChosenProjectId] = useState(
+    initialProjectId ?? "",
+  );
   const [prompt, setPrompt] = useState("");
   const [promptMentions, setPromptMentions] = useState<AssistantMention[]>([]);
   const [model, setModel] = useState("");
   const [reasoning, setReasoning] = useState<ReasoningLevel | null>(null);
   // The levels of the model that this routine will rotate (see composing it).
-  const reasoningLevels = useReasoningLevelsFor(model || defaultModel || providerDefaultModel);
+  const reasoningLevels = useReasoningLevelsFor(
+    model || defaultModel || providerDefaultModel,
+  );
   /** "" = the default branch of the repository, which is the common case. */
   const [baseBranch, setBaseBranch] = useState("");
   /** What a passage is allowed to spend, as a % of the monthly budget. */
@@ -150,7 +170,8 @@ export function CreateRoutineWizard({
    */
   const skipProject = !!initialProjectId || eligible.length === 1;
   const projectId =
-    chosenProjectId || (skipProject ? (initialProjectId ?? eligible[0]?.id ?? "") : "");
+    chosenProjectId ||
+    (skipProject ? (initialProjectId ?? eligible[0]?.id ?? "") : "");
 
   const reset = () => {
     setChosenProjectId(initialProjectId ?? "");
@@ -205,7 +226,10 @@ export function CreateRoutineWizard({
       // different, and the one we display is the one we need to correct.
       const code = (err as { code?: string }).code;
       return {
-        error: code === "unknownTimezone" ? "error_unknownTimezone" : "error_invalidSchedule",
+        error:
+          code === "unknownTimezone"
+            ? "error_unknownTimezone"
+            : "error_invalidSchedule",
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -268,7 +292,11 @@ export function CreateRoutineWizard({
             {t("noEligibleProject")}
           </p>
         ) : (
-          <div className="flex flex-col gap-1" role="radiogroup" aria-label={t("stepProjectTitle")}>
+          <div
+            className="flex flex-col gap-1"
+            role="radiogroup"
+            aria-label={t("stepProjectTitle")}
+          >
             {eligible.map((p) => (
               <button
                 key={p.id}
@@ -276,6 +304,7 @@ export function CreateRoutineWizard({
                 role="radio"
                 aria-checked={projectId === p.id}
                 onClick={() => {
+                  if (p.id !== projectId) setPromptMentions([]);
                   setChosenProjectId(p.id);
                   setStepIndex((i) => i + 1);
                 }}
@@ -286,8 +315,14 @@ export function CreateRoutineWizard({
                     : "border-border hover:border-brand/40 hover:bg-muted/30",
                 )}
               >
-                <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-5 shrink-0" />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.name}</span>
+                <ProjectOrb
+                  seed={projectOrbSeed(p)}
+                  iconUrl={p.icon_url}
+                  className="size-5 shrink-0"
+                />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {p.name}
+                </span>
               </button>
             ))}
           </div>
@@ -333,7 +368,6 @@ export function CreateRoutineWizard({
               </button>
             ))}
           </div>
-
         </div>
       ),
     },

@@ -57,6 +57,23 @@ describe("agent mentions", () => {
     ]);
   });
 
+  it("prefers a complete multiword label over its whitespace prefix", () => {
+    const alice = {
+      type: "member" as const,
+      id: "alice",
+      label: "Alice",
+    };
+    const aliceSmith = {
+      type: "member" as const,
+      id: "alice-smith",
+      label: "Alice Smith",
+    };
+
+    expect(
+      splitAssistantMentionTokens("Ask @Alice Smith", [alice, aliceSmith]),
+    ).toEqual([{ text: "Ask " }, { mention: aliceSmith, raw: "@Alice Smith" }]);
+  });
+
   it("keeps the persisted identity when a live entity could share its label", () => {
     const objective = {
       type: "objective" as const,
@@ -83,15 +100,17 @@ describe("agent mentions", () => {
     };
 
     expect(
-      splitAssistantMentionTokens("Ask @Roadmap, then review @Roadmap", [
-        objective,
-        member,
-      ]),
+      splitAssistantMentionTokens(
+        "Ask @Roadmap, then review @Roadmap, then return to @Roadmap",
+        [objective, member, objective],
+      ),
     ).toEqual([
       { text: "Ask " },
       { mention: objective, raw: "@Roadmap" },
       { text: ", then review " },
       { mention: member, raw: "@Roadmap" },
+      { text: ", then return to " },
+      { mention: objective, raw: "@Roadmap" },
     ]);
   });
 });
