@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { parseAgentMentions } from "@/lib/agent-mentions";
 import { deleteRoutine, getRoutineForUser, updateRoutine } from "@/lib/server/routines";
 import { routineErrorResponse } from "../route";
 
@@ -62,6 +63,9 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     // Only the PRESENT fields leave: the factory distinguishes “absent” from
     // "emptied", and a `undefined` passing through would erase a chosen model.
     ...(body.prompt !== undefined ? { prompt: str(body.prompt, MAX_PROMPT_LENGTH) } : {}),
+    ...(body.promptMentions !== undefined
+      ? { promptMentions: parseAgentMentions(body.promptMentions) }
+      : {}),
     ...(body.model !== undefined ? { model: str(body.model, MAX_SHORT_FIELD) || null } : {}),
     ...(body.reasoningLevel !== undefined
       ? { reasoningLevel: str(body.reasoningLevel, 32) }

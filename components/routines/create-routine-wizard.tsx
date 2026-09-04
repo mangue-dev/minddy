@@ -30,6 +30,7 @@ import {
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
 import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
  * Set up a ROUTINE (MIN-185), by hand: where, what, with what model, at what
@@ -99,6 +100,7 @@ export function CreateRoutineWizard({
 
   const [chosenProjectId, setChosenProjectId] = useState(initialProjectId ?? "");
   const [prompt, setPrompt] = useState("");
+  const [promptMentions, setPromptMentions] = useState<AssistantMention[]>([]);
   const [model, setModel] = useState("");
   const [reasoning, setReasoning] = useState<ReasoningLevel | null>(null);
   // The levels of the model that this routine will rotate (see composing it).
@@ -153,6 +155,7 @@ export function CreateRoutineWizard({
   const reset = () => {
     setChosenProjectId(initialProjectId ?? "");
     setPrompt("");
+    setPromptMentions([]);
     setModel("");
     setReasoning(null);
     setSpendCap(DEFAULT_MAX_SPEND_PERCENT);
@@ -219,6 +222,7 @@ export function CreateRoutineWizard({
       const { routine } = await createRoutineApi({
         projectId,
         prompt: prompt.trim(),
+        promptMentions,
         model: model || null,
         reasoningLevel: reasoning ?? defaultReasoningLevel,
         baseBranch: baseBranch || null,
@@ -301,8 +305,13 @@ export function CreateRoutineWizard({
               same dictation, same input ceiling, same limited height. */}
           <RoutinePromptField
             autoFocus
+            projectId={projectId}
             value={prompt}
-            onChange={setPrompt}
+            mentions={promptMentions}
+            onChange={(value, mentions) => {
+              setPrompt(value);
+              setPromptMentions(mentions);
+            }}
             disabled={creating}
           />
 
@@ -314,7 +323,10 @@ export function CreateRoutineWizard({
               <button
                 key={key}
                 type="button"
-                onClick={() => setPrompt(t(key))}
+                onClick={() => {
+                  setPrompt(t(key));
+                  setPromptMentions([]);
+                }}
                 className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
               >
                 {t(`${key}Label` as "exampleSecurityLabel")}

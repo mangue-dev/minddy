@@ -14,6 +14,7 @@ import {
 } from "@/components/markdown-link";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
+import { SkillChip } from "@/components/assistant/skill-chip";
 import { useMentionLinks, type MentionLinks } from "@/components/mention-links";
 import {
   memberLabel,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/mention-scan";
 import { forgeImageSrc } from "@/lib/forge-image-assets";
 import { usePrEndpoint } from "@/lib/pr-endpoint-context";
+import type { RepositorySkillSummary } from "@/lib/repository-skills";
 import type { Member } from "@/lib/types";
 
 /* Minimal hast node shape — enough to walk text nodes and inject mention spans. */
@@ -114,6 +116,57 @@ function rehypeMentions(scan: MentionScan) {
   return () => (tree: HastNode) => walk(tree);
 }
 
+/** Replace only known repository skill tokens; arbitrary slash text remains text. */
+function rehypeSkills(skills: RepositorySkillSummary[]) {
+  const sorted = [...skills].sort((a, b) => b.name.length - a.name.length);
+  const pattern = sorted
+    .map((skill) => skill.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const split = (value: string): HastNode[] => {
+    if (!pattern) return [{ type: "text", value }];
+    const expression = new RegExp(`(^|\\s)/(${pattern})(?=\\s|$)`, "g");
+    const out: HastNode[] = [];
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = expression.exec(value)) !== null) {
+      if (match.index > last) {
+        out.push({ type: "text", value: value.slice(last, match.index) });
+      }
+      if (match[1]) out.push({ type: "text", value: match[1] });
+      const index = sorted.findIndex((skill) => skill.name === match?.[2]);
+      out.push(
+        index >= 0
+          ? {
+              type: "element",
+              tagName: "span",
+              properties: { "data-skill-index": String(index) },
+              children: [],
+            }
+          : { type: "text", value: match[0] },
+      );
+      last = match.index + match[0].length;
+    }
+    if (last < value.length) out.push({ type: "text", value: value.slice(last) });
+    return out;
+  };
+
+  const walk = (node: HastNode) => {
+    if (!node.children || node.tagName === "code" || node.tagName === "pre") return;
+    const next: HastNode[] = [];
+    for (const child of node.children) {
+      if (child.type === "text" && child.value?.includes("/")) {
+        next.push(...split(child.value));
+      } else {
+        walk(child);
+        next.push(child);
+      }
+    }
+    node.children = next;
+  };
+
+  return () => (tree: HastNode) => walk(tree);
+}
+
 /**
  * A beacon rendered as is, just dressed up.
  *
@@ -143,11 +196,14 @@ function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string
 function rehypeChain(
   scan: MentionScan | undefined,
   allowRawHtml: boolean,
+  skills: RepositorySkillSummary[] | undefined,
 ): Options["rehypePlugins"] {
   const chain: NonNullable<Options["rehypePlugins"]> = allowRawHtml
     ? [rehypeRaw, [rehypeSanitize, defaultSchema]]
     : [[rehypeSanitize, defaultSchema]];
-  return scan ? [...chain, rehypeMentions(scan)] : chain;
+  if (scan) chain.push(rehypeMentions(scan));
+  if (skills?.length) chain.push(rehypeSkills(skills));
+  return chain;
 }
 
 /** Renders markdown (GFM) with minimal, token-aware styling. Raw HTML is kept
@@ -163,6 +219,7 @@ function MarkdownRenderer({
   members,
   mentionScan,
   mentionLinks,
+  skills,
   allowRawHtml = false,
   linkVariant = "app",
 }: {
@@ -173,6 +230,8 @@ function MarkdownRenderer({
   mentionScan?: MentionScan;
   /** Navigation rules paired with `mentionScan`. */
   mentionLinks?: MentionLinks;
+  /** Repository skill tokens to render as skill chips. */
+  skills?: RepositorySkillSummary[];
   /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
   allowRawHtml?: boolean;
   /** Forge-authored PR content keeps conventional links and image buttons intact. */
@@ -204,7 +263,7 @@ function MarkdownRenderer({
         // plans. Without it, a message written in three lines would be delivered in just one
         // paragraph: the most visible difference in “text rendering”.
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={rehypeChain(scan, allowRawHtml)}
+        rehypePlugins={rehypeChain(scan, allowRawHtml, skills)}
         components={{
           p: styled("p", "my-3"),
           a: (props) => {
@@ -316,6 +375,10 @@ function MarkdownRenderer({
           hr: () => <hr className="my-4 border-border" />,
           span: ({ node, ...props }) => {
             const p = node?.properties ?? {};
+            const skillIndex = Number(p["data-skill-index"]);
+            if (Number.isInteger(skillIndex) && skills?.[skillIndex]) {
+              return <SkillChip name={skills[skillIndex].name} />;
+            }
             const type = p["data-mention-type"] as string | undefined;
             if (type === "numo") {
               return <MentionChip type="numo" id={NUMO_MENTION_ID} label="Numo" />;

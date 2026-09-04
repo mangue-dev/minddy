@@ -8,6 +8,7 @@ import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import type { AssistantMention } from "@/lib/assistant-types";
 import {
   DEFAULT_MAX_SPEND_PERCENT,
   NO_SPEND_CAP_PERCENT,
@@ -48,6 +49,7 @@ export interface Routine {
   owner_id: string;
   title: string;
   prompt: string;
+  prompt_mentions: AssistantMention[];
   model: string | null;
   reasoning_level: ReasoningLevel;
   base_branch: string | null;
@@ -150,6 +152,7 @@ export interface CreateRoutineInput {
  *, and it diverged from the instruction from the first rewrite.
  */
   prompt: string;
+  promptMentions?: AssistantMention[] | null;
   model?: string | null;
   reasoningLevel?: string | null;
   baseBranch?: string | null;
@@ -307,6 +310,7 @@ export async function createRoutine(
       owner_id: input.actorId,
       title,
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
+      prompt_mentions: input.promptMentions?.length ? input.promptMentions : [],
       model,
       reasoning_level: isReasoningLevel(input.reasoningLevel)
         ? input.reasoningLevel
@@ -346,6 +350,7 @@ export interface UpdateRoutineInput {
   actorId: string;
   /** Rewrite the instruction REDOES the title: cf. `titleFor`. */
   prompt?: string;
+  promptMentions?: AssistantMention[] | null;
   model?: string | null;
   reasoningLevel?: string | null;
   baseBranch?: string | null;
@@ -395,7 +400,13 @@ export async function updateRoutine(
     // which we read in the column to decide if it is still useful.
     if (prompt !== routine.prompt) {
       updates.title = await titleFor(prompt, input.actorId, routine.project_id);
+      if (input.promptMentions === undefined) updates.prompt_mentions = [];
     }
+  }
+  if (input.promptMentions !== undefined) {
+    updates.prompt_mentions = input.promptMentions?.length
+      ? input.promptMentions
+      : [];
   }
   if ("model" in input) {
     const model = input.model?.trim() ? input.model.trim().slice(0, MAX_MODEL_LENGTH) : null;

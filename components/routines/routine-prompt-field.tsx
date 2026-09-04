@@ -1,9 +1,14 @@
 "use client";
 
-import { Textarea } from "mangue-ui";
 import { useTranslations } from "next-intl";
 
 import { DictateButton } from "@/components/ai-elements/dictate-button";
+import { MentionLinksProvider } from "@/components/mention-links";
+import { MentionTextarea } from "@/components/mention-textarea";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useMembersQuery } from "@/lib/use-members-query";
+import { useRepositorySkills } from "@/lib/use-repository-skills";
 
 /** Hard ceiling of an instruction, server side like here (`MAX_PROMPT_LENGTH`). */
 const MAX_PROMPT_LENGTH = 20000;
@@ -26,40 +31,70 @@ const MAX_PROMPT_LENGTH = 20000;
  * line passes underneath.
  */
 export function RoutinePromptField({
+  projectId,
   value,
+  mentions = [],
   onChange,
   disabled,
   autoFocus,
 }: {
+  projectId: string;
   value: string;
-  onChange: (value: string) => void;
+  mentions?: AssistantMention[];
+  onChange: (value: string, mentions: AssistantMention[]) => void;
   /** Grays out dictation during writing in progress (creation, recording). */
   disabled?: boolean;
   autoFocus?: boolean;
 }) {
   const t = useTranslations("Routines");
+  const { members } = useMembersQuery(projectId || null, !!projectId);
+  const mentionSupport = useDescriptionMentions(projectId || null, members);
+  const repositorySkills = useRepositorySkills(projectId || null);
+
+  const update = (text: string, resolvedMentions: AssistantMention[]) => {
+    const nextText = text.slice(0, MAX_PROMPT_LENGTH);
+    const nextResolvedMentions = resolvedMentions.filter((mention) =>
+      nextText.includes(`@${mention.label}`),
+    );
+    const resolved = new Set(
+      nextResolvedMentions.map((mention) => `${mention.type}:${mention.id}`),
+    );
+    const preserved = mentions.filter(
+      (mention) =>
+        nextText.includes(`@${mention.label}`) &&
+        !resolved.has(`${mention.type}:${mention.id}`),
+    );
+    onChange(nextText, [
+      ...nextResolvedMentions,
+      ...preserved,
+    ]);
+  };
 
   return (
-    <div className="relative">
-      <Textarea
-        autoFocus={autoFocus}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={t("promptPlaceholder")}
-        aria-label={t("promptLabel")}
-        maxLength={MAX_PROMPT_LENGTH}
-        rows={6}
-        className="max-h-64 min-h-36 resize-none overflow-y-auto pb-12"
-      />
-      {/* Dictation ADDS to what is already there, it does not replace it: on
- completes a voice instruction as often as one dictates one. */}
-      <DictateButton
-        floating
-        disabled={disabled}
-        onTranscription={(text) =>
-          onChange(value.trim() ? `${value.trim()} ${text}` : text)
-        }
-      />
-    </div>
+    <MentionLinksProvider value={mentionSupport.links ?? null}>
+      <div className="relative">
+        <MentionTextarea
+          autoFocus={autoFocus}
+          value={value}
+          onChange={update}
+          mentions={mentionSupport}
+          skills={repositorySkills.skills}
+          loadSkill={repositorySkills.load}
+          disabled={disabled}
+          placeholder={t("promptPlaceholder")}
+          ariaLabel={t("promptLabel")}
+          rows={6}
+          className="max-h-64 min-h-36 pb-12"
+        />
+        {/* Dictation appends to the existing instruction. */}
+        <DictateButton
+          floating
+          disabled={disabled}
+          onTranscription={(text) =>
+            update(value.trim() ? `${value.trim()} ${text}` : text, mentions)
+          }
+        />
+      </div>
+    </MentionLinksProvider>
   );
 }

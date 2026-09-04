@@ -71,6 +71,7 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     userId: routine.owner_id,
     triggeredBy: "routine",
     prompt: routine.prompt,
+    promptMentions: routine.prompt_mentions,
     title: routine.title,
     ...(routine.model ? { model: routine.model, forced: true } : {}),
     reasoningLevel: routine.reasoning_level,

@@ -67,6 +67,10 @@ import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-mode
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useMembersQuery } from "@/lib/use-members-query";
+import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { calendarDaysBetween } from "@/lib/due-date";
 import {
   describeSchedule,
@@ -209,6 +213,7 @@ export function RoutineDetail({
     if (!draft || !draft.prompt.trim()) return;
     await patch({
       prompt: draft.prompt.trim(),
+      promptMentions: draft.promptMentions,
       model: draft.model || null,
       reasoningLevel: draft.reasoning,
       baseBranch: draft.baseBranch || null,
@@ -540,7 +545,10 @@ export function RoutineDetail({
             ) : null}
 
             {/* The instruction, rendered and folded (see `RoutinePrompt`). */}
-            <RoutinePrompt prompt={routine.prompt} />
+            <RoutinePrompt
+              projectId={routine.project_id}
+              prompt={routine.prompt}
+            />
           </div>
         </>
       )}
@@ -734,8 +742,17 @@ export function RoutineDetail({
  * Unfolded, it still doesn't push anything: it parades IN its box, and the
  * list of executions remains on the screen below it.
  */
-function RoutinePrompt({ prompt }: { prompt: string }) {
+function RoutinePrompt({
+  projectId,
+  prompt,
+}: {
+  projectId: string;
+  prompt: string;
+}) {
   const t = useTranslations("Routines");
+  const { members } = useMembersQuery(projectId, true);
+  const mentionSupport = useDescriptionMentions(projectId, members);
+  const repositorySkills = useRepositorySkills(projectId);
   const [expanded, setExpanded] = useState(false);
   /* A fade longer than a scroll edge (2 rem by default):
      here it does not indicate a border, it turns off a cut end of text. */
@@ -765,7 +782,14 @@ function RoutinePrompt({ prompt }: { prompt: string }) {
           expanded ? "max-h-[40vh] overflow-y-auto" : "max-h-36 overflow-hidden",
         )}
       >
-        <Markdown className="text-muted-foreground">{prompt}</Markdown>
+        <Markdown
+          className="text-muted-foreground"
+          mentionScan={mentionSupport.scan}
+          mentionLinks={mentionSupport.links}
+          skills={repositorySkills.skills}
+        >
+          {prompt}
+        </Markdown>
       </div>
       {truncated ? (
         <Button
@@ -1008,6 +1032,7 @@ function RoutineSummary({
 /** The editing draft: everything that a routine exposes to adjustment. */
 interface RoutineDraft {
   prompt: string;
+  promptMentions: AssistantMention[];
   /** "" = the default model of the account (no model fixed on the routine). */
   model: string;
   reasoning: ReasoningLevel;
@@ -1022,6 +1047,7 @@ interface RoutineDraft {
 function draftFrom(routine: Routine): RoutineDraft {
   return {
     prompt: routine.prompt,
+    promptMentions: routine.prompt_mentions ?? [],
     model: routine.model ?? "",
     reasoning: routine.reasoning_level,
     baseBranch: routine.base_branch ?? "",
@@ -1090,8 +1116,12 @@ function RoutineEditor({
             same component: dictation, input ceiling and limited height. */}
         <RoutinePromptField
           autoFocus
+          projectId={projectId}
           value={draft.prompt}
-          onChange={(value) => set("prompt", value)}
+          mentions={draft.promptMentions}
+          onChange={(value, mentions) =>
+            onChange({ ...draft, prompt: value, promptMentions: mentions })
+          }
           disabled={busy}
         />
       </EditorSection>

@@ -21,11 +21,21 @@ import { cn } from "mangue-ui";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoAvatar } from "@/components/actor-avatars";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
+import { SkillChip } from "@/components/assistant/skill-chip";
+import { SkillPreviewDialog } from "@/components/assistant/skill-preview-dialog";
+import {
+  SlashMenu,
+  filterSlashOptions,
+  repositorySkillOptions,
+} from "@/components/assistant/slash-menu";
 import {
   MentionFigure,
   type MentionOption as EntityMentionOption,
 } from "@/components/mention-suggest";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { findActiveComposerMenuQuery } from "@/lib/assistant-slash-options";
+import { deleteComposerTokenBeforeCaret } from "@/lib/composer-token-delete";
 import {
   forgeMentionScanner,
   memberLabel,
@@ -37,6 +47,11 @@ import {
   filterMentionItems,
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
+import {
+  MAX_SELECTED_SKILLS,
+  type RepositorySkill,
+  type RepositorySkillSummary,
+} from "@/lib/repository-skills";
 import type { Member } from "@/lib/types";
 
 /** userIds mentioned in `text` as "@Display Name" tokens (matched against members). */
@@ -68,6 +83,7 @@ type MentionOption = EntityMentionOption | SpecialMentionOption;
 
 /** The envelope of a mention in the editor: a NON-editable, empty node, in__KEEP_NL_TOKEN__ which React carries the real pill. The field therefore does not redraw a__KEEP_NL_TOKEN__ pill “like” the one in the published comment — it is the same. */
 const SLOT_CLASS = "inline-flex align-middle";
+const SKILL_SLOT_CLASS = "mx-0.5 inline-block max-w-full align-baseline";
 
 function makeSlot(option: MentionOption): HTMLSpanElement {
   const el = document.createElement("span");
@@ -84,6 +100,26 @@ function makeSlot(option: MentionOption): HTMLSpanElement {
   if ("icon" in option && option.icon) el.dataset.mentionIcon = option.icon;
   if ("color" in option && option.color) el.dataset.mentionColor = option.color;
   return el;
+}
+
+function makeSkillSlot(skill: RepositorySkillSummary): HTMLSpanElement {
+  const el = document.createElement("span");
+  el.contentEditable = "false";
+  el.className = SKILL_SLOT_CLASS;
+  el.dataset.skillPath = skill.path;
+  el.dataset.skillName = skill.name;
+  el.dataset.skillDescription = skill.description;
+  el.dataset.skillSource = skill.source;
+  return el;
+}
+
+function skillFromSlot(el: HTMLElement): RepositorySkillSummary | null {
+  const path = el.dataset.skillPath;
+  const name = el.dataset.skillName;
+  const description = el.dataset.skillDescription;
+  const source = el.dataset.skillSource as RepositorySkillSummary["source"] | undefined;
+  if (!path || !name || description === undefined || !source) return null;
+  return { path, name, description, source };
 }
 
 const SLOT_TYPES = new Set([
@@ -192,6 +228,10 @@ function serialize(root: HTMLElement): string {
       parts.push(`@${el.dataset.mentionLabel}`);
       return;
     }
+    if (el.dataset.skillName) {
+      parts.push(`/${el.dataset.skillName}`);
+      return;
+    }
     if (el.tagName === "BR") {
       parts.push("\n");
       return;
@@ -206,6 +246,27 @@ function serialize(root: HTMLElement): string {
 
   for (const child of root.childNodes) walk(child);
   return parts.join("");
+}
+
+function collectAssistantMentions(root: HTMLElement): AssistantMention[] {
+  const seen = new Set<string>();
+  const mentions: AssistantMention[] = [];
+  for (const node of root.querySelectorAll<HTMLElement>("[data-mention-id]")) {
+    const option = slotOption(node);
+    if (!option || option.type === "numo" || option.type === "forge") continue;
+    const key = `${option.type}:${option.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    mentions.push({
+      type: option.type,
+      id: option.id,
+      label: option.label,
+      ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
+      ...(option.color !== undefined ? { color: option.color } : {}),
+      ...(option.icon !== undefined ? { icon: option.icon } : {}),
+    });
+  }
+  return mentions;
 }
 
 function caretToEnd(el: HTMLElement) {
@@ -229,14 +290,18 @@ export function MentionTextarea({
   onSubmit,
   onEscape,
   placeholder,
+  ariaLabel,
   rows = 1,
   className,
   dropUp = false,
   autoFocus = false,
   includeNumo = false,
+  skills,
+  loadSkill,
+  disabled = false,
 }: {
   value: string;
-  onChange: (text: string) => void;
+  onChange: (text: string, mentions: AssistantMention[]) => void;
   members?: Member[];
   /** Full entity mention support for Minddy comments. */
   mentions?: MarkdownEditorMentions;
@@ -250,6 +315,7 @@ export function MentionTextarea({
   /** Called on Escape when the mention suggestions are closed. */
   onEscape?: () => void;
   placeholder?: string;
+  ariaLabel?: string;
   rows?: number;
   className?: string;
   /** Open the suggestion list above the field (for composers pinned to the bottom). */
@@ -257,6 +323,11 @@ export function MentionTextarea({
   autoFocus?: boolean;
   /** Offer "@Numo" (the assistant) in the suggestions — comment composers only. */
   includeNumo?: boolean;
+  /** Repository skills offered after "/" or "$". */
+  skills?: RepositorySkillSummary[];
+  /** Loads the full instructions when a skill chip is opened. */
+  loadSkill?: (skill: RepositorySkillSummary) => Promise<RepositorySkill | null>;
+  disabled?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -267,6 +338,14 @@ export function MentionTextarea({
   const [slots, setSlots] = useState<
     Array<{ el: HTMLElement; option: MentionOption }>
   >([]);
+  const [skillSlots, setSkillSlots] = useState<
+    Array<{ el: HTMLElement; skill: RepositorySkillSummary }>
+  >([]);
+  const [skillQuery, setSkillQuery] = useState<
+    (ReturnType<typeof findActiveComposerMenuQuery> & { node: Text }) | null
+  >(null);
+  const [skillIndex, setSkillIndex] = useState(0);
+  const [previewSkill, setPreviewSkill] = useState<RepositorySkillSummary | null>(null);
 
   // The identity of the arrays is NOT stable across callers: as long as the
   // query not answered, useMembersQuery returns a new `[]` each time it is rendered.
@@ -354,6 +433,24 @@ export function MentionTextarea({
     });
   }, []);
 
+  const syncSkillSlots = useCallback(() => {
+    const el = ref.current;
+    const found = el
+      ? [...el.querySelectorAll<HTMLElement>("[data-skill-path]")]
+      : [];
+    setSkillSlots((prev) => {
+      const unchanged =
+        prev.length === found.length && prev.every((slot, index) => slot.el === found[index]);
+      if (unchanged) return prev;
+      return found
+        .map((node) => ({ el: node, skill: skillFromSlot(node) }))
+        .filter(
+          (slot): slot is { el: HTMLElement; skill: RepositorySkillSummary } =>
+            slot.skill !== null,
+        );
+    });
+  }, []);
+
   // The request is read in the TEXT NODE under the caret: this is the only place
   // where “@something” is still being written. The mentions already
   // posed are non-editable nodes — the caret does not fit there, they do not
@@ -393,13 +490,60 @@ export function MentionTextarea({
     setQuery((prev) => (prev === next ? prev : next));
   }, [readMention, onMentionQuery, mentions]);
 
+  const readSkill = useCallback(() => {
+    if (skills === undefined) return null;
+    const el = ref.current;
+    const selection = window.getSelection();
+    if (!el || !selection || !selection.isCollapsed) return null;
+    const node = selection.anchorNode;
+    if (!node || node.nodeType !== Node.TEXT_NODE || !el.contains(node)) return null;
+    const end = selection.anchorOffset;
+    const trigger = findActiveComposerMenuQuery(
+      (node.textContent ?? "").slice(0, end),
+    );
+    return trigger ? { ...trigger, node: node as Text } : null;
+  }, [skills]);
+
+  const refreshSkill = useCallback(() => {
+    const next = readSkill();
+    setSkillQuery((prev) =>
+      prev?.node === next?.node &&
+      prev?.prefix === next?.prefix &&
+      prev?.query === next?.query &&
+      prev?.start === next?.start &&
+      prev?.end === next?.end
+        ? prev
+        : next,
+    );
+  }, [readSkill]);
+
+  const availableSkills = useMemo(() => {
+    if (skillSlots.length >= MAX_SELECTED_SKILLS) return [];
+    const selectedPaths = new Set(skillSlots.map((slot) => slot.skill.path));
+    return (skills ?? []).filter((skill) => !selectedPaths.has(skill.path));
+  }, [skillSlots, skills]);
+
+  const skillOptions = useMemo(
+    () =>
+      skillQuery
+        ? filterSlashOptions(
+            repositorySkillOptions(availableSkills),
+            skillQuery.query,
+          )
+        : [],
+    [availableSkills, skillQuery],
+  );
+  const skillOpen = skillOptions.length > 0;
+  const activeSkill = Math.min(skillIndex, Math.max(0, skillOptions.length - 1));
+  useEffect(() => setSkillIndex(0), [skillQuery]);
+
   /** The current text goes back to the caller. `emitted` retains what it has__KEEP_NL_TOKEN__ given to it: as long as it returns it to us as is, the current keystroke must NOT__KEEP_NL_TOKEN__ be rewritten under the caret. */
   const emitted = useRef<string | null>(null);
   const emit = useCallback(
     (el: HTMLElement) => {
       const text = serialize(el);
       emitted.current = text;
-      onChange(text);
+      onChange(text, collectAssistantMentions(el));
     },
     [onChange],
   );
@@ -410,8 +554,29 @@ export function MentionTextarea({
       el.innerHTML = "";
       for (const seg of scan(text)) {
         if (seg.mention === undefined) {
-          seg.text.split("\n").forEach((line, i) => {
-            if (i > 0) el.appendChild(document.createElement("br"));
+          const selected = [...(skills ?? [])].sort(
+            (a, b) => b.name.length - a.name.length,
+          );
+          const names = selected
+            .map((skill) => skill.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+            .join("|");
+          const skillPattern = names
+            ? new RegExp(`(^|\\s)/(${names})(?=\\s|$)`, "g")
+            : null;
+          let last = 0;
+          let match: RegExpExecArray | null;
+          while (skillPattern && (match = skillPattern.exec(seg.text)) !== null) {
+            const before = seg.text.slice(last, match.index) + (match[1] ?? "");
+            before.split("\n").forEach((line, index) => {
+              if (index > 0) el.appendChild(document.createElement("br"));
+              if (line) el.appendChild(document.createTextNode(line));
+            });
+            const skill = selected.find((candidate) => candidate.name === match?.[2]);
+            if (skill) el.appendChild(makeSkillSlot(skill));
+            last = match.index + match[0].length;
+          }
+          seg.text.slice(last).split("\n").forEach((line, index) => {
+            if (index > 0) el.appendChild(document.createElement("br"));
             if (line) el.appendChild(document.createTextNode(line));
           });
           continue;
@@ -419,7 +584,7 @@ export function MentionTextarea({
         el.appendChild(makeSlot(optionFromMention(seg.mention)));
       }
     },
-    [scan],
+    [scan, skills],
   );
 
   // The text comes from ELSEWHERE (editing, dictation, reset after sending, or
@@ -427,21 +592,24 @@ export function MentionTextarea({
   // `value` is exactly what we just sent — nothing moves, the caret
   // stay where it is.
   const lastScan = useRef(scan);
+  const lastSkills = useRef(skills);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const external = emitted.current !== value;
-    const rescan = lastScan.current !== scan;
+    const rescan = lastScan.current !== scan || lastSkills.current !== skills;
     if (!external && !rescan) return;
     // A list of members that changes while typing should not move the
     // caret: we will wait for the field to be rendered.
     if (!external && document.activeElement === el) return;
     lastScan.current = scan;
+    lastSkills.current = skills;
     emitted.current = value;
     render(el, value);
     syncSlots();
+    syncSkillSlots();
     if (document.activeElement === el) caretToEnd(el);
-  }, [value, scan, render, syncSlots]);
+  }, [value, scan, skills, render, syncSlots, syncSkillSlots]);
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -506,17 +674,48 @@ export function MentionTextarea({
     syncSlots();
   };
 
+  const pickSkill = (skill: RepositorySkillSummary) => {
+    const found = readSkill();
+    const el = ref.current;
+    if (!found || !el) return;
+    const range = document.createRange();
+    range.setStart(found.node, found.start);
+    range.setEnd(found.node, found.end);
+    range.deleteContents();
+    const slot = makeSkillSlot(skill);
+    range.insertNode(slot);
+    const space = document.createTextNode(" ");
+    slot.after(space);
+    const selection = window.getSelection();
+    if (selection) {
+      const after = document.createRange();
+      after.setStart(space, 1);
+      after.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(after);
+    }
+    el.focus();
+    setSkillQuery(null);
+    emit(el);
+    syncSkillSlots();
+  };
+
   const handleInput = () => {
     const el = ref.current;
     if (!el) return;
     // Really empty: we return the surface to the `:empty` selector so that
     // the prompt reappears (the browser happily leaves a <br> there).
-    if (!el.querySelector("[data-mention-id]") && !el.textContent?.trim()) {
+    if (
+      !el.querySelector("[data-mention-id], [data-skill-path]") &&
+      !el.textContent?.trim()
+    ) {
       el.innerHTML = "";
     }
     emit(el);
     refreshMention();
+    refreshSkill();
     syncSlots();
+    syncSkillSlots();
   };
 
   return (
@@ -540,25 +739,91 @@ export function MentionTextarea({
           `${option.type}:${option.id}:${index}`,
         ),
       )}
+      {skillSlots.map(({ el, skill }) =>
+        createPortal(
+          <SkillChip
+            name={skill.name}
+            onClick={loadSkill ? () => setPreviewSkill(skill) : undefined}
+          />,
+          el,
+          skill.path,
+        ),
+      )}
+      {loadSkill ? (
+        <SkillPreviewDialog
+          skill={previewSkill}
+          open={previewSkill !== null}
+          onOpenChange={(next) => {
+            if (!next) setPreviewSkill(null);
+          }}
+          loadSkill={loadSkill}
+        />
+      ) : null}
       <div
         ref={ref}
-        contentEditable
+        contentEditable={!disabled}
         role="textbox"
         aria-multiline="true"
         aria-placeholder={placeholder}
+        aria-label={ariaLabel}
         suppressContentEditableWarning
         // `rows` lines at least, like on the native field before: one line
         // of `text-sm` is 1.25rem, and the box being in border-box it is necessary
         // add default vertical padding (py-2).
         style={{ minHeight: `calc(${rows} * 1.25rem + 1rem)` }}
         onInput={handleInput}
-        onClick={refreshMention}
+        onClick={() => {
+          refreshMention();
+          refreshSkill();
+        }}
         onKeyUp={(e) => {
           // The caret can exit an “@” query without the text changing.
           if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
-            refreshMention();
+            {
+              refreshMention();
+              refreshSkill();
+            }
         }}
         onKeyDown={(e) => {
+          if (
+            e.key === "Backspace" &&
+            ref.current &&
+            deleteComposerTokenBeforeCaret(
+              ref.current,
+              window.getSelection(),
+              "[data-skill-path]",
+            )
+          ) {
+            e.preventDefault();
+            setSkillQuery(null);
+            emit(ref.current);
+            syncSkillSlots();
+            return;
+          }
+          if (skillOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+            e.preventDefault();
+            const count = skillOptions.length;
+            setSkillIndex((index) =>
+              e.key === "ArrowDown"
+                ? (Math.min(index, count - 1) + 1) % count
+                : (Math.min(index, count - 1) - 1 + count) % count,
+            );
+            return;
+          }
+          if (
+            skillOpen &&
+            (e.key === "Tab" ||
+              (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey))
+          ) {
+            e.preventDefault();
+            pickSkill(skillOptions[activeSkill].skill);
+            return;
+          }
+          if (skillOpen && e.key === "Escape") {
+            e.preventDefault();
+            setSkillQuery(null);
+            return;
+          }
           // Arrows must not reach the editor: the caret would move out of the
           // "@query" and drop the mention.
           if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
@@ -580,14 +845,14 @@ export function MentionTextarea({
             setQuery(null);
             return;
           }
-          if (!open && e.key === "Escape") {
+          if (!open && !skillOpen && e.key === "Escape") {
             onEscape?.();
             return;
           }
           // Sending to the keyboard — ⌘/Ctrl + Enter, or Enter only if the account
           // set it like this (lib/keyboard/send-shortcut). The list of mentions
           // open pass FORWARD: Enter y chooses a suggestion.
-          if (!open && isSend(e)) {
+          if (!open && !skillOpen && isSend(e)) {
             e.preventDefault();
             onSubmit?.();
           }
@@ -605,7 +870,12 @@ export function MentionTextarea({
           // browser cancellation, which no living API overrides.
           document.execCommand("insertText", false, text);
         }}
-        onBlur={() => setTimeout(() => setQuery(null), 120)}
+        onBlur={() =>
+          setTimeout(() => {
+            setQuery(null);
+            setSkillQuery(null);
+          }, 120)
+        }
         className={cn(
           "max-h-48 min-w-0 w-full max-w-full overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
           "[&:empty]:before:pointer-events-none [&:empty]:before:text-muted-foreground [&:empty]:before:content-[attr(aria-placeholder)]",
@@ -661,6 +931,18 @@ export function MentionTextarea({
             </button>
           ))}
         </div>
+      )}
+      {skillOpen && (
+        <SlashMenu
+          options={skillOptions}
+          prefix={skillQuery?.prefix ?? "/"}
+          activeIndex={activeSkill}
+          onPick={(option) => {
+            if (option.kind === "skill") pickSkill(option.skill);
+          }}
+          onHover={setSkillIndex}
+          className={dropUp ? undefined : "bottom-auto top-full mt-1"}
+        />
       )}
     </div>
   );
