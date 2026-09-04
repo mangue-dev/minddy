@@ -49,41 +49,54 @@ export type AssistantMentionTextSegment =
 
 /**
  * Split persisted mention tokens out of text while preserving their stable ids.
- * The first saved identity wins when legacy metadata contains duplicate labels.
+ * Homonyms are consumed in their persisted occurrence order.
  */
+export function createAssistantMentionTokenSplitter(
+  mentions: readonly AssistantMention[],
+) {
+  const byLabel = new Map<string, AssistantMention[]>();
+  for (const mention of mentions) {
+    if (!mention.label) continue;
+    const matches = byLabel.get(mention.label) ?? [];
+    matches.push(mention);
+    byLabel.set(mention.label, matches);
+  }
+  const labels = [...byLabel.keys()].sort((a, b) => b.length - a.length);
+  const nextIndexByLabel = new Map<string, number>();
+
+  return (text: string): AssistantMentionTextSegment[] => {
+    if (labels.length === 0) return [{ text }];
+    const expression = new RegExp(
+      `@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
+      "gu",
+    );
+    const segments: AssistantMentionTextSegment[] = [];
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = expression.exec(text)) !== null) {
+      if (match.index > last)
+        segments.push({ text: text.slice(last, match.index) });
+      const candidates = byLabel.get(match[1]) ?? [];
+      const nextIndex = nextIndexByLabel.get(match[1]) ?? 0;
+      const mention = candidates[Math.min(nextIndex, candidates.length - 1)];
+      if (mention) {
+        segments.push({ mention, raw: match[0] });
+        nextIndexByLabel.set(match[1], nextIndex + 1);
+      } else {
+        segments.push({ text: match[0] });
+      }
+      last = match.index + match[0].length;
+    }
+    if (last < text.length) segments.push({ text: text.slice(last) });
+    return segments;
+  };
+}
+
 export function splitAssistantMentionTokens(
   text: string,
   mentions: readonly AssistantMention[],
 ): AssistantMentionTextSegment[] {
-  const byLabel = new Map<string, AssistantMention>();
-  for (const mention of mentions) {
-    if (mention.label && !byLabel.has(mention.label)) {
-      byLabel.set(mention.label, mention);
-    }
-  }
-  const labels = [...byLabel.keys()].sort((a, b) => b.length - a.length);
-  if (labels.length === 0) return [{ text }];
-
-  const expression = new RegExp(
-    `@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
-    "gu",
-  );
-  const segments: AssistantMentionTextSegment[] = [];
-  let last = 0;
-  let match: RegExpExecArray | null;
-  while ((match = expression.exec(text)) !== null) {
-    if (match.index > last)
-      segments.push({ text: text.slice(last, match.index) });
-    const mention = byLabel.get(match[1]);
-    if (mention) {
-      segments.push({ mention, raw: match[0] });
-    } else {
-      segments.push({ text: match[0] });
-    }
-    last = match.index + match[0].length;
-  }
-  if (last < text.length) segments.push({ text: text.slice(last) });
-  return segments;
+  return createAssistantMentionTokenSplitter(mentions)(text);
 }
 
 /** Give the model the stable ids behind the labels written in a message. */

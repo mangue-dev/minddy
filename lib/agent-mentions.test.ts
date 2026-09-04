@@ -69,4 +69,29 @@ describe("agent mentions", () => {
       { mention: objective, raw: "@Roadmap" },
     ]);
   });
+
+  it("hydrates homonymous identities in their persisted occurrence order", () => {
+    const objective = {
+      type: "objective" as const,
+      id: "objective-roadmap",
+      label: "Roadmap",
+    };
+    const member = {
+      type: "member" as const,
+      id: "member-roadmap",
+      label: "Roadmap",
+    };
+
+    expect(
+      splitAssistantMentionTokens("Ask @Roadmap, then review @Roadmap", [
+        objective,
+        member,
+      ]),
+    ).toEqual([
+      { text: "Ask " },
+      { mention: objective, raw: "@Roadmap" },
+      { text: ", then review " },
+      { mention: member, raw: "@Roadmap" },
+    ]);
+  });
 });

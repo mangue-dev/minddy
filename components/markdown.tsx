@@ -21,6 +21,8 @@ import {
 import { forgeImageSrc } from "@/lib/forge-image-assets";
 import { usePrEndpoint } from "@/lib/pr-endpoint-context";
 import type { RepositorySkillSummary } from "@/lib/repository-skills";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { createAssistantMentionTokenSplitter } from "@/lib/agent-mentions";
 import type { Member } from "@/lib/types";
 
 /* Minimal hast node shape — enough to walk text nodes and inject mention spans. */
@@ -113,6 +115,55 @@ function rehypeMentions(scan: MentionScan) {
   return () => (tree: HastNode) => walk(tree);
 }
 
+/** Restore saved mention chips from stable identities before scanning live sources. */
+function rehypeResolvedMentions(mentions: AssistantMention[]) {
+  return () => {
+    const splitTokens = createAssistantMentionTokenSplitter(mentions);
+    const split = (value: string): HastNode[] =>
+      splitTokens(value).map((segment) => {
+        if (segment.mention === undefined)
+          return { type: "text", value: segment.text };
+        const mention = segment.mention;
+        return {
+          type: "element",
+          tagName: "span",
+          properties: {
+            "data-mention-type": mention.type,
+            "data-mention-id": mention.id,
+            "data-mention-label": mention.label,
+            ...(mention.avatarSeed
+              ? { "data-mention-seed": mention.avatarSeed }
+              : {}),
+            ...(mention.color !== undefined
+              ? { "data-mention-color": mention.color }
+              : {}),
+            ...(mention.icon !== undefined
+              ? { "data-mention-icon": mention.icon }
+              : {}),
+          },
+          children: [],
+        };
+      });
+
+    const walk = (node: HastNode) => {
+      if (!node.children || node.tagName === "code" || node.tagName === "pre")
+        return;
+      const next: HastNode[] = [];
+      for (const child of node.children) {
+        if (child.type === "text" && child.value?.includes("@")) {
+          next.push(...split(child.value));
+        } else {
+          walk(child);
+          next.push(child);
+        }
+      }
+      node.children = next;
+    };
+
+    return (tree: HastNode) => walk(tree);
+  };
+}
+
 /** Replace only known repository skill tokens; arbitrary slash text remains text. */
 function rehypeSkills(skills: RepositorySkillSummary[]) {
   const sorted = [...skills].sort((a, b) => b.name.length - a.name.length);
@@ -202,10 +253,13 @@ function rehypeChain(
   scan: MentionScan | undefined,
   allowRawHtml: boolean,
   skills: RepositorySkillSummary[] | undefined,
+  resolvedMentions: AssistantMention[] | undefined,
 ): Options["rehypePlugins"] {
   const chain: NonNullable<Options["rehypePlugins"]> = allowRawHtml
     ? [rehypeRaw, [rehypeSanitize, defaultSchema]]
     : [[rehypeSanitize, defaultSchema]];
+  if (resolvedMentions?.length)
+    chain.push(rehypeResolvedMentions(resolvedMentions));
   if (scan) chain.push(rehypeMentions(scan));
   if (skills?.length) chain.push(rehypeSkills(skills));
   return chain;
@@ -224,6 +278,7 @@ function MarkdownRenderer({
   members,
   mentionScan,
   mentionLinks,
+  resolvedMentions,
   skills,
   allowRawHtml = false,
   linkVariant = "app",
@@ -235,6 +290,8 @@ function MarkdownRenderer({
   mentionScan?: MentionScan;
   /** Navigation rules paired with `mentionScan`. */
   mentionLinks?: MentionLinks;
+  /** Persisted mention identities, applied before the live-source scanner. */
+  resolvedMentions?: AssistantMention[];
   /** Repository skill tokens to render as skill chips. */
   skills?: RepositorySkillSummary[];
   /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
@@ -268,7 +325,12 @@ function MarkdownRenderer({
         // plans. Without it, a message written in three lines would be delivered in just one
         // paragraph: the most visible difference in “text rendering”.
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={rehypeChain(scan, allowRawHtml, skills)}
+        rehypePlugins={rehypeChain(
+          scan,
+          allowRawHtml,
+          skills,
+          resolvedMentions,
+        )}
         components={{
           p: styled("p", "my-3"),
           a: (props) => {
