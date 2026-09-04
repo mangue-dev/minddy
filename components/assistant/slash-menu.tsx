@@ -3,7 +3,7 @@
 // The command and skill menu of the Numo composer — the twin of the mention
 // suggestions. “/” opens commands and skills; “$” opens skills only.
 
-import { useMemo } from "react";
+import { type CSSProperties, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Layers, SquarePen, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui";
@@ -82,6 +82,7 @@ export function SlashMenu({
   onPick,
   onHover,
   className,
+  style,
 }: {
   options: SlashMenuOption[];
   prefix?: "/" | "$";
@@ -89,11 +90,13 @@ export function SlashMenu({
   onPick: (option: SlashMenuOption) => void;
   onHover: (index: number) => void;
   className?: string;
+  style?: CSSProperties;
 }) {
   if (options.length === 0) return null;
 
   return (
     <div
+      style={style}
       className={cn(
         "absolute bottom-full z-50 mb-1 max-h-56 w-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md",
         className,

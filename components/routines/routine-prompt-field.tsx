@@ -64,10 +64,7 @@ export function RoutinePromptField({
         nextText.includes(`@${mention.label}`) &&
         !resolved.has(`${mention.type}:${mention.id}`),
     );
-    onChange(nextText, [
-      ...nextResolvedMentions,
-      ...preserved,
-    ]);
+    onChange(nextText, [...nextResolvedMentions, ...preserved]);
   };
 
   return (
@@ -84,6 +81,8 @@ export function RoutinePromptField({
           placeholder={t("promptPlaceholder")}
           ariaLabel={t("promptLabel")}
           rows={6}
+          dropUp
+          portalMenus
           className="max-h-64 min-h-36 pb-12"
         />
         {/* Dictation appends to the existing instruction. */}

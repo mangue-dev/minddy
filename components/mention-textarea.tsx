@@ -15,7 +15,15 @@
 // him that extractMentions reads who to warn, and it is from him that the rendering of the
 // published comment re-infers the pills (only one rule, lib/mention-scan).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "mangue-ui";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -43,10 +51,7 @@ import {
   type ScannedMention,
 } from "@/lib/mention-scan";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
-import {
-  filterMentionItems,
-  findActiveMentionQuery,
-} from "@/lib/mention-menu";
+import { filterMentionItems, findActiveMentionQuery } from "@/lib/mention-menu";
 import {
   MAX_SELECTED_SKILLS,
   type RepositorySkill,
@@ -96,7 +101,8 @@ function makeSlot(option: MentionOption): HTMLSpanElement {
   if ("avatarUrl" in option && option.avatarUrl) {
     el.dataset.mentionAvatar = option.avatarUrl;
   }
-  if ("iconUrl" in option && option.iconUrl) el.dataset.mentionIcon = option.iconUrl;
+  if ("iconUrl" in option && option.iconUrl)
+    el.dataset.mentionIcon = option.iconUrl;
   if ("icon" in option && option.icon) el.dataset.mentionIcon = option.icon;
   if ("color" in option && option.color) el.dataset.mentionColor = option.color;
   return el;
@@ -117,7 +123,8 @@ function skillFromSlot(el: HTMLElement): RepositorySkillSummary | null {
   const path = el.dataset.skillPath;
   const name = el.dataset.skillName;
   const description = el.dataset.skillDescription;
-  const source = el.dataset.skillSource as RepositorySkillSummary["source"] | undefined;
+  const source = el.dataset.skillSource as
+    RepositorySkillSummary["source"] | undefined;
   if (!path || !name || description === undefined || !source) return null;
   return { path, name, description, source };
 }
@@ -237,7 +244,8 @@ function serialize(root: HTMLElement): string {
       return;
     }
     if (el.tagName === "DIV" || el.tagName === "P") {
-      if (parts.length > 0 && parts[parts.length - 1] !== "\n") parts.push("\n");
+      if (parts.length > 0 && parts[parts.length - 1] !== "\n")
+        parts.push("\n");
       for (const child of el.childNodes) walk(child);
       return;
     }
@@ -294,6 +302,7 @@ export function MentionTextarea({
   rows = 1,
   className,
   dropUp = false,
+  portalMenus = false,
   autoFocus = false,
   includeNumo = false,
   skills,
@@ -306,7 +315,11 @@ export function MentionTextarea({
   /** Full entity mention support for Minddy comments. */
   mentions?: MarkdownEditorMentions;
   /**__KEEP_NL_TOKEN__ * The FORGE accounts (MIN-162). Present = this field writes a comment__KEEP_NL_TOKEN__ * from pull request: suggestions come from there, and `members` is ignored.__KEEP_NL_TOKEN__ * A `@` ends up there at GitHub, where quoting a minddy member without a git account does not__KEEP_NL_TOKEN__ * would notify anyone — so the two sources don't mix never.__KEEP_NL_TOKEN__ */
-  forgeMembers?: Array<{ login: string; avatar_url: string | null; name: string | null }>;
+  forgeMembers?: Array<{
+    login: string;
+    avatar_url: string | null;
+    name: string | null;
+  }>;
   /** The first “@” typed — enough to load a list on demand rather than __KEEP_NL_TOKEN__ when opening the view. Called without guarantee of uniqueness: make the caller __KEEP_NL_TOKEN__ only a trigger (a `enabled` which remains true). */
   onMentionQuery?: () => void;
   /** Changing this value gives focus to the field, caret at the end of the text — this__KEEP_NL_TOKEN__ needed by a gesture that WRITEs into the draft from outside__KEEP_NL_TOKEN__ (“Quote” on a PR). A `autoFocus` is only used for editing; here the__KEEP_NL_TOKEN__ field is already there. */
@@ -320,13 +333,17 @@ export function MentionTextarea({
   className?: string;
   /** Open the suggestion list above the field (for composers pinned to the bottom). */
   dropUp?: boolean;
+  /** Render suggestion lists outside clipping containers while keeping them anchored. */
+  portalMenus?: boolean;
   autoFocus?: boolean;
   /** Offer "@Numo" (the assistant) in the suggestions — comment composers only. */
   includeNumo?: boolean;
   /** Repository skills offered after "/" or "$". */
   skills?: RepositorySkillSummary[];
   /** Loads the full instructions when a skill chip is opened. */
-  loadSkill?: (skill: RepositorySkillSummary) => Promise<RepositorySkill | null>;
+  loadSkill?: (
+    skill: RepositorySkillSummary,
+  ) => Promise<RepositorySkill | null>;
   disabled?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -345,7 +362,14 @@ export function MentionTextarea({
     (ReturnType<typeof findActiveComposerMenuQuery> & { node: Text }) | null
   >(null);
   const [skillIndex, setSkillIndex] = useState(0);
-  const [previewSkill, setPreviewSkill] = useState<RepositorySkillSummary | null>(null);
+  const [previewSkill, setPreviewSkill] =
+    useState<RepositorySkillSummary | null>(null);
+  const [floatingAnchor, setFloatingAnchor] = useState<{
+    left: number;
+    bottom: number;
+    availableHeight: number;
+    viewportWidth: number;
+  } | null>(null);
 
   // The identity of the arrays is NOT stable across callers: as long as the
   // query not answered, useMembersQuery returns a new `[]` each time it is rendered.
@@ -359,7 +383,10 @@ export function MentionTextarea({
         .join("");
 
   const fallbackScan = useMemo(
-    () => (forgeMembers ? forgeMentionScanner(forgeMembers) : mentionScanner(members)),
+    () =>
+      forgeMembers
+        ? forgeMentionScanner(forgeMembers)
+        : mentionScanner(members),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [membersKey, fromForge],
   );
@@ -392,7 +419,11 @@ export function MentionTextarea({
     // herself, and the only one who will not notify anyone at the forge. show it
     // first, with Numo's face, avoid reading it as just another account.
     if (includeNumo) {
-      const numo: MentionOption = { type: "numo", id: NUMO_MENTION_ID, label: "Numo" };
+      const numo: MentionOption = {
+        type: "numo",
+        id: NUMO_MENTION_ID,
+        label: "Numo",
+      };
       if (fromForge) list.unshift(numo);
       else list.push(numo);
     }
@@ -401,10 +432,7 @@ export function MentionTextarea({
   }, [membersKey, includeNumo, fromForge, mentions?.options]);
 
   const suggestions = useMemo(
-    () =>
-      query === null
-        ? []
-        : filterMentionItems(mentionables, query),
+    () => (query === null ? [] : filterMentionItems(mentionables, query)),
     [query, mentionables],
   );
   const open = suggestions.length > 0;
@@ -422,14 +450,18 @@ export function MentionTextarea({
 
   const syncSlots = useCallback(() => {
     const el = ref.current;
-    const found = el ? [...el.querySelectorAll<HTMLElement>("[data-mention-id]")] : [];
+    const found = el
+      ? [...el.querySelectorAll<HTMLElement>("[data-mention-id]")]
+      : [];
     setSlots((prev) => {
       const unchanged =
         prev.length === found.length && prev.every((s, i) => s.el === found[i]);
       if (unchanged) return prev;
       return found
         .map((node) => ({ el: node, option: slotOption(node) }))
-        .filter((s): s is { el: HTMLElement; option: MentionOption } => !!s.option);
+        .filter(
+          (s): s is { el: HTMLElement; option: MentionOption } => !!s.option,
+        );
     });
   }, []);
 
@@ -440,7 +472,8 @@ export function MentionTextarea({
       : [];
     setSkillSlots((prev) => {
       const unchanged =
-        prev.length === found.length && prev.every((slot, index) => slot.el === found[index]);
+        prev.length === found.length &&
+        prev.every((slot, index) => slot.el === found[index]);
       if (unchanged) return prev;
       return found
         .map((node) => ({ el: node, skill: skillFromSlot(node) }))
@@ -496,7 +529,8 @@ export function MentionTextarea({
     const selection = window.getSelection();
     if (!el || !selection || !selection.isCollapsed) return null;
     const node = selection.anchorNode;
-    if (!node || node.nodeType !== Node.TEXT_NODE || !el.contains(node)) return null;
+    if (!node || node.nodeType !== Node.TEXT_NODE || !el.contains(node))
+      return null;
     const end = selection.anchorOffset;
     const trigger = findActiveComposerMenuQuery(
       (node.textContent ?? "").slice(0, end),
@@ -534,7 +568,39 @@ export function MentionTextarea({
     [availableSkills, skillQuery],
   );
   const skillOpen = skillOptions.length > 0;
-  const activeSkill = Math.min(skillIndex, Math.max(0, skillOptions.length - 1));
+
+  useLayoutEffect(() => {
+    if (!portalMenus || (!open && !skillOpen)) {
+      setFloatingAnchor(null);
+      return;
+    }
+
+    const updateAnchor = () => {
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect) return;
+      setFloatingAnchor({
+        left: rect.left,
+        bottom: window.innerHeight - rect.top + 4,
+        availableHeight: Math.max(80, rect.top - 12),
+        viewportWidth: window.innerWidth,
+      });
+    };
+
+    updateAnchor();
+    window.addEventListener("resize", updateAnchor);
+    window.addEventListener("scroll", updateAnchor, true);
+    const observer = new ResizeObserver(updateAnchor);
+    if (ref.current) observer.observe(ref.current);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateAnchor);
+      window.removeEventListener("scroll", updateAnchor, true);
+    };
+  }, [open, portalMenus, skillOpen]);
+  const activeSkill = Math.min(
+    skillIndex,
+    Math.max(0, skillOptions.length - 1),
+  );
   useEffect(() => setSkillIndex(0), [skillQuery]);
 
   /** The current text goes back to the caller. `emitted` retains what it has__KEEP_NL_TOKEN__ given to it: as long as it returns it to us as is, the current keystroke must NOT__KEEP_NL_TOKEN__ be rewritten under the caret. */
@@ -565,20 +631,28 @@ export function MentionTextarea({
             : null;
           let last = 0;
           let match: RegExpExecArray | null;
-          while (skillPattern && (match = skillPattern.exec(seg.text)) !== null) {
+          while (
+            skillPattern &&
+            (match = skillPattern.exec(seg.text)) !== null
+          ) {
             const before = seg.text.slice(last, match.index) + (match[1] ?? "");
             before.split("\n").forEach((line, index) => {
               if (index > 0) el.appendChild(document.createElement("br"));
               if (line) el.appendChild(document.createTextNode(line));
             });
-            const skill = selected.find((candidate) => candidate.name === match?.[2]);
+            const skill = selected.find(
+              (candidate) => candidate.name === match?.[2],
+            );
             if (skill) el.appendChild(makeSkillSlot(skill));
             last = match.index + match[0].length;
           }
-          seg.text.slice(last).split("\n").forEach((line, index) => {
-            if (index > 0) el.appendChild(document.createElement("br"));
-            if (line) el.appendChild(document.createTextNode(line));
-          });
+          seg.text
+            .slice(last)
+            .split("\n")
+            .forEach((line, index) => {
+              if (index > 0) el.appendChild(document.createElement("br"));
+              if (line) el.appendChild(document.createTextNode(line));
+            });
           continue;
         }
         el.appendChild(makeSlot(optionFromMention(seg.mention)));
@@ -632,7 +706,8 @@ export function MentionTextarea({
   // want to ask for it.
   const lastFocusSignal = useRef(focusSignal);
   useEffect(() => {
-    if (focusSignal === undefined || focusSignal === lastFocusSignal.current) return;
+    if (focusSignal === undefined || focusSignal === lastFocusSignal.current)
+      return;
     lastFocusSignal.current = focusSignal;
     const el = ref.current;
     if (!el) return;
@@ -718,6 +793,101 @@ export function MentionTextarea({
     syncSkillSlots();
   };
 
+  const floatingStyle = (width: number): CSSProperties | undefined => {
+    if (!portalMenus || !floatingAnchor) return undefined;
+    return {
+      position: "fixed",
+      left: Math.min(
+        Math.max(8, floatingAnchor.left),
+        Math.max(8, floatingAnchor.viewportWidth - width - 8),
+      ),
+      bottom: floatingAnchor.bottom,
+      top: "auto",
+      maxHeight: Math.min(224, floatingAnchor.availableHeight),
+      maxWidth: "calc(100vw - 1rem)",
+      marginBottom: 0,
+    };
+  };
+
+  const mentionMenu =
+    open && (!portalMenus || floatingAnchor) ? (
+      <div
+        ref={suggestionsRef}
+        role="listbox"
+        style={floatingStyle(256)}
+        className={cn(
+          "scrollbar-quiet z-[100] max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
+          portalMenus
+            ? "fixed"
+            : cn(
+                "absolute left-0",
+                dropUp ? "bottom-full mb-1" : "top-full mt-1",
+              ),
+        )}
+      >
+        {suggestions.map((option, index) => (
+          <button
+            key={`${option.type}:${option.id}`}
+            type="button"
+            role="option"
+            aria-selected={index === active}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              pick(option);
+            }}
+            onMouseEnter={() => setSelected(index)}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
+              index === active && "bg-muted",
+            )}
+          >
+            {option.type === "numo" ? (
+              <NumoAvatar />
+            ) : option.type === "forge" ? (
+              <ForgeUserAvatar
+                user={{
+                  login: option.avatarSeed ?? option.id,
+                  avatar_url: option.avatarUrl ?? null,
+                }}
+                className="size-5"
+              />
+            ) : (
+              <MentionFigure option={option} />
+            )}
+            <span className="min-w-0 truncate">
+              {option.label}
+              {"detail" in option && option.detail ? (
+                <span className="ml-1.5 text-muted-foreground">
+                  {option.detail}
+                </span>
+              ) : null}
+            </span>
+          </button>
+        ))}
+      </div>
+    ) : null;
+
+  const skillMenu =
+    skillOpen && (!portalMenus || floatingAnchor) ? (
+      <SlashMenu
+        options={skillOptions}
+        prefix={skillQuery?.prefix ?? "/"}
+        activeIndex={activeSkill}
+        onPick={(option) => {
+          if (option.kind === "skill") pickSkill(option.skill);
+        }}
+        onHover={setSkillIndex}
+        style={floatingStyle(288)}
+        className={
+          portalMenus
+            ? "z-[100]"
+            : dropUp
+              ? undefined
+              : "bottom-auto top-full mt-1"
+        }
+      />
+    ) : null;
+
   return (
     <div className="relative min-w-0 max-w-full">
       {/* Each mention placed receives ITS pill, carried in its envelope. */}
@@ -778,11 +948,10 @@ export function MentionTextarea({
         }}
         onKeyUp={(e) => {
           // The caret can exit an “@” query without the text changing.
-          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
-            {
-              refreshMention();
-              refreshSkill();
-            }
+          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+            refreshMention();
+            refreshSkill();
+          }
         }}
         onKeyDown={(e) => {
           if (
@@ -831,11 +1000,19 @@ export function MentionTextarea({
             const n = suggestions.length;
             setSelected((s) => {
               const from = Math.min(s, n - 1);
-              return e.key === "ArrowDown" ? (from + 1) % n : (from - 1 + n) % n;
+              return e.key === "ArrowDown"
+                ? (from + 1) % n
+                : (from - 1 + n) % n;
             });
             return;
           }
-          if (open && e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+          if (
+            open &&
+            e.key === "Enter" &&
+            !e.shiftKey &&
+            !e.metaKey &&
+            !e.ctrlKey
+          ) {
             e.preventDefault();
             pick(suggestions[active]);
             return;
@@ -863,7 +1040,8 @@ export function MentionTextarea({
           // which surrounds us (pasteFileHandler) — we let them rise.
           if (e.clipboardData.files.length > 0) return;
           const text =
-            e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
+            e.clipboardData.getData("text/plain") ||
+            e.clipboardData.getData("text");
           e.preventDefault();
           if (!text) return;
           // execCommand: this is what writes the paste to the stack
@@ -882,68 +1060,12 @@ export function MentionTextarea({
           className,
         )}
       />
-      {open && (
-        <div
-          ref={suggestionsRef}
-          role="listbox"
-          className={cn(
-            "scrollbar-quiet absolute left-0 z-50 max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
-            dropUp ? "bottom-full mb-1" : "top-full mt-1"
-          )}
-        >
-          {suggestions.map((option, index) => (
-            <button
-              key={`${option.type}:${option.id}`}
-              type="button"
-              role="option"
-              aria-selected={index === active}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                pick(option);
-              }}
-              onMouseEnter={() => setSelected(index)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
-                index === active && "bg-muted"
-              )}
-            >
-              {option.type === "numo" ? (
-                <NumoAvatar />
-              ) : option.type === "forge" ? (
-                <ForgeUserAvatar
-                  user={{
-                    login: option.avatarSeed ?? option.id,
-                    avatar_url: option.avatarUrl ?? null,
-                  }}
-                  className="size-5"
-                />
-              ) : (
-                <MentionFigure option={option} />
-              )}
-              <span className="min-w-0 truncate">
-                {option.label}
-                {"detail" in option && option.detail ? (
-                  <span className="ml-1.5 text-muted-foreground">
-                    {option.detail}
-                  </span>
-                ) : null}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-      {skillOpen && (
-        <SlashMenu
-          options={skillOptions}
-          prefix={skillQuery?.prefix ?? "/"}
-          activeIndex={activeSkill}
-          onPick={(option) => {
-            if (option.kind === "skill") pickSkill(option.skill);
-          }}
-          onHover={setSkillIndex}
-          className={dropUp ? undefined : "bottom-auto top-full mt-1"}
-        />
-      )}
+      {portalMenus && mentionMenu
+        ? createPortal(mentionMenu, document.body)
+        : mentionMenu}
+      {portalMenus && skillMenu
+        ? createPortal(skillMenu, document.body)
+        : skillMenu}
     </div>
   );
 }
