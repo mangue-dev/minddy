@@ -184,6 +184,8 @@ const h = {
   prompts: [] as string[],
   /** How many times the session was cut. */
   aborts: 0,
+  /** Whether OpenCode refuses to acknowledge an abort request. */
+  abortFails: false,
   /** What the control plan answers about the remaining budget. */
   remainingUsd: null as number | null,
   budgetReads: 0,
@@ -437,6 +439,7 @@ function fakeFetch(): typeof fetch {
     }
     if (path.endsWith("/abort")) {
       h.aborts += 1;
+      if (h.abortFails) return new Response("busy", { status: 503 });
       return new Response("true", { status: 200 });
     }
     if (path === "/sync/history") {
@@ -691,6 +694,7 @@ beforeEach(() => {
   h.interruptCleared = 0;
   h.prompts = [];
   h.aborts = 0;
+  h.abortFails = false;
   h.permissionReplies = [];
   h.questionsRejected = [];
   h.questionsAnswered = [];
@@ -726,6 +730,37 @@ function permissionFrame(
       always: [],
       tool: { messageID: "msg_1", callID: callId },
     },
+  });
+}
+
+/** A tool state transition, including the observed bash `running` frame. */
+function toolFrame(
+  tool: string,
+  callId: string,
+  state: Record<string, unknown>,
+  sessionId = PARENT,
+): string {
+  return JSON.stringify({
+    type: "message.part.updated",
+    properties: {
+      sessionID: sessionId,
+      part: {
+        id: `prt_${callId}`,
+        messageID: "msg_1",
+        sessionID: sessionId,
+        type: "tool",
+        tool,
+        callID: callId,
+        state,
+      },
+    },
+  });
+}
+
+function idleFrame(sessionId = PARENT): string {
+  return JSON.stringify({
+    type: "session.idle",
+    properties: { sessionID: sessionId },
   });
 }
 
@@ -2690,24 +2725,76 @@ describe("le battement du tour", () => {
     expect(h.aborts).toBeGreaterThanOrEqual(1);
   });
 
-  it("stops a cloud turn when an approved command never starts", async () => {
+  it("stops a turn when a running bash command stops producing activity", async () => {
     h.tick = 60_000;
     const report = await run(
       {},
       silentStream([
-        permissionFrame("bash", { command: "npm run typecheck" }),
+        toolFrame("bash", "call_typecheck", {
+          status: "running",
+          input: { command: "npm run typecheck" },
+        }),
       ]),
     );
     expect(report.status).toBe("error");
     expect(report.errorCode).toBeUndefined();
     expect(report.errorMessage).toContain("no activity for five minutes");
-    expect(h.permissionReplies[0]?.reply).toBe("once");
     expect(h.aborts).toBeGreaterThanOrEqual(1);
     expect(
       h.events.some(
         (event) =>
           event.type === "error" &&
+          event.payload.code === "turnStalled" &&
+          event.payload.abortSucceeded === true &&
           String(event.payload.message).includes("no activity for five minutes"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not let unrelated server sessions hide a stalled turn", async () => {
+    h.tick = 60_000;
+    const unrelated = Array.from({ length: 6 }, (_, index) =>
+      toolFrame(
+        "bash",
+        `call_foreign_${index}`,
+        { status: "running", input: { command: "echo noise" } },
+        "ses_unrelated",
+      ),
+    );
+
+    const report = await run(
+      {},
+      silentStream([...unrelated, idleFrame()]),
+    );
+
+    expect(report.status).toBe("error");
+    expect(report.errorMessage).toContain("no activity for five minutes");
+  });
+
+  it("preserves the last safe checkpoint when a stalled session cannot abort", async () => {
+    h.tick = 60_000;
+    h.abortFails = true;
+
+    const report = await run(
+      {},
+      silentStream([
+        toolFrame("bash", "call_typecheck", {
+          status: "running",
+          input: { command: "npm run typecheck" },
+        }),
+      ]),
+    );
+
+    expect(report.status).toBe("error");
+    expect(report.checkpoint).toBeUndefined();
+    expect(report.checkpointBytes).toBe(0);
+    expect(report.errorMessage).toContain("could not be stopped cleanly");
+    expect(
+      h.events.some(
+        (event) =>
+          event.type === "error" &&
+          event.payload.code === "turnStalled" &&
+          event.payload.abortSucceeded === false,
       ),
     ).toBe(true);
   });
