@@ -15,12 +15,10 @@ import {
   resolveRepoCloneTarget,
   type RepoCloneTarget,
 } from "@/lib/server/agent/repo-access";
+import { isValidGitBranchName } from "@/lib/server/agent/branch-name";
 import { getFileAtRef as getGithubFileAtRef } from "@/lib/server/agent/pr";
 import { getFileAtRef as getGitlabFileAtRef } from "@/lib/server/agent/mr";
-import {
-  GITHUB_API_BASE,
-  githubHeaders,
-} from "@/lib/server/git/github-rest";
+import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
 import {
   GITLAB_API_BASE,
   gitlabHeaders,
@@ -30,7 +28,10 @@ import {
 const MAX_DISCOVERY_DIRECTORIES = 300;
 const MAX_GITLAB_PAGES_PER_ROOT = 10;
 
-function splitGithubRepo(repoFullName: string): { owner: string; repo: string } {
+function splitGithubRepo(repoFullName: string): {
+  owner: string;
+  repo: string;
+} {
   const [owner, repo] = repoFullName.split("/");
   if (!owner || !repo) throw new Error("Invalid GitHub repository name");
   return { owner, repo };
@@ -42,6 +43,7 @@ function encodeGithubPath(path: string): string {
 
 async function githubSkillPaths(
   target: RepoCloneTarget,
+  ref: string,
   fetcher: typeof fetch,
 ): Promise<string[]> {
   const { owner, repo } = splitGithubRepo(target.repoFullName);
@@ -54,7 +56,7 @@ async function githubSkillPaths(
     visited += 1;
     const url =
       `${GITHUB_API_BASE}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}` +
-      `/contents/${encodeGithubPath(directory)}?ref=${encodeURIComponent(target.defaultBranch)}`;
+      `/contents/${encodeGithubPath(directory)}?ref=${encodeURIComponent(ref)}`;
     const response = await fetcher(url, {
       headers: githubHeaders(target.token),
       cache: "no-store",
@@ -89,6 +91,7 @@ async function githubSkillPaths(
 
 async function gitlabSkillPaths(
   target: RepoCloneTarget,
+  ref: string,
   fetcher: typeof fetch,
 ): Promise<string[]> {
   const paths: string[] = [];
@@ -97,7 +100,7 @@ async function gitlabSkillPaths(
     for (let count = 0; count < MAX_GITLAB_PAGES_PER_ROOT; count += 1) {
       const query = new URLSearchParams({
         path: root,
-        ref: target.defaultBranch,
+        ref,
         recursive: "true",
         per_page: "100",
         page: String(page),
@@ -114,7 +117,11 @@ async function gitlabSkillPaths(
       if (!Array.isArray(data)) break;
       for (const entry of data) {
         if (!entry || typeof entry !== "object") continue;
-        const item = entry as { path?: unknown; type?: unknown; name?: unknown };
+        const item = entry as {
+          path?: unknown;
+          type?: unknown;
+          name?: unknown;
+        };
         if (
           item.type === "blob" &&
           item.name === "SKILL.md" &&
@@ -134,22 +141,24 @@ async function gitlabSkillPaths(
 
 async function repositorySkillPaths(
   target: RepoCloneTarget,
+  ref: string,
   fetcher: typeof fetch = fetch,
 ): Promise<string[]> {
   return target.provider === "github"
-    ? githubSkillPaths(target, fetcher)
-    : gitlabSkillPaths(target, fetcher);
+    ? githubSkillPaths(target, ref, fetcher)
+    : gitlabSkillPaths(target, ref, fetcher);
 }
 
 async function readRepositoryFile(
   target: RepoCloneTarget,
   path: string,
+  ref: string,
 ): Promise<string | null> {
   const options = {
     token: target.token,
     repoFullName: target.repoFullName,
     path,
-    ref: target.defaultBranch,
+    ref,
   };
   return target.provider === "github"
     ? getGithubFileAtRef(options)
@@ -166,12 +175,15 @@ async function projectRepositoryTarget(
 
 export async function listProjectRepositorySkills(
   projectId: string,
+  requestedRef?: string | null,
 ): Promise<RepositorySkillSummary[]> {
   const target = await projectRepositoryTarget(projectId);
   if (!target) return [];
-  const paths = await repositorySkillPaths(target);
+  const ref = requestedRef?.trim() || target.defaultBranch;
+  if (!isValidGitBranchName(ref)) throw new Error("Invalid repository ref");
+  const paths = await repositorySkillPaths(target, ref);
   const skills = await discoverRepositorySkills(paths, (path) =>
-    readRepositoryFile(target, path),
+    readRepositoryFile(target, path, ref),
   );
   return skills.map(summarizeRepositorySkill);
 }
@@ -180,6 +192,7 @@ export async function listProjectRepositorySkills(
 export async function loadProjectRepositorySkills(
   projectId: string,
   requestedPaths: readonly string[],
+  requestedRef?: string | null,
 ): Promise<RepositorySkill[] | null> {
   const paths = [...new Set(requestedPaths)];
   if (
@@ -191,9 +204,11 @@ export async function loadProjectRepositorySkills(
   }
   const target = await projectRepositoryTarget(projectId);
   if (!target) return null;
+  const ref = requestedRef?.trim() || target.defaultBranch;
+  if (!isValidGitBranchName(ref)) return null;
   const skills = await Promise.all(
     paths.map(async (path) => {
-      const raw = await readRepositoryFile(target, path);
+      const raw = await readRepositoryFile(target, path, ref);
       return raw === null ? null : parseRepositorySkill(path, raw);
     }),
   );

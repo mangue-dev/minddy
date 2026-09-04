@@ -304,7 +304,11 @@ export function CreateRoutineWizard({
                 role="radio"
                 aria-checked={projectId === p.id}
                 onClick={() => {
-                  if (p.id !== projectId) setPromptMentions([]);
+                  if (p.id !== projectId) {
+                    setPrompt("");
+                    setPromptMentions([]);
+                    setBaseBranch("");
+                  }
                   setChosenProjectId(p.id);
                   setStepIndex((i) => i + 1);
                 }}
@@ -341,6 +345,7 @@ export function CreateRoutineWizard({
           <RoutinePromptField
             autoFocus
             projectId={projectId}
+            baseBranch={baseBranch}
             value={prompt}
             mentions={promptMentions}
             onChange={(value, mentions) => {

@@ -32,6 +32,7 @@ const MAX_PROMPT_LENGTH = 20000;
  */
 export function RoutinePromptField({
   projectId,
+  baseBranch,
   value,
   mentions = [],
   onChange,
@@ -39,6 +40,7 @@ export function RoutinePromptField({
   autoFocus,
 }: {
   projectId: string;
+  baseBranch?: string | null;
   value: string;
   mentions?: AssistantMention[];
   onChange: (value: string, mentions: AssistantMention[]) => void;
@@ -49,7 +51,12 @@ export function RoutinePromptField({
   const t = useTranslations("Routines");
   const { members } = useMembersQuery(projectId || null, !!projectId);
   const mentionSupport = useDescriptionMentions(projectId || null, members);
-  const repositorySkills = useRepositorySkills(projectId || null);
+  const repositorySkills = useRepositorySkills(
+    projectId || null,
+    "cloud",
+    "routine-prompt",
+    baseBranch?.trim() || null,
+  );
 
   const update = (text: string, resolvedMentions: AssistantMention[]) => {
     const nextText = text.slice(0, MAX_PROMPT_LENGTH);

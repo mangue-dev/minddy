@@ -566,6 +566,7 @@ export function RoutineDetail({
             {/* The instruction, rendered and folded (see `RoutinePrompt`). */}
             <RoutinePrompt
               projectId={routine.project_id}
+              baseBranch={routine.base_branch}
               prompt={routine.prompt}
               promptMentions={routine.prompt_mentions ?? []}
             />
@@ -777,17 +778,24 @@ export function RoutineDetail({
  */
 function RoutinePrompt({
   projectId,
+  baseBranch,
   prompt,
   promptMentions,
 }: {
   projectId: string;
+  baseBranch: string | null;
   prompt: string;
   promptMentions: AssistantMention[];
 }) {
   const t = useTranslations("Routines");
   const { members } = useMembersQuery(projectId, true);
   const mentionSupport = useDescriptionMentions(projectId, members);
-  const repositorySkills = useRepositorySkills(projectId);
+  const repositorySkills = useRepositorySkills(
+    projectId,
+    "cloud",
+    "routine-display",
+    baseBranch,
+  );
   const [expanded, setExpanded] = useState(false);
   /* A fade longer than a scroll edge (2 rem by default):
      here it does not indicate a border, it turns off a cut end of text. */
@@ -1163,6 +1171,7 @@ function RoutineEditor({
         <RoutinePromptField
           autoFocus
           projectId={projectId}
+          baseBranch={draft.baseBranch}
           value={draft.prompt}
           mentions={draft.promptMentions}
           onChange={(value, mentions) =>
