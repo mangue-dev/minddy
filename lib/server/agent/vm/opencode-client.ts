@@ -234,10 +234,18 @@ export class OpencodeClient {
     if (!res.ok) throw new OpencodeHttpError(res.status, route, await res.text());
   }
 
-  /** Cuts the turn in flight. Measured at 40 ms, and without effect if nothing is running. */
-  async abort(sessionId: string): Promise<void> {
+  /**
+   * Cuts the turn in flight. Returns whether OpenCode acknowledged the cut so
+   * callers can avoid checkpointing a session that may still be mutating.
+   */
+  async abort(sessionId: string): Promise<boolean> {
     const route = this.legacy(`/session/${sessionId}/abort`);
-    await this.finiteRequest(route, { method: "POST" }).catch(() => undefined);
+    try {
+      const response = await this.finiteRequest(route, { method: "POST" });
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   /**

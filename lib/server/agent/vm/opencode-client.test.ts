@@ -134,6 +134,20 @@ describe("finite request timeouts", () => {
   });
 });
 
+describe("abort acknowledgement", () => {
+  it("reports whether OpenCode accepted the abort request", async () => {
+    const accepted = clientWith(() => new Response("true", { status: 200 }));
+    const refused = clientWith(() => new Response("busy", { status: 503 }));
+    const unreachable = clientWith(() => {
+      throw new Error("connection lost");
+    });
+
+    await expect(accepted.abort("ses_1")).resolves.toBe(true);
+    await expect(refused.abort("ses_1")).resolves.toBe(false);
+    await expect(unreachable.abort("ses_1")).resolves.toBe(false);
+  });
+});
+
 describe("le flux d'events", () => {
   it("lit une frame SSE", () => {
     expect(parseFrame('data: {"type":"session.idle"}')).toEqual({ type: "session.idle" });

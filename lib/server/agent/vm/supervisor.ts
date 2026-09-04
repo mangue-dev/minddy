@@ -243,15 +243,18 @@ export const ORPHAN_SETTLE_MS = 10_000;
 export const SUPERVISOR_TURN_SOFT_DEADLINE_MS = 12 * 60 * 60_000;
 
 /**
- * Maximum silence from OpenCode before a cloud turn is considered stalled.
+ * Maximum silence from OpenCode while a shell call is pending or running.
  *
- * The provider stream and the built-in shell command both have shorter
- * timeouts. This outer guard covers the gap between them: OpenCode can create a
- * pending tool part and then never start the command, or finish provider work
- * without publishing the final `session.idle`. In both cases the detached
- * supervisor otherwise survives until the sandbox kills it hours later.
+ * Production showed a bash tool already in `running` state whose nominal
+ * 120-second timeout surfaced almost 115 minutes later. This outer guard does
+ * not assume which OpenCode layer stalled. It is deliberately scoped to bash:
+ * long model reasoning, web work, and delegation are not failures merely
+ * because they produce no OpenCode event for five minutes.
  */
 export const SUPERVISOR_STALL_TIMEOUT_MS = 5 * 60_000;
+
+/** An acknowledged abort should make the parent session idle almost at once. */
+const STALLED_SHELL_ABORT_IDLE_TIMEOUT_MS = 30_000;
 
 /** Protect the shared OpenCode process and sandbox from heavy tool-call bursts. */
 export const MAX_PARALLEL_SHELL_COMMANDS = 2;
@@ -1385,6 +1388,7 @@ export async function runOpencodeTurn(
     const outsideDirs = new Set<string>();
     const pendingShellCalls = new Set<string>();
     const activeShellCalls = new Set<string>();
+    const shellCommandsByCall = new Map<string, string>();
     /**
      * ONE CUT THAT WE REQUESTED, and only one — the flag is CONSUMED.
      *
@@ -1396,9 +1400,11 @@ export async function runOpencodeTurn(
      * requested per person.
      */
     let abortsRequested = 0;
-    const abortSession = async (): Promise<void> => {
+    const abortSession = async (): Promise<boolean> => {
       abortsRequested += 1;
-      await client.abort(sessionId);
+      const acknowledged = await client.abort(sessionId);
+      if (!acknowledged) abortsRequested = Math.max(0, abortsRequested - 1);
+      return acknowledged;
     };
     /**
      * AUTHORIZED delegations whose daughter has not yet been born, by `callId`.
@@ -1835,6 +1841,11 @@ export async function runOpencodeTurn(
     const stallTimeoutMs =
       deps.stallTimeoutMs ?? SUPERVISOR_STALL_TIMEOUT_MS;
     let timedOut = false;
+    let stallAbortFailed = false;
+    let stalledShellRecovery: {
+      startedAt: number;
+      prompt: string;
+    } | null = null;
 
     /**
      * ── THE LIFE OF THE TOUR, OUTSIDE THE FLOW ───────────────────── ─────────────────────
@@ -1851,6 +1862,25 @@ export async function runOpencodeTurn(
      * the twelve hour deadline. A silent stream froze the entire tower.
      */
     const lifecycle = async (): Promise<boolean> => {
+      if (
+        stalledShellRecovery &&
+        now() - stalledShellRecovery.startedAt >=
+          STALLED_SHELL_ABORT_IDLE_TIMEOUT_MS
+      ) {
+        stallAbortFailed = true;
+        sessionError =
+          "A shell command timed out and OpenCode acknowledged the abort, but the session did not become idle. No new checkpoint was saved.";
+        await cp
+          .emit("error", {
+            code: "turnStalled",
+            message: sessionError,
+            abortSucceeded: true,
+            idleSucceeded: false,
+          })
+          .catch(() => {});
+        await server?.stop().catch(() => {});
+        return true;
+      }
       /**
        * THE “STOP” AND THE STEERING. The granularity is that of the beat: a
        * `bash` of three minutes delays the stop by five seconds at most, where it
@@ -1928,11 +1958,69 @@ export async function runOpencodeTurn(
         await abortSession();
         return true;
       }
-      if (!pendingQuestion && now() - lastEventAt >= stallTimeoutMs) {
+      const silenceMs = now() - lastEventAt;
+      const shellCallsInFlight =
+        pendingShellCalls.size + activeShellCalls.size;
+      if (
+        !pendingQuestion &&
+        !stalledShellRecovery &&
+        shellCallsInFlight > 0 &&
+        silenceMs >= stallTimeoutMs
+      ) {
+        const stalledCalls = [
+          ...new Set([...pendingShellCalls, ...activeShellCalls]),
+        ].map((callId) => ({
+          callId,
+          command: shellCommandsByCall.get(callId) ?? "(command unavailable)",
+          pending: pendingShellCalls.has(callId),
+          active: activeShellCalls.has(callId),
+        }));
+        const abortSucceeded = await abortSession();
+        stallAbortFailed = !abortSucceeded;
+        // A failed HTTP abort means the command may still be writing. Stop the
+        // OpenCode process before journal export or Git delivery can observe a
+        // moving session. The final cleanup is deliberately idempotent.
+        if (!abortSucceeded) await server?.stop().catch(() => {});
+        if (abortSucceeded) {
+          pendingShellCalls.clear();
+          activeShellCalls.clear();
+          const commands = stalledCalls
+            .map((call) => `- ${JSON.stringify(cap(call.command, 1000))}`)
+            .join("\n");
+          stalledShellRecovery = {
+            startedAt: now(),
+            prompt:
+              `There was a timeout for the following command${stalledCalls.length === 1 ? "" : "s"}:\n` +
+              `${commands}\n\n` +
+              "Reason: OpenCode kept the shell call pending or running without publishing activity for five minutes, beyond the synchronous command timeout. Continue the task without rerunning the same command unchanged; narrow it or use run_background for a genuinely long process.",
+          };
+          await cp
+            .emit("status", {
+              phase: "shell_timeout",
+              silenceMs,
+              shellCallsInFlight,
+              pendingShellCalls: stalledCalls.filter((call) => call.pending)
+                .length,
+              activeShellCalls: stalledCalls.filter((call) => call.active)
+                .length,
+              abortSucceeded: true,
+            })
+            .catch(() => {});
+          return false;
+        }
         sessionError =
-          "The model or command produced no activity for five minutes. The session was stopped and can be resumed.";
-        await cp.emit("error", { message: sessionError }).catch(() => {});
-        await abortSession();
+          "A shell command produced no activity for five minutes, and the session could not be stopped cleanly. No new checkpoint was saved.";
+        await cp
+          .emit("error", {
+            code: "turnStalled",
+            message: sessionError,
+            silenceMs,
+            shellCallsInFlight,
+            pendingShellCalls: pendingShellCalls.size,
+            activeShellCalls: activeShellCalls.size,
+            abortSucceeded,
+          })
+          .catch(() => {});
         return true;
       }
       return false;
@@ -1964,8 +2052,15 @@ export async function runOpencodeTurn(
         nextEvent = null;
         if (winner.done) break;
         const raw = winner.value;
-        lastEventAt = now();
         const out = translateEvent(raw, state);
+        // `/event` is server-wide. Activity from an unrelated session must not
+        // keep this turn alive, while registered child sessions legitimately do.
+        if (
+          out.sessionId === sessionId ||
+          (!!out.sessionId && !!subagents.entry(out.sessionId))
+        ) {
+          lastEventAt = now();
+        }
         if (
           awaitingFirstModelSignal &&
           (out.reasoning ||
@@ -2035,6 +2130,8 @@ export async function runOpencodeTurn(
             out.permission.callId
           ) {
             const callId = out.permission.callId;
+            if (out.permission.command)
+              shellCommandsByCall.set(callId, out.permission.command);
             const alreadyCounted =
               pendingShellCalls.has(callId) || activeShellCalls.has(callId);
             if (
@@ -2234,6 +2331,12 @@ export async function runOpencodeTurn(
             const callId = String(event.payload.id ?? "");
             if (
               event.type === "tool_call" &&
+              typeof event.payload.command === "string"
+            ) {
+              shellCommandsByCall.set(callId, event.payload.command);
+            }
+            if (
+              event.type === "tool_call" &&
               pendingShellCalls.delete(callId)
             ) {
               activeShellCalls.add(callId);
@@ -2241,6 +2344,7 @@ export async function runOpencodeTurn(
             if (event.type === "tool_result") {
               pendingShellCalls.delete(callId);
               activeShellCalls.delete(callId);
+              shellCommandsByCall.delete(callId);
             }
           }
           // A `task` which ends without having made a girl (error, refusal)
@@ -2507,6 +2611,17 @@ export async function runOpencodeTurn(
           // tool-result event was lost during an OpenCode permission cascade.
           pendingShellCalls.clear();
           activeShellCalls.clear();
+          shellCommandsByCall.clear();
+          if (stalledShellRecovery) {
+            const recovery = stalledShellRecovery;
+            stalledShellRecovery = null;
+            abortsRequested = 0;
+            awaitingFirstModelSignal = true;
+            timing("shell-timeout-recovery");
+            await client.promptAsync(sessionId, recovery.prompt);
+            lastEventAt = now();
+            continue;
+          }
           /**
            * THE SAFE BORDER, and the only place from which we speak to the model: the
            * session is idle, history is matched. A steering message
@@ -2824,10 +2939,12 @@ export async function runOpencodeTurn(
 
     // The SAME constructor as the periodic backup: only the sha of
     // files changes, and it only changes here (it was the push that moved it).
-    const checkpoint: OpencodeCheckpoint = turnCheckpoint(
-      status === "completed" ? pushed?.headSha || filesFromSha : filesFromSha,
-      opencodeState,
-    );
+    const checkpoint = stallAbortFailed
+      ? undefined
+      : turnCheckpoint(
+          status === "completed" ? pushed?.headSha || filesFromSha : filesFromSha,
+          opencodeState,
+        );
 
     return {
       status,
@@ -2840,11 +2957,11 @@ export async function runOpencodeTurn(
         ? { errorMessage: cap(outward(sessionError), 1000) }
         : {}),
       costUsd,
-      checkpoint,
+      ...(checkpoint ? { checkpoint } : {}),
       // Nothing is let go: the newspaper no longer passes through the checkpoint,
       // it is written as an append throughout the turn (see `syncJournal`).
       checkpointDropped: [],
-      checkpointBytes: JSON.stringify(checkpoint).length,
+      checkpointBytes: checkpoint ? JSON.stringify(checkpoint).length : 0,
       pushed,
       workBranch: job.workBranch,
       ...(pushError ? { pushError } : {}),
