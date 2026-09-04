@@ -1,0 +1,294 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { auth } from "@modelcontextprotocol/client";
+import { mcpFetch } from "./mcp-http";
+import {
+  startMcpOAuth,
+  completeMcpOAuth,
+  initialMcpOAuth,
+  openMcpOAuth,
+} from "./mcp-oauth";
+import { decryptMcpToken } from "./mcp-credentials";
+import { mcpSettingsUpdate } from "./mcp-settings";
+import type { McpConnectionRow } from "./mcp-client";
+
+const state = vi.hoisted(() => ({
+  tables: {} as Record<string, Record<string, unknown>[]>,
+  requests: [] as Array<{ url: string; body: string }>,
+  failSave: false,
+}));
+vi.mock("./app-origin", () => ({
+  canonicalAppOrigin: () => "https://minddy.test",
+}));
+vi.mock("./safe-fetch", () => ({
+  assertPublicHttpUrl: async (url: URL) => ({ url, address: "1.1.1.1" }),
+  safeFetchResponse: async (url: string, init: RequestInit) => {
+    state.requests.push({ url, body: String(init.body ?? "") });
+    if (url.includes("oauth-protected-resource"))
+      return Response.json({
+        resource: "https://mcp.example.com/mcp",
+        authorization_servers: ["https://auth.example.com"],
+      });
+    if (url.includes("oauth-authorization-server"))
+      return Response.json({
+        issuer: "https://auth.example.com",
+        authorization_endpoint: "https://auth.example.com/authorize",
+        token_endpoint: "https://auth.example.com/token",
+        registration_endpoint: "https://auth.example.com/register",
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code", "refresh_token"],
+        code_challenge_methods_supported: ["S256"],
+        token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+      });
+    if (url.endsWith("/register"))
+      return Response.json({
+        ...JSON.parse(String(init.body)),
+        client_id: "registered-client",
+      });
+    if (url.endsWith("/token"))
+      return Response.json({
+        access_token: "private-access-token",
+        token_type: "Bearer",
+        refresh_token: "private-refresh-token",
+        expires_in: 3600,
+      });
+    return new Response(null, { status: 404 });
+  },
+}));
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: () => ({
+    from: (table: string) => {
+      const filters: Array<(row: Record<string, unknown>) => boolean> = [];
+      let operation = "read";
+      let values: Record<string, unknown> = {};
+      const query = {
+        select: () => query,
+        eq: (key: string, value: unknown) => {
+          filters.push((row) => row[key] === value);
+          return query;
+        },
+        gt: (key: string, value: string) => {
+          filters.push((row) => String(row[key]) > value);
+          return query;
+        },
+        or: () => {
+          filters.push(
+            (row) =>
+              !row.oauth_lock_until ||
+              String(row.oauth_lock_until) < new Date().toISOString(),
+          );
+          return query;
+        },
+        insert: (input: Record<string, unknown>) => {
+          operation = "insert";
+          values = input;
+          return query;
+        },
+        update: (input: Record<string, unknown>) => {
+          operation = "update";
+          values = input;
+          return query;
+        },
+        delete: () => {
+          operation = "delete";
+          return query;
+        },
+        maybeSingle: async () => {
+          const result = execute();
+          return { ...result, data: result.data[0] ?? null };
+        },
+        then: (resolve: (result: ReturnType<typeof execute>) => void) =>
+          resolve(execute()),
+      };
+      function execute() {
+        const rows = state.tables[table] ?? [];
+        const matching = rows.filter((row) =>
+          filters.every((filter) => filter(row)),
+        );
+        if (state.failSave && operation === "update")
+          return { data: [], error: "failed" };
+        if (operation === "insert")
+          rows.push({
+            expires_at: new Date(Date.now() + 600000).toISOString(),
+            ...values,
+          });
+        if (operation === "update")
+          matching.forEach((row) => Object.assign(row, values));
+        state.tables[table] =
+          operation === "delete"
+            ? rows.filter((row) => !matching.includes(row))
+            : rows;
+        return { data: matching.map((row) => ({ ...row })), error: null };
+      }
+      return query;
+    },
+  }),
+}));
+const connection: McpConnectionRow = {
+  id: "33b8b032-d967-4f06-aabd-dc165e988335",
+  user_id: "alice",
+  name: "Tools",
+  url: "https://mcp.example.com/mcp",
+  enabled: true,
+  created_at: "2026-09-04",
+  token_encrypted: null,
+  headers_encrypted: null,
+  oauth_encrypted: null,
+  transport: "http",
+  auth_mode: "oauth",
+  oauth_connected: false,
+};
+beforeEach(() => {
+  vi.stubEnv(
+    "AI_KEY_ENCRYPTION_SECRET",
+    "test-secret-with-at-least-thirty-two-characters",
+  );
+  state.tables = {
+    user_mcp_connections: [{ ...connection }],
+    user_mcp_oauth_attempts: [],
+  };
+  state.requests = [];
+  state.failSave = false;
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("generic MCP OAuth", () => {
+  it("discovers and registers with the actual SDK, persists PKCE, and exchanges a single-use callback", async () => {
+    const url = new URL(await startMcpOAuth(connection));
+    expect(url.origin).toBe("https://auth.example.com");
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+    expect(url.searchParams.get("redirect_uri")).toBe(
+      "https://minddy.test/api/account/mcp-connections/oauth/callback",
+    );
+    const attempt = state.tables.user_mcp_oauth_attempts[0];
+    expect(String(attempt.payload_encrypted)).not.toContain("verifier");
+    const payload = JSON.parse(
+      decryptMcpToken(String(attempt.payload_encrypted))!,
+    );
+    expect(payload.verifier).toBeTruthy();
+    expect(payload.discovery).toBeTruthy();
+    await completeMcpOAuth(
+      "alice",
+      url.searchParams.get("state")!,
+      "code",
+      "https://auth.example.com",
+    );
+    const saved = state.tables.user_mcp_connections[0];
+    expect(saved.oauth_connected).toBe(true);
+    expect(saved.oauth_lock_token).toBeNull();
+    expect(
+      JSON.parse(decryptMcpToken(String(saved.oauth_encrypted))!).tokens
+        .refresh_token,
+    ).toBe("private-refresh-token");
+    expect(
+      state.requests.find((request) => request.url.endsWith("/token"))?.body,
+    ).toContain(`code_verifier=${payload.verifier}`);
+    await expect(
+      completeMcpOAuth("alice", url.searchParams.get("state")!, "code"),
+    ).rejects.toThrow("expired or already used");
+  });
+  it("refreshes an authorized account without another browser redirect", async () => {
+    const url = new URL(await startMcpOAuth(connection));
+    await completeMcpOAuth("alice", url.searchParams.get("state")!, "code");
+    const oauth = await openMcpOAuth(connection);
+    try {
+      expect(
+        await auth(oauth.provider, {
+          serverUrl: connection.url,
+          fetchFn: mcpFetch(AbortSignal.timeout(1000)),
+        }),
+      ).toBe("AUTHORIZED");
+      const requests = state.requests.filter((request) =>
+        request.url.endsWith("/token"),
+      );
+      expect(requests).toHaveLength(2);
+      expect(requests[1].body).toContain("grant_type=refresh_token");
+      expect(requests[1].body).toContain("refresh_token=private-refresh-token");
+      expect(oauth.secrets()).toContain("private-access-token");
+    } finally {
+      await oauth.release();
+    }
+  });
+  it("rejects foreign accounts and expired states before exchanging a code", async () => {
+    const url = new URL(await startMcpOAuth(connection));
+    const nonce = url.searchParams.get("state")!;
+    await expect(completeMcpOAuth("bob", nonce, "code")).rejects.toThrow();
+    state.tables.user_mcp_oauth_attempts[0].expires_at = "2000-01-01T00:00:00Z";
+    await expect(completeMcpOAuth("alice", nonce, "code")).rejects.toThrow();
+    expect(
+      state.requests.some((request) => request.url.endsWith("/token")),
+    ).toBe(false);
+  });
+  it("rejects callback issuer mismatches and changed or deleted connections", async () => {
+    let url = new URL(await startMcpOAuth(connection));
+    await expect(
+      completeMcpOAuth(
+        "alice",
+        url.searchParams.get("state")!,
+        "code",
+        "https://attacker.example",
+      ),
+    ).rejects.toThrow();
+    expect(
+      state.requests.some((request) => request.url.endsWith("/token")),
+    ).toBe(false);
+    url = new URL(await startMcpOAuth(connection));
+    state.tables.user_mcp_connections[0].url = "https://different.example/mcp";
+    await expect(
+      completeMcpOAuth("alice", url.searchParams.get("state")!, "code"),
+    ).rejects.toThrow("changed");
+  });
+  it("supports pre-registered clients and keeps their secrets encrypted", async () => {
+    const configured = {
+      ...connection,
+      oauth_encrypted: initialMcpOAuth("custom-client", "custom-secret"),
+    };
+    const url = new URL(await startMcpOAuth(configured));
+    expect(url.searchParams.get("client_id")).toBe("custom-client");
+    expect(
+      state.requests.some((request) => request.url.endsWith("/register")),
+    ).toBe(false);
+    expect(configured.oauth_encrypted).not.toContain("custom-secret");
+  });
+  it("serializes refreshes and refuses writes after credentials are edited", async () => {
+    const oauth = await openMcpOAuth(connection);
+    await expect(openMcpOAuth(connection)).rejects.toThrow("busy or changed");
+    state.tables.user_mcp_connections[0].oauth_lock_token = null;
+    await expect(
+      oauth.provider.saveTokens({
+        access_token: "new-token",
+        token_type: "Bearer",
+      }),
+    ).rejects.toThrow("changed");
+    await oauth.release();
+    expect(state.tables.user_mcp_connections[0].oauth_encrypted).toBeNull();
+  });
+  it("clears credentials on endpoint changes and encrypts custom headers", () => {
+    const current = {
+      ...connection,
+      auth_mode: "bearer" as const,
+      token_encrypted: "old",
+      headers_encrypted: "old-headers",
+    };
+    const renamed = mcpSettingsUpdate({ name: "Renamed" }, current);
+    expect(renamed).not.toHaveProperty("token_encrypted");
+    const changed = mcpSettingsUpdate(
+      { url: "https://other.example/mcp" },
+      current,
+    );
+    expect(changed).toMatchObject({
+      token_encrypted: null,
+      headers_encrypted: null,
+      oauth_connected: false,
+    });
+    const custom = mcpSettingsUpdate(
+      { headers: { "X-API-Key": "secret-header" } },
+      current,
+    );
+    expect(custom.headers_encrypted).not.toContain("secret-header");
+    expect(decryptMcpToken(custom.headers_encrypted ?? null)).toBe(
+      '{"X-API-Key":"secret-header"}',
+    );
+  });
+});

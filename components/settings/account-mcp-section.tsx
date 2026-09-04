@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Plug } from "lucide-react";
 import { SettingsGroup } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import { AccountMcpClients } from "./account-mcp-clients";
 import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
 
 /** Account settings → MCP: the “Connect an agent” panel, shared with
@@ -20,6 +21,7 @@ export function AccountMcpSection() {
       variant="block"
     >
       <McpConnectPanel />
+      <AccountMcpClients />
     </SettingsGroup>
   );
 }

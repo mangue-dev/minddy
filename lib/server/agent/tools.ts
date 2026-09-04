@@ -1,3 +1,6 @@
+import "server-only";
+
+import { MCP_CLIENT_TOOLS } from "@/lib/mcp-client-tools";
 import { MAX_BACKGROUND_JOBS } from "./background";
 import {
   CREATE_ROUTINE_DESCRIPTION,
@@ -1241,6 +1244,7 @@ const LIST_LOCAL_PROJECTS_TOOL: AgentToolDef = {
  * descriptions and default targets; they never remove a tool from this catalog.
  */
 export const CANONICAL_AGENT_TOOLS: AgentToolDef[] = [
+  ...MCP_CLIENT_TOOLS,
   ...CORE_TOOLS,
   ...MINDDY_TOOLS,
   ...PR_TOOLS,

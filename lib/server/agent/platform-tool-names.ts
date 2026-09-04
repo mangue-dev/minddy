@@ -1,3 +1,4 @@
+import { MCP_CLIENT_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import type { AgentAnchor } from "./prompt";
 
 /**
@@ -111,6 +112,7 @@ export function anchorForRun(run: {
  * plane must remain identical for issue, notebook, and pull-request runs.
  */
 const CANONICAL_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
+  ...MCP_CLIENT_TOOL_NAMES,
   ...ISSUE_TOOL_NAMES,
   ...SCRATCHPAD_TOOL_NAMES,
   ...PR_TOOL_NAMES,

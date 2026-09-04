@@ -1,5 +1,8 @@
 import "server-only";
 
+import { MCP_CLIENT_TOOL_NAMES } from "@/lib/mcp-client-tools";
+import { executeMcpTool } from "@/lib/server/mcp-client";
+
 import { resolveApplicationLocale } from "@/lib/locale-language";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -662,6 +665,9 @@ export async function executeTool(
   ctx: ToolContext,
 ): Promise<ToolExecution> {
   try {
+    if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {
+      return executeMcpTool(ctx.userId, toolName, args);
+    }
     if (toolName === "get_help") {
       const topic = typeof args.topic === "string" ? args.topic : "";
       const article = getKnowledgeArticle(topic);

@@ -6,6 +6,7 @@ exports[`canonical OpenCode capability manifest > keeps one effective catalog fo
     "add_scratchpad_tasks",
     "append_to_page",
     "append_to_plan",
+    "call_mcp_tool",
     "comment_objective",
     "comment_pr",
     "comment_pr_line",
@@ -18,6 +19,7 @@ exports[`canonical OpenCode capability manifest > keeps one effective catalog fo
     "create_routine",
     "edit_issue_text",
     "edit_page_text",
+    "list_mcp_tools",
     "list_objectives",
     "list_pages",
     "list_projects",
@@ -50,183 +52,183 @@ exports[`canonical OpenCode capability manifest > keeps one effective catalog fo
   "sources": [
     {
       "source": "issue/button/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/button/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/button/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/chat/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/chat/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/chat/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/mention/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/mention/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/mention/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/automation/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/automation/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/automation/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/routine/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/routine/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "issue/routine/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/button/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/button/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/button/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/chat/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/chat/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/chat/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/mention/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/mention/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/mention/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/automation/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/automation/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/automation/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/routine/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/routine/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "notebook/routine/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/button/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/button/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/button/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/chat/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/chat/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/chat/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/mention/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/mention/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/mention/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/automation/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/automation/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/automation/local",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/routine/cloud",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/routine/worktree",
-      "tools": 43,
+      "tools": 45,
     },
     {
       "source": "pr/routine/local",
-      "tools": 43,
+      "tools": 45,
     },
   ],
 }

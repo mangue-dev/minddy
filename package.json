@@ -94,6 +94,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@lobehub/icons": "^5.16.0",
+    "@modelcontextprotocol/client": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@paper-design/shaders-react": "^0.0.80",
     "@pierre/diffs": "^1.3.6",
