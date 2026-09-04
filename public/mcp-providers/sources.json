@@ -1,0 +1,132 @@
+[
+  {
+    "file": "notion.png",
+    "source": "https://www.notion.com",
+    "asset": "https://www.notion.com/front-static/logo-ios.png",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "linear.svg",
+    "source": "https://linear.app",
+    "asset": "https://linear.app/static/favicon.svg?v=2",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "slack.png",
+    "source": "https://slack.com",
+    "asset": "https://a.slack-edge.com/9cc0056/img/icons/favicon-32.png",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "figma.svg",
+    "source": "https://www.figma.com",
+    "asset": "https://static.figma.com/app/icon/2/favicon.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "asana.ico",
+    "source": "https://asana.com",
+    "asset": "https://asana.com/assets/img/brand/asana-logo-favicon.ico",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "sentry.ico",
+    "source": "https://sentry.io",
+    "asset": "https://sentry.io/favicon.ico",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "supabase.png",
+    "source": "https://supabase.com",
+    "asset": "https://supabase.com/favicon/favicon-96x96.png",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "vercel.png",
+    "source": "https://vercel.com",
+    "asset": "https://assets.vercel.com/image/upload/q_auto/front/favicon/vercel/apple-touch-icon-180x180.png",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "stripe.svg",
+    "source": "https://stripe.com",
+    "asset": "https://images.stripeassets.com/fzn2n1nzq965/1hgcBNd12BfT9VLgbId7By/01d91920114b124fb4cf6d448f9f06eb/favicon.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-gmail.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/gmail.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-drive.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/drive.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-calendar.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/calendar.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-docs.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/docs.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-sheets.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/sheets.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-slides.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/slides.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-chat.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/chat.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "google-people.svg",
+    "source": "https://knowledge.workspace.google.com/admin/getting-started/brand-your-internal-communications-with-google-workspace",
+    "asset": "https://knowledge.workspace.google.com/static/images/icons/product/contacts.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "canva.svg",
+    "source": "https://www.canva.dev/docs/connect/guidelines/brand/",
+    "asset": "https://www.canva.dev/assets/connect/Canva-logos.zip",
+    "archiveMember": "Canva logos/svg/Canva Icon logo.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "atlassian.svg",
+    "source": "https://atlassian.design/foundations/logos",
+    "asset": "https://atlassian.design/assets/c846903555df/logos/atlassian_logo.zip",
+    "archiveMember": "Atlassian/Atlassian Mark/SVG/Atlassian mark brand RGB.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "github.svg",
+    "source": "https://github.com/logos",
+    "asset": "https://brand.github.com/GitHub_Logos.zip",
+    "archiveMember": "GitHub Logos/SVG/GitHub_Invertocat_Black.svg",
+    "verified": "2026-09-04"
+  },
+  {
+    "file": "github-dark.svg",
+    "source": "https://github.com/logos",
+    "asset": "https://brand.github.com/GitHub_Logos.zip",
+    "archiveMember": "GitHub Logos/SVG/GitHub_Invertocat_White.svg",
+    "verified": "2026-09-04"
+  }
+]

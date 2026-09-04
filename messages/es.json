@@ -5863,6 +5863,7 @@
     "headers": "Cabeceras personalizadas (JSON)",
     "headersHint": "Las cabeceras se cifran. Déjalo vacío para conservarlas o escribe '{}' para quitarlas. Cambiar la URL las elimina. Usa el selector de autenticación para Authorization.",
     "errorHeaders": "Introduce un objeto JSON con nombres y valores de cabeceras.",
+    "popupBlocked": "Permite las ventanas emergentes de Minddy y vuelve a iniciar sesión.",
     "errorOAuth": "No se pudo autorizar. Revisa la guía del proveedor, las credenciales OAuth y la URL de retorno y vuelve a conectar.",
     "saveAndConnect": "Guardar y conectar",
     "unauthenticated": "Este MCP no está autenticado",

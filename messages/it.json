@@ -5863,6 +5863,7 @@
     "headers": "Header personalizzati (JSON)",
     "headersHint": "Gli header sono crittografati. Lascia vuoto per mantenerli o inserisci '{}' per rimuoverli. Cambiare URL li elimina. Per Authorization usa il selettore di autenticazione.",
     "errorHeaders": "Inserisci un oggetto JSON con nomi e valori degli header.",
+    "popupBlocked": "Consenti i popup per Minddy, poi riprova ad accedere.",
     "errorOAuth": "Autorizzazione non riuscita. Controlla guida del fornitore, credenziali OAuth e URL di callback, poi ricollega.",
     "saveAndConnect": "Salva e collega",
     "unauthenticated": "Questo MCP non è autenticato",

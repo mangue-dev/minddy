@@ -42,6 +42,7 @@ import type { McpConnection } from "@/lib/mcp-client";
 
 const queryKey = ["account-mcp-connections"];
 const endpoint = "/api/account/mcp-connections";
+const connectionChannel = "minddy:mcp-connections";
 
 async function request(path: string, method = "GET", body?: unknown) {
   const response = await fetch(path, {
@@ -97,13 +98,24 @@ export function AccountMcpClients() {
     return t("errorSave");
   };
   useEffect(() => {
+    const channel =
+      typeof BroadcastChannel === "undefined"
+        ? null
+        : new BroadcastChannel(connectionChannel);
+    if (channel) {
+      channel.onmessage = () => void queryClient.invalidateQueries({ queryKey });
+    }
     const current = new URL(window.location.href);
     const outcome = current.searchParams.get("mcp");
-    if (!outcome) return;
-    if (outcome === "connected") toast.success(t("oauthConnected"));
-    current.searchParams.delete("mcp");
-    window.history.replaceState(window.history.state, "", current);
-  }, [t]);
+    if (outcome) {
+      if (outcome === "connected") toast.success(t("oauthConnected"));
+      channel?.postMessage("changed");
+      void queryClient.invalidateQueries({ queryKey });
+      current.searchParams.delete("mcp");
+      window.history.replaceState(window.history.state, "", current);
+    }
+    return () => channel?.close();
+  }, [queryClient, t]);
 
   const closeDialog = () => {
     setEditing(null);
@@ -151,7 +163,19 @@ export function AccountMcpClients() {
     }
   };
 
-  const authorize = async (connectionId: string) => {
+  const openAuthorizationTab = () => {
+    // Reserve the tab during the click, before saving or requesting an OAuth URL.
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    else toast.error(t("popupBlocked"));
+    return tab;
+  };
+
+  const authorize = async (
+    connectionId: string,
+    tab = openAuthorizationTab(),
+  ) => {
+    if (!tab) return;
     setBusy(true);
     setError(null);
     try {
@@ -159,11 +183,26 @@ export function AccountMcpClients() {
         `${endpoint}/${connectionId}/authorize`,
         "POST",
       );
-      if (result?.url) window.location.assign(result.url);
+      if (!result?.url) throw new Error("oauth");
+      if (!tab.closed) tab.location.replace(result.url);
     } catch {
+      tab.close();
       // The saved connection stays visible with its authentication tooltip.
     } finally {
       await queryClient.invalidateQueries({ queryKey });
+      setBusy(false);
+    }
+  };
+
+  const testConnection = async (connectionId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await request(`${endpoint}/${connectionId}/test`, "POST");
+      toast.success(t("testSuccess", { count: result.tools }));
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
       setBusy(false);
     }
   };
@@ -290,14 +329,7 @@ export function AccountMcpClients() {
                   </DropdownMenuItem>
                 )}
               <DropdownMenuItem
-                onSelect={async () => {
-                  const result = await mutate(
-                    `${endpoint}/${connection.id}/test`,
-                    "POST",
-                  );
-                  if (result)
-                    toast.success(t("testSuccess", { count: result.tools }));
-                }}
+                onSelect={() => void testConnection(connection.id)}
               >
                 {t("test")}
               </DropdownMenuItem>
@@ -406,6 +438,10 @@ export function AccountMcpClients() {
                     editing.url !== url ||
                     !!clientId ||
                     !!clientSecret);
+                const authorizationTab = needsAuthorization
+                  ? openAuthorizationTab()
+                  : null;
+                if (needsAuthorization && !authorizationTab) return;
                 const result = await mutate(
                   editing === "new" ? endpoint : `${endpoint}/${editing.id}`,
                   editing === "new" ? "POST" : "PATCH",
@@ -432,8 +468,11 @@ export function AccountMcpClients() {
                   setToken("");
                   setClientSecret("");
                   setHeaders("");
-                  if (needsAuthorization) await authorize(savedId);
+                  if (authorizationTab)
+                    await authorize(savedId, authorizationTab);
                   else toast.success(t("saved"));
+                } else {
+                  authorizationTab?.close();
                 }
               }}
             >

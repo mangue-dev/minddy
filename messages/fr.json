@@ -5863,6 +5863,7 @@
     "headers": "En-têtes personnalisés (JSON)",
     "headersHint": "Les en-têtes sont chiffrés. Laissez vide pour les conserver, ou saisissez '{}' pour les retirer. Changer l’URL les supprime. Utilisez le choix d’authentification pour Authorization.",
     "errorHeaders": "Saisissez un objet JSON contenant les noms et valeurs des en-têtes.",
+    "popupBlocked": "Autorisez les fenêtres pop-up pour Minddy, puis réessayez de vous connecter.",
     "errorOAuth": "Autorisation impossible. Vérifiez le guide du fournisseur, les identifiants OAuth et l’URL de retour, puis reconnectez-vous.",
     "saveAndConnect": "Enregistrer et connecter",
     "unauthenticated": "Ce MCP n'est pas authentifié",
