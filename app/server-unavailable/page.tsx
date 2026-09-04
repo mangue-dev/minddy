@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ServerUnavailableState } from "@/components/server-unavailable-state";
-import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
-import { SERVER_UNAVAILABLE_PATH } from "@/lib/backend-availability";
+import { sanitizeBackendRetryPath } from "@/lib/backend-availability";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -18,14 +17,14 @@ export default async function ServerUnavailablePage({
     searchParams,
   ]);
   const rawRetry = Array.isArray(params.retry) ? params.retry[0] : params.retry;
-  const retryHref = sanitizeInternalRedirectPath(rawRetry, "/home");
+  const retryHref = sanitizeBackendRetryPath(rawRetry);
 
   return (
     <ServerUnavailableState
       title={t("title")}
       description={t("description")}
       retryLabel={t("retry")}
-      retryHref={retryHref === SERVER_UNAVAILABLE_PATH ? "/home" : retryHref}
+      retryHref={retryHref}
     />
   );
 }

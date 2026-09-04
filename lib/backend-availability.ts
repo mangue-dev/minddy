@@ -15,6 +15,35 @@ const RETRYABLE_MESSAGE_PATTERNS = [
 export const SERVER_UNAVAILABLE_PATH = "/server-unavailable";
 export const BACKEND_REQUEST_TIMEOUT_MS = 8_000;
 
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) return true;
+  }
+  return false;
+}
+
+/** Validates the already-decoded App Router query value used by the retry link. */
+export function sanitizeBackendRetryPath(
+  raw: string | null | undefined,
+  fallback = "/home",
+): string {
+  const candidate = raw?.trim();
+  if (!candidate) return fallback;
+  if (!candidate.startsWith("/") || candidate.startsWith("//")) return fallback;
+  if (candidate.includes("\\") || hasControlCharacter(candidate)) return fallback;
+  if (/^\/[^/]*:/i.test(candidate)) return fallback;
+
+  try {
+    const parsed = new URL(candidate, "https://minddy.invalid");
+    if (parsed.origin !== "https://minddy.invalid") return fallback;
+    if (parsed.pathname === SERVER_UNAVAILABLE_PATH) return fallback;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
 /** An HTTP failure that keeps its status after a client API response is parsed. */
 export class HttpResponseError extends Error {
   constructor(message: string, readonly status: number) {
