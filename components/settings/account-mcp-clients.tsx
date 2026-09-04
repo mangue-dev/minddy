@@ -6,6 +6,17 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   Input,
+  Textarea,
+  Checkbox,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
   toast,
   Dialog,
   DialogContent,
@@ -24,6 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MCP_PRESETS, type McpPreset } from "@/lib/mcp-catalog";
 import type { McpConnection } from "@/lib/mcp-client";
@@ -158,10 +170,8 @@ export function AccountMcpClients() {
 
   const endpointFields = (
     <>
-      <div className="space-y-1">
-        <label className="text-sm" htmlFor={`${id}-name`}>
-          {t("name")}
-        </label>
+      <Field>
+        <FieldLabel htmlFor={`${id}-name`}>{t("name")}</FieldLabel>
         <Input
           id={`${id}-name`}
           required
@@ -170,11 +180,9 @@ export function AccountMcpClients() {
           onChange={(event) => setName(event.target.value)}
           disabled={busy}
         />
-      </div>
-      <div className="space-y-1">
-        <label className="text-sm" htmlFor={`${id}-url`}>
-          {t("url")}
-        </label>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor={`${id}-url`}>{t("url")}</FieldLabel>
         <Input
           id={`${id}-url`}
           type="url"
@@ -186,7 +194,7 @@ export function AccountMcpClients() {
           disabled={busy}
           aria-describedby={`${id}-support`}
         />
-      </div>
+      </Field>
     </>
   );
 
@@ -227,13 +235,15 @@ export function AccountMcpClients() {
                 !connection.oauth_connected && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         aria-label={t("unauthenticated")}
-                        className="shrink-0 rounded-sm text-orange-500 focus-visible:outline-2 focus-visible:outline-ring"
+                        className="size-5 shrink-0 text-orange-500 hover:text-orange-500"
                       >
                         <TriangleAlert className="size-4" aria-hidden />
-                      </button>
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>{t("unauthenticated")}</TooltipContent>
                   </Tooltip>
@@ -314,9 +324,7 @@ export function AccountMcpClients() {
         </div>
       ))}
       <div className="space-y-3">
-        <label className="text-sm" htmlFor={`${id}-search`}>
-          {t("browse")}
-        </label>
+        <FieldLabel htmlFor={`${id}-search`}>{t("browse")}</FieldLabel>
         <Input
           id={`${id}-search`}
           type="search"
@@ -330,7 +338,7 @@ export function AccountMcpClients() {
               .toLowerCase()
               .includes(search.toLowerCase()),
           ).map((item) => (
-            <button
+            <Button
               key={item.id}
               type="button"
               disabled={busy || isPending || isError}
@@ -343,7 +351,8 @@ export function AccountMcpClients() {
                   item,
                 )
               }
-              className="flex items-center gap-3 rounded-lg border border-border p-3 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+              variant="outline"
+              className="h-auto justify-start gap-3 whitespace-normal p-3 text-left"
             >
               <McpServiceLogo service={item.id} />
               <span className="min-w-0 flex-1 text-sm font-medium">
@@ -353,7 +362,7 @@ export function AccountMcpClients() {
                 className="size-4 shrink-0 text-muted-foreground"
                 aria-hidden
               />
-            </button>
+            </Button>
           ))}
         </div>
         <Button
@@ -459,10 +468,10 @@ export function AccountMcpClients() {
               {!preset && endpointFields}
               {authMode === "bearer" && (
                 <>
-                  <div className="space-y-1">
-                    <label className="text-sm" htmlFor={`${id}-token`}>
+                  <Field>
+                    <FieldLabel htmlFor={`${id}-token`}>
                       {t("token")}
-                    </label>
+                    </FieldLabel>
                     <Input
                       id={`${id}-token`}
                       type="password"
@@ -473,7 +482,7 @@ export function AccountMcpClients() {
                       disabled={busy || clearToken}
                       aria-describedby={`${id}-token-hint`}
                     />
-                  </div>
+                  </Field>
                   <p
                     id={`${id}-token-hint`}
                     className="text-xs text-muted-foreground"
@@ -481,140 +490,165 @@ export function AccountMcpClients() {
                     {t("tokenHint")}
                   </p>
                   {editing !== "new" && editing.has_token && (
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
+                    <Field orientation="horizontal" className="justify-start">
+                      <Checkbox
+                        id={`${id}-clear-token`}
                         checked={clearToken}
                         disabled={busy}
-                        onChange={(event) =>
-                          setClearToken(event.target.checked)
+                        onCheckedChange={(checked) =>
+                          setClearToken(checked === true)
                         }
                       />
-                      {t("clearToken")}
-                    </label>
+                      <FieldLabel htmlFor={`${id}-clear-token`}>
+                        {t("clearToken")}
+                      </FieldLabel>
+                    </Field>
                   )}
                 </>
               )}
-              <details>
-                <summary className="cursor-pointer text-sm">
-                  {t("advanced")}
-                </summary>
-                <div className="mt-3 space-y-3">
-                  <p
-                    id={`${id}-support`}
-                    className="text-xs text-muted-foreground"
-                  >
-                    {t("support")}
-                  </p>
-                  {preset && endpointFields}
-                  <div className="space-y-1">
-                    <label className="block text-sm" htmlFor={`${id}-auth`}>
-                      {t("authentication")}
-                    </label>
-                    <select
-                      id={`${id}-auth`}
-                      className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-                      value={authMode}
-                      disabled={busy}
-                      onChange={(event) =>
-                        setAuthMode(event.target.value as typeof authMode)
-                      }
-                    >
-                      <option value="oauth">{t("oauth")}</option>
-                      <option value="bearer">{t("bearer")}</option>
-                      <option value="none">{t("noAuth")}</option>
-                    </select>
-                  </div>
-                  {authMode === "oauth" && (
+              <Accordion type="single" collapsible>
+                <AccordionItem value="advanced" className="border-b-0">
+                  <AccordionTrigger className="py-3 text-sm font-medium">
+                    {t("advanced")}
+                  </AccordionTrigger>
+                  <AccordionContent>
                     <div className="space-y-3">
-                      <p className="text-xs text-muted-foreground">
-                        {t("oauthHint")}
+                      <p
+                        id={`${id}-support`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        {t("support")}
                       </p>
-                      <details>
-                        <summary className="cursor-pointer text-sm">
-                          {t("oauthAppSettings")}
-                        </summary>
-                        <div className="mt-2 space-y-2">
-                          <label
-                            className="block text-sm"
-                            htmlFor={`${id}-client`}
-                          >
-                            {t("clientId")}
-                          </label>
-                          <Input
-                            id={`${id}-client`}
-                            value={clientId}
-                            maxLength={1024}
+                      {preset && endpointFields}
+                      <Field>
+                        <FieldLabel htmlFor={`${id}-auth`}>
+                          {t("authentication")}
+                        </FieldLabel>
+                        <Select
+                          value={authMode}
+                          disabled={busy}
+                          onValueChange={(value) =>
+                            setAuthMode(value as typeof authMode)
+                          }
+                        >
+                          <SelectTrigger id={`${id}-auth`} className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="oauth">{t("oauth")}</SelectItem>
+                            <SelectItem value="bearer">
+                              {t("bearer")}
+                            </SelectItem>
+                            <SelectItem value="none">{t("noAuth")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      {authMode === "oauth" && (
+                        <div className="space-y-3">
+                          <p className="text-xs text-muted-foreground">
+                            {t("oauthHint")}
+                          </p>
+                          <Accordion type="single" collapsible>
+                            <AccordionItem
+                              value="oauth-app"
+                              className="border-b-0"
+                            >
+                              <AccordionTrigger className="py-3 text-sm font-medium">
+                                {t("oauthAppSettings")}
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="space-y-2">
+                                  <Field>
+                                    <FieldLabel htmlFor={`${id}-client`}>
+                                      {t("clientId")}
+                                    </FieldLabel>
+                                    <Input
+                                      id={`${id}-client`}
+                                      value={clientId}
+                                      maxLength={1024}
+                                      disabled={busy}
+                                      onChange={(event) =>
+                                        setClientId(event.target.value)
+                                      }
+                                    />
+                                  </Field>
+                                  <Field>
+                                    <FieldLabel htmlFor={`${id}-secret`}>
+                                      {t("clientSecret")}
+                                    </FieldLabel>
+                                    <Input
+                                      id={`${id}-secret`}
+                                      type="password"
+                                      autoComplete="new-password"
+                                      value={clientSecret}
+                                      maxLength={4096}
+                                      disabled={busy}
+                                      onChange={(event) =>
+                                        setClientSecret(event.target.value)
+                                      }
+                                    />
+                                  </Field>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t("callback")}{" "}
+                                    <code className="break-all select-all">
+                                      {data?.callback_url}
+                                    </code>
+                                  </p>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </div>
+                      )}
+                      <div className="mt-2 space-y-2">
+                        <Field>
+                          <FieldLabel htmlFor={`${id}-transport`}>
+                            {t("transport")}
+                          </FieldLabel>
+                          <Select
+                            value={transport}
                             disabled={busy}
-                            onChange={(event) =>
-                              setClientId(event.target.value)
+                            onValueChange={(value) =>
+                              setTransport(value as typeof transport)
                             }
-                          />
-                          <label
-                            className="block text-sm"
-                            htmlFor={`${id}-secret`}
                           >
-                            {t("clientSecret")}
-                          </label>
-                          <Input
-                            id={`${id}-secret`}
-                            type="password"
-                            autoComplete="new-password"
-                            value={clientSecret}
-                            maxLength={4096}
+                            <SelectTrigger
+                              id={`${id}-transport`}
+                              className="w-full"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="http">
+                                Streamable HTTP
+                              </SelectItem>
+                              <SelectItem value="sse">SSE</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor={`${id}-headers`}>
+                            {t("headers")}
+                          </FieldLabel>
+                          <Textarea
+                            id={`${id}-headers`}
+                            className="min-h-24 font-mono text-sm"
+                            value={headers}
+                            autoComplete="off"
+                            maxLength={64000}
                             disabled={busy}
-                            onChange={(event) =>
-                              setClientSecret(event.target.value)
-                            }
+                            onChange={(event) => setHeaders(event.target.value)}
+                            placeholder={'{"X-API-Key": "…"}'}
                           />
                           <p className="text-xs text-muted-foreground">
-                            {t("callback")}{" "}
-                            <code className="break-all select-all">
-                              {data?.callback_url}
-                            </code>
+                            {t("headersHint")}
                           </p>
-                        </div>
-                      </details>
+                        </Field>
+                      </div>
                     </div>
-                  )}
-                  <div className="mt-2 space-y-2">
-                    <label
-                      className="block text-sm"
-                      htmlFor={`${id}-transport`}
-                    >
-                      {t("transport")}
-                    </label>
-                    <select
-                      id={`${id}-transport`}
-                      className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-                      value={transport}
-                      disabled={busy}
-                      onChange={(event) =>
-                        setTransport(event.target.value as typeof transport)
-                      }
-                    >
-                      <option value="http">Streamable HTTP</option>
-                      <option value="sse">SSE</option>
-                    </select>
-                    <label className="block text-sm" htmlFor={`${id}-headers`}>
-                      {t("headers")}
-                    </label>
-                    <textarea
-                      id={`${id}-headers`}
-                      className="min-h-20 w-full rounded-md border border-border bg-background p-2 font-mono text-sm"
-                      value={headers}
-                      autoComplete="off"
-                      maxLength={64000}
-                      disabled={busy}
-                      onChange={(event) => setHeaders(event.target.value)}
-                      placeholder={'{"X-API-Key": "…"}'}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {t("headersHint")}
-                    </p>
-                  </div>
-                </div>
-              </details>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
               {error && (
                 <p role="alert" className="text-sm text-destructive">
                   {error}
