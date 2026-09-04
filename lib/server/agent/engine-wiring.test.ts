@@ -90,21 +90,21 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
    * The line only keeps the pointer, because it is reread on each call du
    * control plane and that the log carries the complete output of each tool.
    */
-  it("rassemble le journal du tour précédent depuis sa table", () => {
-    expect(source).toContain(
-      "events: await loadRunJournal(run.id, pointer.sessionId)",
-    );
+  it("loads a bounded journal and cold-starts when it cannot be replayed", () => {
+    expect(source).toContain("await loadRunJournal(run.id, journalPointer.sessionId)");
+    expect(source).toContain("const priorMemoryUnavailable =");
+    expect(source).toContain("if (canResumeOpencode)");
     expect(source).toContain(
       "...(opencodeJournal ? { opencode: opencodeJournal } : {})",
     );
   });
 
-  it("n'amorce pas un tour REPRIS : sa demande arrive par le steering", () => {
+  it("does not bootstrap a replayable turn because steering supplies its prompt", () => {
     // Replaying the primer would replay the ticket context and the request from the launcher
     // OVER the restored history — the agent would reread the initial instruction
     // as if she had just arrived. This is what `VmJob.opencodeInput` promises in
     // all letters (“`prompt` is empty on a RESUME round”).
-    expect(source).toContain("if (run.checkpoint?.opencode?.sessionId)");
+    expect(source).toContain("if (canResumeOpencode)");
   });
 
   it("restores the trusted PR base when a resumed review needs a fresh checkout", () => {

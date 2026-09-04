@@ -1207,6 +1207,32 @@ on this path. The cursor **only advances once the batch has been written**: a se
 which fails causes the same slice to be re-exported on the next pass, rather than
 leave a permanent hole in the newspaper.
 
+#### 2.29.1 Bounded storage and replay (2026-09-04)
+
+Append-only did not make the journal bounded. A production incident exposed a
+156 MB `agent_run_journal` table after 261 MB of journal request bodies arrived
+in fifteen minutes. An unbounded ordered read of one session then timed out and
+contributed to database-wide resource pressure.
+
+The durable format now follows the same separation used by mature agent traces:
+small ordered metadata identifies immutable payloads, while large content is
+opaque to the query engine. Each new batch is serialized once, gzip-compressed,
+and stored with its raw byte count, event count, and SHA-256 digest. The digest
+makes a retry idempotent, including the case where a VM wrote a batch and died
+before its checkpoint cursor was persisted. Legacy JSONB rows remain readable.
+
+Replay is deliberately different from retention. The exact trace is retained
+for the normal 30-day audit window, but automatic session recovery reads one row
+at a time and stops before assembling more than 8 MB or 512 rows into a VM job.
+When that boundary is reached, the executor rebuilds the task context and starts
+a clean OpenCode session. An oversized trace can therefore cost conversational
+continuity, but it cannot make the application or database unavailable.
+
+The supervisor also advances its in-memory export cursor after every successful
+batch instead of after the whole increment. This prevents a failure in batch N
+from immediately resending batches 1 through N-1; database digest uniqueness is
+the second line of defense across process restarts.
+
 ---
 
 ### 2.30 The observation window, recorded at base (2026-08-14)
