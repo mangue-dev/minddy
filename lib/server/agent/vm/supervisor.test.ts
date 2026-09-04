@@ -530,6 +530,72 @@ function silentStream(frames: string[] = []): Partial<SupervisorDeps> {
   };
 }
 
+/** A stalled round that acknowledges abort, becomes idle, then resumes. */
+function recoverableStallStream(frames: string[]): Partial<SupervisorDeps> {
+  let events: ReadableStreamDefaultController<Uint8Array> | null = null;
+  const pendingFrames = [...frames];
+  const encoder = new TextEncoder();
+  const base = fakeFetch();
+  const publish = (frame: string) =>
+    events?.enqueue(encoder.encode(`data: ${frame}\n\n`));
+
+  return {
+    client: (baseUrl) =>
+      new OpencodeClient({
+        baseUrl,
+        directory: "/vercel/sandbox/repo",
+        fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
+          const path = String(input)
+            .replace(/^http:\/\/127\.0\.0\.1:\d+/, "")
+            .split("?")[0];
+          if (path === "/event") {
+            return new Response(
+              new ReadableStream({
+                start(controller) {
+                  events = controller;
+                },
+                pull() {
+                  const frame = pendingFrames.shift();
+                  if (frame) publish(frame);
+                },
+              }),
+              {
+                status: 200,
+                headers: { "content-type": "text/event-stream" },
+              },
+            );
+          }
+          const response = await base(input, init);
+          if (path.endsWith("/abort") && response.ok) {
+            publish(
+              JSON.stringify({
+                type: "session.error",
+                properties: {
+                  sessionID: PARENT,
+                  error: { name: "MessageAbortedError", message: "Aborted" },
+                },
+              }),
+            );
+            publish(idleFrame());
+          }
+          if (path.endsWith("/prompt_async") && h.prompts.length === 2) {
+            publish(
+              parentText(
+                "prt_after_timeout",
+                "msg_after_timeout",
+                "Recovered after the command timeout.",
+              ),
+            );
+            publish(parentRound("msg_after_timeout", "stop"));
+            publish(idleFrame());
+          }
+          return response;
+        }) as typeof fetch,
+      }),
+    lifecycleBeatMs: 5,
+  };
+}
+
 function deps(): SupervisorDeps {
   return {
     startServer: async (env) => {
@@ -2728,7 +2794,48 @@ describe("le battement du tour", () => {
     expect(h.aborts).toBeGreaterThanOrEqual(1);
   });
 
-  it("stops a turn when a running bash command stops producing activity", async () => {
+  it("continues the same turn after aborting a stalled bash command", async () => {
+    h.tick = 10_000;
+    const report = await run(
+      {},
+      recoverableStallStream([
+        permissionFrame(
+          "bash",
+          { command: "npm run typecheck" },
+          "call_typecheck",
+        ),
+        toolFrame("bash", "call_typecheck", {
+          status: "running",
+          input: { command: "npm run typecheck" },
+        }),
+      ]),
+    );
+    expect(report.status).toBe("completed");
+    expect(report.errorCode).toBeUndefined();
+    expect(report.errorMessage).toBeUndefined();
+    expect(h.permissionReplies[0]?.reply).toBe("once");
+    expect(h.aborts).toBeGreaterThanOrEqual(1);
+    expect(
+      h.events.find(
+        (event) =>
+          event.type === "status" && event.payload.phase === "shell_timeout",
+      ),
+    ).toMatchObject({
+      type: "status",
+      payload: {
+        shellCallsInFlight: 1,
+        activeShellCalls: 1,
+        abortSucceeded: true,
+      },
+    });
+    expect(h.prompts[1]).toContain(
+      "There was a timeout for the following command",
+    );
+    expect(h.prompts[1]).toContain("npm run typecheck");
+    expect(h.prompts[1]).toContain("Reason:");
+  });
+
+  it("fails safely when an aborted shell command never makes the session idle", async () => {
     h.tick = 10_000;
     const report = await run(
       {},
@@ -2744,25 +2851,15 @@ describe("le battement du tour", () => {
         }),
       ]),
     );
+
     expect(report.status).toBe("error");
-    expect(report.errorCode).toBeUndefined();
-    expect(report.errorMessage).toContain("shell command");
-    expect(h.permissionReplies[0]?.reply).toBe("once");
-    expect(h.aborts).toBeGreaterThanOrEqual(1);
-    expect(
-      h.events.find((event) => event.payload.code === "turnStalled"),
-    ).toMatchObject({
-      type: "error",
-      payload: {
-        shellCallsInFlight: 1,
-        activeShellCalls: 1,
-        abortSucceeded: true,
-      },
-    });
+    expect(report.checkpoint).toBeUndefined();
+    expect(report.errorMessage).toContain("did not become idle");
+    expect(h.prompts).toHaveLength(1);
   });
 
   it("does not let unrelated server sessions hide a stalled turn", async () => {
-    h.tick = 10_000;
+    h.tick = 1_000;
     const unrelated = Array.from({ length: 40 }, (_, index) =>
       toolFrame(
         "bash",
@@ -2774,23 +2871,26 @@ describe("le battement du tour", () => {
 
     const report = await run(
       {},
-      silentStream([
-        permissionFrame(
-          "bash",
-          { command: "npm run typecheck" },
-          "call_typecheck",
-        ),
-        toolFrame("bash", "call_typecheck", {
-          status: "running",
-          input: { command: "npm run typecheck" },
-        }),
-        ...unrelated,
-        idleFrame(),
-      ]),
+      {
+        ...recoverableStallStream([
+          permissionFrame(
+            "bash",
+            { command: "npm run typecheck" },
+            "call_typecheck",
+          ),
+          toolFrame("bash", "call_typecheck", {
+            status: "running",
+            input: { command: "npm run typecheck" },
+          }),
+          ...unrelated,
+        ]),
+        stallTimeoutMs: 30_000,
+      },
     );
 
-    expect(report.status).toBe("error");
-    expect(report.errorMessage).toContain("shell command");
+    expect(report.errorMessage).toBeUndefined();
+    expect(report.status).toBe("completed");
+    expect(h.prompts).toHaveLength(2);
   });
 
   it("does not classify silent non-shell work as a stalled command", async () => {

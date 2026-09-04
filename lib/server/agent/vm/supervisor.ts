@@ -253,6 +253,9 @@ export const SUPERVISOR_TURN_SOFT_DEADLINE_MS = 12 * 60 * 60_000;
  */
 export const SUPERVISOR_STALL_TIMEOUT_MS = 5 * 60_000;
 
+/** An acknowledged abort should make the parent session idle almost at once. */
+const STALLED_SHELL_ABORT_IDLE_TIMEOUT_MS = 30_000;
+
 /** Protect the shared OpenCode process and sandbox from heavy tool-call bursts. */
 export const MAX_PARALLEL_SHELL_COMMANDS = 2;
 
@@ -1385,6 +1388,7 @@ export async function runOpencodeTurn(
     const outsideDirs = new Set<string>();
     const pendingShellCalls = new Set<string>();
     const activeShellCalls = new Set<string>();
+    const shellCommandsByCall = new Map<string, string>();
     /**
      * ONE CUT THAT WE REQUESTED, and only one — the flag is CONSUMED.
      *
@@ -1838,6 +1842,10 @@ export async function runOpencodeTurn(
       deps.stallTimeoutMs ?? SUPERVISOR_STALL_TIMEOUT_MS;
     let timedOut = false;
     let stallAbortFailed = false;
+    let stalledShellRecovery: {
+      startedAt: number;
+      prompt: string;
+    } | null = null;
 
     /**
      * ── THE LIFE OF THE TOUR, OUTSIDE THE FLOW ───────────────────── ─────────────────────
@@ -1854,6 +1862,25 @@ export async function runOpencodeTurn(
      * the twelve hour deadline. A silent stream froze the entire tower.
      */
     const lifecycle = async (): Promise<boolean> => {
+      if (
+        stalledShellRecovery &&
+        now() - stalledShellRecovery.startedAt >=
+          STALLED_SHELL_ABORT_IDLE_TIMEOUT_MS
+      ) {
+        stallAbortFailed = true;
+        sessionError =
+          "A shell command timed out and OpenCode acknowledged the abort, but the session did not become idle. No new checkpoint was saved.";
+        await cp
+          .emit("error", {
+            code: "turnStalled",
+            message: sessionError,
+            abortSucceeded: true,
+            idleSucceeded: false,
+          })
+          .catch(() => {});
+        await server?.stop().catch(() => {});
+        return true;
+      }
       /**
        * THE “STOP” AND THE STEERING. The granularity is that of the beat: a
        * `bash` of three minutes delays the stop by five seconds at most, where it
@@ -1936,18 +1963,53 @@ export async function runOpencodeTurn(
         pendingShellCalls.size + activeShellCalls.size;
       if (
         !pendingQuestion &&
+        !stalledShellRecovery &&
         shellCallsInFlight > 0 &&
         silenceMs >= stallTimeoutMs
       ) {
+        const stalledCalls = [
+          ...new Set([...pendingShellCalls, ...activeShellCalls]),
+        ].map((callId) => ({
+          callId,
+          command: shellCommandsByCall.get(callId) ?? "(command unavailable)",
+          pending: pendingShellCalls.has(callId),
+          active: activeShellCalls.has(callId),
+        }));
         const abortSucceeded = await abortSession();
         stallAbortFailed = !abortSucceeded;
         // A failed HTTP abort means the command may still be writing. Stop the
         // OpenCode process before journal export or Git delivery can observe a
         // moving session. The final cleanup is deliberately idempotent.
         if (!abortSucceeded) await server?.stop().catch(() => {});
-        sessionError = abortSucceeded
-          ? "A shell command produced no activity for five minutes. The session was stopped and can be resumed."
-          : "A shell command produced no activity for five minutes, and the session could not be stopped cleanly. No new checkpoint was saved.";
+        if (abortSucceeded) {
+          pendingShellCalls.clear();
+          activeShellCalls.clear();
+          const commands = stalledCalls
+            .map((call) => `- ${JSON.stringify(cap(call.command, 1000))}`)
+            .join("\n");
+          stalledShellRecovery = {
+            startedAt: now(),
+            prompt:
+              `There was a timeout for the following command${stalledCalls.length === 1 ? "" : "s"}:\n` +
+              `${commands}\n\n` +
+              "Reason: OpenCode kept the shell call pending or running without publishing activity for five minutes, beyond the synchronous command timeout. Continue the task without rerunning the same command unchanged; narrow it or use run_background for a genuinely long process.",
+          };
+          await cp
+            .emit("status", {
+              phase: "shell_timeout",
+              silenceMs,
+              shellCallsInFlight,
+              pendingShellCalls: stalledCalls.filter((call) => call.pending)
+                .length,
+              activeShellCalls: stalledCalls.filter((call) => call.active)
+                .length,
+              abortSucceeded: true,
+            })
+            .catch(() => {});
+          return false;
+        }
+        sessionError =
+          "A shell command produced no activity for five minutes, and the session could not be stopped cleanly. No new checkpoint was saved.";
         await cp
           .emit("error", {
             code: "turnStalled",
@@ -2068,6 +2130,8 @@ export async function runOpencodeTurn(
             out.permission.callId
           ) {
             const callId = out.permission.callId;
+            if (out.permission.command)
+              shellCommandsByCall.set(callId, out.permission.command);
             const alreadyCounted =
               pendingShellCalls.has(callId) || activeShellCalls.has(callId);
             if (
@@ -2267,6 +2331,12 @@ export async function runOpencodeTurn(
             const callId = String(event.payload.id ?? "");
             if (
               event.type === "tool_call" &&
+              typeof event.payload.command === "string"
+            ) {
+              shellCommandsByCall.set(callId, event.payload.command);
+            }
+            if (
+              event.type === "tool_call" &&
               pendingShellCalls.delete(callId)
             ) {
               activeShellCalls.add(callId);
@@ -2274,6 +2344,7 @@ export async function runOpencodeTurn(
             if (event.type === "tool_result") {
               pendingShellCalls.delete(callId);
               activeShellCalls.delete(callId);
+              shellCommandsByCall.delete(callId);
             }
           }
           // A `task` which ends without having made a girl (error, refusal)
@@ -2540,6 +2611,17 @@ export async function runOpencodeTurn(
           // tool-result event was lost during an OpenCode permission cascade.
           pendingShellCalls.clear();
           activeShellCalls.clear();
+          shellCommandsByCall.clear();
+          if (stalledShellRecovery) {
+            const recovery = stalledShellRecovery;
+            stalledShellRecovery = null;
+            abortsRequested = 0;
+            awaitingFirstModelSignal = true;
+            timing("shell-timeout-recovery");
+            await client.promptAsync(sessionId, recovery.prompt);
+            lastEventAt = now();
+            continue;
+          }
           /**
            * THE SAFE BORDER, and the only place from which we speak to the model: the
            * session is idle, history is matched. A steering message
