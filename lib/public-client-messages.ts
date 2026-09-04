@@ -50,6 +50,8 @@ export const PUBLIC_CLIENT_NAMESPACES = [
   // Plan and quota titles, shared with the plan settings
   // facturation de l'app (`components/marketing/pricing-plans.tsx`).
   "Billing",
+  // The root error boundary must remain translated even when a child layout fails.
+  "ServerUnavailable",
 ] as const;
 
 /**

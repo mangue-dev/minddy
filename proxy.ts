@@ -22,6 +22,11 @@ import {
 } from "@/lib/account-theme";
 import { supportedLocaleForTag } from "@/i18n/config";
 import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import {
+  backendFetchWithTimeout,
+  isBackendUnavailableError,
+  SERVER_UNAVAILABLE_PATH,
+} from "@/lib/backend-availability";
 
 /**
  * Next 16 middleware (named `proxy`). It does four things: route custom domains, resolve the language of public URLs, keep app routes behind a session, and keep crawlers out of anything that doesn't look at them.
@@ -46,6 +51,7 @@ import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies"
  */
 const PUBLIC_ROUTES = new Set([
   "/login",
+  SERVER_UNAVAILABLE_PATH,
   // `/signup` is a real page from MIN-300 (the registration wizard): it
   // it needs its line here, otherwise the proxy would send to `/login` the
   // person who specifically comes to create their account.
@@ -280,6 +286,7 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
 async function readSession(request: NextRequest, url: string, key: string) {
   const sink = createCookieSink();
   const supabase = createServerClient(url, key, {
+    global: { fetch: backendFetchWithTimeout },
     cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
@@ -288,9 +295,8 @@ async function readSession(request: NextRequest, url: string, key: string) {
       setAll: sink.collect,
     },
   });
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error && isBackendUnavailableError(error)) throw error;
   return { session, applyCookies: sink.applyCookies };
 }
 
@@ -389,7 +395,49 @@ function prefersMarkdown(accept: string | null): boolean {
     .some((part) => part.trim().toLowerCase().startsWith("text/markdown"));
 }
 
+/** Sends the visitor to a dependency-free recovery page while preserving their target. */
+function serverUnavailableResponse(request: NextRequest): NextResponse {
+  const target = request.nextUrl.clone();
+  const retry = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const locale =
+    localeForPublicPath(request.nextUrl.pathname) ??
+    supportedLocaleForTag(request.cookies.get("NEXT_LOCALE")?.value) ??
+    detectFromAcceptLanguage(request.headers.get("accept-language"));
+
+  target.pathname = SERVER_UNAVAILABLE_PATH;
+  target.search = "";
+  target.searchParams.set("retry", retry);
+  if (locale) target.searchParams.set("locale", locale);
+
+  const response = NextResponse.redirect(target, 307);
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("Vercel-CDN-Cache-Control", "no-store");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
+  try {
+    return await routeRequest(request);
+  } catch (error) {
+    if (!isBackendUnavailableError(error)) throw error;
+    console.warn("[proxy] Backend unavailable:", error);
+    return serverUnavailableResponse(request);
+  }
+}
+
+async function routeRequest(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // This page must render without touching Supabase, including on a custom host.
+  if (pathname === SERVER_UNAVAILABLE_PATH) {
+    const locale = supportedLocaleForTag(request.nextUrl.searchParams.get("locale"));
+    return nextClean(request, {
+      [PUBLIC_THEME_HEADER]: "1",
+      ...(locale ? { [LOCALE_HEADER]: locale } : {}),
+    });
+  }
+
   // Custom domain (MIN-36): dedicated branch, BEFORE all logic
   // pathname-based — primary hosts pay nothing, custom hosts do not
   // touchent jamais l'auth/locale/login.
@@ -398,7 +446,6 @@ export async function proxy(request: NextRequest) {
     return proxyCustomHost(request, host);
   }
 
-  const pathname = request.nextUrl.pathname;
   const supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -515,6 +562,7 @@ export async function proxy(request: NextRequest) {
   }[] = [];
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    global: { fetch: backendFetchWithTimeout },
     cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
@@ -534,9 +582,8 @@ export async function proxy(request: NextRequest) {
   // `getSession()` reads cookies but does not verify the JWT signature. This
   // route uses only the session and token for routing and cookie refreshes;
   // APIs keep their own identity verification.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error && isBackendUnavailableError(error)) throw error;
 
   // No session, or session whose second factor has not yet been
   // presented (MIN-132): in both cases the destination is /login, which renders

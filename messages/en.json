@@ -39,6 +39,11 @@
     "launchAgentAll": "Launch the Numo agent on the notebook",
     "launchAgentAllAria": "Launch the Numo agent on the whole notebook"
   },
+  "ServerUnavailable": {
+    "title": "Can't connect to the server",
+    "description": "The server is temporarily unavailable. Try again in a moment.",
+    "retry": "Try again"
+  },
   "Activity": {
     "created": "created the issue",
     "categoryAdded": "added the category “{name}”",

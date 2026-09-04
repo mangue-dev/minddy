@@ -18,6 +18,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
  */
 const PUBLIC_ENTRIES = [
   "app/layout.tsx",
+  "app/error.tsx",
   "app/not-found.tsx",
   "app/(marketing)/layout.tsx",
   "app/(marketing)/page.tsx",

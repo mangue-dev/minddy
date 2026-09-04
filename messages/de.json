@@ -39,6 +39,11 @@
     "launchAgentAll": "Starten Sie den Agenten Numo auf dem Notebook.",
     "launchAgentAllAria": "Starten Sie den Numo Agent für das gesamte Notizbuch"
   },
+  "ServerUnavailable": {
+    "title": "Verbindung zum Server nicht möglich",
+    "description": "Der Server ist vorübergehend nicht verfügbar. Versuchen Sie es gleich noch einmal.",
+    "retry": "Erneut versuchen"
+  },
   "Activity": {
     "created": "das Problem erstellt",
     "categoryAdded": "die Kategorie „{name}“ hinzugefügt",
