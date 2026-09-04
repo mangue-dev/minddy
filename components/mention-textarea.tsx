@@ -43,6 +43,11 @@ import {
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import type { AssistantMention } from "@/lib/assistant-types";
 import { splitAssistantMentionTokens } from "@/lib/agent-mentions";
+import {
+  escapeMentionLabel,
+  MENTION_TOKEN_END_PATTERN,
+  MENTION_TOKEN_START_PATTERN,
+} from "@/lib/mention-token";
 import { findActiveComposerMenuQuery } from "@/lib/assistant-slash-options";
 import { deleteComposerTokenBeforeCaret } from "@/lib/composer-token-delete";
 import {
@@ -233,32 +238,42 @@ function optionFromAssistantMention(mention: AssistantMention): MentionOption {
 }
 
 /** The text of the field. A mention is written "@Name" even if the pill only shows__KEEP_NL_TOKEN__ the name: on the server side as well as in rendering, it is the at sign which indicates it. */
-function serialize(root: HTMLElement): string {
+function serialize(root: HTMLElement): {
+  text: string;
+  mentionOffsets: Map<HTMLElement, number>;
+} {
   const parts: string[] = [];
+  const mentionOffsets = new Map<HTMLElement, number>();
+  let length = 0;
+
+  const append = (value: string) => {
+    parts.push(value);
+    length += value.length;
+  };
 
   const walk = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {
-      parts.push(node.textContent ?? "");
+      append(node.textContent ?? "");
       return;
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const el = node as HTMLElement;
 
     if (el.dataset.mentionLabel) {
-      parts.push(`@${el.dataset.mentionLabel}`);
+      mentionOffsets.set(el, length);
+      append(`@${el.dataset.mentionLabel}`);
       return;
     }
     if (el.dataset.skillName) {
-      parts.push(`/${el.dataset.skillName}`);
+      append(`/${el.dataset.skillName}`);
       return;
     }
     if (el.tagName === "BR") {
-      parts.push("\n");
+      append("\n");
       return;
     }
     if (el.tagName === "DIV" || el.tagName === "P") {
-      if (parts.length > 0 && parts[parts.length - 1] !== "\n")
-        parts.push("\n");
+      if (parts.length > 0 && parts[parts.length - 1] !== "\n") append("\n");
       for (const child of el.childNodes) walk(child);
       return;
     }
@@ -266,25 +281,60 @@ function serialize(root: HTMLElement): string {
   };
 
   for (const child of root.childNodes) walk(child);
-  return parts.join("");
+  return { text: parts.join(""), mentionOffsets };
 }
 
 function collectAssistantMentions(
   root: HTMLElement,
   preserveOccurrences: boolean,
+  serialized: ReturnType<typeof serialize>,
 ): AssistantMention[] {
   const seen = new Set<string>();
   const mentions: AssistantMention[] = [];
-  for (const node of root.querySelectorAll<HTMLElement>("[data-mention-id]")) {
-    const option = slotOption(node);
-    if (!option || option.type === "numo" || option.type === "forge") continue;
+  const nodes = [...root.querySelectorAll<HTMLElement>("[data-mention-id]")]
+    .map((node) => ({ node, option: slotOption(node) }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        node: HTMLElement;
+        option: EntityMentionOption;
+      } =>
+        !!entry.option &&
+        entry.option.type !== "numo" &&
+        entry.option.type !== "forge",
+    );
+  const occurrenceByOffset = new Map<string, number>();
+  if (preserveOccurrences && nodes.length > 0) {
+    const labels = [...new Set(nodes.map(({ option }) => option.label))].sort(
+      (a, b) => b.length - a.length,
+    );
+    const expression = new RegExp(
+      `${MENTION_TOKEN_START_PATTERN}@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
+      "gu",
+    );
+    const nextByLabel = new Map<string, number>();
+    let match: RegExpExecArray | null;
+    while ((match = expression.exec(serialized.text)) !== null) {
+      const occurrence = nextByLabel.get(match[1]) ?? 0;
+      occurrenceByOffset.set(`${match.index}\0${match[1]}`, occurrence);
+      nextByLabel.set(match[1], occurrence + 1);
+    }
+  }
+  for (const { node, option } of nodes) {
     const key = `${option.type}:${option.id}`;
     if (!preserveOccurrences && seen.has(key)) continue;
     seen.add(key);
+    const offset = serialized.mentionOffsets.get(node);
+    const occurrence =
+      offset === undefined
+        ? undefined
+        : occurrenceByOffset.get(`${offset}\0${option.label}`);
     mentions.push({
       type: option.type,
       id: option.id,
       label: option.label,
+      ...(occurrence !== undefined ? { occurrence } : {}),
       ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
       ...(option.color !== undefined ? { color: option.color } : {}),
       ...(option.icon !== undefined ? { icon: option.icon } : {}),
@@ -384,6 +434,7 @@ export function MentionTextarea({
     (ReturnType<typeof findActiveComposerMenuQuery> & { node: Text }) | null
   >(null);
   const [skillIndex, setSkillIndex] = useState(0);
+  const [blurRevision, setBlurRevision] = useState(0);
   const [previewSkill, setPreviewSkill] =
     useState<RepositorySkillSummary | null>(null);
   const [floatingAnchor, setFloatingAnchor] = useState<{
@@ -629,9 +680,13 @@ export function MentionTextarea({
   const emitted = useRef<string | null>(null);
   const emit = useCallback(
     (el: HTMLElement) => {
-      const text = serialize(el);
+      const serialized = serialize(el);
+      const { text } = serialized;
       emitted.current = text;
-      onChange(text, collectAssistantMentions(el, preserveMentionOccurrences));
+      onChange(
+        text,
+        collectAssistantMentions(el, preserveMentionOccurrences, serialized),
+      );
     },
     [onChange, preserveMentionOccurrences],
   );
@@ -650,7 +705,10 @@ export function MentionTextarea({
           );
           continue;
         }
-        for (const seg of scan(savedSegment.text)) {
+        const scanned = preserveMentionOccurrences
+          ? [{ text: savedSegment.text, mention: undefined }]
+          : scan(savedSegment.text);
+        for (const seg of scanned) {
           if (seg.mention !== undefined) {
             el.appendChild(makeSlot(optionFromMention(seg.mention)));
             continue;
@@ -692,7 +750,7 @@ export function MentionTextarea({
         }
       }
     },
-    [hydrationMentions, scan, skills],
+    [hydrationMentions, preserveMentionOccurrences, scan, skills],
   );
 
   // The text comes from ELSEWHERE (editing, dictation, reset after sending, or
@@ -730,6 +788,7 @@ export function MentionTextarea({
     render,
     syncSlots,
     syncSkillSlots,
+    blurRevision,
   ]);
 
   useEffect(() => {
@@ -1095,12 +1154,13 @@ export function MentionTextarea({
           // browser cancellation, which no living API overrides.
           document.execCommand("insertText", false, text);
         }}
-        onBlur={() =>
+        onBlur={() => {
+          setBlurRevision((revision) => revision + 1);
           setTimeout(() => {
             setQuery(null);
             setSkillQuery(null);
-          }, 120)
-        }
+          }, 120);
+        }}
         className={cn(
           "max-h-48 min-w-0 w-full max-w-full overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
           "[&:empty]:before:pointer-events-none [&:empty]:before:text-muted-foreground [&:empty]:before:content-[attr(aria-placeholder)]",

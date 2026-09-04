@@ -48,4 +48,30 @@ describe("markdown persisted mentions", () => {
       2,
     );
   });
+
+  it("keeps an unselected code token literal before a selected occurrence", () => {
+    const resolvedMentions: AssistantMention[] = [
+      {
+        type: "page",
+        id: "page-roadmap",
+        label: "Roadmap",
+        occurrence: 1,
+      },
+    ];
+    const mentionLinks: MentionLinks = {
+      href: (type, id) => `/${type}/${id}`,
+      navigate: () => {},
+    };
+
+    const html = renderToStaticMarkup(
+      createElement(Markdown, {
+        children: "Example `@Roadmap`, then open @Roadmap",
+        resolvedMentions,
+        mentionLinks,
+      }),
+    );
+
+    expect(html).toContain(">@Roadmap</code>");
+    expect(html).toContain('href="/page/page-roadmap"');
+  });
 });

@@ -145,9 +145,20 @@ function rehypeResolvedMentions(mentions: AssistantMention[]) {
         };
       });
 
-    const walk = (node: HastNode) => {
-      if (!node.children || node.tagName === "code" || node.tagName === "pre")
+    const advance = (node: HastNode) => {
+      if (node.type === "text" && node.value?.includes("@")) {
+        splitTokens(node.value, false);
         return;
+      }
+      for (const child of node.children ?? []) advance(child);
+    };
+
+    const walk = (node: HastNode) => {
+      if (!node.children) return;
+      if (node.tagName === "code" || node.tagName === "pre") {
+        advance(node);
+        return;
+      }
       const next: HastNode[] = [];
       for (const child of node.children) {
         if (child.type === "text" && child.value?.includes("@")) {

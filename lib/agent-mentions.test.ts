@@ -93,6 +93,37 @@ describe("agent mentions", () => {
     ]);
   });
 
+  it("hydrates only the selected occurrence of an otherwise identical token", () => {
+    const roadmap = {
+      type: "page" as const,
+      id: "roadmap",
+      label: "Roadmap",
+      occurrence: 1,
+    };
+
+    expect(
+      splitAssistantMentionTokens("Example @Roadmap, then open @Roadmap", [
+        roadmap,
+      ]),
+    ).toEqual([
+      { text: "Example " },
+      { text: "@Roadmap" },
+      { text: ", then open " },
+      { mention: roadmap, raw: "@Roadmap" },
+    ]);
+  });
+
+  it("deduplicates repeated identities in the model note", () => {
+    const roadmap = {
+      type: "page" as const,
+      id: "roadmap",
+      label: "Roadmap",
+    };
+    const note = mentionsNote([roadmap, roadmap], 2);
+
+    expect(note.match(/page id: roadmap/g)).toHaveLength(1);
+  });
+
   it("prefers a complete multiword label over its whitespace prefix", () => {
     const alice = {
       type: "member" as const,

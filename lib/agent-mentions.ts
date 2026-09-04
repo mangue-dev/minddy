@@ -38,6 +38,12 @@ export function parseAgentMentions(
       type: v.type as AssistantMention["type"],
       id: v.id as string,
       label: v.label as string,
+      ...(typeof v.occurrence === "number" &&
+      Number.isInteger(v.occurrence) &&
+      v.occurrence >= 0 &&
+      v.occurrence < MAX_ROUTINE_PROMPT_MENTIONS
+        ? { occurrence: v.occurrence }
+        : {}),
       ...(typeof v.avatarSeed === "string" && v.avatarSeed.length <= 100
         ? { avatarSeed: v.avatarSeed }
         : {}),
@@ -74,9 +80,21 @@ export function createAssistantMentionTokenSplitter(
     byLabel.set(mention.label, matches);
   }
   const labels = [...byLabel.keys()].sort((a, b) => b.length - a.length);
-  const nextIndexByLabel = new Map<string, number>();
+  const indexedByLabel = new Map<string, Map<number, AssistantMention>>();
+  for (const [label, candidates] of byLabel) {
+    const indexed = candidates.filter(
+      (mention) => mention.occurrence !== undefined,
+    );
+    if (indexed.length === 0) continue;
+    indexedByLabel.set(
+      label,
+      new Map(indexed.map((mention) => [mention.occurrence!, mention])),
+    );
+  }
+  const nextOccurrenceByLabel = new Map<string, number>();
+  const nextLegacyIndexByLabel = new Map<string, number>();
 
-  return (text: string): AssistantMentionTextSegment[] => {
+  return (text: string, hydrate = true): AssistantMentionTextSegment[] => {
     if (labels.length === 0) return [{ text }];
     const expression = new RegExp(
       `${MENTION_TOKEN_START_PATTERN}@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
@@ -89,11 +107,16 @@ export function createAssistantMentionTokenSplitter(
       if (match.index > last)
         segments.push({ text: text.slice(last, match.index) });
       const candidates = byLabel.get(match[1]) ?? [];
-      const nextIndex = nextIndexByLabel.get(match[1]) ?? 0;
-      const mention = candidates[Math.min(nextIndex, candidates.length - 1)];
-      if (mention) {
+      const occurrence = nextOccurrenceByLabel.get(match[1]) ?? 0;
+      nextOccurrenceByLabel.set(match[1], occurrence + 1);
+      const indexed = indexedByLabel.get(match[1]);
+      const legacyIndex = nextLegacyIndexByLabel.get(match[1]) ?? 0;
+      const mention = indexed
+        ? indexed.get(occurrence)
+        : candidates[Math.min(legacyIndex, candidates.length - 1)];
+      if (mention && hydrate) {
         segments.push({ mention, raw: match[0] });
-        nextIndexByLabel.set(match[1], nextIndex + 1);
+        if (!indexed) nextLegacyIndexByLabel.set(match[1], legacyIndex + 1);
       } else {
         segments.push({ text: match[0] });
       }
@@ -116,7 +139,13 @@ export function mentionsNote(
   raw: unknown,
   maxMentions = DEFAULT_MAX_AGENT_MENTIONS,
 ): string {
-  const list = parseAgentMentions(raw, maxMentions);
+  const seen = new Set<string>();
+  const list = parseAgentMentions(raw, maxMentions).filter((mention) => {
+    const key = `${mention.type}:${mention.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   if (list.length === 0) return "";
   const parts = list.map((m) => {
     if (m.type === "member")
