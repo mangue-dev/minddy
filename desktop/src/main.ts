@@ -97,6 +97,7 @@ import {
   detachLocalRepo,
   localBranches,
   localSkills,
+  localSkill,
 } from "./local-repo";
 import { readLocalRunDiff } from "./local-run-diff";
 import { buildAppMenu, copyDiagnosticReportWithConfirmation } from "./menu";
@@ -1122,6 +1123,22 @@ function registerIpc(): void {
             : null,
         )
       : [];
+  });
+
+  ipcMain.handle("minddy:local-repo:skill", (_event, input: unknown) => {
+    const parsed = localRepoRequest(input);
+    const skillPath = readString(
+      (input as { path?: unknown } | null)?.path,
+    );
+    return parsed && skillPath
+      ? localSkill(
+          parsed.projectId,
+          parsed.fullName
+            ? { fullName: parsed.fullName, aliases: parsed.aliases }
+            : null,
+          skillPath,
+        )
+      : null;
   });
 
   ipcMain.handle("minddy:local-run-diff:read", (_event, input: unknown) =>

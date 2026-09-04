@@ -25,7 +25,10 @@ import type {
   LocalModelDiscoveryResult,
 } from "@/lib/desktop/local-models";
 import type { LocalRepoState } from "@/lib/desktop/local-repo";
-import type { RepositorySkillSummary } from "@/lib/repository-skills";
+import type {
+  RepositorySkill,
+  RepositorySkillSummary,
+} from "@/lib/repository-skills";
 import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notification";
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
@@ -218,6 +221,13 @@ export interface DesktopBridge {
     fullName: string | null;
     aliases?: string[];
   }): Promise<RepositorySkillSummary[]>;
+  /** Full Markdown for one skill already discovered in the attached checkout. */
+  localRepoSkill?(input: {
+    projectId: string;
+    fullName: string | null;
+    aliases?: string[];
+    path: string;
+  }): Promise<RepositorySkill | null>;
   /**
    * Read the durable diff produced by a local run. Optional for compatibility
    * with desktop shells released before this review surface was added.

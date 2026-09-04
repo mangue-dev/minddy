@@ -1,8 +1,7 @@
 "use client";
 
-// The “/” command menu of the Numo composer — the twin brother of the
-// list of mentions (mention-suggest), for Skills: type “/” at the beginning
-// message opens the list, choosing places the command in pill in the text.
+// The command and skill menu of the Numo composer — the twin of the mention
+// suggestions. “/” opens commands and skills; “$” opens skills only.
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
@@ -113,12 +112,29 @@ export function SlashMenu({
           onMouseEnter={() => onHover(index)}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm",
-            index === activeIndex && "bg-muted",
+            index === activeIndex &&
+              (option.kind === "skill" ? "bg-emerald-500/10" : "bg-muted"),
           )}
         >
-          <option.icon className="size-4 shrink-0 text-muted-foreground" />
+          <option.icon
+            className={cn(
+              "size-4 shrink-0",
+              option.kind === "skill"
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-muted-foreground",
+            )}
+          />
           <span className="min-w-0">
-            <span className="block truncate">{prefix}{option.label}</span>
+            <span
+              className={cn(
+                "block truncate",
+                option.kind === "skill" &&
+                  "font-medium text-emerald-700 dark:text-emerald-400",
+              )}
+            >
+              {option.kind === "command" ? prefix : ""}
+              {option.label}
+            </span>
             <span className="block truncate text-xs text-muted-foreground">
               {option.description}
             </span>

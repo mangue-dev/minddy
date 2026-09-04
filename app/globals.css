@@ -499,7 +499,7 @@ a.markdown-link::before {
   overflow: visible;
 }
 
-/* Shiki dual-theme support — !important needed to override inline styles */
+/* Streamdown Shiki fallback — !important overrides its generated inline styles. */
 .dark .shiki,
 .dark .shiki span {
   color: var(--shiki-dark) !important;
@@ -509,10 +509,9 @@ a.markdown-link::before {
   text-decoration: var(--shiki-dark-text-decoration) !important;
 }
 
-/* ── Editor code blocks (TipTap / lowlight) ───────────────────────────────
-   The editable surfaces highlight with highlight.js classes; the read-only
-   renderer highlights with Shiki. Both read the SAME GitHub palette, held
-   here as variables so the two engines never drift apart visually. */
+/* ── Shared code blocks (TipTap / lowlight) ───────────────────────────────
+   Editable Page/notebook blocks and their read-only Markdown twin use the
+   same lowlight tokens and palette. */
 :root {
   --code-comment: #6e7781;
   --code-keyword: #cf222e;

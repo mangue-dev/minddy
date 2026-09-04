@@ -521,6 +521,8 @@
     "addFilesContextOrSkills": "Add files, context, or skills",
     "addContextOrSkills": "Add context or skills",
     "skills": "Skills",
+    "skillPreviewLoading": "Loading skill…",
+    "skillPreviewError": "Couldn't load this skill. Close the preview and try again.",
     "addContextMember": "Team member",
     "addContextProject": "Project",
     "addContextIssue": "Issue",

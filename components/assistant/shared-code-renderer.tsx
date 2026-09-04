@@ -49,6 +49,32 @@ function highlightedCode(code: string, language: string | undefined): ReactNode 
   }
 }
 
+/** Read-only twin of the Page and notebook code block. */
+export function ReadOnlyCodeBlock({
+  code,
+  language,
+  className,
+}: {
+  code: string;
+  language?: string;
+  className?: string;
+}) {
+  const t = useTranslations("Common");
+  const selected = CODE_LANGUAGE_OPTIONS.find((option) => option.value === language);
+  const languageLabel = selected?.label ?? (language || t("codePlainText"));
+  return (
+    <CodeBlockSurface
+      code={code}
+      className={className}
+      languageControl={<CodeBlockLanguageLabel label={languageLabel} />}
+    >
+      <code className={language ? `language-${language}` : undefined}>
+        {highlightedCode(code, language)}
+      </code>
+    </CodeBlockSurface>
+  );
+}
+
 /** Streamdown marks fenced code by cloning its child with `data-block`.
  * Replacing that child lets Agent responses use the Page code-block surface
  * without changing Streamdown's tables, links, incomplete-Markdown handling,
@@ -60,7 +86,6 @@ export function PageCodeRenderer({
   "data-block": dataBlock,
   ...props
 }: StreamdownCodeProps) {
-  const t = useTranslations("Common");
   if (dataBlock !== undefined) {
     const language = className?.match(/(?:^|\s)language-([^\s]+)/)?.[1];
     const code = Array.isArray(children)
@@ -68,18 +93,12 @@ export function PageCodeRenderer({
       : typeof children === "string"
         ? children
         : "";
-    const selected = CODE_LANGUAGE_OPTIONS.find((option) => option.value === language);
-    const languageLabel = selected?.label ?? (language || t("codePlainText"));
     return (
-      <CodeBlockSurface
+      <ReadOnlyCodeBlock
         code={code}
+        language={language}
         className="w-full"
-        languageControl={<CodeBlockLanguageLabel label={languageLabel} />}
-      >
-        <code className={language ? `language-${language}` : undefined}>
-          {highlightedCode(code, language)}
-        </code>
-      </CodeBlockSurface>
+      />
     );
   }
 

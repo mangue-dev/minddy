@@ -235,7 +235,20 @@ jobs:
         with:
           node-version: 24
 
+      # GitHub evaluates dependency changes against its advisory database, so
+      # pull requests remain protected even when the npm audit service is down.
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+
       # No installation: the audit reads the lockfiles, it does not need
-      # the tree. The three lockfiles of the repository are covered by this script.
+      # the tree. The root pnpm and desktop npm trees are covered. The root
+      # package-lock is a compatibility projection, not an installed tree.
       - name: Audit (high+)
+        env:
+          # Dependency Review protects changed PR dependencies, while enabled
+          # Dependabot alerts monitor the complete default-branch graph.
+          MINDDY_AUDIT_ALLOW_UNAVAILABLE: "true"
         run: node scripts/audit.mjs

@@ -521,6 +521,8 @@
     "addFilesContextOrSkills": "Aggiungi file, contesto o skill",
     "addContextOrSkills": "Aggiungi contesto o skill",
     "skills": "Skill",
+    "skillPreviewLoading": "Caricamento skill…",
+    "skillPreviewError": "Impossibile caricare questa skill. Chiudi l’anteprima e riprova.",
     "addContextMember": "Membro della squadra",
     "addContextProject": "Progetto",
     "addContextIssue": "Fascicolo",

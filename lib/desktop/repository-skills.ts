@@ -5,7 +5,9 @@ import {
   MAX_SKILL_FILE_BYTES,
   REPOSITORY_SKILL_ROOTS,
   discoverRepositorySkills,
+  parseRepositorySkill,
   summarizeRepositorySkill,
+  type RepositorySkill,
   type RepositorySkillSummary,
 } from "@/lib/repository-skills";
 
@@ -70,4 +72,14 @@ export async function listLocalRepositorySkills(
     async (relativePath) => readLocalSkill(repoPath, relativePath),
   );
   return skills.map(summarizeRepositorySkill);
+}
+
+/** Load one discovered local skill without accepting arbitrary repository paths. */
+export function loadLocalRepositorySkill(
+  repoPath: string,
+  relativePath: string,
+): RepositorySkill | null {
+  if (!localRepositorySkillPaths(repoPath).includes(relativePath)) return null;
+  const raw = readLocalSkill(repoPath, relativePath);
+  return raw === null ? null : parseRepositorySkill(relativePath, raw);
 }

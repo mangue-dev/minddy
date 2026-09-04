@@ -56,7 +56,7 @@ export function withCodeBlockNodeView(
 
 /**
  * The TipTap code block, WITH syntax highlighting — the editor-side twin of
- * <CodeBlock> (components/code-block.tsx, Shiki on read-only Markdown surfaces).
+ * <ReadOnlyCodeBlock> (shared-code-renderer.tsx on read-only Markdown surfaces).
  * Same node name (`codeBlock`) and same `language` attribute as the stock
  * extension, so markdown storage and round-trips are unchanged; only the
  * rendering gains hljs token classes.

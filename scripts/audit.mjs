@@ -5,13 +5,11 @@
  *
  * It fixes two blind spots of the old `npm audit --omit=dev` :
  *
- * 1. **The correct lockfile.** The repository holds three: `pnpm-lock.yaml` (the one that
- * actually installs — `node_modules` is a pnpm store), `package-lock.json`
- * (held second, cf. CLAUDE.md), and `desktop/package-lock.json` (the
- * macOS app, never audited until now). A hundred packages resolve
- * differently between the first two: auditing `package-lock.json` alone,
- * was auditing a tree that no one executes. We audit them all
- * three — each one can be installed by someone.
+ * 1. **The executable lockfiles.** CI installs the root with pnpm and packages
+ * the desktop shell from its npm project, so those are the two dependency
+ * trees that ship. The root `package-lock.json` is a compatibility projection
+ * for tools that cannot read pnpm; auditing its 1,000+ package npm tree was
+ * both redundant and the recurring source of Bulk Advisory Endpoint timeouts.
  *
  * 2. **`--omit=dev` hid the build chain.** The reasoning ("the build tools
  * are not exposed in prod") does not hold: `esbuild` produces
@@ -42,18 +40,18 @@ const TRANSIENT_AUDIT_FAILURES = [
   /\b(?:429 Too Many Requests|5\d\d (?:Bad Gateway|Gateway Timeout|Internal Server Error|Service Unavailable))\b/i,
 ];
 
-/** The three lockfiles in the repository, and the command that can read each one. */
-const TARGETS = [
+export const AUDIT_RESULT = {
+  passed: "passed",
+  failed: "failed",
+  unavailable: "unavailable",
+};
+
+/** The two lockfiles that resolve code installed or packaged by CI. */
+export const AUDIT_TARGETS = [
   {
     label: "root — pnpm-lock.yaml (the actually installed tree)",
     cwd: ROOT,
     command: "pnpm",
-    args: ["audit", "--audit-level=high"],
-  },
-  {
-    label: "root — package-lock.json (secondary lockfile)",
-    cwd: ROOT,
-    command: "npm",
     args: ["audit", "--audit-level=high"],
   },
   {
@@ -99,7 +97,7 @@ export async function runAuditTarget(
     });
     writeResult(result, stdout, stderr);
 
-    if (result.status === 0) return true;
+    if (result.status === 0) return AUDIT_RESULT.passed;
 
     const errorText = [
       result.error?.code,
@@ -107,13 +105,15 @@ export async function runAuditTarget(
       result.stdout,
       result.stderr,
     ].filter(Boolean).join("\n");
-    const canRetry = attempt < retryDelays.length && isTransientAuditFailure(errorText);
+    const transient = isTransientAuditFailure(errorText);
+    const canRetry = attempt < retryDelays.length && transient;
 
     if (!canRetry) {
+      if (transient) return AUDIT_RESULT.unavailable;
       if (result.error) {
         stderr.write(`  ✗ ${target.command} cannot run: ${result.error.message}\n`);
       }
-      return false;
+      return AUDIT_RESULT.failed;
     }
 
     const delay = retryDelays[attempt];
@@ -124,24 +124,44 @@ export async function runAuditTarget(
     await wait(delay);
   }
 
-  return false;
+  return AUDIT_RESULT.failed;
 }
 
-export async function main() {
+export async function main({
+  targets = AUDIT_TARGETS,
+  runTarget = runAuditTarget,
+  output = console,
+  allowUnavailable = process.env.MINDDY_AUDIT_ALLOW_UNAVAILABLE === "true",
+} = {}) {
   const failed = [];
+  const unavailable = [];
 
-  for (const target of TARGETS) {
-    console.log(`\n→ Audit ${target.label}`);
-    if (!(await runAuditTarget(target))) failed.push(target.label);
+  for (const target of targets) {
+    output.log(`\n→ Audit ${target.label}`);
+    const result = await runTarget(target);
+    if (result === AUDIT_RESULT.failed) failed.push(target.label);
+    if (result === AUDIT_RESULT.unavailable) unavailable.push(target.label);
   }
 
   if (failed.length > 0) {
-    console.error(`\n✗ Audit: high/critical vulnerability (or audit unavailable) in:`);
-    for (const label of failed) console.error(`    - ${label}`);
+    output.error(`\n✗ Audit: high/critical vulnerability or audit command failure in:`);
+    for (const label of failed) output.error(`    - ${label}`);
     return 1;
   }
 
-  console.log("\n✓ Audit: no high/critical vulnerabilities in the three lockfiles.");
+  if (unavailable.length > 0) {
+    const write = allowUnavailable ? output.warn.bind(output) : output.error.bind(output);
+    write(`\n${allowUnavailable ? "⚠" : "✗"} Audit registry unavailable after retries for:`);
+    for (const label of unavailable) write(`    - ${label}`);
+    if (allowUnavailable) {
+      write("  CI dependency review remains authoritative for pull-request changes.");
+      return 0;
+    }
+    write("  These executable dependency trees could not be verified.");
+    return 2;
+  }
+
+  output.log("\n✓ Audit: no high/critical vulnerabilities reported.");
   return 0;
 }
 

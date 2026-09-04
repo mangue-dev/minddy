@@ -1021,6 +1021,7 @@ export function AgentConversation({
                     mentionables={mentionables}
                     onMentionQuery={onMentionQuery}
                     skills={repositorySkills.skills}
+                    loadSkill={repositorySkills.load}
                     placeholder={
                       steerable
                         ? working
@@ -1073,6 +1074,7 @@ export function AgentConversation({
                   mentionables={mentionables}
                   onMentionQuery={onMentionQuery}
                   skills={repositorySkills.skills}
+                  loadSkill={repositorySkills.load}
                   disabled={launching}
                   sendDisabled={
                     environment === "cloud" && !cloudExecutionConfigured

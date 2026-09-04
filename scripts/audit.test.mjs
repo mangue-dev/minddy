@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isTransientAuditFailure, runAuditTarget } from "./audit.mjs";
+import {
+  AUDIT_RESULT,
+  AUDIT_TARGETS,
+  isTransientAuditFailure,
+  main,
+  runAuditTarget,
+} from "./audit.mjs";
 
 const target = {
   label: "fixture lockfile",
@@ -18,6 +24,22 @@ test("classifies registry transport failures as transient", () => {
   assert.equal(isTransientAuditFailure("audit request failed, reason: socket hang up"), true);
   assert.equal(isTransientAuditFailure("503 Service Unavailable"), true);
   assert.equal(isTransientAuditFailure("found 1 high severity vulnerability"), false);
+});
+
+test("audits only dependency trees installed or packaged by CI", () => {
+  assert.deepEqual(
+    AUDIT_TARGETS.map(({ label, command }) => ({ label, command })),
+    [
+      {
+        label: "root — pnpm-lock.yaml (the actually installed tree)",
+        command: "pnpm",
+      },
+      {
+        label: "desktop — package-lock.json (macOS shell)",
+        command: "npm",
+      },
+    ],
+  );
 });
 
 test("retries a transient audit failure and returns the later success", async () => {
@@ -40,7 +62,7 @@ test("retries a transient audit failure and returns the later success", async ()
     stderr: silentStream,
   });
 
-  assert.equal(passed, true);
+  assert.equal(passed, AUDIT_RESULT.passed);
   assert.equal(calls, 2);
   assert.deepEqual(delays, [25]);
   assert.equal(spawnOptions[0].env.npm_config_fetch_retries, "0");
@@ -61,11 +83,11 @@ test("does not retry a reported vulnerability", async () => {
     stderr: silentStream,
   });
 
-  assert.equal(passed, false);
+  assert.equal(passed, AUDIT_RESULT.failed);
   assert.equal(calls, 1);
 });
 
-test("still fails after the bounded transient retries are exhausted", async () => {
+test("reports unavailable after bounded transient retries are exhausted", async () => {
   let calls = 0;
 
   const passed = await runAuditTarget(target, {
@@ -79,6 +101,56 @@ test("still fails after the bounded transient retries are exhausted", async () =
     stderr: silentStream,
   });
 
-  assert.equal(passed, false);
+  assert.equal(passed, AUDIT_RESULT.unavailable);
   assert.equal(calls, 3);
+});
+
+test("fails when an executable dependency tree cannot be audited", async () => {
+  const errors = [];
+  const exitCode = await main({
+    targets: [target],
+    runTarget: async () => AUDIT_RESULT.unavailable,
+    output: {
+      log() {},
+      warn() {},
+      error(message) { errors.push(message); },
+    },
+  });
+
+  assert.equal(exitCode, 2);
+  assert.match(errors.join("\n"), /registry unavailable after retries/i);
+  assert.match(errors.join("\n"), /could not be verified/i);
+});
+
+test("lets CI dependency review cover registry downtime explicitly", async () => {
+  const warnings = [];
+  const exitCode = await main({
+    targets: [target],
+    runTarget: async () => AUDIT_RESULT.unavailable,
+    allowUnavailable: true,
+    output: {
+      log() {},
+      warn(message) { warnings.push(message); },
+      error() {},
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.match(warnings.join("\n"), /dependency review remains authoritative/i);
+});
+
+test("still fails the dependency gate for a vulnerability finding", async () => {
+  const errors = [];
+  const exitCode = await main({
+    targets: [target],
+    runTarget: async () => AUDIT_RESULT.failed,
+    output: {
+      log() {},
+      warn() {},
+      error(message) { errors.push(message); },
+    },
+  });
+
+  assert.equal(exitCode, 1);
+  assert.match(errors.join("\n"), /high\/critical vulnerability/i);
 });

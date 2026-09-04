@@ -7,7 +7,7 @@ import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
-import { CodeBlock } from "@/components/code-block";
+import { ReadOnlyCodeBlock } from "@/components/assistant/shared-code-renderer";
 import {
   MarkdownLink,
   PlainMarkdownLink,
@@ -227,15 +227,16 @@ function MarkdownRenderer({
             "mr-1.5 inline-block size-3.5 translate-y-[0.15em] accent-primary",
           ),
           code: styled("code", "rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"),
-          /* A fenced block becomes a full <CodeBlock>: language badge, Shiki
-             highlighting, copy button. The hast tree is read (not the rendered
+          /* A fenced block uses the same read-only surface as Pages and the
+             notebook: language label, lowlight highlighting, wrap and copy
+             controls. The hast tree is read (not the rendered
              children) because the inner <code> never mounts — the fallback
              below keeps the old muted block for a shape we don't recognize. */
           pre: ({ node, children }) => {
             const block = extractCodeBlock(node);
             if (block) {
               return (
-                <CodeBlock
+                <ReadOnlyCodeBlock
                   code={block.code}
                   language={block.language || undefined}
                 />

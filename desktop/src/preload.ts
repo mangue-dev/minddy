@@ -257,6 +257,12 @@ const bridge: DesktopBridge = {
     >;
   },
 
+  localRepoSkill(input) {
+    return ipcRenderer.invoke("minddy:local-repo:skill", input) as Promise<
+      Awaited<ReturnType<NonNullable<DesktopBridge["localRepoSkill"]>>>
+    >;
+  },
+
   localRunDiff(input) {
     return ipcRenderer.invoke("minddy:local-run-diff:read", input) as Promise<
       Awaited<ReturnType<NonNullable<DesktopBridge["localRunDiff"]>>>

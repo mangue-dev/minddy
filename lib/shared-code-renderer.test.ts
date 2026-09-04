@@ -6,6 +6,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MessageResponse } from "@/components/ai-elements/message";
+import { Markdown } from "@/components/markdown";
 import {
   PAGE_CODE_COMPONENTS,
   PageCodeRenderer,
@@ -86,6 +87,27 @@ function renderResponse(markdown: string): string {
   );
 }
 
+function renderMarkdown(markdown: string): string {
+  return renderToStaticMarkup(
+    createElement(NextIntlClientProvider, {
+      locale: "en",
+      timeZone: "UTC",
+      messages: {
+        Assistant: { collapse: "Collapse", expand: "Expand" },
+        Common: {
+          codePlainText: "Plain text",
+          codeWrap: "Wrap long lines",
+          copy: "Copy",
+          copied: "Copied",
+        },
+      },
+      children: createElement(TooltipProvider, {
+        children: createElement(Markdown, { children: markdown }),
+      }),
+    }),
+  );
+}
+
 describe("PageCodeRenderer", () => {
   it("uses the full-width shared CodeBlock for a fenced block", () => {
     const html = renderResponse("```typescript\nconst ready = true;\n```");
@@ -102,6 +124,18 @@ describe("PageCodeRenderer", () => {
     expect(html).toContain('class="hljs-keyword">const</span> ready =');
     expect(html).toContain('class="hljs-literal">true</span>;');
     expect(html).toContain('aria-label="Copy"');
+  });
+
+  it("uses the same read-only Page surface in general Markdown", () => {
+    const html = renderMarkdown("```typescript\nconst ready = true;\n```");
+
+    expect(html).toContain("code-block-node-view");
+    expect(html).toContain("code-block-node-wrap");
+    expect(html).toContain(
+      '<span class="code-block-node-language-label">TypeScript</span>',
+    );
+    expect(html).toContain('class="hljs-keyword">const</span> ready =');
+    expect(html).not.toContain("github-light");
   });
 
   it("defines distinct light and dark palettes for the shared surface", () => {
