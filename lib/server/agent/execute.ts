@@ -1186,9 +1186,21 @@ export async function executeAgentRun(
       ).flatMap(([id, pricing]) => (pricing ? [[id, pricing] as const] : [])),
     );
 
-    // Rehydrate or bootstrap history. Bootstrap is CONVERSATIONAL: context
-    // (repository + issue), then the launcher's actual request as the LAST user
-    // message — the agent answers that request; the issue is only its anchor.
+    const journalPointer = run.checkpoint?.opencode;
+    const restoredJournal = journalPointer?.sessionId
+      ? localTurn
+        ? []
+        : await loadRunJournal(run.id, journalPointer.sessionId)
+      : null;
+    const canResumeOpencode = restoredJournal !== null;
+    const priorMemoryUnavailable =
+      priorConversationLost(run) ||
+      (journalPointer?.sessionId !== undefined && !canResumeOpencode);
+
+    // Rehydrate or bootstrap history. Bootstrap is conversational: context
+    // (repository + issue), then the launcher's actual request as the last user
+    // message. A missing, corrupt, or oversized journal takes this cold path
+    // instead of creating an empty session with no task context.
     let messages: AgentChatMessage[];
     /** PR context loaded during bootstrap (null outside review or on a continued chunk). */
     let prBoot: Awaited<ReturnType<typeof loadPrReviewBoot>> | null = null;
@@ -1200,7 +1212,7 @@ export async function executeAgentRun(
       paths: [...(run.checkpoint?.instructions?.paths ?? [])],
       bytes: run.checkpoint?.instructions?.bytes ?? 0,
     };
-    if (run.checkpoint?.opencode?.sessionId) {
+    if (canResumeOpencode) {
       /**
        * A CONTINUED OPENCODE TURN NEEDS NO BOOTSTRAP (MIN-286).
        *
@@ -1460,7 +1472,7 @@ export async function executeAgentRun(
        * lost (see `priorConversationLost`): without this sentence, it would answer
        * a message whose context it cannot see.
        */
-      prompt: priorConversationLost(run)
+      prompt: priorMemoryUnavailable
         ? `${PRIOR_CONVERSATION_LOST_NOTE(commentLocale)}\n\n${userPromptFromMessages(messages)}`
         : userPromptFromMessages(messages),
     };
@@ -1628,12 +1640,11 @@ export async function executeAgentRun(
      * outside it.
      */
     const prBaseSha = await prBaseShaPromise;
-    const pointer = run.checkpoint?.opencode;
-    const opencodeJournal = pointer?.sessionId
+    const opencodeJournal = journalPointer?.sessionId && restoredJournal
       ? {
-          sessionId: pointer.sessionId,
-          events: await loadRunJournal(run.id, pointer.sessionId),
-          seq: pointer.seq ?? {},
+          sessionId: journalPointer.sessionId,
+          events: restoredJournal,
+          seq: journalPointer.seq ?? {},
         }
       : undefined;
     // `bootstrapMs` is intentionally missing: `startVmLoop` sets it because it knows
