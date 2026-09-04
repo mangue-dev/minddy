@@ -492,6 +492,40 @@ function tornEventStream(): typeof fetch {
   }) as typeof fetch;
 }
 
+/** Keep the SSE connection open after optionally publishing a few frames. */
+function silentStream(frames: string[] = []): Partial<SupervisorDeps> {
+  return {
+    client: (baseUrl) =>
+      new OpencodeClient({
+        baseUrl,
+        directory: "/vercel/sandbox/repo",
+        fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
+          const path = String(input)
+            .replace(/^http:\/\/127\.0\.0\.1:\d+/, "")
+            .split("?")[0];
+          if (path === "/event") {
+            const encoder = new TextEncoder();
+            return new Response(
+              new ReadableStream({
+                start(controller) {
+                  for (const frame of frames) {
+                    controller.enqueue(encoder.encode(`data: ${frame}\n\n`));
+                  }
+                },
+              }),
+              {
+                status: 200,
+                headers: { "content-type": "text/event-stream" },
+              },
+            );
+          }
+          return await fakeFetch()(input, init);
+        }) as typeof fetch,
+      }),
+    lifecycleBeatMs: 5,
+  };
+}
+
 function deps(): SupervisorDeps {
   return {
     startServer: async (env) => {
@@ -1344,6 +1378,7 @@ describe("le plafond de dépense", () => {
           clock += 60_000;
           return clock;
         },
+        stallTimeoutMs: Number.POSITIVE_INFINITY,
       },
     );
     expect(h.budgetReads).toBeGreaterThan(0);
@@ -2591,31 +2626,6 @@ describe("le steering et le « Stop »", () => {
  * guard then left to probe a perfectly alive microVM.
  */
 describe("le battement du tour", () => {
-  /** A flow that NEVER delivers anything — the twenty-minute `bash`. */
-  function silentStream(): Partial<SupervisorDeps> {
-    return {
-      client: (baseUrl) =>
-        new OpencodeClient({
-          baseUrl,
-          directory: "/vercel/sandbox/repo",
-          fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
-            const path = String(input)
-              .replace(/^http:\/\/127\.0\.0\.1:\d+/, "")
-              .split("?")[0];
-            if (path === "/event") {
-              // Open, and silent: the socket is alive, no frame arrives.
-              return new Response(new ReadableStream({ start() {} }), {
-                status: 200,
-                headers: { "content-type": "text/event-stream" },
-              });
-            }
-            return await fakeFetch()(input, init);
-          }) as typeof fetch,
-        }),
-      lifecycleBeatMs: 5,
-    };
-  }
-
   it("entend le « Stop » alors que le flux n'a rien dit", async () => {
     h.tick = 3_000;
     h.interrupt = true;
@@ -2624,12 +2634,37 @@ describe("le battement du tour", () => {
     expect(h.aborts).toBeGreaterThanOrEqual(1);
   });
 
+  it("stops a cloud turn when an approved command never starts", async () => {
+    h.tick = 60_000;
+    const report = await run(
+      {},
+      silentStream([
+        permissionFrame("bash", { command: "npm run typecheck" }),
+      ]),
+    );
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBeUndefined();
+    expect(report.errorMessage).toContain("no activity for five minutes");
+    expect(h.permissionReplies[0]?.reply).toBe("once");
+    expect(h.aborts).toBeGreaterThanOrEqual(1);
+    expect(
+      h.events.some(
+        (event) =>
+          event.type === "error" &&
+          String(event.payload.message).includes("no activity for five minutes"),
+      ),
+    ).toBe(true);
+  });
+
   it("sauvegarde — donc bat le cœur du run — et tient son échéance murale", async () => {
     // One hour per clock reading: periodic backup (two minutes)
     // falls on the first beat, and the deadline of twelve hours a few
     // beats later. Both are ONLY read by beat.
     h.tick = 60 * 60_000;
-    const report = await run({}, silentStream());
+    const report = await run({}, {
+      ...silentStream(),
+      stallTimeoutMs: Number.POSITIVE_INFINITY,
+    });
     // The only writer from `last_activity_at` on a tour who works: without
     // him, the watchdog will probe a living microVM after 3 minutes.
     expect(h.checkpoints.length).toBeGreaterThanOrEqual(1);
@@ -3134,6 +3169,17 @@ describe("un tour sur la machine de quelqu'un", () => {
       // `askedUser` is what puts the session in `awaiting_input` and sends the
       // notification `agent_question`: a waiting turn is NOT a finished turn.
       expect(report.askedUser).toBeUndefined();
+    });
+
+    it("does not apply the activity timeout while a local question waits", async () => {
+      h.tick = 60 * 60_000;
+      const report = await runLocal({}, {
+        ...silentStream([questionFrame]),
+        stallTimeoutMs: 5 * 60_000,
+      });
+      expect(report.errorCode).toBe("turnTooLong");
+      expect(report.errorMessage).toBeUndefined();
+      expect(h.questionsRejected).toEqual(["que_local"]);
     });
 
     it("marque l'event `blocking`, sans quoi la carte n'ouvrirait qu'au repos", async () => {
