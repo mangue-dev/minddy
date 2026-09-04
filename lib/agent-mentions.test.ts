@@ -93,6 +93,23 @@ describe("agent mentions", () => {
     ]);
   });
 
+  it("hydrates a persisted mention next to Markdown delimiters", () => {
+    const roadmap = {
+      type: "page" as const,
+      id: "roadmap",
+      label: "Roadmap",
+      occurrence: 0,
+    };
+
+    expect(splitAssistantMentionTokens("Read **@Roadmap**", [roadmap])).toEqual(
+      [
+        { text: "Read **" },
+        { mention: roadmap, raw: "@Roadmap" },
+        { text: "**" },
+      ],
+    );
+  });
+
   it("hydrates only the selected occurrence of an otherwise identical token", () => {
     const roadmap = {
       type: "page" as const,

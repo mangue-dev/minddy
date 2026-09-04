@@ -1,5 +1,5 @@
-/** Mentions start at the beginning of text or after whitespace, like the composer. */
-export const MENTION_TOKEN_START_PATTERN = "(?<!\\S)";
+/** Mentions start outside email-like tokens, including after Markdown delimiters. */
+export const MENTION_TOKEN_START_PATTERN = "(?<![\\p{L}\\p{N}_.%+\\-])";
 
 /** Characters that would make a matched label only a prefix of a longer token. */
 export const MENTION_TOKEN_END_PATTERN = "(?![\\p{L}\\p{N}_-])";
