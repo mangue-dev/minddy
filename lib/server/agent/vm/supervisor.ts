@@ -243,12 +243,13 @@ export const ORPHAN_SETTLE_MS = 10_000;
 export const SUPERVISOR_TURN_SOFT_DEADLINE_MS = 12 * 60 * 60_000;
 
 /**
- * Maximum silence from OpenCode before a turn is considered stalled.
+ * Maximum silence from OpenCode while a shell call is pending or running.
  *
  * Production showed a bash tool already in `running` state whose nominal
  * 120-second timeout surfaced almost 115 minutes later. This outer guard does
- * not assume which OpenCode layer stalled; it makes a silent session resumable
- * before the turn-level watchdog has to classify it as lost.
+ * not assume which OpenCode layer stalled. It is deliberately scoped to bash:
+ * long model reasoning, web work, and delegation are not failures merely
+ * because they produce no OpenCode event for five minutes.
  */
 export const SUPERVISOR_STALL_TIMEOUT_MS = 5 * 60_000;
 
@@ -1931,7 +1932,13 @@ export async function runOpencodeTurn(
         return true;
       }
       const silenceMs = now() - lastEventAt;
-      if (!pendingQuestion && silenceMs >= stallTimeoutMs) {
+      const shellCallsInFlight =
+        pendingShellCalls.size + activeShellCalls.size;
+      if (
+        !pendingQuestion &&
+        shellCallsInFlight > 0 &&
+        silenceMs >= stallTimeoutMs
+      ) {
         const abortSucceeded = await abortSession();
         stallAbortFailed = !abortSucceeded;
         // A failed HTTP abort means the command may still be writing. Stop the
@@ -1939,13 +1946,16 @@ export async function runOpencodeTurn(
         // moving session. The final cleanup is deliberately idempotent.
         if (!abortSucceeded) await server?.stop().catch(() => {});
         sessionError = abortSucceeded
-          ? "The model or command produced no activity for five minutes. The session was stopped and can be resumed."
-          : "The model or command produced no activity for five minutes, and the session could not be stopped cleanly. No new checkpoint was saved.";
+          ? "A shell command produced no activity for five minutes. The session was stopped and can be resumed."
+          : "A shell command produced no activity for five minutes, and the session could not be stopped cleanly. No new checkpoint was saved.";
         await cp
           .emit("error", {
             code: "turnStalled",
             message: sessionError,
             silenceMs,
+            shellCallsInFlight,
+            pendingShellCalls: pendingShellCalls.size,
+            activeShellCalls: activeShellCalls.size,
             abortSucceeded,
           })
           .catch(() => {});

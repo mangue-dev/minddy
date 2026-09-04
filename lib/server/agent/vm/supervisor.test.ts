@@ -2729,10 +2729,15 @@ describe("le battement du tour", () => {
   });
 
   it("stops a turn when a running bash command stops producing activity", async () => {
-    h.tick = 60_000;
+    h.tick = 10_000;
     const report = await run(
       {},
       silentStream([
+        permissionFrame(
+          "bash",
+          { command: "npm run typecheck" },
+          "call_typecheck",
+        ),
         toolFrame("bash", "call_typecheck", {
           status: "running",
           input: { command: "npm run typecheck" },
@@ -2741,22 +2746,24 @@ describe("le battement du tour", () => {
     );
     expect(report.status).toBe("error");
     expect(report.errorCode).toBeUndefined();
-    expect(report.errorMessage).toContain("no activity for five minutes");
+    expect(report.errorMessage).toContain("shell command");
+    expect(h.permissionReplies[0]?.reply).toBe("once");
     expect(h.aborts).toBeGreaterThanOrEqual(1);
     expect(
-      h.events.some(
-        (event) =>
-          event.type === "error" &&
-          event.payload.code === "turnStalled" &&
-          event.payload.abortSucceeded === true &&
-          String(event.payload.message).includes("no activity for five minutes"),
-      ),
-    ).toBe(true);
+      h.events.find((event) => event.payload.code === "turnStalled"),
+    ).toMatchObject({
+      type: "error",
+      payload: {
+        shellCallsInFlight: 1,
+        activeShellCalls: 1,
+        abortSucceeded: true,
+      },
+    });
   });
 
   it("does not let unrelated server sessions hide a stalled turn", async () => {
-    h.tick = 60_000;
-    const unrelated = Array.from({ length: 6 }, (_, index) =>
+    h.tick = 10_000;
+    const unrelated = Array.from({ length: 40 }, (_, index) =>
       toolFrame(
         "bash",
         `call_foreign_${index}`,
@@ -2767,20 +2774,66 @@ describe("le battement du tour", () => {
 
     const report = await run(
       {},
-      silentStream([...unrelated, idleFrame()]),
+      silentStream([
+        permissionFrame(
+          "bash",
+          { command: "npm run typecheck" },
+          "call_typecheck",
+        ),
+        toolFrame("bash", "call_typecheck", {
+          status: "running",
+          input: { command: "npm run typecheck" },
+        }),
+        ...unrelated,
+        idleFrame(),
+      ]),
     );
 
     expect(report.status).toBe("error");
-    expect(report.errorMessage).toContain("no activity for five minutes");
+    expect(report.errorMessage).toContain("shell command");
+  });
+
+  it("does not classify silent non-shell work as a stalled command", async () => {
+    h.tick = 10_000;
+    const elapsed = Array.from({ length: 40 }, (_, index) =>
+      toolFrame(
+        "webfetch",
+        `call_foreign_${index}`,
+        { status: "running", input: { url: "https://example.com" } },
+        "ses_unrelated",
+      ),
+    );
+
+    const report = await run(
+      {},
+      silentStream([
+        toolFrame("webfetch", "call_webfetch", {
+          status: "running",
+          input: { url: "https://example.com" },
+        }),
+        ...elapsed,
+        idleFrame(),
+      ]),
+    );
+
+    expect(report.status).toBe("completed");
+    expect(h.events.some((event) => event.payload.code === "turnStalled")).toBe(
+      false,
+    );
   });
 
   it("preserves the last safe checkpoint when a stalled session cannot abort", async () => {
-    h.tick = 60_000;
+    h.tick = 10_000;
     h.abortFails = true;
 
     const report = await run(
       {},
       silentStream([
+        permissionFrame(
+          "bash",
+          { command: "npm run typecheck" },
+          "call_typecheck",
+        ),
         toolFrame("bash", "call_typecheck", {
           status: "running",
           input: { command: "npm run typecheck" },
