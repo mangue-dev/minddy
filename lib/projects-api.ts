@@ -2,6 +2,7 @@
 
 import type { CreateProjectInput, Project, ProjectUpdateInput } from "./types";
 import { trackEvent } from "./analytics";
+import { HttpResponseError } from "./backend-availability";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -16,7 +17,7 @@ async function parseJson<T>(response: Response): Promise<T> {
       (data as { error?: string } | null)?.error ||
       text.trim() ||
       "Request failed";
-    throw new Error(message);
+    throw new HttpResponseError(message, response.status);
   }
   if (data == null) throw new Error("Empty response");
   return data as T;

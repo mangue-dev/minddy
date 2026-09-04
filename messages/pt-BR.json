@@ -39,6 +39,11 @@
     "launchAgentAll": "Iniciar o agente Numo no notebook",
     "launchAgentAllAria": "Iniciar o agente Numo em todo o caderno"
   },
+  "ServerUnavailable": {
+    "title": "Não foi possível conectar ao servidor",
+    "description": "O servidor está temporariamente indisponível. Tente novamente em alguns instantes.",
+    "retry": "Tentar novamente"
+  },
   "Activity": {
     "created": "criou o problema",
     "categoryAdded": "adicionou a categoria “{name}”",

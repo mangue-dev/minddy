@@ -39,6 +39,11 @@
     "launchAgentAll": "Avvia l'agente Numo sul taccuino",
     "launchAgentAllAria": "Avvia l'agente Numo su tutto il taccuino"
   },
+  "ServerUnavailable": {
+    "title": "Impossibile connettersi al server",
+    "description": "Il server è temporaneamente non disponibile. Riprova tra poco.",
+    "retry": "Riprova"
+  },
   "Activity": {
     "created": "ha creato il ticket",
     "categoryAdded": "ha aggiunto la categoria «{name}»",

@@ -36,13 +36,14 @@ let session:
       access_token?: string;
     }
   | null = null;
+let sessionError: { name: string; status: number } | null = null;
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (_url: string, _key: string, options: { cookies: { setAll: SetAll } }) => ({
     auth: {
       getSession: async () => {
         options.cookies.setAll(refreshed);
-        return { data: { session } };
+        return { data: { session }, error: sessionError };
       },
     },
   }),
@@ -83,6 +84,46 @@ beforeEach(() => {
   vi.stubEnv("MINDDY_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
   refreshed = [];
   session = null;
+  sessionError = null;
+});
+
+describe("backend outage fallback", () => {
+  it.each(["/", "/login", "/home"])(
+    "redirects %s to the retryable recovery page on a Supabase 522",
+    async (pathname) => {
+      sessionError = { name: "AuthRetryableFetchError", status: 522 };
+
+      const response = await proxy(request(pathname));
+      const location = new URL(response.headers.get("location")!);
+
+      expect(response.status).toBe(307);
+      expect(location.pathname).toBe("/server-unavailable");
+      expect(location.searchParams.get("retry")).toBe(pathname);
+      expect(response.headers.get("cache-control")).toBe("private, no-store");
+      expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    },
+  );
+
+  it("serves the recovery page without querying Supabase again", async () => {
+    sessionError = { name: "AuthRetryableFetchError", status: 522 };
+
+    const response = await proxy(
+      request("/server-unavailable?retry=%2Fhome&locale=fr"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(forwardedHeaders(response)["x-minddy-locale"]).toBe("fr");
+    expect(forwardedHeaders(response)["x-minddy-public"]).toBe("1");
+  });
+
+  it("keeps normal authentication failures on the sign-in path", async () => {
+    sessionError = { name: "AuthApiError", status: 401 };
+
+    const response = await proxy(request("/home"));
+    const location = new URL(response.headers.get("location")!);
+
+    expect(location.pathname).toBe("/login");
+  });
 });
 
 describe("trusted headers sent by the client", () => {

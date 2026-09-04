@@ -39,6 +39,11 @@
     "launchAgentAll": "Lancer l'agent Numo sur le carnet",
     "launchAgentAllAria": "Lancer l'agent Numo sur tout le carnet"
   },
+  "ServerUnavailable": {
+    "title": "Impossible de se connecter au serveur",
+    "description": "Le serveur est momentanément indisponible. Réessayez dans un instant.",
+    "retry": "Réessayer"
+  },
   "Activity": {
     "created": "a créé le ticket",
     "categoryAdded": "a ajouté la catégorie « {name} »",
