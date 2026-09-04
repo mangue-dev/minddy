@@ -4,6 +4,7 @@ import {
   parseAgentMentions,
   parseAgentUserMessage,
   promptWithMentions,
+  splitAssistantMentionTokens,
 } from "./agent-mentions";
 
 describe("agent mentions", () => {
@@ -22,9 +23,13 @@ describe("agent mentions", () => {
 
   it("adds stable ids to the prompt without changing visible text", () => {
     const mentions = [{ type: "page", id: "page-1", label: "Guide" }];
-    expect(mentionsNote(mentions)).toContain("@Guide = wiki page (page id: page-1)");
+    expect(mentionsNote(mentions)).toContain(
+      "@Guide = wiki page (page id: page-1)",
+    );
     expect(promptWithMentions("Lis @Guide", mentions)).toContain("Lis @Guide");
-    expect(promptWithMentions("Lis @Guide", mentions)).toContain("page id: page-1");
+    expect(promptWithMentions("Lis @Guide", mentions)).toContain(
+      "page id: page-1",
+    );
   });
 
   it("accepts legacy plain steering messages", () => {
@@ -38,5 +43,30 @@ describe("agent mentions", () => {
       text: "regarde @MIN-42",
       mentions: [{ type: "issue", id: "issue-1", label: "MIN-42" }],
     });
+  });
+
+  it("matches saved mentions as complete tokens", () => {
+    const mentions = [
+      { type: "issue" as const, id: "issue-4", label: "MIN-4" },
+      { type: "issue" as const, id: "issue-42", label: "MIN-42" },
+    ];
+
+    expect(splitAssistantMentionTokens("Review @MIN-42", mentions)).toEqual([
+      { text: "Review " },
+      { mention: mentions[1], raw: "@MIN-42" },
+    ]);
+  });
+
+  it("keeps the persisted identity when a live entity could share its label", () => {
+    const objective = {
+      type: "objective" as const,
+      id: "objective-roadmap",
+      label: "Roadmap",
+    };
+
+    expect(splitAssistantMentionTokens("Open @Roadmap", [objective])).toEqual([
+      { text: "Open " },
+      { mention: objective, raw: "@Roadmap" },
+    ]);
   });
 });

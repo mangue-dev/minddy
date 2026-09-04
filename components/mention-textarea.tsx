@@ -42,6 +42,7 @@ import {
 } from "@/components/mention-suggest";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import type { AssistantMention } from "@/lib/assistant-types";
+import { splitAssistantMentionTokens } from "@/lib/agent-mentions";
 import { findActiveComposerMenuQuery } from "@/lib/assistant-slash-options";
 import { deleteComposerTokenBeforeCaret } from "@/lib/composer-token-delete";
 import {
@@ -89,6 +90,7 @@ type MentionOption = EntityMentionOption | SpecialMentionOption;
 /** The envelope of a mention in the editor: a NON-editable, empty node, in__KEEP_NL_TOKEN__ which React carries the real pill. The field therefore does not redraw a__KEEP_NL_TOKEN__ pill “like” the one in the published comment — it is the same. */
 const SLOT_CLASS = "inline-flex align-middle";
 const SKILL_SLOT_CLASS = "mx-0.5 inline-block max-w-full align-baseline";
+const EMPTY_ASSISTANT_MENTIONS: AssistantMention[] = [];
 
 function makeSlot(option: MentionOption): HTMLSpanElement {
   const el = document.createElement("span");
@@ -219,6 +221,17 @@ function optionFromMention(mention: ScannedMention): MentionOption {
   }
 }
 
+function optionFromAssistantMention(mention: AssistantMention): MentionOption {
+  return {
+    type: mention.type,
+    id: mention.id,
+    label: mention.label,
+    ...(mention.avatarSeed ? { avatarSeed: mention.avatarSeed } : {}),
+    ...(mention.color !== undefined ? { color: mention.color } : {}),
+    ...(mention.icon !== undefined ? { icon: mention.icon } : {}),
+  };
+}
+
 /** The text of the field. A mention is written "@Name" even if the pill only shows__KEEP_NL_TOKEN__ the name: on the server side as well as in rendering, it is the at sign which indicates it. */
 function serialize(root: HTMLElement): string {
   const parts: string[] = [];
@@ -292,6 +305,7 @@ export function MentionTextarea({
   onChange,
   members = [],
   mentions,
+  hydrationMentions = EMPTY_ASSISTANT_MENTIONS,
   forgeMembers,
   onMentionQuery,
   focusSignal,
@@ -314,6 +328,8 @@ export function MentionTextarea({
   members?: Member[];
   /** Full entity mention support for Minddy comments. */
   mentions?: MarkdownEditorMentions;
+  /** Persisted identities used before live sources when rebuilding saved tokens. */
+  hydrationMentions?: AssistantMention[];
   /**__KEEP_NL_TOKEN__ * The FORGE accounts (MIN-162). Present = this field writes a comment__KEEP_NL_TOKEN__ * from pull request: suggestions come from there, and `members` is ignored.__KEEP_NL_TOKEN__ * A `@` ends up there at GitHub, where quoting a minddy member without a git account does not__KEEP_NL_TOKEN__ * would notify anyone — so the two sources don't mix never.__KEEP_NL_TOKEN__ */
   forgeMembers?: Array<{
     login: string;
@@ -618,8 +634,21 @@ export function MentionTextarea({
   const render = useCallback(
     (el: HTMLElement, text: string) => {
       el.innerHTML = "";
-      for (const seg of scan(text)) {
-        if (seg.mention === undefined) {
+      for (const savedSegment of splitAssistantMentionTokens(
+        text,
+        hydrationMentions,
+      )) {
+        if (savedSegment.mention !== undefined) {
+          el.appendChild(
+            makeSlot(optionFromAssistantMention(savedSegment.mention)),
+          );
+          continue;
+        }
+        for (const seg of scan(savedSegment.text)) {
+          if (seg.mention !== undefined) {
+            el.appendChild(makeSlot(optionFromMention(seg.mention)));
+            continue;
+          }
           const selected = [...(skills ?? [])].sort(
             (a, b) => b.name.length - a.name.length,
           );
@@ -655,10 +684,9 @@ export function MentionTextarea({
             });
           continue;
         }
-        el.appendChild(makeSlot(optionFromMention(seg.mention)));
       }
     },
-    [scan, skills],
+    [hydrationMentions, scan, skills],
   );
 
   // The text comes from ELSEWHERE (editing, dictation, reset after sending, or
@@ -667,23 +695,36 @@ export function MentionTextarea({
   // stay where it is.
   const lastScan = useRef(scan);
   const lastSkills = useRef(skills);
+  const lastHydrationMentions = useRef(hydrationMentions);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const external = emitted.current !== value;
-    const rescan = lastScan.current !== scan || lastSkills.current !== skills;
+    const rescan =
+      lastScan.current !== scan ||
+      lastSkills.current !== skills ||
+      lastHydrationMentions.current !== hydrationMentions;
     if (!external && !rescan) return;
     // A list of members that changes while typing should not move the
     // caret: we will wait for the field to be rendered.
     if (!external && document.activeElement === el) return;
     lastScan.current = scan;
     lastSkills.current = skills;
+    lastHydrationMentions.current = hydrationMentions;
     emitted.current = value;
     render(el, value);
     syncSlots();
     syncSkillSlots();
     if (document.activeElement === el) caretToEnd(el);
-  }, [value, scan, skills, render, syncSlots, syncSkillSlots]);
+  }, [
+    value,
+    scan,
+    skills,
+    hydrationMentions,
+    render,
+    syncSlots,
+    syncSkillSlots,
+  ]);
 
   useEffect(() => {
     if (!autoFocus) return;

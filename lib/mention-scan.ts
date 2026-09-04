@@ -8,6 +8,10 @@
 // appears on one side and not the other.
 
 import { displayName } from "@/lib/display-name";
+import {
+  escapeMentionLabel,
+  MENTION_TOKEN_END_PATTERN,
+} from "@/lib/mention-token";
 import { PROJECT_KEY_MAX, PROJECT_KEY_MIN } from "@/lib/project-key";
 import type { Member } from "@/lib/types";
 
@@ -15,8 +19,6 @@ import type { Member } from "@/lib/types";
 export function memberLabel(m: Member): string {
   return displayName(m);
 }
-
-const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /* “@numo” is written as you want: this is how the server recognizes it
  (mentionsNumo, lib/server/assistant/comment-agent.ts). A member name,
@@ -27,9 +29,9 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const NUMO_PATTERN = "[Nn][Uu][Mm][Oo]";
 
 /* The FORM of a ticket identifier: the project key (2 to 5 capital letters,
- lib/project-key) and its number. The tail guard prevents "@MIN-42x" and
- "@MIN-1234567890" from impersonating "@MIN-42" followed by nothing. */
-const ISSUE_IDENTIFIER_PATTERN = `[A-Z]{${PROJECT_KEY_MIN},${PROJECT_KEY_MAX}}-\\d{1,7}(?![\\w-])`;
+ lib/project-key) and its number. The shared tail guard below prevents
+ "@MIN-42x" and "@MIN-1234567890" from impersonating "@MIN-42". */
+const ISSUE_IDENTIFIER_PATTERN = `[A-Z]{${PROJECT_KEY_MIN},${PROJECT_KEY_MAX}}-\\d{1,7}`;
 
 /** A TICKET such as a mention needs to be known: enough to draw it
  and go there. */
@@ -82,7 +84,12 @@ export type ScannedMention =
   /** A FORGE account (MIN-162): what is mentioned on a pull request,
  where only a GitHub/GitLab account notifies someone. None `user_id` minddy —
  this is precisely what distinguishes it from a `member`. */
-  | { type: "forge"; member?: undefined; login: string; avatarUrl: string | null }
+  | {
+      type: "forge";
+      member?: undefined;
+      login: string;
+      avatarUrl: string | null;
+    }
   | { type: "issue"; member?: undefined; issue: MentionIssue }
   | { type: "objective"; member?: undefined; objective: MentionObjective }
   | { type: "project"; member?: undefined; project: MentionProject }
@@ -109,19 +116,19 @@ export type MentionScan = (value: string) => MentionSegment[];
 function buildScanner(
   entries: Array<{ label: string; mention: ScannedMention }>,
   /**
- * Citable tickets, indexed by identifier. They do NOT pass by
- * alternation of names: a workspace has thousands of them, and enumerating them would make a regular expression of several tens of thousands
- * of characters, reconstructed each time the list moves. An identifier
- * can be recognized by its FORM (KEY-number) — the table is only used to say if this
- * ticket exists, and to provide something to draw it.
- */
+   * Citable tickets, indexed by identifier. They do NOT pass by
+   * alternation of names: a workspace has thousands of them, and enumerating them would make a regular expression of several tens of thousands
+   * of characters, reconstructed each time the list moves. An identifier
+   * can be recognized by its FORM (KEY-number) — the table is only used to say if this
+   * ticket exists, and to provide something to draw it.
+   */
   issuesByIdentifier?: Map<string, MentionIssue>,
 ): MentionScan {
   // From longest to shortest: “Jean Dupont” must win over “Jean”, and
   // “@bobby” on “@bob”.
   const byLength = [...entries].sort((a, b) => b.label.length - a.label.length);
   const byName = new Map(byLength.map((e) => [e.label, e.mention]));
-  const names = byLength.map((e) => escapeRegExp(e.label));
+  const names = byLength.map((e) => escapeMentionLabel(e.label));
 
   // A branch by nature of mention, in order. Each one wears EXACTLY
   // a capturing group, so its rank in `parts` is its group number —
@@ -139,7 +146,10 @@ function buildScanner(
     parts.push(`(${ISSUE_IDENTIFIER_PATTERN})`);
     issueGroup = parts.length;
   }
-  const re = new RegExp(`@(?:${parts.join("|")})`, "g");
+  const re = new RegExp(
+    `@(?:${parts.join("|")})${MENTION_TOKEN_END_PATTERN}`,
+    "gu",
+  );
 
   return (value: string): MentionSegment[] => {
     const out: MentionSegment[] = [];
@@ -152,7 +162,9 @@ function buildScanner(
       if (numo && m.index > 0 && !/[\s(>]/.test(value[m.index - 1])) continue;
       const name = nameGroup ? m[nameGroup] : undefined;
       const identifier = issueGroup ? m[issueGroup] : undefined;
-      const issue = identifier ? issuesByIdentifier?.get(identifier) : undefined;
+      const issue = identifier
+        ? issuesByIdentifier?.get(identifier)
+        : undefined;
       const found: ScannedMention | undefined = numo
         ? { type: "numo" }
         : name
@@ -194,7 +206,11 @@ export function forgeMentionScanner(
   return buildScanner(
     members.map((m) => ({
       label: m.login,
-      mention: { type: "forge", login: m.login, avatarUrl: m.avatar_url } as const,
+      mention: {
+        type: "forge",
+        login: m.login,
+        avatarUrl: m.avatar_url,
+      } as const,
     })),
   );
 }
