@@ -530,8 +530,8 @@ export function CreateRoutineWizard({
 
   const order: StepId[] = [
     ...(skipProject ? [] : (["project"] as const)),
-    "job",
     "model",
+    "job",
     "schedule",
     "done",
   ];

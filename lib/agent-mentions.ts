@@ -2,7 +2,11 @@ import type { AssistantMention } from "@/lib/assistant-types";
 import {
   escapeMentionLabel,
   MENTION_TOKEN_END_PATTERN,
+  MENTION_TOKEN_START_PATTERN,
 } from "@/lib/mention-token";
+
+const DEFAULT_MAX_AGENT_MENTIONS = 20;
+export const MAX_ROUTINE_PROMPT_MENTIONS = 10_000;
 
 const MENTION_TYPES: ReadonlySet<string> = new Set([
   "member",
@@ -13,7 +17,10 @@ const MENTION_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /** Validate mentions sent by a composer before they enter an agent run. */
-export function parseAgentMentions(raw: unknown): AssistantMention[] {
+export function parseAgentMentions(
+  raw: unknown,
+  maxMentions = DEFAULT_MAX_AGENT_MENTIONS,
+): AssistantMention[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
@@ -26,7 +33,7 @@ export function parseAgentMentions(raw: unknown): AssistantMention[] {
         v.label.length > 0 &&
         v.label.length <= 200,
     )
-    .slice(0, 20)
+    .slice(0, Math.max(0, maxMentions))
     .map((v) => ({
       type: v.type as AssistantMention["type"],
       id: v.id as string,
@@ -41,6 +48,11 @@ export function parseAgentMentions(raw: unknown): AssistantMention[] {
         ? { icon: v.icon }
         : {}),
     }));
+}
+
+/** Routine prompts can contain every mention occurrence allowed by 20,000 characters. */
+export function parseRoutinePromptMentions(raw: unknown): AssistantMention[] {
+  return parseAgentMentions(raw, MAX_ROUTINE_PROMPT_MENTIONS);
 }
 
 export type AssistantMentionTextSegment =
@@ -67,7 +79,7 @@ export function createAssistantMentionTokenSplitter(
   return (text: string): AssistantMentionTextSegment[] => {
     if (labels.length === 0) return [{ text }];
     const expression = new RegExp(
-      `@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
+      `${MENTION_TOKEN_START_PATTERN}@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
       "gu",
     );
     const segments: AssistantMentionTextSegment[] = [];
@@ -100,8 +112,11 @@ export function splitAssistantMentionTokens(
 }
 
 /** Give the model the stable ids behind the labels written in a message. */
-export function mentionsNote(raw: unknown): string {
-  const list = parseAgentMentions(raw);
+export function mentionsNote(
+  raw: unknown,
+  maxMentions = DEFAULT_MAX_AGENT_MENTIONS,
+): string {
+  const list = parseAgentMentions(raw, maxMentions);
   if (list.length === 0) return "";
   const parts = list.map((m) => {
     if (m.type === "member")
@@ -116,8 +131,12 @@ export function mentionsNote(raw: unknown): string {
   return `\n\n[Mentions in this message: ${parts.join("; ")}]`;
 }
 
-export function promptWithMentions(text: string, mentions?: unknown): string {
-  return `${text}${mentionsNote(mentions)}`;
+export function promptWithMentions(
+  text: string,
+  mentions?: unknown,
+  maxMentions = DEFAULT_MAX_AGENT_MENTIONS,
+): string {
+  return `${text}${mentionsNote(mentions, maxMentions)}`;
 }
 
 export interface AgentUserMessage {

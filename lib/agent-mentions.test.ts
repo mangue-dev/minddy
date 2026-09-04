@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_ROUTINE_PROMPT_MENTIONS,
   mentionsNote,
   parseAgentMentions,
   parseAgentUserMessage,
+  parseRoutinePromptMentions,
   promptWithMentions,
   splitAssistantMentionTokens,
 } from "./agent-mentions";
@@ -26,10 +28,30 @@ describe("agent mentions", () => {
     expect(mentionsNote(mentions)).toContain(
       "@Guide = wiki page (page id: page-1)",
     );
-    expect(promptWithMentions("Lis @Guide", mentions)).toContain("Lis @Guide");
-    expect(promptWithMentions("Lis @Guide", mentions)).toContain(
+    expect(promptWithMentions("Read @Guide", mentions)).toContain(
+      "Read @Guide",
+    );
+    expect(promptWithMentions("Read @Guide", mentions)).toContain(
       "page id: page-1",
     );
+  });
+
+  it("preserves every routine mention occurrence beyond the chat limit", () => {
+    const mentions = Array.from({ length: 21 }, (_, index) => ({
+      type: "page" as const,
+      id: `page-${index}`,
+      label: `Guide ${index}`,
+    }));
+
+    expect(parseAgentMentions(mentions)).toHaveLength(20);
+    expect(parseRoutinePromptMentions(mentions)).toEqual(mentions);
+    expect(
+      promptWithMentions(
+        "Review the guides",
+        mentions,
+        MAX_ROUTINE_PROMPT_MENTIONS,
+      ),
+    ).toContain("page id: page-20");
   });
 
   it("accepts legacy plain steering messages", () => {
@@ -54,6 +76,20 @@ describe("agent mentions", () => {
     expect(splitAssistantMentionTokens("Review @MIN-42", mentions)).toEqual([
       { text: "Review " },
       { mention: mentions[1], raw: "@MIN-42" },
+    ]);
+  });
+
+  it("does not hydrate a persisted mention inside an email address", () => {
+    const bob = { type: "member" as const, id: "bob", label: "Bob" };
+
+    expect(
+      splitAssistantMentionTokens(
+        "Email alice@Bob.example.com, then ask @Bob",
+        [bob],
+      ),
+    ).toEqual([
+      { text: "Email alice@Bob.example.com, then ask " },
+      { mention: bob, raw: "@Bob" },
     ]);
   });
 
