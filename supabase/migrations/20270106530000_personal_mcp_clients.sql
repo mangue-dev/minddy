@@ -3,7 +3,7 @@ CREATE TABLE public.user_mcp_connections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80),
-  url text NOT NULL CHECK (char_length(url) <= 2048 AND url LIKE 'https://%'),
+  url text NOT NULL CHECK (char_length(url) <= 2048 AND url ILIKE 'https://%'),
   token_encrypted text,
   headers_encrypted text,
   transport text NOT NULL DEFAULT 'http' CHECK (transport IN ('http', 'sse')),

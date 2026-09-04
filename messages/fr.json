@@ -3091,6 +3091,12 @@
     "automationActor": "L'automatisation"
   },
   "ToolCall": {
+    "listingMcpTools": "Recherche des outils MCP…",
+    "mcpToolsListed": "Outils MCP trouvés",
+    "listMcpToolsFailed": "Impossible de trouver les outils MCP",
+    "callingMcpTool": "Exécution d’un outil MCP…",
+    "mcpToolCalled": "Outil MCP exécuté",
+    "callMcpToolFailed": "Échec de l’outil MCP",
     "readingProductHelp": "Lecture de l'aide produit…",
     "productHelpRead": "Aide produit lue",
     "readProductHelpFailed": "Impossible de lire l'aide produit",
