@@ -1934,9 +1934,13 @@ export async function runOpencodeTurn(
       if (!pendingQuestion && silenceMs >= stallTimeoutMs) {
         const abortSucceeded = await abortSession();
         stallAbortFailed = !abortSucceeded;
+        // A failed HTTP abort means the command may still be writing. Stop the
+        // OpenCode process before journal export or Git delivery can observe a
+        // moving session. The final cleanup is deliberately idempotent.
+        if (!abortSucceeded) await server?.stop().catch(() => {});
         sessionError = abortSucceeded
           ? "The model or command produced no activity for five minutes. The session was stopped and can be resumed."
-          : "The model or command produced no activity for five minutes, and the session could not be stopped cleanly. The last safe checkpoint was preserved.";
+          : "The model or command produced no activity for five minutes, and the session could not be stopped cleanly. No new checkpoint was saved.";
         await cp
           .emit("error", {
             code: "turnStalled",

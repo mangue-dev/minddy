@@ -132,6 +132,7 @@ const h = {
   env: {} as Record<string, string>,
   clientAuth: null as { username: string; password: string } | null,
   stopped: false,
+  serverStops: 0,
   events: [] as Array<{ type: string; payload: Record<string, unknown> }>,
   usage: [] as Array<Record<string, unknown>>,
   live: [] as Array<Record<string, unknown>>,
@@ -536,6 +537,7 @@ function deps(): SupervisorDeps {
       return {
         stop: async () => {
           h.stopped = true;
+          h.serverStops += 1;
         },
       };
     },
@@ -666,6 +668,7 @@ beforeEach(() => {
   h.env = {};
   h.clientAuth = null;
   h.stopped = false;
+  h.serverStops = 0;
   h.events = [];
   h.usage = [];
   h.live = [];
@@ -2789,6 +2792,7 @@ describe("le battement du tour", () => {
     expect(report.checkpoint).toBeUndefined();
     expect(report.checkpointBytes).toBe(0);
     expect(report.errorMessage).toContain("could not be stopped cleanly");
+    expect(h.serverStops).toBeGreaterThanOrEqual(2);
     expect(
       h.events.some(
         (event) =>
