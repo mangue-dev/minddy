@@ -12,6 +12,10 @@ import {
   SESSION_COOKIE_OPTIONS,
   type CookieSink,
 } from "@/lib/session-cookies";
+import {
+  backendFetchWithTimeout,
+  isBackendUnavailableError,
+} from "@/lib/backend-availability";
 
 export { createCookieSink, type CookieSink };
 
@@ -26,6 +30,7 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
     process.env.MINDDY_PUBLIC_SUPABASE_URL!,
     process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: backendFetchWithTimeout },
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
@@ -81,6 +86,7 @@ export function createSupabaseWithCookieSink(
     process.env.MINDDY_PUBLIC_SUPABASE_URL!,
     process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: backendFetchWithTimeout },
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
@@ -107,6 +113,17 @@ export type AuthedResult =
       claims: Record<string, unknown>;
     }
   | { ok: false; response: NextResponse };
+
+async function serviceUnavailableResult(): Promise<AuthedResult> {
+  const t = await getTranslations("ApiErrors");
+  return {
+    ok: false,
+    response: NextResponse.json(
+      { error: t("serviceUnavailable") },
+      { status: 503 },
+    ),
+  };
+}
 
 /**
  * Resolves the authenticated user of a route handler, or error response.
@@ -165,22 +182,17 @@ export async function getAuthedUser(
   }
 
   const supabase = createSupabaseFromRequest(request);
-  const { data, error } = await supabase.auth.getClaims();
+  let authResult: Awaited<ReturnType<typeof supabase.auth.getClaims>>;
+  try {
+    authResult = await supabase.auth.getClaims();
+  } catch (error) {
+    if (isBackendUnavailableError(error)) return serviceUnavailableResult();
+    throw error;
+  }
+  const { data, error } = authResult;
   const claims = data?.claims;
   if (!claims?.sub) {
-    if (
-      error &&
-      (error.name === "AuthRetryableFetchError" || (error.status ?? 0) >= 500)
-    ) {
-      const t = await getTranslations("ApiErrors");
-      return {
-        ok: false,
-        response: NextResponse.json(
-          { error: t("serviceUnavailable") },
-          { status: 503 }
-        ),
-      };
-    }
+    if (isBackendUnavailableError(error)) return serviceUnavailableResult();
     return {
       ok: false,
       response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),

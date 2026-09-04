@@ -18,6 +18,9 @@ import {
   type ProjectSetupResumeState,
 } from "@/components/create-project-wizard";
 import type { ProjectDraft } from "./project-draft";
+import { useTranslations } from "next-intl";
+import { ServerUnavailableState } from "@/components/server-unavailable-state";
+import { isBackendUnavailableError } from "./backend-availability";
 
 interface ProjectsContextValue extends UseProjectsResult {
   /** Opens the shared "new project" wizard (mounted once here). */
@@ -37,6 +40,7 @@ interface ProjectsContextValue extends UseProjectsResult {
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
 
 export function ProjectsProvider({ children }: { children: ReactNode }) {
+  const tUnavailable = useTranslations("ServerUnavailable");
   const projects = useProjectsQuery();
   const { drafts, saveDraft, deleteDraft } = useProjectDrafts();
   const [createOpen, setCreateOpen] = useState(false);
@@ -99,6 +103,17 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       resumeProjectDraft,
     ]
   );
+
+  if (isBackendUnavailableError(projects.error)) {
+    return (
+      <ServerUnavailableState
+        title={tUnavailable("title")}
+        description={tUnavailable("description")}
+        retryLabel={tUnavailable("retry")}
+        onRetry={projects.refetch}
+      />
+    );
+  }
 
   return (
     <ProjectsContext.Provider value={value}>
