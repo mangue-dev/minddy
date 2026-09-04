@@ -15,17 +15,41 @@
 // him that extractMentions reads who to warn, and it is from him that the rendering of the
 // published comment re-infers the pills (only one rule, lib/mention-scan).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "mangue-ui";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoAvatar } from "@/components/actor-avatars";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
+import { SkillChip } from "@/components/assistant/skill-chip";
+import { SkillPreviewDialog } from "@/components/assistant/skill-preview-dialog";
+import {
+  SlashMenu,
+  filterSlashOptions,
+  repositorySkillOptions,
+} from "@/components/assistant/slash-menu";
 import {
   MentionFigure,
   type MentionOption as EntityMentionOption,
 } from "@/components/mention-suggest";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { splitAssistantMentionTokens } from "@/lib/agent-mentions";
+import {
+  escapeMentionLabel,
+  MENTION_TOKEN_END_PATTERN,
+  MENTION_TOKEN_START_PATTERN,
+} from "@/lib/mention-token";
+import { findActiveComposerMenuQuery } from "@/lib/assistant-slash-options";
+import { deleteComposerTokenBeforeCaret } from "@/lib/composer-token-delete";
 import {
   forgeMentionScanner,
   memberLabel,
@@ -33,10 +57,12 @@ import {
   type ScannedMention,
 } from "@/lib/mention-scan";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
+import { filterMentionItems, findActiveMentionQuery } from "@/lib/mention-menu";
 import {
-  filterMentionItems,
-  findActiveMentionQuery,
-} from "@/lib/mention-menu";
+  MAX_SELECTED_SKILLS,
+  type RepositorySkill,
+  type RepositorySkillSummary,
+} from "@/lib/repository-skills";
 import type { Member } from "@/lib/types";
 
 /** userIds mentioned in `text` as "@Display Name" tokens (matched against members). */
@@ -68,6 +94,8 @@ type MentionOption = EntityMentionOption | SpecialMentionOption;
 
 /** The envelope of a mention in the editor: a NON-editable, empty node, in__KEEP_NL_TOKEN__ which React carries the real pill. The field therefore does not redraw a__KEEP_NL_TOKEN__ pill “like” the one in the published comment — it is the same. */
 const SLOT_CLASS = "inline-flex align-middle";
+const SKILL_SLOT_CLASS = "mx-0.5 inline-block max-w-full align-baseline";
+const EMPTY_ASSISTANT_MENTIONS: AssistantMention[] = [];
 
 function makeSlot(option: MentionOption): HTMLSpanElement {
   const el = document.createElement("span");
@@ -80,10 +108,32 @@ function makeSlot(option: MentionOption): HTMLSpanElement {
   if ("avatarUrl" in option && option.avatarUrl) {
     el.dataset.mentionAvatar = option.avatarUrl;
   }
-  if ("iconUrl" in option && option.iconUrl) el.dataset.mentionIcon = option.iconUrl;
+  if ("iconUrl" in option && option.iconUrl)
+    el.dataset.mentionIcon = option.iconUrl;
   if ("icon" in option && option.icon) el.dataset.mentionIcon = option.icon;
   if ("color" in option && option.color) el.dataset.mentionColor = option.color;
   return el;
+}
+
+function makeSkillSlot(skill: RepositorySkillSummary): HTMLSpanElement {
+  const el = document.createElement("span");
+  el.contentEditable = "false";
+  el.className = SKILL_SLOT_CLASS;
+  el.dataset.skillPath = skill.path;
+  el.dataset.skillName = skill.name;
+  el.dataset.skillDescription = skill.description;
+  el.dataset.skillSource = skill.source;
+  return el;
+}
+
+function skillFromSlot(el: HTMLElement): RepositorySkillSummary | null {
+  const path = el.dataset.skillPath;
+  const name = el.dataset.skillName;
+  const description = el.dataset.skillDescription;
+  const source = el.dataset.skillSource as
+    RepositorySkillSummary["source"] | undefined;
+  if (!path || !name || description === undefined || !source) return null;
+  return { path, name, description, source };
 }
 
 const SLOT_TYPES = new Set([
@@ -176,28 +226,54 @@ function optionFromMention(mention: ScannedMention): MentionOption {
   }
 }
 
+function optionFromAssistantMention(mention: AssistantMention): MentionOption {
+  return {
+    type: mention.type,
+    id: mention.id,
+    label: mention.label,
+    ...(mention.avatarSeed ? { avatarSeed: mention.avatarSeed } : {}),
+    ...(mention.color !== undefined ? { color: mention.color } : {}),
+    ...(mention.icon !== undefined ? { icon: mention.icon } : {}),
+  };
+}
+
 /** The text of the field. A mention is written "@Name" even if the pill only shows__KEEP_NL_TOKEN__ the name: on the server side as well as in rendering, it is the at sign which indicates it. */
-function serialize(root: HTMLElement): string {
+function serialize(root: HTMLElement): {
+  text: string;
+  mentionOffsets: Map<HTMLElement, number>;
+} {
   const parts: string[] = [];
+  const mentionOffsets = new Map<HTMLElement, number>();
+  let length = 0;
+
+  const append = (value: string) => {
+    parts.push(value);
+    length += value.length;
+  };
 
   const walk = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {
-      parts.push(node.textContent ?? "");
+      append(node.textContent ?? "");
       return;
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const el = node as HTMLElement;
 
     if (el.dataset.mentionLabel) {
-      parts.push(`@${el.dataset.mentionLabel}`);
+      mentionOffsets.set(el, length);
+      append(`@${el.dataset.mentionLabel}`);
+      return;
+    }
+    if (el.dataset.skillName) {
+      append(`/${el.dataset.skillName}`);
       return;
     }
     if (el.tagName === "BR") {
-      parts.push("\n");
+      append("\n");
       return;
     }
     if (el.tagName === "DIV" || el.tagName === "P") {
-      if (parts.length > 0 && parts[parts.length - 1] !== "\n") parts.push("\n");
+      if (parts.length > 0 && parts[parts.length - 1] !== "\n") append("\n");
       for (const child of el.childNodes) walk(child);
       return;
     }
@@ -205,7 +281,66 @@ function serialize(root: HTMLElement): string {
   };
 
   for (const child of root.childNodes) walk(child);
-  return parts.join("");
+  return { text: parts.join(""), mentionOffsets };
+}
+
+function collectAssistantMentions(
+  root: HTMLElement,
+  preserveOccurrences: boolean,
+  serialized: ReturnType<typeof serialize>,
+): AssistantMention[] {
+  const seen = new Set<string>();
+  const mentions: AssistantMention[] = [];
+  const nodes = [...root.querySelectorAll<HTMLElement>("[data-mention-id]")]
+    .map((node) => ({ node, option: slotOption(node) }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        node: HTMLElement;
+        option: EntityMentionOption;
+      } =>
+        !!entry.option &&
+        entry.option.type !== "numo" &&
+        entry.option.type !== "forge",
+    );
+  const occurrenceByOffset = new Map<string, number>();
+  if (preserveOccurrences && nodes.length > 0) {
+    const labels = [...new Set(nodes.map(({ option }) => option.label))].sort(
+      (a, b) => b.length - a.length,
+    );
+    const expression = new RegExp(
+      `${MENTION_TOKEN_START_PATTERN}@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
+      "gu",
+    );
+    const nextByLabel = new Map<string, number>();
+    let match: RegExpExecArray | null;
+    while ((match = expression.exec(serialized.text)) !== null) {
+      const occurrence = nextByLabel.get(match[1]) ?? 0;
+      occurrenceByOffset.set(`${match.index}\0${match[1]}`, occurrence);
+      nextByLabel.set(match[1], occurrence + 1);
+    }
+  }
+  for (const { node, option } of nodes) {
+    const key = `${option.type}:${option.id}`;
+    if (!preserveOccurrences && seen.has(key)) continue;
+    seen.add(key);
+    const offset = serialized.mentionOffsets.get(node);
+    const occurrence =
+      offset === undefined
+        ? undefined
+        : occurrenceByOffset.get(`${offset}\0${option.label}`);
+    mentions.push({
+      type: option.type,
+      id: option.id,
+      label: option.label,
+      ...(occurrence !== undefined ? { occurrence } : {}),
+      ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
+      ...(option.color !== undefined ? { color: option.color } : {}),
+      ...(option.icon !== undefined ? { icon: option.icon } : {}),
+    });
+  }
+  return mentions;
 }
 
 function caretToEnd(el: HTMLElement) {
@@ -223,25 +358,40 @@ export function MentionTextarea({
   onChange,
   members = [],
   mentions,
+  hydrationMentions = EMPTY_ASSISTANT_MENTIONS,
+  preserveMentionOccurrences = false,
   forgeMembers,
   onMentionQuery,
   focusSignal,
   onSubmit,
   onEscape,
   placeholder,
+  ariaLabel,
   rows = 1,
   className,
   dropUp = false,
+  portalMenus = false,
   autoFocus = false,
   includeNumo = false,
+  skills,
+  loadSkill,
+  disabled = false,
 }: {
   value: string;
-  onChange: (text: string) => void;
+  onChange: (text: string, mentions: AssistantMention[]) => void;
   members?: Member[];
   /** Full entity mention support for Minddy comments. */
   mentions?: MarkdownEditorMentions;
+  /** Persisted identities used before live sources when rebuilding saved tokens. */
+  hydrationMentions?: AssistantMention[];
+  /** Keep DOM occurrence order when homonymous identities must round-trip. */
+  preserveMentionOccurrences?: boolean;
   /**__KEEP_NL_TOKEN__ * The FORGE accounts (MIN-162). Present = this field writes a comment__KEEP_NL_TOKEN__ * from pull request: suggestions come from there, and `members` is ignored.__KEEP_NL_TOKEN__ * A `@` ends up there at GitHub, where quoting a minddy member without a git account does not__KEEP_NL_TOKEN__ * would notify anyone — so the two sources don't mix never.__KEEP_NL_TOKEN__ */
-  forgeMembers?: Array<{ login: string; avatar_url: string | null; name: string | null }>;
+  forgeMembers?: Array<{
+    login: string;
+    avatar_url: string | null;
+    name: string | null;
+  }>;
   /** The first “@” typed — enough to load a list on demand rather than __KEEP_NL_TOKEN__ when opening the view. Called without guarantee of uniqueness: make the caller __KEEP_NL_TOKEN__ only a trigger (a `enabled` which remains true). */
   onMentionQuery?: () => void;
   /** Changing this value gives focus to the field, caret at the end of the text — this__KEEP_NL_TOKEN__ needed by a gesture that WRITEs into the draft from outside__KEEP_NL_TOKEN__ (“Quote” on a PR). A `autoFocus` is only used for editing; here the__KEEP_NL_TOKEN__ field is already there. */
@@ -250,13 +400,23 @@ export function MentionTextarea({
   /** Called on Escape when the mention suggestions are closed. */
   onEscape?: () => void;
   placeholder?: string;
+  ariaLabel?: string;
   rows?: number;
   className?: string;
   /** Open the suggestion list above the field (for composers pinned to the bottom). */
   dropUp?: boolean;
+  /** Render suggestion lists outside clipping containers while keeping them anchored. */
+  portalMenus?: boolean;
   autoFocus?: boolean;
   /** Offer "@Numo" (the assistant) in the suggestions — comment composers only. */
   includeNumo?: boolean;
+  /** Repository skills offered after "/" or "$". */
+  skills?: RepositorySkillSummary[];
+  /** Loads the full instructions when a skill chip is opened. */
+  loadSkill?: (
+    skill: RepositorySkillSummary,
+  ) => Promise<RepositorySkill | null>;
+  disabled?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -267,6 +427,22 @@ export function MentionTextarea({
   const [slots, setSlots] = useState<
     Array<{ el: HTMLElement; option: MentionOption }>
   >([]);
+  const [skillSlots, setSkillSlots] = useState<
+    Array<{ el: HTMLElement; skill: RepositorySkillSummary }>
+  >([]);
+  const [skillQuery, setSkillQuery] = useState<
+    (ReturnType<typeof findActiveComposerMenuQuery> & { node: Text }) | null
+  >(null);
+  const [skillIndex, setSkillIndex] = useState(0);
+  const [blurRevision, setBlurRevision] = useState(0);
+  const [previewSkill, setPreviewSkill] =
+    useState<RepositorySkillSummary | null>(null);
+  const [floatingAnchor, setFloatingAnchor] = useState<{
+    left: number;
+    bottom: number;
+    availableHeight: number;
+    viewportWidth: number;
+  } | null>(null);
 
   // The identity of the arrays is NOT stable across callers: as long as the
   // query not answered, useMembersQuery returns a new `[]` each time it is rendered.
@@ -280,7 +456,10 @@ export function MentionTextarea({
         .join("");
 
   const fallbackScan = useMemo(
-    () => (forgeMembers ? forgeMentionScanner(forgeMembers) : mentionScanner(members)),
+    () =>
+      forgeMembers
+        ? forgeMentionScanner(forgeMembers)
+        : mentionScanner(members),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [membersKey, fromForge],
   );
@@ -313,7 +492,11 @@ export function MentionTextarea({
     // herself, and the only one who will not notify anyone at the forge. show it
     // first, with Numo's face, avoid reading it as just another account.
     if (includeNumo) {
-      const numo: MentionOption = { type: "numo", id: NUMO_MENTION_ID, label: "Numo" };
+      const numo: MentionOption = {
+        type: "numo",
+        id: NUMO_MENTION_ID,
+        label: "Numo",
+      };
       if (fromForge) list.unshift(numo);
       else list.push(numo);
     }
@@ -322,10 +505,7 @@ export function MentionTextarea({
   }, [membersKey, includeNumo, fromForge, mentions?.options]);
 
   const suggestions = useMemo(
-    () =>
-      query === null
-        ? []
-        : filterMentionItems(mentionables, query),
+    () => (query === null ? [] : filterMentionItems(mentionables, query)),
     [query, mentionables],
   );
   const open = suggestions.length > 0;
@@ -343,14 +523,37 @@ export function MentionTextarea({
 
   const syncSlots = useCallback(() => {
     const el = ref.current;
-    const found = el ? [...el.querySelectorAll<HTMLElement>("[data-mention-id]")] : [];
+    const found = el
+      ? [...el.querySelectorAll<HTMLElement>("[data-mention-id]")]
+      : [];
     setSlots((prev) => {
       const unchanged =
         prev.length === found.length && prev.every((s, i) => s.el === found[i]);
       if (unchanged) return prev;
       return found
         .map((node) => ({ el: node, option: slotOption(node) }))
-        .filter((s): s is { el: HTMLElement; option: MentionOption } => !!s.option);
+        .filter(
+          (s): s is { el: HTMLElement; option: MentionOption } => !!s.option,
+        );
+    });
+  }, []);
+
+  const syncSkillSlots = useCallback(() => {
+    const el = ref.current;
+    const found = el
+      ? [...el.querySelectorAll<HTMLElement>("[data-skill-path]")]
+      : [];
+    setSkillSlots((prev) => {
+      const unchanged =
+        prev.length === found.length &&
+        prev.every((slot, index) => slot.el === found[index]);
+      if (unchanged) return prev;
+      return found
+        .map((node) => ({ el: node, skill: skillFromSlot(node) }))
+        .filter(
+          (slot): slot is { el: HTMLElement; skill: RepositorySkillSummary } =>
+            slot.skill !== null,
+        );
     });
   }, []);
 
@@ -393,33 +596,161 @@ export function MentionTextarea({
     setQuery((prev) => (prev === next ? prev : next));
   }, [readMention, onMentionQuery, mentions]);
 
+  const readSkill = useCallback(() => {
+    if (skills === undefined) return null;
+    const el = ref.current;
+    const selection = window.getSelection();
+    if (!el || !selection || !selection.isCollapsed) return null;
+    const node = selection.anchorNode;
+    if (!node || node.nodeType !== Node.TEXT_NODE || !el.contains(node))
+      return null;
+    const end = selection.anchorOffset;
+    const trigger = findActiveComposerMenuQuery(
+      (node.textContent ?? "").slice(0, end),
+    );
+    return trigger ? { ...trigger, node: node as Text } : null;
+  }, [skills]);
+
+  const refreshSkill = useCallback(() => {
+    const next = readSkill();
+    setSkillQuery((prev) =>
+      prev?.node === next?.node &&
+      prev?.prefix === next?.prefix &&
+      prev?.query === next?.query &&
+      prev?.start === next?.start &&
+      prev?.end === next?.end
+        ? prev
+        : next,
+    );
+  }, [readSkill]);
+
+  const availableSkills = useMemo(() => {
+    if (skillSlots.length >= MAX_SELECTED_SKILLS) return [];
+    const selectedPaths = new Set(skillSlots.map((slot) => slot.skill.path));
+    return (skills ?? []).filter((skill) => !selectedPaths.has(skill.path));
+  }, [skillSlots, skills]);
+
+  const skillOptions = useMemo(
+    () =>
+      skillQuery
+        ? filterSlashOptions(
+            repositorySkillOptions(availableSkills),
+            skillQuery.query,
+          )
+        : [],
+    [availableSkills, skillQuery],
+  );
+  const skillOpen = skillOptions.length > 0;
+
+  useLayoutEffect(() => {
+    if (!portalMenus || (!open && !skillOpen)) {
+      setFloatingAnchor(null);
+      return;
+    }
+
+    const updateAnchor = () => {
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect) return;
+      setFloatingAnchor({
+        left: rect.left,
+        bottom: window.innerHeight - rect.top + 4,
+        availableHeight: Math.max(80, rect.top - 12),
+        viewportWidth: window.innerWidth,
+      });
+    };
+
+    updateAnchor();
+    window.addEventListener("resize", updateAnchor);
+    window.addEventListener("scroll", updateAnchor, true);
+    const observer = new ResizeObserver(updateAnchor);
+    if (ref.current) observer.observe(ref.current);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateAnchor);
+      window.removeEventListener("scroll", updateAnchor, true);
+    };
+  }, [open, portalMenus, skillOpen]);
+  const activeSkill = Math.min(
+    skillIndex,
+    Math.max(0, skillOptions.length - 1),
+  );
+  useEffect(() => setSkillIndex(0), [skillQuery]);
+
   /** The current text goes back to the caller. `emitted` retains what it has__KEEP_NL_TOKEN__ given to it: as long as it returns it to us as is, the current keystroke must NOT__KEEP_NL_TOKEN__ be rewritten under the caret. */
   const emitted = useRef<string | null>(null);
   const emit = useCallback(
     (el: HTMLElement) => {
-      const text = serialize(el);
+      const serialized = serialize(el);
+      const { text } = serialized;
       emitted.current = text;
-      onChange(text);
+      onChange(
+        text,
+        collectAssistantMentions(el, preserveMentionOccurrences, serialized),
+      );
     },
-    [onChange],
+    [onChange, preserveMentionOccurrences],
   );
 
   /** Restores the content from the text: each recognized mention becomes a __KEEP_NL_TOKEN__ envelope, the rest of the text nodes and line breaks. */
   const render = useCallback(
     (el: HTMLElement, text: string) => {
       el.innerHTML = "";
-      for (const seg of scan(text)) {
-        if (seg.mention === undefined) {
-          seg.text.split("\n").forEach((line, i) => {
-            if (i > 0) el.appendChild(document.createElement("br"));
-            if (line) el.appendChild(document.createTextNode(line));
-          });
+      for (const savedSegment of splitAssistantMentionTokens(
+        text,
+        hydrationMentions,
+      )) {
+        if (savedSegment.mention !== undefined) {
+          el.appendChild(
+            makeSlot(optionFromAssistantMention(savedSegment.mention)),
+          );
           continue;
         }
-        el.appendChild(makeSlot(optionFromMention(seg.mention)));
+        const scanned = preserveMentionOccurrences
+          ? [{ text: savedSegment.text, mention: undefined }]
+          : scan(savedSegment.text);
+        for (const seg of scanned) {
+          if (seg.mention !== undefined) {
+            el.appendChild(makeSlot(optionFromMention(seg.mention)));
+            continue;
+          }
+          const selected = [...(skills ?? [])].sort(
+            (a, b) => b.name.length - a.name.length,
+          );
+          const names = selected
+            .map((skill) => skill.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+            .join("|");
+          const skillPattern = names
+            ? new RegExp(`(^|\\s)/(${names})(?=\\s|$)`, "g")
+            : null;
+          let last = 0;
+          let match: RegExpExecArray | null;
+          while (
+            skillPattern &&
+            (match = skillPattern.exec(seg.text)) !== null
+          ) {
+            const before = seg.text.slice(last, match.index) + (match[1] ?? "");
+            before.split("\n").forEach((line, index) => {
+              if (index > 0) el.appendChild(document.createElement("br"));
+              if (line) el.appendChild(document.createTextNode(line));
+            });
+            const skill = selected.find(
+              (candidate) => candidate.name === match?.[2],
+            );
+            if (skill) el.appendChild(makeSkillSlot(skill));
+            last = match.index + match[0].length;
+          }
+          seg.text
+            .slice(last)
+            .split("\n")
+            .forEach((line, index) => {
+              if (index > 0) el.appendChild(document.createElement("br"));
+              if (line) el.appendChild(document.createTextNode(line));
+            });
+          continue;
+        }
       }
     },
-    [scan],
+    [hydrationMentions, preserveMentionOccurrences, scan, skills],
   );
 
   // The text comes from ELSEWHERE (editing, dictation, reset after sending, or
@@ -427,21 +758,38 @@ export function MentionTextarea({
   // `value` is exactly what we just sent — nothing moves, the caret
   // stay where it is.
   const lastScan = useRef(scan);
+  const lastSkills = useRef(skills);
+  const lastHydrationMentions = useRef(hydrationMentions);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const external = emitted.current !== value;
-    const rescan = lastScan.current !== scan;
+    const rescan =
+      lastScan.current !== scan ||
+      lastSkills.current !== skills ||
+      lastHydrationMentions.current !== hydrationMentions;
     if (!external && !rescan) return;
     // A list of members that changes while typing should not move the
     // caret: we will wait for the field to be rendered.
     if (!external && document.activeElement === el) return;
     lastScan.current = scan;
+    lastSkills.current = skills;
+    lastHydrationMentions.current = hydrationMentions;
     emitted.current = value;
     render(el, value);
     syncSlots();
+    syncSkillSlots();
     if (document.activeElement === el) caretToEnd(el);
-  }, [value, scan, render, syncSlots]);
+  }, [
+    value,
+    scan,
+    skills,
+    hydrationMentions,
+    render,
+    syncSlots,
+    syncSkillSlots,
+    blurRevision,
+  ]);
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -464,7 +812,8 @@ export function MentionTextarea({
   // want to ask for it.
   const lastFocusSignal = useRef(focusSignal);
   useEffect(() => {
-    if (focusSignal === undefined || focusSignal === lastFocusSignal.current) return;
+    if (focusSignal === undefined || focusSignal === lastFocusSignal.current)
+      return;
     lastFocusSignal.current = focusSignal;
     const el = ref.current;
     if (!el) return;
@@ -506,18 +855,144 @@ export function MentionTextarea({
     syncSlots();
   };
 
+  const pickSkill = (skill: RepositorySkillSummary) => {
+    const found = readSkill();
+    const el = ref.current;
+    if (!found || !el) return;
+    const range = document.createRange();
+    range.setStart(found.node, found.start);
+    range.setEnd(found.node, found.end);
+    range.deleteContents();
+    const slot = makeSkillSlot(skill);
+    range.insertNode(slot);
+    const space = document.createTextNode(" ");
+    slot.after(space);
+    const selection = window.getSelection();
+    if (selection) {
+      const after = document.createRange();
+      after.setStart(space, 1);
+      after.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(after);
+    }
+    el.focus();
+    setSkillQuery(null);
+    emit(el);
+    syncSkillSlots();
+  };
+
   const handleInput = () => {
     const el = ref.current;
     if (!el) return;
     // Really empty: we return the surface to the `:empty` selector so that
     // the prompt reappears (the browser happily leaves a <br> there).
-    if (!el.querySelector("[data-mention-id]") && !el.textContent?.trim()) {
+    if (
+      !el.querySelector("[data-mention-id], [data-skill-path]") &&
+      !el.textContent?.trim()
+    ) {
       el.innerHTML = "";
     }
     emit(el);
     refreshMention();
+    refreshSkill();
     syncSlots();
+    syncSkillSlots();
   };
+
+  const floatingStyle = (width: number): CSSProperties | undefined => {
+    if (!portalMenus || !floatingAnchor) return undefined;
+    return {
+      position: "fixed",
+      left: Math.min(
+        Math.max(8, floatingAnchor.left),
+        Math.max(8, floatingAnchor.viewportWidth - width - 8),
+      ),
+      bottom: floatingAnchor.bottom,
+      top: "auto",
+      maxHeight: Math.min(224, floatingAnchor.availableHeight),
+      maxWidth: "calc(100vw - 1rem)",
+      marginBottom: 0,
+    };
+  };
+
+  const mentionMenu =
+    open && (!portalMenus || floatingAnchor) ? (
+      <div
+        ref={suggestionsRef}
+        role="listbox"
+        style={floatingStyle(256)}
+        className={cn(
+          "scrollbar-quiet z-[100] max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
+          portalMenus
+            ? "fixed"
+            : cn(
+                "absolute left-0",
+                dropUp ? "bottom-full mb-1" : "top-full mt-1",
+              ),
+        )}
+      >
+        {suggestions.map((option, index) => (
+          <button
+            key={`${option.type}:${option.id}`}
+            type="button"
+            role="option"
+            aria-selected={index === active}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              pick(option);
+            }}
+            onMouseEnter={() => setSelected(index)}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
+              index === active && "bg-muted",
+            )}
+          >
+            {option.type === "numo" ? (
+              <NumoAvatar />
+            ) : option.type === "forge" ? (
+              <ForgeUserAvatar
+                user={{
+                  login: option.avatarSeed ?? option.id,
+                  avatar_url: option.avatarUrl ?? null,
+                }}
+                className="size-5"
+              />
+            ) : (
+              <MentionFigure option={option} />
+            )}
+            <span className="min-w-0 truncate">
+              {option.label}
+              {"detail" in option && option.detail ? (
+                <span className="ml-1.5 text-muted-foreground">
+                  {option.detail}
+                </span>
+              ) : null}
+            </span>
+          </button>
+        ))}
+      </div>
+    ) : null;
+
+  const skillMenu =
+    skillOpen && (!portalMenus || floatingAnchor) ? (
+      <SlashMenu
+        options={skillOptions}
+        prefix={skillQuery?.prefix ?? "/"}
+        activeIndex={activeSkill}
+        onPick={(option) => {
+          if (option.kind === "skill") pickSkill(option.skill);
+        }}
+        onHover={setSkillIndex}
+        style={floatingStyle(288)}
+        className={
+          portalMenus
+            ? "z-[100]"
+            : dropUp
+              ? undefined
+              : "bottom-auto top-full mt-1"
+        }
+      />
+    ) : null;
 
   return (
     <div className="relative min-w-0 max-w-full">
@@ -540,25 +1015,90 @@ export function MentionTextarea({
           `${option.type}:${option.id}:${index}`,
         ),
       )}
+      {skillSlots.map(({ el, skill }) =>
+        createPortal(
+          <SkillChip
+            name={skill.name}
+            onClick={loadSkill ? () => setPreviewSkill(skill) : undefined}
+          />,
+          el,
+          skill.path,
+        ),
+      )}
+      {loadSkill ? (
+        <SkillPreviewDialog
+          skill={previewSkill}
+          open={previewSkill !== null}
+          onOpenChange={(next) => {
+            if (!next) setPreviewSkill(null);
+          }}
+          loadSkill={loadSkill}
+        />
+      ) : null}
       <div
         ref={ref}
-        contentEditable
+        contentEditable={!disabled}
         role="textbox"
         aria-multiline="true"
         aria-placeholder={placeholder}
+        aria-label={ariaLabel}
         suppressContentEditableWarning
         // `rows` lines at least, like on the native field before: one line
         // of `text-sm` is 1.25rem, and the box being in border-box it is necessary
         // add default vertical padding (py-2).
         style={{ minHeight: `calc(${rows} * 1.25rem + 1rem)` }}
         onInput={handleInput}
-        onClick={refreshMention}
+        onClick={() => {
+          refreshMention();
+          refreshSkill();
+        }}
         onKeyUp={(e) => {
           // The caret can exit an “@” query without the text changing.
-          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
+          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
             refreshMention();
+            refreshSkill();
+          }
         }}
         onKeyDown={(e) => {
+          if (
+            e.key === "Backspace" &&
+            ref.current &&
+            deleteComposerTokenBeforeCaret(
+              ref.current,
+              window.getSelection(),
+              "[data-skill-path]",
+            )
+          ) {
+            e.preventDefault();
+            setSkillQuery(null);
+            emit(ref.current);
+            syncSkillSlots();
+            return;
+          }
+          if (skillOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+            e.preventDefault();
+            const count = skillOptions.length;
+            setSkillIndex((index) =>
+              e.key === "ArrowDown"
+                ? (Math.min(index, count - 1) + 1) % count
+                : (Math.min(index, count - 1) - 1 + count) % count,
+            );
+            return;
+          }
+          if (
+            skillOpen &&
+            (e.key === "Tab" ||
+              (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey))
+          ) {
+            e.preventDefault();
+            pickSkill(skillOptions[activeSkill].skill);
+            return;
+          }
+          if (skillOpen && e.key === "Escape") {
+            e.preventDefault();
+            setSkillQuery(null);
+            return;
+          }
           // Arrows must not reach the editor: the caret would move out of the
           // "@query" and drop the mention.
           if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
@@ -566,11 +1106,19 @@ export function MentionTextarea({
             const n = suggestions.length;
             setSelected((s) => {
               const from = Math.min(s, n - 1);
-              return e.key === "ArrowDown" ? (from + 1) % n : (from - 1 + n) % n;
+              return e.key === "ArrowDown"
+                ? (from + 1) % n
+                : (from - 1 + n) % n;
             });
             return;
           }
-          if (open && e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+          if (
+            open &&
+            e.key === "Enter" &&
+            !e.shiftKey &&
+            !e.metaKey &&
+            !e.ctrlKey
+          ) {
             e.preventDefault();
             pick(suggestions[active]);
             return;
@@ -580,14 +1128,14 @@ export function MentionTextarea({
             setQuery(null);
             return;
           }
-          if (!open && e.key === "Escape") {
+          if (!open && !skillOpen && e.key === "Escape") {
             onEscape?.();
             return;
           }
           // Sending to the keyboard — ⌘/Ctrl + Enter, or Enter only if the account
           // set it like this (lib/keyboard/send-shortcut). The list of mentions
           // open pass FORWARD: Enter y chooses a suggestion.
-          if (!open && isSend(e)) {
+          if (!open && !skillOpen && isSend(e)) {
             e.preventDefault();
             onSubmit?.();
           }
@@ -598,70 +1146,33 @@ export function MentionTextarea({
           // which surrounds us (pasteFileHandler) — we let them rise.
           if (e.clipboardData.files.length > 0) return;
           const text =
-            e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
+            e.clipboardData.getData("text/plain") ||
+            e.clipboardData.getData("text");
           e.preventDefault();
           if (!text) return;
           // execCommand: this is what writes the paste to the stack
           // browser cancellation, which no living API overrides.
           document.execCommand("insertText", false, text);
         }}
-        onBlur={() => setTimeout(() => setQuery(null), 120)}
+        onBlur={() => {
+          setBlurRevision((revision) => revision + 1);
+          setTimeout(() => {
+            setQuery(null);
+            setSkillQuery(null);
+          }, 120);
+        }}
         className={cn(
           "max-h-48 min-w-0 w-full max-w-full overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
           "[&:empty]:before:pointer-events-none [&:empty]:before:text-muted-foreground [&:empty]:before:content-[attr(aria-placeholder)]",
           className,
         )}
       />
-      {open && (
-        <div
-          ref={suggestionsRef}
-          role="listbox"
-          className={cn(
-            "scrollbar-quiet absolute left-0 z-50 max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
-            dropUp ? "bottom-full mb-1" : "top-full mt-1"
-          )}
-        >
-          {suggestions.map((option, index) => (
-            <button
-              key={`${option.type}:${option.id}`}
-              type="button"
-              role="option"
-              aria-selected={index === active}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                pick(option);
-              }}
-              onMouseEnter={() => setSelected(index)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
-                index === active && "bg-muted"
-              )}
-            >
-              {option.type === "numo" ? (
-                <NumoAvatar />
-              ) : option.type === "forge" ? (
-                <ForgeUserAvatar
-                  user={{
-                    login: option.avatarSeed ?? option.id,
-                    avatar_url: option.avatarUrl ?? null,
-                  }}
-                  className="size-5"
-                />
-              ) : (
-                <MentionFigure option={option} />
-              )}
-              <span className="min-w-0 truncate">
-                {option.label}
-                {"detail" in option && option.detail ? (
-                  <span className="ml-1.5 text-muted-foreground">
-                    {option.detail}
-                  </span>
-                ) : null}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+      {portalMenus && mentionMenu
+        ? createPortal(mentionMenu, document.body)
+        : mentionMenu}
+      {portalMenus && skillMenu
+        ? createPortal(skillMenu, document.body)
+        : skillMenu}
     </div>
   );
 }

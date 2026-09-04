@@ -63,10 +63,20 @@ import {
   routinesQueryKey,
   useRoutineRunsQuery,
 } from "@/lib/use-routines-query";
-import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
+import {
+  useAgentModelsQuery,
+  useReasoningLevelsFor,
+} from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import {
+  nearestReasoningLevel,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useMembersQuery } from "@/lib/use-members-query";
+import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { calendarDaysBetween } from "@/lib/due-date";
 import {
   describeSchedule,
@@ -127,7 +137,11 @@ export function RoutineDetail({
   routine: Routine;
   /** The supporting project — its orb opens the header, like a conversation:
    * “what deposit are we talking about? » is the question we ask ourselves when we arrive. */
-  project: { id: string; icon_url: string | null; orb_seed: string | null } | null;
+  project: {
+    id: string;
+    icon_url: string | null;
+    orb_seed: string | null;
+  } | null;
   /** Gestures (switch, throw, edit, delete) are up to the owner
    * alone — a button that leads to a 403 is not displayed. */
   isOwner: boolean;
@@ -209,6 +223,7 @@ export function RoutineDetail({
     if (!draft || !draft.prompt.trim()) return;
     await patch({
       prompt: draft.prompt.trim(),
+      promptMentions: draft.promptMentions,
       model: draft.model || null,
       reasoningLevel: draft.reasoning,
       baseBranch: draft.baseBranch || null,
@@ -216,9 +231,12 @@ export function RoutineDetail({
       frequency: draft.schedule.frequency,
       hour: draft.schedule.hour,
       minute: draft.schedule.minute,
-      weekdays: draft.schedule.frequency === "weekly" ? draft.schedule.weekdays : [],
+      weekdays:
+        draft.schedule.frequency === "weekly" ? draft.schedule.weekdays : [],
       daysOfMonth:
-        draft.schedule.frequency === "monthly" ? draft.schedule.daysOfMonth : [],
+        draft.schedule.frequency === "monthly"
+          ? draft.schedule.daysOfMonth
+          : [],
       timezone: draft.schedule.timezone,
     });
     setDraft(null);
@@ -263,7 +281,10 @@ export function RoutineDetail({
    */
   const toggleSeq = useRef(0);
   const toggleEnabled = (enabled: boolean) => {
-    if (enabled && (!cloudExecutionConfigured || !routineSchedulingConfigured)) {
+    if (
+      enabled &&
+      (!cloudExecutionConfigured || !routineSchedulingConfigured)
+    ) {
       toast.error(
         t(
           !cloudExecutionConfigured
@@ -282,7 +303,8 @@ export function RoutineDetail({
       .then(({ routine: saved }) => {
         // A more recent switch has left in the meantime: its answer is authentic,
         // not this one — two quick clicks shouldn't end up upside down.
-        if (seq === toggleSeq.current) patchRoutineInCache(queryClient, saved.id, saved);
+        if (seq === toggleSeq.current)
+          patchRoutineInCache(queryClient, saved.id, saved);
       })
       .catch((err) => {
         if (seq !== toggleSeq.current) return;
@@ -461,7 +483,9 @@ export function RoutineDetail({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   disabled={
-                    busy || agentCapabilitiesLoading || !cloudExecutionConfigured
+                    busy ||
+                    agentCapabilitiesLoading ||
+                    !cloudExecutionConfigured
                   }
                   onSelect={() => void runNow()}
                 >
@@ -540,7 +564,12 @@ export function RoutineDetail({
             ) : null}
 
             {/* The instruction, rendered and folded (see `RoutinePrompt`). */}
-            <RoutinePrompt prompt={routine.prompt} />
+            <RoutinePrompt
+              projectId={routine.project_id}
+              baseBranch={routine.base_branch}
+              prompt={routine.prompt}
+              promptMentions={routine.prompt_mentions ?? []}
+            />
           </div>
         </>
       )}
@@ -599,10 +628,13 @@ export function RoutineDetail({
                         </thead>
                         <tbody className="divide-y divide-border">
                           {runs.map((run) => {
-                            const date = format.dateTime(new Date(run.created_at), {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            });
+                            const date = format.dateTime(
+                              new Date(run.created_at),
+                              {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              },
+                            );
                             return (
                               <tr
                                 key={run.id}
@@ -629,7 +661,10 @@ export function RoutineDetail({
                                   )}
                                 </td>
                                 <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
-                                  {formatRunUsagePercent(run.usage_percent, format)}
+                                  {formatRunUsagePercent(
+                                    run.usage_percent,
+                                    format,
+                                  )}
                                 </td>
                                 <td className="relative px-3 py-2.5">
                                   <div className="flex min-w-0 items-center justify-between gap-2">
@@ -640,11 +675,16 @@ export function RoutineDetail({
                                         type="button"
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          router.push(`/pull-requests?run=${run.id}`)
+                                          router.push(
+                                            `/pull-requests?run=${run.id}`,
+                                          );
                                         }}
                                         className="relative z-10 shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                       >
-                                        <PrStateBadge state={run.pr_state} icon />
+                                        <PrStateBadge
+                                          state={run.pr_state}
+                                          icon
+                                        />
                                       </button>
                                     ) : (
                                       <span className="pointer-events-none relative min-w-0 truncate text-xs text-muted-foreground">
@@ -683,7 +723,9 @@ export function RoutineDetail({
                       <Button
                         size="sm"
                         disabled={
-                          busy || agentCapabilitiesLoading || !cloudExecutionConfigured
+                          busy ||
+                          agentCapabilitiesLoading ||
+                          !cloudExecutionConfigured
                         }
                         onClick={() => void runNow()}
                       >
@@ -734,8 +776,26 @@ export function RoutineDetail({
  * Unfolded, it still doesn't push anything: it parades IN its box, and the
  * list of executions remains on the screen below it.
  */
-function RoutinePrompt({ prompt }: { prompt: string }) {
+function RoutinePrompt({
+  projectId,
+  baseBranch,
+  prompt,
+  promptMentions,
+}: {
+  projectId: string;
+  baseBranch: string | null;
+  prompt: string;
+  promptMentions: AssistantMention[];
+}) {
   const t = useTranslations("Routines");
+  const { members } = useMembersQuery(projectId, true);
+  const mentionSupport = useDescriptionMentions(projectId, members);
+  const repositorySkills = useRepositorySkills(
+    projectId,
+    "cloud",
+    "routine-display",
+    baseBranch,
+  );
   const [expanded, setExpanded] = useState(false);
   /* A fade longer than a scroll edge (2 rem by default):
      here it does not indicate a border, it turns off a cut end of text. */
@@ -762,10 +822,20 @@ function RoutinePrompt({ prompt }: { prompt: string }) {
         className={cn(
           "w-full",
           // Folded: the height of the six lines that `line-clamp-6` gave.
-          expanded ? "max-h-[40vh] overflow-y-auto" : "max-h-36 overflow-hidden",
+          expanded
+            ? "max-h-[40vh] overflow-y-auto"
+            : "max-h-36 overflow-hidden",
         )}
       >
-        <Markdown className="text-muted-foreground">{prompt}</Markdown>
+        <Markdown
+          className="text-muted-foreground"
+          mentionScan={mentionSupport.scan}
+          mentionLinks={mentionSupport.links}
+          resolvedMentions={promptMentions}
+          skills={repositorySkills.skills}
+        >
+          {prompt}
+        </Markdown>
       </div>
       {truncated ? (
         <Button
@@ -812,7 +882,10 @@ function NextRunRow({ at }: { at: string }) {
   const now = useNow({ updateInterval: 60_000 });
 
   const date = new Date(at);
-  const exact = format.dateTime(date, { dateStyle: "full", timeStyle: "short" });
+  const exact = format.dateTime(date, {
+    dateStyle: "full",
+    timeStyle: "short",
+  });
   const time = format.dateTime(date, { hour: "2-digit", minute: "2-digit" });
   const days = calendarDaysBetween(now, date);
 
@@ -906,7 +979,10 @@ function PrHeaderAction({ run }: { run: AgentRunSummary }) {
  * A cadence that `nextRunAt` refuses (time zone removed from ICU, tinkered data) does not
  * cannot be guessed: we keep the value in place and let the answer be decided.
  */
-function optimisticNextRunAt(routine: Routine, enabled: boolean): string | null {
+function optimisticNextRunAt(
+  routine: Routine,
+  enabled: boolean,
+): string | null {
   if (!enabled) return null;
   try {
     return nextRunAt(routineSchedule(routine), new Date()).toISOString();
@@ -994,7 +1070,9 @@ function RoutineSummary({
 
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {cadence ? <p className="text-xs text-muted-foreground">{cadence}</p> : null}
+      {cadence ? (
+        <p className="text-xs text-muted-foreground">{cadence}</p>
+      ) : null}
       <ModelBadge
         model={model}
         size={12}
@@ -1008,6 +1086,7 @@ function RoutineSummary({
 /** The editing draft: everything that a routine exposes to adjustment. */
 interface RoutineDraft {
   prompt: string;
+  promptMentions: AssistantMention[];
   /** "" = the default model of the account (no model fixed on the routine). */
   model: string;
   reasoning: ReasoningLevel;
@@ -1022,6 +1101,7 @@ interface RoutineDraft {
 function draftFrom(routine: Routine): RoutineDraft {
   return {
     prompt: routine.prompt,
+    promptMentions: routine.prompt_mentions ?? [],
     model: routine.model ?? "",
     reasoning: routine.reasoning_level,
     baseBranch: routine.base_branch ?? "",
@@ -1090,8 +1170,13 @@ function RoutineEditor({
             same component: dictation, input ceiling and limited height. */}
         <RoutinePromptField
           autoFocus
+          projectId={projectId}
+          baseBranch={draft.baseBranch}
           value={draft.prompt}
-          onChange={(value) => set("prompt", value)}
+          mentions={draft.promptMentions}
+          onChange={(value, mentions) =>
+            onChange({ ...draft, prompt: value, promptMentions: mentions })
+          }
           disabled={busy}
         />
       </EditorSection>

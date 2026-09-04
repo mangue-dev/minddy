@@ -83,6 +83,7 @@ async function runRoutine(routine: Routine): Promise<{ id: string; outcome: stri
     userId: routine.owner_id,
     triggeredBy: "routine",
     prompt: routine.prompt,
+    promptMentions: routine.prompt_mentions,
     // The title is that of the routine, written ONCE at its creation: no
     // summary to be paid for each visit (see `launch.ts`).
     title: routine.title,

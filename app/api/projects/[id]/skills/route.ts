@@ -5,6 +5,7 @@ import {
   listProjectRepositorySkills,
   loadProjectRepositorySkills,
 } from "@/lib/server/repository-skills";
+import { isValidGitBranchName } from "@/lib/server/agent/branch-name";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -30,16 +31,31 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   try {
     const skillPath = request.nextUrl.searchParams.get("path");
+    const ref = request.nextUrl.searchParams.get("ref")?.trim() || null;
+    if (ref && !isValidGitBranchName(ref)) {
+      return NextResponse.json(
+        { error: "Invalid repository ref" },
+        { status: 400 },
+      );
+    }
     if (skillPath) {
-      const loaded = await loadProjectRepositorySkills(id, [skillPath]);
+      const loaded = await loadProjectRepositorySkills(id, [skillPath], ref);
       const skill = loaded?.[0] ?? null;
       return skill
         ? NextResponse.json({ skill })
-        : NextResponse.json({ error: "Repository skill not found" }, { status: 404 });
+        : NextResponse.json(
+            { error: "Repository skill not found" },
+            { status: 404 },
+          );
     }
-    return NextResponse.json({ skills: await listProjectRepositorySkills(id) });
+    return NextResponse.json({
+      skills: await listProjectRepositorySkills(id, ref),
+    });
   } catch (error) {
-    console.error("[repository-skills] discovery failed:", (error as Error).message);
+    console.error(
+      "[repository-skills] discovery failed:",
+      (error as Error).message,
+    );
     return NextResponse.json(
       { error: "Repository skills could not be loaded" },
       { status: 502 },

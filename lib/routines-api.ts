@@ -2,6 +2,7 @@ import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import type { AgentRunSummary } from "./agent-api";
 import type { ReasoningLevel } from "./agent-reasoning";
+import type { AssistantMention } from "./assistant-types";
 import { DEFAULT_MAX_SPEND_PERCENT } from "./routine-budget";
 import type { RoutineFrequency } from "./routine-schedule";
 
@@ -54,6 +55,7 @@ export interface Routine {
   owner_id: string;
   title: string;
   prompt: string;
+  prompt_mentions: AssistantMention[];
   model: string | null;
   reasoning_level: ReasoningLevel;
   base_branch: string | null;
@@ -80,6 +82,7 @@ export interface RoutineInput {
   projectId: string;
   /** No title: minddy writes it from the instruction (see `titleFor`). */
   prompt: string;
+  promptMentions?: AssistantMention[];
   model?: string | null;
   reasoningLevel?: ReasoningLevel;
   baseBranch?: string | null;

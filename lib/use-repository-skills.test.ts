@@ -85,6 +85,23 @@ describe("repository skill environment synchronization", () => {
     expect(fetch).toHaveBeenCalledWith("/api/projects/project-id/skills");
   });
 
+  it("loads cloud skill metadata from the selected repository ref", async () => {
+    const fetch = vi.fn().mockResolvedValue(cloudResponse());
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      fetchRepositorySkills({
+        ...input,
+        environment: "cloud",
+        ref: "release/next",
+        bridge: null,
+      }),
+    ).resolves.toEqual([cloudSkill]);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/projects/project-id/skills?ref=release%2Fnext",
+    );
+  });
+
   it("falls back when the shell exposes discovery but its IPC handler rejects", async () => {
     const fetch = vi.fn().mockResolvedValue(cloudResponse());
     vi.stubGlobal("fetch", fetch);
@@ -93,7 +110,11 @@ describe("repository skill environment synchronization", () => {
       fetchRepositorySkills({
         ...input,
         environment: "worktree",
-        bridge: { localRepoSkills: vi.fn().mockRejectedValue(new Error("missing handler")) },
+        bridge: {
+          localRepoSkills: vi
+            .fn()
+            .mockRejectedValue(new Error("missing handler")),
+        },
       }),
     ).resolves.toEqual([cloudSkill]);
   });
@@ -132,6 +153,24 @@ describe("repository skill environment synchronization", () => {
     ).resolves.toEqual(loadedCloudSkill);
     expect(fetch).toHaveBeenCalledWith(
       "/api/projects/project-id/skills?path=.agents%2Fskills%2Fcloud%2FSKILL.md",
+    );
+  });
+
+  it("loads cloud skill content from the selected repository ref", async () => {
+    const fetch = vi.fn().mockResolvedValue(cloudSkillResponse());
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      fetchRepositorySkill({
+        ...input,
+        environment: "cloud",
+        path: cloudSkill.path,
+        ref: "release/next",
+        bridge: null,
+      }),
+    ).resolves.toEqual(loadedCloudSkill);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/projects/project-id/skills?path=.agents%2Fskills%2Fcloud%2FSKILL.md&ref=release%2Fnext",
     );
   });
 });

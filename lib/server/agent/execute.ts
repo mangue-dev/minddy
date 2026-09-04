@@ -53,7 +53,10 @@ import {
 } from "./prompt";
 import { buildOpencodeAnchor } from "./opencode-anchor";
 import { executionPolicyFor } from "./policy";
-import { promptWithMentions } from "@/lib/agent-mentions";
+import {
+  MAX_ROUTINE_PROMPT_MENTIONS,
+  promptWithMentions,
+} from "@/lib/agent-mentions";
 import {
   loadPrReviewBoot,
   loadPrRunContext,
@@ -1371,6 +1374,9 @@ export async function executeAgentRun(
               ? run.prompt.trim()
               : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
             run.prompt_mentions,
+            run.triggered_by === "routine"
+              ? MAX_ROUTINE_PROMPT_MENTIONS
+              : undefined,
           ),
         });
       }

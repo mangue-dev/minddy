@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
  * The FACTORY of routines (MIN-185) — what the four gates do not revalidate
@@ -23,6 +24,7 @@ interface RoutineRow extends Record<string, unknown> {
   owner_id: string;
   title: string;
   prompt: string;
+  prompt_mentions: AssistantMention[];
   model: string | null;
   reasoning_level: "off" | "low" | "medium" | "high";
   base_branch: string | null;
@@ -66,6 +68,7 @@ function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
     owner_id: OWNER_ID,
     title: "Analyse de sécurité",
     prompt: "Relis le code à la recherche de failles.",
+    prompt_mentions: [],
     model: null,
     reasoning_level: "medium",
     base_branch: null,
@@ -327,6 +330,18 @@ describe("createRoutine", () => {
     if (!result.ok) return;
     expect(result.routine.next_run_at).toBeNull();
   });
+
+  it("persists resolved prompt mentions", async () => {
+    const promptMentions = [
+      { type: "issue" as const, id: "issue-42", label: "MIN-42" },
+    ];
+    const result = await createRoutine(
+      validInput({ prompt: "Review @MIN-42", promptMentions }) as never,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.routine.prompt_mentions).toEqual(promptMentions);
+  });
 });
 
 describe("updateRoutine", () => {
@@ -341,6 +356,34 @@ describe("updateRoutine", () => {
       prompt: "Une autre instruction.",
     });
     expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+  });
+
+  it("updates resolved prompt mentions with the instruction", async () => {
+    const promptMentions = [
+      { type: "page" as const, id: "page-guide", label: "Guide" },
+    ];
+    const result = await updateRoutine({
+      routineId: ROUTINE_ID,
+      actorId: OWNER_ID,
+      prompt: "Follow @Guide",
+      promptMentions,
+    });
+    expect(result.ok).toBe(true);
+    expect(world.routines[0].prompt_mentions).toEqual(promptMentions);
+  });
+
+  it("clears stale mentions when a non-UI caller replaces the instruction", async () => {
+    world.routines = [
+      makeRoutine({
+        prompt_mentions: [{ type: "issue", id: "issue-42", label: "MIN-42" }],
+      }),
+    ];
+    await updateRoutine({
+      routineId: ROUTINE_ID,
+      actorId: OWNER_ID,
+      prompt: "Review the repository without a ticket reference.",
+    });
+    expect(world.routines[0].prompt_mentions).toEqual([]);
   });
 
   it("REFAIT le titre quand l'instruction change, et seulement là", async () => {

@@ -8,12 +8,10 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "mangue-ui";
 import { ReadOnlyCodeBlock } from "@/components/assistant/shared-code-renderer";
-import {
-  MarkdownLink,
-  PlainMarkdownLink,
-} from "@/components/markdown-link";
+import { MarkdownLink, PlainMarkdownLink } from "@/components/markdown-link";
 import { extractCodeBlock } from "@/lib/markdown-code";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
+import { SkillChip } from "@/components/assistant/skill-chip";
 import { useMentionLinks, type MentionLinks } from "@/components/mention-links";
 import {
   memberLabel,
@@ -22,6 +20,9 @@ import {
 } from "@/lib/mention-scan";
 import { forgeImageSrc } from "@/lib/forge-image-assets";
 import { usePrEndpoint } from "@/lib/pr-endpoint-context";
+import type { RepositorySkillSummary } from "@/lib/repository-skills";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { createAssistantMentionTokenSplitter } from "@/lib/agent-mentions";
 import type { Member } from "@/lib/types";
 
 /* Minimal hast node shape — enough to walk text nodes and inject mention spans. */
@@ -114,6 +115,119 @@ function rehypeMentions(scan: MentionScan) {
   return () => (tree: HastNode) => walk(tree);
 }
 
+/** Restore saved mention chips from stable identities before scanning live sources. */
+function rehypeResolvedMentions(mentions: AssistantMention[]) {
+  return () => {
+    const splitTokens = createAssistantMentionTokenSplitter(mentions);
+    const split = (value: string): HastNode[] =>
+      splitTokens(value).map((segment) => {
+        if (segment.mention === undefined)
+          return { type: "text", value: segment.text };
+        const mention = segment.mention;
+        return {
+          type: "element",
+          tagName: "span",
+          properties: {
+            "data-mention-type": mention.type,
+            "data-mention-id": mention.id,
+            "data-mention-label": mention.label,
+            ...(mention.avatarSeed
+              ? { "data-mention-seed": mention.avatarSeed }
+              : {}),
+            ...(mention.color !== undefined
+              ? { "data-mention-color": mention.color }
+              : {}),
+            ...(mention.icon !== undefined
+              ? { "data-mention-icon": mention.icon }
+              : {}),
+          },
+          children: [],
+        };
+      });
+
+    const advance = (node: HastNode) => {
+      if (node.type === "text" && node.value?.includes("@")) {
+        splitTokens(node.value, false);
+        return;
+      }
+      for (const child of node.children ?? []) advance(child);
+    };
+
+    const walk = (node: HastNode) => {
+      if (!node.children) return;
+      if (node.tagName === "code" || node.tagName === "pre") {
+        advance(node);
+        return;
+      }
+      const next: HastNode[] = [];
+      for (const child of node.children) {
+        if (child.type === "text" && child.value?.includes("@")) {
+          next.push(...split(child.value));
+        } else {
+          walk(child);
+          next.push(child);
+        }
+      }
+      node.children = next;
+    };
+
+    return (tree: HastNode) => walk(tree);
+  };
+}
+
+/** Replace only known repository skill tokens; arbitrary slash text remains text. */
+function rehypeSkills(skills: RepositorySkillSummary[]) {
+  const sorted = [...skills].sort((a, b) => b.name.length - a.name.length);
+  const pattern = sorted
+    .map((skill) => skill.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const split = (value: string): HastNode[] => {
+    if (!pattern) return [{ type: "text", value }];
+    const expression = new RegExp(`(^|\\s)/(${pattern})(?=\\s|$)`, "g");
+    const out: HastNode[] = [];
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = expression.exec(value)) !== null) {
+      if (match.index > last) {
+        out.push({ type: "text", value: value.slice(last, match.index) });
+      }
+      if (match[1]) out.push({ type: "text", value: match[1] });
+      const skill = sorted.find((candidate) => candidate.name === match?.[2]);
+      out.push(
+        skill
+          ? {
+              type: "element",
+              tagName: "span",
+              properties: { "data-skill-path": skill.path },
+              children: [],
+            }
+          : { type: "text", value: match[0] },
+      );
+      last = match.index + match[0].length;
+    }
+    if (last < value.length)
+      out.push({ type: "text", value: value.slice(last) });
+    return out;
+  };
+
+  const walk = (node: HastNode) => {
+    if (!node.children || node.tagName === "code" || node.tagName === "pre")
+      return;
+    const next: HastNode[] = [];
+    for (const child of node.children) {
+      if (child.type === "text" && child.value?.includes("/")) {
+        next.push(...split(child.value));
+      } else {
+        walk(child);
+        next.push(child);
+      }
+    }
+    node.children = next;
+  };
+
+  return () => (tree: HastNode) => walk(tree);
+}
+
 /**
  * A beacon rendered as is, just dressed up.
  *
@@ -124,9 +238,15 @@ function rehypeMentions(scan: MentionScan) {
  * `node="[object Object]"`. He retires here, once and for all, rather than in
  * fifteen closures which would repeat the same destructuring.
  */
-function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string) {
+function styled<T extends keyof JSX.IntrinsicElements>(
+  tag: T,
+  className: string,
+) {
   const Tag = tag as ElementType;
-  return function Styled({ node, ...props }: JSX.IntrinsicElements[T] & ExtraProps) {
+  return function Styled({
+    node,
+    ...props
+  }: JSX.IntrinsicElements[T] & ExtraProps) {
     return <Tag className={className} {...props} />;
   };
 }
@@ -143,11 +263,17 @@ function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string
 function rehypeChain(
   scan: MentionScan | undefined,
   allowRawHtml: boolean,
+  skills: RepositorySkillSummary[] | undefined,
+  resolvedMentions: AssistantMention[] | undefined,
 ): Options["rehypePlugins"] {
   const chain: NonNullable<Options["rehypePlugins"]> = allowRawHtml
     ? [rehypeRaw, [rehypeSanitize, defaultSchema]]
     : [[rehypeSanitize, defaultSchema]];
-  return scan ? [...chain, rehypeMentions(scan)] : chain;
+  if (resolvedMentions?.length)
+    chain.push(rehypeResolvedMentions(resolvedMentions));
+  if (scan) chain.push(rehypeMentions(scan));
+  if (skills?.length) chain.push(rehypeSkills(skills));
+  return chain;
 }
 
 /** Renders markdown (GFM) with minimal, token-aware styling. Raw HTML is kept
@@ -163,6 +289,8 @@ function MarkdownRenderer({
   members,
   mentionScan,
   mentionLinks,
+  resolvedMentions,
+  skills,
   allowRawHtml = false,
   linkVariant = "app",
 }: {
@@ -173,6 +301,10 @@ function MarkdownRenderer({
   mentionScan?: MentionScan;
   /** Navigation rules paired with `mentionScan`. */
   mentionLinks?: MentionLinks;
+  /** Persisted mention identities, applied before the live-source scanner. */
+  resolvedMentions?: AssistantMention[];
+  /** Repository skill tokens to render as skill chips. */
+  skills?: RepositorySkillSummary[];
   /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
   allowRawHtml?: boolean;
   /** Forge-authored PR content keeps conventional links and image buttons intact. */
@@ -194,7 +326,7 @@ function MarkdownRenderer({
     <div
       className={cn(
         "text-sm leading-relaxed break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0",
-        className
+        className,
       )}
     >
       <ReactMarkdown
@@ -204,7 +336,12 @@ function MarkdownRenderer({
         // plans. Without it, a message written in three lines would be delivered in just one
         // paragraph: the most visible difference in “text rendering”.
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={rehypeChain(scan, allowRawHtml)}
+        rehypePlugins={rehypeChain(
+          scan,
+          allowRawHtml,
+          skills,
+          resolvedMentions,
+        )}
         components={{
           p: styled("p", "my-3"),
           a: (props) => {
@@ -226,7 +363,10 @@ function MarkdownRenderer({
             "input",
             "mr-1.5 inline-block size-3.5 translate-y-[0.15em] accent-primary",
           ),
-          code: styled("code", "rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"),
+          code: styled(
+            "code",
+            "rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]",
+          ),
           /* A fenced block uses the same read-only surface as Pages and the
              notebook: language label, lowlight highlighting, wrap and copy
              controls. The hast tree is read (not the rendered
@@ -293,7 +433,10 @@ function MarkdownRenderer({
           ),
           thead: styled("thead", "bg-muted/60"),
           tr: styled("tr", "border-b border-border/60 last:border-0"),
-          th: styled("th", "max-w-80 px-2.5 py-1.5 font-medium text-foreground"),
+          th: styled(
+            "th",
+            "max-w-80 px-2.5 py-1.5 font-medium text-foreground",
+          ),
           td: styled("td", "max-w-80 px-2.5 py-1.5 align-top"),
           /* Six levels, and a ladder that IS SEEN — the three old ones fell
              all between 14 and 16 px, which made it read a plan or a summary of
@@ -302,23 +445,44 @@ function MarkdownRenderer({
              reduces its base reduces its titles with it. The proportions are
              those of GitHub, tightened: on a body at 14 px, the 2nd of its h1
              would go beyond the title of the page. */
-          h1: styled("h1", "mt-5 mb-2 text-[1.5em] leading-tight font-semibold"),
-          h2: styled("h2", "mt-5 mb-2 text-[1.3em] leading-tight font-semibold"),
-          h3: styled("h3", "mt-4 mb-2 text-[1.15em] leading-snug font-semibold"),
+          h1: styled(
+            "h1",
+            "mt-5 mb-2 text-[1.5em] leading-tight font-semibold",
+          ),
+          h2: styled(
+            "h2",
+            "mt-5 mb-2 text-[1.3em] leading-tight font-semibold",
+          ),
+          h3: styled(
+            "h3",
+            "mt-4 mb-2 text-[1.15em] leading-snug font-semibold",
+          ),
           h4: styled("h4", "mt-4 mb-2 text-[1em] font-semibold"),
           h5: styled("h5", "mt-4 mb-2 text-[0.9em] font-semibold"),
-          h6: styled("h6", "mt-4 mb-2 text-[0.85em] font-semibold text-muted-foreground"),
+          h6: styled(
+            "h6",
+            "mt-4 mb-2 text-[0.85em] font-semibold text-muted-foreground",
+          ),
           blockquote: styled(
             "blockquote",
-            "my-3 border-l-2 border-border pl-3 text-muted-foreground"
+            "my-3 border-l-2 border-border pl-3 text-muted-foreground",
           ),
           strong: styled("strong", "font-semibold"),
           hr: () => <hr className="my-4 border-border" />,
           span: ({ node, ...props }) => {
             const p = node?.properties ?? {};
+            const skillPath = p["data-skill-path"];
+            const skill = skills?.find(
+              (candidate) => candidate.path === skillPath,
+            );
+            if (skill) {
+              return <SkillChip name={skill.name} />;
+            }
             const type = p["data-mention-type"] as string | undefined;
             if (type === "numo") {
-              return <MentionChip type="numo" id={NUMO_MENTION_ID} label="Numo" />;
+              return (
+                <MentionChip type="numo" id={NUMO_MENTION_ID} label="Numo" />
+              );
             }
             if (type === "member") {
               return (
@@ -345,8 +509,14 @@ function MarkdownRenderer({
                   label={p["data-mention-label"] as string}
                   avatarSeed={p["data-mention-seed"] as string | undefined}
                   avatarUrl={p["data-mention-avatar"] as string | undefined}
-                  iconUrl={type === "project" ? p["data-mention-icon"] as string : null}
-                  icon={type === "page" ? p["data-mention-icon"] as string : null}
+                  iconUrl={
+                    type === "project"
+                      ? (p["data-mention-icon"] as string)
+                      : null
+                  }
+                  icon={
+                    type === "page" ? (p["data-mention-icon"] as string) : null
+                  }
                   color={p["data-mention-color"] as string | undefined}
                   href={links?.href(type, id) ?? null}
                   onNavigate={() => links?.navigate(type, id)}

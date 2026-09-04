@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { parseRoutinePromptMentions } from "@/lib/agent-mentions";
 import {
   createRoutine,
   listRoutinesForUser,
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
     projectId,
     actorId: auth.user.id,
     prompt: str(body.prompt, MAX_PROMPT_LENGTH),
+    promptMentions: parseRoutinePromptMentions(body.promptMentions),
     model: str(body.model, MAX_SHORT_FIELD) || null,
     reasoningLevel: str(body.reasoningLevel, 32) || null,
     baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null,

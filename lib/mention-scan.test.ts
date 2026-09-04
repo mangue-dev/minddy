@@ -11,7 +11,12 @@ import {
 import type { Member } from "./types";
 
 const member = (full_name: string, user_id = full_name.toLowerCase()) =>
-  ({ user_id, full_name, email: null, avatar_seed: user_id }) as unknown as Member;
+  ({
+    user_id,
+    full_name,
+    email: null,
+    avatar_seed: user_id,
+  }) as unknown as Member;
 
 const issue = (identifier: string): MentionIssue => ({
   id: `id-${identifier}`,
@@ -80,7 +85,15 @@ describe("mentionScanner", () => {
 
   it("prefers the longest name", () => {
     const scan = mentionScanner([member("Jean"), member("Jean Dupont")]);
-    expect(shape(scan("@Jean Dupont arrive"))).toEqual(["@Jean Dupont", " arrive"]);
+    expect(shape(scan("@Jean Dupont arrive"))).toEqual([
+      "@Jean Dupont",
+      " arrive",
+    ]);
+  });
+
+  it("does not match a member name inside a longer mention token", () => {
+    const scan = mentionScanner([member("Jean")]);
+    expect(shape(scan("@Jeanne"))).toEqual(["@Jeanne"]);
   });
 
   it("requires exact casing for a member", () => {
@@ -150,7 +163,9 @@ describe("contentMentionScanner", () => {
   });
 
   it("mentions an objective by name", () => {
-    const scan = contentMentionScanner({ objectives: [objective("Refonte SEO")] });
+    const scan = contentMentionScanner({
+      objectives: [objective("Refonte SEO")],
+    });
     expect(shape(scan("dans @Refonte SEO"))).toEqual(["dans ", "@Refonte SEO"]);
   });
 
@@ -189,7 +204,9 @@ describe("contentMentionScanner", () => {
 
   // MIN-273 — a wiki page is cited as an objective: by its TITLE.
   it("mentions a wiki page by title", () => {
-    const scan = contentMentionScanner({ pages: [page("Guide de démarrage", "📘")] });
+    const scan = contentMentionScanner({
+      pages: [page("Guide de démarrage", "📘")],
+    });
     const segments = scan("tout est dans @Guide de démarrage");
     expect(shape(segments)).toEqual(["tout est dans ", "@Guide de démarrage"]);
     // The emoji travels with the page: it is its face on the pill.
@@ -216,7 +233,9 @@ describe("contentMentionScanner", () => {
   });
 
   it("mentions a project by name and preserves its visual metadata", () => {
-    const scan = contentMentionScanner({ projects: [project("Minddy Website")] });
+    const scan = contentMentionScanner({
+      projects: [project("Minddy Website")],
+    });
     const segments = scan("ship this in @Minddy Website");
     expect(shape(segments)).toEqual(["ship this in ", "@Minddy Website"]);
     expect(segments[1].mention).toMatchObject({

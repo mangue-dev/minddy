@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { deleteRoutine, getRoutineForUser, updateRoutine } from "@/lib/server/routines";
+import { parseRoutinePromptMentions } from "@/lib/agent-mentions";
+import {
+  deleteRoutine,
+  getRoutineForUser,
+  updateRoutine,
+} from "@/lib/server/routines";
 import { routineErrorResponse } from "../route";
 
 /**
@@ -24,7 +29,9 @@ function str(value: unknown, max: number): string | undefined {
 }
 
 function num(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function days(value: unknown): number[] {
@@ -38,7 +45,8 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
   if (!auth.ok) return auth.response;
   const { id } = await ctx.params;
   const found = await getRoutineForUser(id, auth.user.id);
-  if (!found) return NextResponse.json({ error: "routineNotFound" }, { status: 404 });
+  if (!found)
+    return NextResponse.json({ error: "routineNotFound" }, { status: 404 });
   return NextResponse.json({ routine: found.routine, isOwner: found.isOwner });
 }
 
@@ -61,8 +69,15 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     actorId: auth.user.id,
     // Only the PRESENT fields leave: the factory distinguishes “absent” from
     // "emptied", and a `undefined` passing through would erase a chosen model.
-    ...(body.prompt !== undefined ? { prompt: str(body.prompt, MAX_PROMPT_LENGTH) } : {}),
-    ...(body.model !== undefined ? { model: str(body.model, MAX_SHORT_FIELD) || null } : {}),
+    ...(body.prompt !== undefined
+      ? { prompt: str(body.prompt, MAX_PROMPT_LENGTH) }
+      : {}),
+    ...(body.promptMentions !== undefined
+      ? { promptMentions: parseRoutinePromptMentions(body.promptMentions) }
+      : {}),
+    ...(body.model !== undefined
+      ? { model: str(body.model, MAX_SHORT_FIELD) || null }
+      : {}),
     ...(body.reasoningLevel !== undefined
       ? { reasoningLevel: str(body.reasoningLevel, 32) }
       : {}),
@@ -72,12 +87,18 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     ...(body.maxSpendPercent !== undefined
       ? { maxSpendPercent: num(body.maxSpendPercent) }
       : {}),
-    ...(body.frequency !== undefined ? { frequency: str(body.frequency, 32) } : {}),
+    ...(body.frequency !== undefined
+      ? { frequency: str(body.frequency, 32) }
+      : {}),
     ...(body.hour !== undefined ? { hour: num(body.hour) } : {}),
     ...(body.minute !== undefined ? { minute: num(body.minute) } : {}),
     ...(body.weekdays !== undefined ? { weekdays: days(body.weekdays) } : {}),
-    ...(body.daysOfMonth !== undefined ? { daysOfMonth: days(body.daysOfMonth) } : {}),
-    ...(body.timezone !== undefined ? { timezone: str(body.timezone, 64) } : {}),
+    ...(body.daysOfMonth !== undefined
+      ? { daysOfMonth: days(body.daysOfMonth) }
+      : {}),
+    ...(body.timezone !== undefined
+      ? { timezone: str(body.timezone, 64) }
+      : {}),
     ...(typeof body.enabled === "boolean" ? { enabled: body.enabled } : {}),
   });
   if (!result.ok) return routineErrorResponse(result);

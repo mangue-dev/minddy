@@ -113,6 +113,8 @@ export interface AssistantMention {
   id: string;
   /** The text written after the “@” in the message. */
   label: string;
+  /** Zero-based occurrence of this exact token label in a persisted prompt. */
+  occurrence?: number;
   /** Members: the portrait seed — see AssistantPinnedContext.avatarSeed. */
   avatarSeed?: string;
   /** Objectifs : leur couleur — voir AssistantPinnedContext.color. */
