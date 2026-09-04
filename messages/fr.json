@@ -2252,9 +2252,9 @@
     "gitDisconnectDescription": "minddy oubliera cette connexion. Vous pourrez la reconnecter à tout moment.",
     "gitDisconnectDescriptionLinked": "minddy oubliera cette connexion et la déliera de ces projets : {projects}.",
     "connectedAppRevokedToast": "{name} a été déconnectée.",
-    "mcpTab": "MCP",
-    "mcpSectionTitle": "Connexions MCP",
-    "mcpSectionDesc": "Connectez des agents externes à Minddy ou donnez à Numo accès à vos outils.",
+    "mcpTab": "MCP Minddy",
+    "mcpSectionTitle": "Connecter des assistants à Minddy",
+    "mcpSectionDesc": "Permettez à Claude, Codex et aux autres assistants d’accéder à Minddy.",
     "mcpDialogTitle": "Connecter {name}",
     "mcpDialogDesc": "Aucune clé à coller : {name} ouvrira votre navigateur pour vous authentifier à la première utilisation.",
     "mcpDialogDone": "C'est connecté",
@@ -2337,7 +2337,8 @@
     "sendShortcutEnter": "Entrée",
     "desktopAppLabel": "App de bureau",
     "desktopAppHint": "Disponible sur macOS, Windows et Linux. Sa fenêtre, le choix du serveur et les mises à jour.",
-    "desktopAppCta": "Télécharger"
+    "desktopAppCta": "Télécharger",
+    "mcpClientsTab": "MCP pour Numo"
   },
   "AccountData": {
     "importTitle": "Transférer des données depuis une autre instance minddy",
@@ -5801,8 +5802,8 @@
     "groupEmpty": "Aucune routine pour l'instant"
   },
   "McpClients": {
-    "title": "Connecter Numo à vos outils",
-    "description": "Connectez des serveurs MCP pour que Numo utilise leurs outils dans vos conversations et sessions d’agent, sur tous vos projets.",
+    "title": "MCP pour Numo",
+    "description": "Connectez des services que Numo utilisera dans vos projets.",
     "routines": "Vos connexions sont personnelles. Les routines utilisent celles du propriétaire du projet.",
     "loading": "Chargement des connexions…",
     "retry": "Réessayer",
@@ -5863,6 +5864,12 @@
     "headersHint": "Les en-têtes sont chiffrés. Laissez vide pour les conserver, ou saisissez '{}' pour les retirer. Changer l’URL les supprime. Utilisez le choix d’authentification pour Authorization.",
     "errorHeaders": "Saisissez un objet JSON contenant les noms et valeurs des en-têtes.",
     "errorOAuth": "Autorisation impossible. Vérifiez le guide du fournisseur, les identifiants OAuth et l’URL de retour, puis reconnectez-vous.",
-    "saveAndConnect": "Enregistrer et connecter"
+    "saveAndConnect": "Enregistrer et connecter",
+    "unauthenticated": "Ce MCP n'est pas authentifié",
+    "manage": "Gérer {name}",
+    "connectService": "Connecter {name}",
+    "editService": "Modifier {name}",
+    "connectDescription": "Autorisez Numo à utiliser {name}.",
+    "customDescription": "Saisissez un nom et l’URL du serveur pour le connecter à Numo."
   }
 }

@@ -2252,9 +2252,9 @@
     "gitDisconnectDescription": "minddy dimenticherà questa connessione. Puoi riconnetterti in qualsiasi momento.",
     "gitDisconnectDescriptionLinked": "minddy dimenticherà questa connessione e la svincolerà da questi progetti: {projects}.",
     "connectedAppRevokedToast": "{name} - Non sono collegato.",
-    "mcpTab": "MCP",
-    "mcpSectionTitle": "Connessioni MCP",
-    "mcpSectionDesc": "Collega agenti esterni a Minddy o dai a Numo accesso ai tuoi strumenti.",
+    "mcpTab": "MCP di Minddy",
+    "mcpSectionTitle": "Collega assistenti a Minddy",
+    "mcpSectionDesc": "Consenti a Claude, Codex e altri assistenti di accedere a Minddy.",
     "mcpDialogTitle": "Connetti {name}",
     "mcpDialogDesc": "Nessuna chiave da incollare: {name} aprirà il browser per accedere al primo utilizzo.",
     "mcpDialogDone": "È collegato.",
@@ -2337,7 +2337,8 @@
     "sendShortcutEnter": "Invio",
     "desktopAppLabel": "App desktop",
     "desktopAppHint": "Disponibile per macOS, Windows e Linux. La sua finestra, il selettore del server e gli aggiornamenti.",
-    "desktopAppCta": "Scarica"
+    "desktopAppCta": "Scarica",
+    "mcpClientsTab": "MCP per Numo"
   },
   "AccountData": {
     "importTitle": "Trasferire dati da un'altra istanza minddy",
@@ -5801,8 +5802,8 @@
     "groupEmpty": "Nessuna routine ancora"
   },
   "McpClients": {
-    "title": "Collega Numo ai tuoi strumenti",
-    "description": "Collega server MCP per usare i loro strumenti nelle conversazioni e nelle sessioni agente di Numo in tutti i progetti.",
+    "title": "MCP per Numo",
+    "description": "Collega servizi che Numo può usare nei tuoi progetti.",
     "routines": "Le connessioni sono personali. Le routine usano quelle del proprietario del progetto.",
     "loading": "Caricamento connessioni…",
     "retry": "Riprova",
@@ -5863,6 +5864,12 @@
     "headersHint": "Gli header sono crittografati. Lascia vuoto per mantenerli o inserisci '{}' per rimuoverli. Cambiare URL li elimina. Per Authorization usa il selettore di autenticazione.",
     "errorHeaders": "Inserisci un oggetto JSON con nomi e valori degli header.",
     "errorOAuth": "Autorizzazione non riuscita. Controlla guida del fornitore, credenziali OAuth e URL di callback, poi ricollega.",
-    "saveAndConnect": "Salva e collega"
+    "saveAndConnect": "Salva e collega",
+    "unauthenticated": "Questo MCP non è autenticato",
+    "manage": "Gestisci {name}",
+    "connectService": "Collega {name}",
+    "editService": "Modifica {name}",
+    "connectDescription": "Consenti a Numo di usare {name}.",
+    "customDescription": "Inserisci un nome e l’URL del server per collegarlo a Numo."
   }
 }

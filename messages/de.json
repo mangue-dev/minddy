@@ -2252,9 +2252,9 @@
     "gitDisconnectDescription": "minddy wird diese Verbindung vergessen. Sie können die Verbindung jederzeit wiederherstellen.",
     "gitDisconnectDescriptionLinked": "minddy wird diese Verbindung vergessen und die Verknüpfung mit diesen Projekten aufheben: {projects}.",
     "connectedAppRevokedToast": "{name} nicht verbunden.",
-    "mcpTab": "MCP",
-    "mcpSectionTitle": "MCP-Verbindungen",
-    "mcpSectionDesc": "Verbinde externe Agenten mit Minddy oder gib Numo Zugriff auf deine Tools.",
+    "mcpTab": "Minddy-MCP",
+    "mcpSectionTitle": "Assistenten mit Minddy verbinden",
+    "mcpSectionDesc": "Erlaube Claude, Codex und anderen Assistenten den Zugriff auf Minddy.",
     "mcpDialogTitle": "{name} verbinden",
     "mcpDialogDesc": "Kein Schlüssel zum Einfügen: {name} öffnet Ihren Browser, um Sie bei der ersten Verwendung anzumelden.",
     "mcpDialogDone": "Es ist verbunden",
@@ -2337,7 +2337,8 @@
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Desktop-App",
     "desktopAppHint": "Verfügbar für macOS, Windows und Linux. Ein eigenes Fenster, eine Serverauswahl und Aktualisierungen.",
-    "desktopAppCta": "Herunterladen"
+    "desktopAppCta": "Herunterladen",
+    "mcpClientsTab": "MCP für Numo"
   },
   "AccountData": {
     "importTitle": "Daten von einer anderen minddy-Instanz übertragen",
@@ -5801,8 +5802,8 @@
     "groupEmpty": "Noch keine Routine"
   },
   "McpClients": {
-    "title": "Numo mit deinen Tools verbinden",
-    "description": "Verbinde MCP-Server, damit Numo ihre Tools in Unterhaltungen und Agentensitzungen projektübergreifend nutzen kann.",
+    "title": "MCP für Numo",
+    "description": "Verbinde Dienste, die Numo in deinen Projekten nutzen kann.",
     "routines": "Deine Verbindungen sind persönlich. Routinen verwenden die Verbindungen des Projektinhabers.",
     "loading": "Verbindungen werden geladen…",
     "retry": "Erneut versuchen",
@@ -5863,6 +5864,12 @@
     "headersHint": "Header werden verschlüsselt. Leer lassen zum Behalten, '{}' zum Entfernen. Eine neue URL löscht gespeicherte Header. Für Authorization die Authentifizierungsauswahl verwenden.",
     "errorHeaders": "Gib ein JSON-Objekt mit Headernamen und Werten ein.",
     "errorOAuth": "Autorisierung fehlgeschlagen. Prüfe Anbieteranleitung, OAuth-Zugangsdaten und Rückruf-URL und verbinde erneut.",
-    "saveAndConnect": "Speichern und verbinden"
+    "saveAndConnect": "Speichern und verbinden",
+    "unauthenticated": "Dieser MCP ist nicht authentifiziert",
+    "manage": "{name} verwalten",
+    "connectService": "{name} verbinden",
+    "editService": "{name} bearbeiten",
+    "connectDescription": "Erlaube Numo, {name} zu nutzen.",
+    "customDescription": "Gib einen Namen und die Server-URL ein, um ihn mit Numo zu verbinden."
   }
 }

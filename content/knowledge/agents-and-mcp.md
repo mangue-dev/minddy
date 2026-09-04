@@ -14,31 +14,36 @@ Numo is the assistant built into minddy. The optional code agent works from an i
 
 ## Connect Numo to an MCP server
 
-In **Account settings → MCP → Connect Numo to your tools**, choose a service or
+In **Account settings → MCP for Numo**, choose a service or
 select **Add another MCP server**. The catalog is a shortcut, not an allowlist:
 unlisted public HTTPS servers work through the same connection flow. The catalog
 includes Notion, Linear, Google Workspace, GitHub, Atlassian, Slack, Figma, Asana,
-Canva, Sentry, Supabase, Vercel, and Stripe. Each entry links to its provider's
-setup documentation and shows prerequisites. Provider endpoints were checked
+Canva, Sentry, Supabase, Vercel, and Stripe. Services open a connection dialog with
+their configuration already filled in. Provider prerequisites and setup links
+appear when needed. Provider endpoints were checked
 against those documents on September 4, 2026.
 
-Choose **Sign in with OAuth** to authorize in the provider's browser flow. Minddy
+Choose **Connect** to add the service and open the provider's OAuth flow. An
+installed OAuth connection that is not authenticated shows an orange triangle;
+hover or focus it to see its status, then use **Connect** to try again. Minddy
 supports discovery, dynamic registration, PKCE, and refresh tokens. Providers that
 require an existing OAuth application can use the client ID and secret under
-**OAuth app settings**; register the callback URL shown there with the provider.
+**Advanced settings → OAuth app settings**; register the callback URL shown there with the provider.
 Google Workspace servers are in developer preview and require an OAuth app and
 preview access. Slack requires an internal or Marketplace app, Asana requires a
 registered MCP app, and Figma requires provider approval of the MCP client. An
 entry in the catalog does not bypass these provider restrictions.
 
-Alternatively, choose **Bearer token** or **No authentication**. Advanced settings
+Alternatively, choose **Bearer token** or **No authentication** in advanced settings. These settings
 accept encrypted custom headers, such as `X-API-Key`, and legacy **SSE** transport;
 **Streamable HTTP** is the default. URLs can include non-secret configuration
 parameters such as Supabase's project scope. Put credentials in authentication or
 custom headers, never in the URL. Local commands and private network endpoints
 are not supported by this server-side connection flow.
 
-Use **Test connection** to verify discovery. Connections belong to your account
+Use the connection's menu to edit, test, disable or remove it. **Minddy MCP** is
+the separate account tab for connecting external assistants such as Claude or
+Codex to Minddy. Connections for Numo belong to your account
 and work across projects in Numo chat and agent sessions, including local agents.
 Only connect servers you trust with the information and actions you ask Numo to
 send. Remote descriptions and results cannot authorize additional actions.

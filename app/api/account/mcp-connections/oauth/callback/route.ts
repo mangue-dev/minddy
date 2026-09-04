@@ -7,7 +7,7 @@ export const maxDuration = 60;
 export async function GET(request: NextRequest) {
   const session = await readForgeCallbackSession(request);
   const returnUrl = new URL("/settings", canonicalAppOrigin());
-  returnUrl.searchParams.set("tab", "mcp");
+  returnUrl.searchParams.set("tab", "mcp-clients");
   try {
     if (!session.userId || request.nextUrl.searchParams.has("error"))
       throw new Error("OAuth authorization canceled");

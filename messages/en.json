@@ -2252,9 +2252,9 @@
     "gitDisconnectDescription": "minddy will forget this connection. You can reconnect at any time.",
     "gitDisconnectDescriptionLinked": "minddy will forget this connection and unlink it from these projects: {projects}.",
     "connectedAppRevokedToast": "{name} disconnected.",
-    "mcpTab": "MCP",
-    "mcpSectionTitle": "MCP connections",
-    "mcpSectionDesc": "Connect external agents to Minddy, or give Numo access to your own tools.",
+    "mcpTab": "Minddy MCP",
+    "mcpSectionTitle": "Connect assistants to Minddy",
+    "mcpSectionDesc": "Let Claude, Codex and other assistants access Minddy.",
     "mcpDialogTitle": "Connect {name}",
     "mcpDialogDesc": "No key to paste: {name} will open your browser to sign you in on first use.",
     "mcpDialogDone": "It's connected",
@@ -2337,7 +2337,8 @@
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Desktop app",
     "desktopAppHint": "Available for macOS, Windows, and Linux. Its own window, server selector, and updates.",
-    "desktopAppCta": "Download"
+    "desktopAppCta": "Download",
+    "mcpClientsTab": "MCP for Numo"
   },
   "AccountData": {
     "importTitle": "Transfer data from another minddy instance",
@@ -5801,8 +5802,8 @@
     "groupEmpty": "No routine yet"
   },
   "McpClients": {
-    "title": "Connect Numo to your tools",
-    "description": "Connect MCP servers for Numo to use in your conversations and agent sessions across all projects.",
+    "title": "MCP for Numo",
+    "description": "Connect services for Numo to use across your projects.",
     "routines": "Your connections are personal. Project routines use the project owner’s connections.",
     "loading": "Loading connections…",
     "retry": "Try again",
@@ -5863,6 +5864,12 @@
     "headersHint": "Headers are encrypted. Leave blank to keep them, or enter '{}' to remove them. Changing the URL clears saved headers. Use the authentication selector for Authorization.",
     "errorHeaders": "Enter a JSON object of header names and values.",
     "errorOAuth": "Could not authorize. Check the provider’s setup guide, OAuth app credentials, and callback URL, then reconnect.",
-    "saveAndConnect": "Save and connect"
+    "saveAndConnect": "Save and connect",
+    "unauthenticated": "This MCP is not authenticated",
+    "manage": "Manage {name}",
+    "connectService": "Connect {name}",
+    "editService": "Edit {name}",
+    "connectDescription": "Allow Numo to use {name}.",
+    "customDescription": "Enter a name and the server URL to connect it to Numo."
   }
 }

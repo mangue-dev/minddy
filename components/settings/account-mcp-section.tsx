@@ -7,8 +7,7 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { AccountMcpClients } from "./account-mcp-clients";
 import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
 
-/** Account settings → MCP: the “Connect an agent” panel, shared with
- the MCP stage of onboarding (MIN-74) — it does not change, only its frame. */
+/** Inbound connections let external assistants use Minddy. */
 export function AccountMcpSection() {
   const t = useTranslations("Account");
 
@@ -21,6 +20,21 @@ export function AccountMcpSection() {
       variant="block"
     >
       <McpConnectPanel />
+    </SettingsGroup>
+  );
+}
+
+/** Personal outbound connections let Numo use other services. */
+export function AccountMcpClientsSection() {
+  const t = useTranslations("McpClients");
+  return (
+    <SettingsGroup
+      anchor={SETTINGS_SECTIONS.accountMcpClients}
+      icon={Plug}
+      title={t("title")}
+      description={t("description")}
+      variant="block"
+    >
       <AccountMcpClients />
     </SettingsGroup>
   );

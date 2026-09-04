@@ -66,6 +66,7 @@ export type AccountSettingsTab =
   | "automations"
   | "inbox"
   | "mcp"
+  | "mcp-clients"
   | "git"
   | "agent"
   | "data";
@@ -101,6 +102,7 @@ export const SETTINGS_SECTIONS = {
   accountNotifications: "account-notifications",
   accountPushDevices: "account-push-devices",
   accountMcp: "account-mcp",
+  accountMcpClients: "account-mcp-clients",
   accountConnectedApps: "account-connected-apps",
   accountGitBranchPrefix: "account-git-branch-prefix",
   accountGitConnections: "account-git-connections",
@@ -204,6 +206,7 @@ export function useSettingsSections(): SettingsSection[] {
       automations: tAutomations("title"),
       inbox: tAccount("inboxTab"),
       mcp: tAccount("mcpTab"),
+      "mcp-clients": tAccount("mcpClientsTab"),
       git: tAccount("gitTab"),
       agent: tAccount("agentTab"),
       data: tAccount("dataTab"),
@@ -382,6 +385,13 @@ export function useSettingsSections(): SettingsSection[] {
           "mcp", "agent", "claude", "cursor", "windsurf", "codex",
           "connecter", "connect", "serveur", "server", "oauth",
         ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountMcpClients,
+        tab: "mcp-clients",
+        icon: Plug,
+        title: tAccount("mcpClientsTab"),
+        keywords: ["mcp", "numo", "notion", "linear", "google", "connectors", "oauth"],
       }),
       account({
         id: SETTINGS_SECTIONS.accountConnectedApps,
