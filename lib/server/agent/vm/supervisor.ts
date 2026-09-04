@@ -1184,14 +1184,22 @@ export async function runOpencodeTurn(
       });
 
     // ── The session: resumed by the journal, or new ────────────────────────
+    let journalSeq: Record<string, number> = { ...previous?.seq };
     let sessionId = previous?.sessionId ?? "";
     if (previous?.events?.length) {
       // Recovery costs 95 ms for 86 events (measured) — and that's what makes a
       // tower independent of the microVM that preceded it.
-      await client.syncReplay(previous.events).catch((err) => {
+      try {
+        await client.syncReplay(previous.events);
+        // The journal is the durable truth when a VM wrote a batch and died
+        // before checkpointing its cursor. Rebase on what was successfully
+        // replayed so the next export cannot wrap that prefix in a new batch.
+        journalSeq = lastSeqByAggregate(journalSeq, previous.events);
+      } catch (err) {
         console.error("[supervisor] replay failed:", (err as Error).message);
         sessionId = "";
-      });
+        journalSeq = {};
+      }
     }
     /**
      * ON A MACHINE, MEMORY IS A FILE — so it can be missing
@@ -1220,6 +1228,7 @@ export async function runOpencodeTurn(
           "[supervisor] no local opencode store — starting a fresh session",
         );
         sessionId = "";
+        journalSeq = {};
       }
     }
     if (!sessionId) {
@@ -1431,7 +1440,6 @@ export async function runOpencodeTurn(
      * conversation, and the next round started again from the ticket as if it had not
      * never worked (measured on 2026-08-13, run `1e8775aa`).
      */
-    let journalSeq: Record<string, number> = { ...previous?.seq };
     /**
      * THE INCREMENT, CUT FOR TRANSPORT. The body of a request remains
      * capped by the platform: a round that reads two hundred files would make
@@ -1478,7 +1486,13 @@ export async function runOpencodeTurn(
       let bytes = 0;
       const flush = async () => {
         if (batch.length === 0) return;
-        await cp.appendJournal(sessionId, batch);
+        const flushed = batch;
+        await cp.appendJournal(sessionId, flushed);
+        // Advance after every durable batch. If a later batch fails, the next
+        // attempt starts after what was already accepted instead of resending
+        // the successful prefix. Database-level digest uniqueness covers the
+        // remaining case where the VM dies before this cursor is checkpointed.
+        journalSeq = lastSeqByAggregate(journalSeq, flushed);
         batch = [];
         bytes = 0;
       };
@@ -1494,17 +1508,13 @@ export async function runOpencodeTurn(
           string,
           unknown
         >;
-        const size = JSON.stringify(event).length;
+        const size = Buffer.byteLength(JSON.stringify(event), "utf8");
         // An event larger than the lot goes ALONE: cutting it out would mean breaking it.
         if (bytes > 0 && bytes + size > JOURNAL_BATCH_BYTES) await flush();
         batch.push(event);
         bytes += size;
       }
       await flush();
-      // The cursor only advances once the increment is WRITTEN: a sending which raises
-      // leaves the position from before, and the next pass re-exports the same
-      // slice rather than leaving a hole in the newspaper.
-      journalSeq = lastSeqByAggregate(journalSeq, fresh);
       return { sessionId, seq: journalSeq };
     };
 
