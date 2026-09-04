@@ -242,6 +242,17 @@ export const ORPHAN_SETTLE_MS = 10_000;
  */
 export const SUPERVISOR_TURN_SOFT_DEADLINE_MS = 12 * 60 * 60_000;
 
+/**
+ * Maximum silence from OpenCode before a cloud turn is considered stalled.
+ *
+ * The provider stream and the built-in shell command both have shorter
+ * timeouts. This outer guard covers the gap between them: OpenCode can create a
+ * pending tool part and then never start the command, or finish provider work
+ * without publishing the final `session.idle`. In both cases the detached
+ * supervisor otherwise survives until the sandbox kills it hours later.
+ */
+export const SUPERVISOR_STALL_TIMEOUT_MS = 5 * 60_000;
+
 /** Protect the shared OpenCode process and sandbox from heavy tool-call bursts. */
 export const MAX_PARALLEL_SHELL_COMMANDS = 2;
 
@@ -314,6 +325,8 @@ export interface SupervisorDeps {
   bootTimeoutMs?: number;
   /** The beat of the tour (see `LIFECYCLE_BEAT_MS`). Adjustable for the same reason. */
   lifecycleBeatMs?: number;
+  /** Maximum OpenCode event silence. Adjustable for deterministic tests. */
+  stallTimeoutMs?: number;
 }
 
 /** Minddy anchor text, served as `instructions` to the system prompt. */
@@ -1426,6 +1439,7 @@ export async function runOpencodeTurn(
       [];
     let interrupted = false;
     let lastSteerAt = now();
+    let lastEventAt = now();
 
     /**
      * THE OPENCODE LOG CURSOR — and NOTHING BUT the cursor (MIN-286,
@@ -1689,6 +1703,9 @@ export async function runOpencodeTurn(
           (err as Error).message,
         );
       });
+      // A human may answer after hours. Give the resumed model a fresh silence
+      // window instead of measuring from when the question was first asked.
+      lastEventAt = now();
     };
 
     /**
@@ -1759,6 +1776,7 @@ export async function runOpencodeTurn(
           )
           .join("\n\n"),
       );
+      lastEventAt = now();
       awaitingFirstModelSignal = true;
       timing("prompt-accepted");
       /**
@@ -1814,6 +1832,8 @@ export async function runOpencodeTurn(
     await postPending();
 
     const deadline = startedAt + SUPERVISOR_TURN_SOFT_DEADLINE_MS;
+    const stallTimeoutMs =
+      deps.stallTimeoutMs ?? SUPERVISOR_STALL_TIMEOUT_MS;
     let timedOut = false;
 
     /**
@@ -1908,6 +1928,13 @@ export async function runOpencodeTurn(
         await abortSession();
         return true;
       }
+      if (!pendingQuestion && now() - lastEventAt >= stallTimeoutMs) {
+        sessionError =
+          "The model or command produced no activity for five minutes. The session was stopped and can be resumed.";
+        await cp.emit("error", { message: sessionError }).catch(() => {});
+        await abortSession();
+        return true;
+      }
       return false;
     };
 
@@ -1937,6 +1964,7 @@ export async function runOpencodeTurn(
         nextEvent = null;
         if (winner.done) break;
         const raw = winner.value;
+        lastEventAt = now();
         const out = translateEvent(raw, state);
         if (
           awaitingFirstModelSignal &&
