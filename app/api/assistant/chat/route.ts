@@ -22,8 +22,8 @@ import {
 } from "@/lib/server/assistant/skills";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
-  ASSISTANT_TOOLS,
   GLOBAL_ASSISTANT_TOOLS,
+  PROJECT_ASSISTANT_TOOLS,
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import {
@@ -533,7 +533,7 @@ export async function POST(request: NextRequest) {
       project,
     });
     systemPrompt = buildSystemPrompt(promptProject, locale, numoDefaultStatus);
-    activeTools = ASSISTANT_TOOLS;
+    activeTools = PROJECT_ASSISTANT_TOOLS;
   } else {
     // ── Global mode ──────────────────────────────────────────────────
     systemPrompt = buildGlobalSystemPrompt(locale, numoDefaultStatus);

@@ -400,6 +400,9 @@ You help users create, find and edit issues, triage, assign work, comment, and c
 - Key: ${project.key} (issues are "${project.key}-N")
 - ID: ${project.id}
 - Issues by status: ${formatStatusCounts(project.statusCounts)}
+- This project is the DEFAULT for every project-scoped tool. Omit \`project_id\` when the request targets it.
+- Another project is NEVER implicit. Only when the user explicitly names another project, call \`list_projects\`, resolve the name to one accessible project, and pass that id as \`project_id\` to every project-scoped tool used for that request. If the name is missing or ambiguous, ask which project they mean before reading or writing there.
+- Cross-project targeting does not change permissions: members may use normal issue operations, while tools documented as OWNER ONLY remain owner-only.
 
 ## Recent issues (last 5)
 ${recentLines}
