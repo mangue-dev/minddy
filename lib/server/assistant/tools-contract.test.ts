@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { ASSISTANT_TOOLS, GLOBAL_ASSISTANT_TOOLS } from "./tools";
+import {
+  ASSISTANT_TOOLS,
+  GLOBAL_ASSISTANT_TOOLS,
+  PROJECT_ASSISTANT_TOOLS,
+  PROJECT_SCOPED_TOOLS,
+} from "./tools";
 
 const tool = (name: string) =>
   ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
@@ -101,5 +106,42 @@ describe("Numo tool contracts", () => {
     expect(updatePlanTasks?.function.parameters.properties).toHaveProperty(
       "expected_rev",
     );
+  });
+
+  it("lets a project conversation discover the user's accessible projects", () => {
+    const projects = PROJECT_ASSISTANT_TOOLS.find(
+      (candidate) => candidate.function.name === "list_projects",
+    );
+
+    expect(projects).toBeDefined();
+    expect(projects?.function.description).toMatch(/owner or member/i);
+    expect(projects?.function.parameters.properties).not.toHaveProperty(
+      "project_id",
+    );
+  });
+
+  it("makes alternate project targeting optional in project conversations", () => {
+    for (const name of PROJECT_SCOPED_TOOLS) {
+      const scoped = PROJECT_ASSISTANT_TOOLS.find(
+        (candidate) => candidate.function.name === name,
+      );
+      expect(scoped, name).toBeDefined();
+      expect(scoped?.function.parameters.properties, name).toHaveProperty(
+        "project_id",
+      );
+      expect(scoped?.function.parameters.required ?? [], name).not.toContain(
+        "project_id",
+      );
+    }
+  });
+
+  it("continues to require explicit project targeting in global mode", () => {
+    for (const name of PROJECT_SCOPED_TOOLS) {
+      if (["list_views", "create_view", "update_view"].includes(name)) continue;
+      const scoped = GLOBAL_ASSISTANT_TOOLS.find(
+        (candidate) => candidate.function.name === name,
+      );
+      expect(scoped?.function.parameters.required, name).toContain("project_id");
+    }
   });
 });

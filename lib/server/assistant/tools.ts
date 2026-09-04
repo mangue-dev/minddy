@@ -2146,6 +2146,44 @@ export const GLOBAL_VIEW_TOOLS = new Set([
   "update_view",
 ]);
 
+const LIST_PROJECTS_TOOL: AssistantToolDef = {
+  type: "function",
+  function: {
+    name: "list_projects",
+    description:
+      "List all projects the user has access to, with their id, name, key, and role (owner or member). In a project conversation, use this only when the user explicitly names another project or asks which projects are available.",
+    parameters: { type: "object", properties: {} },
+  },
+};
+
+function withProjectId(
+  tool: AssistantToolDef,
+  options: { required: boolean },
+): AssistantToolDef {
+  const params = tool.function.parameters;
+  return {
+    ...tool,
+    function: {
+      ...tool.function,
+      parameters: {
+        ...params,
+        properties: {
+          project_id: {
+            type: "string",
+            description: options.required
+              ? "The project ID to operate on. Use list_projects to discover available projects."
+              : "The project ID to operate on. Omit it for the current project. Set it only when the user explicitly names another project, after resolving that project with list_projects.",
+          },
+          ...params.properties,
+        },
+        required: options.required
+          ? ["project_id", ...(params.required || [])]
+          : params.required,
+      },
+    },
+  };
+}
+
 /** Global mode adds the project facet to a view's filters — the same one the
     user gets in the toolbar on the global board, and the only filter the
     cross-project view has that a project view doesn't. */
@@ -2177,16 +2215,6 @@ function withProjectFilter(tool: AssistantToolDef): AssistantToolDef {
 }
 
 export function buildGlobalTools(): AssistantToolDef[] {
-  const listProjectsTool: AssistantToolDef = {
-    type: "function",
-    function: {
-      name: "list_projects",
-      description:
-        "List all projects the user has access to, with their id, name, and key.",
-      parameters: { type: "object", properties: {} },
-    },
-  };
-
   // Global-mode discovery for the cross-project view's category/objective/
   // integration filters: same names collapsed across projects, each carrying
   // the full set of ids to put in filters.category/objective/integration.
@@ -2212,29 +2240,22 @@ export function buildGlobalTools(): AssistantToolDef[] {
       return tool;
     }
 
-    const params = tool.function.parameters;
-
-    return {
-      ...tool,
-      function: {
-        ...tool.function,
-        parameters: {
-          ...params,
-          properties: {
-            project_id: {
-              type: "string",
-              description:
-                "The project ID to operate on. Use list_projects to discover available projects.",
-            },
-            ...params.properties,
-          },
-          required: ["project_id", ...(params.required || [])],
-        },
-      },
-    };
+    return withProjectId(tool, { required: true });
   });
 
-  return [listProjectsTool, listGlobalFilterOptionsTool, ...augmented];
+  return [LIST_PROJECTS_TOOL, listGlobalFilterOptionsTool, ...augmented];
 }
 
+export function buildProjectTools(): AssistantToolDef[] {
+  return [
+    LIST_PROJECTS_TOOL,
+    ...ASSISTANT_TOOLS.map((tool) =>
+      PROJECT_SCOPED_TOOLS.has(tool.function.name)
+        ? withProjectId(tool, { required: false })
+        : tool,
+    ),
+  ];
+}
+
+export const PROJECT_ASSISTANT_TOOLS = buildProjectTools();
 export const GLOBAL_ASSISTANT_TOOLS = buildGlobalTools();

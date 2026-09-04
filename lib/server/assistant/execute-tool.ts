@@ -183,6 +183,7 @@ import {
   type InboxReadCategory,
   type InboxReadState,
 } from "@/lib/inbox-tool";
+import { resolveAssistantProjectId } from "./project-scope";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -494,13 +495,14 @@ async function writePlan(
   };
 }
 
-/** create_view / update_view for both scopes: project mode uses the
-    conversation's project, global mode (ctx.projectId null) targets the user's
-    personal cross-project view. Access is enforced inside create/updateView. */
+/** create_view / update_view for both scopes: project mode uses the current or
+    explicitly targeted project, while global mode targets the user's personal
+    cross-project view. */
 async function executeViewTool(
   toolName: "create_view" | "update_view",
   args: Record<string, unknown>,
   ctx: ToolContext,
+  projectId: string | null,
 ): Promise<ToolExecution> {
   const shape = (r: {
     view: Record<string, unknown>;
@@ -520,7 +522,7 @@ async function executeViewTool(
 
   if (toolName === "create_view") {
     const result = await createView({
-      projectId: ctx.projectId,
+      projectId,
       actorId: ctx.userId,
       input: args,
     });
@@ -528,6 +530,16 @@ async function executeViewTool(
   }
   const viewId = typeof args.view_id === "string" ? args.view_id : "";
   if (!viewId) return toolError("view_id is required.");
+  if (projectId) {
+    const { data, error } = await ctx.supabase
+      .from("views")
+      .select("id")
+      .eq("id", viewId)
+      .eq("project_id", projectId)
+      .maybeSingle();
+    if (error) return toolError(error.message);
+    if (!data) return toolError("View not found in the targeted project.");
+  }
   const result = await updateView({ viewId, actorId: ctx.userId, input: args });
   return result.ok ? shape(result) : libError(result);
 }
@@ -664,15 +676,25 @@ export async function executeTool(
           };
     }
 
-    // ── Global-only tools ───────────────────────────────────────────────
+    // ── Project discovery and global-only filter options ───────────────
     if (toolName === "list_projects") {
       const { data, error } = await ctx.supabase
         .from("projects")
-        .select("id, name, key")
+        .select("id, name, key, owner_id")
         .is("deleted_at", null)
         .order("created_at", { ascending: true });
       if (error) return toolError(error.message);
-      return { result: { projects: data ?? [] }, success: true };
+      return {
+        result: {
+          projects: (data ?? []).map((project) => ({
+            id: project.id,
+            name: project.name,
+            key: project.key,
+            role: project.owner_id === ctx.userId ? "owner" : "member",
+          })),
+        },
+        success: true,
+      };
     }
     if (toolName === "list_global_filter_options") {
       return listGlobalFilterOptions(ctx);
@@ -684,14 +706,26 @@ export async function executeTool(
     }
 
     // ── View tools (scope = the conversation's) ─────────────────────────
-    // Project mode → a project view; global mode (ctx.projectId null) → the
-    // user's cross-project global view (project_id null, personal). create/
-    // updateView enforce access themselves, so no project_id is required here.
+    // Project mode → the current project's view by default, or an explicitly
+    // targeted accessible project. Global mode (ctx.projectId null) → the
+    // user's personal cross-project view (project_id null).
     if (toolName === "list_views") {
-      return listViews(ctx, ctx.projectId);
+      const projectId = ctx.projectId
+        ? resolveAssistantProjectId(ctx.projectId, args.project_id)
+        : null;
+      if (projectId && !(await getProjectAccess(ctx.userId, projectId))) {
+        return toolError("Project not found or not accessible.");
+      }
+      return listViews(ctx, projectId);
     }
     if (toolName === "create_view" || toolName === "update_view") {
-      return executeViewTool(toolName, args, ctx);
+      const projectId = ctx.projectId
+        ? resolveAssistantProjectId(ctx.projectId, args.project_id)
+        : null;
+      if (projectId && !(await getProjectAccess(ctx.userId, projectId))) {
+        return toolError("Project not found or not accessible.");
+      }
+      return executeViewTool(toolName, args, ctx, projectId);
     }
 
     // ── Account tools (the requesting user's own account — no project) ──
@@ -801,9 +835,10 @@ export async function executeTool(
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
-    const projectId =
-      ctx.projectId ??
-      (typeof args.project_id === "string" ? args.project_id : null);
+    const projectId = resolveAssistantProjectId(
+      ctx.projectId,
+      args.project_id,
+    );
     if (!projectId) {
       return toolError(
         "No project in scope. Pass project_id (use list_projects to discover projects).",
