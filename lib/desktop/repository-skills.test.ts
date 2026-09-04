@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   listLocalRepositorySkills,
+  loadLocalRepositorySkill,
   localRepositorySkillPaths,
 } from "./repository-skills";
 
@@ -54,5 +55,20 @@ describe("desktop repository skill discovery", () => {
     symlinkSync(outside, path.join(root, ".agents", "skills"));
 
     expect(localRepositorySkillPaths(root)).toEqual([]);
+  });
+
+  it("loads Markdown only for a skill found during local discovery", () => {
+    const root = temporaryRepository();
+    writeSkill(root, ".agents/skills/release", "release");
+    const skillPath = ".agents/skills/release/SKILL.md";
+
+    expect(loadLocalRepositorySkill(root, skillPath)).toMatchObject({
+      path: skillPath,
+      name: "release",
+      content: "Follow release.",
+    });
+    expect(
+      loadLocalRepositorySkill(root, ".agents/skills/missing/SKILL.md"),
+    ).toBeNull();
   });
 });

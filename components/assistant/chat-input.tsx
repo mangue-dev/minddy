@@ -39,6 +39,7 @@ import {
   type SlashMenuOption,
 } from "@/components/assistant/slash-menu";
 import { SkillChip } from "@/components/assistant/skill-chip";
+import { SkillPreviewDialog } from "@/components/assistant/skill-preview-dialog";
 import {
   ResourcePills,
   DropOverlay,
@@ -53,13 +54,17 @@ import { SearchMenu } from "@/components/search-menu";
 import { SendShortcutKeys } from "@/components/send-shortcut";
 import { Kbd } from "@/components/ui/kbd";
 import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
+import { deleteComposerTokenBeforeCaret } from "@/lib/composer-token-delete";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import {
   filterMentionItems,
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
-import { composerMenuTrigger } from "@/lib/assistant-slash-options";
+import {
+  findActiveComposerMenuQuery,
+  type ActiveComposerMenuQuery,
+} from "@/lib/assistant-slash-options";
 import {
   useAttachmentUploads,
   type PendingResource,
@@ -73,6 +78,7 @@ import type {
 import type { ResourceInput } from "@/lib/types";
 import {
   MAX_SELECTED_SKILLS,
+  type RepositorySkill,
   type RepositorySkillSummary,
 } from "@/lib/repository-skills";
 import {
@@ -112,6 +118,11 @@ const MENTION_TYPES: ReadonlySet<string> = new Set([
   "objective",
   "page",
 ]);
+
+type ActiveSlashQuery = ActiveComposerMenuQuery & {
+  node: Text;
+  commandsAllowed: boolean;
+};
 
 function mentionFromNode(node: HTMLElement): MentionOption | null {
   const type = node.dataset.mentionType;
@@ -244,6 +255,10 @@ interface ChatInputProps {
   commands?: SlashCommandOption[];
   /** Agent Skills discovered in the active project's linked repository. */
   skills?: RepositorySkillSummary[];
+  /** Loads the selected skill instructions only when its badge is opened. */
+  loadSkill?: (
+    skill: RepositorySkillSummary,
+  ) => Promise<RepositorySkill | null>;
   /**
    * Text to seed the editor with on mount (caret placed at the end, ready to
    * edit). Used by the agent launch composer to pre-write "Work on MIN-42".
@@ -300,6 +315,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onAddContext,
       commands,
       skills,
+      loadSkill,
       initialValue,
       leadingControls,
       beam,
@@ -509,6 +525,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [skillSlots, setSkillSlots] = useState<
       Array<{ el: HTMLElement; skill: RepositorySkillSummary }>
     >([]);
+    const [previewSkill, setPreviewSkill] =
+      useState<RepositorySkillSummary | null>(null);
 
     const syncMentionSlots = useCallback(() => {
       const el = editorRef.current;
@@ -691,7 +709,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     );
 
     const placeSkill = useCallback(
-      (skill: RepositorySkillSummary, replaceEditor = false) => {
+      (
+        skill: RepositorySkillSummary,
+        activeQuery?: Pick<ActiveSlashQuery, "node" | "start" | "end">,
+      ) => {
         const el = editorRef.current;
         if (!el) return;
         const alreadySelected = [
@@ -707,17 +728,22 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         ) {
           return;
         }
-        if (replaceEditor) {
-          el.innerHTML = "";
+        const pill = createSkillNode(skill);
+        const space = document.createTextNode(" ");
+        if (activeQuery) {
+          const range = document.createRange();
+          range.setStart(activeQuery.node, activeQuery.start);
+          range.setEnd(activeQuery.node, activeQuery.end);
+          range.deleteContents();
+          range.insertNode(pill);
+          pill.after(space);
         } else {
           const current = el.textContent ?? "";
           if (current && !/[\s ]$/.test(current)) {
             el.appendChild(document.createTextNode(" "));
           }
+          el.append(pill, space);
         }
-        const pill = createSkillNode(skill);
-        const space = document.createTextNode(" ");
-        el.append(pill, space);
         const selection = window.getSelection();
         if (selection) {
           const range = document.createRange();
@@ -774,31 +800,34 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return selected;
     }, []);
 
-    // ── Commands “/” and skills “$” ─────────────────────────────────
-    // The menu only lives as long as the ENTIRE message is “/request” or “$skill”: a
-    // single line of bare text, no pill already placed. The detection is read again
-    // so from the full editor — not from the caret like the mentions:
-    // a trigger only exists at the top of the message.
-    const [slashQuery, setSlashQuery] = useState<
-      ReturnType<typeof composerMenuTrigger>
-    >(null);
+    // ── Commands “/” and inline skills “/” or “$” ───────────────────
+    // Skills follow the mention contract: read the query in the text node under
+    // the caret and replace only that fragment. Commands remain start-only.
+    const [slashQuery, setSlashQuery] = useState<ActiveSlashQuery | null>(null);
     const [slashIndex, setSlashIndex] = useState(0);
 
-    const readSlash = useCallback((): ReturnType<typeof composerMenuTrigger> => {
+    const readSlash = useCallback((): ActiveSlashQuery | null => {
       if (!commands?.length && skills === undefined) return null;
       const el = editorRef.current;
-      if (!el) return null;
-      // Only text nodes — no pill already placed, no return to the
-      // line. The <br> that the browser sometimes leaves hanging at the end
-      // publisher does not count; elsewhere, it's a real line break.
-      const nodes = [...el.childNodes];
-      const last = nodes[nodes.length - 1];
-      if (last instanceof HTMLElement && last.tagName === "BR") nodes.pop();
-      if (nodes.some((n) => n.nodeType !== Node.TEXT_NODE)) return null;
-      const text = nodes.map((n) => n.textContent ?? "").join("");
-      const trigger = composerMenuTrigger(text);
-      if (trigger?.prefix === "$" && skills === undefined) return null;
-      return trigger;
+      const selection = window.getSelection();
+      if (!el || !selection || !selection.isCollapsed) return null;
+      const node = selection.anchorNode;
+      if (!node || node.nodeType !== Node.TEXT_NODE || !el.contains(node)) return null;
+      const end = selection.anchorOffset;
+      const before = (node.textContent ?? "").slice(0, end);
+      const trigger = findActiveComposerMenuQuery(before);
+      if (!trigger) return null;
+      const editorNodes = [...el.childNodes];
+      const last = editorNodes[editorNodes.length - 1];
+      if (last instanceof HTMLElement && last.tagName === "BR") editorNodes.pop();
+      const commandsAllowed =
+        trigger.prefix === "/" &&
+        trigger.start === 0 &&
+        editorNodes.length === 1 &&
+        node === editorNodes[0] &&
+        end === (node.textContent ?? "").length;
+      if (!commandsAllowed && skills === undefined) return null;
+      return { ...trigger, node: node as Text, commandsAllowed };
     }, [commands, skills]);
 
     // Reread on typing only: Escape closes the menu, and it does not reopen
@@ -806,7 +835,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const refreshSlash = useCallback(() => {
       const next = readSlash();
       setSlashQuery((prev) =>
-        prev?.prefix === next?.prefix && prev?.query === next?.query ? prev : next,
+        prev?.node === next?.node &&
+        prev?.prefix === next?.prefix &&
+        prev?.query === next?.query &&
+        prev?.start === next?.start &&
+        prev?.end === next?.end &&
+        prev?.commandsAllowed === next?.commandsAllowed
+          ? prev
+          : next,
       );
     }, [readSlash]);
 
@@ -815,7 +851,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         slashQuery === null
           ? []
           : filterSlashOptions(
-              slashQuery.prefix === "$"
+              !slashQuery.commandsAllowed
                 ? repositorySkillOptions(availableSkills)
                 : [
                     ...(commands ?? []),
@@ -867,12 +903,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const insertSlashOption = useCallback(
       (option: SlashMenuOption) => {
         if (option.kind === "skill") {
-          placeSkill(option.skill, true);
+          const activeQuery = readSlash();
+          if (activeQuery) placeSkill(option.skill, activeQuery);
         } else {
           insertCommand(option);
         }
       },
-      [insertCommand, placeSkill],
+      [insertCommand, placeSkill, readSlash],
     );
 
     /** The command actually placed at the top of the message, if there is one. */
@@ -915,6 +952,21 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
+        if (
+          e.key === "Backspace" &&
+          editorRef.current &&
+          deleteComposerTokenBeforeCaret(
+            editorRef.current,
+            window.getSelection(),
+            "[data-skill-path]",
+          )
+        ) {
+          e.preventDefault();
+          setSlashQuery(null);
+          setIsEmpty(!editorRef.current.textContent?.trim());
+          syncSkillSlots();
+          return;
+        }
         // Open slash menu: same keyboard contract as the list of mentions.
         if (slashOpen) {
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -987,6 +1039,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         slashOptions,
         activeSlash,
         insertSlashOption,
+        syncSkillSlots,
       ]
     );
 
@@ -1202,8 +1255,25 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           ),
         )}
         {skillSlots.map(({ el, skill }) =>
-          createPortal(<SkillChip name={skill.name} />, el, skill.path),
+          createPortal(
+            <SkillChip
+              name={skill.name}
+              onClick={loadSkill ? () => setPreviewSkill(skill) : undefined}
+            />,
+            el,
+            skill.path,
+          ),
         )}
+        {loadSkill ? (
+          <SkillPreviewDialog
+            skill={previewSkill}
+            open={previewSkill !== null}
+            onOpenChange={(open) => {
+              if (!open) setPreviewSkill(null);
+            }}
+            loadSkill={loadSkill}
+          />
+        ) : null}
         {/* The list of mentions lives OUTSIDE the surface of the composer: this one
  is `overflow-hidden` (the border, the drop zone), it would cut it. */}
         {mentionOpen && (
@@ -1216,7 +1286,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           />
         )}
         {/* The command/skill menu shares the mention list's floating position.
-        It opens for “/” or “$” at the start, while mentions use “@” at the caret. */}
+        Skills open for “/” or “$” at the caret; commands require “/” at the start. */}
         {slashOpen && (
           <SlashMenu
             options={slashOptions}

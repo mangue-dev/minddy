@@ -902,6 +902,7 @@ export const AssistantShell = forwardRef<
                   onAddContext={addPinned}
                   commands={slashCommands}
                   skills={projectId ? repositorySkills.skills : undefined}
+                  loadSkill={projectId ? repositorySkills.load : undefined}
                   contextSlot={(attachments: ChatInputContextAttachments) => (
                     <AssistantContextBar
                       chips={chips}

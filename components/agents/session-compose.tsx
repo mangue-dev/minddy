@@ -477,6 +477,7 @@ export function SessionCompose({
             mentionables={mentionables}
             onMentionQuery={onMentionQuery}
             skills={projectId ? repositorySkills.skills : undefined}
+            loadSkill={projectId ? repositorySkills.load : undefined}
             disabled={launching}
             // Without a project, nothing to clone: ​​sending is blocked (the text remains
             // freely editable) and the button tooltip says what is missing —
