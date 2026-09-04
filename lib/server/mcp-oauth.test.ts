@@ -181,9 +181,10 @@ describe("generic MCP OAuth", () => {
       JSON.parse(decryptMcpToken(String(saved.oauth_encrypted))!).tokens
         .refresh_token,
     ).toBe("private-refresh-token");
-    expect(
+    const tokenRequest = new URLSearchParams(
       state.requests.find((request) => request.url.endsWith("/token"))?.body,
-    ).toContain(`code_verifier=${payload.verifier}`);
+    );
+    expect(tokenRequest.get("code_verifier")).toBe(payload.verifier);
     await expect(
       completeMcpOAuth("alice", url.searchParams.get("state")!, "code"),
     ).rejects.toThrow("expired or already used");
