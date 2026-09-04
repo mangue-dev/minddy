@@ -2297,6 +2297,31 @@ describe("la reprise", () => {
     expect(h.routes).not.toContain("POST /session");
   });
 
+  it("rebases a stale checkpoint cursor on the journal that was replayed", async () => {
+    h.history = [1, 2, 3, 4].map((seq) => ({
+      aggregate_id: "ses_neuve",
+      seq,
+      type: "message.updated",
+      data: {},
+    }));
+
+    await run({
+      opencode: {
+        sessionId: "ses_neuve",
+        events: h.history.slice(0, 2).map((event) => ({
+          ...event,
+          aggregateID: event.aggregate_id,
+          aggregate_id: undefined,
+        })),
+        seq: {},
+      },
+    });
+
+    expect(
+      h.journal.flatMap((batch) => batch.events).map((event) => event.seq),
+    ).toEqual([3, 4]);
+  });
+
   /**
    * MIN-286 (2026-08-13) — THE NEWSPAPER NO LONGER GOES THROUGH THE CHECKPOINT.
    *
@@ -2411,6 +2436,37 @@ describe("la reprise", () => {
       report.checkpoint as { opencode?: { seq?: Record<string, number> } }
     ).opencode;
     expect(state?.seq ?? {}).toEqual({});
+  });
+
+  it("does not resend a durable prefix when a later batch fails", async () => {
+    h.tick = 130_000;
+    const fat = "x".repeat(900_000);
+    h.history = [3, 4, 5].map((seq) => ({
+      aggregate_id: "ses_neuve",
+      seq,
+      type: "message.updated",
+      data: { fat },
+    }));
+    let writes = 0;
+
+    const report = await run(
+      {},
+      {},
+      {
+        appendJournal: async (sessionId, events) => {
+          writes += 1;
+          if (writes === 2) throw new Error("temporary journal failure");
+          h.journal.push({ sessionId, events });
+        },
+      },
+    );
+
+    const stored = h.journal.flatMap((batch) => batch.events);
+    expect(stored.map((event) => event.seq)).toEqual([3, 4, 5]);
+    expect(
+      (report.checkpoint as { opencode?: { seq?: Record<string, number> } })
+        .opencode?.seq,
+    ).toEqual({ ses_neuve: 5 });
   });
 
   it("normalise le curseur d'export", () => {

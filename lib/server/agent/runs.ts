@@ -26,6 +26,11 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { getProjectAccess } from "@/lib/server/project-access";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
+import {
+  decodeRunJournalRow,
+  encodeRunJournal,
+  type StoredRunJournalRow,
+} from "./run-journal-codec";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -1937,13 +1942,26 @@ export async function appendEvent(
   }
 }
 
+/** PostgreSQL uniqueness violation. */
+const JOURNAL_DUPLICATE = "23505";
+
 /**
- * THE LOG OF AN OPENCODE SESSION (MIN-286) — written in APPEND, never proofread
- * to be rewritten.
+ * Maximum uncompressed journal data included in a fresh VM job.
  *
- * One batch per incremental export. This is what makes the memory of a session
- * independent of the size of an HTTP body: the supervisor only sends what
- * is new, and the table keeps it.
+ * The complete audit trail remains stored after this limit. Only automatic
+ * OpenCode replay is abandoned: serializing an unbounded history into one VM
+ * job would recreate the memory and timeout failure this table is meant to
+ * prevent.
+ */
+export const RUN_JOURNAL_REPLAY_MAX_BYTES = 8_000_000;
+const RUN_JOURNAL_REPLAY_MAX_ROWS = 512;
+
+/**
+ * Append one immutable OpenCode event batch.
+ *
+ * New rows store an opaque gzip payload instead of JSONB. PostgreSQL therefore
+ * does not parse or aggregate large tool outputs, while the digest makes a
+ * retry idempotent when a checkpoint lags behind a successful batch write.
  */
 export async function appendRunJournal(
   runId: string,
@@ -1951,42 +1969,90 @@ export async function appendRunJournal(
   events: Record<string, unknown>[],
 ): Promise<void> {
   if (!sessionId || events.length === 0) return;
+  const encoded = encodeRunJournal(stripUnstorable(events));
   const service = getServiceClient();
   const { error } = await service.from("agent_run_journal").insert({
     run_id: runId,
     session_id: sessionId,
-    events: stripUnstorable(events),
+    events: null,
+    payload: encoded.payload,
+    payload_encoding: encoded.encoding,
+    payload_sha256: encoded.sha256,
+    event_count: encoded.eventCount,
+    payload_bytes: encoded.payloadBytes,
+    stored_bytes: encoded.storedBytes,
   });
-  if (error)
+  if (error && error.code !== JOURNAL_DUPLICATE) {
     throw new Error(`agent_run_journal insert failed: ${error.message}`);
+  }
 }
 
 /**
- * The journal of a session, collected in writing order.
+ * Load a replayable journal in append order, one database row at a time.
  *
- * Filtered on the SESSION: a session reset (resumption impossible) written
- * under a new id, and the lots from the old one must not be replayed by-
- * above. Retention will take them with the run.
+ * Returning `null` deliberately starts a fresh OpenCode session. It is safer
+ * than sending an incomplete event sequence, and prevents an oversized or
+ * corrupt historical row from crashing the application. Legacy JSONB rows
+ * remain readable during the transition to compressed payloads.
  */
 export async function loadRunJournal(
   runId: string,
   sessionId: string,
-): Promise<Record<string, unknown>[]> {
-  if (!sessionId) return [];
+): Promise<Record<string, unknown>[] | null> {
+  if (!sessionId) return null;
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("agent_run_journal")
-    .select("events")
-    .eq("run_id", runId)
-    .eq("session_id", sessionId)
-    .order("id", { ascending: true });
-  if (error) {
-    // An illegible log costs RESTART, not the turn: the supervisor
-    // will start with a new session, and he will say it over time.
-    console.error("[agent-runs] loadRunJournal failed:", error.message);
-    return [];
+  const events: Record<string, unknown>[] = [];
+  let afterId = 0;
+  let payloadBytes = 0;
+
+  for (let rowCount = 0; rowCount <= RUN_JOURNAL_REPLAY_MAX_ROWS; rowCount++) {
+    const { data, error } = await service
+      .from("agent_run_journal")
+      .select(
+        "id,events,payload,payload_encoding,payload_sha256,payload_bytes,event_count,stored_bytes",
+      )
+      .eq("run_id", runId)
+      .eq("session_id", sessionId)
+      .gt("id", afterId)
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("[agent-runs] loadRunJournal failed:", error.message);
+      return null;
+    }
+    if (!data) return events.length > 0 ? events : null;
+    if (rowCount === RUN_JOURNAL_REPLAY_MAX_ROWS) {
+      console.warn(
+        `[agent-runs] journal replay skipped: more than ${RUN_JOURNAL_REPLAY_MAX_ROWS} rows`,
+      );
+      return null;
+    }
+
+    try {
+      const row = data as StoredRunJournalRow & { id: number | string };
+      const nextId = Number(row.id);
+      if (!Number.isSafeInteger(nextId) || nextId <= afterId) {
+        throw new Error("agent journal row has an invalid cursor");
+      }
+      const decoded = decodeRunJournalRow(row);
+      payloadBytes += decoded.payloadBytes;
+      if (payloadBytes > RUN_JOURNAL_REPLAY_MAX_BYTES) {
+        console.warn(
+          `[agent-runs] journal replay skipped: ${payloadBytes} bytes exceeds ${RUN_JOURNAL_REPLAY_MAX_BYTES}`,
+        );
+        return null;
+      }
+      events.push(...decoded.events);
+      afterId = nextId;
+    } catch (error) {
+      console.error(
+        "[agent-runs] journal row is unreadable:",
+        (error as Error).message,
+      );
+      return null;
+    }
   }
-  return ((data ?? []) as Array<{ events: Record<string, unknown>[] }>).flatMap(
-    (row) => row.events ?? [],
-  );
+
+  return null;
 }
