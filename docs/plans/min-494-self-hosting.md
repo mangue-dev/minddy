@@ -3,6 +3,8 @@
 Continue PR #133 on its existing branch. Extend the shared marketing style to
 both the self-hosting overview and the installation wizard.
 
+## Initial redesign
+
 - [x] Restyle the overview hero, local/team routes, architecture, migration,
   included features, and operations with shared headings and pastel surfaces.
   Include an expandable localized screenshot and preserve release-pinned links.
@@ -38,3 +40,28 @@ both the self-hosting overview and the installation wizard.
   installation links, and the image fallback remain usable without JavaScript.
 - Fixed intrinsic grid sizing that allowed email templates to overflow on mobile.
   Only the overview, wizard, six locale catalogs, and this plan changed.
+
+## Wizard interaction review
+
+- [x] Replace the sidebar and mobile progress panel with a compact popover in
+  the header. Center the step content and retain past-step navigation. Opening
+  the popover focuses the current step without scrolling the page; Escape
+  returns focus to its trigger and choosing a past step focuses that heading.
+- [x] Replace all 15 acknowledgement checkboxes with direct confirmation
+  buttons using 14 contextual labels across six locales. Keep completion
+  guidance, required selections, address/email validation, and generated content.
+- [x] Remove Restart and its reset handler. Keep Back and the progress menu.
+- [x] Use the shared Minddy Accordion for the agent's complete prompt, including
+  opening/closing animation, reduced-motion behavior, and keyboard activation.
+- [x] Verify 12 complete paths (142 step visits, 23 distinct titles), 52 exact
+  clipboard copies, required inputs, selection persistence, and back navigation.
+  Check 48 locale/viewport/theme combinations with the popover open and closed,
+  including content position, progress fill geometry, dismissal, and focus.
+- [x] Verify eight accordion cases across local/team routes, 320/1440 px, and
+  normal/reduced motion, including exact prompt copies and keyboard focus.
+  Focused lint, TypeScript, 74 tests across three locale/message suites, owned
+  English, and whitespace checks pass. Update the signed PR and MIN-494.
+
+The reported progress-bar issue was a stale browser cache, confirmed by the
+user. Its calculation is unchanged. The review only changes the wizard, six
+locale catalogs, and this plan; installation commands were never executed.

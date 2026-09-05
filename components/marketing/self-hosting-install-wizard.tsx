@@ -9,6 +9,7 @@ import {
   Bot,
   Check,
   CheckCircle2,
+  ChevronDown,
   Database,
   Download,
   ExternalLink,
@@ -17,12 +18,13 @@ import {
   HardDrive,
   Laptop,
   Mail,
-  RotateCcw,
   Server,
   ShieldCheck,
   TerminalSquare,
 } from "lucide-react";
 import type { Messages } from "next-intl";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "mangue-ui/components/ui/accordion";
+import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui/components/ui/popover";
 import { cn } from "mangue-ui/lib/utils";
 import { McpAvatar } from "@/components/actor-avatars";
 import { CopyButton } from "@/components/marketing/copy-button";
@@ -72,6 +74,7 @@ interface Step {
   title: string;
   body?: string;
   canContinue: boolean;
+  continueLabel?: string;
   content: ReactNode;
 }
 
@@ -187,36 +190,11 @@ function OptionCard({
   );
 }
 
-function DoneBlock({
-  copy,
-  criterion,
-  acked,
-  onAck,
-}: {
-  copy: SelfHostingInstallCopy;
-  criterion: string;
-  acked: boolean;
-  onAck: () => void;
-}) {
+function CompletionNote({ copy, criterion }: { copy: SelfHostingInstallCopy; criterion: string }) {
   return (
-    <div className="mt-6 space-y-2 rounded-xl bg-background/55 p-4 sm:p-5">
-      <p className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <span>
-          <span className="font-medium text-foreground">{copy.doneWhen}</span> {criterion}
-        </span>
-      </p>
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
-        <input type="checkbox" checked={acked} onChange={onAck} className="sr-only peer" />
-        <span
-          aria-hidden
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border bg-background transition-colors peer-checked:border-primary peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
-        >
-          {acked && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
-        </span>
-        <span className={cn(acked ? "text-foreground" : "text-muted-foreground")}>{copy.doneAck}</span>
-      </label>
-    </div>
+    <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
+      <span className="font-medium">{copy.doneWhen}</span> {criterion}
+    </p>
   );
 }
 
@@ -265,12 +243,16 @@ function PromptCard({
           className={COPY_BUTTON}
         />
       </div>
-      <details className="mt-6 rounded-xl bg-background/50 p-4">
-        <summary className="min-h-11 cursor-pointer content-center rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">{copy.reviewPrompt}</summary>
-        <pre tabIndex={0} className="mt-3 max-h-96 overflow-auto overscroll-contain whitespace-pre-wrap rounded-xl bg-background/70 p-4 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-ring">
-          {prompt}
-        </pre>
-      </details>
+      <Accordion type="single" collapsible className="mt-6 rounded-xl bg-background/50 px-4 motion-reduce:[&_[data-slot=accordion-content]]:animate-none">
+        <AccordionItem value="installation-prompt">
+          <AccordionTrigger className="min-h-11 items-center gap-4 py-4">{copy.reviewPrompt}</AccordionTrigger>
+          <AccordionContent animated className="pb-4">
+            <pre tabIndex={0} role="region" aria-label={copy.copyContentLabel} className="max-h-96 overflow-auto overscroll-contain whitespace-pre-wrap rounded-xl bg-background/70 p-4 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-ring">
+              {prompt}
+            </pre>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
       {disabled && <p className="mt-3 text-sm text-destructive" role="alert">{copy.promptNeedsSetup}</p>}
     </div>
   );
@@ -469,7 +451,9 @@ export function SelfHostingInstallWizard({
   const [email, setEmail] = useState("");
   const [optionalFeatures, setOptionalFeatures] = useState<OptionalFeature[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
-  const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
+  const [progressOpen, setProgressOpen] = useState(false);
+  const progressStepRef = useRef<HTMLLIElement>(null);
+  const navigatingFromProgress = useRef(false);
 
   const enteredHost = normalizeHostname(domain);
   const domainValid = isHostname(enteredHost);
@@ -540,8 +524,6 @@ export function SelfHostingInstallWizard({
   const toggleFeature = (feature: OptionalFeature) => {
     setOptionalFeatures((current) => current.includes(feature) ? current.filter((item) => item !== feature) : [...current, feature]);
   };
-  const ack = (id: string) => acknowledged[id] === true;
-  const acknowledge = (id: string) => setAcknowledged((current) => ({ ...current, [id]: !current[id] }));
 
   const capacity = path === "local"
     ? [copy.specsLocalMinimum, copy.specsLocalRecommended]
@@ -552,7 +534,6 @@ export function SelfHostingInstallWizard({
   const selectPath = (nextPath: Path) => {
     setPath(nextPath);
     setMethod(null);
-    setAcknowledged((current) => Object.fromEntries(Object.entries(current).filter(([id]) => ["desktop-app", "migration-export", "capacity"].includes(id))));
   };
 
   const stages: Step[] = [
@@ -560,7 +541,8 @@ export function SelfHostingInstallWizard({
       id: "desktop-app",
       title: copy.desktopSetupTitle,
       body: copy.desktopSetupBody,
-      canContinue: ack("desktop-app"),
+      canContinue: true,
+      continueLabel: copy.confirmDesktop,
       content: (
         <div className={HIGHLIGHT_PANEL}>
           <div className="flex items-start gap-3">
@@ -571,7 +553,7 @@ export function SelfHostingInstallWizard({
             </div>
           </div>
           <div className="mt-4"><ResourceLink href={links.download}>{copy.downloadDesktopApp}</ResourceLink></div>
-          <DoneBlock copy={copy} criterion={copy.desktopSetupDone} acked={ack("desktop-app")} onAck={() => acknowledge("desktop-app")} />
+          <CompletionNote copy={copy} criterion={copy.desktopSetupDone} />
         </div>
       ),
     },
@@ -603,7 +585,8 @@ export function SelfHostingInstallWizard({
       id: "migration-export",
       title: copy.exportTitle,
       body: copy.exportGoal,
-      canContinue: ack("migration-export"),
+      canContinue: true,
+      continueLabel: copy.confirmExport,
       content: (
         <div className={HIGHLIGHT_PANEL}>
           <p className="text-sm font-medium">{copy.exportHeading}</p>
@@ -612,7 +595,7 @@ export function SelfHostingInstallWizard({
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
             {copy.exportNote}
           </p>
-          <DoneBlock copy={copy} criterion={copy.exportDone} acked={ack("migration-export")} onAck={() => acknowledge("migration-export")} />
+          <CompletionNote copy={copy} criterion={copy.exportDone} />
         </div>
       ),
     }] : []),
@@ -620,7 +603,8 @@ export function SelfHostingInstallWizard({
       id: "capacity",
       title: path === "local" ? copy.capacityLocalTitle : copy.capacityTeamTitle,
       body: copy.capacityBody,
-      canContinue: ack("capacity"),
+      canContinue: true,
+      continueLabel: copy.confirmCapacity,
       content: (
         <div className={PANEL}>
           <h3 className="font-medium">{copy.specsTitle}</h3>
@@ -630,7 +614,7 @@ export function SelfHostingInstallWizard({
             <div className={cn("rounded-xl p-4", CARD_TONES.sky)}><dt className="text-xs font-medium text-primary">{copy.specsRecommended}</dt><dd className="mt-1 text-sm font-medium">{capacity[1]}</dd></div>
           </dl>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{copy.specsStorageNote}</p>
-          <DoneBlock copy={copy} criterion={path === "local" ? copy.capacityDone : copy.capacityDone} acked={ack("capacity")} onAck={() => acknowledge("capacity")} />
+          <CompletionNote copy={copy} criterion={copy.capacityDone} />
         </div>
       ),
     },
@@ -712,11 +696,12 @@ export function SelfHostingInstallWizard({
       id: "agent",
       title: copy.agentTitle,
       body: path === "local" ? copy.agentLocalGoal : copy.agentTeamGoal,
-      canContinue: ack("agent"),
+      canContinue: true,
+      continueLabel: copy.confirmAgent,
       content: (
         <div>
           <PromptCard prompt={path === "local" ? `${localPrompt}\n\n${copy.localAutostartPrompt}${transferPrompt}` : teamPrompt} body={path === "local" ? copy.agentLocalRun : copy.agentTeamRun} copy={copy} disabled={path === "team" && !serverSetupValid} />
-          <DoneBlock copy={copy} criterion={path === "local" ? copy.agentLocalDone : copy.agentTeamDone} acked={ack("agent")} onAck={() => acknowledge("agent")} />
+          <CompletionNote copy={copy} criterion={path === "local" ? copy.agentLocalDone : copy.agentTeamDone} />
         </div>
       ),
     }] : []),
@@ -725,7 +710,8 @@ export function SelfHostingInstallWizard({
         id: "local-tools",
         title: copy.toolsTitle,
         body: copy.toolsBody,
-        canContinue: ack("local-tools"),
+        canContinue: true,
+        continueLabel: copy.confirmTools,
         content: (
           <div className={PANEL}>
             <div className="flex flex-wrap gap-2">
@@ -735,7 +721,7 @@ export function SelfHostingInstallWizard({
               <ResourceLink href="https://git-scm.com/downloads">{copy.installGit}</ResourceLink>
             </div>
             <CommandBlock command="node --version\ngit --version\ndocker --version\ndocker compose version\ndocker info\nsupabase --version" copy={copy} />
-            <DoneBlock copy={copy} criterion={copy.toolsDone} acked={ack("local-tools")} onAck={() => acknowledge("local-tools")} />
+            <CompletionNote copy={copy} criterion={copy.toolsDone} />
           </div>
         ),
       },
@@ -743,12 +729,13 @@ export function SelfHostingInstallWizard({
         id: "local-install",
         title: copy.manualLocalTitle,
         body: copy.manualLocalBody,
-        canContinue: ack("local-install"),
+        canContinue: true,
+        continueLabel: copy.confirmLocalInstall,
         content: (
           <div className={HIGHLIGHT_PANEL}>
             <CommandBlock command={localInstall} copy={copy} />
             <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.minimalNote}</p>
-            <DoneBlock copy={copy} criterion={copy.manualLocalDone} acked={ack("local-install")} onAck={() => acknowledge("local-install")} />
+            <CompletionNote copy={copy} criterion={copy.manualLocalDone} />
           </div>
         ),
       },
@@ -758,13 +745,14 @@ export function SelfHostingInstallWizard({
         id: "team-prepare",
         title: copy.prepareTitle,
         body: copy.prepareBody,
-        canContinue: ack("team-prepare"),
+        canContinue: true,
+        continueLabel: copy.confirmPrepare,
         content: (
           <div className={cn("space-y-5", PANEL)}>
             <p className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />{networkSetup}</p>
             <Checklist items={serverAccess === "private" ? [copy.serverChecklistDocker, networkSetup, copy.serverChecklistSmtp] : [copy.serverChecklistDocker, copy.serverChecklistDns, copy.serverChecklistPorts, copy.serverChecklistSmtp]} />
             {serverAccess === "public" && <div className="rounded-xl border border-border bg-background p-4"><div className="flex items-center gap-2 text-sm font-medium"><Globe2 className="h-4 w-4 text-primary" aria-hidden />{copy.dnsTitle}</div><dl className="mt-3 space-y-2 font-mono text-xs"><div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsApp}</dt><dd className="[overflow-wrap:anywhere]">{host} → {copy.dnsTarget}</dd></div>{supabaseMode === "full" && <div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsSupabase}</dt><dd className="[overflow-wrap:anywhere]">supabase.{host} → {copy.dnsTarget}</dd></div>}</dl></div>}
-            <DoneBlock copy={copy} criterion={copy.prepareDone} acked={ack("team-prepare")} onAck={() => acknowledge("team-prepare")} />
+            <CompletionNote copy={copy} criterion={copy.prepareDone} />
           </div>
         ),
       },
@@ -772,25 +760,28 @@ export function SelfHostingInstallWizard({
         id: "team-release",
         title: copy.releaseTitle,
         body: copy.releaseBody.replace("{release}", releaseTag),
-        canContinue: ack("team-release"),
+        canContinue: true,
+        continueLabel: copy.confirmRelease,
         content: (
-          <div className={PANEL}><CommandBlock command={serverClone} copy={copy} /><div className="mt-4"><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div><DoneBlock copy={copy} criterion={copy.releaseDone} acked={ack("team-release")} onAck={() => acknowledge("team-release")} /></div>
+          <div className={PANEL}><CommandBlock command={serverClone} copy={copy} /><div className="mt-4"><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div><CompletionNote copy={copy} criterion={copy.releaseDone} /></div>
         ),
       },
       ...(supabaseMode === "full" ? [{
         id: "team-fetch",
         title: copy.fetchSupabaseTitle,
         body: copy.fetchSupabaseBody,
-        canContinue: ack("team-fetch"),
-        content: <div className={PANEL}><CommandBlock command={fetchSupabase} copy={copy} /><DoneBlock copy={copy} criterion={copy.fetchDone} acked={ack("team-fetch")} onAck={() => acknowledge("team-fetch")} /></div>,
+        canContinue: true,
+        continueLabel: copy.confirmFetch,
+        content: <div className={PANEL}><CommandBlock command={fetchSupabase} copy={copy} /><CompletionNote copy={copy} criterion={copy.fetchDone} /></div>,
       }] : []),
       {
         id: "team-installer",
         title: copy.installerTitle,
         body: copy.installerBody,
-        canContinue: ack("team-installer"),
+        canContinue: true,
+        continueLabel: copy.confirmInstaller,
         content: (
-          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<DoneBlock copy={copy} criterion={copy.installerDone} acked={ack("team-installer")} onAck={() => acknowledge("team-installer")} /></div>
+          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={copy.installerDone} /></div>
         ),
       },
     ] : []),
@@ -798,20 +789,22 @@ export function SelfHostingInstallWizard({
       id: "team-email",
       title: copy.emailTitle,
       body: supabaseMode === "managed" ? copy.emailManagedBody : copy.emailFullBody,
-      canContinue: ack("team-email"),
-      content: <div><EmailConfiguration serverOrigin={serverOrigin} mode={supabaseMode} templates={emailTemplates} copy={copy} /><DoneBlock copy={copy} criterion={copy.emailDone} acked={ack("team-email")} onAck={() => acknowledge("team-email")} /></div>,
+      canContinue: true,
+      continueLabel: copy.confirmEmail,
+      content: <div><EmailConfiguration serverOrigin={serverOrigin} mode={supabaseMode} templates={emailTemplates} copy={copy} /><CompletionNote copy={copy} criterion={copy.emailDone} /></div>,
     }] : []),
     ...(path === "local" && migrate === false ? [{
       id: "local-verify",
       title: copy.verifyLocalTitle,
       body: copy.verifyLocalBody,
-      canContinue: ack("local-verify"),
+      canContinue: true,
+      continueLabel: copy.confirmChecks,
       content: (
         <div className="space-y-5">
           <ClientAccess serverOrigin={localOrigin} local copy={copy} />
           <div className={HIGHLIGHT_PANEL}>
             <Checklist items={[copy.testAccount, copy.testProject, copy.testAttachment]} />
-            <DoneBlock copy={copy} criterion={copy.verifyLocalDone} acked={ack("local-verify")} onAck={() => acknowledge("local-verify")} />
+            <CompletionNote copy={copy} criterion={copy.verifyLocalDone} />
           </div>
         </div>
       ),
@@ -820,18 +813,20 @@ export function SelfHostingInstallWizard({
       id: "team-verify",
       title: copy.verifyTeamTitle,
       body: copy.verifyTeamBody,
-      canContinue: ack("team-verify"),
-      content: <div className={HIGHLIGHT_PANEL}><CommandBlock command={doctor} copy={copy} /><Checklist items={serverAccess === "private" ? [copy.doctorPass, copy.emailPass, copy.backupPass] : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} /><DoneBlock copy={copy} criterion={copy.verifyTeamDone} acked={ack("team-verify")} onAck={() => acknowledge("team-verify")} /></div>,
+      canContinue: true,
+      continueLabel: copy.confirmChecks,
+      content: <div className={HIGHLIGHT_PANEL}><CommandBlock command={doctor} copy={copy} /><Checklist items={serverAccess === "private" ? [copy.doctorPass, copy.emailPass, copy.backupPass] : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} /><CompletionNote copy={copy} criterion={copy.verifyTeamDone} /></div>,
     }] : []),
     ...(path === "team" && migrate === false ? [{
       id: "team-open",
       title: copy.openTeamTitle,
       body: copy.openTeamBody,
-      canContinue: ack("open"),
+      canContinue: true,
+      continueLabel: copy.confirmOpen,
       content: (
         <div className="space-y-5">
           <ClientAccess serverOrigin={serverOrigin} local={false} privateNetwork={serverAccess === "private"} copy={copy} />
-          <DoneBlock copy={copy} criterion={copy.openTeamDone} acked={ack("open")} onAck={() => acknowledge("open")} />
+          <CompletionNote copy={copy} criterion={copy.openTeamDone} />
         </div>
       ),
     }] : []),
@@ -839,7 +834,8 @@ export function SelfHostingInstallWizard({
       id: "migration-import",
       title: copy.importTitle,
       body: copy.importGoal,
-      canContinue: ack("migration-import"),
+      canContinue: true,
+      continueLabel: copy.confirmImport,
       content: (
         <div className="space-y-5">
           <ClientAccess serverOrigin={path === "local" ? localOrigin : serverOrigin} local={path === "local"} privateNetwork={serverAccess === "private"} copy={copy} />
@@ -847,7 +843,7 @@ export function SelfHostingInstallWizard({
             <p className="text-sm font-medium">{copy.importHeading}</p>
             <Checklist items={[copy.importOne, copy.importTwo]} />
             <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><Database className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.importNote}</p>
-            <DoneBlock copy={copy} criterion={copy.importDone} acked={ack("migration-import")} onAck={() => acknowledge("migration-import")} />
+            <CompletionNote copy={copy} criterion={copy.importDone} />
           </div>
         </div>
       ),
@@ -878,20 +874,6 @@ export function SelfHostingInstallWizard({
     window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   }, [currentIndex]);
 
-  const reset = () => {
-    setPath(null);
-    setMigrate(null);
-    setMethod(null);
-    setServerAccess("private");
-    setSupabaseMode("managed");
-    setServerIp("");
-    setDomain("");
-    setEmail("");
-    setOptionalFeatures([]);
-    setAcknowledged({});
-    setStepIndex(0);
-  };
-
   const goBack = () => {
     if (currentIndex === 0) return;
     setStepIndex((current) => Math.max(0, current - 1));
@@ -904,6 +886,8 @@ export function SelfHostingInstallWizard({
 
   const jumpBack = (target: number) => {
     if (target >= currentIndex) return;
+    navigatingFromProgress.current = true;
+    setProgressOpen(false);
     setStepIndex(target);
   };
 
@@ -911,49 +895,65 @@ export function SelfHostingInstallWizard({
 
   return (
     <section className="min-h-[calc(100dvh-4rem)] px-4 pt-6 pb-16 sm:px-6 sm:pt-8 sm:pb-24">
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2">
-          <Link href={guidePath} className="inline-flex min-h-11 items-center gap-2 rounded-full text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-            <ArrowLeft className="size-4 shrink-0" aria-hidden />{copy.backToGuide}
+      <div className="mx-auto w-full max-w-4xl">
+        <header className="flex items-center justify-between gap-2">
+          <Link href={guidePath} aria-label={copy.backToGuide} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:justify-start">
+            <ArrowLeft className="size-4 shrink-0" aria-hidden /><span className="hidden sm:inline">{copy.backToGuide}</span>
           </Link>
-          <button type="button" onClick={reset} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
-            <RotateCcw className="size-4 shrink-0" aria-hidden />{copy.restart}
-          </button>
+          <div className="flex items-center gap-2">
+            <Popover open={progressOpen} onOpenChange={setProgressOpen}>
+              <PopoverTrigger asChild>
+                <button type="button" aria-label={`${copy.progressTitle}: ${progressLabel}`} className="inline-flex min-h-11 items-center gap-3 rounded-full bg-[#f3f5ef] px-4 text-sm transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dark:bg-[#202821]">
+                  {progressLabel}<ChevronDown className="size-4 shrink-0" aria-hidden />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" sideOffset={8} collisionPadding={16}
+                onOpenAutoFocus={event => {
+                  event.preventDefault();
+                  const step = progressStepRef.current;
+                  const nav = step?.closest("nav");
+                  step?.focus({ preventScroll: true });
+                  if (step && nav) nav.scrollTop = step.offsetTop - nav.offsetTop;
+                }}
+                onCloseAutoFocus={event => {
+                  if (!navigatingFromProgress.current) return;
+                  event.preventDefault();
+                  navigatingFromProgress.current = false;
+                  headingRef.current?.focus({ preventScroll: true });
+                }}
+                className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl p-3 motion-reduce:animate-none">
+                <h2 className="px-2 pt-2 text-base font-medium tracking-tight">{copy.progressTitle}</h2>
+                <div role="progressbar" aria-label={copy.progressTitle} aria-valuemin={1} aria-valuemax={stages.length} aria-valuenow={currentIndex + 1} aria-valuetext={progressLabel} className="mx-2 mt-3 mb-4 h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                  <div className="h-full rounded-full bg-foreground/65" style={{ width: `${((currentIndex + 1) / stages.length) * 100}%` }} />
+                </div>
+                <nav aria-label={copy.progressTitle} className="max-h-[min(24rem,50dvh)] overflow-y-auto overscroll-contain">
+                  <ol className="space-y-1">
+                    {stages.map((stage, index) => {
+                      const contents = <><span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs", index === currentIndex ? "bg-foreground text-background" : "bg-foreground/5")}>{index < currentIndex ? <Check className="size-3.5" /> : index + 1}</span><span className="text-sm leading-snug">{stage.title}</span></>;
+                      return <li key={stage.id} ref={index === currentIndex ? progressStepRef : undefined} tabIndex={index === currentIndex ? -1 : undefined} aria-current={index === currentIndex ? "step" : undefined} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+                        {index < currentIndex ? <button type="button" onClick={() => jumpBack(index)} className="flex min-h-11 w-full items-center gap-3 rounded-xl p-2 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring">{contents}</button>
+                          : <div className={cn("flex min-h-11 items-center gap-3 rounded-xl p-2", index === currentIndex ? "bg-muted font-medium" : "text-muted-foreground")}>{contents}</div>}
+                      </li>;
+                    })}
+                  </ol>
+                </nav>
+              </PopoverContent>
+            </Popover>
+          </div>
         </header>
 
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10 xl:gap-14">
-          <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-2xl bg-[#f3f5ef] p-5 dark:bg-[#202821]">
-              <h2 className="text-base font-medium tracking-tight">{copy.progressTitle}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{progressLabel}</p>
-              <div role="progressbar" aria-label={copy.progressTitle} aria-valuemin={1} aria-valuemax={stages.length} aria-valuenow={currentIndex + 1} aria-valuetext={progressLabel} className="mt-4 h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                <div className="h-full rounded-full bg-foreground/65 transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${((currentIndex + 1) / stages.length) * 100}%` }} />
-              </div>
-              <nav aria-label={copy.progressTitle} className="mt-5 hidden max-h-[calc(100dvh-22rem)] overflow-y-auto overscroll-contain lg:block">
-                <ol className="space-y-1">
-                  {stages.map((stage, index) => {
-                    const contents = <><span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs", index === currentIndex ? "bg-foreground text-background" : "bg-foreground/5")}>{index < currentIndex ? <Check className="size-3.5" /> : index + 1}</span><span className="text-sm leading-snug">{stage.title}</span></>;
-                    return <li key={stage.id} aria-current={index === currentIndex ? "step" : undefined}>
-                      {index < currentIndex ? <button type="button" onClick={() => jumpBack(index)} className="flex min-h-11 w-full items-center gap-3 rounded-xl p-2 text-left text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring">{contents}</button>
-                        : <div className={cn("flex min-h-11 items-center gap-3 rounded-xl p-2", index === currentIndex ? "bg-background/75 font-medium" : "text-muted-foreground")}>{contents}</div>}
-                    </li>;
-                  })}
-                </ol>
-              </nav>
-            </div>
-          </aside>
-
+        <div className="mt-6 sm:mt-10">
           <div className="min-w-0">
             <div key={currentStage.id} className="animate-in fade-in duration-200 motion-reduce:animate-none">
               <h1 ref={headingRef} tabIndex={-1} className="max-w-3xl text-[clamp(2rem,3.8vw,3.25rem)] leading-[1.1] font-medium tracking-[-0.045em] text-balance outline-none">{currentStage.title}</h1>
               {currentStage.body && <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground">{currentStage.body}</p>}
               <div className="mt-8 min-w-0">{currentStage.content}</div>
             </div>
-            <div className="mt-8 flex items-center justify-between gap-4">
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={goBack} disabled={currentIndex === 0} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-0">
                 <ArrowLeft className="size-4" aria-hidden />{copy.backLabel}
               </button>
-              {currentIndex < stages.length - 1 && <button type="button" onClick={continueWizard} disabled={!currentStage.canContinue} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-35">{copy.continueLabel}<ArrowRight className="size-4" aria-hidden /></button>}
+              {currentIndex < stages.length - 1 && <button type="button" onClick={continueWizard} disabled={!currentStage.canContinue} className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-35">{currentStage.continueLabel ?? copy.continueLabel}<ArrowRight className="size-4 shrink-0" aria-hidden /></button>}
             </div>
           </div>
         </div>
