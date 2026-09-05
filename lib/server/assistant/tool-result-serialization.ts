@@ -1,3 +1,4 @@
+import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";
 import {
   ROUTINE_LIST_RESULT_CHAR_LIMIT,
   ROUTINE_TOOL_RESULT_CHAR_LIMIT,
@@ -15,6 +16,10 @@ export function getToolResultCharLimit(
   args: Record<string, unknown> = {},
 ): number {
   switch (toolName) {
+    // MCP results are already byte-bounded; preserve schemas and pagination.
+    case "list_mcp_tools":
+    case "call_mcp_tool":
+      return MCP_MAX_RESULT_BYTES;
     // Issue lists must never reach the model truncated mid-array: a partial id
     // list makes the model hallucinate issue ids on the next write.
     case "list_issues":

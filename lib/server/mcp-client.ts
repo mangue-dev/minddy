@@ -17,8 +17,8 @@ import { decryptMcpToken } from "./mcp-credentials";
 export { encryptMcpToken, decryptMcpToken } from "./mcp-credentials";
 import { openMcpOAuth } from "./mcp-oauth";
 import { checkSessionRateLimit } from "./session-rate-limit";
+import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";
 
-const MAX_RESULT_BYTES = 64_000;
 const COLUMNS =
   "id,name,url,enabled,created_at,transport,auth_mode,oauth_connected";
 export type McpConnectionRow = Omit<
@@ -124,7 +124,7 @@ export async function withMcpClient<T>(
     const serialized = JSON.stringify(result, (_key, value) =>
       typeof value === "string" ? redact(value) : value,
     );
-    if (Buffer.byteLength(serialized) > MAX_RESULT_BYTES)
+    if (Buffer.byteLength(serialized) > MCP_MAX_RESULT_BYTES)
       throw new Error("MCP result too large");
     return JSON.parse(serialized) as T;
   } finally {
@@ -202,7 +202,7 @@ export async function executeMcpTool(
                 nextCursor: page.nextCursor,
               };
         }
-        if (Buffer.byteLength(JSON.stringify(page)) <= MAX_RESULT_BYTES)
+        if (Buffer.byteLength(JSON.stringify(page)) <= MCP_MAX_RESULT_BYTES)
           return page;
         const offset =
           typeof args.offset === "number" &&
@@ -240,7 +240,7 @@ export async function executeMcpTool(
       !args.arguments ||
       typeof args.arguments !== "object" ||
       Array.isArray(args.arguments) ||
-      Buffer.byteLength(JSON.stringify(args.arguments)) > MAX_RESULT_BYTES
+      Buffer.byteLength(JSON.stringify(args.arguments)) > MCP_MAX_RESULT_BYTES
     ) {
       return {
         success: false,

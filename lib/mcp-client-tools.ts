@@ -1,3 +1,6 @@
+/** The assistant must preserve every result accepted by the MCP executor. */
+export const MCP_MAX_RESULT_BYTES = 64_000;
+
 /** Shared discovery tools keep personal credentials out of both Numo runtimes. */
 export const MCP_CLIENT_TOOLS = [
   {

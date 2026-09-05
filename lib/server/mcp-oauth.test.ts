@@ -7,14 +7,25 @@ import {
   initialMcpOAuth,
   openMcpOAuth,
 } from "./mcp-oauth";
-import { decryptMcpToken } from "./mcp-credentials";
+import { decryptMcpToken, encryptMcpToken } from "./mcp-credentials";
 import { mcpSettingsUpdate } from "./mcp-settings";
 import type { McpConnectionRow } from "./mcp-client";
 
 const state = vi.hoisted(() => ({
   tables: {} as Record<string, Record<string, unknown>[]>,
-  requests: [] as Array<{ url: string; body: string }>,
+  requests: [] as Array<{
+    url: string;
+    body: string;
+    method: string;
+    headers: Headers;
+  }>,
   failSave: false,
+  challenge: null as string | null,
+  challengeOnly: false,
+  postOnly: false,
+  streaming: false,
+  canceled: 0,
+  session: false,
 }));
 vi.mock("./app-origin", () => ({
   canonicalAppOrigin: () => "https://minddy.test",
@@ -22,11 +33,42 @@ vi.mock("./app-origin", () => ({
 vi.mock("./safe-fetch", () => ({
   assertPublicHttpUrl: async (url: URL) => ({ url, address: "1.1.1.1" }),
   safeFetchResponse: async (url: string, init: RequestInit) => {
-    state.requests.push({ url, body: String(init.body ?? "") });
-    if (url.includes("oauth-protected-resource"))
+    state.requests.push({
+      url,
+      body: String(init.body ?? ""),
+      method: init.method ?? "GET",
+      headers: new Headers(init.headers),
+    });
+    if (url === "https://mcp.example.com/mcp") {
+      if (init.method === "DELETE")
+        return new Response(null, { status: 204 });
+      if (state.postOnly && init.method === "GET")
+        return new Response(null, { status: 405 });
+      if (state.session)
+        return Response.json({}, { headers: { "mcp-session-id": "probe-session" } });
+      if (state.challenge || state.streaming)
+        return new Response(
+          new ReadableStream({
+            cancel() { state.canceled += 1; },
+          }),
+          {
+            status: state.challenge ? 401 : 200,
+            headers: state.challenge
+              ? { "WWW-Authenticate": state.challenge }
+              : { "Content-Type": "text/event-stream" },
+          },
+        );
+    }
+    if (state.challengeOnly && url.includes("oauth-protected-resource"))
+      return new Response(null, { status: 404 });
+    if (
+      url.includes("oauth-protected-resource") ||
+      url === "https://mcp.example.com/auth/resource"
+    )
       return Response.json({
         resource: "https://mcp.example.com/mcp",
         authorization_servers: ["https://auth.example.com"],
+        scopes_supported: ["tools:read", "tools:write"],
       });
     if (url.includes("oauth-authorization-server"))
       return Response.json({
@@ -148,12 +190,85 @@ beforeEach(() => {
   };
   state.requests = [];
   state.failSave = false;
+  state.challenge = null;
+  state.challengeOnly = false;
+  state.postOnly = false;
+  state.streaming = false;
+  state.canceled = 0;
+  state.session = false;
 });
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
 describe("generic MCP OAuth", () => {
+  it.each(["http", "sse"] as const)("follows %s challenges and preserves the challenged scope", async (transport) => {
+    state.challengeOnly = true;
+    state.challenge = 'Bearer resource_metadata="https://mcp.example.com/auth/resource", scope="tools:read"';
+    const url = new URL(await startMcpOAuth({ ...connection, transport }));
+    expect(url.origin).toBe("https://auth.example.com");
+    expect(url.searchParams.get("scope")).toBe("tools:read");
+    expect(state.requests[0].url).toBe(connection.url);
+    expect(state.requests.some((request) =>
+      request.url.includes("oauth-protected-resource"),
+    )).toBe(false);
+    await vi.waitFor(() => expect(state.canceled).toBe(1));
+    const payload = JSON.parse(decryptMcpToken(
+      String(state.tables.user_mcp_oauth_attempts[0].payload_encrypted),
+    )!);
+    expect(payload).toMatchObject({
+      scope: "tools:read",
+      discovery: { resourceMetadataUrl: "https://mcp.example.com/auth/resource" },
+    });
+    const registration = state.requests.find((request) =>
+      request.url.endsWith("/register"),
+    )!;
+    expect(JSON.parse(registration.body).scope).toBe("tools:read");
+    await completeMcpOAuth("alice", url.searchParams.get("state")!, "code");
+    expect(state.tables.user_mcp_connections[0].oauth_connected).toBe(true);
+  });
+  it("reads a POST-only challenge when Streamable HTTP rejects GET", async () => {
+    state.postOnly = true;
+    state.challengeOnly = true;
+    state.challenge = 'Bearer resource_metadata="https://mcp.example.com/auth/resource", scope="tools:read"';
+    const url = new URL(await startMcpOAuth(connection));
+    expect(url.searchParams.get("scope")).toBe("tools:read");
+    const requests = state.requests.filter((request) =>
+      request.url === connection.url,
+    );
+    expect(requests.map((request) => request.method)).toEqual(["GET", "POST"]);
+    expect(JSON.parse(requests[1].body)).toMatchObject({ method: "initialize" });
+    expect(requests[1].headers.get("content-type")).toBe("application/json");
+    await vi.waitFor(() => expect(state.canceled).toBe(1));
+  });
+  it("closes an unchallenged SSE stream before falling back to well-known discovery", async () => {
+    state.streaming = true;
+    const url = new URL(await startMcpOAuth({ ...connection, transport: "sse" }));
+    expect(url.origin).toBe("https://auth.example.com");
+    expect(url.searchParams.get("scope")).toBe("tools:read tools:write");
+    await vi.waitFor(() => expect(state.canceled).toBe(1));
+    expect(state.requests.filter((request) =>
+      request.url === connection.url,
+    )).toHaveLength(1);
+  });
+  it("closes a probe session and keeps custom headers on the resource server", async () => {
+    state.postOnly = true;
+    state.session = true;
+    await startMcpOAuth({
+      ...connection,
+      headers_encrypted: encryptMcpToken(JSON.stringify({ "X-API-Key": "private-header" })),
+    });
+    const resourceRequests = state.requests.filter((request) =>
+      request.url === connection.url,
+    );
+    expect(resourceRequests.map((request) => request.method)).toEqual(["GET", "POST", "DELETE"]);
+    expect(resourceRequests[2].headers.get("mcp-session-id")).toBe("probe-session");
+    for (const request of state.requests) {
+      expect(request.headers.get("x-api-key")).toBe(
+        request.url === connection.url ? "private-header" : null,
+      );
+    }
+  });
   it("discovers and registers with the actual SDK, persists PKCE, and exchanges a single-use callback", async () => {
     const url = new URL(await startMcpOAuth(connection));
     expect(url.origin).toBe("https://auth.example.com");

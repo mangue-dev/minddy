@@ -2,13 +2,14 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { executeMcpTool } from "@/lib/server/mcp-client";
 import { runSteeredByOther, type AgentRun } from "./runs";
+import type { VmToolResponse } from "./vm/protocol";
 
 /** Resolve from trusted run/project records, never model arguments or billing input. */
 export async function executeAgentMcpTool(
   run: AgentRun,
   name: string,
   args: Record<string, unknown>,
-) {
+): Promise<VmToolResponse> {
   let userId = run.created_by;
   if (run.routine_id) {
     const { data, error } = await getServiceClient()
@@ -23,9 +24,12 @@ export async function executeAgentMcpTool(
   }
   if (!userId || (await runSteeredByOther(run.id, userId))) {
     return {
-      error:
-        "Personal MCP connections are unavailable in a session steered by another member or without its current owner.",
+      success: false,
+      result: {
+        error:
+          "Personal MCP connections are unavailable in a session steered by another member or without its current owner.",
+      },
     };
   }
-  return (await executeMcpTool(userId, name, args)).result;
+  return executeMcpTool(userId, name, args);
 }

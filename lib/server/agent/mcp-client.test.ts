@@ -10,6 +10,9 @@ import {
 import { agentToolsFor } from "./tools";
 import { PLATFORM_TOOLS_BY_ANCHOR } from "./platform-tool-names";
 import { DOMAIN_TOOL_NAMES, schemaExpression } from "./vm/opencode-tools";
+import { startToolBridge } from "./vm/tool-bridge";
+import type { ControlPlaneClient } from "./vm/control-plane-client";
+import type { VmJob } from "./vm/protocol";
 import { z } from "zod";
 
 const mocks = vi.hoisted(() => ({
@@ -79,7 +82,7 @@ describe("Numo MCP routing and personal identity", () => {
         "list_mcp_tools",
         {},
       ),
-    ).toHaveProperty("error");
+    ).toMatchObject({ success: false, result: { error: expect.any(String) } });
     expect(mocks.execute).not.toHaveBeenCalled();
   });
   it("refuses personal tools after another member steers either run type", async () => {
@@ -87,7 +90,7 @@ describe("Numo MCP routing and personal identity", () => {
     for (const routine_id of [null, "routine"]) {
       expect(
         await executeAgentMcpTool({ ...run, routine_id }, "call_mcp_tool", {}),
-      ).toHaveProperty("error");
+      ).toMatchObject({ success: false, result: { error: expect.any(String) } });
     }
     expect(mocks.execute).not.toHaveBeenCalled();
   });
@@ -99,8 +102,77 @@ describe("Numo MCP routing and personal identity", () => {
         "list_mcp_tools",
         {},
       ),
-    ).toHaveProperty("error");
+    ).toMatchObject({ success: false, result: { error: expect.any(String) } });
     expect(mocks.execute).not.toHaveBeenCalled();
+  });
+  it("delivers discovery, tool results and refusals through the agent bridge", async () => {
+    const callTool = vi.fn(
+      (name: string, body: { args: Record<string, unknown> }) =>
+        executeAgentMcpTool(run, name, body.args),
+    );
+    // Only catalog selection fields are read by the bridge.
+    const job = {
+      anchor: "issue",
+      webSearch: false,
+      subagents: { models: false },
+      interactive: true,
+      chain: false,
+    } as unknown as VmJob;
+    const bridge = await startToolBridge({
+      job,
+      cp: { callTool } as unknown as ControlPlaneClient,
+      authorizationToken: "test-mcp-bridge-token",
+      port: 0,
+    });
+    try {
+      for (const [name, outcome] of [
+        ["list_mcp_tools", {
+          success: true,
+          result: { connections: [{ id: "connection", name: "Tools" }] },
+        }],
+        ["call_mcp_tool", {
+          success: true,
+          result: { content: [{ type: "text", text: "Done" }] },
+        }],
+        ["call_mcp_tool", {
+          success: false,
+          result: {
+            isError: true,
+            content: [{ type: "text", text: "Rejected" }],
+          },
+        }],
+      ] as const) {
+        mocks.execute.mockResolvedValue(outcome);
+        const response = await fetch(`${bridge.url}/tool/${name}`, {
+          method: "POST",
+          headers: {
+            authorization: "Bearer test-mcp-bridge-token",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ args: {} }),
+        });
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(outcome.result);
+        expect(await callTool.mock.results.at(-1)!.value).toEqual(outcome);
+      }
+      mocks.steered.mockResolvedValue(true);
+      const response = await fetch(`${bridge.url}/tool/list_mcp_tools`, {
+        method: "POST",
+        headers: {
+          authorization: "Bearer test-mcp-bridge-token",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ args: {} }),
+      });
+      expect(await response.json()).toEqual({
+        error: expect.stringContaining("steered by another member"),
+      });
+      expect(await callTool.mock.results.at(-1)!.value).toMatchObject({
+        success: false,
+      });
+    } finally {
+      await bridge.close();
+    }
   });
   it("serves both tools on every agent anchor and both assistant scopes", () => {
     for (const name of MCP_CLIENT_TOOL_NAMES) {

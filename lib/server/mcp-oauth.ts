@@ -1,6 +1,11 @@
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
-import { auth, type OAuthClientProvider } from "@modelcontextprotocol/client";
+import {
+  auth,
+  extractWWWAuthenticateParams,
+  LATEST_PROTOCOL_VERSION,
+  type OAuthClientProvider,
+} from "@modelcontextprotocol/client";
 import { getServiceClient } from "@/lib/supabase-service";
 import { canonicalAppOrigin } from "./app-origin";
 import { assertPublicHttpUrl } from "./safe-fetch";
@@ -15,6 +20,7 @@ type OAuthData = {
     ReturnType<NonNullable<OAuthClientProvider["discoveryState"]>>
   >;
   verifier?: string;
+  scope?: string;
 };
 export const mcpOAuthCallback = () =>
   `${canonicalAppOrigin()}/api/account/mcp-connections/oauth/callback`;
@@ -175,6 +181,59 @@ export async function startMcpOAuth(
   delete data.tokens;
   delete data.verifier;
   delete data.discovery;
+  const fetchFn = mcpFetch(AbortSignal.timeout(MCP_TIMEOUT_MS));
+  const headers = new Headers(
+    connection.headers_encrypted
+      ? JSON.parse(decryptMcpToken(connection.headers_encrypted)!)
+      : undefined,
+  );
+  headers.set("Accept", "application/json, text/event-stream");
+  let response = await fetchFn(connection.url, { headers });
+  // Streamable HTTP servers may expose their challenge only on POST.
+  if (response.status === 405 && connection.transport === "http") {
+    await response.body?.cancel();
+    headers.set("Content-Type", "application/json");
+    response = await fetchFn(connection.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 0,
+        method: "initialize",
+        params: {
+          protocolVersion: LATEST_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: { name: "minddy-numo", version: "1.0.0" },
+        },
+      }),
+    });
+  }
+  let challenge: ReturnType<typeof extractWWWAuthenticateParams> = {};
+  try {
+    if (response.status === 401 || response.status === 403)
+      challenge = extractWWWAuthenticateParams(response);
+  } finally {
+    // Only the headers are needed; in particular, do not consume an SSE stream.
+    await response.body?.cancel();
+    const sessionId = response.headers.get("mcp-session-id");
+    if (response.ok && connection.transport === "http" && sessionId) {
+      // An unprotected initialization may still allocate a remote session.
+      const cleanupHeaders = new Headers(headers);
+      cleanupHeaders.set("mcp-session-id", sessionId);
+      cleanupHeaders.delete("Content-Type");
+      try {
+        const cleanup = await fetchFn(connection.url, {
+          method: "DELETE",
+          headers: cleanupHeaders,
+          signal: AbortSignal.timeout(1000),
+        });
+        await cleanup.body?.cancel();
+      } catch {
+        // Remote cleanup must not prevent authorization from continuing.
+      }
+    }
+  }
+  data.scope = challenge.scope;
   let authorizationUrl: string | undefined;
   const provider = providerFor(
     data,
@@ -189,7 +248,9 @@ export async function startMcpOAuth(
   );
   await auth(provider, {
     serverUrl: connection.url,
-    fetchFn: mcpFetch(AbortSignal.timeout(MCP_TIMEOUT_MS)),
+    resourceMetadataUrl: challenge.resourceMetadataUrl,
+    scope: data.scope,
+    fetchFn,
     forceReauthorization: true,
   });
   if (!authorizationUrl || !data.verifier || !data.discovery)
@@ -254,6 +315,7 @@ export async function completeMcpOAuth(
       serverUrl: attempt.endpoint,
       authorizationCode: code,
       iss,
+      scope: data.scope,
       fetchFn: mcpFetch(AbortSignal.timeout(MCP_TIMEOUT_MS)),
     });
     if (result !== "AUTHORIZED" || !data.tokens)
