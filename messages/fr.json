@@ -4965,6 +4965,9 @@
     "openOperationsGuide": "Ouvrir le guide de sauvegarde et de mise à jour"
   },
   "SelfHostingInstall": {
+    "progressTitle": "Votre installation",
+    "stepProgress": "Étape {current} sur {total}",
+    "copyContentLabel": "Texte à copier",
     "metaTitle": "Installer minddy — l'assistant d'auto-hébergement",
     "metaDescription": "Installez d'abord l'app de bureau, puis suivez un parcours guidé vers une instance minddy locale ou hébergée sur un serveur.",
     "backToGuide": "Retour au guide",

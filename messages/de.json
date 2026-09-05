@@ -4965,6 +4965,9 @@
     "openOperationsGuide": "Sicherungs- und Aktualisierungsanleitung öffnen"
   },
   "SelfHostingInstall": {
+    "progressTitle": "Deine Installation",
+    "stepProgress": "Schritt {current} von {total}",
+    "copyContentLabel": "Text zum Kopieren",
     "metaTitle": "Installieren Sie minddy – geführter Selbsthosting-Assistent",
     "metaDescription": "Installieren Sie zunächst die Desktop-App und folgen Sie anschließend der geführten Anleitung für eine lokale oder auf einem Server gehostete minddy-Instanz.",
     "backToGuide": "Zurück zur Anleitung",

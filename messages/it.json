@@ -4965,6 +4965,9 @@
     "openOperationsGuide": "Aprire la guida di backup e aggiornamento"
   },
   "SelfHostingInstall": {
+    "progressTitle": "La tua installazione",
+    "stepProgress": "Passaggio {current} di {total}",
+    "copyContentLabel": "Testo da copiare",
     "metaTitle": "Installa minddy — procedura guidata per l'hosting autonomo",
     "metaDescription": "Installare prima l'app desktop, quindi seguire un percorso guidato verso un'istanza locale o server-hosted minddy.",
     "backToGuide": "Torna alla guida",

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,7 +26,7 @@ import type { Messages } from "next-intl";
 import { cn } from "mangue-ui/lib/utils";
 import { McpAvatar } from "@/components/actor-avatars";
 import { CopyButton } from "@/components/marketing/copy-button";
-import { WizardStepper } from "@/components/wizard/wizard-stepper";
+import { CARD_TONES } from "@/components/marketing/card-tones";
 
 type Path = "local" | "team";
 type SupabaseMode = "managed" | "full";
@@ -97,6 +96,10 @@ function isPrivateIpv4(value: string) {
     (parts[0] === 169 && parts[1] === 254);
 }
 
+const PANEL = "min-w-0 rounded-2xl bg-[#f3f5ef] p-6 sm:p-8 dark:bg-[#202821]";
+const HIGHLIGHT_PANEL = `min-w-0 rounded-2xl p-6 sm:p-8 ${CARD_TONES.sky}`;
+const COPY_BUTTON = "min-h-11 w-fit justify-center rounded-full border-current/15 bg-background/70 px-4 text-current hover:bg-background hover:text-current disabled:cursor-not-allowed disabled:opacity-50";
+
 function CommandBlock({
   command,
   copy,
@@ -105,11 +108,11 @@ function CommandBlock({
   copy: SelfHostingInstallCopy;
 }) {
   return (
-    <div className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-background p-3">
-      <pre className="min-w-0 flex-1 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground">
+    <div className="mt-4 flex min-w-0 flex-col items-start gap-4 rounded-xl bg-background/70 p-4">
+      <pre tabIndex={0} role="region" aria-label={copy.copyContentLabel} className="max-h-96 w-full min-w-0 overflow-auto overscroll-contain rounded-sm font-mono text-xs leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
         <code>{command}</code>
       </pre>
-      <CopyButton text={command} label={copy.copy} copiedLabel={copy.copied} />
+      <CopyButton text={command} label={copy.copy} copiedLabel={copy.copied} className={COPY_BUTTON} />
     </div>
   );
 }
@@ -133,7 +136,7 @@ function ResourceLink({ href, children }: { href: string; children: ReactNode })
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-background/75 px-4 py-2 text-sm font-medium transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       {children}
       <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
@@ -148,6 +151,7 @@ function OptionCard({
   title,
   body,
   badge,
+  tone = CARD_TONES.sage,
 }: {
   selected: boolean;
   onSelect: () => void;
@@ -155,6 +159,7 @@ function OptionCard({
   title: string;
   body: string;
   badge?: string;
+  tone?: string;
 }) {
   return (
     <button
@@ -162,18 +167,22 @@ function OptionCard({
       aria-pressed={selected}
       onClick={onSelect}
       className={cn(
-        "group rounded-2xl border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "border-primary ring-1 ring-primary/20" : "border-border",
+        "group min-w-0 rounded-2xl border-2 p-6 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:p-7",
+        tone,
+        selected ? "border-current/60" : "border-transparent hover:border-current/20",
       )}
     >
       <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" aria-hidden />
-        </span>
-        {badge && <span className="rounded-full border border-primary/25 bg-primary/[0.05] px-2.5 py-1 text-xs font-medium text-primary">{badge}</span>}
+        <Icon className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
+        <div className="flex min-w-0 items-center gap-3">
+          {badge && <span className="text-right text-xs font-medium opacity-75">{badge}</span>}
+          <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border", selected ? "border-current bg-background/70" : "border-current/25")} aria-hidden>
+            {selected && <Check className="size-4" />}
+          </span>
+        </div>
       </div>
-      <h3 className="mt-4 font-semibold tracking-tight">{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+      <h3 className="mt-6 text-2xl leading-tight font-medium tracking-tight">{title}</h3>
+      <p className="mt-3 text-sm leading-relaxed opacity-80">{body}</p>
     </button>
   );
 }
@@ -190,14 +199,14 @@ function DoneBlock({
   onAck: () => void;
 }) {
   return (
-    <div className="mt-5 space-y-3 border-t border-border pt-4">
+    <div className="mt-6 space-y-2 rounded-xl bg-background/55 p-4 sm:p-5">
       <p className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
         <span>
           <span className="font-medium text-foreground">{copy.doneWhen}</span> {criterion}
         </span>
       </p>
-      <label className="flex cursor-pointer items-center gap-3 text-sm">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
         <input type="checkbox" checked={acked} onChange={onAck} className="sr-only peer" />
         <span
           aria-hidden
@@ -223,7 +232,7 @@ function PromptCard({
   disabled: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-primary/25 bg-primary/[0.05] p-5 sm:p-6">
+    <div className={cn("min-w-0 rounded-2xl p-6 sm:p-8", CARD_TONES.lavender)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-xl">
           <div className="flex items-center gap-3">
@@ -244,7 +253,7 @@ function PromptCard({
                 />
               ))}
             </span>
-            <h3 className="font-medium">{copy.agentTitle}</h3>
+            <h3 className="text-xl font-medium tracking-tight">{copy.agentTitle}</h3>
           </div>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
         </div>
@@ -253,12 +262,12 @@ function PromptCard({
           label={copy.copyPrompt}
           copiedLabel={copy.copied}
           disabled={disabled}
-          className="h-10 justify-center rounded-full border-primary/30 px-4 text-sm text-foreground"
+          className={COPY_BUTTON}
         />
       </div>
-      <details className="mt-4 border-t border-primary/15 pt-4">
-        <summary className="cursor-pointer text-sm font-medium text-muted-foreground">{copy.reviewPrompt}</summary>
-        <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-xl border border-border bg-background p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+      <details className="mt-6 rounded-xl bg-background/50 p-4">
+        <summary className="min-h-11 cursor-pointer content-center rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">{copy.reviewPrompt}</summary>
+        <pre tabIndex={0} className="mt-3 max-h-96 overflow-auto overscroll-contain whitespace-pre-wrap rounded-xl bg-background/70 p-4 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-ring">
           {prompt}
         </pre>
       </details>
@@ -277,17 +286,17 @@ function EmailTemplateCard({
   copy: SelfHostingInstallCopy;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-background p-4">
+    <div className="min-w-0 rounded-xl border border-border bg-background p-4">
       <h4 className="text-sm font-medium">{title}</h4>
       <p className="mt-3 text-xs font-medium text-muted-foreground">{copy.emailSubjectLabel}</p>
       <CommandBlock command={template.subject} copy={copy} />
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-xs font-medium text-muted-foreground">{copy.emailBodyLabel}</p>
-        <CopyButton text={template.body} label={copy.copy} copiedLabel={copy.copied} />
+        <CopyButton text={template.body} label={copy.copy} copiedLabel={copy.copied} className={COPY_BUTTON} />
       </div>
       <details className="mt-3 rounded-lg border border-border p-3">
         <summary className="cursor-pointer text-xs font-medium text-muted-foreground">{copy.emailReviewTemplate}</summary>
-        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-muted-foreground">{template.body}</pre>
+        <pre tabIndex={0} className="mt-3 max-h-80 overflow-auto overscroll-contain whitespace-pre-wrap font-mono text-xs leading-relaxed [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-ring">{template.body}</pre>
       </details>
     </div>
   );
@@ -315,23 +324,23 @@ function EmailConfiguration({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-2xl border border-border bg-card p-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className={PANEL}>
           <h3 className="font-medium">{copy.emailUrlsTitle}</h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{mode === "managed" ? copy.emailCloudLocation : copy.emailFullLocation}</p>
           <CommandBlock command={`${copy.emailSiteUrlLabel}=${serverOrigin}\n${copy.emailRedirectUrlLabel}=${callbackUrl}`} copy={copy} />
         </section>
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className={PANEL}>
           <h3 className="font-medium">{copy.emailSmtpTitle}</h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{mode === "managed" ? copy.emailSmtpCloudBody : copy.emailSmtpFullBody}</p>
           <CommandBlock command={smtpFields} copy={copy} />
           {mode === "full" && <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{copy.emailRestartTitle}</p>}
         </section>
       </div>
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className={PANEL}>
         <h3 className="font-medium">{copy.emailTemplatesTitle}</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{mode === "managed" ? copy.emailTemplatesManagedBody : copy.emailTemplatesFullBody}</p>
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
           <EmailTemplateCard title={copy.emailConfirmTitle} template={templates.confirmSignup} copy={copy} />
           <EmailTemplateCard title={copy.emailResetTitle} template={templates.resetPassword} copy={copy} />
         </div>
@@ -356,7 +365,7 @@ function ClientAccess({
 
   return (
     <section className="space-y-4" aria-labelledby="desktop-source-title">
-      <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+      <div className={HIGHLIGHT_PANEL}>
         <div className="flex items-start gap-3">
           <Laptop className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
           <div>
@@ -365,7 +374,7 @@ function ClientAccess({
           </div>
         </div>
 
-        <ol className="mt-6 grid gap-4 lg:grid-cols-2">
+        <ol className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <li className="rounded-xl border border-border bg-background p-4 sm:p-5">
             <div className="flex items-start gap-3">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground" aria-hidden>1</span>
@@ -420,7 +429,7 @@ function ClientAccess({
                 <div className="mt-4 space-y-3">
                   <div>
                     <p className="text-xs font-medium text-foreground">{copy.desktopServerAddressLabel}</p>
-                    <div className="mt-1.5 rounded-lg border border-primary bg-background px-3 py-2.5 font-mono text-xs text-foreground ring-2 ring-primary/15">{serverOrigin}</div>
+                    <div className="mt-1.5 rounded-lg border border-primary bg-background px-3 py-2.5 font-mono text-xs break-all text-foreground ring-2 ring-primary/15">{serverOrigin}</div>
                   </div>
                   <div className="flex justify-end">
                     <span className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">{copy.desktopConnectAction}</span>
@@ -460,7 +469,6 @@ export function SelfHostingInstallWizard({
   const [email, setEmail] = useState("");
   const [optionalFeatures, setOptionalFeatures] = useState<OptionalFeature[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
-  const [direction, setDirection] = useState(1);
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
 
   const enteredHost = normalizeHostname(domain);
@@ -554,7 +562,7 @@ export function SelfHostingInstallWizard({
       body: copy.desktopSetupBody,
       canContinue: ack("desktop-app"),
       content: (
-        <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+        <div className={HIGHLIGHT_PANEL}>
           <div className="flex items-start gap-3">
             <Laptop className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
             <div>
@@ -573,9 +581,9 @@ export function SelfHostingInstallWizard({
       body: copy.routeBody,
       canContinue: path !== null,
       content: (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <OptionCard selected={path === "local"} onSelect={() => selectPath("local")} icon={HardDrive} title={copy.localTitle} body={copy.localBody} badge={copy.recommended} />
-          <OptionCard selected={path === "team"} onSelect={() => selectPath("team")} icon={Server} title={copy.teamTitle} body={copy.teamBody} />
+          <OptionCard tone={CARD_TONES.sky} selected={path === "team"} onSelect={() => selectPath("team")} icon={Server} title={copy.teamTitle} body={copy.teamBody} />
         </div>
       ),
     },
@@ -585,9 +593,9 @@ export function SelfHostingInstallWizard({
       body: copy.migrateBody,
       canContinue: migrate !== null,
       content: (
-        <div className="grid gap-4 md:grid-cols-2">
-          <OptionCard selected={migrate === true} onSelect={() => setMigrate(true)} icon={Download} title={copy.migrateYes} body={copy.migrateYesHint} />
-          <OptionCard selected={migrate === false} onSelect={() => setMigrate(false)} icon={ArrowRight} title={copy.migrateNo} body={copy.migrateNoHint} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <OptionCard tone={CARD_TONES.lavender} selected={migrate === true} onSelect={() => setMigrate(true)} icon={Download} title={copy.migrateYes} body={copy.migrateYesHint} />
+          <OptionCard tone={CARD_TONES.sky} selected={migrate === false} onSelect={() => setMigrate(false)} icon={ArrowRight} title={copy.migrateNo} body={copy.migrateNoHint} />
         </div>
       ),
     },
@@ -597,7 +605,7 @@ export function SelfHostingInstallWizard({
       body: copy.exportGoal,
       canContinue: ack("migration-export"),
       content: (
-        <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+        <div className={HIGHLIGHT_PANEL}>
           <p className="text-sm font-medium">{copy.exportHeading}</p>
           <Checklist items={[copy.exportOne, copy.exportTwo]} />
           <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
@@ -614,12 +622,12 @@ export function SelfHostingInstallWizard({
       body: copy.capacityBody,
       canContinue: ack("capacity"),
       content: (
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className={PANEL}>
           <h3 className="font-medium">{copy.specsTitle}</h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.specsAvailable}</p>
-          <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+          <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-border bg-background p-4"><dt className="text-xs font-medium text-muted-foreground">{copy.specsMinimum}</dt><dd className="mt-1 text-sm font-medium">{capacity[0]}</dd></div>
-            <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4"><dt className="text-xs font-medium text-primary">{copy.specsRecommended}</dt><dd className="mt-1 text-sm font-medium">{capacity[1]}</dd></div>
+            <div className={cn("rounded-xl p-4", CARD_TONES.sky)}><dt className="text-xs font-medium text-primary">{copy.specsRecommended}</dt><dd className="mt-1 text-sm font-medium">{capacity[1]}</dd></div>
           </dl>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{copy.specsStorageNote}</p>
           <DoneBlock copy={copy} criterion={path === "local" ? copy.capacityDone : copy.capacityDone} acked={ack("capacity")} onAck={() => acknowledge("capacity")} />
@@ -633,12 +641,12 @@ export function SelfHostingInstallWizard({
         body: copy.accessBody,
         canContinue: serverSetupValid,
         content: (
-          <div className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className={cn("space-y-5", PANEL)}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <OptionCard selected={serverAccess === "private"} onSelect={() => setServerAccess("private")} icon={ShieldCheck} title={copy.privateAccessTitle} body={copy.privateAccessBody} badge={copy.privateAccessBadge} />
-              <OptionCard selected={serverAccess === "public"} onSelect={() => setServerAccess("public")} icon={Globe2} title={copy.publicAccessTitle} body={copy.publicAccessBody} />
+              <OptionCard tone={CARD_TONES.sky} selected={serverAccess === "public"} onSelect={() => setServerAccess("public")} icon={Globe2} title={copy.publicAccessTitle} body={copy.publicAccessBody} />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 {serverAccess === "private" ? copy.serverIpLabel : copy.domainLabel}
                 <input value={serverAccess === "private" ? serverIp : domain} onChange={(event) => serverAccess === "private" ? setServerIp(event.target.value) : setDomain(event.target.value)} inputMode={serverAccess === "private" ? "decimal" : "url"} spellCheck={false} placeholder={serverAccess === "private" ? "192.168.1.50" : "tickets.example.com"} aria-invalid={serverAccess === "private" ? serverIp.length > 0 && !serverIpValid : domain.length > 0 && !domainValid} className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 font-normal outline-none transition-shadow focus:ring-2 focus:ring-ring" />
@@ -662,18 +670,18 @@ export function SelfHostingInstallWizard({
         body: copy.backendBody,
         canContinue: true,
         content: (
-          <div className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className={cn("space-y-5", PANEL)}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <OptionCard selected={supabaseMode === "managed"} onSelect={() => setSupabaseMode("managed")} icon={Database} title={copy.managedTitle} body={copy.managedBody} badge={copy.managedBadge} />
-              <OptionCard selected={supabaseMode === "full"} onSelect={() => setSupabaseMode("full")} icon={Server} title={copy.fullTitle} body={copy.fullBody} badge={copy.fullBadge} />
+              <OptionCard tone={CARD_TONES.lavender} selected={supabaseMode === "full"} onSelect={() => setSupabaseMode("full")} icon={Server} title={copy.fullTitle} body={copy.fullBody} badge={copy.fullBadge} />
             </div>
             <p className="rounded-xl bg-muted/50 p-3 text-sm leading-relaxed text-muted-foreground">{supabaseMode === "managed" && serverAccess === "private" ? copy.privateSupabaseManagedNotice : supabaseMode === "full" && serverAccess === "private" ? copy.privateSupabaseFullNotice : supabaseMode === "managed" ? copy.managedNeed : copy.fullNeed}</p>
             <div>
               <h3 className="font-medium">{copy.featuresTitle}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.featuresBody}</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {featureCatalog.map(({ id, title, body, icon: Icon }) => (
-                  <button key={id} type="button" aria-pressed={optionalFeatures.includes(id)} onClick={() => toggleFeature(id)} className={cn("rounded-xl border p-4 text-left transition-colors", optionalFeatures.includes(id) ? "border-primary bg-primary/[0.04]" : "border-border hover:bg-muted/40")}>
+                  <button key={id} type="button" aria-pressed={optionalFeatures.includes(id)} onClick={() => toggleFeature(id)} className={cn("min-h-11 rounded-xl border-2 p-5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring", optionalFeatures.includes(id) ? "border-current/60 bg-background/75" : "border-transparent bg-background/40 hover:bg-background/60")}>
                     <div className="flex items-start gap-3">
                       <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
                       <span><span className="font-medium">{title}</span><span className="mt-1.5 block text-sm leading-relaxed text-muted-foreground">{body}</span></span>
@@ -694,9 +702,9 @@ export function SelfHostingInstallWizard({
       body: copy.methodBody,
       canContinue: method !== null,
       content: (
-        <div className="grid gap-4 md:grid-cols-2">
-          <OptionCard selected={method === "agent"} onSelect={() => setMethod("agent")} icon={Bot} title={copy.methodAgentTitle} body={copy.methodAgentBody} badge={copy.methodAgentBadge} />
-          <OptionCard selected={method === "manual"} onSelect={() => setMethod("manual")} icon={TerminalSquare} title={copy.methodManualTitle} body={copy.methodManualBody} badge={copy.methodManualBadge} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <OptionCard tone={CARD_TONES.lavender} selected={method === "agent"} onSelect={() => setMethod("agent")} icon={Bot} title={copy.methodAgentTitle} body={copy.methodAgentBody} badge={copy.methodAgentBadge} />
+          <OptionCard tone={CARD_TONES.peach} selected={method === "manual"} onSelect={() => setMethod("manual")} icon={TerminalSquare} title={copy.methodManualTitle} body={copy.methodManualBody} badge={copy.methodManualBadge} />
         </div>
       ),
     },
@@ -719,7 +727,7 @@ export function SelfHostingInstallWizard({
         body: copy.toolsBody,
         canContinue: ack("local-tools"),
         content: (
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className={PANEL}>
             <div className="flex flex-wrap gap-2">
               <ResourceLink href="https://nodejs.org/en/download">{copy.installNode}</ResourceLink>
               <ResourceLink href="https://docs.docker.com/get-started/get-docker/">{copy.installDocker}</ResourceLink>
@@ -737,7 +745,7 @@ export function SelfHostingInstallWizard({
         body: copy.manualLocalBody,
         canContinue: ack("local-install"),
         content: (
-          <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+          <div className={HIGHLIGHT_PANEL}>
             <CommandBlock command={localInstall} copy={copy} />
             <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.minimalNote}</p>
             <DoneBlock copy={copy} criterion={copy.manualLocalDone} acked={ack("local-install")} onAck={() => acknowledge("local-install")} />
@@ -752,10 +760,10 @@ export function SelfHostingInstallWizard({
         body: copy.prepareBody,
         canContinue: ack("team-prepare"),
         content: (
-          <div className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className={cn("space-y-5", PANEL)}>
             <p className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />{networkSetup}</p>
             <Checklist items={serverAccess === "private" ? [copy.serverChecklistDocker, networkSetup, copy.serverChecklistSmtp] : [copy.serverChecklistDocker, copy.serverChecklistDns, copy.serverChecklistPorts, copy.serverChecklistSmtp]} />
-            {serverAccess === "public" && <div className="rounded-xl border border-border bg-background p-4"><div className="flex items-center gap-2 text-sm font-medium"><Globe2 className="h-4 w-4 text-primary" aria-hidden />{copy.dnsTitle}</div><dl className="mt-3 space-y-2 font-mono text-xs"><div className="flex justify-between gap-3"><dt>{copy.dnsApp}</dt><dd>{host} → {copy.dnsTarget}</dd></div>{supabaseMode === "full" && <div className="flex justify-between gap-3"><dt>{copy.dnsSupabase}</dt><dd>supabase.{host} → {copy.dnsTarget}</dd></div>}</dl></div>}
+            {serverAccess === "public" && <div className="rounded-xl border border-border bg-background p-4"><div className="flex items-center gap-2 text-sm font-medium"><Globe2 className="h-4 w-4 text-primary" aria-hidden />{copy.dnsTitle}</div><dl className="mt-3 space-y-2 font-mono text-xs"><div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsApp}</dt><dd className="[overflow-wrap:anywhere]">{host} → {copy.dnsTarget}</dd></div>{supabaseMode === "full" && <div className="flex flex-wrap justify-between gap-3"><dt>{copy.dnsSupabase}</dt><dd className="[overflow-wrap:anywhere]">supabase.{host} → {copy.dnsTarget}</dd></div>}</dl></div>}
             <DoneBlock copy={copy} criterion={copy.prepareDone} acked={ack("team-prepare")} onAck={() => acknowledge("team-prepare")} />
           </div>
         ),
@@ -766,7 +774,7 @@ export function SelfHostingInstallWizard({
         body: copy.releaseBody.replace("{release}", releaseTag),
         canContinue: ack("team-release"),
         content: (
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6"><CommandBlock command={serverClone} copy={copy} /><div className="mt-4"><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div><DoneBlock copy={copy} criterion={copy.releaseDone} acked={ack("team-release")} onAck={() => acknowledge("team-release")} /></div>
+          <div className={PANEL}><CommandBlock command={serverClone} copy={copy} /><div className="mt-4"><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div><DoneBlock copy={copy} criterion={copy.releaseDone} acked={ack("team-release")} onAck={() => acknowledge("team-release")} /></div>
         ),
       },
       ...(supabaseMode === "full" ? [{
@@ -774,7 +782,7 @@ export function SelfHostingInstallWizard({
         title: copy.fetchSupabaseTitle,
         body: copy.fetchSupabaseBody,
         canContinue: ack("team-fetch"),
-        content: <div className="rounded-2xl border border-border bg-card p-5 sm:p-6"><CommandBlock command={fetchSupabase} copy={copy} /><DoneBlock copy={copy} criterion={copy.fetchDone} acked={ack("team-fetch")} onAck={() => acknowledge("team-fetch")} /></div>,
+        content: <div className={PANEL}><CommandBlock command={fetchSupabase} copy={copy} /><DoneBlock copy={copy} criterion={copy.fetchDone} acked={ack("team-fetch")} onAck={() => acknowledge("team-fetch")} /></div>,
       }] : []),
       {
         id: "team-installer",
@@ -782,7 +790,7 @@ export function SelfHostingInstallWizard({
         body: copy.installerBody,
         canContinue: ack("team-installer"),
         content: (
-          <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6"><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<DoneBlock copy={copy} criterion={copy.installerDone} acked={ack("team-installer")} onAck={() => acknowledge("team-installer")} /></div>
+          <div className={HIGHLIGHT_PANEL}><CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<DoneBlock copy={copy} criterion={copy.installerDone} acked={ack("team-installer")} onAck={() => acknowledge("team-installer")} /></div>
         ),
       },
     ] : []),
@@ -801,7 +809,7 @@ export function SelfHostingInstallWizard({
       content: (
         <div className="space-y-5">
           <ClientAccess serverOrigin={localOrigin} local copy={copy} />
-          <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+          <div className={HIGHLIGHT_PANEL}>
             <Checklist items={[copy.testAccount, copy.testProject, copy.testAttachment]} />
             <DoneBlock copy={copy} criterion={copy.verifyLocalDone} acked={ack("local-verify")} onAck={() => acknowledge("local-verify")} />
           </div>
@@ -813,7 +821,7 @@ export function SelfHostingInstallWizard({
       title: copy.verifyTeamTitle,
       body: copy.verifyTeamBody,
       canContinue: ack("team-verify"),
-      content: <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6"><CommandBlock command={doctor} copy={copy} /><Checklist items={serverAccess === "private" ? [copy.doctorPass, copy.emailPass, copy.backupPass] : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} /><DoneBlock copy={copy} criterion={copy.verifyTeamDone} acked={ack("team-verify")} onAck={() => acknowledge("team-verify")} /></div>,
+      content: <div className={HIGHLIGHT_PANEL}><CommandBlock command={doctor} copy={copy} /><Checklist items={serverAccess === "private" ? [copy.doctorPass, copy.emailPass, copy.backupPass] : [copy.doctorPass, copy.httpsPass, copy.emailPass, copy.backupPass]} /><DoneBlock copy={copy} criterion={copy.verifyTeamDone} acked={ack("team-verify")} onAck={() => acknowledge("team-verify")} /></div>,
     }] : []),
     ...(path === "team" && migrate === false ? [{
       id: "team-open",
@@ -835,7 +843,7 @@ export function SelfHostingInstallWizard({
       content: (
         <div className="space-y-5">
           <ClientAccess serverOrigin={path === "local" ? localOrigin : serverOrigin} local={path === "local"} privateNetwork={serverAccess === "private"} copy={copy} />
-          <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+          <div className={HIGHLIGHT_PANEL}>
             <p className="text-sm font-medium">{copy.importHeading}</p>
             <Checklist items={[copy.importOne, copy.importTwo]} />
             <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><Database className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.importNote}</p>
@@ -849,7 +857,7 @@ export function SelfHostingInstallWizard({
       title: path === "local" ? copy.doneLocalTitle : copy.doneTeamTitle,
       canContinue: false,
       content: (
-        <div className="space-y-5 rounded-2xl border border-primary/20 bg-primary/[0.04] p-5 sm:p-6">
+        <div className={cn("space-y-5", HIGHLIGHT_PANEL)}>
           <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden /><p className="text-sm leading-relaxed">{path === "local" ? copy.localTeamAnswer : copy.answerUpdates}</p></div>
           {path === "local" && <Checklist items={[copy.desktopStopInstruction, copy.desktopRestartInstruction]} />}
           {path === "team" && <div className="flex flex-wrap gap-2"><ResourceLink href={links.operations}>{copy.openOperationsGuide}</ResourceLink></div>}
@@ -861,8 +869,13 @@ export function SelfHostingInstallWizard({
   const currentIndex = Math.min(stepIndex, stages.length - 1);
   const currentStage = stages[currentIndex];
 
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const previousIndex = useRef(currentIndex);
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (previousIndex.current === currentIndex) return;
+    previousIndex.current = currentIndex;
+    headingRef.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   }, [currentIndex]);
 
   const reset = () => {
@@ -876,65 +889,71 @@ export function SelfHostingInstallWizard({
     setEmail("");
     setOptionalFeatures([]);
     setAcknowledged({});
-    setDirection(-1);
     setStepIndex(0);
   };
 
   const goBack = () => {
     if (currentIndex === 0) return;
-    setDirection(-1);
     setStepIndex((current) => Math.max(0, current - 1));
   };
 
   const continueWizard = () => {
     if (!currentStage.canContinue || currentIndex >= stages.length - 1) return;
-    setDirection(1);
     setStepIndex((current) => current + 1);
   };
 
   const jumpBack = (target: number) => {
     if (target >= currentIndex) return;
-    setDirection(-1);
     setStepIndex(target);
   };
 
+  const progressLabel = copy.stepProgress.replace("{current}", String(currentIndex + 1)).replace("{total}", String(stages.length));
+
   return (
-    <section className="min-h-[calc(100dvh-4rem)] px-4 pb-16 pt-5 sm:px-6 sm:pb-24 sm:pt-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-col">
-        <header className="flex items-center justify-between gap-4">
-          <Link href={guidePath} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            {copy.backToGuide}
+    <section className="min-h-[calc(100dvh-4rem)] px-4 pt-6 pb-16 sm:px-6 sm:pt-8 sm:pb-24">
+      <div className="mx-auto w-full max-w-6xl">
+        <header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2">
+          <Link href={guidePath} className="inline-flex min-h-11 items-center gap-2 rounded-full text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
+            <ArrowLeft className="size-4 shrink-0" aria-hidden />{copy.backToGuide}
           </Link>
-          <button type="button" onClick={reset} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-            {copy.restart}
+          <button type="button" onClick={reset} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+            <RotateCcw className="size-4 shrink-0" aria-hidden />{copy.restart}
           </button>
         </header>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-14">
-          <aside className="lg:pt-2">
-            <div className="hidden lg:block"><WizardStepper currentStep={currentIndex + 1} totalSteps={stages.length} onStepClick={jumpBack} getStepLabel={(step) => stages[step - 1]?.title ?? ""} /></div>
-            <div className="lg:hidden"><WizardStepper currentStep={currentIndex + 1} totalSteps={stages.length} /></div>
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10 xl:gap-14">
+          <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-2xl bg-[#f3f5ef] p-5 dark:bg-[#202821]">
+              <h2 className="text-base font-medium tracking-tight">{copy.progressTitle}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{progressLabel}</p>
+              <div role="progressbar" aria-label={copy.progressTitle} aria-valuemin={1} aria-valuemax={stages.length} aria-valuenow={currentIndex + 1} aria-valuetext={progressLabel} className="mt-4 h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                <div className="h-full rounded-full bg-foreground/65 transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${((currentIndex + 1) / stages.length) * 100}%` }} />
+              </div>
+              <nav aria-label={copy.progressTitle} className="mt-5 hidden max-h-[calc(100dvh-22rem)] overflow-y-auto overscroll-contain lg:block">
+                <ol className="space-y-1">
+                  {stages.map((stage, index) => {
+                    const contents = <><span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-xs", index === currentIndex ? "bg-foreground text-background" : "bg-foreground/5")}>{index < currentIndex ? <Check className="size-3.5" /> : index + 1}</span><span className="text-sm leading-snug">{stage.title}</span></>;
+                    return <li key={stage.id} aria-current={index === currentIndex ? "step" : undefined}>
+                      {index < currentIndex ? <button type="button" onClick={() => jumpBack(index)} className="flex min-h-11 w-full items-center gap-3 rounded-xl p-2 text-left text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring">{contents}</button>
+                        : <div className={cn("flex min-h-11 items-center gap-3 rounded-xl p-2", index === currentIndex ? "bg-background/75 font-medium" : "text-muted-foreground")}>{contents}</div>}
+                    </li>;
+                  })}
+                </ol>
+              </nav>
+            </div>
           </aside>
 
           <div className="min-w-0">
-            <AnimatePresence initial={false} mode="wait" custom={direction}>
-              <motion.div key={currentStage.id} custom={direction} initial={{ opacity: 0, x: direction * 22 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: direction * -22 }} transition={{ duration: 0.2, ease: "easeOut" }}>
-                <div className="max-w-3xl">
-                  <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{currentStage.title}</h1>
-                  {currentStage.body && <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">{currentStage.body}</p>}
-                </div>
-                <div className="mt-8">{currentStage.content}</div>
-              </motion.div>
-            </AnimatePresence>
-
+            <div key={currentStage.id} className="animate-in fade-in duration-200 motion-reduce:animate-none">
+              <h1 ref={headingRef} tabIndex={-1} className="max-w-3xl text-[clamp(2rem,3.8vw,3.25rem)] leading-[1.1] font-medium tracking-[-0.045em] text-balance outline-none">{currentStage.title}</h1>
+              {currentStage.body && <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground">{currentStage.body}</p>}
+              <div className="mt-8 min-w-0">{currentStage.content}</div>
+            </div>
             <div className="mt-8 flex items-center justify-between gap-4">
-              <button type="button" onClick={goBack} disabled={currentIndex === 0} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-0">
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                {copy.backLabel}
+              <button type="button" onClick={goBack} disabled={currentIndex === 0} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-0">
+                <ArrowLeft className="size-4" aria-hidden />{copy.backLabel}
               </button>
-              {currentStage.canContinue && <button type="button" onClick={continueWizard} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">{copy.continueLabel}<ArrowRight className="h-4 w-4" aria-hidden /></button>}
+              {currentIndex < stages.length - 1 && <button type="button" onClick={continueWizard} disabled={!currentStage.canContinue} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-35">{copy.continueLabel}<ArrowRight className="size-4" aria-hidden /></button>}
             </div>
           </div>
         </div>
