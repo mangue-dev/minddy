@@ -26,16 +26,5 @@ export function AccountMcpSection() {
 
 /** Personal outbound connections let Numo use other services. */
 export function AccountMcpClientsSection() {
-  const t = useTranslations("McpClients");
-  return (
-    <SettingsGroup
-      anchor={SETTINGS_SECTIONS.accountMcpClients}
-      icon={Plug}
-      title={t("title")}
-      description={t("description")}
-      variant="block"
-    >
-      <AccountMcpClients />
-    </SettingsGroup>
-  );
+  return <AccountMcpClients />;
 }

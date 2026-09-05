@@ -30,7 +30,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "mangue-ui";
-import { Ellipsis, Plus, TriangleAlert } from "lucide-react";
+import { Ellipsis, Plug, Plus, TriangleAlert } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
+import { SettingsGroup } from "@/components/settings/settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { MCP_PRESETS, mcpPresetForUrl, type McpPreset } from "@/lib/mcp-catalog";
 import { mcpConnectionNeedsAuth, type McpConnection } from "@/lib/mcp-client";
 import { useAuth } from "@/lib/auth-context";
@@ -250,7 +252,7 @@ export function AccountMcpClients() {
     </>
   );
 
-  return (
+  const content = (
     <section className="space-y-5" aria-label={t("title")}>
       <p className="text-sm text-muted-foreground">{t("routines")}</p>
       {isPending && (
@@ -402,13 +404,6 @@ export function AccountMcpClients() {
             </Button>
           ))}
         </div>
-        <Button
-          variant="outline"
-          disabled={busy || isPending || isError}
-          onClick={() => edit("new")}
-        >
-          {t("custom")}
-        </Button>
       </div>
       {error && !editing && (
         <p role="alert" className="text-sm text-destructive">
@@ -721,5 +716,35 @@ export function AccountMcpClients() {
         </DialogContent>
       </Dialog>
     </section>
+  );
+
+  return (
+    <SettingsGroup
+      anchor={SETTINGS_SECTIONS.accountMcpClients}
+      icon={Plug}
+      title={t("title")}
+      description={t("description")}
+      variant="block"
+      action={
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-label={t("custom")}
+              disabled={busy || isPending || isError}
+              onClick={() => edit("new")}
+            >
+              <Plus className="size-4" aria-hidden />
+              <span className="hidden sm:inline">{t("custom")}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("custom")}</TooltipContent>
+        </Tooltip>
+      }
+    >
+      {content}
+    </SettingsGroup>
   );
 }
