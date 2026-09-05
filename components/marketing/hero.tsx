@@ -22,7 +22,7 @@ export async function Hero() {
             {t("heroTitleBefore")}
             <span className="mt-1 block text-muted-foreground">{t("heroTitleAccent")}</span>
           </h1>
-          <div className="mt-7 flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between xl:gap-16">
+          <div className="mt-7 flex flex-col gap-7">
             <p className="max-w-xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
               {t("heroSubtitle")}
             </p>

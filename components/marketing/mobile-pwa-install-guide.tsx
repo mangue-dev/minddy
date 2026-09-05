@@ -18,6 +18,7 @@ import {
   mobileInstallGuidePlatformFromEvent,
   SHOW_MOBILE_INSTALL_GUIDE_EVENT,
 } from "@/lib/mobile-install-guide";
+import { CARD_TONES } from "./card-tones";
 import type { Locale } from "@/i18n/config";
 import { SCREENSHOT_SLOTS, screenshotSrc } from "@/components/marketing/screenshot-slots";
 
@@ -66,7 +67,7 @@ function GuideCard({
   children: ReactNode;
 }) {
   return (
-    <li className="flex min-w-0 flex-col rounded-2xl border border-border bg-background p-4 shadow-sm sm:p-5">
+    <li className={`flex min-w-0 flex-col rounded-2xl p-5 sm:p-6 ${[CARD_TONES.sky, CARD_TONES.lavender, CARD_TONES.peach][number - 1]}`}>
       <div className="mb-4 flex items-start gap-3">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
           {number}
@@ -273,7 +274,7 @@ export function MobilePwaInstallGuide({
       window.setTimeout(() => {
         document
           .getElementById("mobile-install-guide")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          ?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
       }, 0);
     };
     window.addEventListener(SHOW_MOBILE_INSTALL_GUIDE_EVENT, showSelectedGuide);
@@ -296,16 +297,13 @@ export function MobilePwaInstallGuide({
   const ios = platform === "ios";
 
   return (
-    <section id="mobile-install-guide" className="scroll-mt-24 border-y border-border bg-muted/20 py-16 sm:py-24">
+    <section id="mobile-install-guide" className="scroll-mt-24 py-12 sm:py-16">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <header className="mx-auto mb-10 max-w-2xl text-center">
-          <p className="mb-3 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-            {ios ? copy.iosEyebrow : copy.androidEyebrow}
-          </p>
-          <h2 className="text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
+        <header className="mb-10 max-w-3xl">
+          <h2 className="text-3xl font-medium tracking-[-0.035em] text-balance sm:text-4xl">
             {ios ? copy.iosTitle : copy.androidTitle}
           </h2>
-          <p className="mx-auto mt-4 max-w-xl leading-relaxed text-pretty text-muted-foreground">
+          <p className="mt-4 max-w-2xl leading-relaxed text-pretty text-muted-foreground">
             {ios ? copy.iosBody : copy.androidBody}
           </p>
         </header>
@@ -323,7 +321,7 @@ export function MobilePwaInstallGuide({
             </GuideCard>
           </ol>
         ) : (
-          <ol className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
+          <ol className="grid gap-4 md:grid-cols-2">
             <GuideCard number={1} title={copy.androidStepPromptTitle} body={copy.androidStepPromptBody}>
               <AndroidPromptVisual copy={copy} locale={locale} />
             </GuideCard>

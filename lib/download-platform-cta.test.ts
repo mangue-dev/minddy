@@ -4,9 +4,9 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  DownloadPlatformCta,
-  type DownloadPlatformCtaProps,
-} from "@/components/marketing/download-platform-cta";
+  DownloadPlatformCards,
+  type DownloadPlatformCardsProps,
+} from "@/components/marketing/download-platform-cards";
 import {
   MobilePwaInstallGuide,
   type MobileInstallGuideCopy,
@@ -14,24 +14,17 @@ import {
 import type { Locale } from "@/i18n/config";
 import { WINDOWS_STORE_DEEP_LINK } from "@/lib/desktop/install-prompt";
 
-const copy: DownloadPlatformCtaProps = {
-  macLabel: "Download for Mac",
-  macIntelLabel: "Mac with an Intel chip",
-  linuxLabel: "Download AppImage for Linux",
-  linuxArmLabel: "AppImage for ARM64",
-  linuxBody: "Portable Linux app.",
-  linuxReleaseLabel: "Linux 1.2.3 · 100 MB",
-  linuxPackagesLabel: "Other Linux packages.",
-  linuxDebX64Label: "Download .deb (x64)",
-  linuxRpmX64Label: "Download .rpm (x64)",
-  linuxDebArm64Label: "Download .deb (ARM64)",
-  linuxRpmArm64Label: "Download .rpm (ARM64)",
-  windowsLabel: "Get it from Microsoft Store",
-  windowsBody: "Install from Microsoft Store. No .exe installer is provided.",
-  androidLabel: "Install on Android",
-  iosLabel: "Install on iPhone",
-  tutorialLabel: "View installation guide",
-  selectorLabel: "Choose a platform",
+const copy: DownloadPlatformCardsProps = {
+  copy: {
+    download: "Download", guide: "Installation guide", architecture: "Processor",
+    macBody: "For Apple silicon and Intel.", windowsBody: "The Windows app.",
+    windowsUpdates: "Automatic updates.", linuxBody: "AppImage and signed packages.",
+    iosBody: "Install from Safari.", androidBody: "Install from Chrome.", iosTitle: "iPhone and iPad",
+    androidInstall: "Install on Android", mobileTitle: "Take your projects with you.", mobileBody: "A mobile PWA.",
+  },
+  macRelease: { arm64: "1.2.3 · 120 MB", x64: "1.2.3 · 130 MB" },
+  linuxRelease: { arm64: "1.2.3 · 140 MB", x64: "1.2.3 · 150 MB" },
+  guides: { macos: "/download/macos", linux: "/download/linux", windows: "/download/windows", mobile: "/download/mobile-pwa" },
 };
 
 const guideCopy: MobileInstallGuideCopy = {
@@ -80,7 +73,7 @@ function setNavigatorProbe(input: {
   });
 }
 
-describe("DownloadPlatformCta", () => {
+describe("DownloadPlatformCards", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -91,6 +84,7 @@ describe("DownloadPlatformCta", () => {
       configurable: true,
       value: vi.fn(),
     });
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: vi.fn(() => ({ matches: false })) });
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -106,7 +100,7 @@ describe("DownloadPlatformCta", () => {
   });
 
   async function render() {
-    await act(async () => root.render(createElement(DownloadPlatformCta, copy)));
+    await act(async () => root.render(createElement(DownloadPlatformCards, copy)));
   }
 
   async function renderWithGuide(locale: Locale = "en") {
@@ -115,106 +109,94 @@ describe("DownloadPlatformCta", () => {
         createElement(
           "div",
           null,
-          createElement(DownloadPlatformCta, copy),
+          createElement(DownloadPlatformCards, copy),
           createElement(MobilePwaInstallGuide, { copy: guideCopy, locale }),
         ),
       ),
     );
   }
 
-  function platformButton(platform: string): HTMLButtonElement {
-    const button = container.querySelector<HTMLButtonElement>(
-      `button[data-platform="${platform}"]`,
-    );
-    if (!button) throw new Error(`Missing ${platform} selector button`);
-    return button;
+  function card(platform: string) {
+    const element = container.querySelector<HTMLElement>(`article[data-platform="${platform}"]`);
+    if (!element) throw new Error(`Missing ${platform} card`);
+    return element;
   }
 
-  it("selects the detected desktop platform and presents its primary action", async () => {
+  function chooseArch(platform: string, arch: string) {
+    const select = card(platform).querySelector("select");
+    if (!select) throw new Error("Missing architecture choice");
+    act(() => {
+      select.value = arch;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+
+  it("keeps all five platforms and their guides available regardless of the current device", async () => {
     setNavigatorProbe({ userAgentDataPlatform: "Windows" });
     await render();
-
-    expect(platformButton("windows").getAttribute("aria-pressed")).toBe("true");
-    expect(
-      container.querySelector<HTMLAnchorElement>(`a[href="${WINDOWS_STORE_DEEP_LINK}"]`)
-        ?.textContent,
-    ).toContain("Microsoft Store");
-    expect(container.textContent).toContain("No .exe installer is provided.");
+    expect(container.querySelectorAll("article[data-platform]")).toHaveLength(5);
+    expect(card("windows").querySelector(`a[href="${WINDOWS_STORE_DEEP_LINK}"]`)).not.toBeNull();
+    expect(card("macos").querySelector('a[href="/api/desktop/download"]')).not.toBeNull();
+    for (const platform of ["macos", "linux", "windows"] as const) {
+      expect(card(platform).querySelector(`a[href="${copy.guides[platform]}"]`)).not.toBeNull();
+    }
   });
 
-  it("falls back to macOS when the platform is unsupported", async () => {
-    setNavigatorProbe({ platform: "FreeBSD", userAgent: "ExampleBrowser/1.0" });
+  it("changes the Mac package and release size together when Intel is selected", async () => {
     await render();
-
-    expect(platformButton("macos").getAttribute("aria-pressed")).toBe("true");
-    expect(
-      container.querySelector<HTMLAnchorElement>('a[href="/api/desktop/download"]')?.textContent,
-    ).toContain("Download for Mac");
+    chooseArch("macos", "x64");
+    expect(card("macos").querySelector('a[href="/api/desktop/download?arch=x64"]')).not.toBeNull();
+    expect(card("macos").textContent).toContain("130 MB");
+    expect(card("macos").textContent).not.toContain("120 MB");
+    chooseArch("macos", "arm64");
+    expect(card("macos").querySelector('a[href="/api/desktop/download"]')).not.toBeNull();
   });
 
-  it("keeps every platform available and updates the installer after manual selection", async () => {
-    setNavigatorProbe({ userAgentDataPlatform: "macOS" });
+  it.each(["x64", "arm64"])("offers each Linux format for %s with matching metadata", async arch => {
     await render();
-
-    expect(container.querySelectorAll("button[data-platform]")).toHaveLength(5);
-    act(() => platformButton("linux").click());
-
-    expect(platformButton("macos").getAttribute("aria-pressed")).toBe("false");
-    expect(platformButton("linux").getAttribute("aria-pressed")).toBe("true");
-    expect(
-      container.querySelector<HTMLAnchorElement>(
-        'a[href="/api/desktop/download?platform=linux&format=AppImage&arch=x64"]',
-      )?.textContent,
-    ).toContain("Linux");
+    chooseArch("linux", arch);
+    for (const format of ["AppImage", "deb", "rpm"]) {
+      expect(card("linux").querySelector(`a[href="/api/desktop/download?platform=linux&format=${format}&arch=${arch}"]`)).not.toBeNull();
+    }
+    expect(card("linux").textContent).toContain(arch === "arm64" ? "140 MB" : "150 MB");
   });
 
-  it("opens the native install prompt on a compatible Android browser", async () => {
+  it("opens the native Android prompt once and then restores the guide fallback", async () => {
     setNavigatorProbe({ userAgentDataPlatform: "Android", userAgent: "Mozilla/5.0 Android" });
     await render();
     const prompt = vi.fn().mockResolvedValue({ outcome: "accepted", platform: "web" });
     const event = Object.assign(new Event("beforeinstallprompt", { cancelable: true }), { prompt });
-
     act(() => window.dispatchEvent(event));
-    const installButton = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Install on Android"),
-    );
-    await act(async () => installButton?.click());
-
+    const button = card("android").querySelector("button");
+    expect(button?.textContent).toContain("Install on Android");
+    await act(async () => button?.click());
     expect(prompt).toHaveBeenCalledOnce();
+    expect(card("android").querySelector(`a[href="${copy.guides.mobile}"]`)).not.toBeNull();
   });
 
-  it("offers the tutorial when native mobile installation is unavailable", async () => {
-    setNavigatorProbe({
-      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
-    });
+  it("does not offer a desktop PWA prompt as an Android installation", async () => {
+    setNavigatorProbe({ userAgentDataPlatform: "Windows" });
     await render();
-
-    expect(platformButton("ios").getAttribute("aria-pressed")).toBe("true");
-    const tutorial = container.querySelector<HTMLAnchorElement>('a[href="#mobile-install-guide"]');
-    expect(tutorial?.textContent).toBe("View installation guide");
-    expect(tutorial?.dataset.variant).toBe("outline");
+    const prompt = vi.fn();
+    act(() => window.dispatchEvent(Object.assign(new Event("beforeinstallprompt", { cancelable: true }), { prompt })));
+    expect(card("android").querySelector("button")).toBeNull();
+    expect(card("android").querySelector(`a[href="${copy.guides.mobile}"]`)).not.toBeNull();
   });
 
-  it("shows a manually selected mobile tutorial on desktop", async () => {
+  it.each(["ios", "android"])("opens the %s tutorial from its card on a desktop browser", async platform => {
     setNavigatorProbe({ userAgentDataPlatform: "macOS" });
     await renderWithGuide();
-
-    act(() => platformButton("android").click());
-    const tutorial = container.querySelector<HTMLAnchorElement>('a[href="#mobile-install-guide"]');
-    act(() => tutorial?.click());
-
+    act(() => card(platform).querySelector<HTMLAnchorElement>(`a[href="${copy.guides.mobile}"]`)?.click());
     expect(container.querySelector("section#mobile-install-guide h2")?.textContent).toBe(
-      "Install minddy like an app",
+      platform === "ios" ? guideCopy.iosTitle : guideCopy.androidTitle,
     );
   });
 
   it("uses the current locale for the Android guide screenshot", async () => {
     setNavigatorProbe({ userAgentDataPlatform: "Android", userAgent: "Mozilla/5.0 Android" });
     await renderWithGuide("de");
-
-    const screenshot = Array.from(container.querySelectorAll("img")).find((image) =>
+    expect(Array.from(container.querySelectorAll("img")).some(image =>
       decodeURIComponent(image.getAttribute("src") ?? "").includes("heroBoard-de-light.webp"),
-    );
-    expect(screenshot).toBeDefined();
+    )).toBe(true);
   });
 });
