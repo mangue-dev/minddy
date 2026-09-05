@@ -3,47 +3,12 @@ import type { Namespace } from "@/lib/i18n-keys";
 import type { PublicRouteKey } from "@/lib/public-routes";
 
 /**
- * Pages `/alternatives/<outil>` (MIN-93) — a comparison by competitor.
- *
- * ## How these three were chosen
- *
- * The plan required deciding on data: the PostHog and the
- * responses from the feedback board. Recorded on July 27, 2026, there are none —
- * 12 external page views for 10 people since tracking was put into service,
- * and only one feedback post, internal. A “data-driven” choice on
- * twelve visits would be a decoration.
- *
- * For lack of anything better, we therefore use the three tools that the product description
- * already names (`Landing.metaDescription` says “simple alternative to Linear or
- * Jira”) and which bring the search volume to “alternative to X”. TO
- * redo when traffic says something.
- *
- * ## What is compared, and what is not
- *
- * The table covers only verifiable structural differences: source model,
- * seats, agents, project knowledge, feedback, hosting, setup, and audience.
- * Current minddy features get their own section instead of turning the table
- * into a long checklist.
- *
- * This is deliberate. A long matrix goes stale quickly, and one false claim
- * undermines the rest. Each page links to official documentation and says
- * where the other tool is stronger.
- *
- * ## The two mistakes not to make
- *
- * **No, minddy is not “a package for the whole team”.** The first
- * version of these pages wrote it, and it was wrong: the owner pays the limits
- * of HIS projects, but each keeps its own plan for the IA functions
- * (`lib/server/entitlements.ts`: "a structural limit is verified on the
- * plan of the OWNER; an AI action is paid on the level of its ACTOR"). Which is
- * true, and that's already a difference: a colleague who comes to follow tickets
- * does not cost an extra seat.
- *
- * **No, minddy is not the only one talking about MCP.** Linear publishes
- * `mcp.linear.app/mcp`, Atlassian its Rovo server in OAuth 2.1, Notion le
- * its own. The tenable difference is finer: at Minddy the ticket carries its
- * plan, and the agent checks it as the work progresses.
+ * The public comparison catalog for Linear, Jira, and Notion.
+ * Compare documented workflows and billing models, acknowledge each product's
+ * strengths, and keep current Minddy capabilities separate from competitor claims.
+ * Refresh the review date only after checking the linked official sources.
  */
+export const COMPARISON_REVIEWED_AT = "2026-09-05";
 
 export interface Comparison {
   /** URL segment for `/alternatives/<slug>`. */
@@ -58,6 +23,8 @@ export interface Comparison {
   pricingUrl: string;
   /** Its official product documentation, used to substantiate feature claims. */
   docsUrl: string;
+  /** Official evidence for the corresponding comparison row. */
+  sources: Partial<Record<ComparisonRow, string>>;
 }
 
 export const COMPARISONS = [
@@ -68,6 +35,14 @@ export const COMPARISONS = [
     namespace: "AlternativeLinear",
     pricingUrl: "https://linear.app/pricing",
     docsUrl: "https://linear.app/docs",
+    sources: {
+      teammate: "https://linear.app/pricing",
+      agents: "https://linear.app/docs/coding-sessions",
+      pages: "https://linear.app/docs/default-team-pages",
+      feedback: "https://linear.app/docs/customer-requests",
+      setup: "https://linear.app/docs/conceptual-model",
+      builtFor: "https://linear.app/docs/initiatives",
+    },
   },
   {
     slug: "jira",
@@ -76,6 +51,14 @@ export const COMPARISONS = [
     namespace: "AlternativeJira",
     pricingUrl: "https://www.atlassian.com/software/jira/pricing",
     docsUrl: "https://support.atlassian.com/jira-software-cloud/",
+    sources: {
+      teammate: "https://support.atlassian.com/subscriptions-and-billing/docs/manage-users-and-user-tiers/",
+      agents: "https://www.atlassian.com/platform/rovo-mcp",
+      pages: "https://support.atlassian.com/confluence-cloud/docs/create-and-edit-content/",
+      feedback: "https://support.atlassian.com/jira-product-discovery/docs/create-and-manage-insights/",
+      hosting: "https://www.atlassian.com/licensing/data-center-end-of-life",
+      setup: "https://support.atlassian.com/jira-software-cloud/docs/what-are-jira-workflows/",
+    },
   },
   {
     slug: "notion",
@@ -84,6 +67,13 @@ export const COMPARISONS = [
     namespace: "AlternativeNotion",
     pricingUrl: "https://www.notion.com/pricing",
     docsUrl: "https://www.notion.com/help",
+    sources: {
+      teammate: "https://www.notion.com/help/add-members-admins-guests-and-groups",
+      agents: "https://www.notion.com/help/mcp-connections-for-custom-agents",
+      pages: "https://www.notion.com/help/guides/getting-started-with-projects-and-tasks",
+      feedback: "https://www.notion.com/pricing",
+      setup: "https://www.notion.com/help/guides/getting-started-with-projects-and-tasks",
+    },
   },
 ] as const satisfies ReadonlyArray<Comparison>;
 
@@ -116,12 +106,14 @@ export const COMPARISON_POINTS = [1, 2, 3] as const;
 
 /** Current minddy capabilities that deserve more than one table cell. */
 export const COMPARISON_FEATURES = [
-  "openSource",
+  "agents",
   "pages",
-  "scratchpad",
+  "numo",
+  "routines",
+  "planning",
   "feedback",
-  "pullRequests",
-  "voice",
+  "capture",
+  "openSource",
 ] as const;
 
 export function comparisonBySlug(slug: string): Comparison | null {

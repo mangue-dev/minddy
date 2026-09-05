@@ -187,7 +187,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/linear",
     },
     namespace: "AlternativeLinear",
-    lastModified: "2026-08-27",
+    lastModified: "2026-09-05",
     priority: 0.7,
   },
   {
@@ -201,7 +201,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/jira",
     },
     namespace: "AlternativeJira",
-    lastModified: "2026-08-27",
+    lastModified: "2026-09-05",
     priority: 0.7,
   },
   {
@@ -215,7 +215,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/alternativas/notion",
     },
     namespace: "AlternativeNotion",
-    lastModified: "2026-08-27",
+    lastModified: "2026-09-05",
     priority: 0.7,
   },
   {

@@ -6,6 +6,8 @@ import { BILLING_PLANS } from "@/lib/billing-plans";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import {
   COMPARISONS,
+  COMPARISON_FEATURES,
+  COMPARISON_REVIEWED_AT,
   COMPARISON_POINTS,
   COMPARISON_ROWS,
   type Comparison,
@@ -439,15 +441,7 @@ async function renderChangelog(locale: Locale, canonical: string): Promise<strin
   ].join("\n\n") + "\n";
 }
 
-/**
- * A comparison in Markdown (MIN-93). HTML table becomes a real table
- * Markdown: this is the form that a model copies without making a mistake in the column, and
- * the only reason a text version of this page is of interest.
- *
- * The order of the page is preserved — what the other tool does better comes
- * BEFORE what minddy does otherwise. A text version that would reverse the
- * two would not say the same thing as the page it claims to reflect.
- */
+/** Keep the comparison's evidence, capabilities, and reading order in Markdown. */
 async function renderComparison(
   comparison: Comparison,
   locale: Locale,
@@ -457,15 +451,22 @@ async function renderComparison(
     getTranslations({ locale, namespace: "Alternatives" }),
     getTranslations({ locale, namespace: comparison.namespace }),
   ]);
+  const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${COMPARISON_REVIEWED_AT}T12:00:00Z`));
   const cell = (row: (typeof COMPARISON_ROWS)[number]) => [
     t(`minddy_${row}`),
-    tc(`them_${row}`),
+    comparison.sources[row]
+      ? `[${tc(`them_${row}`)}](${comparison.sources[row]})`
+      : tc(`them_${row}`),
   ];
 
   return [
     header(tc("metaTitle"), tc("metaDescription"), canonical, locale),
     `## ${tc("heroTitle")}`,
     tc("heroSubtitle"),
+    `### ${t("betterThemTitle", { name: comparison.name })}`,
+    tc("verdictThem"),
+    `### ${t("betterUsTitle")}`,
+    tc("verdictUs"),
 
     `## ${t("compareTitle")}`,
     t("compareSubtitle"),
@@ -474,17 +475,27 @@ async function renderComparison(
       "| --- | --- | --- |",
       ...COMPARISON_ROWS.map((row) => `| ${t(`row_${row}`)} | ${cell(row).join(" | ")} |`),
     ].join("\n"),
-    `${t("checkedNote")} ${comparison.pricingUrl}`,
+    t("billingNote"),
+    t("checkedNote", { date: reviewedDate }),
+    `[${t("checkedDocsLink", { name: comparison.name })}](${comparison.docsUrl}) · [${t("checkedLink", { name: comparison.name })}](${comparison.pricingUrl})`,
 
-    `## ${t("betterThemTitle", { name: comparison.name })}`,
-    COMPARISON_POINTS.map((point) => `- ${tc(`betterThem_${point}`)}`).join("\n"),
-
-    `## ${t("betterUsTitle")}`,
-    COMPARISON_POINTS.map((point) => `- ${tc(`betterUs_${point}`)}`).join("\n"),
+    `## ${t("productTitle")}`,
+    t("productSubtitle"),
+    ...COMPARISON_FEATURES.flatMap(feature => [
+      `### ${t(`feature_${feature}_title`)}`,
+      t(`feature_${feature}_body`),
+    ]),
+    t("aiNote"),
 
     `## ${t("verdictTitle")}`,
-    tc("verdictThem"),
-    tc("verdictUs"),
+    t("verdictSubtitle"),
+    `### ${t("betterThemTitle", { name: comparison.name })}`,
+    COMPARISON_POINTS.map((point) => `- ${tc(`betterThem_${point}`)}`).join("\n"),
+    `### ${t("betterUsTitle")}`,
+    COMPARISON_POINTS.map((point) => `- ${tc(`betterUs_${point}`)}`).join("\n"),
+
+    `## ${t("migrationTitle")}`,
+    t("migrationBody", { name: comparison.name }),
     links(locale),
   ].join("\n\n") + "\n";
 }
