@@ -4,6 +4,7 @@ import { standaloneMobileInstallGuideCopy } from "@/components/marketing/mobile-
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { MARKDOWN_LOCALE_COPY } from "@/lib/markdown-locale-copy";
 import { BILLING_PLANS } from "@/lib/billing-plans";
+import { planFeatureLabels } from "@/lib/plan-features";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import {
   COMPARISONS,
@@ -138,30 +139,34 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
     [
       t("featuresTitle"),
       t("featuresSubtitle"),
-      [],
+      (["board", "all", "inbox", "objectives", "cycles", "triage"] as const).map(
+        (k) => [t(`feature_${k}_title`), t(`feature_${k}_body`)],
+      ),
     ],
-    [t("speedTitle"), t("speedSubtitle"), []],
+    [t("pagesTitle"), t("pagesSubtitle"), (["write", "link", "agents", "publish"] as const).map(
+      (k) => [t(`pages_${k}_title`), t(`pages_${k}_body`)],
+    )],
+    [t("navMenu_feedback_title"), t("feedbackSubtitle"), (["post", "moderate", "decide", "status"] as const).map(
+      (k) => [t(`feedback_${k}_title`), t(`feedback_${k}_body`)],
+    )],
+    [t("feature_palette_title"), t("feature_palette_body"), []],
+    [t("scratchpadTitle"), t("scratchpadSubtitle"), (["write", "prompt", "agent", "promote", "mcp"] as const).map(
+      (k) => ["", t(`scratchpadPoint_${k}`)],
+    )],
+    [t("voiceTitle"), t("voiceSubtitle"), []],
     [
       t("agentsTitle"),
       t("agentsSubtitle"),
-      (
-        [
-          "read",
-          "plan",
-          "track",
-          "create",
-          "comment",
-          "wiki",
-          "review",
-          "beyond",
-        ] as const
-      ).map((k) => ["", t(`agentsCapability_${k}`)] as [string, string]),
+      (["write", "run", "review"] as const).map(
+        (k) => [t(`workflow_${k}_title`), t(`workflow_${k}_body`)],
+      ),
     ],
-    [
-      t("feedbackTitle"),
-      t("feedbackSubtitle"),
-      (["post", "moderate", "decide", "status"] as const).map(
-        (k) => [t(`feedback_${k}_title`), t(`feedback_${k}_body`)] as [string, string],
+    [t("numoTitle"), t("numoSubtitle"), (["find", "act", "context"] as const).map(
+      (k) => [t(`numoCapability_${k}_title`), t(`numoCapability_${k}_body`)],
+    )],
+    [t("agentsCompatible"), [t("agentsMcpRoles"), t("agentsPlanNote"), t("agentsByokNote")].join("\n\n"),
+      (["read", "plan", "track", "create", "comment", "wiki", "review", "beyond"] as const).map(
+        (k) => ["", t(`agentsCapability_${k}`)],
       ),
     ],
     [
@@ -171,6 +176,10 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
         (k) => [t(`more_${k}_title`), t(`more_${k}_body`)] as [string, string],
       ),
     ],
+    [t("editionsTitle"), t("editionsSubtitle"), [
+      [t("cloudTitle"), [t("cloudBody"), t("cloudPointOne"), t("cloudPointTwo"), t("cloudPointThree")].join(" ")],
+      [t("selfHostedTitle"), [t("selfHostedBody"), t("selfHostedPointOne"), t("selfHostedPointTwo"), t("selfHostedPointThree")].join(" ")],
+    ]],
     [t("pricingTitle"), t("pricingSubtitle"), []],
   ];
 
@@ -178,7 +187,6 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitleBefore")} ${t("heroTitleAccent")}`,
     t("heroSubtitle"),
-    t("heroNote"),
     ...sections.flatMap(([title, subtitle, items]) => [
       `## ${title}`,
       subtitle,
@@ -207,10 +215,13 @@ async function renderPricing(locale: Locale, canonical: string): Promise<string>
     // structured data.
     BILLING_PLANS.map(
       (plan) =>
-        `- **${tb(planNameKey[plan.id])}**: ${plan.priceEurMonthly} EUR / ${MARKDOWN_LOCALE_COPY[locale].perMonth}`,
+        `### ${tb(planNameKey[plan.id])}\n\n${plan.priceEurMonthly} EUR / ${MARKDOWN_LOCALE_COPY[locale].perMonth}\n\n${planFeatureLabels(plan, tb).map(feature => `- ${feature}`).join("\n")}`,
     ).join("\n"),
     `## ${t("comparisonTitle")}`,
     t("comparisonSubtitle"),
+    `## ${t("byokTitle")}`,
+    t("byokSubtitle"),
+    t("byokNote"),
     "## FAQ",
     PRICING_FAQ_KEYS.map((k) => `### ${t(`faq_${k}_q`)}\n\n${t(`faq_${k}_a`)}`).join("\n\n"),
     links(locale),
@@ -382,10 +393,20 @@ async function renderDownload(locale: Locale, canonical: string): Promise<string
       .join("\n"),
     `## ${t("iosGuideTitle")}`,
     t("iosGuideBody"),
+    (["Share", "Home", "Add"] as const)
+      .map((step, index) => `${index + 1}. **${t(`iosStep${step}Title`)}.** ${t(`iosStep${step}Body`)}`)
+      .join("\n"),
     `## ${t("androidGuideTitle")}`,
-    t("androidGuideBody"),
+    `[${t("platformGuideMobile")}](${SITE_URL}${publicPathForLocale(routeByKey("downloadMobile"), locale)})`,
     `## ${t("pointsTitle")}`,
     t("pointsSubtitle"),
+    ...(["window", "notifications", "updates"] as const).flatMap(k => [
+      `### ${t(`point_${k}_title`)}`, t(`point_${k}_body`),
+    ]),
+    `### ${t("noticeTitle")}`,
+    t("noticeBody"),
+    `### ${t("noticeCounterTitle")}`,
+    t("noticeCounterBody"),
     links(locale),
   ].join("\n\n") + "\n";
 }

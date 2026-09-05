@@ -40,7 +40,7 @@ describe("public SEO surface", () => {
   });
 
   it("uses the approved English positioning on core and platform pages", () => {
-    expect(en.Landing.metaTitle).toContain("open-source workspace");
+    expect(en.Landing.metaTitle).toContain("open-source project management");
     expect(en.Landing.metaDescription).toContain("coding agents");
     expect(en.SelfHosting.metaDescription).toContain("GNU AGPL v3.0");
 

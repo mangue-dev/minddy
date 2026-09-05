@@ -100,7 +100,7 @@ const GROUPS: ReadonlyArray<Group> = [
       // A PR only exists in minddy carried by an agent run
       // (`app/api/pull-requests` reads `agent_runs`): same guard as the agent.
       { key: "pr", hint: true, value: (plan) => plan.allowAgents },
-      // BYOK removes minddy usage caps; every current plan also includes agents.
+      // Provider keys cover compatible AI calls; cloud execution remains metered.
       { key: "byok", hint: true, value: (plan) => plan.allowAgents },
     ],
   },
