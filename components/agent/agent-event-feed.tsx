@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
+import { WorkEvents } from "@/components/assistant/work-events";
+import type { WorkEvent } from "@/lib/work-event-groups";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChangedFilesBlock } from "./changed-files-block";
@@ -899,10 +901,42 @@ function TurnGroup({
     !!summary.message.content &&
     filesContent;
 
+  const events: WorkEvent<ReactNode>[] = [];
+  for (const item of work) {
+    if (item.kind === "message") {
+      if (item.message.id === ctx.hiddenQuestionEventId) continue;
+      if (item.message.content?.trim()) {
+        events.push({
+          key: `${item.message.id}-text`,
+          kind: "text",
+          content: renderItem({ ...item, message: { ...item.message, tool_calls: [] } }, ctx),
+        });
+      }
+      const calls = item.message.tool_calls ?? [];
+      if (calls.length > 0) {
+        events.push({
+          key: `${item.message.id}-actions`,
+          kind: "action",
+          count: calls.length,
+          active: calls.some((call) => ctx.results.get(call.id)?.status === "running"),
+          content: renderItem({ ...item, message: { ...item.message, content: null } }, ctx),
+        });
+      }
+    } else {
+      const content = renderItem(item, ctx);
+      if (content) events.push({
+        key: item.id,
+        kind: "action",
+        active: item.kind === "reasoning" && item.active,
+        content,
+      });
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <WorkAccordion startedAt={startedAt} endedAt={endedAt} active={active}>
-        {work.map((it) => renderItem(it, ctx))}
+        <WorkEvents events={events} />
       </WorkAccordion>
       {summary
         ? renderItem(summary, ctx, attachFilesToSummary || undefined)

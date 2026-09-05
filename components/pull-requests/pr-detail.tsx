@@ -64,8 +64,6 @@ import {
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import {
   CommentReactionChips,
-  ReactionPicker,
-  reactionToggler,
   useCommentReactions,
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
@@ -519,12 +517,6 @@ function ThreadComment({
             </span>
           ) : null}
           <span className="min-w-0 flex-1" />
-          {reactions?.canReact && list.length === 0 ? (
-            <ReactionPicker
-              className="-my-1 opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
-              onPick={reactionToggler(reactions, commentId, list)}
-            />
-          ) : null}
           {onQuoteReply ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -553,7 +545,7 @@ function ThreadComment({
           >
             {body}
           </Markdown>
-          {reactions && list.length > 0 ? (
+          {reactions && (list.length > 0 || reactions.canReact) ? (
             <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
           ) : null}
         </div>

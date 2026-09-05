@@ -24,6 +24,7 @@ import {
 } from "@/lib/use-window-buttons";
 import { WindowButtonDecoys } from "@/components/desktop-window-buttons";
 import { isMacWindowControlsZone } from "@/lib/sidebar-window-controls";
+import { isSidebarPointerTarget } from "@/lib/sidebar-pointer-target";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
@@ -872,10 +873,12 @@ function ChangelogButton({
   productFeedbackIntegrationEnabled,
   productFeedbackUrl,
   onMenuOpenChange,
+  portalOwner,
 }: {
   productFeedbackIntegrationEnabled: boolean;
   productFeedbackUrl: string | null;
   onMenuOpenChange?: (open: boolean) => void;
+  portalOwner: string;
 }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Changelog");
@@ -911,7 +914,12 @@ function ChangelogButton({
     <>
       <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
         <DropdownMenuTrigger asChild>{control}</DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" className="w-80">
+        <DropdownMenuContent
+          align="start"
+          side="top"
+          className="w-80"
+          data-sidebar-owner={portalOwner}
+        >
           <DropdownMenuLabel className="font-normal text-muted-foreground">
             {t("whatsNew")}
           </DropdownMenuLabel>
@@ -1066,18 +1074,23 @@ function FooterRow({
       aria-expanded={ariaExpanded}
       aria-haspopup={ariaControls ? "dialog" : undefined}
       className={cn(
-        "flex h-9 items-center rounded-lg text-sm font-medium transition-colors",
+        "relative flex h-9 items-center rounded-lg text-sm font-medium transition-colors",
         disabled
           ? "cursor-default"
           : "cursor-pointer hover:bg-sidebar-accent hover:text-foreground",
         active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
         ROW_PL,
         collapsed ? cn(ROW_BOX, "pr-[9px]") : "w-full gap-3 pr-3 text-left",
+        centerLabel && !collapsed && "px-[9px]",
         className,
       )}
     >
       {collapsed || !iconCollapsedOnly ? (
-        <Icon className={cn("size-[18px] shrink-0", iconClassName)} />
+        <Icon className={cn(
+          "size-[18px] shrink-0",
+          centerLabel && !collapsed && "absolute left-[9px]",
+          iconClassName,
+        )} />
       ) : null}
       {/* `truncate` (so no line break): the label remains mounted
           while the bar animates from 56 to 256 px, and without it “Share a
@@ -1088,7 +1101,7 @@ function FooterRow({
         <span
           className={cn(
             "min-w-0 flex-1 truncate",
-            centerLabel && "text-center",
+            centerLabel && "px-6 text-center",
           )}
         >
           {expandedLabel}
@@ -1284,9 +1297,11 @@ function UpdateFooterCard({
 function SidebarFooter({
   collapsed,
   onMenuOpenChange,
+  portalOwner,
 }: {
   collapsed: boolean;
   onMenuOpenChange?: (open: boolean) => void;
+  portalOwner: string;
 }) {
   const { productFeedbackIntegrationEnabled, productFeedbackUrl } = useRuntimeConfig();
   return (
@@ -1317,6 +1332,7 @@ function SidebarFooter({
               onOpenChange={onMenuOpenChange}
             />
             <ChangelogButton
+              portalOwner={portalOwner}
               productFeedbackIntegrationEnabled={productFeedbackIntegrationEnabled}
               productFeedbackUrl={productFeedbackUrl}
               onMenuOpenChange={onMenuOpenChange}
@@ -1395,6 +1411,7 @@ export function AppSidebar({
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The bar itself, to know if the pointer returns to it (see below). */
   const railRef = useRef<HTMLElement>(null);
+  const railId = useId();
   /** The pointer return watcher, and what to remove it. */
   const returnWatcher = useRef<(() => void) | null>(null);
   useEffect(() => () => {
@@ -1503,7 +1520,7 @@ export function AppSidebar({
     returnWatcher.current?.();
     const onMove = (event: PointerEvent) => {
       disarm();
-      if (railRef.current?.contains(event.target as Node)) return;
+      if (isSidebarPointerTarget(railRef.current, event.target)) return;
       closeRail();
     };
     /**
@@ -1583,13 +1600,15 @@ export function AppSidebar({
   useEffect(() => {
     if (!overlay || !hovered) return;
     const onMove = (event: PointerEvent) => {
-      if (railRef.current?.contains(event.target as Node)) return;
+      if (isSidebarPointerTarget(railRef.current, event.target)) {
+        openRail();
+        return;
+      }
       scheduleClose();
     };
     document.addEventListener("pointermove", onMove);
     return () => document.removeEventListener("pointermove", onMove);
-    // `scheduleClose` only reads refs: its closure can be stale without
-    // changing the behavior.
+    // Both helpers only read refs, so stale closures do not change the behavior.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay, hovered]);
 
@@ -1651,6 +1670,7 @@ export function AppSidebar({
         transition={shellTransition}
       />
       <motion.aside
+        id={railId}
         ref={railRef}
         data-collapsed={collapsed}
         data-rail-hovered={overlay && hovered ? "" : undefined}
@@ -1670,7 +1690,11 @@ export function AppSidebar({
         onPointerMove={overlay && !hovered ? openRail : undefined}
         // The EVENT has passed, and it matters: this is the exit location
         // which says if the pointer goes to the macOS buttons (see closeRail).
-        onPointerLeave={overlay ? (e) => closeRail(e) : undefined}
+        onPointerLeave={overlay ? (e) => {
+          if (!isSidebarPointerTarget(railRef.current, e.relatedTarget)) {
+            closeRail(e);
+          }
+        } : undefined}
         onFocusCapture={
           overlay
             ? (e) => {
@@ -1787,6 +1811,7 @@ export function AppSidebar({
         {/* Footer */}
         <div className={cn("pt-2 pb-2.5", GUTTER)}>
           <SidebarFooter
+            portalOwner={railId}
             collapsed={collapsed}
             onMenuOpenChange={handleMenuOpenChange}
           />

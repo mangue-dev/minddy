@@ -344,9 +344,7 @@ export function CommentReactionChips({
           </Tooltip>
         );
       })}
-      {/* The add button closes the strip: the line says "here are the reactions, and
-          here’s how to put one on.” Permanently visible, unlike
-          that of the header — the line is already there, nothing to reveal. */}
+      {/* Keep the add button below the message, including before its first reaction. */}
       {reactions.canReact ? (
         <ReactionPicker onPick={reactionToggler(reactions, commentId, list)} />
       ) : null}
@@ -448,18 +446,6 @@ function CommentBody({
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {format.relativeTime(new Date(comment.created_at), now)}
         </span>
-        {/* The fallback of the header, for a comment WITHOUT reaction: as soon as it
-            wears one, the palette goes down in the band, with the emoji that it
-            adds. Here it is revealed on hover, like the “+” of the gutter
-            right next to it — a permanent palette under each message would make a
-            checkerboard of buttons. Rendered anyway (and not edited on hover) for
-            remain reachable on the keyboard — `focus-visible` turns it back on. */}
-        {reactions?.canReact && list.length === 0 ? (
-          <ReactionPicker
-            className="-my-1 ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-            onPick={reactionToggler(reactions, comment.id, list)}
-          />
-        ) : null}
       </div>
       <div data-testid="review-comment-body" className="pl-7">
         <Markdown
@@ -470,7 +456,7 @@ function CommentBody({
           {comment.body}
         </Markdown>
       </div>
-      {reactions && list.length > 0 ? (
+      {reactions && (list.length > 0 || reactions.canReact) ? (
         <div className="pl-7">
           <CommentReactionChips commentId={comment.id} reactions={reactions} list={list} />
         </div>
@@ -574,7 +560,7 @@ function PlainComposer({
   const isSend = useIsSendShortcut();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 font-sans">
       <div className="w-full rounded-lg border border-border bg-background transition-colors focus-within:border-ring">
         <AutoTextarea
           autoFocus={autoFocus}
@@ -685,7 +671,7 @@ export function ReviewThreadCard({
       data-variant={variant}
       className={cn(
         "flex flex-col gap-3 font-sans",
-        variant === "card" && "rounded-md border border-border bg-card px-3 py-2.5",
+        variant === "card" && "rounded-xl border border-border bg-card px-3 py-2.5",
       )}
     >
       {thread.comments.map((c) => (

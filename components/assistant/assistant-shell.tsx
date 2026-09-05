@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   forwardRef,
+  type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -48,6 +49,8 @@ import {
 } from "@/components/assistant/chat-message";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
+import { WorkEvents } from "@/components/assistant/work-events";
+import type { WorkEvent } from "@/lib/work-event-groups";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import {
   buildAssistantBlocks,
@@ -766,11 +769,75 @@ export const AssistantShell = forwardRef<
                     const summaryReasoning = assistantMessageReasoning(
                       block.summary,
                     );
-                    const hasWork =
-                      block.work.length > 0 ||
-                      Boolean(summaryReasoning) ||
-                      Boolean(state.streamingReasoning) ||
-                      streamingIsWork;
+                    const events: WorkEvent<ReactNode>[] = [];
+                    const addReasoning = (
+                      key: string,
+                      reasoning: ReturnType<typeof assistantMessageReasoning>,
+                    ) => {
+                      if (reasoning) events.push({
+                        key,
+                        kind: "action",
+                        content: renderReasoning(key, reasoning),
+                      });
+                    };
+                    for (const msg of block.work) {
+                      if (askUserReplies.hiddenBubbleIds.has(msg.id)) continue;
+                      addReasoning(`${msg.id}-reasoning`, assistantMessageReasoning(msg));
+                      if (msg.content?.trim()) {
+                        events.push({
+                          key: `${msg.id}-text`,
+                          kind: "text",
+                          content: renderMessage({ ...msg, tool_calls: [] }),
+                        });
+                      }
+                      const calls = (msg.tool_calls ?? []).filter((call) =>
+                        !(call.function.name === "ask_user" && msg.id === activeAskUser?.messageId),
+                      );
+                      if (calls.length > 0) {
+                        events.push({
+                          key: `${msg.id}-actions`,
+                          kind: "action",
+                          count: calls.length,
+                          active: calls.some((call) => state.toolCallResults.get(call.id)?.status === "running"),
+                          content: renderMessage({ ...msg, content: null, tool_calls: calls }),
+                        });
+                      }
+                    }
+                    addReasoning(`${block.summary?.id ?? block.key}-reasoning`, summaryReasoning);
+                    if (block.active && state.streamingReasoning) {
+                      events.push({
+                        key: "streaming-reasoning",
+                        kind: "action",
+                        active: state.streamingReasoning.active,
+                        content: (
+                          <ReasoningBlock
+                            active={state.streamingReasoning.active}
+                            durationMs={state.streamingReasoning.durationMs}
+                            text={state.streamingReasoning.text}
+                          />
+                        ),
+                      });
+                    }
+                    if (streamingIsWork) {
+                      if (state.streamingContent.trim()) {
+                        events.push({
+                          key: "streaming-text",
+                          kind: "text",
+                          content: <StreamingMessage content={state.streamingContent} activeToolCalls={[]} />,
+                        });
+                      }
+                      const calls = state.activeToolCalls.filter((call) => call.name !== "ask_user");
+                      if (calls.length > 0) {
+                        events.push({
+                          key: "streaming-actions",
+                          kind: "action",
+                          count: calls.length,
+                          active: calls.some((call) => call.status === "running"),
+                          content: <StreamingMessage content="" activeToolCalls={calls} />,
+                        });
+                      }
+                    }
+                    const hasWork = events.length > 0;
                     return (
                       <div key={block.key} className="flex flex-col gap-3">
                         {hasWork && (
@@ -779,32 +846,7 @@ export const AssistantShell = forwardRef<
                             endedAt={block.endedAt}
                             active={block.active}
                           >
-                            {block.work.map((msg) => (
-                              <div key={msg.id} className="flex flex-col gap-3">
-                                {renderReasoning(
-                                  `reasoning-${msg.id}`,
-                                  assistantMessageReasoning(msg),
-                                )}
-                                {renderMessage(msg)}
-                              </div>
-                            ))}
-                            {renderReasoning(
-                              `reasoning-${block.summary?.id ?? block.key}`,
-                              summaryReasoning,
-                            )}
-                            {state.streamingReasoning ? (
-                              <ReasoningBlock
-                                active={state.streamingReasoning.active}
-                                durationMs={state.streamingReasoning.durationMs}
-                                text={state.streamingReasoning.text}
-                              />
-                            ) : null}
-                            {streamingIsWork && (
-                              <StreamingMessage
-                                content={state.streamingContent}
-                                activeToolCalls={state.activeToolCalls}
-                              />
-                            )}
+                            <WorkEvents events={events} />
                           </WorkAccordion>
                         )}
                         {block.summary ? renderMessage(block.summary) : null}
