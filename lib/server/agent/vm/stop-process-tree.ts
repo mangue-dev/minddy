@@ -7,10 +7,17 @@ export async function stopProcessTree(child: ChildProcess): Promise<void> {
   if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   // Capture descendants before terminating their parent: once reparented they
   // can no longer be attributed to this turn. Birth markers prevent PID reuse.
-  const rows = execFileSync("ps", ["-A", "-o", "pid=,ppid="], {
-    encoding: "utf8",
-    timeout: 2_000,
-  }).trim().split("\n").map((line) => line.trim().split(/\s+/).map(Number));
+  let rows: number[][] = [];
+  try {
+    rows = execFileSync("ps", ["-A", "-o", "pid=,ppid="], {
+      encoding: "utf8",
+      timeout: 2_000,
+    }).trim().split("\n").map((line) => line.trim().split(/\s+/).map(Number));
+  } catch (error) {
+    // Descendant discovery is best-effort. A missing or overloaded ps must
+    // not prevent SIGTERM and SIGKILL from reaching the known server process.
+    console.warn("[opencode] Could not enumerate descendants; stopping the server only:", error);
+  }
   const pids = new Set([child.pid]);
   for (let size = 0; size !== pids.size;) {
     size = pids.size;
