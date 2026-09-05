@@ -6,6 +6,7 @@ import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import { SeedProposalCard } from "./seed-proposal-card";
 import { liveSecretOf, SecretCallout } from "./secret-callout";
+import { useGroupedActions } from "./work-events";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
 import {
@@ -1425,6 +1426,7 @@ export function ToolCallList({
   onSeedCreated,
 }: ToolCallListProps) {
   const t = useTranslations("ToolCall");
+  const grouped = useGroupedActions();
   const [expanded, setExpanded] = useState(false);
 
   if (items.length === 0) return null;
@@ -1452,6 +1454,9 @@ export function ToolCallList({
 
   const renderRows = () => {
     if (rowItems.length === 0) return null;
+    if (grouped) {
+      return rowItems.map((item) => <ToolCallRow key={item.id} item={item} t={t} />);
+    }
 
     // Unique action: the line shimmers by itself as long as it rotates.
     if (rowItems.length === 1) return <ToolCallRow item={rowItems[0]} t={t} />;

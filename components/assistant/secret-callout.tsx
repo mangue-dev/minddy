@@ -55,6 +55,20 @@ export function liveSecretOf(
   return null;
 }
 
+/** Track newly available credentials by call ID, never by credential material. */
+export function liveSecretRevealKey(calls: readonly {
+  id: string;
+  name: string;
+  status?: "running" | "complete";
+  success?: boolean;
+  result?: unknown;
+}[]): string | undefined {
+  const ids = calls.filter((call) =>
+    call.status === "complete" && call.success !== false && liveSecretOf(call.name, call.result),
+  ).map((call) => call.id);
+  return ids.length > 0 ? JSON.stringify(ids) : undefined;
+}
+
 export function SecretCallout({ envLine }: { envLine: string }) {
   const t = useTranslations("ToolCall");
   const [reveal, setReveal] = useState(false);

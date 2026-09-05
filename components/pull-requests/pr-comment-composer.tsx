@@ -100,7 +100,7 @@ export function PrCommentComposer({
   const canPost = !!body && !posting && !uploads.uploading;
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-2">
+    <div className="flex min-w-0 max-w-full flex-col gap-2 font-sans">
       <div
         className={cn(
           "relative min-w-0 w-full max-w-full border border-border transition-colors focus-within:border-ring",

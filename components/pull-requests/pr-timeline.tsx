@@ -470,7 +470,7 @@ export function ReviewConversationCard({
   }, [resolved]);
 
   return (
-    <article className="overflow-clip rounded-lg border border-border bg-card shadow-xs">
+    <article className="overflow-clip rounded-xl border border-border bg-card shadow-xs">
       <PrHunk
         path={comment.path}
         line={displayLineOf(comment)}
@@ -481,7 +481,7 @@ export function ReviewConversationCard({
         collapsed={collapsed}
         onCollapsedChange={setCollapsed}
         diffHunk={comment.diff_hunk}
-        className="pr-diff-view-inset border-b border-border bg-muted/15"
+        className={cn("pr-diff-view-inset bg-muted/15", !collapsed && "border-b border-border")}
         headerClassName="py-2.5"
       />
 
