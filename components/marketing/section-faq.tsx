@@ -13,7 +13,7 @@ export async function SectionFaq() {
   }));
 
   return (
-    <section id="faq" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
+    <section id="faq" className="scroll-mt-24 py-16 sm:py-24">
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
         <RevealHeading
           className="mb-8 text-3xl font-medium tracking-[-0.035em] text-balance sm:text-4xl"
