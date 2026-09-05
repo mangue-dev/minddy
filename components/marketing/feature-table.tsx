@@ -1,21 +1,10 @@
 import { Check, Minus } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
+import { CARD_TONES } from "./card-tones";
 
 /**
- * The comparative table of the public site, without its content (MIN-93).
- *
- * Extract from `pricing-comparison.tsx`, which was the only caller: the
- * pages `/alternatives/<outil>` compare the same thing in another form —
- * grouped rows, columns, and cells that have a yes, no, or a
- * value. A second copied table would have diverged on the first correction
- * of the layout, and the sticky left column is precisely the kind of
- * detail that is not copied correctly.
- *
- * Purely presentational: NO translation here, no access to the plans. The
- * labels arrive already translated, the cells already calculated. This is what
- * allows the pricing page to continue to derive its values from
- * `BILLING_PLANS` while the comparisons derive theirs from
- * `lib/comparisons.ts`.
+ * Shared presentation for translated pricing and competitor comparisons.
+ * Callers derive their values from billing plans or comparison data.
  */
 
 /** `true` = included, `false` = absent, a string = the cell value. */
@@ -26,6 +15,8 @@ export interface FeatureColumn {
   label: string;
   /** Highlighted column (the recommended plan, minddy in a comparison). */
   highlighted?: boolean;
+  /** Match the corresponding plan card in the pastel presentation. */
+  tone?: keyof typeof CARD_TONES;
 }
 
 export interface FeatureRow {
@@ -50,6 +41,7 @@ export function FeatureTable({
   includedLabel,
   notIncludedLabel,
   framed = false,
+  pastel = false,
 }: {
   /** Title read by screen readers (`<caption class="sr-only">`). */
   caption: string;
@@ -60,7 +52,52 @@ export function FeatureTable({
   notIncludedLabel: string;
   /** Give short comparison tables visible cell and outer borders. */
   framed?: boolean;
+  /** Separate feature groups into rounded panels with colored plan columns. */
+  pastel?: boolean;
 }) {
+  if (pastel) {
+    return (
+      <div className="space-y-6 sm:space-y-8">
+        {groups.map((group) => (
+          <div key={group.key} role="region" aria-label={`${caption} — ${group.label}`} tabIndex={0} className="overflow-x-auto rounded-2xl bg-[#f7f7f4] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 dark:bg-[#222321]">
+            <table className="w-full min-w-[520px] table-fixed border-separate border-spacing-0 text-sm">
+              <caption className="sr-only">{caption} — {group.label}</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className="sticky left-0 z-10 w-[40%] bg-[#f7f7f4] px-4 py-6 text-left text-base font-medium tracking-tight dark:bg-[#222321] sm:px-6">
+                    {group.label}
+                  </th>
+                  {columns.map((column) => (
+                    <th key={column.key} scope="col" className={cn("px-3 py-6 text-center text-base font-medium tracking-tight", column.tone && CARD_TONES[column.tone])}>
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {group.rows.map((row) => (
+                  <tr key={row.key}>
+                    <th scope="row" className="sticky left-0 z-10 border-t border-black/5 bg-[#f7f7f4] px-4 py-4 text-left font-normal dark:border-white/5 dark:bg-[#222321] sm:px-6">
+                      <span className="inline-flex items-center gap-2 text-foreground">
+                        {row.label}
+                        {row.hint}
+                      </span>
+                    </th>
+                    {row.cells.map((cell, index) => (
+                      <td key={columns[index]?.key ?? index} className={cn("relative border-t border-black/5 px-3 py-4 text-center dark:border-white/5", columns[index]?.tone && CARD_TONES[columns[index].tone])}>
+                        <FeatureCellValue cell={cell} includedLabel={includedLabel} notIncludedLabel={notIncludedLabel} pastel />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("overflow-x-auto", framed && "rounded-2xl border border-border")}>
       {/* `border-separate` keeps the sticky first column and each row border
@@ -129,28 +166,7 @@ export function FeatureTable({
                       framed && "border-l px-4",
                     )}
                   >
-                    {typeof cell === "boolean" ? (
-                      cell ? (
-                        <>
-                          <Check
-                            className="h-4 w-4 text-primary"
-                            strokeWidth={3}
-                            aria-hidden
-                          />
-                          <span className="sr-only">{includedLabel}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Minus
-                            className="h-4 w-4 text-muted-foreground/50"
-                            aria-hidden
-                          />
-                          <span className="sr-only">{notIncludedLabel}</span>
-                        </>
-                      )
-                    ) : (
-                      <span className="text-foreground/90">{cell}</span>
-                    )}
+                    <FeatureCellValue cell={cell} includedLabel={includedLabel} notIncludedLabel={notIncludedLabel} />
                   </td>
                 ))}
               </tr>
@@ -159,5 +175,27 @@ export function FeatureTable({
         ))}
       </table>
     </div>
+  );
+}
+
+function FeatureCellValue({ cell, includedLabel, notIncludedLabel, pastel = false }: {
+  cell: FeatureCell;
+  includedLabel: string;
+  notIncludedLabel: string;
+  pastel?: boolean;
+}) {
+  if (typeof cell === "string") {
+    return <span className={pastel ? "font-medium" : "text-foreground/90"}>{cell}</span>;
+  }
+
+  return (
+    <>
+      {cell ? (
+        <Check className={cn("size-4", pastel ? "mx-auto" : "text-primary")} strokeWidth={pastel ? 2 : 3} aria-hidden />
+      ) : (
+        <Minus className={cn("size-4", pastel ? "mx-auto opacity-40" : "text-muted-foreground/50")} aria-hidden />
+      )}
+      <span className="sr-only">{cell ? includedLabel : notIncludedLabel}</span>
+    </>
   );
 }

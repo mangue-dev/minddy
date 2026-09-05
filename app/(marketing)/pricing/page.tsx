@@ -10,9 +10,9 @@ import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { StructuredData } from "@/components/marketing/structured-data";
 import { PRICING_FAQ_KEYS } from "@/components/marketing/faq-keys";
+import { SectionHeading } from "@/components/marketing/section-heading";
 
-/** Public price page (MIN-73): plan maps, line by line details,
- and the only questions that relate to money. */
+/** Public Cloud plans, feature comparison, and billing questions. */
 
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "pricing", locale: (await getLocale()) as Locale });
@@ -33,59 +33,45 @@ export default async function PricingPage() {
 
   return (
     <>
-      {/* `Offer` (derived from BILLING_PLANS) + `FAQPage`: the pricing page is
- the only one that can claim a rich result price, and it had
- no structured data (MIN-88). */}
       <StructuredData variant="pricing" />
-      <section className="pt-24 pb-16 sm:pt-28 sm:pb-20">
+      <section className="pt-24 pb-12 sm:pt-32 sm:pb-16">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-          <header className="mx-auto mb-10 max-w-2xl text-center sm:mb-12">
-            <h1 className="mb-4 text-4xl leading-[1.05] font-semibold tracking-tighter text-balance sm:text-5xl">
+          <header className="mb-12 max-w-3xl sm:mb-16">
+            <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] leading-[1.06] font-medium tracking-[-0.055em] text-balance">
               {t("heroTitle")}
             </h1>
-            <p className="text-lg leading-relaxed text-pretty text-muted-foreground">
+            <p className="mt-7 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
               {t("heroSubtitle")}
             </p>
-            <p className="mt-5 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-              {t("cloudNotice")} {" "}
-              <Link href={localizedHref("/self-hosting", locale as Locale)} className="font-medium text-foreground underline underline-offset-4">
+            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-pretty text-muted-foreground">
+              {t("cloudNotice")}
+              <Link href={localizedHref("/self-hosting", locale as Locale)} className="mt-2 block w-fit font-medium text-foreground underline underline-offset-4">
                 {t("cloudNoticeCta")}
               </Link>
             </p>
           </header>
 
-          {/* On this page the cards directly follow the `<h1>`: they
- take the `h2` level, otherwise the hierarchy jumps a notch. */}
-          <PricingPlans headingLevel={2} />
+          <PricingPlans headingLevel={2} compact />
         </div>
       </section>
 
-      <section className="border-t border-border py-16 sm:py-20">
-        <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
-          <header className="mx-auto mb-10 max-w-2xl text-center">
-            <h2 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
-              {t("comparisonTitle")}
-            </h2>
-            <p className="leading-relaxed text-pretty text-muted-foreground">
-              {t("comparisonSubtitle")}
-            </p>
-          </header>
+      <section className="py-12 sm:py-16">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <SectionHeading title={t("comparisonTitle")} description={t("comparisonSubtitle")} />
 
           <PricingComparison />
         </div>
       </section>
 
-      <section className="border-t border-border py-16 sm:py-20">
+      <section className="py-16 sm:py-24">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-          <h2 className="mb-8 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
+          <h2 className="mb-8 text-3xl leading-tight font-medium tracking-[-0.035em] text-balance sm:text-4xl">
             {tl("faqTitle")}
           </h2>
           <FaqAccordion items={faqItems} />
         </div>
       </section>
 
-      {/* Same last reminder as the landing, both component included:
- pages end on the same request. */}
       <SectionCta />
     </>
   );

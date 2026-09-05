@@ -1,201 +1,72 @@
 import { getTranslations } from "next-intl/server";
-import { Check } from "lucide-react";
+import { Check, GitPullRequest, Bot, Layers } from "lucide-react";
+import { MCP_PRESETS } from "@/lib/mcp-catalog";
+import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { NumoFace } from "@/components/numo-face";
 import { ScreenshotSlot } from "./screenshot-slot";
-import { Reveal, RevealGroup, RevealHeading } from "./reveal";
-import { IsoTile, type IsoTileName } from "./iso-tile";
-import type { ScreenshotSlotId } from "./screenshot-slots";
+import { FeatureDisclosure } from "./feature-disclosure";
+import { CARD_TONES } from "./card-tones";
+import { SectionHeading } from "./section-heading";
 
-/**
- * One agent story: connect over MCP, move an issue through a pull request,
- * then use Numo from inside the product. Compatible agents come from the same
- * registry as account settings (`lib/mcp-agents.ts`).
- */
+const CAPABILITIES = ["read", "plan", "track", "create", "comment", "wiki", "review", "beyond"] as const;
+const PROVIDER_IDS = ["notion", "github", "slack", "figma"];
+const PROVIDERS = PROVIDER_IDS.map(id => MCP_PRESETS.find(provider => provider.id === id)!);
+const NUMO_CAPABILITIES = ["find", "act", "context"] as const;
 
-const CAPABILITY_KEYS = [
-  "read",
-  "plan",
-  "track",
-  "create",
-  "comment",
-  "wiki",
-  "review",
-  "beyond",
-] as const;
-
-/** The three stages of a ticket entrusted to the code agent. */
-const STEPS = [
-  { key: "write", slot: "workflowIssue" },
-  { key: "run", slot: "workflowAgent" },
-  { key: "review", slot: "workflowPr" },
-] as const satisfies ReadonlyArray<{ key: string; slot: ScreenshotSlotId }>;
-
-/** What distinguishes Numo: it can search, act, and use the current screen as context. */
-const NUMO_CAPABILITIES = [
-  { key: "find", icon: "find" },
-  { key: "act", icon: "pencil" },
-  { key: "context", icon: "context" },
-] as const satisfies ReadonlyArray<{ key: string; icon: IsoTileName }>;
-
-const NUMO_EXAMPLES = ["triage", "assign", "view", "plan"] as const;
-
+/** Read left to right: the agent works, you review, and both keep the same context. */
 export async function SectionAgents() {
   const t = await getTranslations("Landing");
-
   return (
-    <section id="agents" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        {/* `min-w-0` prevents long agent names from widening the page. */}
-        <div className="grid items-start gap-10 md:grid-cols-2 md:gap-16 [&>*]:min-w-0">
-          <div>
-            <RevealHeading
-              className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
-              text={t("agentsTitle")}
-            />
-            <Reveal
-              as="p"
-              delay={0.15}
-              className="mb-8 leading-relaxed text-pretty text-muted-foreground"
-            >
-              {t("agentsSubtitle")}
-            </Reveal>
-
-            <RevealGroup as="ul" step={0.07} className="flex flex-col gap-3">
-              {CAPABILITY_KEYS.map((key) => (
-                <li key={key} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Check className="h-3 w-3" />
-                  </span>
-                  <span className="text-sm leading-relaxed text-muted-foreground">
-                    {t(`agentsCapability_${key}`)}
-                  </span>
-                </li>
-              ))}
-            </RevealGroup>
-          </div>
-
-          {/* This is compatibility proof. Installation stays in account settings,
-              where the visitor has a real endpoint and can use the command. */}
-          <Reveal
-            delay={0.1}
-            className="rounded-2xl border border-border bg-muted/30 p-5 sm:p-6"
-          >
-            <p className="mb-4 text-sm font-medium">{t("agentsCompatible")}</p>
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {MCP_AGENTS.map((agent) => (
-                <li
-                  key={agent.id}
-                  className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-4 text-left text-xs font-medium text-foreground/90 shadow-sm"
-                >
-                  <McpAgentLogo agent={agent.id} size={24} />
-                  {agent.label}
-                </li>
-              ))}
-            </ul>
-
-            {/* What the agent costs, and to whom. The second sentence is the only
-                landing-page mention of BYOK (MIN-149). The full detail lives in
-                the “Your key, your inference” section of /pricing. */}
-            <p className="mt-5 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
-              {t("agentsPlanNote")} {t("agentsByokNote")}
-            </p>
-          </Reveal>
-        </div>
-
-        <div id="workflow" className="mt-20 scroll-mt-24 sm:mt-28">
-          <header className="mb-10 max-w-2xl sm:mb-12">
-            <RevealHeading
-              as="h3"
-              className="text-2xl font-semibold tracking-tight text-balance sm:text-4xl"
-              text={t("workflowTitle")}
-            />
-            <Reveal
-              as="p"
-              delay={0.15}
-              className="mt-3 leading-relaxed text-pretty text-muted-foreground"
-            >
-              {t("workflowSubtitle")}
-            </Reveal>
-          </header>
-
-          <RevealGroup className="grid gap-4 lg:grid-cols-3" step={0.1}>
-            {STEPS.map((step) => (
-              <article
-                key={step.key}
-                className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
-              >
-                <ScreenshotSlot id={step.slot} className="rounded-none border-0 border-b" />
-                <div className="p-6">
-                  <h4 className="mb-2 text-lg font-semibold tracking-tight">
-                    {t(`workflow_${step.key}_title`)}
-                  </h4>
-                  <p className="text-sm leading-relaxed text-pretty text-muted-foreground">
-                    {t(`workflow_${step.key}_body`)}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </RevealGroup>
-        </div>
-
-        <div id="numo" className="mt-20 scroll-mt-24 sm:mt-28">
-          <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 [&>*]:min-w-0">
-            <Reveal>
-              <ScreenshotSlot id="numoPanel" />
-            </Reveal>
-
-            <div>
-              {/* Numo has its own mark, so a separate text badge would be redundant. */}
-              <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-primary">
-                <NumoFace className="h-4 w-auto" />
-              </span>
-
-              <RevealHeading
-                as="h3"
-                className="mb-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl"
-                text={t("numoTitle")}
-              />
-              <Reveal
-                as="p"
-                delay={0.15}
-                className="mb-8 leading-relaxed text-pretty text-muted-foreground"
-              >
-                {t("numoSubtitle")}
-              </Reveal>
-
-              <RevealGroup as="ul" className="flex flex-col gap-6">
-                {NUMO_CAPABILITIES.map((capability) => (
-                  <li key={capability.key} className="flex items-start gap-4">
-                    <IsoTile name={capability.icon} className="mt-0.5 w-12 shrink-0" />
-                    <div>
-                      <h4 className="mb-1 font-medium">
-                        {t(`numoCapability_${capability.key}_title`)}
-                      </h4>
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        {t(`numoCapability_${capability.key}_body`)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </RevealGroup>
+    <section id="agents" className="scroll-mt-24 bg-[#f4f6f9] px-4 py-16 sm:px-6 sm:py-20 dark:bg-[#12171d]">
+      <div className="mx-auto max-w-6xl">
+        <SectionHeading title={t("agentsTitle")} description={t("agentsSubtitle")} />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <FeatureDisclosure id="workflow" title={t("workflow_run_title")} className={`h-[460px] ${CARD_TONES.lavender}`}
+            details={<div className="space-y-5"><p>{t("workflow_write_body")}</p><p>{t("workflow_run_body")}</p><p>{t("workflowSubtitle")}</p></div>}>
+            <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
+              <Bot className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <h3 className="text-2xl font-medium tracking-tight">{t("workflow_run_title")}</h3>
+              <p className="mt-3 text-sm leading-relaxed opacity-80">{t("workflow_run_body")}</p>
+              <div className="mt-6 min-h-0 flex-1">
+                <ScreenshotSlot id="workflowAgent" expandable sizes="(min-width: 1024px) 700px, 100vw" className="h-full w-full border-0 bg-transparent shadow-none" />
+              </div>
             </div>
-          </div>
-
-          <Reveal className="mt-12 rounded-2xl border border-border bg-muted/30 p-5 sm:mt-16 sm:p-6">
-            <p className="mb-4 text-sm font-medium">{t("numoExamplesTitle")}</p>
-            <ul className="flex flex-wrap gap-2">
-              {NUMO_EXAMPLES.map((example) => (
-                <li
-                  key={example}
-                  className="rounded-full border border-border bg-card px-3.5 py-1.5 text-sm text-foreground/90 shadow-sm"
-                >
-                  {t(`numoExample_${example}`)}
-                </li>
-              ))}
-            </ul>
-          </Reveal>
+          </FeatureDisclosure>
+          <FeatureDisclosure title={t("workflow_review_title")} className={`h-[460px] lg:col-span-2 ${CARD_TONES.sage}`}
+            details={<div className="space-y-5"><p>{t("workflow_review_body")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="workflowPr" expandable sizes="(min-width: 1024px) 700px, 100vw" /></div>}>
+            <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
+              <GitPullRequest className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <h3 className="text-2xl font-medium tracking-tight">{t("workflow_review_title")}</h3>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("workflow_review_body")}</p>
+              <div className="mt-6 min-h-0 flex-1">
+                <ScreenshotSlot id="workflowPr" expandable sizes="(min-width: 1024px) 700px, 100vw" className="h-full w-full border-0 bg-transparent shadow-none" />
+              </div>
+            </div>
+          </FeatureDisclosure>
+          <FeatureDisclosure id="numo" title={t("numoTitle")} className={`h-[440px] lg:col-span-2 ${CARD_TONES.sky}`}
+            details={<dl className="space-y-5">{NUMO_CAPABILITIES.map(key => <div key={key}><dt className="font-medium">{t(`numoCapability_${key}_title`)}</dt><dd className="mt-1 opacity-85">{t(`numoCapability_${key}_body`)}</dd></div>)}</dl>}>
+            <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
+              <NumoFace className="mb-5 h-5 w-6 shrink-0 self-start" />
+              <h3 className="text-2xl font-medium tracking-tight">{t("numoTitle")}</h3>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("numoSubtitle")}</p>
+              <div className="mt-6 min-h-0 flex-1">
+                <ScreenshotSlot id="numoPanel" expandable sizes="(min-width: 1024px) 700px, 100vw" className="h-full w-full border-0 bg-transparent shadow-none" />
+              </div>
+            </div>
+          </FeatureDisclosure>
+          <FeatureDisclosure title={t("navMenu_agents_title")} className={`h-[440px] ${CARD_TONES.butter}`}
+            details={<><p className="mb-5">{t("agentsMcpRoles")}</p><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><Check className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
+            <div className="flex h-full flex-col p-6 pb-20 sm:p-8 sm:pb-20">
+              <h3 className="text-2xl font-medium tracking-tight">{t("agentsCompatible")}</h3>
+              <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-5">
+                {MCP_AGENTS.map(agent => <li key={agent.id} className="flex min-w-0 items-center gap-2 text-xs font-medium"><McpAgentLogo agent={agent.id} size={24} />{agent.label}</li>)}
+                {PROVIDERS.map(provider => <li key={provider.id} className="flex min-w-0 items-center gap-2 text-xs font-medium"><McpServiceLogo service={provider.id} className="size-6" />{provider.name}</li>)}
+                <li className="flex items-center gap-2 text-xs opacity-75"><Layers className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />{t("agentsMore")}</li>
+              </ul>
+            </div>
+          </FeatureDisclosure>
         </div>
       </div>
     </section>

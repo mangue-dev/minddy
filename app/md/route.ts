@@ -1,11 +1,15 @@
 import type { NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
+import { standaloneMobileInstallGuideCopy } from "@/components/marketing/mobile-install-guide-copy";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { MARKDOWN_LOCALE_COPY } from "@/lib/markdown-locale-copy";
 import { BILLING_PLANS } from "@/lib/billing-plans";
+import { planFeatureLabels } from "@/lib/plan-features";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import {
   COMPARISONS,
+  COMPARISON_FEATURES,
+  COMPARISON_REVIEWED_AT,
   COMPARISON_POINTS,
   COMPARISON_ROWS,
   type Comparison,
@@ -52,9 +56,6 @@ const COMPARISON_BY_ROUTE = new Map<string, Comparison>(
 );
 
 const DOWNLOAD_PLATFORM_NAMESPACES = {
-  downloadMacos: "DownloadMacos",
-  downloadLinux: "DownloadLinux",
-  downloadWindows: "DownloadWindows",
   downloadMobile: "DownloadMobile",
 } as const;
 
@@ -138,30 +139,34 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
     [
       t("featuresTitle"),
       t("featuresSubtitle"),
-      [],
+      (["board", "all", "inbox", "objectives", "cycles", "triage"] as const).map(
+        (k) => [t(`feature_${k}_title`), t(`feature_${k}_body`)],
+      ),
     ],
-    [t("speedTitle"), t("speedSubtitle"), []],
+    [t("pagesTitle"), t("pagesSubtitle"), (["write", "link", "agents", "publish"] as const).map(
+      (k) => [t(`pages_${k}_title`), t(`pages_${k}_body`)],
+    )],
+    [t("navMenu_feedback_title"), t("feedbackSubtitle"), (["post", "moderate", "decide", "status"] as const).map(
+      (k) => [t(`feedback_${k}_title`), t(`feedback_${k}_body`)],
+    )],
+    [t("feature_palette_title"), t("feature_palette_body"), []],
+    [t("scratchpadTitle"), t("scratchpadSubtitle"), (["write", "prompt", "agent", "promote", "mcp"] as const).map(
+      (k) => ["", t(`scratchpadPoint_${k}`)],
+    )],
+    [t("voiceTitle"), t("voiceSubtitle"), []],
     [
       t("agentsTitle"),
       t("agentsSubtitle"),
-      (
-        [
-          "read",
-          "plan",
-          "track",
-          "create",
-          "comment",
-          "wiki",
-          "review",
-          "beyond",
-        ] as const
-      ).map((k) => ["", t(`agentsCapability_${k}`)] as [string, string]),
+      (["write", "run", "review"] as const).map(
+        (k) => [t(`workflow_${k}_title`), t(`workflow_${k}_body`)],
+      ),
     ],
-    [
-      t("feedbackTitle"),
-      t("feedbackSubtitle"),
-      (["post", "moderate", "decide", "status"] as const).map(
-        (k) => [t(`feedback_${k}_title`), t(`feedback_${k}_body`)] as [string, string],
+    [t("numoTitle"), t("numoSubtitle"), (["find", "act", "context"] as const).map(
+      (k) => [t(`numoCapability_${k}_title`), t(`numoCapability_${k}_body`)],
+    )],
+    [t("agentsCompatible"), [t("agentsMcpRoles"), t("agentsPlanNote"), t("agentsByokNote")].join("\n\n"),
+      (["read", "plan", "track", "create", "comment", "wiki", "review", "beyond"] as const).map(
+        (k) => ["", t(`agentsCapability_${k}`)],
       ),
     ],
     [
@@ -171,6 +176,10 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
         (k) => [t(`more_${k}_title`), t(`more_${k}_body`)] as [string, string],
       ),
     ],
+    [t("editionsTitle"), t("editionsSubtitle"), [
+      [t("cloudTitle"), [t("cloudBody"), t("cloudPointOne"), t("cloudPointTwo"), t("cloudPointThree")].join(" ")],
+      [t("selfHostedTitle"), [t("selfHostedBody"), t("selfHostedPointOne"), t("selfHostedPointTwo"), t("selfHostedPointThree")].join(" ")],
+    ]],
     [t("pricingTitle"), t("pricingSubtitle"), []],
   ];
 
@@ -178,7 +187,6 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitleBefore")} ${t("heroTitleAccent")}`,
     t("heroSubtitle"),
-    t("heroNote"),
     ...sections.flatMap(([title, subtitle, items]) => [
       `## ${title}`,
       subtitle,
@@ -207,10 +215,13 @@ async function renderPricing(locale: Locale, canonical: string): Promise<string>
     // structured data.
     BILLING_PLANS.map(
       (plan) =>
-        `- **${tb(planNameKey[plan.id])}**: ${plan.priceEurMonthly} EUR / ${MARKDOWN_LOCALE_COPY[locale].perMonth}`,
+        `### ${tb(planNameKey[plan.id])}\n\n${plan.priceEurMonthly} EUR / ${MARKDOWN_LOCALE_COPY[locale].perMonth}\n\n${planFeatureLabels(plan, tb).map(feature => `- ${feature}`).join("\n")}`,
     ).join("\n"),
     `## ${t("comparisonTitle")}`,
     t("comparisonSubtitle"),
+    `## ${t("byokTitle")}`,
+    t("byokSubtitle"),
+    t("byokNote"),
     "## FAQ",
     PRICING_FAQ_KEYS.map((k) => `### ${t(`faq_${k}_q`)}\n\n${t(`faq_${k}_a`)}`).join("\n\n"),
     links(locale),
@@ -365,15 +376,12 @@ async function renderSelfHosting(locale: Locale, canonical: string): Promise<str
 async function renderDownload(locale: Locale, canonical: string): Promise<string> {
   const t = await getTranslations({ locale, namespace: "Download" });
   const platformRoutes = [
-    ["downloadMacos", "platformGuideMacos"],
-    ["downloadLinux", "platformGuideLinux"],
-    ["downloadWindows", "platformGuideWindows"],
     ["downloadMobile", "platformGuideMobile"],
   ] as const;
 
   return [
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
-    `## ${t("heroTitle")} ${t("heroTitleAccent")}`,
+    `## ${t("heroTitle")}`,
     t("heroSubtitle"),
     `## ${t("platformGuidesTitle")}`,
     t("platformGuidesSubtitle"),
@@ -385,10 +393,20 @@ async function renderDownload(locale: Locale, canonical: string): Promise<string
       .join("\n"),
     `## ${t("iosGuideTitle")}`,
     t("iosGuideBody"),
+    (["Share", "Home", "Add"] as const)
+      .map((step, index) => `${index + 1}. **${t(`iosStep${step}Title`)}.** ${t(`iosStep${step}Body`)}`)
+      .join("\n"),
     `## ${t("androidGuideTitle")}`,
-    t("androidGuideBody"),
+    `[${t("platformGuideMobile")}](${SITE_URL}${publicPathForLocale(routeByKey("downloadMobile"), locale)})`,
     `## ${t("pointsTitle")}`,
     t("pointsSubtitle"),
+    ...(["window", "notifications", "updates"] as const).flatMap(k => [
+      `### ${t(`point_${k}_title`)}`, t(`point_${k}_body`),
+    ]),
+    `### ${t("noticeTitle")}`,
+    t("noticeBody"),
+    `### ${t("noticeCounterTitle")}`,
+    t("noticeCounterBody"),
     links(locale),
   ].join("\n\n") + "\n";
 }
@@ -403,16 +421,25 @@ async function renderDownloadPlatform(
     namespace: DOWNLOAD_PLATFORM_NAMESPACES[key],
   });
 
+  const td = await getTranslations({ locale, namespace: "Download" });
+  const copy = standaloneMobileInstallGuideCopy(td, t);
+
   return [
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
     `## ${t("availabilityTitle")}`,
     t("availabilityBody"),
-    `## ${t("installTitle")}`,
-    [t("stepOne"), t("stepTwo"), t("stepThree")]
-      .map((step, index) => `${index + 1}. ${step}`)
-      .join("\n"),
+    `## ${copy.iosTitle}`,
+    copy.iosBody,
+    [[copy.iosStepShareTitle, copy.iosStepShareBody], [copy.iosStepHomeTitle, copy.iosStepHomeBody], [copy.iosStepAddTitle, copy.iosStepAddBody]]
+      .map(([title, body], index) => `${index + 1}. **${title}.** ${body}`).join("\n"),
+    `## ${copy.androidTitle}`,
+    copy.androidBody,
+    [[copy.androidStepMenuTitle, copy.androidStepMenuBody], [copy.androidStepPromptTitle, copy.androidStepPromptBody]]
+      .map(([title, body], index) => `${index + 1}. **${title}.** ${body}`).join("\n"),
+    `## ${t("finishTitle")}`,
+    t("finishBody"),
     `## ${t("noteTitle")}`,
     t("noteBody"),
     `## ${t("openSourceTitle")}`,
@@ -445,15 +472,7 @@ async function renderChangelog(locale: Locale, canonical: string): Promise<strin
   ].join("\n\n") + "\n";
 }
 
-/**
- * A comparison in Markdown (MIN-93). HTML table becomes a real table
- * Markdown: this is the form that a model copies without making a mistake in the column, and
- * the only reason a text version of this page is of interest.
- *
- * The order of the page is preserved — what the other tool does better comes
- * BEFORE what minddy does otherwise. A text version that would reverse the
- * two would not say the same thing as the page it claims to reflect.
- */
+/** Keep the comparison's evidence, capabilities, and reading order in Markdown. */
 async function renderComparison(
   comparison: Comparison,
   locale: Locale,
@@ -463,15 +482,22 @@ async function renderComparison(
     getTranslations({ locale, namespace: "Alternatives" }),
     getTranslations({ locale, namespace: comparison.namespace }),
   ]);
+  const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${COMPARISON_REVIEWED_AT}T12:00:00Z`));
   const cell = (row: (typeof COMPARISON_ROWS)[number]) => [
     t(`minddy_${row}`),
-    tc(`them_${row}`),
+    comparison.sources[row]
+      ? `[${tc(`them_${row}`)}](${comparison.sources[row]})`
+      : tc(`them_${row}`),
   ];
 
   return [
     header(tc("metaTitle"), tc("metaDescription"), canonical, locale),
     `## ${tc("heroTitle")}`,
     tc("heroSubtitle"),
+    `### ${t("betterThemTitle", { name: comparison.name })}`,
+    tc("verdictThem"),
+    `### ${t("betterUsTitle")}`,
+    tc("verdictUs"),
 
     `## ${t("compareTitle")}`,
     t("compareSubtitle"),
@@ -480,17 +506,27 @@ async function renderComparison(
       "| --- | --- | --- |",
       ...COMPARISON_ROWS.map((row) => `| ${t(`row_${row}`)} | ${cell(row).join(" | ")} |`),
     ].join("\n"),
-    `${t("checkedNote")} ${comparison.pricingUrl}`,
+    t("billingNote"),
+    t("checkedNote", { date: reviewedDate }),
+    `[${t("checkedDocsLink", { name: comparison.name })}](${comparison.docsUrl}) · [${t("checkedLink", { name: comparison.name })}](${comparison.pricingUrl})`,
 
-    `## ${t("betterThemTitle", { name: comparison.name })}`,
-    COMPARISON_POINTS.map((point) => `- ${tc(`betterThem_${point}`)}`).join("\n"),
-
-    `## ${t("betterUsTitle")}`,
-    COMPARISON_POINTS.map((point) => `- ${tc(`betterUs_${point}`)}`).join("\n"),
+    `## ${t("productTitle")}`,
+    t("productSubtitle"),
+    ...COMPARISON_FEATURES.flatMap(feature => [
+      `### ${t(`feature_${feature}_title`)}`,
+      t(`feature_${feature}_body`),
+    ]),
+    t("aiNote"),
 
     `## ${t("verdictTitle")}`,
-    tc("verdictThem"),
-    tc("verdictUs"),
+    t("verdictSubtitle"),
+    `### ${t("betterThemTitle", { name: comparison.name })}`,
+    COMPARISON_POINTS.map((point) => `- ${tc(`betterThem_${point}`)}`).join("\n"),
+    `### ${t("betterUsTitle")}`,
+    COMPARISON_POINTS.map((point) => `- ${tc(`betterUs_${point}`)}`).join("\n"),
+
+    `## ${t("migrationTitle")}`,
+    t("migrationBody", { name: comparison.name }),
     links(locale),
   ].join("\n\n") + "\n";
 }

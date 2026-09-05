@@ -1,0 +1,31 @@
+@property --minddy-wordmark-progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.brand {
+  --minddy-wordmark-progress: 0;
+  transition: --minddy-wordmark-progress 140ms linear;
+}
+
+/* One timeline preserves each letter's position when hover reverses mid-flight. */
+@media (hover: hover) {
+  .brand:hover {
+    --minddy-wordmark-progress: 1;
+  }
+}
+
+:global(a:focus-visible) .brand {
+  --minddy-wordmark-progress: 1;
+}
+
+.letter {
+  color: color-mix(in srgb, var(--foreground), var(--letter-color) calc(clamp(0, (var(--minddy-wordmark-progress) * 350 - var(--letter-index) * 40) / 150, 1) * 100%));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand {
+    transition: none;
+  }
+}

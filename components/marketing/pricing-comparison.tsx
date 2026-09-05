@@ -100,7 +100,7 @@ const GROUPS: ReadonlyArray<Group> = [
       // A PR only exists in minddy carried by an agent run
       // (`app/api/pull-requests` reads `agent_runs`): same guard as the agent.
       { key: "pr", hint: true, value: (plan) => plan.allowAgents },
-      // BYOK removes minddy usage caps; every current plan also includes agents.
+      // Provider keys cover compatible AI calls; cloud execution remains metered.
       { key: "byok", hint: true, value: (plan) => plan.allowAgents },
     ],
   },
@@ -162,12 +162,10 @@ export async function PricingComparison() {
     getTranslations("Pricing"),
   ]);
 
-  // The table itself lives in `feature-table.tsx`: comparisons
-  // `/alternatives/<outil>` return a second one with other columns
-  // (MIN-93). Here we only do CALCULATE — and it is this calculation, derived from
-  // `BILLING_PLANS` row by row, which keeps the table honest.
+  // Derive every cell from the billing model; the shared table handles presentation.
   return (
     <FeatureTable
+      pastel
       caption={tp("comparisonTitle")}
       includedLabel={t("included")}
       notIncludedLabel={t("notIncluded")}
@@ -175,6 +173,7 @@ export async function PricingComparison() {
         key: plan.id,
         label: t(PLAN_LABEL_KEYS[plan.id]),
         highlighted: plan.highlighted,
+        tone: plan.id === "free" ? "sky" : plan.id === "go" ? "butter" : "lavender",
       }))}
       groups={GROUPS.map((group) => ({
         key: group.key,

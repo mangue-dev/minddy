@@ -36,9 +36,7 @@ export function planFeatureLabels(plan: BillingPlan, t: PlanFeatureTranslator): 
       : t("featureMaxMembers", { n: plan.maxMembersPerProject }),
     t("featureModelsUpTo", { n: plan.maxModelMultiplier }),
     ...(plan.allowAgents ? [t("featureAgents")] : []),
-    // BYOK follows the agent because it is only valid for it
-    // (`resolveAgentApiKey` is only called by the agent loop). It belongs on
-    // the plan card rather than being hidden in the FAQ.
+    // Every current plan offers provider keys for compatible AI features.
     ...(plan.allowAgents ? [t("featureByok")] : []),
   ];
 }

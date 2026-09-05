@@ -146,6 +146,23 @@ describe("localized slug redirects in next.config.mjs", () => {
     );
   });
 
+  it("redirects retired desktop guides and their locale aliases to the download hub", async () => {
+    const redirects = await nextConfig.redirects!();
+    const hub = PUBLIC_ROUTES.find(route => route.key === "download")!;
+    const home = PUBLIC_ROUTES.find(route => route.key === "home")!;
+    for (const locale of locales) {
+      const destination = publicPathForLocale(hub, locale);
+      for (const platform of ["macos", "linux", "windows"]) {
+        const paths = [`${destination}/${platform}`];
+        if (locale !== "en") paths.push(`${publicPathForLocale(home, locale)}/download/${platform}`);
+        for (const source of paths) {
+          expect(redirects).toContainEqual({ source, destination, permanent: true });
+          expect(routeByPath(source)).toBeNull();
+        }
+      }
+    }
+  });
+
   /** Same reason: the list is used to set the CDN cache header. */
   it("lists exactly the public URLs for the CDN cache header", () => {
     expect([...CONFIG_PUBLIC_ROUTE_PATHS].sort()).toEqual(

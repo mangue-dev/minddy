@@ -25,9 +25,6 @@ export const LOCALIZED_SLUG_REDIRECTS = [
     destination: "/fr/auto-hebergement/installer",
   },
   { source: "/fr/download", destination: "/fr/telecharger" },
-  { source: "/fr/download/macos", destination: "/fr/telecharger/macos" },
-  { source: "/fr/download/linux", destination: "/fr/telecharger/linux" },
-  { source: "/fr/download/windows", destination: "/fr/telecharger/windows" },
   { source: "/fr/download/mobile-pwa", destination: "/fr/telecharger/pwa-mobile" },
   { source: "/fr/changelog", destination: "/fr/nouveautes" },
   { source: "/fr/legal", destination: "/fr/mentions-legales" },
@@ -40,9 +37,6 @@ export const LOCALIZED_SLUG_REDIRECTS = [
     destination: "/de/selbst-hosten/installieren",
   },
   { source: "/de/download", destination: "/de/herunterladen" },
-  { source: "/de/download/macos", destination: "/de/herunterladen/macos" },
-  { source: "/de/download/linux", destination: "/de/herunterladen/linux" },
-  { source: "/de/download/windows", destination: "/de/herunterladen/windows" },
   { source: "/de/download/mobile-pwa", destination: "/de/herunterladen/mobile-pwa" },
   { source: "/de/changelog", destination: "/de/neuigkeiten" },
   { source: "/de/alternatives/linear", destination: "/de/alternativen/linear" },
@@ -58,9 +52,6 @@ export const LOCALIZED_SLUG_REDIRECTS = [
     destination: "/pt-br/auto-hospedagem/instalar",
   },
   { source: "/pt-br/download", destination: "/pt-br/baixar" },
-  { source: "/pt-br/download/macos", destination: "/pt-br/baixar/macos" },
-  { source: "/pt-br/download/linux", destination: "/pt-br/baixar/linux" },
-  { source: "/pt-br/download/windows", destination: "/pt-br/baixar/windows" },
   { source: "/pt-br/download/mobile-pwa", destination: "/pt-br/baixar/pwa-movel" },
   { source: "/pt-br/changelog", destination: "/pt-br/novidades" },
   {
@@ -85,9 +76,6 @@ export const LOCALIZED_SLUG_REDIRECTS = [
     destination: "/it/hosting-autonomo/installa",
   },
   { source: "/it/download", destination: "/it/scarica" },
-  { source: "/it/download/macos", destination: "/it/scarica/macos" },
-  { source: "/it/download/linux", destination: "/it/scarica/linux" },
-  { source: "/it/download/windows", destination: "/it/scarica/windows" },
   { source: "/it/download/mobile-pwa", destination: "/it/scarica/pwa-mobile" },
   { source: "/it/changelog", destination: "/it/novita" },
   { source: "/it/alternatives/linear", destination: "/it/alternative/linear" },
@@ -103,9 +91,6 @@ export const LOCALIZED_SLUG_REDIRECTS = [
     destination: "/es/autoalojamiento/instalar",
   },
   { source: "/es/download", destination: "/es/descargar" },
-  { source: "/es/download/macos", destination: "/es/descargar/macos" },
-  { source: "/es/download/linux", destination: "/es/descargar/linux" },
-  { source: "/es/download/windows", destination: "/es/descargar/windows" },
   { source: "/es/download/mobile-pwa", destination: "/es/descargar/pwa-movil" },
   { source: "/es/changelog", destination: "/es/novedades" },
   { source: "/es/alternatives/linear", destination: "/es/alternativas/linear" },
@@ -128,9 +113,6 @@ export const PUBLIC_ROUTE_PATHS = [
   "/self-hosting",
   "/self-hosting/install",
   "/download",
-  "/download/macos",
-  "/download/linux",
-  "/download/windows",
   "/download/mobile-pwa",
   "/changelog",
   "/alternatives/linear",
@@ -146,9 +128,6 @@ export const PUBLIC_ROUTE_PATHS = [
   "/fr/auto-hebergement",
   "/fr/auto-hebergement/installer",
   "/fr/telecharger",
-  "/fr/telecharger/macos",
-  "/fr/telecharger/linux",
-  "/fr/telecharger/windows",
   "/fr/telecharger/pwa-mobile",
   "/fr/nouveautes",
   "/fr/alternatives/linear",
@@ -164,9 +143,6 @@ export const PUBLIC_ROUTE_PATHS = [
   "/de/selbst-hosten",
   "/de/selbst-hosten/installieren",
   "/de/herunterladen",
-  "/de/herunterladen/macos",
-  "/de/herunterladen/linux",
-  "/de/herunterladen/windows",
   "/de/herunterladen/mobile-pwa",
   "/de/neuigkeiten",
   "/de/alternativen/linear",
@@ -182,9 +158,6 @@ export const PUBLIC_ROUTE_PATHS = [
   "/pt-br/auto-hospedagem",
   "/pt-br/auto-hospedagem/instalar",
   "/pt-br/baixar",
-  "/pt-br/baixar/macos",
-  "/pt-br/baixar/linux",
-  "/pt-br/baixar/windows",
   "/pt-br/baixar/pwa-movel",
   "/pt-br/novidades",
   "/pt-br/alternativas/linear",
@@ -200,9 +173,6 @@ export const PUBLIC_ROUTE_PATHS = [
   "/it/hosting-autonomo",
   "/it/hosting-autonomo/installa",
   "/it/scarica",
-  "/it/scarica/macos",
-  "/it/scarica/linux",
-  "/it/scarica/windows",
   "/it/scarica/pwa-mobile",
   "/it/novita",
   "/it/alternative/linear",
@@ -218,9 +188,6 @@ export const PUBLIC_ROUTE_PATHS = [
   "/es/autoalojamiento",
   "/es/autoalojamiento/instalar",
   "/es/descargar",
-  "/es/descargar/macos",
-  "/es/descargar/linux",
-  "/es/descargar/windows",
   "/es/descargar/pwa-movil",
   "/es/novedades",
   "/es/alternativas/linear",
@@ -280,6 +247,15 @@ export const PRIMARY_HOST_PATTERN =
 /** On Vercel, excluding production (preview, branch deploys). Not locally. */
 const isVercelNonProduction =
   !!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production";
+
+/** Former desktop installation guides now lead straight to the download hub. */
+export const DESKTOP_GUIDE_REDIRECTS = [
+  "/download", "/fr/telecharger", "/de/herunterladen", "/pt-br/baixar", "/it/scarica", "/es/descargar",
+].flatMap(destination => ["macos", "linux", "windows"].flatMap(platform => {
+  const sources = new Set([`${destination}/${platform}`]);
+  if (destination !== "/download") sources.add(`/${destination.split("/")[1]}/download/${platform}`);
+  return [...sources].map(source => ({ source, destination, permanent: true }));
+}));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -370,6 +346,7 @@ const nextConfig = {
         destination: "/projects/:id?view=my",
         permanent: false,
       },
+      ...DESKTOP_GUIDE_REDIRECTS,
       ...LOCALIZED_SLUG_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
     ];
   },

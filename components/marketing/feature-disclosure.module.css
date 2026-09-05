@@ -1,0 +1,72 @@
+.card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.front {
+  height: 100%;
+  opacity: 1;
+  transition: opacity 240ms ease, visibility 240ms allow-discrete;
+}
+
+.card:has(.disclosure[open]) .front {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.disclosure {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.toggle {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  pointer-events: auto;
+  list-style: none;
+}
+
+.toggle::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure[open] .toggle svg {
+  transform: rotate(45deg);
+}
+
+.content {
+  position: absolute;
+  inset: 1rem 1.5rem 5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: 1rem;
+  padding-right: .5rem;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  scrollbar-color: currentColor transparent;
+  mask-image: linear-gradient(to bottom, transparent, black 1rem, black calc(100% - 1rem), transparent);
+}
+
+@media (min-width: 640px) {
+  .toggle { right: 2rem; }
+  .content { inset-inline: 2rem; }
+}
+
+/* Keep native disclosure semantics while allowing its content to fade out. */
+.disclosure::details-content {
+  opacity: 0;
+  transition: opacity 240ms ease, content-visibility 240ms allow-discrete;
+}
+
+.disclosure[open]::details-content {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .front, .disclosure::details-content { transition: none; }
+}

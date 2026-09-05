@@ -253,12 +253,6 @@ export async function StructuredData({
 }
 
 const DOWNLOAD_PLATFORM_SCHEMA = {
-  downloadMacos: { operatingSystem: "macOS", applicationSubCategory: "Native desktop application" },
-  downloadLinux: { operatingSystem: "Linux", applicationSubCategory: "Native desktop application" },
-  downloadWindows: {
-    operatingSystem: "Windows",
-    applicationSubCategory: "Native desktop application",
-  },
   downloadMobile: {
     operatingSystem: "iOS, iPadOS, Android",
     applicationSubCategory: "Progressive Web App",

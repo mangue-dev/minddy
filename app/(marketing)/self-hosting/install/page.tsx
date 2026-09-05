@@ -38,7 +38,7 @@ export default async function SelfHostingInstallPage({
     routeParam === "local" || routeParam === "team" ? routeParam : null;
 
   return (
-    <div className="min-h-[calc(100dvh-4rem)] bg-muted/20">
+    <div className="min-h-[calc(100dvh-4rem)] bg-background">
       <SelfHostingInstallWizard
         copy={copy}
         guidePath={localizedHref("/self-hosting", locale)}
