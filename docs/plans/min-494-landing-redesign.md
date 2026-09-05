@@ -20,7 +20,10 @@ product screenshots, and Cloud/open-source positioning.
 The completed plan and verification outcome are also synchronized to MIN-494
 through the Minddy MCP tools. PR #133 is linked, and the issue is in review.
 
-## Verification outcome
+The subsequent design review is tracked in [the review checklist](min-494-design-review.md).
+It replaces the separate speed/open-source sections and the original disclosure behavior.
+
+## Initial verification outcome
 
 - Focused Oxlint checks and `npm run typecheck` passed.
 - `npm run check:owned-english` and `git diff --check` passed.

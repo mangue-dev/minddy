@@ -11,7 +11,7 @@ import { VoiceDemoPlayer } from "./voice-demo-player";
  * a few dozen bytes in the RSC feed, and keeps the demo aligned with the
  * exact words of the app: if "Expiration" changes in the product, it changes here.
  */
-export async function VoiceDemo() {
+export async function VoiceDemo({ embedded = false }: { embedded?: boolean }) {
   const [tField, tPriority] = await Promise.all([
     getTranslations("Field"),
     getTranslations("Priority"),
@@ -19,6 +19,7 @@ export async function VoiceDemo() {
 
   return (
     <VoiceDemoPlayer
+      embedded={embedded}
       labels={{
         priority: tField("priority"),
         dueDate: tField("dueDate"),

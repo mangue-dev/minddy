@@ -114,7 +114,7 @@ function Row({
   );
 }
 
-export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
+export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDemoLabels; embedded?: boolean }) {
   const t = useTranslations("Landing");
   const locale = useLocale();
   const { track } = useAnalytics();
@@ -407,13 +407,13 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
     }).format(new Date(`${ticket.dueDate}T12:00:00`));
 
   return (
-    <figure className="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
+    <figure className={cn(embedded ? "text-foreground" : "rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8")}>
       {/* `[&>*]:min-w-0`: without it, a grid column takes the width of
           its longest content (the example sentences, in `nowrap`) and the
           page overflows horizontally on mobile. */}
-      <div className="grid gap-6 md:grid-cols-[1fr_auto_1fr] md:gap-8 [&>*]:min-w-0">
+      <div className={cn("grid gap-6 md:grid-cols-[1fr_auto_1fr] md:gap-8 [&>*]:min-w-0", embedded && "md:min-h-[360px]")}>
         {/* ── What you say ───────────────────── ────────────────────── */}
-        <div className="flex flex-col gap-4">
+        <div className={cn("flex flex-col gap-4", embedded && "h-[360px] overflow-y-auto p-1")}>
           <p className="text-xs font-medium text-muted-foreground">
             {t("voiceDemoSpoken")}
           </p>
@@ -423,8 +423,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
               in the app the gesture is known, on the landing no one saw
               that there was something to try.
 
-              Trois changements, un seul but — qu'on comprenne qu'on peut
-              speak: the microphone is 56 px and bears the brand color in
+              Three changes make the invitation to speak visible: the microphone is 56 px and bears the brand color in
               flat, it is the WHOLE box that triggers and not the pellet
               alone, and the title is an invitation to the imperative rather
               than a label. The ring that beats during recording says
@@ -548,8 +547,8 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
           <ArrowRight className="hidden size-5 md:block" />
         </div>
 
-        {/* ── Ce que minddy en fait ─────────────────────────────────────── */}
-        <div className="flex flex-col gap-4">
+        {/* The resulting issue preview. */}
+        <div className={cn("flex flex-col gap-4", embedded && "h-[360px] overflow-y-auto p-1")}>
           <div className="flex items-baseline justify-between gap-4">
             <p className="text-xs font-medium text-muted-foreground">
               {t("voiceDemoResult")}

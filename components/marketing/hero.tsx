@@ -14,10 +14,6 @@ export async function Hero() {
     <section className="px-4 pt-14 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
       <div className="mx-auto w-full max-w-6xl">
         <div className="max-w-5xl">
-          <p className="mb-6 flex items-center gap-2.5 text-sm font-medium text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-primary" aria-hidden />
-            {t("navMenu_tracker_desc")}
-          </p>
           <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] leading-[1.06] font-medium tracking-[-0.055em] text-balance">
             {t("heroTitleBefore")}
             <span className="mt-1 block text-muted-foreground">{t("heroTitleAccent")}</span>
@@ -45,7 +41,6 @@ export async function Hero() {
                   <ArrowUpRight className="size-3.5" aria-hidden />
                 </a>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">{t("heroNote")}</p>
             </div>
           </div>
         </div>
@@ -54,10 +49,6 @@ export async function Hero() {
           <div className="rounded-xl border border-border bg-[#e9ede4] p-2 sm:p-5 dark:bg-[#252c25]">
             <ScreenshotSlot id="heroBoard" priority sizes="(min-width: 1200px) 1108px, calc(100vw - 64px)" className="shadow-lg shadow-black/5" />
           </div>
-          <figcaption className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="font-mono text-[10px]" aria-hidden>01 /</span>
-            {t("featuresCaptionBoard")}
-          </figcaption>
         </figure>
       </div>
     </section>

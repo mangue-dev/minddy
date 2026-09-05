@@ -5,10 +5,8 @@ import type { Locale } from "@/i18n/config";
 import { Hero } from "@/components/marketing/hero";
 import { SectionEditions } from "@/components/marketing/section-editions";
 import { SectionWorkspace } from "@/components/marketing/section-workspace";
-import { SectionSpeed } from "@/components/marketing/section-speed";
 import { SectionAgents } from "@/components/marketing/section-agents";
 import { SectionMore } from "@/components/marketing/section-more";
-import { SectionOpenSource } from "@/components/marketing/section-open-source";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
 import { SectionFaq } from "@/components/marketing/section-faq";
 import { SectionCta } from "@/components/marketing/section-cta";
@@ -38,10 +36,8 @@ export default async function LandingPage() {
       <Hero />
       <SectionWorkspace />
       <SectionAgents />
-      <SectionSpeed />
       <SectionMore />
       <SectionEditions />
-      <SectionOpenSource />
       <SectionPricingTeaser />
       <SectionFaq />
       <SectionCta />
