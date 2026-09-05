@@ -55,13 +55,12 @@ describe("public SEO surface", () => {
     expect(mobileCopy).toContain("There is no Minddy application in the iOS App Store or Google Play");
   });
 
-  it("publishes dedicated canonical route families for every supported platform", () => {
+  it("keeps a mobile guide route and retires desktop guide pages", () => {
     const expected = {
-      downloadMacos: "/download/macos",
-      downloadLinux: "/download/linux",
-      downloadWindows: "/download/windows",
       downloadMobile: "/download/mobile-pwa",
     } as const;
+
+    expect(PUBLIC_ROUTES.some(route => ["downloadMacos", "downloadLinux", "downloadWindows"].includes(route.key))).toBe(false);
 
     for (const key of Object.keys(expected) as Array<keyof typeof expected>) {
       const route = routeByKey(key);

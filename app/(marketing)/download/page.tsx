@@ -93,24 +93,18 @@ export default async function DownloadPage() {
           <header className="mb-12 max-w-3xl sm:mb-16">
             <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] leading-[1.06] font-medium tracking-[-0.055em] text-balance">{t("heroTitle")}</h1>
             <p className="mt-7 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">{t("heroSubtitle")}</p>
-            <p className="mt-4 text-sm text-muted-foreground">{t("requirements")}</p>
           </header>
           <DownloadPlatformCards
             copy={{
               download: t("cardDownload"), guide: t("cardGuide"), architecture: t("cardArchitecture"),
               macBody: t("cardMacBody"), windowsBody: t("cardWindowsBody"), linuxBody: t("cardLinuxBody"),
               iosBody: t("cardIosBody"), androidBody: t("cardAndroidBody"), iosTitle: t("iosGuideEyebrow"),
-              androidInstall: t("downloadButtonAndroid"), mobileTitle: t("mobileTitle"), mobileBody: t("mobileBody"),
+              androidInstall: t("downloadButtonAndroid"),
               windowsUpdates: t("cardWindowsUpdates"),
             }}
             macRelease={{ arm64: releaseLabel(release, "arm64"), x64: releaseLabel(release, "x64") }}
             linuxRelease={{ arm64: releaseLabel(linuxRelease, "arm64"), x64: releaseLabel(linuxRelease, "x64") }}
-            guides={{
-              macos: publicPathForLocale(routeByKey("downloadMacos"), locale),
-              windows: publicPathForLocale(routeByKey("downloadWindows"), locale),
-              linux: publicPathForLocale(routeByKey("downloadLinux"), locale),
-              mobile: publicPathForLocale(routeByKey("downloadMobile"), locale),
-            }}
+            mobileGuideHref={publicPathForLocale(routeByKey("downloadMobile"), locale)}
           />
         </div>
       </section>

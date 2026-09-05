@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight, Download, ExternalLink, Laptop, Smartphone } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, Smartphone } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { Github } from "@/components/git/provider-icons";
 import type { Locale } from "@/i18n/config";
-import { WINDOWS_STORE_DEEP_LINK } from "@/lib/desktop/install-prompt";
 import { MINDDY_LICENSE_URL, MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 import {
   publicPathForLocale,
@@ -17,27 +16,6 @@ import { Reveal, RevealGroup, RevealHeading } from "@/components/marketing/revea
 import { DownloadPlatformStructuredData } from "@/components/marketing/structured-data";
 
 const PLATFORMS = {
-  macos: {
-    namespace: "DownloadMacos",
-    routeKey: "downloadMacos",
-    primaryHref: "/api/desktop/download",
-    secondaryHref: "/api/desktop/download?arch=x64",
-    icon: Laptop,
-  },
-  linux: {
-    namespace: "DownloadLinux",
-    routeKey: "downloadLinux",
-    primaryHref: "/api/desktop/download?platform=linux&format=AppImage&arch=x64",
-    secondaryHref: "/api/desktop/download?platform=linux&format=AppImage&arch=arm64",
-    icon: Laptop,
-  },
-  windows: {
-    namespace: "DownloadWindows",
-    routeKey: "downloadWindows",
-    primaryHref: WINDOWS_STORE_DEEP_LINK,
-    secondaryHref: null,
-    icon: Laptop,
-  },
   "mobile-pwa": {
     namespace: "DownloadMobile",
     routeKey: "downloadMobile",
@@ -50,9 +28,6 @@ const PLATFORMS = {
 type Platform = keyof typeof PLATFORMS;
 
 const PLATFORM_LINKS = [
-  { platform: "macos", labelKey: "platformGuideMacos" },
-  { platform: "linux", labelKey: "platformGuideLinux" },
-  { platform: "windows", labelKey: "platformGuideWindows" },
   { platform: "mobile-pwa", labelKey: "platformGuideMobile" },
 ] as const satisfies ReadonlyArray<{ platform: Platform; labelKey: string }>;
 

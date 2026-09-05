@@ -52,9 +52,6 @@ const COMPARISON_BY_ROUTE = new Map<string, Comparison>(
 );
 
 const DOWNLOAD_PLATFORM_NAMESPACES = {
-  downloadMacos: "DownloadMacos",
-  downloadLinux: "DownloadLinux",
-  downloadWindows: "DownloadWindows",
   downloadMobile: "DownloadMobile",
 } as const;
 
@@ -365,15 +362,12 @@ async function renderSelfHosting(locale: Locale, canonical: string): Promise<str
 async function renderDownload(locale: Locale, canonical: string): Promise<string> {
   const t = await getTranslations({ locale, namespace: "Download" });
   const platformRoutes = [
-    ["downloadMacos", "platformGuideMacos"],
-    ["downloadLinux", "platformGuideLinux"],
-    ["downloadWindows", "platformGuideWindows"],
     ["downloadMobile", "platformGuideMobile"],
   ] as const;
 
   return [
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
-    `## ${t("heroTitle")} ${t("heroTitleAccent")}`,
+    `## ${t("heroTitle")}`,
     t("heroSubtitle"),
     `## ${t("platformGuidesTitle")}`,
     t("platformGuidesSubtitle"),

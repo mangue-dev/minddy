@@ -20,11 +20,11 @@ const copy: DownloadPlatformCardsProps = {
     macBody: "For Apple silicon and Intel.", windowsBody: "The Windows app.",
     windowsUpdates: "Automatic updates.", linuxBody: "AppImage and signed packages.",
     iosBody: "Install from Safari.", androidBody: "Install from Chrome.", iosTitle: "iPhone and iPad",
-    androidInstall: "Install on Android", mobileTitle: "Take your projects with you.", mobileBody: "A mobile PWA.",
+    androidInstall: "Install on Android",
   },
   macRelease: { arm64: "1.2.3 · 120 MB", x64: "1.2.3 · 130 MB" },
   linuxRelease: { arm64: "1.2.3 · 140 MB", x64: "1.2.3 · 150 MB" },
-  guides: { macos: "/download/macos", linux: "/download/linux", windows: "/download/windows", mobile: "/download/mobile-pwa" },
+  mobileGuideHref: "/download/mobile-pwa",
 };
 
 const guideCopy: MobileInstallGuideCopy = {
@@ -123,22 +123,40 @@ describe("DownloadPlatformCards", () => {
   }
 
   function chooseArch(platform: string, arch: string) {
-    const select = card(platform).querySelector("select");
-    if (!select) throw new Error("Missing architecture choice");
-    act(() => {
-      select.value = arch;
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    const trigger = card(platform).querySelector('[role="combobox"]');
+    if (!trigger) throw new Error("Missing architecture choice");
+    act(() => trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    const label = platform === "macos" ? (arch === "arm64" ? "Apple silicon" : "Intel") : (arch === "arm64" ? "ARM64" : "x64");
+    const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(el => el.textContent === label);
+    if (!option) throw new Error(`Missing ${label} option`);
+    act(() => option.click());
   }
 
-  it("keeps all five platforms and their guides available regardless of the current device", async () => {
-    setNavigatorProbe({ userAgentDataPlatform: "Windows" });
+  it.each([
+    ["macOS", "macos"], ["Windows", "windows"], ["Linux", "linux"], ["Android", "android"],
+  ])("features the detected %s platform above the four other cards", async (probe, expected) => {
+    setNavigatorProbe({ userAgentDataPlatform: probe });
     await render();
     expect(container.querySelectorAll("article[data-platform]")).toHaveLength(5);
+    expect(container.querySelector("article")?.dataset.platform).toBe(expected);
+    expect(container.querySelectorAll("article[data-featured]")).toHaveLength(1);
+    expect(card(expected).dataset.featured).toBe("true");
+  });
+
+  it("features iPadOS despite its desktop-like platform string", async () => {
+    setNavigatorProbe({ platform: "MacIntel", userAgent: "Mozilla/5.0 Macintosh", maxTouchPoints: 5 });
+    await render();
+    expect(container.querySelector("article")?.dataset.platform).toBe("ios");
+  });
+
+  it("keeps unsupported devices unfeatured and all download actions available", async () => {
+    setNavigatorProbe({ platform: "FreeBSD" });
+    await render();
+    expect(container.querySelector("article[data-featured]")).toBeNull();
     expect(card("windows").querySelector(`a[href="${WINDOWS_STORE_DEEP_LINK}"]`)).not.toBeNull();
     expect(card("macos").querySelector('a[href="/api/desktop/download"]')).not.toBeNull();
-    for (const platform of ["macos", "linux", "windows"] as const) {
-      expect(card(platform).querySelector(`a[href="${copy.guides[platform]}"]`)).not.toBeNull();
+    for (const platform of ["macos", "linux", "windows"]) {
+      expect(card(platform).textContent).not.toContain("Installation guide");
     }
   });
 
@@ -171,7 +189,7 @@ describe("DownloadPlatformCards", () => {
     expect(button?.textContent).toContain("Install on Android");
     await act(async () => button?.click());
     expect(prompt).toHaveBeenCalledOnce();
-    expect(card("android").querySelector(`a[href="${copy.guides.mobile}"]`)).not.toBeNull();
+    expect(card("android").querySelector(`a[href="${copy.mobileGuideHref}"]`)).not.toBeNull();
   });
 
   it("does not offer a desktop PWA prompt as an Android installation", async () => {
@@ -180,13 +198,13 @@ describe("DownloadPlatformCards", () => {
     const prompt = vi.fn();
     act(() => window.dispatchEvent(Object.assign(new Event("beforeinstallprompt", { cancelable: true }), { prompt })));
     expect(card("android").querySelector("button")).toBeNull();
-    expect(card("android").querySelector(`a[href="${copy.guides.mobile}"]`)).not.toBeNull();
+    expect(card("android").querySelector(`a[href="${copy.mobileGuideHref}"]`)).not.toBeNull();
   });
 
   it.each(["ios", "android"])("opens the %s tutorial from its card on a desktop browser", async platform => {
     setNavigatorProbe({ userAgentDataPlatform: "macOS" });
     await renderWithGuide();
-    act(() => card(platform).querySelector<HTMLAnchorElement>(`a[href="${copy.guides.mobile}"]`)?.click());
+    act(() => card(platform).querySelector<HTMLAnchorElement>(`a[href="${copy.mobileGuideHref}"]`)?.click());
     expect(container.querySelector("section#mobile-install-guide h2")?.textContent).toBe(
       platform === "ios" ? guideCopy.iosTitle : guideCopy.androidTitle,
     );

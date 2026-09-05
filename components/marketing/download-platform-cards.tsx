@@ -6,6 +6,7 @@ import { resolveInstallPlatform, WINDOWS_STORE_DEEP_LINK, type InstallPlatform }
 import { showMobileInstallGuide } from "@/lib/mobile-install-guide";
 import { TrackedDownloadLink } from "./tracked-download-link";
 import { usePwaInstall } from "./use-pwa-install";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "mangue-ui/components/ui/select";
 import { CARD_TONES } from "./card-tones";
 
 type SupportedInstallPlatform = Exclude<InstallPlatform, "unsupported">;
@@ -25,31 +26,32 @@ export interface DownloadPlatformCardsProps {
     androidBody: string;
     iosTitle: string;
     androidInstall: string;
-    mobileTitle: string;
-    mobileBody: string;
   };
   macRelease: Record<Arch, string>;
   linuxRelease: Record<Arch, string>;
-  guides: Record<"macos" | "windows" | "linux" | "mobile", string>;
+  mobileGuideHref: string;
 }
 
 const ACTION = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-3 text-sm font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current";
 const TEXT_LINK = "inline-flex min-h-10 items-center gap-2 text-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current";
 
-function PlatformCard({ platform, title, body, tone, children, compact = false }: {
+function PlatformCard({ platform, title, body, tone, children, featured }: {
   platform: SupportedInstallPlatform;
   title: string;
   body: string;
   tone: string;
   children: ReactNode;
-  compact?: boolean;
+  featured: boolean;
 }) {
   return (
-    <article data-platform={platform} className={`flex min-w-0 flex-col rounded-2xl p-6 sm:p-8 ${compact ? "min-h-72" : "min-h-[460px]"} ${tone}`}>
-      <span className={`block shrink-0 ${compact ? "mb-6 size-8" : "mb-10 size-12"}`}><PlatformLogo platform={platform} /></span>
-      <h2 className="text-2xl font-medium tracking-[-0.035em] sm:text-3xl">{title}</h2>
-      <p className="mt-3 max-w-sm text-sm leading-relaxed opacity-80">{body}</p>
-      <div className="mt-auto pt-8">{children}</div>
+    <article data-platform={platform} data-featured={featured || undefined}
+      className={`min-w-0 rounded-2xl p-6 sm:p-8 ${featured ? "flex min-h-[420px] flex-col gap-8 md:col-span-2 md:min-h-[380px] md:flex-row md:items-center md:justify-between md:p-10" : "flex min-h-[340px] flex-col"} ${tone}`}>
+      <div className={featured ? "min-w-0 md:max-w-lg" : ""}>
+        <span className={`mb-7 block shrink-0 ${featured ? "size-16" : "size-10"}`}><PlatformLogo platform={platform} /></span>
+        <h2 className={`font-medium tracking-[-0.035em] ${featured ? "text-4xl sm:text-5xl" : "text-2xl sm:text-3xl"}`}>{title}</h2>
+        <p className={`mt-3 max-w-sm leading-relaxed opacity-80 ${featured ? "text-base" : "text-sm"}`}>{body}</p>
+      </div>
+      <div className={featured ? "mt-auto w-full md:my-auto md:max-w-sm md:shrink-0" : "mt-auto pt-8"}>{children}</div>
     </article>
   );
 }
@@ -61,20 +63,24 @@ function Architecture({ platform, label, value, onChange }: {
   onChange: (value: Arch) => void;
 }) {
   return (
-    <label className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs">
       <span className="opacity-80">{label}</span>
-      <select aria-label={`${label} — ${platform === "macos" ? "macOS" : "Linux"}`} value={value}
-        onChange={event => onChange(event.target.value as Arch)}
-        className="min-h-10 max-w-full rounded-lg border border-current/20 bg-white/30 py-2 pr-6 pl-3 text-sm text-inherit focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current dark:bg-black/15">
-        <option value="arm64">{platform === "macos" ? "Apple silicon" : "ARM64"}</option>
-        <option value="x64">{platform === "macos" ? "Intel" : "x64"}</option>
-      </select>
-    </label>
+      <Select value={value} onValueChange={value => onChange(value as Arch)}>
+        <SelectTrigger aria-label={`${label} — ${platform === "macos" ? "macOS" : "Linux"}`}
+          className="min-h-10 w-auto min-w-28 border-current/20 bg-white/30 text-inherit dark:bg-black/15">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="arm64">{platform === "macos" ? "Apple silicon" : "ARM64"}</SelectItem>
+          <SelectItem value="x64">{platform === "macos" ? "Intel" : "x64"}</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
 /** Every platform stays visible; choosing an architecture only changes its package links. */
-export function DownloadPlatformCards({ copy, macRelease, linuxRelease, guides }: DownloadPlatformCardsProps) {
+export function DownloadPlatformCards({ copy, macRelease, linuxRelease, mobileGuideHref }: DownloadPlatformCardsProps) {
   const [macArch, setMacArch] = useState<Arch>("arm64");
   const [linuxArch, setLinuxArch] = useState<Arch>("x64");
   const [platform, setPlatform] = useState<InstallPlatform>("unsupported");
@@ -88,25 +94,29 @@ export function DownloadPlatformCards({ copy, macRelease, linuxRelease, guides }
     }));
   }, []);
 
-  const guideLink = (target: string) => <a href={target} className={TEXT_LINK}>{copy.guide}<ArrowUpRight className="size-3.5" aria-hidden /></a>;
+  const cards = [
+    { platform: "macos", title: "macOS", body: copy.macBody, tone: CARD_TONES.sky },
+    { platform: "windows", title: "Windows", body: copy.windowsBody, tone: CARD_TONES.lavender },
+    { platform: "linux", title: "Linux", body: copy.linuxBody, tone: CARD_TONES.sage },
+    { platform: "ios", title: copy.iosTitle, body: copy.iosBody, tone: CARD_TONES.rose },
+    { platform: "android", title: "Android", body: copy.androidBody, tone: CARD_TONES.peach },
+  ] as const;
+  const ordered = [...cards.filter(card => card.platform === platform), ...cards.filter(card => card.platform !== platform)];
   return (
-    <>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <PlatformCard platform="macos" title="macOS" body={copy.macBody} tone={CARD_TONES.sky}>
+    <div className="grid gap-4 md:grid-cols-2">
+      {ordered.map(card => (
+        <PlatformCard key={card.platform} {...card} featured={card.platform === platform}>
+          {card.platform === "macos" ? <>
           <Architecture platform="macos" label={copy.architecture} value={macArch} onChange={setMacArch} />
           <TrackedDownloadLink platform="macos" format="dmg" arch={macArch}
             href={macArch === "arm64" ? "/api/desktop/download" : "/api/desktop/download?arch=x64"} className={`${ACTION} w-full`}>
             <ArrowDownToLine className="size-4" aria-hidden />{copy.download} <span className="opacity-60">.dmg</span>
           </TrackedDownloadLink>
           <p className="mt-3 text-xs opacity-70">{macRelease[macArch]}</p>
-          <div className="mt-3">{guideLink(guides.macos)}</div>
-        </PlatformCard>
-        <PlatformCard platform="windows" title="Windows" body={copy.windowsBody} tone={CARD_TONES.lavender}>
+          </> : card.platform === "windows" ? <>
           <a href={WINDOWS_STORE_DEEP_LINK} className={`${ACTION} w-full`}>Microsoft Store<ArrowUpRight className="size-4" aria-hidden /></a>
           <p className="mt-3 text-xs opacity-70">{copy.windowsUpdates}</p>
-          <div className="mt-3">{guideLink(guides.windows)}</div>
-        </PlatformCard>
-        <PlatformCard platform="linux" title="Linux" body={copy.linuxBody} tone={CARD_TONES.sage}>
+          </> : card.platform === "linux" ? <>
           <Architecture platform="linux" label={copy.architecture} value={linuxArch} onChange={setLinuxArch} />
           <TrackedDownloadLink platform="linux" format="AppImage" arch={linuxArch}
             href={`/api/desktop/download?platform=linux&format=AppImage&arch=${linuxArch}`} className={`${ACTION} w-full`}>
@@ -114,7 +124,6 @@ export function DownloadPlatformCards({ copy, macRelease, linuxRelease, guides }
           </TrackedDownloadLink>
           <p className="mt-3 text-xs opacity-70">{linuxRelease[linuxArch]}</p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3">
-            {guideLink(guides.linux)}
             <span className="flex gap-3">
               {(["deb", "rpm"] as const).map(format => (
                 <TrackedDownloadLink key={format} platform="linux" format={format} arch={linuxArch}
@@ -122,34 +131,24 @@ export function DownloadPlatformCards({ copy, macRelease, linuxRelease, guides }
               ))}
             </span>
           </div>
+          </> : card.platform === "android" && platform === "android" && canPrompt ? (
+            <button type="button" className={ACTION} onClick={() => void promptInstall()}>{copy.androidInstall}<ArrowDownToLine className="size-4" aria-hidden /></button>
+          ) : (
+            <a href={mobileGuideHref} className={TEXT_LINK} onClick={event => { event.preventDefault(); showMobileInstallGuide(card.platform as "ios" | "android"); }}>
+              {copy.guide}<ArrowUpRight className="size-4" aria-hidden />
+            </a>
+          )}
         </PlatformCard>
-      </div>
-      <div className="mt-14 sm:mt-20">
-        <h2 className="text-3xl font-medium tracking-[-0.035em] sm:text-4xl">{copy.mobileTitle}</h2>
-        <p className="mt-4 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg">{copy.mobileBody}</p>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {(["ios", "android"] as const).map(mobile => (
-            <PlatformCard key={mobile} platform={mobile} compact title={mobile === "ios" ? copy.iosTitle : "Android"}
-              body={mobile === "ios" ? copy.iosBody : copy.androidBody} tone={mobile === "ios" ? CARD_TONES.rose : CARD_TONES.peach}>
-              {mobile === "android" && platform === "android" && canPrompt ? (
-                <button type="button" className={ACTION} onClick={() => void promptInstall()}>{copy.androidInstall}<ArrowDownToLine className="size-4" aria-hidden /></button>
-              ) : (
-                <a href={guides.mobile} className={TEXT_LINK} onClick={event => { event.preventDefault(); showMobileInstallGuide(mobile); }}>
-                  {copy.guide}<ArrowUpRight className="size-4" aria-hidden />
-                </a>
-              )}
-            </PlatformCard>
-          ))}
-        </div>
-      </div>
-    </>
+      ))}
+    </div>
   );
 }
+
 function PlatformLogo({ platform }: { platform: SupportedInstallPlatform }) {
   if (platform === "windows") {
     return (
-      <svg aria-hidden="true" viewBox="64 64 896 896">
-        <path fill="currentColor" d="M523.8 191.4v288.9h382V128.1zm0 642.2 382 62.2v-352h-382zM120.1 480.2H443V201.9l-322.9 53.5zm0 290.4L443 823.2V543.8H120.1z" />
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M1 1h10v10H1zM13 1h10v10H13zM1 13h10v10H1zM13 13h10v10H13z" />
       </svg>
     );
   }
