@@ -135,6 +135,38 @@ describe("finite request timeouts", () => {
 });
 
 describe("abort acknowledgement", () => {
+  it("rejects a false acknowledgement even with HTTP 200", async () => {
+    await expect(clientWith(() => new Response("false")).abort("ses_1"))
+      .resolves.toBe(false);
+  });
+
+  it("bounds an unresponsive abort independently of normal requests", async () => {
+    const client = new OpencodeClient({
+      baseUrl: "http://localhost:4096",
+      directory: "/repo",
+      fetchImpl: ((_url, init) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new Error("timeout")));
+      })) as typeof fetch,
+    });
+    await expect(client.abort("ses_1", 10)).resolves.toBe(false);
+  });
+
+  it("waits for delegated sessions as well as the parent to become idle", async () => {
+    let polls = 0;
+    const client = clientWith(() => new Response(JSON.stringify(
+      ++polls === 1 ? { child: { type: "busy" } } : {},
+    )));
+    await expect(client.waitIdle()).resolves.toBe(true);
+    expect(polls).toBe(2);
+  });
+
+  it("does not treat a busy or unreachable server as idle", async () => {
+    await expect(clientWith(() => new Response('{"child":{"type":"busy"}}'))
+      .waitIdle(10)).resolves.toBe(false);
+    await expect(clientWith(() => new Response("unavailable", { status: 503 }))
+      .waitIdle()).resolves.toBe(false);
+  });
+
   it("reports whether OpenCode accepted the abort request", async () => {
     const accepted = clientWith(() => new Response("true", { status: 200 }));
     const refused = clientWith(() => new Response("busy", { status: 503 }));

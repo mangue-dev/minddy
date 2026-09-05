@@ -10,6 +10,7 @@ import {
   processBirthMarker,
 } from "./child-registry";
 import { OpencodeClient } from "./opencode-client";
+import { stopProcessTree } from "./stop-process-tree";
 import {
   OPENCODE_INSTALL_MANIFEST,
   OPENCODE_VERSION,
@@ -249,7 +250,7 @@ export function opencodeSupervisorDeps(opts: {
         bin,
         ["serve", "--port", String(port), "--hostname", "127.0.0.1"],
         {
-          // L'environnement du harness PLUS celui du tour : `opencodeServerEnv` ne
+          // Combine the harness environment with the turn configuration, which
           // carries only the config and the folders, but the binary still needs a
           // `PATH` and a `HOME` to launch the tools shell.
           env: { ...process.env, ...env },
@@ -313,29 +314,14 @@ export function opencodeSupervisorDeps(opts: {
       child.on("error", (err) =>
         console.error("[opencode] runtime error:", err.message),
       );
+      let stopping: Promise<void> | null = null;
       return {
         stop: async () => {
-          // Unregister first, regardless of state: from here on, this pid is
-          // our business and no longer that of the launcher. A pid recycled by the system
-          // between two turns would otherwise designate someone else's process.
+          // Keep crash recovery registered until the server and its tools have
+          // exited. Concurrent cleanup paths share the same termination.
+          stopping ??= stopProcessTree(child);
+          await stopping;
           if (child.pid) forgetHarnessChild(layout.harnessDir, child.pid);
-          if (child.exitCode !== null || child.signalCode !== null) return;
-          /**
-           * `SIGTERM` then, if it hangs, `SIGKILL`. The server holds a base
-           * SQLite: giving it a second to close it properly avoids a bulk
-           * WAL log that the next round would replay.
-           */
-          child.kill("SIGTERM");
-          await new Promise<void>((resolve) => {
-            const timer = setTimeout(() => {
-              child.kill("SIGKILL");
-              resolve();
-            }, 1_000);
-            child.once("exit", () => {
-              clearTimeout(timer);
-              resolve();
-            });
-          });
         },
       };
     },

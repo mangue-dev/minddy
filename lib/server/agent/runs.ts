@@ -1802,17 +1802,18 @@ export async function runSteeredByOther(
 }
 
 /**
- * Requests the interruption of the current response (“Stop”). Only place the flag
- * on a WORKING run (queued/running) — the active chunk reads it and suspends
- * proprement au repos. N'annule rien, ne touche ni checkpoint ni sandbox.
+ * Request interruption of an active turn without discarding its checkpoint or
+ * sandbox. Storage failures must reach the caller so the UI can undo its
+ * optimistic stop and offer another attempt.
  */
 export async function requestInterrupt(runId: string): Promise<void> {
   const service = getServiceClient();
-  await service
+  const { error } = await service
     .from("agent_runs")
     .update({ interrupt_requested: true })
     .eq("id", runId)
     .in("status", ["queued", "running"]);
+  if (error) throw new Error(`Could not request agent interruption: ${error.message}`);
 }
 
 /** Reads the interrupt flag (poll via loop: round boundary + stream). */
