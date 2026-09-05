@@ -291,6 +291,8 @@ export interface SupervisorDeps {
    * because a test doesn't have to run a 144 MB binary.
    */
   startServer(env: Record<string, string>): Promise<{ stop(): Promise<void> }>;
+  /** Stop polling remains independent of event publication and checkpoints. */
+  stopPollIntervalMs?: number;
   /** Writes a file to the microVM (config, tools, anchor). */
   writeFile(path: string, content: string): Promise<void>;
   /** The server's HTTP client — injected for the same reasons. */
@@ -750,8 +752,29 @@ export async function runOpencodeTurn(
    * harness. The supervisor, for his part, gives them the two facts that come
    * Integrated tools — one write allowed, one command completed.
    */
+  // Validation commands run in the supervisor, outside OpenCode's process
+  // tree. Stop must cancel these as well as the engine's built-in shell tools.
+  const validationAbort = new AbortController();
+  const validationCommands = new Set<Promise<unknown>>();
   const delivery = makeOpencodeDelivery({
-    host,
+    host: {
+      ...host,
+      exec: async (command, opts) => {
+        validationAbort.signal.throwIfAborted();
+        const pending = host.exec(command, {
+          ...opts,
+          signal: opts?.signal
+            ? AbortSignal.any([opts.signal, validationAbort.signal])
+            : validationAbort.signal,
+        });
+        validationCommands.add(pending);
+        try {
+          return await pending;
+        } finally {
+          validationCommands.delete(pending);
+        }
+      },
+    },
     emit: (type, payload) => cp.emit(type, payload),
     filesFromSha,
     editedPaths: job.editedPaths,
@@ -1444,6 +1467,23 @@ export async function runOpencodeTurn(
     let pendingPrompt: Array<{ message: AgentUserMessage; steered: boolean }> =
       [];
     let interrupted = false;
+    let controlBusy = false;
+    let forcedStop = false;
+    let stoppingTurn: Promise<void> | null = null;
+    const stopTurn = (): Promise<void> => {
+      if (stoppingTurn) return stoppingTurn;
+      interrupted = true;
+      validationAbort.abort();
+      stoppingTurn = (async () => {
+        const acknowledged = await abortSession();
+        if (!acknowledged || !(await client.waitIdle())) {
+          forcedStop = true;
+          await server?.stop();
+        }
+        await Promise.allSettled(validationCommands);
+      })();
+      return stoppingTurn;
+    };
     let lastSteerAt = now();
     let lastEventAt = now();
 
@@ -1736,6 +1776,7 @@ export async function runOpencodeTurn(
      * Emitting both would cause the user to read the same sentence twice.
      */
     const postPending = async (): Promise<void> => {
+      if (interrupted) return;
       const parts = pendingPrompt.splice(0);
       if (parts.length === 0) return;
       /**
@@ -1773,6 +1814,10 @@ export async function runOpencodeTurn(
               : {}),
           });
         }
+      }
+      if (interrupted) {
+        pendingPrompt.unshift(...parts.filter((part) => part.steered));
+        return;
       }
       await client.promptAsync(
         sessionId,
@@ -1862,6 +1907,10 @@ export async function runOpencodeTurn(
      * the twelve hour deadline. A silent stream froze the entire tower.
      */
     const lifecycle = async (): Promise<boolean> => {
+      if (interrupted) {
+        await stoppingTurn;
+        return true;
+      }
       if (
         stalledShellRecovery &&
         now() - stalledShellRecovery.startedAt >=
@@ -1887,63 +1936,70 @@ export async function runOpencodeTurn(
        * delayed it by three minutes — it was already the worst case of the loop
        * house, who only reread the flag between two rounds.
        */
-      if (now() - lastSteerAt >= STEER_POLL_INTERVAL_MS) {
-        lastSteerAt = now();
-        const stopping = await cp.checkInterrupt().catch(() => false);
-        /**
-         * A STOP ACCOMPANIED BY A MESSAGE continues in THIS lap (“stop
-         * and do this instead): the dialer always sends the torque steer
-         * THEN interrupt. So we only drain there, and we consume the flag -
-         * otherwise the following survey would reread it and come out, message accepted
-         * and never played (same reasoning as `clearInterrupt` in
-         * `agent-loop.ts`).
-         *
-         * Outside of stopping, we only drain AFTER knowing that there is something:
-         * `pullSteering` consumes, and a message drained without being played would be
-         * lost for good.
-         */
-        const steered =
-          stopping || (await cp.hasPendingMessages().catch(() => false))
-            ? await takeSteering()
-            : [];
-        /**
-         * THE ANSWER TO A QUESTION IS NOT STEERING (D7). She unties a
-         * tool suspended, and the round that was waiting for it starts again by itself: cut
-         * the session here would kill precisely the round that we have just unlocked.
-         *
-         * The “Stop” which accompanies it is consumed without being played, and it is the
-         * good driving: the dial always sends the steer + interrupt torque
-         * ([agent-conversation.tsx](../../../components/agent/agent-conversation.tsx)),
-         * but here the user RESPONDS — he is not asking to stop.
-         */
-        if (pendingQuestion && steered.length > 0) {
-          if (stopping) await cp.clearInterrupt().catch(() => {});
-          await answerPendingQuestion(steered);
-          return false;
-        }
-        if (stopping) {
-          if (steered.length === 0) {
-            interrupted = true;
+      if (!controlBusy && now() - lastSteerAt >= STEER_POLL_INTERVAL_MS) {
+        controlBusy = true;
+        try {
+          lastSteerAt = now();
+          const stopping = await cp.checkInterrupt().catch(() => false);
+          /**
+           * A STOP ACCOMPANIED BY A MESSAGE continues in THIS lap (“stop
+           * and do this instead): the dialer always sends the torque steer
+           * THEN interrupt. So we only drain there, and we consume the flag -
+           * otherwise the following survey would reread it and come out, message accepted
+           * and never played (same reasoning as `clearInterrupt` in
+           * `agent-loop.ts`).
+           *
+           * Outside of stopping, we only drain AFTER knowing that there is something:
+           * `pullSteering` consumes, and a message drained without being played would be
+           * lost for good.
+           */
+          const steered =
+            stopping || (await cp.hasPendingMessages().catch(() => false))
+              ? await takeSteering()
+              : [];
+          /**
+           * THE ANSWER TO A QUESTION IS NOT STEERING (D7). She unties a
+           * tool suspended, and the round that was waiting for it starts again by itself: cut
+           * the session here would kill precisely the round that we have just unlocked.
+           *
+           * The “Stop” which accompanies it is consumed without being played, and it is the
+           * good driving: the dial always sends the steer + interrupt torque
+           * ([agent-conversation.tsx](../../../components/agent/agent-conversation.tsx)),
+           * but here the user RESPONDS — he is not asking to stop.
+           */
+          if (pendingQuestion && steered.length > 0) {
+            if (stopping) await cp.clearInterrupt().catch(() => {});
+            await answerPendingQuestion(steered);
+            return false;
+          }
+          if (stopping) {
+            if (steered.length === 0) {
+              await stopTurn();
+              return true;
+            }
+            await cp.clearInterrupt().catch(() => {});
+            pendingPrompt.push(
+              ...steered.map((message) => ({ message, steered: true })),
+            );
             await closePendingQuestion();
             await abortSession();
-            return true;
+          } else if (steered.length > 0) {
+            pendingPrompt.push(
+              ...steered.map((message) => ({ message, steered: true })),
+            );
+            await closePendingQuestion();
+            await abortSession();
           }
-          await cp.clearInterrupt().catch(() => {});
-          pendingPrompt.push(
-            ...steered.map((message) => ({ message, steered: true })),
-          );
-          await closePendingQuestion();
-          await abortSession();
-        } else if (steered.length > 0) {
-          pendingPrompt.push(
-            ...steered.map((message) => ({ message, steered: true })),
-          );
-          await closePendingQuestion();
-          await abortSession();
+        } finally {
+          controlBusy = false;
         }
       }
       // The periodic backup IS the heartbeat (see his comment).
       await maybeSaveCheckpoint();
+      if (interrupted) {
+        await stoppingTurn;
+        return true;
+      }
       if (runClosed) {
         // The run was concluded elsewhere (cancelled, or already stamped). Continue, this
         // would be spending in the name of a conversation that no longer exists.
@@ -2026,6 +2082,35 @@ export async function runOpencodeTurn(
       return false;
     };
 
+    // A blocked permission reply, journal export or event upload must not
+    // prevent Stop from reaching the engine. Never drain steering here: the
+    // lifecycle owns message consumption and shares this control lock.
+    let monitorClosed = false;
+    let monitorTimer: ReturnType<typeof setTimeout> | undefined;
+    let monitorPoll: Promise<void> = Promise.resolve();
+    const pollStop = async () => {
+      if (monitorClosed || controlBusy || interrupted) return;
+      controlBusy = true;
+      try {
+        const requested = await cp.checkInterrupt();
+        if (!requested || monitorClosed) return;
+        const pending = await cp.hasPendingMessages();
+        if (pending || pendingPrompt.length > 0 || monitorClosed) return;
+        await stopTurn();
+      } catch (err) {
+        console.error("[supervisor] stop monitor failed:", (err as Error).message);
+      } finally {
+        controlBusy = false;
+      }
+    };
+    const scheduleStopPoll = () => {
+      if (monitorClosed || interrupted) return;
+      monitorTimer = setTimeout(() => {
+        monitorPoll = pollStop().finally(scheduleStopPoll);
+      }, deps.stopPollIntervalMs ?? 1_000);
+    };
+    scheduleStopPoll();
+
     try {
       /**
        * THE FLOW, READ BY HAND RATHER THAN IN `for await` — so that silence does not
@@ -2050,6 +2135,10 @@ export async function runOpencodeTurn(
           continue;
         }
         nextEvent = null;
+        if (interrupted) {
+          await stoppingTurn;
+          break;
+        }
         if (winner.done) break;
         const raw = winner.value;
         const out = translateEvent(raw, state);
@@ -2607,6 +2696,10 @@ export async function runOpencodeTurn(
           subagents.finish(childSession);
         }
         if (out.idle && !child) {
+          if (interrupted) {
+            await stoppingTurn;
+            break;
+          }
           // An idle session has no running shell tools. Clear any approval whose
           // tool-result event was lost during an OpenCode permission cascade.
           pendingShellCalls.clear();
@@ -2676,6 +2769,10 @@ export async function runOpencodeTurn(
           ) {
             repairedPreamble = true;
             await cp.emit("thinking", { text: cap(stranded, 2000) });
+            if (interrupted) {
+              await stoppingTurn;
+              break;
+            }
             reasoningSince = null;
             lastLiveAt = 0;
             toolsSeen = 0;
@@ -2694,7 +2791,15 @@ export async function runOpencodeTurn(
 
         if (await lifecycle()) break;
       }
+    } catch (err) {
+      // A forced stop can break an in-flight OpenCode request or the SSE
+      // stream. Finish the interrupted turn through the normal report path.
+      if (!interrupted) throw err;
+      await stoppingTurn;
     } finally {
+      monitorClosed = true;
+      clearTimeout(monitorTimer);
+      await monitorPoll;
       if (liveStatsTimer) {
         clearTimeout(liveStatsTimer);
         liveStatsTimer = null;
@@ -2707,7 +2812,7 @@ export async function runOpencodeTurn(
        * still in the opencode base, which the next round rereads: measured at
        * batch 0 of the waiting probe, nothing revives it.
        */
-      await closePendingQuestion().catch(() => {});
+      if (!forcedStop) await closePendingQuestion().catch(() => {});
       /**
        * WHAT WE DRAINED WITHOUT KNOWING TO PLAY IT COMES BACK IN A FILE (MIN-286).
        *
@@ -2768,7 +2873,11 @@ export async function runOpencodeTurn(
     try {
       // Incremental since the LAST export, periodic included: the cursor is
       // that of the accumulator, not that of the previous round.
-      opencodeState = await syncJournal();
+      // A forced shutdown cannot export more history. Keep the durable cursor
+      // (or the local SQLite session) so interruption remains resumable.
+      opencodeState = forcedStop
+        ? { sessionId, seq: journalSeq }
+        : await syncJournal();
     } catch (err) {
       // A newspaper that we have not been able to export does not lose the trick: it loses the
       // RESUME, and the next round will start with a new session. To say, therefore,

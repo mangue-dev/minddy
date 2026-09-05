@@ -2786,6 +2786,128 @@ describe("le steering et le « Stop »", () => {
  * guard then left to probe a perfectly alive microVM.
  */
 describe("le battement du tour", () => {
+  it("cancels supervisor validation commands before reporting an interrupted turn", async () => {
+    const normalHost = host() as import("../repo-host").RepoHost;
+    let probe: (() => Promise<void>) | undefined;
+    let cancelled = false;
+    const report = await runOpencodeTurn(job(), {
+      prompt: "Validate the changes.", anchorInstructions: "# Instructions",
+    }, {
+      ...cp(),
+      emit: async (type) => {
+        if (type === "tool_call") await probe?.();
+      },
+    }, {
+      ...normalHost,
+      exec: async (command, opts) => {
+        if (!opts?.signal) return await normalHost.exec(command);
+        h.interrupt = true;
+        await new Promise<void>((resolve) => {
+          opts.signal!.addEventListener("abort", () => {
+            cancelled = true;
+            resolve();
+          }, { once: true });
+        });
+        return { exitCode: 130, stdout: "", stderr: "aborted" };
+      },
+    }, {
+      ...deps(),
+      ...silentStream([toolFrame("bash", "validation", {
+        status: "running", input: { command: "validate_changes" },
+      })]),
+      stopPollIntervalMs: 5,
+      startToolBridge: async (opts) => {
+        probe = opts.delivery?.probeRepoTouched;
+        return await startToolBridge(opts);
+      },
+    });
+    expect(report.status).toBe("interrupted");
+    expect(cancelled).toBe(true);
+    expect(h.prompts).toHaveLength(1);
+  });
+
+  it("forces an unacknowledged user stop before finalization and keeps a resume checkpoint", async () => {
+    h.tick = 3_000;
+    h.interrupt = true;
+    h.abortFails = true;
+    let stoppedBeforeFinalization = false;
+    const report = await run({}, silentStream(), {
+      repoAuthUrl: async () => {
+        stoppedBeforeFinalization = h.stopped;
+        return "https://github.com/org/repo.git";
+      },
+    });
+    expect(report.status).toBe("interrupted");
+    expect(report.checkpoint?.opencode).toEqual({ sessionId: PARENT, seq: {} });
+    expect(stoppedBeforeFinalization).toBe(true);
+    expect(h.interruptCleared).toBe(0);
+  });
+
+  it("forces a user stop when an acknowledged abort leaves a child busy", async () => {
+    h.tick = 3_000;
+    h.interrupt = true;
+    const streamDeps = silentStream();
+    const report = await run({}, {
+      ...streamDeps,
+      client: (url, auth) => {
+        const client = streamDeps.client!(url, auth);
+        vi.spyOn(client, "waitIdle").mockResolvedValue(false);
+        return client;
+      },
+    });
+    expect(report.status).toBe("interrupted");
+    expect(h.serverStops).toBeGreaterThanOrEqual(2);
+    expect(report.checkpoint?.opencode?.sessionId).toBe(PARENT);
+  });
+
+  it("reaches Stop while an event upload is blocked", async () => {
+    let releaseUpload: () => void = () => {};
+    const upload = new Promise<void>((resolve) => { releaseUpload = resolve; });
+    const normalDeps = deps();
+    h.abortFails = true;
+    const report = await run({}, {
+      ...silentStream([toolFrame("bash", "blocked", {
+        status: "running", input: { command: "sleep 600" },
+      })]),
+      stopPollIntervalMs: 5,
+      startServer: async (env) => {
+        const server = await normalDeps.startServer(env);
+        return { stop: async () => {
+          await server.stop();
+          releaseUpload();
+        } };
+      },
+    }, {
+      emit: async (type) => {
+        if (type !== "tool_call") return;
+        h.interrupt = true;
+        await upload;
+      },
+    });
+    expect(report.status).toBe("interrupted");
+    expect(h.aborts).toBe(1);
+    expect(h.prompts).toHaveLength(1);
+  });
+
+  it("leaves Stop with queued steering to the lifecycle while an event is uploading", async () => {
+    h.tick = 3_000;
+    let queued = false;
+    const report = await run({}, { stopPollIntervalMs: 5 }, {
+      emit: async (type, payload) => {
+        await cp().emit(type, payload);
+        if (queued || type !== "tool_call") return;
+        queued = true;
+        h.steering.push("Continue with the focused test instead.");
+        h.interrupt = true;
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      },
+    });
+    expect(report.status).toBe("completed");
+    expect(h.prompts.at(-1)).toBe("Continue with the focused test instead.");
+    expect(h.interruptCleared).toBe(1);
+    expect(h.serverStops).toBe(1);
+  });
+
   it("entend le « Stop » alors que le flux n'a rien dit", async () => {
     h.tick = 3_000;
     h.interrupt = true;

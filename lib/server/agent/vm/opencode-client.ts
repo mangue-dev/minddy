@@ -238,14 +238,39 @@ export class OpencodeClient {
    * Cuts the turn in flight. Returns whether OpenCode acknowledged the cut so
    * callers can avoid checkpointing a session that may still be mutating.
    */
-  async abort(sessionId: string): Promise<boolean> {
+  async abort(sessionId: string, timeoutMs = 2_000): Promise<boolean> {
     const route = this.legacy(`/session/${sessionId}/abort`);
     try {
-      const response = await this.finiteRequest(route, { method: "POST" });
-      return response.ok;
+      const response = await this.finiteRequest(route, {
+        method: "POST",
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      return response.ok && (await response.json()) === true;
     } catch {
       return false;
     }
+  }
+
+  /** An abort acknowledgement is not proof that every tool has stopped. */
+  async waitIdle(timeoutMs = 2_000): Promise<boolean> {
+    const signal = AbortSignal.timeout(timeoutMs);
+    try {
+      while (!signal.aborted) {
+        const statuses = await this.json<Record<string, { type: string }>>(
+          this.legacy("/session/status"),
+          { signal },
+        );
+        // This server belongs to one turn. Include delegated sessions, which
+        // can still be writing after the parent has acknowledged its abort.
+        if (Object.values(statuses).every((status) => status.type === "idle")) {
+          return true;
+        }
+        await defaultSleep(50);
+      }
+    } catch {
+      // An unreachable server cannot confirm that the turn is idle.
+    }
+    return false;
   }
 
   /**
