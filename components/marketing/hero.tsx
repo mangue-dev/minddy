@@ -28,7 +28,7 @@ export async function Hero() {
             </p>
             <div className="shrink-0">
               <div className="flex flex-wrap items-center gap-3">
-                <Button asChild size="lg" className="rounded-lg">
+                <Button asChild size="lg" className="rounded-full">
                   <TrackedCta href={localizedHref("/download", locale)} location="hero">
                     {t("downloadMinddy")}
                     <Download data-icon="inline-end" />

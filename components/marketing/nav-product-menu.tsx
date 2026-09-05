@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowRight, ChevronDown, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
@@ -23,8 +23,6 @@ export type ProductEntry = {
   /** Translation keys use `navMenu_<key>_title` and `navMenu_<key>_desc`. */
   key: ProductEntryKey;
   href: string;
-  /** Used in the mobile drawer; Numo uses its own logo. */
-  icon: LucideIcon | null;
 };
 
 const GROUPS: ReadonlyArray<ReadonlyArray<ProductEntryKey>> = [
@@ -126,7 +124,7 @@ export function NavProductMenu({
       <div ref={panelRef} id={panelId} inert={!open} aria-hidden={!open}
         className={cn("absolute top-full left-1/2 z-50 w-[min(calc(100vw-3rem),58rem)] -translate-x-1/2 pt-2 whitespace-normal", !open && "pointer-events-none")}>
         <div className={cn(
-          "overflow-hidden rounded-2xl border border-border bg-popover p-2 shadow-xl shadow-black/10",
+          "overflow-hidden rounded-[calc(var(--radius-xl)+9px)] border border-border bg-popover p-2 shadow-xl shadow-black/10",
           "origin-top transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none",
           open ? "visible translate-y-0 opacity-100" : "invisible -translate-y-2 opacity-0",
         )}>

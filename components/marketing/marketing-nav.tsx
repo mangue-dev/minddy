@@ -4,27 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  Boxes,
-  Equal,
-  FileText,
-  GitFork,
-  Laptop,
-  LayoutGrid,
-  MessagesSquare,
-  Plug,
-  Route,
-  Server,
-  Tag,
-  Terminal,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowUpRight, Download, Equal, X } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "mangue-ui/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "mangue-ui/components/ui/sheet";
 import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { NumoFace } from "@/components/numo-face";
+import styles from "./nav-wordmark.module.css";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -44,44 +29,51 @@ import type { MessageKey } from "@/lib/i18n-keys";
 type NavLink = {
   href: string;
   key: MessageKey<"Landing">;
-  icon: LucideIcon;
   external?: boolean;
 };
 
 /** Shared destinations for the desktop product menu and mobile drawer. */
 const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
-  { key: "tracker", href: "/#tracker", icon: LayoutGrid },
-  { key: "agents", href: "/#agents", icon: Plug },
-  { key: "numo", href: "/#numo", icon: null },
-  { key: "speed", href: "/#speed", icon: Zap },
-  { key: "pages", href: "/#pages", icon: FileText },
-  { key: "feedback", href: "/#feedback", icon: MessagesSquare },
-  { key: "more", href: "/#more", icon: Boxes },
-  { key: "mcp", href: "/mcp", icon: Terminal },
-  { key: "selfHosting", href: "/self-hosting", icon: Server },
+  { key: "tracker", href: "/#tracker" },
+  { key: "agents", href: "/#agents" },
+  { key: "numo", href: "/#numo" },
+  { key: "speed", href: "/#speed" },
+  { key: "pages", href: "/#pages" },
+  { key: "feedback", href: "/#feedback" },
+  { key: "more", href: "/#more" },
+  { key: "mcp", href: "/mcp" },
+  { key: "selfHosting", href: "/self-hosting" },
   // The desktop app is last because it describes where Minddy runs rather than
   // what it does. It remains discoverable without displacing the product story.
-  { key: "download", href: "/download", icon: Laptop },
+  { key: "download", href: "/download" },
 ];
 
 /** Direct navigation complements the product menu with an overview and pricing. */
 const LINKS: ReadonlyArray<NavLink> = [
-  { href: "/#workspace", key: "navHowItWorks", icon: Route },
-  { href: "/pricing", key: "navPricing", icon: Tag },
-  { href: "https://github.com/mangue-dev/minddy", key: "navOpenSource", icon: GitFork, external: true },
+  { href: "/#workspace", key: "navHowItWorks" },
+  { href: "/pricing", key: "navPricing" },
+  { href: "https://github.com/mangue-dev/minddy", key: "navOpenSource", external: true },
 ];
 
-/** Line and icon pad of the mobile drawer, shared by its two blocks. */
 const MOBILE_ROW =
-  "flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted active:scale-[0.99]";
-const MOBILE_ICON =
-  "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/60 text-muted-foreground";
+  "flex min-h-11 items-center justify-between gap-4 rounded-lg py-2 text-xl leading-snug tracking-tight transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring";
+
+const WORDMARK_COLORS = ["#cbd9e6", "#ccdccb", "#e7d3c4", "#c9dedd", "#c9dedd", "#dfd9b8"];
 
 function NavLogo() {
   return (
-    <span className="flex items-center gap-2">
+    <span className={cn("flex items-center gap-2", styles.brand)}>
       <MinddyLogo className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
-      <span className="font-display text-lg font-semibold tracking-tight">minddy</span>
+      <span className="font-display text-lg font-semibold tracking-tight" aria-hidden>
+        {Array.from("minddy", (letter, index) => (
+          <span key={index} className={styles.letter} style={{
+            "--letter-color": WORDMARK_COLORS[index],
+            "--letter-index": index,
+          } as React.CSSProperties}>
+            {letter}
+          </span>
+        ))}
+      </span>
     </span>
   );
 }
@@ -113,6 +105,13 @@ export function MarketingNav() {
   const locale = useLocale() as Locale;
   const href = (path: string) => localizedHref(path, locale);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) setMobileOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
   const [hasSession, probeSession, setHasSession] = useSession();
 
   // On the landing, clicking the logo does not trigger any navigation (we are there
@@ -131,7 +130,7 @@ export function MarketingNav() {
   }, [locale]);
 
   return (
-    <>
+    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
       {probeSession && <SessionProbe onChange={setHasSession} />}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 text-foreground backdrop-blur-md">
         <div className="mx-auto grid h-16 w-full max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6 lg:px-10">
@@ -174,14 +173,15 @@ export function MarketingNav() {
           </nav>
 
           <div className="col-start-3 flex items-center gap-2 justify-self-end">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              aria-label={t("mobileMenuOpen")}
-              className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground lg:hidden"
-            >
-              <Equal className="h-5 w-5" />
-            </button>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("mobileMenuOpen")}
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground lg:hidden"
+              >
+                <Equal className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
 
             <div className="hidden items-center gap-2 sm:flex">
               <Button asChild variant="ghost" size="sm" className="px-3">
@@ -200,103 +200,87 @@ export function MarketingNav() {
         </div>
       </header>
 
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="right" className="flex w-[88%] max-w-[380px] flex-col gap-0 p-0">
-          <SheetTitle className="sr-only">{t("mobileMenuTitle")}</SheetTitle>
+      <SheetContent
+        side="right"
+        autoFocusOnOpen
+        showCloseButton={false}
+        aria-describedby={undefined}
+        onCloseAutoFocus={event => {
+          if (window.matchMedia("(min-width: 1024px)").matches) {
+            event.preventDefault();
+            return;
+          }
+        }}
+        overlayClassName="bg-black/25 motion-reduce:animate-none"
+        className="flex min-h-0 flex-col gap-0 bg-background p-0 data-[side=right]:h-dvh data-[side=right]:w-full data-[side=right]:sm:max-w-[26rem] motion-reduce:animate-none motion-reduce:transition-none"
+      >
+        <SheetTitle className="sr-only">{t("mobileMenuTitle")}</SheetTitle>
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-6">
+          <Link href={href("/")} aria-label="minddy"
+            className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+            onClick={event => {
+              setMobileOpen(false);
+              handleLogoClick(event);
+            }}>
+            <NavLogo />
+          </Link>
+          <SheetClose asChild>
+            <button type="button" aria-label={t("mobileMenuClose")}
+              className="-mr-2 flex size-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+              <X className="size-5" aria-hidden />
+            </button>
+          </SheetClose>
+        </div>
 
-          <div className="flex h-16 shrink-0 items-center border-b border-border px-5">
-            <Link
-              href={href("/")}
-              aria-label="minddy"
-              onClick={(event) => {
-                setMobileOpen(false);
-                handleLogoClick(event);
-              }}
-            >
-              <NavLogo />
-            </Link>
-          </div>
-
-          {/* On touch screen there is no hover, therefore no menu: the drawer
-              unfolds what the “Product” menu groups together, under its title, and
-              the two direct links follow. Same targets, same order. */}
-          <div className="flex-1 overflow-y-auto p-3">
-            <p className="px-2.5 pt-1 pb-2 text-xs font-medium text-muted-foreground">
-              {t("navProduct")}
-            </p>
-            {PRODUCT_ENTRIES.map((entry) => (
-              <SheetClose key={entry.href} asChild>
-                <a href={href(entry.href)} className={MOBILE_ROW}>
-                  <span className={MOBILE_ICON}>
-                    {entry.icon ? (
-                      <entry.icon className="h-4 w-4" />
-                    ) : (
-                      <NumoFace className="h-3.5 w-auto" />
-                    )}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-foreground">
-                      {t(`navMenu_${entry.key}_title`)}
-                    </span>
-                    <span className="block text-xs leading-snug text-muted-foreground">
-                      {t(`navMenu_${entry.key}_desc`)}
-                    </span>
-                  </span>
-                </a>
-              </SheetClose>
-            ))}
-
-            <div className="my-2 border-t border-border" />
-
-            {LINKS.map((link) => {
-              const Icon = link.icon;
-              const content = (
-                <>
-                  <span className={MOBILE_ICON}>
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="text-sm font-medium text-foreground">{t(link.key)}</span>
-                </>
-              );
-              return (
-                <SheetClose key={link.href} asChild>
-                  {link.external ? (
-                    <a href={link.href} target="_blank" rel="noreferrer" className={MOBILE_ROW}>
-                      {content}
-                    </a>
-                  ) : link.href.startsWith("/#") ? (
-                    <a href={href(link.href)} className={MOBILE_ROW}>
-                      {content}
-                    </a>
-                  ) : (
-                    <Link href={href(link.href)} className={MOBILE_ROW}>
-                      {content}
-                    </Link>
-                  )}
+        <nav aria-label={t("mobileMenuTitle")} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6">
+          <ul className="space-y-1">
+            {LINKS.map(link => (
+              <li key={link.href}>
+                <SheetClose asChild>
+                  <a href={link.external ? link.href : href(link.href)}
+                    target={link.external ? "_blank" : undefined}
+                    rel={link.external ? "noreferrer" : undefined}
+                    className={cn(MOBILE_ROW, "text-2xl")}>
+                    {t(link.key)}
+                    {link.external && <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
+                  </a>
                 </SheetClose>
-              );
-            })}
-          </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-7 mb-3 text-sm text-muted-foreground">{t("navProduct")}</p>
+          <ul>
+            {PRODUCT_ENTRIES.filter(entry => entry.key !== "download").map(entry => (
+              <li key={entry.href}>
+                <SheetClose asChild>
+                  <a href={href(entry.href)} className={MOBILE_ROW}>
+                    {t(`navMenu_${entry.key}_title`)}
+                  </a>
+                </SheetClose>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-          <div className="flex shrink-0 flex-col gap-2 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <SheetClose asChild>
-              <Button asChild variant="outline" size="lg" className="w-full">
-                <Link href={hasSession ? "/home" : "/login"}>
-                  {t(hasSession ? "navOpenApp" : "navSignIn")}
-                </Link>
-              </Button>
-            </SheetClose>
-            <SheetClose asChild>
-              <Button asChild size="lg" className="w-full">
-                <Link href={href("/download")}
-                  onClick={() => track("landing_cta_clicked", { location: "nav" })}>
-                  {t("downloadMinddy")}
-                </Link>
-              </Button>
-            </SheetClose>
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-[#f3f5ef] px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-[#252b27]">
+          <SheetClose asChild>
+            <Button asChild size="lg" className="min-h-11 w-full rounded-full">
+              <Link href={href("/download")}
+                onClick={() => track("landing_cta_clicked", { location: "nav" })}>
+                {t("downloadMinddy")}
+                <Download data-icon="inline-end" />
+              </Link>
+            </Button>
+          </SheetClose>
+          <SheetClose asChild>
+            <Button asChild variant="ghost" size="lg" className="min-h-11 w-full rounded-full">
+              <Link href={hasSession ? "/home" : "/login"}>
+                {t(hasSession ? "navOpenApp" : "navSignIn")}
+              </Link>
+            </Button>
+          </SheetClose>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
