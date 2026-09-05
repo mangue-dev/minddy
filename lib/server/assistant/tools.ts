@@ -1,5 +1,7 @@
 import "server-only";
 
+import { MCP_CLIENT_TOOLS } from "@/lib/mcp-client-tools";
+
 import {
   ISSUE_STATUSES,
   ISSUE_PRIORITIES,
@@ -201,6 +203,7 @@ const VIEW_PROJECT_FILTER_PROPERTY = {
 } as const;
 
 export const ASSISTANT_TOOLS: AssistantToolDef[] = [
+  ...MCP_CLIENT_TOOLS,
   // ── Read tools ────────────────────────────────────────────────────────
   {
     type: "function",
@@ -2121,6 +2124,7 @@ export const ACCOUNT_TOOLS = new Set([
 // Tools that never take a project (ask_user, the web, and the account-level
 // tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
 const NON_PROJECT_TOOLS = new Set([
+  ...MCP_CLIENT_TOOLS.map((tool) => tool.function.name),
   "ask_user",
   "web_search",
   "get_help",

@@ -15,10 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
-import {
-  SettingsShell,
-  type SettingsTab,
-} from "@/components/settings-shell";
+import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
 import { AccountSecuritySection } from "@/components/settings/account-security-section";
 import { AccountDesktopSection } from "@/components/settings/account-desktop-section";
@@ -27,7 +24,10 @@ import { AccountCyclesSection } from "@/components/settings/account-cycles-secti
 import { AccountAutomationsSection } from "@/components/settings/account-automations-section";
 import { AccountNotificationsSection } from "@/components/settings/account-notifications-section";
 import { AccountPushDevicesSection } from "@/components/settings/account-push-devices-section";
-import { AccountMcpSection } from "@/components/settings/account-mcp-section";
+import {
+  AccountMcpSection,
+  AccountMcpClientsSection,
+} from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 import { AccountGitConnectionsSection } from "@/components/settings/account-git-connections-section";
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
@@ -116,6 +116,12 @@ export default function AccountSettingsPage() {
           <AccountConnectedAppsSection />
         </>
       ),
+    },
+    {
+      value: "mcp-clients",
+      label: t("mcpClientsTab"),
+      icon: Plug,
+      content: <AccountMcpClientsSection />,
     },
     {
       value: "git",

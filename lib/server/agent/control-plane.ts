@@ -1,5 +1,8 @@
 import "server-only";
 
+import { MCP_CLIENT_TOOL_NAMES } from "@/lib/mcp-client-tools";
+import { executeAgentMcpTool } from "./mcp-client";
+
 import {
   recordAiUsage,
   type AiUsageBillTo,
@@ -1064,6 +1067,10 @@ async function runPlatformTool(
     return forbidden(
       `${name} is not available in this session (anchor: ${anchor})`,
     );
+  }
+
+  if (MCP_CLIENT_TOOL_NAMES.has(name)) {
+    return ok(await executeAgentMcpTool(run, name, args));
   }
 
   if (SCRATCHPAD_TOOL_NAMES.has(name)) {

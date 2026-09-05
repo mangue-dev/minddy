@@ -890,6 +890,7 @@ export const AssistantShell = forwardRef<
               )}
               <div className={cn(activeAskUser && "hidden")}>
                 <ChatInput
+                  onNavigate={onClose}
                   ref={chatInputRef}
                   onSend={handleSend}
                   onAbort={abort}

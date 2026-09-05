@@ -50,7 +50,10 @@ import {
   type ChatContentPart,
   type ChatMessage,
 } from "./loop";
-import { serializeToolResult } from "./tool-result-serialization";
+import {
+  getToolResultCharLimit,
+  serializeToolResult,
+} from "./tool-result-serialization";
 import { commentFallbackDone } from "@/lib/server/runtime-locale-copy";
 import { getAssistantReasoningLevel } from "./reasoning";
 import { reasoningMaxTokens } from "@/lib/agent-reasoning";
@@ -369,7 +372,7 @@ export async function runCommentMention({
     ];
 
     // ── Agent loop (streamed, in-memory only — nothing persisted per round)
-    const finalContent = await runLoop(messages, {
+    const finalContent = await runCommentLoop(messages, {
       model,
       aiRuntime,
       projectId: issue.project_id as string,
@@ -604,7 +607,7 @@ export async function runObjectiveCommentMention({
       { role: "user", content: triggerContent },
     ];
 
-    const finalContent = await runLoop(messages, {
+    const finalContent = await runCommentLoop(messages, {
       model,
       aiRuntime,
       projectId: objective.project_id as string,
@@ -797,7 +800,7 @@ export async function runPageCommentMention({
       { role: "user", content: triggerText },
     ];
 
-    const finalContent = await runLoop(messages, {
+    const finalContent = await runCommentLoop(messages, {
       model,
       projectId,
       userId: actorId,
@@ -1047,7 +1050,7 @@ export async function runFeedbackCommentMention({
       { role: "user", content: triggerContent },
     ];
 
-    const finalContent = await runLoop(messages, {
+    const finalContent = await runCommentLoop(messages, {
       model,
       aiRuntime,
       projectId: post.project_id as string,
@@ -1101,7 +1104,7 @@ export async function runFeedbackCommentMention({
 
 // ── Streaming loop (adapted from loop.ts, without SSE/persistence) ───────
 
-async function runLoop(
+export async function runCommentLoop(
   messages: ChatMessage[],
   ctx: {
     model: string;
@@ -1295,7 +1298,7 @@ async function runLoop(
           tool_call_id: acc.id,
           content: serializeToolResult(
             redactDeep(result, redactor.redact),
-            12000
+            Math.max(12_000, getToolResultCharLimit(acc.name, args))
           ),
         });
       }

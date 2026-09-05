@@ -1,3 +1,4 @@
+import { MCP_CLIENT_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import {
   ISSUE_TOOL_NAMES,
   PR_TOOL_NAMES,
@@ -119,6 +120,7 @@ export const TOOL_ATTACHMENTS_HEADER = "x-minddy-attachments";
  * tools LOCAL, where it should have been from the start.
  */
 export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
+  ...MCP_CLIENT_TOOL_NAMES,
   ...ISSUE_TOOL_NAMES,
   ...SCRATCHPAD_TOOL_NAMES,
   ...PR_TOOL_NAMES,
@@ -215,6 +217,7 @@ function toolsFor(job: VmJob): AgentToolDef[] {
 }
 
 type JsonSchema = {
+  additionalProperties?: boolean;
   type?: string;
   description?: string;
   enum?: unknown[];
@@ -313,7 +316,8 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
         const inner = schemaExpression(raw as JsonSchema, `${path}.${name}`);
         return `    ${JSON.stringify(name)}: ${inner}${required.has(name) ? "" : ".optional()"},`;
       });
-      return describe(`tool.schema.object({\n${entries.join("\n")}\n  })`);
+      const passthrough = schema.additionalProperties === true ? ".passthrough()" : "";
+      return describe(`tool.schema.object({\n${entries.join("\n")}\n  })${passthrough}`);
     }
     default:
       throw new Error(`${path}: type ${String(schema.type)} sans traduction`);

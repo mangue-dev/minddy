@@ -872,6 +872,20 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("scratchpadUpdated") : t("updateScratchpadFailed");
     },
   },
+  list_mcp_tools: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("listingMcpTools");
+      return success ? t("mcpToolsListed") : t("listMcpToolsFailed");
+    },
+  },
+  call_mcp_tool: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("callingMcpTool");
+      return success ? t("mcpToolCalled") : t("callMcpToolFailed");
+    },
+  },
   web_search: {
     icon: Globe,
     getLabel: (args, result, success, status, t) => {
@@ -1247,6 +1261,7 @@ const SUMMARY_KEYS: Record<ActionKind, MessageKey<"ToolCall">> = {
  * rule of `actionKind`: a minddy tool that LIT is called `list_`/`get_`/
  * `read_`/`search_`, the others write. */
 const ACTION_KIND: Record<string, ActionKind> = {
+  call_mcp_tool: "other",
   read_file: "read",
   grep: "search",
   glob: "search",

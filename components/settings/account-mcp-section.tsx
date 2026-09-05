@@ -4,10 +4,10 @@ import { useTranslations } from "next-intl";
 import { Plug } from "lucide-react";
 import { SettingsGroup } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import { AccountMcpClients } from "./account-mcp-clients";
 import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
 
-/** Account settings → MCP: the “Connect an agent” panel, shared with
- the MCP stage of onboarding (MIN-74) — it does not change, only its frame. */
+/** Inbound connections let external assistants use Minddy. */
 export function AccountMcpSection() {
   const t = useTranslations("Account");
 
@@ -22,4 +22,9 @@ export function AccountMcpSection() {
       <McpConnectPanel />
     </SettingsGroup>
   );
+}
+
+/** Personal outbound connections let Numo use other services. */
+export function AccountMcpClientsSection() {
+  return <AccountMcpClients />;
 }
