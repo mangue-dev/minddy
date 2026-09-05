@@ -6,7 +6,7 @@
 
 .brand {
   --minddy-wordmark-progress: 0;
-  transition: --minddy-wordmark-progress 350ms linear;
+  transition: --minddy-wordmark-progress 140ms linear;
 }
 
 /* One timeline preserves each letter's position when hover reverses mid-flight. */

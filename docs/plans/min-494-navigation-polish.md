@@ -7,8 +7,8 @@ Continue PR #133 on `codex/min-494-landing-redesign`.
 - [x] Keep the Product panel corners concentric: the outer radius is the inner
   radius plus 8 px padding and a 1 px border (29 px and 20 px with this theme).
 - [x] Color the navbar wordmark using the footer palette, with one green i.
-  A shared 350 ms CSS progress value drives 150 ms letter fades staggered by
-  40 ms. Reversing hover preserves the current progress in either direction.
+  A shared 140 ms CSS progress value drives 60 ms letter fades staggered by
+  16 ms. Reversing hover preserves the current progress in either direction.
   Keyboard focus also activates the effect; reduced motion removes the delay.
 - [x] Review Linear's mobile navigation at <https://linear.app/>. Replace the
   icon/description rows with spacious text links and a clear product group.
