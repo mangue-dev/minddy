@@ -69,3 +69,15 @@ export interface McpConnection {
   oauth_connected: boolean;
   created_at: string;
 }
+
+export function mcpConnectionNeedsAuth(connection: McpConnection): boolean {
+  return connection.auth_mode === "oauth"
+    ? !connection.oauth_connected
+    : connection.auth_mode === "bearer" && !connection.has_token;
+}
+
+export function mcpSettingsHref(connectionId?: string): string {
+  const params = new URLSearchParams({ tab: "mcp-clients" });
+  if (connectionId) params.set("mcp_connection", connectionId);
+  return `/settings?${params}`;
+}

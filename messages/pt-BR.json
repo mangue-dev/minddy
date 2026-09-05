@@ -5866,6 +5866,7 @@
     "popupBlocked": "Permita pop-ups para o Minddy e tente entrar novamente.",
     "errorOAuth": "Não foi possível autorizar. Confira o guia do provedor, as credenciais OAuth e a URL de retorno e reconecte.",
     "saveAndConnect": "Salvar e conectar",
+    "manageConnections": "Gerenciar MCPs",
     "unauthenticated": "Este MCP não está autenticado",
     "manage": "Gerenciar {name}",
     "connectService": "Conectar {name}",

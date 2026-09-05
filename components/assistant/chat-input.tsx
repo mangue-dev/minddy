@@ -40,6 +40,7 @@ import {
 } from "@/components/assistant/slash-menu";
 import { SkillChip } from "@/components/assistant/skill-chip";
 import { SkillPreviewDialog } from "@/components/assistant/skill-preview-dialog";
+import { McpMenuGroup } from "@/components/assistant/mcp-menu-group";
 import {
   ResourcePills,
   DropOverlay,
@@ -188,6 +189,8 @@ export interface ChatInputContextAttachments {
 }
 
 interface ChatInputProps {
+  /** Close an enclosing panel when the composer opens account settings. */
+  onNavigate?: () => void;
   onSend: (
     message: string,
     attachments: ResourceInput[],
@@ -301,6 +304,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   function ChatInput(
     {
       onSend,
+      onNavigate,
       onAbort,
       disabled,
       isStreaming,
@@ -399,7 +403,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
     const hasMentionMenu = mentionables !== undefined || !!onAddContext;
     const hasSkillMenu = skills !== undefined;
-    const canAdd = canAttach || !!onAddContext || hasSkillMenu;
+    const hasMcpMenu = !!userId;
+    const canAdd = canAttach || !!onAddContext || hasSkillMenu || hasMcpMenu;
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
     });
@@ -1380,7 +1385,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       e.target.value = "";
                     }}
                   />
-                  {hasMentionMenu || hasSkillMenu ? (
+                  {hasMentionMenu || hasSkillMenu || hasMcpMenu ? (
                     <div ref={addMenuAnchorRef} className="shrink-0">
                       <SearchMenu
                         open={addMenuOpen}
@@ -1398,6 +1403,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         searchValue={addMenuQuery}
                         onSearchValueChange={setAddMenuQuery}
                         shouldFilter={false}
+                        hideEmpty={hasMcpMenu}
                         contentClassName="w-80"
                         trigger={
                           <Button
@@ -1446,7 +1452,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         )}
                         {canAttach &&
                           (addContextOptions.length > 0 ||
-                            addMenuSkillOptions.length > 0) && <CommandSeparator />}
+                            addMenuSkillOptions.length > 0 ||
+                            hasMcpMenu) && <CommandSeparator />}
                         {addMenuSkillOptions.length > 0 && (
                           <CommandGroup heading={t("skills")}>
                             {addMenuSkillOptions.map((option) => (
@@ -1467,8 +1474,22 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                             ))}
                           </CommandGroup>
                         )}
+                        {hasMcpMenu && addMenuSkillOptions.length > 0 && (
+                          <CommandSeparator />
+                        )}
+                        {userId && (
+                          <McpMenuGroup
+                            userId={userId}
+                            query={addMenuQuery}
+                            onNavigate={() => {
+                              setAddMenuOpen(false);
+                              setAddMenuQuery("");
+                              onNavigate?.();
+                            }}
+                          />
+                        )}
                         {addContextOptions.length > 0 &&
-                          addMenuSkillOptions.length > 0 && <CommandSeparator />}
+                          (addMenuSkillOptions.length > 0 || hasMcpMenu) && <CommandSeparator />}
                         {addContextOptions.length > 0 && (
                           <CommandGroup>
                             {addContextOptions.map((option) => (

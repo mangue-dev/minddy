@@ -14,6 +14,23 @@ export interface McpPreset {
 }
 const googleDocs =
   "https://developers.google.com/workspace/guides/configure-mcp-servers";
+
+/** Provider identity survives connection-specific query parameters. */
+export function mcpPresetForUrl(raw: string): McpPreset | undefined {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return undefined;
+  }
+  return MCP_PRESETS.find((preset) => {
+    const candidate = new URL(preset.url);
+    return (
+      candidate.origin === url.origin &&
+      candidate.pathname.replace(/\/+$/, "") === url.pathname.replace(/\/+$/, "")
+    );
+  });
+}
 export const MCP_PRESETS: McpPreset[] = [
   {
     id: "notion",

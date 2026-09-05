@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useId, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -37,10 +38,14 @@ import {
 } from "@/components/ui/tooltip";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
-import { MCP_PRESETS, type McpPreset } from "@/lib/mcp-catalog";
-import type { McpConnection } from "@/lib/mcp-client";
+import { MCP_PRESETS, mcpPresetForUrl, type McpPreset } from "@/lib/mcp-catalog";
+import { mcpConnectionNeedsAuth, type McpConnection } from "@/lib/mcp-client";
+import { useAuth } from "@/lib/auth-context";
+import {
+  MCP_CONNECTIONS_QUERY_KEY as queryKey,
+  useMcpConnections,
+} from "@/lib/use-mcp-connections";
 
-const queryKey = ["account-mcp-connections"];
 const endpoint = "/api/account/mcp-connections";
 const connectionChannel = "minddy:mcp-connections";
 
@@ -63,13 +68,9 @@ export function AccountMcpClients() {
   const t = useTranslations("McpClients");
   const id = useId();
   const queryClient = useQueryClient();
-  const { data, isPending, isError, refetch } = useQuery<{
-    connections: McpConnection[];
-    callback_url: string;
-  }>({
-    queryKey,
-    queryFn: () => request(endpoint),
-  });
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const { data, isPending, isError, refetch } = useMcpConnections(user?.id);
   const [editing, setEditing] = useState<McpConnection | "new" | null>(null);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -124,30 +125,42 @@ export function AccountMcpClients() {
     setHeaders("");
     setError(null);
   };
-  const edit = (
-    connection: McpConnection | "new",
-    selected: McpPreset | null = null,
-  ) => {
-    setEditing(connection);
-    setName(connection === "new" ? (selected?.name ?? "") : connection.name);
-    setUrl(connection === "new" ? (selected?.url ?? "") : connection.url);
-    setToken("");
-    setClearToken(false);
-    setTransport(connection === "new" ? "http" : connection.transport);
-    setAuthMode(
-      connection === "new" ? (selected?.auth ?? "oauth") : connection.auth_mode,
-    );
-    setClientId("");
-    setClientSecret("");
-    setHeaders("");
-    setPreset(
-      selected ??
-        (connection === "new"
-          ? null
-          : (MCP_PRESETS.find((item) => item.url === connection.url) ?? null)),
-    );
-    setError(null);
-  };
+  const edit = useCallback(
+    (
+      connection: McpConnection | "new",
+      selected: McpPreset | null = null,
+    ) => {
+      setEditing(connection);
+      setName(connection === "new" ? (selected?.name ?? "") : connection.name);
+      setUrl(connection === "new" ? (selected?.url ?? "") : connection.url);
+      setToken("");
+      setClearToken(false);
+      setTransport(connection === "new" ? "http" : connection.transport);
+      setAuthMode(
+        connection === "new" ? (selected?.auth ?? "oauth") : connection.auth_mode,
+      );
+      setClientId("");
+      setClientSecret("");
+      setHeaders("");
+      setPreset(
+        selected ??
+          (connection === "new"
+            ? null
+            : (mcpPresetForUrl(connection.url) ?? null)),
+      );
+      setError(null);
+    },
+    [],
+  );
+  useEffect(() => {
+    const connectionId = searchParams.get("mcp_connection");
+    if (!connectionId || !data) return;
+    const connection = data.connections.find((item) => item.id === connectionId);
+    const current = new URL(window.location.href);
+    current.searchParams.delete("mcp_connection");
+    window.history.replaceState(window.history.state, "", current);
+    if (connection) edit(connection);
+  }, [data, edit, searchParams]);
   const mutate = async (path: string, method: string, body?: unknown) => {
     setBusy(true);
     setError(null);
@@ -259,34 +272,26 @@ export function AccountMcpClients() {
           key={connection.id}
           className="flex items-center gap-3 rounded-lg border border-border p-3"
         >
-          <McpServiceLogo
-            service={
-              MCP_PRESETS.find(
-                (item) =>
-                  new URL(item.url).href === new URL(connection.url).href,
-              )?.id
-            }
-          />
+          <McpServiceLogo service={mcpPresetForUrl(connection.url)?.id} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <p className="truncate text-sm font-medium">{connection.name}</p>
-              {connection.auth_mode === "oauth" &&
-                !connection.oauth_connected && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("unauthenticated")}
-                        className="size-5 shrink-0 text-orange-500 hover:text-orange-500"
-                      >
-                        <TriangleAlert className="size-4" aria-hidden />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t("unauthenticated")}</TooltipContent>
-                  </Tooltip>
-                )}
+              {mcpConnectionNeedsAuth(connection) && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("unauthenticated")}
+                      className="size-5 shrink-0 text-orange-500 hover:text-orange-500"
+                    >
+                      <TriangleAlert className="size-4" aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("unauthenticated")}</TooltipContent>
+                </Tooltip>
+              )}
             </div>
             <p className="truncate text-xs text-muted-foreground">
               {new URL(connection.url).hostname}
