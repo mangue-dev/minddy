@@ -263,6 +263,64 @@ describe("personal MCP client", () => {
     ).toBe(`Bearer ${secret}`);
     expect(JSON.stringify(outcome)).not.toContain(secret);
   });
+  it.each([
+    { auth: "bearer", secret: "abc123" },
+    { auth: "bearer", secret: "7" },
+    { auth: "header", secret: "abc123" },
+    { auth: "header", secret: "7" },
+  ])("redacts embedded short $auth credentials ($secret) in text and structured results", async ({ auth, secret }) => {
+    if (auth === "bearer") {
+      mocks.rows[0].auth_mode = "bearer";
+      mocks.rows[0].token_encrypted = encryptMcpToken(secret);
+    } else {
+      mocks.rows[0].headers_encrypted = encryptMcpToken(
+        JSON.stringify({ "X-API-Key": secret }),
+      );
+    }
+    server({
+      content: [{ type: "text", text: `Bearer ${secret}; repeated ${secret}.` }],
+      structuredContent: {
+        nested: { credential: secret, reflected: `value=${secret}` },
+        entries: [secret, `prefix${secret}suffix`],
+      },
+    });
+    const outcome = await executeMcpTool("alice", "call_mcp_tool", {
+      connection_id: ID,
+      tool: "echo",
+      arguments: {},
+    });
+    expect(outcome).toMatchObject({
+      success: true,
+      result: {
+        content: [{ text: "Bearer [REDACTED]; repeated [REDACTED]." }],
+        structuredContent: {
+          nested: { credential: "[REDACTED]", reflected: "value=[REDACTED]" },
+          entries: ["[REDACTED]", "prefix[REDACTED]suffix"],
+        },
+      },
+    });
+    expect(JSON.stringify(outcome)).not.toContain(secret);
+    const sentHeaders = new Headers(mocks.fetch.mock.calls[0][1].headers);
+    expect(sentHeaders.get(auth === "bearer" ? "authorization" : "x-api-key"))
+      .toBe(auth === "bearer" ? `Bearer ${secret}` : secret);
+  });
+  it("redacts embedded short credentials from discovered tool descriptions", async () => {
+    mocks.rows[0].auth_mode = "bearer";
+    mocks.rows[0].token_encrypted = encryptMcpToken("abc123");
+    listedTools = [{
+      name: "echo",
+      description: "Authenticated with Bearer abc123",
+      inputSchema: { type: "object" },
+    }];
+    const outcome = await executeMcpTool("alice", "list_mcp_tools", {
+      connection_id: ID,
+    });
+    expect(outcome).toMatchObject({
+      success: true,
+      result: { tools: [{ description: "Authenticated with Bearer [REDACTED]" }] },
+    });
+    expect(JSON.stringify(outcome)).not.toContain("abc123");
+  });
   it("preserves remote tool errors without retrying an action", async () => {
     server({
       isError: true,

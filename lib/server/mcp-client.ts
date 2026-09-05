@@ -113,12 +113,7 @@ export async function withMcpClient<T>(
     ].filter((value): value is string => !!value);
     const redact = (value: string) =>
       secrets.reduce(
-        (text, secret) =>
-          secret.length < 8
-            ? text === secret
-              ? "[REDACTED]"
-              : text
-            : text.split(secret).join("[REDACTED]"),
+        (text, secret) => text.split(secret).join("[REDACTED]"),
         value,
       );
     const serialized = JSON.stringify(result, (_key, value) =>
