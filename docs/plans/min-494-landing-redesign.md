@@ -17,8 +17,8 @@ product screenshots, and Cloud/open-source positioning.
 - [x] Verify desktop/mobile layouts, light/dark screenshots, keyboard disclosure and mobile navigation, localized links, and reduced-motion behavior. Run focused lint, type checking, relevant tests, the owned-English check, and `git diff --check`.
 - [x] Review the scoped diff and prepare the DCO-signed pull request handoff.
 
-The Minddy MCP prefix was searched before implementation, but no callable tools
-were exposed in this session. This file records the plan and verification instead.
+The completed plan and verification outcome are also synchronized to MIN-494
+through the Minddy MCP tools. PR #133 is linked, and the issue is in review.
 
 ## Verification outcome
 
