@@ -4634,7 +4634,7 @@
     "speedSubtitle": "Use the keyboard, dictate a change, or keep a task in the notebook until it is ready.",
     "voiceBadge": "Voice dictation",
     "voiceTitle": "What you'd have typed, you can just say it",
-    "voiceSubtitle": "You speak. minddy fills the title, description and issue fields.",
+    "voiceSubtitle": "Wherever you can type in Minddy, you can also speak.",
     "voice_create_title": "Dictate a whole issue",
     "voice_create_body": "One sentence, and the form comes back filled.",
     "voice_edit_title": "Fix it out loud",
@@ -4722,7 +4722,7 @@
     "feature_objectives_title": "Objectives",
     "feature_objectives_body": "A group of issues sharing one goal, with its progress.",
     "pricingTitle": "Minddy Cloud pricing",
-    "pricingSubtitle": "These monthly plans pay for the Minddy-managed Cloud service. They do not change the public self-hosted core.",
+    "pricingSubtitle": "Start for free. Choose a Cloud plan as your team grows.",
     "pricingPopular": "Recommended",
     "pricingCta": "Start for free",
     "pricingNote": "Payments through Stripe. Switch or cancel at any time.",
@@ -4797,7 +4797,12 @@
     "heroCtaDownloadWindows": "Get it from Microsoft Store",
     "heroCtaInstallAndroid": "Install on Android",
     "heroCtaInstallIos": "Install on iPhone",
-    "heroNoteSignup": "start in your browser"
+    "heroNoteSignup": "start in your browser",
+    "screenshotExpand": "Enlarge screenshot",
+    "screenshotClose": "Close preview",
+    "voiceDemoErrorMicEmbedded": "Allow microphone access in your browser, then try again.",
+    "agentsMcpRoles": "Minddy is an MCP server: your agents can read and update the tracker. Numo is also an MCP client: connect your tools to bring their context and actions into your conversations.",
+    "agentsMore": "And more…"
   },
   "Pricing": {
     "metaTitle": "Minddy Cloud pricing and plans",

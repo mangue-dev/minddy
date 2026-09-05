@@ -45,7 +45,7 @@ export async function SectionWorkspace() {
           {cards.map(card => (
             <FeatureDisclosure key={card.id} id={card.id} title={card.title}
               className={`h-[460px] sm:h-[480px] ${card.tone} ${card.span}`}
-              details={<dl className="space-y-5">{card.points.map(point => (
+              details={card.id !== "speed" && <dl className="space-y-5">{card.points.map(point => (
                 <div key={point.body}>
                   {point.title && <dt className="font-medium">{point.title}</dt>}
                   <dd className="mt-1 opacity-85">{point.body}</dd>
@@ -56,15 +56,10 @@ export async function SectionWorkspace() {
                 <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
                 <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
-                <div className="relative -mx-6 mt-6 min-h-0 flex-1 overflow-hidden sm:-mx-8">
-                  <ScreenshotSlot id={card.screenshot}
-                    sizes={card.id === "tracker" ? "(min-width: 1024px) 752px, 100vw" : "(min-width: 1024px) 520px, 100vw"}
-                    className={`absolute border-black/10 shadow-none dark:border-white/10 ${
-                      card.id === "tracker" ? "top-0 left-6 w-[145%] sm:left-8 lg:w-[calc(100%_-_3rem)]" :
-                      card.id === "scratchpad" ? "-top-12 -left-6 w-[140%]" :
-                      card.id === "speed" ? "top-0 -left-6 w-[140%]" :
-                      "top-0 left-6 w-[140%] sm:left-8"
-                    }`} />
+                <div className="mt-6 min-h-0 flex-1">
+                  <ScreenshotSlot id={card.screenshot} expandable
+                    sizes={card.id === "tracker" ? "(min-width: 1024px) 700px, 100vw" : "(min-width: 1024px) 310px, 100vw"}
+                    className="h-full w-full border-0 bg-transparent shadow-none" />
                 </div>
               </div>
             </FeatureDisclosure>

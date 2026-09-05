@@ -32,7 +32,7 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       // Order of the new landing plan. `#numo`, `#voice`, `#scratchpad`
       // and `#workflow` are no longer sections but remain anchors, placed
       // on the blocks which absorbed them: these links — and those already shared —
-      // tombent toujours au bon endroit.
+      // still land at the right place.
       { href: "/#tracker", labelKey: "navMenu_tracker_title" },
       { href: "/#agents", labelKey: "footerAgents" },
       { href: "/#workflow", labelKey: "navHowItWorks" },
@@ -264,8 +264,8 @@ export function MarketingFooter() {
       {/* Giant wordmark: its lower half passes under the fold of the footer
  (overflow-hidden), which gives weight to the brand without occupying the height of a real section. */}
       <div aria-hidden className="pointer-events-none mx-auto max-w-7xl px-4 select-none sm:px-6">
-        <span className="block translate-y-[38%] text-center font-display text-[clamp(6rem,22vw,22rem)] leading-none font-bold tracking-[-0.06em] text-foreground/[0.06] dark:text-foreground/[0.09]">
-          minddy
+        <span className="block translate-y-[38%] text-center font-display text-[clamp(6rem,22vw,22rem)] leading-none font-bold tracking-[-0.06em] dark:opacity-60">
+          <span className="text-[#cbd9e6]">m</span><span className="-mr-[0.08em] inline-block pr-[0.08em] bg-[linear-gradient(to_bottom,#d9c7e3_30%,#ccdccb_30%)] bg-clip-text text-transparent">i</span><span className="text-[#e7d3c4]">n</span><span className="text-[#c9dedd]">d</span><span className="text-[#c9dedd]">d</span><span className="text-[#dfd9b8]">y</span>
         </span>
       </div>
     </footer>

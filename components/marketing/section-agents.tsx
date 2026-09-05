@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import { Check, GitPullRequest, Bot } from "lucide-react";
+import { Check, GitPullRequest, Bot, Layers } from "lucide-react";
+import { MCP_PRESETS } from "@/lib/mcp-catalog";
+import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { NumoFace } from "@/components/numo-face";
@@ -9,6 +11,8 @@ import { CARD_TONES } from "./card-tones";
 import { SectionHeading } from "./section-heading";
 
 const CAPABILITIES = ["read", "plan", "track", "create", "comment", "wiki", "review", "beyond"] as const;
+const PROVIDER_IDS = ["notion", "github", "slack", "figma"];
+const PROVIDERS = PROVIDER_IDS.map(id => MCP_PRESETS.find(provider => provider.id === id)!);
 const NUMO_CAPABILITIES = ["find", "act", "context"] as const;
 
 /** Read left to right: the agent works, you review, and both keep the same context. */
@@ -25,39 +29,41 @@ export async function SectionAgents() {
               <Bot className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h3 className="text-2xl font-medium tracking-tight">{t("workflow_run_title")}</h3>
               <p className="mt-3 text-sm leading-relaxed opacity-80">{t("workflow_run_body")}</p>
-              <div className="relative -mr-6 mt-6 min-h-0 flex-1 overflow-hidden sm:-mr-8">
-                <ScreenshotSlot id="workflowAgent" sizes="(min-width: 1024px) 500px, 100vw" className="w-[145%] border-black/10 shadow-none dark:border-white/10" />
+              <div className="mt-6 min-h-0 flex-1">
+                <ScreenshotSlot id="workflowAgent" expandable sizes="(min-width: 1024px) 700px, 100vw" className="h-full w-full border-0 bg-transparent shadow-none" />
               </div>
             </div>
           </FeatureDisclosure>
           <FeatureDisclosure title={t("workflow_review_title")} className={`h-[460px] lg:col-span-2 ${CARD_TONES.sage}`}
-            details={<div className="space-y-5"><p>{t("workflow_review_body")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="workflowPr" sizes="(min-width: 1024px) 700px, 100vw" /></div>}>
+            details={<div className="space-y-5"><p>{t("workflow_review_body")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="workflowPr" expandable sizes="(min-width: 1024px) 700px, 100vw" /></div>}>
             <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
               <GitPullRequest className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h3 className="text-2xl font-medium tracking-tight">{t("workflow_review_title")}</h3>
               <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("workflow_review_body")}</p>
-              <div className="relative -mr-6 mt-6 min-h-0 flex-1 overflow-hidden sm:-mr-8">
-                <ScreenshotSlot id="workflowPr" sizes="(min-width: 1024px) 752px, 100vw" className="w-full border-black/10 shadow-none dark:border-white/10" />
+              <div className="mt-6 min-h-0 flex-1">
+                <ScreenshotSlot id="workflowPr" expandable sizes="(min-width: 1024px) 700px, 100vw" className="h-full w-full border-0 bg-transparent shadow-none" />
               </div>
             </div>
           </FeatureDisclosure>
           <FeatureDisclosure id="numo" title={t("numoTitle")} className={`h-[440px] lg:col-span-2 ${CARD_TONES.sky}`}
             details={<dl className="space-y-5">{NUMO_CAPABILITIES.map(key => <div key={key}><dt className="font-medium">{t(`numoCapability_${key}_title`)}</dt><dd className="mt-1 opacity-85">{t(`numoCapability_${key}_body`)}</dd></div>)}</dl>}>
             <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
-              <NumoFace className="mb-5 h-5 w-fit" />
+              <NumoFace className="mb-5 h-5 w-6 shrink-0 self-start" />
               <h3 className="text-2xl font-medium tracking-tight">{t("numoTitle")}</h3>
               <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("numoSubtitle")}</p>
-              <div className="relative -mr-6 mt-6 min-h-0 flex-1 overflow-hidden sm:-mr-8">
-                <ScreenshotSlot id="numoPanel" sizes="(min-width: 1024px) 752px, 100vw" className="absolute right-0 bottom-0 w-[140%] border-black/10 shadow-none lg:w-full dark:border-white/10" />
+              <div className="mt-6 min-h-0 flex-1">
+                <ScreenshotSlot id="numoPanel" expandable sizes="(min-width: 1024px) 700px, 100vw" className="h-full w-full border-0 bg-transparent shadow-none" />
               </div>
             </div>
           </FeatureDisclosure>
           <FeatureDisclosure title={t("navMenu_agents_title")} className={`h-[440px] ${CARD_TONES.butter}`}
-            details={<><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><Check className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
+            details={<><p className="mb-5">{t("agentsMcpRoles")}</p><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><Check className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
             <div className="flex h-full flex-col p-6 pb-20 sm:p-8 sm:pb-20">
               <h3 className="text-2xl font-medium tracking-tight">{t("agentsCompatible")}</h3>
-              <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-7">
+              <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-5">
                 {MCP_AGENTS.map(agent => <li key={agent.id} className="flex min-w-0 items-center gap-2 text-xs font-medium"><McpAgentLogo agent={agent.id} size={24} />{agent.label}</li>)}
+                {PROVIDERS.map(provider => <li key={provider.id} className="flex min-w-0 items-center gap-2 text-xs font-medium"><McpServiceLogo service={provider.id} className="size-6" />{provider.name}</li>)}
+                <li className="flex items-center gap-2 text-xs opacity-75"><Layers className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />{t("agentsMore")}</li>
               </ul>
             </div>
           </FeatureDisclosure>

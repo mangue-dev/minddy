@@ -19,7 +19,7 @@ export async function SectionEditions() {
       points: [t("selfHostedPointOne"), t("selfHostedPointTwo"), t("selfHostedPointThree")], href: href("/self-hosting"), cta: t("selfHostedCta") },
   ];
   return (
-    <section id="editions" className="scroll-mt-24 bg-[#e9ede4] px-4 py-16 sm:px-6 sm:py-24 dark:bg-[#252c25]">
+    <section id="editions" className="scroll-mt-24 bg-[#f6f3ef] px-4 py-16 sm:px-6 sm:py-24 dark:bg-[#211f20]">
       <div id="open-source" className="mx-auto max-w-6xl scroll-mt-24">
         <SectionHeading title={t("editionsTitle")} description={t("editionsSubtitle")} />
         <div className="grid gap-4 md:grid-cols-2">

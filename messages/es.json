@@ -4634,7 +4634,7 @@
     "speedSubtitle": "Usa el teclado, dicta un cambio o guarda una tarea en el cuaderno hasta que esté lista.",
     "voiceBadge": "Dictado por voz",
     "voiceTitle": "Si puedes escribirlo, puedes decirlo",
-    "voiceSubtitle": "Habla. minddy completa el título, la descripción y los campos de la incidencia.",
+    "voiceSubtitle": "Donde pueda escribir en Minddy, también puede hablar.",
     "voice_create_title": "Dicta una incidencia completa",
     "voice_create_body": "Una frase basta para completar el formulario.",
     "voice_edit_title": "Corrígelo en voz alta",
@@ -4722,7 +4722,7 @@
     "feature_objectives_title": "Objetivos",
     "feature_objectives_body": "Un grupo de incidencias que comparten un objetivo, con su progreso.",
     "pricingTitle": "Precios de Minddy Cloud",
-    "pricingSubtitle": "Estos planes mensuales pagan por el servicio de Nube gestionado por Minddy. No cambian el núcleo público auto-alojado.",
+    "pricingSubtitle": "Empiece gratis. Elija un plan Cloud a medida que crezca su equipo.",
     "pricingPopular": "Recomendado",
     "pricingCta": "Comienza gratis",
     "pricingNote": "Pagos a través de Stripe. Cambiar o cancelar en cualquier momento.",
@@ -4797,7 +4797,12 @@
     "heroCtaDownloadWindows": "Obtener en Microsoft Store",
     "heroCtaInstallAndroid": "Instalar en Android",
     "heroCtaInstallIos": "Instalar en el iPhone",
-    "heroNoteSignup": "empieza en el navegador"
+    "heroNoteSignup": "empieza en el navegador",
+    "screenshotExpand": "Ampliar captura",
+    "screenshotClose": "Cerrar vista previa",
+    "voiceDemoErrorMicEmbedded": "Permita el acceso al micrófono en su navegador e inténtelo de nuevo.",
+    "agentsMcpRoles": "Minddy es un servidor MCP: sus agentes pueden leer y actualizar el tracker. Numo también es un cliente MCP: conecte sus herramientas para incorporar su contexto y sus acciones a las conversaciones.",
+    "agentsMore": "Y muchos más…"
   },
   "Pricing": {
     "metaTitle": "Precios y planes de Minddy Cloud",

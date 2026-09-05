@@ -58,12 +58,15 @@ export async function ScreenshotSlot({
   id,
   className,
   priority = false,
+  expandable = false,
   sizes = "(min-width: 1024px) 960px, 100vw",
 }: {
   id: ScreenshotSlotId;
   className?: string;
   /** To be placed on the hero's capture only (priority loading). */
   priority?: boolean;
+  /** Show the whole image and offer a full-resolution modal preview. */
+  expandable?: boolean;
   /** Rendered width at each breakpoint; compact cards request smaller images. */
   sizes?: string;
 }) {
@@ -92,6 +95,7 @@ export async function ScreenshotSlot({
           dark={dark ?? fallback}
           sizes={sizes}
           priority={priority}
+          preview={expandable ? { light: light ?? fallback, dark: dark ?? fallback, expandLabel: t("screenshotExpand"), closeLabel: t("screenshotClose") } : undefined}
         />
       ) : (
         <div className="absolute inset-0 flex flex-col justify-between gap-4 bg-muted/40 p-5 [background-image:repeating-linear-gradient(135deg,transparent,transparent_10px,var(--color-border)_10px,var(--color-border)_11px)] [background-size:auto] opacity-90">
@@ -117,12 +121,14 @@ function Picture({
   dark,
   sizes,
   priority,
+  preview,
 }: {
   alt: string;
   light: string;
   dark: string;
   sizes: string;
   priority: boolean;
+  preview?: { light: string; dark: string; expandLabel: string; closeLabel: string };
 }) {
   const common = {
     alt,
@@ -150,6 +156,7 @@ function Picture({
       lightSrcSet={lightSrcSet}
       imgProps={imgProps}
       priority={priority}
+      preview={preview}
     />
   );
 }

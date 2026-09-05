@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { ScreenshotPreview } from "./screenshot-preview";
 import { cn } from "mangue-ui/lib/utils";
 
 /**
@@ -28,11 +29,13 @@ export function ScreenshotPicture({
   lightSrcSet,
   imgProps,
   priority,
+  preview,
 }: {
   darkSrcSet: string | undefined;
   lightSrcSet: string | undefined;
   imgProps: ComponentProps<"img">;
   priority: boolean;
+  preview?: { light: string; dark: string; expandLabel: string; closeLabel: string };
 }) {
   const [mounted, setMounted] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -51,6 +54,7 @@ export function ScreenshotPicture({
   }, [imgProps.src]);
 
   return (
+    <>
     <picture>
       {/* Art direction by SYSTEM theme, without JavaScript or cookies: the
           browser chooses only one of the two variants, even before React
@@ -65,7 +69,7 @@ export function ScreenshotPicture({
         ref={img}
         onLoad={() => setLoaded(true)}
         className={cn(
-          "object-cover object-top",
+          preview ? "object-contain" : "object-cover object-top",
           imgProps.className,
           !priority && [
             "transition-[opacity,transform,filter] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
@@ -74,5 +78,7 @@ export function ScreenshotPicture({
         )}
       />
     </picture>
+    {preview && <ScreenshotPreview {...preview} alt={imgProps.alt ?? ""} />}
+    </>
   );
 }

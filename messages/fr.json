@@ -4634,7 +4634,7 @@
     "speedSubtitle": "Utilisez le clavier, dictez un changement ou gardez une tâche dans le carnet jusqu'au bon moment.",
     "voiceBadge": "Dictée vocale",
     "voiceTitle": "Ce que vous auriez tapé, vous pouvez le dire",
-    "voiceSubtitle": "Vous parlez. minddy remplit le titre, la description et les champs du ticket.",
+    "voiceSubtitle": "Partout où vous pouvez écrire dans Minddy, vous pouvez aussi parler.",
     "voice_create_title": "Dicter un ticket entier",
     "voice_create_body": "Une phrase, et le formulaire revient rempli.",
     "voice_edit_title": "Corriger de vive voix",
@@ -4722,7 +4722,7 @@
     "feature_objectives_title": "Objectifs",
     "feature_objectives_body": "Un groupe de tickets qui partagent un but, avec son avancement.",
     "pricingTitle": "Tarifs Minddy Cloud",
-    "pricingSubtitle": "Ces plans mensuels financent le service Cloud géré par Minddy. Ils ne changent pas le cœur public auto-hébergé.",
+    "pricingSubtitle": "Commencez gratuitement. Choisissez un plan Cloud à mesure que votre équipe grandit.",
     "pricingPopular": "Recommandé",
     "pricingCta": "Commencer gratuitement",
     "pricingNote": "Paiement par Stripe. Changement ou résiliation à tout moment.",
@@ -4797,7 +4797,12 @@
     "heroCtaDownloadWindows": "Obtenir dans le Microsoft Store",
     "heroCtaInstallAndroid": "Installer sur Android",
     "heroCtaInstallIos": "Installer sur iPhone",
-    "heroNoteSignup": "commencer dans le navigateur"
+    "heroNoteSignup": "commencer dans le navigateur",
+    "screenshotExpand": "Agrandir la capture",
+    "screenshotClose": "Fermer la prévisualisation",
+    "voiceDemoErrorMicEmbedded": "Autorisez le microphone dans votre navigateur, puis réessayez.",
+    "agentsMcpRoles": "Minddy est un serveur MCP : vos agents peuvent lire et mettre à jour le tracker. Numo est aussi un client MCP : connectez vos outils pour retrouver leur contexte et leurs actions dans vos conversations.",
+    "agentsMore": "Et plus encore…"
   },
   "Pricing": {
     "metaTitle": "Tarifs et plans Minddy Cloud",

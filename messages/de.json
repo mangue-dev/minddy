@@ -4634,7 +4634,7 @@
     "speedSubtitle": "Nutzen Sie die Tastatur, diktieren Sie Änderungen oder halten Sie eine Aufgabe im Notizbuch fest.",
     "voiceBadge": "Sprachdiktat",
     "voiceTitle": "Was Sie eingegeben hätten, können Sie einfach sagen.",
-    "voiceSubtitle": "Sie sprechen. minddy füllt Titel, Beschreibung und Issue-Felder aus.",
+    "voiceSubtitle": "Überall, wo Sie in Minddy tippen können, können Sie auch sprechen.",
     "voice_create_title": "Ein ganzes Problem diktieren",
     "voice_create_body": "Ein Satz genügt, und das Formular ist ausgefüllt.",
     "voice_edit_title": "Das Problem laut korrigieren",
@@ -4722,7 +4722,7 @@
     "feature_objectives_title": "Ziele",
     "feature_objectives_body": "Eine Gruppe von Problemen, die ein Ziel und dessen Fortschritt teilen.",
     "pricingTitle": "Minddy Cloud-Preise",
-    "pricingSubtitle": "Diese monatlichen Pläne zahlen für den von Minddy verwalteten Cloud-Dienst. Sie verändern nicht den öffentlichen, selbstgehosteten Kern.",
+    "pricingSubtitle": "Starten Sie kostenlos. Wählen Sie einen Cloud-Tarif, wenn Ihr Team wächst.",
     "pricingPopular": "Empfohlen",
     "pricingCta": "Kostenlos starten",
     "pricingNote": "Zahlungen über Stripe. Wechseln oder kündigen Sie jederzeit.",
@@ -4797,7 +4797,12 @@
     "heroCtaDownloadWindows": "Im Microsoft Store herunterladen",
     "heroCtaInstallAndroid": "Auf Android installieren",
     "heroCtaInstallIos": "Auf dem iPhone installieren",
-    "heroNoteSignup": "im Browser starten"
+    "heroNoteSignup": "im Browser starten",
+    "screenshotExpand": "Screenshot vergrößern",
+    "screenshotClose": "Vorschau schließen",
+    "voiceDemoErrorMicEmbedded": "Erlauben Sie den Mikrofonzugriff im Browser und versuchen Sie es erneut.",
+    "agentsMcpRoles": "Minddy ist ein MCP-Server: Ihre Agenten können den Tracker lesen und aktualisieren. Numo ist auch ein MCP-Client: Verbinden Sie Ihre Tools, um deren Kontext und Aktionen in Ihre Gespräche einzubinden.",
+    "agentsMore": "Und viele mehr…"
   },
   "Pricing": {
     "metaTitle": "Minddy Cloud-Preise und -Pläne",

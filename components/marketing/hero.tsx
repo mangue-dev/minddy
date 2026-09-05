@@ -11,7 +11,7 @@ export async function Hero() {
   const t = await getTranslations("Landing");
 
   return (
-    <section className="px-4 pt-14 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
+    <section className="px-4 pt-30 pb-12 sm:px-6 sm:pt-40 sm:pb-16">
       <div className="mx-auto w-full max-w-6xl">
         <div className="max-w-5xl">
           <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] leading-[1.06] font-medium tracking-[-0.055em] text-balance">

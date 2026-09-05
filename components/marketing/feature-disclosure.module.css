@@ -6,10 +6,14 @@
 
 .front {
   height: 100%;
+  opacity: 1;
+  transition: opacity 240ms ease, visibility 240ms allow-discrete;
 }
 
 .card:has(.disclosure[open]) .front {
   visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .disclosure {
@@ -51,4 +55,18 @@
 @media (min-width: 640px) {
   .toggle { right: 2rem; }
   .content { inset-inline: 2rem; }
+}
+
+/* Keep native disclosure semantics while allowing its content to fade out. */
+.disclosure::details-content {
+  opacity: 0;
+  transition: opacity 240ms ease, content-visibility 240ms allow-discrete;
+}
+
+.disclosure[open]::details-content {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .front, .disclosure::details-content { transition: none; }
 }

@@ -316,7 +316,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
       !navigator.mediaDevices?.getUserMedia ||
       typeof MediaRecorder === "undefined"
     ) {
-      setError(t("voiceDemoErrorMic"));
+      setError(t(embedded ? "voiceDemoErrorMicEmbedded" : "voiceDemoErrorMic"));
       track("landing_voice_demo_failed", { input: "mic", reason: "unsupported" });
       return;
     }
@@ -325,7 +325,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      setError(t("voiceDemoErrorMic"));
+      setError(t(embedded ? "voiceDemoErrorMicEmbedded" : "voiceDemoErrorMic"));
       track("landing_voice_demo_failed", { input: "mic", reason: "denied" });
       return;
     }
@@ -343,7 +343,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
       });
     } catch {
       mediaStream.getTracks().forEach((track) => track.stop());
-      setError(t("voiceDemoErrorMic"));
+      setError(t(embedded ? "voiceDemoErrorMicEmbedded" : "voiceDemoErrorMic"));
       track("landing_voice_demo_failed", { input: "mic", reason: "unsupported" });
       return;
     }
@@ -386,7 +386,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
       if (elapsed >= DEMO_MAX_RECORDING_MS) stopRecording();
     }, 200);
     timersRef.current.push(timer);
-  }, [clearTimers, send, stopRecording, stopStream, t, track]);
+  }, [clearTimers, embedded, send, stopRecording, stopStream, t, track]);
 
   const restart = useCallback(() => {
     clearTimers();
@@ -411,9 +411,25 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
       {/* `[&>*]:min-w-0`: without it, a grid column takes the width of
           its longest content (the example sentences, in `nowrap`) and the
           page overflows horizontally on mobile. */}
-      <div className={cn("grid gap-6 md:grid-cols-[1fr_auto_1fr] md:gap-8 [&>*]:min-w-0", embedded && "md:min-h-[360px]")}>
+      <div className={cn("grid gap-6 md:gap-8 [&>*]:min-w-0", embedded ? "md:grid-cols-2" : "md:grid-cols-[1fr_auto_1fr]")}>
         {/* ── What you say ───────────────────── ────────────────────── */}
-        <div className={cn("flex flex-col gap-4", embedded && "h-[360px] overflow-y-auto p-1")}>
+        {embedded ? (
+          <div className="relative flex h-[240px] flex-col items-center justify-center md:h-[320px]">
+            <button type="button" onClick={status === "recording" ? stopRecording : startRecording}
+              disabled={status === "processing"}
+              aria-label={status === "recording" ? t("voiceDemoStop") : t("voiceDemoStart")}
+              className="flex size-24 items-center justify-center rounded-full transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:opacity-50 dark:hover:bg-white/5">
+              {status === "processing" ? <Loader2 className="size-12 animate-spin motion-reduce:animate-none" strokeWidth={1.25} aria-hidden /> :
+                status === "recording" ? <Square className="size-9" strokeWidth={1.25} aria-hidden /> :
+                <Mic className="size-14" strokeWidth={1.25} aria-hidden />}
+            </button>
+            <div className="absolute inset-x-0 top-[calc(50%+3.5rem)] text-center text-sm" role="status">
+              {error || (status === "recording" ? `${t("voiceDemoStop")} · ${formatTime(elapsedMs)}` : status === "processing" ? t("voiceDemoProcessing") : "")}
+            </div>
+            <p className="sr-only" aria-live="polite">{transcript}</p>
+          </div>
+        ) : (
+        <div className="flex flex-col gap-4">
           <p className="text-xs font-medium text-muted-foreground">
             {t("voiceDemoSpoken")}
           </p>
@@ -541,15 +557,17 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
           </div>
         </div>
 
+        )}
+
         {/* Reading direction: to the right on the big screen, downwards otherwise. */}
-        <div className="flex justify-center self-center text-muted-foreground" aria-hidden>
+        {!embedded && <div className="flex justify-center self-center text-muted-foreground" aria-hidden>
           <ArrowDown className="size-5 md:hidden" />
           <ArrowRight className="hidden size-5 md:block" />
-        </div>
+        </div>}
 
         {/* The resulting issue preview. */}
-        <div className={cn("flex flex-col gap-4", embedded && "h-[360px] overflow-y-auto p-1")}>
-          <div className="flex items-baseline justify-between gap-4">
+        <div className={cn("flex flex-col gap-4", embedded && "h-[320px] overflow-y-auto p-1")}>
+          {!embedded && <div className="flex items-baseline justify-between gap-4">
             <p className="text-xs font-medium text-muted-foreground">
               {t("voiceDemoResult")}
             </p>
@@ -562,7 +580,7 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
                 {t("voiceDemoAgain")}
               </button>
             )}
-          </div>
+          </div>}
 
           <div
             aria-live="polite"
@@ -625,6 +643,8 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
               {ticket?.category?.name ?? "—"}
             </Row>
           </div>
+          {embedded && status === "done" && <button type="button" onClick={restart}
+            className="self-end rounded-sm text-xs underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">{t("voiceDemoAgain")}</button>}
         </div>
       </div>
     </figure>
