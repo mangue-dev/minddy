@@ -385,7 +385,7 @@ export function AccountMcpClients() {
                 edit(
                   data?.connections.find(
                     (connection) =>
-                      new URL(connection.url).href === new URL(item.url).href,
+                      mcpPresetForUrl(connection.url)?.id === item.id,
                   ) ?? "new",
                   item,
                 )
