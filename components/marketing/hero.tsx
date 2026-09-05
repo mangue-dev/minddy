@@ -1,14 +1,18 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui/components/ui/button";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { Download, ArrowUpRight } from "lucide-react";
 import { Github } from "@/components/git/provider-icons";
 import { TrackedCta } from "./tracked-cta";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
+import { localizedHref } from "@/lib/locale-href";
+import type { Locale } from "@/i18n/config";
+
 /** Lead with the workspace itself, using the visitor's language and system theme. */
 export async function Hero() {
   const t = await getTranslations("Landing");
+  const locale = await getLocale() as Locale;
 
   return (
     <section className="px-4 pt-30 pb-12 sm:px-6 sm:pt-40 sm:pb-16">
@@ -25,9 +29,9 @@ export async function Hero() {
             <div className="shrink-0">
               <div className="flex flex-wrap items-center gap-3">
                 <Button asChild size="lg" className="rounded-lg">
-                  <TrackedCta href="/signup" location="hero">
-                    {t("heroCtaPrimary")}
-                    <ArrowRight data-icon="inline-end" />
+                  <TrackedCta href={localizedHref("/download", locale)} location="hero">
+                    {t("downloadMinddy")}
+                    <Download data-icon="inline-end" />
                   </TrackedCta>
                 </Button>
                 <a

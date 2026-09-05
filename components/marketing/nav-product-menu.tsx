@@ -2,44 +2,11 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
-import { NumoFace } from "@/components/numo-face";
-import { IsoIcon } from "@/components/illustrations/iso-icon";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
-/**
- * The "Product" menu of the public nav.
- *
- * Why a menu and not six links: the nav pointed to four anchors at random
- * of the page map ("The tracker", "The agents", "Prices", "FAQ"), this
- * which forced the visitor to guess what was behind each one. A single word — Product — and six read-at-a-glance entries require one more hover, but remove the guesswork.
- *
- * HAND-WRITTEN rather than Radix NavigationMenu: primitive is not re-exported
- * by `mangue-ui` and the package is not live-resolvable
- * (strict pnpm). Adding it as a dependency would require resynchronizing the two
- * lockfiles of the repository for a single component.
- *
- * This is taken from the primitive, because it is what makes the difference
- * between a usable menu and a menu which closes under the cursor:
- *
- * - **Delayed close.** Exiting the trigger to enter the panel
- * moves the cursor over the gap. Without delay, the menu closes
- * during the trip.
- * - **No dead zone.** The space between the pad and the panel is IN
- * the hovered area (padding of the container, not panel margin).
- * - **Keyboard.** The trigger is a real button: Enter / Space / Arrow
- * down opens, Escape closes and returns focus. The panel remains open as long as
- * the focus is in it, otherwise we would not be able to cross it at Tab.
- * - **Tactile.** Hover does not exist: clicking switches.
- */
-
-/**
- * Product menu slugs. Union of literals, not `string`: this is what
- * allows TypeScript to resolve `navMenu_${key}_title` into real keys and to confront them with the catalog. Adding an entry without adding its two messages
- * does not compile.
- */
 export type ProductEntryKey =
   | "tracker"
   | "speed"
@@ -53,33 +20,38 @@ export type ProductEntryKey =
   | "download";
 
 export type ProductEntry = {
-  /** i18n key: `navMenu_<key>_title` and `navMenu_<key>_desc`. */
+  /** Translation keys use `navMenu_<key>_title` and `navMenu_<key>_desc`. */
   key: ProductEntryKey;
   href: string;
-  /** `null` for Numo, which has its own logo rather than a generic icon. */
+  /** Used in the mobile drawer; Numo uses its own logo. */
   icon: LucideIcon | null;
 };
 
-/** Grace period before closing, time to cross to the sign. */
+const GROUPS: ReadonlyArray<ReadonlyArray<ProductEntryKey>> = [
+  ["tracker", "pages", "feedback"],
+  ["agents", "numo", "speed"],
+  ["more", "mcp", "selfHosting"],
+];
 const CLOSE_DELAY_MS = 140;
 
+/** Grouped navigation links with a hover bridge and native keyboard tab order. */
 export function NavProductMenu({
-  entries,
-  label,
-  locale,
-  className,
+  entries, label, locale, className,
 }: {
   entries: ReadonlyArray<ProductEntry>;
   label: string;
-  /** Language served: anchors point to `/fr` when the page is in French. */
   locale: Locale;
   className?: string;
 }) {
   const t = useTranslations("Landing");
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const pointerType = useRef("");
   const closeTimer = useRef<number | null>(null);
+  const download = entries.find(entry => entry.key === "download");
 
   const cancelClose = useCallback(() => {
     if (closeTimer.current !== null) {
@@ -90,13 +62,13 @@ export function NavProductMenu({
 
   const scheduleClose = useCallback(() => {
     cancelClose();
-    closeTimer.current = window.setTimeout(() => setOpen(false), CLOSE_DELAY_MS);
+    closeTimer.current = window.setTimeout(() => {
+      if (!panelRef.current?.contains(document.activeElement)) setOpen(false);
+    }, CLOSE_DELAY_MS);
   }, [cancelClose]);
 
   useEffect(() => cancelClose, [cancelClose]);
 
-  // Close escape and RETURN FOCUS to the trigger: without this, the focus remains on
-  // an element that has just disappeared and the tabulation starts again from the document.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -105,113 +77,86 @@ export function NavProductMenu({
       setOpen(false);
       triggerRef.current?.focus();
     };
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
   }, [open]);
 
   return (
-    <div
-      className={cn("relative", className)}
-      onMouseEnter={() => {
+    <div ref={rootRef} className={cn("flex h-16 items-center", className)}
+      onPointerEnter={event => {
+        if (event.pointerType !== "mouse") return;
         cancelClose();
         setOpen(true);
       }}
-      onMouseLeave={scheduleClose}
-      // Focus leaving the block closes the menu — but only if it leaves
-      // REALLY elsewhere, hence the test on the incoming target.
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setOpen(false);
-        }
-      }}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((v) => !v)}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            setOpen(true);
-          }
+      onPointerLeave={scheduleClose}
+      onFocus={cancelClose}
+      onBlur={event => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}>
+      <button ref={triggerRef} type="button" aria-expanded={open} aria-controls={panelId}
+        onPointerDown={event => { pointerType.current = event.pointerType; }}
+        onClick={event => {
+          cancelClose();
+          // A mouse click should keep the menu opened by hover; touch and keyboard toggle it.
+          setOpen(value => event.detail > 0 && pointerType.current === "mouse" ? true : !value);
+        }}
+        onKeyDown={event => {
+          if (event.key !== "ArrowDown") return;
+          event.preventDefault();
+          cancelClose();
+          setOpen(true);
+          requestAnimationFrame(() => panelRef.current?.querySelector("a")?.focus());
         }}
         className={cn(
-          "flex items-center gap-1 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          "flex items-center gap-1 rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
           open ? "text-foreground" : "hover:text-foreground",
-        )}
-      >
+        )}>
         {label}
-        <ChevronDown
-          className={cn(
-            "h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none",
-            open && "rotate-180",
-          )}
-        />
+        <ChevronDown aria-hidden className={cn("size-3.5 transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} />
       </button>
 
-      {/* `pt-3` on the container and not a margin on the panel: the gap with
- the patch must remain hoverable, otherwise the menu closes as soon as you
- descends towards it. `-translate-x-1/2` centers it under its trigger. */}
-      <div
-        id={panelId}
-        className={cn(
-          "absolute top-full left-1/2 z-50 -translate-x-1/2 pt-3",
-          !open && "pointer-events-none",
-        )}
-      >
-        <div
-          className={cn(
-            // 36rem: two columns where each description fits on ONE line.
-            // Narrower, three entries returned to the line and shifted
-            // their neighbors — the grid read crookedly.
-            // OPAQUE background, unlike the nav badge: the badge of the
-            // hero showed through a `bg-popover/95`, and a menu
-            // who lets the page behind him read reads half as fast.
-            "w-[min(92vw,36rem)] origin-top rounded-2xl border border-border bg-popover p-2 shadow-xl",
-            "transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-            open ? "translate-y-0 scale-100 opacity-100" : "-translate-y-1 scale-[0.98] opacity-0",
-          )}
-        >
-          <ul className="grid gap-0.5 sm:grid-cols-2">
-            {entries.map((entry) => {
-              const Icon = entry.icon;
-              return (
-                <li key={entry.key}>
-                  <a
-                    href={localizedHref(entry.href, locale)}
-                    onClick={() => setOpen(false)}
-                    tabIndex={open ? undefined : -1}
-                    className="group flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:bg-muted/70 focus-visible:outline-none"
-                  >
-                    {/* The APPLICATION icons, placed on its isometric
- block (MIN-254). Until now it was a gray
- sticker with a lucid icon in it — the most neutral drawing possible, therefore one that said nothing about minddy,
- in what is often the first screen of the product that
- a visitor sees. They keep the brand color in all states: these are its three values ​​(the three faces of the solid) which carry the relief; repainting them with hovering over them would overwrite it. */}
-                    {Icon ? (
-                      <IsoIcon icon={Icon} className="w-11 shrink-0" />
-                    ) : (
-                      /* Numo wears his face: there is nothing to put on a
- block, it is already a brand design. */
-                      <span className="flex w-11 shrink-0 items-center justify-center text-muted-foreground">
-                        <NumoFace className="h-4 w-auto" />
-                      </span>
-                    )}
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-foreground">
-                        {t(`navMenu_${entry.key}_title`)}
-                      </span>
-                      <span className="block text-xs leading-snug text-muted-foreground">
-                        {t(`navMenu_${entry.key}_desc`)}
-                      </span>
-                    </span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
+      {/* Position against the full-width header so long translations cannot push the panel offscreen. */}
+      <div ref={panelRef} id={panelId} inert={!open} aria-hidden={!open}
+        className={cn("absolute top-full left-1/2 z-50 w-[min(calc(100vw-3rem),58rem)] -translate-x-1/2 pt-2 whitespace-normal", !open && "pointer-events-none")}>
+        <div className={cn(
+          "overflow-hidden rounded-2xl border border-border bg-popover p-2 shadow-xl shadow-black/10",
+          "origin-top transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none",
+          open ? "visible translate-y-0 opacity-100" : "invisible -translate-y-2 opacity-0",
+        )}>
+          <div className="grid grid-cols-[1fr_1fr_0.9fr] rounded-xl bg-[#f3f5ef] py-5 dark:bg-[#252b27]">
+            {GROUPS.map((group, index) => (
+              <ul key={group[0]} className={cn("min-w-0 space-y-1 px-4", index > 0 && "border-l border-foreground/10")}>
+                {group.map(key => {
+                  const entry = entries.find(item => item.key === key);
+                  if (!entry) return null;
+                  return (
+                    <li key={key}>
+                      <a href={localizedHref(entry.href, locale)} onClick={() => setOpen(false)}
+                        className="block rounded-lg px-3 py-3 transition-colors hover:bg-background/65 focus-visible:bg-background/65 focus-visible:outline-2 focus-visible:outline-ring">
+                        <span className="block text-sm leading-snug font-medium text-foreground">{t(`navMenu_${key}_title`)}</span>
+                        {index < 2 && <span className="mt-1.5 block text-[13px] leading-relaxed text-pretty text-muted-foreground">{t(`navMenu_${key}_desc`)}</span>}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            ))}
+          </div>
+          {download && <a href={localizedHref(download.href, locale)} onClick={() => setOpen(false)}
+            className="mt-2 flex items-center justify-between gap-6 rounded-xl px-7 py-4 transition-colors hover:bg-[#eaf0f4] focus-visible:bg-[#eaf0f4] focus-visible:outline-2 focus-visible:outline-ring dark:hover:bg-[#283139] dark:focus-visible:bg-[#283139]">
+            <span className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span className="text-sm font-medium text-foreground">{t("downloadMinddy")}</span>
+              <span className="text-[13px] text-muted-foreground">{t("navMenu_download_desc")}</span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-foreground" aria-hidden />
+          </a>}
         </div>
       </div>
     </div>

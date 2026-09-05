@@ -48,14 +48,7 @@ type NavLink = {
   external?: boolean;
 };
 
-/**
- * The “Product” menu: the six sections of the landing, each with what we see there
- * find. The nav listed four bare anchors — “The Tracker,” “The Agents,”
- * “Prices”, “FAQ” – two of which teach nothing to those who don’t know
- * minddy, and left out half the page (the speed, the board of
- * feedback, the rest). One word that brings together is better than four that
- * devinent.
- */
+/** Shared destinations for the desktop product menu and mobile drawer. */
 const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "tracker", href: "/#tracker", icon: LayoutGrid },
   { key: "agents", href: "/#agents", icon: Plug },
@@ -64,10 +57,6 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "pages", href: "/#pages", icon: FileText },
   { key: "feedback", href: "/#feedback", icon: MessagesSquare },
   { key: "more", href: "/#more", icon: Boxes },
-  // The only entry that leads to a PAGE and not to a section of the landing
-  // (MIN-93). It is last so that the menu always reads like the
-  // plan of the landing, and its description says “documentation” without the word:
-  // this is what distinguishes it from the “Agents & MCP” entry just above.
   { key: "mcp", href: "/mcp", icon: Terminal },
   { key: "selfHosting", href: "/self-hosting", icon: Server },
   // The desktop app is last because it describes where Minddy runs rather than
@@ -75,24 +64,9 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "download", href: "/download", icon: Laptop },
 ];
 
-/**
- * The two direct links that accompany the menu.
- *
- * “How it works” aims at `#workflow`, the ticket → pull request route:
- * this is the question asked by a visitor who has just read the hero, and the
- * section answers it in three images. The FAQ has left the nav — it is at the bottom of
- * page, you get there by reading, not by looking for it, and it occupied a place
- * of nav for an objection that we do not yet have.
- *
- * “Prices” refers to PAGE `/pricing`, and no longer to the landing section:
- * someone who clicks “Prices” in a navigation bar asks for the
- * full grid, not a scroll to three cards followed by a second link
- * to find. It's also the only entrance to the nav that led to an anchor so
- * that a real page existed — and one more internal link to a page
- * indexable ne se refuse pas.
- */
+/** Direct navigation complements the product menu with an overview and pricing. */
 const LINKS: ReadonlyArray<NavLink> = [
-  { href: "/#workflow", key: "navHowItWorks", icon: Route },
+  { href: "/#workspace", key: "navHowItWorks", icon: Route },
   { href: "/pricing", key: "navPricing", icon: Tag },
   { href: "https://github.com/mangue-dev/minddy", key: "navOpenSource", icon: GitFork, external: true },
 ];
@@ -112,37 +86,14 @@ function NavLogo() {
   );
 }
 
-/**
- * Session probe, client side only.
- *
- * The public site is not wrapped in the app's providers: we just have
- * need to know if there is a session to replace the couple
- * connection/registration with a single “open the app”. CUSTOMER side reading and
- * not on the server side so that public pages remain cacheable by the CDN —
- * a `signedIn` calculated at rendering would make the HTML dependent on cookies, which
- * would cancel the caching job of the same batch. We start from `false` (the
- * majority case) so that the server rendering and the first paint coincide.
- *
- * DEUX PARESSES (MIN-88, revues par MIN-100), parce que
- * `@supabase/supabase-js` weighed in the INITIAL bundle of the landing for a
- * simple button label:
- *
- * 1. The SDK lives behind a `next/dynamic` (`session-probe.tsx`) — therefore in a
- *    vrai chunk paresseux. Un `import()` nu ne suffisait PAS : Turbopack en place
- * the target in the initial chunk group of the component, and the 18 KB
- * gzipped files still left with the starting bundle (measured).
- * 2. The probe is not even mounted if no Supabase auth cookie is present
- * here. An anonymous visitor — the vast majority on a landing — does not
- *    demande donc jamais ce chunk.
- */
+/** Load the session SDK only when an auth cookie suggests a returning visitor. */
 const SessionProbe = dynamic(
   () => import("./session-probe").then((m) => m.SessionProbe),
   { ssr: false },
 );
 
 function hasAuthCookie(): boolean {
-  // Supabase nomme ses cookies `sb-<ref>-auth-token[.n]`. On ne cherche qu'un
-  // clue, not proof: the SDK remains the sole judge of validity.
+  // Supabase cookies are only a hint; the SDK checks session validity.
   return document.cookie.includes("-auth-token");
 }
 
@@ -232,28 +183,18 @@ export function MarketingNav() {
               <Equal className="h-5 w-5" />
             </button>
 
-            {/* Keep one secondary account action and one Cloud conversion action.
-                An existing session replaces both with a direct app link. */}
             <div className="hidden items-center gap-2 sm:flex">
-              {hasSession ? (
-                <Button asChild size="sm" className="px-4">
-                  <Link href="/home">{t("navOpenApp")}</Link>
-                </Button>
-              ) : (
-                <>
-                  <Button asChild variant="ghost" size="sm" className="px-3">
-                    <Link href="/login">{t("navSignIn")}</Link>
-                  </Button>
-                  <Button asChild size="sm" className="px-4">
-                    <Link
-                      href="/signup"
-                      onClick={() => track("landing_cta_clicked", { location: "nav" })}
-                    >
-                      {t("navGetStarted")}
-                    </Link>
-                  </Button>
-                </>
-              )}
+              <Button asChild variant="ghost" size="sm" className="px-3">
+                <Link href={hasSession ? "/home" : "/login"}>
+                  {t(hasSession ? "navOpenApp" : "navSignIn")}
+                </Link>
+              </Button>
+              <Button asChild size="sm" className="px-4">
+                <Link href={href("/download")}
+                  onClick={() => track("landing_cta_clicked", { location: "nav" })}>
+                  {t("downloadMinddy")}
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -338,26 +279,21 @@ export function MarketingNav() {
           </div>
 
           <div className="flex shrink-0 flex-col gap-2 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {hasSession ? (
-              <SheetClose asChild>
-                <Button asChild size="lg" className="w-full">
-                  <Link href="/home">{t("navOpenApp")}</Link>
-                </Button>
-              </SheetClose>
-            ) : (
-              <>
-                <SheetClose asChild>
-                  <Button asChild variant="outline" size="lg" className="w-full">
-                    <Link href="/login">{t("navSignIn")}</Link>
-                  </Button>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Button asChild size="lg" className="w-full">
-                    <Link href="/signup">{t("navGetStarted")}</Link>
-                  </Button>
-                </SheetClose>
-              </>
-            )}
+            <SheetClose asChild>
+              <Button asChild variant="outline" size="lg" className="w-full">
+                <Link href={hasSession ? "/home" : "/login"}>
+                  {t(hasSession ? "navOpenApp" : "navSignIn")}
+                </Link>
+              </Button>
+            </SheetClose>
+            <SheetClose asChild>
+              <Button asChild size="lg" className="w-full">
+                <Link href={href("/download")}
+                  onClick={() => track("landing_cta_clicked", { location: "nav" })}>
+                  {t("downloadMinddy")}
+                </Link>
+              </Button>
+            </SheetClose>
           </div>
         </SheetContent>
       </Sheet>

@@ -38,7 +38,7 @@ export async function SectionWorkspace() {
   ] as const;
 
   return (
-    <section className="px-4 py-12 sm:px-6 sm:py-16" aria-labelledby="workspace-title">
+    <section id="workspace" className="scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16" aria-labelledby="workspace-title">
       <div className="mx-auto max-w-6xl">
         <SectionHeading id="workspace-title" title={t("featuresTitle")} description={t("featuresSubtitle")} />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
