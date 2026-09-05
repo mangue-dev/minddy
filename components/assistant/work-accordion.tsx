@@ -10,25 +10,15 @@ import {
 import { ChevronRight } from "lucide-react";
 
 /**
- * Foldable sequence of the work of a TOUR, shared by the Numo chat and the thread of
- * the code agent — one mechanic, one appearance:
- * • ACTIVE → open by default, “Working from X” header which counts live.
- * • finished → the header changes to “Worked for
- * closes automatically (remains foldable/unfoldable by hand).
- *
- * The caller returns the ANSWER to the trick just below: the reader follows the work
- * in progress, then reads the final message, instead of receiving the turn of a block.
- *
- * To be mounted with a STABLE `key` between the active state and the finished state of the same turn:
- * This is the same instance that plays the closing animation.
- *
- * The labels live in the i18n namespace `Agent`: a single source for the
- * deux surfaces.
+ * Shared turn accordion for the assistant and agent feeds. Active turns stay open
+ * with a live timer; completed turns close unless they contain a live credential.
+ * Keep its key stable so completion animates without remounting the work.
  */
 export function WorkAccordion({
   startedAt,
   endedAt,
   active,
+  revealKey,
   children,
 }: {
   /** ISO — start of the round. */
@@ -36,6 +26,8 @@ export function WorkAccordion({
   /** ISO — end of the turn; `null` while it is working. */
   endedAt: string | null;
   active: boolean;
+  /** Keep newly received one-time credentials visible when the turn finishes. */
+  revealKey?: string;
   children: ReactNode;
 }) {
   const t = useTranslations("Agent");
@@ -44,13 +36,14 @@ export function WorkAccordion({
   // work transition → completed, while remaining foldable by hand.
   // A turn that RESUMES after a pause (an answered ask_user re-activates the
   // same instance) unfolds again, so the reader keeps following the work.
-  const [open, setOpen] = useState(active);
+  const [open, setOpen] = useState(active || Boolean(revealKey));
   const wasActive = useRef(active);
   useEffect(() => {
-    if (wasActive.current && !active) setOpen(false);
+    if (wasActive.current && !active && !revealKey) setOpen(false);
     if (!wasActive.current && active) setOpen(true);
+    if (revealKey) setOpen(true);
     wasActive.current = active;
-  }, [active]);
+  }, [active, revealKey]);
 
   // Chrono: live count (1 s tick) while active, otherwise fixed duration.
   const now = useNow({ updateInterval: active ? 1000 : undefined });

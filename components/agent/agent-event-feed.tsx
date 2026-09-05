@@ -21,7 +21,8 @@ import {
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { WorkEvents } from "@/components/assistant/work-events";
-import type { WorkEvent } from "@/lib/work-event-groups";
+import { workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
+import { liveSecretRevealKey } from "@/components/assistant/secret-callout";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChangedFilesBlock } from "./changed-files-block";
@@ -919,6 +920,11 @@ function TurnGroup({
           kind: "action",
           count: calls.length,
           active: calls.some((call) => ctx.results.get(call.id)?.status === "running"),
+          revealKey: liveSecretRevealKey(calls.map((call) => ({
+            id: call.id,
+            name: call.function.name,
+            ...ctx.results.get(call.id),
+          }))),
           content: renderItem({ ...item, message: { ...item.message, content: null } }, ctx),
         });
       }
@@ -935,7 +941,12 @@ function TurnGroup({
 
   return (
     <div className="flex flex-col gap-3">
-      <WorkAccordion startedAt={startedAt} endedAt={endedAt} active={active}>
+      <WorkAccordion
+        startedAt={startedAt}
+        endedAt={endedAt}
+        active={active}
+        revealKey={workEventsRevealKey(events)}
+      >
         <WorkEvents events={events} />
       </WorkAccordion>
       {summary

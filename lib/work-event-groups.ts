@@ -4,7 +4,14 @@ export type WorkEvent<T> = {
   content: T;
   count?: number;
   active?: boolean;
+  /** Changes when a new one-time credential needs to be shown. Contains call IDs only. */
+  revealKey?: string;
 };
+
+export function workEventsRevealKey<T>(events: WorkEvent<T>[]): string | undefined {
+  const keys = events.flatMap((event) => event.revealKey ? [event.revealKey] : []);
+  return keys.length > 0 ? JSON.stringify(keys) : undefined;
+}
 
 /** Keep narration visible and combine every consecutive action, regardless of type. */
 export function groupWorkEvents<T>(events: WorkEvent<T>[]) {

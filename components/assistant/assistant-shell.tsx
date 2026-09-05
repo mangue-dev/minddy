@@ -50,7 +50,8 @@ import {
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { WorkEvents } from "@/components/assistant/work-events";
-import type { WorkEvent } from "@/lib/work-event-groups";
+import { workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
+import { liveSecretRevealKey } from "@/components/assistant/secret-callout";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import {
   buildAssistantBlocks,
@@ -799,6 +800,11 @@ export const AssistantShell = forwardRef<
                           kind: "action",
                           count: calls.length,
                           active: calls.some((call) => state.toolCallResults.get(call.id)?.status === "running"),
+                          revealKey: liveSecretRevealKey(calls.map((call) => ({
+                            id: call.id,
+                            name: call.function.name,
+                            ...state.toolCallResults.get(call.id),
+                          }))),
                           content: renderMessage({ ...msg, content: null, tool_calls: calls }),
                         });
                       }
@@ -833,6 +839,7 @@ export const AssistantShell = forwardRef<
                           kind: "action",
                           count: calls.length,
                           active: calls.some((call) => call.status === "running"),
+                          revealKey: liveSecretRevealKey(calls),
                           content: <StreamingMessage content="" activeToolCalls={calls} />,
                         });
                       }
@@ -845,6 +852,7 @@ export const AssistantShell = forwardRef<
                             startedAt={block.startedAt}
                             endedAt={block.endedAt}
                             active={block.active}
+                            revealKey={workEventsRevealKey(events)}
                           >
                             <WorkEvents events={events} />
                           </WorkAccordion>
