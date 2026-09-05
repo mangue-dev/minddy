@@ -294,10 +294,23 @@ export function MobilePwaInstallGuide({
     return <div id="mobile-install-guide" className="scroll-mt-24" />;
   }
 
+  return <MobilePwaGuideSteps platform={platform} copy={copy} locale={locale} />;
+}
+
+/** Explicit platforms keep the standalone guide readable before hydration. */
+export function MobilePwaGuideSteps({
+  platform, copy, locale, id = "mobile-install-guide", manualAndroid = false,
+}: {
+  platform: "ios" | "android";
+  copy: MobileInstallGuideCopy;
+  locale: Locale;
+  id?: string;
+  manualAndroid?: boolean;
+}) {
   const ios = platform === "ios";
 
   return (
-    <section id="mobile-install-guide" className="scroll-mt-24 py-12 sm:py-16">
+    <section id={id} className="scroll-mt-24 py-12 sm:py-16">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="mb-10 max-w-3xl">
           <h2 className="text-3xl font-medium tracking-[-0.035em] text-balance sm:text-4xl">
@@ -322,11 +335,11 @@ export function MobilePwaInstallGuide({
           </ol>
         ) : (
           <ol className="grid gap-4 md:grid-cols-2">
-            <GuideCard number={1} title={copy.androidStepPromptTitle} body={copy.androidStepPromptBody}>
-              <AndroidPromptVisual copy={copy} locale={locale} />
+            <GuideCard number={1} title={manualAndroid ? copy.androidStepMenuTitle : copy.androidStepPromptTitle} body={manualAndroid ? copy.androidStepMenuBody : copy.androidStepPromptBody}>
+              {manualAndroid ? <AndroidMenuVisual copy={copy} /> : <AndroidPromptVisual copy={copy} locale={locale} />}
             </GuideCard>
-            <GuideCard number={2} title={copy.androidStepMenuTitle} body={copy.androidStepMenuBody}>
-              <AndroidMenuVisual copy={copy} />
+            <GuideCard number={2} title={manualAndroid ? copy.androidStepPromptTitle : copy.androidStepMenuTitle} body={manualAndroid ? copy.androidStepPromptBody : copy.androidStepMenuBody}>
+              {manualAndroid ? <AndroidPromptVisual copy={copy} locale={locale} /> : <AndroidMenuVisual copy={copy} />}
             </GuideCard>
           </ol>
         )}

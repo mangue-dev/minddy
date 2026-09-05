@@ -7,7 +7,8 @@ import { publicPathForLocale, routeByKey } from "@/lib/public-routes";
 import { desktopFeedBaseUrl, dmgEntry, formatBytes, linuxPackageEntry, parseLatestLinuxFeed, parseLatestMacFeed } from "@/lib/desktop/update-feed";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { DownloadPlatformCards } from "@/components/marketing/download-platform-cards";
-import { MobilePwaInstallGuide, type MobileInstallGuideCopy } from "@/components/marketing/mobile-pwa-install-guide";
+import { MobilePwaInstallGuide } from "@/components/marketing/mobile-pwa-install-guide";
+import { mobileInstallGuideCopy } from "@/components/marketing/mobile-install-guide-copy";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
@@ -57,34 +58,7 @@ export default async function DownloadPage() {
     const size = entry.sizes[arch];
     return size ? `${entry.version} · ${formatBytes(size, locale)}` : entry.version;
   };
-  const mobileInstallGuideCopy = {
-    iosEyebrow: t("iosGuideEyebrow"),
-    iosTitle: t("iosGuideTitle"),
-    iosBody: t("iosGuideBody"),
-    iosStepShareTitle: t("iosStepShareTitle"),
-    iosStepShareBody: t("iosStepShareBody"),
-    iosStepHomeTitle: t("iosStepHomeTitle"),
-    iosStepHomeBody: t("iosStepHomeBody"),
-    iosStepAddTitle: t("iosStepAddTitle"),
-    iosStepAddBody: t("iosStepAddBody"),
-    androidEyebrow: t("androidGuideEyebrow"),
-    androidTitle: t("androidGuideTitle"),
-    androidBody: t("androidGuideBody"),
-    androidStepPromptTitle: t("androidStepPromptTitle"),
-    androidStepPromptBody: t("androidStepPromptBody"),
-    androidStepMenuTitle: t("androidStepMenuTitle"),
-    androidStepMenuBody: t("androidStepMenuBody"),
-    uiShare: t("installUiShare"),
-    uiAddToHome: t("installUiAddToHome"),
-    uiOpenAsWebApp: t("installUiOpenAsWebApp"),
-    uiAdd: t("installUiAdd"),
-    uiCancel: t("installUiCancel"),
-    uiInstallApp: t("installUiInstallApp"),
-    uiInstall: t("installUiInstall"),
-    uiNotNow: t("installUiNotNow"),
-    uiCopy: t("installUiCopy"),
-    uiSettings: t("installUiSettings"),
-  } satisfies MobileInstallGuideCopy;
+
 
   return (
     <>
@@ -109,7 +83,7 @@ export default async function DownloadPage() {
         </div>
       </section>
 
-      <MobilePwaInstallGuide copy={mobileInstallGuideCopy} locale={locale} />
+      <MobilePwaInstallGuide copy={mobileInstallGuideCopy(t)} locale={locale} />
 
       <section className="px-4 py-12 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-6xl">

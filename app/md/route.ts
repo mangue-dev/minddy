@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
+import { standaloneMobileInstallGuideCopy } from "@/components/marketing/mobile-install-guide-copy";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { MARKDOWN_LOCALE_COPY } from "@/lib/markdown-locale-copy";
 import { BILLING_PLANS } from "@/lib/billing-plans";
@@ -399,16 +400,25 @@ async function renderDownloadPlatform(
     namespace: DOWNLOAD_PLATFORM_NAMESPACES[key],
   });
 
+  const td = await getTranslations({ locale, namespace: "Download" });
+  const copy = standaloneMobileInstallGuideCopy(td, t);
+
   return [
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
     `## ${t("availabilityTitle")}`,
     t("availabilityBody"),
-    `## ${t("installTitle")}`,
-    [t("stepOne"), t("stepTwo"), t("stepThree")]
-      .map((step, index) => `${index + 1}. ${step}`)
-      .join("\n"),
+    `## ${copy.iosTitle}`,
+    copy.iosBody,
+    [[copy.iosStepShareTitle, copy.iosStepShareBody], [copy.iosStepHomeTitle, copy.iosStepHomeBody], [copy.iosStepAddTitle, copy.iosStepAddBody]]
+      .map(([title, body], index) => `${index + 1}. **${title}.** ${body}`).join("\n"),
+    `## ${copy.androidTitle}`,
+    copy.androidBody,
+    [[copy.androidStepMenuTitle, copy.androidStepMenuBody], [copy.androidStepPromptTitle, copy.androidStepPromptBody]]
+      .map(([title, body], index) => `${index + 1}. **${title}.** ${body}`).join("\n"),
+    `## ${t("finishTitle")}`,
+    t("finishBody"),
     `## ${t("noteTitle")}`,
     t("noteBody"),
     `## ${t("openSourceTitle")}`,

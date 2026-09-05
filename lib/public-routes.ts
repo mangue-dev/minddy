@@ -152,7 +152,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/descargar/pwa-movil",
     },
     namespace: "DownloadMobile",
-    lastModified: "2026-08-27",
+    lastModified: "2026-09-05",
     priority: 0.8,
   },
   // Only page whose `lastModified` is NOT hand-held: here,
