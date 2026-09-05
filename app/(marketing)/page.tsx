@@ -4,11 +4,9 @@ import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { Hero } from "@/components/marketing/hero";
 import { SectionEditions } from "@/components/marketing/section-editions";
-import { SectionTracker } from "@/components/marketing/section-tracker";
+import { SectionWorkspace } from "@/components/marketing/section-workspace";
 import { SectionSpeed } from "@/components/marketing/section-speed";
 import { SectionAgents } from "@/components/marketing/section-agents";
-import { SectionPages } from "@/components/marketing/section-pages";
-import { SectionFeedback } from "@/components/marketing/section-feedback";
 import { SectionMore } from "@/components/marketing/section-more";
 import { SectionOpenSource } from "@/components/marketing/section-open-source";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
@@ -38,19 +36,12 @@ export default async function LandingPage() {
       <StructuredData />
       <LandingViewed />
       <Hero />
-      {/* The opening answers the commercial question first: use the managed Cloud
-          service or run the same open-source core yourself. The product tour then
-          proves the choice through concrete screens and workflows. */}
-      <SectionEditions />
-      <SectionOpenSource />
-      <SectionTracker />
+      <SectionWorkspace />
       <SectionAgents />
       <SectionSpeed />
-      {/* Pages come before feedback because the following section changes the
-          source of the work from the team to its users. */}
-      <SectionPages />
-      <SectionFeedback />
       <SectionMore />
+      <SectionEditions />
+      <SectionOpenSource />
       <SectionPricingTeaser />
       <SectionFaq />
       <SectionCta />

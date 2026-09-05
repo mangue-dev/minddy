@@ -18,7 +18,7 @@ export async function SectionOpenSource() {
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
         <div>
           <RevealHeading
-            className="max-w-lg text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
+            className="max-w-lg text-3xl font-medium tracking-[-0.035em] text-balance sm:text-4xl"
             text={t("openSourceTitle")}
           />
           <Reveal

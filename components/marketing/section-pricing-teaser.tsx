@@ -16,7 +16,7 @@ export async function SectionPricingTeaser() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="mb-10 max-w-2xl sm:mb-12">
           <RevealHeading
-            className="max-w-2xl text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
+            className="max-w-2xl text-3xl font-medium tracking-[-0.035em] text-balance sm:text-4xl"
             text={t("pricingTitle")}
           />
           <Reveal

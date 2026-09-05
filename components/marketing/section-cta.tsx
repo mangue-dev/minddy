@@ -15,17 +15,11 @@ import { Reveal, RevealHeading } from "./reveal";
 export async function SectionCta() {
   const t = await getTranslations("Landing");
 
-  // `svh` and not `vh`: on mobile, `vh` is measured on the LARGE viewport —
-  // the one after the URL bar is retracted. A section wedged on top
-  // therefore overflows the height of this bar as long as it is deployed,
-  // that is to say upon arrival on the page. `svh` takes the viewport SMALL (bar
-  // deployed): the section fits on the screen from the outset, and gains air when the
-  // bar retracts rather than running out before.
   return (
-    <section className="flex min-h-[70svh] items-center overflow-hidden border-t border-border bg-muted/20 py-24 sm:py-32">
-      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
+    <section className="border-t border-border bg-[#e9ede4] py-20 sm:py-24 dark:bg-[#252c25]">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <RevealHeading
-          className="mb-4 text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
+          className="mb-4 max-w-3xl text-3xl font-medium tracking-tighter text-balance sm:text-5xl"
           text={t("ctaTitle")}
         />
         <Reveal

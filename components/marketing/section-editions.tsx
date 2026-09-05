@@ -16,7 +16,7 @@ export async function SectionEditions() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <header className="max-w-2xl">
           <RevealHeading
-            className="max-w-2xl text-3xl font-semibold tracking-tighter text-balance sm:text-5xl"
+            className="max-w-2xl text-3xl font-medium tracking-[-0.035em] text-balance sm:text-4xl"
             text={t("editionsTitle")}
           />
           <Reveal as="p" delay={0.12} className="mt-3 max-w-xl leading-relaxed text-pretty text-muted-foreground">
@@ -25,7 +25,7 @@ export async function SectionEditions() {
         </header>
         <div className="mt-10 grid gap-4 md:grid-cols-12">
           <Reveal className="md:col-span-7">
-            <article className="flex min-h-[28rem] flex-col rounded-3xl bg-foreground p-7 text-background shadow-sm sm:p-9">
+            <article className="flex min-h-[28rem] flex-col rounded-xl bg-foreground p-7 text-background shadow-sm sm:p-9">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-background/10">
               <Cloud className="h-5 w-5" aria-hidden />
             </span>
@@ -55,7 +55,7 @@ export async function SectionEditions() {
             </article>
           </Reveal>
           <Reveal delay={0.1} className="md:col-span-5">
-            <article className="flex min-h-[28rem] flex-col rounded-3xl border border-border bg-card p-7 shadow-sm sm:p-9">
+            <article className="flex min-h-[28rem] flex-col rounded-xl border border-border bg-card p-7 shadow-sm sm:p-9">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-muted/50 text-primary">
               <Server className="h-5 w-5" aria-hidden />
             </span>

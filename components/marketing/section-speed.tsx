@@ -1,170 +1,63 @@
 import { getTranslations } from "next-intl/server";
-import {
-  ArrowUpRight,
-  Bot,
-  ClipboardCopy,
-  ListChecks,
-  Plug,
-  type LucideIcon,
-} from "lucide-react";
+import { Command, Mic, NotebookPen } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { VoiceDemo } from "./voice-demo";
-import { Reveal, RevealGroup, RevealHeading } from "./reveal";
-import { IsoTile, type IsoTileName } from "./iso-tile";
+import { FeatureDisclosure } from "./feature-disclosure";
 
-/**
- * §3 — “Made to go fast” (new section).
- *
- * The page defended simplicity by the number of screens, never by the number
- * of gestures. Now fluidity is half of the positioning, and it was
- * scattered in three places which did not speak to each other: a grid square
- * (the palette), a full section (the dictation), a full section (the notebook).
- * The three are here, in the order in which we encounter them when we go fast: the
- * keyboard first, the voice when the keyboard is not enough, the notebook for this
- * which is not yet a ticket.
- *
- * Three blocks under a single H2, therefore three `h3`: the dictation and the notebook lose
- * their section rank but keep their anchor (`#voice`, `#scratchpad`), so that
- * footer links and already shared links continue to fall in the correct place.
- */
+const SCRATCHPAD_POINTS = ["write", "prompt", "agent", "promote", "mcp"] as const;
+const VOICE_WAYS = ["create", "edit", "everywhere"] as const;
 
-/** The three uses of dictation, such as `DictateButton` is actually mounted. */
-const VOICE_WAYS = [
-  { key: "create", icon: "mic" },
-  { key: "edit", icon: "pencil" },
-  { key: "everywhere", icon: "message" },
-] as const satisfies ReadonlyArray<{ key: string; icon: IsoTileName }>;
-
-const SCRATCHPAD_POINTS = [
-  { key: "write", icon: ListChecks },
-  { key: "prompt", icon: ClipboardCopy },
-  { key: "agent", icon: Bot },
-  { key: "promote", icon: ArrowUpRight },
-  { key: "mcp", icon: Plug },
-] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
-
+/** Keep everyday shortcuts compact, with the voice demo available on demand. */
 export async function SectionSpeed() {
   const t = await getTranslations("Landing");
 
   return (
-    <section
-      id="speed"
-      className="scroll-mt-24 border-t border-border bg-muted/20 py-16 sm:py-24"
-    >
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <header className="mb-12 max-w-2xl sm:mb-16">
-          <RevealHeading
-            className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl"
-            text={t("speedTitle")}
-          />
-          <Reveal
-            as="p"
-            delay={0.15}
-            className="leading-relaxed text-pretty text-muted-foreground"
-          >
-            {t("speedSubtitle")}
-          </Reveal>
+    <section id="speed" className="scroll-mt-24 px-4 py-16 sm:px-6 sm:py-20">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-10 grid gap-5 md:grid-cols-[1.2fr_1fr] md:gap-20">
+          <h2 className="max-w-xl text-3xl leading-tight font-medium tracking-[-0.035em] text-balance sm:text-4xl">{t("speedTitle")}</h2>
+          <p className="max-w-md self-end leading-relaxed text-muted-foreground">{t("speedSubtitle")}</p>
         </header>
-
-        {/* ── The keyboard ───────────────────────── ────────────────────────── */}
-        <RevealGroup step={0.12} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
-          <ScreenshotSlot id="featurePalette" />
-          <div>
-            <IsoTile name="command" className="mb-4 w-14" />
-            <h3 className="mb-3 text-2xl font-semibold tracking-tight">
-              {t("feature_palette_title")}
-            </h3>
-            {/* The list of shortcuts (“G then I”, “⇧V”…) has been skipped: the
- visitor who does not know Minddy wants to know what we gain,
- not which key to press. Shortcuts are learned in
- the app, where they are displayed next to each action. */}
-            <p className="leading-relaxed text-pretty text-muted-foreground">
-              {t("feature_palette_body")}
-            </p>
-          </div>
-        </RevealGroup>
-
-        {/* ── The voice ─────────────────────────── ─────────────────────────── */}
-        <div id="voice" className="mt-16 scroll-mt-24 sm:mt-24">
-          <header className="mb-10 max-w-2xl">
-            <RevealHeading
-              as="h3"
-              className="mb-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl"
-              text={t("voiceTitle")}
-            />
-            <Reveal
-              as="p"
-              delay={0.15}
-              className="leading-relaxed text-pretty text-muted-foreground"
-            >
-              {t("voiceSubtitle")}
-            </Reveal>
-          </header>
-
-          {/* Playable, not illustrated (MIN-150): the visitor speaks and watches the
- fields fill up. The static figure who held this place
- said the same thing without making it felt. */}
-          <Reveal>
-            <VoiceDemo />
-          </Reveal>
-
-          {/* The net grids (`gap-px` on a `bg-border` background) enter as a single piece: hiding the cards one by one would reveal the gray
- background of the container during the cascade. */}
-          <Reveal
-            as="ul"
-            className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-3"
-          >
-            {VOICE_WAYS.map((way) => (
-              <li key={way.key} className="bg-card p-6">
-                <IsoTile name={way.icon} className="mb-4 w-14" />
-                <h4 className="mb-1.5 font-medium">{t(`voice_${way.key}_title`)}</h4>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {t(`voice_${way.key}_body`)}
-                </p>
-              </li>
-            ))}
-          </Reveal>
+        <div className="grid items-start gap-4 lg:grid-cols-3">
+          <article className="min-w-0 rounded-xl border border-border p-6">
+            <Command className="mb-8 size-6 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+            <h3 className="text-lg font-medium tracking-tight lg:min-h-14">{t("feature_palette_title")}</h3>
+            <p className="mt-3 mb-6 text-sm leading-relaxed text-muted-foreground lg:min-h-[4.5rem]">{t("feature_palette_body")}</p>
+            <FeatureDisclosure title={t("feature_palette_title")}>
+              <ScreenshotSlot id="featurePalette" sizes="(min-width: 1024px) 336px, calc(100vw - 96px)" className="shadow-none" />
+            </FeatureDisclosure>
+          </article>
+          <article id="voice" className="min-w-0 scroll-mt-24 rounded-xl border border-border p-6">
+            <Mic className="mb-8 size-6 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+            <h3 className="text-lg font-medium tracking-tight lg:min-h-14">{t("voiceTitle")}</h3>
+            <p className="mt-3 mb-6 text-sm leading-relaxed text-muted-foreground lg:min-h-[4.5rem]">{t("voiceSubtitle")}</p>
+            <FeatureDisclosure title={t("voiceTitle")}>
+              <dl className="space-y-4">
+                {VOICE_WAYS.map((key) => (
+                  <div key={key}>
+                    <dt className="font-medium">{t(`voice_${key}_title`)}</dt>
+                    <dd className="mt-1 text-muted-foreground">{t(`voice_${key}_body`)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </FeatureDisclosure>
+          </article>
+          <article id="scratchpad" className="min-w-0 scroll-mt-24 rounded-xl border border-border p-6">
+            <NotebookPen className="mb-8 size-6 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+            <h3 className="text-lg font-medium tracking-tight lg:min-h-14">{t("scratchpadTitle")}</h3>
+            <p className="mt-3 mb-6 text-sm leading-relaxed text-muted-foreground lg:min-h-[4.5rem]">{t("scratchpadSubtitle")}</p>
+            <FeatureDisclosure title={t("scratchpadTitle")}>
+              <ScreenshotSlot id="scratchpad" sizes="(min-width: 1024px) 336px, calc(100vw - 96px)" className="mb-5" />
+              <ul className="list-outside list-disc space-y-2 pl-4 text-muted-foreground">
+                {SCRATCHPAD_POINTS.map((key) => <li key={key}>{t(`scratchpadPoint_${key}`)}</li>)}
+              </ul>
+            </FeatureDisclosure>
+          </article>
         </div>
-
-        {/* ── The notebook ────────────────────────── ────────────────────────── */}
-        <div
-          id="scratchpad"
-          className="mt-16 grid scroll-mt-24 items-center gap-10 sm:mt-24 md:grid-cols-2 md:gap-16 [&>*]:min-w-0"
-        >
-          <div>
-            <RevealHeading
-              as="h3"
-              className="mb-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl"
-              text={t("scratchpadTitle")}
-            />
-            <Reveal
-              as="p"
-              delay={0.15}
-              className="mb-8 leading-relaxed text-pretty text-muted-foreground"
-            >
-              {t("scratchpadSubtitle")}
-            </Reveal>
-
-            <RevealGroup as="ul" step={0.07} className="flex flex-col gap-4">
-              {SCRATCHPAD_POINTS.map((point) => {
-                const Icon = point.icon;
-                return (
-                  <li key={point.key} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Icon className="h-3 w-3" />
-                    </span>
-                    <span className="text-sm leading-relaxed text-muted-foreground">
-                      {t(`scratchpadPoint_${point.key}`)}
-                    </span>
-                  </li>
-                );
-              })}
-            </RevealGroup>
-          </div>
-
-          <Reveal delay={0.1}>
-            <ScreenshotSlot id="scratchpad" />
-          </Reveal>
+        <div className="mt-6">
+          <FeatureDisclosure title={t("voiceTitle")} label={t("voiceDemoStart")}>
+            <VoiceDemo />
+          </FeatureDisclosure>
         </div>
       </div>
     </section>

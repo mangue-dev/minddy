@@ -35,7 +35,7 @@ import type { MessageKey } from "@/lib/i18n-keys";
 /**
  * Public site navigation bar (MIN-73) — landing, prices, legal pages.
  *
- * Centered floating bar with a `1fr auto 1fr` grid so the links remain
+ * Full-width sticky bar with a `1fr auto 1fr` grid so the links remain
  * optically centered regardless of the logo and account actions. It stays
  * visible across the whole marketing surface so navigation and conversion
  * actions remain available on long pages.
@@ -168,19 +168,22 @@ export function MarketingNav() {
   // already): we therefore go back explicitly, and we delete the anchor so that the URL
   // reflects the actual position. Elsewhere, the link does its job.
   const handleLogoClick = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
-    if (window.location.pathname !== "/") return;
+    if (window.location.pathname !== localizedHref("/", locale)) return;
     event.preventDefault();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    });
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
-  }, []);
+  }, [locale]);
 
   return (
     <>
       {probeSession && <SessionProbe onChange={setHasSession} />}
-      <header className="sticky top-0 z-50 px-3 pt-3 pb-2 sm:px-4 sm:pt-4">
-        <div className="mx-auto grid h-14 w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-full border border-border bg-card/95 pr-3 pl-5 shadow-sm backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 text-foreground backdrop-blur-md">
+        <div className="mx-auto grid h-16 w-full max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6 lg:px-10">
           <Link
             href={href("/")}
             onClick={handleLogoClick}
@@ -190,7 +193,7 @@ export function MarketingNav() {
             <NavLogo />
           </Link>
 
-          <nav className="hidden items-center gap-5 text-sm text-muted-foreground md:flex lg:gap-7">
+          <nav className="hidden items-center gap-5 text-sm whitespace-nowrap text-muted-foreground lg:flex lg:gap-7">
             <NavProductMenu entries={PRODUCT_ENTRIES} label={t("navProduct")} locale={locale} />
             {LINKS.map((link) =>
               link.external ? (
@@ -224,7 +227,7 @@ export function MarketingNav() {
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label={t("mobileMenuOpen")}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground md:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground lg:hidden"
             >
               <Equal className="h-5 w-5" />
             </button>

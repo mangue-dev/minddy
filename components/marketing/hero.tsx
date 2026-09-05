@@ -1,126 +1,64 @@
-import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui/components/ui/button";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Github } from "@/components/git/provider-icons";
-import { AgentLoopFigure } from "./agent-loop-figure";
 import { TrackedCta } from "./tracked-cta";
+import { ScreenshotSlot } from "./screenshot-slot";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
-/**
- * The opening promise and its proof. Cloud is the primary action; the public
- * repository is the adjacent trust path, not a footnote near the end of the page.
- * The shader remains at page level so it can extend behind the navigation.
- */
-
-/**
- * Split a title fragment into animated words while keeping one continuous
- * animation sequence across the regular and italic fragments.
- */
-function HeroWords({
-  text,
-  start,
-  className,
-}: {
-  text: string;
-  start: number;
-  className?: string;
-}) {
-  let i = start;
-
-  return (
-    <>
-      {text.split(/(\s+)/).map((token, index) => {
-        if (token === "") return null;
-        if (/^\s+$/.test(token)) return token;
-        const delayIndex = i;
-        i += 1;
-        return (
-          <span
-            key={index}
-            className={className ? `hero-word ${className}` : "hero-word"}
-            style={{ "--hero-i": delayIndex } as CSSProperties}
-          >
-            {token}
-          </span>
-        );
-      })}
-    </>
-  );
-}
-
-/** Number of words in a fragment — used to chain the indexes of the cascade. */
-function wordCount(text: string) {
-  return text.split(/\s+/).filter(Boolean).length;
-}
-
+/** Lead with the workspace itself, using the visitor's language and system theme. */
 export async function Hero() {
   const t = await getTranslations("Landing");
 
-  const titleBefore = t("heroTitleBefore");
-  const titleAccent = t("heroTitleAccent");
-  // The title is the LCP element, so it starts immediately.
-  const accentStart = wordCount(titleBefore);
-  const afterTitle = 0.06 * (accentStart + wordCount(titleAccent)) + 0.18;
-
   return (
-    <section className="pt-8 pb-16 sm:pt-12 sm:pb-24">
-      <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <div className="grid items-center gap-12 pt-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:pt-14">
-          <div className="max-w-2xl">
-          <h1
-            className="text-4xl leading-[1.02] font-semibold tracking-tighter text-balance sm:text-6xl lg:text-[4.25rem]"
-            aria-label={`${titleBefore} ${titleAccent}`}
-          >
-            <span aria-hidden="true">
-              <HeroWords text={titleBefore} start={0} />{" "}
-              <HeroWords
-                text={titleAccent}
-                start={accentStart}
-                className="font-serif font-normal italic"
-              />
-            </span>
+    <section className="px-4 pt-14 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
+      <div className="mx-auto w-full max-w-6xl">
+        <div className="max-w-5xl">
+          <p className="mb-6 flex items-center gap-2.5 text-sm font-medium text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-primary" aria-hidden />
+            {t("navMenu_tracker_desc")}
+          </p>
+          <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] leading-[1.06] font-medium tracking-[-0.055em] text-balance">
+            {t("heroTitleBefore")}
+            <span className="mt-1 block text-muted-foreground">{t("heroTitleAccent")}</span>
           </h1>
-
-          <p
-            style={{ "--hero-d": afterTitle } as CSSProperties}
-            className="hero-reveal mt-6 max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground"
-          >
-            {t("heroSubtitle")}
-          </p>
-
-          <div
-            style={{ "--hero-d": afterTitle + 0.12 } as CSSProperties}
-            className="hero-reveal mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
-          >
-            <Button asChild size="lg">
-              <TrackedCta href="/signup" location="hero">
-                {t("heroCtaPrimary")}
-              </TrackedCta>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noreferrer">
-                <Github data-icon="inline-start" />
-                {t("heroCtaSecondary")}
-                <ArrowUpRight data-icon="inline-end" />
-              </a>
-            </Button>
-          </div>
-
-          <p
-            style={{ "--hero-d": afterTitle + 0.22 } as CSSProperties}
-            className="hero-reveal mt-4 text-sm text-muted-foreground"
-          >
-            {t("heroNote")}
-          </p>
-          </div>
-
-          {/* The figure has no delayed reveal because it is visible in the first
-              viewport and should remain useful when animation is disabled. */}
-          <div className="hero-reveal hero-reveal-media lg:pt-4">
-            <AgentLoopFigure />
+          <div className="mt-7 flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between xl:gap-16">
+            <p className="max-w-xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
+              {t("heroSubtitle")}
+            </p>
+            <div className="shrink-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button asChild size="lg" className="rounded-lg">
+                  <TrackedCta href="/signup" location="hero">
+                    {t("heroCtaPrimary")}
+                    <ArrowRight data-icon="inline-end" />
+                  </TrackedCta>
+                </Button>
+                <a
+                  href={MINDDY_REPOSITORY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-medium transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                >
+                  <Github className="size-4" aria-hidden />
+                  {t("heroCtaSecondary")}
+                  <ArrowUpRight className="size-3.5" aria-hidden />
+                </a>
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">{t("heroNote")}</p>
+            </div>
           </div>
         </div>
+
+        <figure className="mt-10 sm:mt-14">
+          <div className="rounded-xl border border-border bg-[#e9ede4] p-2 sm:p-5 dark:bg-[#252c25]">
+            <ScreenshotSlot id="heroBoard" priority sizes="(min-width: 1200px) 1108px, calc(100vw - 64px)" className="shadow-lg shadow-black/5" />
+          </div>
+          <figcaption className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="font-mono text-[10px]" aria-hidden>01 /</span>
+            {t("featuresCaptionBoard")}
+          </figcaption>
+        </figure>
       </div>
     </section>
   );
