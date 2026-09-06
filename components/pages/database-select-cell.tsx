@@ -46,12 +46,14 @@ export function DatabaseSelectCell({
   database,
   property,
   className,
+  empty,
 }: {
   projectId: string;
   page: PageSummary;
   database: PageSummary;
   property: DatabaseProperty;
   className: string;
+  empty?: string;
 }) {
   const t = useTranslations("PageDatabase");
   const { saveSchema, saveValue, pending } = usePageDatabase(projectId);
@@ -112,7 +114,7 @@ export function DatabaseSelectCell({
           ) : null;
         })
       ) : (
-        <span className="text-muted-foreground">{t("emptyValue")}</span>
+        <span className="text-muted-foreground">{empty ?? t("emptyValue")}</span>
       )}
     </button>
   );

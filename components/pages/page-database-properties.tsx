@@ -58,6 +58,7 @@ export function DatabasePropertyCell({
     }
   };
   const label = t("editProperty", { name: property.name });
+  const emptyValue = table ? "" : t("emptyValue");
   const triggerClass = table ? TABLE_CELL_TRIGGER : `${TRIGGER} min-h-8`;
   if (property.type === "created_at")
     return (
@@ -67,7 +68,7 @@ export function DatabasePropertyCell({
               dateStyle: "medium",
               timeStyle: "short",
             })
-          : t("emptyValue")}
+          : emptyValue}
       </span>
     );
   if (property.type === "select" || property.type === "multi_select")
@@ -78,6 +79,7 @@ export function DatabasePropertyCell({
         database={database}
         property={property}
         className={triggerClass}
+        empty={emptyValue}
       />
     );
   if (property.type === "text" || property.type === "number")
@@ -91,7 +93,7 @@ export function DatabasePropertyCell({
             ? triggerClass
             : `${triggerClass} cursor-pointer whitespace-normal text-left [overflow-wrap:anywhere]`
         }
-        empty={t("emptyValue")}
+        empty={emptyValue}
         save={(next, base) => saveValue(page, property.id, next, base)}
       />
     );
@@ -124,7 +126,7 @@ export function DatabasePropertyCell({
         className={table ? `${TABLE_CELL_TRIGGER} mr-0` : undefined}
         variant="value"
         value={typeof value === "string" ? value : null}
-        placeholder={t("emptyValue")}
+        placeholder={emptyValue}
         ariaLabel={label}
         open={open}
         onOpenChange={changeOpen}
@@ -217,7 +219,7 @@ export function DatabasePropertyCell({
                 })
               )
             ) : (
-              <span className="text-muted-foreground">{t("emptyValue")}</span>
+              <span className="text-muted-foreground">{emptyValue}</span>
             )}
           </button>
         }
