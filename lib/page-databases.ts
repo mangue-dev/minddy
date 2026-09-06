@@ -122,14 +122,15 @@ export function databaseValueText(
   property?: DatabaseProperty,
 ): string {
   if (value == null) return "";
-  const name = (id: string) =>
-    property?.options?.find((option) => option.id === id)?.name ??
-    names.get(id) ??
-    id;
+  const name = (id: string) => {
+    if (property?.type === "select" || property?.type === "multi_select")
+      return property.options?.find((option) => option.id === id)?.name ?? id;
+    return names.get(id) ?? id;
+  };
   if (Array.isArray(value)) return value.map(name).join(", ");
   if (typeof value === "number") return String(value);
   if (typeof value === "boolean") return value ? "1" : "0";
-  return name(value);
+  return property?.type === "select" ? name(value) : value;
 }
 
 export function compareDatabaseValues(

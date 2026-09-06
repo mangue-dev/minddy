@@ -1671,6 +1671,33 @@ describe("database page lifecycle", () => {
     expect(rowOf(entryId).title).toBe("Entry");
     expect(rowOf(entryId).parent_id).toBe(first.id);
   });
+  it.each(["root", "document"])("refuses populated entry moves to a %s without changing the page", async (destination) => {
+    const source = await database();
+    const parentId = destination === "root" ? null : await create("Document");
+    const entryId = await create("Entry", source.id);
+    const values = { [property.id]: "2026-09-06" };
+    Object.assign(rowOf(entryId), { property_values: values });
+    const before = { ...rowOf(entryId) };
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: parentId, title: "Changed" } })).toMatchObject({ ok: false, status: 400, errorKey: "pageDatabaseMove" });
+    expect(rowOf(entryId)).toMatchObject(before);
+  });
+  it("allows populated entries to reorder within their database", async () => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06" } });
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: source.id, position: "z" } })).toMatchObject({ ok: true });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id, position: "z", property_values: { [property.id]: "2026-09-06" } });
+  });
+  it("allows empty entries to move out and return to their database", async () => {
+    const source = await database();
+    const documentId = await create("Document");
+    const entryId = await create("Entry", source.id);
+    Object.assign(rowOf(entryId), { property_values: {} });
+    for (const parentId of [null, source.id, documentId, source.id]) {
+      expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: parentId } })).toMatchObject({ ok: true });
+      expect(rowOf(entryId)).toMatchObject({ parent_id: parentId, property_values: {} });
+    }
+  });
   it("keeps database metadata and entry values through recursive trash and restore", async () => {
     const page = await database();
     const entryId = await create("Entry", page.id);

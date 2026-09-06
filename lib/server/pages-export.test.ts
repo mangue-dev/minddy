@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { unzipSync, strFromU8 } from "fflate";
+import MarkdownIt from "markdown-it";
+import { posix } from "node:path";
 
 /**
  * MIN-283 — export, from the side that touches the base: what really goes into
@@ -37,10 +39,10 @@ vi.mock("@/lib/server/project-access", () => ({
 }));
 
 vi.mock("@/lib/server/pages-projection", () => ({
-  pageToMarkdownServer: async (page: { title: string }) => {
+  pageToMarkdownServer: vi.fn(async (page: { title: string }) => {
     projections.push(page);
     return `# ${page.title}\n\ncorps de ${page.title}`;
-  },
+  }),
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -206,4 +208,41 @@ it("includes creation metadata when an exported entry has no editable values", a
   expect(reads.selects.some((columns) => columns.includes("created_at"))).toBe(
     true,
   );
+});
+
+it("links database entries to existing archive files with duplicate titles and nested pages", async () => {
+  access = { isOwner: true };
+  rows.list = [
+    { ...rows.root },
+    { id: "db", parent_id: "root", title: "Journal", icon: null, position: "a", database_schema: [] },
+    { id: "first", parent_id: "db", title: "Index", icon: null, position: "a" },
+    { id: "second", parent_id: "db", title: "Index", icon: null, position: "b" },
+    { id: "child", parent_id: "first", title: "Details", icon: null, position: "a" },
+    { id: "outside", parent_id: null, title: "Private", icon: null, position: "z" },
+  ];
+  const projection = await import("@/lib/server/pages-projection");
+  const actual = await vi.importActual<typeof projection>("@/lib/server/pages-projection");
+  for (let i = 0; i < 5; i++) {
+    vi.mocked(projection.pageToMarkdownServer).mockImplementationOnce(actual.pageToMarkdownServer);
+  }
+  const result = await exportPage({ pageId: "root", actorId: "u", branch: true });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  const archive = unzipSync(result.body);
+  const indexPath = "Guide/Journal/index.md";
+  const markdown = strFromU8(archive[indexPath]);
+  const links = new MarkdownIt().parse(markdown, {}).flatMap((token) =>
+    (token.children ?? []).filter((child) => child.type === "link_open").map((child) => String(child.attrGet("href"))),
+  );
+  expect(links, markdown).toHaveLength(2);
+  const targets = links.map((link) => posix.join(posix.dirname(indexPath), decodeURIComponent(link)));
+  expect(targets).toEqual([
+    "Guide/Journal/Index (2)/index.md",
+    "Guide/Journal/Index (3).md",
+  ]);
+  for (const target of targets) expect(archive[target]).toBeDefined();
+  expect(archive["Guide/Journal/Index (2)/Details.md"]).toBeDefined();
+  expect(markdown).not.toContain("/projects/");
+  expect(markdown).not.toContain("[[page:");
+  expect(markdown).not.toContain("Private");
 });

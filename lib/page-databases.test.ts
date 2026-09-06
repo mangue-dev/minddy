@@ -59,12 +59,26 @@ describe("database property validation", () => {
     expect(isDatabaseValue("text", "x".repeat(2001))).toBe(false);
     expect(isDatabaseValue("date", null)).toBe(true);
   });
+  it("preserves UUID-shaped text while resolving people and selection labels", () => {
+    const id = property.id;
+    const names = new Map([[id, "Zoe"]]);
+    const text = { ...property, type: "text" as const };
+    expect(databaseValueText(id, names)).toBe(id);
+    expect(databaseValueText(id, names, text)).toBe(id);
+    expect(compareDatabaseValues(id, "Alex", names, text)).toBeLessThan(0);
+    expect(databaseValueText([id], names, { ...text, type: "people" })).toBe("Zoe");
+    const select = { ...text, type: "select" as const, options: [{ id, name: "Ready", color: "#22c55e" }] };
+    expect(databaseValueText(id, names, select)).toBe("Ready");
+    expect(databaseValueText([id], names, { ...select, type: "multi_select" })).toBe("Ready");
+    expect(databaseValueText(id, names, { ...select, options: [] })).toBe(id);
+    expect(databaseValueText([id], names, { ...select, type: "multi_select", options: [] })).toBe(id);
+  });
   it("sorts people by display name and handles unset values", () => {
     const names = new Map([
       ["one", "Zoe"],
       ["two", "Alex"],
     ]);
-    expect(compareDatabaseValues("one", "two", names)).toBeGreaterThan(0);
+    expect(compareDatabaseValues(["one"], ["two"], names)).toBeGreaterThan(0);
     expect(compareDatabaseValues(null, "two", names)).toBeLessThan(0);
     expect(compareDatabaseValues(false, true, names)).toBeLessThan(0);
     expect(

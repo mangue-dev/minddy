@@ -108,3 +108,13 @@ it("exports numbers, option names, and creation metadata without exposing privat
     JSON.stringify(pageDatabaseDocument(db, [db], new Map())),
   ).not.toContain("Ready");
 });
+
+it("preserves literal member IDs in text properties in database and entry projections", () => {
+  const id = "10000000-0000-4000-8000-000000000001";
+  const row = { ...entry, property_values: { owner: [id], notes: id } };
+  for (const page of [database, row]) {
+    const output = JSON.stringify(pageDatabaseDocument(page, [database, row], new Map([[id, "Morgan"]])));
+    expect(output).toContain(`Notes: ${id}`);
+    expect(output).toContain("Owner: Morgan");
+  }
+});

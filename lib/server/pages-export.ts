@@ -11,7 +11,9 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { pageToMarkdownServer } from "@/lib/server/pages-projection";
 import { descendantIds } from "@/lib/pages";
 import {
+  exportPagePaths,
   exportPagesToFiles,
+  relativePath,
   pageFileSlug,
   type ExportInputPage,
   type ExportedFile,
@@ -146,6 +148,7 @@ export async function exportPage({
 
   const context = all.filter((page) => inBranch.has(page.id) || page.id === rootRow.parent_id);
   const names = await databaseDocumentNames(context);
+  const archivePaths = exportPagePaths(branchPages);
   const pages: ExportInputPage[] = [];
   for (const page of branchPages) {
     pages.push({
@@ -158,7 +161,13 @@ export async function exportPage({
       markdown: await pageToMarkdownServer({
         title: page.title,
         icon: page.icon,
-        content: pageDatabaseDocument({ ...page, content: bodies.get(page.id) }, context, names, (id) => pageHref(root.project_id, id)) as never,
+        content: pageDatabaseDocument(
+          { ...page, content: bodies.get(page.id) },
+          context,
+          names,
+          (id) => relativePath(archivePaths.get(page.id)!, archivePaths.get(id)!)
+            .split("/").map(encodeURIComponent).join("/"),
+        ) as never,
       }),
     });
   }

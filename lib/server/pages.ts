@@ -864,7 +864,10 @@ export async function updatePage({
 
     if (nextParentId !== page.parent_id) {
       const nextParent = nextParentId ? await loadPage(service, nextParentId) : null;
-      if (nextParent?.database_schema && (page.database_schema || Object.keys(page.property_values ?? {}).length > 0)) {
+      if (
+        Object.keys(page.property_values ?? {}).length > 0 ||
+        (nextParent?.database_schema && page.database_schema)
+      ) {
         return { ok: false, status: 400, errorKey: "pageDatabaseMove" };
       }
     }
