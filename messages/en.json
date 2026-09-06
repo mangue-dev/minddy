@@ -5960,6 +5960,7 @@
     "customDescription": "Enter a name and the server URL to connect it to Numo."
   },
   "PageDatabase": {
+    "horizontalScroll": "Scroll database horizontally",
     "newDatabase": "New database",
     "create": "Create",
     "extend": "Extend",

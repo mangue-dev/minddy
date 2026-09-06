@@ -46,6 +46,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DatabaseColumnName } from "./database-column-name";
+import { DatabaseTableScroll } from "./database-table-scroll";
 import {
   databaseRowPositions,
   selectDatabaseRows,
@@ -787,10 +788,7 @@ export function PageDatabaseView({
           {t("new")}
         </Button>
       </div>
-      <div
-        className="-ml-2 overflow-x-auto [container-type:inline-size] md:-ml-24"
-        data-database-scroll
-      >
+      <DatabaseTableScroll>
         <table
           className="w-full table-fixed border-separate border-spacing-0 text-sm"
           style={{ minWidth: contentWidth + 96 }}
@@ -833,7 +831,7 @@ export function PageDatabaseView({
               </th>
               <th
                 scope="col"
-                className="sticky left-0 z-20 overflow-hidden border-b border-border/50 bg-background px-2 py-1 font-normal"
+                className="sticky left-0 z-20 overflow-hidden border-b border-border/50 bg-background px-2 py-1 font-normal after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/30 after:opacity-0 group-data-[title-pinned=true]/database-scroll:after:opacity-100"
               >
                 <DatabaseColumnName projectId={projectId} database={database} />
               </th>
@@ -1029,11 +1027,11 @@ export function PageDatabaseView({
                     </div>
                   </td>
                   <td
-                    className={`sticky left-0 z-20 h-8 overflow-hidden border-b border-border/40 p-0 ${checked ? "bg-background bg-linear-to-r from-primary/5 to-primary/5" : "bg-background group-hover:bg-muted"}`}
+                    className={`sticky left-0 z-20 h-8 overflow-hidden border-b border-border/40 bg-background p-0 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/30 after:opacity-0 group-data-[title-pinned=true]/database-scroll:after:opacity-100 ${checked ? "bg-linear-to-r from-primary/5 to-primary/5" : "group-hover:bg-linear-to-r group-hover:from-muted/20 group-hover:to-muted/20"}`}
                   >
                     <button
                       type="button"
-                      className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                      className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                       onClick={() => onOpen(entry.id)}
                       onMouseEnter={() => prefetchPage(entry.id)}
                       onFocus={() => prefetchPage(entry.id)}
@@ -1077,7 +1075,7 @@ export function PageDatabaseView({
             )}
           </div>
         )}
-      </div>
+      </DatabaseTableScroll>
       <Button
         variant="ghost"
         size="sm"
