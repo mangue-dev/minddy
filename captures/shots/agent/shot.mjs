@@ -49,11 +49,6 @@ async function applyEditsLabel(locale) {
   return toolCallLabel(locale, "agentApplyEdits", 3);
 }
 
-/** A translated label passed as a pattern: it can contain meta-characters. */
-function escapeRe(text) {
-  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
   try {
@@ -70,19 +65,14 @@ async function capture({ locale, theme }) {
     // The thread arrives folded: a completed run closes its work sequence.
     await page.getByRole("button", { name: DURATION }).click();
 
-    // Several actions of the same turn are summarized, and the SUMMARY has changed: the
-    // group was titled by its last line (“… provider.tsx”), it counts
-    // now what it contains (“Reading 2 files, one search”).
-    // This wording is translated; we rebuild it from the catalog rather than
-    // copy it, and we only keep the first half — the separator and the
-    // sentence case are set by the component, not by a key.
-    const readSummaries = [await toolCallLabel(locale, "summaryRead", 2)];
-    const readGroup = page
-      .getByRole("button", {
-        name: new RegExp(readSummaries.map(escapeRe).join("|"), "i"),
-      })
-      .first();
-    await readGroup.click();
+    // Both seeded turns now group their three actions under a count label.
+    // Expand each group to show the reads, edits, and test command together.
+    const actionGroups = page.getByRole("button", {
+      name: await toolCallLabel(locale, "toolCallSummary", 3),
+      exact: true,
+    });
+    await actionGroups.nth(1).waitFor({ state: "visible", timeout: 10_000 });
+    for (const group of await actionGroups.all()) await group.click();
     await page
       .getByText("lib/palette/actions.ts", { exact: false })
       .first()

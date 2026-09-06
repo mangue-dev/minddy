@@ -76,6 +76,16 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-1" });
 
+    // Billing resolves separately and controls the plan's optional agent actions.
+    // Wait for it before opening the panel so every variant has the same controls.
+    await page.waitForFunction(
+      () => ![...document.querySelectorAll("button")].some(
+        (button) => button.textContent?.trim() === "…",
+      ),
+      undefined,
+      { timeout: 15_000 },
+    );
+
     // The board is the decor: we want it complete before opening the panel. Its
     // tab bar arrives by a separate query, later than maps.
     await page
