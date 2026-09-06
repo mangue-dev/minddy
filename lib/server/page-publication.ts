@@ -127,6 +127,28 @@ export async function getPublicPageBundle(
   if (!pageRow) return null;
 
   databasePages = databasePages.map((page) => page.id === targetId ? pageRow as DatabaseDocumentPage : page);
+  if (
+    pageRow.database_schema == null &&
+    pageRow.parent_id &&
+    !databasePages.some((page) => page.id === pageRow.parent_id)
+  ) {
+    const { data: parent } = await service
+      .from("pages")
+      .select("id, database_schema")
+      .eq("id", pageRow.parent_id)
+      .eq("project_id", ctx.project.id)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (parent?.database_schema != null) {
+      // The parent provides column definitions only; it is not a published page.
+      databasePages.push({
+        id: parent.id,
+        parent_id: null,
+        title: "",
+        database_schema: parent.database_schema,
+      });
+    }
+  }
   const publishedIds = new Set(pages.map((p) => p.id));
   const names = await databaseDocumentNames(databasePages);
   const projected = pageDatabaseDocument(pageRow as DatabaseDocumentPage, databasePages, names, (id) => `/p/${encodeURIComponent(token)}/${encodeURIComponent(id)}`);

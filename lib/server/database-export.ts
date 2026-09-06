@@ -86,22 +86,26 @@ export async function databaseArchiveFiles(
   for (const database of pages.filter((page) => page.database_schema != null)) {
     const schema = database.database_schema!;
     const rows = pages.filter((page) => page.parent_id === database.id);
-    const csv = Papa.unparse({
-      fields: [
-        database.database_title_name ?? "Name",
-        ...schema.map((property) => property.name),
-      ],
-      data: rows.map((row) => [
-        row.title,
-        ...schema.map((property) =>
-          databaseValueText(
-            databasePropertyValue(row, property),
-            names,
-            property,
+    const csv = Papa.unparse(
+      {
+        fields: [
+          database.database_title_name ?? "Name",
+          ...schema.map((property) => property.name),
+        ],
+        data: rows.map((row) => [
+          row.title,
+          ...schema.map((property) =>
+            databaseValueText(
+              databasePropertyValue(row, property),
+              names,
+              property,
+            ),
           ),
-        ),
-      ]),
-    });
+        ]),
+      },
+      // Match the leading character even when a cell contains multiple lines.
+      { escapeFormulae: /^[=+\-@\t\r]/ },
+    );
     entries[paths.get(database.id)!.replace(/\.md$/, ".csv")] = strToU8(csv);
   }
   entries["minddy-database.json"] = strToU8(JSON.stringify(manifest, null, 2));

@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { strFromU8, strToU8 } from "fflate";
+import Papa from "papaparse";
 import type { ImportPage } from "@/lib/database-import/types";
 
 const fixtures = vi.hoisted(() => ({
@@ -118,6 +119,41 @@ it("includes attachments beyond the first metadata batch", async () => {
   ).toHaveLength(501);
   expect(entries["__minddy_files__/file-500/notes.txt"]).toBeDefined();
 });
+
+it.each(["=", "+", "-", "@", "\t", "\r"])(
+  "neutralizes CSV formulas starting with %j while preserving exact manifest data",
+  async (prefix) => {
+    fixtures.files = [];
+    const value = `${prefix}SUM(1,2)`;
+    const multiline = `${value}\nSecond line with "quotes"`;
+    const database: ImportPage = {
+      ...page,
+      database_title_name: value,
+      database_schema: [{ id: "notes", name: multiline, type: "text" }],
+    };
+    const rows: ImportPage[] = [value, multiline, "Ordinary text"].map(
+      (text, index) => ({
+        ...page,
+        id: `entry-${index}`,
+        parent_id: page.id,
+        title: text,
+        database_schema: null,
+        property_values: { notes: text },
+      }),
+    );
+    const pages = [database, ...rows];
+    const entries = await databaseArchiveFiles(pages, paths, new Map(), {}, "proj");
+    const csv = Papa.parse<string[]>(strFromU8(entries["Journal/index.csv"]));
+    expect(csv.errors).toEqual([]);
+    expect(csv.data).toEqual([
+      [`'${value}`, `'${multiline}`],
+      [`'${value}`, `'${value}`],
+      [`'${multiline}`, `'${multiline}`],
+      ["Ordinary text", "Ordinary text"],
+    ]);
+    expect(JSON.parse(strFromU8(entries["minddy-database.json"])).pages).toEqual(pages);
+  },
+);
 
 it("fails the export if an attachment cannot be downloaded instead of producing an incomplete archive", async () => {
   fixtures.downloadError = true;
