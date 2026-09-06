@@ -14,7 +14,7 @@ type RouteContext = { params: Promise<{ id: string; pageId: string }> };
  * without its subpages would render an amputated copy whose blocks point to
  * the children of the ORIGINAL. Internal branch links are rewritten to
  * copy (`remapSubpages`), those that exit the branch are left as they are
- * quels.
+ * unchanged.
  *
  * Returns the root page of the copy, body included: it is from it that the block
  * subpage gets its `pageId`.
@@ -31,7 +31,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const refused = rateLimitRefusal(auth.user.id, "page-duplicate", { limit: 10 });
   if (refused) return refused;
 
-  const result = await duplicatePage(pageId, auth.user.id);
+  const body = await request.json().catch(() => null);
+  const ids = body?.ids;
+  if (ids !== undefined && (!ids || typeof ids !== "object" || Array.isArray(ids))) {
+    return NextResponse.json({ error: t("pageContentRefused") }, { status: 400 });
+  }
+  const result = await duplicatePage(pageId, auth.user.id, "human", ids);
   if (!result.ok) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }

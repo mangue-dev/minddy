@@ -165,5 +165,7 @@ export async function convertPageDatabase(
   afterOrNow(async () => {
     await recordPageEvent(service, { pageId, actorId, kind, mcpKeyId: kind === "agent" ? mcpKeyId : null, type: "page_updated" });
   });
-  return getPage(pageId, actorId);
+  const result = await getPage(pageId, actorId);
+  if (!result.ok || !data.values) return result;
+  return { ok: true, page: { ...result.page, conversion_values: data.values } as Page };
 }

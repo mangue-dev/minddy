@@ -590,7 +590,8 @@ function PageSurface({
       duplicate: async (id) => {
         try {
           const copy = await duplicatePage(id);
-          toast.success(t("duplicated"));
+          void copy.settled.then(() => toast.success(t("duplicated"))).catch((error: unknown) =>
+            toast.error(error instanceof Error ? error.message : t("duplicateFailed")));
           return copy.id;
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("duplicateFailed"));

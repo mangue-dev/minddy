@@ -202,11 +202,13 @@ export function updatePageOnUnload(
  */
 export async function duplicatePageApi(
   projectId: string,
-  pageId: string
+  pageId: string,
+  ids?: Record<string, string>,
 ): Promise<Page> {
   return json(
     await fetch(`/api/projects/${projectId}/pages/${pageId}/duplicate`, {
       method: "POST",
+      ...(ids ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) } : {}),
     }),
     "Duplicate failed"
   );

@@ -662,7 +662,8 @@ export async function createPage({
 export async function duplicatePage(
   pageId: string,
   actorId: string,
-  kind: PageWriteKind = "human"
+  kind: PageWriteKind = "human",
+  clientIds?: Record<string, string>
 ): Promise<PageResult<Page>> {
   const service = getServiceClient();
   const page = await loadPage(service, pageId);
@@ -687,7 +688,12 @@ export async function duplicatePage(
   }
 
   const byId = new Map((sources as unknown as Page[]).map((row) => [row.id, row]));
-  const idMap = new Map(family.map((id) => [id, crypto.randomUUID()]));
+  const requestedIds = clientIds ? Object.values(clientIds) : [];
+  if (requestedIds.some((id) => typeof id !== "string" || !UUID_RE.test(id)) ||
+      new Set(requestedIds).size !== requestedIds.length) {
+    return { ok: false, status: 400, errorKey: "pageContentRefused" };
+  }
+  const idMap = new Map(family.map((id) => [id, clientIds?.[id] ?? crypto.randomUUID()]));
   const rootPosition = positionAtEnd(
     live.filter((p) => (p.parent_id ?? null) === (page.parent_id ?? null))
   );

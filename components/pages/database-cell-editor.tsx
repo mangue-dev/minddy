@@ -28,7 +28,6 @@ export function DatabaseCellEditor({
   const t = useTranslations("PageDatabase");
   const trigger = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
-  const busy = useRef(false);
   const closing = useRef(false);
   const expected = useRef(value);
   const focusInput = useCallback((node: HTMLTextAreaElement | null) => {
@@ -41,7 +40,6 @@ export function DatabaseCellEditor({
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [geometry, setGeometry] = useState({
     left: 0,
     top: 0,
@@ -117,8 +115,8 @@ export function DatabaseCellEditor({
       window.visualViewport?.removeEventListener("scroll", place);
     };
   }, [open, draft]);
-  const commit = async (restoreFocus = false) => {
-    if (busy.current || closing.current) return;
+  const commit = (restoreFocus = false) => {
+    if (closing.current) return;
     const next = numeric ? parseDatabaseNumber(draft) : draft || null;
     if (next === undefined) {
       setError(true);
@@ -127,17 +125,10 @@ export function DatabaseCellEditor({
       input.current?.focus();
       return;
     }
-    busy.current = true;
-    setSaving(true);
-    const ok =
-      next === expected.current || (await save(next, expected.current));
-    busy.current = false;
-    setSaving(false);
-    if (ok) {
-      closing.current = true;
-      setOpen(false);
-      if (restoreFocus) trigger.current?.focus();
-    } else input.current?.focus();
+    closing.current = true;
+    setOpen(false);
+    if (restoreFocus) trigger.current?.focus();
+    if (next !== expected.current) void save(next, expected.current);
   };
   return (
     <>
@@ -177,7 +168,6 @@ export function DatabaseCellEditor({
             }}
             maxLength={numeric ? 320 : 2000}
             value={draft}
-            readOnly={saving}
             onChange={(event) => {
               if (!numeric || isDatabaseNumberDraft(event.target.value)) {
                 setDraft(event.target.value);
@@ -191,11 +181,9 @@ export function DatabaseCellEditor({
               if (event.key === "Escape") {
                 event.preventDefault();
                 event.stopPropagation();
-                if (!busy.current) {
-                  closing.current = true;
-                  setOpen(false);
-                  trigger.current?.focus();
-                }
+                closing.current = true;
+                setOpen(false);
+                trigger.current?.focus();
               } else if (
                 event.key === "Enter" &&
                 (!event.shiftKey || numeric)

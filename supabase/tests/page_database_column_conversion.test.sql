@@ -14,6 +14,9 @@ CREATE FUNCTION pg_temp.convert(input jsonb, actor uuid DEFAULT '49920000-0000-4
 $$;
 CREATE TEMP TABLE preview AS SELECT pg_temp.convert('{}') AS data;
 SELECT is((SELECT data->>'status' FROM preview),'preview','conversion previews without writing');
+SELECT is((SELECT data->'column'->>'type' FROM preview),'number','preview returns the target column');
+SELECT is((SELECT data->'values'->'49920000-0000-4000-8000-000000000005' FROM preview),'12.5'::jsonb,'preview returns compatible converted values');
+SELECT is((SELECT data->'values'->'49920000-0000-4000-8000-000000000006' FROM preview),'null'::jsonb,'preview explicitly clears incompatible values');
 SELECT is((SELECT (data->>'totalCount')::int FROM preview),2,'preview includes trash');
 SELECT is((SELECT (data->>'incompatibleCount')::int FROM preview),1,'preview counts incompatible cells');
 SELECT is((SELECT database_revision FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),0,'preview preserves schema revision');
@@ -35,6 +38,7 @@ SELECT ok((SELECT NOT property_values ? '49920000-0000-4000-8000-000000000010' F
 SELECT throws_ok($$ UPDATE public.pages SET database_schema=jsonb_set(database_schema,'{0,type}','"text"') WHERE id='49920000-0000-4000-8000-000000000004' $$,'22023','Property types cannot change','direct schema edits cannot bypass conversion');
 UPDATE preview SET data=pg_temp.convert('{"targetType":"select"}');
 SELECT is(pg_temp.convert(jsonb_build_object('targetType','select','preview',false,'token',(SELECT data->>'token' FROM preview)))->>'status','updated','numeric labels become select options');
+SELECT is((SELECT database_schema->0->'options' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),(SELECT data->'column'->'options' FROM preview),'preview option identities survive confirmation');
 SELECT is((SELECT database_schema->0->'options'->0->>'name' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),'14','new options use readable labels');
 UPDATE preview SET data=pg_temp.convert('{"targetType":"multi_select"}');
 SELECT is(pg_temp.convert(jsonb_build_object('targetType','multi_select','preview',false,'token',(SELECT data->>'token' FROM preview)))->>'status','updated','single selection converts to multiple');

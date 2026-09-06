@@ -174,9 +174,8 @@ function PropertySettings({
                                 ? { ...p, name: rename.trim() }
                                 : p,
                             ),
-                          ).then((ok) => {
-                            if (ok) setEditing(null);
-                          });
+                          );
+                        setEditing(null);
                       }}
                     >
                       <Input
@@ -336,9 +335,8 @@ function PropertySettings({
                   (removeBase.database_schema ?? []).filter(
                     (p) => p.id !== remove?.id,
                   ),
-                ).then((ok) => {
-                  if (ok) setRemove(null);
-                });
+                );
+                setRemove(null);
               }}
             >
               {t("delete")}
@@ -401,7 +399,6 @@ export function PageDatabaseView({
   const [filter, setFilter] = useState("");
   const [filterValue, setFilterValue] = useState("");
   const [hidden, setHidden] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
   const [preferencesReady, setPreferencesReady] = useState(false);
   const storageKey = `minddy:database-list:${projectId}:${database.id}`;
   useEffect(() => {
@@ -528,20 +525,17 @@ export function PageDatabaseView({
       return (descending ? -result : result) || a.id.localeCompare(b.id);
     });
   const run = async (action: () => Promise<unknown>) => {
-    setBusy(true);
     try {
       await action();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("saveFailed"));
-    } finally {
-      setBusy(false);
     }
   };
   const add = () =>
     void run(async () => {
       const entry = await createPage({ parent_id: database.id });
-      await entry.settled;
       onOpen(entry.id);
+      await entry.settled;
     });
   const selectedRows = rows.filter((entry) => selected.includes(entry.id));
   const manual = sort === "position" && !descending;
@@ -552,22 +546,19 @@ export function PageDatabaseView({
       const [position] = databaseRowPositions(entries, entry.id, above);
       if (!position) return;
       const created = await createPage({ parent_id: database.id, position });
-      await created.settled;
       setSort("position");
       setDescending(false);
       setQuery("");
       setFilter("");
       onOpen(created.id);
+      await created.settled;
     });
   const duplicate = (targets: PageSummary[]) =>
     void run(async () => {
-      const copies: string[] = [];
-      for (const entry of targets) {
-        const copy = await duplicatePage(entry.id);
-        copies.push(copy.id);
-      }
-      if (copies.length === 1) onOpen(copies[0]);
-      else setSelected(copies);
+      const copies = await Promise.all(targets.map((entry) => duplicatePage(entry.id)));
+      if (copies.length === 1) onOpen(copies[0].id);
+      else setSelected(copies.map((copy) => copy.id));
+      await Promise.all(copies.map((copy) => copy.settled));
     });
   const drop = (targetId: string, above: boolean) => {
     const ids = dragging.current;
@@ -585,8 +576,7 @@ export function PageDatabaseView({
     );
     if (!positions.length) return;
     void run(async () => {
-      for (const [index, entry] of moving.entries())
-        await updatePage(entry.id, { position: positions[index] });
+      await Promise.all(moving.map((entry, index) => updatePage(entry.id, { position: positions[index] })));
     });
   };
   const move = (entry: PageSummary, direction: number) =>
@@ -637,7 +627,6 @@ export function PageDatabaseView({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={t("duplicate")}
-                  disabled={busy}
                   onClick={() => duplicate(selectedRows)}
                 >
                   <Copy className="size-4" />
@@ -648,7 +637,6 @@ export function PageDatabaseView({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={t("delete")}
-                  disabled={busy}
                   onClick={() => setRemove(selectedRows)}
                 >
                   <Trash2 className="size-4" />
@@ -826,7 +814,7 @@ export function PageDatabaseView({
             )
           }
         />
-        <Button size="sm" className="ml-2" disabled={busy} onClick={add}>
+        <Button size="sm" className="ml-2" onClick={add}>
           {t("new")}
         </Button>
       </div>
@@ -867,7 +855,7 @@ export function PageDatabaseView({
                   <Checkbox
                     className="after:inset-x-0"
                     aria-label={t("selectAllEntries")}
-                    disabled={!rows.length || busy}
+                    disabled={!rows.length}
                     checked={
                       rows.length > 0 && selectedRows.length === rows.length
                         ? true
@@ -1002,7 +990,6 @@ export function PageDatabaseView({
                         <button
                           type="button"
                           className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                          disabled={busy}
                           aria-label={t("insertEntryHint")}
                           onClick={(event) => insert(entry, event.altKey)}
                         >
@@ -1020,8 +1007,7 @@ export function PageDatabaseView({
                             <button
                               type="button"
                               aria-label={t("entryActions")}
-                              disabled={busy}
-                              draggable={manual && !busy}
+                              draggable={manual}
                               className={`flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "cursor-grabbing" : "cursor-pointer"}`}
                               onPointerDownCapture={(event) => {
                                 if (event.button === 0) event.stopPropagation();
@@ -1056,7 +1042,6 @@ export function PageDatabaseView({
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
-                            disabled={busy}
                             onSelect={() => duplicate(targets)}
                           >
                             <Copy className="size-4" />
@@ -1066,7 +1051,7 @@ export function PageDatabaseView({
                             <>
                               <DropdownMenuItem
                                 disabled={
-                                  busy || !manual || entries[0]?.id === entry.id
+                                  !manual || entries[0]?.id === entry.id
                                 }
                                 onSelect={() => move(entry, -1)}
                               >
@@ -1075,7 +1060,6 @@ export function PageDatabaseView({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 disabled={
-                                  busy ||
                                   !manual ||
                                   entries.at(-1)?.id === entry.id
                                 }
@@ -1089,7 +1073,6 @@ export function PageDatabaseView({
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             variant="destructive"
-                            disabled={busy}
                             onSelect={() => setRemove(targets)}
                           >
                             <Trash2 className="size-4" />
@@ -1116,7 +1099,6 @@ export function PageDatabaseView({
                             name: entry.title || tPages("untitled"),
                           })}
                           checked={checked}
-                          disabled={busy}
                           onClick={(event) => {
                             if (event.shiftKey && selectionAnchor.current) {
                               event.preventDefault();
@@ -1194,7 +1176,6 @@ export function PageDatabaseView({
       <Button
         variant="ghost"
         size="sm"
-        disabled={busy}
         className="justify-start text-muted-foreground"
         onClick={add}
       >
@@ -1237,17 +1218,17 @@ export function PageDatabaseView({
             <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={busy}
               onClick={(e) => {
                 e.preventDefault();
                 void run(async () => {
-                  for (const entry of remove) await trashPage(entry.id);
+                  const requests = remove.map((entry) => trashPage(entry.id));
                   setSelected((ids) =>
                     ids.filter(
                       (id) => !remove.some((entry) => entry.id === id),
                     ),
                   );
                   setRemove([]);
+                  await Promise.all(requests);
                 });
               }}
             >

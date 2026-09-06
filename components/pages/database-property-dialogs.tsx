@@ -71,24 +71,10 @@ export function DatabaseOptionsDialog({
       cancelLabel={t("cancel")}
       submitting={pending}
       submitDisabled={!dirty || duplicate || names.some((name) => !name)}
-      onSubmit={async () => {
-        if (
-          await saveSchema(
-            base,
-            (base.database_schema ?? []).map((p) =>
-              p.id === property.id
-                ? {
-                    ...p,
-                    options: options.map((option) => ({
-                      ...option,
-                      name: option.name.trim(),
-                    })),
-                  }
-                : p,
-            ),
-          )
-        )
-          onClose();
+      onSubmit={() => {
+        void saveSchema(base, (base.database_schema ?? []).map((p) =>
+          p.id === property.id ? { ...p, options: options.map((option) => ({ ...option, name: option.name.trim() })) } : p));
+        onClose();
       }}
     >
       <div className="max-h-[min(50dvh,400px)] space-y-2 overflow-y-auto px-0.5 py-1">
@@ -225,22 +211,14 @@ function DatabaseColumnDialog({
     confirmLoss: boolean,
   ) => {
     if (!property) return;
-    setSaving(true);
-    try {
-      if (
-        await convertColumn(
-          base,
-          property.id,
-          type,
-          name.trim(),
-          preview,
-          confirmLoss,
-        )
-      )
-        onClose();
-      else setWarning(null);
-    } finally {
-      setSaving(false);
+    const request = convertColumn(base, property.id, type, name.trim(), preview, confirmLoss);
+    if (preview.column) {
+      onClose();
+      void request;
+    } else {
+      setSaving(true);
+      try { if (await request) onClose(); else setWarning(null); }
+      finally { setSaving(false); }
     }
   };
   return (
@@ -290,7 +268,8 @@ function DatabaseColumnDialog({
                       ...schema,
                       { id: crypto.randomUUID(), name: name.trim(), type },
                     ];
-                if (await saveSchema(base, next)) onClose();
+                void saveSchema(base, next);
+                onClose();
               }
             } finally {
               setSaving(false);

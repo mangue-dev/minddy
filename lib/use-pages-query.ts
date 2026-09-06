@@ -38,6 +38,15 @@ import {
   type Page,
   type PageTreeNode,
 } from "./pages";
+import {
+  beginPageWrite,
+  beginPagePresence,
+  queuePageWrite,
+  waitForPageWrites,
+} from "./optimistic-page-writes";
+import { remapSubpages } from "./pages-subpage";
+import type { PageDocJSON } from "./pages-merge";
+import { positionAtEnd } from "./pages";
 import { buildOptimisticPage } from "./optimistic-page";
 import {
   trackPageCreation,
@@ -190,7 +199,7 @@ export interface UsePagesResult {
  */
   previewPage: (pageId: string, patch: PagePreview) => void;
   /** Copies a page and its descendants. Returns the ROOT of the copy. */
-  duplicatePage: (pageId: string) => Promise<Page>;
+  duplicatePage: (pageId: string) => Promise<PageCreation>;
   updatePage: (pageId: string, input: UpdatePageInput) => Promise<Page>;
   trashPage: (pageId: string) => Promise<number>;
   /**
@@ -250,7 +259,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
       // Cancellation starts synchronously, before the optimistic row is written,
       // so an older list response cannot erase the new page afterwards.
       void queryClient.cancelQueries({ queryKey: pagesKey(pid) });
-      writePages(queryClient, pid, [...current, summary]);
+      const finishPresence = beginPagePresence(queryClient, pid, [summary], true);
       preparePageNavigation(optimistic.id);
       queryClient.setQueryData(pageKey(optimistic.id), optimistic);
 
@@ -261,14 +270,17 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
         optimistic.id,
         queryClient.fetchQuery({
           queryKey: pageKey(optimistic.id),
-          queryFn: () =>
-            createPageApi(
+          queryFn: async () => {
+            if (optimistic.parent_id)
+              await waitForPageCreation(optimistic.parent_id);
+            return createPageApi(
               pid,
               { ...input, id: optimistic.id },
               // Blank-page payloads are tiny enough for the browser's keepalive
               // budget. Rich JSON bodies may exceed that budget and stay regular.
               { keepalive: input.content === undefined },
-            ),
+            );
+          },
           staleTime: 0,
           retry: false,
         }),
@@ -277,29 +289,14 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
         .then((page) => {
           const { content: _serverContent, ...serverSummary } = page;
           const visibleSummary = withPreview(serverSummary);
-          const latest = readPages(queryClient, pid);
-          if (latest) {
-            writePages(
-              queryClient,
-              pid,
-              latest.map((row) =>
-                row.id === page.id ? visibleSummary : row,
-              ),
-            );
-          }
+          finishPresence(true, [visibleSummary]);
           if (needsListRefresh) {
             void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
           }
         })
         .catch(() => {
-          const latest = readPages(queryClient, pid);
-          if (latest) {
-            writePages(
-              queryClient,
-              pid,
-              latest.filter((row) => row.id !== optimistic.id),
-            );
-          }
+          finishPresence(false);
+          queryClient.removeQueries({ queryKey: pageKey(optimistic.id) });
           if (needsListRefresh) {
             void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
           }
@@ -345,100 +342,184 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const updatePage = useCallback(
     async (pageId: string, input: UpdatePageInput) => {
       const pid = projectId as string;
-      await waitForPageCreation(pageId);
-      await hushPages(queryClient, pid);
-      const before = readPages(queryClient, pid);
-      if (before) {
-        // The BODY is not in the list (the server does not send it): it
-        // exit optimistic patch, otherwise the cache line would gain a field
-        // that no one reads there and which would weigh as much as the document.
-        const { content: _content, ...visible } = input;
-        writePages(
-          queryClient,
-          pid,
-          before.map((page) =>
-            page.id === pageId ? { ...page, ...visible } : page
-          )
-        );
-      }
-      try {
-        const page = await updatePageApi(pid, pageId, input);
-        const { content: _content, ...summary } = page;
-        const current = readPages(queryClient, pid);
-        if (current) {
-          // `withPreview`: the response does not put the title back in the tree
-          // before the last letters typed (see `previews`).
-          const next = withPreview(summary);
-          writePages(
+      const cached =
+        readPages(queryClient, pid)?.find((row) => row.id === pageId) ??
+        queryClient.getQueryData<Page>(pageKey(pageId));
+      const { content: _content, version: _version, ...visible } = input;
+      const write = cached
+        ? beginPageWrite(
             queryClient,
             pid,
-            current.map((row) => (row.id === pageId ? next : row))
+            cached,
+            Object.keys(visible) as (keyof Page)[],
+            (row) => ({ ...row, ...visible, ...previews.get(pageId) }),
+          )
+        : null;
+      return queuePageWrite(queryClient, `page:${pid}:${pageId}`, async () => {
+        try {
+          await waitForPageCreation(pageId);
+          const page = await updatePageApi(pid, pageId, input);
+          write?.settle(page);
+          const { content: _body, ...summary } = page;
+          const confirmed = Object.fromEntries(
+            Object.keys(visible).map((key) => [
+              key,
+              summary[key as keyof PageSummary],
+            ]),
           );
+          queryClient.setQueryData<PageSummary[]>(pagesKey(pid), (rows) =>
+            rows?.map((row) =>
+              row.id === pageId
+                ? withPreview({
+                    ...row,
+                    ...confirmed,
+                    version: summary.version,
+                    updated_at: summary.updated_at,
+                    updated_by: summary.updated_by,
+                    updated_kind: summary.updated_kind,
+                    updated_api_key_id: summary.updated_api_key_id,
+                  })
+                : row,
+            ),
+          );
+          queryClient.setQueryData<Page>(pageKey(pageId), (row) =>
+            row
+              ? {
+                  ...page,
+                  database_schema: row.database_schema,
+                  database_revision: row.database_revision,
+                  database_title_name: row.database_title_name,
+                  property_values: row.property_values,
+                }
+              : page,
+          );
+          return page;
+        } catch (error) {
+          write?.settle();
+          throw error;
         }
-        // The BODY goes back down into its own cache, and this is essential:
-        // the editor only reads his document during EDITING (tiptap never rereads
-        // `content`), so everything this cache carries that is out of date will be displayed
-        // as is on the next edit — return to the page from the tree,
-        // or reload the tab, reappeared the document from before the
-        // modifications, until a refetch has finally passed. THE
-        // update here is the only place that knows: it's the one that
-        // just wrote.
-        queryClient.setQueryData(pageKey(pageId), page);
-        // The ENTIRE page goes back to the caller, including body and `version`:
-        // it is from this that the autosave (MIN-271) draws the basis of its next
-        // write. The list cache only keeps the summary.
-        return page;
-      } catch (err) {
-        // Put the tree back where it was: this is the only possible fix
-        // of a 409 cycle, and leaving the state false on the screen would be worse than
-        // the refusal itself.
-        if (before) writePages(queryClient, pid, before);
-        throw err;
-      }
+      });
     },
-    [projectId, queryClient]
+    [projectId, queryClient],
   );
 
   const duplicatePage = useCallback(
     async (pageId: string) => {
       const pid = projectId as string;
-      const page = await duplicatePageApi(pid, pageId);
-      // The copy takes away its subpages: it is therefore NOT one more line
-      // in the cache, it's a whole branch. We'll ask for the list again instead
-      // than reconstruct it here — the server is the only one who knows what it
-      // wrote, and a half-laid branch would be a false tree.
-      await queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
-      return page;
+      const current = readPages(queryClient, pid) ?? [];
+      const source = current.find((row) => row.id === pageId);
+      if (!source) {
+        const page = await duplicatePageApi(pid, pageId);
+        await queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+        return { ...page, settled: Promise.resolve(page) };
+      }
+      const family = [source.id, ...descendantIds(current, source.id)];
+      const ids = new Map(family.map((id) => [id, crypto.randomUUID()]));
+      const now = new Date().toISOString();
+      const copies = family.map((id): PageSummary => {
+        const row = current.find((item) => item.id === id)!;
+        return {
+          ...row,
+          id: ids.get(id)!,
+          parent_id: id === pageId ? row.parent_id : ids.get(row.parent_id!)!,
+          position:
+            id === pageId
+              ? positionAtEnd(
+                  current.filter((item) => item.parent_id === row.parent_id),
+                )
+              : row.position,
+          favorite: false,
+          version: 1,
+          database_revision: 0,
+          created_at: now,
+          updated_at: now,
+        };
+      });
+      const finishPresence = beginPagePresence(queryClient, pid, copies, true);
+      const root = copies[0];
+      const request = queuePageWrite(
+        queryClient,
+        `database:${pid}:${source.parent_id ?? source.id}`,
+        async () => {
+          await Promise.all(family.map(waitForPageCreation));
+          await waitForPageWrites(queryClient, family.map((id) => `page:${pid}:${id}`));
+          const page = await duplicatePageApi(
+            pid,
+            pageId,
+            Object.fromEntries(ids),
+          );
+          const { content: _content, ...summary } = page;
+          finishPresence(
+            true,
+            copies.map((row) => (row.id === page.id ? summary : row)),
+          );
+          queryClient.setQueryData(pageKey(page.id), page);
+          void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+          return page;
+        },
+      );
+      for (const [index, id] of family.entries()) {
+        const copy = copies[index];
+        const body = queryClient.getQueryData<Page>(pageKey(id));
+        preparePageNavigation(copy.id);
+        if (body)
+          queryClient.setQueryData(pageKey(copy.id), {
+            ...copy,
+            content: remapSubpages(body.content as PageDocJSON | null, ids),
+          });
+        const settlement = trackPageCreation(
+          copy.id,
+          request.then(async (page) => {
+            if (copy.id === page.id) return page;
+            return fetchPageApi(pid, copy.id);
+          }),
+        );
+        // PageView joins this query instead of requesting a not-yet-created copy.
+        void queryClient
+          .fetchQuery({
+            queryKey: pageKey(copy.id),
+            queryFn: () => settlement,
+            staleTime: 0,
+            retry: false,
+          })
+          .catch(() => {});
+      }
+      void request.catch(() => {
+        finishPresence(false);
+        for (const copy of copies)
+          queryClient.removeQueries({ queryKey: pageKey(copy.id) });
+      });
+      return { ...root, settled: request };
     },
-    [projectId, queryClient]
+    [projectId, queryClient],
   );
 
   const trashPage = useCallback(
     async (pageId: string) => {
       const pid = projectId as string;
-      await hushPages(queryClient, pid);
-      const before = readPages(queryClient, pid);
-      if (before) {
-        // Recursive like the server: the page AND its descendants exit
-        // the tree at once, otherwise the subpages would go back to the root on
-        // response time.
-        const gone = new Set([pageId, ...descendantIds(before, pageId)]);
-        writePages(
-          queryClient,
-          pid,
-          before.filter((page) => !gone.has(page.id))
-        );
-      }
-      try {
-        const { trashed } = await trashPageApi(pid, pageId);
-        void queryClient.invalidateQueries({ queryKey: ["me", "trash"] });
-        return trashed;
-      } catch (err) {
-        if (before) writePages(queryClient, pid, before);
-        throw err;
-      }
+      const before = readPages(queryClient, pid) ?? [];
+      const gone = new Set([pageId, ...descendantIds(before, pageId)]);
+      const removed = before.filter((row) => gone.has(row.id));
+      const finishPresence = beginPagePresence(queryClient, pid, removed, false);
+      const parentId = before.find((row) => row.id === pageId)?.parent_id;
+      return queuePageWrite(
+        queryClient,
+        `database:${pid}:${parentId ?? pageId}`,
+        async () => {
+          try {
+            await waitForPageCreation(pageId);
+            const { trashed } = await trashPageApi(pid, pageId);
+            finishPresence(true);
+            void queryClient.invalidateQueries({ queryKey: ["me", "trash"] });
+            return trashed;
+          } catch (error) {
+            finishPresence(false);
+            throw error;
+          }
+        },
+      );
     },
-    [projectId, queryClient]
+    [projectId, queryClient],
   );
 
   const discardPage = useCallback(

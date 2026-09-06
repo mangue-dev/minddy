@@ -1033,6 +1033,28 @@ describe("duplicatePage (MIN-272)", () => {
       .content.filter((node) => node.type === "subpage")
       .map((node) => node.attrs?.pageId ?? null));
 
+  it("uses validated client identities for the copied tree and its internal links", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapter", root);
+    rowOf(root).content = bodyCiting(child);
+    const rootId = "49930000-0000-4000-8000-000000000001";
+    const childId = "49930000-0000-4000-8000-000000000002";
+    const result = await duplicatePage(root, ACTOR, "human", { [root]: rootId, [child]: childId });
+    expect(result).toMatchObject({ ok: true, page: { id: rootId } });
+    expect(rowOf(childId).parent_id).toBe(rootId);
+    expect(citedBy(rootId)).toEqual([childId]);
+  });
+
+  it("rejects invalid or repeated copy identities without inserting pages", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapter", root);
+    const id = "49930000-0000-4000-8000-000000000001";
+    for (const ids of [{ [root]: "invalid" }, { [root]: id, [child]: id }]) {
+      expect(await duplicatePage(root, ACTOR, "human", ids)).toMatchObject({ ok: false, status: 400 });
+      expect(h.rows).toHaveLength(2);
+    }
+  });
+
   it("copie la page ET sa descendance, sous le même parent", async () => {
     const root = await create("Guide");
     const child = await create("Chapitre", root);

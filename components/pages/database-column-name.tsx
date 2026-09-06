@@ -51,9 +51,10 @@ export function DatabaseColumnName({
     setBase(database);
     setDraft(name);
     cancelled.current = false;
+    saving.current = false;
     setEditing(true);
   };
-  const save = async () => {
+  const save = () => {
     if (saving.current || cancelled.current) return;
     const next = draft.trim();
     if (!next || next === name) {
@@ -62,14 +63,14 @@ export function DatabaseColumnName({
     }
     saving.current = true;
     const schema = base.database_schema ?? [];
-    const ok = property
-      ? await saveSchema(
+    setEditing(false);
+    const request = property
+      ? saveSchema(
           base,
           schema.map((p) => (p.id === property.id ? { ...p, name: next } : p)),
         )
-      : await saveSchema(base, schema, next);
-    saving.current = false;
-    if (ok) setEditing(false);
+      : saveSchema(base, schema, next);
+    void request;
   };
   if (editing)
     return (

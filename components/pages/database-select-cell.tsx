@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem, CommandSeparator } from "mangue-ui";
 import { Settings2 } from "lucide-react";
@@ -56,13 +56,13 @@ export function DatabaseSelectCell({
   empty?: string;
 }) {
   const t = useTranslations("PageDatabase");
-  const { saveSchema, saveValue, pending } = usePageDatabase(projectId);
+  const { saveSchema, saveValue } = usePageDatabase(projectId);
   const [open, setOpen] = useState(false);
   const [manage, setManage] = useState(false);
   const [query, setQuery] = useState("");
-  const busy = useRef(false);
   const value = page.property_values?.[property.id] ?? null;
   const expected = useRef(value);
+  useEffect(() => { expected.current = value; }, [value]);
   const selected = Array.isArray(value)
     ? value
     : typeof value === "string"
@@ -70,12 +70,11 @@ export function DatabaseSelectCell({
       : [];
   const options = property.options ?? [];
   const changeOpen = (next: boolean) => {
-    if (busy.current || pending) return;
     expected.current = value;
     setOpen(next);
     setQuery("");
   };
-  const choose = async (id: string) => {
+  const choose = (id: string) => {
     const previous = expected.current;
     const ids = Array.isArray(previous)
       ? previous
@@ -90,11 +89,10 @@ export function DatabaseSelectCell({
         : ids.includes(id)
           ? ids.filter((v) => v !== id)
           : [...ids, id];
-    if (await saveValue(page, property.id, next, previous)) {
-      expected.current = next;
-      if (property.type === "select") setOpen(false);
-      setQuery((current) => (current === query ? "" : current));
-    }
+    expected.current = next;
+    if (property.type === "select") setOpen(false);
+    setQuery("");
+    void saveValue(page, property.id, next, previous);
   };
   const trigger = (
     <button
@@ -136,16 +134,8 @@ export function DatabaseSelectCell({
               key={option.id}
               value={option.id}
               keywords={[option.name]}
-              disabled={pending || busy.current}
               {...checkedProps(selected.includes(option.id))}
-              onSelect={() => {
-                if (!busy.current) {
-                  busy.current = true;
-                  void choose(option.id).finally(() => {
-                    busy.current = false;
-                  });
-                }
-              }}
+              onSelect={() => choose(option.id)}
             >
               <OptionBadge
                 option={option}
@@ -164,28 +154,10 @@ export function DatabaseSelectCell({
             create={{
               labelFor: (name) => t("createOption", { name }),
               onCreate: async (name) => {
-                if (busy.current || pending) return;
-                busy.current = true;
-                try {
-                  const option = {
-                    id: crypto.randomUUID(),
-                    name,
-                    color: CATEGORY_COLORS[0],
-                  };
-                  if (
-                    await saveSchema(
-                      database,
-                      (database.database_schema ?? []).map((p) =>
-                        p.id === property.id
-                          ? { ...p, options: [...options, option] }
-                          : p,
-                      ),
-                    )
-                  )
-                    await choose(option.id);
-                } finally {
-                  busy.current = false;
-                }
+                const option = { id: crypto.randomUUID(), name, color: CATEGORY_COLORS[0] };
+                void saveSchema(database, (database.database_schema ?? []).map((p) =>
+                  p.id === property.id ? { ...p, options: [...options, option] } : p));
+                choose(option.id);
               },
             }}
           />

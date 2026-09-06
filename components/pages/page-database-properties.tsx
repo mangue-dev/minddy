@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Checkbox } from "mangue-ui";
 import { DateTimePicker } from "@/components/date-time-picker";
@@ -40,22 +40,21 @@ export function DatabasePropertyCell({
 }) {
   const t = useTranslations("PageDatabase");
   const format = useFormatter();
-  const { saveValue, pending } = usePageDatabase(projectId);
+  const { saveValue } = usePageDatabase(projectId);
   const { members } = useMembersQuery(projectId, property.type === "people");
   const value = databasePropertyValue(page, property);
   const [open, setOpen] = useState(false);
-  const [expected, setExpected] = useState<DatabaseValue>(value);
+  const expected = useRef<DatabaseValue>(value);
+  useEffect(() => { expected.current = value; }, [value]);
   const changeOpen = (next: boolean) => {
-    if (pending) return;
     setOpen(next);
-    setExpected(value);
+    expected.current = value;
   };
-  const save = async (next: DatabaseValue, close = true) => {
-    if (pending) return;
-    if (await saveValue(page, property.id, next, expected)) {
-      setExpected(next);
-      if (close) setOpen(false);
-    }
+  const save = (next: DatabaseValue, close = true) => {
+    const previous = expected.current;
+    expected.current = next;
+    if (close) setOpen(false);
+    void saveValue(page, property.id, next, previous);
   };
   const label = t("editProperty", { name: property.name });
   const emptyValue = table ? "" : t("emptyValue");
@@ -102,7 +101,6 @@ export function DatabasePropertyCell({
       <Checkbox
         aria-label={property.name}
         checked={value === true}
-        disabled={pending}
         className={table ? "after:inset-x-0 after:inset-y-0" : undefined}
         onCheckedChange={(checked) =>
           void saveValue(page, property.id, checked === true)
