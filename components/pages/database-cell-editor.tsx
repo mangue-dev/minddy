@@ -52,6 +52,8 @@ export function DatabaseCellEditor({
     if (!open) return;
     const place = () => {
       const anchor = trigger.current?.getBoundingClientRect();
+      const panel = trigger.current?.closest<HTMLElement>("[role=dialog]");
+      const panelBox = panel?.getBoundingClientRect();
       const surface = trigger.current
         ?.closest<HTMLElement>("[data-database-scroll]")
         ?.getBoundingClientRect();
@@ -62,29 +64,43 @@ export function DatabaseCellEditor({
       const y = viewport?.offsetTop ?? 0;
       const width = viewport?.width ?? window.innerWidth;
       const height = viewport?.height ?? window.innerHeight;
+      const leftEdge = Math.max(x, panelBox?.left ?? x) + 8;
+      const rightEdge = Math.min(x + width, panelBox?.right ?? x + width) - 8;
+      const topEdge = Math.max(y, panelBox?.top ?? y) + 8;
+      const bottomEdge =
+        Math.min(y + height, panelBox?.bottom ?? y + height) - 8;
       const editorWidth = Math.min(
         Math.max(anchor.width + 24, 240),
-        width - 16,
+        rightEdge - leftEdge,
       );
       field.style.width = `${editorWidth}px`;
       field.style.height = "0px";
       const editorHeight = Math.min(
         Math.max(42, field.scrollHeight + 2),
-        Math.min(480, Math.max(42, height - 16)),
+        Math.min(480, Math.max(42, bottomEdge - topEdge)),
       );
       field.style.height = `${editorHeight}px`;
       setGeometry({
-        left: Math.max(
-          x + 8,
-          Math.min(
-            Math.max(anchor.left - 1, surface?.left ?? x + 8),
-            x + width - editorWidth - 8,
-          ),
-        ),
-        top: Math.max(
-          y + 8,
-          Math.min(anchor.top - 1, y + height - editorHeight - 8),
-        ),
+        // Dialogs position the portal locally, including drawers with will-change: transform.
+        left:
+          Math.max(
+            leftEdge,
+            Math.min(
+              Math.max(anchor.left - 1, surface?.left ?? leftEdge),
+              rightEdge - editorWidth,
+            ),
+          ) -
+          (panelBox?.left ?? 0) +
+          (panel?.scrollLeft ?? 0) -
+          (panel?.clientLeft ?? 0),
+        top:
+          Math.max(
+            topEdge,
+            Math.min(anchor.top - 1, bottomEdge - editorHeight),
+          ) -
+          (panelBox?.top ?? 0) +
+          (panel?.scrollTop ?? 0) -
+          (panel?.clientTop ?? 0),
         width: editorWidth,
         height: editorHeight,
       });
@@ -153,7 +169,12 @@ export function DatabaseCellEditor({
             data-database-cell-editor
             inputMode={numeric ? "decimal" : "text"}
             className="fixed z-[100] resize-none rounded-sm border border-ring bg-background px-2 py-2 text-sm leading-6 shadow-lg outline-none"
-            style={geometry}
+            style={{
+              ...geometry,
+              position: trigger.current?.closest("[role=dialog]")
+                ? "absolute"
+                : "fixed",
+            }}
             maxLength={numeric ? 320 : 2000}
             value={draft}
             readOnly={saving}
@@ -169,6 +190,7 @@ export function DatabaseCellEditor({
               if (event.nativeEvent.isComposing) return;
               if (event.key === "Escape") {
                 event.preventDefault();
+                event.stopPropagation();
                 if (!busy.current) {
                   closing.current = true;
                   setOpen(false);

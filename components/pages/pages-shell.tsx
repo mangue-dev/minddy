@@ -266,7 +266,14 @@ export function PagesShell() {
       </div>
     </div>
     <SidePanel open={!!validPreview} onOpenChange={(open) => { if (!open) void leavePreview(); }}>
-      <SidePanelContent className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0" onInteractOutside={keepOverlayOpenForPopper}>
+      <SidePanelContent
+        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0"
+        onInteractOutside={keepOverlayOpenForPopper}
+        onEscapeKeyDown={(event) => {
+          if (event.target instanceof HTMLElement && event.target.closest("[data-database-cell-editor]"))
+            event.preventDefault();
+        }}
+      >
         <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
           <SidePanelTitle className="sr-only">{validPreview?.title || tDatabase("newEntry")}</SidePanelTitle><div className="flex-1" />
           <Button variant="ghost" size="sm" onClick={() => void leavePreview(true)}><Maximize2 className="size-3.5" />{tDatabase("extend")}</Button>

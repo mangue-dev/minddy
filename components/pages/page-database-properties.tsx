@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import {
-  Button,
-  Checkbox,
-  Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "mangue-ui";
+import { Checkbox } from "mangue-ui";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchMultiSelect } from "@/components/search-select";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
@@ -19,8 +12,6 @@ import { displayName } from "@/lib/display-name";
 import { usePageDatabase } from "@/lib/use-page-database";
 import {
   databasePropertyValue,
-  isDatabaseNumberDraft,
-  parseDatabaseNumber,
   type DatabaseProperty,
   type DatabaseValue,
 } from "@/lib/page-databases";
@@ -53,13 +44,11 @@ export function DatabasePropertyCell({
   const { members } = useMembersQuery(projectId, property.type === "people");
   const value = databasePropertyValue(page, property);
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState("");
   const [expected, setExpected] = useState<DatabaseValue>(value);
   const changeOpen = (next: boolean) => {
     if (pending) return;
     setOpen(next);
     setExpected(value);
-    setDraft(value == null ? "" : String(value));
   };
   const save = async (next: DatabaseValue, close = true) => {
     if (pending) return;
@@ -91,13 +80,17 @@ export function DatabasePropertyCell({
         className={triggerClass}
       />
     );
-  if (table && (property.type === "text" || property.type === "number"))
+  if (property.type === "text" || property.type === "number")
     return (
       <DatabaseCellEditor
         value={value}
         numeric={property.type === "number"}
         label={label}
-        className={triggerClass}
+        className={
+          table
+            ? triggerClass
+            : `${triggerClass} cursor-pointer whitespace-normal text-left [overflow-wrap:anywhere]`
+        }
         empty={t("emptyValue")}
         save={(next, base) => saveValue(page, property.id, next, base)}
       />
@@ -231,78 +224,7 @@ export function DatabasePropertyCell({
       />
     );
   }
-  return (
-    <Popover open={open} onOpenChange={changeOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={label}
-          className={
-            table
-              ? triggerClass
-              : `${triggerClass} whitespace-normal text-left [overflow-wrap:anywhere]`
-          }
-        >
-          {(typeof value === "string" || typeof value === "number") &&
-          value !== "" ? (
-            table ? (
-              String(value).slice(0, 160)
-            ) : (
-              value
-            )
-          ) : (
-            <span className="text-muted-foreground">{t("emptyValue")}</span>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-3">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const next =
-              property.type === "number"
-                ? parseDatabaseNumber(draft)
-                : draft || null;
-            if (next !== undefined) void save(next);
-          }}
-          className="space-y-3"
-        >
-          <label className="block space-y-2 text-sm font-medium">
-            <span>{property.name}</span>
-            <Input
-              placeholder={t("valuePlaceholder")}
-              maxLength={2000}
-              value={draft}
-              disabled={pending}
-              inputMode={property.type === "number" ? "decimal" : "text"}
-              onChange={(event) => {
-                if (
-                  property.type !== "number" ||
-                  isDatabaseNumberDraft(event.target.value)
-                )
-                  setDraft(event.target.value);
-              }}
-              autoFocus
-            />
-          </label>
-          <div className="flex justify-between gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={pending}
-              onClick={() => void save(null)}
-            >
-              {t("clearValue")}
-            </Button>
-            <Button type="submit" size="sm" disabled={pending}>
-              {t("save")}
-            </Button>
-          </div>
-        </form>
-      </PopoverContent>
-    </Popover>
-  );
+  return null;
 }
 
 export function PageDatabaseProperties({

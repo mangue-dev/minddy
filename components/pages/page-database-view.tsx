@@ -1088,6 +1088,7 @@ export function PageDatabaseView({
                           )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
+                            variant="destructive"
                             disabled={busy}
                             onSelect={() => setRemove(targets)}
                           >
