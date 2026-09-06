@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isDatabaseSchema } from "@/lib/page-databases";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
@@ -107,7 +109,10 @@ export type PageErrorKey =
   | "pageTooDeep"
   | "pageContentRefused"
   | "noFieldsToUpdate"
-  | "databaseError";
+  | "databaseError"
+  | "pageDatabaseInvalid"
+  | "pageDatabaseStale"
+  | "pageDatabaseMove";
 
 /** The title of a page: same ceiling as a ticket title (MIN-118). */
 const MAX_TITLE_LENGTH = 500;
@@ -135,7 +140,7 @@ const UUID_RE =
  * page by page, when opened.
  */
 const LIST_COLUMNS =
-  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
+  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed, database_schema, database_revision, property_values";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
@@ -543,6 +548,14 @@ export async function createPage({
   const service = getServiceClient();
   const parentId = typeof input.parent_id === "string" ? input.parent_id : null;
 
+  if (input.database_schema !== undefined && !isDatabaseSchema(input.database_schema)) {
+    return { ok: false, status: 400, errorKey: "pageDatabaseInvalid" };
+  }
+  if (input.database_schema !== undefined && parentId) {
+    const parent = await loadPage(service, parentId);
+    if (parent?.database_schema) return { ok: false, status: 400, errorKey: "pageDatabaseInvalid" };
+  }
+
   const all = await loadProjectPages(service, projectId);
   if (parentId) {
     // The parent must exist, belong to the SAME project and be alive: create
@@ -582,6 +595,7 @@ export async function createPage({
     project_id: projectId,
     parent_id: parentId,
     title: readTitle(input.title) ?? "",
+    database_schema: input.database_schema ?? null,
     icon: readIcon(input.icon),
     position: positionAtEnd(
       all.filter((p) => !p.deleted_at && (p.parent_id ?? null) === parentId)
@@ -678,10 +692,16 @@ export async function duplicatePage(
     live.filter((p) => (p.parent_id ?? null) === (page.parent_id ?? null))
   );
 
+  const sourceParent = page.parent_id ? await loadPage(service, page.parent_id) : null;
   const rows = family.flatMap((id) => {
     const source = byId.get(id);
     if (!source) return [];
     const root = id === pageId;
+    const parentSchema = (root ? sourceParent : byId.get(source.parent_id ?? ""))?.database_schema;
+    // Removed properties are not part of the copied database's visible schema.
+    const copiedValues = Object.fromEntries((parentSchema ?? []).flatMap((property) =>
+      source.property_values && property.id in source.property_values
+        ? [[property.id, source.property_values[property.id]]] : []));
     return [
       {
         id: idMap.get(id)!,
@@ -692,6 +712,8 @@ export async function duplicatePage(
         parent_id: root
           ? source.parent_id
           : (idMap.get(source.parent_id ?? "") ?? null),
+        database_schema: source.database_schema ?? null,
+        property_values: copiedValues,
         title: source.title,
         icon: source.icon,
         content: remapSubpages(source.content as PageDocJSON | null, idMap),
@@ -839,6 +861,12 @@ export async function updatePage({
       return { ok: false, status: 409, errorKey: "pageCycle" };
     }
 
+    if (nextParentId !== page.parent_id) {
+      const nextParent = nextParentId ? await loadPage(service, nextParentId) : null;
+      if (nextParent?.database_schema && (page.database_schema || Object.keys(page.property_values ?? {}).length > 0)) {
+        return { ok: false, status: 400, errorKey: "pageDatabaseMove" };
+      }
+    }
     patch.parent_id = nextParentId;
     if (!isPosition(input.position)) {
       patch.position = positionAtEnd(
@@ -872,7 +900,7 @@ export async function updatePage({
   // exactly the false attribution that MIN-277 exists to avoid.
   //
   // HISTORY only deals with the body - it is the only state that we
-  // puisse vouloir remonter.
+  // that a reader may want to restore.
   const writesDocument =
     patch.content !== undefined || patch.title !== undefined || "icon" in patch;
   if (writesDocument) Object.assign(patch, writtenBy(actorId, kind));

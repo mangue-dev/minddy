@@ -71,6 +71,7 @@ const VALUE_TRIGGER =
 export function DateTimePicker({
   value,
   onChange,
+  dateOnly = false,
   variant = "field",
   placeholder,
   className,
@@ -85,6 +86,8 @@ export function DateTimePicker({
   recurrence = null,
   onRecurrenceChange,
 }: {
+  /** Store a calendar date without a time or timezone. */
+  dateOnly?: boolean;
   value: string | null;
   onChange: (v: string | null) => void;
   variant?: Variant;
@@ -272,13 +275,13 @@ export function DateTimePicker({
   // prevents the card from displaying the past due date for a second before resetting.
   const commit = (d: Date) => {
     const resolved = isRecurring && recurrence ? startDueDate(d, recurrence) : d;
-    onChange(resolved.toISOString());
+    onChange(dateOnly ? `${resolved.getFullYear()}-${pad(resolved.getMonth() + 1)}-${pad(resolved.getDate())}` : resolved.toISOString());
   };
 
   const handleDaySelect = (day: Date | undefined) => {
     if (!day) return;
     const next = new Date(day);
-    if (timeEnabled) {
+    if (timeEnabled && !dateOnly) {
       next.setHours(
         selected ? selected.getHours() : DEFAULT_HOUR,
         selected ? selected.getMinutes() : 0,
@@ -504,7 +507,7 @@ export function DateTimePicker({
             locale={dfLocale}
           />
         </React.Suspense>
-        <div className="flex flex-col gap-2.5 border-t border-border pt-3">
+        {!dateOnly && <div className="flex flex-col gap-2.5 border-t border-border pt-3">
           <div className="flex items-center justify-between gap-3">
             <label htmlFor={switchId} className="text-sm text-muted-foreground">
               {t("addTime")}
@@ -535,7 +538,7 @@ export function DateTimePicker({
               {tRec("hint")}
             </p>
           )}
-        </div>
+        </div>}
         <div className="flex items-center justify-between">
           <button
             type="button"

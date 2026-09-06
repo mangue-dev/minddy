@@ -195,3 +195,26 @@ describe("getPublicPageBundle", () => {
     expect(json).not.toContain("/api/projects/");
   });
 });
+
+
+describe("published page databases", () => {
+  it("keeps the published root schema when rendering an entry", async () => {
+    db.share = share({ include_children: true });
+    db.pages[0].database_schema = [{ id: "notes", name: "Summary", type: "text" }];
+    db.pages[1].property_values = { notes: "Release scope agreed" };
+    const entry = await getPublicPageBundle("tok", "kid");
+    expect(JSON.stringify(entry?.content)).toContain("Summary: Release scope agreed");
+    const database = await getPublicPageBundle("tok");
+    expect(JSON.stringify(database?.content)).toContain("Summary: Release scope agreed");
+    expect(JSON.stringify(database?.content)).toContain("/p/tok/kid");
+    expect(database?.pages[0]).not.toHaveProperty("database_schema");
+  });
+
+  it("does not expose entry values when publishing only the database", async () => {
+    db.pages[0].database_schema = [{ id: "notes", name: "Summary", type: "text" }];
+    db.pages[1].property_values = { notes: "Private entry value" };
+    const database = await getPublicPageBundle("tok");
+    expect(database?.content).toEqual({ type: "doc", content: [] });
+    expect(JSON.stringify(database)).not.toContain("Private entry value");
+  });
+});

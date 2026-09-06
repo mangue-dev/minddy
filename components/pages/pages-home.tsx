@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
 import { FileText, Plus } from "lucide-react";
 
+import { PageCreateMenu } from "./page-create-menu";
 import { EmptyScene } from "@/components/empty-scene";
 import type { PageSummary } from "@/lib/pages-api";
 import { pageHref, replacePagesHistory } from "@/lib/pages-navigation";
@@ -21,7 +22,7 @@ export function PagesHome({
   pages: PageSummary[];
   byId: Map<string, PageSummary>;
   loading: boolean;
-  onCreate: () => void;
+  onCreate: (database: boolean) => void;
 }) {
   const t = useTranslations("Pages");
   const restored = useRef(false);
@@ -45,10 +46,10 @@ export function PagesHome({
           icon={FileText}
           title={pages.length === 0 ? t("emptyTitle") : t("pickTitle")}
         >
-          <Button onClick={onCreate}>
+          <PageCreateMenu onCreate={onCreate} trigger={<Button>
             <Plus className="size-4" />
             {t("newPage")}
-          </Button>
+          </Button>} />
         </EmptyScene>
       </div>
     </div>

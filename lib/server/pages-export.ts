@@ -1,5 +1,9 @@
 import "server-only";
 
+import { pageDatabaseDocument, type DatabaseDocumentPage } from "@/lib/page-database-document";
+import { databaseDocumentNames } from "./page-database-document";
+import { pageHref } from "@/lib/pages-navigation";
+
 import { zipSync, strToU8 } from "fflate";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -34,7 +38,7 @@ export type PageExportResult =
 /** How many page bodies a read brings back at once (MIN-348). */
 const BODY_BATCH = 50;
 
-interface PageRow {
+interface PageRow extends DatabaseDocumentPage {
   id: string;
   parent_id: string | null;
   title: string;
@@ -63,7 +67,7 @@ export async function exportPage({
   const service = getServiceClient();
   const { data: root } = await service
     .from("pages")
-    .select("id, project_id, parent_id, title, icon, content, position")
+    .select("id, project_id, parent_id, title, icon, content, position, database_schema, property_values")
     .eq("id", pageId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -74,10 +78,23 @@ export async function exportPage({
 
   const rootRow = root as unknown as PageRow;
   if (!branch) {
+    let context: DatabaseDocumentPage[] = [rootRow];
+    if (rootRow.database_schema != null) {
+      const { data, error } = await service.from("pages")
+        .select("id, parent_id, title, property_values, position")
+        .eq("parent_id", pageId).eq("project_id", root.project_id).is("deleted_at", null).order("position");
+      if (error) return { ok: false, status: 500, errorKey: "databaseError" };
+      context = [rootRow, ...(data ?? []) as DatabaseDocumentPage[]];
+    } else if (Object.keys(rootRow.property_values ?? {}).length && rootRow.parent_id) {
+      const { data: parent } = await service.from("pages").select("id, parent_id, title, database_schema")
+        .eq("id", rootRow.parent_id).eq("project_id", root.project_id).maybeSingle();
+      if (parent) context.push(parent as DatabaseDocumentPage);
+    }
+    const names = await databaseDocumentNames(context);
     const markdown = await pageToMarkdownServer({
       title: rootRow.title,
       icon: rootRow.icon,
-      content: (rootRow.content ?? null) as never,
+      content: pageDatabaseDocument(rootRow, context, names, (id) => pageHref(root.project_id, id)) as never,
     });
     return {
       ok: true,
@@ -95,7 +112,7 @@ export async function exportPage({
   // also what limits the size of ONE PostgREST response.
   const { data: skeleton, error } = await service
     .from("pages")
-    .select("id, parent_id, title, icon, position")
+    .select("id, parent_id, title, icon, position, database_schema, property_values")
     .eq("project_id", root.project_id as string)
     .is("deleted_at", null)
     .order("position", { ascending: true });
@@ -127,6 +144,8 @@ export async function exportPage({
     }
   }
 
+  const context = all.filter((page) => inBranch.has(page.id) || page.id === rootRow.parent_id);
+  const names = await databaseDocumentNames(context);
   const pages: ExportInputPage[] = [];
   for (const page of branchPages) {
     pages.push({
@@ -139,7 +158,7 @@ export async function exportPage({
       markdown: await pageToMarkdownServer({
         title: page.title,
         icon: page.icon,
-        content: (bodies.get(page.id) ?? null) as never,
+        content: pageDatabaseDocument({ ...page, content: bodies.get(page.id) }, context, names, (id) => pageHref(root.project_id, id)) as never,
       }),
     });
   }

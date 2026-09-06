@@ -95,6 +95,9 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   pageTooDeep: "page_too_large",
   pageContentRefused: "invalid_params",
   noFieldsToUpdate: "invalid_params",
+  pageDatabaseInvalid: "invalid_params",
+  pageDatabaseMove: "invalid_params",
+  pageDatabaseStale: "page_stale",
   databaseError: "database_error",
 };
 
@@ -120,6 +123,9 @@ const MESSAGES: Record<PageErrorKey, string> = {
     "The page body carries a block minddy does not know, or a link whose " +
     "protocol it refuses (only http, https and mailto are stored).",
   noFieldsToUpdate: "Nothing to update: pass a title, an icon or a markdown body.",
+  pageDatabaseInvalid: "Invalid database property or value.",
+  pageDatabaseMove: "This page cannot move into another database with its current properties.",
+  pageDatabaseStale: "This property changed. Read its current value and retry.",
   databaseError: "Database error.",
 };
 

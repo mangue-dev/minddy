@@ -101,11 +101,12 @@ export async function fetchPageApi(
 }
 
 export interface CreatePageInput {
+  database_schema?: import("./page-databases").DatabaseProperty[];
   /** Client-assigned identity used by the optimistic page creation path. */
   id?: string;
   title?: string;
   icon?: string | null;
-  /** Sous-page : l'id du parent. Absent = page racine. */
+  /** Parent page ID. Omit to create a root page. */
   parent_id?: string | null;
   content?: unknown;
   /**

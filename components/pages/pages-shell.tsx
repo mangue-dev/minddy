@@ -1,32 +1,23 @@
 "use client";
 
-// The PAGES tab of a project (MIN-270): the secondary bar and its tree.
-//
-// It lives in the LAYOUT of the segment, not in each of its pages. Two reasons,
-// and the second is enough: the tree does not go back from one page to another (state
-// opening, scroll position, query), and the secondary bar does not
-// therefore never disappears for the duration of a navigation - it is she who holds the
-// sidebar primaire au rail.
-//
-// What is NOT at the bottom of the tree: a “Trash” entry. The plan in
-// anticipated a ; it was a duplicate. The application trash (/trash)
-// already collects deleted pages, with their project and purge time,
-// next to tickets and objectives — a second path to the same list
-// above all, we have to ask ourselves which of the two is telling the truth.
+// The persistent page tree and document surfaces for the project.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
   Skeleton,
   cn,
   toast,
+  SidePanel, SidePanelContent, SidePanelTitle,
 } from "mangue-ui";
-import { Plus } from "lucide-react";
+import { Plus, Maximize2, X } from "lucide-react";
 
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
+import { PageCreateMenu } from "@/components/pages/page-create-menu";
+import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { PageView } from "@/components/pages/page-view";
 import { PagesHome } from "@/components/pages/pages-home";
 import { PagePresenceProvider } from "@/components/pages/page-presence";
@@ -43,11 +34,6 @@ import {
 } from "@/lib/pages-navigation";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export function PagesShell() {
   const t = useTranslations("Pages");
@@ -55,6 +41,10 @@ export function PagesShell() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tDatabase = useTranslations("PageDatabase");
+  const previewFlush = useRef<() => Promise<boolean>>(async () => true);
+  const registerPreviewFlush = useCallback((flush: () => Promise<boolean>) => { previewFlush.current = flush; }, []);
 
   const base = pagesHref(projectId);
   const activePageId = useMemo(() => {
@@ -67,10 +57,22 @@ export function PagesShell() {
     usePagesQuery(projectId);
   const [query, setQuery] = useState("");
 
-  const openPage = useCallback(
-    (pageId: string) => pushPagesHistory(pageHref(projectId, pageId)),
-    [projectId]
-  );
+  const previewId = searchParams.get("entry");
+  const preview = previewId ? byId.get(previewId) : undefined;
+  const validPreview = preview?.parent_id === activePageId && byId.get(activePageId ?? "")?.database_schema != null ? preview : undefined;
+  const openPage = useCallback((pageId: string, databaseId?: string) => {
+    const page = byId.get(pageId);
+    const parent = databaseId ? byId.get(databaseId) : page?.parent_id ? byId.get(page.parent_id) : undefined;
+    const href = parent?.database_schema != null
+      ? `${pageHref(projectId, parent.id)}?entry=${pageId}`
+      : pageHref(projectId, pageId);
+    if (validPreview) void previewFlush.current().then((saved) => { if (saved) pushPagesHistory(href); });
+    else pushPagesHistory(href);
+  }, [projectId, byId, validPreview]);
+  const leavePreview = async (extend = false) => {
+    if (!(await previewFlush.current())) return;
+    pushPagesHistory(pageHref(projectId, extend && validPreview ? validPreview.id : activePageId!));
+  };
 
   // The open page is retained HERE rather than in `PageView`: the shell
   // crosses navigations, so it sees the LAST state of the tab, y
@@ -81,16 +83,18 @@ export function PagesShell() {
   }, [projectId, activePageId]);
 
   const create = useCallback(
-    async (parentId: string | null) => {
+    async (parentId: string | null, database = false) => {
       try {
         // The position is calculated by the SERVER (end of siblings): it is
         // the only one to see the pages that this client does not yet have.
-        const page = await createPage({ parent_id: parentId });
+        const page = await createPage({ parent_id: parentId, ...(database ? { database_schema: (["date", "people", "checkbox"] as const).map((type) => ({ id: crypto.randomUUID(), name: tDatabase(type), type })) } : {}) });
         // It is in base, but it is not yet acquired: exit without it
         // writing a letter destroys it (lib/pages-draft.ts). Create a page
         // is not saving it.
-        markDraftPage(page.id);
-        openPage(page.id);
+        if (!database && !(parentId && byId.get(parentId)?.database_schema)) markDraftPage(page.id);
+        if (parentId && byId.get(parentId)?.database_schema) {
+          pushPagesHistory(`${pageHref(projectId, parentId)}?entry=${page.id}`);
+        } else openPage(page.id);
         void page.settled.catch((err: unknown) => {
           forgetDraftPage(page.id);
           if (window.location.pathname === pageHref(projectId, page.id)) {
@@ -102,7 +106,7 @@ export function PagesShell() {
         toast.error(err instanceof Error ? err.message : t("createFailed"));
       }
     },
-    [base, createPage, openPage, projectId, t]
+    [base, createPage, openPage, projectId, t, byId, tDatabase]
   );
 
   const move = useCallback(
@@ -189,7 +193,7 @@ export function PagesShell() {
   return (
     // The PRESENCE is open here, and not in the page: the shell crosses
     // navigations, open page no (MIN-271).
-    <PagePresenceProvider projectId={projectId} pageId={activePageId}>
+    <PagePresenceProvider projectId={projectId} pageId={validPreview?.id ?? activePageId}>
     <div className="flex h-full min-h-0">
       {bare ? null : (
       <SecondarySidebar
@@ -202,20 +206,10 @@ export function PagesShell() {
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
-                aria-label={t("newPage")}
-                onClick={() => void create(null)}
-              >
-                <Plus className="size-[18px]" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("newPage")}</TooltipContent>
-          </Tooltip>
+          <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
+            <Button variant="ghost" size="icon" className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+              aria-label={tDatabase("create")}><Plus className="size-[18px]" /></Button>
+          } />
         }
       >
         {loading ? (
@@ -259,18 +253,28 @@ export function PagesShell() {
         )}
       >
         {activePageId ? (
-          <PageView key={activePageId} projectId={projectId} pageId={activePageId} />
+          <PageView key={activePageId} projectId={projectId} pageId={activePageId} active={!validPreview} onNavigate={openPage} />
         ) : (
           <PagesHome
             projectId={projectId}
             pages={pages}
             byId={byId}
             loading={loading}
-            onCreate={() => void create(null)}
+            onCreate={(database) => void create(null, database)}
           />
         )}
       </div>
     </div>
+    <SidePanel open={!!validPreview} onOpenChange={(open) => { if (!open) void leavePreview(); }}>
+      <SidePanelContent className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0" onInteractOutside={keepOverlayOpenForPopper}>
+        <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
+          <SidePanelTitle className="sr-only">{validPreview?.title || tDatabase("newEntry")}</SidePanelTitle><div className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={() => void leavePreview(true)}><Maximize2 className="size-3.5" />{tDatabase("extend")}</Button>
+          <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} onClick={() => void leavePreview()}><X className="size-4" /></Button>
+        </div>
+        {validPreview && <PageView panel key={validPreview.id} projectId={projectId} pageId={validPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
+      </SidePanelContent>
+    </SidePanel>
     </PagePresenceProvider>
   );
 }

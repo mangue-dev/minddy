@@ -13,6 +13,9 @@ export function buildOptimisticPage(
   return {
     id: input.id ?? crypto.randomUUID(),
     project_id: projectId,
+    database_schema: input.database_schema ?? null,
+    database_revision: 0,
+    property_values: {},
     parent_id: parentId,
     title: input.title ?? "",
     icon: input.icon ?? null,

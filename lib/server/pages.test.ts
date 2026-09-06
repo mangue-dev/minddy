@@ -1628,3 +1628,57 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     expect(announce.notifyPageMentions).not.toHaveBeenCalled();
   });
 });
+
+describe("database page lifecycle", () => {
+  const property = { id: "49900000-0000-4000-8000-000000000010", name: "Date", type: "date" };
+  async function database() {
+    const result = await createPage({ projectId: PROJECT, actorId: ACTOR, input: { title: "Journal", database_schema: [property] } });
+    if (!result.ok) throw new Error(result.errorKey);
+    return result.page;
+  }
+  it("persists database schemas in both the page and the tree", async () => {
+    const page = await database();
+    expect(page.database_schema).toEqual([property]);
+    const result = await listPages(PROJECT, ACTOR);
+    expect(result.ok && result.pages[0].database_schema).toEqual([property]);
+  });
+  it("refuses invalid schemas and database records that are databases", async () => {
+    expect(await createPage({ projectId: PROJECT, actorId: ACTOR, input: { database_schema: [{ ...property, type: "formula" }] } })).toMatchObject({ ok: false, status: 400 });
+    const page = await database();
+    expect(await createPage({ projectId: PROJECT, actorId: ACTOR, input: { parent_id: page.id, database_schema: [] } })).toMatchObject({ ok: false, status: 400 });
+  });
+  it("copies database entries, their bodies, and their visible property values", async () => {
+    const page = await database();
+    const entryId = await create("Entry", page.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06", removed: "Old value" }, content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Journal details" }] }] } });
+    const result = await duplicatePage(page.id, ACTOR);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.page.database_schema).toEqual([property]);
+    const child = h.rows.find((row) => row.parent_id === result.page.id);
+    expect(child?.property_values).toEqual({ [property.id]: "2026-09-06" });
+    expect(child?.content).toEqual({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Journal details" }] }] });
+    expect(rowOf(entryId).parent_id).toBe(page.id);
+  });
+  it("refuses cross-database moves that would silently lose properties", async () => {
+    const first = await database();
+    const second = await database();
+    const entryId = await create("Entry", first.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06" } });
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: second.id, title: "Changed" } })).toMatchObject({ ok: false, errorKey: "pageDatabaseMove" });
+    expect(rowOf(entryId).title).toBe("Entry");
+    expect(rowOf(entryId).parent_id).toBe(first.id);
+  });
+  it("keeps database metadata and entry values through recursive trash and restore", async () => {
+    const page = await database();
+    const entryId = await create("Entry", page.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06" } });
+    await trashPage(page.id, ACTOR);
+    expect(rowOf(entryId).deleted_at).not.toBeNull();
+    await restorePage(page.id, ACTOR);
+    const entry = await getPage(entryId, ACTOR);
+    expect(entry.ok && entry.page.property_values).toEqual({ [property.id]: "2026-09-06" });
+    const restored = await getPage(page.id, ACTOR);
+    expect(restored.ok && restored.page.database_schema).toEqual([property]);
+  });
+});

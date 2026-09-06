@@ -1,5 +1,8 @@
 import "server-only";
 
+import { pageDatabaseDocument, type DatabaseDocumentPage } from "@/lib/page-database-document";
+import { databaseDocumentNames } from "./page-database-document";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { signedAttachmentUrl } from "@/lib/server/attachments";
 import { isInlineSafeMimeType } from "@/lib/inline-safe";
@@ -94,14 +97,16 @@ export async function getPublicPageBundle(
   // All published. Without `include_children`, it fits on one page — and that's
   // the guarantee that counts: no child's title is even READ.
   let pages: PublicPageNode[] = [root];
+  let databasePages: DatabaseDocumentPage[] = [ctx.page];
   if (ctx.share.include_children) {
     const { data } = await service
       .from("pages")
-      .select("id, parent_id, title, icon, position")
+      .select("id, parent_id, title, icon, position, database_schema, property_values")
       .eq("project_id", ctx.project.id)
       .is("deleted_at", null);
     const all = (data ?? []) as Array<PublicPageNode & { position: string }>;
     const inBranch = descendantIds(all, root.id);
+    databasePages = all.filter((page) => page.id === root.id || inBranch.includes(page.id));
     pages = [
       root,
       ...all
@@ -115,14 +120,17 @@ export async function getPublicPageBundle(
 
   const { data: pageRow } = await service
     .from("pages")
-    .select("id, parent_id, title, icon, content, updated_at")
+    .select("id, parent_id, title, icon, content, updated_at, database_schema, property_values")
     .eq("id", targetId)
     .is("deleted_at", null)
     .maybeSingle();
   if (!pageRow) return null;
 
+  databasePages = databasePages.map((page) => page.id === targetId ? pageRow as DatabaseDocumentPage : page);
   const publishedIds = new Set(pages.map((p) => p.id));
-  const content = await signPublicFileUrls(pageRow.content, publishedIds);
+  const names = await databaseDocumentNames(databasePages);
+  const projected = pageDatabaseDocument(pageRow as DatabaseDocumentPage, databasePages, names, (id) => `/p/${encodeURIComponent(token)}/${encodeURIComponent(id)}`);
+  const content = await signPublicFileUrls(projected, publishedIds);
 
   return {
     share: ctx.share,
