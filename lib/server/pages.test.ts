@@ -48,6 +48,8 @@ const h = vi.hoisted(() => ({
   access: new Set<string>(),
   /** Optional edit injected between discardPage's initial read and its RPC. */
   beforeDiscard: null as (() => void) | null,
+  beforeRestore: null as (() => void) | null,
+  updateError: null as { code: string; message: string } | null,
   seq: 0,
 }));
 
@@ -75,7 +77,7 @@ vi.mock("@/lib/supabase-service", () => {
     const all = () => (pages ? h.rows : h.versions);
     const matching = () => all().filter((row) => filters.every((f) => f(row)));
 
-    const run = (): { data: Record<string, unknown>[] | null; error: null } => {
+    const run = (): { data: Record<string, unknown>[] | null; error: { code: string; message: string } | null } => {
       if (mode === "insert") {
         // An object OR an array: duplication writes an entire branch of a
         // shot (MIN-272), and a half-posed copy would be a false tree.
@@ -116,6 +118,11 @@ vi.mock("@/lib/supabase-service", () => {
       }
       const rows = matching();
       if (mode === "update") {
+        if (h.updateError && "parent_id" in payload) {
+          const error = h.updateError;
+          h.updateError = null;
+          return { data: null, error };
+        }
         for (const row of rows) Object.assign(row, payload);
       }
       if (mode === "delete") {
@@ -194,14 +201,31 @@ vi.mock("@/lib/supabase-service", () => {
       return { data: data?.[0] ?? null, error: data?.length ? null : new Error("no row") };
     };
     query.maybeSingle = async () => {
-      const { data } = run();
-      return { data: data?.[0] ?? null, error: null };
+      const { data, error } = run();
+      return { data: data?.[0] ?? null, error };
     };
     query.then = (resolve: (value: unknown) => unknown) => resolve(run());
     return query;
   };
 
   const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name === "restore_page_guarded") {
+      h.beforeRestore?.();
+      h.beforeRestore = null;
+      const row = h.rows.find((candidate) => candidate.id === args.p_page_id && candidate.project_id === args.p_project_id);
+      if (!row?.deleted_at) return { data: { status: "not_found" }, error: null };
+      const parent = h.rows.find((candidate) => candidate.id === row.parent_id);
+      const lift = !!row.parent_id && (!parent || !!parent.deleted_at);
+      if (lift && (parent?.database_schema != null || Object.keys(row.property_values ?? {}).length > 0)) {
+        return { data: { status: "parent_required" }, error: null };
+      }
+      const family = h.rows.filter((candidate) => candidate.id === row.id || candidate.deleted_root_id === row.id);
+      const parentBlockRemoved = row.parent_block_removed;
+      for (const member of family) Object.assign(member, { deleted_at: null, deleted_by: null, deleted_root_id: null });
+      if (lift) Object.assign(row, { parent_id: null, position: args.p_root_position });
+      row.parent_block_removed = false;
+      return { data: { status: "restored", restored: family.length, parent_id: lift ? null : parent?.id ?? null, parent_block_removed: parentBlockRemoved }, error: null };
+    }
     if (name !== "discard_blank_page_guarded") {
       return { data: null, error: new Error(`unexpected RPC: ${name}`) };
     }
@@ -355,6 +379,8 @@ beforeEach(() => {
   h.versions = [];
   h.seq = 0;
   h.beforeDiscard = null;
+  h.beforeRestore = null;
+  h.updateError = null;
   h.access = new Set([PROJECT]);
   announce.recordPageEvent.mockClear();
   announce.notifyAgentPageWrite.mockClear();
@@ -1033,6 +1059,28 @@ describe("duplicatePage (MIN-272)", () => {
       .content.filter((node) => node.type === "subpage")
       .map((node) => node.attrs?.pageId ?? null));
 
+  it("uses validated client identities for the copied tree and its internal links", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapter", root);
+    rowOf(root).content = bodyCiting(child);
+    const rootId = "49930000-0000-4000-8000-000000000001";
+    const childId = "49930000-0000-4000-8000-000000000002";
+    const result = await duplicatePage(root, ACTOR, "human", { [root]: rootId, [child]: childId });
+    expect(result).toMatchObject({ ok: true, page: { id: rootId } });
+    expect(rowOf(childId).parent_id).toBe(rootId);
+    expect(citedBy(rootId)).toEqual([childId]);
+  });
+
+  it("rejects invalid or repeated copy identities without inserting pages", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapter", root);
+    const id = "49930000-0000-4000-8000-000000000001";
+    for (const ids of [{ [root]: "invalid" }, { [root]: id, [child]: id }]) {
+      expect(await duplicatePage(root, ACTOR, "human", ids)).toMatchObject({ ok: false, status: 400 });
+      expect(h.rows).toHaveLength(2);
+    }
+  });
+
   it("copie la page ET sa descendance, sous le même parent", async () => {
     const root = await create("Guide");
     const child = await create("Chapitre", root);
@@ -1626,5 +1674,120 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
       )
     );
     expect(announce.notifyPageMentions).not.toHaveBeenCalled();
+  });
+});
+
+describe("database page lifecycle", () => {
+  const property = { id: "49900000-0000-4000-8000-000000000010", name: "Date", type: "date" };
+  async function database() {
+    const result = await createPage({ projectId: PROJECT, actorId: ACTOR, input: { title: "Journal", database_schema: [property] } });
+    if (!result.ok) throw new Error(result.errorKey);
+    return result.page;
+  }
+  it("persists database schemas in both the page and the tree", async () => {
+    const page = await database();
+    expect(page.database_schema).toEqual([property]);
+    const result = await listPages(PROJECT, ACTOR);
+    expect(result.ok && result.pages[0].database_schema).toEqual([property]);
+  });
+  it("refuses invalid schemas and database records that are databases", async () => {
+    expect(await createPage({ projectId: PROJECT, actorId: ACTOR, input: { database_schema: [{ ...property, type: "formula" }] } })).toMatchObject({ ok: false, status: 400 });
+    const page = await database();
+    expect(await createPage({ projectId: PROJECT, actorId: ACTOR, input: { parent_id: page.id, database_schema: [] } })).toMatchObject({ ok: false, status: 400 });
+  });
+  it("copies database entries, their bodies, and their visible property values", async () => {
+    const page = await database();
+    Object.assign(rowOf(page.id), { database_title_name: "Report" });
+    const entryId = await create("Entry", page.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06", removed: "Old value" }, content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Journal details" }] }] } });
+    const result = await duplicatePage(page.id, ACTOR);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.page.database_schema).toEqual([property]);
+    expect(result.page.database_title_name).toBe("Report");
+    const child = h.rows.find((row) => row.parent_id === result.page.id);
+    expect(child?.property_values).toEqual({ [property.id]: "2026-09-06" });
+    expect(child?.content).toEqual({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Journal details" }] }] });
+    expect(rowOf(entryId).parent_id).toBe(page.id);
+  });
+  it("refuses cross-database moves that would silently lose properties", async () => {
+    const first = await database();
+    const second = await database();
+    const entryId = await create("Entry", first.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06" } });
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: second.id, title: "Changed" } })).toMatchObject({ ok: false, errorKey: "pageDatabaseMove" });
+    expect(rowOf(entryId).title).toBe("Entry");
+    expect(rowOf(entryId).parent_id).toBe(first.id);
+  });
+  it.each(["root", "document"])("refuses populated entry moves to a %s without changing the page", async (destination) => {
+    const source = await database();
+    const parentId = destination === "root" ? null : await create("Document");
+    const entryId = await create("Entry", source.id);
+    const values = { [property.id]: "2026-09-06" };
+    Object.assign(rowOf(entryId), { property_values: values });
+    const before = { ...rowOf(entryId) };
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: parentId, title: "Changed" } })).toMatchObject({ ok: false, status: 400, errorKey: "pageDatabaseMove" });
+    expect(rowOf(entryId)).toMatchObject(before);
+  });
+  it("allows populated entries to reorder within their database", async () => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06" } });
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: source.id, position: "z" } })).toMatchObject({ ok: true });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id, position: "z", property_values: { [property.id]: "2026-09-06" } });
+  });
+  it("reports a move conflict when the database rejects a concurrent cell edit", async () => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    h.updateError = { code: "23514", message: "Database entries with values cannot change parent" };
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: null, title: "Changed" } })).toMatchObject({ ok: false, status: 409, errorKey: "pageDatabaseMove" });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id, title: "Entry" });
+  });
+  it("allows empty entries to move out and return to their database", async () => {
+    const source = await database();
+    const documentId = await create("Document");
+    const entryId = await create("Entry", source.id);
+    Object.assign(rowOf(entryId), { property_values: {} });
+    for (const parentId of [null, source.id, documentId, source.id]) {
+      expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: parentId } })).toMatchObject({ ok: true });
+      expect(rowOf(entryId)).toMatchObject({ parent_id: parentId, property_values: {} });
+    }
+  });
+  it("keeps database metadata and entry values through recursive trash and restore", async () => {
+    const page = await database();
+    const entryId = await create("Entry", page.id);
+    Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06" } });
+    await trashPage(page.id, ACTOR);
+    expect(rowOf(entryId).deleted_at).not.toBeNull();
+    await restorePage(page.id, ACTOR);
+    const entry = await getPage(entryId, ACTOR);
+    expect(entry.ok && entry.page.property_values).toEqual({ [property.id]: "2026-09-06" });
+    const restored = await getPage(page.id, ACTOR);
+    expect(restored.ok && restored.page.database_schema).toEqual([property]);
+  });
+  it.each([{}, { "49900000-0000-4000-8000-000000000010": "2026-09-06" }])("restores the database before an independently trashed entry with values %j", async (values) => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    const childId = await create("Notes", entryId);
+    Object.assign(rowOf(entryId), { property_values: values });
+    await trashPage(entryId, ACTOR);
+    await trashPage(source.id, ACTOR);
+    const before = h.rows.map((row) => ({ ...row }));
+    expect(await restorePage(entryId, ACTOR)).toEqual({ ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" });
+    expect(h.rows).toEqual(before);
+    expect(await restorePage(source.id, ACTOR)).toEqual({ ok: true, restored: 1 });
+    expect(rowOf(entryId).deleted_at).not.toBeNull();
+    expect(await restorePage(entryId, ACTOR)).toEqual({ ok: true, restored: 2 });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id, property_values: values, deleted_at: null });
+    expect(rowOf(childId).deleted_at).toBeNull();
+  });
+  it("checks the parent again inside the restore transaction", async () => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    await trashPage(entryId, ACTOR);
+    h.beforeRestore = () => { rowOf(source.id).deleted_at = "2026-09-06T00:00:00Z"; };
+    expect(await restorePage(entryId, ACTOR)).toEqual({ ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id });
+    expect(rowOf(entryId).deleted_at).not.toBeNull();
   });
 });

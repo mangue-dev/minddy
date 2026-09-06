@@ -84,6 +84,7 @@ export interface TrashActor {
 
 export interface TrashItem {
   type: TrashType;
+  is_database?: boolean;
   id: string;
   /** Title of ticket/feedback/routine, name of project or objective. */
   title: string;
@@ -110,10 +111,15 @@ export function isBlankTrashPage(
     title?: string | null;
     icon?: string | null;
     content?: unknown;
+    database_schema?: unknown;
+    property_values?: Record<string, unknown>;
   },
   hasDescendants: boolean,
 ): boolean {
-  if (hasDescendants || row.title?.trim() || row.icon) return false;
+  if (
+    hasDescendants || row.database_schema != null ||
+    Object.keys(row.property_values ?? {}).length > 0 || row.title?.trim() || row.icon
+  ) return false;
   const blocks = (row.content as { content?: unknown[] } | null)?.content;
   if (!Array.isArray(blocks) || blocks.length === 0) return true;
   if (blocks.length > 1) return false;
@@ -132,6 +138,8 @@ type TrashErrorKey =
   | "feedbackNotFound"
   | "routineNotFound"
   | "pageNotFound"
+  | "pageDatabaseRestoreParent"
+  | "pageStale"
   | "ownerOnly"
   | "projectKeyAlreadyUsed"
   | "databaseError";
@@ -203,7 +211,9 @@ function toTrashResult(result: {
   errorKey: PageErrorKey;
 }): Extract<TrashResult, { ok: false }> {
   const errorKey: TrashErrorKey =
-    result.errorKey === "databaseError" ? "databaseError" : "pageNotFound";
+    result.errorKey === "databaseError" || result.errorKey === "pageDatabaseRestoreParent" || result.errorKey === "pageStale"
+      ? result.errorKey
+      : "pageNotFound";
   return { ok: false, status: result.status, errorKey };
 }
 
@@ -367,7 +377,7 @@ export async function listTrash(
       // page and its twenty subpages make ONE line to restore, not twenty.
       inProjects(
         "pages",
-        "id, project_id, deleted_at, deleted_by, title, icon, content, deleted_root_id",
+        "id, project_id, deleted_at, deleted_by, title, icon, content, database_schema, property_values, deleted_root_id",
         projectIds,
         "deleted_root_id"
       ),
@@ -460,6 +470,7 @@ export async function listTrash(
     ...visiblePageRows.map((row) => ({
       ...base(row),
       type: "page" as const,
+      is_database: row.database_schema != null,
       title: row.title ?? "",
       identifier: null,
     })),
@@ -486,6 +497,8 @@ interface TrashRow {
   title?: string | null;
   icon?: string | null;
   content?: unknown;
+  database_schema?: unknown;
+  property_values?: Record<string, unknown>;
   name?: string;
   key?: string;
   number?: number;
@@ -539,8 +552,8 @@ export async function restoreItem(
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
-  // A PAGE returns with everything that left with it, and goes back to the
-  // root if its parent is still trashed (MIN-266).
+  // Pages restore with their deletion family. Ordinary documents can return to
+  // the root; database entries require their parent database to be restored first.
   if (type === "page") {
     const result = await restorePage(id, actorId, kind);
     return result.ok ? { ok: true } : toTrashResult(result);

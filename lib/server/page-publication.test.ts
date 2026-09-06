@@ -23,6 +23,7 @@ const db = {
   pages: [] as Row[],
   project: null as Row | null,
   files: [] as Row[],
+  pageReads: [] as Array<{ columns: string; filters: Row }>,
 };
 
 const signed = vi.fn(async (_service: unknown, path: string) => `https://signed/${path}`);
@@ -39,8 +40,15 @@ vi.mock("@/lib/server/attachments", () => ({
 function table(name: string) {
   const filters: Record<string, unknown> = {};
   let ins: unknown[] | undefined;
+  let columns = "";
+  const recordRead = () => {
+    if (name === "pages") db.pageReads.push({ columns, filters: { ...filters } });
+  };
   const api = {
-    select: () => api,
+    select: (selected: string) => {
+      columns = selected;
+      return api;
+    },
     eq: (column: string, value: unknown) => {
       filters[column] = value;
       return api;
@@ -49,11 +57,19 @@ function table(name: string) {
       ins = values;
       return api;
     },
-    is: () => api,
+    is: (column: string, value: unknown) => {
+      filters[column] = value;
+      return api;
+    },
     order: () => api,
-    maybeSingle: async () => ({ data: single(name, filters) }),
-    then: (resolve: (value: { data: unknown; error: null }) => void) =>
-      resolve({ data: many(name, filters, ins), error: null }),
+    maybeSingle: async () => {
+      recordRead();
+      return { data: single(name, filters) };
+    },
+    then: (resolve: (value: { data: unknown; error: null }) => void) => {
+      recordRead();
+      resolve({ data: many(name, filters, ins), error: null });
+    },
   };
   return api;
 }
@@ -63,7 +79,9 @@ function single(name: string, filters: Record<string, unknown>): Row | null {
     return db.share && db.share.token === filters.token ? db.share : null;
   }
   if (name === "pages") {
-    return db.pages.find((p) => p.id === filters.id) ?? null;
+    return db.pages.find((p) => Object.entries(filters).every(
+      ([column, value]) => (p[column] ?? null) === value,
+    )) ?? null;
   }
   if (name === "projects") return db.project;
   return null;
@@ -123,6 +141,7 @@ beforeEach(() => {
   db.share = share();
   db.project = { id: PROJECT, key: "MIN", name: "Acme", owner_id: "owner" };
   db.files = [];
+  db.pageReads = [];
   db.pages = [
     page("root", null, "Guide", {
       type: "doc",
@@ -193,5 +212,93 @@ describe("getPublicPageBundle", () => {
     // especially not the application URL, which names the project and the file.
     expect(json).not.toContain(FILE_HORS);
     expect(json).not.toContain("/api/projects/");
+  });
+});
+
+
+describe("published page databases", () => {
+  it.each([false, true])(
+    "preserves a shared entry's properties without exposing its parent or siblings (include_children=%s)",
+    async (includeChildren) => {
+      db.share = share({ page_id: "kid", include_children: includeChildren });
+      db.pages[0].title = "Private parent title";
+      db.pages[0].database_schema = [
+        { id: "notes", name: "Summary", type: "text" },
+        { id: "checked", name: "Approved", type: "checkbox" },
+      ];
+      db.pages[1].property_values = { notes: "Release scope agreed", checked: true };
+      db.pages[1].content = {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Entry body" }] }],
+      };
+      db.pages.push({
+        ...page("sibling", "root", "Private sibling title"),
+        property_values: { notes: "Private sibling value" },
+      });
+
+      const bundle = await getPublicPageBundle("tok");
+      const json = JSON.stringify(bundle);
+      expect(json).toContain("Summary: Release scope agreed");
+      expect(json).toContain("Approved: ☑");
+      expect(json).toContain("Entry body");
+      expect(bundle?.pages.map((entry) => entry.id)).toEqual(["kid"]);
+      expect(bundle?.trail).toEqual([]);
+      expect(json).not.toContain("Private parent title");
+      expect(json).not.toContain("Private sibling title");
+      expect(json).not.toContain("Private sibling value");
+      expect(json).not.toContain("/p/tok/root");
+      expect(json).not.toContain("/p/tok/sibling");
+      expect(db.pageReads.filter((read) => read.filters.id === "root")).toEqual([
+        {
+          columns: "id, database_schema",
+          filters: { id: "root", project_id: PROJECT, deleted_at: null },
+        },
+      ]);
+      if (!includeChildren) {
+        expect(db.pageReads.every((read) => ["kid", "root"].includes(read.filters.id as string))).toBe(true);
+      }
+      expect(await getPublicPageBundle("tok", "root")).toBeNull();
+      expect(await getPublicPageBundle("tok", "sibling")).toBeNull();
+    },
+  );
+
+  it.each([
+    { database_schema: null },
+    { deleted_at: "2026-08-12T00:00:00Z" },
+    { project_id: "another-project" },
+  ])("keeps the entry body when its parent schema is unavailable (%j)", async (parentOverrides) => {
+    db.share = share({ page_id: "kid" });
+    Object.assign(db.pages[0], {
+      database_schema: [{ id: "notes", name: "Summary", type: "text" }],
+      ...parentOverrides,
+    });
+    db.pages[1].property_values = { notes: "Unprojected value" };
+    db.pages[1].content = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Entry body" }] }],
+    };
+    const bundle = await getPublicPageBundle("tok");
+    expect(bundle?.content).toEqual(db.pages[1].content);
+    expect(bundle?.pages.map((entry) => entry.id)).toEqual(["kid"]);
+  });
+
+  it("keeps the published root schema when rendering an entry", async () => {
+    db.share = share({ include_children: true });
+    db.pages[0].database_schema = [{ id: "notes", name: "Summary", type: "text" }];
+    db.pages[1].property_values = { notes: "Release scope agreed" };
+    const entry = await getPublicPageBundle("tok", "kid");
+    expect(JSON.stringify(entry?.content)).toContain("Summary: Release scope agreed");
+    const database = await getPublicPageBundle("tok");
+    expect(JSON.stringify(database?.content)).toContain("Summary: Release scope agreed");
+    expect(JSON.stringify(database?.content)).toContain("/p/tok/kid");
+    expect(database?.pages[0]).not.toHaveProperty("database_schema");
+  });
+
+  it("does not expose entry values when publishing only the database", async () => {
+    db.pages[0].database_schema = [{ id: "notes", name: "Summary", type: "text" }];
+    db.pages[1].property_values = { notes: "Private entry value" };
+    const database = await getPublicPageBundle("tok");
+    expect(database?.content).toEqual({ type: "doc", content: [] });
+    expect(JSON.stringify(database)).not.toContain("Private entry value");
   });
 });

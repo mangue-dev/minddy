@@ -1,4 +1,5 @@
 import "server-only";
+import { DATABASE_TOOL_PARAMETERS, databaseToolDescription } from "@/lib/server/database-tool-schema";
 
 import { MCP_CLIENT_TOOLS } from "@/lib/mcp-client-tools";
 import { MAX_BACKGROUND_JOBS } from "./background";
@@ -475,7 +476,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "read_page",
       description:
-        "Read ONE page of the project's wiki in MARKDOWN: its title, its icon, its body, its version and its direct subpages. Ids come from list_pages. A '[[page:<id>]]' line is a LINK to a subpage, not its content — read that page too when it matters. Copy passages from here verbatim for edit_page_text.",
+        "Read ONE page of the project's wiki in MARKDOWN. Database pages include database_schema, database_revision, database_title_name, and entry property_values/created_at in subpages. The result also includes title, icon, body, version, and direct subpages. Use update_page_database to manage columns and values. Ids come from list_pages. A '[[page:<id>]]' line is a LINK to a subpage, not its content — read that page too when it matters. Copy passages from here verbatim for edit_page_text.",
       parameters: {
         type: "object",
         properties: {
@@ -490,10 +491,11 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "create_page",
       description:
-        "Create a page in the project's wiki, optionally under an existing page. Only when the user asked for documentation — a spec, a decision record, a runbook you were told to write. Never document your own run here: what you did belongs in the pull request and in the ticket. Write it filled, and nested under the right parent.",
+        "Create a page in the project's wiki, optionally under an existing page. Use it for requested documentation or a page database. Set database=true for a database and parent_page_id for an entry; empty markdown is valid for both. Never document your own run here: what you did belongs in the pull request and in the ticket. Write it filled, and nested under the right parent.",
       parameters: {
         type: "object",
         properties: {
+          database: { type: "boolean", description: "Create a database. Add columns with update_page_database; create entries with parent_page_id set to this database. Empty markdown is valid for databases and entries." },
           title: {
             type: "string",
             description: "Page title, plain text (no leading '#', no emoji).",
@@ -512,6 +514,14 @@ const MINDDY_TOOLS: AgentToolDef[] = [
         },
         required: ["title", "markdown"],
       },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_page_database",
+      description: databaseToolDescription("read_page"),
+      parameters: DATABASE_TOOL_PARAMETERS,
     },
   },
   {

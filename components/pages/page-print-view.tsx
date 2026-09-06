@@ -7,6 +7,9 @@ import { Spinner } from "mangue-ui";
 import { FileText } from "lucide-react";
 import type { JSONContent } from "@tiptap/core";
 
+import { pageDatabaseDocument } from "@/lib/page-database-document";
+import { useMembersQuery } from "@/lib/use-members-query";
+import { displayName } from "@/lib/display-name";
 import { fetchPageApi } from "@/lib/pages-api";
 import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { descendantIds } from "@/lib/pages";
@@ -41,6 +44,8 @@ export function PagePrintView({
 }) {
   const t = useTranslations("Pages");
   const { pages, byId, loading } = usePagesQuery(projectId);
+  const { members, loading: membersLoading } = useMembersQuery(projectId, true);
+  const names = useMemo(() => new Map(members.map((member) => [member.user_id, displayName(member)])), [members]);
 
   const ids = useMemo(() => {
     if (!branch) return [pageId];
@@ -55,7 +60,7 @@ export function PagePrintView({
       queryFn: () => fetchPageApi(projectId, id),
     })),
   });
-  const ready = !loading && results.every((r) => r.data || r.isError);
+  const ready = !loading && !membersLoading && results.every((r) => r.data || r.isError);
 
   const lookup = useMemo<PagesLookup>(
     () => ({
@@ -123,7 +128,7 @@ export function PagePrintView({
             </h1>
             <div className="mt-5">
               <PageEditor
-                initialContent={(page.content as JSONContent | null) ?? null}
+                initialContent={pageDatabaseDocument(page, pages, names) as JSONContent | null}
                 onChange={() => {}}
                 editable={false}
                 pages={lookup}

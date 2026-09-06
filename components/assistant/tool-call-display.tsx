@@ -404,6 +404,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return title ? t("pageCreatedWithTitle", { title }) : t("pageCreated");
     },
   },
+  update_page_database: {
+    icon: BookText,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingPage");
+      return success ? t("pageUpdated") : t("updatePageFailed");
+    },
+  },
   update_page: {
     icon: BookText,
     getLabel: (_args, _result, success, status, t) => {

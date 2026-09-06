@@ -69,6 +69,9 @@ import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { PageDatabaseView } from "./page-database-view";
+import { DatabaseSetupBanner } from "./database-setup-banner";
+import { PageDatabaseProperties } from "./page-database-properties";
 import { PageEditor } from "@/components/pages/page-editor";
 import { AppContentHeader } from "@/components/app-content-header";
 import { usePageUploads } from "@/components/pages/page-uploads";
@@ -245,9 +248,17 @@ function isEmptyDoc(content: unknown): boolean {
 export function PageView({
   projectId,
   pageId,
+  onNavigate,
+  onNavigationReady,
+  active = true,
+  panel = false,
 }: {
   projectId: string;
   pageId: string;
+  onNavigate?: (pageId: string, databaseId?: string) => void;
+  onNavigationReady?: (flush: () => Promise<boolean>) => void;
+  active?: boolean;
+  panel?: boolean;
 }) {
   const [reload, setReload] = useState(0);
   return (
@@ -255,6 +266,10 @@ export function PageView({
       key={reload}
       projectId={projectId}
       pageId={pageId}
+      active={active}
+      panel={panel}
+      onNavigate={onNavigate}
+      onNavigationReady={onNavigationReady}
       onRestored={() => setReload((n) => n + 1)}
     />
   );
@@ -264,11 +279,19 @@ function PageSurface({
   projectId,
   pageId,
   onRestored,
+  onNavigate,
+  onNavigationReady,
+  active = true,
+  panel = false,
 }: {
   projectId: string;
   pageId: string;
   /** A version has just been put back in place: the surface is going back up. */
   onRestored: () => void;
+  onNavigate?: (pageId: string, databaseId?: string) => void;
+  onNavigationReady?: (flush: () => Promise<boolean>) => void;
+  active?: boolean;
+  panel?: boolean;
 }) {
   const t = useTranslations("Pages");
   const queryClient = useQueryClient();
@@ -423,6 +446,7 @@ function PageSurface({
      rendering, and the editor can already be unmounted. */
   const flushRef = useRef(flush);
   flushRef.current = flush;
+  useEffect(() => { onNavigationReady?.(autosave.flushBeforeNavigation); }, [onNavigationReady, autosave.flushBeforeNavigation]);
   const titleRef = useRef(title);
   titleRef.current = title;
   const iconRef = useRef(icon);
@@ -514,7 +538,7 @@ function PageSurface({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (
-        (event.metaKey || event.ctrlKey) &&
+        active && (event.metaKey || event.ctrlKey) &&
         !event.shiftKey &&
         !event.altKey &&
         eventKey(event) === "s"
@@ -525,7 +549,7 @@ function PageSurface({
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, []);
+  }, [active]);
 
   /* ── Body subpages (MIN-272) ───────────────────────────────── */
   //
@@ -534,8 +558,8 @@ function PageSurface({
   // a view — and it is here that the view comes back down to the truth.
   const base = pagesHref(projectId);
   const openPage = useCallback(
-    (id: string) => pushPagesHistory(pageHref(projectId, id)),
-    [projectId]
+    (id: string) => onNavigate ? onNavigate(id) : pushPagesHistory(pageHref(projectId, id)),
+    [projectId, onNavigate]
   );
 
   const lookup = useMemo<PagesLookup>(
@@ -567,7 +591,8 @@ function PageSurface({
       duplicate: async (id) => {
         try {
           const copy = await duplicatePage(id);
-          toast.success(t("duplicated"));
+          void copy.settled.then(() => toast.success(t("duplicated"))).catch((error: unknown) =>
+            toast.error(error instanceof Error ? error.message : t("duplicateFailed")));
           return copy.id;
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("duplicateFailed"));
@@ -702,7 +727,7 @@ function PageSurface({
       void (async () => {
         try {
           const child = await createPage({ parent_id: parentId });
-          markDraftPage(child.id);
+          if (!byId.get(parentId)?.database_schema) markDraftPage(child.id);
           void child.settled.catch((err: unknown) => {
             forgetDraftPage(child.id);
             if (window.location.pathname === pageHref(projectId, child.id)) {
@@ -712,13 +737,13 @@ function PageSurface({
           });
           void flushRef
             .current()
-            .finally(() => openPage(child.id));
+            .finally(() => onNavigate && byId.get(parentId)?.database_schema != null ? onNavigate(child.id, parentId) : openPage(child.id));
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("createFailed"));
         }
       })();
     },
-    [base, createPage, openPage, projectId, t]
+    [base, createPage, openPage, projectId, t, byId, onNavigate]
   );
 
   const toggleFavoriteFromMenu = useCallback(
@@ -798,7 +823,7 @@ function PageSurface({
   openAgentCopyRef.current = () => documentMenu.openAgentCopy(pageRef, "shortcut");
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!matchesModShiftCombo(event, "l")) return;
+      if (!active || !matchesModShiftCombo(event, "l")) return;
       // A dialog already open takes up the screen - this one included: without this
       // guard, the shortcut while writing the instruction would reopen the
       // dialog and would erase what was just typed.
@@ -808,7 +833,7 @@ function PageSurface({
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, []);
+  }, [active]);
 
   /* ── What Numo sees when you are on this page ─────────────────────── */
   //
@@ -821,8 +846,8 @@ function PageSurface({
   // the one we may have just typed.
   useAssistantContext(
     useMemo(
-      () => ({ projectId, pageId, pageTitle: title, pageIcon: icon }),
-      [projectId, pageId, title, icon]
+      () => active ? ({ projectId, pageId, pageTitle: title, pageIcon: icon }) : null,
+      [active, projectId, pageId, title, icon]
     )
   );
 
@@ -905,7 +930,7 @@ function PageSurface({
     <div className="relative flex min-h-0 flex-1 flex-col">
       {/* A structural, non-scrolling header: breadcrumb on the left; presence,
           versions, comments, and document actions on the right. */}
-      <AppContentHeader contentClassName="gap-2">
+      {!panel && <AppContentHeader contentClassName="gap-2">
         <div className="flex min-w-0 flex-1 items-center">
           <PageBreadcrumb
             trail={trail}
@@ -958,17 +983,17 @@ function PageSurface({
             }
           />
         </div>
-      </AppContentHeader>
+      </AppContentHeader>}
       {documentMenu.dialogs}
 
       {/* The table of contents floats at the right edge of the PANEL, therefore out of the
           container that moves by: it stays in its place while we go down
           in the document, and it's scrolling through it. */}
-      <PageToc editor={editor} scrollRef={scrollRef} />
+      {!panel && <PageToc editor={editor} scrollRef={scrollRef} />}
 
       <div
         ref={scrollRef}
-        className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto"
+        className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto overscroll-none"
       >
         {/* The COLUMN of the document. She carries two things, and she's the only one
             be able to carry them together: the GUTTER reserve on the left (56 px,
@@ -976,7 +1001,8 @@ function PageSurface({
             the chrome is used to place itself there. Title and blocks therefore share the
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
-        <div className="relative mx-auto w-full max-w-3xl px-6 py-10 md:pl-24 md:pr-10">
+        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? "max-w-3xl md:px-16" : page.database_schema != null ? "max-w-none md:pl-24 md:pr-10" : "max-w-3xl md:pl-24 md:pr-10")}>
+          {page.database_schema != null && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}
             icon={icon}
@@ -1015,7 +1041,10 @@ function PageSurface({
             onRestore={autosave.restore}
             onDismiss={autosave.dismiss}
           />
-          <div ref={bodyRef} className="mt-6">
+          {page.parent_id && byId.get(page.parent_id)?.database_schema != null && (
+            <PageDatabaseProperties projectId={projectId} page={summary ?? page} database={byId.get(page.parent_id)!} />
+          )}
+          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
             {/* What “assign a task” means when it comes off a page
                 rather than the notebook: the prompt names the page, and the navigation
                 waits for what is pending to be written (MIN-274). */}
@@ -1041,7 +1070,7 @@ function PageSurface({
                 onComment={onComment}
               />
             </PageTaskSurface>
-          </div>
+          </div>}
         </div>
       </div>
 

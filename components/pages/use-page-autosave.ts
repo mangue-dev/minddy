@@ -63,6 +63,8 @@ export interface PageAutosave {
   schedule: (patch: UpdatePageInput) => void;
   /** Now writes what is waiting (⌘S, page exit, hidden tab). */
   flush: () => Promise<void>;
+  /** Wait for all writes and keep the current surface open if saving failed. */
+  flushBeforeNavigation: () => Promise<boolean>;
   /** Remove draft from queue — last chance writing
       (`pagehide`) must win itself, without going through a promise. */
   takePending: () => UpdatePageInput | null;
@@ -138,6 +140,7 @@ export function usePageAutosave({
   const pending = useRef<UpdatePageInput | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef(false);
+  const inFlightDone = useRef<Promise<void>>(Promise.resolve());
 
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -175,11 +178,13 @@ export function usePageAutosave({
   );
 
   const write = useCallback(async () => {
-    if (inFlight.current) return; // the line is already served
+    if (inFlight.current) return inFlightDone.current;
     let patch = takePending();
     if (!patch) return;
 
     inFlight.current = true;
+    let finish!: () => void;
+    inFlightDone.current = new Promise<void>((resolve) => { finish = resolve; });
     setSaving(true);
     try {
       // A writing, its replays, then what was typed during — all
@@ -221,6 +226,7 @@ export function usePageAutosave({
       onError(err);
     } finally {
       inFlight.current = false;
+      finish();
       setSaving(false);
     }
 
@@ -256,6 +262,11 @@ export function usePageAutosave({
 
   const flush = useCallback(async () => {
     await writeRef.current();
+  }, []);
+
+  const flushBeforeNavigation = useCallback(async () => {
+    await writeRef.current();
+    return pending.current === null && !inFlight.current;
   }, []);
 
   const schedule = useCallback(
@@ -346,6 +357,7 @@ export function usePageAutosave({
       conflicts,
       schedule,
       flush,
+      flushBeforeNavigation,
       takePending,
       restore,
       dismiss,
@@ -357,6 +369,7 @@ export function usePageAutosave({
       conflicts,
       schedule,
       flush,
+      flushBeforeNavigation,
       takePending,
       restore,
       dismiss,

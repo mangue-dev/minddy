@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { DATABASE_TOOL_SCHEMA, databaseToolDescription } from "@/lib/server/database-tool-schema";
 import type { McpServer } from "@modelcontextprotocol/server";
 import {
   addPageCommentForAgent,
@@ -11,6 +12,7 @@ import {
   readPageForAgent,
   searchPagesForAgent,
   updatePageForAgent,
+  updateDatabaseForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
 import {
@@ -189,6 +191,7 @@ export function registerPageTools(server: McpServer): void {
     {
       title: "Get page",
       description:
+        "Database pages include database_schema, database_revision, database_title_name, and entry property_values/created_at in subpages. Use minddy_update_page_database for columns and values. " +
         "ONE page in full: its title, its icon, its body in MARKDOWN, its version, " +
         "and its direct subpages (so you can walk down the tree without a second " +
         "listing call). This is what you read before writing: copy passages from " +
@@ -233,7 +236,8 @@ export function registerPageTools(server: McpServer): void {
         "Create a page in the project's wiki, optionally UNDER an existing page " +
         "(parent_page_id — the wiki nests at any depth). Write it FILLED: a title " +
         "and a real body, in markdown, in ONE call — not an empty page to fill " +
-        "later. A page is " +
+        "later. Databases and their entries may have an empty markdown body. " +
+        "Set database=true to create a database, add columns with minddy_update_page_database, and create entries using parent_page_id. A page is " +
         "for knowledge that outlives a ticket — a spec, a decision and its why, a " +
         "convention, a runbook; what is work to do belongs in an issue " +
         "(minddy_create_issue), not here. Prefer a subpage of the right parent " +
@@ -252,6 +256,7 @@ export function registerPageTools(server: McpServer): void {
               "page's title and icon."
           ),
         markdown: BODY,
+        database: z.boolean().optional().describe("Create a database; then add columns with minddy_update_page_database."),
         icon: z
           .string()
           .optional()
@@ -280,6 +285,7 @@ export function registerPageTools(server: McpServer): void {
         icon: args.icon,
         markdown: args.markdown,
         parentPageId: args.parent_page_id ?? null,
+        database: args.database === true,
         // The key that writes NAME the agent (MIN-278): the activity of the page and
         // the quotes he puts there say “Claude Code (mcp)”, not the name of the
         // key holder — the same rule as the ticket timeline.
@@ -288,6 +294,28 @@ export function registerPageTools(server: McpServer): void {
       if (!result.ok) return refusal(result);
       return written(result.data);
     }
+  );
+
+  server.registerTool(
+    "minddy_update_page_database",
+    {
+      title: "Update page database",
+      description: databaseToolDescription("minddy_get_page"),
+      inputSchema: DATABASE_TOOL_SCHEMA.extend({ project_id: PROJECT_ID }),
+      annotations: { ...WRITE, destructiveHint: true },
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await updateDatabaseForAgent({
+        projectId: scope.access.project.id,
+        pageId: args.page_id,
+        actorId: scope.userId,
+        mcpKeyId: scope.keyId,
+        input: args,
+      });
+      return result.ok ? ok(result.data) : refusal(result);
+    },
   );
 
   server.registerTool(

@@ -81,18 +81,20 @@ function uniqueIn(taken: Set<string>, slug: string): string {
 
 const SUBPAGE_LINK = /\[\[page:([^\]\s]+)\]\]/g;
 
+type ExportPageLocation = Pick<ExportInputPage, "id" | "parent_id" | "title">;
+
 /**
- * The archive of a branch: one file per page, with links rewritten.
+ * Assign archive paths before projecting links or packaging page bodies.
  *
  * `pages` contains the root AND its descendants, in any order. A page whose
  * parent is not in the list is treated as a root — this does not happen on a
  * branch, but prevents an inconsistent input set from silently making files
  * disappear.
  */
-export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
+export function exportPagePaths(pages: ExportPageLocation[]): Map<string, string> {
   const ids = new Set(pages.map((p) => p.id));
-  const childrenOf = new Map<string, ExportInputPage[]>();
-  const roots: ExportInputPage[] = [];
+  const childrenOf = new Map<string, ExportPageLocation[]>();
+  const roots: ExportPageLocation[] = [];
   for (const page of pages) {
     if (page.parent_id && ids.has(page.parent_id)) {
       const list = childrenOf.get(page.parent_id);
@@ -110,7 +112,7 @@ export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
       There is only one, `index` — the folder carries the parent's name, and its
       body is stored there as `index.md`. A subpage titled “Index” would produce
       the same path, causing the archive to silently keep only one of the files. */
-  const assign = (siblings: ExportInputPage[], prefix: string, reserved: string[] = []) => {
+  const assign = (siblings: ExportPageLocation[], prefix: string, reserved: string[] = []) => {
     const taken = new Set<string>(reserved);
     for (const page of siblings) {
       const slug = uniqueIn(taken, pageFileSlug(page.title));
@@ -124,19 +126,17 @@ export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
   };
   assign(roots, "");
 
-  const files: ExportedFile[] = [];
-  const walk = (list: ExportInputPage[]) => {
-    for (const page of list) {
-      const path = pathOf.get(page.id)!;
-      files.push({
-        path,
-        markdown: rewriteSubpageLinks(page.markdown, path, pathOf, pages),
-      });
-      walk(childrenOf.get(page.id) ?? []);
-    }
-  };
-  walk(roots);
-  return files;
+  return pathOf;
+}
+
+/** Build the file tree and rewrite subpage markers to archive-relative links. */
+export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
+  const pathOf = exportPagePaths(pages);
+  const pageOf = new Map(pages.map((page) => [page.id, page]));
+  return [...pathOf].map(([id, path]) => ({
+    path,
+    markdown: rewriteSubpageLinks(pageOf.get(id)!.markdown, path, pathOf, pages),
+  }));
 }
 
 /** The `[[page:<id>]]` markers in a body, changed into relative Markdown links. */

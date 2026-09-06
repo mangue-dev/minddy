@@ -29,6 +29,7 @@ import { Button, cn } from "mangue-ui";
 import {
   ChevronRight,
   FileText,
+  Database,
   MoreHorizontal,
   Plus,
   Star,
@@ -465,7 +466,7 @@ function PageRow({
       >
         <span className="flex size-4 shrink-0 items-center justify-center text-sm leading-none">
           {page.icon ?? (
-            <FileText className="size-3.5 text-muted-foreground" />
+            page.database_schema != null ? <Database className="size-3.5 text-muted-foreground" /> : <FileText className="size-3.5 text-muted-foreground" />
           )}
         </span>
         <span

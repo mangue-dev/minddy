@@ -30,6 +30,9 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getServiceClient } from "@/lib/supabase-service";
 import { displayName } from "@/lib/display-name";
 import { SITE_NAME } from "@/lib/site";
+import { convertPageDatabase, updatePageDatabase } from "@/lib/server/page-databases";
+import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
+import type { DatabaseProperty, DatabaseValues } from "@/lib/page-databases";
 import type { Page, PageWriteKind } from "@/lib/pages";
 
 /**
@@ -95,6 +98,10 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   pageTooDeep: "page_too_large",
   pageContentRefused: "invalid_params",
   noFieldsToUpdate: "invalid_params",
+  pageDatabaseInvalid: "invalid_params",
+  pageDatabaseMove: "invalid_params",
+  pageDatabaseRestoreParent: "invalid_params",
+  pageDatabaseStale: "page_stale",
   databaseError: "database_error",
 };
 
@@ -120,6 +127,10 @@ const MESSAGES: Record<PageErrorKey, string> = {
     "The page body carries a block minddy does not know, or a link whose " +
     "protocol it refuses (only http, https and mailto are stored).",
   noFieldsToUpdate: "Nothing to update: pass a title, an icon or a markdown body.",
+  pageDatabaseInvalid: "Invalid database property or value.",
+  pageDatabaseMove: "This page cannot move into another database with its current properties.",
+  pageDatabaseRestoreParent: "Restore the parent database before restoring this entry.",
+  pageDatabaseStale: "This property changed. Read its current value and retry.",
   databaseError: "Database error.",
 };
 
@@ -145,6 +156,11 @@ export interface PageTreeEntry {
   /** `null` = page racine. L'arbre se reconstruit chez l'appelant. */
   parent_page_id: string | null;
   updated_at: string;
+  database_schema?: DatabaseProperty[] | null;
+  database_revision?: number;
+  database_title_name?: string | null;
+  property_values?: DatabaseValues;
+  created_at?: string;
 }
 
 /** A page read in its entirety: its header, its body in markdown, its children. */
@@ -165,7 +181,13 @@ export interface PageRead extends PageTreeEntry {
   /** The body writing counter — to be ironed to write without overwriting. */
   version: number;
   /** DIRECT subpages, to go down the tree without a second call. */
-  subpages: Array<{ page_id: string; title: string; icon: string | null }>;
+  subpages: Array<{
+    page_id: string;
+    title: string;
+    icon: string | null;
+    property_values?: DatabaseValues;
+    created_at?: string;
+  }>;
   /**
  * WHICH relies on this page (MIN-279) — tickets, objectives and other pages,
  * by the resource as well as by the mention.
@@ -211,6 +233,11 @@ function entry(page: {
   icon: string | null;
   parent_id: string | null;
   updated_at: string;
+  database_schema?: DatabaseProperty[] | null;
+  database_revision?: number;
+  database_title_name?: string | null;
+  property_values?: DatabaseValues;
+  created_at?: string;
 }): PageTreeEntry {
   return {
     page_id: page.id,
@@ -218,6 +245,11 @@ function entry(page: {
     icon: page.icon,
     parent_page_id: page.parent_id ?? null,
     updated_at: page.updated_at,
+    database_schema: page.database_schema,
+    database_revision: page.database_revision,
+    database_title_name: page.database_title_name,
+    property_values: page.property_values,
+    created_at: page.created_at,
   };
 }
 
@@ -266,7 +298,14 @@ export async function readPageForAgent({
   const subpages = siblings.ok
     ? siblings.pages
         .filter((p) => p.parent_id === page.id)
-        .map((p) => ({ page_id: p.id, title: p.title, icon: p.icon }))
+        .map((p) => ({
+          page_id: p.id,
+          title: p.title,
+          icon: p.icon,
+          ...(page.database_schema != null
+            ? { property_values: p.property_values ?? {}, created_at: p.created_at }
+            : {}),
+        }))
     : [];
 
   // The KEY to the project, so ticket trackbacks read “MIN-42”
@@ -584,6 +623,7 @@ export async function createPageForAgent({
   icon,
   markdown,
   parentPageId,
+  database,
   mcpKeyId,
 }: {
   projectId: string;
@@ -592,6 +632,7 @@ export async function createPageForAgent({
   icon?: string | null;
   markdown?: string;
   parentPageId?: string | null;
+  database?: boolean;
   /** The MCP key behind the call, when the surface has one (MIN-278): it is
  which NAMES the agent in the activity of the page and in the quotes
  that he places there. Absent on chat and code agent, which are Numo. */
@@ -600,6 +641,7 @@ export async function createPageForAgent({
   const input: Record<string, unknown> = {
     parent_id: parentPageId ?? null,
   };
+  if (database) input.database_schema = [];
   let body = "";
 
   if (markdown !== undefined && markdown.trim()) {
@@ -868,4 +910,17 @@ async function writeBody({
       markdown_length: markdown.trim().length,
     },
   };
+}
+
+/** All agent surfaces share the table's revision, cell, and conversion guards. */
+export async function updateDatabaseForAgent({ projectId, pageId, actorId, input, mcpKeyId = null }: {
+  projectId: string; pageId: string; actorId: string; input: unknown; mcpKeyId?: string | null;
+}): Promise<PageToolResult<PageTreeEntry | DatabaseConversionPreview>> {
+  if (input && typeof input === "object" && "operation" in input && input.operation === "convert") {
+    const result = await convertPageDatabase(projectId, pageId, actorId, input, "agent", mcpKeyId);
+    if (!result.ok) return refuse(result.errorKey);
+    return { ok: true, data: "status" in result.page ? result.page : entry(result.page) };
+  }
+  const result = await updatePageDatabase(projectId, pageId, actorId, input, "agent", mcpKeyId);
+  return result.ok ? { ok: true, data: entry(result.page) } : refuse(result.errorKey);
 }

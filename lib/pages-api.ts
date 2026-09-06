@@ -101,11 +101,14 @@ export async function fetchPageApi(
 }
 
 export interface CreatePageInput {
+  /** Optional fractional position for insertion next to an existing entry. */
+  position?: string;
+  database_schema?: import("./page-databases").DatabaseProperty[];
   /** Client-assigned identity used by the optimistic page creation path. */
   id?: string;
   title?: string;
   icon?: string | null;
-  /** Sous-page : l'id du parent. Absent = page racine. */
+  /** Parent page ID. Omit to create a root page. */
   parent_id?: string | null;
   content?: unknown;
   /**
@@ -199,11 +202,13 @@ export function updatePageOnUnload(
  */
 export async function duplicatePageApi(
   projectId: string,
-  pageId: string
+  pageId: string,
+  ids?: Record<string, string>,
 ): Promise<Page> {
   return json(
     await fetch(`/api/projects/${projectId}/pages/${pageId}/duplicate`, {
       method: "POST",
+      ...(ids ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) } : {}),
     }),
     "Duplicate failed"
   );

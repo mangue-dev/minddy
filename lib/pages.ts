@@ -1,3 +1,5 @@
+import type { DatabaseProperty, DatabaseValues } from "./page-databases";
+
 /**
  * The PAGES of a project (MIN-266) — the pure logic of the tree.
  *
@@ -40,6 +42,11 @@ export const PAGE_WATCH_FRESH_MS = 3 * PAGE_WATCH_PING_MS;
 
 /** A page, as it comes out of the table (raw columns). */
 export interface Page {
+  /** Null on documents; an ordered property schema on database pages. */
+  database_schema?: DatabaseProperty[] | null;
+  database_revision?: number;
+  database_title_name?: string | null;
+  property_values?: DatabaseValues;
   id: string;
   project_id: string;
   parent_id: string | null;

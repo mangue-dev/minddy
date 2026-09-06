@@ -46,7 +46,7 @@ export function usePageDocumentMenu({
 }: {
   projectId: string;
   /** The flat project tree determines whether branch export actions are useful. */
-  pages: readonly { id: string; parent_id: string | null }[];
+  pages: readonly { id: string; parent_id: string | null; database_schema?: unknown[] | null }[];
   onCreateChild: (parentId: string) => void;
   onToggleFavorite: (page: PageMenuTarget) => void;
   onTrash: (page: PageMenuTarget) => void;
@@ -70,6 +70,7 @@ export function usePageDocumentMenu({
   dialogs: ReactNode;
 } {
   const t = useTranslations("Pages");
+  const tDatabase = useTranslations("PageDatabase");
   // “⌘⇧L” on a Mac, “Ctrl+Shift+L” elsewhere — and the Windows form on
   // rendered server, otherwise the hydration would scream lag. ⇧ is not
   // decorative: ⌘L bare is taken by the browser address bar and
@@ -172,10 +173,11 @@ export function usePageDocumentMenu({
       options?: { shortcut?: boolean }
     ): ContextMenuAction[] => {
       const count = countOf(page.id);
+      const isDatabase = pages.find(candidate => candidate.id === page.id)?.database_schema != null;
       const exportChildren: ContextMenuAction[] = [
         {
           id: "export-md",
-          label: t("exportMarkdown"),
+          label: isDatabase ? tDatabase("exportArchive") : t("exportMarkdown"),
           icon: <FileText className="size-4" />,
           onSelect: () => download(page.id, false),
         },
@@ -186,10 +188,9 @@ export function usePageDocumentMenu({
           onSelect: () => print(page.id, false),
         },
       ];
-      // “with subpages” only appears if there are: an entry which
-      // would only take away that the page itself is a lying entry.
+      // Database archives already contain the entire branch.
       if (count > 0) {
-        exportChildren.push(
+        if (!isDatabase) exportChildren.push(
           {
             id: "export-md-branch",
             label: t("exportMarkdownBranch", { count }),
@@ -197,6 +198,8 @@ export function usePageDocumentMenu({
             separatorBefore: true,
             onSelect: () => download(page.id, true),
           },
+        );
+        exportChildren.push(
           {
             id: "export-pdf-branch",
             label: t("exportPdfBranch", { count }),
@@ -270,6 +273,8 @@ export function usePageDocumentMenu({
       onToggleFavorite,
       onTrash,
       t,
+      tDatabase,
+      pages,
     ]
   );
 
