@@ -45,6 +45,7 @@ export interface Page {
   /** Null on documents; an ordered property schema on database pages. */
   database_schema?: DatabaseProperty[] | null;
   database_revision?: number;
+  database_title_name?: string | null;
   property_values?: DatabaseValues;
   id: string;
   project_id: string;

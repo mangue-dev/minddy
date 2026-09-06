@@ -5999,7 +5999,6 @@
     "allEntries": "Todas las entradas",
     "checked": "Marcada",
     "unchecked": "Sin marcar",
-    "visibleProperties": "Mostrar propiedades",
     "noProperties": "Añade propiedades para organizar tus entradas.",
     "newEntry": "Nueva entrada",
     "entryActions": "Acciones de la entrada",
@@ -6010,8 +6009,16 @@
     "deleteEntry": "Eliminar entrada",
     "deleteEntryBody": "Esta página y sus subpáginas se moverán a la papelera. Puedes restaurarlas desde allí.",
     "new": "Nuevo",
-    "table": "Tabla",
     "valuePlaceholder": "Introduce un valor…",
-    "sortDirection": "Dirección de ordenación"
+    "sortDirection": "Dirección de ordenación",
+    "renameColumn": "Renombrar {name}",
+    "showProperty": "Mostrar {name}",
+    "hideProperty": "Ocultar {name}",
+    "selectedCount": "{count} seleccionadas",
+    "clearSelection": "Borrar selección",
+    "selectAllEntries": "Seleccionar todas las entradas",
+    "selectEntry": "Seleccionar {name}",
+    "insertEntryHint": "Insertar debajo · Opción/Alt-clic para insertar encima",
+    "deleteEntries": "Eliminar {count} entradas"
   }
 }

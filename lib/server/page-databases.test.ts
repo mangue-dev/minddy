@@ -65,6 +65,28 @@ describe("page database server boundary", () => {
     }
     expect(h.rpc).not.toHaveBeenCalled();
   });
+  it("validates the shared title column name before changing the schema", async () => {
+    for (const titleName of ["", "   ", "x".repeat(81), 42, {}]) {
+      expect(
+        await updatePageDatabase("project", "db", "actor", {
+          operation: "schema",
+          schema,
+          revision: 0,
+          titleName,
+        }),
+      ).toMatchObject({ ok: false, status: 400 });
+    }
+    expect(h.rpc).not.toHaveBeenCalled();
+    expect(
+      await updatePageDatabase("project", "db", "actor", {
+        operation: "schema",
+        schema,
+        revision: 0,
+        titleName: "Report",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(h.rpc.mock.calls[0][1].p_input.titleName).toBe("Report");
+  });
   it("validates values against the parent schema and requires the previous value", async () => {
     for (const input of [
       { operation: "value", propertyId, value: "2026-02-30", expected: null },

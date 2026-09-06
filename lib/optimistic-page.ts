@@ -1,5 +1,5 @@
 import type { CreatePageInput } from "./pages-api";
-import { positionAtEnd, type Page } from "./pages";
+import { isPosition, positionAtEnd, type Page } from "./pages";
 
 /** Build the page shown while its creation request is still in flight. */
 export function buildOptimisticPage(
@@ -15,13 +15,14 @@ export function buildOptimisticPage(
     project_id: projectId,
     database_schema: input.database_schema ?? null,
     database_revision: 0,
+    database_title_name: null,
     property_values: {},
     parent_id: parentId,
     title: input.title ?? "",
     icon: input.icon ?? null,
     content: input.content ?? { type: "doc", content: [] },
     version: 1,
-    position: positionAtEnd(
+    position: isPosition(input.position) ? input.position : positionAtEnd(
       existing.filter((page) => (page.parent_id ?? null) === parentId),
     ),
     favorite: false,

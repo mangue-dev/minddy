@@ -140,7 +140,7 @@ const UUID_RE =
  * page by page, when opened.
  */
 const LIST_COLUMNS =
-  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed, database_schema, database_revision, property_values";
+  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed, database_schema, database_revision, database_title_name, property_values";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
@@ -597,7 +597,7 @@ export async function createPage({
     title: readTitle(input.title) ?? "",
     database_schema: input.database_schema ?? null,
     icon: readIcon(input.icon),
-    position: positionAtEnd(
+    position: isPosition(input.position) ? input.position : positionAtEnd(
       all.filter((p) => !p.deleted_at && (p.parent_id ?? null) === parentId)
     ),
     created_by: actorId,
@@ -713,6 +713,7 @@ export async function duplicatePage(
           ? source.parent_id
           : (idMap.get(source.parent_id ?? "") ?? null),
         database_schema: source.database_schema ?? null,
+        database_title_name: source.database_title_name ?? null,
         property_values: copiedValues,
         title: source.title,
         icon: source.icon,

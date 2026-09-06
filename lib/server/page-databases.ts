@@ -31,6 +31,11 @@ export async function updatePageDatabase(
     if (
       !loaded.page.database_schema ||
       !isDatabaseSchema(body.schema) ||
+      (body.titleName !== undefined &&
+        body.titleName !== null &&
+        (typeof body.titleName !== "string" ||
+          !body.titleName.trim() ||
+          body.titleName.length > 80)) ||
       !Number.isSafeInteger(body.revision) ||
       (body.revision as number) < 0
     )

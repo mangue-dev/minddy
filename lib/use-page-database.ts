@@ -34,6 +34,7 @@ export function usePageDatabase(projectId: string) {
         const patch = {
           database_schema: page.database_schema,
           database_revision: page.database_revision,
+          database_title_name: page.database_title_name,
           property_values: page.property_values,
         };
         await queryClient.cancelQueries({ queryKey: pagesKey(projectId) });
@@ -55,9 +56,14 @@ export function usePageDatabase(projectId: string) {
     [projectId, queryClient, t],
   );
 
-  const saveSchema = (page: PageSummary, schema: DatabaseProperty[]) =>
+  const saveSchema = (
+    page: PageSummary,
+    schema: DatabaseProperty[],
+    titleName = page.database_title_name ?? null,
+  ) =>
     mutate(page.id, {
       operation: "schema",
+      titleName,
       schema,
       revision: page.database_revision ?? 0,
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -33,17 +33,23 @@ import {
   ArrowDown,
   ArrowDownUp,
   Filter,
-  Table2,
   ArrowUp,
   Copy,
-  Columns3,
+  Eye,
+  EyeOff,
+  GripVertical,
+  X,
   FileText,
-  MoreHorizontal,
   Plus,
   Search,
   Settings2,
   Trash2,
 } from "lucide-react";
+import { DatabaseColumnName } from "./database-column-name";
+import {
+  databaseRowPositions,
+  selectDatabaseRows,
+} from "@/lib/page-database-rows";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect } from "@/components/search-select";
@@ -100,9 +106,13 @@ function DatabaseSelect({
 function PropertySettings({
   projectId,
   database,
+  hidden,
+  onToggleVisibility,
 }: {
   projectId: string;
   database: PageSummary;
+  hidden: string[];
+  onToggleVisibility: (id: string) => void;
 }) {
   const t = useTranslations("PageDatabase");
   const { saveSchema, pending } = usePageDatabase(projectId);
@@ -207,6 +217,33 @@ function PropertySettings({
                   >
                     <ArrowDown className="size-3.5" />
                   </Button>
+                  <AppTooltip
+                    label={t(
+                      hidden.includes(property.id)
+                        ? "showProperty"
+                        : "hideProperty",
+                      { name: property.name },
+                    )}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t(
+                        hidden.includes(property.id)
+                          ? "showProperty"
+                          : "hideProperty",
+                        { name: property.name },
+                      )}
+                      aria-pressed={!hidden.includes(property.id)}
+                      onClick={() => onToggleVisibility(property.id)}
+                    >
+                      {hidden.includes(property.id) ? (
+                        <EyeOff className="size-3.5 text-muted-foreground" />
+                      ) : (
+                        <Eye className="size-3.5" />
+                      )}
+                    </Button>
+                  </AppTooltip>
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -381,7 +418,15 @@ export function PageDatabaseView({
     filterValue,
     hidden,
   ]);
-  const [remove, setRemove] = useState<PageSummary | null>(null);
+  const [remove, setRemove] = useState<PageSummary[]>([]);
+  const [menuEntry, setMenuEntry] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectionAnchor = useRef<string | null>(null);
+  const dragging = useRef<string[]>([]);
+  const [dropTarget, setDropTarget] = useState<{
+    id: string;
+    above: boolean;
+  } | null>(null);
   const schema = database.database_schema ?? [];
   const filterProperty = schema.find((property) => property.id === filter);
   const names = useMemo(
@@ -393,7 +438,9 @@ export function PageDatabaseView({
   );
   const entries = pages
     .filter((p) => p.parent_id === database.id)
-    .sort((a, b) => a.position.localeCompare(b.position));
+    .sort((a, b) =>
+      a.position < b.position ? -1 : a.position > b.position ? 1 : 0,
+    );
   const rows = entries
     .filter((entry) => {
       const text = [
@@ -432,7 +479,11 @@ export function PageDatabaseView({
           : "position";
       const result =
         effectiveSort === "position"
-          ? a.position.localeCompare(b.position)
+          ? a.position < b.position
+            ? -1
+            : a.position > b.position
+              ? 1
+              : 0
           : effectiveSort === "title"
             ? a.title.localeCompare(b.title)
             : compareDatabaseValues(
@@ -458,6 +509,51 @@ export function PageDatabaseView({
       await entry.settled;
       onOpen(entry.id);
     });
+  const selectedRows = rows.filter((entry) => selected.includes(entry.id));
+  const manual = sort === "position" && !descending;
+  const targetsFor = (entry: PageSummary) =>
+    selected.includes(entry.id) ? selectedRows : [entry];
+  const insert = (entry: PageSummary, above: boolean) =>
+    void run(async () => {
+      const [position] = databaseRowPositions(entries, entry.id, above);
+      if (!position) return;
+      const created = await createPage({ parent_id: database.id, position });
+      await created.settled;
+      setSort("position");
+      setDescending(false);
+      setQuery("");
+      setFilter("");
+      onOpen(created.id);
+    });
+  const duplicate = (targets: PageSummary[]) =>
+    void run(async () => {
+      const copies: string[] = [];
+      for (const entry of targets) {
+        const copy = await duplicatePage(entry.id);
+        copies.push(copy.id);
+      }
+      if (copies.length === 1) onOpen(copies[0]);
+      else setSelected(copies);
+    });
+  const drop = (targetId: string, above: boolean) => {
+    const ids = dragging.current;
+    dragging.current = [];
+    setDropTarget(null);
+    if (!manual || ids.includes(targetId)) return;
+    const moving = entries.filter((entry) => ids.includes(entry.id));
+    const positions = databaseRowPositions(
+      entries,
+      targetId,
+      above,
+      ids,
+      moving.length,
+    );
+    if (!positions.length) return;
+    void run(async () => {
+      for (const [index, entry] of moving.entries())
+        await updatePage(entry.id, { position: positions[index] });
+    });
+  };
   const move = (entry: PageSummary, direction: number) =>
     void run(async () => {
       const index = entries.findIndex((p) => p.id === entry.id);
@@ -475,9 +571,49 @@ export function PageDatabaseView({
   return (
     <div className="mt-5 space-y-1">
       <div className="flex items-center gap-0.5">
-        <div className="mr-auto flex items-center gap-2 text-sm text-muted-foreground">
-          <Table2 className="size-4" />
-          {t("table")}
+        <div className="mr-auto flex items-center gap-1">
+          {selectedRows.length > 0 && (
+            <>
+              <span
+                className="text-xs text-muted-foreground"
+                aria-live="polite"
+              >
+                {t("selectedCount", { count: selectedRows.length })}
+              </span>
+              <AppTooltip label={t("duplicate")}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("duplicate")}
+                  disabled={busy}
+                  onClick={() => duplicate(selectedRows)}
+                >
+                  <Copy className="size-4" />
+                </Button>
+              </AppTooltip>
+              <AppTooltip label={t("delete")}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("delete")}
+                  disabled={busy}
+                  onClick={() => setRemove(selectedRows)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </AppTooltip>
+              <AppTooltip label={t("clearSelection")}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("clearSelection")}
+                  onClick={() => setSelected([])}
+                >
+                  <X className="size-4" />
+                </Button>
+              </AppTooltip>
+            </>
+          )}
         </div>
         <Popover>
           <AppTooltip label={t("filter")}>
@@ -584,7 +720,10 @@ export function PageDatabaseView({
               onChange={setSort}
               options={[
                 { value: "position", label: t("manualOrder") },
-                { value: "title", label: t("name") },
+                {
+                  value: "title",
+                  label: database.database_title_name ?? t("name"),
+                },
                 ...schema.map((p) => ({ value: p.id, label: p.name })),
               ]}
             />
@@ -622,52 +761,57 @@ export function PageDatabaseView({
             />
           </PopoverContent>
         </Popover>
-        <Popover>
-          <AppTooltip label={t("visibleProperties")}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("visibleProperties")}
-              >
-                <Columns3 className="size-4" />
-              </Button>
-            </PopoverTrigger>
-          </AppTooltip>
-          <PopoverContent align="end" className="space-y-2">
-            {schema.map((p) => (
-              <label key={p.id} className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={!hidden.includes(p.id)}
-                  onCheckedChange={(checked) =>
-                    setHidden((ids) =>
-                      checked === true
-                        ? ids.filter((id) => id !== p.id)
-                        : [...ids, p.id],
-                    )
-                  }
-                />
-                {p.name}
-              </label>
-            ))}
-            {!schema.length && (
-              <p className="text-sm text-muted-foreground">
-                {t("noProperties")}
-              </p>
-            )}
-          </PopoverContent>
-        </Popover>
-        <PropertySettings projectId={projectId} database={database} />
+        <PropertySettings
+          projectId={projectId}
+          database={database}
+          hidden={hidden}
+          onToggleVisibility={(id) =>
+            setHidden((ids) =>
+              ids.includes(id)
+                ? ids.filter((value) => value !== id)
+                : [...ids, id],
+            )
+          }
+        />
         <Button size="sm" className="ml-2" disabled={busy} onClick={add}>
           {t("new")}
         </Button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full table-auto border-collapse text-sm">
+      <div className="-ml-2 overflow-x-auto md:-ml-16" data-database-scroll>
+        <table className="w-full table-auto border-separate border-spacing-0 text-sm">
           <thead>
-            <tr className="border-b border-border/50 text-left text-muted-foreground">
-              <th scope="col" className="min-w-56 px-2 py-1.5 font-normal">
-                {t("name")}
+            <tr className="text-left text-muted-foreground">
+              <th
+                scope="col"
+                className="sticky left-0 z-30 w-16 min-w-16 bg-background"
+              >
+                <div
+                  className={`flex justify-end pr-2 ${selectedRows.length ? "" : "opacity-0 hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"}`}
+                >
+                  <Checkbox
+                    className="after:inset-x-0"
+                    aria-label={t("selectAllEntries")}
+                    disabled={!rows.length || busy}
+                    checked={
+                      rows.length > 0 && selectedRows.length === rows.length
+                        ? true
+                        : selectedRows.length
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(checked) =>
+                      setSelected(
+                        checked === true ? rows.map((entry) => entry.id) : [],
+                      )
+                    }
+                  />
+                </div>
+              </th>
+              <th
+                scope="col"
+                className="sticky left-16 z-20 min-w-40 border-b border-border/50 bg-background px-2 py-1 font-normal"
+              >
+                <DatabaseColumnName projectId={projectId} database={database} />
               </th>
               {visible.map((property) => {
                 const Icon = PROPERTY_ICONS[property.type];
@@ -675,119 +819,222 @@ export function PageDatabaseView({
                   <th
                     scope="col"
                     key={property.id}
-                    className="min-w-32 whitespace-nowrap px-2 py-1.5 font-normal"
+                    className="min-w-32 whitespace-nowrap border-b border-border/50 px-2 py-1 font-normal"
                   >
                     <span className="flex items-center gap-2">
                       <Icon className="size-3.5 shrink-0" />
-                      {property.name}
+                      <DatabaseColumnName
+                        projectId={projectId}
+                        database={database}
+                        property={property}
+                      />
                     </span>
                   </th>
                 );
               })}
-              <th scope="col" className="w-10">
-                <span className="sr-only">{t("entryActions")}</span>
-              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((entry) => (
-              <tr
-                key={entry.id}
-                className="group border-b border-border/40 hover:bg-muted/20 [&>td+td]:border-l [&>td+td]:border-border/30"
-              >
-                <td className="min-w-56 px-2">
-                  <button
-                    type="button"
-                    className="flex min-h-8 w-full items-center gap-2 px-0 text-left hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-                    onClick={() => onOpen(entry.id)}
-                    onMouseEnter={() => prefetchPage(entry.id)}
-                    onFocus={() => prefetchPage(entry.id)}
-                  >
-                    {entry.icon ?? (
-                      <FileText className="size-4 shrink-0 text-muted-foreground" />
-                    )}
-                    <span className="whitespace-nowrap">
-                      {entry.title || tPages("untitled")}
-                    </span>
-                  </button>
-                </td>
-                {visible.map((property) => (
-                  <td key={property.id} className="px-1.5">
-                    <DatabasePropertyCell
-                      projectId={projectId}
-                      page={entry}
-                      property={property}
-                    />
+            {rows.map((entry) => {
+              const targets = targetsFor(entry);
+              const checked = selected.includes(entry.id);
+              const showGutter = checked || selectedRows.length > 0;
+              return (
+                <tr
+                  key={entry.id}
+                  data-entry-id={entry.id}
+                  aria-selected={checked}
+                  className={`group ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:border-t-2 [&>td]:border-t-primary" : "[&>td]:border-b-2 [&>td]:border-b-primary") : ""}`}
+                  onDragOver={(event) => {
+                    if (
+                      !manual ||
+                      !dragging.current.length ||
+                      dragging.current.includes(entry.id)
+                    )
+                      return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    const box = event.currentTarget.getBoundingClientRect();
+                    setDropTarget({
+                      id: entry.id,
+                      above: event.clientY < box.top + box.height / 2,
+                    });
+                  }}
+                  onDrop={(event) => {
+                    if (!dragging.current.length) return;
+                    event.preventDefault();
+                    const box = event.currentTarget.getBoundingClientRect();
+                    drop(entry.id, event.clientY < box.top + box.height / 2);
+                  }}
+                >
+                  <td className="sticky left-0 z-30 w-16 min-w-16 bg-background pr-2">
+                    <div
+                      className={`flex items-center justify-end ${showGutter ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100"}`}
+                    >
+                      <AppTooltip label={t("insertEntryHint")}>
+                        <button
+                          type="button"
+                          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                          disabled={busy}
+                          aria-label={t("insertEntryHint")}
+                          onClick={(event) => insert(entry, event.altKey)}
+                        >
+                          <Plus className="size-3.5" />
+                        </button>
+                      </AppTooltip>
+                      <DropdownMenu
+                        open={menuEntry === entry.id}
+                        onOpenChange={(open) =>
+                          setMenuEntry(open ? entry.id : null)
+                        }
+                      >
+                        <AppTooltip label={t("entryActions")}>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={t("entryActions")}
+                              disabled={busy}
+                              draggable={manual && !busy}
+                              className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+                              onPointerDownCapture={(event) => {
+                                if (event.button === 0) event.stopPropagation();
+                              }}
+                              onClick={() => setMenuEntry(entry.id)}
+                              onDragStart={(event) => {
+                                dragging.current = targets.map(
+                                  (target) => target.id,
+                                );
+                                event.dataTransfer.effectAllowed = "move";
+                                event.dataTransfer.setData(
+                                  "text/plain",
+                                  entry.id,
+                                );
+                              }}
+                              onDragEnd={() => {
+                                dragging.current = [];
+                                setDropTarget(null);
+                              }}
+                            >
+                              <GripVertical className="size-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                        </AppTooltip>
+                        <DropdownMenuContent align="start">
+                          {targets.length === 1 && (
+                            <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
+                              <FileText className="size-4" />
+                              {t("openEntry")}
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            disabled={busy}
+                            onSelect={() => duplicate(targets)}
+                          >
+                            <Copy className="size-4" />
+                            {t("duplicate")}
+                          </DropdownMenuItem>
+                          {targets.length === 1 && (
+                            <>
+                              <DropdownMenuItem
+                                disabled={
+                                  busy || !manual || entries[0]?.id === entry.id
+                                }
+                                onSelect={() => move(entry, -1)}
+                              >
+                                <ArrowUp className="size-4" />
+                                {t("moveUp")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={
+                                  busy ||
+                                  !manual ||
+                                  entries.at(-1)?.id === entry.id
+                                }
+                                onSelect={() => move(entry, 1)}
+                              >
+                                <ArrowDown className="size-4" />
+                                {t("moveDown")}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={busy}
+                            onSelect={() => setRemove(targets)}
+                          >
+                            <Trash2 className="size-4" />
+                            {t("delete")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Checkbox
+                        className="after:inset-x-0"
+                        aria-label={t("selectEntry", {
+                          name: entry.title || tPages("untitled"),
+                        })}
+                        checked={checked}
+                        disabled={busy}
+                        onClick={(event) => {
+                          if (event.shiftKey && selectionAnchor.current) {
+                            event.preventDefault();
+                            setSelected((ids) =>
+                              selectDatabaseRows(
+                                rows.map((row) => row.id),
+                                ids,
+                                entry.id,
+                                !checked,
+                                selectionAnchor.current,
+                              ),
+                            );
+                          }
+                        }}
+                        onCheckedChange={(next) => {
+                          setSelected((ids) =>
+                            selectDatabaseRows(
+                              rows.map((row) => row.id),
+                              ids,
+                              entry.id,
+                              next === true,
+                            ),
+                          );
+                          selectionAnchor.current = entry.id;
+                        }}
+                      />
+                    </div>
                   </td>
-                ))}
-                <td className="px-1">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("entryActions")}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        disabled={busy}
-                        onSelect={() => onOpen(entry.id)}
-                      >
-                        <FileText className="size-4" />
-                        {t("openEntry")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={busy}
-                        onSelect={() =>
-                          void run(async () => {
-                            const copy = await duplicatePage(entry.id);
-                            onOpen(copy.id);
-                          })
-                        }
-                      >
-                        <Copy className="size-4" />
-                        {t("duplicate")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={
-                          busy ||
-                          sort !== "position" ||
-                          descending ||
-                          entries[0]?.id === entry.id
-                        }
-                        onSelect={() => move(entry, -1)}
-                      >
-                        <ArrowUp className="size-4" />
-                        {t("moveUp")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={
-                          busy ||
-                          sort !== "position" ||
-                          descending ||
-                          entries.at(-1)?.id === entry.id
-                        }
-                        onSelect={() => move(entry, 1)}
-                      >
-                        <ArrowDown className="size-4" />
-                        {t("moveDown")}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        disabled={busy}
-                        onSelect={() => setRemove(entry)}
-                      >
-                        <Trash2 className="size-4" />
-                        {t("delete")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            ))}
+                  <td
+                    className={`sticky left-16 z-20 min-w-40 border-b border-border/40 px-2 ${checked ? "bg-background bg-linear-to-r from-primary/5 to-primary/5" : "bg-background group-hover:bg-muted"}`}
+                  >
+                    <button
+                      type="button"
+                      className="flex min-h-8 w-full items-center gap-2 text-left hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                      onClick={() => onOpen(entry.id)}
+                      onMouseEnter={() => prefetchPage(entry.id)}
+                      onFocus={() => prefetchPage(entry.id)}
+                    >
+                      {entry.icon ?? (
+                        <FileText className="size-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="max-w-[min(20rem,calc(100vw-9rem))] truncate">
+                        {entry.title || tPages("untitled")}
+                      </span>
+                    </button>
+                  </td>
+                  {visible.map((property) => (
+                    <td
+                      key={property.id}
+                      className="border-b border-l border-border/30 px-1.5"
+                    >
+                      <DatabasePropertyCell
+                        projectId={projectId}
+                        page={entry}
+                        property={property}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {!rows.length && (
@@ -815,14 +1062,18 @@ export function PageDatabaseView({
         {t("newEntry")}
       </Button>
       <AlertDialog
-        open={!!remove}
+        open={remove.length > 0}
         onOpenChange={(open) => {
-          if (!open) setRemove(null);
+          if (!open) setRemove([]);
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteEntry")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {remove.length > 1
+                ? t("deleteEntries", { count: remove.length })
+                : t("deleteEntry")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("deleteEntryBody")}
             </AlertDialogDescription>
@@ -834,11 +1085,15 @@ export function PageDatabaseView({
               disabled={busy}
               onClick={(e) => {
                 e.preventDefault();
-                if (remove)
-                  void run(async () => {
-                    await trashPage(remove.id);
-                    setRemove(null);
-                  });
+                void run(async () => {
+                  for (const entry of remove) await trashPage(entry.id);
+                  setSelected((ids) =>
+                    ids.filter(
+                      (id) => !remove.some((entry) => entry.id === id),
+                    ),
+                  );
+                  setRemove([]);
+                });
               }}
             >
               {t("delete")}

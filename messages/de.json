@@ -5999,7 +5999,6 @@
     "allEntries": "Alle Einträge",
     "checked": "Aktiviert",
     "unchecked": "Deaktiviert",
-    "visibleProperties": "Eigenschaften anzeigen",
     "noProperties": "Füge Eigenschaften hinzu, um deine Einträge zu organisieren.",
     "newEntry": "Neuer Eintrag",
     "entryActions": "Eintragsaktionen",
@@ -6010,8 +6009,16 @@
     "deleteEntry": "Eintrag löschen",
     "deleteEntryBody": "Diese Seite und ihre Unterseiten werden in den Papierkorb verschoben. Dort kannst du sie wiederherstellen.",
     "new": "Neu",
-    "table": "Tabelle",
     "valuePlaceholder": "Wert eingeben…",
-    "sortDirection": "Sortierrichtung"
+    "sortDirection": "Sortierrichtung",
+    "renameColumn": "{name} umbenennen",
+    "showProperty": "{name} anzeigen",
+    "hideProperty": "{name} ausblenden",
+    "selectedCount": "{count} ausgewählt",
+    "clearSelection": "Auswahl aufheben",
+    "selectAllEntries": "Alle Einträge auswählen",
+    "selectEntry": "{name} auswählen",
+    "insertEntryHint": "Darunter einfügen · Wahltaste/Alt-Klick für darüber",
+    "deleteEntries": "{count} Einträge löschen"
   }
 }

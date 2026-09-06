@@ -5999,7 +5999,6 @@
     "allEntries": "Toutes les entrées",
     "checked": "Cochée",
     "unchecked": "Décochée",
-    "visibleProperties": "Afficher les propriétés",
     "noProperties": "Ajoutez des propriétés pour organiser vos entrées.",
     "newEntry": "Nouvelle entrée",
     "entryActions": "Actions de l’entrée",
@@ -6010,8 +6009,16 @@
     "deleteEntry": "Supprimer l’entrée",
     "deleteEntryBody": "Cette page et ses sous-pages seront déplacées dans la corbeille. Vous pourrez les y restaurer.",
     "new": "Nouveau",
-    "table": "Tableau",
     "valuePlaceholder": "Saisir une valeur…",
-    "sortDirection": "Sens du tri"
+    "sortDirection": "Sens du tri",
+    "renameColumn": "Renommer {name}",
+    "showProperty": "Afficher {name}",
+    "hideProperty": "Masquer {name}",
+    "selectedCount": "{count} sélectionnées",
+    "clearSelection": "Désélectionner",
+    "selectAllEntries": "Sélectionner toutes les entrées",
+    "selectEntry": "Sélectionner {name}",
+    "insertEntryHint": "Insérer en dessous · Option/Alt-clic pour insérer au-dessus",
+    "deleteEntries": "Supprimer {count} entrées"
   }
 }

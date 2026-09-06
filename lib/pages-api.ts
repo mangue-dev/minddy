@@ -101,6 +101,8 @@ export async function fetchPageApi(
 }
 
 export interface CreatePageInput {
+  /** Optional fractional position for insertion next to an existing entry. */
+  position?: string;
   database_schema?: import("./page-databases").DatabaseProperty[];
   /** Client-assigned identity used by the optimistic page creation path. */
   id?: string;

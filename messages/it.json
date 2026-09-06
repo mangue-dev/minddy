@@ -5999,7 +5999,6 @@
     "allEntries": "Tutte le voci",
     "checked": "Selezionata",
     "unchecked": "Non selezionata",
-    "visibleProperties": "Mostra proprietà",
     "noProperties": "Aggiungi proprietà per organizzare le tue voci.",
     "newEntry": "Nuova voce",
     "entryActions": "Azioni della voce",
@@ -6010,8 +6009,16 @@
     "deleteEntry": "Elimina voce",
     "deleteEntryBody": "Questa pagina e le sue sottopagine saranno spostate nel cestino. Potrai ripristinarle da lì.",
     "new": "Nuovo",
-    "table": "Tabella",
     "valuePlaceholder": "Inserisci un valore…",
-    "sortDirection": "Direzione di ordinamento"
+    "sortDirection": "Direzione di ordinamento",
+    "renameColumn": "Rinomina {name}",
+    "showProperty": "Mostra {name}",
+    "hideProperty": "Nascondi {name}",
+    "selectedCount": "{count} selezionate",
+    "clearSelection": "Annulla selezione",
+    "selectAllEntries": "Seleziona tutte le voci",
+    "selectEntry": "Seleziona {name}",
+    "insertEntryHint": "Inserisci sotto · Opzione/Alt-clic per inserire sopra",
+    "deleteEntries": "Elimina {count} voci"
   }
 }

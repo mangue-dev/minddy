@@ -5999,7 +5999,6 @@
     "allEntries": "All entries",
     "checked": "Checked",
     "unchecked": "Unchecked",
-    "visibleProperties": "Show properties",
     "noProperties": "Add properties to organize your entries.",
     "newEntry": "New entry",
     "entryActions": "Entry actions",
@@ -6010,8 +6009,16 @@
     "deleteEntry": "Delete entry",
     "deleteEntryBody": "This page and its subpages will move to the trash. You can restore them there.",
     "new": "New",
-    "table": "Table",
     "valuePlaceholder": "Enter a value…",
-    "sortDirection": "Sort direction"
+    "sortDirection": "Sort direction",
+    "renameColumn": "Rename {name}",
+    "showProperty": "Show {name}",
+    "hideProperty": "Hide {name}",
+    "selectedCount": "{count} selected",
+    "clearSelection": "Clear selection",
+    "selectAllEntries": "Select all entries",
+    "selectEntry": "Select {name}",
+    "insertEntryHint": "Insert below · Option/Alt-click to insert above",
+    "deleteEntries": "Delete {count} entries"
   }
 }

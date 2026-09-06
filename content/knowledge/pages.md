@@ -16,10 +16,12 @@ Numo and MCP-connected agents can search, read, write, and attach pages to issue
 
 ## Page databases
 
-Use the **+** menu in Pages to create a page or a database. A database starts with Date, People, and Checkbox properties. Add text properties or more properties of these types from **Properties**. Rename, reorder, or delete properties there; deleting a property removes its values from every entry and cannot be undone.
+Use the **+** menu in Pages to create a page or a database. A database starts with Date, People, and Checkbox properties. Add text properties or more properties of these types from **Properties**. Use the eye beside a property to show or hide it. Double-click any column name, including the title column, to rename it. Reorder or delete properties in the same menu; deleting a property removes its values from every entry and cannot be undone.
 
 Each database entry is a full page. Open an entry from the list to edit it in a floating panel, then choose **Extend** to open it as a full page. Extend waits for pending document saves and keeps the panel open if saving fails. An empty entry remains in the database until you delete it.
 
-Edit properties in the list or above an entry's page content. People selects one or more project members and notifies newly mentioned members. Search, filter, sort, and hide properties in the single list view. These display preferences are remembered on your device. Manual ordering is shared with the page tree.
+Edit properties in the list or above an entry's page content. People selects one or more project members and notifies newly mentioned members. Search, filter, sort, and hide properties in the single list view. These display preferences are remembered on your device. Manual ordering is shared with the page tree. The title column stays visible when scrolling horizontally.
+
+Hover over an entry to reveal its gutter. The handle opens entry actions and can drag entries in manual order. Select several entries with their checkboxes, or Shift-click to select a range, then duplicate or delete the selection. The gutter **+** inserts below that entry; hold **Option/Alt** to insert above. Adjacent insertion returns to manual order and clears filters so the new entry is visible.
 
 Database entries support the usual rich text editor, comments, attachments, duplication, and trash restoration. Markdown and PDF exports include database entries and their properties. Published database pages only show entries included in the published branch; publishing a database without its children keeps their content private. Advanced formulas, automations, and additional database views are not part of page databases.

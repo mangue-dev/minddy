@@ -1649,12 +1649,14 @@ describe("database page lifecycle", () => {
   });
   it("copies database entries, their bodies, and their visible property values", async () => {
     const page = await database();
+    Object.assign(rowOf(page.id), { database_title_name: "Report" });
     const entryId = await create("Entry", page.id);
     Object.assign(rowOf(entryId), { property_values: { [property.id]: "2026-09-06", removed: "Old value" }, content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Journal details" }] }] } });
     const result = await duplicatePage(page.id, ACTOR);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.page.database_schema).toEqual([property]);
+    expect(result.page.database_title_name).toBe("Report");
     const child = h.rows.find((row) => row.parent_id === result.page.id);
     expect(child?.property_values).toEqual({ [property.id]: "2026-09-06" });
     expect(child?.content).toEqual({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Journal details" }] }] });

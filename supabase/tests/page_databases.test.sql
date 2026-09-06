@@ -1,6 +1,6 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
-SELECT plan(19);
+SELECT plan(24);
 
 INSERT INTO auth.users (id, email) VALUES
   ('49900000-0000-4000-8000-000000000001', 'database-owner@example.test'),
@@ -35,6 +35,11 @@ SELECT is((SELECT database_revision FROM public.pages WHERE id='49900000-0000-40
 SELECT is(pg_temp.edit_database('{"operation":"schema","revision":0,"schema":[]}', '49900000-0000-4000-8000-000000000001','49900000-0000-4000-8000-000000000004'), 'conflict', 'stale schema replacement is refused');
 SELECT is(pg_temp.edit_database('{"operation":"value","propertyId":"49900000-0000-4000-8000-000000000011","value":false,"expected":true}'), 'conflict', 'an open editor cannot write a deleted property');
 SELECT is(pg_temp.edit_database('{"operation":"value","propertyId":"49900000-0000-4000-8000-000000000010","value":null,"expected":"2028-02-29"}'), 'updated', 'remaining properties can be cleared after schema deletion');
+SELECT is(pg_temp.edit_database('{"operation":"schema","revision":1,"titleName":"Report","schema":[{"id":"49900000-0000-4000-8000-000000000010","name":"Delivery date","type":"date"}]}', '49900000-0000-4000-8000-000000000001','49900000-0000-4000-8000-000000000004'), 'updated', 'the title column can be renamed without changing properties');
+SELECT is((SELECT database_title_name FROM public.pages WHERE id='49900000-0000-4000-8000-000000000004'), 'Report', 'the title column name is persisted');
+SELECT is((SELECT database_revision FROM public.pages WHERE id='49900000-0000-4000-8000-000000000004'), 2, 'title renaming advances the shared schema revision');
+SELECT is(pg_temp.edit_database('{"operation":"schema","revision":1,"titleName":"Stale","schema":[]}', '49900000-0000-4000-8000-000000000001','49900000-0000-4000-8000-000000000004'), 'conflict', 'stale property edits cannot overwrite a title rename');
+SELECT throws_ok($$ UPDATE public.pages SET database_title_name = ' ' WHERE id='49900000-0000-4000-8000-000000000004' $$, '22023', 'Invalid title column name', 'blank title column names are rejected');
 UPDATE public.pages SET deleted_at = now() WHERE id = '49900000-0000-4000-8000-000000000004';
 SELECT is(pg_temp.edit_database('{"operation":"value","propertyId":"49900000-0000-4000-8000-000000000010","value":"2028-03-01","expected":null}'), 'not_found', 'a trashed database cannot receive entry edits');
 SELECT * FROM finish();
