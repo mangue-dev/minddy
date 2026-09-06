@@ -116,9 +116,16 @@ export async function withMcpClient<T>(
         (text, secret) => text.split(secret).join("[REDACTED]"),
         value,
       );
-    const serialized = JSON.stringify(result, (_key, value) =>
-      typeof value === "string" ? redact(value) : value,
-    );
+    const serialized = JSON.stringify(result, (_key, value) => {
+      if (typeof value === "string") return redact(value);
+      // Structured responses can reflect credentials in property names too.
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        return Object.fromEntries(
+          Object.entries(value).map(([key, child]) => [redact(key), child]),
+        );
+      }
+      return value;
+    });
     if (Buffer.byteLength(serialized) > MCP_MAX_RESULT_BYTES)
       throw new Error("MCP result too large");
     return JSON.parse(serialized) as T;
