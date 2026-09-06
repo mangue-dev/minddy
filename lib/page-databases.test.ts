@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   isDatabaseSchema,
+  isDatabasePropertyValue,
+  databaseValueText,
+  databasePropertyValue,
+  isDatabaseNumberDraft,
+  parseDatabaseNumber,
   isDatabaseValue,
   compareDatabaseValues,
 } from "./page-databases";
@@ -65,5 +70,65 @@ describe("database property validation", () => {
     expect(
       compareDatabaseValues("2026-01-01", "2026-02-01", names),
     ).toBeLessThan(0);
+  });
+});
+
+describe("extended database properties", () => {
+  const option = { id: property.id, name: "Ready", color: "#22c55e" };
+  const select = { ...property, type: "select" as const, options: [option] };
+  it("validates options, unique names, colors, and single/multiple cardinality", () => {
+    expect(isDatabaseSchema([select])).toBe(true);
+    for (const options of [
+      [option, option],
+      [{ ...option, color: "red" }],
+      [{ ...option, name: " " }],
+      [
+        option,
+        {
+          ...option,
+          id: "10000000-0000-4000-8000-000000000002",
+          name: " READY ",
+        },
+      ],
+    ])
+      expect(isDatabaseSchema([{ ...select, options }])).toBe(false);
+    expect(isDatabasePropertyValue(select, option.id)).toBe(true);
+    expect(isDatabasePropertyValue(select, [option.id])).toBe(false);
+    expect(
+      isDatabasePropertyValue(select, "10000000-0000-4000-8000-000000000002"),
+    ).toBe(false);
+    const multi = { ...select, type: "multi_select" as const };
+    expect(isDatabasePropertyValue(multi, [option.id])).toBe(true);
+    expect(isDatabasePropertyValue(multi, [option.id, option.id])).toBe(false);
+    expect(isDatabasePropertyValue(multi, [])).toBe(true);
+    expect(databaseValueText([option.id], new Map(), multi)).toBe("Ready");
+  });
+  it("accepts finite numbers, parses decimals, and sorts negatives numerically", () => {
+    for (const value of [0, -12.5, 100])
+      expect(isDatabaseValue("number", value)).toBe(true);
+    for (const value of ["12", "abc", Infinity, NaN])
+      expect(isDatabaseValue("number", value)).toBe(false);
+    expect(parseDatabaseNumber("-12,5")).toBe(-12.5);
+    expect(parseDatabaseNumber(".5")).toBe(0.5);
+    expect(parseDatabaseNumber("")).toBeNull();
+    expect(parseDatabaseNumber("-")).toBeUndefined();
+    expect(parseDatabaseNumber("1e3")).toBeUndefined();
+    expect(isDatabaseNumberDraft("12a")).toBe(false);
+    expect(isDatabaseNumberDraft("-0,")).toBe(true);
+    expect(compareDatabaseValues(-10, -2, new Map())).toBeLessThan(0);
+  });
+  it("reads creation time from metadata and rejects every attempted write", () => {
+    const created = { ...property, type: "created_at" as const };
+    expect(
+      databasePropertyValue(
+        {
+          created_at: "2026-09-06T12:00:00Z",
+          property_values: { [property.id]: "fake" },
+        },
+        created,
+      ),
+    ).toBe("2026-09-06T12:00:00Z");
+    for (const value of [null, "2026-09-06", "fake", 0])
+      expect(isDatabasePropertyValue(created, value)).toBe(false);
   });
 });

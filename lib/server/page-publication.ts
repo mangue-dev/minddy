@@ -101,7 +101,7 @@ export async function getPublicPageBundle(
   if (ctx.share.include_children) {
     const { data } = await service
       .from("pages")
-      .select("id, parent_id, title, icon, position, database_schema, property_values")
+      .select("id, parent_id, title, icon, position, database_schema, property_values, created_at")
       .eq("project_id", ctx.project.id)
       .is("deleted_at", null);
     const all = (data ?? []) as Array<PublicPageNode & { position: string }>;
@@ -120,7 +120,7 @@ export async function getPublicPageBundle(
 
   const { data: pageRow } = await service
     .from("pages")
-    .select("id, parent_id, title, icon, content, updated_at, database_schema, property_values")
+    .select("id, parent_id, title, icon, content, updated_at, database_schema, property_values, created_at")
     .eq("id", targetId)
     .is("deleted_at", null)
     .maybeSingle();

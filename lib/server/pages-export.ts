@@ -67,7 +67,7 @@ export async function exportPage({
   const service = getServiceClient();
   const { data: root } = await service
     .from("pages")
-    .select("id, project_id, parent_id, title, icon, content, position, database_schema, property_values")
+    .select("id, project_id, parent_id, title, icon, content, position, database_schema, property_values, created_at")
     .eq("id", pageId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -81,11 +81,11 @@ export async function exportPage({
     let context: DatabaseDocumentPage[] = [rootRow];
     if (rootRow.database_schema != null) {
       const { data, error } = await service.from("pages")
-        .select("id, parent_id, title, property_values, position")
+        .select("id, parent_id, title, property_values, position, created_at")
         .eq("parent_id", pageId).eq("project_id", root.project_id).is("deleted_at", null).order("position");
       if (error) return { ok: false, status: 500, errorKey: "databaseError" };
       context = [rootRow, ...(data ?? []) as DatabaseDocumentPage[]];
-    } else if (Object.keys(rootRow.property_values ?? {}).length && rootRow.parent_id) {
+    } else if (rootRow.parent_id) {
       const { data: parent } = await service.from("pages").select("id, parent_id, title, database_schema")
         .eq("id", rootRow.parent_id).eq("project_id", root.project_id).maybeSingle();
       if (parent) context.push(parent as DatabaseDocumentPage);
@@ -112,7 +112,7 @@ export async function exportPage({
   // also what limits the size of ONE PostgREST response.
   const { data: skeleton, error } = await service
     .from("pages")
-    .select("id, parent_id, title, icon, position, database_schema, property_values")
+    .select("id, parent_id, title, icon, position, database_schema, property_values, created_at")
     .eq("project_id", root.project_id as string)
     .is("deleted_at", null)
     .order("position", { ascending: true });

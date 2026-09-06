@@ -5960,6 +5960,16 @@
     "customDescription": "Enter a name and the server URL to connect it to Numo."
   },
   "PageDatabase": {
+    "number": "Number",
+    "select": "Select",
+    "multi_select": "Multi-select",
+    "created_at": "Created at",
+    "editOptions": "Edit options",
+    "optionName": "Option name",
+    "noOptions": "No options yet",
+    "searchOptions": "Find or create an option",
+    "createOption": "Create “{name}”",
+    "numberRequired": "Enter a number",
     "horizontalScroll": "Scroll database horizontally",
     "newDatabase": "New database",
     "create": "Create",

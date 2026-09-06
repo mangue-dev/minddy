@@ -117,7 +117,7 @@ describe("page database server boundary", () => {
       p_project_id: "project",
       p_page_id: "entry",
       p_actor_id: "actor",
-      p_input: input,
+      p_input: { ...input, kind: "human" },
     });
   });
   it("reports stale cells and schema edits without retrying over them", async () => {
@@ -145,4 +145,60 @@ describe("page database server boundary", () => {
       errorKey: "pageDatabaseInvalid",
     });
   });
+});
+
+it("keeps Numo attribution server-owned and applies the same concurrency guard", async () => {
+  const input = {
+    operation: "value",
+    propertyId,
+    value: "2026-01-01",
+    expected: null,
+    kind: "agent",
+  };
+  await updatePageDatabase("project", "entry", "actor", input);
+  expect(h.rpc).toHaveBeenLastCalledWith(
+    "update_page_database_guarded",
+    expect.objectContaining({ p_input: { ...input, kind: "human" } }),
+  );
+  await updatePageDatabase("project", "entry", "actor", input, "agent");
+  expect(h.rpc).toHaveBeenLastCalledWith(
+    "update_page_database_guarded",
+    expect.objectContaining({ p_input: input }),
+  );
+  h.rpc.mockResolvedValue({ data: { status: "conflict" }, error: null });
+  expect(
+    await updatePageDatabase("project", "entry", "actor", input, "agent"),
+  ).toMatchObject({ ok: false, status: 409 });
+});
+
+it("rejects number strings, unknown options, and writes to creation metadata before RPC", async () => {
+  for (const [type, value] of [
+    ["number", "12a"],
+    ["select", propertyId],
+    ["multi_select", [propertyId]],
+    ["created_at", null],
+  ]) {
+    h.getPage.mockImplementation(async (id: string) => ({
+      ok: true,
+      page:
+        id === "db"
+          ? {
+              ...database,
+              database_schema: [
+                { id: propertyId, name: "Property", type, options: [] },
+              ],
+            }
+          : entry,
+    }));
+    expect(
+      await updatePageDatabase(
+        "project",
+        "entry",
+        "actor",
+        { operation: "value", propertyId, value, expected: null },
+        "agent",
+      ),
+    ).toMatchObject({ ok: false, status: 400 });
+  }
+  expect(h.rpc).not.toHaveBeenCalled();
 });

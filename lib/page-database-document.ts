@@ -1,12 +1,13 @@
 import type { JSONContent } from "@tiptap/core";
 import type { DatabaseProperty, DatabaseValues } from "./page-databases";
-import { databaseValueText } from "./page-databases";
+import { databasePropertyValue, databaseValueText } from "./page-databases";
 
 export interface DatabaseDocumentPage {
   id: string;
   parent_id: string | null;
   title: string;
   content?: unknown;
+  created_at?: string;
   database_schema?: DatabaseProperty[] | null;
   property_values?: DatabaseValues;
 }
@@ -24,7 +25,7 @@ export function pageDatabaseDocument(
   });
   const values = (entry: DatabaseDocumentPage, schema: DatabaseProperty[]) =>
     schema.flatMap((property) => {
-      const value = entry.property_values?.[property.id];
+      const value = databasePropertyValue(entry, property);
       if (
         value == null ||
         value === "" ||
@@ -36,7 +37,7 @@ export function pageDatabaseDocument(
           ? value
             ? "☑"
             : "☐"
-          : databaseValueText(value, names);
+          : databaseValueText(value, names, property);
       return [paragraph(`${property.name}: ${text}`)];
     });
   if (page.database_schema != null) {

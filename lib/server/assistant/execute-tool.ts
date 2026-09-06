@@ -24,6 +24,7 @@ import {
   readPageForAgent,
   searchPagesForAgent,
   updatePageForAgent,
+  updateDatabaseForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
 
@@ -1145,6 +1146,7 @@ export async function executeTool(
       case "list_pages":
       case "search_pages":
       case "get_page":
+      case "update_page_database":
       case "update_page":
       case "append_to_page":
       case "edit_page_text":
@@ -2831,6 +2833,8 @@ async function executePageTool(
   switch (toolName) {
     case "get_page":
       return render(await readPageForAgent({ pageId, projectId, actorId }));
+    case "update_page_database":
+      return render(await updateDatabaseForAgent({ projectId, pageId, actorId, input: args }));
     case "update_page":
       return render(
         await updatePageForAgent({
@@ -2878,6 +2882,7 @@ async function executeCreatePage(
   const result = await createPageForAgent({
     projectId,
     actorId: ctx.userId,
+    database: args.database === true,
     title: typeof args.title === "string" ? args.title : "",
     icon: typeof args.icon === "string" ? args.icon : undefined,
     markdown: typeof args.markdown === "string" ? args.markdown : undefined,

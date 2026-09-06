@@ -5960,6 +5960,16 @@
     "customDescription": "Inserisci un nome e l’URL del server per collegarlo a Numo."
   },
   "PageDatabase": {
+    "number": "Numero",
+    "select": "Selezione",
+    "multi_select": "Selezione multipla",
+    "created_at": "Data di creazione",
+    "editOptions": "Modifica opzioni",
+    "optionName": "Nome dell’opzione",
+    "noOptions": "Nessuna opzione",
+    "searchOptions": "Cerca o crea un’opzione",
+    "createOption": "Crea «{name}»",
+    "numberRequired": "Inserisci un numero",
     "horizontalScroll": "Scorri il database in orizzontale",
     "newDatabase": "Nuovo database",
     "create": "Crea",

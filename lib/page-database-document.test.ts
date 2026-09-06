@@ -80,3 +80,31 @@ describe("database document projection", () => {
     );
   });
 });
+
+it("exports numbers, option names, and creation metadata without exposing private entries", () => {
+  const db: DatabaseDocumentPage = {
+    ...database,
+    database_schema: [
+      { id: "amount", name: "Amount", type: "number" },
+      {
+        id: "status",
+        name: "Status",
+        type: "select",
+        options: [{ id: "ready", name: "Ready", color: "#22c55e" }],
+      },
+      { id: "created", name: "Created", type: "created_at" },
+    ],
+  };
+  const row = {
+    ...entry,
+    created_at: "2026-09-06T12:00:00Z",
+    property_values: { amount: -12.5, status: "ready" },
+  };
+  const output = JSON.stringify(pageDatabaseDocument(db, [db, row], new Map()));
+  expect(output).toContain("Amount: -12.5");
+  expect(output).toContain("Status: Ready");
+  expect(output).toContain("Created: 2026-09-06T12:00:00Z");
+  expect(
+    JSON.stringify(pageDatabaseDocument(db, [db], new Map())),
+  ).not.toContain("Ready");
+});

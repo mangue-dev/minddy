@@ -64,11 +64,13 @@ import {
   MAX_DATABASE_PROPERTIES,
   compareDatabaseValues,
   databaseValueText,
+  databasePropertyValue,
   type DatabaseProperty,
   type DatabasePropertyType,
 } from "@/lib/page-databases";
 import { positionBetween } from "@/lib/pages";
 import type { PageSummary } from "@/lib/pages-api";
+import { DatabaseOptionSettings } from "./database-select-cell";
 import {
   DatabasePropertyCell,
   PROPERTY_ICONS,
@@ -199,6 +201,30 @@ function PropertySettings({
                     >
                       {property.name}
                     </button>
+                  )}
+                  {(property.type === "select" ||
+                    property.type === "multi_select") && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("editOptions")}
+                        >
+                          <Settings2 className="size-3.5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 space-y-3">
+                        <div className="text-sm font-medium">
+                          {t("editOptions")}
+                        </div>
+                        <DatabaseOptionSettings
+                          projectId={projectId}
+                          database={database}
+                          property={property}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   )}
                   <Button
                     variant="ghost"
@@ -448,14 +474,14 @@ export function PageDatabaseView({
       const text = [
         entry.title,
         ...schema.map((p) =>
-          databaseValueText(entry.property_values?.[p.id], names),
+          databaseValueText(databasePropertyValue(entry, p), names, p),
         ),
       ]
         .join(" ")
         .toLocaleLowerCase();
       if (!text.includes(query.toLocaleLowerCase())) return false;
       if (!filterProperty) return true;
-      const value = entry.property_values?.[filter];
+      const value = databasePropertyValue(entry, filterProperty);
       if (filterProperty.type === "checkbox")
         return (value === true) === (filterValue === "true");
       if (!filterValue)
@@ -468,7 +494,7 @@ export function PageDatabaseView({
         return Array.isArray(value)
           ? value.includes(filterValue)
           : value === filterValue;
-      return databaseValueText(value, names)
+      return databaseValueText(value, names, filterProperty)
         .toLocaleLowerCase()
         .includes(filterValue.toLocaleLowerCase());
     })
@@ -489,9 +515,16 @@ export function PageDatabaseView({
           : effectiveSort === "title"
             ? a.title.localeCompare(b.title)
             : compareDatabaseValues(
-                a.property_values?.[effectiveSort],
-                b.property_values?.[effectiveSort],
+                databasePropertyValue(
+                  a,
+                  schema.find((p) => p.id === effectiveSort)!,
+                ),
+                databasePropertyValue(
+                  b,
+                  schema.find((p) => p.id === effectiveSort)!,
+                ),
                 names,
+                schema.find((p) => p.id === effectiveSort),
               );
       return (descending ? -result : result) || a.id.localeCompare(b.id);
     });
@@ -575,7 +608,16 @@ export function PageDatabaseView({
     240,
     ...visible.map(
       (property) =>
-        ({ text: 240, date: 176, people: 192, checkbox: 128 })[property.type],
+        ({
+          text: 240,
+          number: 160,
+          select: 192,
+          multi_select: 240,
+          created_at: 200,
+          date: 176,
+          people: 192,
+          checkbox: 128,
+        })[property.type],
     ),
   ];
   const contentWidth = columnWidths.reduce((total, width) => total + width, 0);
@@ -1066,6 +1108,7 @@ export function PageDatabaseView({
                         table
                         projectId={projectId}
                         page={entry}
+                        database={database}
                         property={property}
                       />
                     </td>

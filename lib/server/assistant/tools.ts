@@ -626,7 +626,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_page",
       description:
-        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A '[[page:<id>]]' line is a LINK to a subpage, never its content — read that page too if you need it.",
+        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and entry property_values/created_at in subpages. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A '[[page:<id>]]' line is a LINK to a subpage, never its content — read that page too if you need it.",
       parameters: {
         type: "object",
         properties: {
@@ -645,6 +645,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       parameters: {
         type: "object",
         properties: {
+          database: {
+            type: "boolean",
+            description:
+              "Create a database instead of a document. Then add properties with update_page_database. Create entries with parent_page_id set to this database id; an empty markdown body is valid for databases and entries.",
+          },
           title: {
             type: "string",
             description:
@@ -666,6 +671,71 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["title", "markdown"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_page_database",
+      description:
+        "Update a database schema or one entry property. Read get_page first. For schema, send the FULL schema preserving existing properties/options and its database_revision as revision; option ids are stable UUIDs, names are unique per property, colors are #RRGGBB. Removing a property or option clears its entry values. For value, use the entry page_id and exact previous value as expected (null when empty). Number values must be finite JSON numbers, select is one option id, multi_select an array of option ids, people an array of project member ids, date YYYY-MM-DD, checkbox boolean, text string; null clears. created_at is read-only metadata. A stale edit is refused: reread and reapply, never overwrite blindly.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string" },
+          operation: { type: "string", enum: ["schema", "value"] },
+          revision: { type: "integer", minimum: 0 },
+          titleName: { type: ["string", "null"] },
+          schema: {
+            type: "array",
+            maxItems: 30,
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string", format: "uuid" },
+                name: { type: "string", maxLength: 80 },
+                type: {
+                  type: "string",
+                  enum: [
+                    "text",
+                    "number",
+                    "select",
+                    "multi_select",
+                    "created_at",
+                    "date",
+                    "people",
+                    "checkbox",
+                  ],
+                },
+                options: {
+                  type: "array",
+                  maxItems: 100,
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "string", format: "uuid" },
+                      name: { type: "string", maxLength: 80 },
+                      color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+                    },
+                    required: ["id", "name", "color"],
+                  },
+                },
+              },
+              required: ["id", "name", "type"],
+            },
+          },
+          propertyId: { type: "string", format: "uuid" },
+          value: {
+            type: ["string", "number", "boolean", "array", "null"],
+            items: { type: "string" },
+          },
+          expected: {
+            type: ["string", "number", "boolean", "array", "null"],
+            items: { type: "string" },
+          },
+        },
+        required: ["page_id", "operation"],
       },
     },
   },

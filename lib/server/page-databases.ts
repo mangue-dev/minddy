@@ -1,6 +1,9 @@
 import "server-only";
 
-import { isDatabaseSchema, isDatabaseValue } from "@/lib/page-databases";
+import {
+  isDatabaseSchema,
+  isDatabasePropertyValue,
+} from "@/lib/page-databases";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getPage, type PageResult } from "@/lib/server/pages";
 import { recordPageEvent } from "@/lib/server/page-activity";
@@ -14,6 +17,7 @@ export async function updatePageDatabase(
   pageId: string,
   actorId: string,
   input: unknown,
+  kind: "human" | "agent" = "human",
 ): Promise<PageResult<Page>> {
   const loaded = await getPage(pageId, actorId);
   if (!loaded.ok) return loaded;
@@ -52,7 +56,7 @@ export async function updatePageDatabase(
     const property = parent.page.database_schema?.find(
       (p) => p.id === body.propertyId,
     );
-    if (!property || !isDatabaseValue(property.type, body.value))
+    if (!property || !isDatabasePropertyValue(property, body.value))
       return invalid;
   } else return invalid;
 
@@ -61,7 +65,7 @@ export async function updatePageDatabase(
     p_project_id: projectId,
     p_page_id: pageId,
     p_actor_id: actorId,
-    p_input: body,
+    p_input: { ...body, kind },
   });
   if (error) {
     if (error.code?.startsWith("22")) return invalid;
@@ -76,7 +80,7 @@ export async function updatePageDatabase(
     await recordPageEvent(service, {
       pageId,
       actorId,
-      kind: "human",
+      kind,
       type: "page_updated",
     });
     if (body.operation !== "value" || !loaded.page.parent_id) return;

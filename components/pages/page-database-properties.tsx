@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
   Checkbox,
@@ -10,7 +10,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "mangue-ui";
-import { CalendarDays, CheckSquare, Type, Users } from "lucide-react";
+import {
+  CalendarDays,
+  CheckSquare,
+  Type,
+  Users,
+  Hash,
+  ListFilter,
+  Tags,
+  Clock,
+} from "lucide-react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchMultiSelect } from "@/components/search-select";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
@@ -19,16 +28,26 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { displayName } from "@/lib/display-name";
 import { usePageDatabase } from "@/lib/use-page-database";
 import {
+  databasePropertyValue,
+  isDatabaseNumberDraft,
+  parseDatabaseNumber,
   type DatabaseProperty,
   type DatabaseValue,
 } from "@/lib/page-databases";
 import type { PageSummary } from "@/lib/pages-api";
+
+import { DatabaseCellEditor } from "./database-cell-editor";
+import { DatabaseSelectCell } from "./database-select-cell";
 
 const TABLE_CELL_TRIGGER =
   "flex h-8 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
 
 export const PROPERTY_ICONS = {
   text: Type,
+  number: Hash,
+  select: ListFilter,
+  multi_select: Tags,
+  created_at: Clock,
   date: CalendarDays,
   people: Users,
   checkbox: CheckSquare,
@@ -37,18 +56,21 @@ export const PROPERTY_ICONS = {
 export function DatabasePropertyCell({
   projectId,
   page,
+  database,
   property,
   table = false,
 }: {
   projectId: string;
   page: PageSummary;
+  database: PageSummary;
   property: DatabaseProperty;
   table?: boolean;
 }) {
   const t = useTranslations("PageDatabase");
+  const format = useFormatter();
   const { saveValue, pending } = usePageDatabase(projectId);
   const { members } = useMembersQuery(projectId, property.type === "people");
-  const value = page.property_values?.[property.id] ?? null;
+  const value = databasePropertyValue(page, property);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [expected, setExpected] = useState<DatabaseValue>(value);
@@ -56,7 +78,7 @@ export function DatabasePropertyCell({
     if (pending) return;
     setOpen(next);
     setExpected(value);
-    setDraft(typeof value === "string" ? value : "");
+    setDraft(value == null ? "" : String(value));
   };
   const save = async (next: DatabaseValue, close = true) => {
     if (pending) return;
@@ -67,6 +89,38 @@ export function DatabasePropertyCell({
   };
   const label = t("editProperty", { name: property.name });
   const triggerClass = table ? TABLE_CELL_TRIGGER : `${TRIGGER} min-h-8`;
+  if (property.type === "created_at")
+    return (
+      <span className={triggerClass}>
+        {page.created_at
+          ? format.dateTime(new Date(page.created_at), {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          : t("emptyValue")}
+      </span>
+    );
+  if (property.type === "select" || property.type === "multi_select")
+    return (
+      <DatabaseSelectCell
+        projectId={projectId}
+        page={page}
+        database={database}
+        property={property}
+        className={triggerClass}
+      />
+    );
+  if (table && (property.type === "text" || property.type === "number"))
+    return (
+      <DatabaseCellEditor
+        value={value}
+        numeric={property.type === "number"}
+        label={label}
+        className={triggerClass}
+        empty={t("emptyValue")}
+        save={(next, base) => saveValue(page, property.id, next, base)}
+      />
+    );
   if (property.type === "checkbox") {
     const checkbox = (
       <Checkbox
@@ -208,9 +262,10 @@ export function DatabasePropertyCell({
               : `${triggerClass} whitespace-normal text-left [overflow-wrap:anywhere]`
           }
         >
-          {typeof value === "string" && value ? (
+          {(typeof value === "string" || typeof value === "number") &&
+          value !== "" ? (
             table ? (
-              value.slice(0, 160)
+              String(value).slice(0, 160)
             ) : (
               value
             )
@@ -223,7 +278,11 @@ export function DatabasePropertyCell({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void save(draft || null);
+            const next =
+              property.type === "number"
+                ? parseDatabaseNumber(draft)
+                : draft || null;
+            if (next !== undefined) void save(next);
           }}
           className="space-y-3"
         >
@@ -234,7 +293,14 @@ export function DatabasePropertyCell({
               maxLength={2000}
               value={draft}
               disabled={pending}
-              onChange={(event) => setDraft(event.target.value)}
+              inputMode={property.type === "number" ? "decimal" : "text"}
+              onChange={(event) => {
+                if (
+                  property.type !== "number" ||
+                  isDatabaseNumberDraft(event.target.value)
+                )
+                  setDraft(event.target.value);
+              }}
               autoFocus
             />
           </label>
@@ -274,6 +340,7 @@ export function PageDatabaseProperties({
           <DatabasePropertyCell
             projectId={projectId}
             page={page}
+            database={database}
             property={property}
           />
         </PropertyRow>

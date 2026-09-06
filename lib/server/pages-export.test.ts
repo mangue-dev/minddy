@@ -19,6 +19,7 @@ const rows = {
     icon: null,
     content: null,
     position: "a",
+    created_at: "2026-09-06T12:00:00Z",
   },
   list: [] as Array<Record<string, unknown>>,
 };
@@ -28,6 +29,7 @@ let access: unknown = { isOwner: true };
 /** What the base was asked to return — the object of MIN-348's control: the
     project list does NOT ask for bodies, and these are only read for
     branche. */
+const projections: unknown[] = [];
 const reads = { selects: [] as string[], bodyIds: [] as string[][] };
 
 vi.mock("@/lib/server/project-access", () => ({
@@ -35,8 +37,10 @@ vi.mock("@/lib/server/project-access", () => ({
 }));
 
 vi.mock("@/lib/server/pages-projection", () => ({
-  pageToMarkdownServer: async (page: { title: string }) =>
-    `# ${page.title}\n\ncorps de ${page.title}`,
+  pageToMarkdownServer: async (page: { title: string }) => {
+    projections.push(page);
+    return `# ${page.title}\n\ncorps de ${page.title}`;
+  },
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -45,9 +49,18 @@ vi.mock("@/lib/supabase-service", () => ({
       select: (columns: string) => {
         reads.selects.push(columns);
         return {
-          eq: (column: string) =>
+          eq: (column: string, value: string) =>
             column === "id"
-              ? { is: () => ({ maybeSingle: async () => ({ data: rows.root }) }) }
+              ? {
+                  is: () => ({
+                    maybeSingle: async () => ({ data: rows.root }),
+                  }),
+                  eq: () => ({
+                    maybeSingle: async () => ({
+                      data: rows.list.find((row) => row.id === value) ?? null,
+                    }),
+                  }),
+                }
               : {
                   is: () => ({
                     order: async () => ({ data: rows.list, error: null }),
@@ -94,7 +107,11 @@ function branchRows() {
 describe("exportPage", () => {
   it("rend un .md pour une page seule", async () => {
     access = { isOwner: true };
-    const result = await exportPage({ pageId: "root", actorId: "u", branch: false });
+    const result = await exportPage({
+      pageId: "root",
+      actorId: "u",
+      branch: false,
+    });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.fileName).toBe("Guide.md");
@@ -105,7 +122,11 @@ describe("exportPage", () => {
   it("rend une archive relisible, bornée à la branche", async () => {
     access = { isOwner: true };
     rows.list = branchRows();
-    const result = await exportPage({ pageId: "root", actorId: "u", branch: true });
+    const result = await exportPage({
+      pageId: "root",
+      actorId: "u",
+      branch: true,
+    });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.fileName).toBe("Guide.zip");
@@ -119,7 +140,9 @@ describe("exportPage", () => {
     expect(strFromU8(entries["Guide/index.md"])).toContain("corps de Guide");
     // The root of the archive is the exported page: its real parent, which is not
     // Don't take the branch, don't take it down a notch.
-    expect(Object.keys(entries).every((p) => p.startsWith("Guide/"))).toBe(true);
+    expect(Object.keys(entries).every((p) => p.startsWith("Guide/"))).toBe(
+      true,
+    );
   });
 
   it("ne charge le corps que des pages de la branche", async () => {
@@ -127,13 +150,17 @@ describe("exportPage", () => {
     rows.list = branchRows();
     reads.selects = [];
     reads.bodyIds = [];
-    const result = await exportPage({ pageId: "root", actorId: "u", branch: true });
+    const result = await exportPage({
+      pageId: "root",
+      actorId: "u",
+      branch: true,
+    });
     expect(result.ok).toBe(true);
 
     // The project list is a SKELETON: without it, export a page from a
     // wiki de mille documents en chargeait mille corps (MIN-348).
     const listSelect = reads.selects.find(
-      (s) => s.includes("parent_id") && !s.includes("project_id")
+      (s) => s.includes("parent_id") && !s.includes("project_id"),
     );
     expect(listSelect).toBeDefined();
     expect(listSelect).not.toContain("content");
@@ -144,7 +171,39 @@ describe("exportPage", () => {
 
   it("répond 404 à qui n'a pas accès au projet — jamais 403", async () => {
     access = null;
-    const result = await exportPage({ pageId: "root", actorId: "u", branch: false });
-    expect(result).toEqual({ ok: false, status: 404, errorKey: "pageNotFound" });
+    const result = await exportPage({
+      pageId: "root",
+      actorId: "u",
+      branch: false,
+    });
+    expect(result).toEqual({
+      ok: false,
+      status: 404,
+      errorKey: "pageNotFound",
+    });
   });
+});
+
+it("includes creation metadata when an exported entry has no editable values", async () => {
+  access = { isOwner: true };
+  rows.list = [
+    {
+      id: rows.root.parent_id,
+      parent_id: null,
+      title: "Database",
+      database_schema: [{ id: "created", name: "Created", type: "created_at" }],
+    },
+  ];
+  const result = await exportPage({
+    pageId: "root",
+    actorId: "u",
+    branch: false,
+  });
+  expect(result.ok).toBe(true);
+  expect(JSON.stringify(projections.at(-1))).toContain(
+    "Created: 2026-09-06T12:00:00Z",
+  );
+  expect(reads.selects.some((columns) => columns.includes("created_at"))).toBe(
+    true,
+  );
 });

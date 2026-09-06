@@ -5960,6 +5960,16 @@
     "customDescription": "Saisissez un nom et l’URL du serveur pour le connecter à Numo."
   },
   "PageDatabase": {
+    "number": "Nombre",
+    "select": "Sélection",
+    "multi_select": "Sélection multiple",
+    "created_at": "Date de création",
+    "editOptions": "Modifier les options",
+    "optionName": "Nom de l’option",
+    "noOptions": "Aucune option pour le moment",
+    "searchOptions": "Rechercher ou créer une option",
+    "createOption": "Créer « {name} »",
+    "numberRequired": "Saisissez un nombre",
     "horizontalScroll": "Faire défiler le tableau horizontalement",
     "newDatabase": "Nouvelle base de données",
     "create": "Créer",

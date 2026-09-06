@@ -887,3 +887,19 @@ describe("les fils de discussion d'une page", () => {
     expect((payload.error as { code: string }).code).toBe("project_not_found");
   });
 });
+
+it("returns database schemas, option identities, and direct entry values to page agents", async () => {
+  const databaseId = await createPage("Journal");
+  const entryId = await createPage("Release notes", "Entry body", databaseId);
+  const schema = [{ id: "status", name: "Status", type: "select", options: [{ id: "ready", name: "Ready", color: "#22c55e" }] }];
+  Object.assign(h.rows.find((row) => row.id === databaseId)!, { database_schema: schema, database_revision: 4 });
+  Object.assign(h.rows.find((row) => row.id === entryId)!, { property_values: { status: "ready" } });
+  const { payload, ok } = await call("minddy_get_page", { project_id: PROJECT, page_id: databaseId });
+  expect(ok).toBe(true);
+  expect(payload.database_schema).toEqual(schema);
+  expect(payload.database_revision).toBe(4);
+  expect(payload.subpages).toEqual([expect.objectContaining({ page_id: entryId, property_values: { status: "ready" }, created_at: expect.any(String) })]);
+  const entryRead = await call("minddy_get_page", { project_id: PROJECT, page_id: entryId });
+  expect(entryRead.payload.property_values).toEqual({ status: "ready" });
+  expect(entryRead.payload.markdown).toBe("Entry body");
+});
