@@ -368,11 +368,13 @@ function reasoningOptions(job: VmJob): Record<string, unknown> | null {
  */
 function permissions(_job: VmJob): Record<string, PermissionRule> {
   return {
+    // OpenCode applies the last matching rule. Keep audited capabilities after
+    // the default so the supervisor still receives their permission requests.
+    "*": "allow",
     edit: "ask",
     task: "ask",
     bash: "ask",
     external_directory: "ask",
-    "*": "allow",
   };
 }
 

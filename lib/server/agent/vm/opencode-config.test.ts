@@ -727,3 +727,24 @@ describe("local and cloud capability parity", () => {
     );
   });
 });
+
+/** OpenCode evaluates these rules in insertion order, with the last match winning. */
+describe("native permission precedence", () => {
+  it.each(["edit", "task", "bash", "external_directory"])(
+    "routes %s through the supervisor in every capable agent",
+    (capability) => {
+      const config = buildOpencodeConfig(job());
+      const policies = [
+        config.permission,
+        config.agent[OPENCODE_PRIMARY_AGENT].permission,
+        config.agent.general.permission,
+      ];
+      for (const policy of policies) {
+        const effective = Object.entries(policy ?? {})
+          .filter(([pattern]) => pattern === "*" || pattern === capability)
+          .at(-1)?.[1];
+        expect(effective).toBe("ask");
+      }
+    },
+  );
+});
