@@ -117,7 +117,7 @@ describe("page database server boundary", () => {
       p_project_id: "project",
       p_page_id: "entry",
       p_actor_id: "actor",
-      p_input: { ...input, kind: "human" },
+      p_input: { ...input, kind: "human", mcpKeyId: null },
     });
   });
   it("reports stale cells and schema edits without retrying over them", async () => {
@@ -154,16 +154,17 @@ it("keeps Numo attribution server-owned and applies the same concurrency guard",
     value: "2026-01-01",
     expected: null,
     kind: "agent",
+    mcpKeyId: "spoofed",
   };
   await updatePageDatabase("project", "entry", "actor", input);
   expect(h.rpc).toHaveBeenLastCalledWith(
     "update_page_database_guarded",
-    expect.objectContaining({ p_input: { ...input, kind: "human" } }),
+    expect.objectContaining({ p_input: { ...input, kind: "human", mcpKeyId: null } }),
   );
   await updatePageDatabase("project", "entry", "actor", input, "agent");
   expect(h.rpc).toHaveBeenLastCalledWith(
     "update_page_database_guarded",
-    expect.objectContaining({ p_input: input }),
+    expect.objectContaining({ p_input: { ...input, mcpKeyId: null } }),
   );
   h.rpc.mockResolvedValue({ data: { status: "conflict" }, error: null });
   expect(
@@ -230,7 +231,7 @@ describe("column conversion boundary", () => {
     expect(await convertPageDatabase("project", "db", "actor", input)).toEqual({ ok: true, page: preview });
     expect(h.rpc).toHaveBeenCalledWith("convert_page_database_guarded", {
       p_project_id: "project", p_page_id: "db", p_actor_id: "actor",
-      p_input: { ...input, kind: "human" },
+      p_input: { ...input, kind: "human", mcpKeyId: null },
     });
     expect(h.event).not.toHaveBeenCalled();
   });

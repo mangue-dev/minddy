@@ -171,7 +171,7 @@ BEGIN
     UPDATE public.pages SET database_schema = p_input->'schema',
       database_title_name = CASE WHEN p_input ? 'titleName' THEN p_input->>'titleName' ELSE database_title_name END,
       updated_by = p_actor_id,
-      updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END, updated_api_key_id = NULL WHERE id = p_page_id;
+      updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END, updated_api_key_id = CASE WHEN p_input->>'kind' = 'agent' THEN (p_input->>'mcpKeyId')::uuid ELSE NULL END WHERE id = p_page_id;
   ELSIF p_input->>'operation' = 'value' THEN
     IF target.parent_id IS DISTINCT FROM container.id OR NOT EXISTS (
       SELECT 1 FROM jsonb_array_elements(container.database_schema) p WHERE p->>'id' = p_input->>'propertyId' AND p->>'type' <> 'created_at'
@@ -179,7 +179,7 @@ BEGIN
     IF coalesce(target.property_values->(p_input->>'propertyId'), 'null'::jsonb) IS DISTINCT FROM p_input->'expected' THEN
       RETURN jsonb_build_object('status', 'conflict'); END IF;
     UPDATE public.pages SET property_values = property_values || jsonb_build_object(p_input->>'propertyId', p_input->'value'),
-      updated_by = p_actor_id, updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END, updated_api_key_id = NULL WHERE id = p_page_id;
+      updated_by = p_actor_id, updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END, updated_api_key_id = CASE WHEN p_input->>'kind' = 'agent' THEN (p_input->>'mcpKeyId')::uuid ELSE NULL END WHERE id = p_page_id;
   ELSE RAISE EXCEPTION 'Unknown operation' USING ERRCODE = '22023'; END IF;
   RETURN jsonb_build_object('status', 'updated');
 END;
@@ -198,7 +198,7 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements(NEW.database_schema) n WHERE n->>'id' = p->>'id');
   IF removed IS NOT NULL THEN
     UPDATE public.pages SET property_values = property_values - removed,
-      updated_by = NEW.updated_by, updated_kind = NEW.updated_kind
+      updated_by = NEW.updated_by, updated_kind = NEW.updated_kind, updated_api_key_id = NEW.updated_api_key_id
       WHERE parent_id = NEW.id AND property_values ?| removed;
   END IF;
   FOR prop IN SELECT value FROM jsonb_array_elements(NEW.database_schema) WHERE value->>'type' IN ('select', 'multi_select') LOOP
@@ -208,13 +208,13 @@ BEGIN
     IF removed_options IS NULL THEN CONTINUE; END IF;
     IF prop->>'type' = 'select' THEN
       UPDATE public.pages SET property_values = property_values - (prop->>'id'),
-        updated_by = NEW.updated_by, updated_kind = NEW.updated_kind
+        updated_by = NEW.updated_by, updated_kind = NEW.updated_kind, updated_api_key_id = NEW.updated_api_key_id
         WHERE parent_id = NEW.id AND property_values->>(prop->>'id') = ANY(removed_options);
     ELSE
       UPDATE public.pages SET property_values = jsonb_set(property_values, ARRAY[prop->>'id'],
         coalesce((SELECT jsonb_agg(v) FROM jsonb_array_elements(property_values->(prop->>'id')) v
           WHERE NOT (v #>> '{}') = ANY(removed_options)), '[]'::jsonb)),
-        updated_by = NEW.updated_by, updated_kind = NEW.updated_kind
+        updated_by = NEW.updated_by, updated_kind = NEW.updated_kind, updated_api_key_id = NEW.updated_api_key_id
         WHERE parent_id = NEW.id AND property_values->(prop->>'id') ?| removed_options;
     END IF;
   END LOOP;

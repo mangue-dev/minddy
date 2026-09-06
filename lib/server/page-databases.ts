@@ -21,6 +21,7 @@ export async function updatePageDatabase(
   actorId: string,
   input: unknown,
   kind: "human" | "agent" = "human",
+  mcpKeyId: string | null = null,
 ): Promise<PageResult<Page>> {
   const loaded = await getPage(pageId, actorId);
   if (!loaded.ok) return loaded;
@@ -51,7 +52,7 @@ export async function updatePageDatabase(
     if (
       !loaded.page.parent_id ||
       typeof body.propertyId !== "string" ||
-      !("expected" in body)
+      body.expected === undefined
     )
       return invalid;
     const parent = await getPage(loaded.page.parent_id, actorId);
@@ -68,7 +69,7 @@ export async function updatePageDatabase(
     p_project_id: projectId,
     p_page_id: pageId,
     p_actor_id: actorId,
-    p_input: { ...body, kind },
+    p_input: { ...body, kind, mcpKeyId: kind === "agent" ? mcpKeyId : null },
   });
   if (error) {
     if (error.code?.startsWith("22")) return invalid;
@@ -84,6 +85,7 @@ export async function updatePageDatabase(
       pageId,
       actorId,
       kind,
+      mcpKeyId: kind === "agent" ? mcpKeyId : null,
       type: "page_updated",
     });
     if (body.operation !== "value" || !loaded.page.parent_id) return;
@@ -125,6 +127,8 @@ export async function convertPageDatabase(
   pageId: string,
   actorId: string,
   input: unknown,
+  kind: "human" | "agent" = "human",
+  mcpKeyId: string | null = null,
 ): Promise<PageResult<Page | DatabaseConversionPreview>> {
   const loaded = await getPage(pageId, actorId);
   if (!loaded.ok) return loaded;
@@ -147,7 +151,7 @@ export async function convertPageDatabase(
   const service = getServiceClient();
   const { data, error } = await service.rpc("convert_page_database_guarded", {
     p_project_id: projectId, p_page_id: pageId, p_actor_id: actorId,
-    p_input: { ...body, kind: "human" },
+    p_input: { ...body, kind, mcpKeyId: kind === "agent" ? mcpKeyId : null },
   });
   if (error) {
     if (error.code?.startsWith("22")) return invalid;
@@ -159,7 +163,7 @@ export async function convertPageDatabase(
   if (data?.status === "preview") return { ok: true, page: data as DatabaseConversionPreview };
   if (data?.status !== "updated") return { ok: false, status: 404, errorKey: "pageNotFound" };
   afterOrNow(async () => {
-    await recordPageEvent(service, { pageId, actorId, kind: "human", type: "page_updated" });
+    await recordPageEvent(service, { pageId, actorId, kind, mcpKeyId: kind === "agent" ? mcpKeyId : null, type: "page_updated" });
   });
   return getPage(pageId, actorId);
 }

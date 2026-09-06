@@ -8,6 +8,7 @@ import {
   readPageForAgent,
   searchPagesForAgent,
   updatePageForAgent,
+  updateDatabaseForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
 /**
@@ -45,6 +46,7 @@ export const PAGE_TOOL_NAMES = new Set([
   "read_page",
   "create_page",
   "update_page",
+  "update_page_database",
   "append_to_page",
   "edit_page_text",
 ]);
@@ -115,6 +117,7 @@ export async function executePageTool(
         icon: str(args.icon),
         markdown: str(args.markdown),
         parentPageId: str(args.parent_page_id) ?? null,
+        database: args.database === true,
       })
     );
   }
@@ -129,6 +132,8 @@ export async function executePageTool(
   switch (name) {
     case "read_page":
       return render(await readPageForAgent({ pageId, projectId, actorId }));
+    case "update_page_database":
+      return render(await updateDatabaseForAgent({ pageId, projectId, actorId, input: args }));
     case "update_page":
       return render(
         await updatePageForAgent({

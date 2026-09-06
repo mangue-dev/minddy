@@ -1107,7 +1107,7 @@ export function PageDatabaseView({
                       className={`flex h-10 items-center justify-center ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
                     >
                       <div
-                        className={`flex size-6 items-center justify-center rounded bg-background ${checked ? "pointer-events-auto" : "group-hover:pointer-events-auto focus-within:pointer-events-auto"}`}
+                        className="pointer-events-auto flex size-6 items-center justify-center rounded bg-background"
                       >
                         <Checkbox
                           className="after:inset-x-0 after:inset-y-0"

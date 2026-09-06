@@ -66,6 +66,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_update_issues",
   "minddy_update_objective",
   "minddy_update_page",
+  "minddy_update_page_database",
   "minddy_update_plan_task",
   "minddy_update_routine",
   "minddy_update_scratchpad_task",

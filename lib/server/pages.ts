@@ -601,7 +601,7 @@ export async function createPage({
       all.filter((p) => !p.deleted_at && (p.parent_id ?? null) === parentId)
     ),
     created_by: actorId,
-    ...writtenBy(actorId, kind),
+    ...writtenBy(actorId, kind, mcpKeyId),
   };
   if (typeof input.id === "string" && UUID_RE.test(input.id)) row.id = input.id;
   if (content !== undefined) row.content = content;
@@ -904,7 +904,7 @@ export async function updatePage({
   // that a reader may want to restore.
   const writesDocument =
     patch.content !== undefined || patch.title !== undefined || "icon" in patch;
-  if (writesDocument) Object.assign(patch, writtenBy(actorId, kind));
+  if (writesDocument) Object.assign(patch, writtenBy(actorId, kind, mcpKeyId));
 
   // The lock is IN the write, not just in the control above:
   // two recordings started at the same millisecond both pass the

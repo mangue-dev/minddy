@@ -1,4 +1,5 @@
 import "server-only";
+import { DATABASE_TOOL_PARAMETERS, databaseToolDescription } from "@/lib/server/database-tool-schema";
 
 import { MCP_CLIENT_TOOLS } from "@/lib/mcp-client-tools";
 
@@ -678,65 +679,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "update_page_database",
-      description:
-        "Update a database schema or one entry property. Read get_page first. For schema, send the FULL schema preserving existing properties/options and its database_revision as revision; option ids are stable UUIDs, names are unique per property, colors are #RRGGBB. Removing a property or option clears its entry values. For value, use the entry page_id and exact previous value as expected (null when empty). Number values must be finite JSON numbers, select is one option id, multi_select an array of option ids, people an array of project member ids, date YYYY-MM-DD, checkbox boolean, text string; null clears. created_at is read-only metadata. A stale edit is refused: reread and reapply, never overwrite blindly.",
-      parameters: {
-        type: "object",
-        properties: {
-          page_id: { type: "string" },
-          operation: { type: "string", enum: ["schema", "value"] },
-          revision: { type: "integer", minimum: 0 },
-          titleName: { type: ["string", "null"] },
-          schema: {
-            type: "array",
-            maxItems: 30,
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string", format: "uuid" },
-                name: { type: "string", maxLength: 80 },
-                type: {
-                  type: "string",
-                  enum: [
-                    "text",
-                    "number",
-                    "select",
-                    "multi_select",
-                    "created_at",
-                    "date",
-                    "people",
-                    "checkbox",
-                  ],
-                },
-                options: {
-                  type: "array",
-                  maxItems: 100,
-                  items: {
-                    type: "object",
-                    properties: {
-                      id: { type: "string", format: "uuid" },
-                      name: { type: "string", maxLength: 80 },
-                      color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-                    },
-                    required: ["id", "name", "color"],
-                  },
-                },
-              },
-              required: ["id", "name", "type"],
-            },
-          },
-          propertyId: { type: "string", format: "uuid" },
-          value: {
-            type: ["string", "number", "boolean", "array", "null"],
-            items: { type: "string" },
-          },
-          expected: {
-            type: ["string", "number", "boolean", "array", "null"],
-            items: { type: "string" },
-          },
-        },
-        required: ["page_id", "operation"],
-      },
+      description: databaseToolDescription("get_page"),
+      parameters: DATABASE_TOOL_PARAMETERS,
     },
   },
   {

@@ -1235,10 +1235,11 @@ export async function executeIssueTool(
       // The project pages: same context, neighboring executor (MIN-273).
       case "list_pages":
       // `search_pages` was served to the model and routed by `ISSUE_TOOL_NAMES`,
-      // mais absent d'ici : chaque appel repartait en « Unknown issue tool ».
+      // but was missing here, so every call returned "Unknown issue tool".
       case "search_pages":
       case "read_page":
       case "create_page":
+      case "update_page_database":
       case "update_page":
       case "append_to_page":
       case "edit_page_text":

@@ -276,23 +276,23 @@ BEGIN
   IF source->>'type' = target_type THEN
     UPDATE public.pages SET database_schema = (SELECT jsonb_agg(CASE WHEN p->>'id' = column_id THEN replacement ELSE p END ORDER BY ordinal) FROM jsonb_array_elements(database_schema) WITH ORDINALITY a(p,ordinal)),
       updated_by = p_actor_id, updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END,
-      updated_api_key_id = NULL WHERE id = p_page_id;
+      updated_api_key_id = CASE WHEN p_input->>'kind' = 'agent' THEN (p_input->>'mcpKeyId')::uuid ELSE NULL END WHERE id = p_page_id;
     RETURN jsonb_build_object('status','updated');
   END IF;
   -- Remove the old representation before installing the new schema, in one transaction.
   UPDATE public.pages SET property_values = property_values - column_id,
     updated_by = p_actor_id, updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END,
-    updated_api_key_id = NULL WHERE parent_id = p_page_id AND property_values ? column_id;
+    updated_api_key_id = CASE WHEN p_input->>'kind' = 'agent' THEN (p_input->>'mcpKeyId')::uuid ELSE NULL END WHERE parent_id = p_page_id AND property_values ? column_id;
   previous_guard := current_setting('minddy.database_conversion', true);
   PERFORM set_config('minddy.database_conversion',p_page_id::text || ':' || column_id,true);
   UPDATE public.pages SET database_schema = (SELECT jsonb_agg(CASE WHEN p->>'id' = column_id THEN replacement ELSE p END ORDER BY ordinal) FROM jsonb_array_elements(database_schema) WITH ORDINALITY a(p,ordinal)),
     updated_by = p_actor_id, updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END,
-    updated_api_key_id = NULL WHERE id = p_page_id;
+    updated_api_key_id = CASE WHEN p_input->>'kind' = 'agent' THEN (p_input->>'mcpKeyId')::uuid ELSE NULL END WHERE id = p_page_id;
   PERFORM set_config('minddy.database_conversion',coalesce(previous_guard,''),true);
   IF target_type <> 'created_at' THEN
     UPDATE public.pages SET property_values = property_values || jsonb_build_object(column_id, converted_cells->id::text),
       updated_by = p_actor_id, updated_kind = CASE WHEN p_input->>'kind' = 'agent' THEN 'agent' ELSE 'human' END,
-      updated_api_key_id = NULL WHERE parent_id = p_page_id AND converted_cells->id::text <> 'null'::jsonb;
+      updated_api_key_id = CASE WHEN p_input->>'kind' = 'agent' THEN (p_input->>'mcpKeyId')::uuid ELSE NULL END WHERE parent_id = p_page_id AND converted_cells->id::text <> 'null'::jsonb;
   END IF;
   RETURN jsonb_build_object('status','updated');
 END;

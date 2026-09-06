@@ -30,7 +30,8 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getServiceClient } from "@/lib/supabase-service";
 import { displayName } from "@/lib/display-name";
 import { SITE_NAME } from "@/lib/site";
-import { updatePageDatabase } from "@/lib/server/page-databases";
+import { convertPageDatabase, updatePageDatabase } from "@/lib/server/page-databases";
+import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
 import type { DatabaseProperty, DatabaseValues } from "@/lib/page-databases";
 import type { Page, PageWriteKind } from "@/lib/pages";
 
@@ -909,10 +910,15 @@ async function writeBody({
   };
 }
 
-/** Numo uses the same schema revision and expected-cell guards as the table. */
-export async function updateDatabaseForAgent({ projectId, pageId, actorId, input }: {
-  projectId: string; pageId: string; actorId: string; input: unknown;
-}): Promise<PageToolResult<PageTreeEntry>> {
-  const result = await updatePageDatabase(projectId, pageId, actorId, input, "agent");
+/** All agent surfaces share the table's revision, cell, and conversion guards. */
+export async function updateDatabaseForAgent({ projectId, pageId, actorId, input, mcpKeyId = null }: {
+  projectId: string; pageId: string; actorId: string; input: unknown; mcpKeyId?: string | null;
+}): Promise<PageToolResult<PageTreeEntry | DatabaseConversionPreview>> {
+  if (input && typeof input === "object" && "operation" in input && input.operation === "convert") {
+    const result = await convertPageDatabase(projectId, pageId, actorId, input, "agent", mcpKeyId);
+    if (!result.ok) return refuse(result.errorKey);
+    return { ok: true, data: "status" in result.page ? result.page : entry(result.page) };
+  }
+  const result = await updatePageDatabase(projectId, pageId, actorId, input, "agent", mcpKeyId);
   return result.ok ? { ok: true, data: entry(result.page) } : refuse(result.errorKey);
 }

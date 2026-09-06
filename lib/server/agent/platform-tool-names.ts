@@ -40,6 +40,7 @@ export const ISSUE_TOOL_NAMES = new Set([
   "read_page",
   "create_page",
   "update_page",
+  "update_page_database",
   "append_to_page",
   "edit_page_text",
   // Project OBJECTIVES (MIN-287) — the purpose for which the ticket serves. They
