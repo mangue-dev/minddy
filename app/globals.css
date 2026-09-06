@@ -1525,26 +1525,40 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── FAQ: collapse an answer that `forceMount` keeps mounted ────────────
-   FAQ answers are rendered with `forceMount` to exist in the
-   HTML even when folded — otherwise no crawler will read them (MIN-88, see
-   `components/marketing/faq-accordion.tsx`).
+/* Animate the inner wrapper: Radix disables outer transitions while measuring.
+   Force-mounted answers stay in server HTML, including when collapsed. */
+.faq-accordion [data-slot="accordion-content"] > div {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  opacity: 0;
+  transition: grid-template-rows 280ms ease, opacity 200ms ease, visibility 280ms;
+}
 
-   But `forceMount` also forces PRESENCE in the sense of Radix, so Radix does not
-   no longer sets its `hidden` attribute: nothing replicates the responses anymore.
-   The animation `accordion-up` plays once, without `fill-mode`, and the content
-   returns to its natural height 0.25 s later — all twelve answers
-   displayed unfolded when loading (MIN-93).
+.faq-accordion [data-slot="accordion-content"][data-state="open"] > div {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  opacity: 1;
+}
 
-   `display: none` does not remove anything from the document: the text remains exactly where
-   the crawlers read it, it only ceases to be painted. Written here and not in
-   variante Tailwind arbitraire (`[[data-state=closed]_&]`) : celle-ci ne
-   produced no rules, the class left in the HTML with nothing behind.
+.faq-accordion [data-slot="accordion-trigger-icon"] {
+  transition: transform 280ms ease;
+}
 
-   Scope to the FAQ alone: ​​elsewhere in the app, the accordion is not mounted
-   force and Radix handles the collapse itself, including the closing animation. */
-.faq-accordion [data-slot="accordion-content"][data-state="closed"] {
+.faq-accordion [data-slot="accordion-trigger-icon"]:last-child {
   display: none;
+}
+
+.faq-accordion [aria-expanded="true"] [data-slot="accordion-trigger-icon"]:first-of-type {
+  display: block;
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-accordion [data-slot="accordion-content"] > div,
+  .faq-accordion [data-slot="accordion-trigger-icon"] {
+    transition: none;
+  }
 }
 
 /* ─── Settings section opened from ⌘K ──────────────────────────────

@@ -60,8 +60,8 @@ export function ScreenshotPicture({
           browser chooses only one of the two variants, even before React
           does not execute. See `screenshot-slot.tsx` for why this is not
           `useTheme()` who decides. */}
-      {darkSrcSet && <source media="(prefers-color-scheme: dark)" srcSet={darkSrcSet} />}
-      {lightSrcSet && <source media="(prefers-color-scheme: light)" srcSet={lightSrcSet} />}
+      {darkSrcSet && <source media="(prefers-color-scheme: dark)" srcSet={darkSrcSet} sizes={imgProps.sizes} />}
+      {lightSrcSet && <source media="(prefers-color-scheme: light)" srcSet={lightSrcSet} sizes={imgProps.sizes} />}
       {/* eslint-disable-next-line @next/next/no-img-element -- props come
           of `getImageProps`, this is the documented pattern for the art direction. */}
       <img

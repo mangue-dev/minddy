@@ -9,56 +9,17 @@ import {
   type ScreenshotSlotId,
 } from "./screenshot-slots";
 
-/**
- * Responsive product screenshot (MIN-73, revised in MIN-88).
- *
- * Reserves the exact place of the image via `aspect-ratio` — the layout does not
- * will not move when the real captures arrive. As long as the entrance to
- * catalog does not have a published capture, we return the capture instruction to
- * the screen: the landing remains readable and the command remains in front of your eyes.
- *
- * NO ROUNDED CORNERS IN THE IMAGE. The frame carried them (`rounded-xl` on the
- * container that is cropping), and an application capture has content all the way into
- * its corners: the sidebar at the top left, the edge of a map, a
- * counter. The round bit into it—a silent trimming, different from a
- * capture to the other depending on what was lying around the corner. A capture is shown
- * whole or not at all; it is the line which delimits the image, not a cut-out.
- *
- * ## Why a `<picture>` and more `useTheme()` (MIN-88)
- *
- * The component was a client and calculated its `src` from `resolvedTheme`. Gold
- * `resolvedTheme` is `"light"` at the FIRST rendering (the ThemeProvider of mango-ui
- * only reads `localStorage` as `useEffect`). Three consequences, all measured
- * on production: the HTML served always announced the clear variant, the header
- * `Link` therefore preloaded 222 KB of clear capture, and a theme visitor
- * dark downloaded them for nothing before loading the dark — in
- * replacing the LCP element after hydration.
- *
- * Two `<source media="(prefers-color-scheme: …)">` solves all three at once,
- * without JavaScript or cookies: the browser chooses ONE variant even before
- * React won't run. A theme cookie would have worked too, but it would have been
- * wrong on the first visit (no one has a cookie yet) and it would have returned
- * the HTML depends on cookies — therefore not cacheable by the CDN, which
- * canceled the other half of the work on the LCP.
- *
- * There remains the case of a visitor who has explicitly chosen a theme different from
- * that of his system: he will see the system variant. It's a compromise
- * assumed — the public site does not have a theme selector, this choice cannot come
- * than the app, and it only costs one capture at the wrong bottom.
- *
- * ## And the `srcset`
- *
- * The captures are 2208 px wide. They were served in `unoptimized`,
- * therefore without `srcset`: a 390 px phone downloaded the 2208 px and the
- * 222 KB. `getImageProps` (the pattern documented by Next for art direction)
- * renders the same width variants as a normal `<Image>`, in a
- * `<picture>` who also knows how to choose the theme.
- */
+const FOCUSED_SLOTS: ReadonlySet<ScreenshotSlotId> = new Set([
+  "pagesEditor", "feedbackBoard", "featurePalette", "workflowAgent", "workflowPr", "numoPanel",
+]);
+
+/** Localized product photography with optional focused assets for feature cards. */
 export async function ScreenshotSlot({
   id,
   className,
   priority = false,
   expandable = false,
+  focused = false,
   sizes = "(min-width: 1024px) 960px, 100vw",
 }: {
   id: ScreenshotSlotId;
@@ -67,10 +28,13 @@ export async function ScreenshotSlot({
   priority?: boolean;
   /** Show the whole image and offer a full-resolution modal preview. */
   expandable?: boolean;
+  /** Use a published component crop while keeping the original in the lightbox. */
+  focused?: boolean;
   /** Rendered width at each breakpoint; compact cards request smaller images. */
   sizes?: string;
 }) {
   const slot = SCREENSHOT_SLOTS[id];
+  const useFocus = focused && FOCUSED_SLOTS.has(id);
   const [locale, t] = await Promise.all([getLocale(), getTranslations("Landing")]);
 
   const light = screenshotSrc(slot, { theme: "light", lang: locale });
@@ -91,8 +55,8 @@ export async function ScreenshotSlot({
       {fallback ? (
         <Picture
           alt={t(slot.altKey)}
-          light={light ?? fallback}
-          dark={dark ?? fallback}
+          light={useFocus ? (light ?? fallback).replace("/captures/", "/captures/focused/") : light ?? fallback}
+          dark={useFocus ? (dark ?? fallback).replace("/captures/", "/captures/focused/") : dark ?? fallback}
           sizes={sizes}
           priority={priority}
           preview={expandable ? { light: light ?? fallback, dark: dark ?? fallback, expandLabel: t("screenshotExpand"), closeLabel: t("screenshotClose") } : undefined}
