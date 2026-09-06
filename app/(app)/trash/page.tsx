@@ -18,6 +18,7 @@ import {
   CalendarClock,
   ChevronLeft,
   CircleDashed,
+  Database,
   FileText,
   MessagesSquare,
   MoreHorizontal,
@@ -92,7 +93,7 @@ function TrashRow({
   const t = useTranslations("Trash");
   const tPages = useTranslations("Pages");
   const locale = useLocale();
-  const Icon = TYPE_ICON[item.type];
+  const Icon = item.type === "page" && item.is_database ? Database : TYPE_ICON[item.type];
   const left = daysLeft(item.deleted_at, retentionDays);
   const title = item.title.trim() || tPages("untitled");
 

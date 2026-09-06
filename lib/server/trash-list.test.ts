@@ -46,6 +46,10 @@ describe("isBlankTrashPage", () => {
     ).toBe(false);
   });
 
+  it("keeps an empty database even without a title or entries", () => {
+    expect(isBlankTrashPage({ title: "", icon: null, content: null, database_schema: [] }, false)).toBe(false);
+  });
+
   it("keeps a page with a title or icon", () => {
     expect(isBlankTrashPage({ title: "Plan", icon: null }, false)).toBe(false);
     expect(isBlankTrashPage({ title: "", icon: "📄" }, false)).toBe(false);

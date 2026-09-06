@@ -54,6 +54,7 @@ export interface ChangelogEntry {
 
 /** Newest to oldest — this is the display order AND the order of the feed. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
+  { id: "page-databases", date: "2026-09-06" },
   { id: "numo-connected-services", date: "2026-09-05" },
   { id: "numo-cross-project", date: "2026-09-05" },
   { id: "routine-context", date: "2026-09-05" },

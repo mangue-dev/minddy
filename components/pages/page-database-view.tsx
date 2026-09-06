@@ -1185,17 +1185,9 @@ export function PageDatabaseView({
             })}
           </tbody>
         </table>
-        {!rows.length && (
-          <div className="space-y-3 px-6 py-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              {entries.length ? t("noResults") : t("emptyDatabase")}
-            </p>
-            {!entries.length && (
-              <Button variant="ghost" disabled={busy} onClick={add}>
-                <Plus className="size-4" />
-                {t("newEntry")}
-              </Button>
-            )}
+        {!rows.length && entries.length > 0 && (
+          <div className="px-6 py-10 text-center">
+            <p className="text-sm text-muted-foreground">{t("noResults")}</p>
           </div>
         )}
       </DatabaseTableScroll>

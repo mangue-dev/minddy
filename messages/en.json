@@ -5593,6 +5593,8 @@
     "subscribe": "Follow updates via RSS",
     "feedBannerTitle": "Follow minddy updates in your feed reader",
     "feedBannerBody": "RSS lets you follow updates without an account. Copy this page’s address into an RSS reader to receive new release announcements.",
+    "entry_page-databases_title": "Organize your pages in databases",
+    "entry_page-databases_body": "Create databases in Pages to organize journals, reports and logs. Add text, number, date, people, selection and checkbox columns, then search, filter and sort your entries. Each entry opens as a full page. Numo and MCP-connected agents can read and update your databases too.",
     "entry_numo-connected-services_title": "Connect your services to Numo",
     "entry_numo-connected-services_body": "Add a personal MCP connection in your account settings so Numo can use your other services in chats and coding tasks. Scheduled routines use the project owner's connections.",
     "entry_numo-cross-project_title": "Ask Numo to work in another project",

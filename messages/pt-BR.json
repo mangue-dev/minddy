@@ -5593,6 +5593,8 @@
     "subscribe": "Acompanhar novidades por RSS",
     "feedBannerTitle": "Acompanhe o minddy no seu leitor de feeds",
     "feedBannerBody": "O RSS permite acompanhar novidades sem criar uma conta. Copie o endereço desta página para um leitor RSS e receba os novos anúncios.",
+    "entry_page-databases_title": "Organize suas páginas em bancos de dados",
+    "entry_page-databases_body": "Crie bancos de dados em Pages para organizar diários, relatórios e registros. Adicione colunas de texto, números, datas, pessoas, seleções e caixas de seleção. Pesquise, filtre e ordene suas entradas. Cada entrada abre como uma página completa. O Numo e os agentes conectados via MCP também podem ler e editar seus bancos de dados.",
     "entry_numo-connected-services_title": "Conecte seus serviços ao Numo",
     "entry_numo-connected-services_body": "Adicione uma conexão MCP pessoal nas configurações da conta para que o Numo use seus outros serviços em conversas e tarefas de programação. As rotinas agendadas usam as conexões do proprietário do projeto.",
     "entry_numo-cross-project_title": "Peça ao Numo para trabalhar em outro projeto",

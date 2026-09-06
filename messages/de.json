@@ -5593,6 +5593,8 @@
     "subscribe": "Updates per RSS verfolgen",
     "feedBannerTitle": "minddy-Updates im Feedreader verfolgen",
     "feedBannerBody": "Mit RSS kannst du Updates ohne Konto verfolgen. Kopiere die Adresse dieser Seite in einen RSS-Reader, um neue Ankündigungen zu erhalten.",
+    "entry_page-databases_title": "Organisieren Sie Ihre Seiten in Datenbanken",
+    "entry_page-databases_body": "Erstellen Sie Datenbanken in Pages für Journale, Berichte und Protokolle. Fügen Sie Spalten für Text, Zahlen, Daten, Personen, Auswahlfelder und Kontrollkästchen hinzu. Durchsuchen, filtern und sortieren Sie Ihre Einträge. Jeder Eintrag öffnet sich als vollständige Seite. Auch Numo und über MCP verbundene Agenten können Ihre Datenbanken lesen und bearbeiten.",
     "entry_numo-connected-services_title": "Verbinde deine Dienste mit Numo",
     "entry_numo-connected-services_body": "Füge in deinen Kontoeinstellungen eine persönliche MCP-Verbindung hinzu, damit Numo deine anderen Dienste in Gesprächen und Programmieraufgaben nutzen kann. Geplante Routinen verwenden die Verbindungen des Projektinhabers.",
     "entry_numo-cross-project_title": "Bitte Numo, in einem anderen Projekt zu arbeiten",

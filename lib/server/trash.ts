@@ -84,6 +84,7 @@ export interface TrashActor {
 
 export interface TrashItem {
   type: TrashType;
+  is_database?: boolean;
   id: string;
   /** Title of ticket/feedback/routine, name of project or objective. */
   title: string;
@@ -110,10 +111,11 @@ export function isBlankTrashPage(
     title?: string | null;
     icon?: string | null;
     content?: unknown;
+    database_schema?: unknown;
   },
   hasDescendants: boolean,
 ): boolean {
-  if (hasDescendants || row.title?.trim() || row.icon) return false;
+  if (hasDescendants || row.database_schema != null || row.title?.trim() || row.icon) return false;
   const blocks = (row.content as { content?: unknown[] } | null)?.content;
   if (!Array.isArray(blocks) || blocks.length === 0) return true;
   if (blocks.length > 1) return false;
@@ -367,7 +369,7 @@ export async function listTrash(
       // page and its twenty subpages make ONE line to restore, not twenty.
       inProjects(
         "pages",
-        "id, project_id, deleted_at, deleted_by, title, icon, content, deleted_root_id",
+        "id, project_id, deleted_at, deleted_by, title, icon, content, database_schema, deleted_root_id",
         projectIds,
         "deleted_root_id"
       ),
@@ -460,6 +462,7 @@ export async function listTrash(
     ...visiblePageRows.map((row) => ({
       ...base(row),
       type: "page" as const,
+      is_database: row.database_schema != null,
       title: row.title ?? "",
       identifier: null,
     })),
@@ -486,6 +489,7 @@ interface TrashRow {
   title?: string | null;
   icon?: string | null;
   content?: unknown;
+  database_schema?: unknown;
   name?: string;
   key?: string;
   number?: number;

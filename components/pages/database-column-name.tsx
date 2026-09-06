@@ -108,7 +108,7 @@ export function DatabaseColumnName({
       }}
     >
       <AppTooltip
-        label={property ? t("dragColumnHint") : t("columnActions", { name })}
+        label={property ? `${name} · ${t("dragColumnHint")}` : t("columnActions", { name })}
       >
         <DropdownMenuTrigger asChild>
           <button
@@ -148,7 +148,7 @@ export function DatabaseColumnName({
             }}
           >
             {Icon && <Icon className="size-3.5 shrink-0" />}
-            <span className="min-w-0 overflow-hidden whitespace-nowrap text-clip">
+            <span className="min-w-0 truncate">
               {name}
             </span>
           </button>

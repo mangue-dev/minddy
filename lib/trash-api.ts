@@ -23,6 +23,7 @@ export interface TrashActor {
 
 export interface TrashItem {
   type: TrashType;
+  is_database?: boolean;
   id: string;
   title: string;
   /** “MIN-42” for a ticket, the project key for a project, otherwise null. */

@@ -5593,6 +5593,8 @@
     "subscribe": "Suivre les nouveautés par RSS",
     "feedBannerTitle": "Suivez minddy dans votre lecteur de flux",
     "feedBannerBody": "RSS permet de suivre les nouveautés sans créer de compte. Copiez l’adresse de cette page dans un lecteur RSS pour recevoir les nouvelles annonces.",
+    "entry_page-databases_title": "Organisez vos pages en bases de données",
+    "entry_page-databases_body": "Créez des bases de données dans Pages pour organiser vos journaux, comptes rendus et suivis. Ajoutez des colonnes de texte, nombres, dates, personnes, sélections et cases à cocher, puis recherchez, filtrez et triez vos entrées. Chaque entrée s’ouvre comme une page complète. Numo et les agents connectés par MCP peuvent aussi lire et modifier vos bases.",
     "entry_numo-connected-services_title": "Connectez vos services à Numo",
     "entry_numo-connected-services_body": "Ajoutez une connexion MCP personnelle dans les paramètres de votre compte pour que Numo utilise vos autres services dans ses conversations et ses tâches de code. Les routines utilisent les connexions du propriétaire du projet.",
     "entry_numo-cross-project_title": "Demandez à Numo d’agir dans un autre projet",
