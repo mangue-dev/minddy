@@ -43,6 +43,7 @@ exports[`canonical OpenCode capability manifest > keeps one effective catalog fo
     "update_issue",
     "update_objective",
     "update_page",
+    "update_page_database",
     "update_plan",
     "update_scratchpad_task",
     "validate_changes",
@@ -52,183 +53,183 @@ exports[`canonical OpenCode capability manifest > keeps one effective catalog fo
   "sources": [
     {
       "source": "issue/button/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/button/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/button/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/chat/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/chat/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/chat/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/mention/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/mention/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/mention/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/automation/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/automation/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/automation/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/routine/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/routine/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "issue/routine/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/button/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/button/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/button/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/chat/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/chat/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/chat/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/mention/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/mention/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/mention/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/automation/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/automation/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/automation/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/routine/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/routine/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "notebook/routine/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/button/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/button/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/button/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/chat/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/chat/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/chat/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/mention/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/mention/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/mention/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/automation/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/automation/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/automation/local",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/routine/cloud",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/routine/worktree",
-      "tools": 45,
+      "tools": 46,
     },
     {
       "source": "pr/routine/local",
-      "tools": 45,
+      "tools": 46,
     },
   ],
 }

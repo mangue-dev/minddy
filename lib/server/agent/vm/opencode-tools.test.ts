@@ -382,3 +382,22 @@ describe("les descriptions, dites avec les noms d'opencode", () => {
     );
   });
 });
+
+it("preserves nullable database values in the generated agent schema", async () => {
+  const { z } = await import("zod");
+  const { DATABASE_TOOL_PARAMETERS } = await import("@/lib/server/database-tool-schema");
+  const generated = schemaExpression({
+    type: "object",
+    properties: DATABASE_TOOL_PARAMETERS.properties,
+    required: DATABASE_TOOL_PARAMETERS.required,
+  });
+  const validator = new Function("tool", `return ${generated}`)({ schema: z });
+  for (const value of [null, "Report", -12.5, false, ["option-id"]]) {
+    expect(validator.safeParse({ page_id: "entry", operation: "value", value, expected: null }).success).toBe(true);
+  }
+  expect(validator.safeParse({ page_id: "database", operation: "schema", titleName: null, schema: [] }).success).toBe(true);
+  expect(validator.safeParse({ page_id: "entry", operation: "value", value: { invalid: true } }).success).toBe(false);
+  expect(validator.safeParse({ page_id: "entry", operation: "value", value: [42] }).success).toBe(false);
+  expect(validator.safeParse({ page_id: "database", operation: "schema", titleName: 42 }).success).toBe(false);
+  expect(schemaExpression({ type: ["string", "null"] })).toBe("tool.schema.union([tool.schema.string(), tool.schema.null()])");
+});

@@ -9,6 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { bindDatabasePageScroll } from "@/lib/database-page-scroll";
 
 type ScrollbarGeometry = {
   left: number;
@@ -39,6 +40,7 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const container = viewport.current;
     if (!container) return;
+    const unbindPageScroll = bindDatabasePageScroll(container);
     let frame = 0;
     const measure = () => {
       const box = container.getBoundingClientRect();
@@ -77,6 +79,7 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", schedule, true);
     measure();
     return () => {
+      unbindPageScroll();
       cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener("resize", schedule);

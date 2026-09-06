@@ -94,8 +94,8 @@ function conditionHolds(condition: string, viewport: number): boolean {
  * `@layer utilities`): a layer does not change the order between two rules which
  * live inside, and it is this order that we replay.
  */
-function flatRules(css: string): { selector: string; body: string }[] {
-  const rules: { selector: string; body: string }[] = [];
+function flatRules(css: string, conditions: string[] = []): { selector: string; body: string; conditions: string[] }[] {
+  const rules: { selector: string; body: string; conditions: string[] }[] = [];
   let depth = 0;
   let start = 0;
   let openedAt = -1;
@@ -109,8 +109,10 @@ function flatRules(css: string): { selector: string; body: string }[] {
       if (depth === 0) {
         const selector = css.slice(start, openedAt).trim();
         const body = css.slice(openedAt + 1, i);
-        if (selector.startsWith("@layer")) rules.push(...flatRules(body));
-        else rules.push({ selector, body });
+        if (selector.startsWith("@layer")) rules.push(...flatRules(body, conditions));
+        else if (selector.startsWith("@media"))
+          rules.push(...flatRules(body, [...conditions, selector.slice(6).trim()]));
+        else rules.push({ selector, body, conditions });
         start = i + 1;
       }
     }
@@ -148,6 +150,7 @@ async function resolvedWidth(viewport: number): Promise<string | null> {
   let winner: string | null = null;
   for (const rule of flatRules(css)) {
     if (!wanted.has(rule.selector.replace(/\\/g, ""))) continue;
+    if (!rule.conditions.every((condition) => conditionHolds(condition, viewport))) continue;
     const width = widthInBody(rule.body, viewport);
     if (width) winner = width;
   }

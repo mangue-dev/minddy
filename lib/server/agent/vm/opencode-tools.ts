@@ -218,7 +218,8 @@ function toolsFor(job: VmJob): AgentToolDef[] {
 
 type JsonSchema = {
   additionalProperties?: boolean;
-  type?: string;
+  type?: string | string[];
+  anyOf?: JsonSchema[];
   description?: string;
   enum?: unknown[];
   items?: JsonSchema;
@@ -275,10 +276,8 @@ export function retargetToolNames(text: string): string {
  *
  * What this translator covers is exactly what `tools.ts` uses —
  * `string`, `number`, `boolean`, `array` (with `items`), `object` (nested),
- * `enum`, `description`. The rest **rises**, and this is deliberate: a pattern that we
- * ne sait pas traduire deviendrait sinon un `any` silencieux, donc un tool dont
- * the model no longer knows the form. An error when starting the tour is seen;
- * a parameter disappeared, no.
+ * `enum`, `description`, nullable values, and unions. Unsupported types throw
+ * instead of silently dropping a parameter or weakening it to `any`.
  */
 export function schemaExpression(schema: JsonSchema, path = "args"): string {
   const describe = (expr: string) =>
@@ -295,7 +294,22 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
     return describe(`tool.schema.enum(${JSON.stringify(schema.enum)})`);
   }
 
+  const variants = schema.anyOf ?? (Array.isArray(schema.type)
+    ? schema.type.map((type) => ({ ...schema, type, description: undefined }))
+    : null);
+  if (variants) {
+    if (!variants.length) throw new Error(`${path}: empty schema union`);
+    const expressions = variants.map((variant, index) =>
+      schemaExpression(variant, `${path}.anyOf[${index}]`),
+    );
+    return describe(expressions.length === 1
+      ? expressions[0]
+      : `tool.schema.union([${expressions.join(", ")}])`);
+  }
+
   switch (schema.type) {
+    case "null":
+      return describe("tool.schema.null()");
     case "string":
       return describe("tool.schema.string()");
     case "number":
