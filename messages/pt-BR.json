@@ -5960,6 +5960,8 @@
     "customDescription": "Insira um nome e a URL do servidor para conectá-lo ao Numo."
   },
   "PageDatabase": {
+    "searchPropertyTypes": "Buscar tipo de propriedade",
+    "optionNamesUnique": "Use um nome diferente para cada opção.",
     "number": "Número",
     "select": "Seleção",
     "multi_select": "Seleção múltipla",

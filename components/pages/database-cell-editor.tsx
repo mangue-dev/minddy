@@ -46,7 +46,7 @@ export function DatabaseCellEditor({
     left: 0,
     top: 0,
     width: 240,
-    height: 34,
+    height: 42,
   });
   useLayoutEffect(() => {
     if (!open) return;
@@ -69,8 +69,8 @@ export function DatabaseCellEditor({
       field.style.width = `${editorWidth}px`;
       field.style.height = "0px";
       const editorHeight = Math.min(
-        Math.max(34, field.scrollHeight + 2),
-        Math.min(480, Math.max(34, height - 16)),
+        Math.max(42, field.scrollHeight + 2),
+        Math.min(480, Math.max(42, height - 16)),
       );
       field.style.height = `${editorHeight}px`;
       setGeometry({
@@ -152,7 +152,7 @@ export function DatabaseCellEditor({
             aria-invalid={error}
             data-database-cell-editor
             inputMode={numeric ? "decimal" : "text"}
-            className="fixed z-[100] resize-none rounded-sm border border-ring bg-background px-2 py-1 text-sm leading-6 shadow-lg outline-none"
+            className="fixed z-[100] resize-none rounded-sm border border-ring bg-background px-2 py-2 text-sm leading-6 shadow-lg outline-none"
             style={geometry}
             maxLength={numeric ? 320 : 2000}
             value={draft}

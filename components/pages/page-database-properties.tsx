@@ -10,16 +10,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "mangue-ui";
-import {
-  CalendarDays,
-  CheckSquare,
-  Type,
-  Users,
-  Hash,
-  ListFilter,
-  Tags,
-  Clock,
-} from "lucide-react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchMultiSelect } from "@/components/search-select";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
@@ -40,18 +30,9 @@ import { DatabaseCellEditor } from "./database-cell-editor";
 import { DatabaseSelectCell } from "./database-select-cell";
 
 const TABLE_CELL_TRIGGER =
-  "flex h-8 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+  "flex h-10 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
 
-export const PROPERTY_ICONS = {
-  text: Type,
-  number: Hash,
-  select: ListFilter,
-  multi_select: Tags,
-  created_at: Clock,
-  date: CalendarDays,
-  people: Users,
-  checkbox: CheckSquare,
-};
+export { PROPERTY_ICONS } from "./database-property-icons";
 
 export function DatabasePropertyCell({
   projectId,

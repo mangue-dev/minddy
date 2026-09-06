@@ -60,17 +60,18 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { usePageDatabase } from "@/lib/use-page-database";
 import { displayName } from "@/lib/display-name";
 import {
-  DATABASE_PROPERTY_TYPES,
   MAX_DATABASE_PROPERTIES,
   compareDatabaseValues,
   databaseValueText,
   databasePropertyValue,
   type DatabaseProperty,
-  type DatabasePropertyType,
 } from "@/lib/page-databases";
 import { positionBetween } from "@/lib/pages";
 import type { PageSummary } from "@/lib/pages-api";
-import { DatabaseOptionSettings } from "./database-select-cell";
+import {
+  DatabaseOptionsDialog,
+  DatabaseCreatePropertyDialog,
+} from "./database-property-dialogs";
 import {
   DatabasePropertyCell,
   PROPERTY_ICONS,
@@ -111,17 +112,19 @@ function PropertySettings({
   database,
   hidden,
   onToggleVisibility,
+  onCreate,
 }: {
   projectId: string;
   database: PageSummary;
   hidden: string[];
   onToggleVisibility: (id: string) => void;
+  onCreate: () => void;
 }) {
   const t = useTranslations("PageDatabase");
   const { saveSchema, pending } = usePageDatabase(projectId);
   const schema = database.database_schema ?? [];
-  const [name, setName] = useState("");
-  const [type, setType] = useState<DatabasePropertyType>("text");
+  const [open, setOpen] = useState(false);
+  const [manage, setManage] = useState<DatabaseProperty | null>(null);
   const [remove, setRemove] = useState<DatabaseProperty | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [rename, setRename] = useState("");
@@ -137,7 +140,7 @@ function PropertySettings({
   };
   return (
     <>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <AppTooltip label={t("properties")}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label={t("properties")}>
@@ -204,27 +207,17 @@ function PropertySettings({
                   )}
                   {(property.type === "select" ||
                     property.type === "multi_select") && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={t("editOptions")}
-                        >
-                          <Settings2 className="size-3.5" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 space-y-3">
-                        <div className="text-sm font-medium">
-                          {t("editOptions")}
-                        </div>
-                        <DatabaseOptionSettings
-                          projectId={projectId}
-                          database={database}
-                          property={property}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("editOptions")}
+                      onClick={() => {
+                        setOpen(false);
+                        setManage(property);
+                      }}
+                    >
+                      <Settings2 className="size-3.5" />
+                    </Button>
                   )}
                   <Button
                     variant="ghost"
@@ -287,56 +280,35 @@ function PropertySettings({
               );
             })}
           </div>
-          <form
-            className="space-y-2 border-t pt-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (name.trim())
-                void saveSchema(database, [
-                  ...schema,
-                  { id: crypto.randomUUID(), name: name.trim(), type },
-                ]).then((ok) => {
-                  if (ok) setName("");
-                });
-            }}
-          >
-            <Input
-              aria-label={t("propertyName")}
-              placeholder={t("propertyName")}
-              value={name}
-              maxLength={80}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <DatabaseSelect
-                label={t("propertyType")}
-                value={type}
-                onChange={(next) => setType(next as DatabasePropertyType)}
-                options={DATABASE_PROPERTY_TYPES.map((kind) => ({
-                  value: kind,
-                  label: t(kind),
-                }))}
-              />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={
-                  pending ||
-                  !name.trim() ||
-                  schema.length >= MAX_DATABASE_PROPERTIES
-                }
-              >
-                {t("addProperty")}
-              </Button>
-            </div>
+          <div className="border-t pt-3">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              disabled={schema.length >= MAX_DATABASE_PROPERTIES}
+              onClick={() => {
+                setOpen(false);
+                onCreate();
+              }}
+            >
+              <Plus className="size-4" />
+              {t("addProperty")}
+            </Button>
             {schema.length >= MAX_DATABASE_PROPERTIES && (
               <p className="text-sm text-muted-foreground">
                 {t("propertyLimit", { count: MAX_DATABASE_PROPERTIES })}
               </p>
             )}
-          </form>
+          </div>
         </PopoverContent>
       </Popover>
+      {manage && (
+        <DatabaseOptionsDialog
+          projectId={projectId}
+          database={database}
+          property={manage}
+          onClose={() => setManage(null)}
+        />
+      )}
       <AlertDialog
         open={!!remove}
         onOpenChange={(open) => {
@@ -385,6 +357,7 @@ export function PageDatabaseView({
   database: PageSummary;
   onOpen: (pageId: string) => void;
 }) {
+  const [createProperty, setCreateProperty] = useState(false);
   const t = useTranslations("PageDatabase");
   const tPages = useTranslations("Pages");
   const {
@@ -818,6 +791,7 @@ export function PageDatabaseView({
           projectId={projectId}
           database={database}
           hidden={hidden}
+          onCreate={() => setCreateProperty(true)}
           onToggleVisibility={(id) =>
             setHidden((ids) =>
               ids.includes(id)
@@ -833,7 +807,7 @@ export function PageDatabaseView({
       <DatabaseTableScroll>
         <table
           className="w-full table-fixed border-separate border-spacing-0 text-sm"
-          style={{ minWidth: contentWidth + 96 }}
+          style={{ minWidth: contentWidth + 152 }}
         >
           <colgroup>
             <col style={{ width: 64 }} />
@@ -842,10 +816,11 @@ export function PageDatabaseView({
               <col
                 key={index}
                 style={{
-                  width: `max(${width}px, calc(${(100 * width) / contentWidth}cqw - ${(96 * width) / contentWidth}px))`,
+                  width: `max(${width}px, calc(${(100 * width) / contentWidth}cqw - ${(152 * width) / contentWidth}px))`,
                 }}
               />
             ))}
+            <col style={{ width: 56 }} />
           </colgroup>
           <thead>
             <tr className="text-left text-muted-foreground">
@@ -898,6 +873,23 @@ export function PageDatabaseView({
                   </th>
                 );
               })}
+              <th
+                scope="col"
+                data-create-property-column
+                className="w-14 border-b border-border/50 p-0 font-normal"
+              >
+                <AppTooltip label={t("addProperty")}>
+                  <button
+                    type="button"
+                    aria-label={t("addProperty")}
+                    disabled={schema.length >= MAX_DATABASE_PROPERTIES}
+                    className="flex h-10 w-full items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:opacity-40"
+                    onClick={() => setCreateProperty(true)}
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                </AppTooltip>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -910,7 +902,7 @@ export function PageDatabaseView({
                   key={entry.id}
                   data-entry-id={entry.id}
                   aria-selected={checked}
-                  className={`group h-8 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:shadow-[inset_0_2px_0_var(--primary)]" : "[&>td]:shadow-[inset_0_-2px_0_var(--primary)]") : ""}`}
+                  className={`group h-10 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:shadow-[inset_0_2px_0_var(--primary)]" : "[&>td]:shadow-[inset_0_-2px_0_var(--primary)]") : ""}`}
                   onDragOver={(event) => {
                     if (
                       !manual ||
@@ -933,9 +925,9 @@ export function PageDatabaseView({
                     drop(entry.id, event.clientY < box.top + box.height / 2);
                   }}
                 >
-                  <td className="h-8 w-16 bg-background p-0">
+                  <td className="h-10 w-16 bg-background p-0">
                     <div
-                      className={`flex h-8 items-center justify-end gap-2 ${showGutter ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100"}`}
+                      className={`flex h-10 items-center justify-end gap-2 ${showGutter ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100"}`}
                     >
                       <AppTooltip label={t("insertEntryHint")}>
                         <button
@@ -1038,11 +1030,11 @@ export function PageDatabaseView({
                     </div>
                   </td>
                   <td
-                    className="pointer-events-none sticky left-0 z-20 h-8 w-8 p-0"
+                    className="pointer-events-none sticky left-0 z-20 h-10 w-8 p-0"
                     data-selection-cell
                   >
                     <div
-                      className={`flex h-8 items-center justify-center ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
+                      className={`flex h-10 items-center justify-center ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
                     >
                       <div
                         className={`flex size-6 items-center justify-center rounded bg-background ${checked ? "pointer-events-auto" : "group-hover:pointer-events-auto focus-within:pointer-events-auto"}`}
@@ -1083,10 +1075,10 @@ export function PageDatabaseView({
                       </div>
                     </div>
                   </td>
-                  <td className="h-8 overflow-hidden border-b border-border/40 p-0">
+                  <td className="h-10 overflow-hidden border-b border-border/40 p-0">
                     <button
                       type="button"
-                      className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                      className="flex h-10 w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                       onClick={() => onOpen(entry.id)}
                       onMouseEnter={() => prefetchPage(entry.id)}
                       onFocus={() => prefetchPage(entry.id)}
@@ -1102,7 +1094,7 @@ export function PageDatabaseView({
                   {visible.map((property) => (
                     <td
                       key={property.id}
-                      className="h-8 overflow-hidden border-b border-l border-border/30 p-0"
+                      className="h-10 overflow-hidden border-b border-l border-border/30 p-0"
                     >
                       <DatabasePropertyCell
                         table
@@ -1113,6 +1105,10 @@ export function PageDatabaseView({
                       />
                     </td>
                   ))}
+                  <td
+                    aria-hidden="true"
+                    className="h-10 border-b border-l border-border/30 p-0"
+                  />
                 </tr>
               );
             })}
@@ -1142,6 +1138,13 @@ export function PageDatabaseView({
         <Plus className="size-4" />
         {t("newEntry")}
       </Button>
+      {createProperty && (
+        <DatabaseCreatePropertyDialog
+          projectId={projectId}
+          database={database}
+          onClose={() => setCreateProperty(false)}
+        />
+      )}
       <AlertDialog
         open={remove.length > 0}
         onOpenChange={(open) => {
