@@ -15,19 +15,19 @@ function req(headers: Record<string, string>) {
 }
 
 describe("hasForeignOrigin", () => {
-  it("refuse une origine tierce", () => {
+  it("rejects a foreign origin", () => {
     expect(
       hasForeignOrigin(req({ host: "www.minddy.app", origin: "https://evil.example" }))
     ).toBe(true);
   });
 
-  it("laisse passer notre propre origine", () => {
+  it("allows the request origin", () => {
     expect(
       hasForeignOrigin(req({ host: "www.minddy.app", origin: "https://www.minddy.app" }))
     ).toBe(false);
   });
 
-  it("suit le host de la requête — préversions et localhost compris", () => {
+  it("uses the request host, including previews and localhost", () => {
     expect(
       hasForeignOrigin(req({ host: "localhost:3000", origin: "http://localhost:3000" }))
     ).toBe(false);
@@ -36,7 +36,7 @@ describe("hasForeignOrigin", () => {
     ).toBe(false);
   });
 
-  it("retombe sur le Referer quand l'Origin manque", () => {
+  it("falls back to Referer when Origin is absent", () => {
     expect(
       hasForeignOrigin(
         req({ host: "www.minddy.app", referer: "https://evil.example/page" })
@@ -46,17 +46,34 @@ describe("hasForeignOrigin", () => {
 
   /** The assumed choice: a silent request is not a third-party browser
  request — the browser would have set the header. */
-  it("laisse passer une requête qui ne déclare rien", () => {
+  it("allows a request without origin headers", () => {
     expect(hasForeignOrigin(req({ host: "www.minddy.app" }))).toBe(false);
   });
 
-  it("traite `Origin: null` comme une absence, jamais comme un host", () => {
-    expect(hasForeignOrigin(req({ host: "www.minddy.app", origin: "null" }))).toBe(false);
+  it.each(["null", "", "invalid", "file://www.minddy.app", "ftp://www.minddy.app"])(
+    "rejects an invalid or opaque Origin %j even with a trusted Referer",
+    (origin) => {
+      const request = req({
+        host: "www.minddy.app",
+        origin,
+        referer: "https://www.minddy.app/page",
+      });
+      expect(hasForeignOrigin(request)).toBe(true);
+      expect(isSameOriginRequest(request)).toBe(false);
+    },
+  );
+
+  it("rejects a declared origin when the request host is missing", () => {
+    expect(hasForeignOrigin(req({ origin: "https://www.minddy.app" }))).toBe(true);
+  });
+
+  it("rejects an invalid Referer when Origin is absent", () => {
+    expect(hasForeignOrigin(req({ host: "www.minddy.app", referer: "invalid" }))).toBe(true);
   });
 });
 
 describe("isSameOriginRequest", () => {
-  it("exige l'en-tête, contrairement à hasForeignOrigin", () => {
+  it("requires an origin header", () => {
     expect(isSameOriginRequest(req({ host: "www.minddy.app" }))).toBe(false);
     expect(
       isSameOriginRequest(req({ host: "www.minddy.app", origin: "https://www.minddy.app" }))
@@ -68,7 +85,7 @@ describe("isSameOriginRequest", () => {
 });
 
 describe("isMutatingMethod", () => {
-  it("ne compte que ce qui change l'état", () => {
+  it("identifies state-changing methods", () => {
     expect(["POST", "put", "PATCH", "delete"].map(isMutatingMethod)).toEqual([
       true,
       true,
