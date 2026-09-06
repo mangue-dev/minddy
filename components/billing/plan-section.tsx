@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Gift } from "lucide-react";
+import { ArrowRight, Check, Gift } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,13 +19,13 @@ import {
 } from "mangue-ui";
 import {
   BILLING_PLANS,
-  billingPlanRank,
   annualPriceEur,
   annualMonthlyEquivalentEur,
   type BillingInterval,
   type BillingPlanId,
 } from "@/lib/billing-plans";
 import { planFeatureLabels } from "@/lib/plan-features";
+import { CARD_TONES } from "@/components/marketing/card-tones";
 import { billingStatusQueryKey, useBillingSummary } from "@/lib/use-billing-query";
 import {
   createCheckoutApi,
@@ -34,9 +34,9 @@ import {
 } from "@/lib/billing-api";
 
 /**
- * The billing page plan cards (MIN-72, returns) use a highlighted card and
- * ring, a floating “Current plan” badge, prices, descriptions, feature lists,
- * and full-width calls to action. Usage is stated as a multiple of Free
+ * The billing page plan cards share the marketing palette and layout, with
+ * an inline “Current plan” badge and subscription-specific actions.
+ * Usage is stated as a multiple of Free
  * (“10× more usage”), never as a monetary amount.
  *
  * Monthly/annual switch (2 months free): only affects CHECKOUT (new
@@ -61,6 +61,12 @@ const PLAN_DESC_KEYS: Record<BillingPlanId, "planDescFree" | "planDescGo" | "pla
   pro: "planDescPro",
 };
 
+const PLAN_TONES: Record<BillingPlanId, string> = {
+  free: CARD_TONES.sky,
+  go: CARD_TONES.butter,
+  pro: CARD_TONES.lavender,
+};
+
 export function PlanSection() {
   const t = useTranslations("Billing");
   const locale = useLocale();
@@ -74,7 +80,6 @@ export function PlanSection() {
   const cancelPending = status?.subscription?.cancelAtPeriodEnd ?? false;
   const periodEnd = status?.subscription?.currentPeriodEnd ?? null;
   const stripeConfigured = status?.stripeConfigured ?? false;
-  const userRank = billingPlanRank(planId);
 
   const formatEur = useCallback(
     (value: number) =>
@@ -185,17 +190,18 @@ export function PlanSection() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {/* Monthly/yearly switch — yearly billing includes two free months. */}
-      <div className="flex justify-center">
-        <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium">
+      <div className="flex">
+        <div className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-xl bg-[#f3f1ed] p-1.5 text-sm font-medium dark:bg-[#252525]">
           <button
             type="button"
+            aria-pressed={interval === "month"}
             onClick={() => setInterval("month")}
             className={cn(
-              "rounded-md px-3 py-1.5 transition-colors",
+              "inline-flex min-h-11 items-center gap-2 rounded-lg px-4 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               interval === "month"
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-white text-foreground dark:bg-[#414141]"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -203,16 +209,17 @@ export function PlanSection() {
           </button>
           <button
             type="button"
+            aria-pressed={interval === "year"}
             onClick={() => setInterval("year")}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors",
+              "inline-flex min-h-11 items-center gap-2 rounded-lg px-4 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               interval === "year"
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-white text-foreground dark:bg-[#414141]"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             {t("billingYearly")}
-            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="text-xs font-normal opacity-70">
               {t("yearlySavings")}
             </span>
           </button>
@@ -230,12 +237,10 @@ export function PlanSection() {
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-y-0">
         {BILLING_PLANS.map((plan) => {
           const isCurrent = plan.id === planId;
           const isFreeCard = plan.id === "free";
-          const isHighlighted =
-            !!plan.highlighted && userRank <= billingPlanRank(plan.id);
           const showYearly = interval === "year" && !isFreeCard;
           const displayPriceEur = showYearly
             ? annualMonthlyEquivalentEur(plan)
@@ -265,82 +270,62 @@ export function PlanSection() {
           const disabled = loading || submittingPlanId !== null || !onAction;
 
           return (
-            <div
+            <article
               key={plan.id}
               className={cn(
-                "relative flex flex-col rounded-xl border p-5 transition-all duration-200",
-                isHighlighted
-                  ? "border-primary/50 bg-gradient-to-b from-primary/8 to-primary/3 shadow-[0_0_0_1px_--alpha(var(--color-primary)/15%),0_4px_24px_-4px_--alpha(var(--color-primary)/15%)]"
-                  : isCurrent && !isFreeCard
-                    ? "border-primary/40 bg-card shadow-sm ring-1 ring-primary/20"
-                    : "border-border bg-card hover:border-foreground/20 hover:shadow-sm"
+                "flex min-w-0 flex-col rounded-2xl p-6 md:row-span-5 md:grid md:grid-rows-subgrid md:gap-y-0 lg:p-8",
+                PLAN_TONES[plan.id]
               )}
             >
-              {isCurrent && (
-                <span className="absolute -top-2.5 left-4 flex h-5 items-center rounded-full border border-primary bg-card px-2 text-xs font-semibold text-primary">
-                  {t("currentPlanBadge")}
-                </span>
-              )}
-
-              <div className="mb-5">
-                <h3 className="text-sm font-bold tracking-tight text-foreground">
+              <div className="mb-5 flex min-h-7 flex-wrap items-center justify-between gap-2">
+                <h3 className="text-2xl font-medium tracking-tight">
                   {t(PLAN_LABEL_KEYS[plan.id])}
                 </h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {t(PLAN_DESC_KEYS[plan.id])}
-                </p>
+                {isCurrent && (
+                  <span className="rounded-md bg-white/45 px-2.5 py-1 text-xs font-medium dark:bg-white/10">
+                    {t("currentPlanBadge")}
+                  </span>
+                )}
               </div>
+              <p className="min-h-12 text-sm leading-relaxed opacity-80">
+                {t(PLAN_DESC_KEYS[plan.id])}
+              </p>
 
-              <div className="mb-5 border-b border-border/60 pb-5">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold tracking-tight">
+              <div className="my-8">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-5xl font-medium tracking-[-0.05em]">
                     {formatEur(displayPriceEur)} €
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm opacity-75">
                     {isFreeCard ? t("forever") : t("perMonth")}
                   </span>
                 </div>
-                {showYearly && (
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {t("billedYearly", { total: formatEur(annualPriceEur(plan)) })}
-                  </p>
-                )}
+                <p className="mt-3 min-h-10 text-xs leading-relaxed opacity-75">
+                  {showYearly
+                    ? t("billedYearly", { total: formatEur(annualPriceEur(plan)) })
+                    : " "}
+                </p>
               </div>
 
-              <ul className="mb-5 flex-1 space-y-2.5">
+              <ul className="mb-9 flex-1 space-y-3.5">
                 {planFeatureLabels(plan, t).map((feature) => (
-                  <li key={feature} className="flex items-start gap-2">
-                    <span
-                      className={cn(
-                        "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full",
-                        isHighlighted
-                          ? "bg-primary/15 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      <Check className="size-2.5" strokeWidth={3} />
-                    </span>
-                    <span className="text-xs leading-relaxed text-muted-foreground">
-                      {feature}
-                    </span>
+                  <li key={feature} className="flex items-start gap-3 text-sm leading-relaxed">
+                    <Check className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <span>{feature}</span>
                   </li>
                 ))}
               </ul>
 
-              <Button
-                size="sm"
+              <button
+                type="button"
                 disabled={disabled}
                 onClick={onAction}
-                variant={isCurrent || isFreeCard ? "outline" : isHighlighted ? "default" : "outline"}
-                className={cn(
-                  "w-full",
-                  isCurrent && !onAction && "cursor-default text-muted-foreground",
-                  !isHighlighted && !isCurrent && "border-foreground/20 hover:bg-accent/50"
-                )}
+                className="inline-flex min-h-12 items-center justify-between gap-3 rounded-lg border border-current/20 px-4 py-3 text-left text-sm font-medium transition-colors enabled:hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:cursor-default disabled:opacity-50 dark:enabled:hover:bg-white/10"
               >
-                {submittingPlanId === plan.id ? t("loading") : ctaLabel}
-              </Button>
-            </div>
+                <span>{submittingPlanId === plan.id ? t("loading") : ctaLabel}</span>
+                {onAction && <ArrowRight className="size-4 shrink-0" aria-hidden />}
+              </button>
+            </article>
           );
         })}
       </div>
