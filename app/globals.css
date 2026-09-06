@@ -326,49 +326,29 @@ a.markdown-link::before {
   --popover: oklch(1 0 0);
   --sidebar-border: oklch(0.912 0.008 264);
 }
-/* Exchange the existing app surface shades. Both sidebar levels, including
-   floating navigation, use the darker shade; content and its header use the
-   lighter shade. Other surfaces and public pages keep their existing tokens. */
+/* Keep content slightly lighter than both sidebar levels, including floating
+   navigation. The shared surface scale below also covers cards and popovers. */
 .dark:has(.app-shell) {
-  --background: oklch(0.214 0.005 264);
+  --background: oklch(0.195 0.005 264);
   --sidebar: oklch(0.165 0.004 264);
 }
 .dark {
-  --background: oklch(0.165 0.004 264); /* content — darkest */
-  --sidebar: oklch(0.214 0.005 264);    /* chrome — elevated */
-  --card: oklch(0.214 0.005 264);
-  --popover: oklch(0.214 0.005 264);
+  --background: oklch(0.165 0.004 264);
+  --sidebar: oklch(0.195 0.005 264);
+  --card: oklch(0.195 0.005 264);
+  --popover: oklch(0.195 0.005 264);
   --sidebar-border: oklch(0.27 0.006 264);
 
-  /* Removing the dark surface requires reassembling EVERYTHING that lands on it.
-     mango-ui calibrates its dark scale on --card to 0.170: --muted 0.200,
-     --secondary 0.220, --accent 0.230, each one notch LIGHTER than the card.
-     By passing the map to 0.214 we went back above them, and the scale
-     was reversed: a `hover:bg-muted` placed in a card darkened it,
-     and the active item of the sidebar (bg-sidebar-accent) appeared darker
-     that the sidebar — the opposite of the intended direction, and 0.014 difference, so barely
-     visible. Clearly the scale still held (white → 0.935 for --muted),
-     hence a defect that only existed in dark.
+  /* Darken the neutral scale together, preserving the lightness differences
+     that distinguish surfaces, selected items, and hover states. */
+  --muted: oklch(0.236 0.005 264);
+  --sidebar-accent: oklch(0.236 0.005 264);
+  --secondary: oklch(0.249 0.005 264);
+  --accent: oklch(0.257 0.005 264);
 
-     We therefore redo it from 0.214, in the original order (muted < secondary <
-     accent) and with steps of around 0.04 — those of the light theme, where the
-     0.030 mango-ui already did not feel. Hue aligned to 264 as
-     the surfaces above rather than the 250 inherited: which covers a
-     The card must take its nuance, not introduce a second one. */
-  --muted: oklch(0.255 0.005 264);          /* flyovers and flat areas on a map */
-  --sidebar-accent: oklch(0.255 0.005 264); /* active item / hovered over the sidebar */
-  --secondary: oklch(0.268 0.005 264);
-  --accent: oklch(0.276 0.005 264);
-
-  /* --control was missing from this list: as long as it only carried the fields of
-     form, its border marked (--input) was enough to detach them despite a
-     0.215 confused with the map. Since mango-ui 0.5.0 it also carries the
-     pastilles neutres (Badge secondary, StatusChip, ModelBadge, CategoryPill),
-     which only have a border - a solid color in the exact color of the background made them
-     disappear. Same deviations on the map as the lib (+0.045 and +0.075), color
-     aligned to 264 like the tokens above. */
-  --control: oklch(0.259 0.005 264);
-  --control-hover: oklch(0.289 0.005 264);
+  /* Fields and neutral badges stay above the surface; hover adds another step. */
+  --control: oklch(0.240 0.005 264);
+  --control-hover: oklch(0.270 0.005 264);
 }
 
 /* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the

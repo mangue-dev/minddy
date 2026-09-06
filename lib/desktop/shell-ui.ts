@@ -73,13 +73,13 @@ export function desktopShellStyles(interFontDataUrl?: string): string {
       :root {
         --background: oklch(0.165 0.004 264);
         --foreground: oklch(0.985 0 0);
-        --card: oklch(0.214 0.005 264);
+        --card: oklch(0.195 0.005 264);
         --primary: oklch(0.97 0.004 265);
         --primary-foreground: oklch(0.18 0.01 265);
-        --muted: oklch(0.255 0.005 264);
+        --muted: oklch(0.236 0.005 264);
         --muted-foreground: oklch(0.62 0.003 250);
-        --control: oklch(0.259 0.005 264);
-        --control-hover: oklch(0.289 0.005 264);
+        --control: oklch(0.240 0.005 264);
+        --control-hover: oklch(0.270 0.005 264);
         --border: oklch(1 0 0 / 8%);
         --input: oklch(1 0 0 / 12%);
         --ring: oklch(0.58 0.22 265);
