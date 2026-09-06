@@ -330,7 +330,7 @@
   scroll-behavior: smooth;
   scroll-padding-block: 8px;
   /* Prevent scroll chaining to parent */
-  overscroll-behavior: contain;
+  overscroll-behavior: var(--app-overscroll, contain);
 }
 
 /* Blur-in animation for options dropdown */

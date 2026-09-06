@@ -326,42 +326,29 @@ a.markdown-link::before {
   --popover: oklch(1 0 0);
   --sidebar-border: oklch(0.912 0.008 264);
 }
+/* Keep content slightly lighter than both sidebar levels, including floating
+   navigation. The shared surface scale below also covers cards and popovers. */
+.dark:has(.app-shell) {
+  --background: #101011;
+  --sidebar: oklch(0.165 0.004 264);
+}
 .dark {
-  --background: oklch(0.165 0.004 264); /* content — darkest */
-  --sidebar: oklch(0.214 0.005 264);    /* chrome — elevated */
-  --card: oklch(0.214 0.005 264);
-  --popover: oklch(0.214 0.005 264);
+  --background: oklch(0.165 0.004 264);
+  --sidebar: #101011;
+  --card: #101011;
+  --popover: #101011;
   --sidebar-border: oklch(0.27 0.006 264);
 
-  /* Removing the dark surface requires reassembling EVERYTHING that lands on it.
-     mango-ui calibrates its dark scale on --card to 0.170: --muted 0.200,
-     --secondary 0.220, --accent 0.230, each one notch LIGHTER than the card.
-     By passing the map to 0.214 we went back above them, and the scale
-     was reversed: a `hover:bg-muted` placed in a card darkened it,
-     and the active item of the sidebar (bg-sidebar-accent) appeared darker
-     that the sidebar — the opposite of the intended direction, and 0.014 difference, so barely
-     visible. Clearly the scale still held (white → 0.935 for --muted),
-     hence a defect that only existed in dark.
+  /* Darken the neutral scale together, preserving the lightness differences
+     that distinguish surfaces, selected items, and hover states. */
+  --muted: oklch(0.236 0.005 264);
+  --sidebar-accent: oklch(0.236 0.005 264);
+  --secondary: oklch(0.249 0.005 264);
+  --accent: oklch(0.257 0.005 264);
 
-     We therefore redo it from 0.214, in the original order (muted < secondary <
-     accent) and with steps of around 0.04 — those of the light theme, where the
-     0.030 mango-ui already did not feel. Hue aligned to 264 as
-     the surfaces above rather than the 250 inherited: which covers a
-     The card must take its nuance, not introduce a second one. */
-  --muted: oklch(0.255 0.005 264);          /* flyovers and flat areas on a map */
-  --sidebar-accent: oklch(0.255 0.005 264); /* active item / hovered over the sidebar */
-  --secondary: oklch(0.268 0.005 264);
-  --accent: oklch(0.276 0.005 264);
-
-  /* --control was missing from this list: as long as it only carried the fields of
-     form, its border marked (--input) was enough to detach them despite a
-     0.215 confused with the map. Since mango-ui 0.5.0 it also carries the
-     pastilles neutres (Badge secondary, StatusChip, ModelBadge, CategoryPill),
-     which only have a border - a solid color in the exact color of the background made them
-     disappear. Same deviations on the map as the lib (+0.045 and +0.075), color
-     aligned to 264 like the tokens above. */
-  --control: oklch(0.259 0.005 264);
-  --control-hover: oklch(0.289 0.005 264);
+  /* Fields and neutral badges stay above the surface; hover adds another step. */
+  --control: oklch(0.240 0.005 264);
+  --control-hover: oklch(0.270 0.005 264);
 }
 
 /* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the
@@ -1078,19 +1065,59 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── The scroll that goes elsewhere ──────────────────── ─────────────────────
-   Arriving at the end of its journey, a container passing by passes the gesture to its parent
-   — and step by step to the document, which triggers the pull-to-refresh.
-   In an app, this is never what we wanted: we read a list, it
-   reaches the end, and the finger reloads the page.
+/* Disable app boundary bounce at the viewport and on each scrolling axis.
+   The document scope also covers menus and dialogs portaled outside the shell.
+   Extend overflow utilities so responsive variants and library components share
+   the policy. Do not apply it to every element: an overflow-hidden wrapper or
+   the unused axis of a horizontal table would trap normal parent scrolling.
+   Public pages retain their browser behavior. */
+html:has(.app-shell) {
+  --app-overscroll: none;
+  overscroll-behavior: none;
+}
 
-   `contain` (and not `none`): we cut the PROPAGATION, we keep the rebound
-   elastic of iOS, which is a useful benchmark — it says that we are at the end of the list.
-   And it is placed on the <main> of the shell, not on `html, body`: on the landing and
-   the public board, pull-to-refresh is the expected behavior of the
-   browser, and deleting it there would take it from the user. */
-.app-shell main {
-  overscroll-behavior: contain;
+html:has(.app-shell) body,
+html:has(.app-shell) textarea {
+  overscroll-behavior: none;
+}
+
+@utility overflow-auto {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior: none !important;
+  }
+}
+@utility overflow-scroll {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior: none !important;
+  }
+}
+@utility overflow-x-auto {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-x: none !important;
+  }
+}
+@utility overflow-x-scroll {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-x: none !important;
+  }
+}
+@utility overflow-y-auto {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-y: none !important;
+  }
+}
+@utility overflow-y-scroll {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-y: none !important;
+  }
+}
+
+/* Radix enables each ScrollArea axis with an inline overflow declaration. */
+html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-x: scroll"] {
+  overscroll-behavior-x: none;
+}
+html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scroll"] {
+  overscroll-behavior-y: none;
 }
 
 /* ─── The hover that gets stuck ─────────────────────── ────────────────────────

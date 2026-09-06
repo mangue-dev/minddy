@@ -118,6 +118,7 @@
 .actionsList {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior-y: var(--app-overscroll, auto);
   padding: 6px;
   scroll-behavior: smooth;
   max-height: 280px;
