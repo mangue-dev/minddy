@@ -10,6 +10,7 @@
 }
 
 .list {
+  overscroll-behavior-y: var(--app-overscroll, auto);
   /* Also animate height on the list itself */
   transition: height 200ms ease-out;
   /* Scrollbar styling */

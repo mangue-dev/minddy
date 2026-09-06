@@ -42,6 +42,11 @@ export const DIFF_UNSAFE_CSS = `
   user-select: text !important;
   -webkit-user-select: text !important;
 }
+/* Code already disables horizontal bounce upstream; error panels scroll on both
+   axes and need the same policy inside the shadow boundary. */
+[data-error-wrapper] {
+  overscroll-behavior: none;
+}
 [data-line-type="context-expanded"] [data-gutter-utility-slot] { display: none; }
 [data-deletions] [data-line-type="context"] [data-gutter-utility-slot] { display: none; }
 

@@ -739,6 +739,8 @@ function createWindow(
       nodeIntegration: false,
       sandbox: true,
       webviewTag: false,
+      // Keep native macOS rubber-banding disabled alongside the web scroll policy.
+      scrollBounce: false,
       // The version, by the command line rather than by a SYNCHRONOUS IPC
       // (MIN-322): `sendSync` stops the renderer for the round trip, at
       // start — that is, right during the first render. The preload reads

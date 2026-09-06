@@ -326,6 +326,13 @@ a.markdown-link::before {
   --popover: oklch(1 0 0);
   --sidebar-border: oklch(0.912 0.008 264);
 }
+/* Exchange the existing app surface shades. Both sidebar levels, including
+   floating navigation, use the darker shade; content and its header use the
+   lighter shade. Other surfaces and public pages keep their existing tokens. */
+.dark:has(.app-shell) {
+  --background: oklch(0.214 0.005 264);
+  --sidebar: oklch(0.165 0.004 264);
+}
 .dark {
   --background: oklch(0.165 0.004 264); /* content — darkest */
   --sidebar: oklch(0.214 0.005 264);    /* chrome — elevated */
@@ -1078,19 +1085,59 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── The scroll that goes elsewhere ──────────────────── ─────────────────────
-   Arriving at the end of its journey, a container passing by passes the gesture to its parent
-   — and step by step to the document, which triggers the pull-to-refresh.
-   In an app, this is never what we wanted: we read a list, it
-   reaches the end, and the finger reloads the page.
+/* Disable app boundary bounce at the viewport and on each scrolling axis.
+   The document scope also covers menus and dialogs portaled outside the shell.
+   Extend overflow utilities so responsive variants and library components share
+   the policy. Do not apply it to every element: an overflow-hidden wrapper or
+   the unused axis of a horizontal table would trap normal parent scrolling.
+   Public pages retain their browser behavior. */
+html:has(.app-shell) {
+  --app-overscroll: none;
+  overscroll-behavior: none;
+}
 
-   `contain` (and not `none`): we cut the PROPAGATION, we keep the rebound
-   elastic of iOS, which is a useful benchmark — it says that we are at the end of the list.
-   And it is placed on the <main> of the shell, not on `html, body`: on the landing and
-   the public board, pull-to-refresh is the expected behavior of the
-   browser, and deleting it there would take it from the user. */
-.app-shell main {
-  overscroll-behavior: contain;
+html:has(.app-shell) body,
+html:has(.app-shell) textarea {
+  overscroll-behavior: none;
+}
+
+@utility overflow-auto {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior: none !important;
+  }
+}
+@utility overflow-scroll {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior: none !important;
+  }
+}
+@utility overflow-x-auto {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-x: none !important;
+  }
+}
+@utility overflow-x-scroll {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-x: none !important;
+  }
+}
+@utility overflow-y-auto {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-y: none !important;
+  }
+}
+@utility overflow-y-scroll {
+  &:where(html:has(.app-shell) *) {
+    overscroll-behavior-y: none !important;
+  }
+}
+
+/* Radix enables each ScrollArea axis with an inline overflow declaration. */
+html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-x: scroll"] {
+  overscroll-behavior-x: none;
+}
+html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scroll"] {
+  overscroll-behavior-y: none;
 }
 
 /* ─── The hover that gets stuck ─────────────────────── ────────────────────────

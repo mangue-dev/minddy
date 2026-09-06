@@ -233,16 +233,13 @@ describe("les autres pièges du tactile", () => {
     }
   });
 
-  it("le défilement de l'app ne remonte pas jusqu'au tirer-pour-rafraîchir", () => {
+  it("disables app viewport bounce without changing public page scrolling", () => {
     const css = read(GLOBALS);
-    // `contain`, rather than `none`: we stop propagation while preserving the
-    // browser's bounce effect.
+    // Scope the viewport policy to the app, including its portaled surfaces.
     expect(css).toMatch(
-      /\.app-shell main \{\s*overscroll-behavior: contain;/,
+      /html:has\(\.app-shell\) \{\s*--app-overscroll: none;\s*overscroll-behavior: none;/,
     );
-    // And not on `html, body`: on the landing and the public board, the
-    // pull-to-refresh is the expected behavior of the browser.
-    expect(css).not.toMatch(/^(html|body)[^{]*\{[^}]*overscroll-behavior/m);
+    expect(css).not.toMatch(/^(html|body)\s*\{[^}]*overscroll-behavior/m);
   });
 
   it("Tailwind protège toujours ses `hover:` du tactile", () => {

@@ -99,6 +99,7 @@
   flex-direction: column;
   padding: 16px;
   overflow-y: auto;
+  overscroll-behavior-y: var(--app-overscroll, auto);
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: var(--cp-border) transparent;
