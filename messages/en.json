@@ -1293,7 +1293,7 @@
       "import": "Import issues from Linear, Jira, Notion, Trello, or a CSV file.",
       "accountTransfer": "Restore your account data from another minddy instance.",
       "export": "Export issues to CSV in the same format minddy can import.",
-      "zenMode": "Zen mode hides the header and sidebar so you can focus on the board.",
+      "sidebarVisibility": "Hide or show the sidebar using the button above your account. When hidden, hover over the left edge to access it.",
       "sendShortcut": "Choose in account settings whether Enter sends or starts a new paragraph.",
       "desktopApp": "The desktop app adds native notifications while minddy is open."
     }
@@ -1709,9 +1709,8 @@
     "viewFullChangelog": "View full changelog",
     "account": "Account",
     "appearance": "Appearance",
-    "zenMode": "Zen mode",
-    "zenModeExit": "Leave zen mode",
-    "zenModeOn": "Zen mode on; {shortcut} to come back, or reload the page",
+    "hideSidebar": "Hide sidebar",
+    "showSidebar": "Show sidebar",
     "new": "New",
     "newIssue": "New issue",
     "newObjective": "New objective",

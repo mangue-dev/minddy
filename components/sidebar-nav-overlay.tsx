@@ -5,46 +5,28 @@ import { motion, useReducedMotion } from "framer-motion";
 
 import { WINDOW_BUTTONS_WIDTH } from "@/components/desktop-window-buttons";
 import { useHoldWindowButtons, useWideLayout } from "@/lib/use-window-buttons";
+import { transitions } from "@/lib/motion";
 
-/**
- * Entry and exit from navigation, in zen mode. Shorter than
- * `transitions.shell` (180 ms), and this is deliberate: the curve of the frame is
- * that of a layout which is reorganized — header, breadcrumbs and content
- * slide together, and it takes time to read it. Here NOTHING else moves:
- * the block passes above, it should only follow the pointer. The same curve,
- * on a third less.
- */
-const OVERLAY_SLIDE = { duration: 0.14, ease: [0.32, 0.72, 0, 1] } as const;
-
-/** Width of the sensitive edge, at the LEFT edge of the chassis, which recalls
- * navigation in zen mode. Wide enough to aim without a sight, thin enough to
- * not eat up clicks on the content. */
+/** Left-edge target that recalls hidden navigation. */
 const HOTZONE = 12;
 
 /**
- * The Zen mode navigation block (MIN-134): the primary bar, and the secondary
- * when the page has one. Out of the flow, recalled when hovering over the left edge
- *, it unfolds ABOVE the content without shifting anything — the same market
- * as the primary rail. **Zen removes the furniture, not the navigation.**
- *
- * It ALWAYS carries the primary, including on pages without a secondary bar.
- * The previous version only recalled the secondary: on other pages, the
- * zen no longer left any navigation — and on the desktop app, the bar
- * disassembled rendered its WINDOW BUTTONS, which remained placed across the
- * contents (their only host, the brand line, was no longer there).
- *
- * Hence the secondary role of this component: as long as the block is stored, it holds the
- * buttons removed; the hover that brings the bar back takes them with it, to their
- * place, on its mark line. Under 768 px we do not remove them — the AppShell
- * no longer renders the sidebars there, and zen mode does not have a header for welcoming them: hiding them there would double-close the window.
+ * Keep one navigation tree mounted across docked, rail, and hidden modes.
+ * Animate its reserved width with the sidebars so page content resizes smoothly.
+ * Hidden navigation can be recalled by pointer, keyboard focus, or a portaled layer.
  */
-export function ZenNavOverlay({
+export function SidebarNavOverlay({
   width,
+  dockedWidth,
+  hidden,
   pinned = false,
   children,
 }: {
-  /** Block width: primary alone, or primary plus secondary. */
+  /** Expanded overlay width: primary alone, or primary plus secondary. */
   width: number;
+  /** Space reserved when docked, including the primary rail when applicable. */
+  dockedWidth: number;
+  hidden: boolean;
   /** Keep navigation visible while one of its portaled layers is open. */
   pinned?: boolean;
   children: ReactNode;
@@ -54,7 +36,17 @@ export function ZenNavOverlay({
   const [focusWithin, setFocusWithin] = useState(false);
   const panel = useRef<HTMLDivElement | null>(null);
 
-  const shown = open || focusWithin || pinned;
+  const shown = !hidden || open || focusWithin || pinned;
+  const flowWidth = hidden ? 0 : dockedWidth;
+  const panelWidth = hidden ? width : dockedWidth;
+  const shellTransition = reduce ? { duration: 0 } : transitions.shell;
+
+  // A new visibility choice ends the previous temporary reveal. The children
+  // remain mounted, preserving focus, secondary-sidebar scroll, and width motion.
+  useEffect(() => {
+    setOpen(false);
+    setFocusWithin(false);
+  }, [hidden]);
 
   const openPanel = useCallback(() => setOpen(true), []);
   // Without grace period: the block follows the pointer, it does not make it wait.
@@ -68,7 +60,7 @@ export function ZenNavOverlay({
   // The macOS buttons follow the bar that houses them: put away, they leave
   // with her. See lib/use-window-buttons.ts for what “remove” means.
   const wide = useWideLayout();
-  useHoldWindowButtons("zen", wide && !shown);
+  useHoldWindowButtons("sidebar-hidden", wide && !shown);
 
   /**
  * What closes the block is GEOMETRY, not a `onPointerLeave`.
@@ -85,7 +77,7 @@ export function ZenNavOverlay({
  * block is open — when idle, it costs nothing.
  */
   useEffect(() => {
-    if (!open || pinned) return;
+    if (!hidden || !open || pinned) return;
     const onMove = (e: PointerEvent) => {
       const el = panel.current;
       if (!el) return;
@@ -146,7 +138,7 @@ export function ZenNavOverlay({
       document.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onDocumentLeave);
     };
-  }, [open, pinned, width, closePanel]);
+  }, [hidden, open, pinned, width, closePanel]);
 
   // The keyboard focus, for the same reason, is listened to NATIVE on the block:
   // `focusin`/`focusout` go up the DOM, so they see the teleported bar
@@ -172,31 +164,34 @@ export function ZenNavOverlay({
   }, []);
 
   return (
-    <>
-      {/* The edge. It does nothing other than listen to the pointer: the stored block
- is out of scope, so there is nothing left to hover over to recall it. Under the z-index block, so that it covers it once
- opened instead of taking the pointer back from it. Here the React
- handlers are enough — it's empty, no portal lands there. */}
-      <div
-        aria-hidden
-        className={`zen-nav-hotzone absolute inset-y-0 left-0 ${shown ? "z-30" : "z-[41]"}`}
-        style={{ width: HOTZONE }}
-        onPointerEnter={openPanel}
-        onPointerMove={openPanel}
-      />
+    <motion.div
+      className="relative h-full shrink-0"
+      data-sidebar-hidden={hidden}
+      initial={{ width: flowWidth }}
+      animate={{ width: flowWidth }}
+      transition={shellTransition}
+    >
+      {/* The edge recalls hidden navigation without intercepting its controls. */}
+      {hidden && (
+        <div
+          aria-hidden
+          className={`sidebar-nav-hotzone absolute inset-y-0 left-0 ${shown ? "z-30" : "z-[41]"}`}
+          style={{ width: HOTZONE }}
+          onPointerEnter={openPanel}
+          onPointerMove={openPanel}
+        />
+      )}
       <motion.div
         ref={panel}
-        className="absolute inset-y-0 left-0 z-40 flex h-full overflow-hidden bg-sidebar transition-shadow duration-200 data-[open=true]:shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]"
+        className="absolute inset-y-0 left-0 z-40 flex h-full overflow-hidden bg-sidebar transition-shadow duration-200 data-[floating=true]:shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]"
         data-open={shown}
-        style={{ width }}
-        // `initial` explicit and closed: zen mode is never activated when
-        // rendered server, the block therefore always starts from its stored position.
-        initial={{ x: -width }}
-        animate={{ x: shown ? 0 : -width }}
-        transition={reduce ? { duration: 0 } : OVERLAY_SLIDE}
+        data-floating={hidden && shown}
+        initial={{ width: panelWidth, x: shown ? 0 : -width }}
+        animate={{ width: panelWidth, x: shown ? 0 : -width }}
+        transition={shellTransition}
       >
         {children}
       </motion.div>
-    </>
+    </motion.div>
   );
 }

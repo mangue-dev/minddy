@@ -16,7 +16,7 @@ import {
 } from "@/lib/keyboard/keyboard-context";
 import { SendModeBoundary } from "@/app/(app)/send-mode-boundary";
 import { SecondarySidebarProvider } from "@/lib/secondary-sidebar-context";
-import { ZenModeProvider } from "@/lib/zen-mode-context";
+import { SidebarVisibilityProvider } from "@/lib/sidebar-visibility-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
 import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
@@ -82,9 +82,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  panel dismantles its shell, not the current round. */}
                 <AssistantChatProvider>
                   <ScratchpadProvider>
-                    {/* Zen mode (MIN-134) wraps the shell AND the FAB: it is
- the chrome of the two it hides, and they are brothers. */}
-                    <ZenModeProvider>
+                    <SidebarVisibilityProvider>
                       {/* Above the keyboard: ⌘B reads this context to know
  that a page has a secondary sidebar — the primary y
  is in rail, there is nothing more to fold. */}
@@ -131,7 +129,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                           </UndoProvider>
                         </KeyboardProvider>
                       </SecondarySidebarProvider>
-                    </ZenModeProvider>
+                    </SidebarVisibilityProvider>
                   </ScratchpadProvider>
                 </AssistantChatProvider>
               </AssistantPanelProvider>

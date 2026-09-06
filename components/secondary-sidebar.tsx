@@ -14,7 +14,7 @@ import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { transitions } from "@/lib/motion";
 
 /** Width of the column (`w-80`), shared by the shutter, its gutter, and the
- * Zen mode navigation block, which adds it to that of the primary. */
+ * hidden navigation overlay, which adds it to that of the primary. */
 export const SECONDARY_WIDTH = 320;
 
 /**
@@ -144,8 +144,8 @@ export function SecondarySidebar({
  * The docking point, placed by the chassis between the primary sidebar and the
  * column header + content.
  *
- * In Zen mode (MIN-134) it is rendered identically, but IN the block of
- * superimposed navigation (`ZenNavOverlay`) rather than in the flow: the
+ * When sidebars are hidden it is rendered identically, but IN the block of
+ * superimposed navigation (`SidebarNavOverlay`) rather than in the flow: the
  * gutter opens and closes the same column, at the same width, depending on whether the
  * page carries a secondary bar or not.
  */

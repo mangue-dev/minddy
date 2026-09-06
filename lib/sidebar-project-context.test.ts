@@ -29,12 +29,15 @@ describe("primary sidebar project context", () => {
     );
   });
 
-  it("keeps project data and menu state wired through both sidebar branches", () => {
-    expect(shell.match(/currentProject=\{currentProject\}/g)).toHaveLength(2);
-    expect(shell.match(/projects=\{projects\}/g)).toHaveLength(2);
-    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(3);
-    expect(shell).toContain("pinned={zenSidebarLayerOpen}");
-    expect(shell).toContain("onLayerOpenChange={setZenSidebarLayerOpen}");
+  it("keeps project data and menu state wired through the persistent sidebar", () => {
+    expect(shell.match(/<AppSidebar\s/g)).toHaveLength(1);
+    expect(shell.match(/currentProject=\{currentProject\}/g)).toHaveLength(1);
+    expect(shell.match(/projects=\{projects\}/g)).toHaveLength(1);
+    expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(1);
+    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
+    expect(shell).toContain("pinned={sidebarLayerOpen}");
+    expect(shell).toContain("onLayerOpenChange={setSidebarLayerOpen}");
+    expect(shell).toContain("overlay={!sidebarHidden && secondaryNav}");
   });
 
   it("keeps the current project tab when building switch destinations", () => {

@@ -127,7 +127,7 @@ export const HOME_TIPS: HomeTip[] = [
   tip("export"),
 
   // — Comfort: adjustments that we only look for if we know they exist.
-  tip("zenMode"),
+  tip("sidebarVisibility"),
   tip("sendShortcut"),
   tip("desktopApp"),
 ];

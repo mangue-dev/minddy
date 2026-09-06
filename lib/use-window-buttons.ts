@@ -86,10 +86,9 @@ function pushToBridge(): void {
 /**
  * Remove buttons as long as `active` is true, under a named reason.
  *
- * The reason is not decorative: it is what allows two applicants to
- * coexist without one canceling the other. Release is automatic when
- * unmount — zen mode unmounts the sidebar, and a window without a bar
- * ni boutons n'aurait plus de fermeture visible.
+ * Named reasons let independent callers coexist without canceling each other.
+ * Release is automatic on unmount, so switching sidebar visibility cannot
+ * leave a stale hold.
  */
 export function useHoldWindowButtons(reason: string, active: boolean): void {
   useEffect(() => {

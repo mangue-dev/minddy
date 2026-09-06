@@ -1293,7 +1293,7 @@
       "import": "Importieren Sie Probleme von Linear, Jira, Notion, Trello oder eine CSV-Datei.",
       "accountTransfer": "Stellen Sie Ihre Kontodaten von einer anderen minddy-Instanz wieder her.",
       "export": "Exportieren Sie Probleme nach CSV im gleichen Format, das minddy importieren kann.",
-      "zenMode": "Der Zen-Modus verbirgt die Kopfzeile und Seitenleiste, damit Sie sich auf das Board konzentrieren können.",
+      "sidebarVisibility": "Blende die Seitenleiste mit der Schaltfläche über deinem Konto aus oder ein. Wenn sie ausgeblendet ist, bewege den Mauszeiger zum linken Rand, um darauf zuzugreifen.",
       "sendShortcut": "Wählen Sie in den Kontoeinstellungen, ob die Eingabetaste sendet oder einen neuen Absatz beginnt.",
       "desktopApp": "Die Desktop-App fügt native Benachrichtigungen hinzu, während minddy geöffnet ist."
     }
@@ -1709,9 +1709,8 @@
     "viewFullChangelog": "Vollständiges Änderungsprotokoll anzeigen",
     "account": "Konto",
     "appearance": "Aussehen",
-    "zenMode": "Zen-Modus",
-    "zenModeExit": "Zen-Modus verlassen",
-    "zenModeOn": "Zen-Modus aktiviert; mit {shortcut} zurückkehren oder die Seite neu laden",
+    "hideSidebar": "Seitenleiste ausblenden",
+    "showSidebar": "Seitenleiste anzeigen",
     "new": "Neu",
     "newIssue": "Neues Problem",
     "newObjective": "Neues Ziel",

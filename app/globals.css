@@ -50,7 +50,7 @@
    and become a web zone again; otherwise a hover of the top-left corner cannot
    never recall navigation. Once opened, it goes back under the panel
    itself and does not block any controls. */
-html[data-desktop-app] .zen-nav-hotzone {
+html[data-desktop-app] .sidebar-nav-hotzone {
   -webkit-app-region: no-drag;
 }
 

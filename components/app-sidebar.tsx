@@ -90,6 +90,7 @@ import { usePrefetchPages } from "@/lib/use-pages-query";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
+import { SidebarVisibilityButton } from "@/components/sidebar-visibility-button";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -109,10 +110,9 @@ import {
 } from "@/components/ui/tooltip";
 import type { Project } from "@/lib/types";
 
-/** The bar unfolded. Exported for the Zen mode navigation block, which
- * unfolds out of the flow and must know its width to tidy up. */
+/** Expanded width shared with the hidden navigation overlay. */
 export const EXPANDED_WIDTH = 256;
-const COLLAPSED_WIDTH = 56;
+export const COLLAPSED_WIDTH = 56;
 
 /**
  * ─── The icon column ────────────────────── ──────────────────────
@@ -1311,6 +1311,7 @@ function SidebarFooter({
         collapsed={collapsed}
         onOpenChange={onMenuOpenChange}
       />
+      <SidebarVisibilityButton collapsed={collapsed} />
       <div className="flex items-center gap-0.5">
         <div
           className={cn(
@@ -1778,35 +1779,25 @@ export function AppSidebar({
           onScratchpadWarm={onScratchpadWarm}
         />
 
-        {/* Nav — animated swap between home and project modes */}
-        {reduce ? (
-          <SidebarNav
-            sections={sections}
-            collapsed={collapsed}
-            currentProject={currentProject}
-            projects={projects}
-            onMenuOpenChange={handleMenuOpenChange}
-          />
-        ) : (
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={modeKey}
-              className="flex min-h-0 flex-1 flex-col"
-              initial={{ opacity: 0, x: dx }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: dx }}
-              transition={transitions.fade}
-            >
-              <SidebarNav
-                sections={sections}
-                collapsed={collapsed}
-                currentProject={currentProject}
-                projects={projects}
-                onMenuOpenChange={handleMenuOpenChange}
-              />
-            </motion.div>
-          </AnimatePresence>
-        )}
+        {/* Keep the same markup during hydration and when motion preferences change. */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={modeKey}
+            className="flex min-h-0 flex-1 flex-col"
+            initial={{ opacity: 0, x: dx }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: dx }}
+            transition={reduce ? { duration: 0 } : transitions.fade}
+          >
+            <SidebarNav
+              sections={sections}
+              collapsed={collapsed}
+              currentProject={currentProject}
+              projects={projects}
+              onMenuOpenChange={handleMenuOpenChange}
+            />
+          </motion.div>
+        </AnimatePresence>
 
         {/* Footer */}
         <div className={cn("pt-2 pb-2.5", GUTTER)}>
