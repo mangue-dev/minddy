@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { bindDatabasePageScroll } from "@/lib/database-page-scroll";
+import { bindDatabaseScrollSync } from "@/lib/database-scroll-sync";
 
 type ScrollbarGeometry = {
   left: number;
@@ -24,19 +25,6 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
   const viewport = useRef<HTMLDivElement>(null);
   const scrollbar = useRef<HTMLDivElement>(null);
   const [geometry, setGeometry] = useState<ScrollbarGeometry | null>(null);
-
-  const sync = () => {
-    const container = viewport.current;
-    if (!container) return;
-    if (scrollbar.current) {
-      if (scrollbar.current.scrollLeft !== container.scrollLeft)
-        scrollbar.current.scrollLeft = container.scrollLeft;
-      scrollbar.current.setAttribute(
-        "aria-valuenow",
-        String(container.scrollLeft),
-      );
-    }
-  };
 
   useLayoutEffect(() => {
     const container = viewport.current;
@@ -66,7 +54,6 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
           ? previous
           : next,
       );
-      sync();
     };
     const schedule = (event?: Event) => {
       // Horizontal movement changes the value, never the viewport geometry.
@@ -97,7 +84,10 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useLayoutEffect(sync, [geometry]);
+  useLayoutEffect(() => {
+    if (viewport.current && scrollbar.current)
+      return bindDatabaseScrollSync(viewport.current, scrollbar.current);
+  }, [geometry]);
 
   return (
     <>
@@ -106,7 +96,6 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
         id={id}
         className="no-scrollbar -ml-2 -mr-6 overflow-x-auto overscroll-x-none [container-type:inline-size] md:-ml-24 md:-mr-10"
         data-database-scroll
-        onScroll={sync}
       >
         {children}
       </div>
@@ -125,13 +114,6 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
             data-database-scrollbar
             className="scrollbar-quiet fixed bottom-0 z-30 h-3 overflow-x-auto overflow-y-hidden overscroll-x-none bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             style={{ left: geometry.left, width: geometry.width }}
-            onScroll={(event) => {
-              if (
-                viewport.current &&
-                viewport.current.scrollLeft !== event.currentTarget.scrollLeft
-              )
-                viewport.current.scrollLeft = event.currentTarget.scrollLeft;
-            }}
             onKeyDown={(event) => {
               const container = viewport.current;
               if (!container) return;
