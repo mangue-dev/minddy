@@ -991,7 +991,7 @@ function PageSurface({
 
       <div
         ref={scrollRef}
-        className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto"
+        className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto overscroll-none"
       >
         {/* The COLUMN of the document. She carries two things, and she's the only one
             be able to carry them together: the GUTTER reserve on the left (56 px,

@@ -91,7 +91,7 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
       <div
         ref={viewport}
         id={id}
-        className="no-scrollbar -ml-2 -mr-6 overflow-x-auto [container-type:inline-size] md:-ml-24 md:-mr-10"
+        className="no-scrollbar -ml-2 -mr-6 overflow-x-auto overscroll-x-none [container-type:inline-size] md:-ml-24 md:-mr-10"
         data-database-scroll
         onScroll={sync}
       >
@@ -110,7 +110,7 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
             aria-valuenow={viewport.current?.scrollLeft ?? 0}
             tabIndex={0}
             data-database-scrollbar
-            className="scrollbar-quiet fixed bottom-0 z-30 h-3 overflow-x-auto overflow-y-hidden bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className="scrollbar-quiet fixed bottom-0 z-30 h-3 overflow-x-auto overflow-y-hidden overscroll-x-none bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             style={{ left: geometry.left, width: geometry.width }}
             onScroll={(event) => {
               if (viewport.current)
