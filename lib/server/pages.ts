@@ -112,6 +112,7 @@ export type PageErrorKey =
   | "databaseError"
   | "pageDatabaseInvalid"
   | "pageDatabaseStale"
+  | "pageDatabaseRestoreParent"
   | "pageDatabaseMove";
 
 /** The title of a page: same ceiling as a ticket title (MIN-118). */
@@ -929,6 +930,9 @@ export async function updatePage({
     .maybeSingle();
 
   if (error) {
+    if (error.code === "23514" && error.message === "Database entries with values cannot change parent") {
+      return { ok: false, status: 409, errorKey: "pageDatabaseMove" };
+    }
     console.error("[pages] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
@@ -1207,12 +1211,9 @@ export async function discardPage(
 /**
  * Restores a page and everything that went with it.
  *
- * The case that matters: the restored page had a parent, itself still in the
- * trash (it was deleted separately, or the user restores from the
- * trash a page whose the tree moved). Making the child without the parent the
- * would leave VISIBLE nowhere — the sidebar doesn't show it, and its page is
- * a dead link. It therefore goes back to the root, at the end of the siblings: misplaced
- * rather than not found.
+ * Ordinary documents whose parent is still trashed return to the project root.
+ * Database entries require their parent to be restored first, preserving the
+ * schema that gives their stored column values meaning.
  */
 export async function restorePage(
   pageId: string,
@@ -1230,52 +1231,40 @@ export async function restorePage(
   }
 
   const all = await loadProjectPages(service, page.project_id);
-  const family = [pageId, ...all.filter((p) => p.deleted_root_id === pageId).map((p) => p.id)];
-
-  const { error } = await service
-    .from("pages")
-    .update({ deleted_at: null, deleted_by: null, deleted_root_id: null })
-    .in("id", family);
+  const { data, error } = await service.rpc("restore_page_guarded", {
+    p_project_id: page.project_id,
+    p_page_id: pageId,
+    p_actor_id: actorId,
+    p_root_position: positionAtEnd(all.filter((p) => !p.deleted_at && p.parent_id === null)),
+  });
   if (error) {
     console.error("[pages] restore failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // Is the parent still absent? (Trashed for his part, or purged.)
-  const parent = page.parent_id
-    ? all.find((p) => p.id === page.parent_id && !p.deleted_at)
-    : null;
-  if (page.parent_id && !parent) {
-    const { error: liftError } = await service
-      .from("pages")
-      .update({
-        parent_id: null,
-        position: positionAtEnd(
-          all.filter((p) => !p.deleted_at && p.parent_id === null)
-        ),
-      })
-      .eq("id", pageId);
-    if (liftError) {
-      console.error("[pages] restore lift failed:", liftError.message);
-      return { ok: false, status: 500, errorKey: "databaseError" };
-    }
-  } else if (parent && page.parent_block_removed) {
+  const result = data as {
+    status?: string;
+    restored?: number;
+    parent_id?: string | null;
+    parent_block_removed?: boolean;
+  } | null;
+  if (result?.status === "parent_required") {
+    return { ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" };
+  }
+  if (result?.status === "conflict") {
+    return { ok: false, status: 409, errorKey: "pageStale" };
+  }
+  if (result?.status !== "restored" || typeof result.restored !== "number") {
+    return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
+  if (result.parent_id && result.parent_block_removed) {
     // The block returns to the parent body, at the END of the document (MIN-272).
     // Nothing is duplicated: `appendSubpage` does not set anything if the body
     // already cites the page — the case of a block recreated by hand in the meantime.
-    await syncParentBody(service, parent.id, actorId, (doc) => {
+    await syncParentBody(service, result.parent_id, actorId, (doc) => {
       const { doc: next, added } = appendSubpage(doc, pageId);
       return { doc: next, changed: added };
     });
-  }
-
-  // The brand does not survive the restoration: the page is alive again,
-  // and it's the next move to the trash that will say what it is then.
-  if (page.parent_block_removed) {
-    await service
-      .from("pages")
-      .update({ parent_block_removed: false })
-      .eq("id", pageId);
   }
 
   // The counterpart of the trash can: without this line, a page reappears in the
@@ -1289,7 +1278,7 @@ export async function restorePage(
     event: "page_restored",
     scanMentions: false,
   });
-  return { ok: true, restored: family.length };
+  return { ok: true, restored: result.restored };
 }
 
 /* ─── Reading input ────────────────────────── ────────────────────────── */

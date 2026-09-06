@@ -294,7 +294,8 @@
     "savedViewNameTaken": "You already have a view with that name.",
     "pageDatabaseInvalid": "Invalid database column or value. Check it and try again.",
     "pageDatabaseStale": "This column changed since you opened it. Review the latest value and try again.",
-    "pageDatabaseMove": "This page cannot move into another database with its current column values."
+    "pageDatabaseMove": "This page cannot move into another database with its current column values.",
+    "pageDatabaseRestoreParent": "Restore the parent database before restoring this entry."
   },
   "RelayClaim": {
     "title": "Connect GitHub",

@@ -294,7 +294,8 @@
     "savedViewNameTaken": "Vous avez déjà une vue portant ce nom.",
     "pageDatabaseInvalid": "Colonne ou valeur de base de données invalide. Vérifiez-la et réessayez.",
     "pageDatabaseStale": "Cette colonne a changé depuis son ouverture. Vérifiez sa valeur actuelle et réessayez.",
-    "pageDatabaseMove": "Cette page ne peut pas être déplacée dans une autre base avec les valeurs actuelles de ses colonnes."
+    "pageDatabaseMove": "Cette page ne peut pas être déplacée dans une autre base avec les valeurs actuelles de ses colonnes.",
+    "pageDatabaseRestoreParent": "Restaurez la base parente avant de restaurer cette entrée."
   },
   "RelayClaim": {
     "title": "Connecter GitHub",

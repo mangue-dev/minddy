@@ -294,7 +294,8 @@
     "savedViewNameTaken": "Você já tem uma visualização com esse nome.",
     "pageDatabaseInvalid": "Coluna ou valor de banco de dados inválido. Confira os dados e tente novamente.",
     "pageDatabaseStale": "Esta coluna foi alterada. Confira o valor atual e tente novamente.",
-    "pageDatabaseMove": "Esta página não pode ser movida para outro banco de dados com os valores atuais das suas colunas."
+    "pageDatabaseMove": "Esta página não pode ser movida para outro banco de dados com os valores atuais das suas colunas.",
+    "pageDatabaseRestoreParent": "Restaure o banco de dados pai antes de restaurar esta entrada."
   },
   "RelayClaim": {
     "title": "Conecte GitHub",

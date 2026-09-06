@@ -48,6 +48,8 @@ const h = vi.hoisted(() => ({
   access: new Set<string>(),
   /** Optional edit injected between discardPage's initial read and its RPC. */
   beforeDiscard: null as (() => void) | null,
+  beforeRestore: null as (() => void) | null,
+  updateError: null as { code: string; message: string } | null,
   seq: 0,
 }));
 
@@ -75,7 +77,7 @@ vi.mock("@/lib/supabase-service", () => {
     const all = () => (pages ? h.rows : h.versions);
     const matching = () => all().filter((row) => filters.every((f) => f(row)));
 
-    const run = (): { data: Record<string, unknown>[] | null; error: null } => {
+    const run = (): { data: Record<string, unknown>[] | null; error: { code: string; message: string } | null } => {
       if (mode === "insert") {
         // An object OR an array: duplication writes an entire branch of a
         // shot (MIN-272), and a half-posed copy would be a false tree.
@@ -116,6 +118,11 @@ vi.mock("@/lib/supabase-service", () => {
       }
       const rows = matching();
       if (mode === "update") {
+        if (h.updateError && "parent_id" in payload) {
+          const error = h.updateError;
+          h.updateError = null;
+          return { data: null, error };
+        }
         for (const row of rows) Object.assign(row, payload);
       }
       if (mode === "delete") {
@@ -194,14 +201,31 @@ vi.mock("@/lib/supabase-service", () => {
       return { data: data?.[0] ?? null, error: data?.length ? null : new Error("no row") };
     };
     query.maybeSingle = async () => {
-      const { data } = run();
-      return { data: data?.[0] ?? null, error: null };
+      const { data, error } = run();
+      return { data: data?.[0] ?? null, error };
     };
     query.then = (resolve: (value: unknown) => unknown) => resolve(run());
     return query;
   };
 
   const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name === "restore_page_guarded") {
+      h.beforeRestore?.();
+      h.beforeRestore = null;
+      const row = h.rows.find((candidate) => candidate.id === args.p_page_id && candidate.project_id === args.p_project_id);
+      if (!row?.deleted_at) return { data: { status: "not_found" }, error: null };
+      const parent = h.rows.find((candidate) => candidate.id === row.parent_id);
+      const lift = !!row.parent_id && (!parent || !!parent.deleted_at);
+      if (lift && (parent?.database_schema != null || Object.keys(row.property_values ?? {}).length > 0)) {
+        return { data: { status: "parent_required" }, error: null };
+      }
+      const family = h.rows.filter((candidate) => candidate.id === row.id || candidate.deleted_root_id === row.id);
+      const parentBlockRemoved = row.parent_block_removed;
+      for (const member of family) Object.assign(member, { deleted_at: null, deleted_by: null, deleted_root_id: null });
+      if (lift) Object.assign(row, { parent_id: null, position: args.p_root_position });
+      row.parent_block_removed = false;
+      return { data: { status: "restored", restored: family.length, parent_id: lift ? null : parent?.id ?? null, parent_block_removed: parentBlockRemoved }, error: null };
+    }
     if (name !== "discard_blank_page_guarded") {
       return { data: null, error: new Error(`unexpected RPC: ${name}`) };
     }
@@ -355,6 +379,8 @@ beforeEach(() => {
   h.versions = [];
   h.seq = 0;
   h.beforeDiscard = null;
+  h.beforeRestore = null;
+  h.updateError = null;
   h.access = new Set([PROJECT]);
   announce.recordPageEvent.mockClear();
   announce.notifyAgentPageWrite.mockClear();
@@ -1710,6 +1736,13 @@ describe("database page lifecycle", () => {
     expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: source.id, position: "z" } })).toMatchObject({ ok: true });
     expect(rowOf(entryId)).toMatchObject({ parent_id: source.id, position: "z", property_values: { [property.id]: "2026-09-06" } });
   });
+  it("reports a move conflict when the database rejects a concurrent cell edit", async () => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    h.updateError = { code: "23514", message: "Database entries with values cannot change parent" };
+    expect(await updatePage({ pageId: entryId, actorId: ACTOR, input: { parent_id: null, title: "Changed" } })).toMatchObject({ ok: false, status: 409, errorKey: "pageDatabaseMove" });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id, title: "Entry" });
+  });
   it("allows empty entries to move out and return to their database", async () => {
     const source = await database();
     const documentId = await create("Document");
@@ -1731,5 +1764,30 @@ describe("database page lifecycle", () => {
     expect(entry.ok && entry.page.property_values).toEqual({ [property.id]: "2026-09-06" });
     const restored = await getPage(page.id, ACTOR);
     expect(restored.ok && restored.page.database_schema).toEqual([property]);
+  });
+  it.each([{}, { "49900000-0000-4000-8000-000000000010": "2026-09-06" }])("restores the database before an independently trashed entry with values %j", async (values) => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    const childId = await create("Notes", entryId);
+    Object.assign(rowOf(entryId), { property_values: values });
+    await trashPage(entryId, ACTOR);
+    await trashPage(source.id, ACTOR);
+    const before = h.rows.map((row) => ({ ...row }));
+    expect(await restorePage(entryId, ACTOR)).toEqual({ ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" });
+    expect(h.rows).toEqual(before);
+    expect(await restorePage(source.id, ACTOR)).toEqual({ ok: true, restored: 1 });
+    expect(rowOf(entryId).deleted_at).not.toBeNull();
+    expect(await restorePage(entryId, ACTOR)).toEqual({ ok: true, restored: 2 });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id, property_values: values, deleted_at: null });
+    expect(rowOf(childId).deleted_at).toBeNull();
+  });
+  it("checks the parent again inside the restore transaction", async () => {
+    const source = await database();
+    const entryId = await create("Entry", source.id);
+    await trashPage(entryId, ACTOR);
+    h.beforeRestore = () => { rowOf(source.id).deleted_at = "2026-09-06T00:00:00Z"; };
+    expect(await restorePage(entryId, ACTOR)).toEqual({ ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" });
+    expect(rowOf(entryId)).toMatchObject({ parent_id: source.id });
+    expect(rowOf(entryId).deleted_at).not.toBeNull();
   });
 });

@@ -294,7 +294,8 @@
     "savedViewNameTaken": "Sie haben bereits eine Ansicht mit diesem Namen.",
     "pageDatabaseInvalid": "Ungültige Datenbankspalte oder ungültiger Wert. Prüfe die Eingabe und versuche es erneut.",
     "pageDatabaseStale": "Diese Spalte wurde inzwischen geändert. Prüfe den aktuellen Wert und versuche es erneut.",
-    "pageDatabaseMove": "Diese Seite kann mit ihren aktuellen Spaltenwerten nicht in eine andere Datenbank verschoben werden."
+    "pageDatabaseMove": "Diese Seite kann mit ihren aktuellen Spaltenwerten nicht in eine andere Datenbank verschoben werden.",
+    "pageDatabaseRestoreParent": "Stelle zuerst die übergeordnete Datenbank wieder her, bevor du diesen Eintrag wiederherstellst."
   },
   "RelayClaim": {
     "title": "GitHub verbinden",

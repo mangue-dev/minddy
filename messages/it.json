@@ -294,7 +294,8 @@
     "savedViewNameTaken": "Hai già una vista con quel nome.",
     "pageDatabaseInvalid": "La colonna o il valore del database non è valido. Controlla i dati e riprova.",
     "pageDatabaseStale": "Questa colonna è stata modificata. Controlla il valore attuale e riprova.",
-    "pageDatabaseMove": "Questa pagina non può essere spostata in un altro database con i valori attuali delle sue colonne."
+    "pageDatabaseMove": "Questa pagina non può essere spostata in un altro database con i valori attuali delle sue colonne.",
+    "pageDatabaseRestoreParent": "Ripristina il database padre prima di ripristinare questa voce."
   },
   "RelayClaim": {
     "title": "Connetti GitHub",

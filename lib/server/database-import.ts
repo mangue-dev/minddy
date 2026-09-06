@@ -116,6 +116,15 @@ export async function importDatabase(args: {
       .filter((page) => page.path)
       .map((page) => [page.path!, pageIds.get(page.id)!]),
   );
+  // Notion links to a database's CSV even when its introduction has a Markdown file.
+  for (const importedSource of prepared.sources) {
+    const id = pageIds.get(importedSource.id);
+    if (!id || importedSource.native) continue;
+    paths.set(importedSource.id, id);
+    const base = importedSource.id.replace(/(?:_all)?\.csv$/i, "");
+    paths.set(`${base}.csv`, id);
+    paths.set(`${base}_all.csv`, id);
+  }
   const fileReferences = new Map<
     string,
     {

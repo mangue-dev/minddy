@@ -100,6 +100,7 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   noFieldsToUpdate: "invalid_params",
   pageDatabaseInvalid: "invalid_params",
   pageDatabaseMove: "invalid_params",
+  pageDatabaseRestoreParent: "invalid_params",
   pageDatabaseStale: "page_stale",
   databaseError: "database_error",
 };
@@ -128,6 +129,7 @@ const MESSAGES: Record<PageErrorKey, string> = {
   noFieldsToUpdate: "Nothing to update: pass a title, an icon or a markdown body.",
   pageDatabaseInvalid: "Invalid database property or value.",
   pageDatabaseMove: "This page cannot move into another database with its current properties.",
+  pageDatabaseRestoreParent: "Restore the parent database before restoring this entry.",
   pageDatabaseStale: "This property changed. Read its current value and retry.",
   databaseError: "Database error.",
 };

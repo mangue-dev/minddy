@@ -294,7 +294,8 @@
     "savedViewNameTaken": "Ya tienes una vista con ese nombre.",
     "pageDatabaseInvalid": "La columna o el valor de la base de datos no es válido. Revisa la entrada e inténtalo de nuevo.",
     "pageDatabaseStale": "Esta columna ha cambiado. Revisa el valor actual e inténtalo de nuevo.",
-    "pageDatabaseMove": "Esta página no puede moverse a otra base de datos con los valores actuales de sus columnas."
+    "pageDatabaseMove": "Esta página no puede moverse a otra base de datos con los valores actuales de sus columnas.",
+    "pageDatabaseRestoreParent": "Restaura la base de datos principal antes de restaurar esta entrada."
   },
   "RelayClaim": {
     "title": "Conectar GitHub",

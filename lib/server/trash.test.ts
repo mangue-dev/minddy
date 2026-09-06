@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { attachmentPaths, TRASH_TYPES } from "./trash";
+import { attachmentPaths, restoreItem, TRASH_TYPES } from "./trash";
+import { restorePage } from "./pages";
+
+vi.mock("@/lib/server/pages", () => ({ restorePage: vi.fn(), trashPage: vi.fn() }));
+vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
+
+it("preserves the actionable database restoration error in the trash API", async () => {
+  vi.mocked(restorePage).mockResolvedValue({ ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" });
+  expect(await restoreItem("page", "entry", "actor")).toEqual({ ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" });
+});
 
 /**
  * MIN-133 — the purge must take the FILES with the line.
