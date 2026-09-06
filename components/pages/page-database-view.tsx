@@ -1109,8 +1109,9 @@ export function PageDatabaseView({
                       <div
                         className="pointer-events-auto flex size-6 items-center justify-center"
                       >
+                        {/* Anchor the checkbox hit area to the full selection container. */}
                         <Checkbox
-                          className="after:inset-x-0 after:inset-y-0"
+                          className="static cursor-pointer after:inset-x-0 after:inset-y-0"
                           aria-label={t("selectEntry", {
                             name: entry.title || tPages("untitled"),
                           })}
