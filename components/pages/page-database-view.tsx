@@ -98,7 +98,7 @@ function DatabaseSelect({
       <SelectTrigger aria-label={label} className="w-full min-w-0">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="[&_[role=option]]:rounded-sm">
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value || "__empty__"}>
             {option.label}
@@ -152,14 +152,17 @@ function PropertySettings({
         </AppTooltip>
         <PopoverContent
           align="end"
-          className="w-[min(380px,calc(100vw-2rem))] space-y-4"
+          className="w-[min(380px,calc(100vw-2rem))] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
         >
-          <div className="text-sm font-medium">{t("properties")}</div>
-          <div className="max-h-72 space-y-2 overflow-y-auto">
+          <div className="px-2 py-1 text-sm font-medium">{t("properties")}</div>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
             {schema.map((property, index) => {
               const Icon = PROPERTY_ICONS[property.type];
               return (
-                <div key={property.id} className="flex items-center gap-1">
+                <div
+                  key={property.id}
+                  className="flex min-h-9 items-center gap-1 rounded-sm px-2 hover:bg-muted/50"
+                >
                   <Icon className="mr-1 size-4 shrink-0 text-muted-foreground" />
                   {editing === property.id ? (
                     <form
@@ -281,10 +284,10 @@ function PropertySettings({
               );
             })}
           </div>
-          <div className="border-t pt-3">
+          <div className="border-t pt-2">
             <Button
               variant="ghost"
-              className="w-full justify-start"
+              className="w-full justify-start rounded-sm"
               disabled={schema.length >= MAX_DATABASE_PROPERTIES}
               onClick={() => {
                 setOpen(false);
@@ -555,7 +558,9 @@ export function PageDatabaseView({
     });
   const duplicate = (targets: PageSummary[]) =>
     void run(async () => {
-      const copies = await Promise.all(targets.map((entry) => duplicatePage(entry.id)));
+      const copies = await Promise.all(
+        targets.map((entry) => duplicatePage(entry.id)),
+      );
       if (copies.length === 1) onOpen(copies[0].id);
       else setSelected(copies.map((copy) => copy.id));
       await Promise.all(copies.map((copy) => copy.settled));
@@ -576,7 +581,11 @@ export function PageDatabaseView({
     );
     if (!positions.length) return;
     void run(async () => {
-      await Promise.all(moving.map((entry, index) => updatePage(entry.id, { position: positions[index] })));
+      await Promise.all(
+        moving.map((entry, index) =>
+          updatePage(entry.id, { position: positions[index] }),
+        ),
+      );
     });
   };
   const move = (entry: PageSummary, direction: number) =>
@@ -670,8 +679,11 @@ export function PageDatabaseView({
               </Button>
             </PopoverTrigger>
           </AppTooltip>
-          <PopoverContent align="end" className="space-y-3">
-            <div className="text-sm font-medium">{t("filter")}</div>
+          <PopoverContent
+            align="end"
+            className="w-72 max-w-[calc(100vw-2rem)] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
+          >
+            <div className="px-2 py-1 text-sm font-medium">{t("filter")}</div>
             <DatabaseSelect
               label={t("filterProperty")}
               value={filter}
@@ -710,7 +722,7 @@ export function PageDatabaseView({
                   trigger={
                     <Button
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start rounded-sm"
                       aria-label={t("filterValue")}
                     >
                       {names.get(filterValue) ?? t("emptyValue")}
@@ -752,8 +764,11 @@ export function PageDatabaseView({
               </Button>
             </PopoverTrigger>
           </AppTooltip>
-          <PopoverContent align="end" className="space-y-3">
-            <div className="text-sm font-medium">{t("sort")}</div>
+          <PopoverContent
+            align="end"
+            className="w-72 max-w-[calc(100vw-2rem)] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
+          >
+            <div className="px-2 py-1 text-sm font-medium">{t("sort")}</div>
             <DatabaseSelect
               label={t("sort")}
               value={sort}
@@ -791,7 +806,10 @@ export function PageDatabaseView({
               </Button>
             </PopoverTrigger>
           </AppTooltip>
-          <PopoverContent align="end" className="p-3">
+          <PopoverContent
+            align="end"
+            className="w-72 max-w-[calc(100vw-2rem)] gap-2 rounded-xl p-2 [&_input]:rounded-sm [&_button]:rounded-sm"
+          >
             <Input
               autoFocus
               aria-label={t("searchEntries")}
@@ -1034,16 +1052,14 @@ export function PageDatabaseView({
                             </button>
                           </DropdownMenuTrigger>
                         </AppTooltip>
-                        <DropdownMenuContent align="start">
+                        <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
                           {targets.length === 1 && (
                             <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
                               <FileText className="size-4" />
                               {t("openEntry")}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onSelect={() => duplicate(targets)}
-                          >
+                          <DropdownMenuItem onSelect={() => duplicate(targets)}>
                             <Copy className="size-4" />
                             {t("duplicate")}
                           </DropdownMenuItem>
@@ -1060,8 +1076,7 @@ export function PageDatabaseView({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 disabled={
-                                  !manual ||
-                                  entries.at(-1)?.id === entry.id
+                                  !manual || entries.at(-1)?.id === entry.id
                                 }
                                 onSelect={() => move(entry, 1)}
                               >
@@ -1089,9 +1104,7 @@ export function PageDatabaseView({
                     <div
                       className={`absolute inset-0 flex items-center justify-center bg-background ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
                     >
-                      <div
-                        className="pointer-events-auto flex size-6 items-center justify-center"
-                      >
+                      <div className="pointer-events-auto flex size-6 items-center justify-center">
                         {/* Anchor the checkbox hit area to the full selection container. */}
                         <Checkbox
                           className="static cursor-pointer after:inset-x-0 after:inset-y-0"

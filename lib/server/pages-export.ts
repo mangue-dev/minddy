@@ -1,6 +1,11 @@
 import "server-only";
+import { databaseArchiveFiles } from "./database-export";
+import type { ImportPage } from "@/lib/database-import/types";
 
-import { pageDatabaseDocument, type DatabaseDocumentPage } from "@/lib/page-database-document";
+import {
+  pageDatabaseDocument,
+  type DatabaseDocumentPage,
+} from "@/lib/page-database-document";
 import { databaseDocumentNames } from "./page-database-document";
 import { pageHref } from "@/lib/pages-navigation";
 
@@ -39,6 +44,7 @@ export type PageExportResult =
 
 /** How many page bodies a read brings back at once (MIN-348). */
 const BODY_BATCH = 50;
+const LIST_BATCH = 500;
 
 interface PageRow extends DatabaseDocumentPage {
   id: string;
@@ -69,7 +75,9 @@ export async function exportPage({
   const service = getServiceClient();
   const { data: root } = await service
     .from("pages")
-    .select("id, project_id, parent_id, title, icon, content, position, database_schema, property_values, created_at")
+    .select(
+      "id, project_id, parent_id, title, icon, content, position, database_schema, database_title_name, property_values, created_at",
+    )
     .eq("id", pageId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -79,24 +87,24 @@ export async function exportPage({
   }
 
   const rootRow = root as unknown as PageRow;
-  if (!branch) {
-    let context: DatabaseDocumentPage[] = [rootRow];
-    if (rootRow.database_schema != null) {
-      const { data, error } = await service.from("pages")
-        .select("id, parent_id, title, property_values, position, created_at")
-        .eq("parent_id", pageId).eq("project_id", root.project_id).is("deleted_at", null).order("position");
-      if (error) return { ok: false, status: 500, errorKey: "databaseError" };
-      context = [rootRow, ...(data ?? []) as DatabaseDocumentPage[]];
-    } else if (rootRow.parent_id) {
-      const { data: parent } = await service.from("pages").select("id, parent_id, title, database_schema")
-        .eq("id", rootRow.parent_id).eq("project_id", root.project_id).maybeSingle();
+  if (!branch && rootRow.database_schema == null) {
+    const context: DatabaseDocumentPage[] = [rootRow];
+    if (rootRow.parent_id) {
+      const { data: parent } = await service
+        .from("pages")
+        .select("id, parent_id, title, database_schema")
+        .eq("id", rootRow.parent_id)
+        .eq("project_id", root.project_id)
+        .maybeSingle();
       if (parent) context.push(parent as DatabaseDocumentPage);
     }
     const names = await databaseDocumentNames(context);
     const markdown = await pageToMarkdownServer({
       title: rootRow.title,
       icon: rootRow.icon,
-      content: pageDatabaseDocument(rootRow, context, names, (id) => pageHref(root.project_id, id)) as never,
+      content: pageDatabaseDocument(rootRow, context, names, (id) =>
+        pageHref(root.project_id, id),
+      ) as never,
     });
     return {
       ok: true,
@@ -106,23 +114,27 @@ export async function exportPage({
     };
   }
 
-  // Two readings, and this is the limit of the subject (MIN-348). The first does not take
-  // that the SKELETON - enough to know who descends from whom -, because the
-  // requested branch may be one page out of a thousand and there is no reason
-  // to bring down the body of the nine hundred and ninety-nine others. There
-  // second only fetches bodies from the branch, and in batches: this is
-  // also what limits the size of ONE PostgREST response.
-  const { data: skeleton, error } = await service
-    .from("pages")
-    .select("id, parent_id, title, icon, position, database_schema, property_values, created_at")
-    .eq("project_id", root.project_id as string)
-    .is("deleted_at", null)
-    .order("position", { ascending: true });
-  if (error) {
-    console.error("[pages-export] list failed:", error.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
+  // Paginate the project outline so PostgREST cannot silently truncate a branch.
+  // Bodies are fetched separately and only for the requested branch.
+  const all: Omit<PageRow, "content">[] = [];
+  for (let offset = 0; ; offset += LIST_BATCH) {
+    const { data: skeleton, error } = await service
+      .from("pages")
+      .select(
+        "id, parent_id, title, icon, position, database_schema, database_title_name, property_values, created_at",
+      )
+      .eq("project_id", root.project_id as string)
+      .is("deleted_at", null)
+      .order("position", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + LIST_BATCH - 1);
+    if (error) {
+      console.error("[pages-export] list failed:", error.message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    all.push(...((skeleton ?? []) as unknown as Omit<PageRow, "content">[]));
+    if (!skeleton || skeleton.length < LIST_BATCH) break;
   }
-  const all = (skeleton ?? []) as unknown as Omit<PageRow, "content">[];
   const inBranch = new Set([rootRow.id, ...descendantIds(all, rootRow.id)]);
   const branchPages = all.filter((p) => inBranch.has(p.id));
 
@@ -146,7 +158,9 @@ export async function exportPage({
     }
   }
 
-  const context = all.filter((page) => inBranch.has(page.id) || page.id === rootRow.parent_id);
+  const context = all.filter(
+    (page) => inBranch.has(page.id) || page.id === rootRow.parent_id,
+  );
   const names = await databaseDocumentNames(context);
   const archivePaths = exportPagePaths(branchPages);
   const pages: ExportInputPage[] = [];
@@ -165,19 +179,54 @@ export async function exportPage({
           { ...page, content: bodies.get(page.id) },
           context,
           names,
-          (id) => relativePath(archivePaths.get(page.id)!, archivePaths.get(id)!)
-            .split("/").map(encodeURIComponent).join("/"),
+          (id) =>
+            relativePath(archivePaths.get(page.id)!, archivePaths.get(id)!)
+              .split("/")
+              .map(encodeURIComponent)
+              .join("/"),
         ) as never,
       }),
     });
   }
 
   const files = exportPagesToFiles(pages);
+  let body: Uint8Array;
+  if (branchPages.some((page) => page.database_schema != null)) {
+    const nativePages: ImportPage[] = branchPages.map((page) => ({
+      id: page.id,
+      parent_id: page.id === rootRow.id ? null : page.parent_id,
+      title: page.title,
+      icon: page.icon,
+      content: bodies.get(page.id) ?? null,
+      database_schema: page.database_schema ?? null,
+      database_title_name: page.database_title_name ?? null,
+      property_values: page.property_values ?? {},
+      created_at: page.created_at,
+      position: page.position,
+    }));
+    try {
+      body = zipSync(
+        await databaseArchiveFiles(
+          nativePages,
+          archivePaths,
+          names,
+          Object.fromEntries(
+            files.map((file) => [file.path, strToU8(file.markdown)]),
+          ),
+          root.project_id,
+        ),
+        { level: 6 },
+      );
+    } catch (error) {
+      console.error("[pages-export] database archive failed:", error);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+  } else body = zipArchive(files);
   return {
     ok: true,
     fileName: `${pageFileSlug(rootRow.title)}.zip`,
     contentType: "application/zip",
-    body: zipArchive(files),
+    body,
   };
 }
 

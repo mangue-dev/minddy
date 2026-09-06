@@ -121,7 +121,7 @@ export function DatabaseOptionsDialog({
               </PopoverTrigger>
               <PopoverContent
                 align="end"
-                className="grid w-auto grid-cols-5 gap-1 p-2"
+                className="grid w-auto grid-cols-5 gap-1 rounded-xl p-2"
               >
                 {CATEGORY_COLORS.map((color) => (
                   <button
@@ -129,7 +129,7 @@ export function DatabaseOptionsDialog({
                     type="button"
                     aria-label={tObjectives("colorAria", { color })}
                     aria-pressed={color === option.color}
-                    className="flex size-7 items-center justify-center rounded-md hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                    className="flex size-7 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
                     onClick={() => {
                       setOptions((rows) =>
                         rows.map((row, i) =>

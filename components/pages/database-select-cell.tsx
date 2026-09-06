@@ -119,6 +119,7 @@ export function DatabaseSelectCell({
   return (
     <>
       <SearchMenu
+        contentClassName="[&_[cmdk-item]]:rounded-sm"
         open={open}
         onOpenChange={changeOpen}
         trigger={trigger}

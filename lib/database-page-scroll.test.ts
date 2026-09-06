@@ -28,13 +28,21 @@ function touch(type: string, points: Array<[number, number]>) {
 }
 
 describe("page-wide database gestures", () => {
-  it("scrolls from headers, sidebars, controls, blank space, and the table without doubling native scrolling", () => {
-    for (const selector of ["aside", "header", "button", "#blank", "#table"]) {
+  it("routes gestures outside the table without doubling native scrolling", () => {
+    for (const selector of ["aside", "header", "button", "#blank"]) {
       viewport.scrollLeft = 0;
       const event = wheel(document.querySelector(selector)!, { deltaX: 120 });
       expect(viewport.scrollLeft).toBe(120);
       expect(event.defaultPrevented).toBe(true);
     }
+  });
+  it("leaves table gestures to native scrolling while retaining Shift-wheel routing", () => {
+    const child = document.createElement("button");
+    viewport.append(child);
+    expect(wheel(child, { deltaX: 120 }).defaultPrevented).toBe(false);
+    expect(viewport.scrollLeft).toBe(0);
+    expect(wheel(child, { deltaY: 120, shiftKey: true }).defaultPrevented).toBe(true);
+    expect(viewport.scrollLeft).toBe(120);
   });
   it("handles Shift-wheel and line/page units, clamping both boundaries", () => {
     wheel(document.body, { deltaY: 3, deltaMode: 1, shiftKey: true });

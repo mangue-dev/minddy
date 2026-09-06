@@ -157,6 +157,7 @@ export function DatabaseColumnName({
       </AppTooltip>
       <DropdownMenuContent
         align="start"
+        className="[&_[role=menuitem]]:rounded-sm"
         onCloseAutoFocus={(event) => {
           if (editing) event.preventDefault();
         }}

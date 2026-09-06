@@ -70,6 +70,7 @@ import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageDatabaseView } from "./page-database-view";
+import { DatabaseSetupBanner } from "./database-setup-banner";
 import { PageDatabaseProperties } from "./page-database-properties";
 import { PageEditor } from "@/components/pages/page-editor";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -1000,7 +1001,8 @@ function PageSurface({
             the chrome is used to place itself there. Title and blocks therefore share the
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
-        <div className={cn("relative mx-auto w-full px-6 py-10", page.database_schema != null ? "max-w-none md:pl-24 md:pr-10" : "max-w-3xl md:pl-24 md:pr-10")}>
+        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? "max-w-3xl md:px-16" : page.database_schema != null ? "max-w-none md:pl-24 md:pr-10" : "max-w-3xl md:pl-24 md:pr-10")}>
+          {page.database_schema != null && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}
             icon={icon}

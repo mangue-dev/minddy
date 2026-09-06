@@ -29,7 +29,8 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
     const container = viewport.current;
     if (!container) return;
     if (scrollbar.current) {
-      scrollbar.current.scrollLeft = container.scrollLeft;
+      if (scrollbar.current.scrollLeft !== container.scrollLeft)
+        scrollbar.current.scrollLeft = container.scrollLeft;
       scrollbar.current.setAttribute(
         "aria-valuenow",
         String(container.scrollLeft),
@@ -67,11 +68,20 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
       );
       sync();
     };
-    const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(measure);
+    const schedule = (event?: Event) => {
+      // Horizontal movement changes the value, never the viewport geometry.
+      if (
+        event?.type === "scroll" &&
+        (event.target === container || event.target === scrollbar.current)
+      )
+        return;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        measure();
+      });
     };
-    const observer = new ResizeObserver(schedule);
+    const observer = new ResizeObserver(() => schedule());
     observer.observe(container);
     const table = container.querySelector("table");
     if (table) observer.observe(table);
@@ -116,7 +126,10 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
             className="scrollbar-quiet fixed bottom-0 z-30 h-3 overflow-x-auto overflow-y-hidden overscroll-x-none bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             style={{ left: geometry.left, width: geometry.width }}
             onScroll={(event) => {
-              if (viewport.current)
+              if (
+                viewport.current &&
+                viewport.current.scrollLeft !== event.currentTarget.scrollLeft
+              )
                 viewport.current.scrollLeft = event.currentTarget.scrollLeft;
             }}
             onKeyDown={(event) => {

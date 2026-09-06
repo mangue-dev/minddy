@@ -17,6 +17,7 @@ import { Plus, Maximize2, X } from "lucide-react";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
+import { markDatabaseSetup } from "@/lib/page-database-setup";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { PageView } from "@/components/pages/page-view";
 import { PagesHome } from "@/components/pages/pages-home";
@@ -87,7 +88,8 @@ export function PagesShell() {
       try {
         // The position is calculated by the SERVER (end of siblings): it is
         // the only one to see the pages that this client does not yet have.
-        const page = await createPage({ parent_id: parentId, ...(database ? { database_schema: (["date", "people", "checkbox"] as const).map((type) => ({ id: crypto.randomUUID(), name: tDatabase(type), type })) } : {}) });
+        const page = await createPage({ parent_id: parentId, ...(database ? { database_schema: [] } : {}) });
+        if (database) markDatabaseSetup(page.id);
         // It is in base, but it is not yet acquired: exit without it
         // writing a letter destroys it (lib/pages-draft.ts). Create a page
         // is not saving it.
@@ -106,7 +108,7 @@ export function PagesShell() {
         toast.error(err instanceof Error ? err.message : t("createFailed"));
       }
     },
-    [base, createPage, openPage, projectId, t, byId, tDatabase]
+    [base, createPage, openPage, projectId, t, byId]
   );
 
   const move = useCallback(
@@ -267,7 +269,7 @@ export function PagesShell() {
     </div>
     <SidePanel open={!!validPreview} onOpenChange={(open) => { if (!open) void leavePreview(); }}>
       <SidePanelContent
-        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0"
+        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0 data-[vaul-drawer-direction=bottom]:w-full"
         onInteractOutside={keepOverlayOpenForPopper}
         onEscapeKeyDown={(event) => {
           if (event.target instanceof HTMLElement && event.target.closest("[data-database-cell-editor]"))

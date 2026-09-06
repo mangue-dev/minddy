@@ -47,7 +47,7 @@ vi.mock("@/lib/server/pages-projection", () => ({
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: () => ({
+    from: (table: string) => table === "page_files" ? { select: () => ({ eq: () => ({ in: () => ({ order: () => ({ range: async () => ({ data: [], error: null }) }) }) }) }) } : ({
       select: (columns: string) => {
         reads.selects.push(columns);
         return {
@@ -65,7 +65,7 @@ vi.mock("@/lib/supabase-service", () => ({
                 }
               : {
                   is: () => ({
-                    order: async () => ({ data: rows.list, error: null }),
+                    order: () => ({ order: () => ({ range: async (from: number, to: number) => ({ data: rows.list.slice(from, to + 1), error: null }) }) }),
                   }),
                 },
           in: async (_column: string, ids: string[]) => {
@@ -245,4 +245,25 @@ it("links database entries to existing archive files with duplicate titles and n
   expect(markdown).not.toContain("/projects/");
   expect(markdown).not.toContain("[[page:");
   expect(markdown).not.toContain("Private");
+  const manifest = JSON.parse(strFromU8(archive["minddy-database.json"]));
+  expect(manifest.pages.map((page: { id: string }) => page.id)).toEqual(["root", "db", "first", "second", "child"]);
+  expect(manifest.pages.find((page: { id: string }) => page.id === "db").database_schema).toEqual([]);
+  expect(archive["Guide/Journal/index.csv"]).toBeDefined();
+});
+
+
+it("exports the whole branch when its entries occur beyond the first project list batch", async () => {
+  access = { isOwner: true };
+  rows.list = [
+    ...Array.from({ length: 1000 }, (_, index) => ({
+      id: `outside-${index}`, parent_id: null, title: "Outside", position: "a",
+    })),
+    ...branchRows(),
+  ];
+  const result = await exportPage({ pageId: "root", actorId: "u", branch: true });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(Object.keys(unzipSync(result.body)).sort()).toEqual([
+    "Guide/Intro.md", "Guide/index.md",
+  ]);
 });

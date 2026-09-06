@@ -45,7 +45,9 @@ export function DatabasePropertyCell({
   const value = databasePropertyValue(page, property);
   const [open, setOpen] = useState(false);
   const expected = useRef<DatabaseValue>(value);
-  useEffect(() => { expected.current = value; }, [value]);
+  useEffect(() => {
+    expected.current = value;
+  }, [value]);
   const changeOpen = (next: boolean) => {
     setOpen(next);
     expected.current = value;
@@ -236,6 +238,7 @@ export function PageDatabaseProperties({
   page: PageSummary;
   database: PageSummary;
 }) {
+  if (!database.database_schema?.length) return null;
   return (
     <div className="my-5 border-y border-border/60 py-3">
       {(database.database_schema ?? []).map((property) => (

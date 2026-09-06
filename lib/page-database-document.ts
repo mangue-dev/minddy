@@ -9,6 +9,7 @@ export interface DatabaseDocumentPage {
   content?: unknown;
   created_at?: string;
   database_schema?: DatabaseProperty[] | null;
+  database_title_name?: string | null;
   property_values?: DatabaseValues;
 }
 
