@@ -4,6 +4,7 @@ import { ScreenshotSlot } from "./screenshot-slot";
 import { FeatureDisclosure } from "./feature-disclosure";
 import { CARD_TONES } from "./card-tones";
 import { SectionHeading } from "./section-heading";
+import { BoardFigure, ScratchpadFigure } from "./workspace-figures";
 import { VoiceDemo } from "./voice-demo";
 
 /** One workspace tour: planning, knowledge, feedback, and fast ways to capture work. */
@@ -12,7 +13,7 @@ export async function SectionWorkspace() {
   const cards = [
     {
       id: "tracker", icon: Layers, title: t("navMenu_tracker_title"), description: t("feature_board_body"),
-      screenshot: "heroBoard", tone: CARD_TONES.sage, span: "lg:col-span-2",
+      screenshot: "heroBoard", tone: CARD_TONES.sage, span: "md:col-span-2",
       points: (["board", "all", "inbox", "objectives", "cycles", "triage"] as const).map(key => ({ title: t(`feature_${key}_title`), body: t(`feature_${key}_body`) })),
     },
     {
@@ -41,10 +42,10 @@ export async function SectionWorkspace() {
     <section id="workspace" className="scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16" aria-labelledby="workspace-title">
       <div className="mx-auto max-w-6xl">
         <SectionHeading id="workspace-title" title={t("featuresTitle")} description={t("featuresSubtitle")} />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           {cards.map(card => (
             <FeatureDisclosure key={card.id} id={card.id} title={card.title}
-              className={`h-[460px] sm:h-[480px] ${card.tone} ${card.span}`}
+              className={`min-h-[460px] ${card.tone} ${card.span}`}
               details={card.id !== "speed" && <dl className="space-y-5">{card.points.map(point => (
                 <div key={point.body}>
                   {point.title && <dt className="font-medium">{point.title}</dt>}
@@ -56,15 +57,15 @@ export async function SectionWorkspace() {
                 <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
                 <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
-                <div className="mt-6 min-h-0 flex-1">
-                  <ScreenshotSlot id={card.screenshot} expandable
-                    sizes={card.id === "tracker" ? "(min-width: 1024px) 700px, 100vw" : "(min-width: 1024px) 310px, 100vw"}
-                    className="h-full w-full border-0 bg-transparent shadow-none" />
+                <div className="mt-auto pt-6">
+                  {card.id === "tracker" ? <BoardFigure /> : card.id === "scratchpad" ? <ScratchpadFigure /> : <ScreenshotSlot id={card.screenshot} expandable focused
+                    sizes="(min-width: 1024px) 480px, (min-width: 768px) 440px, 100vw"
+                    className="w-full rounded-xl shadow-sm" />}
                 </div>
               </div>
             </FeatureDisclosure>
           ))}
-          <article id="voice" className={`min-w-0 scroll-mt-24 rounded-2xl p-6 sm:p-8 md:col-span-2 lg:col-span-3 ${CARD_TONES.sky}`}>
+          <article id="voice" className={`min-w-0 scroll-mt-24 rounded-2xl p-6 sm:p-8 md:col-span-2 ${CARD_TONES.sky}`}>
             <h3 className="text-2xl font-medium tracking-tight">{t("voiceTitle")}</h3>
             <p className="mt-3 mb-7 max-w-2xl text-sm leading-relaxed opacity-80">{t("voiceSubtitle")}</p>
             <VoiceDemo embedded />

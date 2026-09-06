@@ -52,7 +52,7 @@ describe("public SEO surface", () => {
     const mobileCopy = Object.values(en.DownloadMobile).join(" ");
     expect(mobileCopy).toContain("progressive web app");
     expect(mobileCopy).toMatch(/not a native mobile app|not a native iOS or Android app/);
-    expect(mobileCopy).toContain("There is no Minddy application in the iOS App Store or Google Play");
+    expect(mobileCopy).toContain("There is no minddy application in the iOS App Store or Google Play");
   });
 
   it("keeps a mobile guide route and retires desktop guide pages", () => {
