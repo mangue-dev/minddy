@@ -1293,7 +1293,7 @@
       "import": "Importe problemas de Linear, Jira, Notion, Trello ou um arquivo CSV.",
       "accountTransfer": "Restaure os dados da sua conta de outra instância minddy.",
       "export": "Exporte problemas para CSV no mesmo formato que minddy pode importar.",
-      "zenMode": "Modo Zen oculta o cabeçalho e a barra lateral para que você possa se concentrar no quadro.",
+      "sidebarVisibility": "Oculte ou mostre a barra lateral com o botão acima da sua conta. Quando estiver oculta, passe o cursor sobre a borda esquerda para acessá-la.",
       "sendShortcut": "Escolha nas configurações da conta se Enter envia ou inicia um novo parágrafo.",
       "desktopApp": "O aplicativo de desktop adiciona notificações nativas enquanto minddy está aberto."
     }
@@ -1709,9 +1709,8 @@
     "viewFullChangelog": "Ver histórico completo",
     "account": "Conta",
     "appearance": "Aparência",
-    "zenMode": "Modo Zen",
-    "zenModeExit": "Sair do modo zen",
-    "zenModeOn": "Modo Zen ativado; {shortcut} para voltar ou recarregar a página",
+    "hideSidebar": "Ocultar barra lateral",
+    "showSidebar": "Mostrar barra lateral",
     "new": "Novo",
     "newIssue": "Novo problema",
     "newObjective": "Novo objetivo",

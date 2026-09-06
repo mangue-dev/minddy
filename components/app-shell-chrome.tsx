@@ -20,7 +20,6 @@ import {
   Spinner,
   cn,
   toast,
-  useMediaQuery,
 } from "mangue-ui";
 import {
   Home,
@@ -40,8 +39,6 @@ import {
   IterationCw,
   Brush,
   TriangleAlert,
-  Focus,
-  PanelsTopLeft,
   Download,
   FileClock,
   FileText,
@@ -95,7 +92,7 @@ import {
   SecondarySidebarSlot,
   SECONDARY_WIDTH,
 } from "@/components/secondary-sidebar";
-import { ZenNavOverlay } from "@/components/zen-nav-overlay";
+import { SidebarNavOverlay } from "@/components/sidebar-nav-overlay";
 import {
   routeHasSecondaryNav,
   useSecondarySidebar,
@@ -106,7 +103,7 @@ import {
   type SettingsSection,
 } from "@/lib/settings-sections";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
-import { useZenMode } from "@/lib/zen-mode-context";
+import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
 import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
 import { useCommandPaletteLauncher } from "@/lib/use-command-palette-launcher";
 import type {
@@ -422,15 +419,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [pathname, router]
   );
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
-  // Zen mode (MIN-134): the paddle is the only switch, and the only output
-  // with reloading — it therefore remains mounted, whatever is masked around it.
-  const { zen, toggle: toggleZen } = useZenMode();
-  // Between the phone and the wide desktop, we keep the chrome desktop but
-  // we return the 256 px of the bar: the zen panel returns when hovering over the
-  // left edge, without pushing content or activating the moving bar.
-  const compactDesktop = useMediaQuery(
-    "(min-width: 768px) and (max-width: 1199px)",
-  );
+  const { hidden: sidebarHidden } = useSidebarVisibility();
 
   // Command palette open state — shared by the header search pill and the
   // lightweight global shortcut launcher. The full palette mounts on demand.
@@ -951,27 +940,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           keywords: ["keyboard", "shortcuts", "raccourcis", "clavier", "cheatsheet", "help", "aide"],
           onSelect: () => setCheatsheetOpen(true),
         },
-        {
-          // Zen mode (MIN-134): single input, in both directions. Without button
-          // elsewhere, this line is also the exit door — hence the wording
-          // which switches rather than an ambiguous “Zen Mode” once in.
-          key: "toggle-zen",
-          label: zen ? t("zenModeExit") : t("zenMode"),
-          icon: zen ? PanelsTopLeft : Focus,
-          keywords: [
-            "zen",
-            "focus",
-            "concentration",
-            "distraction",
-            "épuré",
-            "epure",
-            "minimal",
-            "plein écran",
-            "plein ecran",
-            "fullscreen",
-          ],
-          onSelect: toggleZen,
-        },
       ],
     });
 
@@ -1113,7 +1081,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Settings: one line per CARD, not per tab ───────────────────────
   // A settings tab is a column of cards; “Cadence”, “Zone
@@ -1620,7 +1588,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
-  const [zenSidebarLayerOpen, setZenSidebarLayerOpen] = useState(false);
+  const [sidebarLayerOpen, setSidebarLayerOpen] = useState(false);
 
   // Account/global options (statistics, feedback, theme, sign out). On desktop
   // they live in the sidebar footer; on mobile they move into the menu sheet +
@@ -1680,15 +1648,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // The navigation block contains the primary sidebar followed by the
       // landing point where pages teleport their secondary sidebar.
       //
-      // Zen mode keeps both navigation bars available from the left-edge
-      // overlay without reserving space. There is no longer a shared header to
-      // hide or offset: page content always owns the full content column.
+      // Hidden sidebars remain available from the left-edge overlay without
+      // reserving space. Page content and Numo keep their normal behavior.
       sidebar={
         <div className="relative flex h-full">
-          {zen || compactDesktop ? (
-            <ZenNavOverlay
+          {sidebarHidden ? (
+            <SidebarNavOverlay
               width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
-              pinned={zenSidebarLayerOpen}
+              pinned={sidebarLayerOpen}
             >
               <AppSidebar
                 sections={desktopSections}
@@ -1699,10 +1666,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 onSearch={() => handlePaletteOpenChange(true)}
                 onSearchWarm={warmPalette}
                 onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
-                onLayerOpenChange={setZenSidebarLayerOpen}
+                onLayerOpenChange={setSidebarLayerOpen}
               />
               <SecondarySidebarSlot reserve={secondaryNav} />
-            </ZenNavOverlay>
+            </SidebarNavOverlay>
           ) : (
             <>
               <AppSidebar
@@ -1729,9 +1696,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           <HeaderWindowButtonsSlot />
         </div>
       }
-      // The mobile nav REMAINS: it is through its search button that you open
-      // the palette on mobile, so hiding it would lock everyone in Zen mode
-      // those who don't have ⌘K on hand.
       mobileNav={
         <MobileNav
           sections={mobileMenuSections}

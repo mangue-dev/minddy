@@ -11,7 +11,6 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantBusy } from "@/lib/assistant-chat-context";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
-import { useZenMode } from "@/lib/zen-mode-context";
 import {
   Tooltip,
   TooltipContent,
@@ -53,13 +52,10 @@ export function AssistantFab() {
    */
   const pathname = usePathname();
   const hiddenForRoute = HIDDEN_ROUTES.some((route) => pathname.startsWith(route));
-  // Zen mode (MIN-134): the FAB leaves with the rest of the chrome. Numo remains
-  // accessible from the keyboard (G then A), and its panel opens above.
-  const { zen } = useZenMode();
 
   return (
     <AnimatePresence>
-      {!isOpen && !hiddenForRoute && !fabSuppressed && !zen && (
+      {!isOpen && !hiddenForRoute && !fabSuppressed && (
         <motion.div
           key="assistant-fab"
           initial={{ opacity: 0, y: 14, scale: 0.92 }}

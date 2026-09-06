@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { useAuth } from "@/lib/auth-context";
-import { useZenMode } from "@/lib/zen-mode-context";
 import { useOnboarding } from "@/lib/use-onboarding";
 import { displayName } from "@/lib/display-name";
 import { pickGreeting } from "@/lib/home-greeting";
@@ -62,9 +61,6 @@ function useGreeting(name: string): string {
 export default function HomePage() {
   const t = useTranslations("Home");
   const { user } = useAuth();
-  // Zen mode (MIN-134): without a header, the content area IS the window — the
-  // gap that separates them no longer exists.
-  const { zen } = useZenMode();
   // Onboarding (MIN-74): as long as it is not completed or passed, it takes
   // place of the reception block — a new account does not have to ask anything from Numo before
   // to have a project.
@@ -142,7 +138,7 @@ export default function HomePage() {
     <section
       className={cn(
         "grid min-h-full grid-rows-[1fr_auto_1fr] px-6",
-        !zen && HEADER_OFFSET,
+        HEADER_OFFSET,
       )}
     >
       <div className={cn(HERO_COLUMN, "flex items-end pb-5 pt-10")}>

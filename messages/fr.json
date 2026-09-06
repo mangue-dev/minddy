@@ -1293,7 +1293,7 @@
       "import": "Importez des tickets depuis Linear, Jira, Notion, Trello ou un fichier CSV.",
       "accountTransfer": "Restaurez les données de votre compte depuis une autre instance minddy.",
       "export": "Exportez les tickets en CSV, dans le même format que minddy sait importer.",
-      "zenMode": "Le mode zen masque l'en-tête et la barre latérale pour vous laisser vous concentrer sur le board.",
+      "sidebarVisibility": "Masquez ou affichez la sidebar avec le bouton au-dessus de votre compte. Lorsqu’elle est masquée, survolez le bord gauche pour y accéder.",
       "sendShortcut": "Choisissez dans les réglages du compte si Entrée envoie ou crée un nouveau paragraphe.",
       "desktopApp": "L'app de bureau ajoute des notifications natives tant que minddy est ouvert."
     }
@@ -1709,9 +1709,8 @@
     "viewFullChangelog": "Voir le changelog complet",
     "account": "Compte",
     "appearance": "Apparence",
-    "zenMode": "Mode zen",
-    "zenModeExit": "Quitter le mode zen",
-    "zenModeOn": "Mode zen activé; {shortcut} pour revenir, ou rechargez la page",
+    "hideSidebar": "Masquer la sidebar",
+    "showSidebar": "Afficher la sidebar",
     "new": "Nouveau",
     "newIssue": "Nouveau ticket",
     "newObjective": "Nouvel objectif",

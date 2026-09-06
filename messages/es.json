@@ -1293,7 +1293,7 @@
       "import": "Importa incidencias desde Linear, Jira, Notion, Trello o un archivo CSV.",
       "accountTransfer": "Restaura los datos de tu cuenta desde otra instancia de minddy.",
       "export": "Exporta incidencias a CSV en el mismo formato que minddy puede importar.",
-      "zenMode": "El modo Zen oculta la cabecera y la barra lateral para que puedas enfocarte en el tablero.",
+      "sidebarVisibility": "Oculta o muestra la barra lateral con el botón encima de tu cuenta. Cuando esté oculta, pasa el cursor por el borde izquierdo para acceder a ella.",
       "sendShortcut": "Elige en los ajustes de la cuenta si Intro envía o inicia un párrafo nuevo.",
       "desktopApp": "La aplicación de escritorio añade notificaciones nativas mientras minddy está abierto."
     }
@@ -1709,9 +1709,8 @@
     "viewFullChangelog": "Ver el registro de cambios completo",
     "account": "Cuenta",
     "appearance": "Apariencia",
-    "zenMode": "Modo Zen",
-    "zenModeExit": "Dejar el modo zen",
-    "zenModeOn": "Modo Zen activado; {shortcut} volver, o recargar la página",
+    "hideSidebar": "Ocultar barra lateral",
+    "showSidebar": "Mostrar barra lateral",
     "new": "Nuevo",
     "newIssue": "Nueva incidencia",
     "newObjective": "Nuevo objetivo",
