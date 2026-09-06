@@ -5,10 +5,10 @@ import sharp from 'sharp';
 // Coordinates are fractions of each source image. The crop always keeps the slot ratio.
 const shots = [
   { id: 'pagesEditor', shot: 'pages-editor', x: .43, y: .075, width: .43, ratio: 16 / 10 },
-  { id: 'feedbackBoard', shot: 'feedback-board', x: .20, y: .09, width: .44, height: .38, ratio: 16 / 10 },
+  { id: 'feedbackBoard', shot: 'feedback-board', x: .20, y: .09, width: .44, height: .405, ratio: 16 / 10 },
   { id: 'featurePalette', shot: 'palette', x: .288, y: .152, width: .424, height: .359, ratio: 16 / 10 },
   { id: 'workflowAgent', shot: 'agent', x: .35, y: .06, width: .56, ratio: 4 / 3 },
-  { id: 'workflowPr', shot: 'pull-request', x: .37, y: .29, width: .56, ratio: 4 / 3 },
+  { id: 'workflowPr', shot: 'pull-request', x: .355, y: .28, width: .575, ratio: 4 / 3 },
   { id: 'numoPanel', shot: 'numo', x: .59, y: .32, width: .40, ratio: 4 / 3 },
 ];
 const locales = ['en', 'fr', 'de', 'es', 'it', 'pt-BR'];

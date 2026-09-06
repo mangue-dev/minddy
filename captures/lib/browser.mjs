@@ -154,7 +154,14 @@ async function alignStoredViewNames(context, locale) {
   const known = Object.values(DEFAULT_VIEW_NAMES);
 
   await context.route("**/api/**/views", async (route) => {
-    const response = await route.fetch();
+    const response = await route.fetch().catch((error) => {
+      // A background refetch may still be pending when a finished capture closes.
+      if (/Request context disposed|Target page, context or browser has been closed/.test(error.message)) {
+        return null;
+      }
+      throw error;
+    });
+    if (!response) return;
     if (!response.ok()) return route.fulfill({ response });
 
     let body;

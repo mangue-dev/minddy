@@ -256,5 +256,5 @@ export const CAPTURE = {
   viewport: { width: 1440, height: 900 },
   deviceScaleFactor: 2,
   /** Fixed instant: any relative date displayed is stable from one run to the next. */
-  frozenNow: "2026-07-15T10:30:00.000Z",
+  frozenNow: "2026-09-06T10:30:00.000Z",
 };

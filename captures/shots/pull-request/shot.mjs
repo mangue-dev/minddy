@@ -36,6 +36,7 @@ const OUT = "captures/shots/pull-request/out";
 const VIEWPORT = { width: 1447, height: 1085 };
 
 const PUBLISH = process.argv.includes("--publish");
+const CAPTURE_ONLY = process.argv.includes("--capture-only");
 const VARIANTS = CAPTURE_VARIANTS;
 
 const json = (route, body) =>
@@ -61,7 +62,7 @@ const json = (route, body) =>
 async function serveFixture(page) {
   const served = [];
   const unexpected = [];
-  let reviewResolved = false;
+  let reviewResolved = CAPTURE_ONLY;
   let draft = false;
 
   const listResponse = () => ({
@@ -265,6 +266,9 @@ async function capture({ locale, theme }) {
       );
     }
 
+    const checksBanner = page.getByTestId("pr-checks");
+    // Marketing refreshes can use the ready fixture without replaying mutation UI checks.
+    if (!CAPTURE_ONLY) {
     if (
       (await page.getByTestId("pr-issue-link-icon").count()) !== 1 ||
       (await page.getByTestId("pr-sidebar-issue-link-icon").count()) !== 1
@@ -277,7 +281,6 @@ async function capture({ locale, theme }) {
     await page.getByTestId("pr-edit-title").hover();
     await page.getByRole("tooltip").waitFor({ state: "visible" });
 
-    const checksBanner = page.getByTestId("pr-checks");
     await checksBanner.locator("button").first().click();
     const requiredCheck = checksBanner.locator('[data-testid="pr-check"][data-required="true"]');
     const optionalCheck = checksBanner.locator('[data-testid="pr-check"][data-required="false"]');
@@ -849,6 +852,8 @@ async function capture({ locale, theme }) {
       );
     }
 
+    }
+
     // Files tab: designated by its rank, its wording is translated and carries
     // the file counter. This is the THIRD since a tab
     // “Commit” slipped between Conversation and Files — aim for
@@ -1081,6 +1086,16 @@ async function capture({ locale, theme }) {
           `la page a peut-être appelé la forge pour de vrai. Servies : ${served.join(", ")}`,
       );
     }
+
+    // The interaction checks above leave CI details and a success toast open.
+    // Restore the compact review view before taking the marketing photograph.
+    if (!CAPTURE_ONLY) await checksBanner.locator("button").first().click();
+    for (const toast of await page.locator("[data-sonner-toast]").all()) {
+      const close = toast.locator("[data-close-button]");
+      if (await close.count()) await close.click();
+    }
+    await page.locator("[data-sonner-toast]").first().waitFor({ state: "hidden", timeout: 10_000 });
+    await settle(page);
 
     const path = `${OUT}/${locale}-${theme}.png`;
     await shoot(page, path);
