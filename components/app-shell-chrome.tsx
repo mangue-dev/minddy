@@ -85,6 +85,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import {
   AppSidebar,
   EXPANDED_WIDTH,
+  COLLAPSED_WIDTH,
   type AppNavItem,
   type AppNavSection,
 } from "@/components/app-sidebar";
@@ -1651,42 +1652,26 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // Hidden sidebars remain available from the left-edge overlay without
       // reserving space. Page content and Numo keep their normal behavior.
       sidebar={
-        <div className="relative flex h-full">
-          {sidebarHidden ? (
-            <SidebarNavOverlay
-              width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
-              pinned={sidebarLayerOpen}
-            >
-              <AppSidebar
-                sections={desktopSections}
-                modeKey={modeKey}
-                currentProject={currentProject}
-                projects={projects}
-                inbox={inboxItem}
-                onSearch={() => handlePaletteOpenChange(true)}
-                onSearchWarm={warmPalette}
-                onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
-                onLayerOpenChange={setSidebarLayerOpen}
-              />
-              <SecondarySidebarSlot reserve={secondaryNav} />
-            </SidebarNavOverlay>
-          ) : (
-            <>
-              <AppSidebar
-                sections={desktopSections}
-                modeKey={modeKey}
-                currentProject={currentProject}
-                projects={projects}
-                inbox={inboxItem}
-                onSearch={() => handlePaletteOpenChange(true)}
-                onSearchWarm={warmPalette}
-                onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
-                overlay={secondaryNav}
-              />
-              <SecondarySidebarSlot reserve={secondaryNav} />
-            </>
-          )}
-        </div>
+        <SidebarNavOverlay
+          hidden={sidebarHidden}
+          width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
+          dockedWidth={secondaryNav ? COLLAPSED_WIDTH + SECONDARY_WIDTH : EXPANDED_WIDTH}
+          pinned={sidebarLayerOpen}
+        >
+          <AppSidebar
+            sections={desktopSections}
+            modeKey={modeKey}
+            currentProject={currentProject}
+            projects={projects}
+            inbox={inboxItem}
+            onSearch={() => handlePaletteOpenChange(true)}
+            onSearchWarm={warmPalette}
+            onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
+            onLayerOpenChange={setSidebarLayerOpen}
+            overlay={!sidebarHidden && secondaryNav}
+          />
+          <SecondarySidebarSlot reserve={secondaryNav} />
+        </SidebarNavOverlay>
       }
       // Narrow macOS windows use the mobile shell, so the primary sidebar is
       // absent. This native-control clearance is not an application header and

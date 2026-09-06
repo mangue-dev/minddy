@@ -112,7 +112,7 @@ import type { Project } from "@/lib/types";
 
 /** Expanded width shared with the hidden navigation overlay. */
 export const EXPANDED_WIDTH = 256;
-const COLLAPSED_WIDTH = 56;
+export const COLLAPSED_WIDTH = 56;
 
 /**
  * ─── The icon column ────────────────────── ──────────────────────
@@ -1779,35 +1779,25 @@ export function AppSidebar({
           onScratchpadWarm={onScratchpadWarm}
         />
 
-        {/* Nav — animated swap between home and project modes */}
-        {reduce ? (
-          <SidebarNav
-            sections={sections}
-            collapsed={collapsed}
-            currentProject={currentProject}
-            projects={projects}
-            onMenuOpenChange={handleMenuOpenChange}
-          />
-        ) : (
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={modeKey}
-              className="flex min-h-0 flex-1 flex-col"
-              initial={{ opacity: 0, x: dx }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: dx }}
-              transition={transitions.fade}
-            >
-              <SidebarNav
-                sections={sections}
-                collapsed={collapsed}
-                currentProject={currentProject}
-                projects={projects}
-                onMenuOpenChange={handleMenuOpenChange}
-              />
-            </motion.div>
-          </AnimatePresence>
-        )}
+        {/* Keep the same markup during hydration and when motion preferences change. */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={modeKey}
+            className="flex min-h-0 flex-1 flex-col"
+            initial={{ opacity: 0, x: dx }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: dx }}
+            transition={reduce ? { duration: 0 } : transitions.fade}
+          >
+            <SidebarNav
+              sections={sections}
+              collapsed={collapsed}
+              currentProject={currentProject}
+              projects={projects}
+              onMenuOpenChange={handleMenuOpenChange}
+            />
+          </motion.div>
+        </AnimatePresence>
 
         {/* Footer */}
         <div className={cn("pt-2 pb-2.5", GUTTER)}>

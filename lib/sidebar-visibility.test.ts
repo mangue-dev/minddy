@@ -29,9 +29,9 @@ vi.mock("@/lib/use-window-buttons", () => ({
 function Navigation({ collapsed = false }: { collapsed?: boolean }) {
   const { hidden } = useSidebarVisibility();
   const button = createElement(SidebarVisibilityButton, { collapsed });
-  return hidden
-    ? createElement(SidebarNavOverlay, { width: 256, children: button })
-    : button;
+  return createElement(SidebarNavOverlay, {
+    width: 256, dockedWidth: collapsed ? 56 : 256, hidden, children: button,
+  });
 }
 
 let container: HTMLDivElement;
@@ -70,6 +70,10 @@ function button() {
   return container.querySelector<HTMLButtonElement>("button")!;
 }
 
+function isHidden() {
+  return container.querySelector("[data-sidebar-hidden]")?.getAttribute("data-sidebar-hidden") === "true";
+}
+
 function panel() {
   return container.querySelector<HTMLElement>("[data-open]");
 }
@@ -78,7 +82,7 @@ describe("sidebar visibility", () => {
   it("hides navigation, recalls it from the edge, and restores it with one click", () => {
     render();
     expect(button().textContent).toBe("Hide sidebar");
-    expect(panel()).toBeNull();
+    expect(isHidden()).toBe(false);
     act(() => button().click());
     expect(button().getAttribute("aria-label")).toBe("Show sidebar");
     expect(panel()?.dataset.open).toBe("false");
@@ -87,7 +91,7 @@ describe("sidebar visibility", () => {
     ));
     expect(panel()?.dataset.open).toBe("true");
     act(() => button().click());
-    expect(panel()).toBeNull();
+    expect(isHidden()).toBe(false);
     expect(button().getAttribute("aria-label")).toBe("Hide sidebar");
   });
 
@@ -96,25 +100,25 @@ describe("sidebar visibility", () => {
     render();
     expect(panel()?.dataset.open).toBe("false");
     act(() => button().click());
-    expect(panel()).toBeNull();
+    expect(isHidden()).toBe(false);
     viewport.compact = false;
     render();
     viewport.compact = true;
     render();
-    expect(panel()).toBeNull();
+    expect(isHidden()).toBe(false);
     act(() => button().click());
     expect(panel()?.dataset.open).toBe("false");
   });
 
   it("follows viewport defaults until a visibility preference is chosen", () => {
     render();
-    expect(panel()).toBeNull();
+    expect(isHidden()).toBe(false);
     viewport.compact = true;
     render();
-    expect(panel()).not.toBeNull();
+    expect(isHidden()).toBe(true);
     viewport.compact = false;
     render();
-    expect(panel()).toBeNull();
+    expect(isHidden()).toBe(false);
   });
 
   it("recalls hidden navigation for keyboard focus and releases it on focus exit", () => {
@@ -129,6 +133,21 @@ describe("sidebar visibility", () => {
     expect(panel()?.dataset.open).toBe("true");
     act(() => control.blur());
     expect(panel()?.dataset.open).toBe("false");
+  });
+
+  it("preserves navigation DOM and focus across hide/show instead of remounting", () => {
+    render();
+    const navigationPanel = panel();
+    const control = button();
+    act(() => control.focus());
+    act(() => control.click());
+    expect(panel()).toBe(navigationPanel);
+    expect(button()).toBe(control);
+    expect(document.activeElement).toBe(control);
+    act(() => control.click());
+    expect(panel()).toBe(navigationPanel);
+    expect(button()).toBe(control);
+    expect(document.activeElement).toBe(control);
   });
 
   it("keeps the rail control named and usable without its visible label", () => {

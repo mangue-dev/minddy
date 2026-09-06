@@ -5,25 +5,28 @@ import { motion, useReducedMotion } from "framer-motion";
 
 import { WINDOW_BUTTONS_WIDTH } from "@/components/desktop-window-buttons";
 import { useHoldWindowButtons, useWideLayout } from "@/lib/use-window-buttons";
-
-/** The overlay follows the pointer without shifting page content. */
-const OVERLAY_SLIDE = { duration: 0.14, ease: [0.32, 0.72, 0, 1] } as const;
+import { transitions } from "@/lib/motion";
 
 /** Left-edge target that recalls hidden navigation. */
 const HOTZONE = 12;
 
 /**
- * Temporarily reveal the primary and secondary sidebars above page content.
- * Native window controls follow the sidebar, and keyboard focus or an open
- * portaled layer keeps navigation visible until the interaction finishes.
+ * Keep one navigation tree mounted across docked, rail, and hidden modes.
+ * Animate its reserved width with the sidebars so page content resizes smoothly.
+ * Hidden navigation can be recalled by pointer, keyboard focus, or a portaled layer.
  */
 export function SidebarNavOverlay({
   width,
+  dockedWidth,
+  hidden,
   pinned = false,
   children,
 }: {
-  /** Block width: primary alone, or primary plus secondary. */
+  /** Expanded overlay width: primary alone, or primary plus secondary. */
   width: number;
+  /** Space reserved when docked, including the primary rail when applicable. */
+  dockedWidth: number;
+  hidden: boolean;
   /** Keep navigation visible while one of its portaled layers is open. */
   pinned?: boolean;
   children: ReactNode;
@@ -33,7 +36,17 @@ export function SidebarNavOverlay({
   const [focusWithin, setFocusWithin] = useState(false);
   const panel = useRef<HTMLDivElement | null>(null);
 
-  const shown = open || focusWithin || pinned;
+  const shown = !hidden || open || focusWithin || pinned;
+  const flowWidth = hidden ? 0 : dockedWidth;
+  const panelWidth = hidden ? width : dockedWidth;
+  const shellTransition = reduce ? { duration: 0 } : transitions.shell;
+
+  // A new visibility choice ends the previous temporary reveal. The children
+  // remain mounted, preserving focus, secondary-sidebar scroll, and width motion.
+  useEffect(() => {
+    setOpen(false);
+    setFocusWithin(false);
+  }, [hidden]);
 
   const openPanel = useCallback(() => setOpen(true), []);
   // Without grace period: the block follows the pointer, it does not make it wait.
@@ -64,7 +77,7 @@ export function SidebarNavOverlay({
  * block is open — when idle, it costs nothing.
  */
   useEffect(() => {
-    if (!open || pinned) return;
+    if (!hidden || !open || pinned) return;
     const onMove = (e: PointerEvent) => {
       const el = panel.current;
       if (!el) return;
@@ -125,7 +138,7 @@ export function SidebarNavOverlay({
       document.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onDocumentLeave);
     };
-  }, [open, pinned, width, closePanel]);
+  }, [hidden, open, pinned, width, closePanel]);
 
   // The keyboard focus, for the same reason, is listened to NATIVE on the block:
   // `focusin`/`focusout` go up the DOM, so they see the teleported bar
@@ -151,30 +164,34 @@ export function SidebarNavOverlay({
   }, []);
 
   return (
-    <>
-      {/* The edge. It does nothing other than listen to the pointer: the stored block
- is out of scope, so there is nothing left to hover over to recall it. Under the z-index block, so that it covers it once
- opened instead of taking the pointer back from it. Here the React
- handlers are enough — it's empty, no portal lands there. */}
-      <div
-        aria-hidden
-        className={`sidebar-nav-hotzone absolute inset-y-0 left-0 ${shown ? "z-30" : "z-[41]"}`}
-        style={{ width: HOTZONE }}
-        onPointerEnter={openPanel}
-        onPointerMove={openPanel}
-      />
+    <motion.div
+      className="relative h-full shrink-0"
+      data-sidebar-hidden={hidden}
+      initial={{ width: flowWidth }}
+      animate={{ width: flowWidth }}
+      transition={shellTransition}
+    >
+      {/* The edge recalls hidden navigation without intercepting its controls. */}
+      {hidden && (
+        <div
+          aria-hidden
+          className={`sidebar-nav-hotzone absolute inset-y-0 left-0 ${shown ? "z-30" : "z-[41]"}`}
+          style={{ width: HOTZONE }}
+          onPointerEnter={openPanel}
+          onPointerMove={openPanel}
+        />
+      )}
       <motion.div
         ref={panel}
-        className="absolute inset-y-0 left-0 z-40 flex h-full overflow-hidden bg-sidebar transition-shadow duration-200 data-[open=true]:shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]"
+        className="absolute inset-y-0 left-0 z-40 flex h-full overflow-hidden bg-sidebar transition-shadow duration-200 data-[floating=true]:shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]"
         data-open={shown}
-        style={{ width }}
-        // Start outside the content column when navigation becomes hidden.
-        initial={{ x: -width }}
-        animate={{ x: shown ? 0 : -width }}
-        transition={reduce ? { duration: 0 } : OVERLAY_SLIDE}
+        data-floating={hidden && shown}
+        initial={{ width: panelWidth, x: shown ? 0 : -width }}
+        animate={{ width: panelWidth, x: shown ? 0 : -width }}
+        transition={shellTransition}
       >
         {children}
       </motion.div>
-    </>
+    </motion.div>
   );
 }
