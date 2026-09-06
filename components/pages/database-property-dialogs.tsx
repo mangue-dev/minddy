@@ -3,7 +3,20 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, ChevronDown } from "lucide-react";
-import { Input, Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
+import {
+  Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "mangue-ui";
 import { FormDialog } from "@/components/form-dialog";
 import { SearchSelect, PICKER_FIELD_TRIGGER } from "@/components/search-select";
 import { CATEGORY_COLORS } from "@/lib/category-colors";
@@ -16,6 +29,7 @@ import {
   type DatabasePropertyType,
 } from "@/lib/page-databases";
 import type { PageSummary } from "@/lib/pages-api";
+import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
 import { PROPERTY_ICONS } from "./database-property-icons";
 
 /** Mount once per edit so incoming revisions cannot replace an unsaved draft. */
@@ -168,96 +182,211 @@ export function DatabaseOptionsDialog({
   );
 }
 
-export function DatabaseCreatePropertyDialog({
-  database,
-  projectId,
-  onClose,
-}: {
+type ColumnDialogProps = {
   database: PageSummary;
   projectId: string;
   onClose: () => void;
-}) {
+};
+
+export function DatabaseCreatePropertyDialog(props: ColumnDialogProps) {
+  return <DatabaseColumnDialog {...props} />;
+}
+
+export function DatabaseEditPropertyDialog(
+  props: ColumnDialogProps & { property: DatabaseProperty },
+) {
+  return <DatabaseColumnDialog {...props} />;
+}
+
+function DatabaseColumnDialog({
+  database,
+  property,
+  projectId,
+  onClose,
+}: ColumnDialogProps & { property?: DatabaseProperty }) {
   const t = useTranslations("PageDatabase");
-  const { saveSchema, pending } = usePageDatabase(projectId);
+  const { saveSchema, previewConversion, convertColumn, pending } =
+    usePageDatabase(projectId);
   const [base] = useState(database);
-  const [name, setName] = useState("");
-  const [type, setType] = useState<DatabasePropertyType>("text");
-  const full = (base.database_schema?.length ?? 0) >= MAX_DATABASE_PROPERTIES;
+  const [name, setName] = useState(property?.name ?? "");
+  const [type, setType] = useState<DatabasePropertyType>(
+    property?.type ?? "text",
+  );
+  const [warning, setWarning] = useState<DatabaseConversionPreview | null>(
+    null,
+  );
+  const [saving, setSaving] = useState(false);
+  const busy = pending || saving;
+  const full =
+    !property && (base.database_schema?.length ?? 0) >= MAX_DATABASE_PROPERTIES;
   const Icon = PROPERTY_ICONS[type];
-  return (
-    <FormDialog
-      open
-      onOpenChange={(next) => {
-        if (!next && !pending) onClose();
-      }}
-      title={t("addProperty")}
-      className="sm:max-w-md"
-      contentProps={{
-        "aria-describedby": undefined,
-        onInteractOutside: keepOverlayOpenForPopper,
-      }}
-      submitLabel={t("addProperty")}
-      cancelLabel={t("cancel")}
-      submitting={pending}
-      submitDisabled={!name.trim() || full}
-      onSubmit={async () => {
-        if (
-          await saveSchema(base, [
-            ...(base.database_schema ?? []),
-            { id: crypto.randomUUID(), name: name.trim(), type },
-          ])
+  const applyConversion = async (
+    preview: DatabaseConversionPreview,
+    confirmLoss: boolean,
+  ) => {
+    if (!property) return;
+    setSaving(true);
+    try {
+      if (
+        await convertColumn(
+          base,
+          property.id,
+          type,
+          name.trim(),
+          preview,
+          confirmLoss,
         )
-          onClose();
-      }}
-    >
-      <label className="grid gap-2 text-sm font-medium">
-        {t("propertyName")}
-        <Input
-          autoFocus
-          value={name}
-          maxLength={80}
-          required
-          disabled={pending}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </label>
-      <div className="grid gap-2 pb-2 text-sm font-medium">
-        <span>{t("propertyType")}</span>
-        <SearchSelect
-          value={type}
-          onChange={(next) => {
-            if (next) setType(next as DatabasePropertyType);
+      )
+        onClose();
+      else setWarning(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <>
+      {!warning && (
+        <FormDialog
+          open
+          onOpenChange={(next) => {
+            if (!next && !busy && !warning) onClose();
           }}
-          searchPlaceholder={t("searchPropertyTypes")}
-          options={DATABASE_PROPERTY_TYPES.map((kind) => {
-            const TypeIcon = PROPERTY_ICONS[kind];
-            return {
-              value: kind,
-              label: t(kind),
-              icon: <TypeIcon className="size-4 text-muted-foreground" />,
-            };
-          })}
-          trigger={
-            <button
-              type="button"
-              aria-label={t("propertyType")}
-              disabled={pending}
-              className={PICKER_FIELD_TRIGGER}
-            >
-              <span className="flex items-center gap-2">
-                <Icon className="size-4 text-muted-foreground" />
-                {t(type)}
-              </span>
-              <ChevronDown className="size-4 text-muted-foreground" />
-            </button>
+          title={t(property ? "editColumn" : "addProperty")}
+          className="sm:max-w-md"
+          contentProps={{
+            "aria-describedby": undefined,
+            onInteractOutside: keepOverlayOpenForPopper,
+          }}
+          submitLabel={t(property ? "save" : "addProperty")}
+          cancelLabel={t("cancel")}
+          submitting={busy}
+          submitDisabled={
+            !name.trim() ||
+            full ||
+            (!!property &&
+              name.trim() === property.name &&
+              type === property.type)
           }
-        />
-      </div>
-      {full && (
-        <p className="text-sm text-muted-foreground">
-          {t("propertyLimit", { count: MAX_DATABASE_PROPERTIES })}
-        </p>
+          onSubmit={async () => {
+            setSaving(true);
+            try {
+              if (property && type !== property.type) {
+                const preview = await previewConversion(
+                  base,
+                  property.id,
+                  type,
+                  name.trim(),
+                );
+                if (!preview) return;
+                if (preview.incompatibleCount) setWarning(preview);
+                else await applyConversion(preview, false);
+              } else {
+                const schema = base.database_schema ?? [];
+                const next = property
+                  ? schema.map((p) =>
+                      p.id === property.id ? { ...p, name: name.trim() } : p,
+                    )
+                  : [
+                      ...schema,
+                      { id: crypto.randomUUID(), name: name.trim(), type },
+                    ];
+                if (await saveSchema(base, next)) onClose();
+              }
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          <label className="grid gap-2 text-sm font-medium">
+            {t("propertyName")}
+            <Input
+              autoFocus
+              value={name}
+              maxLength={80}
+              required
+              disabled={busy}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <div className="grid gap-2 pb-2 text-sm font-medium">
+            <span>{t("propertyType")}</span>
+            <SearchSelect
+              value={type}
+              onChange={(next) => {
+                if (next) setType(next as DatabasePropertyType);
+              }}
+              searchPlaceholder={t("searchPropertyTypes")}
+              options={DATABASE_PROPERTY_TYPES.map((kind) => {
+                const TypeIcon = PROPERTY_ICONS[kind];
+                return {
+                  value: kind,
+                  label: t(kind),
+                  icon: <TypeIcon className="size-4 text-muted-foreground" />,
+                };
+              })}
+              trigger={
+                <button
+                  type="button"
+                  aria-label={t("propertyType")}
+                  disabled={busy}
+                  className={PICKER_FIELD_TRIGGER}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon className="size-4 text-muted-foreground" />
+                    {t(type)}
+                  </span>
+                  <ChevronDown className="size-4 text-muted-foreground" />
+                </button>
+              }
+            />
+          </div>
+          {full && (
+            <p className="text-sm text-muted-foreground">
+              {t("propertyLimit", { count: MAX_DATABASE_PROPERTIES })}
+            </p>
+          )}
+        </FormDialog>
       )}
-    </FormDialog>
+      <AlertDialog
+        open={!!warning}
+        onOpenChange={(next) => {
+          if (!next && !busy) setWarning(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("conversionWarningTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {type === "created_at"
+                ? t("conversionMetadataWarning", {
+                    count: warning?.incompatibleCount ?? 0,
+                  })
+                : t("conversionWarningDescription", {
+                    count: warning?.incompatibleCount ?? 0,
+                    from: t(property?.type ?? "text"),
+                    to: t(type),
+                  })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={busy}
+              onClick={(event) => {
+                event.preventDefault();
+                if (warning) void applyConversion(warning, true);
+              }}
+            >
+              {t(
+                type === "created_at"
+                  ? "confirmMetadataConversion"
+                  : "confirmConversion",
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

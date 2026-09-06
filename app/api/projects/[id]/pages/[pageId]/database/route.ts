@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { updatePageDatabase } from "@/lib/server/page-databases";
+import {
+  convertPageDatabase,
+  updatePageDatabase,
+} from "@/lib/server/page-databases";
 
 export async function PATCH(
   request: NextRequest,
@@ -21,7 +24,17 @@ export async function PATCH(
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const result = await updatePageDatabase(id, pageId, auth.user.id, input);
+  const convert =
+    input !== null &&
+    typeof input === "object" &&
+    "operation" in input &&
+    input.operation === "convert";
+  const result = await (convert ? convertPageDatabase : updatePageDatabase)(
+    id,
+    pageId,
+    auth.user.id,
+    input,
+  );
   if (!result.ok)
     return NextResponse.json(
       { error: t(result.errorKey) },

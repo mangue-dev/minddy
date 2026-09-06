@@ -292,9 +292,9 @@
     "reauthTooOld": "Melden Sie sich ab und wieder an, und versuchen Sie es dann erneut – beim Löschen eines Kontos werden Sie nach einer aktuellen Anmeldung gefragt.",
     "invalidViewHref": "Dieser Bildschirm kann nicht gespeichert werden.",
     "savedViewNameTaken": "Sie haben bereits eine Ansicht mit diesem Namen.",
-    "pageDatabaseInvalid": "Ungültige Datenbankeigenschaft. Prüfe den Wert und versuche es erneut.",
-    "pageDatabaseStale": "Diese Eigenschaft wurde inzwischen geändert. Prüfe den aktuellen Wert und versuche es erneut.",
-    "pageDatabaseMove": "Diese Seite kann mit ihren aktuellen Eigenschaften nicht in eine andere Datenbank verschoben werden."
+    "pageDatabaseInvalid": "Ungültige Datenbankspalte oder ungültiger Wert. Prüfe die Eingabe und versuche es erneut.",
+    "pageDatabaseStale": "Diese Spalte wurde inzwischen geändert. Prüfe den aktuellen Wert und versuche es erneut.",
+    "pageDatabaseMove": "Diese Seite kann mit ihren aktuellen Spaltenwerten nicht in eine andere Datenbank verschoben werden."
   },
   "RelayClaim": {
     "title": "GitHub verbinden",
@@ -5960,7 +5960,7 @@
     "customDescription": "Gib einen Namen und die Server-URL ein, um ihn mit Numo zu verbinden."
   },
   "PageDatabase": {
-    "searchPropertyTypes": "Eigenschaftstyp suchen",
+    "searchPropertyTypes": "Spaltentyp suchen",
     "optionNamesUnique": "Verwende für jede Option einen anderen Namen.",
     "number": "Zahl",
     "select": "Auswahl",
@@ -5976,13 +5976,13 @@
     "newDatabase": "Neue Datenbank",
     "create": "Erstellen",
     "extend": "Vergrößern",
-    "properties": "Eigenschaften",
-    "propertyName": "Eigenschaftsname",
-    "propertyType": "Eigenschaftstyp",
-    "addProperty": "Eigenschaft hinzufügen",
-    "deleteProperty": "Eigenschaft löschen",
+    "properties": "Spalten",
+    "propertyName": "Spaltenname",
+    "propertyType": "Spaltentyp",
+    "addProperty": "Spalte hinzufügen",
+    "deleteProperty": "Spalte löschen",
     "deletePropertyBody": "„{name}“ aus allen Einträgen entfernen? Dies kann nicht rückgängig gemacht werden.",
-    "propertyLimit": "Eine Datenbank kann bis zu {count} Eigenschaften haben.",
+    "propertyLimit": "Eine Datenbank kann bis zu {count} Spalten haben.",
     "text": "Text",
     "date": "Datum",
     "people": "Personen",
@@ -6007,12 +6007,12 @@
     "sortAscending": "Aufsteigend sortieren",
     "sortDescending": "Absteigend sortieren",
     "filter": "Filtern",
-    "filterProperty": "Nach Eigenschaft filtern",
+    "filterProperty": "Nach Spalte filtern",
     "filterValue": "Filterwert",
     "allEntries": "Alle Einträge",
     "checked": "Aktiviert",
     "unchecked": "Deaktiviert",
-    "noProperties": "Füge Eigenschaften hinzu, um deine Einträge zu organisieren.",
+    "noProperties": "Füge Spalten hinzu, um deine Einträge zu organisieren.",
     "newEntry": "Neuer Eintrag",
     "entryActions": "Eintragsaktionen",
     "openEntry": "Seite öffnen",
@@ -6032,6 +6032,15 @@
     "selectAllEntries": "Alle Einträge auswählen",
     "selectEntry": "{name} auswählen",
     "insertEntryHint": "Darunter einfügen · Wahltaste/Alt-Klick für darüber",
-    "deleteEntries": "{count} Einträge löschen"
+    "deleteEntries": "{count} Einträge löschen",
+    "columnActions": "Aktionen für {name}",
+    "rename": "Umbenennen",
+    "editColumn": "Spalte bearbeiten",
+    "dragColumnHint": "Klicken für Aktionen, ziehen zum Umordnen",
+    "conversionWarningTitle": "Einige Werte können nicht umgewandelt werden",
+    "conversionWarningDescription": "Beim Wechsel von {from} zu {to} {count, plural, one {wird # inkompatible Zelle geleert} other {werden # inkompatible Zellen geleert}}. Kompatible Werte werden umgewandelt. Brich ab, um die aktuelle Spalte und alle Werte zu behalten.",
+    "confirmConversion": "Typ ändern und Zellen leeren",
+    "conversionMetadataWarning": "Beim Wechsel zu Erstellt am {count, plural, one {wird # vorhandener Wert} other {werden # vorhandene Werte}} durch das ursprüngliche Erstellungsdatum des jeweiligen Eintrags ersetzt. Brich ab, um die aktuelle Spalte und alle Werte zu behalten.",
+    "confirmMetadataConversion": "Erstellungsdaten verwenden"
   }
 }

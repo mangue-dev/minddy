@@ -10,7 +10,7 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: vi.fn() }));
 vi.mock("@/lib/server/page-activity", () => ({ recordPageEvent: h.event }));
-import { updatePageDatabase } from "./page-databases";
+import { convertPageDatabase, updatePageDatabase } from "./page-databases";
 
 const propertyId = "10000000-0000-4000-8000-000000000001";
 const schema = [{ id: propertyId, type: "date", name: "Date" }];
@@ -201,4 +201,45 @@ it("rejects number strings, unknown options, and writes to creation metadata bef
     ).toMatchObject({ ok: false, status: 400 });
   }
   expect(h.rpc).not.toHaveBeenCalled();
+});
+
+describe("column conversion boundary", () => {
+  const input = {
+    operation: "convert", propertyId, targetType: "number", revision: 0,
+    preview: true,
+  };
+  it("validates conversion intent before calling the guarded RPC", async () => {
+    for (const change of [
+      { targetType: "formula" }, { propertyId: "unknown" }, { revision: -1 },
+      { name: " " }, { name: "a".repeat(81) }, { preview: "yes" },
+      { preview: false }, { preview: false, token: "invalid" }, { confirmLoss: "true" },
+    ]) {
+      expect(await convertPageDatabase("project", "db", "actor", { ...input, ...change }))
+        .toMatchObject({ ok: false, status: 400 });
+    }
+    expect(h.rpc).not.toHaveBeenCalled();
+  });
+  it("does not expose preview data through another project", async () => {
+    expect(await convertPageDatabase("other", "db", "actor", input))
+      .toMatchObject({ ok: false, status: 404 });
+    expect(h.rpc).not.toHaveBeenCalled();
+  });
+  it("returns the guarded preview without recording an edit", async () => {
+    const preview = { status: "preview", incompatibleCount: 2, totalCount: 5, token: "a".repeat(32) };
+    h.rpc.mockResolvedValue({ data: preview, error: null });
+    expect(await convertPageDatabase("project", "db", "actor", input)).toEqual({ ok: true, page: preview });
+    expect(h.rpc).toHaveBeenCalledWith("convert_page_database_guarded", {
+      p_project_id: "project", p_page_id: "db", p_actor_id: "actor",
+      p_input: { ...input, kind: "human" },
+    });
+    expect(h.event).not.toHaveBeenCalled();
+  });
+  it("returns a conflict for a stale confirmation and reloads only successful conversions", async () => {
+    h.rpc.mockResolvedValueOnce({ data: { status: "conflict" }, error: null });
+    const apply = { ...input, preview: false, token: "a".repeat(32), confirmLoss: true, name: "Amount" };
+    expect(await convertPageDatabase("project", "db", "actor", apply))
+      .toMatchObject({ ok: false, status: 409 });
+    expect(await convertPageDatabase("project", "db", "actor", apply))
+      .toEqual({ ok: true, page: database });
+  });
 });

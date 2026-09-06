@@ -292,9 +292,9 @@
     "reauthTooOld": "Cierra sesión, vuelve a iniciarla e inténtalo de nuevo: para eliminar una cuenta debes haber iniciado sesión recientemente.",
     "invalidViewHref": "Esta pantalla no puede ser guardada.",
     "savedViewNameTaken": "Ya tienes una vista con ese nombre.",
-    "pageDatabaseInvalid": "Propiedad de base de datos no válida. Revisa el valor e inténtalo de nuevo.",
-    "pageDatabaseStale": "Esta propiedad ha cambiado. Revisa el valor actual e inténtalo de nuevo.",
-    "pageDatabaseMove": "Esta página no puede moverse a otra base de datos con sus propiedades actuales."
+    "pageDatabaseInvalid": "La columna o el valor de la base de datos no es válido. Revisa la entrada e inténtalo de nuevo.",
+    "pageDatabaseStale": "Esta columna ha cambiado. Revisa el valor actual e inténtalo de nuevo.",
+    "pageDatabaseMove": "Esta página no puede moverse a otra base de datos con los valores actuales de sus columnas."
   },
   "RelayClaim": {
     "title": "Conectar GitHub",
@@ -5960,7 +5960,7 @@
     "customDescription": "Introduce un nombre y la URL del servidor para conectarlo a Numo."
   },
   "PageDatabase": {
-    "searchPropertyTypes": "Buscar tipo de propiedad",
+    "searchPropertyTypes": "Buscar tipo de columna",
     "optionNamesUnique": "Usa un nombre diferente para cada opción.",
     "number": "Número",
     "select": "Selección",
@@ -5976,13 +5976,13 @@
     "newDatabase": "Nueva base de datos",
     "create": "Crear",
     "extend": "Ampliar",
-    "properties": "Propiedades",
-    "propertyName": "Nombre de la propiedad",
-    "propertyType": "Tipo de propiedad",
-    "addProperty": "Añadir propiedad",
-    "deleteProperty": "Eliminar propiedad",
+    "properties": "Columnas",
+    "propertyName": "Nombre de la columna",
+    "propertyType": "Tipo de columna",
+    "addProperty": "Añadir columna",
+    "deleteProperty": "Eliminar columna",
     "deletePropertyBody": "¿Quitar «{name}» de todas las entradas? Esta acción no se puede deshacer.",
-    "propertyLimit": "Una base de datos puede tener hasta {count} propiedades.",
+    "propertyLimit": "Una base de datos puede tener hasta {count} columnas.",
     "text": "Texto",
     "date": "Fecha",
     "people": "Personas",
@@ -6007,12 +6007,12 @@
     "sortAscending": "Orden ascendente",
     "sortDescending": "Orden descendente",
     "filter": "Filtrar",
-    "filterProperty": "Filtrar por propiedad",
+    "filterProperty": "Filtrar por columna",
     "filterValue": "Valor del filtro",
     "allEntries": "Todas las entradas",
     "checked": "Marcada",
     "unchecked": "Sin marcar",
-    "noProperties": "Añade propiedades para organizar tus entradas.",
+    "noProperties": "Añade columnas para organizar tus entradas.",
     "newEntry": "Nueva entrada",
     "entryActions": "Acciones de la entrada",
     "openEntry": "Abrir página",
@@ -6032,6 +6032,15 @@
     "selectAllEntries": "Seleccionar todas las entradas",
     "selectEntry": "Seleccionar {name}",
     "insertEntryHint": "Insertar debajo · Opción/Alt-clic para insertar encima",
-    "deleteEntries": "Eliminar {count} entradas"
+    "deleteEntries": "Eliminar {count} entradas",
+    "columnActions": "Acciones para {name}",
+    "rename": "Renombrar",
+    "editColumn": "Editar columna",
+    "dragColumnHint": "Haz clic para ver acciones o arrastra para reordenar",
+    "conversionWarningTitle": "Algunos valores no se pueden convertir",
+    "conversionWarningDescription": "Cambiar de {from} a {to} borrará {count, plural, one {# celda incompatible} other {# celdas incompatibles}}. Los valores compatibles se convertirán. Cancela para conservar la columna actual y todos sus valores.",
+    "confirmConversion": "Cambiar tipo y borrar celdas",
+    "conversionMetadataWarning": "Cambiar a Fecha de creación reemplazará {count, plural, one {# valor existente} other {# valores existentes}} por la fecha de creación original de cada entrada. Cancela para conservar la columna actual y todos sus valores.",
+    "confirmMetadataConversion": "Usar fechas de creación"
   }
 }

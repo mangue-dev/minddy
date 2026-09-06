@@ -6,7 +6,12 @@ import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
 import type { Page } from "./pages";
 import type { PageSummary } from "./pages-api";
-import type { DatabaseProperty, DatabaseValue } from "./page-databases";
+import type {
+  DatabaseProperty,
+  DatabasePropertyType,
+  DatabaseValue,
+} from "./page-databases";
+import type { DatabaseConversionPreview } from "./page-database-conversion";
 import { pagesKey, pageKey } from "./use-pages-query";
 import { waitForPageCreation } from "./page-creation-settlement";
 
@@ -29,6 +34,7 @@ export function usePageDatabase(projectId: string) {
         );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || t("saveFailed"));
+        if (data.status === "preview") return data as DatabaseConversionPreview;
         const page = data as Page;
         // Only update metadata: the editor owns its body and unsaved document changes.
         const patch = {
@@ -44,10 +50,21 @@ export function usePageDatabase(projectId: string) {
         queryClient.setQueryData<Page>(pageKey(pageId), (row) =>
           row ? { ...row, ...patch } : row,
         );
-        return true;
+        if ((input as { operation?: string }).operation === "convert") {
+          const entries = queryClient.getQueryData<PageSummary[]>(
+            pagesKey(projectId),
+          );
+          for (const entry of entries ?? []) {
+            if (entry.parent_id === pageId)
+              void queryClient.invalidateQueries({
+                queryKey: pageKey(entry.id),
+              });
+          }
+        }
+        return page;
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t("saveFailed"));
-        return false;
+        return null;
       } finally {
         setPending(false);
         void queryClient.invalidateQueries({ queryKey: pagesKey(projectId) });
@@ -56,22 +73,64 @@ export function usePageDatabase(projectId: string) {
     [projectId, queryClient, t],
   );
 
-  const saveSchema = (
+  const saveSchema = async (
     page: PageSummary,
     schema: DatabaseProperty[],
     titleName = page.database_title_name ?? null,
   ) =>
-    mutate(page.id, {
+    !!(await mutate(page.id, {
       operation: "schema",
       titleName,
       schema,
       revision: page.database_revision ?? 0,
-    });
-  const saveValue = (
+    }));
+  const saveValue = async (
     page: PageSummary,
     propertyId: string,
     value: DatabaseValue,
     expected: DatabaseValue = page.property_values?.[propertyId] ?? null,
-  ) => mutate(page.id, { operation: "value", propertyId, value, expected });
-  return { saveSchema, saveValue, pending };
+  ) =>
+    !!(await mutate(page.id, {
+      operation: "value",
+      propertyId,
+      value,
+      expected,
+    }));
+  const previewConversion = async (
+    page: PageSummary,
+    propertyId: string,
+    targetType: DatabasePropertyType,
+    name: string,
+  ): Promise<DatabaseConversionPreview | null> => {
+    const result = await mutate(page.id, {
+      operation: "convert",
+      propertyId,
+      targetType,
+      name,
+      revision: page.database_revision ?? 0,
+      preview: true,
+    });
+    return result && "status" in result ? result : null;
+  };
+  const convertColumn = async (
+    page: PageSummary,
+    propertyId: string,
+    targetType: DatabasePropertyType,
+    name: string,
+    preview: DatabaseConversionPreview,
+    confirmLoss: boolean,
+  ) => {
+    const result = await mutate(page.id, {
+      operation: "convert",
+      propertyId,
+      targetType,
+      name,
+      revision: page.database_revision ?? 0,
+      preview: false,
+      token: preview.token,
+      confirmLoss,
+    });
+    return !!result && !("status" in result);
+  };
+  return { saveSchema, saveValue, previewConversion, convertColumn, pending };
 }

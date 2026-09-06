@@ -46,6 +46,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DatabaseColumnName } from "./database-column-name";
+import { reorderDatabaseColumns } from "@/lib/page-database-columns";
 import { DatabaseTableScroll } from "./database-table-scroll";
 import {
   databaseRowPositions,
@@ -71,6 +72,7 @@ import type { PageSummary } from "@/lib/pages-api";
 import {
   DatabaseOptionsDialog,
   DatabaseCreatePropertyDialog,
+  DatabaseEditPropertyDialog,
 } from "./database-property-dialogs";
 import {
   DatabasePropertyCell,
@@ -358,6 +360,30 @@ export function PageDatabaseView({
   onOpen: (pageId: string) => void;
 }) {
   const [createProperty, setCreateProperty] = useState(false);
+  const [editProperty, setEditProperty] = useState<DatabaseProperty | null>(
+    null,
+  );
+  const { saveSchema, pending: schemaPending } = usePageDatabase(projectId);
+  const columnDrag = useRef<{ id: string; base: PageSummary } | null>(null);
+  const [draggingColumn, setDraggingColumn] = useState<string | null>(null);
+  const [columnDropTarget, setColumnDropTarget] = useState<{
+    id: string;
+    before: boolean;
+  } | null>(null);
+  const endColumnDrag = () => {
+    columnDrag.current = null;
+    setDraggingColumn(null);
+    setColumnDropTarget(null);
+  };
+  const dropColumn = (targetId: string, before: boolean) => {
+    const source = columnDrag.current;
+    endColumnDrag();
+    if (!source) return;
+    const schema = source.base.database_schema ?? [];
+    const next = reorderDatabaseColumns(schema, source.id, targetId, before);
+    if (next.some((property, index) => property.id !== schema[index]?.id))
+      void saveSchema(source.base, next);
+  };
   const t = useTranslations("PageDatabase");
   const tPages = useTranslations("Pages");
   const {
@@ -822,7 +848,16 @@ export function PageDatabaseView({
             ))}
             <col style={{ width: 56 }} />
           </colgroup>
-          <thead>
+          <thead
+            onDragLeave={(event) => {
+              if (
+                !event.currentTarget.contains(
+                  event.relatedTarget as Node | null,
+                )
+              )
+                setColumnDropTarget(null);
+            }}
+          >
             <tr className="text-left text-muted-foreground">
               <th scope="col" className="w-16 bg-background" />
               <th scope="col" className="w-8 bg-background">
@@ -850,29 +885,63 @@ export function PageDatabaseView({
               </th>
               <th
                 scope="col"
-                className="overflow-hidden border-b border-border/50 px-2 py-1 font-normal"
+                className="overflow-hidden border-b border-border/50 p-1 font-normal"
               >
                 <DatabaseColumnName projectId={projectId} database={database} />
               </th>
-              {visible.map((property) => {
-                const Icon = PROPERTY_ICONS[property.type];
-                return (
-                  <th
-                    scope="col"
-                    key={property.id}
-                    className="overflow-hidden whitespace-nowrap border-b border-border/50 px-2 py-1 font-normal"
-                  >
-                    <span className="flex min-w-0 items-center gap-2 overflow-hidden">
-                      <Icon className="size-3.5 shrink-0" />
-                      <DatabaseColumnName
-                        projectId={projectId}
-                        database={database}
-                        property={property}
-                      />
-                    </span>
-                  </th>
-                );
-              })}
+              {visible.map((property) => (
+                <th
+                  scope="col"
+                  key={property.id}
+                  data-database-column={property.id}
+                  className={`overflow-hidden whitespace-nowrap border-b border-border/50 p-1 font-normal ${columnDropTarget?.id === property.id ? (columnDropTarget.before ? "shadow-[inset_2px_0_0_var(--primary)]" : "shadow-[inset_-2px_0_0_var(--primary)]") : ""}`}
+                  onDragOver={(event) => {
+                    if (!columnDrag.current) return;
+                    if (columnDrag.current.id === property.id) {
+                      setColumnDropTarget(null);
+                      return;
+                    }
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.dataTransfer.dropEffect = "move";
+                    const box = event.currentTarget.getBoundingClientRect();
+                    setColumnDropTarget({
+                      id: property.id,
+                      before: event.clientX < box.left + box.width / 2,
+                    });
+                  }}
+                  onDrop={(event) => {
+                    if (!columnDrag.current) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const box = event.currentTarget.getBoundingClientRect();
+                    dropColumn(
+                      property.id,
+                      event.clientX < box.left + box.width / 2,
+                    );
+                  }}
+                >
+                  <DatabaseColumnName
+                    projectId={projectId}
+                    database={database}
+                    property={property}
+                    disabled={schemaPending}
+                    dragging={draggingColumn === property.id}
+                    onEdit={setEditProperty}
+                    onDragStart={(event) => {
+                      event.stopPropagation();
+                      columnDrag.current = { id: property.id, base: database };
+                      setDraggingColumn(property.id);
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData(
+                        "application/x-minddy-database-column",
+                        property.id,
+                      );
+                    }}
+                    onDragEnd={endColumnDrag}
+                  />
+                </th>
+              ))}
               <th
                 scope="col"
                 data-create-property-column
@@ -1138,6 +1207,14 @@ export function PageDatabaseView({
         <Plus className="size-4" />
         {t("newEntry")}
       </Button>
+      {editProperty && (
+        <DatabaseEditPropertyDialog
+          projectId={projectId}
+          database={database}
+          property={editProperty}
+          onClose={() => setEditProperty(null)}
+        />
+      )}
       {createProperty && (
         <DatabaseCreatePropertyDialog
           projectId={projectId}

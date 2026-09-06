@@ -292,9 +292,9 @@
     "reauthTooOld": "Saia, faça login novamente e tente novamente. A exclusão de uma conta exige um login recente.",
     "invalidViewHref": "Esta tela não pode ser salva.",
     "savedViewNameTaken": "Você já tem uma visualização com esse nome.",
-    "pageDatabaseInvalid": "Propriedade de banco de dados inválida. Verifique o valor e tente novamente.",
-    "pageDatabaseStale": "Esta propriedade foi alterada. Confira o valor atual e tente novamente.",
-    "pageDatabaseMove": "Esta página não pode ser movida para outro banco de dados com suas propriedades atuais."
+    "pageDatabaseInvalid": "Coluna ou valor de banco de dados inválido. Confira os dados e tente novamente.",
+    "pageDatabaseStale": "Esta coluna foi alterada. Confira o valor atual e tente novamente.",
+    "pageDatabaseMove": "Esta página não pode ser movida para outro banco de dados com os valores atuais das suas colunas."
   },
   "RelayClaim": {
     "title": "Conecte GitHub",
@@ -5960,7 +5960,7 @@
     "customDescription": "Insira um nome e a URL do servidor para conectá-lo ao Numo."
   },
   "PageDatabase": {
-    "searchPropertyTypes": "Buscar tipo de propriedade",
+    "searchPropertyTypes": "Buscar tipo de coluna",
     "optionNamesUnique": "Use um nome diferente para cada opção.",
     "number": "Número",
     "select": "Seleção",
@@ -5976,13 +5976,13 @@
     "newDatabase": "Novo banco de dados",
     "create": "Criar",
     "extend": "Expandir",
-    "properties": "Propriedades",
-    "propertyName": "Nome da propriedade",
-    "propertyType": "Tipo de propriedade",
-    "addProperty": "Adicionar propriedade",
-    "deleteProperty": "Excluir propriedade",
+    "properties": "Colunas",
+    "propertyName": "Nome da coluna",
+    "propertyType": "Tipo de coluna",
+    "addProperty": "Adicionar coluna",
+    "deleteProperty": "Excluir coluna",
     "deletePropertyBody": "Remover “{name}” de todas as entradas? Esta ação não pode ser desfeita.",
-    "propertyLimit": "Um banco de dados pode ter até {count} propriedades.",
+    "propertyLimit": "Um banco de dados pode ter até {count} colunas.",
     "text": "Texto",
     "date": "Data",
     "people": "Pessoas",
@@ -6007,12 +6007,12 @@
     "sortAscending": "Ordem crescente",
     "sortDescending": "Ordem decrescente",
     "filter": "Filtrar",
-    "filterProperty": "Filtrar por propriedade",
+    "filterProperty": "Filtrar por coluna",
     "filterValue": "Valor do filtro",
     "allEntries": "Todas as entradas",
     "checked": "Marcada",
     "unchecked": "Desmarcada",
-    "noProperties": "Adicione propriedades para organizar suas entradas.",
+    "noProperties": "Adicione colunas para organizar suas entradas.",
     "newEntry": "Nova entrada",
     "entryActions": "Ações da entrada",
     "openEntry": "Abrir página",
@@ -6032,6 +6032,15 @@
     "selectAllEntries": "Selecionar todas as entradas",
     "selectEntry": "Selecionar {name}",
     "insertEntryHint": "Inserir abaixo · Option/Alt-clique para inserir acima",
-    "deleteEntries": "Excluir {count} entradas"
+    "deleteEntries": "Excluir {count} entradas",
+    "columnActions": "Ações para {name}",
+    "rename": "Renomear",
+    "editColumn": "Editar coluna",
+    "dragColumnHint": "Clique para ver ações, arraste para reordenar",
+    "conversionWarningTitle": "Alguns valores não podem ser convertidos",
+    "conversionWarningDescription": "Mudar de {from} para {to} limpará {count, plural, one {# célula incompatível} other {# células incompatíveis}}. Os valores compatíveis serão convertidos. Cancele para manter a coluna atual e todos os seus valores.",
+    "confirmConversion": "Mudar tipo e limpar células",
+    "conversionMetadataWarning": "Mudar para Data de criação substituirá {count, plural, one {# valor existente} other {# valores existentes}} pela data de criação original de cada entrada. Cancele para manter a coluna atual e todos os seus valores.",
+    "confirmMetadataConversion": "Usar datas de criação"
   }
 }

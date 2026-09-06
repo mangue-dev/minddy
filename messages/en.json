@@ -292,9 +292,9 @@
     "reauthTooOld": "Sign out and sign back in, then try again — deleting an account asks for a recent sign-in.",
     "invalidViewHref": "This screen can't be saved.",
     "savedViewNameTaken": "You already have a view with that name.",
-    "pageDatabaseInvalid": "Invalid database property. Check the value and try again.",
-    "pageDatabaseStale": "This property changed since you opened it. Review the latest value and try again.",
-    "pageDatabaseMove": "This page cannot move into another database with its current properties."
+    "pageDatabaseInvalid": "Invalid database column or value. Check it and try again.",
+    "pageDatabaseStale": "This column changed since you opened it. Review the latest value and try again.",
+    "pageDatabaseMove": "This page cannot move into another database with its current column values."
   },
   "RelayClaim": {
     "title": "Connect GitHub",
@@ -5960,7 +5960,7 @@
     "customDescription": "Enter a name and the server URL to connect it to Numo."
   },
   "PageDatabase": {
-    "searchPropertyTypes": "Search property types",
+    "searchPropertyTypes": "Search column types",
     "optionNamesUnique": "Use a different name for each option.",
     "number": "Number",
     "select": "Select",
@@ -5976,13 +5976,13 @@
     "newDatabase": "New database",
     "create": "Create",
     "extend": "Extend",
-    "properties": "Properties",
-    "propertyName": "Property name",
-    "propertyType": "Property type",
-    "addProperty": "Add property",
-    "deleteProperty": "Delete property",
+    "properties": "Columns",
+    "propertyName": "Column name",
+    "propertyType": "Column type",
+    "addProperty": "Add column",
+    "deleteProperty": "Delete column",
     "deletePropertyBody": "Remove “{name}” from every entry? This cannot be undone.",
-    "propertyLimit": "A database can have up to {count} properties.",
+    "propertyLimit": "A database can have up to {count} columns.",
     "text": "Text",
     "date": "Date",
     "people": "People",
@@ -6007,12 +6007,12 @@
     "sortAscending": "Sort ascending",
     "sortDescending": "Sort descending",
     "filter": "Filter",
-    "filterProperty": "Filter by property",
+    "filterProperty": "Filter by column",
     "filterValue": "Filter value",
     "allEntries": "All entries",
     "checked": "Checked",
     "unchecked": "Unchecked",
-    "noProperties": "Add properties to organize your entries.",
+    "noProperties": "Add columns to organize your entries.",
     "newEntry": "New entry",
     "entryActions": "Entry actions",
     "openEntry": "Open page",
@@ -6032,6 +6032,15 @@
     "selectAllEntries": "Select all entries",
     "selectEntry": "Select {name}",
     "insertEntryHint": "Insert below · Option/Alt-click to insert above",
-    "deleteEntries": "Delete {count} entries"
+    "deleteEntries": "Delete {count} entries",
+    "columnActions": "Actions for {name}",
+    "rename": "Rename",
+    "editColumn": "Edit column",
+    "dragColumnHint": "Click for actions, drag to reorder",
+    "conversionWarningTitle": "Some values cannot be converted",
+    "conversionWarningDescription": "Changing from {from} to {to} will clear {count, plural, one {# incompatible cell} other {# incompatible cells}}. Compatible values will be converted. Cancel to keep the current column and all its values.",
+    "confirmConversion": "Change type and clear cells",
+    "conversionMetadataWarning": "Changing to Created at will replace {count, plural, one {# existing value} other {# existing values}} with the entry’s original creation date. Cancel to keep the current column and all its values.",
+    "confirmMetadataConversion": "Use creation dates"
   }
 }

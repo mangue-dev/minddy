@@ -1,0 +1,90 @@
+BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
+SELECT no_plan();
+INSERT INTO auth.users (id,email) VALUES ('49920000-0000-4000-8000-000000000001','conversion-owner@example.test'),('49920000-0000-4000-8000-000000000002','conversion-outsider@example.test');
+INSERT INTO public.projects (id,owner_id,name,key) VALUES ('49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000001','Column conversion','CVC');
+INSERT INTO public.pages (id,project_id,position,database_schema) VALUES ('49920000-0000-4000-8000-000000000004','49920000-0000-4000-8000-000000000003','a','[{"id":"49920000-0000-4000-8000-000000000010","name":"Value","type":"text"}]');
+INSERT INTO public.pages (id,project_id,parent_id,position,property_values) VALUES
+('49920000-0000-4000-8000-000000000005','49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000004','a','{"49920000-0000-4000-8000-000000000010":"12.5"}'),
+('49920000-0000-4000-8000-000000000006','49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000004','b','{"49920000-0000-4000-8000-000000000010":"oops"}');
+UPDATE public.pages SET deleted_at=now() WHERE id='49920000-0000-4000-8000-000000000006';
+CREATE FUNCTION pg_temp.convert(input jsonb, actor uuid DEFAULT '49920000-0000-4000-8000-000000000001') RETURNS jsonb LANGUAGE sql AS $$
+ SELECT public.convert_page_database_guarded('49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000004',actor,
+ jsonb_build_object('operation','convert','propertyId','49920000-0000-4000-8000-000000000010','targetType','number','revision',(SELECT database_revision FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),'preview',true) || input);
+$$;
+CREATE TEMP TABLE preview AS SELECT pg_temp.convert('{}') AS data;
+SELECT is((SELECT data->>'status' FROM preview),'preview','conversion previews without writing');
+SELECT is((SELECT (data->>'totalCount')::int FROM preview),2,'preview includes trash');
+SELECT is((SELECT (data->>'incompatibleCount')::int FROM preview),1,'preview counts incompatible cells');
+SELECT is((SELECT database_revision FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),0,'preview preserves schema revision');
+SELECT is((SELECT property_values->>'49920000-0000-4000-8000-000000000010' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000006'),'oops','preview preserves incompatible values');
+SELECT is(pg_temp.convert('{}','49920000-0000-4000-8000-000000000002')->>'status','not_found','nonmembers cannot preview conversions');
+SELECT is(pg_temp.convert('{"revision":99}')->>'status','conflict','stale schema cannot preview');
+SELECT is(pg_temp.convert('{"preview":false}') ->>'status','conflict','apply requires preview token');
+SELECT is(pg_temp.convert(jsonb_build_object('preview',false,'token',(SELECT data->>'token' FROM preview)))->>'status','preview','clearing incompatible cells requires explicit confirmation');
+SELECT is(pg_temp.convert(jsonb_build_object('preview',false,'confirmLoss',true,'name','Other','token',(SELECT data->>'token' FROM preview)))->>'status','conflict','confirmation token binds the column name');
+UPDATE public.pages SET property_values='{"49920000-0000-4000-8000-000000000010":"14"}' WHERE id='49920000-0000-4000-8000-000000000005';
+SELECT is(pg_temp.convert(jsonb_build_object('preview',false,'confirmLoss',true,'token',(SELECT data->>'token' FROM preview)))->>'status','conflict','a concurrent cell edit invalidates the preview');
+UPDATE preview SET data=pg_temp.convert('{"name":"Amount"}');
+SELECT is(pg_temp.convert(jsonb_build_object('preview',false,'confirmLoss',true,'name','Amount','token',(SELECT data->>'token' FROM preview)))->>'status','updated','confirmed conversion updates atomically');
+SELECT is((SELECT database_schema->0->>'type' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),'number','conversion saves target type');
+SELECT is((SELECT database_schema->0->>'name' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),'Amount','conversion renames atomically');
+SELECT is((SELECT database_revision FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),1,'conversion increments schema revision once');
+SELECT is((SELECT property_values->'49920000-0000-4000-8000-000000000010' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000005'),'14'::jsonb,'compatible values retain converted content');
+SELECT ok((SELECT NOT property_values ? '49920000-0000-4000-8000-000000000010' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000006'),'only incompatible cells are cleared, including trash');
+SELECT throws_ok($$ UPDATE public.pages SET database_schema=jsonb_set(database_schema,'{0,type}','"text"') WHERE id='49920000-0000-4000-8000-000000000004' $$,'22023','Property types cannot change','direct schema edits cannot bypass conversion');
+UPDATE preview SET data=pg_temp.convert('{"targetType":"select"}');
+SELECT is(pg_temp.convert(jsonb_build_object('targetType','select','preview',false,'token',(SELECT data->>'token' FROM preview)))->>'status','updated','numeric labels become select options');
+SELECT is((SELECT database_schema->0->'options'->0->>'name' FROM public.pages WHERE id='49920000-0000-4000-8000-000000000004'),'14','new options use readable labels');
+UPDATE preview SET data=pg_temp.convert('{"targetType":"multi_select"}');
+SELECT is(pg_temp.convert(jsonb_build_object('targetType','multi_select','preview',false,'token',(SELECT data->>'token' FROM preview)))->>'status','updated','single selection converts to multiple');
+SELECT is((SELECT jsonb_typeof(property_values->'49920000-0000-4000-8000-000000000010') FROM public.pages WHERE id='49920000-0000-4000-8000-000000000005'),'array','multiple selection stores an option array');
+UPDATE preview SET data=pg_temp.convert('{"targetType":"created_at"}');
+SELECT is((SELECT (data->>'incompatibleCount')::int FROM preview),1,'replacing content with metadata warns');
+SELECT is(pg_temp.convert(jsonb_build_object('targetType','created_at','preview',false,'confirmLoss',true,'token',(SELECT data->>'token' FROM preview)))->>'status','updated','metadata conversion clears stored representations');
+UPDATE preview SET data=pg_temp.convert('{"targetType":"date"}');
+SELECT is(pg_temp.convert(jsonb_build_object('targetType','date','preview',false,'token',(SELECT data->>'token' FROM preview)))->>'status','updated','creation metadata converts to calendar dates');
+SELECT ok((SELECT property_values->>'49920000-0000-4000-8000-000000000010'=to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD') FROM public.pages WHERE id='49920000-0000-4000-8000-000000000006'),'metadata conversion includes original timestamps in trash');
+SELECT is(public.convert_database_cell('{"type":"text"}','number','"-1.5"'),'-1.5'::jsonb,'signed decimals convert');
+SELECT is(public.convert_database_cell('{"type":"text"}','number','"1e9999"'),NULL::jsonb,'overflow is incompatible');
+SELECT is(public.convert_database_cell('{"type":"text"}','date','"2026-02-30"'),NULL::jsonb,'invalid calendar dates are incompatible');
+SELECT is(public.convert_database_cell('{"type":"text"}','checkbox','"false"'),'false'::jsonb,'false checkbox remains meaningful');
+SELECT is(public.convert_database_cell('{"type":"text"}','people','"Someone"'),NULL::jsonb,'people identities are never guessed');
+SELECT is(public.convert_database_cell('{"type":"people"}','text','["49920000-0000-4000-8000-000000000001"]'),NULL::jsonb,'raw people identifiers are never exposed as converted text');
+SELECT is(public.convert_database_cell('{"type":"multi_select","options":[{"id":"one","name":"1"},{"id":"two","name":"2"}]}','select','["one","two"]'),NULL::jsonb,'multiple selected options cannot silently lose a selection');
+SELECT is(public.convert_database_cell('{"type":"select","options":[{"id":"one","name":"1"}]}','number','"one"'),'1'::jsonb,'selection labels convert to scalar values');
+
+SELECT is(public.convert_database_cell('{"type":"text"}','number','"-1,5"'),'-1.5'::jsonb,'decimal commas use the numeric editor convention');
+SELECT set_config('request.jwt.claim.sub','49920000-0000-4000-8000-000000000001',true);
+SELECT set_config('minddy.database_conversion','49920000-0000-4000-8000-000000000004:49920000-0000-4000-8000-000000000010',true);
+SET LOCAL ROLE authenticated;
+SELECT throws_ok($$ UPDATE public.pages SET database_schema=jsonb_set(database_schema,'{0,type}','"text"') WHERE id='49920000-0000-4000-8000-000000000004' $$,'22023','Property types cannot change','authenticated clients cannot spoof the conversion guard');
+RESET ROLE;
+SELECT set_config('minddy.database_conversion','',true);
+INSERT INTO public.pages (id,project_id,position,database_schema) VALUES ('49920000-0000-4000-8000-000000000007','49920000-0000-4000-8000-000000000003','c','[{"id":"49920000-0000-4000-8000-000000000010","name":"Label","type":"text"}]');
+INSERT INTO public.pages (id,project_id,parent_id,position,property_values)
+ SELECT md5('conversion-limit-' || n)::uuid,'49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000007',n::text,jsonb_build_object('49920000-0000-4000-8000-000000000010',n::text) FROM generate_series(1,101) n;
+CREATE FUNCTION pg_temp.convert_many(input jsonb) RETURNS jsonb LANGUAGE sql AS $$
+ SELECT public.convert_page_database_guarded('49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000007','49920000-0000-4000-8000-000000000001',
+ '{"operation":"convert","propertyId":"49920000-0000-4000-8000-000000000010","targetType":"select","revision":0,"preview":true}'::jsonb || input);
+$$;
+UPDATE preview SET data=pg_temp.convert_many('{}');
+SELECT is((SELECT (data->>'incompatibleCount')::int FROM preview),1,'option limit is included in the warning count');
+INSERT INTO public.pages (id,project_id,parent_id,position) VALUES ('49920000-0000-4000-8000-000000000008','49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000007','z');
+SELECT is(pg_temp.convert_many(jsonb_build_object('preview',false,'confirmLoss',true,'token',(SELECT data->>'token' FROM preview)))->>'status','conflict','new entries invalidate conversion confirmation');
+UPDATE preview SET data=pg_temp.convert_many('{}');
+DELETE FROM public.pages WHERE id='49920000-0000-4000-8000-000000000008';
+SELECT is(pg_temp.convert_many(jsonb_build_object('preview',false,'confirmLoss',true,'token',(SELECT data->>'token' FROM preview)))->>'status','conflict','removed entries invalidate conversion confirmation');
+UPDATE preview SET data=pg_temp.convert_many('{}');
+SELECT is(pg_temp.convert_many(jsonb_build_object('preview',false,'confirmLoss',true,'token',(SELECT data->>'token' FROM preview)))->>'status','updated','confirmed option overflow converts all supported values');
+SELECT is((SELECT jsonb_array_length(database_schema->0->'options') FROM public.pages WHERE id='49920000-0000-4000-8000-000000000007'),100,'conversion never exceeds the option limit');
+SELECT is((SELECT count(*)::int FROM public.pages WHERE parent_id='49920000-0000-4000-8000-000000000007' AND property_values ? '49920000-0000-4000-8000-000000000010'),100,'option overflow clears only the incompatible cell');
+SELECT is(public.convert_database_cell('{"type":"multi_select","options":[{"id":"one","name":"Present"}]}','text','["one","removed"]'),NULL::jsonb,'missing multi-select references warn instead of silently dropping labels');
+SELECT is(public.convert_database_cell('{"type":"select","options":[]}','multi_select','"removed"'),NULL::jsonb,'missing single-select references cannot reach incompatible array storage');
+SELECT is(public.convert_database_cell('{"type":"multi_select","options":[]}','select','["removed"]'),NULL::jsonb,'missing multi-select references cannot reach incompatible scalar storage');
+SELECT is(public.convert_database_cell('{"type":"select","options":[]}','select','"removed"'),'"removed"'::jsonb,'same-type renaming preserves unchanged legacy single references');
+SELECT is(public.convert_database_cell('{"type":"multi_select","options":[]}','multi_select','["removed"]'),'["removed"]'::jsonb,'same-type renaming preserves unchanged legacy multiple references');
+SELECT is(public.convert_database_cell('{"type":"multi_select","options":[{"id":"one","name":"Present"}]}','text','["one","one"]'),NULL::jsonb,'malformed duplicate references are incompatible');
+SELECT is(public.convert_database_cell('{"type":"multi_select","options":[{"id":"one","name":"Present"}]}','text','"one"'),NULL::jsonb,'malformed multi-select storage warns instead of failing the transaction');
+SELECT * FROM finish();
+ROLLBACK;
