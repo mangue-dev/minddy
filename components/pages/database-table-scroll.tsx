@@ -27,8 +27,6 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
   const sync = () => {
     const container = viewport.current;
     if (!container) return;
-    const gutterWidth = container.querySelector("th")?.offsetWidth ?? 96;
-    container.dataset.titlePinned = String(container.scrollLeft >= gutterWidth);
     if (scrollbar.current) {
       scrollbar.current.scrollLeft = container.scrollLeft;
       scrollbar.current.setAttribute(
@@ -93,7 +91,7 @@ export function DatabaseTableScroll({ children }: { children: ReactNode }) {
       <div
         ref={viewport}
         id={id}
-        className="group/database-scroll no-scrollbar -ml-2 -mr-6 overflow-x-auto [container-type:inline-size] md:-ml-24 md:-mr-10"
+        className="no-scrollbar -ml-2 -mr-6 overflow-x-auto [container-type:inline-size] md:-ml-24 md:-mr-10"
         data-database-scroll
         onScroll={sync}
       >

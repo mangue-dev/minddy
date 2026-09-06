@@ -794,7 +794,8 @@ export function PageDatabaseView({
           style={{ minWidth: contentWidth + 96 }}
         >
           <colgroup>
-            <col style={{ width: 96 }} />
+            <col style={{ width: 64 }} />
+            <col style={{ width: 32 }} />
             {columnWidths.map((width, index) => (
               <col
                 key={index}
@@ -806,7 +807,8 @@ export function PageDatabaseView({
           </colgroup>
           <thead>
             <tr className="text-left text-muted-foreground">
-              <th scope="col" className="w-24 bg-background">
+              <th scope="col" className="w-16 bg-background" />
+              <th scope="col" className="w-8 bg-background">
                 <div
                   className={`flex justify-end pr-2 ${selectedRows.length ? "" : "opacity-0 hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"}`}
                 >
@@ -831,7 +833,7 @@ export function PageDatabaseView({
               </th>
               <th
                 scope="col"
-                className="sticky left-0 z-20 overflow-hidden border-b border-border/50 bg-background px-2 py-1 font-normal after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/30 after:opacity-0 group-data-[title-pinned=true]/database-scroll:after:opacity-100"
+                className="overflow-hidden border-b border-border/50 px-2 py-1 font-normal"
               >
                 <DatabaseColumnName projectId={projectId} database={database} />
               </th>
@@ -889,7 +891,7 @@ export function PageDatabaseView({
                     drop(entry.id, event.clientY < box.top + box.height / 2);
                   }}
                 >
-                  <td className="h-8 w-24 bg-background p-0 pr-2">
+                  <td className="h-8 w-16 bg-background p-0">
                     <div
                       className={`flex h-8 items-center justify-end gap-2 ${showGutter ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100"}`}
                     >
@@ -991,44 +993,55 @@ export function PageDatabaseView({
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <Checkbox
-                        className="after:inset-x-0"
-                        aria-label={t("selectEntry", {
-                          name: entry.title || tPages("untitled"),
-                        })}
-                        checked={checked}
-                        disabled={busy}
-                        onClick={(event) => {
-                          if (event.shiftKey && selectionAnchor.current) {
-                            event.preventDefault();
+                    </div>
+                  </td>
+                  <td
+                    className="pointer-events-none sticky left-0 z-20 h-8 w-8 p-0"
+                    data-selection-cell
+                  >
+                    <div
+                      className={`flex h-8 items-center justify-center ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"}`}
+                    >
+                      <div
+                        className={`flex size-6 items-center justify-center rounded bg-background ${checked ? "pointer-events-auto" : "group-hover:pointer-events-auto focus-within:pointer-events-auto"}`}
+                      >
+                        <Checkbox
+                          className="after:inset-x-0 after:inset-y-0"
+                          aria-label={t("selectEntry", {
+                            name: entry.title || tPages("untitled"),
+                          })}
+                          checked={checked}
+                          disabled={busy}
+                          onClick={(event) => {
+                            if (event.shiftKey && selectionAnchor.current) {
+                              event.preventDefault();
+                              setSelected((ids) =>
+                                selectDatabaseRows(
+                                  rows.map((row) => row.id),
+                                  ids,
+                                  entry.id,
+                                  !checked,
+                                  selectionAnchor.current,
+                                ),
+                              );
+                            }
+                          }}
+                          onCheckedChange={(next) => {
                             setSelected((ids) =>
                               selectDatabaseRows(
                                 rows.map((row) => row.id),
                                 ids,
                                 entry.id,
-                                !checked,
-                                selectionAnchor.current,
+                                next === true,
                               ),
                             );
-                          }
-                        }}
-                        onCheckedChange={(next) => {
-                          setSelected((ids) =>
-                            selectDatabaseRows(
-                              rows.map((row) => row.id),
-                              ids,
-                              entry.id,
-                              next === true,
-                            ),
-                          );
-                          selectionAnchor.current = entry.id;
-                        }}
-                      />
+                            selectionAnchor.current = entry.id;
+                          }}
+                        />
+                      </div>
                     </div>
                   </td>
-                  <td
-                    className={`sticky left-0 z-20 h-8 overflow-hidden border-b border-border/40 bg-background p-0 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/30 after:opacity-0 group-data-[title-pinned=true]/database-scroll:after:opacity-100 ${checked ? "bg-linear-to-r from-primary/5 to-primary/5" : "group-hover:bg-linear-to-r group-hover:from-muted/20 group-hover:to-muted/20"}`}
-                  >
+                  <td className="h-8 overflow-hidden border-b border-border/40 p-0">
                     <button
                       type="button"
                       className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
