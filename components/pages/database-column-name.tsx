@@ -51,6 +51,7 @@ export function DatabaseColumnName({
   if (editing)
     return (
       <form
+        className="min-w-0 w-full"
         onSubmit={(event) => {
           event.preventDefault();
           void save();
@@ -59,7 +60,7 @@ export function DatabaseColumnName({
         <Input
           autoFocus
           aria-label={t("renameColumn", { name })}
-          className="h-7 min-w-28"
+          className="h-7 min-w-0"
           maxLength={80}
           value={draft}
           disabled={pending}
@@ -79,7 +80,7 @@ export function DatabaseColumnName({
   return (
     <button
       type="button"
-      className="min-h-7 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="h-7 w-full min-w-0 overflow-hidden whitespace-nowrap text-clip text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label={t("renameColumn", { name })}
       onDoubleClick={start}
       onKeyDown={(event) => {

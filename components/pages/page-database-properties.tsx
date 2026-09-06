@@ -24,6 +24,9 @@ import {
 } from "@/lib/page-databases";
 import type { PageSummary } from "@/lib/pages-api";
 
+const TABLE_CELL_TRIGGER =
+  "flex h-8 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+
 export const PROPERTY_ICONS = {
   text: Type,
   date: CalendarDays,
@@ -35,10 +38,12 @@ export function DatabasePropertyCell({
   projectId,
   page,
   property,
+  table = false,
 }: {
   projectId: string;
   page: PageSummary;
   property: DatabaseProperty;
+  table?: boolean;
 }) {
   const t = useTranslations("PageDatabase");
   const { saveValue, pending } = usePageDatabase(projectId);
@@ -61,23 +66,34 @@ export function DatabasePropertyCell({
     }
   };
   const label = t("editProperty", { name: property.name });
-  if (property.type === "checkbox")
-    return (
-      <div className="flex min-h-8 items-center px-1.5">
-        <Checkbox
-          aria-label={property.name}
-          checked={value === true}
-          disabled={pending}
-          onCheckedChange={(checked) =>
-            void saveValue(page, property.id, checked === true)
-          }
-        />
-      </div>
+  const triggerClass = table ? TABLE_CELL_TRIGGER : `${TRIGGER} min-h-8`;
+  if (property.type === "checkbox") {
+    const checkbox = (
+      <Checkbox
+        aria-label={property.name}
+        checked={value === true}
+        disabled={pending}
+        className={table ? "after:inset-x-0 after:inset-y-0" : undefined}
+        onCheckedChange={(checked) =>
+          void saveValue(page, property.id, checked === true)
+        }
+      />
     );
+    return table ? (
+      <label
+        className={`${TABLE_CELL_TRIGGER} focus-within:ring-2 focus-within:ring-inset focus-within:ring-ring`}
+      >
+        {checkbox}
+      </label>
+    ) : (
+      <div className="flex min-h-8 items-center px-1.5">{checkbox}</div>
+    );
+  }
   if (property.type === "date")
     return (
       <DateTimePicker
         dateOnly
+        className={table ? `${TABLE_CELL_TRIGGER} mr-0` : undefined}
         variant="value"
         value={typeof value === "string" ? value : null}
         placeholder={t("emptyValue")}
@@ -116,20 +132,62 @@ export function DatabasePropertyCell({
           <button
             type="button"
             aria-label={label}
-            className={`${TRIGGER} min-h-8 flex-wrap`}
+            className={table ? triggerClass : `${triggerClass} flex-wrap`}
           >
             {selected.length ? (
-              selected.map((id) => {
-                const member = members.find((m) => m.user_id === id);
-                return (
-                  <span key={id} className="inline-flex items-center gap-1.5">
-                    <UserAvatar seed={member?.avatar_seed} className="size-5" />
-                    {member
-                      ? displayName(member, t("unknownPerson"))
-                      : t("unknownPerson")}
+              table && selected.length > 1 ? (
+                <>
+                  <span
+                    className="flex min-w-0 items-center -space-x-1.5 overflow-hidden"
+                    data-avatar-stack
+                  >
+                    {selected.slice(0, 12).map((id) => {
+                      const member = members.find((m) => m.user_id === id);
+                      return (
+                        <UserAvatar
+                          key={id}
+                          seed={member?.avatar_seed}
+                          title={
+                            member
+                              ? displayName(member, t("unknownPerson"))
+                              : t("unknownPerson")
+                          }
+                          className="size-5 ring-2 ring-background"
+                        />
+                      );
+                    })}
                   </span>
-                );
-              })
+                  <span className="sr-only">
+                    {selected.length} {t("people")}
+                  </span>
+                </>
+              ) : (
+                selected.map((id) => {
+                  const member = members.find((m) => m.user_id === id);
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex min-w-0 items-center gap-1.5 overflow-hidden"
+                    >
+                      <UserAvatar
+                        seed={member?.avatar_seed}
+                        className="size-5"
+                      />
+                      <span
+                        className={
+                          table
+                            ? "overflow-hidden whitespace-nowrap text-clip"
+                            : undefined
+                        }
+                      >
+                        {member
+                          ? displayName(member, t("unknownPerson"))
+                          : t("unknownPerson")}
+                      </span>
+                    </span>
+                  );
+                })
+              )
             ) : (
               <span className="text-muted-foreground">{t("emptyValue")}</span>
             )}
@@ -144,10 +202,18 @@ export function DatabasePropertyCell({
         <button
           type="button"
           aria-label={label}
-          className={`${TRIGGER} min-h-8 whitespace-normal text-left [overflow-wrap:anywhere]`}
+          className={
+            table
+              ? triggerClass
+              : `${triggerClass} whitespace-normal text-left [overflow-wrap:anywhere]`
+          }
         >
           {typeof value === "string" && value ? (
-            value
+            table ? (
+              value.slice(0, 160)
+            ) : (
+              value
+            )
           ) : (
             <span className="text-muted-foreground">{t("emptyValue")}</span>
           )}

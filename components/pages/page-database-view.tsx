@@ -423,6 +423,7 @@ export function PageDatabaseView({
   const [selected, setSelected] = useState<string[]>([]);
   const selectionAnchor = useRef<string | null>(null);
   const dragging = useRef<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [dropTarget, setDropTarget] = useState<{
     id: string;
     above: boolean;
@@ -538,6 +539,7 @@ export function PageDatabaseView({
   const drop = (targetId: string, above: boolean) => {
     const ids = dragging.current;
     dragging.current = [];
+    setIsDragging(false);
     setDropTarget(null);
     if (!manual || ids.includes(targetId)) return;
     const moving = entries.filter((entry) => ids.includes(entry.id));
@@ -568,6 +570,14 @@ export function PageDatabaseView({
       await updatePage(entry.id, { position: positionBetween(before, after) });
     });
   const visible = schema.filter((property) => !hidden.includes(property.id));
+  const columnWidths = [
+    240,
+    ...visible.map(
+      (property) =>
+        ({ text: 240, date: 176, people: 192, checkbox: 128 })[property.type],
+    ),
+  ];
+  const contentWidth = columnWidths.reduce((total, width) => total + width, 0);
   return (
     <div className="mt-5 space-y-1">
       <div className="flex items-center gap-0.5">
@@ -777,14 +787,28 @@ export function PageDatabaseView({
           {t("new")}
         </Button>
       </div>
-      <div className="-ml-2 overflow-x-auto md:-ml-16" data-database-scroll>
-        <table className="w-full table-auto border-separate border-spacing-0 text-sm">
+      <div
+        className="-ml-2 overflow-x-auto [container-type:inline-size] md:-ml-24"
+        data-database-scroll
+      >
+        <table
+          className="w-full table-fixed border-separate border-spacing-0 text-sm"
+          style={{ minWidth: contentWidth + 96 }}
+        >
+          <colgroup>
+            <col style={{ width: 96 }} />
+            {columnWidths.map((width, index) => (
+              <col
+                key={index}
+                style={{
+                  width: `max(${width}px, calc(${(100 * width) / contentWidth}cqw - ${(96 * width) / contentWidth}px))`,
+                }}
+              />
+            ))}
+          </colgroup>
           <thead>
             <tr className="text-left text-muted-foreground">
-              <th
-                scope="col"
-                className="sticky left-0 z-30 w-16 min-w-16 bg-background"
-              >
+              <th scope="col" className="w-24 bg-background">
                 <div
                   className={`flex justify-end pr-2 ${selectedRows.length ? "" : "opacity-0 hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"}`}
                 >
@@ -809,7 +833,7 @@ export function PageDatabaseView({
               </th>
               <th
                 scope="col"
-                className="sticky left-16 z-20 min-w-40 border-b border-border/50 bg-background px-2 py-1 font-normal"
+                className="sticky left-0 z-20 overflow-hidden border-b border-border/50 bg-background px-2 py-1 font-normal"
               >
                 <DatabaseColumnName projectId={projectId} database={database} />
               </th>
@@ -819,9 +843,9 @@ export function PageDatabaseView({
                   <th
                     scope="col"
                     key={property.id}
-                    className="min-w-32 whitespace-nowrap border-b border-border/50 px-2 py-1 font-normal"
+                    className="overflow-hidden whitespace-nowrap border-b border-border/50 px-2 py-1 font-normal"
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex min-w-0 items-center gap-2 overflow-hidden">
                       <Icon className="size-3.5 shrink-0" />
                       <DatabaseColumnName
                         projectId={projectId}
@@ -844,7 +868,7 @@ export function PageDatabaseView({
                   key={entry.id}
                   data-entry-id={entry.id}
                   aria-selected={checked}
-                  className={`group ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:border-t-2 [&>td]:border-t-primary" : "[&>td]:border-b-2 [&>td]:border-b-primary") : ""}`}
+                  className={`group h-8 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:shadow-[inset_0_2px_0_var(--primary)]" : "[&>td]:shadow-[inset_0_-2px_0_var(--primary)]") : ""}`}
                   onDragOver={(event) => {
                     if (
                       !manual ||
@@ -867,19 +891,19 @@ export function PageDatabaseView({
                     drop(entry.id, event.clientY < box.top + box.height / 2);
                   }}
                 >
-                  <td className="sticky left-0 z-30 w-16 min-w-16 bg-background pr-2">
+                  <td className="h-8 w-24 bg-background p-0 pr-2">
                     <div
-                      className={`flex items-center justify-end ${showGutter ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100"}`}
+                      className={`flex h-8 items-center justify-end gap-2 ${showGutter ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100"}`}
                     >
                       <AppTooltip label={t("insertEntryHint")}>
                         <button
                           type="button"
-                          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                          className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                           disabled={busy}
                           aria-label={t("insertEntryHint")}
                           onClick={(event) => insert(entry, event.altKey)}
                         >
-                          <Plus className="size-3.5" />
+                          <Plus className="size-4" />
                         </button>
                       </AppTooltip>
                       <DropdownMenu
@@ -895,12 +919,13 @@ export function PageDatabaseView({
                               aria-label={t("entryActions")}
                               disabled={busy}
                               draggable={manual && !busy}
-                              className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+                              className={`flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "cursor-grabbing" : "cursor-pointer"}`}
                               onPointerDownCapture={(event) => {
                                 if (event.button === 0) event.stopPropagation();
                               }}
                               onClick={() => setMenuEntry(entry.id)}
                               onDragStart={(event) => {
+                                setIsDragging(true);
                                 dragging.current = targets.map(
                                   (target) => target.id,
                                 );
@@ -912,10 +937,11 @@ export function PageDatabaseView({
                               }}
                               onDragEnd={() => {
                                 dragging.current = [];
+                                setIsDragging(false);
                                 setDropTarget(null);
                               }}
                             >
-                              <GripVertical className="size-3.5" />
+                              <GripVertical className="size-4" />
                             </button>
                           </DropdownMenuTrigger>
                         </AppTooltip>
@@ -1003,11 +1029,11 @@ export function PageDatabaseView({
                     </div>
                   </td>
                   <td
-                    className={`sticky left-16 z-20 min-w-40 border-b border-border/40 px-2 ${checked ? "bg-background bg-linear-to-r from-primary/5 to-primary/5" : "bg-background group-hover:bg-muted"}`}
+                    className={`sticky left-0 z-20 h-8 overflow-hidden border-b border-border/40 p-0 ${checked ? "bg-background bg-linear-to-r from-primary/5 to-primary/5" : "bg-background group-hover:bg-muted"}`}
                   >
                     <button
                       type="button"
-                      className="flex min-h-8 w-full items-center gap-2 text-left hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                      className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                       onClick={() => onOpen(entry.id)}
                       onMouseEnter={() => prefetchPage(entry.id)}
                       onFocus={() => prefetchPage(entry.id)}
@@ -1015,17 +1041,18 @@ export function PageDatabaseView({
                       {entry.icon ?? (
                         <FileText className="size-4 shrink-0 text-muted-foreground" />
                       )}
-                      <span className="max-w-[min(20rem,calc(100vw-9rem))] truncate">
-                        {entry.title || tPages("untitled")}
+                      <span className="min-w-0 overflow-hidden whitespace-nowrap text-clip">
+                        {entry.title.slice(0, 160) || tPages("untitled")}
                       </span>
                     </button>
                   </td>
                   {visible.map((property) => (
                     <td
                       key={property.id}
-                      className="border-b border-l border-border/30 px-1.5"
+                      className="h-8 overflow-hidden border-b border-l border-border/30 p-0"
                     >
                       <DatabasePropertyCell
+                        table
                         projectId={projectId}
                         page={entry}
                         property={property}
