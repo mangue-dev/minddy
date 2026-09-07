@@ -1,6 +1,9 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import type { ImportPage } from "@/lib/database-import/types";
+import {
+  MAX_IMPORT_PAGE_CONTENT_BYTES,
+  type ImportPage,
+} from "@/lib/database-import/types";
 
 const h = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/lib/supabase-service", () => ({
@@ -79,4 +82,34 @@ it.each([
     ...(introduction ? [nestedUrl] : []),
   ]);
   expect(pages.some((page) => page.title === "Other")).toBe(false);
+});
+
+it("rejects oversized Markdown before rendering native page content", async () => {
+  const page = {
+    id: "db",
+    parent_id: null,
+    title: "Database",
+    icon: null,
+    markdown: "a".repeat(MAX_IMPORT_PAGE_CONTENT_BYTES + 1),
+    database_schema: [],
+    database_title_name: "Name",
+    property_values: {},
+    position: "0",
+  };
+  const bytes = zipSync({
+    "minddy-database.json": strToU8(
+      JSON.stringify({
+        format: "minddy-database",
+        version: 1,
+        pages: [page],
+        files: [],
+        people: [],
+      }),
+    ),
+  });
+
+  await expect(
+    importDatabase({ ...args, bytes, sourceId: "db" }),
+  ).rejects.toThrow("importTooLarge");
+  expect(h.rpc).not.toHaveBeenCalled();
 });

@@ -1538,7 +1538,7 @@ describe("les garde-fous", () => {
       id: "per_task_1",
       reply: "reject",
     });
-    expect(h.permissionReplies[0].message).toContain("At most 0 sub-agents");
+    expect(h.permissionReplies[0].message).toContain("0/0");
   });
 
   it("caps parallel delegation bursts before children are registered", async () => {
@@ -1566,10 +1566,10 @@ describe("les garde-fous", () => {
     expect(h.permissionReplies.slice(0, 3).map((reply) => reply.reply)).toEqual(
       ["once", "once", "reject"],
     );
-    expect(h.permissionReplies[2].message).toContain("At most 2 sub-agents");
+    expect(h.permissionReplies[2].message).toContain("2/2");
   });
 
-  it("auto-grants shell commands without parsing their intent", async () => {
+  it("rejects destructive shell commands and reports the reason", async () => {
     h.extraFrames = [
       permissionFrame("bash", { command: "git reset --hard" }),
       // The tool returns an error after the refusal: it is this frame which
@@ -1592,30 +1592,34 @@ describe("les garde-fous", () => {
       }),
     ];
     await run();
-    expect(h.permissionReplies[0]).toMatchObject({ reply: "once" });
-    expect(h.permissionReplies[0].message).toBeUndefined();
+    expect(h.permissionReplies[0]).toMatchObject({ reply: "reject" });
+    expect(h.permissionReplies[0].message).toContain(
+      "throws away uncommitted work",
+    );
     const result = h.events.find(
       (e) => e.payload.id === "call_garde" && e.type === "tool_result",
     );
-    expect(result?.payload.reason).toBeUndefined();
+    expect(result?.payload.reason).toBe("forbidden_command");
   });
 
-  it("does not synthesize a retry after an auto-granted action", async () => {
+  it("retries once after a rejected permission cancels parallel tools", async () => {
     h.extraFrames = [
       parentRound("msg_refus", "tool-calls"),
       permissionFrame("bash", { command: "git reset --hard" }),
     ];
     await run();
-    expect(h.permissionReplies[0].reply).toBe("once");
-    expect(h.prompts).toHaveLength(1);
+    expect(h.permissionReplies[0].reply).toBe("reject");
+    expect(h.prompts).toHaveLength(2);
+    expect(h.prompts[1]).toContain("cancelled the other parallel tool calls");
   });
 
-  it("auto-grants edit permissions", async () => {
+  it("rejects writes to Git internals", async () => {
     h.extraFrames = [
       permissionFrame("edit", { filepath: "/vercel/sandbox/repo/.git/config" }),
     ];
     await run();
-    expect(h.permissionReplies[0]).toMatchObject({ reply: "once" });
+    expect(h.permissionReplies[0]).toMatchObject({ reply: "reject" });
+    expect(h.permissionReplies[0].message).toContain(".git");
   });
 
   it("laisse passer une écriture du dépôt", async () => {
@@ -1660,13 +1664,12 @@ describe("les garde-fous", () => {
     ]);
   });
 
-  it("records an auto-granted edit", async () => {
+  it("does not record a rejected edit", async () => {
     h.extraFrames = [
       permissionFrame("edit", { filepath: "/vercel/sandbox/repo/.git/config" }),
     ];
     const report = await run();
-    expect(report.checkpoint?.editedPaths).toEqual([".git/config"]);
-    expect(report.checkpoint?.repoTouched).toBe(true);
+    expect(report.checkpoint?.editedPaths ?? []).not.toContain(".git/config");
   });
 
   it("ne perd pas le tour quand le verdict n'arrive pas à destination", async () => {
@@ -2058,12 +2061,12 @@ describe("la forge", () => {
       permission: Record<string, string>;
       agent: Record<string, { tools: Record<string, boolean> }>;
     };
-    expect(config.permission).toEqual({
+    expect(config.permission).toMatchObject({
+      "*": "allow",
       edit: "ask",
       task: "ask",
       bash: "ask",
-      external_directory: "ask",
-      "*": "allow",
+      external_directory: "deny",
     });
     for (const tool of ["edit", "write", "apply_patch"]) {
       expect(config.agent.build.tools[tool]).toBeUndefined();
@@ -3495,25 +3498,25 @@ describe("un tour sur la machine de quelqu'un", () => {
       },
     });
 
-    it("auto-grants an external-directory permission request", async () => {
+    it("rejects an external-directory permission request", async () => {
       h.extraFrames = [externalFrame];
       await runLocal();
       expect(h.permissionReplies[0]).toMatchObject({
         id: "per_ext",
-        reply: "once",
+        reply: "reject",
       });
       expect(
         h.events.some(
           (e) => e.type === "status" && e.payload.phase === "outside_repo",
         ),
-      ).toBe(true);
+      ).toBe(false);
     });
 
-    it("auto-grants every repeated external-directory request", async () => {
+    it("rejects every repeated external-directory request", async () => {
       h.extraFrames = [externalFrame, externalFrame, externalFrame];
       await runLocal();
       expect(h.permissionReplies).toHaveLength(3);
-      expect(h.permissionReplies.every((reply) => reply.reply === "once")).toBe(
+      expect(h.permissionReplies.every((reply) => reply.reply === "reject")).toBe(
         true,
       );
     });
@@ -3521,7 +3524,7 @@ describe("un tour sur la machine de quelqu'un", () => {
     it("uses the same default in a microVM", async () => {
       h.extraFrames = [externalFrame];
       await run();
-      expect(h.permissionReplies[0]?.reply).toBe("once");
+      expect(h.permissionReplies[0]?.reply).toBe("reject");
       expect(
         h.events.some(
           (e) => e.type === "status" && e.payload.phase === "outside_repo",
@@ -3696,7 +3699,7 @@ describe("un tour sur la machine de quelqu'un", () => {
       root = mkdtempSync(join(tmpdir(), "mdy-supervisor-"));
     });
 
-    it("exposes the background-command handler to local runs", async () => {
+    it("does not expose a background-command handler to local runs", async () => {
       const layout = layoutForRoot(root, `${root}/oc`);
       await runOpencodeTurn(
         job({ layout, controlToken: "jeton-de-bail" }),
@@ -3708,7 +3711,7 @@ describe("un tour sur la machine de quelqu'un", () => {
           startToolBridge: async (opts) => {
             h.supervisorTools = (opts.supervisorTools ??
               {}) as typeof h.supervisorTools;
-            expect(h.supervisorTools.run_background).toBeDefined();
+            expect(h.supervisorTools.run_background).toBeUndefined();
             return await startToolBridge(opts);
           },
         },

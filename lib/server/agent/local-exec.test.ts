@@ -115,7 +115,7 @@ describe("le bail d'exécution locale", () => {
     expect(h.row?.gen).toBe(second.gen);
   });
 
-  it("issues a lease independently of anchor and trigger", async () => {
+  it("rejects leases for third-party or unattended contexts", async () => {
     for (const scope of [
       { pull_request_id: "pr-1" },
       { routine_id: "r-1" },
@@ -130,17 +130,41 @@ describe("le bail d'exécution locale", () => {
         pull_request_id: null,
         ...scope,
       };
-      await expect(issue()).resolves.toMatchObject({ ok: true });
+      await expect(issue()).resolves.toEqual({
+        ok: false,
+        error: "third_party_context",
+      });
+      expect(h.row?.gen).toBe(0);
     }
   });
 
-  it("keeps compatibility with a confirmed pull-request review", async () => {
+  it("does not treat issue confirmation as approval for pull-request context", async () => {
     h.scope = {
       ...h.scope!,
       pull_request_id: "pr-1",
       local_issue_context_confirmed: true,
     };
 
+    await expect(issue()).resolves.toEqual({
+      ok: false,
+      error: "third_party_context",
+    });
+    expect(h.row?.gen).toBe(0);
+  });
+
+  it("requires per-run confirmation before issuing a lease for issue context", async () => {
+    h.scope = {
+      ...h.scope!,
+      issue_id: "issue-1",
+      local_issue_context_confirmed: false,
+    };
+    await expect(issue()).resolves.toEqual({
+      ok: false,
+      error: "issue_confirmation_required",
+    });
+    expect(h.row?.gen).toBe(0);
+
+    h.scope.local_issue_context_confirmed = true;
     await expect(issue()).resolves.toMatchObject({ ok: true, gen: 1 });
   });
 

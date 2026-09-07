@@ -3,37 +3,27 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { hasMfaEnabled } from "@/lib/mfa";
+import { BACKEND_REQUEST_TIMEOUT_MS } from "@/lib/backend-availability";
 
-/**
- * Whether a user is a minddy admin — the single gate for the admin dashboard
- * (`/admin`) and its API (`/api/admin/*`).
- *
- * Two sources, either grants access:
- * - `app_metadata.role === "admin"` (set server-side on the account, tamper-proof
- * since app_metadata isn't user-writable),
- * - the `ADMIN_EMAILS` allowlist — a comma-separated list of emails. This is the
- * primary knob (matches AutoKap): flip an env var, no migration, no code.
- *
- * ## Why this function is ASYNCHRONOUS (MIN-344)
- *
- * The allowlist compares an ADDRESS, and the JWT carries one — but nothing in the
- * token says this address has been CONFIRMED. Anyone who registers with
- * the address of an admin (typically an admin not yet registered, or a fresh
- * instance of which `ADMIN_EMAILS` is already filled) then obtains the highest privilege of the product without ever having opened the mailbox.
- *
- * The `email_verified` of `user_metadata` does not answer the question: this field
- * is WRITABLE by the user (`auth.updateUser({ data })`), therefore forgeable.
- * The only authoritative source is `email_confirmed_at` on `auth.users`, which we
- * will read at GoTrue as a service key — and we take the opportunity to compare
- * the allowlist to the REAL address of the account, not to that which a token carries.
- *
- * The cost is limited: the reading does not take place only for a candidate whose address is
- * ALREADY in the allowlist (so never for an ordinary visitor), and the result
- * is stored for one minute — the admin dashboard fan-out several routes by
- * display. The `app_metadata.role` branch does not cost any calls.
- *
- * Fail-closed: a failed read does not give access.
- */
+async function withBackendDeadline<T>(operation: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("live authorization check timed out")),
+          BACKEND_REQUEST_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/** Central authorization gate for the admin dashboard and every admin API. */
 export function adminEmailAllowlist(): string[] {
   return (process.env.ADMIN_EMAILS ?? "")
     .split(",")
@@ -41,61 +31,78 @@ export function adminEmailAllowlist(): string[] {
     .filter(Boolean);
 }
 
-/** Is the address in `ADMIN_EMAILS`? (normalized case on both sides) */
+/** Whether an address is currently present in `ADMIN_EMAILS`. */
 export function isAdminEmail(email: string | null | undefined): boolean {
   return !!email && adminEmailAllowlist().includes(email.trim().toLowerCase());
 }
 
-/** The role carried by `app_metadata` — the tamper-proof source, without IO. */
+/** Whether signed application metadata grants the admin role. */
 export function hasAdminRole(
   user: Pick<User, "app_metadata"> | null | undefined
 ): boolean {
   return (user?.app_metadata as { role?: string } | undefined)?.role === "admin";
 }
 
-const CONFIRMED_TTL_MS = 60_000;
-const confirmedCache = new Map<string, { at: number; ok: boolean }>();
-
-/** Test purge — cache is an implementation detail, not shared state. */
-export function resetAdminConfirmationCache(): void {
-  confirmedCache.clear();
-}
-
 /**
- * Does the account have a CONFIRMED address, and is that address the address of
- * on the allowlist? Read at GoTrue (`auth.users`), the only source that is not
- * written by the user.
- */
-async function isConfirmedAdminAccount(userId: string): Promise<boolean> {
-  const hit = confirmedCache.get(userId);
-  if (hit && Date.now() - hit.at < CONFIRMED_TTL_MS) return hit.ok;
-
-  let ok = false;
-  try {
-    const { data, error } = await getServiceClient().auth.admin.getUserById(userId);
-    const account = data?.user;
-    if (error) throw new Error(error.message);
-    ok = !!account?.email_confirmed_at && isAdminEmail(account?.email);
-  } catch (err) {
-    // Fail-closed, and no caching of a failure: the next call
-    // try again rather than keeping an admin out for a minute because of a hiccup.
-    console.error("[admin] email confirmation check failed:", (err as Error).message);
-    return false;
-  }
-
-  confirmedCache.set(userId, { at: Date.now(), ok });
-  return ok;
-}
-
-/**
- * Takes the minimal shape the JWT claims expose (`getAuthedUser` rebuilds `User`
- * from claims), so it works both from route handlers and server components.
+ * Revalidates every privileged request against the live Auth account and live
+ * session. Access-token claims can remain cryptographically valid after role,
+ * MFA, password, or session revocation, so no positive admin result is cached.
  */
 export async function isAdminUser(
-  user: Pick<User, "id" | "email" | "app_metadata"> | null | undefined
+  user: Pick<User, "id"> | null | undefined,
+  claims: Record<string, unknown> | null | undefined,
 ): Promise<boolean> {
-  if (!user) return false;
-  if (hasAdminRole(user)) return true;
-  if (!user.id || !isAdminEmail(user.email)) return false;
-  return isConfirmedAdminAccount(user.id);
+  const sessionId = typeof claims?.session_id === "string" ? claims.session_id : "";
+  if (
+    !user?.id ||
+    claims?.sub !== user.id ||
+    claims?.aal !== "aal2" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      sessionId,
+    )
+  )
+    return false;
+
+  try {
+    const service = getServiceClient();
+    const [accountResult, sessionResult] = await withBackendDeadline(
+      Promise.all([
+        service.auth.admin.getUserById(user.id),
+        service.rpc("auth_authorization_state", {
+          p_user: user.id,
+          p_session: sessionId,
+          p_aal: claims?.aal,
+          p_amr: Array.isArray(claims?.amr) ? claims.amr : [],
+        }),
+      ]),
+    );
+    if (accountResult.error) throw new Error(accountResult.error.message);
+    if (sessionResult.error) throw new Error(sessionResult.error.message);
+    const account = accountResult.data?.user;
+    const liveState = sessionResult.data;
+    const hasVerifiedFactor = account?.factors?.some(
+      (factor) => factor.status === "verified",
+    );
+    const bannedUntil = account?.banned_until
+      ? Date.parse(account.banned_until)
+      : Number.NaN;
+    if (
+      !liveState ||
+      typeof liveState !== "object" ||
+      Array.isArray(liveState) ||
+      liveState.sessionActive !== true ||
+      liveState.mfaAllowed !== true ||
+      !account ||
+      account.id !== user.id ||
+      !hasMfaEnabled(account.app_metadata) ||
+      !hasVerifiedFactor ||
+      (Number.isFinite(bannedUntil) && bannedUntil > Date.now())
+    )
+      return false;
+    if (hasAdminRole(account)) return true;
+    return !!account.email_confirmed_at && isAdminEmail(account.email);
+  } catch (error) {
+    console.error("[admin] live authorization check failed:", (error as Error).message);
+    return false;
+  }
 }

@@ -196,31 +196,42 @@ describe("le modèle et son fournisseur", () => {
 });
 
 describe("canonical OpenCode capabilities", () => {
-  it("auto-grants model actions and explicitly enables repository skills", () => {
-    const variants = [
-      buildOpencodeConfig(job()),
-      buildOpencodeConfig(job({ writesToRepo: false, anchor: "pr" })),
-      buildOpencodeConfig(job({ interactive: false })),
-      buildOpencodeConfig(job({ controlToken: "local-token" })),
-    ];
-    for (const cfg of variants) {
-      expect(cfg.permission).toEqual({
-        edit: "ask",
-        task: "ask",
-        bash: "ask",
-        external_directory: "ask",
-        "*": "allow",
-      });
-      expect(cfg.tools).toEqual({ skill: true });
-      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools).toEqual({ skill: true });
-      expect(cfg.agent[OPENCODE_PRIMARY_AGENT].permission).toEqual({
-        edit: "ask",
-        task: "ask",
-        bash: "ask",
-        external_directory: "ask",
-        "*": "allow",
-      });
-    }
+  it("routes cloud commands and writes through the supervisor", () => {
+    const cfg = buildOpencodeConfig(job());
+    expect(cfg.permission).toMatchObject({
+      "*": "allow",
+      read: "allow",
+      edit: "ask",
+      task: "ask",
+      bash: "ask",
+      webfetch: "allow",
+      external_directory: "deny",
+    });
+    expect(cfg.tools.skill).toBe(true);
+    expect(cfg.agent[OPENCODE_PRIMARY_AGENT].permission).toEqual(
+      cfg.permission,
+    );
+  });
+
+  it("fails closed for local native capabilities", () => {
+    const cfg = buildOpencodeConfig(job({ controlToken: "local-token" }));
+    expect(cfg.permission).toMatchObject({
+      "*": "ask",
+      read: "ask",
+      edit: "ask",
+      bash: "deny",
+      webfetch: "deny",
+      external_directory: "deny",
+    });
+    expect(cfg.tools).toMatchObject({
+      bash: false,
+      webfetch: false,
+      skill: true,
+    });
+    expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools).toMatchObject({
+      bash: false,
+      webfetch: false,
+    });
   });
 });
 
@@ -268,13 +279,7 @@ describe("les sous-agents", () => {
     // Cascading delegation is structural, never a prompt sentence.
     expect(cfg.agent.general.tools?.["*"]).toBe(false);
     expect(cfg.agent.general.tools?.task).toBeUndefined();
-    expect(cfg.agent.general.permission).toEqual({
-      edit: "ask",
-      task: "ask",
-      bash: "ask",
-      external_directory: "ask",
-      "*": "allow",
-    });
+    expect(cfg.agent.general.permission).toEqual(cfg.permission);
   });
 
   it("fait de `explore` une lecture seule PAR SON JEU DE TOOLS", () => {
@@ -314,7 +319,7 @@ describe("les sous-agents", () => {
     ).toBe(undefined);
   });
 
-  it("keeps all three editing interfaces for implementation sub-agents", () => {
+  it("serves editing interfaces only when repository writes are allowed", () => {
     // It is opencode which decides according to the model OF THE GIRL (`apply_patch` on
     // the `gpt-*`): designating one here would freeze it on that of the parent.
     const cfg = buildOpencodeConfig(job());
@@ -324,8 +329,12 @@ describe("les sous-agents", () => {
     }
     const review = buildOpencodeConfig(job({ writesToRepo: false }));
     for (const name of ["edit", "write", "apply_patch"]) {
-      expect(review.agent.general.tools?.[name]).toBe(true);
+      expect(review.tools[name]).toBe(false);
+      expect(review.agent[OPENCODE_PRIMARY_AGENT].tools?.[name]).toBe(false);
+      expect(review.agent.general.tools?.[name]).toBeUndefined();
     }
+    expect(review.permission.edit).toBe("deny");
+    expect(review.agent.general.permission?.edit).toBe("deny");
   });
 
   it("does not hide delegation through a run-mode tool profile", () => {
@@ -334,19 +343,18 @@ describe("les sous-agents", () => {
     });
     expect(
       buildOpencodeConfig(none).agent[OPENCODE_PRIMARY_AGENT].tools?.task,
-    ).toBeUndefined();
+    ).toBe(false);
     expect(
       buildOpencodeConfig(job()).agent[OPENCODE_PRIMARY_AGENT].tools?.task,
-    ).toBeUndefined();
+    ).toBe(true);
   });
 
-  it("keeps accounting signals observable while auto-granting the catalog", () => {
-    expect(buildOpencodeConfig(job()).permission).toEqual({
+  it("keeps accounting and security decisions observable", () => {
+    expect(buildOpencodeConfig(job()).permission).toMatchObject({
       edit: "ask",
       task: "ask",
       bash: "ask",
-      external_directory: "ask",
-      "*": "allow",
+      external_directory: "deny",
     });
   });
 
@@ -708,29 +716,36 @@ describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
   });
 });
 
-describe("local and cloud capability parity", () => {
+describe("local capability restrictions", () => {
   const cloud = () => buildOpencodeConfig(job());
   const onMachine = () =>
     buildOpencodeConfig(job({ controlToken: "jeton-de-bail" }));
 
-  it("keeps native tools and permissions identical", () => {
-    expect(onMachine().permission).toEqual(cloud().permission);
-    expect(onMachine().tools).toEqual(cloud().tools);
-    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT]).toEqual(
-      cloud().agent[OPENCODE_PRIMARY_AGENT],
-    );
+  it("removes host shell and direct fetch while retaining repository tools", () => {
+    expect(onMachine().permission.bash).toBe("deny");
+    expect(onMachine().permission.webfetch).toBe("deny");
+    expect(onMachine().permission.external_directory).toBe("deny");
+    expect(onMachine().permission.read).toBe("ask");
+    expect(onMachine().permission["*"]).toBe("ask");
+    expect(onMachine().tools).toMatchObject({ bash: false, webfetch: false });
+    expect(cloud().permission.bash).toBe("ask");
+    expect(cloud().permission.webfetch).toBe("allow");
+    expect(cloud().permission.read).toBe("allow");
     expect(onMachine().agent.explore.tools).toEqual(
       cloud().agent.explore.tools,
     );
-    expect(onMachine().agent.general.tools).toEqual(
-      cloud().agent.general.tools,
-    );
+    expect(onMachine().agent.explore.permission?.read).toBe("ask");
+    expect(cloud().agent.explore.permission?.read).toBe("allow");
+    expect(onMachine().agent.general.tools?.bash).toBeUndefined();
+    expect(onMachine().agent.general.tools?.webfetch).toBeUndefined();
+    expect(cloud().agent.general.tools?.bash).toBe(true);
+    expect(cloud().agent.general.tools?.webfetch).toBe(true);
   });
 });
 
 /** OpenCode evaluates these rules in insertion order, with the last match winning. */
 describe("native permission precedence", () => {
-  it.each(["edit", "task", "bash", "external_directory"])(
+  it.each(["edit", "task", "bash"])(
     "routes %s through the supervisor in every capable agent",
     (capability) => {
       const config = buildOpencodeConfig(job());
@@ -747,4 +762,25 @@ describe("native permission precedence", () => {
       }
     },
   );
+
+  it("denies external directories after the wildcard rule", () => {
+    for (const local of [false, true]) {
+      const config = buildOpencodeConfig(
+        job(local ? { controlToken: "local-token" } : {}),
+      );
+      for (const policy of [
+        config.permission,
+        config.agent[OPENCODE_PRIMARY_AGENT].permission,
+        config.agent.general.permission,
+      ]) {
+        const effective = Object.entries(policy ?? {})
+          .filter(
+            ([pattern]) =>
+              pattern === "*" || pattern === "external_directory",
+          )
+          .at(-1)?.[1];
+        expect(effective).toBe("deny");
+      }
+    }
+  });
 });

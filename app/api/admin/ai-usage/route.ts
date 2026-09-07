@@ -18,7 +18,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!(await isAdminUser(auth.user))) {
+  if (!(await isAdminUser(auth.user, auth.claims))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

@@ -14,10 +14,9 @@ import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
  * as is (appendEvent) so that the thread displays it immediately
  * instead of waiting for its poll.
  *
- * We type the Realtime HTTP endpoint rather than opening a websocket: the
- * loop runs in a serverless function that can be cut at any time,
- * and a stateless POST lends itself to this better than a maintainable connection. The key of
- * service authorizes broadcast on a private topic.
+ * The loop calls a service-only PostgREST RPC instead of opening a websocket.
+ * The RPC resolves the current membership generation and writes the private
+ * Realtime broadcast in one database transaction.
  *
  * EVERYTHING is best-effort: a failed broadcast should never cause a run
  * to fail (polling the thread makes up for what is missing).
@@ -55,8 +54,8 @@ export interface AgentLiveStream {
 }
 
 /**
- * Raw sending to a private topic. Taken out of the function below to serve
- * also the review of a PR (`pr-review:{id}`), which broadcasts the same pair
+ * Send to a logical private topic. This also serves pull request review flows,
+ * which broadcast the same pair
  * `stream`/`event` on its own topic: the transport does not depend on what
  * is broadcast, only the topic change.
  *
@@ -74,7 +73,7 @@ export async function broadcastToTopic(
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return;
   try {
-    await fetch(`${url}/realtime/v1/api/broadcast`, {
+    await fetch(`${url}/rest/v1/rpc/broadcast_private_realtime`, {
       method: "POST",
       headers: {
         apikey: key,
@@ -82,7 +81,9 @@ export async function broadcastToTopic(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        messages: [{ topic, event, payload, private: true }],
+        p_topic: topic,
+        p_event: event,
+        p_payload: payload,
       }),
     });
   } catch {

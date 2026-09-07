@@ -110,6 +110,8 @@ import {
 } from "../working-diff";
 import { vmLocalDiffPath } from "../harness-layout";
 import { registeredBackgroundRunner } from "./child-registry";
+import { decidePermission, editTargets } from "./opencode-permissions";
+import { refineLocalVerdict } from "./local-guard";
 
 /**
  * THE SUPERVISOR (MIN-286, lot 1) — what `runVmTurn` becomes when the loop
@@ -480,18 +482,6 @@ async function servedInstructionsFile(
  * `runVmTurn`, and for the same reason: a trick that wrote code and didn't know
  * pushing it should still raise its state.
  */
-function permissionEditTargets(permission: {
-  filepath?: string;
-  files?: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
-}): Array<{ path: string; status: "added" | "modified" | "deleted" }> {
-  const files = (permission.files ?? [])
-    .map((file) => ({ ...file, path: file.path.trim() }))
-    .filter((file) => file.path);
-  if (files.length > 0) return files;
-  const filepath = permission.filepath?.trim();
-  return filepath ? [{ path: filepath, status: "modified" }] : [];
-}
-
 export async function runOpencodeTurn(
   job: VmJob,
   input: SupervisorInput,
@@ -2175,8 +2165,7 @@ export async function runOpencodeTurn(
           timing("first-visible-text-signal");
         }
 
-        /** Permission requests are answered immediately so they never become a
-         * second application-level approval queue around OpenCode. */
+        /** Permission requests are decided immediately by the harness policy. */
         // A girl linked to her call of `task`: this is what gives her name
         // to the events that follow, and his gang at the ledger. His birth balance
         // with the same gesture the credit opened by the authorization (see `pendingTasks`).
@@ -2186,32 +2175,23 @@ export async function runOpencodeTurn(
         }
 
         if (out.permission) {
-          let verdict: {
-            reply: "once" | "reject";
-            reason?: string;
-            message?: string;
-          } = {
-            reply: "once",
-          };
-          if (
-            out.permission.permission === "task" &&
-            verdict.reply === "once" &&
-            out.permission.callId
-          ) {
-            const callId = out.permission.callId;
-            const alreadyCounted = pendingTasks.has(callId);
-            if (
-              !alreadyCounted &&
-              subagents.running + pendingTasks.size >= job.subagents.maxParallel
-            ) {
-              verdict = {
-                reply: "reject",
-                reason: "subagent_concurrency_limit",
-                message:
-                  `At most ${job.subagents.maxParallel} sub-agents may run in parallel. ` +
-                  "Wait for the current sub-agents to finish, then retry this delegation.",
-              };
-            }
+          let verdict = decidePermission(
+            out.permission,
+            job.layout.repoDir,
+            {
+              names: new Set(agentTable.keys()),
+              running: subagents.running,
+              pending: pendingTasks.size,
+              maxParallel: job.subagents.maxParallel,
+            },
+            { local },
+          );
+          if (local) {
+            verdict = await refineLocalVerdict(
+              out.permission,
+              verdict,
+              job.layout.repoDir,
+            );
           }
           if (
             out.permission.permission === "bash" &&
@@ -2313,7 +2293,7 @@ export async function runOpencodeTurn(
              * targeted type-check of the delivery gate, on a path that
              * does not exist.
              */
-            const targets = permissionEditTargets(out.permission);
+            const targets = editTargets(out.permission);
             for (const { path } of targets) delivery.noteEdit(path);
             // …and they are SEEN immediately: an edition does not advance the
             // round (neither text nor reflection), so nothing else would make

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { readBoundedRequestBody } from "./request-body";
+import {
+  readBoundedRequestBody,
+  readBoundedRequestBytes,
+} from "./request-body";
 
 describe("readBoundedRequestBody", () => {
   it("rejects a declared oversized body before reading its stream", async () => {
@@ -50,6 +53,19 @@ describe("readBoundedRequestBody", () => {
       readBoundedRequestBody(
         new Request("https://cloud.example.com/api/relay/test", { method: "POST", body }),
         4,
+      ),
+    ).resolves.toEqual({ ok: true, body });
+  });
+
+  it("preserves bounded binary bodies byte for byte", async () => {
+    const body = new Uint8Array([0, 255, 128, 13, 10]);
+    await expect(
+      readBoundedRequestBytes(
+        new Request("https://cloud.example.com/api/relay/test", {
+          method: "POST",
+          body,
+        }),
+        body.byteLength,
       ),
     ).resolves.toEqual({ ok: true, body });
   });

@@ -295,20 +295,17 @@ describe("où les fichiers sont posés", () => {
     }
   });
 
-  it("keeps shell-backed tools on a local host", () => {
+  it("keeps only control-only local tools on a developer host", () => {
     const local = job({ controlToken: "bail-hs256" });
     expect(localToolsFor(local).map((t) => t.function.name)).toEqual([
-      "run_background",
       "update_plan",
-      "validate_changes",
-      "list_projects",
     ]);
     for (const name of [
       "run_background",
       "validate_changes",
       "list_projects",
     ]) {
-      expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
+      expect(opencodeToolFiles(local).map((f) => f.path)).not.toContain(
         `${TOOL_DIR}/${name}.ts`,
       );
     }

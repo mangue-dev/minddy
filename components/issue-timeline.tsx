@@ -63,6 +63,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
+import type { CommentLiveTable } from "@/lib/comment-live-topic";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import type { Attachment, Comment, Member, ResourceInput } from "@/lib/types";
 import type { CommentVisibility } from "@/lib/feedback/types";
@@ -434,6 +435,7 @@ export function CommentBlock({
   onDelete,
   onDeleteAttachment,
   deletesReplies,
+  liveTable = "comments",
   isReply = false,
 }: {
   comment: ThreadMessage;
@@ -446,6 +448,8 @@ export function CommentBlock({
   onDelete: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   deletesReplies: boolean;
+  /** Selects the private Realtime namespace for the backing comment table. */
+  liveTable?: CommentLiveTable;
   /** Message from a thread, not its root: the “Public” badge is not repeated at
       each line — the root and the tint of the card already say it, and five
       badges for a single idea read like noise. */
@@ -490,7 +494,7 @@ export function CommentBlock({
   // base: ~4 times per second, without thread refetch. The basic line remains the
   // fallback — it is she who sees the tab opened along the way, or the one which
   // missed a broadcast.
-  const live = useCommentLive(comment.id, working);
+  const live = useCommentLive(comment.id, working, liveTable);
   const liveTool = live ? live.tool : comment.assistant_tool;
   const liveBody = live ? live.text : comment.body;
   const [editing, setEditing] = useState(false);
@@ -908,6 +912,7 @@ function CommentCard({
   mentions,
   header,
   allowAttachments = true,
+  liveTable = "comments",
   onReply,
   onEditComment,
   onDeleteComment,
@@ -921,6 +926,7 @@ function CommentCard({
   /** The headband, when the surface has one (see `commentHeader`). */
   header?: React.ReactNode;
   allowAttachments?: boolean;
+  liveTable?: CommentLiveTable;
   onReply: (
     parentId: string,
     body: string,
@@ -956,6 +962,7 @@ function CommentCard({
           onDelete={onDeleteComment}
           onDeleteAttachment={onDeleteAttachment}
           deletesReplies={item.replies.length > 0}
+          liveTable={liveTable}
         />
       </div>
       {item.replies.map((reply) => (
@@ -969,6 +976,7 @@ function CommentCard({
             onDelete={onDeleteComment}
             onDeleteAttachment={onDeleteAttachment}
             deletesReplies={false}
+            liveTable={liveTable}
             isReply
           />
         </div>
@@ -1133,6 +1141,7 @@ export function IssueActivity({
                     mentions={mentions}
                     header={commentHeader?.(row.item.comment)}
                     allowAttachments={allowAttachments}
+                    liveTable={entity === "page" ? "page_comments" : "comments"}
                     onReply={onReply}
                     onEditComment={onEditComment}
                     onDeleteComment={onDeleteComment}

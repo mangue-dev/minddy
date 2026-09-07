@@ -6,18 +6,14 @@ vi.mock("server-only", () => ({}));
 const { signedAttachmentUrl, uploadAttachment } = await import("./attachments");
 
 /**
- * MIN-340 — `signedAttachmentUrl` is the ONLY place where a private
- * file becomes a URL. This is therefore the only place where it is decided whether it will be displayed
- * or downloaded, and what this test pinpoints is this decision, not the
- * signature.
+ * MIN-340 — `signedAttachmentUrl` is the only place where a private file
+ * becomes a URL. It decides whether the browser displays or downloads the
+ * object; these tests cover that disposition decision rather than signing.
  *
- * What is simulated here: storage, and it alone. `createSignedUrl` notes what
- * is being asked for — the presence of a `download` IS the provision "exhibit
- * attached", which never renders anything and therefore never executes anything. `info`
- * returns the header that the object carries in the bucket: for a resource of
- * ticket, which goes directly from the browser to the storage, it is the only
- * truth about what the browser will receive — the line only carries this
- * that the client has requested declare.
+ * Only Storage is simulated. `createSignedUrl` records whether the caller asks
+ * for a download, which prevents the browser from rendering active content.
+ * `info` returns the content type stored on the object. Direct browser uploads
+ * make that header the authoritative type served to the browser.
  */
 
 function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}) {
@@ -53,10 +49,13 @@ function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}
         remove: async () => ({ error: null }),
       }),
     },
-    // MIN-343: the registration asks the storage which uploaded the object, and
-    // housekeeping asks the tables who still references it. Here the object comes
-    // to be created by the server (no uploader) and nothing references it.
-    rpc: async () => ({ data: [], error: null }),
+    // MIN-343: registration asks Storage who uploaded the object, and cleanup
+    // asks which rows still reference it. Server-created objects have no
+    // uploader in this fixture. The service upload quota check is allowed.
+    rpc: async (name: string) => ({
+      data: name === "project_storage_quota_allows" ? true : [],
+      error: null,
+    }),
     from: () => ({
       insert: (batch: Record<string, unknown>[]) => {
         rows.push(...batch);
@@ -73,49 +72,46 @@ function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}
 
 const PATH = "projects/11111111-1111-4111-8111-111111111111/abc/capture.png";
 
-describe("signedAttachmentUrl — la disposition", () => {
-  it("affiche un vrai PNG, sans rien ajouter", async () => {
-    // The risk of regression of the subject: custody must not transform
-    // all images in the app for downloads.
+describe("signedAttachmentUrl disposition", () => {
+  it("displays a real PNG without forcing a download", async () => {
+    // The serving guard must not turn every image into a download.
     const storage = fakeStorage({ contentType: "image/png" });
     const url = await signedAttachmentUrl(storage.client, PATH);
     expect(url).toBe(`https://signed.test/${PATH}`);
     expect(storage.calls[0].download).toBeUndefined();
   });
 
-  it("force la pièce jointe sur un objet servi en HTML", async () => {
-    // The file is called `.png` and the line will say `image/png`; the header that
-    // the bucket carries, it says `text/html`.
+  it("forces a download for an object served as HTML", async () => {
+    // The filename and resource row claim PNG, but the bucket header says HTML.
     const storage = fakeStorage({ contentType: "text/html" });
     await signedAttachmentUrl(storage.client, PATH);
     expect(storage.calls[0].download).toBe(true);
   });
 
-  it("force la pièce jointe sur un SVG", async () => {
+  it("forces a download for SVG", async () => {
     const storage = fakeStorage({ contentType: "image/svg+xml" });
     await signedAttachmentUrl(storage.client, PATH);
     expect(storage.calls[0].download).toBe(true);
   });
 
-  it("ferme la porte quand le type de l'objet est illisible", async () => {
-    // A file that downloads instead of displaying is an inconvenience;
-    // the opposite is the subject of this ticket.
+  it("fails closed when the stored object type cannot be read", async () => {
+    // Downloading a safe file is preferable to rendering unreadable metadata.
     const storage = fakeStorage({ infoFails: true });
     await signedAttachmentUrl(storage.client, PATH);
     expect(storage.calls[0].download).toBe(true);
   });
 
-  it("garde le nom de fichier demandé par l'appelant", async () => {
+  it("preserves the filename requested by the caller", async () => {
     const storage = fakeStorage({ contentType: "image/png" });
     await signedAttachmentUrl(storage.client, PATH, { download: "capture.png" });
     expect(storage.calls[0].download).toBe("capture.png");
-    // Nothing to ask for storage: the arrangement has already been decided.
+    // The caller already chose the disposition, so no Storage lookup is needed.
     expect(storage.infoCalls()).toBe(0);
   });
 
-  it("croit l'appelant qui tient déjà un type de confiance", async () => {
-    // A page file: its type was deduced from the BYTES when sending, the line
-    // is therefore authentic and the `info()` round trip has nothing to learn.
+  it("uses a trusted type supplied by the caller", async () => {
+    // A page file's type was derived from its bytes during upload, so the
+    // resource row is authoritative and an `info()` round trip adds nothing.
     const storage = fakeStorage({ contentType: "text/html" });
     await signedAttachmentUrl(storage.client, PATH, { mimeType: "image/png" });
     expect(storage.calls[0].download).toBeUndefined();
@@ -127,7 +123,7 @@ describe("signedAttachmentUrl — la disposition", () => {
   });
 });
 
-describe("uploadAttachment — le type rangé", () => {
+describe("uploadAttachment stored type", () => {
   const args = {
     projectId: "11111111-1111-4111-8111-111111111111",
     issueId: "22222222-2222-4222-8222-222222222222",
@@ -135,20 +131,20 @@ describe("uploadAttachment — le type rangé", () => {
     fileName: "capture.png",
   };
 
-  it("range ce que les octets disent, pas ce que l'appelant annonce", async () => {
+  it("stores the type detected from bytes instead of the caller claim", async () => {
     const storage = fakeStorage();
     await uploadAttachment(storage.client, {
       ...args,
       mimeType: "image/png",
       data: Buffer.from("<!DOCTYPE html><script>alert(1)</script>"),
     });
-    // The header placed on the OBJECT counts as much as the line: it is this that the
-    // bucket will be used again, and it is on it that the reading guard is read.
+    // The object header and resource row must agree because the serving guard
+    // reads the header again before issuing a signed URL.
     expect(storage.uploads[0].contentType).toBe("text/html");
     expect(storage.rows[0].mime_type).toBe("text/html");
   });
 
-  it("laisse une vraie image passer pour ce qu'elle est", async () => {
+  it("stores a real image with its detected image type", async () => {
     const storage = fakeStorage();
     await uploadAttachment(storage.client, {
       ...args,

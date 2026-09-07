@@ -20,6 +20,7 @@ import { clearPersistedQueryCache } from "./query-provider";
 import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
 import { browserRuntimeConfig } from "./runtime-config-provider";
+import { signalRealtimeRekey } from "./realtime-topic";
 import type { User, Session } from "@supabase/supabase-js";
 
 export type OAuthProvider = "google" | "github";
@@ -196,6 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(s?.user ?? null);
       setLoading(false);
 
+      // The database rotates every private topic when MFA assurance changes.
+      // Supabase emits this event after saving the replacement AAL2 session, so
+      // reconnect only now; TOKEN_REFRESHED is routine and must not churn sockets.
+      if (event === "MFA_CHALLENGE_VERIFIED") signalRealtimeRekey();
+
       // Analytics (MIN-78): attaches the following events to the account. THE
       // registration/login events themselves are emitted by the SERVER
       // (app/auth/callback), which reliably distinguishes a first
@@ -309,14 +315,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (safeRedirect !== "/home") {
         callbackUrl.searchParams.set("next", safeRedirect);
       }
-      // The marker travels to the provider and returns with it: this is the
-      // ONLY thing that will tell the callback that the session to open is not the one
-      // du navigateur qui l'appelle (MIN-291).
+      // This marker returns from the provider and tells the callback to hand
+      // the session to the desktop app instead of the invoking browser (MIN-291).
       if (desktop) {
         callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
-        // And with him the nuncio of the tour (MIN-345): on the return, the window does not
-        // will process the deep link only if it reports it. A `minddy://auth`
-        // received from the system, he will not carry any.
+        // Bind the returning deep link to this desktop auth attempt (MIN-345).
+        // An unsolicited `minddy://auth` link will not carry this nonce.
         callbackUrl.searchParams.set(DESKTOP_TURN_PARAM, beginDesktopAuthTurn());
       }
 
@@ -324,10 +328,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider,
         options: {
           redirectTo: callbackUrl.toString(),
-          // Google REFUSES OAuth from an embedded browser. In the app, we do not
-          // therefore do not navigate: we ask for the URL, and the system browser
-          // goes around. `skipBrowserRedirect` is what makes this URL au
-          // lieu de nous y envoyer.
+          // Google rejects OAuth in embedded browsers. The desktop app requests
+          // the URL and opens it in the system browser instead of navigating.
           ...(desktop ? { skipBrowserRedirect: true } : {}),
         },
       });
@@ -435,7 +437,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error && data.user) {
       userRef.current = data.user;
       setUser(data.user);
-      if (data.session) setSession(data.session);
+      if (data.session) {
+        setSession(data.session);
+        // Manual refreshes follow security-state changes such as MFA removal.
+        // Reconnect after saving the new assurance claim so a rekey received
+        // moments earlier cannot leave dedicated channels offline.
+        signalRealtimeRekey();
+      }
       return;
     }
     // Fallback: fetch the fresh account without a token refresh.
@@ -471,8 +479,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const unenrollTotp = useCallback(async (factorId: string) => {
-    const { error } = await getSupabase().auth.mfa.unenroll({ factorId });
+    const supabase = getSupabase();
+    const { error } = await supabase.auth.mfa.unenroll({ factorId });
     if (error) throw error;
+    // Removing the last factor invalidates the old AAL2 claim. Mint AAL1 before
+    // re-resolving the user and project topic generations rotated by the DB.
+    const refreshed = await supabase.auth.refreshSession();
+    if (refreshed.error) throw refreshed.error;
+    signalRealtimeRekey();
   }, []);
 
   const firstTotpFactorId = useCallback(async () => {

@@ -3,9 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
+import {
+  numoCommentTopic,
+  type CommentLiveTable,
+} from "./comment-live-topic";
+import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
 
 /**
- * A response @Numo LIVE, on the private topic `numo-comment:{commentId}`
+ * A response @Numo LIVE, on a table-specific private comment topic
  * (migration 20260909090000_numo_comment_live_stream).
  *
  * The assistant streams because its panel holds the SSE connection of the route
@@ -39,6 +44,8 @@ interface Entry {
   listeners: Set<Listener>;
   /** Last subscriber left during opening → do not contact afterwards. */
   closed: boolean;
+  connectVersion: number;
+  stopRekey: () => void;
 }
 
 /**
@@ -48,26 +55,51 @@ interface Entry {
  */
 const channels = new Map<string, Entry>();
 
-function subscribeComment(commentId: string, listener: Listener): () => void {
-  let entry = channels.get(commentId);
+function subscribeComment(
+  commentId: string,
+  table: CommentLiveTable,
+  listener: Listener,
+): () => void {
+  const logicalTopic = numoCommentTopic(commentId, table);
+  let entry = channels.get(logicalTopic);
   if (!entry) {
-    const fresh: Entry = { channel: null, listeners: new Set(), closed: false };
+    const fresh: Entry = {
+      channel: null,
+      listeners: new Set(),
+      closed: false,
+      connectVersion: 0,
+      stopRekey: () => {},
+    };
     entry = fresh;
-    channels.set(commentId, fresh);
+    channels.set(logicalTopic, fresh);
     const supabase = getSupabase();
-    // Same precaution as the RealtimeProvider: push the token BEFORE the join,
-    // otherwise the private channel refuses the subscription (anon token).
-    void supabase.realtime.setAuth().then(() => {
-      if (fresh.closed) return;
-      const channel = supabase.channel(`numo-comment:${commentId}`, {
-        config: { private: true },
-      });
-      channel.on("broadcast", { event: "stream" }, ({ payload }) => {
-        for (const l of fresh.listeners) l((payload ?? {}) as StreamPayload);
-      });
-      channel.subscribe();
-      fresh.channel = channel;
-    });
+    const connect = () => {
+      const version = ++fresh.connectVersion;
+      if (fresh.channel) {
+        const previous = fresh.channel;
+        fresh.channel = null;
+        void supabase.removeChannel(previous);
+      }
+      void (async () => {
+        try {
+          await supabase.realtime.setAuth();
+          const topic = await resolveRealtimeTopic(supabase, logicalTopic);
+          if (fresh.closed || version !== fresh.connectVersion) return;
+          const channel = supabase.channel(topic, {
+            config: { private: true },
+          });
+          channel.on("broadcast", { event: "stream" }, ({ payload }) => {
+            for (const l of fresh.listeners) l((payload ?? {}) as StreamPayload);
+          });
+          channel.subscribe();
+          fresh.channel = channel;
+        } catch {
+          // The durable comment row and its polling loop remain the fallback.
+        }
+      })();
+    };
+    fresh.stopRekey = onRealtimeRekey(connect);
+    connect();
   }
   entry.listeners.add(listener);
 
@@ -76,7 +108,9 @@ function subscribeComment(commentId: string, listener: Listener): () => void {
     opened.listeners.delete(listener);
     if (opened.listeners.size > 0) return;
     opened.closed = true;
-    channels.delete(commentId);
+    opened.connectVersion += 1;
+    opened.stopRekey();
+    channels.delete(logicalTopic);
     if (opened.channel) void getSupabase().removeChannel(opened.channel);
   };
 }
@@ -91,7 +125,8 @@ function subscribeComment(commentId: string, listener: Listener): () => void {
  */
 export function useCommentLive(
   commentId: string | null,
-  active: boolean
+  active: boolean,
+  table: CommentLiveTable = "comments",
 ): CommentLive | null {
   const [live, setLive] = useState<CommentLive | null>(null);
   // Timestamp of the last message retained: two broadcasts left at 250 ms
@@ -104,7 +139,7 @@ export function useCommentLive(
     lastAt.current = 0;
     if (!commentId || !active) return;
 
-    return subscribeComment(commentId, (p) => {
+    return subscribeComment(commentId, table, (p) => {
       const at = typeof p.at === "number" ? p.at : 0;
       if (at < lastAt.current) return;
       lastAt.current = at;
@@ -114,7 +149,7 @@ export function useCommentLive(
       // to the base line.
       setLive(text || tool ? { text, tool } : null);
     });
-  }, [commentId, active]);
+  }, [commentId, active, table]);
 
   return live;
 }

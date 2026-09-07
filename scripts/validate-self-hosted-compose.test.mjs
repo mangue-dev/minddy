@@ -32,6 +32,59 @@ test("the full profile keeps application and Supabase traffic on internal networ
   assert.match(profile, /networks:\n[\s\S]*?default:\n\s+internal: true/);
   assert.match(profile, /minddy:[\s\S]*?networks:\n\s+- default\n\s+- private\n\s+- agent_egress/);
   assert.match(profile, /caddy:[\s\S]*?networks:\n\s+- default\n\s+- edge\n\s+- private/);
+  assert.match(profile, /auth:[\s\S]*?networks:\n\s+- default\n\s+- auth_egress/);
+});
+
+test("the full profile enforces the application password policy and leaked-password checks", () => {
+  const profile = readFileSync(resolve(root, "deploy/self-hosted/compose.full.yml"), "utf8");
+  assert.match(profile, /GOTRUE_PASSWORD_MIN_LENGTH: "8"/);
+  assert.match(
+    profile,
+    /GOTRUE_PASSWORD_REQUIRED_CHARACTERS: "abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789"/,
+  );
+  assert.match(profile, /GOTRUE_PASSWORD_HIBP_ENABLED: "true"/);
+  assert.match(profile, /GOTRUE_PASSWORD_HIBP_FAIL_CLOSED: "true"/);
+  assert.match(profile, /GOTRUE_SESSIONS_TIMEBOX: "720h"/);
+  assert.match(profile, /GOTRUE_SESSIONS_INACTIVITY_TIMEOUT: "168h"/);
+});
+
+test("every public self-hosted endpoint receives a one-year HSTS policy", () => {
+  const managed = readFileSync(resolve(root, "deploy/self-hosted/Caddyfile"), "utf8");
+  const full = readFileSync(resolve(root, "deploy/self-hosted/Caddyfile.full"), "utf8");
+  assert.match(
+    managed,
+    /\{\$MINDDY_SITE_ADDRESS\}[\s\S]*?Strict-Transport-Security "max-age=31536000; includeSubDomains"/,
+  );
+  assert.match(
+    full,
+    /\{\$MINDDY_SITE_ADDRESS\}[\s\S]*?Strict-Transport-Security "max-age=31536000; includeSubDomains"/,
+  );
+  assert.match(
+    full,
+    /\{\$SUPABASE_SITE_ADDRESS\}[\s\S]*?Strict-Transport-Security "max-age=31536000; includeSubDomains"/,
+  );
+});
+
+test("both server profiles bound database import request bodies at the proxy", () => {
+  for (const file of ["Caddyfile", "Caddyfile.full"]) {
+    const caddyfile = readFileSync(resolve(root, `deploy/self-hosted/${file}`), "utf8");
+    assert.match(
+      caddyfile,
+      /@database_import path_regexp database_import \^\/api\/projects\/\[\^\/\]\+\/pages\/\[\^\/\]\+\/import\/\?\$/,
+    );
+    assert.match(
+      caddyfile,
+      /request_body @database_import \{\n\s+max_size 21MiB\n\s+\}/,
+    );
+    assert.match(
+      caddyfile,
+      /@database_import_plan path_regexp database_import_plan \^\/api\/projects\/\[\^\/\]\+\/pages\/import-plan\/\?\$/,
+    );
+    assert.match(
+      caddyfile,
+      /request_body @database_import_plan \{\n\s+max_size 2MiB\n\s+\}/,
+    );
+  }
 });
 
 test("both server profiles include routines and isolated agent execution by default", () => {

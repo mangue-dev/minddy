@@ -31,7 +31,7 @@ const MAX_VALUE_LENGTH = 10_000;
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!(await isAdminUser(auth.user))) {
+  if (!(await isAdminUser(auth.user, auth.claims))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;
@@ -103,9 +103,8 @@ export async function PATCH(request: NextRequest) {
       { status: 400 }
     );
   }
-  // A routing suffix has only three legal values, plus the blank which
-  // deletes the line (“no parameters”). Refuse here rather than leave
-  // leave a `…:nirto` that OpenRouter would return as 404 on each call.
+  // A routing suffix has three legal values. An empty value removes the row;
+  // reject typos here instead of letting OpenRouter return 404 on every call.
   if (isModelSuffixKey(key) && trimmed && !isModelSuffix(trimmed)) {
     return NextResponse.json(
       { error: `Suffix must be one of: ${MODEL_SUFFIXES.join(", ")}` },

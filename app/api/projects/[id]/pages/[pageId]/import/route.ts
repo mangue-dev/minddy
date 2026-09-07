@@ -5,9 +5,11 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { importDatabase } from "@/lib/server/database-import";
+import { readBoundedRequestBytes } from "@/lib/server/forge-relay/request-body";
 import { MAX_IMPORT_BYTES } from "@/lib/database-import/types";
 
 export const maxDuration = 120;
+export const DATABASE_IMPORT_REQUEST_MAX_BYTES = 21 * 1024 * 1024;
 const optionsSchema = z.object({
   requestId: z.uuid(),
   revision: z.number().int().nonnegative(),
@@ -45,13 +47,19 @@ export async function POST(
     limit: 5,
   });
   if (refused) return refused;
-  if (
-    Number(request.headers.get("content-length") ?? 0) >
-    MAX_IMPORT_BYTES + 100000
-  )
-    return NextResponse.json({ error: t("importTooLarge") }, { status: 413 });
   try {
-    const form = await request.formData();
+    const incoming = await readBoundedRequestBytes(
+      request,
+      DATABASE_IMPORT_REQUEST_MAX_BYTES,
+    );
+    if (!incoming.ok)
+      return NextResponse.json({ error: t("importTooLarge") }, { status: 413 });
+    const contentType = request.headers.get("content-type");
+    const form = await new Request(request.url, {
+      method: "POST",
+      headers: contentType ? { "content-type": contentType } : undefined,
+      body: incoming.body.buffer,
+    }).formData();
     const file = form.get("file");
     if (!(file instanceof File) || file.size > MAX_IMPORT_BYTES)
       throw new Error("importTooLarge");
@@ -90,9 +98,11 @@ export async function POST(
         status:
           key === "importConflict"
             ? 409
-            : key === "importUnavailable"
-              ? 503
-              : 400,
+            : key === "importTooLarge"
+              ? 413
+              : key === "importUnavailable"
+                ? 503
+                : 400,
       },
     );
   }

@@ -1,13 +1,7 @@
 /**
- * THE LOCAL DESTINATION INVARIANT (MIN-492) — a pure module shared by launch,
- * persistence, and lease issuance.
- *
- * The signed-in user chooses local execution when creating the run. That choice
- * is frozen on the run; a later mention, routine tick, PR update, or continuation
- * may add context but cannot select a developer machine by itself. Authentication,
- * project membership, the device-bound lease, process isolation, and explicit
- * resource ceilings remain the enforcement boundaries. Trigger and anchor labels
- * are not capability profiles and therefore do not revoke the chosen destination.
+ * Local execution admission shared by launch, persistence, and lease issuance.
+ * Only an authenticated person reviewing the exact context may select a developer
+ * machine; unattended or third-party-controlled contexts fail closed.
  */
 
 /** Where the trigger came from, as `agent_runs.triggered_by` records it. */
@@ -27,20 +21,31 @@ export interface LocalRunContext {
   localIssueContextConfirmed?: boolean | null;
 }
 
-/** Legacy refusal vocabulary retained for persisted/API compatibility. */
 export type LocalRunScopeRefusal =
-  "routine" | "chain" | "trigger" | "issue_confirmation";
+  | "pull_request"
+  | "routine"
+  | "chain"
+  | "trigger"
+  | "issue_confirmation";
 
 export type LocalRunScope =
   { ok: true } | { ok: false; reason: LocalRunScopeRefusal };
 
 /**
- * Every authenticated run source may use the local OpenCode harness. The
- * trigger, anchor and destination are context, not capability gates; process
- * isolation and project access remain enforcement boundaries outside this
- * predicate.
+ * Admit a closed list of user-controlled sources. A future trigger is denied
+ * until this predicate is deliberately extended. Issue text needs an explicit
+ * per-run acknowledgement because it may contain third-party content.
  */
-export function localRunScope(_ctx: LocalRunContext): LocalRunScope {
+export function localRunScope(ctx: LocalRunContext): LocalRunScope {
+  if (ctx.pullRequestId) return { ok: false, reason: "pull_request" };
+  if (ctx.routineId) return { ok: false, reason: "routine" };
+  if (ctx.chainId) return { ok: false, reason: "chain" };
+  if (ctx.triggeredBy !== "button" && ctx.triggeredBy !== "chat") {
+    return { ok: false, reason: "trigger" };
+  }
+  if (ctx.issueId && ctx.localIssueContextConfirmed !== true) {
+    return { ok: false, reason: "issue_confirmation" };
+  }
   return { ok: true };
 }
 

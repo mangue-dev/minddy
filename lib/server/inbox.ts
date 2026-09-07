@@ -66,17 +66,61 @@ export async function readInboxNotifications({
   );
   if (readable.length === 0) return { notifications: [], error: null };
 
+  const projectIds = [
+    ...new Set(readable.map((n) => n.project_id).filter(Boolean)),
+  ] as string[];
+  const commentIds = [
+    ...new Set(readable.map((n) => n.comment_id).filter(Boolean)),
+  ] as string[];
+  const { data: comments } = commentIds.length
+    ? await service
+        .from("comments")
+        .select(
+          "id, issue_id, objective_id, feedback_post_id, body, via_assistant, via_mcp, api_key_id",
+        )
+        .in("id", commentIds)
+    : {
+        data: [] as {
+          id: string;
+          issue_id: string | null;
+          objective_id: string | null;
+          feedback_post_id: string | null;
+          body: string;
+          via_assistant: boolean;
+          via_mcp: boolean;
+          api_key_id: string | null;
+        }[],
+      };
+
+  // A comment has no project_id of its own. Resolve its immutable parent in the
+  // same bounded batch as direct notification targets, then require that parent
+  // to match the notification project before exposing the excerpt.
   const issueIds = [
-    ...new Set(readable.map((n) => n.issue_id).filter(Boolean)),
+    ...new Set(
+      [
+        ...readable.map((n) => n.issue_id),
+        ...(comments ?? []).map((comment) => comment.issue_id),
+      ].filter(Boolean),
+    ),
   ] as string[];
   const conversationIds = [
     ...new Set(readable.map((n) => n.agent_conversation_id).filter(Boolean)),
   ] as string[];
   const objectiveIds = [
-    ...new Set(readable.map((n) => n.objective_id).filter(Boolean)),
+    ...new Set(
+      [
+        ...readable.map((n) => n.objective_id),
+        ...(comments ?? []).map((comment) => comment.objective_id),
+      ].filter(Boolean),
+    ),
   ] as string[];
   const feedbackPostIds = [
-    ...new Set(readable.map((n) => n.feedback_post_id).filter(Boolean)),
+    ...new Set(
+      [
+        ...readable.map((n) => n.feedback_post_id),
+        ...(comments ?? []).map((comment) => comment.feedback_post_id),
+      ].filter(Boolean),
+    ),
   ] as string[];
   const routineIds = [
     ...new Set(readable.map((n) => n.routine_id).filter(Boolean)),
@@ -86,15 +130,6 @@ export async function readInboxNotifications({
   ] as string[];
   const pageIds = [
     ...new Set(readable.map((n) => n.page_id).filter(Boolean)),
-  ] as string[];
-  const projectIds = [
-    ...new Set(readable.map((n) => n.project_id).filter(Boolean)),
-  ] as string[];
-  const actorIds = [
-    ...new Set(readable.map((n) => n.actor_id).filter(Boolean)),
-  ] as string[];
-  const commentIds = [
-    ...new Set(readable.map((n) => n.comment_id).filter(Boolean)),
   ] as string[];
 
   const [
@@ -106,74 +141,103 @@ export async function readInboxNotifications({
     { data: pullRequests },
     { data: pages },
     { data: projects },
-    actorsById,
-    actorSeeds,
-    { data: comments },
+    { data: projectLinks },
   ] = await Promise.all([
-    issueIds.length
+    issueIds.length && projectIds.length
       ? service
           .from("issues")
-          .select("id, number, title")
+          .select("id, project_id, number, title")
           .in("id", issueIds)
+          .in("project_id", projectIds)
           .is("deleted_at", null)
-      : Promise.resolve({
-          data: [] as { id: string; number: number; title: string }[],
-        }),
-    conversationIds.length
-      ? service
-          .from("agent_conversations")
-          .select("id, title")
-          .in("id", conversationIds)
-      : Promise.resolve({ data: [] as { id: string; title: string | null }[] }),
-    objectiveIds.length
-      ? service
-          .from("objectives")
-          .select("id, name")
-          .in("id", objectiveIds)
-          .is("deleted_at", null)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    feedbackPostIds.length
-      ? service
-          .from("feedback_posts")
-          .select("id, title")
-          .in("id", feedbackPostIds)
-          .is("deleted_at", null)
-      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    routineIds.length
-      ? service.from("agent_routines").select("id, title").in("id", routineIds)
-      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    pullRequestIds.length
-      ? service
-          .from("pull_requests")
-          .select("id, number, title")
-          .in("id", pullRequestIds)
-      : Promise.resolve({
-          data: [] as { id: string; number: number; title: string }[],
-        }),
-    pageIds.length
-      ? service
-          .from("pages")
-          .select("id, title")
-          .in("id", pageIds)
-          .is("deleted_at", null)
-      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    projectIds.length
-      ? service.from("projects").select("id, key").in("id", projectIds)
-      : Promise.resolve({ data: [] as { id: string; key: string }[] }),
-    fetchAuthUsersById(service, actorIds),
-    fetchAvatarSeeds(service, actorIds),
-    commentIds.length
-      ? service
-          .from("comments")
-          .select("id, body, via_assistant, via_mcp, api_key_id")
-          .in("id", commentIds)
       : Promise.resolve({
           data: [] as {
             id: string;
-            body: string;
-            via_assistant: boolean;
-            via_mcp: boolean;
-            api_key_id: string | null;
+            project_id: string;
+            number: number;
+            title: string;
+          }[],
+        }),
+    conversationIds.length && projectIds.length
+      ? service
+          .from("agent_conversations")
+          .select("id, project_id, title")
+          .in("id", conversationIds)
+          .in("project_id", projectIds)
+      : Promise.resolve({
+          data: [] as { id: string; project_id: string; title: string | null }[],
+        }),
+    objectiveIds.length && projectIds.length
+      ? service
+          .from("objectives")
+          .select("id, project_id, name")
+          .in("id", objectiveIds)
+          .in("project_id", projectIds)
+          .is("deleted_at", null)
+      : Promise.resolve({
+          data: [] as { id: string; project_id: string; name: string }[],
+        }),
+    feedbackPostIds.length && projectIds.length
+      ? service
+          .from("feedback_posts")
+          .select("id, project_id, title")
+          .in("id", feedbackPostIds)
+          .in("project_id", projectIds)
+          .is("deleted_at", null)
+      : Promise.resolve({
+          data: [] as { id: string; project_id: string; title: string }[],
+        }),
+    routineIds.length && projectIds.length
+      ? service
+          .from("agent_routines")
+          .select("id, project_id, title")
+          .in("id", routineIds)
+          .in("project_id", projectIds)
+      : Promise.resolve({
+          data: [] as { id: string; project_id: string; title: string }[],
+        }),
+    pullRequestIds.length
+      ? service
+          .from("pull_requests")
+          .select("id, provider, repo_full_name, number, title")
+          .in("id", pullRequestIds)
+      : Promise.resolve({
+          data: [] as {
+            id: string;
+            provider: string;
+            repo_full_name: string;
+            number: number;
+            title: string;
+          }[],
+        }),
+    pageIds.length && projectIds.length
+      ? service
+          .from("pages")
+          .select("id, project_id, title")
+          .in("id", pageIds)
+          .in("project_id", projectIds)
+          .is("deleted_at", null)
+      : Promise.resolve({
+          data: [] as { id: string; project_id: string; title: string }[],
+        }),
+    projectIds.length
+      ? service
+          .from("projects")
+          .select("id, key, owner_id")
+          .in("id", projectIds)
+      : Promise.resolve({
+          data: [] as { id: string; key: string; owner_id: string }[],
+        }),
+    projectIds.length
+      ? service
+          .from("project_git_links")
+          .select("project_id, provider, repo_full_name")
+          .in("project_id", projectIds)
+      : Promise.resolve({
+          data: [] as {
+            project_id: string;
+            provider: string;
+            repo_full_name: string;
           }[],
         }),
   ]);
@@ -196,48 +260,177 @@ export async function readInboxNotifications({
   const projectMap = new Map((projects ?? []).map((item) => [item.id, item]));
   const commentMap = new Map((comments ?? []).map((item) => [item.id, item]));
 
-  const keyActors = await resolveApiKeyActors([
-    ...readable.map((n) => n.api_key_id as string | null),
-    ...(comments ?? []).map((comment) => comment.api_key_id),
+  const inProject = <T extends { project_id: string }>(
+    item: T | undefined,
+    projectId: unknown,
+  ): item is T => !!item && item.project_id === projectId;
+  const issueFor = (n: (typeof readable)[number]) => {
+    const item = n.issue_id ? issueMap.get(n.issue_id) : undefined;
+    return inProject(item, n.project_id) ? item : undefined;
+  };
+  const conversationFor = (n: (typeof readable)[number]) => {
+    const item = n.agent_conversation_id
+      ? conversationMap.get(n.agent_conversation_id)
+      : undefined;
+    return inProject(item, n.project_id) ? item : undefined;
+  };
+  const objectiveFor = (n: (typeof readable)[number]) => {
+    const item = n.objective_id ? objectiveMap.get(n.objective_id) : undefined;
+    return inProject(item, n.project_id) ? item : undefined;
+  };
+  const feedbackFor = (n: (typeof readable)[number]) => {
+    const item = n.feedback_post_id
+      ? feedbackMap.get(n.feedback_post_id)
+      : undefined;
+    return inProject(item, n.project_id) ? item : undefined;
+  };
+  const routineFor = (n: (typeof readable)[number]) => {
+    const item = n.routine_id ? routineMap.get(n.routine_id) : undefined;
+    return inProject(item, n.project_id) ? item : undefined;
+  };
+  const pageFor = (n: (typeof readable)[number]) => {
+    const item = n.page_id ? pageMap.get(n.page_id) : undefined;
+    return inProject(item, n.project_id) ? item : undefined;
+  };
+  const commentFor = (n: (typeof readable)[number]) => {
+    const item = n.comment_id ? commentMap.get(n.comment_id) : undefined;
+    if (!item) return undefined;
+    const parent = item.issue_id
+      ? issueMap.get(item.issue_id)
+      : item.objective_id
+        ? objectiveMap.get(item.objective_id)
+        : item.feedback_post_id
+          ? feedbackMap.get(item.feedback_post_id)
+          : undefined;
+    return inProject(parent, n.project_id) ? item : undefined;
+  };
+  const repoProjects = new Set(
+    (projectLinks ?? []).map(
+      (link) => `${link.project_id}\u0000${link.provider}\u0000${link.repo_full_name}`,
+    ),
+  );
+  const pullRequestFor = (n: (typeof readable)[number]) => {
+    const item = n.pull_request_id
+      ? pullRequestMap.get(n.pull_request_id)
+      : undefined;
+    if (!item || typeof n.project_id !== "string") return undefined;
+    return repoProjects.has(
+      `${n.project_id}\u0000${item.provider}\u0000${item.repo_full_name}`,
+    )
+      ? item
+      : undefined;
+  };
+
+  // Null data denotes a failed hydration and preserves the historical row. An
+  // empty or cross-project result is authoritative and removes the confused
+  // target from the response.
+  const targetAlive = (n: (typeof readable)[number]): boolean =>
+    (!n.issue_id || issues === null || !!issueFor(n)) &&
+    (!n.agent_conversation_id ||
+      agentConversations === null ||
+      !!conversationFor(n)) &&
+    (!n.objective_id || objectives === null || !!objectiveFor(n)) &&
+    (!n.feedback_post_id || feedbackPosts === null || !!feedbackFor(n)) &&
+    (!n.routine_id || routines === null || !!routineFor(n)) &&
+    (!n.pull_request_id ||
+      pullRequests === null ||
+      projectLinks === null ||
+      !!pullRequestFor(n)) &&
+    (!n.page_id || pages === null || !!pageFor(n)) &&
+    (!n.comment_id || comments === null || !!commentFor(n));
+
+  const scopedNotifications = readable.filter(targetAlive);
+  const candidateActorIds = [
+    ...new Set(scopedNotifications.map((n) => n.actor_id).filter(Boolean)),
+  ] as string[];
+  const candidateKeyIds = [
+    ...new Set(
+      [
+        ...scopedNotifications.map((n) => n.api_key_id),
+        ...scopedNotifications.map((n) => commentFor(n)?.api_key_id),
+      ].filter(Boolean),
+    ),
+  ] as string[];
+  const { data: keyOwners } = candidateKeyIds.length
+    ? await service
+        .from("api_keys")
+        .select("id, user_id")
+        .in("id", candidateKeyIds)
+    : { data: [] as { id: string; user_id: string }[] };
+  const keyOwnerMap = new Map(
+    (keyOwners ?? []).map((key) => [key.id as string, key.user_id as string]),
+  );
+  const attributionUserIds = [
+    ...new Set([...candidateActorIds, ...keyOwnerMap.values()]),
+  ];
+  const { data: projectMembers } =
+    projectIds.length && attributionUserIds.length
+      ? await service
+          .from("project_members")
+          .select("project_id, user_id")
+          .in("project_id", projectIds)
+          .in("user_id", attributionUserIds)
+      : { data: [] as { project_id: string; user_id: string }[] };
+  const projectMemberSet = new Set(
+    (projectMembers ?? []).map(
+      (member) => `${member.project_id}\u0000${member.user_id}`,
+    ),
+  );
+  const userBelongsToProject = (
+    userId: string | null | undefined,
+    projectId: unknown,
+  ): userId is string => {
+    if (!userId || typeof projectId !== "string") return false;
+    const project = projectMap.get(projectId);
+    return (
+      project?.owner_id === userId ||
+      projectMemberSet.has(`${projectId}\u0000${userId}`)
+    );
+  };
+  const actorAllowedFor = (n: (typeof scopedNotifications)[number]) =>
+    userBelongsToProject(n.actor_id as string | null, n.project_id);
+  const keyIdFor = (n: (typeof scopedNotifications)[number]) =>
+    (commentFor(n)?.api_key_id ?? n.api_key_id) as string | null;
+  const keyAllowedFor = (n: (typeof scopedNotifications)[number]) => {
+    const keyId = keyIdFor(n);
+    return keyId
+      ? userBelongsToProject(keyOwnerMap.get(keyId), n.project_id)
+      : false;
+  };
+  const actorIds = [
+    ...new Set(
+      scopedNotifications
+        .filter(actorAllowedFor)
+        .map((n) => n.actor_id as string),
+    ),
+  ];
+  const [actorsById, actorSeeds] = await Promise.all([
+    fetchAuthUsersById(service, actorIds),
+    fetchAvatarSeeds(service, actorIds),
   ]);
 
-  // Soft-deleted targets stay in the database, but their inbox rows remain
-  // hidden until the target is restored. A failed hydration does not count as a
-  // deletion: null data leaves the row visible instead of emptying the inbox.
-  const targetAlive = (n: (typeof readable)[number]): boolean =>
-    (!n.issue_id || !issues || issueMap.has(n.issue_id)) &&
-    (!n.objective_id || !objectives || objectiveMap.has(n.objective_id)) &&
-    (!n.feedback_post_id ||
-      !feedbackPosts ||
-      feedbackMap.has(n.feedback_post_id)) &&
-    (!n.routine_id || !routines || routineMap.has(n.routine_id)) &&
-    (!n.pull_request_id ||
-      !pullRequests ||
-      pullRequestMap.has(n.pull_request_id)) &&
-    (!n.page_id || !pages || pageMap.has(n.page_id));
+  const keyActors = await resolveApiKeyActors(
+    scopedNotifications.filter(keyAllowedFor).map(keyIdFor),
+  );
 
-  const notifications: MyNotification[] = readable
-    .filter(targetAlive)
+  const notifications: MyNotification[] = scopedNotifications
     .map((n) => {
-      const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
-      const objective = n.objective_id
-        ? objectiveMap.get(n.objective_id)
-        : undefined;
-      const feedback = n.feedback_post_id
-        ? feedbackMap.get(n.feedback_post_id)
-        : undefined;
-      const routine = n.routine_id ? routineMap.get(n.routine_id) : undefined;
-      const pullRequest = n.pull_request_id
-        ? pullRequestMap.get(n.pull_request_id)
-        : undefined;
-      const page = n.page_id ? pageMap.get(n.page_id) : undefined;
+      const issue = issueFor(n);
+      const objective = objectiveFor(n);
+      const feedback = feedbackFor(n);
+      const routine = routineFor(n);
+      const pullRequest = pullRequestFor(n);
+      const page = pageFor(n);
       const project = n.project_id ? projectMap.get(n.project_id) : undefined;
-      const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
-      const comment = n.comment_id ? commentMap.get(n.comment_id) : undefined;
+      const actor =
+        n.actor_id && actorAllowedFor(n)
+          ? actorsById.get(n.actor_id)
+          : undefined;
+      const comment = commentFor(n);
       const fromNumo = Boolean(n.via_assistant || comment?.via_assistant);
       const viaMcp = !fromNumo && Boolean(n.via_mcp || comment?.via_mcp);
-      const keyActor = viaMcp
-        ? keyActors.get((comment?.api_key_id ?? n.api_key_id) as string)
+      const keyActor = viaMcp && keyAllowedFor(n)
+        ? keyActors.get(keyIdFor(n) as string)
         : undefined;
 
       return {
@@ -247,9 +440,7 @@ export async function readInboxNotifications({
         created_at: n.created_at,
         issue_id: n.issue_id,
         agent_conversation_id: n.agent_conversation_id ?? null,
-        agent_conversation_title: n.agent_conversation_id
-          ? (conversationMap.get(n.agent_conversation_id)?.title ?? null)
-          : null,
+        agent_conversation_title: conversationFor(n)?.title ?? null,
         issue_number: issue?.number ?? null,
         issue_title: issue?.title ?? null,
         objective_id: n.objective_id ?? null,
@@ -272,7 +463,7 @@ export async function readInboxNotifications({
             ? displayName(toNamed(actor))
             : null,
         actor_avatar_seed:
-          !fromNumo && !viaMcp && n.actor_id
+          !fromNumo && !viaMcp && actor
             ? (actorSeeds.get(n.actor_id as string) ?? null)
             : null,
         from_numo: fromNumo,

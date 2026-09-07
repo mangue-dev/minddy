@@ -12,7 +12,7 @@ import {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const PREVIEW_CSP = [
+export const PREVIEW_CSP = [
   "sandbox",
   "default-src 'none'",
   "img-src data: blob:",

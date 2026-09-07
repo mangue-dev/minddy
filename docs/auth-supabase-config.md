@@ -124,9 +124,11 @@ reset.
   depending on the version of GoTrue, at the end of a reset link, where it would be
   a second email for the same proof. To deal with the word change of
   happens *from settings*, not here.
-- `sessions_timebox` / `sessions_inactivity_timeout` = `0`: no expiration
-  forced sessions. Product-side slippage is addressed elsewhere
-  ([lib/session-cookies.ts](../lib/session-cookies.ts)).
+- `sessions_timebox` = 30 days and `sessions_inactivity_timeout` = 7 days:
+  refresh-backed sessions have an absolute lifetime and an inactivity limit.
+  Next.js APIs, PostgREST, GraphQL, Storage, and new Realtime joins check the
+  live session immediately. A private Realtime channel that was already joined
+  can remain connected until its access token expires, for at most one hour.
 - `security_captcha_enabled` = `false`: see above.
 - `disable_signup` = `false`, `mailer_autoconfirm` = `false`: registration is
   open and the address must be confirmed. That's what we want.

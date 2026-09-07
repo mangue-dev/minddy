@@ -39,7 +39,7 @@ export default async function AdminLayout({
     app_metadata: claims.app_metadata ?? {},
   } as Pick<User, "id" | "email" | "app_metadata">;
 
-  if (!(await isAdminUser(user))) {
+  if (!(await isAdminUser(user, claims as unknown as Record<string, unknown>))) {
     redirect("/home");
   }
 

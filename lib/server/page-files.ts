@@ -86,7 +86,7 @@ export async function createPageFile(
   // The account quota (MIN-348). This writing goes through the client of
   // SERVICE, which bypasses the policy where the ceiling is placed: without this relay,
   // the page files would be precisely the door that ignores it.
-  if (!(await projectStorageAllowed(service, args.projectId))) {
+  if (!(await projectStorageAllowed(service, args.projectId, size))) {
     throw new PageFileError("storage quota exceeded", 507);
   }
 

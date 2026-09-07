@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const updateUser = vi.fn();
+const liveMfaAbortSignal = vi.fn();
 let claims: Record<string, unknown> = {};
 
 vi.mock("@supabase/ssr", () => ({
@@ -10,6 +11,15 @@ vi.mock("@supabase/ssr", () => ({
       getClaims: async () => ({ data: { claims }, error: null }),
       updateUser: (...args: unknown[]) => updateUser(...args),
     },
+  }),
+}));
+
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: () => ({
+    rpc: (name: string) => ({
+      abortSignal: (signal: AbortSignal) =>
+        liveMfaAbortSignal(name, signal),
+    }),
   }),
 }));
 
@@ -34,12 +44,24 @@ function call(body: unknown): Promise<Response> {
 beforeEach(() => {
   claims = {
     sub: "user-1",
+    session_id: "22222222-2222-4222-8222-222222222222",
     email: "jane@example.com",
     aal: "aal1",
     app_metadata: { mfa_enabled: true },
   };
   updateUser.mockReset();
   updateUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+  liveMfaAbortSignal.mockReset();
+  liveMfaAbortSignal.mockImplementation(async () => ({
+    data: {
+      sessionActive: true,
+      mfaAllowed:
+        claims.aal === "aal2" ||
+        (claims.aal === "aal1" &&
+          (claims.app_metadata as { mfa_enabled?: boolean }).mfa_enabled !== true),
+    },
+    error: null,
+  }));
 });
 
 describe("POST /api/account/password/reset", () => {

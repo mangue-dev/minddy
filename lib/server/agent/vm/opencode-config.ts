@@ -230,6 +230,9 @@ interface OpencodeModelDef {
 /** Native editing tools exposed by OpenCode according to the selected model. */
 const WRITE_BUILTINS = ["edit", "write", "apply_patch"] as const;
 
+/** Native capabilities that may not inherit authority from a developer host. */
+const LOCAL_DISABLED_BUILTINS = ["bash", "webfetch"] as const;
+
 /** What a sub-agent `explore` has the right to do, and nothing else. */
 const EXPLORE_TOOLS = ["read", "grep", "glob"] as const;
 
@@ -362,25 +365,38 @@ function reasoningOptions(job: VmJob): Record<string, unknown> | null {
 }
 
 /**
- * OpenCode permissions are auto-granted. Cap- and audit-bearing operations stay
- * observable so the supervisor can account for them before granting the request;
- * every other native capability is granted directly by OpenCode.
+ * Route every security-sensitive native capability through an explicit policy.
+ * Local unknown permissions are also sent to the supervisor so a new OpenCode
+ * capability fails closed until it has been reviewed.
  */
-function permissions(_job: VmJob): Record<string, PermissionRule> {
+function permissions(job: VmJob): Record<string, PermissionRule> {
+  const local = isLocalJob(job);
+  const write: PermissionAction = job.writesToRepo ? "ask" : "deny";
   return {
-    // OpenCode applies the last matching rule. Keep audited capabilities after
-    // the default so the supervisor still receives their permission requests.
-    "*": "allow",
-    edit: "ask",
+    // OpenCode applies the last matching rule, so the fallback must come first.
+    "*": local ? "ask" : "allow",
+    read: local ? "ask" : "allow",
+    glob: "allow",
+    grep: "allow",
+    skill: "allow",
+    edit: write,
     task: "ask",
-    bash: "ask",
-    external_directory: "ask",
+    bash: local ? "deny" : "ask",
+    webfetch: local ? "deny" : "allow",
+    external_directory: "deny",
   };
 }
 
 /** The global map of integrated people — permission, not withdrawal (§4). */
-function toolMap(_job: VmJob): Record<string, boolean> {
-  return { skill: true };
+function toolMap(job: VmJob): Record<string, boolean> {
+  const tools: Record<string, boolean> = { skill: true };
+  if (isLocalJob(job)) {
+    for (const name of LOCAL_DISABLED_BUILTINS) tools[name] = false;
+  }
+  if (!job.writesToRepo) {
+    for (const name of WRITE_BUILTINS) tools[name] = false;
+  }
+  return tools;
 }
 
 /**
@@ -391,8 +407,10 @@ function toolMap(_job: VmJob): Record<string, boolean> {
  * rocker is measured identical (docs/harness-opencode.md §2.3), so the
  * redeclaring here would just create a second place where it can diverge.
  */
-function primaryTools(_job: VmJob): Record<string, boolean> {
-  return { skill: true };
+function primaryTools(job: VmJob): Record<string, boolean> {
+  const tools = toolMap(job);
+  tools.task = job.subagents.maxParallel > 0;
+  return tools;
 }
 
 /**
@@ -520,13 +538,17 @@ function subagentTools(
   for (const name of EXPLORE_TOOLS) tools[name] = true;
   if (mode === "explore") return tools;
 
-  tools.bash = true;
-  tools.webfetch = true;
+  if (!isLocalJob(job)) {
+    tools.bash = true;
+    tools.webfetch = true;
+  }
   // The three writing interfaces are open together: it is opencode which
   // slice according to the model OF THE GIRL (`apply_patch` on the `gpt-*`, the tools
   // per chain otherwise), and it decides before this game applies. In
   // designating one here would freeze it on the PARENT model.
-  for (const name of WRITE_BUILTINS) tools[name] = true;
+  if (job.writesToRepo) {
+    for (const name of WRITE_BUILTINS) tools[name] = true;
+  }
   if (job.webSearch) tools.web_search = true;
   return tools;
 }
@@ -543,7 +565,12 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
       description: subagentDescription(entry, job),
       tools: subagentTools(job, entry.mode),
       permission: explore
-        ? { "*": "deny", read: "allow", grep: "allow", glob: "allow" }
+        ? {
+            "*": "deny",
+            read: isLocalJob(job) ? "ask" : "allow",
+            grep: "allow",
+            glob: "allow",
+          }
         : permissions(job),
       ...(entry.modelId ? { model: modelRef(entry.modelId) } : {}),
     };
