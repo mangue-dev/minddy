@@ -293,6 +293,7 @@ function ThreadPanel({
           onDelete={onDelete}
           onDeleteAttachment={noAttachments}
           deletesReplies={replies.length > 0}
+          liveTable="page_comments"
         />
       </div>
       {replies.map((reply) => (
@@ -306,6 +307,7 @@ function ThreadPanel({
             onDelete={onDelete}
             onDeleteAttachment={noAttachments}
             deletesReplies={false}
+            liveTable="page_comments"
             isReply
           />
         </div>

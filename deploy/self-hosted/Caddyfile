@@ -4,5 +4,14 @@
 
 {$MINDDY_SITE_ADDRESS} {
   encode zstd gzip
+  header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  @database_import path_regexp database_import ^/api/projects/[^/]+/pages/[^/]+/import/?$
+  request_body @database_import {
+    max_size 21MiB
+  }
+  @database_import_plan path_regexp database_import_plan ^/api/projects/[^/]+/pages/import-plan/?$
+  request_body @database_import_plan {
+    max_size 2MiB
+  }
   reverse_proxy minddy:3000
 }

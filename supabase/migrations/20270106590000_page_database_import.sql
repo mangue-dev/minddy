@@ -21,8 +21,7 @@ DECLARE
   root jsonb;
   previous public.page_database_imports;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.projects WHERE id = p_project AND owner_id = p_actor)
-     AND NOT EXISTS (SELECT 1 FROM public.project_members WHERE project_id = p_project AND user_id = p_actor) THEN
+  IF NOT public.lock_live_project_actor_access(p_project, p_actor) THEN
     RAISE EXCEPTION 'Project access required' USING ERRCODE = '42501';
   END IF;
   SELECT * INTO target FROM public.pages WHERE id = p_page AND project_id = p_project AND deleted_at IS NULL FOR UPDATE;

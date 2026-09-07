@@ -5,6 +5,11 @@ import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 import { parsePrLiveParts, prLiveQueryKeys, pullRequestTopic } from "./pr-live";
+import {
+  onRealtimeRekey,
+  resolveRealtimeTopic,
+  signalRealtimeRekey,
+} from "./realtime-topic";
 
 /**
  * The live view of ONE pull request, from the point of view of the screen viewing it.
@@ -45,6 +50,8 @@ interface Entry {
   channel: RealtimeChannel | null;
   listeners: Set<Listener>;
   closed: boolean;
+  connectVersion: number;
+  stopRekey: () => void;
 }
 
 /** ONE channel per PR, regardless of the number of views mounted on it. */
@@ -53,24 +60,51 @@ const channels = new Map<string, Entry>();
 function subscribePr(prId: string, listener: Listener): () => void {
   let entry = channels.get(prId);
   if (!entry) {
-    const fresh: Entry = { channel: null, listeners: new Set(), closed: false };
+    const fresh: Entry = {
+      channel: null,
+      listeners: new Set(),
+      closed: false,
+      connectVersion: 0,
+      stopRekey: () => {},
+    };
     entry = fresh;
     channels.set(prId, fresh);
     const supabase = getSupabase();
-    // The token BEFORE the join, otherwise the private channel refuses the subscription.
-    void supabase.realtime.setAuth().then(() => {
-      if (fresh.closed) return;
-      const channel = supabase.channel(pullRequestTopic(prId), {
-        config: { private: true },
-      });
-      channel.on("broadcast", { event: "changed" }, ({ payload }) => {
-        const parts = parsePrLiveParts((payload as { parts?: unknown } | null)?.parts);
-        if (parts.length === 0) return;
-        for (const l of fresh.listeners) l.onChanged(parts);
-      });
-      channel.subscribe();
-      fresh.channel = channel;
-    });
+    const connect = () => {
+      const version = ++fresh.connectVersion;
+      if (fresh.channel) {
+        const previous = fresh.channel;
+        fresh.channel = null;
+        void supabase.removeChannel(previous);
+      }
+      void (async () => {
+        try {
+          await supabase.realtime.setAuth();
+          const topic = await resolveRealtimeTopic(
+            supabase,
+            pullRequestTopic(prId),
+          );
+          if (fresh.closed || version !== fresh.connectVersion) return;
+          const channel = supabase.channel(topic, {
+            config: { private: true },
+          });
+          channel.on("broadcast", { event: "changed" }, ({ payload }) => {
+            const parts = parsePrLiveParts(
+              (payload as { parts?: unknown } | null)?.parts,
+            );
+            if (parts.length === 0) return;
+            for (const l of fresh.listeners) l.onChanged(parts);
+          });
+          channel.on("broadcast", { event: "rekey" }, signalRealtimeRekey);
+          channel.subscribe();
+          fresh.channel = channel;
+        } catch {
+          // Forge-backed queries refresh on focus and remain authoritative.
+        }
+      })();
+    };
+    fresh.stopRekey = onRealtimeRekey(connect);
+    connect();
   }
   entry.listeners.add(listener);
 
@@ -79,6 +113,8 @@ function subscribePr(prId: string, listener: Listener): () => void {
     opened.listeners.delete(listener);
     if (opened.listeners.size > 0) return;
     opened.closed = true;
+    opened.connectVersion += 1;
+    opened.stopRekey();
     channels.delete(prId);
     if (opened.channel) void getSupabase().removeChannel(opened.channel);
   };

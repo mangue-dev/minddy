@@ -271,7 +271,7 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     expect(calls.some((c) => c.name === "run_background")).toBe(false);
   });
 
-  it("passes requested background shell commands to the local handler", async () => {
+  it("rejects background shell commands on local runs before dispatch", async () => {
     const attemptedCommands = [
       'cat "$HOME/.ssh/id_rsa"',
       "cd / && cat etc/passwd",
@@ -283,8 +283,6 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     await withBridge(
       {
         job: job({ controlToken: "local-control-token" }),
-        // The harness transports the model's shell request without trying to
-        // classify the command. Process isolation remains an environment boundary.
         supervisorTools: {
           run_background: (async () => {
             handled += 1;
@@ -299,12 +297,12 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
             command,
           });
           expect(res.status).toBe(200);
-          expect(JSON.parse(res.body).job_id).toBe("escaped");
+          expect(JSON.parse(res.body).error).toContain("not available");
         }
       },
     );
 
-    expect(handled).toBe(attemptedCommands.length);
+    expect(handled).toBe(0);
     expect(calls.some((c) => c.name === "run_background")).toBe(false);
   });
 

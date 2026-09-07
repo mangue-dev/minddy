@@ -3,21 +3,45 @@ import { describe, expect, it } from "vitest";
 import { localRunScope, rowMayRunLocally } from "./local-exec-scope";
 
 describe("local OpenCode admission", () => {
-  it("admits every anchor and trigger through the same harness", () => {
-    const inputs = [
-      { triggeredBy: "button" },
-      { triggeredBy: "chat", issueId: "issue-1" },
-      { triggeredBy: "mention", pullRequestId: "pr-1" },
-      { triggeredBy: "automation", chainId: "chain-1" },
-      { triggeredBy: "routine", routineId: "routine-1" },
-      { triggeredBy: "future-trigger" },
-    ];
-    for (const input of inputs)
-      expect(localRunScope(input)).toEqual({ ok: true });
+  it("admits direct button and chat launches", () => {
+    expect(localRunScope({ triggeredBy: "button" })).toEqual({ ok: true });
+    expect(localRunScope({ triggeredBy: "chat" })).toEqual({ ok: true });
   });
 
-  it("applies the same admission to persisted runs", () => {
-    expect(rowMayRunLocally({})).toEqual({ ok: true });
+  it("requires explicit confirmation for issue context", () => {
+    expect(
+      localRunScope({ triggeredBy: "button", issueId: "issue-1" }),
+    ).toEqual({ ok: false, reason: "issue_confirmation" });
+    expect(
+      localRunScope({
+        triggeredBy: "button",
+        issueId: "issue-1",
+        localIssueContextConfirmed: true,
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  it("rejects pull requests, routines, chains, mentions, and future triggers", () => {
+    expect(
+      localRunScope({ triggeredBy: "button", pullRequestId: "pr-1" }),
+    ).toEqual({ ok: false, reason: "pull_request" });
+    expect(
+      localRunScope({ triggeredBy: "button", routineId: "routine-1" }),
+    ).toEqual({ ok: false, reason: "routine" });
+    expect(
+      localRunScope({ triggeredBy: "button", chainId: "chain-1" }),
+    ).toEqual({ ok: false, reason: "chain" });
+    for (const triggeredBy of ["mention", "automation", "routine", "future-trigger", ""]) {
+      expect(localRunScope({ triggeredBy })).toEqual({
+        ok: false,
+        reason: "trigger",
+      });
+    }
+  });
+
+  it("applies the same closed policy to persisted rows", () => {
+    expect(rowMayRunLocally({})).toEqual({ ok: false, reason: "trigger" });
+    expect(rowMayRunLocally({ triggered_by: "button" })).toEqual({ ok: true });
     expect(
       rowMayRunLocally({
         triggered_by: "automation",
@@ -26,6 +50,6 @@ describe("local OpenCode admission", () => {
         pull_request_id: "pr-1",
         local_issue_context_confirmed: false,
       }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: false, reason: "pull_request" });
   });
 });

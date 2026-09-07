@@ -13,9 +13,16 @@ import {
 
 const MAX_LOCAL_DISCOVERY_DIRECTORIES = 300;
 
-function isDirectoryWithoutFollowingLinks(directory: string): boolean {
+function isDirectoryWithoutFollowingLinks(repoPath: string, relativeDirectory: string): boolean {
   try {
-    return lstatSync(directory).isDirectory();
+    // lstat on the final directory alone still follows symlinks in its ancestors.
+    let directory = repoPath;
+    for (const segment of relativeDirectory.split("/")) {
+      if (!segment || segment === "." || segment === "..") return false;
+      directory = path.join(directory, segment);
+      if (!lstatSync(directory).isDirectory()) return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -24,7 +31,7 @@ function isDirectoryWithoutFollowingLinks(directory: string): boolean {
 /** Find skill entrypoints without following symlinks outside the attached repository. */
 export function localRepositorySkillPaths(repoPath: string): string[] {
   const queue: string[] = REPOSITORY_SKILL_ROOTS.filter((root) =>
-    isDirectoryWithoutFollowingLinks(path.join(repoPath, root)),
+    isDirectoryWithoutFollowingLinks(repoPath, root),
   );
   const skills: string[] = [];
   let visited = 0;
@@ -32,6 +39,7 @@ export function localRepositorySkillPaths(repoPath: string): string[] {
   while (queue.length > 0 && visited < MAX_LOCAL_DISCOVERY_DIRECTORIES) {
     const relativeDirectory = queue.shift()!;
     visited += 1;
+    if (!isDirectoryWithoutFollowingLinks(repoPath, relativeDirectory)) continue;
     let entries;
     try {
       entries = readdirSync(path.join(repoPath, relativeDirectory), {
@@ -53,6 +61,7 @@ export function localRepositorySkillPaths(repoPath: string): string[] {
 }
 
 function readLocalSkill(repoPath: string, relativePath: string): string | null {
+  if (!isDirectoryWithoutFollowingLinks(repoPath, path.posix.dirname(relativePath))) return null;
   const absolutePath = path.join(repoPath, ...relativePath.split("/"));
   try {
     const stat = lstatSync(absolutePath);

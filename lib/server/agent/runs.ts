@@ -680,7 +680,14 @@ export async function insertLatestRunMessage(
   content: string,
   mentions: AssistantMention[] | null,
   messageId: string,
-): Promise<"inserted" | "already" | "superseded"> {
+): Promise<
+  | "inserted"
+  | "already"
+  | "conflict"
+  | "forbidden"
+  | "superseded"
+  | "message_id_conflict"
+> {
   const { data, error } = await getServiceClient().rpc(
     "insert_latest_agent_run_message",
     {
@@ -692,10 +699,69 @@ export async function insertLatestRunMessage(
     },
   );
   if (error) throw new Error(`agent_run_messages insert failed: ${error.message}`);
-  if (data === "inserted" || data === "already" || data === "superseded") {
+  if (
+    data === "inserted" ||
+    data === "already" ||
+    data === "conflict" ||
+    data === "forbidden" ||
+    data === "superseded" ||
+    data === "message_id_conflict"
+  ) {
     return data;
   }
   throw new Error(`agent_run_messages insert refused: ${String(data)}`);
+}
+
+export async function resumeLatestRunWithMessage(input: {
+  runId: string;
+  ownerId: string;
+  actorId: string;
+  messageId: string;
+  content: string;
+  mentions: AssistantMention[] | null;
+  notBefore: string;
+  usageSince: string | null;
+  budgetCap: number | null;
+  requestedBudget: number | null;
+}): Promise<
+  | "queued"
+  | "already"
+  | "no_budget"
+  | "conflict"
+  | "forbidden"
+  | "superseded"
+  | "message_id_conflict"
+> {
+  const { data, error } = await getServiceClient().rpc(
+    "resume_latest_agent_run_with_message",
+    {
+      p_run_id: input.runId,
+      p_owner_id: input.ownerId,
+      p_actor_id: input.actorId,
+      p_message_id: input.messageId,
+      p_content: stripUnstorable(input.content),
+      p_mentions: input.mentions?.length
+        ? stripUnstorable(input.mentions)
+        : null,
+      p_not_before: input.notBefore,
+      p_usage_since: input.usageSince,
+      p_budget_cap: input.budgetCap,
+      p_requested_budget: input.requestedBudget,
+    },
+  );
+  if (error) throw new Error(`agent run resume failed: ${error.message}`);
+  if (
+    data === "queued" ||
+    data === "already" ||
+    data === "no_budget" ||
+    data === "conflict" ||
+    data === "forbidden" ||
+    data === "superseded" ||
+    data === "message_id_conflict"
+  ) {
+    return data;
+  }
+  throw new Error(`agent run resume refused: ${String(data)}`);
 }
 
 export async function reserveRunInlineComment(

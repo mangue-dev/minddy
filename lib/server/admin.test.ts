@@ -1,28 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-344 — the gate admin believed an UNCONFIRMED email.
- *
- * `ADMIN_EMAILS` compares an address, and the JWT carries one — but no claim
- * says it was confirmed. Registering with the address of an admin (the case
- * which counts: an admin listed but not yet registered) therefore gave the highest privilege
- * of the product to those who have never opened the corresponding mailbox.
- *
- * What these tests pinpoint: the only authoritative source is
- * `auth.users.email_confirmed_at`, read in service key — never a claim, and
- * especially not `user_metadata.email_verified`, which the user writes himself.
- * And fail-closed: a failed reading does not create an admin.
+ * The admin boundary revalidates the signed session against live Auth state.
+ * This closes the access-token lifetime after role, allowlist, MFA, password,
+ * or session revocation and never trusts user-writable metadata.
  */
 
+const ADMIN = "11111111-1111-4111-8111-111111111111";
+const OTHER_USER = "22222222-2222-4222-8222-222222222222";
+const SESSION = "33333333-3333-4333-8333-333333333333";
 const getUserById = vi.fn();
+const rpc = vi.fn();
 
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ auth: { admin: { getUserById } } }),
+  getServiceClient: () => ({
+    auth: { admin: { getUserById } },
+    rpc,
+  }),
 }));
 
-const { isAdminUser, resetAdminConfirmationCache } = await import("./admin");
-
-const ADMIN = "11111111-1111-4111-8111-111111111111";
+const { isAdminUser } = await import("./admin");
 
 function account(overrides: Record<string, unknown> = {}) {
   return {
@@ -31,6 +28,8 @@ function account(overrides: Record<string, unknown> = {}) {
         id: ADMIN,
         email: "boss@minddy.app",
         email_confirmed_at: "2026-08-01T00:00:00.000Z",
+        app_metadata: { mfa_enabled: true },
+        factors: [{ id: "factor-1", status: "verified" }],
         ...overrides,
       },
     },
@@ -38,70 +37,164 @@ function account(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function claims(overrides: Record<string, unknown> = {}) {
+  return {
+    sub: ADMIN,
+    aal: "aal2",
+    session_id: SESSION,
+    amr: [{ method: "totp", timestamp: 1_788_739_200 }],
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   process.env.ADMIN_EMAILS = "boss@minddy.app, second@minddy.app";
   getUserById.mockReset();
+  rpc.mockReset();
   getUserById.mockResolvedValue(account());
-  resetAdminConfirmationCache();
+  rpc.mockResolvedValue({
+    data: { sessionActive: true, mfaAllowed: true },
+    error: null,
+  });
 });
 
 describe("isAdminUser", () => {
-  it("refuse une adresse d'admin dont le compte n'est pas confirmé", async () => {
-    getUserById.mockResolvedValue(account({ email_confirmed_at: null }));
-    const user = { id: ADMIN, email: "boss@minddy.app", app_metadata: {} };
-    await expect(isAdminUser(user)).resolves.toBe(false);
+  it("accepts a confirmed live allowlisted account with MFA and an active AAL2 session", async () => {
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(true);
+    expect(getUserById).toHaveBeenCalledWith(ADMIN);
+    expect(rpc).toHaveBeenCalledWith("auth_authorization_state", {
+      p_user: ADMIN,
+      p_session: SESSION,
+      p_aal: "aal2",
+      p_amr: [{ method: "totp", timestamp: 1_788_739_200 }],
+    });
   });
 
-  it("accepte l'adresse d'admin d'un compte confirmé, casse comprise", async () => {
-    const user = { id: ADMIN, email: "BOSS@Minddy.app", app_metadata: {} };
-    await expect(isAdminUser(user)).resolves.toBe(true);
-  });
-
-  it("ne croit pas un `email_verified` de user_metadata — il est écrit par l'utilisateur", async () => {
+  it("accepts the live admin role only with MFA and an active AAL2 session", async () => {
     getUserById.mockResolvedValue(
-      account({ email_confirmed_at: null, user_metadata: { email_verified: true } }),
+      account({
+        email: undefined,
+        email_confirmed_at: null,
+        app_metadata: { role: "admin", mfa_enabled: true },
+      }),
     );
-    const user = {
-      id: ADMIN,
-      email: "boss@minddy.app",
-      app_metadata: {},
-      user_metadata: { email_verified: true },
-    };
-    await expect(isAdminUser(user)).resolves.toBe(false);
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(true);
   });
 
-  it("compare l'allowlist à l'adresse RÉELLE du compte, pas à celle du jeton", async () => {
-    getUserById.mockResolvedValue(account({ email: "quelquun@ailleurs.com" }));
-    const user = { id: ADMIN, email: "boss@minddy.app", app_metadata: {} };
-    await expect(isAdminUser(user)).resolves.toBe(false);
+  it("rejects an allowlisted address whose live account is unconfirmed", async () => {
+    getUserById.mockResolvedValue(account({ email_confirmed_at: null }));
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
   });
 
-  it("ne consulte même pas GoTrue pour une adresse hors allowlist", async () => {
-    const user = { id: ADMIN, email: "curieux@ailleurs.com", app_metadata: {} };
-    await expect(isAdminUser(user)).resolves.toBe(false);
+  it("compares the allowlist with the live account address", async () => {
+    getUserById.mockResolvedValue(account({ email: "someone@example.test" }));
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+  });
+
+  it("rejects both admin sources when the live MFA flag is absent", async () => {
+    getUserById.mockResolvedValue(
+      account({ app_metadata: { role: "admin" } }),
+    );
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+
+    getUserById.mockResolvedValue(account({ app_metadata: {} }));
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+  });
+
+  it("rejects an admin whose live verified factor was removed", async () => {
+    getUserById.mockResolvedValue(account({ factors: [] }));
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+  });
+
+  it("rejects a currently banned admin account", async () => {
+    getUserById.mockResolvedValue(
+      account({ banned_until: "2999-01-01T00:00:00.000Z" }),
+    );
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+  });
+
+  it("rejects an old AAL1 token after MFA enrollment without privileged IO", async () => {
+    await expect(
+      isAdminUser({ id: ADMIN }, claims({ aal: "aal1" })),
+    ).resolves.toBe(false);
     expect(getUserById).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("garde le rôle app_metadata comme chemin sans IO", async () => {
-    const user = { id: ADMIN, email: undefined, app_metadata: { role: "admin" } };
-    await expect(isAdminUser(user)).resolves.toBe(true);
+  it("rejects a revoked session while its old AAL2 token is still signed", async () => {
+    rpc.mockResolvedValue({
+      data: { sessionActive: false, mfaAllowed: true },
+      error: null,
+    });
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+  });
+
+  it("rejects an old AAL2 AMR epoch after replacement-factor verification", async () => {
+    rpc.mockResolvedValue({
+      data: { sessionActive: true, mfaAllowed: false },
+      error: null,
+    });
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+  });
+
+  it("rejects mismatched subjects and missing or malformed session identifiers", async () => {
+    await expect(
+      isAdminUser({ id: ADMIN }, claims({ sub: OTHER_USER })),
+    ).resolves.toBe(false);
+    await expect(
+      isAdminUser({ id: ADMIN }, claims({ session_id: undefined })),
+    ).resolves.toBe(false);
+    await expect(
+      isAdminUser({ id: ADMIN }, claims({ session_id: "not-a-uuid" })),
+    ).resolves.toBe(false);
     expect(getUserById).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("fail-closed : une lecture en panne ne donne pas l'accès", async () => {
-    getUserById.mockRejectedValue(new Error("gotrue down"));
-    const user = { id: ADMIN, email: "boss@minddy.app", app_metadata: {} };
-    await expect(isAdminUser(user)).resolves.toBe(false);
+  it("rejects a live account identifier that differs from the signed subject", async () => {
+    getUserById.mockResolvedValue(account({ id: OTHER_USER }));
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
   });
 
-  it("ne met pas une panne en cache — le coup d'après retente", async () => {
-    getUserById.mockRejectedValueOnce(new Error("gotrue down"));
-    const user = { id: ADMIN, email: "boss@minddy.app", app_metadata: {} };
-    await expect(isAdminUser(user)).resolves.toBe(false);
-    await expect(isAdminUser(user)).resolves.toBe(true);
+  it("rechecks live role and MFA state on every request", async () => {
+    getUserById
+      .mockResolvedValueOnce(
+        account({
+          email: "not-allowlisted@example.test",
+          app_metadata: { role: "admin", mfa_enabled: true },
+        }),
+      )
+      .mockResolvedValueOnce(
+        account({
+          email: "not-allowlisted@example.test",
+          app_metadata: { role: "member", mfa_enabled: false },
+        }),
+      );
+
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(true);
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+    expect(getUserById).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 
-  it("refuse sans session", async () => {
-    await expect(isAdminUser(null)).resolves.toBe(false);
+  it("fails closed when either live lookup fails", async () => {
+    getUserById.mockRejectedValueOnce(new Error("Auth unavailable"));
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+
+    getUserById.mockResolvedValue(account());
+    rpc.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
+    await expect(isAdminUser({ id: ADMIN }, claims())).resolves.toBe(false);
+  });
+
+  it("rejects a missing user", async () => {
+    await expect(isAdminUser(null, claims())).resolves.toBe(false);
   });
 });

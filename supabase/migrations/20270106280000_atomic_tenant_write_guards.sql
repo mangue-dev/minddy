@@ -1,5 +1,6 @@
 -- Serialize tenant membership changes with service-role mutations that depend on
--- current membership. Project ownership changes already lock the projects row.
+-- current membership. Run after immediate foreign-key checks so referenced Auth
+-- rows are locked before the project row.
 CREATE OR REPLACE FUNCTION public.lock_project_membership_scope()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -13,7 +14,7 @@ BEGIN
   PERFORM 1
   FROM public.projects
   WHERE id = v_project_id
-  FOR UPDATE;
+  FOR NO KEY UPDATE;
 
   IF TG_OP = 'DELETE' THEN
     RETURN OLD;
@@ -25,9 +26,10 @@ $function$;
 REVOKE ALL ON FUNCTION public.lock_project_membership_scope()
   FROM PUBLIC, anon, authenticated, service_role;
 
-DROP TRIGGER IF EXISTS project_members_lock_project_scope ON public.project_members;
-CREATE TRIGGER project_members_lock_project_scope
-BEFORE INSERT OR UPDATE OR DELETE ON public.project_members
+DROP TRIGGER IF EXISTS project_members_authority_scope_lock
+  ON public.project_members;
+CREATE TRIGGER project_members_authority_scope_lock
+AFTER INSERT OR UPDATE OR DELETE ON public.project_members
 FOR EACH ROW EXECUTE FUNCTION public.lock_project_membership_scope();
 
 CREATE OR REPLACE FUNCTION public.guard_project_actor(

@@ -90,6 +90,17 @@ describe("GET /api/projects/[id]/pages/files/[fileId]", () => {
     expect(signOptions().download).toBe("capture.png");
   });
 
+  it("refuses a stored path outside the authorized project namespace", async () => {
+    getPageFilePath.mockResolvedValue({
+      storage_path: "projects/ffffffff-ffff-4fff-8fff-ffffffffffff/pages/p/f/capture.png",
+      file_name: "capture.png",
+      mime_type: "image/png",
+    });
+    const response = await GET(request(), params);
+    expect(response.status).toBe(404);
+    expect(signedAttachmentUrl).not.toHaveBeenCalled();
+  });
+
   it("ne dit rien d'un projet qui n'est pas le mien", async () => {
     getProjectAccess.mockResolvedValue(null);
     const response = await GET(request(), params);

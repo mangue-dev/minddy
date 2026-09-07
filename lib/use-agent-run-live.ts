@@ -7,6 +7,7 @@ import { getSupabase } from "./supabase";
 import type { AgentRunEvent } from "./agent-api";
 import { liveAfterEvent, liveFromStream, type AgentRunLive, type StreamPayload } from "./agent-live";
 import { parseAgentLocalDiff, type AgentLocalDiff } from "./agent-local-diff";
+import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
 
 export type { AgentRunLive } from "./agent-live";
 
@@ -42,6 +43,8 @@ interface Entry {
   listeners: Set<Listener>;
   /** Last subscriber left during opening → do not contact afterwards. */
   closed: boolean;
+  connectVersion: number;
+  stopRekey: () => void;
 }
 
 /**
@@ -54,32 +57,56 @@ const channels = new Map<string, Entry>();
 function subscribeRun(runId: string, listener: Listener): () => void {
   let entry = channels.get(runId);
   if (!entry) {
-    const fresh: Entry = { channel: null, listeners: new Set(), closed: false };
+    const fresh: Entry = {
+      channel: null,
+      listeners: new Set(),
+      closed: false,
+      connectVersion: 0,
+      stopRekey: () => {},
+    };
     entry = fresh;
     channels.set(runId, fresh);
     const supabase = getSupabase();
-    // Same precaution as the RealtimeProvider: push the token BEFORE the join,
-    // otherwise the private channel refuses the subscription (anon token).
-    void supabase.realtime.setAuth().then(() => {
-      if (fresh.closed) return;
-      const channel = supabase.channel(`agent-run:${runId}`, {
-        config: { private: true },
-      });
-      channel.on("broadcast", { event: "stream" }, ({ payload }) => {
-        for (const l of fresh.listeners) l.onStream?.((payload ?? {}) as StreamPayload);
-      });
-      channel.on("broadcast", { event: "event" }, ({ payload }) => {
-        const row = (payload as { row?: AgentRunEvent } | null)?.row;
-        if (!row?.id) return;
-        for (const l of fresh.listeners) l.onEvent?.(row);
-      });
-      channel.on("broadcast", { event: "diff" }, ({ payload }) => {
-        const diff = parseAgentLocalDiff(payload);
-        for (const l of fresh.listeners) l.onDiff?.(diff);
-      });
-      channel.subscribe();
-      fresh.channel = channel;
-    });
+    const connect = () => {
+      const version = ++fresh.connectVersion;
+      if (fresh.channel) {
+        const previous = fresh.channel;
+        fresh.channel = null;
+        void supabase.removeChannel(previous);
+      }
+      // Push the token and resolve the current membership generation before
+      // joining. A removed member cannot resolve the replacement topic.
+      void (async () => {
+        try {
+          await supabase.realtime.setAuth();
+          const topic = await resolveRealtimeTopic(supabase, `agent-run:${runId}`);
+          if (fresh.closed || version !== fresh.connectVersion) return;
+          const channel = supabase.channel(topic, {
+            config: { private: true },
+          });
+          channel.on("broadcast", { event: "stream" }, ({ payload }) => {
+            for (const l of fresh.listeners)
+              l.onStream?.((payload ?? {}) as StreamPayload);
+          });
+          channel.on("broadcast", { event: "event" }, ({ payload }) => {
+            const row = (payload as { row?: AgentRunEvent } | null)?.row;
+            if (!row?.id) return;
+            for (const l of fresh.listeners) l.onEvent?.(row);
+          });
+          channel.on("broadcast", { event: "diff" }, ({ payload }) => {
+            const diff = parseAgentLocalDiff(payload);
+            for (const l of fresh.listeners) l.onDiff?.(diff);
+          });
+          channel.subscribe();
+          fresh.channel = channel;
+        } catch {
+          // Polling remains the durable fallback when access was revoked or
+          // Realtime topic resolution is temporarily unavailable.
+        }
+      })();
+    };
+    fresh.stopRekey = onRealtimeRekey(connect);
+    connect();
   }
   entry.listeners.add(listener);
 
@@ -88,6 +115,8 @@ function subscribeRun(runId: string, listener: Listener): () => void {
     opened.listeners.delete(listener);
     if (opened.listeners.size > 0) return;
     opened.closed = true;
+    opened.connectVersion += 1;
+    opened.stopRekey();
     channels.delete(runId);
     if (opened.channel) void getSupabase().removeChannel(opened.channel);
   };

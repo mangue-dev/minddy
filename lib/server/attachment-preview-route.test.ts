@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
+import { tryToParsePath } from "next/dist/lib/try-to-parse-path";
 
 const getAuthedUser = vi.fn();
 const getProjectAccess = vi.fn();
@@ -16,7 +17,12 @@ vi.mock("@/lib/server/project-access", () => ({
 }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 
-const { GET } = await import("@/app/api/attachments/file/route");
+const { GET, PREVIEW_CSP } = await import("@/app/api/attachments/file/route");
+const {
+  ATTACHMENT_FILE_SOURCE,
+  ATTACHMENT_PREVIEW_CSP,
+  default: nextConfig,
+} = await import("../../next.config.mjs");
 
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const PATH = `projects/${PROJECT}/resource/file.html`;
@@ -41,6 +47,36 @@ beforeEach(() => {
 });
 
 describe("GET /api/attachments/file proxy", () => {
+  it("keeps the production header rule aligned with the route sandbox", async () => {
+    const configured = await nextConfig.headers!();
+    const routeHeaders = configured.find(
+      (entry) => entry.source === ATTACHMENT_FILE_SOURCE,
+    )?.headers;
+    const catchAllSource = configured.find((entry) =>
+      entry.source.includes("oauth/authorize(?:/?$)"),
+    )?.source;
+    const catchAllRegex = catchAllSource
+      ? tryToParsePath(catchAllSource).regexStr
+      : undefined;
+
+    expect(ATTACHMENT_PREVIEW_CSP).toBe(PREVIEW_CSP);
+    expect(routeHeaders).toEqual(
+      expect.arrayContaining([
+        { key: "Content-Security-Policy", value: PREVIEW_CSP },
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+      ]),
+    );
+    expect(catchAllRegex).toBeDefined();
+    const catchAll = new RegExp(catchAllRegex!);
+    expect(catchAll.test("/api/attachments/file")).toBe(false);
+    expect(catchAll.test("/api/attachments/file/")).toBe(false);
+    expect(catchAll.test("/api/attachments/file/unknown")).toBe(true);
+    expect(catchAll.test("/oauth/authorize")).toBe(false);
+    expect(catchAll.test("/oauth/authorize/")).toBe(false);
+    expect(catchAll.test("/oauth/authorize/unknown")).toBe(true);
+  });
+
   it("returns the authentication response before reading storage", async () => {
     getAuthedUser.mockResolvedValue({
       ok: false,
@@ -59,6 +95,16 @@ describe("GET /api/attachments/file proxy", () => {
     const response = await GET(request());
 
     expect(response.status).toBe(404);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects a project prefix that only starts with a UUID", async () => {
+    const response = await GET(
+      request(`projects/${PROJECT}suffix/resource/file.html`),
+    );
+
+    expect(response.status).toBe(404);
+    expect(getProjectAccess).not.toHaveBeenCalled();
     expect(from).not.toHaveBeenCalled();
   });
 

@@ -253,28 +253,35 @@ describe("POST /api/desktop/local-turn", () => {
     expect(h.calls).toEqual([]);
   });
 
-  it("claims every local run source through the same harness", async () => {
-    for (const over of [
-      { pull_request_id: "pr-1" },
-      { routine_id: "rt-1" },
-      { chain_id: "ch-1" },
-      { triggered_by: "mention" },
-      { triggered_by: "automation" },
-    ]) {
+  it("rejects third-party local run sources before claiming them", async () => {
+    for (const [over, reason] of [
+      [{ pull_request_id: "pr-1" }, "pull_request"],
+      [{ routine_id: "rt-1" }, "routine"],
+      [{ chain_id: "ch-1" }, "chain"],
+      [{ triggered_by: "mention" }, "trigger"],
+      [{ triggered_by: "automation" }, "trigger"],
+    ] as const) {
       h.calls.length = 0;
       h.run = row(over);
-      expect((await direct()).status).toBe(200);
-      expect(h.calls.length, JSON.stringify(over)).toBeGreaterThan(0);
+      const response = await direct();
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({
+        error: `third-party context: ${reason}`,
+      });
+      expect(h.calls, JSON.stringify(over)).toEqual([]);
     }
   });
 
-  it("isolates a queued PR review even when its persisted flag predates the invariant", async () => {
+  it("rejects a queued local PR review before assigning it", async () => {
     h.run = row({ pull_request_id: "pr-1", local_worktree: false });
 
     const response = await direct();
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ localWorktree: true });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "third-party context: pull_request",
+    });
+    expect(h.calls).toEqual([]);
   });
 
   it("joue un run BYOK sans plafond ni mint de la plateforme", async () => {

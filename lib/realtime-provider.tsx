@@ -44,6 +44,11 @@ import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { trace } from "./desktop/trace";
 import { getDesktopBridge } from "./desktop/bridge";
 import type { Project } from "./types";
+import {
+  onRealtimeRekey,
+  resolveRealtimeTopic,
+  signalRealtimeRekey,
+} from "./realtime-topic";
 
 /**
  * Single realtime bridge for the whole app. The DB broadcasts every relevant
@@ -257,56 +262,85 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       let hasSubscribed = false;
       let authRetry: ReturnType<typeof setTimeout> | null = null;
       let authAttempts = 0;
+      let connectVersion = 0;
 
       // Deterministically push the session token to the socket before joining:
       // supabase-js only re-sends it on SIGNED_IN/TOKEN_REFRESHED, never on
       // INITIAL_SESSION, and a join carrying the anon token is refused on
       // private channels.
       const connect = () => {
-        void supabase.realtime.setAuth().then(() => {
-          if (cancelled) return;
-          authAttempts = 0;
-          channel = supabase.channel(topic, { config: { private: true } });
-          for (const event of BROADCAST_EVENTS) {
-            channel.on("broadcast", { event }, ({ payload }) => {
-              const change = payload as BroadcastChange;
-              // The line first (it's in the payload, that's what
-              // the user sees), the refresh then.
-              apply?.(change);
-              for (const invalidation of keysFor(change)) {
-                invalidateCoalesced(invalidation);
+        const version = ++connectVersion;
+        void (async () => {
+          try {
+            await supabase.realtime.setAuth();
+            const resolvedTopic = await resolveRealtimeTopic(supabase, topic);
+            if (cancelled || version !== connectVersion) return;
+            authAttempts = 0;
+            const next = supabase.channel(resolvedTopic, {
+              config: { private: true },
+            });
+            for (const event of BROADCAST_EVENTS) {
+              next.on("broadcast", { event }, ({ payload }) => {
+                const change = payload as BroadcastChange;
+                // The line first (it's in the payload, that's what
+                // the user sees), the refresh then.
+                apply?.(change);
+                for (const invalidation of keysFor(change)) {
+                  invalidateCoalesced(invalidation);
+                }
+              });
+            }
+            next.on("broadcast", { event: "rekey" }, signalRealtimeRekey);
+            next.subscribe((status) => {
+              if (status === "SUBSCRIBED") {
+                const initialSubscription = !hasSubscribed;
+                hasSubscribed = true;
+                if (needsCatchUp) {
+                  needsCatchUp = false;
+                  catchUp(scopeKeys, initialSubscription);
+                }
+              } else if (
+                status === "CHANNEL_ERROR" ||
+                status === "TIMED_OUT" ||
+                status === "CLOSED"
+              ) {
+                needsCatchUp = true;
               }
             });
+            channel = next;
+          } catch {
+            if (cancelled || version !== connectVersion) return;
+            needsCatchUp = true;
+            catchUp(scopeKeys);
+            authAttempts += 1;
+            const delay = Math.min(1_000 * 2 ** (authAttempts - 1), 10_000);
+            authRetry = setTimeout(connect, delay);
           }
-          channel.subscribe((status) => {
-            if (status === "SUBSCRIBED") {
-              const initialSubscription = !hasSubscribed;
-              hasSubscribed = true;
-              if (needsCatchUp) {
-                needsCatchUp = false;
-                catchUp(scopeKeys, initialSubscription);
-              }
-            } else if (
-              status === "CHANNEL_ERROR" ||
-              status === "TIMED_OUT" ||
-              status === "CLOSED"
-            ) {
-              needsCatchUp = true;
-            }
-          });
-        }).catch(() => {
-          if (cancelled) return;
-          needsCatchUp = true;
-          catchUp(scopeKeys);
-          authAttempts += 1;
-          const delay = Math.min(1_000 * 2 ** (authAttempts - 1), 10_000);
-          authRetry = setTimeout(connect, delay);
-        });
+        })();
       };
+
+      const reconnect = () => {
+        if (cancelled) return;
+        needsCatchUp = true;
+        connectVersion += 1;
+        if (authRetry) {
+          clearTimeout(authRetry);
+          authRetry = null;
+        }
+        if (channel) {
+          const previous = channel;
+          channel = null;
+          void supabase.removeChannel(previous);
+        }
+        connect();
+      };
+      const stopRekey = onRealtimeRekey(reconnect);
       connect();
 
       return () => {
         cancelled = true;
+        connectVersion += 1;
+        stopRekey();
         if (authRetry) clearTimeout(authRetry);
         if (channel) void getSupabase().removeChannel(channel);
       };
@@ -370,6 +404,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       if (!shouldCatchUpOnResume({ hiddenForMs })) return;
       const realtime = getSupabase().realtime;
       catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)]);
+      // Re-resolve versioned topics in case a rekey broadcast was missed while
+      // this client was suspended or offline.
+      signalRealtimeRekey();
       if (probe) clearTimeout(probe);
       probe = wakeRealtime(realtime);
     };

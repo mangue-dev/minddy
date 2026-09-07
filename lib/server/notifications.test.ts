@@ -76,28 +76,78 @@ function stubService(opts: {
   insertError?: string;
   upsertedRows?: unknown[];
   prefs?: Record<string, Record<string, unknown>>;
+  projectOwners?: Record<string, string>;
+  memberships?: { project_id: string; user_id: string }[];
+  accessError?: string;
+  tableErrors?: Record<string, string>;
+  tables?: Partial<Record<string, Record<string, unknown>[]>>;
 }) {
   const inserted: unknown[] = [];
   const upserted: unknown[] = [];
+  const projectOwners = opts.projectOwners ?? { p1: ALICE };
+  const memberships = opts.memberships ?? [{ project_id: "p1", user_id: BOB }];
   const service = {
-    from: () => ({
-      insert: (rows: unknown[]) => {
-        inserted.push(...rows);
-        return Promise.resolve({
-          error: opts.insertError ? { message: opts.insertError } : null,
-        });
-      },
-      upsert: (rows: unknown[], options: unknown) => {
-        upserted.push({ rows, options });
+    from: (table: string) => {
+      if (table === "notifications") {
         return {
-          select: () =>
-            Promise.resolve({
-              data: opts.upsertedRows ?? rows,
+          insert: (rows: unknown[]) => {
+            inserted.push(...rows);
+            return Promise.resolve({
               error: opts.insertError ? { message: opts.insertError } : null,
-            }),
+            });
+          },
+          upsert: (rows: unknown[], options: unknown) => {
+            upserted.push({ rows, options });
+            return {
+              select: () =>
+                Promise.resolve({
+                  data: opts.upsertedRows ?? rows,
+                  error: opts.insertError ? { message: opts.insertError } : null,
+                }),
+            };
+          },
         };
-      },
-    }),
+      }
+
+      const defaults: Record<string, Record<string, unknown>[]> = {
+        projects: Object.entries(projectOwners).map(([id, owner_id]) => ({
+          id,
+          owner_id,
+        })),
+        project_members: memberships,
+        issues: [{ id: "i1", project_id: "p1" }],
+        pages: [{ id: "page-1", project_id: "p1" }],
+        pull_requests: [
+          {
+            id: "pr-1",
+            provider: "github",
+            repo_full_name: "org/repo",
+          },
+        ],
+        project_git_links: [
+          {
+            project_id: "p1",
+            provider: "github",
+            repo_full_name: "org/repo",
+          },
+        ],
+      };
+      const data = opts.tables?.[table] ?? defaults[table] ?? [];
+      const result = {
+        data,
+        error:
+          opts.tableErrors?.[table] || opts.accessError
+            ? { message: opts.tableErrors?.[table] ?? opts.accessError ?? "error" }
+            : null,
+      };
+      const chain: Record<string, unknown> = {
+        select: () => chain,
+        in: () => chain,
+        then: (resolve: (value: typeof result) => unknown) =>
+          Promise.resolve(resolve(result)),
+      };
+      return chain;
+    },
     auth: {
       admin: {
         getUserById: (id: string) =>
@@ -135,6 +185,24 @@ const pullRequestOpenedRow = (userId: string) => ({
   type: "pr_opened" as const,
   issue_id: null,
   pull_request_id: "pr-1",
+  actor_id: null,
+});
+
+const conversationRow = (userId: string) => ({
+  user_id: userId,
+  project_id: "p1",
+  type: "agent_done" as const,
+  issue_id: null,
+  agent_conversation_id: "conversation-1",
+  actor_id: null,
+});
+
+const routineRow = (userId: string) => ({
+  user_id: userId,
+  project_id: "p1",
+  type: "routine_done" as const,
+  issue_id: null,
+  routine_id: "routine-1",
   actor_id: null,
 });
 
@@ -254,5 +322,95 @@ describe("insertNotifications — volet push (MIN-183)", () => {
     ]);
     expect(H.after).not.toHaveBeenCalled();
     expect(H.sendPushToUser).not.toHaveBeenCalled();
+  });
+
+  it("rechecks access before a deferred push reaches a removed member", async () => {
+    const { service, inserted } = stubService({ memberships: [] });
+
+    await insertNotifications(service, [commentRow(BOB)]);
+    expect(inserted).toHaveLength(1);
+
+    await runScheduledWork();
+
+    expect(H.loadPushContext).not.toHaveBeenCalled();
+    expect(H.sendPushToUser).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      name: "agent conversation",
+      row: conversationRow(ALICE),
+      tables: {
+        agent_conversations: [
+          { id: "conversation-1", project_id: "p2" },
+        ],
+      },
+    },
+    {
+      name: "routine",
+      row: routineRow(ALICE),
+      tables: {
+        agent_routines: [{ id: "routine-1", project_id: "p2" }],
+      },
+    },
+    {
+      name: "pull request repository",
+      row: pullRequestOpenedRow(ALICE),
+      tables: {
+        pull_requests: [
+          {
+            id: "pr-1",
+            provider: "github",
+            repo_full_name: "org/moved",
+          },
+        ],
+      },
+    },
+    {
+      name: "project repository link",
+      row: pullRequestOpenedRow(ALICE),
+      tables: {
+        project_git_links: [
+          {
+            project_id: "p2",
+            provider: "github",
+            repo_full_name: "org/repo",
+          },
+        ],
+      },
+    },
+  ])("drops a deferred push after a $name moves projects", async ({ row, tables }) => {
+    const { service, inserted } = stubService({ tables });
+
+    await insertNotifications(service, [row]);
+    expect(inserted).toHaveLength(1);
+
+    await runScheduledWork();
+
+    expect(H.loadPushContext).not.toHaveBeenCalled();
+    expect(H.sendPushToUser).not.toHaveBeenCalled();
+  });
+
+  it("sanitizes foreign actor and API-key attribution without dropping the push", async () => {
+    const row = {
+      ...commentRow(ALICE),
+      actor_id: BOB,
+      via_mcp: true,
+      api_key_id: "foreign-key",
+    };
+    const { service } = stubService({
+      memberships: [],
+      tables: {
+        api_keys: [{ id: "foreign-key", user_id: BOB }],
+      },
+    });
+
+    await insertNotifications(service, [row]);
+    await runScheduledWork();
+
+    expect(H.loadPushContext).toHaveBeenCalledWith(service, [
+      expect.objectContaining({ actor_id: null, api_key_id: null }),
+    ]);
+    expect(H.sendPushToUser).toHaveBeenCalledTimes(1);
   });
 });

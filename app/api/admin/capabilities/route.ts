@@ -11,7 +11,7 @@ import { capabilities } from "@/lib/server/capabilities";
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!(await isAdminUser(auth.user))) {
+  if (!(await isAdminUser(auth.user, auth.claims))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return NextResponse.json({ capabilities: capabilities() });

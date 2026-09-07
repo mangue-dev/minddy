@@ -17,6 +17,9 @@ import {
 import {
   type ImportColumn,
   type ImportPage,
+  MAX_IMPORT_EXPANDED_BYTES,
+  MAX_IMPORT_FILES,
+  MAX_IMPORT_PAGE_CONTENT_BYTES,
 } from "@/lib/database-import/types";
 import { checkPageContent } from "@/lib/page-content-schema";
 import { exceedsJsonDepth, MAX_PAGE_JSON_DEPTH } from "@/lib/json-depth";
@@ -139,7 +142,7 @@ export async function importDatabase(args: {
     if (!sourceIds.has(file.page_id)) continue;
     const path = cleanArchivePath(file.path);
     if (!prepared.files[path]) throw new Error("importMissingFile");
-    fileReferences.set(file.id, {
+    fileReferences.set(`id:${file.id}`, {
       ...file,
       id: randomUUID(),
       page_id: pageIds.get(file.page_id)!,
@@ -155,10 +158,10 @@ export async function importDatabase(args: {
           return [key, pageIds.get(child)];
         if (["href", "src"].includes(key) && typeof child === "string") {
           const fileId = pageFileIdFromSrc(child);
-          if (fileId && fileReferences.has(fileId))
+          if (fileId && fileReferences.has(`id:${fileId}`))
             return [
               key,
-              pageFileUrl(projectId, fileReferences.get(fileId)!.id),
+              pageFileUrl(projectId, fileReferences.get(`id:${fileId}`)!.id),
             ];
           const targetPage = /\/pages\/([0-9a-f-]{36})(?:[?#]|$)/i.exec(
             child,
@@ -175,15 +178,16 @@ export async function importDatabase(args: {
               "/projects/" + projectId + "/pages/" + paths.get(path),
             ];
           if (path && prepared.files[path] && !/\.(md|csv)$/i.test(path)) {
-            if (!fileReferences.has(path))
-              fileReferences.set(path, {
+            const pathKey = `path:${path}`;
+            if (!fileReferences.has(pathKey))
+              fileReferences.set(pathKey, {
                 id: randomUUID(),
                 page_id: pageIds.get(page.id)!,
                 path,
                 file_name: path.split("/").at(-1)!,
                 mime_type: "",
               });
-            return [key, pageFileUrl(projectId, fileReferences.get(path)!.id)];
+            return [key, pageFileUrl(projectId, fileReferences.get(pathKey)!.id)];
           }
         }
         return [key, rewrite(child, page)];
@@ -209,12 +213,26 @@ export async function importDatabase(args: {
         !/^\d{4}-/.test(page.created_at))
     )
       throw new Error("importInvalidArchive");
+    if (
+      page.markdown !== undefined &&
+      (typeof page.markdown !== "string" ||
+        Buffer.byteLength(page.markdown, "utf8") >
+          MAX_IMPORT_PAGE_CONTENT_BYTES)
+    )
+      throw new Error("importTooLarge");
     let content: unknown = page.content ?? null;
     if (page.markdown !== undefined)
       content = (await markdownToPageServer(page.markdown)).content;
+    let serializedContent: string;
+    try {
+      serializedContent = JSON.stringify(content);
+    } catch {
+      throw new Error("importInvalidArchive");
+    }
     if (
       exceedsJsonDepth(content, MAX_PAGE_JSON_DEPTH) ||
-      JSON.stringify(content).length > 1000000
+      Buffer.byteLength(serializedContent, "utf8") >
+        MAX_IMPORT_PAGE_CONTENT_BYTES
     )
       throw new Error("importTooLarge");
     content = rewrite(content, page);
@@ -256,11 +274,17 @@ export async function importDatabase(args: {
           : String(index).padStart(10, "0") + "V",
     });
   }
-  if (fileReferences.size && !(await projectStorageAllowed(service, projectId)))
-    throw new Error("importStorageFull");
+  const referencedPaths = new Set<string>();
+  let totalFileBytes = 0;
+  if (fileReferences.size > MAX_IMPORT_FILES) throw new Error("importTooLarge");
   const files = [...fileReferences.values()].map((file) => {
     const bytes = prepared.files[file.path];
     if (!bytes?.length || bytes.length > MAX_PAGE_FILE_BYTES)
+      throw new Error("importTooLarge");
+    if (referencedPaths.has(file.path)) throw new Error("importInvalidArchive");
+    referencedPaths.add(file.path);
+    totalFileBytes += bytes.length;
+    if (totalFileBytes > MAX_IMPORT_EXPANDED_BYTES)
       throw new Error("importTooLarge");
     return {
       ...file,
@@ -274,6 +298,11 @@ export async function importDatabase(args: {
       size_bytes: bytes.length,
     };
   });
+  if (
+    files.length &&
+    !(await projectStorageAllowed(service, projectId, totalFileBytes))
+  )
+    throw new Error("importStorageFull");
   const uploaded: string[] = [];
   try {
     for (const file of files) {

@@ -199,6 +199,19 @@ export const PUBLIC_ROUTE_PATHS = [
   "/es/cookies",
 ];
 
+export const ATTACHMENT_FILE_SOURCE = "/api/attachments/file";
+export const ATTACHMENT_PREVIEW_CSP = [
+  "sandbox",
+  "default-src 'none'",
+  "img-src data: blob:",
+  "media-src data: blob:",
+  "style-src 'unsafe-inline'",
+  "font-src data:",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'self'",
+].join("; ");
+
 /**
  * API responses are dynamic and may contain account or project data. React
  * Query owns client-side freshness; HTTP intermediaries must never retain a
@@ -353,14 +366,11 @@ const nextConfig = {
   async headers() {
     const headers = [];
 
-    // Security headers, all routes (MIN-118). HSTS is only valid on one
-    // HTTPS response — harmless in dev, and the HTTP→HTTPS redirection is
-    // native Vercel. `preload` is in the header but the domain is NOT
-    // submitted to hstspreload.org (almost irreversible). The CSP is limited to
-    // `frame-ancestors`/`base-uri`/`form-action`: a `script-src` with nonces
-    // would require rewriting the render string (inline scripts Next +
-    // theme-init-script) — separate site if desired. Microphone authorized in
-    // self: the assistant's dictation uses it.
+    // Security headers for every route (MIN-118). HSTS applies only over HTTPS;
+    // Vercel owns the HTTP redirect. The domain has not been submitted to the
+    // browser preload list. A nonce-based script policy needs a separate render
+    // change because Next and the theme initializer emit inline scripts. The
+    // assistant's dictation feature requires microphone access from this origin.
     const securityHeaders = (csp) => [
       {
         key: "Strict-Transport-Security",
@@ -378,26 +388,33 @@ const nextConfig = {
 
     const BASE_CSP = "frame-ancestors 'none'; base-uri 'self'";
 
-    // ⚠ `/oauth/authorize` is EXCLUDED from this entry (only one CSP header per
-    // answer: two accumulate in intersection, the strictest would win).
-    // The exclusion is anchored on `/` or the end — otherwise a future route in
-    // `/oauth/authorize-…` would silently exit ALL these headers.
+    // `/oauth/authorize` is excluded because multiple CSP headers intersect and
+    // the stricter policy would win. Anchor exclusions on a slash or the end so
+    // similarly prefixed future routes keep the catch-all headers.
     headers.push({
-      source: "/((?!oauth/authorize(?:/|$)).*)",
+      source:
+        "/((?!(?:oauth/authorize(?:/?$)|api/attachments/file(?:/?$))).*)",
       headers: securityHeaders(`${BASE_CSP}; form-action 'self'`),
     });
 
-    // The OAuth consent screen, and it alone, without `form-action`.
-    //
-    // Son formulaire (components/oauth/consent-card.tsx) POSTe vers
-    // /api/oauth/authorize, which responds 303 to the `redirect_uri` of the MCP client
-    // — so towards claude.ai, a localhost, or an application schema: a target
-    // cross-origin BY CONSTRUCTION. Or Chrome and Safari apply
-    // `form-action` to the target of the REDIRECTION which follows a form POST
-    // (Firefox no — behavior is not specified). `form-action 'self'`
-    // here would therefore block the return to the client on two browsers out of three,
-    // that is to say the entire OAuth flow of the MCP, the only access route from the
-    // removal of `mdyk_` keys. The rest of the CSP is identical.
+    // Active attachments are rendered in a same-origin iframe. The route sets
+    // this sandbox too, but configured headers take precedence over route
+    // headers in a production Next server. Keep this path out of the catch-all
+    // CSP so uploaded markup cannot inherit the application's permissive policy.
+    headers.push({
+      source: ATTACHMENT_FILE_SOURCE,
+      headers: securityHeaders(ATTACHMENT_PREVIEW_CSP).map((header) =>
+        header.key === "X-Frame-Options"
+          ? { ...header, value: "SAMEORIGIN" }
+          : header,
+      ),
+    });
+
+    // The OAuth consent screen alone omits `form-action`. Its form posts to the
+    // same-origin authorization API, whose 303 targets the MCP client's allowed
+    // redirect URI. Chrome and Safari apply `form-action` to that redirect, so a
+    // self-only directive would break legitimate localhost, HTTPS, and custom
+    // scheme callbacks. Every other CSP directive remains identical.
     headers.push({
       source: "/oauth/authorize",
       headers: securityHeaders(BASE_CSP),
@@ -405,19 +422,13 @@ const nextConfig = {
 
     // The push notification service worker (MIN-183).
     //
-    // `Content-Type`: served from `public/`, he already has it — but a service
-    // worker refused due to MIME type fails to register, without
-    // possible recourse on the client side. We ask it explicitly.
+    // Set Content-Type explicitly because a MIME rejection prevents service
+    // worker registration before client code can recover.
     //
-    // `Cache-Control`: the browser re-downloads `/sw.js` to compare the
-    // bytes and decide if there is a new version. A cached worker
-    // is a worker that never updates.
+    // Disable caching so the browser can compare `/sw.js` bytes for updates.
     //
-    // ⚠ ESPECIALLY NO `Content-Security-Policy` here, despite what the
-    // Next's PWA guide: the catch-all entry above is ALREADY one on
-    // `/sw.js`, and two CSP headers on the same response accumulate in
-    // intersection — the strictest wins, on each directive. It's the same
-    // trap that `/oauth/authorize` higher up, in the other direction.
+    // Do not add another CSP here. The catch-all already covers `/sw.js`, and
+    // browsers enforce multiple CSP headers as an intersection.
     headers.push({
       source: "/sw.js",
       headers: [

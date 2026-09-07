@@ -3,38 +3,31 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * The storage limit of an account, server side (MIN-348).
+ * Enforces an account's storage limit for server-side writes (MIN-348).
  *
- * The REAL application of the quota is in SQL — in the policy `attachments
- * insert` (migration 20261229090000), because sending an attachment leaves
- * from the browser straight to the bucket without crossing any of our routes.
- *
- * This module serves the writes which pass through the SERVER: the file
- * page, the attachment filed by an MCP agent. They use the client
- * service, which bypasses RLS — so the policy does not see them, and without this
- * relay they would be the hole in the ceiling that we have just installed.
- *
- * Only one definition of the verdict for all that: both paths call for
- * SAME SQL function. Here we are just asking for it.
+ * Browser uploads are constrained by the Storage policy. Server uploads use
+ * the service role and bypass RLS, so they must ask the same database-owned
+ * quota model whether the complete pending write still fits.
  */
 
 /**
- * `false` when the owner of this project has filled his quota.
- *
- * In the event of a base error, we respond `true`: a reading incident must not
- * block the writing of a user in good standing, and the policy remains the net
- * for everything that comes from the browser.
+ * Returns `false` when the project owner cannot store all additional bytes.
+ * Database errors fail closed because the service role has no downstream RLS
+ * policy to catch an upload admitted here.
  */
 export async function projectStorageAllowed(
   service: SupabaseClient,
-  projectId: string
+  projectId: string,
+  additionalBytes = 0,
 ): Promise<boolean> {
-  const { data, error } = await service.rpc("project_storage_quota_ok", {
+  if (!Number.isSafeInteger(additionalBytes) || additionalBytes < 0) return false;
+  const { data, error } = await service.rpc("project_storage_quota_allows", {
     p_project: projectId,
+    p_additional_bytes: additionalBytes,
   });
   if (error) {
     console.error("[storage-quota] check failed:", error.message);
-    return true;
+    return false;
   }
-  return data !== false;
+  return data === true;
 }

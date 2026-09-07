@@ -4,6 +4,9 @@ import { canonicalSql, readMigration } from "@/test/sql-migrations";
 const guards = canonicalSql(
   readMigration("20270106280000_atomic_tenant_write_guards.sql")
 );
+const authority = canonicalSql(
+  readMigration("20270106540000_page_databases.sql")
+);
 const embeddings = canonicalSql(
   readMigration("20270106220000_restrict_feedback_embedding_rpc.sql")
 );
@@ -11,9 +14,18 @@ const embeddings = canonicalSql(
 describe("atomic tenant write guards", () => {
   it("serializes membership changes and guarded writes on the project row", () => {
     expect(guards).toContain(
-      "create trigger project_members_lock_project_scope before insert or update or delete on public.project_members"
+      "create trigger project_members_authority_scope_lock after insert or update or delete on public.project_members"
     );
-    expect(guards).toContain("where id = v_project_id for update");
+    expect(guards).toContain("where id = v_project_id for no key update");
+    expect(authority).toContain(
+      "drop trigger if exists project_members_lock_project_scope on public.project_members"
+    );
+    expect(authority).toContain(
+      "drop trigger if exists project_members_authority_scope_lock on public.project_members"
+    );
+    expect(authority).toContain(
+      "create trigger project_members_auth_insert_lock before insert on public.project_members"
+    );
     expect(guards).toContain(
       "v_owner_id := public.guard_project_actor(p_project_id, p_actor_id, true)"
     );

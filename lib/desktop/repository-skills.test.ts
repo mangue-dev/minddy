@@ -57,6 +57,17 @@ describe("desktop repository skill discovery", () => {
     expect(localRepositorySkillPaths(root)).toEqual([]);
   });
 
+  it("does not discover or read skills through a symlinked root ancestor", async () => {
+    const root = temporaryRepository();
+    const outside = temporaryRepository();
+    writeSkill(outside, "skills/release", "outside");
+    symlinkSync(outside, path.join(root, ".agents"));
+
+    expect(localRepositorySkillPaths(root)).toEqual([]);
+    await expect(listLocalRepositorySkills(root)).resolves.toEqual([]);
+    expect(loadLocalRepositorySkill(root, ".agents/skills/release/SKILL.md")).toBeNull();
+  });
+
   it("loads Markdown only for a skill found during local discovery", () => {
     const root = temporaryRepository();
     writeSkill(root, ".agents/skills/release", "release");

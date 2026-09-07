@@ -9,26 +9,17 @@ import {
 } from "@/lib/server/page-files";
 
 /**
- * MIN-280 — sending connected without its HOUSEHOLD is the only real possible fault
- * here, and it is the one that is never seen: the bucket grows with images that
- * no document shows anymore, without an error line, without a screen that
- * change.
- *
- * This file plays both halves on a fake Supabase in memory — only the OUTPUT of the process is simulated (the storage, PostgREST), the real module on top.
- * Three properties are pinned to it, and each is a byte or line that
- * would survive otherwise:
- *
- * - a sending whose LINE fails erases its object, otherwise it is born an orphan;
- * - scanning ONLY deletes what no body no longer cites — a file
- * still displayed, nested in a leaflet, must remain;
- * - and the line leaves BEFORE the bytes, never the other way around: in the other order,
- * a failure leaves a line which names an object missing, therefore a dead block.
+ * MIN-280 verifies both sides of the page-file lifecycle against an in-memory
+ * Supabase double. A failed metadata insert must remove the uploaded object;
+ * sweeping must keep every object still cited by page content; and cleanup must
+ * delete the metadata row before its bytes so a Storage failure cannot leave a
+ * live row pointing at a missing object.
  */
 
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const PAGE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
-/* ── The fake Supabase ─────────────────────────── ──────────────────────────── */
+/* ── In-memory Supabase double ─────────────────────────────────────────────── */
 
 interface FakeRow {
   id: string;
@@ -45,16 +36,16 @@ interface FakeRow {
 function fakeService(options: {
   files?: FakeRow[];
   pages?: { id: string; content: unknown }[];
-  /** Fail row insertion — the only catch-up branch. */
+  /** Fail row insertion to exercise upload rollback. */
   insertFails?: boolean;
-  /** Compte plein : ce que rend `project_storage_quota_ok` (MIN-348). */
+  /** Whether the exact pending upload fits the account quota (MIN-348). */
   quotaOk?: boolean;
 } = {}) {
   const files = options.files ?? [];
   const pages = options.pages ?? [];
   const uploaded: string[] = [];
   const removed: string[] = [];
-  /** The REAL order of gestures, to slice “the line before the bytes”. */
+  /** Actual operation order, used to assert row deletion precedes byte deletion. */
   const order: string[] = [];
 
   const storage = {
@@ -81,9 +72,8 @@ function fakeService(options: {
           filters.before = value;
           return query;
         },
-        // MIN-343: bucket cleaning first asks who is still referencing the
-        // path. LIVING lines respond — that's what makes order
-        // “line first, bytes later” observable here.
+        // MIN-343: bucket cleanup first asks which live rows still reference
+        // each path, making row-before-object deletion observable here.
         in: async (_column: string, paths: string[]) => ({
           data: files
             .filter((f) => paths.includes(f.storage_path))
@@ -137,16 +127,17 @@ function fakeService(options: {
         }),
       };
     }
-    // The other table that references the bucket: no ticket resources here.
+    // Attachments are the other table that can reference this bucket.
     if (table === "attachments") {
       return { select: () => ({ in: async () => ({ data: [], error: null }) }) };
     }
     throw new Error(`table inattendue: ${table}`);
   };
 
-  // The quota verdict is in SQL; the module only knows the call.
+  // SQL owns the quota verdict; the module only calls the RPC.
   const rpc = async (name: string) => {
-    if (name !== "project_storage_quota_ok") throw new Error(`rpc inattendu: ${name}`);
+    if (name !== "project_storage_quota_allows")
+      throw new Error(`unexpected rpc: ${name}`);
     return { data: options.quotaOk ?? true, error: null };
   };
 
@@ -159,7 +150,7 @@ function fakeService(options: {
   };
 }
 
-/* ── L'envoi ──────────────────────────────────────────────────────────────── */
+/* ── Upload ───────────────────────────────────────────────────────────────── */
 
 describe("createPageFile", () => {
   const args = {
@@ -171,7 +162,7 @@ describe("createPageFile", () => {
     data: Buffer.from("des octets"),
   };
 
-  it("range l'objet sous le préfixe du projet ET de la page", async () => {
+  it("stores the object under both the project and page prefixes", async () => {
     const service = fakeService();
     const row = await createPageFile(service.client, args);
 
@@ -179,14 +170,14 @@ describe("createPageFile", () => {
     expect(service.uploaded[0]).toMatch(
       new RegExp(`^projects/${PROJECT}/pages/${PAGE}/[0-9a-f-]{36}/`)
     );
-    // The name of the KEY is cleaned (the storage refuses the exotic), that of the
-    // LINE keeps its spaces and its apostrophe: this is what we display.
+    // The object key is sanitized for Storage, while the row keeps the original
+    // display name with its spaces and apostrophe.
     expect(service.uploaded[0].endsWith("Ma_capture_d_cran.png")).toBe(true);
     expect(row.file_name).toBe("Ma capture d'écran.png");
     expect(row.size_bytes).toBe(args.data.byteLength);
   });
 
-  it("refuse un fichier vide ou trop lourd, sans rien téléverser", async () => {
+  it("rejects empty and oversized files without uploading", async () => {
     const service = fakeService();
     await expect(
       createPageFile(service.client, { ...args, data: Buffer.alloc(0) })
@@ -197,9 +188,9 @@ describe("createPageFile", () => {
     expect(service.uploaded).toEqual([]);
   });
 
-  it("refuse quand le compte a rempli son quota, sans rien téléverser", async () => {
-    // This writing goes through the SERVICE client, which bypasses the policy
-    // where the ceiling is placed: without this relay, it would be the hole (MIN-348).
+  it("rejects a full account quota without uploading", async () => {
+    // This write uses the service client and therefore needs an explicit quota
+    // check before it reaches Storage (MIN-348).
     const service = fakeService({ quotaOk: false });
     await expect(createPageFile(service.client, args)).rejects.toMatchObject({
       status: 507,
@@ -207,10 +198,9 @@ describe("createPageFile", () => {
     expect(service.uploaded).toEqual([]);
   });
 
-  it("efface l'objet quand la LIGNE ne passe pas", async () => {
-    // Without this catch-up, the byte exists and nothing says which page it is on
-    // belonged: even the scanning of orphans, which starts from the lines, does not
-    // couldn't find him anymore.
+  it("removes the object when metadata insertion fails", async () => {
+    // Without rollback, the bucket would retain bytes that no metadata row can
+    // associate with a page.
     const service = fakeService({ insertFails: true });
     await expect(createPageFile(service.client, args)).rejects.toBeInstanceOf(
       PageFileError
@@ -218,7 +208,7 @@ describe("createPageFile", () => {
     expect(service.removed).toEqual(service.uploaded);
   });
 
-  it("accepte N'IMPORTE QUEL type — c'est un bloc fichier, pas un bloc image", async () => {
+  it("accepts any MIME type because this is a file block", async () => {
     const service = fakeService();
     const row = await createPageFile(service.client, {
       ...args,
@@ -228,14 +218,14 @@ describe("createPageFile", () => {
     expect(row.mime_type).toBe("application/zip");
   });
 
-  it("retombe sur un type générique quand le navigateur n'en donne pas", async () => {
+  it("uses a generic type when the browser provides none", async () => {
     const service = fakeService();
     const row = await createPageFile(service.client, { ...args, mimeType: "" });
     expect(row.mime_type).toBe("application/octet-stream");
   });
 });
 
-/* ── Housekeeping ─────────────────────────────── ─────────────────────────────── */
+/* ── Housekeeping ──────────────────────────────────────────────────────────── */
 
 function row(id: string, pageId = PAGE): FakeRow {
   return {
@@ -251,7 +241,7 @@ function row(id: string, pageId = PAGE): FakeRow {
   };
 }
 
-/** A body that cites `cited`, including a file EMBEDDED in a leaflet. */
+/** Page content that cites `cited`, including a file nested in a callout. */
 function body(cited: string[]) {
   return {
     type: "doc",
@@ -281,16 +271,14 @@ function body(cited: string[]) {
 
 describe("sweepOrphanPageFiles", () => {
   const LATER = "2026-02-01T00:00:00.000Z";
-  // Real identifiers: this is the FORM of the URL that the scanning recognizes
-  // in a body (lib/page-files.ts), and a bogus id would not be found there —
-  // the test would then pass for the wrong reason, erasing everything.
+  // Real UUIDs preserve the URL shape that the production scanner recognizes.
   const VIVANT = "11111111-1111-4111-8111-111111111111";
   const IMBRIQUE = "22222222-2222-4222-8222-222222222222";
   const ORPHELIN = "33333333-3333-4333-8333-333333333333";
   const VEUF = "44444444-4444-4444-8444-444444444444";
   const FRAIS = "55555555-5555-4555-8555-555555555555";
 
-  it("garde ce que le corps cite encore, effaçant tout le reste", async () => {
+  it("keeps objects still cited by content and removes the rest", async () => {
     const service = fakeService({
       files: [row(VIVANT), row(IMBRIQUE), row(ORPHELIN)],
       pages: [{ id: PAGE, content: body([VIVANT, IMBRIQUE]) }],
@@ -303,7 +291,7 @@ describe("sweepOrphanPageFiles", () => {
     expect(service.files.map((f) => f.id)).toEqual([VIVANT, IMBRIQUE]);
   });
 
-  it("deletes the ROW before the bytes", async () => {
+  it("deletes the row before the bytes", async () => {
     const service = fakeService({
       files: [row(ORPHELIN)],
       pages: [{ id: PAGE, content: body([]) }],
@@ -315,18 +303,16 @@ describe("sweepOrphanPageFiles", () => {
     ]);
   });
 
-  it("emporte les fichiers d'une page qui n'existe plus", async () => {
-    // Its lines have already left through the waterfall at the time of the purge; those
-    // that we see here are of a page purged between two scans.
+  it("removes files whose page no longer exists", async () => {
+    // Cascades may have removed the rows before the next object sweep.
     const service = fakeService({ files: [row(VEUF)], pages: [] });
     expect(await sweepOrphanPageFiles(service.client, LATER)).toBe(1);
     expect(service.removed).toHaveLength(1);
   });
 
   it("spares what has not passed the grace period", async () => {
-    // A file sent an hour ago is not yet in a body
-    // SAVED: the autosave did not necessarily write. Deleting it would
-    // effacer l'image qu'on vient de coller.
+    // A recently uploaded file may not appear in persisted content until the
+    // next autosave, so the grace period must protect it.
     const service = fakeService({
       files: [row(FRAIS)],
       pages: [{ id: PAGE, content: body([]) }],
@@ -341,7 +327,7 @@ describe("sweepOrphanPageFiles", () => {
     const service = fakeService();
     const spy = vi.spyOn(service.client, "from");
     expect(await sweepOrphanPageFiles(service.client, LATER)).toBe(0);
-    // Only one request: the bodies are not even read.
+    // No candidates means page bodies do not need to be read.
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });

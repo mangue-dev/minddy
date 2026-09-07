@@ -186,7 +186,7 @@ export async function uploadAttachment(
   const mime = resolveUploadedMimeType(args.mimeType, args.data).slice(0, 120);
   // The account quota (MIN-348): this sending comes from the SERVICE client, who
   // does not see the policy where the ceiling is placed.
-  if (!(await projectStorageAllowed(service, args.projectId))) {
+  if (!(await projectStorageAllowed(service, args.projectId, args.data.byteLength))) {
     throw new Error("attachment upload refused: storage quota exceeded");
   }
   const path = `projects/${args.projectId}/${crypto.randomUUID()}/${sanitizeKeyPart(
@@ -522,14 +522,9 @@ export async function insertAttachmentsFor(
 }
 
 /**
- * The MIME type that the BUCKET will serve for this object — the one set when sending, and
- * therefore the only truth about what the browser will receive.
- *
- * It is requested in storage and not read on the line: the `mime_type` of a line
- * is what the client DECLARED at the time of registration, unrelated
- * required with the header that the object carries (a ticket resource rises
- * directly from the browser to the bucket, including the header). Returning `""` in case
- * of failure closes the door: outside allowlist, so `attachment`.
+ * Reads the MIME type that Storage will send with the object. The database row
+ * contains the client's declared value, while direct browser uploads can set a
+ * different object header. An unavailable type fails closed to attachment mode.
  */
 async function storedContentType(
   service: SupabaseClient,
@@ -547,16 +542,10 @@ async function storedContentType(
  * Short-lived signed URL on the private bucket (service role bypasses the
  * absence of a storage select policy). Null when the object is missing.
  *
- * The ONLY neck by which a private file becomes a URL — hence the keeping
- * `inline` here and not in the five callers (MIN-340): which is not in
- * the allowlist ({@link isInlineSafeMimeType}) returns to `attachment`, whatever
- * requested by the caller. An "attachment" layout never renders anything, so
- * never executes anything, and it leaves the image displayed in a `<img>` — the
- * layout only governs navigation.
- *
- * `mimeType` is the type that the caller ALREADY holds for this file (the line
- * `page_files`, whose type is sniffed when sending): passing it avoids the forward-
- * return `info()`. Without it, we will request it from storage.
+ * This is the single boundary that turns a private object into a URL (MIN-340).
+ * Inline mode is allowed only for {@link isInlineSafeMimeType}; every other
+ * type receives an attachment disposition. Callers may pass a trusted, sniffed
+ * `mimeType` to avoid a Storage `info()` round trip.
  */
 export async function signedAttachmentUrl(
   service: SupabaseClient,
@@ -568,7 +557,7 @@ export async function signedAttachmentUrl(
   }: {
     download?: string | boolean;
     expiresIn?: number;
-    /** Type de confiance, quand l'appelant en tient un (voir ci-dessus). */
+    /** Trusted type when the caller already has one, as described above. */
     mimeType?: string | null;
   } = {}
 ): Promise<string | null> {

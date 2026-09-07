@@ -3,10 +3,11 @@ CREATE OR REPLACE FUNCTION public.guard_page_database_parent() RETURNS trigger
 LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN
   IF NEW.parent_id IS DISTINCT FROM OLD.parent_id AND NEW.property_values <> '{}'::jsonb THEN
-    -- Preserve the existing ON DELETE SET NULL behavior for permanent parent deletion.
-    -- Explicit moves still have a parent row and must keep their database context.
+    -- A permanent parent deletion may detach the entry, but its typed values
+    -- have no valid schema as a root document and must be cleared atomically.
     IF pg_trigger_depth() > 1 AND NEW.parent_id IS NULL AND OLD.parent_id IS NOT NULL AND
        NOT EXISTS (SELECT 1 FROM public.pages WHERE id = OLD.parent_id) THEN
+      NEW.property_values := '{}'::jsonb;
       RETURN NEW;
     END IF;
     RAISE EXCEPTION 'Database entries with values cannot change parent'
@@ -30,12 +31,9 @@ DECLARE
   restored_count integer;
   lift boolean;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.projects p WHERE p.id = p_project_id AND p.deleted_at IS NULL AND
-      (p.owner_id = p_actor_id OR EXISTS (
-        SELECT 1 FROM public.project_members m WHERE m.project_id = p.id AND m.user_id = p_actor_id
-      ))
-  ) THEN RETURN jsonb_build_object('status', 'not_found'); END IF;
+  IF NOT public.lock_live_project_actor_access(p_project_id, p_actor_id) THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
 
   SELECT parent_id INTO expected_parent FROM public.pages WHERE id = p_page_id AND project_id = p_project_id;
   IF expected_parent IS NOT NULL THEN

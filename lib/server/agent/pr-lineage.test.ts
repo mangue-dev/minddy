@@ -298,7 +298,7 @@ describe("an explicit PR keeps priority", () => {
 });
 
 describe("a pull-request review session", () => {
-  it("uses the dedicated review model and always isolates local checkout", async () => {
+  it("uses the dedicated review model and disables local execution", async () => {
     const result = await launchAgentRun({
       pullRequestId: PR_ID,
       userId: USER_ID,
@@ -314,8 +314,8 @@ describe("a pull-request review session", () => {
       pullRequestId: PR_ID,
       intent: "review",
       model: "model/review",
-      localExec: true,
-      localWorktree: true,
+      localExec: false,
+      localWorktree: false,
       localIssueContextConfirmed: true,
     });
     expect(h.reviewModelCalls).toEqual([

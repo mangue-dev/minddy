@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { localExecRequested } from "./local-exec";
 
-/** The local execution flag is an explicit destination choice, independent
- * from the run's trigger or anchor. */
+/** Local execution requires both an explicit choice and a trusted run scope. */
 describe("localExecRequested", () => {
   const base = { triggeredBy: "button" } as const;
 
@@ -19,34 +18,34 @@ describe("localExecRequested", () => {
     expect(localExecRequested({ ...base, localExec: false })).toBe(false);
   });
 
-  it("allows routine-triggered local execution", () => {
+  it("rejects routine-triggered local execution", () => {
     expect(
       localExecRequested({ triggeredBy: "routine", localExec: true }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       localExecRequested({ ...base, localExec: true, routineId: "r-1" }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("allows an automation chain step", () => {
+  it("rejects automation and chain-triggered local execution", () => {
     expect(
       localExecRequested({ ...base, localExec: true, chainId: "c-1" }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       localExecRequested({ triggeredBy: "automation", localExec: true }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("allows a mention-triggered local run", () => {
+  it("rejects mention-triggered local execution", () => {
     expect(
       localExecRequested({ triggeredBy: "mention", localExec: true }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("does not require a separate confirmation for pull-request context", () => {
+  it("rejects pull-request context even when issue context was confirmed", () => {
     expect(
       localExecRequested({ ...base, pullRequestId: "pr-1", localExec: true }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       localExecRequested({
         ...base,
@@ -54,6 +53,6 @@ describe("localExecRequested", () => {
         localExec: true,
         localIssueContextConfirmed: true,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

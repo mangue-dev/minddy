@@ -72,7 +72,9 @@ SELECT ok(NOT has_function_privilege('anon','public.restore_page_guarded(uuid,uu
 -- Permanent deletion retains the existing foreign-key behavior, including separate trash roots.
 UPDATE public.pages SET deleted_root_id=NULL WHERE id='49996000-0000-4000-8000-000000000004';
 SELECT lives_ok($$DELETE FROM public.pages WHERE id='49996000-0000-4000-8000-000000000003'$$,'permanent parent deletion is not mistaken for a user move');
-SELECT ok((SELECT parent_id IS NULL AND deleted_at IS NOT NULL FROM public.pages WHERE id='49996000-0000-4000-8000-000000000004'),'separately trashed entries survive permanent parent deletion as before');
+SELECT ok((SELECT parent_id IS NULL AND deleted_at IS NOT NULL AND property_values = '{}'::jsonb FROM public.pages WHERE id='49996000-0000-4000-8000-000000000004'),'permanently detached entries survive without schema-orphaned values');
+SELECT is(pg_temp.restore('49996000-0000-4000-8000-000000000004')->>'status','restored','a detached entry can be restored as a root document');
+SELECT ok((SELECT parent_id IS NULL AND deleted_at IS NULL AND property_values = '{}'::jsonb FROM public.pages WHERE id='49996000-0000-4000-8000-000000000004'),'the restored root has no orphaned typed values');
 INSERT INTO public.pages (id,project_id,parent_id,position,property_values) VALUES
  ('49996000-0000-4000-8000-000000000009','49996000-0000-4000-8000-000000000002','49996000-0000-4000-8000-000000000008','a','{"49996000-0000-4000-8000-000000000010":0}');
 UPDATE public.pages SET deleted_at=now(),deleted_root_id=CASE WHEN id='49996000-0000-4000-8000-000000000008' THEN NULL ELSE '49996000-0000-4000-8000-000000000008'::uuid END

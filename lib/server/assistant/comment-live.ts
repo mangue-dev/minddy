@@ -1,6 +1,12 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  numoCommentTopic,
+  type CommentLiveTable,
+} from "@/lib/comment-live-topic";
+
+export { numoCommentTopic } from "@/lib/comment-live-topic";
 
 /**
  * Displaying an @Numo response as it is written (migration
@@ -9,8 +15,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * Two channels, and the distribution between the two is the whole point:
  *
  * LIVE — the text of the round, broadcast on the private topic
- * `numo-comment:{id}` at the cadence of `LIVE_FLUSH_MS`. Ephemeral: nothing is
- * written in base, nothing is refetched, the open thread repainted and that's it.
+ * `numo-comment:{id}` or `numo-page-comment:{id}` at the cadence of
+ * `LIVE_FLUSH_MS`. Ephemeral: nothing is written in base, nothing is refetched,
+ * the open thread repainted and that's it.
  * THE BASE — the only transitions that count: the current tool, the end, a
  * failure. Replayable, therefore readable by the tab which arrives along the way
  * or which has missed a message.
@@ -19,11 +26,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * of the thread behind each one. The text arrived in blocks and the end of the
  * message only appeared on final writing.
  *
- * We type the Realtime HTTP endpoint rather than opening a websocket, for the
- * same reason as the code agent (lib/server/agent/live.ts): the loop runs
- * in an after() which can be cut at any time, a stateless POST lends itself to this
- * better than a connection to maintain. The service key authorizes broadcast
- * on a private topic.
+ * The loop calls the same service-only PostgREST RPC as the code agent. The
+ * RPC resolves the current membership generation before writing the private
+ * broadcast, while the server keeps a stateless best-effort transport.
  *
  * Direct is best-effort from end to end: a failed broadcast must never
  * cause a response to fail — the thread polls as long as it is 'working'.
@@ -31,10 +36,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Live cadence, aligned with that of the code agent (agent-loop.ts). */
 const LIVE_FLUSH_MS = 250;
-
-export function numoCommentTopic(commentId: string): string {
-  return `numo-comment:${commentId}`;
-}
 
 /** Live payload: the COMPLETE state of the round, never a delta — un
  * lost message is therefore made up for in the next one, without a gap in the text. */
@@ -50,12 +51,16 @@ export interface NumoCommentLive {
   at: number;
 }
 
-async function broadcast(commentId: string, payload: NumoCommentLive): Promise<void> {
+async function broadcast(
+  commentId: string,
+  table: CommentLiveTable,
+  payload: NumoCommentLive,
+): Promise<void> {
   const url = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return;
   try {
-    await fetch(`${url}/realtime/v1/api/broadcast`, {
+    await fetch(`${url}/rest/v1/rpc/broadcast_private_realtime`, {
       method: "POST",
       headers: {
         apikey: key,
@@ -63,14 +68,9 @@ async function broadcast(commentId: string, payload: NumoCommentLive): Promise<v
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        messages: [
-          {
-            topic: numoCommentTopic(commentId),
-            event: "stream",
-            payload,
-            private: true,
-          },
-        ],
+        p_topic: numoCommentTopic(commentId, table),
+        p_event: "stream",
+        p_payload: payload,
       }),
     });
   } catch {
@@ -93,7 +93,7 @@ export interface CommentDisplay {
 export function commentDisplay(
   service: SupabaseClient,
   commentId: string,
-  table: "comments" | "page_comments" = "comments"
+  table: CommentLiveTable = "comments"
 ): CommentDisplay {
   let currentTool: string | null = null;
   let lastFlushAt = 0;
@@ -116,7 +116,11 @@ export function commentDisplay(
   };
 
   const push = (text: string): void => {
-    void broadcast(commentId, { text, tool: currentTool, at: Date.now() });
+    void broadcast(commentId, table, {
+      text,
+      tool: currentTool,
+      at: Date.now(),
+    });
   };
 
   return {

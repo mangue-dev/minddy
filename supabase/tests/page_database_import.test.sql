@@ -12,6 +12,9 @@ CREATE FUNCTION pg_temp.import_rows(rows jsonb, actor uuid DEFAULT '49990000-000
  SELECT public.import_page_database('49990000-0000-4000-8000-000000000002','49990000-0000-4000-8000-000000000003',actor,request,0,rows,'[]');
 $$;
 SELECT throws_ok($$SELECT pg_temp.import_rows((SELECT pages FROM payload),'49990000-0000-4000-8000-000000000099')$$,'42501','Project access required','non-members cannot import');
+UPDATE public.projects SET deleted_at=now() WHERE id='49990000-0000-4000-8000-000000000002';
+SELECT throws_ok($$SELECT pg_temp.import_rows((SELECT pages FROM payload))$$,'42501','Project access required','deleted projects cannot accept an import');
+UPDATE public.projects SET deleted_at=NULL WHERE id='49990000-0000-4000-8000-000000000002';
 SELECT throws_ok($$SELECT pg_temp.import_rows(jsonb_set((SELECT pages FROM payload),'{1,property_values,49990000-0000-4000-8000-000000000010}','"invalid"'))$$,'22023',NULL,'invalid cells reject the entire import');
 SELECT is((SELECT database_schema FROM public.pages WHERE id='49990000-0000-4000-8000-000000000003'),'[]'::jsonb,'failed import rolls back the root schema');
 SELECT is((SELECT count(*)::int FROM public.pages WHERE parent_id='49990000-0000-4000-8000-000000000003'),0,'failed import creates no entries');

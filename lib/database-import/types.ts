@@ -9,6 +9,10 @@ export const DATABASE_ARCHIVE_VERSION = 1;
 export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 export const MAX_IMPORT_EXPANDED_BYTES = 50 * 1024 * 1024;
 export const MAX_IMPORT_PAGES = 1000;
+export const MAX_IMPORT_SOURCES = 1000;
+export const MAX_IMPORT_FILES = 100;
+export const MAX_IMPORT_PEOPLE = 5000;
+export const MAX_IMPORT_PAGE_CONTENT_BYTES = 1_000_000;
 export type ImportColumnType =
   | Exclude<DatabasePropertyType, "created_at">
   | "title";

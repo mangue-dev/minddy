@@ -8,6 +8,7 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
+import { readBoundedRequestBody } from "@/lib/server/forge-relay/request-body";
 import {
   IMPORT_MAP_ENABLED_KEY,
   IMPORT_MAP_MODEL_KEY,
@@ -37,6 +38,7 @@ const inputSchema = z.object({
 });
 const resultSchema = z.object({ types: z.array(type).min(1).max(100) });
 export const maxDuration = 60;
+export const DATABASE_IMPORT_PLAN_REQUEST_MAX_BYTES = 2 * 1024 * 1024;
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -51,7 +53,13 @@ export async function POST(
   });
   if (refused) return refused;
   try {
-    const input = inputSchema.parse(await request.json());
+    const incoming = await readBoundedRequestBody(
+      request,
+      DATABASE_IMPORT_PLAN_REQUEST_MAX_BYTES,
+    );
+    if (!incoming.ok)
+      return NextResponse.json({ types: null }, { status: 413 });
+    const input = inputSchema.parse(JSON.parse(incoming.body));
     if (!(await hasUsageBudget(auth.user.id, "automations")))
       return NextResponse.json({ types: null });
     const config = await getAppConfigValues([

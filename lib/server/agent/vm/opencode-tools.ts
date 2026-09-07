@@ -175,7 +175,11 @@ export function domainToolsFor(job: VmJob): AgentToolDef[] {
  * personne.
  */
 export function localToolsFor(job: VmJob): AgentToolDef[] {
-  return toolsFor(job).filter((t) => LOCAL_TOOL_NAMES.has(t.function.name));
+  return toolsFor(job).filter(
+    (tool) =>
+      LOCAL_TOOL_NAMES.has(tool.function.name) &&
+      localToolAllowed(job, tool.function.name),
+  );
 }
 
 /**
@@ -184,15 +188,25 @@ export function localToolsFor(job: VmJob): AgentToolDef[] {
  */
 function bridgedToolsFor(job: VmJob): AgentToolDef[] {
   return toolsFor(job).filter(
-    (t) =>
-      DOMAIN_TOOL_NAMES.has(t.function.name) ||
-      LOCAL_TOOL_NAMES.has(t.function.name),
+    (tool) =>
+      DOMAIN_TOOL_NAMES.has(tool.function.name) ||
+      (LOCAL_TOOL_NAMES.has(tool.function.name) &&
+        localToolAllowed(job, tool.function.name)),
   );
 }
 
 /** Exact per-run capability set enforced by both generation and dispatch. */
 export function bridgedToolNamesFor(job: VmJob): ReadonlySet<string> {
   return new Set(bridgedToolsFor(job).map((tool) => tool.function.name));
+}
+
+function localToolAllowed(job: VmJob, name: string): boolean {
+  if (!isLocalJob(job)) return true;
+  // These tools execute host commands or expose filesystem paths outside the
+  // assigned repository. Local runs keep only control-only supervisor tools.
+  return !["run_background", "validate_changes", "list_projects"].includes(
+    name,
+  );
 }
 
 function toolsFor(job: VmJob): AgentToolDef[] {

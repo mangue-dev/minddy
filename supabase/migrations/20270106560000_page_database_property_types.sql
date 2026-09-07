@@ -151,12 +151,9 @@ DECLARE
   container public.pages%ROWTYPE;
   parent uuid;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.projects p WHERE p.id = p_project_id AND p.deleted_at IS NULL AND
-      (p.owner_id = p_actor_id OR EXISTS (
-        SELECT 1 FROM public.project_members m WHERE m.project_id = p.id AND m.user_id = p_actor_id
-      ))
-  ) THEN RETURN jsonb_build_object('status', 'not_found'); END IF;
+  IF NOT public.lock_live_project_actor_access(p_project_id, p_actor_id) THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
   SELECT parent_id INTO parent FROM public.pages WHERE id = p_page_id AND project_id = p_project_id AND deleted_at IS NULL;
   IF p_input->>'operation' = 'value' THEN
     SELECT * INTO container FROM public.pages WHERE id = parent AND deleted_at IS NULL FOR UPDATE;

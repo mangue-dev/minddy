@@ -4,16 +4,20 @@ export type BoundedRequestBody =
   | { ok: true; body: string }
   | { ok: false; error: "too_large" };
 
+export type BoundedRequestBytes =
+  | { ok: true; body: Uint8Array<ArrayBuffer> }
+  | { ok: false; error: "too_large" };
+
 /**
  * Reads at most `maxBytes` from a request body. The declared length is checked
  * first so a known oversized request is rejected without touching its stream;
  * chunked bodies are cancelled as soon as their accumulated bytes cross the
  * same ceiling.
  */
-export async function readBoundedRequestBody(
+export async function readBoundedRequestBytes(
   request: Request,
   maxBytes: number,
-): Promise<BoundedRequestBody> {
+): Promise<BoundedRequestBytes> {
   const lengthHeader = request.headers.get("content-length");
   if (lengthHeader !== null) {
     const declaredLength = Number(lengthHeader);
@@ -22,7 +26,7 @@ export async function readBoundedRequestBody(
     }
   }
 
-  if (!request.body) return { ok: true, body: "" };
+  if (!request.body) return { ok: true, body: new Uint8Array() };
 
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -42,8 +46,21 @@ export async function readBoundedRequestBody(
     reader.releaseLock();
   }
 
-  return {
-    ok: true,
-    body: Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)), received).toString("utf8"),
-  };
+  const body: Uint8Array<ArrayBuffer> = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { ok: true, body };
+}
+
+export async function readBoundedRequestBody(
+  request: Request,
+  maxBytes: number,
+): Promise<BoundedRequestBody> {
+  const incoming = await readBoundedRequestBytes(request, maxBytes);
+  return incoming.ok
+    ? { ok: true, body: Buffer.from(incoming.body).toString("utf8") }
+    : incoming;
 }

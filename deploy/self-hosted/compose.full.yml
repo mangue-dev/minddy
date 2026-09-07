@@ -15,10 +15,19 @@ services:
 
   auth:
     environment:
+      GOTRUE_PASSWORD_MIN_LENGTH: "8"
+      GOTRUE_PASSWORD_REQUIRED_CHARACTERS: "abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789"
+      GOTRUE_PASSWORD_HIBP_ENABLED: "true"
+      GOTRUE_PASSWORD_HIBP_FAIL_CLOSED: "true"
+      GOTRUE_SESSIONS_TIMEBOX: "720h"
+      GOTRUE_SESSIONS_INACTIVITY_TIMEOUT: "168h"
       GOTRUE_MAILER_SUBJECTS_CONFIRMATION: '{{ if eq (printf "%v" (index .Data "locale")) "fr" }}Confirmez votre adresse e-mail{{ else }}Confirm your email{{ end }}'
       GOTRUE_MAILER_SUBJECTS_RECOVERY: '{{ if eq (printf "%v" (index .Data "locale")) "fr" }}Réinitialisez votre mot de passe{{ else }}Reset your password{{ end }}'
       GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://minddy:3000/api/self-hosting/email-templates/confirm-signup
       GOTRUE_MAILER_TEMPLATES_RECOVERY: http://minddy:3000/api/self-hosting/email-templates/reset-password
+    networks:
+      - default
+      - auth_egress
 
   minddy:
     image: ${MINDDY_IMAGE:?Set MINDDY_IMAGE from the matching compatibility row.}
@@ -129,11 +138,13 @@ volumes:
 networks:
   # The complete profile keeps the application and the local Supabase stack off
   # the Internet. Caddy is the only service attached to `edge` for ingress and
-  # ACME. `agent_egress` gives isolated agent sandboxes outbound access without
-  # connecting them to the Supabase network.
+  # ACME. `auth_egress` gives Auth the outbound access required for
+  # password-compromise checks. `agent_egress` gives isolated agent sandboxes
+  # outbound access without connecting them to the Supabase network.
   default:
     internal: true
   edge:
+  auth_egress:
   private:
     internal: true
   agent_egress:

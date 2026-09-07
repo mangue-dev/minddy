@@ -234,13 +234,16 @@ Use a private browser profile containing no existing cookies.
 1. Run `supabase status`, open the local email inbox URL it reports, then open
    `http://127.0.0.1:3000` and sign up as `admin@example.test`. Use the message
    captured in that local inbox to confirm the account.
-2. Confirm that the account receives first-administrator access through
-   `ADMIN_EMAILS`; no database console edit is allowed.
-3. Create project `Clean Room` with key `ROOM`.
-4. Create ticket `Survives update and restore`, set it to `In progress`, priority
+2. Enroll and verify TOTP MFA from account settings, then confirm that the
+   account receives first-administrator access through `ADMIN_EMAILS`; no
+   database console edit is allowed.
+3. Store the recovery codes outside the test browser, sign out, sign in again,
+   and complete the MFA challenge.
+4. Create project `Clean Room` with key `ROOM`.
+5. Create ticket `Survives update and restore`, set it to `In progress`, priority
    `Urgent`, effort `M`, and add the description `MIN-383 acceptance marker`.
-5. Upload a small text attachment containing only `clean-room-storage-marker`.
-6. Sign out, sign in again, and confirm that the project, ticket, and attachment
+6. Upload a small text attachment containing only `clean-room-storage-marker`.
+7. Sign out, sign in again, and confirm that the project, ticket, and attachment
    are readable.
 
 Record timestamps and generated row identifiers, but no cookie, JWT, key, email

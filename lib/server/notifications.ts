@@ -76,6 +76,332 @@ const AGENT_TYPES: readonly NotificationType[] = [
 const siblingTypes = (type: NotificationType): readonly NotificationType[] =>
   AGENT_TYPES.includes(type) ? AGENT_TYPES : [type];
 
+type ScopeRow = Record<string, unknown>;
+
+const idsOf = (
+  rows: readonly NotificationRow[],
+  pick: (row: NotificationRow) => string | null | undefined,
+): string[] => [...new Set(rows.map(pick).filter((id): id is string => !!id))];
+
+const scopedId = (
+  projectId: string,
+  provider: string,
+  repoFullName: string,
+): string => `${projectId}\u0000${provider}\u0000${repoFullName}`;
+
+/**
+ * Recheck access and target scope immediately before external push delivery.
+ * The database trigger serializes notification creation with access
+ * revocation; this second check also covers a target move or revocation that
+ * commits after the insert and before the deferred push job runs.
+ *
+ * Target reads fail closed. Actor and API-key attribution is sanitized instead
+ * of dropping an otherwise valid notification when its identity no longer
+ * belongs to the notification project.
+ */
+async function currentlyPushableRows(
+  service: SupabaseClient,
+  rows: readonly NotificationRow[],
+): Promise<NotificationRow[]> {
+  const projectIds = idsOf(rows, (row) => row.project_id);
+  const commentIds = idsOf(rows, (row) => row.comment_id);
+  const apiKeyIds = idsOf(rows, (row) => row.api_key_id);
+
+  const [projectsResult, commentsResult, apiKeysResult] = await Promise.all([
+    projectIds.length
+      ? service.from("projects").select("id, owner_id").in("id", projectIds)
+      : Promise.resolve({ data: [] as ScopeRow[], error: null }),
+    commentIds.length
+      ? service
+          .from("comments")
+          .select("id, issue_id, objective_id, feedback_post_id")
+          .in("id", commentIds)
+      : Promise.resolve({ data: [] as ScopeRow[], error: null }),
+    apiKeyIds.length
+      ? service.from("api_keys").select("id, user_id").in("id", apiKeyIds)
+      : Promise.resolve({ data: [] as ScopeRow[], error: null }),
+  ]);
+
+  const comments = (commentsResult.data ?? []) as ScopeRow[];
+  const issueIds = [
+    ...new Set([
+      ...idsOf(rows, (row) => row.issue_id),
+      ...comments
+        .map((comment) => comment.issue_id)
+        .filter((id): id is string => typeof id === "string"),
+    ]),
+  ];
+  const objectiveIds = [
+    ...new Set([
+      ...idsOf(rows, (row) => row.objective_id),
+      ...comments
+        .map((comment) => comment.objective_id)
+        .filter((id): id is string => typeof id === "string"),
+    ]),
+  ];
+  const feedbackIds = [
+    ...new Set([
+      ...idsOf(rows, (row) => row.feedback_post_id),
+      ...comments
+        .map((comment) => comment.feedback_post_id)
+        .filter((id): id is string => typeof id === "string"),
+    ]),
+  ];
+  const recipientAndActorIds = [
+    ...new Set([
+      ...rows.map((row) => row.user_id),
+      ...idsOf(rows, (row) => row.actor_id),
+      ...(apiKeysResult.data ?? [])
+        .map((key) => key.user_id)
+        .filter((id): id is string => typeof id === "string"),
+    ]),
+  ];
+
+  const targetQuery = <T extends ScopeRow>(
+    ids: readonly string[],
+    table:
+      | "issues"
+      | "objectives"
+      | "feedback_posts"
+      | "agent_routines"
+      | "pages"
+      | "agent_conversations",
+  ) =>
+    ids.length && projectIds.length
+      ? service
+          .from(table)
+          .select("id, project_id")
+          .in("id", [...ids])
+          .in("project_id", projectIds)
+      : Promise.resolve({ data: [] as T[], error: null });
+
+  const [
+    membersResult,
+    issuesResult,
+    objectivesResult,
+    feedbackResult,
+    routinesResult,
+    pagesResult,
+    conversationsResult,
+    pullRequestsResult,
+    projectLinksResult,
+  ] = await Promise.all([
+    projectIds.length && recipientAndActorIds.length
+      ? service
+          .from("project_members")
+          .select("project_id, user_id")
+          .in("project_id", projectIds)
+          .in("user_id", recipientAndActorIds)
+      : Promise.resolve({ data: [] as ScopeRow[], error: null }),
+    targetQuery(issueIds, "issues"),
+    targetQuery(objectiveIds, "objectives"),
+    targetQuery(feedbackIds, "feedback_posts"),
+    targetQuery(idsOf(rows, (row) => row.routine_id), "agent_routines"),
+    targetQuery(idsOf(rows, (row) => row.page_id), "pages"),
+    targetQuery(
+      idsOf(rows, (row) => row.agent_conversation_id),
+      "agent_conversations",
+    ),
+    idsOf(rows, (row) => row.pull_request_id).length
+      ? service
+          .from("pull_requests")
+          .select("id, provider, repo_full_name")
+          .in("id", idsOf(rows, (row) => row.pull_request_id))
+      : Promise.resolve({ data: [] as ScopeRow[], error: null }),
+    projectIds.length
+      ? service
+          .from("project_git_links")
+          .select("project_id, provider, repo_full_name")
+          .in("project_id", projectIds)
+      : Promise.resolve({ data: [] as ScopeRow[], error: null }),
+  ]);
+
+  const failures = [
+    projectsResult.error,
+    commentsResult.error,
+    apiKeysResult.error,
+    membersResult.error,
+    issuesResult.error,
+    objectivesResult.error,
+    feedbackResult.error,
+    routinesResult.error,
+    pagesResult.error,
+    conversationsResult.error,
+    pullRequestsResult.error,
+    projectLinksResult.error,
+  ].flatMap((error) => (error ? [error.message] : []));
+  if (failures.length > 0) {
+    console.error(
+      "[notifications] push scope recheck failed:",
+      failures.join("; "),
+    );
+  }
+
+  const owners = new Map(
+    (projectsResult.data ?? []).map((project) => [
+      project.id as string,
+      project.owner_id as string,
+    ]),
+  );
+  const memberships = new Set(
+    (membersResult.data ?? []).map(
+      (member) =>
+        `${member.project_id as string}\u0000${member.user_id as string}`,
+    ),
+  );
+  const belongsToProject = (
+    userId: string | null | undefined,
+    projectId: string | null,
+  ): boolean =>
+    !!userId &&
+    !!projectId &&
+    !projectsResult.error &&
+    !membersResult.error &&
+    (owners.get(projectId) === userId ||
+      memberships.has(`${projectId}\u0000${userId}`));
+
+  const scopeMap = (data: ScopeRow[] | null) =>
+    new Map((data ?? []).map((item) => [item.id as string, item]));
+  const issues = scopeMap((issuesResult.data ?? []) as ScopeRow[]);
+  const objectives = scopeMap((objectivesResult.data ?? []) as ScopeRow[]);
+  const feedback = scopeMap((feedbackResult.data ?? []) as ScopeRow[]);
+  const routines = scopeMap((routinesResult.data ?? []) as ScopeRow[]);
+  const pages = scopeMap((pagesResult.data ?? []) as ScopeRow[]);
+  const conversations = scopeMap(
+    (conversationsResult.data ?? []) as ScopeRow[],
+  );
+  const commentMap = scopeMap(comments);
+  const pullRequests = scopeMap(
+    (pullRequestsResult.data ?? []) as ScopeRow[],
+  );
+  const apiKeyOwners = new Map(
+    (apiKeysResult.data ?? []).map((key) => [
+      key.id as string,
+      key.user_id as string,
+    ]),
+  );
+  const repoProjects = new Set(
+    (projectLinksResult.data ?? []).map((link) =>
+      scopedId(
+        link.project_id as string,
+        link.provider as string,
+        link.repo_full_name as string,
+      ),
+    ),
+  );
+
+  const directTargetMatches = (
+    id: string | null | undefined,
+    projectId: string | null,
+    result: { error: unknown },
+    targets: ReadonlyMap<string, ScopeRow>,
+  ): boolean =>
+    !id ||
+    (!result.error && targets.get(id)?.project_id === projectId);
+
+  return rows.flatMap((row) => {
+    if (
+      row.project_id &&
+      !belongsToProject(row.user_id, row.project_id)
+    ) {
+      return [];
+    }
+
+    const comment = row.comment_id ? commentMap.get(row.comment_id) : undefined;
+    const commentMatches = !row.comment_id
+      ? true
+      : !commentsResult.error &&
+        !!comment &&
+        (typeof comment.issue_id === "string"
+          ? directTargetMatches(
+              comment.issue_id,
+              row.project_id,
+              issuesResult,
+              issues,
+            )
+          : typeof comment.objective_id === "string"
+            ? directTargetMatches(
+                comment.objective_id,
+                row.project_id,
+                objectivesResult,
+                objectives,
+              )
+            : typeof comment.feedback_post_id === "string" &&
+              directTargetMatches(
+                comment.feedback_post_id,
+                row.project_id,
+                feedbackResult,
+                feedback,
+              ));
+    const pullRequest = row.pull_request_id
+      ? pullRequests.get(row.pull_request_id)
+      : undefined;
+    const pullRequestMatches = !row.pull_request_id
+      ? true
+      : !pullRequestsResult.error &&
+        !projectLinksResult.error &&
+        !!row.project_id &&
+        !!pullRequest &&
+        repoProjects.has(
+          scopedId(
+            row.project_id,
+            pullRequest.provider as string,
+            pullRequest.repo_full_name as string,
+          ),
+        );
+
+    const targetsMatch =
+      directTargetMatches(
+        row.issue_id,
+        row.project_id,
+        issuesResult,
+        issues,
+      ) &&
+      directTargetMatches(
+        row.objective_id,
+        row.project_id,
+        objectivesResult,
+        objectives,
+      ) &&
+      directTargetMatches(
+        row.feedback_post_id,
+        row.project_id,
+        feedbackResult,
+        feedback,
+      ) &&
+      directTargetMatches(
+        row.routine_id,
+        row.project_id,
+        routinesResult,
+        routines,
+      ) &&
+      directTargetMatches(row.page_id, row.project_id, pagesResult, pages) &&
+      directTargetMatches(
+        row.agent_conversation_id,
+        row.project_id,
+        conversationsResult,
+        conversations,
+      ) &&
+      commentMatches &&
+      pullRequestMatches;
+    if (!targetsMatch) return [];
+
+    const actorId = belongsToProject(row.actor_id, row.project_id)
+      ? row.actor_id
+      : null;
+    const apiKeyId =
+      row.api_key_id &&
+      !apiKeysResult.error &&
+      belongsToProject(apiKeyOwners.get(row.api_key_id), row.project_id)
+        ? row.api_key_id
+        : null;
+    if (actorId === row.actor_id && apiKeyId === (row.api_key_id ?? null)) {
+      return [row];
+    }
+    return [{ ...row, actor_id: actorId, api_key_id: apiKeyId }];
+  });
+}
+
 export async function insertNotifications(
   service: SupabaseClient,
   rows: NotificationRow[],
@@ -211,10 +537,12 @@ function pushNotifications(
 ): void {
   if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
-    const ctx = await loadPushContext(service, kept);
+    const authorized = await currentlyPushableRows(service, kept);
+    if (authorized.length === 0) return;
+    const ctx = await loadPushContext(service, authorized);
     // Sequential by recipient: `sendPushToUser` already parallelizes by
     // device, and an insert is rarely aimed at more than a handful of people.
-    for (const row of kept) {
+    for (const row of authorized) {
       const locale = localeByUserId.get(row.user_id) ?? "en";
       await sendPushToUser(
         service,

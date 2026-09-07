@@ -84,7 +84,7 @@ SELECT ok(
 SELECT has_trigger(
   'public',
   'project_members',
-  'project_members_lock_project_scope',
+  'project_members_authority_lock',
   'membership changes lock the same project scope as guarded writes'
 );
 

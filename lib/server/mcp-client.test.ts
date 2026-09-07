@@ -321,6 +321,25 @@ describe("personal MCP client", () => {
     });
     expect(JSON.stringify(outcome)).not.toContain("abc123");
   });
+
+  it("redacts credentials reflected in nested structured-result keys", async () => {
+    const secret = "synthetic-mcp-key-canary";
+    mocks.rows[0].token_encrypted = encryptMcpToken(secret);
+    server({
+      content: [{ type: "text", text: "Synthetic response" }],
+      structuredContent: { nested: [{ [`prefix-${secret}`]: { [secret]: secret } }] },
+    });
+    const outcome = await executeMcpTool("alice", "call_mcp_tool", {
+      connection_id: ID,
+      tool: "echo",
+      arguments: {},
+    });
+    expect(outcome).toMatchObject({ success: true });
+    expect(JSON.stringify(outcome)).not.toContain(secret);
+    expect(outcome.result).toMatchObject({
+      structuredContent: { nested: [{ "prefix-[REDACTED]": { "[REDACTED]": "[REDACTED]" } }] },
+    });
+  });
   it("preserves remote tool errors without retrying an action", async () => {
     server({
       isError: true,

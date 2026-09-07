@@ -5,18 +5,16 @@ import {
   pagePresenceTopic,
   type PagePresenceMap,
 } from "./page-presence";
+import { signalRealtimeRekey } from "./realtime-topic";
 
 /**
- * MIN-271 — the LIFE CYCLE of the presence subscription.
+ * MIN-271 — the complete lifecycle of the presence subscription.
  *
- * What this file catches, and which neither `tsc` nor a replay catches: a
- * subscription that goes up and never comes down. We already shipped it once (the
- * feature of PR 48) — the code compiled, it read well, and the
- * channel remained open forever. The only possible proof is to mount, de
- * dismount, and look at what was called.
+ * This catches a subscription that opens and never closes. Static checks cannot
+ * prove cleanup, so the test opens and closes a channel and inspects each call.
  *
- * The setting is a fake Supabase client which KEEP the callbacks passed to
- * `on` and to `subscribe`: it's the only one way to replay a presence `sync` * without a socket, like `compact-path.test.ts` replays an SSE flow without a provider.
+ * The fake Supabase client retains callbacks passed to `on` and `subscribe`, so
+ * the test can replay a Presence sync without a socket.
  */
 
 type PresenceEntry = { userId: string; pageId: string };
@@ -27,6 +25,7 @@ function fakeSupabase() {
     tracked: [] as PresenceEntry[],
     untracked: 0,
     removed: 0,
+    resolved: [] as string[],
   };
   let syncHandler: (() => void) | null = null;
   let state: Record<string, PresenceEntry[]> = {};
@@ -53,6 +52,10 @@ function fakeSupabase() {
 
   const client = {
     realtime: { setAuth: async () => undefined },
+    rpc: async (_name: string, args: { p_topic: string }) => {
+      calls.resolved.push(args.p_topic);
+      return { data: `${args.p_topic}:v:7`, error: null };
+    },
     channel: (topic: string) => {
       calls.channels.push(topic);
       return channel as never;
@@ -75,7 +78,7 @@ function fakeSupabase() {
 }
 
 describe("openPagePresence", () => {
-  it("rejoint le canal du PROJET et s'y déclare sur la page ouverte", async () => {
+  it("joins the versioned project channel and tracks the open page", async () => {
     const supabase = fakeSupabase();
     const handle = openPagePresence({
       projectId: "proj",
@@ -86,15 +89,17 @@ describe("openPagePresence", () => {
     });
     await vi.waitFor(() => expect(supabase.calls.channels).toHaveLength(1));
 
-    // One channel, that of the project — not one per page.
-    expect(supabase.calls.channels).toEqual([pagePresenceTopic("proj")]);
+    expect(supabase.calls.resolved).toEqual([pagePresenceTopic("proj")]);
+    expect(supabase.calls.channels).toEqual([
+      `${pagePresenceTopic("proj")}:v:7`,
+    ]);
     expect(supabase.calls.tracked).toEqual([
       { userId: "moi", pageId: "page-1" },
     ]);
     handle.close();
   });
 
-  it("redescend du canal au démontage", async () => {
+  it("leaves the channel during cleanup", async () => {
     const supabase = fakeSupabase();
     const handle = openPagePresence({
       projectId: "proj",
@@ -107,18 +112,16 @@ describe("openPagePresence", () => {
 
     handle.close();
 
-    // Both: `untrack` removes the avatar from others immediately,
-    // `removeChannel` ferme l'abonnement.
+    // Untracking removes the avatar immediately; removing closes the channel.
     expect(supabase.calls.untracked).toBe(1);
     expect(supabase.calls.removed).toBe(1);
 
-    // And close twice (React mounts/unmounts twice in development) doesn't
-    // ferme pas deux fois.
+    // Cleanup remains idempotent when React mounts twice in development.
     handle.close();
     expect(supabase.calls.removed).toBe(1);
   });
 
-  it("ne rejoint RIEN quand on part avant que le token soit poussé", async () => {
+  it("joins nothing when cleanup happens before authentication resolves", async () => {
     const supabase = fakeSupabase();
     const handle = openPagePresence({
       projectId: "proj",
@@ -127,9 +130,7 @@ describe("openPagePresence", () => {
       onChange: () => {},
       client: supabase.client,
     });
-    // The disassembly happens in the same tick as the opening: that's what it does
-    // a quick click from one page to another, and this is the path by which a
-    // ghost channel survives its component.
+    // A quick navigation can unmount in the same tick as the opening.
     handle.close();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -137,7 +138,7 @@ describe("openPagePresence", () => {
     expect(supabase.calls.removed).toBe(0);
   });
 
-  it("change de page sans rejoindre un second canal", async () => {
+  it("moves to another page without joining another channel", async () => {
     const supabase = fakeSupabase();
     const handle = openPagePresence({
       projectId: "proj",
@@ -158,7 +159,7 @@ describe("openPagePresence", () => {
     handle.close();
   });
 
-  it("ne se compte JAMAIS soi-même, même depuis un autre onglet", async () => {
+  it("never counts the current account, including another tab", async () => {
     const supabase = fakeSupabase();
     let seen: PagePresenceMap = new Map();
     const handle = openPagePresence({
@@ -174,8 +175,7 @@ describe("openPagePresence", () => {
 
     supabase.emit({
       a: [{ userId: "moi", pageId: "page-1" }],
-      // My second tab, on ANOTHER page: the tree pellet is there
-      // lit up in front of a page that no one else was reading.
+      // A second current-account tab on another page is still excluded.
       b: [{ userId: "moi", pageId: "page-2" }],
       c: [{ userId: "elle", pageId: "page-2" }],
     });
@@ -185,7 +185,7 @@ describe("openPagePresence", () => {
     handle.close();
   });
 
-  it("range les présents par page, un avatar par compte", async () => {
+  it("groups presence by page with one avatar per account", async () => {
     const supabase = fakeSupabase();
     let seen: PagePresenceMap = new Map();
     const handle = openPagePresence({
@@ -209,6 +209,29 @@ describe("openPagePresence", () => {
 
     expect(seen.get("page-1")).toEqual(["elle"]);
     expect(seen.get("page-2")).toEqual(["lui"]);
+    handle.close();
+  });
+
+  it("re-resolves and rejoins after a membership rekey", async () => {
+    const supabase = fakeSupabase();
+    const handle = openPagePresence({
+      projectId: "proj",
+      userId: "me",
+      pageId: "page-1",
+      onChange: () => {},
+      client: supabase.client,
+    });
+    await vi.waitFor(() => expect(supabase.calls.channels).toHaveLength(1));
+
+    signalRealtimeRekey();
+
+    await vi.waitFor(() => expect(supabase.calls.channels).toHaveLength(2));
+    expect(supabase.calls.resolved).toEqual([
+      pagePresenceTopic("proj"),
+      pagePresenceTopic("proj"),
+    ]);
+    expect(supabase.calls.untracked).toBe(1);
+    expect(supabase.calls.removed).toBe(1);
     handle.close();
   });
 });
