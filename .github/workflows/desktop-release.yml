@@ -278,13 +278,22 @@ jobs:
           MINDDY_WINDOWS_WNS_OBJECT_ID: ${{ vars.WINDOWS_WNS_OBJECT_ID }}
         run: npm --prefix desktop run dist:win:store
 
+      # Validation tooling follows the approved workflow revision while the
+      # packaged application remains on its immutable release tag.
+      - name: Load the approved Windows verifier
+        shell: pwsh
+        run: |
+          $verifier = git show "$($env:GITHUB_SHA):scripts/verify-windows-desktop.ps1"
+          if ($LASTEXITCODE -ne 0) { throw "The workflow revision has no Windows verifier." }
+          $verifier | Set-Content "$env:RUNNER_TEMP/verify-windows-desktop.ps1" -Encoding utf8
+
       - name: Validate MSIX manifests with the Windows SDK
         shell: pwsh
         env:
           MINDDY_WINDOWS_STORE_IDENTITY_NAME: ${{ vars.WINDOWS_STORE_IDENTITY_NAME }}
           MINDDY_WINDOWS_STORE_PUBLISHER: ${{ vars.WINDOWS_STORE_PUBLISHER }}
           MINDDY_WINDOWS_WNS_APP_ID: ${{ vars.WINDOWS_WNS_APP_ID }}
-        run: ./scripts/verify-windows-desktop.ps1
+        run: '& "$env:RUNNER_TEMP/verify-windows-desktop.ps1" -StoreDirectory "$env:GITHUB_WORKSPACE/desktop/release/windows-store"'
 
       # Partner Center requires unsigned submission packages. Sign only
       # disposable copies so the release can still exercise installation,
@@ -322,7 +331,7 @@ jobs:
             & $signTool.FullName sign /fd SHA256 /f "$env:RUNNER_TEMP\minddy-ci.pfx" /p "minddy-ci-only" $_.FullName | Out-Host
             if ($LASTEXITCODE -ne 0) { throw "SignTool could not sign $($_.Name)." }
           }
-          ./scripts/verify-windows-desktop.ps1 -InstallStore -StoreDirectory $testDirectory
+          & "$env:RUNNER_TEMP/verify-windows-desktop.ps1" -InstallStore -StoreDirectory $testDirectory
 
       - name: Stage Windows desktop artifacts
         shell: pwsh

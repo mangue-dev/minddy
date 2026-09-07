@@ -1,0 +1,125 @@
+name: Published Windows package validation
+
+on:
+  pull_request:
+    paths:
+      - scripts/verify-windows-desktop.ps1
+      - .github/workflows/windows-store-validation.yml
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Existing immutable release to build and validate"
+        required: true
+        default: "0.10.26"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-store-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build and validate published Store packages
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ inputs.version || '0.10.26' }}
+      MINDDY_WINDOWS_STORE_IDENTITY_NAME: mangue-dev.minddy
+      MINDDY_WINDOWS_STORE_PUBLISHER: CN=D5052B10-735B-4EF0-920F-642DFBDEB04F
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      # Exercise the proposed verifier against unchanged, tagged application source.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          path: validation
+          persist-credentials: false
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: v${{ env.RELEASE_VERSION }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable source identity
+        shell: pwsh
+        working-directory: candidate
+        run: |
+          $tag = "v$env:RELEASE_VERSION"
+          $source = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw "Cannot resolve the source commit." }
+          if ((git cat-file -t $tag) -ne "tag") { throw "An annotated release tag is required." }
+          if ((git rev-list -n 1 $tag) -ne $source) { throw "Source differs from the release tag." }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $desktopVersion = (Get-Content desktop/package.json -Raw | ConvertFrom-Json).version
+          if ($version -ne $env:RELEASE_VERSION -or $desktopVersion -ne $version) {
+            throw "Application and desktop versions must match the release."
+          }
+          "SOURCE_COMMIT=$source" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: candidate/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: candidate
+
+      - run: npm --prefix desktop ci --ignore-scripts
+        working-directory: candidate
+
+      - run: npm --prefix desktop run dist:win:store
+        working-directory: candidate
+
+      - name: Preserve unsigned packages and source identity
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory windows-validation | Out-Null
+          Copy-Item candidate/desktop/release/windows-store/*.msix windows-validation/
+          Get-FileHash windows-validation/*.msix -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } |
+            Set-Content windows-validation/SHA256SUMS-Windows
+          $env:SOURCE_COMMIT | Set-Content windows-validation/source-commit.txt
+
+      - name: Validate original unsigned packages
+        shell: pwsh
+        run: ./validation/scripts/verify-windows-desktop.ps1 -StoreDirectory "$env:GITHUB_WORKSPACE/windows-validation"
+
+      - name: Sign disposable copies for installation testing
+        shell: pwsh
+        run: |
+          $testDirectory = "$env:RUNNER_TEMP/minddy-store-installation"
+          New-Item -ItemType Directory $testDirectory | Out-Null
+          Copy-Item windows-validation/*.msix $testDirectory/
+          $password = ConvertTo-SecureString "minddy-ci-only" -AsPlainText -Force
+          $certificate = New-SelfSignedCertificate -Type Custom `
+            -Subject $env:MINDDY_WINDOWS_STORE_PUBLISHER -KeyUsage DigitalSignature `
+            -FriendlyName "minddy CI" -CertStoreLocation Cert:\CurrentUser\My `
+            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+          Export-PfxCertificate -Cert $certificate -FilePath "$env:RUNNER_TEMP/minddy-ci.pfx" -Password $password | Out-Null
+          Export-Certificate -Cert $certificate -FilePath "$env:RUNNER_TEMP/minddy-ci.cer" | Out-Null
+          Import-Certificate -FilePath "$env:RUNNER_TEMP/minddy-ci.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+          $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signTool) { throw "SignTool was not found." }
+          Get-ChildItem "$testDirectory/*.msix" | ForEach-Object {
+            & $signTool.FullName sign /fd SHA256 /f "$env:RUNNER_TEMP/minddy-ci.pfx" /p "minddy-ci-only" $_.FullName | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "SignTool could not sign the test copy." }
+          }
+          ./validation/scripts/verify-windows-desktop.ps1 -InstallStore -StoreDirectory $testDirectory
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: windows-validation-${{ env.RELEASE_VERSION }}
+          path: windows-validation/
+          if-no-files-found: error
+          retention-days: 7
