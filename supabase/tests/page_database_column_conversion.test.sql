@@ -1,6 +1,11 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SELECT no_plan();
+SELECT ok(
+  pg_get_functiondef('public.validate_page_database()'::regprocedure)
+    ILIKE '%IF TG_OP = ''INSERT''%FOR SHARE%',
+  'entry insertion locks its database schema through the write'
+);
 INSERT INTO auth.users (id,email) VALUES ('49920000-0000-4000-8000-000000000001','conversion-owner@example.test'),('49920000-0000-4000-8000-000000000002','conversion-outsider@example.test');
 INSERT INTO public.projects (id,owner_id,name,key) VALUES ('49920000-0000-4000-8000-000000000003','49920000-0000-4000-8000-000000000001','Column conversion','CVC');
 INSERT INTO public.pages (id,project_id,position,database_schema) VALUES ('49920000-0000-4000-8000-000000000004','49920000-0000-4000-8000-000000000003','a','[{"id":"49920000-0000-4000-8000-000000000010","name":"Value","type":"text"}]');

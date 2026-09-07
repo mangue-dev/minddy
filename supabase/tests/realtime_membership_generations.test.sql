@@ -93,13 +93,12 @@ INSERT INTO expected_realtime_function_privileges VALUES
   ('public.rekey_mfa_amr_change()', false, false, false),
   ('public.rekey_auth_user_access_change()', false, false, false),
   ('public.rekey_deleted_auth_user()', false, false, false),
-  ('public.rekey_project_git_link_before()', false, false, false),
   ('public.rekey_project_git_link_after()', false, false, false);
 
 SELECT is(
   (SELECT count(*) FROM expected_realtime_function_privileges),
-  28::bigint,
-  'the ACL matrix covers all 28 functions defined by this migration'
+  27::bigint,
+  'the ACL matrix covers all 27 functions defined by this migration'
 );
 
 SELECT is(
@@ -142,37 +141,34 @@ SELECT is(
   'v',
   'resource scope resolution takes a fresh snapshot after reparenting'
 );
-SELECT like(
+SELECT ok(
   (
     SELECT qual
     FROM pg_policies
     WHERE schemaname = 'realtime'
       AND tablename = 'messages'
       AND policyname = 'members_receive_broadcasts'
-  ),
-  '%realtime_topic_is_current%',
+  ) LIKE '%realtime_topic_is_current%',
   'Broadcast joins require the current authorized topic generation'
 );
-SELECT like(
+SELECT ok(
   (
     SELECT qual
     FROM pg_policies
     WHERE schemaname = 'realtime'
       AND tablename = 'messages'
       AND policyname = 'members_receive_page_presence'
-  ),
-  '%realtime_topic_is_current%',
+  ) LIKE '%realtime_topic_is_current%',
   'Presence reads require the current authorized topic generation'
 );
-SELECT like(
+SELECT ok(
   (
     SELECT with_check
     FROM pg_policies
     WHERE schemaname = 'realtime'
       AND tablename = 'messages'
       AND policyname = 'members_track_page_presence'
-  ),
-  '%realtime_topic_is_current%',
+  ) LIKE '%realtime_topic_is_current%',
   'Presence tracking requires the current authorized topic generation'
 );
 SELECT is(
@@ -239,6 +235,21 @@ SELECT is(
   3::bigint,
   'MFA factor Realtime rotations defer until commit to preserve Auth lock order'
 );
+SELECT is(
+  (
+    SELECT count(*)
+    FROM pg_catalog.pg_trigger
+    WHERE tgrelid = 'auth.users'::regclass
+      AND tgname = 'auth_users_rekey_realtime_delete'
+      AND tgconstraint <> 0
+      AND tgdeferrable
+      AND tginitdeferred
+      AND tgfoid = 'public.rekey_deleted_auth_user()'::regprocedure
+      AND tgenabled <> 'D'
+  ),
+  1::bigint,
+  'Auth user deletion rotates personal Realtime topics after cascades complete'
+);
 
 INSERT INTO auth.users (id, email, raw_app_meta_data)
 VALUES
@@ -263,27 +274,35 @@ VALUES
     '{}'::jsonb
   );
 
-INSERT INTO auth.sessions (id, user_id, aal)
+INSERT INTO auth.sessions (id, user_id, aal, created_at, updated_at)
 VALUES
   (
     '73010000-0000-4000-8000-000000000001',
     '73000000-0000-4000-8000-000000000001',
-    'aal1'
+    'aal1',
+    now(),
+    now()
   ),
   (
     '73010000-0000-4000-8000-000000000002',
     '73000000-0000-4000-8000-000000000002',
-    'aal1'
+    'aal1',
+    now(),
+    now()
   ),
   (
     '73010000-0000-4000-8000-000000000003',
     '73000000-0000-4000-8000-000000000003',
-    'aal1'
+    'aal1',
+    now(),
+    now()
   ),
   (
     '73010000-0000-4000-8000-000000000004',
     '73000000-0000-4000-8000-000000000004',
-    'aal1'
+    'aal1',
+    now(),
+    now()
   );
 INSERT INTO auth.refresh_tokens (token, user_id, revoked, session_id)
 VALUES
@@ -547,6 +566,34 @@ SELECT is(
   'the linked project has an independently rotated generation'
 );
 
+CREATE TEMP TABLE missing_project_generation AS
+SELECT *
+FROM public.project_realtime_generations
+WHERE project_id = '73100000-0000-4000-8000-000000000002';
+
+DELETE FROM public.project_realtime_generations
+WHERE project_id = '73100000-0000-4000-8000-000000000002';
+
+SELECT is(
+  public.current_realtime_topic(
+    'pull-request:73800000-0000-4000-8000-000000000001'
+  ),
+  NULL::text,
+  'a shared pull request fails closed when any linked project generation is missing'
+);
+
+SELECT throws_ok(
+  $$ SELECT public.rotate_project_realtime_generation(
+       '73100000-0000-4000-8000-000000000002'
+     ) $$,
+  '23514',
+  'realtime_project_generation_missing',
+  'a missing project generation aborts rather than skipping revocation'
+);
+
+INSERT INTO public.project_realtime_generations (project_id, generation)
+SELECT project_id, generation FROM missing_project_generation;
+
 SELECT isnt(
   public.current_realtime_topic(
     'agent-run:73500000-0000-4000-8000-000000000002'
@@ -792,11 +839,10 @@ SELECT throws_ok(
   'Realtime topic access denied',
   'a regular-comment member cannot use the colliding UUID to resolve the page comment'
 );
-SELECT like(
+SELECT ok(
   public.resolve_realtime_topic(
     'pull-request:73800000-0000-4000-8000-000000000001'
-  ),
-  'pull-request:73800000-0000-4000-8000-000000000001:v:%',
+  ) LIKE 'pull-request:73800000-0000-4000-8000-000000000001:v:%',
   'a member resolves the linked pull request generation digest'
 );
 SELECT is(
@@ -956,11 +1002,10 @@ SELECT throws_ok(
   'Realtime topic access denied',
   'an outsider cannot resolve a project-visible agent run topic'
 );
-SELECT like(
+SELECT ok(
   public.resolve_realtime_topic(
     'pull-request:73800000-0000-4000-8000-000000000001'
-  ),
-  'pull-request:73800000-0000-4000-8000-000000000001:v:%',
+  ) LIKE 'pull-request:73800000-0000-4000-8000-000000000001:v:%',
   'a user linked only through another project can resolve the shared PR topic'
 );
 
@@ -1420,7 +1465,7 @@ SELECT is(
   1::bigint,
   'MFA factor rotation remains deferred before the constraint fires'
 );
-SET CONSTRAINTS auth_mfa_factors_rekey_realtime_insert IMMEDIATE;
+SET CONSTRAINTS auth.auth_mfa_factors_rekey_realtime_insert IMMEDIATE;
 SELECT is(
   (
     SELECT generation
@@ -1449,7 +1494,7 @@ SELECT ok(
   ),
   'MFA verification signals the old personal topic before rotation'
 );
-SET CONSTRAINTS auth_mfa_factors_rekey_realtime_insert DEFERRED;
+SET CONSTRAINTS auth.auth_mfa_factors_rekey_realtime_insert DEFERRED;
 SET LOCAL ROLE authenticated;
 SELECT throws_ok(
   $$ SELECT public.resolve_realtime_topic(
@@ -1572,7 +1617,7 @@ SELECT set_config(
 );
 DELETE FROM auth.mfa_factors
 WHERE id = '73020000-0000-4000-8000-000000000004';
-SET CONSTRAINTS auth_mfa_factors_rekey_realtime_delete IMMEDIATE;
+SET CONSTRAINTS auth.auth_mfa_factors_rekey_realtime_delete IMMEDIATE;
 SELECT is(
   (
     SELECT generation
@@ -1615,7 +1660,7 @@ VALUES (
   now(),
   now()
 );
-SET CONSTRAINTS auth_mfa_factors_rekey_realtime_insert IMMEDIATE;
+SET CONSTRAINTS auth.auth_mfa_factors_rekey_realtime_insert IMMEDIATE;
 SELECT is(
   (
     SELECT generation
@@ -1625,7 +1670,7 @@ SELECT is(
   4::bigint,
   'adding an unverified factor does not rotate Realtime topics'
 );
-SET CONSTRAINTS auth_mfa_factors_rekey_realtime_insert DEFERRED;
+SET CONSTRAINTS auth.auth_mfa_factors_rekey_realtime_insert DEFERRED;
 SELECT set_config(
   'minddy.rt_user_' ||
     pg_catalog.md5('73000000-0000-4000-8000-000000000004'),
@@ -1644,7 +1689,7 @@ SELECT is(
   4::bigint,
   'MFA status updates remain deferred before the constraint fires'
 );
-SET CONSTRAINTS auth_mfa_factors_rekey_realtime_update IMMEDIATE;
+SET CONSTRAINTS auth.auth_mfa_factors_rekey_realtime_update IMMEDIATE;
 SELECT is(
   (
     SELECT generation
@@ -1663,7 +1708,7 @@ SELECT is(
   5::bigint,
   'the deferred MFA update rotates every accessible project generation'
 );
-SET CONSTRAINTS auth_mfa_factors_rekey_realtime_update DEFERRED;
+SET CONSTRAINTS auth.auth_mfa_factors_rekey_realtime_update DEFERRED;
 
 CREATE TEMP TABLE refresh_generation_before AS
 SELECT generation
@@ -1679,7 +1724,7 @@ VALUES (
   false,
   '73010000-0000-4000-8000-000000000002'
 );
-SET CONSTRAINTS auth_refresh_tokens_rekey_realtime IMMEDIATE;
+SET CONSTRAINTS auth.auth_refresh_tokens_rekey_realtime IMMEDIATE;
 SELECT is(
   (
     SELECT generation
@@ -1689,7 +1734,7 @@ SELECT is(
   (SELECT generation FROM refresh_generation_before),
   'a normal refresh replacement does not rotate personal topics'
 );
-SET CONSTRAINTS auth_refresh_tokens_rekey_realtime DEFERRED;
+SET CONSTRAINTS auth.auth_refresh_tokens_rekey_realtime DEFERRED;
 
 CREATE TEMP TABLE expiry_generations_before AS
 SELECT
@@ -1937,6 +1982,7 @@ DELETE FROM public.projects
 WHERE id = '73100000-0000-4000-8000-000000000099';
 DELETE FROM auth.users
 WHERE id = '73000000-0000-4000-8000-000000000099';
+SET CONSTRAINTS auth.auth_users_rekey_realtime_delete IMMEDIATE;
 SELECT is(
   (
     SELECT generation
@@ -1953,6 +1999,7 @@ SELECT is(
   NULL::text,
   'a user tombstone cannot resolve as a live topic'
 );
+SET CONSTRAINTS auth.auth_users_rekey_realtime_delete DEFERRED;
 INSERT INTO auth.users (id, email, raw_app_meta_data)
 VALUES (
   '73000000-0000-4000-8000-000000000099',

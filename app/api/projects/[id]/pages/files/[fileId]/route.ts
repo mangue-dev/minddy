@@ -39,6 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const service = getServiceClient();
   const file = await getPageFilePath(service, projectId, fileId);
   if (!file) return notFound;
+  if (!file.storage_path.startsWith(`projects/${projectId}/pages/`)) return notFound;
 
   const download = request.nextUrl.searchParams.get("download") === "1";
   const url = await signedAttachmentUrl(service, file.storage_path, {

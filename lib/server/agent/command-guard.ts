@@ -1,1 +1,832 @@
-\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const FORBIDDEN_COMMAND_REASON = "forbidden_command";\n\nexport type CommandVerdict = { allowed: true } | { allowed: false; reason: string };\n\n\n\n\n\n\nexport interface CommandScope {\n\n  local?: boolean;\n}\n\n\n\n\nconst SEGMENT_BREAKS = new Set([";", "&", "|", "\n", "(", ")"]);\n\n\nconst WRAPPERS = new Set([\n  "sudo", "env", "command", "builtin", "exec", "time", "nohup", "xargs",\n\n  "!", "{", "if", "then", "else", "elif", "while", "until", "do",\n]);\n\n\nconst SHELL_EVALUATORS = new Set(["eval", "source", ".", "function", "coproc"]);\n\n\n\n\n\n\n\n\n\n\n\n\n\nconst WRAPPER_VALUE_OPTIONS: Record<string, ReadonlySet<string>> = {\n  sudo: new Set(["-u", "--user", "-g", "--group", "-p", "--prompt", "-C", "--close-from",\n    "-U", "--other-user", "-T", "--command-timeout", "-r", "--role", "-t", "--type", "-h", "--host"]),\n  env: new Set(["-u", "--unset", "-C", "--chdir", "-S", "--split-string"]),\n  xargs: new Set(["-n", "--max-args", "-L", "-I", "-i", "-P", "--max-procs", "-s",\n    "--max-chars", "-a", "--arg-file", "-d", "--delimiter", "-E", "-e", "--eof"]),\n  time: new Set(["-f", "--format", "-o", "--output"]),\n  command: new Set<string>(),\n  builtin: new Set<string>(),\n  exec: new Set(["-a"]),\n  nohup: new Set<string>(),\n  "!": new Set<string>(),\n  "{": new Set<string>(),\n  if: new Set<string>(),\n  then: new Set<string>(),\n  else: new Set<string>(),\n  elif: new Set<string>(),\n  while: new Set<string>(),\n  until: new Set<string>(),\n  do: new Set<string>(),\n};\n\n\n\n\n\n\n\nconst DESTRUCTIVE = new Set([\n  "reset",\n  "restore",\n  "rebase",\n  "cherry-pick",\n]);\n\n\nconst GIT_ARGUMENT_POLICY = new Set(["config", "commit", "checkout", "stash", "clean", "switch"]);\n\n\nconst MAX_SHELL_DEPTH = 8;\n\n\n\n\n\n\nfunction splitSegments(command: string): string[] {\n  const segments: string[] = [];\n  let current = "";\n  let quote: '"' | "'" | null = null;\n  for (let i = 0; i < command.length; i++) {\n    const ch = command[i];\n    if (quote) {\n      if (ch === "\\" && quote === '"') {\n        current += ch + (command[++i] ?? "");\n        continue;\n      }\n      if (ch === quote) quote = null;\n      current += ch;\n      continue;\n    }\n    if (ch === '"' || ch === "'") {\n      quote = ch;\n      current += ch;\n      continue;\n    }\n    if (ch === "\\") {\n      current += ch + (command[++i] ?? "");\n      continue;\n    }\n    if (SEGMENT_BREAKS.has(ch)) {\n      segments.push(current);\n      current = "";\n      continue;\n    }\n    current += ch;\n  }\n  segments.push(current);\n  return segments.filter((s) => s.trim().length > 0);\n}\n\ninterface TokenizedSegment {\n  tokens: string[];\n\n  expansions: ReadonlySet<number>;\n\n  globs: ReadonlySet<number>;\n}\n\n\n\n\n\n\n\nfunction tokenize(segment: string): TokenizedSegment {\n  const tokens: string[] = [];\n  const expansions = new Set<number>();\n  const globs = new Set<number>();\n  let current = "";\n  let started = false;\n  let expands = false;\n  let globsPath = false;\n  let quote: '"' | "'" | null = null;\n  const flush = () => {\n    if (started) {\n      if (expands) expansions.add(tokens.length);\n      if (globsPath) globs.add(tokens.length);\n      tokens.push(current);\n    }\n    current = "";\n    started = false;\n    expands = false;\n    globsPath = false;\n  };\n  for (let i = 0; i < segment.length; i++) {\n    const ch = segment[i];\n    if (quote) {\n      if (ch === "\\" && quote === '"') {\n        current += segment[++i] ?? "";\n        continue;\n      }\n      if (ch === quote) {\n        quote = null;\n        continue;\n      }\n      if (quote === '"' && (ch === "$" || ch === "`")) expands = true;\n      current += ch;\n      continue;\n    }\n    if (ch === '"' || ch === "'") {\n      quote = ch;\n      started = true;\n      continue;\n    }\n    if (ch === "\\") {\n      current += segment[++i] ?? "";\n      started = true;\n      continue;\n    }\n    if (/\s/.test(ch)) {\n      flush();\n      continue;\n    }\n    if (ch === "$" || ch === "`") expands = true;\n    if (ch === "*" || ch === "?" || ch === "[") globsPath = true;\n    current += ch;\n    started = true;\n  }\n  flush();\n  return { tokens, expansions, globs };\n}\n\ntype SubstitutionFrame = { quote: '"' | "'" | null };\n\n\nfunction substitutionEnd(command: string, start: number): number {\n  const frames: SubstitutionFrame[] = [{ quote: null }];\n  for (let i = start; i < command.length; i++) {\n    const frame = frames[frames.length - 1];\n    const ch = command[i];\n    if (ch === "\\" && frame.quote !== "'") {\n      i++;\n      continue;\n    }\n    if (ch === "'" && frame.quote !== '"') {\n      frame.quote = frame.quote === "'" ? null : "'";\n      continue;\n    }\n    if (ch === '"' && frame.quote !== "'") {\n      frame.quote = frame.quote === '"' ? null : '"';\n      continue;\n    }\n    if (frame.quote === "'") continue;\n    if (ch === "$" && command[i + 1] === "(") {\n      frames.push({ quote: null });\n      i++;\n      continue;\n    }\n    if (frame.quote == null && ch === "(") {\n      frames.push({ quote: null });\n      continue;\n    }\n    if (frame.quote == null && ch === ")") {\n      frames.pop();\n      if (frames.length === 0) return i;\n    }\n  }\n  return -1;\n}\n\n\nfunction commandSubstitutions(command: string): string[] {\n  const substitutions: string[] = [];\n  let quote: '"' | "'" | null = null;\n  for (let i = 0; i < command.length; i++) {\n    const ch = command[i];\n    if (ch === "\\" && quote !== "'") {\n      i++;\n      continue;\n    }\n    if (ch === "'" && quote !== '"') {\n      quote = quote === "'" ? null : "'";\n      continue;\n    }\n    if (ch === '"' && quote !== "'") {\n      quote = quote === '"' ? null : '"';\n      continue;\n    }\n    if (quote === "'") continue;\n    if (ch === "$" && command[i + 1] === "(") {\n      const end = substitutionEnd(command, i + 2);\n      if (end >= 0) {\n        substitutions.push(command.slice(i + 2, end));\n        i = end;\n      }\n      continue;\n    }\n    if (ch === "`") {\n      let end = i + 1;\n      while (end < command.length && command[end] !== "`") {\n        if (command[end] === "\\") end++;\n        end++;\n      }\n      if (end < command.length) {\n        substitutions.push(command.slice(i + 1, end));\n        i = end;\n      }\n    }\n  }\n  return substitutions;\n}\n\n\n\n\nfunction skipPrefix(tokens: string[]): number {\n  let i = 0;\n\n\n  let valueOptions: ReadonlySet<string> | null = null;\n  while (i < tokens.length) {\n    const t = tokens[i];\n    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(t)) {\n      i++;\n      continue;\n    }\n    if (WRAPPERS.has(t)) {\n      valueOptions = WRAPPER_VALUE_OPTIONS[t] ?? new Set<string>();\n      i++;\n      continue;\n    }\n    if (valueOptions && t === "--") {\n      i++;\n      continue;\n    }\n    if (valueOptions && t.startsWith("-") && t.length > 1) {\n      i++;\n\n      if (!t.includes("=") && valueOptions.has(t)) i++;\n      continue;\n    }\n    break;\n  }\n  return i;\n}\n\n\nconst GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nconst GIT_GLOBAL_ELSEWHERE = new Set(["-C", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);\n\n\n\n\n\n\n\n\n\n\nfunction gitInvocation(tokens: string[]): {\n  sub: string;\n  args: string[];\n  globals: string[];\n  policyTokenIndexes: number[];\n  argsStart: number;\n} | null {\n  let i = skipPrefix(tokens);\n  const bin = tokens[i];\n  if (!bin || !(bin === "git" || bin.endsWith("/git"))) return null;\n  i++;\n  const globals: string[] = [];\n  const policyTokenIndexes: number[] = [];\n  while (i < tokens.length && tokens[i].startsWith("-")) {\n    policyTokenIndexes.push(i);\n    const opt = tokens[i];\n    i++;\n    if (GIT_GLOBAL_WITH_VALUE.has(opt)) {\n      policyTokenIndexes.push(i);\n      globals.push(`${opt}=${tokens[i] ?? ""}`);\n      i++;\n    } else {\n      globals.push(opt);\n    }\n  }\n  // A Git invocation without a subcommand still has policy-bearing globals.\n  policyTokenIndexes.push(i);\n  return {\n    sub: tokens[i] ?? "",\n    args: tokens.slice(i + 1),\n    globals,\n    policyTokenIndexes,\n    argsStart: i + 1,\n  };\n}\n\n/**\n * CONFIG KEYS THAT EXECUTE CODE OR SURVIVE RUN (MIN-360).\n *\n * Indexed `section.feuille` in lowercase: the section and the final key of a name\n * git are case insensitive, only the middle subsection is not —\n * and it is precisely she who is free (`filter.<nom>.clean`,\n * `url.<base>.insteadOf`). We therefore compare the two ends, never the whole name.\n */\nconst GIT_CONFIG_EXECUTES = new Set([\n  "core.hookspath",\n  "core.fsmonitor",\n  "core.sshcommand",\n  "core.editor",\n  "core.pager",\n  "core.gitproxy",\n  "core.alternaterefscommand",\n  "credential.helper",\n  "filter.clean",\n  "filter.smudge",\n  "filter.process",\n  "diff.textconv",\n  "diff.external",\n  "merge.driver",\n  "url.insteadof",\n  "url.pushinsteadof",\n  "sequence.editor",\n  "include.path",\n  "uploadpack.packobjectshook",\n]);\n\n/** Sections of which ANY key executes (`alias.x = !sh -c …`) or loads a file. */\nconst GIT_CONFIG_SECTIONS = new Set(["alias", "includeif"]);\n\nfunction dangerousConfigKey(raw: string): boolean {\n  const key = raw.trim().toLowerCase();\n  const parts = key.split(".");\n  if (parts.length < 2) return false;\n  if (GIT_CONFIG_SECTIONS.has(parts[0])) return true;\n  return GIT_CONFIG_EXECUTES.has(`${parts[0]}.${parts[parts.length - 1]}`);\n}\n\n/** `git config` flags that only read values. */\nconst GIT_CONFIG_READ_FLAGS = new Set([\n  "--get", "--get-all", "--get-regexp", "--get-urlmatch", "--get-color", "--get-colorbool",\n  "-l", "--list",\n]);\n/** Flags that WRITE (or open an editor on the file). */\nconst GIT_CONFIG_WRITE_FLAGS = new Set([\n  "--add", "--unset", "--unset-all", "--replace-all", "--edit", "-e",\n  "--remove-section", "--rename-section",\n]);\n/** Scopes that leave the tour repository: the user's `~/.gitconfig`, the\n * system file, a file named. A writing survives everything else. */\nconst GIT_CONFIG_ELSEWHERE = new Set(["--global", "--system", "--file", "-f", "--blob"]);\n/** Modern form verbs (`git config set core.pager x`, git ≥ 2.46). */\nconst GIT_CONFIG_MODES = new Set([\n  "get", "set", "unset", "list", "edit", "remove-section", "rename-section",\n]);\nconst GIT_CONFIG_WRITE_MODES = new Set(["set", "unset", "edit", "remove-section", "rename-section"]);\n\n/** Shells that accept a command as an argument (`bash -lc "…"`). */\nconst SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);\n\n/**\n * The command carried by a `sh -c` / `bash -lc` — or null if the segment does not launch\n * not a shell with a command as an argument. Only the `-…c…` form counts:\n * `bash script.sh` executes a file, which is not read.\n */\nfunction shellCommandArg(tokens: string[]): string | null {\n  const i = skipPrefix(tokens);\n  const bin = tokens[i];\n  if (!bin) return null;\n  const name = bin.slice(bin.lastIndexOf("/") + 1);\n  if (!SHELLS.has(name)) return null;\n  let sawC = false;\n  for (let j = i + 1; j < tokens.length; j++) {\n    const t = tokens[j];\n    // After `--`, what follows is the command for `-c` ... or a script name otherwise.\n    if (t === "--") return sawC ? (tokens[j + 1] ?? null) : null;\n    if (!t.startsWith("-")) return sawC ? t : null;\n    if (!t.startsWith("--") && t.includes("c")) sawC = true;\n    if (t === "-o" || t === "+o") j++; // `bash -o pipefail -c …`: `-o` carries a value\n  }\n  return null;\n}\n\n/**\n * WHAT DESTROYS WORK — the refusal which does not depend on any decision of\n * delivery, and the only one of the lot whose victim is never the agent himself.\n */\nfunction destructiveRefusal(what: string): CommandVerdict {\n  return {\n    allowed: false,\n    reason:\n      `Refused \`${what}\` — it throws away uncommitted work, and nothing in git tells what YOU ` +\n      `changed apart from what was already in this checkout. Read-only git ` +\n      `(status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit ` +\n      `the file back instead.`,\n  };\n}\n\n\nfunction pushRefusal(scope: CommandScope): CommandVerdict {\n  return {\n    allowed: false,\n    reason: scope.local\n      ? `Refused \`git push\` — \`create_pr\` owns the remote here: it mints the credentials, runs ` +\n        `the delivery checks and links the pull request to the ticket, and a bare push goes ` +\n        `around all three. Commit locally when you were asked to, then \`create_pr\` to publish.`\n      : `Refused \`git push\` — the harness owns the remote: it pushes your work at the end of ` +\n        `every turn, and reopens the pull request if needed. Read-only git (status/diff/log/show) ` +\n        `is fine, and \`git add\` is free.`,\n  };\n}\n\n\n\n\n\n\nfunction harnessCommitRefusal(): CommandVerdict {\n  return {\n    allowed: false,\n    reason:\n      `Refused \`git commit\` — the harness owns git here: it commits and pushes your work at the ` +\n      `end of every turn, and reopens the pull request if needed. Read-only git ` +\n      `(status/diff/log/show) is fine, and \`git add\` is free.`,\n  };\n}\n\n\nfunction shellExpansionRefusal(what: string): CommandVerdict {\n  return {\n    allowed: false,\n    reason:\n      `Refused shell-expanded ${what} — the guard must see literal executable, Git option, ` +\n      `subcommand, and destructive-mode names before the shell runs. Write the command ` +\n      `literally so its Git effects can be verified.`,\n  };\n}\n\n/**\n * `git config` — or rather the only part that matters: what WRITES (MIN-360).\n *\n * Reading the config is free and useful (`git config --get remote.origin.url`). This\n * that we refuse is contained in two sentences: a writing that COMES OUT of the deposit of the turn\n * (`--global` rewrites the user's `~/.gitconfig`), and a write to a\n * key that makes something RUN later — on the next commit, on the next\n * `git fetch`, to the next `git diff` from a human who won't know where it comes from.\n *\n * `null` = nothing to complain about.\n */\nfunction checkGitConfig(args: string[]): CommandVerdict | null {\n  const positionals: string[] = [];\n  let reads = false;\n  let writes = false;\n  let elsewhere = "";\n  for (let i = 0; i < args.length; i++) {\n    const arg = args[i];\n    if (arg === "--") {\n      positionals.push(...args.slice(i + 1));\n      break;\n    }\n    if (arg.startsWith("-") && arg.length > 1) {\n      const name = arg.includes("=") ? arg.slice(0, arg.indexOf("=")) : arg;\n      if (GIT_CONFIG_READ_FLAGS.has(name)) reads = true;\n      if (GIT_CONFIG_WRITE_FLAGS.has(name)) writes = true;\n      if (GIT_CONFIG_ELSEWHERE.has(name)) elsewhere = name;\n      // `--file <chemin>` carries its value in the following word: it is not a key.\n      if (!arg.includes("=") && (name === "--file" || name === "-f" || name === "--blob")) i++;\n      continue;\n    }\n    positionals.push(arg);\n  }\n\n  const mode = positionals[0] ?? "";\n  const named = GIT_CONFIG_MODES.has(mode) ? positionals.slice(1) : positionals;\n  if (GIT_CONFIG_WRITE_MODES.has(mode)) writes = true;\n  // The historical form has no verb: `git config <key>` READS, `git config\n\n  if (!reads && !GIT_CONFIG_MODES.has(mode) && named.length >= 2) writes = true;\n  if (!writes) return null;\n\n  if (elsewhere) {\n    return {\n      allowed: false,\n      reason:\n        `Refused \`git config ${elsewhere}\` — that writes outside this repository (your own ` +\n        `git configuration), and it would outlive this run. Configuration this turn needs goes ` +\n        `on the command that needs it (\`git -c …\`), never in a file.`,\n    };\n  }\n  const key = named.find(dangerousConfigKey);\n  if (key) return configKeyRefusal(key);\n  return null;\n}\n\nfunction configKeyRefusal(key: string): CommandVerdict {\n  return {\n    allowed: false,\n    reason:\n      `Refused setting \`${key}\` — that git setting makes something run later, in someone ` +\n      `else's terminal, long after this turn is over. The harness runs what a turn needs itself; ` +\n      `nothing has to be installed into the repository's configuration to make it happen.`,\n  };\n}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nconst GIT_INTERNALS = /(^|\/)\.git(\/|$)/i;\n\nfunction gitInternalsToken(tokens: string[]): string | null {\n  return tokens.find((t) => GIT_INTERNALS.test(t)) ?? null;\n}\n\n\nconst shortFlagWith = (letter: string) => (a: string) =>\n  a.startsWith("-") && !a.startsWith("--") && a.includes(letter);\n\n\nfunction checkSegment(segment: string, depth: number, scope: CommandScope): CommandVerdict {\n  const tokenized = tokenize(segment);\n  const { tokens, expansions, globs } = tokenized;\n  const isIndirect = (index: number) => expansions.has(index) || globs.has(index);\n\n\n\n\n  const executableIndex = skipPrefix(tokens);\n  const envWrapperIndex = tokens.findIndex((token, index) => token === "env" && index < executableIndex);\n  if (\n    envWrapperIndex >= 0 &&\n    tokens\n      .slice(envWrapperIndex + 1, executableIndex)\n      .some((token) => token === "-S" || token === "--split-string" || token.startsWith("--split-string="))\n  ) {\n    return shellExpansionRefusal("`env --split-string` payload");\n  }\n  if (isIndirect(executableIndex)) {\n    return shellExpansionRefusal(`executable name \`${tokens[executableIndex]}\``);\n  }\n  const executable = tokens[executableIndex];\n  if (SHELL_EVALUATORS.has(executable)) {\n    return shellExpansionRefusal(`shell evaluator \`${executable}\``);\n  }\n\n\n\n\n  const inner = shellCommandArg(tokens);\n  if (inner != null && depth < MAX_SHELL_DEPTH) {\n    const verdict = check(inner, depth + 1, scope);\n    if (!verdict.allowed) return verdict;\n  } else if (inner != null) {\n    return shellExpansionRefusal("nested shell command");\n  }\n\n\n\n  const internals = gitInternalsToken(tokens);\n  if (internals) {\n    return {\n      allowed: false,\n      reason:\n        `Refused \`${internals}\` — \`.git/\` belongs to the harness. A file written there runs ` +\n        `on someone else's next git command, and \`.git/config\` controls future Git behavior. ` +\n        `Use git itself (\`git status\`, \`git log\`, \`git show\`) to read the repository's state.`,\n    };\n  }\n\n  const git = gitInvocation(tokens);\n  if (!git) return { allowed: true };\n  const { sub, args, globals, policyTokenIndexes, argsStart } = git;\n\n  const expandedPolicyIndex = policyTokenIndexes.find(isIndirect);\n  if (expandedPolicyIndex != null) {\n    return shellExpansionRefusal(`Git policy token \`${tokens[expandedPolicyIndex]}\``);\n  }\n  if (GIT_ARGUMENT_POLICY.has(sub)) {\n    const expandedArgIndex = args.findIndex((_, index) => isIndirect(argsStart + index));\n    if (expandedArgIndex >= 0) {\n      return shellExpansionRefusal(`\`git ${sub}\` argument \`${args[expandedArgIndex]}\``);\n    }\n  }\n\n\n\n  for (const global of globals) {\n    const name = global.includes("=") ? global.slice(0, global.indexOf("=")) : global;\n    if (!scope.local && GIT_GLOBAL_ELSEWHERE.has(name)) {\n      return {\n        allowed: false,\n        reason:\n          `Refused \`git ${name}\` — this turn works in one repository, the one you are in. ` +\n          `Pointing git somewhere else is outside what the harness can vouch for.`,\n      };\n    }\n\n\n    if (name === "-c") {\n      const key = global.slice(global.indexOf("=") + 1).split("=")[0];\n      if (dangerousConfigKey(key)) return configKeyRefusal(key);\n    }\n  }\n\n  if (sub === "config") {\n    const verdict = checkGitConfig(args);\n    if (verdict) return verdict;\n  }\n\n  if (DESTRUCTIVE.has(sub)) return destructiveRefusal(`git ${sub}`);\n  if (sub === "push") return pushRefusal(scope);\n  // The commit remains at the harness in the microVM, and NOTHING BUT there (D6).\n  if (sub === "commit" && !scope.local) return harnessCommitRefusal();\n  // `--amend` rewrites the last commit — that of the harness in the microVM,\n  // that of the USER on his machine. Refused on both sides, therefore.\n  if (args.includes("--amend")) return destructiveRefusal(`git ${sub} --amend`);\n  // `checkout` is ambiguous (changing branch is harmless): we only refuse\n  // the forms which aim at FILES, that is to say which throw away the work.\n  if (sub === "checkout") {\n    const discards = args.find((a) => a === "--" || a === "." || a === "-f" || a === "--force");\n    if (discards) return destructiveRefusal(`git checkout ${discards}`);\n  }\n  // `git stash` only is recoverable; `drop`/`clear` are not.\n  if (sub === "stash" && (args[0] === "drop" || args[0] === "clear")) {\n    return destructiveRefusal(`git stash ${args[0]}`);\n  }\n  // `git clean` without `-f` does nothing; with it, it deletes untracked files\n  // — uncommitted work, exactly what this module protects. `-n` remains free.\n  if (sub === "clean") {\n    const forces = args.find((a) => a === "--force" || shortFlagWith("f")(a));\n    if (forces) return destructiveRefusal(`git clean ${forces}`);\n  }\n  // `git switch` is the modern equivalent of `checkout`: changing branch is\n  // harmless, throwing away the changes to get there is not.\n  if (sub === "switch") {\n    const discards = args.find((a) => a === "--discard-changes" || a === "--force" || a === "-f");\n    if (discards) return destructiveRefusal(`git switch ${discards}`);\n  }\n  return { allowed: true };\n}\n\n/**\n * Harness verdict on an order for `run_command`. A refusal comes down to\n * model as a TOOL ERROR: the round continues, it reads why and\n * adapts — we never break the trick.\n */\nexport function checkCommand(command: string, scope: CommandScope = {}): CommandVerdict {\n  return check(command, 0, scope);\n}\n\nfunction check(command: string, depth: number, scope: CommandScope): CommandVerdict {\n  const substitutions = commandSubstitutions(command);\n  if (substitutions.length > 0 && depth >= MAX_SHELL_DEPTH) {\n    return shellExpansionRefusal("nested command substitution");\n  }\n  for (const inner of substitutions) {\n    const verdict = check(inner, depth + 1, scope);\n    if (!verdict.allowed) return verdict;\n  }\n  for (const segment of splitSegments(command)) {\n    const verdict = checkSegment(segment, depth, scope);\n    if (!verdict.allowed) return verdict;\n  }\n  return { allowed: true };\n}\n
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const FORBIDDEN_COMMAND_REASON = "forbidden_command";
+
+export type CommandVerdict = { allowed: true } | { allowed: false; reason: string };
+
+
+
+
+
+
+export interface CommandScope {
+
+  local?: boolean;
+}
+
+
+
+
+const SEGMENT_BREAKS = new Set([";", "&", "|", "\n", "(", ")"]);
+
+
+const WRAPPERS = new Set([
+  "sudo", "env", "command", "builtin", "exec", "time", "nohup", "xargs",
+
+  "!", "{", "if", "then", "else", "elif", "while", "until", "do",
+]);
+
+
+const SHELL_EVALUATORS = new Set(["eval", "source", ".", "function", "coproc"]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+const WRAPPER_VALUE_OPTIONS: Record<string, ReadonlySet<string>> = {
+  sudo: new Set(["-u", "--user", "-g", "--group", "-p", "--prompt", "-C", "--close-from",
+    "-U", "--other-user", "-T", "--command-timeout", "-r", "--role", "-t", "--type", "-h", "--host"]),
+  env: new Set(["-u", "--unset", "-C", "--chdir", "-S", "--split-string"]),
+  xargs: new Set(["-n", "--max-args", "-L", "-I", "-i", "-P", "--max-procs", "-s",
+    "--max-chars", "-a", "--arg-file", "-d", "--delimiter", "-E", "-e", "--eof"]),
+  time: new Set(["-f", "--format", "-o", "--output"]),
+  command: new Set<string>(),
+  builtin: new Set<string>(),
+  exec: new Set(["-a"]),
+  nohup: new Set<string>(),
+  "!": new Set<string>(),
+  "{": new Set<string>(),
+  if: new Set<string>(),
+  then: new Set<string>(),
+  else: new Set<string>(),
+  elif: new Set<string>(),
+  while: new Set<string>(),
+  until: new Set<string>(),
+  do: new Set<string>(),
+};
+
+
+
+
+
+
+
+const DESTRUCTIVE = new Set([
+  "reset",
+  "restore",
+  "rebase",
+  "cherry-pick",
+]);
+
+
+const GIT_ARGUMENT_POLICY = new Set(["config", "commit", "checkout", "stash", "clean", "switch"]);
+
+
+const MAX_SHELL_DEPTH = 8;
+
+
+
+
+
+
+function splitSegments(command: string): string[] {
+  const segments: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (quote) {
+      if (ch === "\\" && quote === '"') {
+        current += ch + (command[++i] ?? "");
+        continue;
+      }
+      if (ch === quote) quote = null;
+      current += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === "\\") {
+      current += ch + (command[++i] ?? "");
+      continue;
+    }
+    if (SEGMENT_BREAKS.has(ch)) {
+      segments.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  segments.push(current);
+  return segments.filter((s) => s.trim().length > 0);
+}
+
+interface TokenizedSegment {
+  tokens: string[];
+
+  expansions: ReadonlySet<number>;
+
+  globs: ReadonlySet<number>;
+}
+
+
+
+
+
+
+
+function tokenize(segment: string): TokenizedSegment {
+  const tokens: string[] = [];
+  const expansions = new Set<number>();
+  const globs = new Set<number>();
+  let current = "";
+  let started = false;
+  let expands = false;
+  let globsPath = false;
+  let quote: '"' | "'" | null = null;
+  const flush = () => {
+    if (started) {
+      if (expands) expansions.add(tokens.length);
+      if (globsPath) globs.add(tokens.length);
+      tokens.push(current);
+    }
+    current = "";
+    started = false;
+    expands = false;
+    globsPath = false;
+  };
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i];
+    if (quote) {
+      if (ch === "\\" && quote === '"') {
+        current += segment[++i] ?? "";
+        continue;
+      }
+      if (ch === quote) {
+        quote = null;
+        continue;
+      }
+      if (quote === '"' && (ch === "$" || ch === "`")) expands = true;
+      current += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      started = true;
+      continue;
+    }
+    if (ch === "\\") {
+      current += segment[++i] ?? "";
+      started = true;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      flush();
+      continue;
+    }
+    if (ch === "$" || ch === "`") expands = true;
+    if (ch === "*" || ch === "?" || ch === "[") globsPath = true;
+    current += ch;
+    started = true;
+  }
+  flush();
+  return { tokens, expansions, globs };
+}
+
+type SubstitutionFrame = { quote: '"' | "'" | null };
+
+
+function substitutionEnd(command: string, start: number): number {
+  const frames: SubstitutionFrame[] = [{ quote: null }];
+  for (let i = start; i < command.length; i++) {
+    const frame = frames[frames.length - 1];
+    const ch = command[i];
+    if (ch === "\\" && frame.quote !== "'") {
+      i++;
+      continue;
+    }
+    if (ch === "'" && frame.quote !== '"') {
+      frame.quote = frame.quote === "'" ? null : "'";
+      continue;
+    }
+    if (ch === '"' && frame.quote !== "'") {
+      frame.quote = frame.quote === '"' ? null : '"';
+      continue;
+    }
+    if (frame.quote === "'") continue;
+    if (ch === "$" && command[i + 1] === "(") {
+      frames.push({ quote: null });
+      i++;
+      continue;
+    }
+    if (frame.quote == null && ch === "(") {
+      frames.push({ quote: null });
+      continue;
+    }
+    if (frame.quote == null && ch === ")") {
+      frames.pop();
+      if (frames.length === 0) return i;
+    }
+  }
+  return -1;
+}
+
+
+function commandSubstitutions(command: string): string[] {
+  const substitutions: string[] = [];
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (ch === "\\" && quote !== "'") {
+      i++;
+      continue;
+    }
+    if (ch === "'" && quote !== '"') {
+      quote = quote === "'" ? null : "'";
+      continue;
+    }
+    if (ch === '"' && quote !== "'") {
+      quote = quote === '"' ? null : '"';
+      continue;
+    }
+    if (quote === "'") continue;
+    if (ch === "$" && command[i + 1] === "(") {
+      const end = substitutionEnd(command, i + 2);
+      if (end >= 0) {
+        substitutions.push(command.slice(i + 2, end));
+        i = end;
+      }
+      continue;
+    }
+    if (ch === "`") {
+      let end = i + 1;
+      while (end < command.length && command[end] !== "`") {
+        if (command[end] === "\\") end++;
+        end++;
+      }
+      if (end < command.length) {
+        substitutions.push(command.slice(i + 1, end));
+        i = end;
+      }
+    }
+  }
+  return substitutions;
+}
+
+
+
+
+function skipPrefix(tokens: string[]): number {
+  let i = 0;
+
+
+  let valueOptions: ReadonlySet<string> | null = null;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(t)) {
+      i++;
+      continue;
+    }
+    if (WRAPPERS.has(t)) {
+      valueOptions = WRAPPER_VALUE_OPTIONS[t] ?? new Set<string>();
+      i++;
+      continue;
+    }
+    if (valueOptions && t === "--") {
+      i++;
+      continue;
+    }
+    if (valueOptions && t.startsWith("-") && t.length > 1) {
+      i++;
+
+      if (!t.includes("=") && valueOptions.has(t)) i++;
+      continue;
+    }
+    break;
+  }
+  return i;
+}
+
+
+const GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const GIT_GLOBAL_ELSEWHERE = new Set(["-C", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
+
+
+
+
+
+
+
+
+
+
+function gitInvocation(tokens: string[]): {
+  sub: string;
+  args: string[];
+  globals: string[];
+  policyTokenIndexes: number[];
+  argsStart: number;
+} | null {
+  let i = skipPrefix(tokens);
+  const bin = tokens[i];
+  if (!bin || !(bin === "git" || bin.endsWith("/git"))) return null;
+  i++;
+  const globals: string[] = [];
+  const policyTokenIndexes: number[] = [];
+  while (i < tokens.length && tokens[i].startsWith("-")) {
+    policyTokenIndexes.push(i);
+    const opt = tokens[i];
+    i++;
+    if (GIT_GLOBAL_WITH_VALUE.has(opt)) {
+      policyTokenIndexes.push(i);
+      globals.push(`${opt}=${tokens[i] ?? ""}`);
+      i++;
+    } else {
+      globals.push(opt);
+    }
+  }
+  // A Git invocation without a subcommand still has policy-bearing globals.
+  policyTokenIndexes.push(i);
+  return {
+    sub: tokens[i] ?? "",
+    args: tokens.slice(i + 1),
+    globals,
+    policyTokenIndexes,
+    argsStart: i + 1,
+  };
+}
+
+/**
+ * CONFIG KEYS THAT EXECUTE CODE OR SURVIVE RUN (MIN-360).
+ *
+ * Indexed `section.feuille` in lowercase: the section and the final key of a name
+ * git are case insensitive, only the middle subsection is not —
+ * and it is precisely she who is free (`filter.<nom>.clean`,
+ * `url.<base>.insteadOf`). We therefore compare the two ends, never the whole name.
+ */
+const GIT_CONFIG_EXECUTES = new Set([
+  "core.hookspath",
+  "core.fsmonitor",
+  "core.sshcommand",
+  "core.editor",
+  "core.pager",
+  "core.gitproxy",
+  "core.alternaterefscommand",
+  "credential.helper",
+  "filter.clean",
+  "filter.smudge",
+  "filter.process",
+  "diff.textconv",
+  "diff.external",
+  "merge.driver",
+  "url.insteadof",
+  "url.pushinsteadof",
+  "sequence.editor",
+  "include.path",
+  "uploadpack.packobjectshook",
+]);
+
+/** Sections of which ANY key executes (`alias.x = !sh -c …`) or loads a file. */
+const GIT_CONFIG_SECTIONS = new Set(["alias", "includeif"]);
+
+function dangerousConfigKey(raw: string): boolean {
+  const key = raw.trim().toLowerCase();
+  const parts = key.split(".");
+  if (parts.length < 2) return false;
+  if (GIT_CONFIG_SECTIONS.has(parts[0])) return true;
+  return GIT_CONFIG_EXECUTES.has(`${parts[0]}.${parts[parts.length - 1]}`);
+}
+
+/** `git config` flags that only read values. */
+const GIT_CONFIG_READ_FLAGS = new Set([
+  "--get", "--get-all", "--get-regexp", "--get-urlmatch", "--get-color", "--get-colorbool",
+  "-l", "--list",
+]);
+/** Flags that WRITE (or open an editor on the file). */
+const GIT_CONFIG_WRITE_FLAGS = new Set([
+  "--add", "--unset", "--unset-all", "--replace-all", "--edit", "-e",
+  "--remove-section", "--rename-section",
+]);
+/** Scopes that leave the tour repository: the user's `~/.gitconfig`, the
+ * system file, a file named. A writing survives everything else. */
+const GIT_CONFIG_ELSEWHERE = new Set(["--global", "--system", "--file", "-f", "--blob"]);
+/** Modern form verbs (`git config set core.pager x`, git ≥ 2.46). */
+const GIT_CONFIG_MODES = new Set([
+  "get", "set", "unset", "list", "edit", "remove-section", "rename-section",
+]);
+const GIT_CONFIG_WRITE_MODES = new Set(["set", "unset", "edit", "remove-section", "rename-section"]);
+
+/** Shells that accept a command as an argument (`bash -lc "…"`). */
+const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
+
+/**
+ * The command carried by a `sh -c` / `bash -lc` — or null if the segment does not launch
+ * not a shell with a command as an argument. Only the `-…c…` form counts:
+ * `bash script.sh` executes a file, which is not read.
+ */
+function shellCommandArg(tokens: string[]): string | null {
+  const i = skipPrefix(tokens);
+  const bin = tokens[i];
+  if (!bin) return null;
+  const name = bin.slice(bin.lastIndexOf("/") + 1);
+  if (!SHELLS.has(name)) return null;
+  let sawC = false;
+  for (let j = i + 1; j < tokens.length; j++) {
+    const t = tokens[j];
+    // After `--`, what follows is the command for `-c` ... or a script name otherwise.
+    if (t === "--") return sawC ? (tokens[j + 1] ?? null) : null;
+    if (!t.startsWith("-")) return sawC ? t : null;
+    if (!t.startsWith("--") && t.includes("c")) sawC = true;
+    if (t === "-o" || t === "+o") j++; // `bash -o pipefail -c …`: `-o` carries a value
+  }
+  return null;
+}
+
+/**
+ * WHAT DESTROYS WORK — the refusal which does not depend on any decision of
+ * delivery, and the only one of the lot whose victim is never the agent himself.
+ */
+function destructiveRefusal(what: string): CommandVerdict {
+  return {
+    allowed: false,
+    reason:
+      `Refused \`${what}\` — it throws away uncommitted work, and nothing in git tells what YOU ` +
+      `changed apart from what was already in this checkout. Read-only git ` +
+      `(status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit ` +
+      `the file back instead.`,
+  };
+}
+
+
+function pushRefusal(scope: CommandScope): CommandVerdict {
+  return {
+    allowed: false,
+    reason: scope.local
+      ? `Refused \`git push\` — \`create_pr\` owns the remote here: it mints the credentials, runs ` +
+        `the delivery checks and links the pull request to the ticket, and a bare push goes ` +
+        `around all three. Commit locally when you were asked to, then \`create_pr\` to publish.`
+      : `Refused \`git push\` — the harness owns the remote: it pushes your work at the end of ` +
+        `every turn, and reopens the pull request if needed. Read-only git (status/diff/log/show) ` +
+        `is fine, and \`git add\` is free.`,
+  };
+}
+
+
+
+
+
+
+function harnessCommitRefusal(): CommandVerdict {
+  return {
+    allowed: false,
+    reason:
+      `Refused \`git commit\` — the harness owns git here: it commits and pushes your work at the ` +
+      `end of every turn, and reopens the pull request if needed. Read-only git ` +
+      `(status/diff/log/show) is fine, and \`git add\` is free.`,
+  };
+}
+
+
+function shellExpansionRefusal(what: string): CommandVerdict {
+  return {
+    allowed: false,
+    reason:
+      `Refused shell-expanded ${what} — the guard must see literal executable, Git option, ` +
+      `subcommand, and destructive-mode names before the shell runs. Write the command ` +
+      `literally so its Git effects can be verified.`,
+  };
+}
+
+/**
+ * `git config` — or rather the only part that matters: what WRITES (MIN-360).
+ *
+ * Reading the config is free and useful (`git config --get remote.origin.url`). This
+ * that we refuse is contained in two sentences: a writing that COMES OUT of the deposit of the turn
+ * (`--global` rewrites the user's `~/.gitconfig`), and a write to a
+ * key that makes something RUN later — on the next commit, on the next
+ * `git fetch`, to the next `git diff` from a human who won't know where it comes from.
+ *
+ * `null` = nothing to complain about.
+ */
+function checkGitConfig(args: string[]): CommandVerdict | null {
+  const positionals: string[] = [];
+  let reads = false;
+  let writes = false;
+  let elsewhere = "";
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--") {
+      positionals.push(...args.slice(i + 1));
+      break;
+    }
+    if (arg.startsWith("-") && arg.length > 1) {
+      const name = arg.includes("=") ? arg.slice(0, arg.indexOf("=")) : arg;
+      if (GIT_CONFIG_READ_FLAGS.has(name)) reads = true;
+      if (GIT_CONFIG_WRITE_FLAGS.has(name)) writes = true;
+      if (GIT_CONFIG_ELSEWHERE.has(name)) elsewhere = name;
+      // `--file <chemin>` carries its value in the following word: it is not a key.
+      if (!arg.includes("=") && (name === "--file" || name === "-f" || name === "--blob")) i++;
+      continue;
+    }
+    positionals.push(arg);
+  }
+
+  const mode = positionals[0] ?? "";
+  const named = GIT_CONFIG_MODES.has(mode) ? positionals.slice(1) : positionals;
+  if (GIT_CONFIG_WRITE_MODES.has(mode)) writes = true;
+  // The historical form has no verb: `git config <key>` READS, `git config
+
+  if (!reads && !GIT_CONFIG_MODES.has(mode) && named.length >= 2) writes = true;
+  if (!writes) return null;
+
+  if (elsewhere) {
+    return {
+      allowed: false,
+      reason:
+        `Refused \`git config ${elsewhere}\` — that writes outside this repository (your own ` +
+        `git configuration), and it would outlive this run. Configuration this turn needs goes ` +
+        `on the command that needs it (\`git -c …\`), never in a file.`,
+    };
+  }
+  const key = named.find(dangerousConfigKey);
+  if (key) return configKeyRefusal(key);
+  return null;
+}
+
+function configKeyRefusal(key: string): CommandVerdict {
+  return {
+    allowed: false,
+    reason:
+      `Refused setting \`${key}\` — that git setting makes something run later, in someone ` +
+      `else's terminal, long after this turn is over. The harness runs what a turn needs itself; ` +
+      `nothing has to be installed into the repository's configuration to make it happen.`,
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const GIT_INTERNALS = /(^|\/)\.git(\/|$)/i;
+
+function gitInternalsToken(tokens: string[]): string | null {
+  return tokens.find((t) => GIT_INTERNALS.test(t)) ?? null;
+}
+
+
+const shortFlagWith = (letter: string) => (a: string) =>
+  a.startsWith("-") && !a.startsWith("--") && a.includes(letter);
+
+
+function checkSegment(segment: string, depth: number, scope: CommandScope): CommandVerdict {
+  const tokenized = tokenize(segment);
+  const { tokens, expansions, globs } = tokenized;
+  const isIndirect = (index: number) => expansions.has(index) || globs.has(index);
+
+
+
+
+  const executableIndex = skipPrefix(tokens);
+  const envWrapperIndex = tokens.findIndex((token, index) => token === "env" && index < executableIndex);
+  if (
+    envWrapperIndex >= 0 &&
+    tokens
+      .slice(envWrapperIndex + 1, executableIndex)
+      .some((token) => token === "-S" || token === "--split-string" || token.startsWith("--split-string="))
+  ) {
+    return shellExpansionRefusal("`env --split-string` payload");
+  }
+  if (isIndirect(executableIndex)) {
+    return shellExpansionRefusal(`executable name \`${tokens[executableIndex]}\``);
+  }
+  const executable = tokens[executableIndex];
+  if (SHELL_EVALUATORS.has(executable)) {
+    return shellExpansionRefusal(`shell evaluator \`${executable}\``);
+  }
+
+
+
+
+  const inner = shellCommandArg(tokens);
+  if (inner != null && depth < MAX_SHELL_DEPTH) {
+    const verdict = check(inner, depth + 1, scope);
+    if (!verdict.allowed) return verdict;
+  } else if (inner != null) {
+    return shellExpansionRefusal("nested shell command");
+  }
+
+
+
+  const internals = gitInternalsToken(tokens);
+  if (internals) {
+    return {
+      allowed: false,
+      reason:
+        `Refused \`${internals}\` — \`.git/\` belongs to the harness. A file written there runs ` +
+        `on someone else's next git command, and \`.git/config\` controls future Git behavior. ` +
+        `Use git itself (\`git status\`, \`git log\`, \`git show\`) to read the repository's state.`,
+    };
+  }
+
+  const git = gitInvocation(tokens);
+  if (!git) return { allowed: true };
+  const { sub, args, globals, policyTokenIndexes, argsStart } = git;
+
+  const expandedPolicyIndex = policyTokenIndexes.find(isIndirect);
+  if (expandedPolicyIndex != null) {
+    return shellExpansionRefusal(`Git policy token \`${tokens[expandedPolicyIndex]}\``);
+  }
+  if (GIT_ARGUMENT_POLICY.has(sub)) {
+    const expandedArgIndex = args.findIndex((_, index) => isIndirect(argsStart + index));
+    if (expandedArgIndex >= 0) {
+      return shellExpansionRefusal(`\`git ${sub}\` argument \`${args[expandedArgIndex]}\``);
+    }
+  }
+
+
+
+  for (const global of globals) {
+    const name = global.includes("=") ? global.slice(0, global.indexOf("=")) : global;
+    if (!scope.local && GIT_GLOBAL_ELSEWHERE.has(name)) {
+      return {
+        allowed: false,
+        reason:
+          `Refused \`git ${name}\` — this turn works in one repository, the one you are in. ` +
+          `Pointing git somewhere else is outside what the harness can vouch for.`,
+      };
+    }
+
+
+    if (name === "-c") {
+      const key = global.slice(global.indexOf("=") + 1).split("=")[0];
+      if (dangerousConfigKey(key)) return configKeyRefusal(key);
+    }
+  }
+
+  if (sub === "config") {
+    const verdict = checkGitConfig(args);
+    if (verdict) return verdict;
+  }
+
+  if (DESTRUCTIVE.has(sub)) return destructiveRefusal(`git ${sub}`);
+  if (sub === "push") return pushRefusal(scope);
+  // The commit remains at the harness in the microVM, and NOTHING BUT there (D6).
+  if (sub === "commit" && !scope.local) return harnessCommitRefusal();
+  // `--amend` rewrites the last commit — that of the harness in the microVM,
+  // that of the USER on his machine. Refused on both sides, therefore.
+  if (args.includes("--amend")) return destructiveRefusal(`git ${sub} --amend`);
+  // `checkout` is ambiguous (changing branch is harmless): we only refuse
+  // the forms which aim at FILES, that is to say which throw away the work.
+  if (sub === "checkout") {
+    const discards = args.find((a) => a === "--" || a === "." || a === "-f" || a === "--force");
+    if (discards) return destructiveRefusal(`git checkout ${discards}`);
+  }
+  // `git stash` only is recoverable; `drop`/`clear` are not.
+  if (sub === "stash" && (args[0] === "drop" || args[0] === "clear")) {
+    return destructiveRefusal(`git stash ${args[0]}`);
+  }
+  // `git clean` without `-f` does nothing; with it, it deletes untracked files
+  // — uncommitted work, exactly what this module protects. `-n` remains free.
+  if (sub === "clean") {
+    const forces = args.find((a) => a === "--force" || shortFlagWith("f")(a));
+    if (forces) return destructiveRefusal(`git clean ${forces}`);
+  }
+  // `git switch` is the modern equivalent of `checkout`: changing branch is
+  // harmless, throwing away the changes to get there is not.
+  if (sub === "switch") {
+    const discards = args.find((a) => a === "--discard-changes" || a === "--force" || a === "-f");
+    if (discards) return destructiveRefusal(`git switch ${discards}`);
+  }
+  return { allowed: true };
+}
+
+/**
+ * Harness verdict on an order for `run_command`. A refusal comes down to
+ * model as a TOOL ERROR: the round continues, it reads why and
+ * adapts — we never break the trick.
+ */
+export function checkCommand(command: string, scope: CommandScope = {}): CommandVerdict {
+  return check(command, 0, scope);
+}
+
+function check(command: string, depth: number, scope: CommandScope): CommandVerdict {
+  const substitutions = commandSubstitutions(command);
+  if (substitutions.length > 0 && depth >= MAX_SHELL_DEPTH) {
+    return shellExpansionRefusal("nested command substitution");
+  }
+  for (const inner of substitutions) {
+    const verdict = check(inner, depth + 1, scope);
+    if (!verdict.allowed) return verdict;
+  }
+  for (const segment of splitSegments(command)) {
+    const verdict = checkSegment(segment, depth, scope);
+    if (!verdict.allowed) return verdict;
+  }
+  return { allowed: true };
+}

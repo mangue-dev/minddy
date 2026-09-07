@@ -17,6 +17,7 @@ DECLARE
   v_spent numeric;
   v_reserved numeric;
   v_granted numeric;
+  v_updated integer;
 BEGIN
   IF p_run_id IS NULL OR p_user_id IS NULL OR p_usage_since IS NULL
      OR p_budget_cap IS NULL OR p_budget_cap < 0
@@ -80,6 +81,10 @@ BEGIN
       not_before = p_not_before,
       managed_budget_usd = v_granted
   WHERE id = p_run_id;
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  IF v_updated = 0 THEN
+    RETURN pg_catalog.jsonb_build_object('state', 'conflict');
+  END IF;
 
   RETURN pg_catalog.jsonb_build_object(
     'state', 'queued',

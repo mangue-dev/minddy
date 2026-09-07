@@ -7,6 +7,7 @@ import {
   activeRunForRoutine,
   getRun,
   insertLatestRunMessage,
+  resumeLatestRunWithMessage,
   runIsLatestOnAnchor,
   stampRun,
   bumpRunActivity,
@@ -14,7 +15,6 @@ import {
 } from "@/lib/server/agent/runs";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
-import type { AgentQuota } from "@/lib/server/agent/quota";
 import { requestedRunReservationUsd } from "@/lib/server/agent/run-key";
 import { syncIssueStatusOnAgentStart } from "@/lib/server/agent/issue-status-sync";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -60,42 +60,6 @@ const MAX_LEN = 4000;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-async function queueResumableRun(input: {
-  runId: string;
-  ownerId: string;
-  keyMode: string;
-  runBudgetUsd: number | null;
-  quota: AgentQuota;
-}): Promise<"queued" | "no_budget" | "conflict"> {
-  const notBefore = new Date().toISOString();
-  if (input.keyMode !== "platform" || input.quota.mode !== "platform") {
-    const stamped = await stampRun(
-      input.runId,
-      { status: "queued", not_before: notBefore },
-      { guard: RESUME_FROM, expected: { sandbox_reap_claim: null } },
-    );
-    return stamped ? "queued" : "conflict";
-  }
-  if (input.quota.cap == null || !input.quota.periodStart) return "no_budget";
-  const { data, error } = await getServiceClient().rpc(
-    "resume_agent_run_with_budget",
-    {
-      p_run_id: input.runId,
-      p_user_id: input.ownerId,
-      p_usage_since: input.quota.periodStart,
-      p_budget_cap: input.quota.cap,
-      p_requested_budget: requestedRunReservationUsd({
-        runBudgetUsd: input.runBudgetUsd,
-        accountCapUsd: input.quota.cap,
-      }),
-      p_not_before: notBefore,
-    },
-  );
-  if (error) throw new Error(error.message);
-  const state = (data as { state?: unknown } | null)?.state;
-  return state === "queued" || state === "no_budget" ? state : "conflict";
-}
-
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { runId } = await params;
   const auth = await getAuthedUser(request);
@@ -137,6 +101,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     (resource): resource is AttachmentInput => resource.kind !== "link",
   );
   const messageWithFiles = await promptWithAttachments(message, attachments);
+  const mentions = parseAgentMentions(payload?.mentions);
 
   const run = await getRun(runId);
   if (!run)
@@ -195,6 +160,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   let resumed = false;
+  let messagePersisted = false;
   if (RESUME_FROM.includes(run.status)) {
     if (run.sandbox_reap_claim) {
       const claimedAt = Date.parse(run.sandbox_reap_claimed_at ?? "");
@@ -250,7 +216,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
      * conversation, while the rest of the tour continues on the checkpoint and the
      * owner's sandbox.
      */
-    const ownerId = run.created_by ?? auth.user.id;
+    const ownerId = run.created_by;
+    if (!ownerId) {
+      return NextResponse.json(
+        { error: "alreadyRunning", code: "alreadyRunning" },
+        { status: 409 },
+      );
+    }
     const ownerQuota =
       ownerId === auth.user.id ? null : await checkAgentQuota(ownerId);
     const quota = !callerQuota.allowed
@@ -263,23 +235,65 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    // Query BEFORE saving the message: if the guard does not match (race
-    // lost), we decide with full knowledge of the facts instead of accepting a message
-    // that no one would drain. New round on the same branch/PR.
-    const queued = await queueResumableRun({
-      runId,
-      ownerId,
-      keyMode: run.key_mode,
-      runBudgetUsd: run.budget_usd,
-      quota,
-    });
-    if (queued === "no_budget") {
+    const managedResume = run.key_mode === "platform";
+    if (
+      managedResume &&
+      (quota.mode !== "platform" ||
+        quota.cap == null ||
+        !quota.periodStart)
+    ) {
       return NextResponse.json(
         { error: "quotaExceeded", code: "quotaExceeded", quota },
         { status: 402 },
       );
     }
-    if (queued === "conflict") {
+    const usageSince = managedResume ? (quota.periodStart ?? null) : null;
+    const budgetCap = managedResume ? (quota.cap ?? null) : null;
+    const requestedBudget =
+      managedResume && budgetCap !== null
+        ? requestedRunReservationUsd({
+            runBudgetUsd: run.budget_usd,
+            accountCapUsd: budgetCap,
+          })
+        : null;
+
+    // The database persists the message and resumes the run under the same
+    // anchor lock used by new-run insertion. A superseding run therefore
+    // cannot leave this historical run queued without its accepted message.
+    const resumeState = await resumeLatestRunWithMessage({
+      runId,
+      ownerId,
+      actorId: auth.user.id,
+      messageId,
+      content: messageWithFiles,
+      mentions,
+      notBefore: new Date().toISOString(),
+      usageSince,
+      budgetCap,
+      requestedBudget,
+    });
+    if (resumeState === "no_budget") {
+      return NextResponse.json(
+        { error: "quotaExceeded", code: "quotaExceeded", quota },
+        { status: 402 },
+      );
+    }
+    if (resumeState === "superseded") {
+      return NextResponse.json(
+        { error: "supersededRun", code: "supersededRun" },
+        { status: 409 },
+      );
+    }
+    if (resumeState === "message_id_conflict") {
+      return NextResponse.json(
+        { error: "messageIdConflict", code: "messageIdConflict" },
+        { status: 409 },
+      );
+    }
+    if (resumeState === "forbidden") {
+      return NextResponse.json({ error: "Run not found" }, { status: 404 });
+    }
+    if (resumeState === "conflict") {
       // Race: the run is no longer at rest. If it was HE who (re)became active
       // (quick double-send, another tab which just woke it up), the message
       // is legitimate — he joins the turn that starts, as for a run that
@@ -293,6 +307,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       }
     } else {
       resumed = true;
+      messagePersisted = true;
 
       // The agent returns to work → the ticket returns to “in progress”, UNLESS a
       // PR in review (open/draft) already governs its status — same rule as in
@@ -308,26 +323,46 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  // Repeat the latest-run check immediately before the durable write. The UI
-  // has the same guard for affordance; the server owns the restriction.
-  if (!(await runIsLatestOnAnchor(run))) {
-    return NextResponse.json(
-      { error: "supersededRun", code: "supersededRun" },
-      { status: 409 },
+  if (!messagePersisted) {
+    // Repeat the latest-run check immediately before the durable write. The UI
+    // has the same guard for affordance; the server owns the restriction.
+    if (!(await runIsLatestOnAnchor(run))) {
+      return NextResponse.json(
+        { error: "supersededRun", code: "supersededRun" },
+        { status: 409 },
+      );
+    }
+    const inserted = await insertLatestRunMessage(
+      runId,
+      auth.user.id,
+      messageWithFiles,
+      mentions,
+      messageId,
     );
-  }
-  const inserted = await insertLatestRunMessage(
-    runId,
-    auth.user.id,
-    messageWithFiles,
-    parseAgentMentions(payload?.mentions),
-    messageId,
-  );
-  if (inserted === "superseded") {
-    return NextResponse.json(
-      { error: "supersededRun", code: "supersededRun" },
-      { status: 409 },
-    );
+    if (inserted === "superseded") {
+      return NextResponse.json(
+        { error: "supersededRun", code: "supersededRun" },
+        { status: 409 },
+      );
+    }
+    if (inserted === "forbidden") {
+      return NextResponse.json({ error: "Run not found" }, { status: 404 });
+    }
+    if (inserted === "message_id_conflict") {
+      return NextResponse.json(
+        { error: "messageIdConflict", code: "messageIdConflict" },
+        { status: 409 },
+      );
+    }
+    if (inserted === "conflict") {
+      const now = await getRun(runId);
+      if (!now || !RESUME_FROM.includes(now.status)) {
+        return NextResponse.json(
+          { error: "alreadyRunning", code: "alreadyRunning" },
+          { status: 409 },
+        );
+      }
+    }
   }
   // A message restarts the idle timer (prevents imminent reaping).
   await bumpRunActivity(runId);
@@ -340,18 +375,78 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!resumed) {
     const now = await getRun(runId);
     if (now && RESUME_FROM.includes(now.status)) {
-      const ownerId = now.created_by ?? auth.user.id;
+      const ownerId = now.created_by;
+      if (!ownerId) {
+        return NextResponse.json(
+          { error: "alreadyRunning", code: "alreadyRunning" },
+          { status: 409 },
+        );
+      }
       const ownerQuota =
         ownerId === auth.user.id ? callerQuota : await checkAgentQuota(ownerId);
-      if (ownerQuota.allowed) {
-        const queued = await queueResumableRun({
-          runId,
-          ownerId,
-          keyMode: now.key_mode,
-          runBudgetUsd: now.budget_usd,
-          quota: ownerQuota,
-        });
-        if (queued === "queued") resumed = true;
+      if (!ownerQuota.allowed) {
+        return NextResponse.json(
+          { error: "quotaExceeded", code: "quotaExceeded", quota: ownerQuota },
+          { status: 402 },
+        );
+      }
+      const managedResume = now.key_mode === "platform";
+      const budgetCap = managedResume ? (ownerQuota.cap ?? null) : null;
+      const usageSince = managedResume ? (ownerQuota.periodStart ?? null) : null;
+      const requestedBudget =
+        managedResume && budgetCap !== null
+          ? requestedRunReservationUsd({
+              runBudgetUsd: now.budget_usd,
+              accountCapUsd: budgetCap,
+            })
+          : null;
+      const resumableQuota =
+        !managedResume ||
+        (ownerQuota.mode === "platform" &&
+          budgetCap !== null &&
+          usageSince !== null);
+      if (!resumableQuota) {
+        return NextResponse.json(
+          { error: "quotaExceeded", code: "quotaExceeded", quota: ownerQuota },
+          { status: 402 },
+        );
+      }
+      const resumeState = await resumeLatestRunWithMessage({
+        runId,
+        ownerId,
+        actorId: auth.user.id,
+        messageId,
+        content: messageWithFiles,
+        mentions,
+        notBefore: new Date().toISOString(),
+        usageSince,
+        budgetCap,
+        requestedBudget,
+      });
+      if (resumeState === "queued" || resumeState === "already") {
+        resumed = true;
+      } else if (resumeState === "no_budget") {
+        return NextResponse.json(
+          { error: "quotaExceeded", code: "quotaExceeded", quota: ownerQuota },
+          { status: 402 },
+        );
+      } else if (resumeState === "forbidden") {
+        return NextResponse.json({ error: "Run not found" }, { status: 404 });
+      } else if (resumeState === "superseded") {
+        return NextResponse.json(
+          { error: "supersededRun", code: "supersededRun" },
+          { status: 409 },
+        );
+      } else if (resumeState === "message_id_conflict") {
+        return NextResponse.json(
+          { error: "messageIdConflict", code: "messageIdConflict" },
+          { status: 409 },
+        );
+      } else {
+        return NextResponse.json(
+          { error: "alreadyRunning", code: "alreadyRunning" },
+          { status: 409 },
+        );
       }
     }
   }

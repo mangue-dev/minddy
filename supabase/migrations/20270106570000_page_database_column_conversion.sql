@@ -74,8 +74,21 @@ BEGIN
   END IF;
 
   IF NEW.parent_id IS NOT NULL THEN
-    SELECT database_schema, project_id, deleted_at INTO parent_schema, parent_project, parent_deleted
-      FROM public.pages WHERE id = NEW.parent_id;
+    -- Inserts need a SHARE lock so a conversion cannot miss their new row.
+    -- Updates already hold the child row and must not reverse the converter's
+    -- parent-to-child order by locking the parent from this row trigger.
+    IF TG_OP = 'INSERT' THEN
+      SELECT database_schema, project_id, deleted_at
+        INTO parent_schema, parent_project, parent_deleted
+        FROM public.pages
+        WHERE id = NEW.parent_id
+        FOR SHARE;
+    ELSE
+      SELECT database_schema, project_id, deleted_at
+        INTO parent_schema, parent_project, parent_deleted
+        FROM public.pages
+        WHERE id = NEW.parent_id;
+    END IF;
     IF parent_project IS DISTINCT FROM NEW.project_id THEN
       RAISE EXCEPTION 'Parent belongs to another project' USING ERRCODE = '22023';
     END IF;
@@ -231,10 +244,9 @@ DECLARE
   total_count integer := 0;
   previous_guard text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.projects p WHERE p.id = p_project_id AND p.deleted_at IS NULL AND
-      (p.owner_id = p_actor_id OR EXISTS (SELECT 1 FROM public.project_members m WHERE m.project_id = p.id AND m.user_id = p_actor_id))
-  ) THEN RETURN jsonb_build_object('status', 'not_found'); END IF;
+  IF NOT public.lock_live_project_actor_access(p_project_id, p_actor_id) THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
   SELECT * INTO target FROM public.pages WHERE id = p_page_id AND project_id = p_project_id AND deleted_at IS NULL FOR UPDATE;
   IF target.database_schema IS NULL THEN RETURN jsonb_build_object('status', 'not_found'); END IF;
   IF target.database_revision IS DISTINCT FROM (p_input->>'revision')::integer THEN RETURN jsonb_build_object('status', 'conflict'); END IF;

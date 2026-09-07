@@ -1,3 +1,9 @@
+-- Keep generation backfills and every revocation trigger atomic. A failed
+-- migration can then be repaired and retried without leaving partial topic
+-- authorization state behind.
+BEGIN;
+SET LOCAL lock_timeout = '30s';
+
 -- Rotate project-bound and personal private Realtime topics when access changes.
 -- Realtime caches channel authorization for the lifetime of the access token, so
 -- changing RLS membership alone cannot revoke an already joined socket.
@@ -26,6 +32,13 @@ ALTER TABLE public.user_realtime_generations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_realtime_generations FORCE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.user_realtime_generations
   FROM PUBLIC, anon, authenticated, service_role;
+
+-- Prevent an entity from appearing after the backfill snapshot but before its
+-- initializer trigger exists. The locks are held through the final COMMIT.
+LOCK TABLE
+  auth.users,
+  public.projects
+IN SHARE ROW EXCLUSIVE MODE;
 
 INSERT INTO public.project_realtime_generations (project_id)
 SELECT id FROM public.projects
@@ -292,12 +305,17 @@ BEGIN
       FROM public.page_comments AS page_comment
       WHERE page_comment.id = resource_id;
     WHEN 'pull-request' THEN
-      SELECT pg_catalog.md5(
-        pg_catalog.string_agg(
-          linked.project_id::text || ':' || generation.generation::text,
-          ',' ORDER BY linked.project_id
+      SELECT CASE
+        WHEN pg_catalog.count(*) > 0
+         AND pg_catalog.count(generation.project_id) = pg_catalog.count(*)
+        THEN pg_catalog.md5(
+          pg_catalog.string_agg(
+            linked.project_id::text || ':' || generation.generation::text,
+            ',' ORDER BY linked.project_id
+          )
         )
-      )
+        ELSE NULL
+      END
       INTO version_value
       FROM (
         SELECT DISTINCT link.project_id
@@ -307,7 +325,7 @@ BEGIN
          AND link.repo_full_name = pull_request.repo_full_name
         WHERE pull_request.id = resource_id
       ) AS linked
-      JOIN public.project_realtime_generations AS generation
+      LEFT JOIN public.project_realtime_generations AS generation
         ON generation.project_id = linked.project_id;
     ELSE
       RETURN NULL;
@@ -680,9 +698,9 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    -- Fail closed if legacy or partially migrated data has no registry row.
-    -- Initializers and durable tombstones make this unreachable in steady state.
-    RETURN;
+    -- Preserve the authorization change as one atomic operation. Silently
+    -- continuing would leave a previously joined shared-PR topic unchanged.
+    RAISE check_violation USING MESSAGE = 'realtime_project_generation_missing';
   END IF;
 
   old_topic := 'project:' || p_project_id || ':v:' || pg_catalog.md5(
@@ -825,8 +843,8 @@ REVOKE ALL ON FUNCTION public.rekey_project_realtime_membership()
 
 DROP TRIGGER IF EXISTS project_members_rekey_realtime
   ON public.project_members;
-CREATE TRIGGER project_members_rekey_realtime
-BEFORE INSERT OR UPDATE OR DELETE ON public.project_members
+CREATE TRIGGER project_members_authority_rekey
+AFTER INSERT OR UPDATE OR DELETE ON public.project_members
 FOR EACH ROW EXECUTE FUNCTION public.rekey_project_realtime_membership();
 
 CREATE OR REPLACE FUNCTION public.rekey_project_realtime_owner()
@@ -1060,7 +1078,7 @@ BEGIN
   WHERE generation.user_id = p_user_id
   FOR UPDATE;
   IF NOT FOUND THEN
-    RETURN;
+    RAISE check_violation USING MESSAGE = 'realtime_user_generation_missing';
   END IF;
 
   old_topic := 'user:' || p_user_id || ':v:' || pg_catalog.md5(
@@ -1393,52 +1411,13 @@ REVOKE ALL ON FUNCTION public.rekey_deleted_auth_user()
   FROM PUBLIC, anon, authenticated, service_role;
 
 DROP TRIGGER IF EXISTS auth_users_rekey_realtime_delete ON auth.users;
-CREATE TRIGGER auth_users_rekey_realtime_delete
-BEFORE DELETE ON auth.users
+CREATE CONSTRAINT TRIGGER auth_users_rekey_realtime_delete
+AFTER DELETE ON auth.users
+DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION public.rekey_deleted_auth_user();
-
-CREATE OR REPLACE FUNCTION public.rekey_project_git_link_before()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-DECLARE
-  new_project_id uuid;
-  link_changed boolean := TG_OP = 'DELETE';
-BEGIN
-  IF TG_OP <> 'DELETE' THEN
-    new_project_id := NEW.project_id;
-    link_changed := OLD.project_id IS DISTINCT FROM NEW.project_id
-      OR OLD.provider IS DISTINCT FROM NEW.provider
-      OR OLD.repo_full_name IS DISTINCT FROM NEW.repo_full_name;
-  END IF;
-  IF link_changed THEN
-    -- UPDATE can touch two projects. Prelock both rows in UUID order so two
-    -- concurrent link moves cannot acquire their project locks in reverse.
-    PERFORM generation.project_id
-    FROM public.project_realtime_generations AS generation
-    WHERE generation.project_id = OLD.project_id
-       OR generation.project_id = new_project_id
-    ORDER BY generation.project_id
-    FOR UPDATE;
-    PERFORM public.rotate_project_realtime_generation(OLD.project_id);
-  END IF;
-  IF TG_OP = 'DELETE' THEN
-    RETURN OLD;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.rekey_project_git_link_before()
-  FROM PUBLIC, anon, authenticated, service_role;
 
 DROP TRIGGER IF EXISTS project_git_links_rekey_realtime_before
   ON public.project_git_links;
-CREATE TRIGGER project_git_links_rekey_realtime_before
-BEFORE UPDATE OR DELETE ON public.project_git_links
-FOR EACH ROW EXECUTE FUNCTION public.rekey_project_git_link_before();
 
 CREATE OR REPLACE FUNCTION public.rekey_project_git_link_after()
 RETURNS trigger
@@ -1447,14 +1426,59 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  link_changed boolean := TG_OP = 'INSERT';
+  old_link_changed boolean := TG_OP = 'DELETE';
+  new_link_changed boolean := TG_OP = 'INSERT';
+  old_related_users uuid[] := '{}'::uuid[];
+  old_project_id uuid;
+  new_project_id uuid;
 BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    old_project_id := OLD.project_id;
+  END IF;
+  IF TG_OP <> 'DELETE' THEN
+    new_project_id := NEW.project_id;
+  END IF;
   IF TG_OP = 'UPDATE' THEN
-    link_changed := OLD.project_id IS DISTINCT FROM NEW.project_id
+    old_link_changed := OLD.project_id IS DISTINCT FROM NEW.project_id
       OR OLD.provider IS DISTINCT FROM NEW.provider
       OR OLD.repo_full_name IS DISTINCT FROM NEW.repo_full_name;
+    new_link_changed := old_link_changed;
   END IF;
-  IF link_changed THEN
+
+  -- Authority triggers have already locked both project scopes. Lock their
+  -- generation rows in the same UUID order before rotating either side.
+  PERFORM generation.project_id
+  FROM public.project_realtime_generations AS generation
+  WHERE generation.project_id IN (old_project_id, new_project_id)
+  ORDER BY generation.project_id
+  FOR UPDATE;
+
+  IF old_link_changed THEN
+    -- The old link is no longer queryable after UPDATE/DELETE. Snapshot users
+    -- of the remaining projects that shared its repository and pass them as
+    -- explicit wake-up recipients for the old generation.
+    SELECT COALESCE(array_agg(DISTINCT related_user.user_id), '{}'::uuid[])
+    INTO old_related_users
+    FROM (
+      SELECT project.owner_id AS user_id
+      FROM public.project_git_links AS link
+      JOIN public.projects AS project ON project.id = link.project_id
+      WHERE link.provider = OLD.provider
+        AND link.repo_full_name = OLD.repo_full_name
+      UNION
+      SELECT member.user_id
+      FROM public.project_git_links AS link
+      JOIN public.project_members AS member
+        ON member.project_id = link.project_id
+      WHERE link.provider = OLD.provider
+        AND link.repo_full_name = OLD.repo_full_name
+    ) AS related_user;
+    PERFORM public.rotate_project_realtime_generation(
+      OLD.project_id,
+      old_related_users
+    );
+  END IF;
+  IF new_link_changed THEN
     PERFORM public.rotate_project_realtime_generation(NEW.project_id);
   END IF;
   RETURN NULL;
@@ -1467,5 +1491,7 @@ REVOKE ALL ON FUNCTION public.rekey_project_git_link_after()
 DROP TRIGGER IF EXISTS project_git_links_rekey_realtime_after
   ON public.project_git_links;
 CREATE TRIGGER project_git_links_rekey_realtime_after
-AFTER INSERT OR UPDATE ON public.project_git_links
+AFTER INSERT OR UPDATE OR DELETE ON public.project_git_links
 FOR EACH ROW EXECUTE FUNCTION public.rekey_project_git_link_after();
+
+COMMIT;

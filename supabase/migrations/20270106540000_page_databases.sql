@@ -135,6 +135,178 @@ CREATE TRIGGER pages_remove_deleted_database_properties AFTER UPDATE OF database
   FOR EACH ROW WHEN (OLD.database_schema IS DISTINCT FROM NEW.database_schema)
   EXECUTE FUNCTION public.remove_deleted_database_properties();
 
+-- Hold the live project row while a privileged page RPC relies on membership.
+-- Membership mutations take the same project lock after changing their row, so
+-- an authorization decision cannot become stale before the caller commits.
+CREATE FUNCTION public.lock_live_project_actor_access(
+  p_project_id uuid, p_actor_id uuid
+) RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  target_project public.projects%ROWTYPE;
+BEGIN
+  PERFORM account.id
+  FROM auth.users AS account
+  WHERE account.id = p_actor_id
+  FOR SHARE;
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  SELECT * INTO target_project
+  FROM public.projects
+  WHERE id = p_project_id
+    AND deleted_at IS NULL
+  FOR SHARE;
+
+  IF target_project.id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      'project-authority:' || p_project_id::text,
+      5400
+    )
+  );
+
+  RETURN target_project.owner_id = p_actor_id OR EXISTS (
+    SELECT 1
+    FROM public.project_members AS member
+    WHERE member.project_id = p_project_id
+      AND member.user_id = p_actor_id
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.lock_live_project_actor_access(uuid, uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+
+-- PostgreSQL checks added_by, project_id, then user_id foreign keys. Lock both
+-- Auth identities first so account deletion cannot hold Auth while this INSERT
+-- holds the project and waits for the member account.
+CREATE FUNCTION public.lock_project_member_auth_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  PERFORM account.id
+  FROM auth.users AS account
+  WHERE account.id IN (NEW.added_by, NEW.user_id)
+  ORDER BY account.id
+  FOR KEY SHARE;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.lock_project_member_auth_insert()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE TRIGGER project_members_auth_insert_lock
+BEFORE INSERT ON public.project_members
+FOR EACH ROW EXECUTE FUNCTION public.lock_project_member_auth_insert();
+
+-- The baseline checks the connection FK before the creator's Auth FK. Lock the
+-- creator first so deleting a connection owner cannot deadlock link creation.
+CREATE FUNCTION public.lock_project_git_link_parent_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.created_by IS NOT NULL THEN
+    PERFORM account.id
+    FROM auth.users AS account
+    WHERE account.id = NEW.created_by
+    FOR KEY SHARE;
+  END IF;
+  PERFORM connection.id
+  FROM public.git_connections AS connection
+  WHERE connection.id = NEW.connection_id
+  FOR KEY SHARE;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.lock_project_git_link_parent_insert()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE TRIGGER project_git_links_parent_insert_lock
+BEFORE INSERT ON public.project_git_links
+FOR EACH ROW EXECUTE FUNCTION public.lock_project_git_link_parent_insert();
+
+-- Publish membership and repository-binding mutations under the same project
+-- authority lock used by privileged page and agent RPCs. Run after immediate
+-- foreign-key checks, then take all affected project rows in UUID order before
+-- Realtime generation triggers run.
+CREATE FUNCTION public.lock_project_authority_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  old_project_id uuid;
+  new_project_id uuid;
+  affected_project_id uuid;
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    old_project_id := OLD.project_id;
+  END IF;
+  IF TG_OP <> 'DELETE' THEN
+    new_project_id := NEW.project_id;
+  END IF;
+
+  PERFORM project.id
+  FROM public.projects AS project
+  WHERE project.id IN (old_project_id, new_project_id)
+  ORDER BY project.id
+  FOR NO KEY UPDATE;
+
+  FOR affected_project_id IN
+    SELECT DISTINCT project_id
+    FROM unnest(ARRAY[old_project_id, new_project_id])
+      AS affected(project_id)
+    WHERE project_id IS NOT NULL
+    ORDER BY project_id
+  LOOP
+    PERFORM pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(
+        'project-authority:' || affected_project_id::text,
+        5400
+      )
+    );
+  END LOOP;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.lock_project_authority_mutation()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+-- The later authority trigger supersedes the older project-row mutex. Keeping
+-- both would upgrade NO KEY UPDATE after concurrent FK KEY SHARE locks.
+DROP TRIGGER IF EXISTS project_members_authority_scope_lock
+  ON public.project_members;
+
+CREATE TRIGGER project_members_authority_lock
+AFTER INSERT OR UPDATE OR DELETE ON public.project_members
+FOR EACH ROW EXECUTE FUNCTION public.lock_project_authority_mutation();
+
+CREATE TRIGGER project_git_links_authority_lock
+AFTER INSERT OR UPDATE OR DELETE ON public.project_git_links
+FOR EACH ROW EXECUTE FUNCTION public.lock_project_authority_mutation();
+
 -- Serialize schema edits and validate a single cell against the schema under lock.
 -- Independent cells merge; a stale edit to the same cell returns a conflict.
 CREATE FUNCTION public.update_page_database_guarded(
@@ -145,12 +317,9 @@ DECLARE
   container public.pages%ROWTYPE;
   parent uuid;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.projects p WHERE p.id = p_project_id AND p.deleted_at IS NULL AND
-      (p.owner_id = p_actor_id OR EXISTS (
-        SELECT 1 FROM public.project_members m WHERE m.project_id = p.id AND m.user_id = p_actor_id
-      ))
-  ) THEN RETURN jsonb_build_object('status', 'not_found'); END IF;
+  IF NOT public.lock_live_project_actor_access(p_project_id, p_actor_id) THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
   SELECT parent_id INTO parent FROM public.pages WHERE id = p_page_id AND project_id = p_project_id AND deleted_at IS NULL;
   IF p_input->>'operation' = 'value' THEN
     SELECT * INTO container FROM public.pages WHERE id = parent AND deleted_at IS NULL FOR UPDATE;

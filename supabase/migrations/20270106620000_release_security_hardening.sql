@@ -1,3 +1,13 @@
+-- Apply every hardening step atomically. Several historical-data checks are
+-- intentionally fail closed; rolling the entire migration back keeps a repair
+-- and retry safe when one of those checks detects inconsistent production data.
+BEGIN;
+SET LOCAL lock_timeout = '30s';
+
+-- Acquire parent scopes before any child-table DDL. This both closes the
+-- historical-scan race and follows the order used by account/project deletes.
+LOCK TABLE auth.users, public.projects IN SHARE ROW EXCLUSIVE MODE;
+
 -- JWT AMR timestamps have one-second precision. Keep a session-scoped epoch
 -- outside auth.mfa_amr_claims because GoTrue deletes that row when a factor is
 -- removed, then inserts a new row if a replacement factor is verified. The
@@ -428,42 +438,6 @@ $$;
 ALTER ROLE authenticator SET pgrst.db_pre_request = 'public.enforce_mfa_aal';
 NOTIFY pgrst, 'reload config';
 
-DROP POLICY IF EXISTS "mfa_aal_required" ON storage.objects;
-CREATE POLICY "mfa_aal_required"
-ON storage.objects
-AS RESTRICTIVE
-FOR ALL
-TO authenticated
-USING ((SELECT public.mfa_aal_ok()))
-WITH CHECK ((SELECT public.mfa_aal_ok()));
-
-DROP POLICY IF EXISTS "auth_session_required" ON storage.objects;
-CREATE POLICY "auth_session_required"
-ON storage.objects
-AS RESTRICTIVE
-FOR ALL
-TO authenticated
-USING ((SELECT public.auth_session_is_current()))
-WITH CHECK ((SELECT public.auth_session_is_current()));
-
-DROP POLICY IF EXISTS "mfa_aal_required" ON realtime.messages;
-CREATE POLICY "mfa_aal_required"
-ON realtime.messages
-AS RESTRICTIVE
-FOR ALL
-TO authenticated
-USING ((SELECT public.mfa_aal_ok()))
-WITH CHECK ((SELECT public.mfa_aal_ok()));
-
-DROP POLICY IF EXISTS "auth_session_required" ON realtime.messages;
-CREATE POLICY "auth_session_required"
-ON realtime.messages
-AS RESTRICTIVE
-FOR ALL
-TO authenticated
-USING ((SELECT public.auth_session_is_current()))
-WITH CHECK ((SELECT public.auth_session_is_current()));
-
 -- Client comment edits are body-only. RLS verifies the old and new parent
 -- scope, but it cannot express that identity and scope columns are immutable;
 -- changing parent_id alone could attach a whole thread to a foreign cascade.
@@ -805,6 +779,605 @@ USING (
   )
 );
 
+-- Lock every identity and scope that makes a queued run claimable. Project
+-- membership and repository-link writes take the project authority lock in
+-- their row triggers, so the unlocked child reads below remain stable.
+CREATE OR REPLACE FUNCTION public.lock_live_agent_run_project_access(
+  p_project_id uuid,
+  p_owner_id uuid,
+  p_actor_id uuid
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  account_id uuid;
+  owner_is_live boolean := false;
+  actor_is_live boolean := false;
+  target_project public.projects%ROWTYPE;
+BEGIN
+  FOR account_id IN
+    SELECT account.id
+    FROM auth.users AS account
+    WHERE account.id IN (p_owner_id, p_actor_id)
+      AND account.deleted_at IS NULL
+      AND (
+        account.banned_until IS NULL
+        OR account.banned_until <= pg_catalog.now()
+      )
+    ORDER BY account.id
+    FOR SHARE
+  LOOP
+    owner_is_live := owner_is_live OR account_id = p_owner_id;
+    actor_is_live := actor_is_live OR account_id = p_actor_id;
+  END LOOP;
+  IF NOT actor_is_live THEN
+    RETURN 'forbidden';
+  END IF;
+  IF NOT owner_is_live THEN
+    RETURN 'conflict';
+  END IF;
+
+  SELECT * INTO target_project
+  FROM public.projects
+  WHERE id = p_project_id
+    AND deleted_at IS NULL
+  FOR SHARE;
+  IF target_project.id IS NULL THEN
+    RETURN 'conflict';
+  END IF;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      'project-authority:' || p_project_id::text,
+      5400
+    )
+  );
+
+  IF target_project.owner_id IS DISTINCT FROM p_actor_id
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.project_members AS member
+       WHERE member.project_id = p_project_id
+         AND member.user_id = p_actor_id
+     ) THEN
+    RETURN 'forbidden';
+  END IF;
+  IF target_project.owner_id IS DISTINCT FROM p_owner_id
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.project_members AS member
+       WHERE member.project_id = p_project_id
+         AND member.user_id = p_owner_id
+     ) THEN
+    RETURN 'conflict';
+  END IF;
+  RETURN 'ok';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.lock_live_agent_run_project_access(
+  uuid, uuid, uuid
+) FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.agent_run_repository_binding_is_current(
+  p_project_id uuid,
+  p_repo_link_id uuid,
+  p_connection_id uuid,
+  p_repo_provider text,
+  p_repo_external_id text
+)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT CASE
+    WHEN p_repo_link_id IS NULL
+     AND p_connection_id IS NULL
+     AND p_repo_provider IS NULL
+     AND p_repo_external_id IS NULL THEN NOT EXISTS (
+      SELECT 1
+      FROM public.project_git_links AS current_link
+      WHERE current_link.project_id = p_project_id
+    )
+    ELSE EXISTS (
+      SELECT 1
+      FROM public.project_git_links AS current_link
+      WHERE current_link.project_id = p_project_id
+        AND current_link.id = p_repo_link_id
+        AND current_link.connection_id IS NOT DISTINCT FROM p_connection_id
+        AND current_link.provider = p_repo_provider
+        AND current_link.external_repo_id = p_repo_external_id
+    )
+  END;
+$$;
+
+REVOKE ALL ON FUNCTION public.agent_run_repository_binding_is_current(
+  uuid, uuid, uuid, text, text
+) FROM PUBLIC, anon, authenticated, service_role;
+
+-- A queued run may outlive an administrative account revocation. Serialize the
+-- claim with the Auth row and current project/repository authority before any
+-- worker can start execution with that account's quota or provider secrets.
+CREATE OR REPLACE FUNCTION public.claim_agent_run(p_run_id uuid)
+RETURNS SETOF public.agent_runs
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_project_id uuid;
+  v_owner_id uuid;
+BEGIN
+  SELECT run.project_id, run.created_by
+  INTO v_project_id, v_owner_id
+  FROM public.agent_runs AS run
+  WHERE run.id = p_run_id
+    AND run.status = 'queued';
+  IF NOT FOUND OR v_owner_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  IF public.lock_live_agent_run_project_access(
+    v_project_id, v_owner_id, v_owner_id
+  ) IS DISTINCT FROM 'ok' THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  UPDATE public.agent_runs AS run
+  SET status = 'running',
+      started_at = pg_catalog.now(),
+      window_started_at = COALESCE(run.window_started_at, pg_catalog.now()),
+      attempts = run.attempts + 1,
+      rest_claimed_at = NULL
+  WHERE run.id = p_run_id
+    AND run.status = 'queued'
+    AND run.project_id = v_project_id
+    AND run.created_by = v_owner_id
+    AND public.agent_run_repository_binding_is_current(
+      run.project_id,
+      run.repo_link_id,
+      run.connection_id,
+      run.repo_provider,
+      run.repo_external_id
+    )
+  RETURNING run.*;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.claim_agent_run(uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.claim_agent_run(uuid) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.claim_local_agent_run(
+  p_run_id uuid,
+  p_user_id uuid,
+  p_device_id text
+)
+RETURNS SETOF public.agent_runs
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_project_id uuid;
+  v_owner_id uuid;
+BEGIN
+  IF p_user_id IS NULL OR p_device_id IS NULL
+     OR p_device_id !~ '^[0-9a-f]{32}$' THEN
+    RETURN;
+  END IF;
+
+  SELECT run.project_id, run.created_by
+  INTO v_project_id, v_owner_id
+  FROM public.agent_runs AS run
+  WHERE run.id = p_run_id
+    AND run.status = 'queued'
+    AND run.local_exec = true
+    AND run.created_by = p_user_id
+    AND run.local_exec_device_id IS NULL;
+  IF NOT FOUND OR v_owner_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  IF public.lock_live_agent_run_project_access(
+    v_project_id, v_owner_id, p_user_id
+  ) IS DISTINCT FROM 'ok' THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  UPDATE public.agent_runs AS run
+  SET status = 'running',
+      started_at = pg_catalog.now(),
+      window_started_at = COALESCE(run.window_started_at, pg_catalog.now()),
+      attempts = run.attempts + 1,
+      local_exec_device_id = p_device_id,
+      rest_claimed_at = NULL
+  WHERE run.id = p_run_id
+    AND run.status = 'queued'
+    AND run.local_exec = true
+    AND run.project_id = v_project_id
+    AND run.created_by = v_owner_id
+    AND run.created_by = p_user_id
+    AND run.local_exec_device_id IS NULL
+    AND public.agent_run_repository_binding_is_current(
+      run.project_id,
+      run.repo_link_id,
+      run.connection_id,
+      run.repo_provider,
+      run.repo_external_id
+    )
+  RETURNING run.*;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.claim_local_agent_run(uuid, uuid, text)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.claim_local_agent_run(uuid, uuid, text)
+  TO service_role;
+
+-- Active steering uses the same current authority and lock order as a resume.
+-- A caller revoked while waiting on the run anchor cannot persist a message.
+CREATE OR REPLACE FUNCTION public.insert_latest_agent_run_message(
+  p_run_id uuid,
+  p_message_id uuid,
+  p_user_id uuid,
+  p_content text,
+  p_mentions jsonb DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_run public.agent_runs%ROWTYPE;
+  v_conversation public.agent_conversations%ROWTYPE;
+  v_latest_id uuid;
+  v_anchor text;
+  v_owner_id uuid;
+  v_project_id uuid;
+  v_conversation_id uuid;
+  v_access text;
+  v_inserted integer;
+BEGIN
+  IF p_run_id IS NULL OR p_message_id IS NULL OR p_user_id IS NULL
+     OR p_content IS NULL THEN
+    RAISE EXCEPTION 'agent_run_message_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT * INTO v_run
+  FROM public.agent_runs
+  WHERE id = p_run_id;
+  IF v_run.id IS NULL OR v_run.created_by IS NULL THEN
+    RETURN 'conflict';
+  END IF;
+  v_owner_id := v_run.created_by;
+  v_project_id := v_run.project_id;
+  v_conversation_id := v_run.conversation_id;
+  v_anchor := CASE
+    WHEN v_run.issue_id IS NOT NULL THEN 'issue:' || v_run.issue_id::text
+    WHEN v_run.pull_request_id IS NOT NULL
+      THEN 'pr:' || v_run.pull_request_id::text
+    WHEN v_run.routine_id IS NOT NULL THEN 'routine:' || v_run.routine_id::text
+    ELSE 'conversation:' || v_run.conversation_id::text
+  END;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('agent-run:' || v_anchor, 459)
+  );
+  v_access := public.lock_live_agent_run_project_access(
+    v_project_id, v_owner_id, p_user_id
+  );
+  IF v_access IS DISTINCT FROM 'ok' THEN
+    RETURN v_access;
+  END IF;
+
+  SELECT * INTO v_run
+  FROM public.agent_runs
+  WHERE id = p_run_id
+  FOR UPDATE;
+  IF v_run.id IS NULL
+     OR v_run.created_by IS DISTINCT FROM v_owner_id
+     OR v_run.status NOT IN ('queued', 'running')
+     OR v_run.project_id IS DISTINCT FROM v_project_id
+     OR v_run.conversation_id IS DISTINCT FROM v_conversation_id
+     OR v_anchor IS DISTINCT FROM (CASE
+       WHEN v_run.issue_id IS NOT NULL THEN 'issue:' || v_run.issue_id::text
+       WHEN v_run.pull_request_id IS NOT NULL
+         THEN 'pr:' || v_run.pull_request_id::text
+       WHEN v_run.routine_id IS NOT NULL
+         THEN 'routine:' || v_run.routine_id::text
+       ELSE 'conversation:' || v_run.conversation_id::text
+     END) THEN
+    RETURN 'conflict';
+  END IF;
+
+  SELECT * INTO v_conversation
+  FROM public.agent_conversations
+  WHERE id = v_conversation_id
+    AND project_id = v_project_id
+  FOR UPDATE;
+  IF v_conversation.id IS NULL
+     OR (
+       v_conversation.visibility IS DISTINCT FROM 'project'
+       AND v_conversation.owner_id IS DISTINCT FROM p_user_id
+     ) THEN
+    RETURN 'forbidden';
+  END IF;
+
+  SELECT id INTO v_latest_id
+  FROM public.agent_runs
+  WHERE CASE
+    WHEN v_run.issue_id IS NOT NULL THEN issue_id = v_run.issue_id
+    WHEN v_run.pull_request_id IS NOT NULL
+      THEN pull_request_id = v_run.pull_request_id
+    WHEN v_run.routine_id IS NOT NULL THEN routine_id = v_run.routine_id
+    ELSE conversation_id = v_run.conversation_id
+  END
+  ORDER BY created_at DESC, id DESC
+  LIMIT 1;
+  IF v_latest_id IS DISTINCT FROM p_run_id THEN
+    RETURN 'superseded';
+  END IF;
+  IF NOT public.agent_run_repository_binding_is_current(
+    v_run.project_id,
+    v_run.repo_link_id,
+    v_run.connection_id,
+    v_run.repo_provider,
+    v_run.repo_external_id
+  ) THEN
+    RETURN 'conflict';
+  END IF;
+
+  INSERT INTO public.agent_run_messages (
+    id, run_id, created_by, content, mentions
+  ) VALUES (
+    p_message_id, p_run_id, p_user_id, p_content, p_mentions
+  ) ON CONFLICT (id) DO NOTHING;
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+  IF v_inserted = 1 THEN
+    RETURN 'inserted';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM public.agent_run_messages
+    WHERE id = p_message_id AND run_id = p_run_id
+  ) THEN
+    RETURN 'already';
+  END IF;
+  RETURN 'message_id_conflict';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.insert_latest_agent_run_message(
+  uuid, uuid, uuid, text, jsonb
+) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.insert_latest_agent_run_message(
+  uuid, uuid, uuid, text, jsonb
+) TO service_role;
+
+-- Resume an idle run and persist the user message at one linearization point.
+-- Run creation takes the same anchor lock, so a superseding run either commits
+-- before this check and wins, or waits until this complete resume commits.
+CREATE OR REPLACE FUNCTION public.resume_latest_agent_run_with_message(
+  p_run_id uuid,
+  p_owner_id uuid,
+  p_actor_id uuid,
+  p_message_id uuid,
+  p_content text,
+  p_mentions jsonb,
+  p_not_before timestamptz,
+  p_usage_since timestamptz DEFAULT NULL,
+  p_budget_cap numeric DEFAULT NULL,
+  p_requested_budget numeric DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_run public.agent_runs%ROWTYPE;
+  v_conversation public.agent_conversations%ROWTYPE;
+  v_latest_id uuid;
+  v_anchor text;
+  v_key_mode text;
+  v_project_id uuid;
+  v_conversation_id uuid;
+  v_access text;
+  v_spent numeric;
+  v_reserved numeric;
+  v_granted numeric;
+  v_inserted integer;
+BEGIN
+  IF p_run_id IS NULL OR p_owner_id IS NULL OR p_actor_id IS NULL
+     OR p_message_id IS NULL OR p_content IS NULL OR p_not_before IS NULL THEN
+    RAISE EXCEPTION 'agent_resume_message_invalid' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT * INTO v_run
+  FROM public.agent_runs
+  WHERE id = p_run_id;
+  IF v_run.id IS NULL
+     OR v_run.created_by IS DISTINCT FROM p_owner_id THEN
+    RETURN 'conflict';
+  END IF;
+  v_key_mode := v_run.key_mode;
+  v_project_id := v_run.project_id;
+  v_conversation_id := v_run.conversation_id;
+
+  -- Managed run creation already takes this budget lock before its anchor lock.
+  -- Keep the same global order to avoid inversions with a concurrent new run.
+  IF v_key_mode = 'platform' THEN
+    IF p_usage_since IS NULL OR p_budget_cap IS NULL OR p_budget_cap < 0
+       OR p_requested_budget IS NULL OR p_requested_budget <= 0 THEN
+      RAISE EXCEPTION 'agent_resume_budget_invalid' USING ERRCODE = '22023';
+    END IF;
+    PERFORM pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(p_owner_id::text, 460)
+    );
+  END IF;
+
+  v_anchor := CASE
+    WHEN v_run.issue_id IS NOT NULL THEN 'issue:' || v_run.issue_id::text
+    WHEN v_run.pull_request_id IS NOT NULL
+      THEN 'pr:' || v_run.pull_request_id::text
+    WHEN v_run.routine_id IS NOT NULL THEN 'routine:' || v_run.routine_id::text
+    ELSE 'conversation:' || v_run.conversation_id::text
+  END;
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('agent-run:' || v_anchor, 459)
+  );
+
+  v_access := public.lock_live_agent_run_project_access(
+    v_project_id, p_owner_id, p_actor_id
+  );
+  IF v_access IS DISTINCT FROM 'ok' THEN
+    RETURN v_access;
+  END IF;
+
+  SELECT * INTO v_run
+  FROM public.agent_runs
+  WHERE id = p_run_id
+  FOR UPDATE;
+  IF v_run.id IS NULL
+     OR v_run.created_by IS DISTINCT FROM p_owner_id
+     OR v_run.status NOT IN ('completed', 'failed', 'canceled')
+     OR (v_run.status = 'failed' AND v_run.checkpoint IS NULL)
+     OR v_run.sandbox_reap_claim IS NOT NULL
+     OR v_run.key_mode IS DISTINCT FROM v_key_mode
+     OR v_run.project_id IS DISTINCT FROM v_project_id
+     OR v_run.conversation_id IS DISTINCT FROM v_conversation_id THEN
+    RETURN 'conflict';
+  END IF;
+
+  -- Run updates synchronize the conversation in an AFTER trigger, so every
+  -- steering path takes the run row before the conversation row.
+  SELECT * INTO v_conversation
+  FROM public.agent_conversations
+  WHERE id = v_conversation_id AND project_id = v_project_id
+  FOR UPDATE;
+  IF v_conversation.id IS NULL
+     OR (
+       v_conversation.visibility IS DISTINCT FROM 'project'
+       AND v_conversation.owner_id IS DISTINCT FROM p_actor_id
+     ) THEN
+    RETURN 'forbidden';
+  END IF;
+  IF v_anchor IS DISTINCT FROM (CASE
+    WHEN v_run.issue_id IS NOT NULL THEN 'issue:' || v_run.issue_id::text
+    WHEN v_run.pull_request_id IS NOT NULL
+      THEN 'pr:' || v_run.pull_request_id::text
+    WHEN v_run.routine_id IS NOT NULL THEN 'routine:' || v_run.routine_id::text
+    ELSE 'conversation:' || v_run.conversation_id::text
+  END) THEN
+    RETURN 'conflict';
+  END IF;
+
+  SELECT id INTO v_latest_id
+  FROM public.agent_runs
+  WHERE CASE
+    WHEN v_run.issue_id IS NOT NULL THEN issue_id = v_run.issue_id
+    WHEN v_run.pull_request_id IS NOT NULL
+      THEN pull_request_id = v_run.pull_request_id
+    WHEN v_run.routine_id IS NOT NULL THEN routine_id = v_run.routine_id
+    ELSE conversation_id = v_run.conversation_id
+  END
+  ORDER BY created_at DESC, id DESC
+  LIMIT 1;
+  IF v_latest_id IS DISTINCT FROM p_run_id THEN
+    RETURN 'superseded';
+  END IF;
+  IF NOT public.agent_run_repository_binding_is_current(
+    v_run.project_id,
+    v_run.repo_link_id,
+    v_run.connection_id,
+    v_run.repo_provider,
+    v_run.repo_external_id
+  ) THEN
+    RETURN 'conflict';
+  END IF;
+
+  IF v_key_mode = 'platform' THEN
+    SELECT COALESCE(SUM(cost), 0)
+    INTO v_spent
+    FROM public.ai_usage
+    WHERE user_id = p_owner_id
+      AND created_at >= p_usage_since
+      AND key_mode = 'platform';
+
+    SELECT COALESCE(SUM(GREATEST(
+      run.managed_budget_usd - COALESCE(usage.spent, 0), 0
+    )), 0)
+    INTO v_reserved
+    FROM public.agent_runs AS run
+    LEFT JOIN LATERAL (
+      SELECT SUM(cost) AS spent
+      FROM public.ai_usage
+      WHERE run_id = run.run_id AND key_mode = 'platform'
+    ) AS usage ON true
+    WHERE run.created_by = p_owner_id
+      AND run.key_mode = 'platform'
+      AND run.status IN ('queued', 'running')
+      AND run.managed_budget_usd IS NOT NULL;
+
+    v_granted := LEAST(
+      p_requested_budget,
+      GREATEST(p_budget_cap - v_spent - v_reserved, 0)
+    );
+    IF v_granted <= 0 THEN
+      RETURN 'no_budget';
+    END IF;
+  END IF;
+
+  INSERT INTO public.agent_run_messages (
+    id, run_id, created_by, content, mentions
+  ) VALUES (
+    p_message_id, p_run_id, p_actor_id, p_content, p_mentions
+  ) ON CONFLICT (id) DO NOTHING;
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+  IF v_inserted = 0 AND NOT EXISTS (
+    SELECT 1
+    FROM public.agent_run_messages
+    WHERE id = p_message_id AND run_id = p_run_id
+  ) THEN
+    RETURN 'message_id_conflict';
+  END IF;
+
+  UPDATE public.agent_runs
+  SET status = 'queued',
+      not_before = p_not_before,
+      managed_budget_usd = CASE
+        WHEN v_key_mode = 'platform' THEN v_granted
+        ELSE managed_budget_usd
+      END
+  WHERE id = p_run_id;
+
+  RETURN CASE WHEN v_inserted = 1 THEN 'queued' ELSE 'already' END;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.resume_latest_agent_run_with_message(
+  uuid, uuid, uuid, uuid, text, jsonb, timestamptz,
+  timestamptz, numeric, numeric
+) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.resume_latest_agent_run_with_message(
+  uuid, uuid, uuid, uuid, text, jsonb, timestamptz,
+  timestamptz, numeric, numeric
+) TO service_role;
+
+-- The former budget-only RPC could not bind the caller authorization and
+-- committed its queue transition before the message/latest check.
+REVOKE ALL ON FUNCTION public.resume_agent_run_with_budget(
+  uuid, uuid, timestamptz, numeric, numeric, timestamptz
+) FROM service_role;
+
 -- Service-role uploads must account for the complete pending payload because
 -- Storage RLS is bypassed on those paths.
 -- Keep project ownership available after a hard delete until the final object
@@ -829,11 +1402,51 @@ ON public.project_storage_owners (owner_id);
 REVOKE ALL ON TABLE public.project_storage_owners
   FROM PUBLIC, anon, authenticated, service_role;
 
--- Trigger installation takes write locks later in this transaction. Lock both
--- sources before the backfill so no project or Storage write can land between
--- the snapshot and the lifecycle triggers becoming visible.
-LOCK TABLE public.projects IN SHARE ROW EXCLUSIVE MODE;
-LOCK TABLE storage.objects IN SHARE ROW EXCLUSIVE MODE;
+-- Lock in the same order as the application: parent scope, physical Storage,
+-- metadata, then Realtime broadcast. Moving policy DDL below this point avoids
+-- acquiring the Realtime or Storage lock first and deadlocking live writes.
+LOCK TABLE
+  storage.objects,
+  public.attachments,
+  public.page_files,
+  realtime.messages
+IN SHARE ROW EXCLUSIVE MODE;
+
+DROP POLICY IF EXISTS "mfa_aal_required" ON storage.objects;
+CREATE POLICY "mfa_aal_required"
+ON storage.objects
+AS RESTRICTIVE
+FOR ALL
+TO authenticated
+USING ((SELECT public.mfa_aal_ok()))
+WITH CHECK ((SELECT public.mfa_aal_ok()));
+
+DROP POLICY IF EXISTS "auth_session_required" ON storage.objects;
+CREATE POLICY "auth_session_required"
+ON storage.objects
+AS RESTRICTIVE
+FOR ALL
+TO authenticated
+USING ((SELECT public.auth_session_is_current()))
+WITH CHECK ((SELECT public.auth_session_is_current()));
+
+DROP POLICY IF EXISTS "mfa_aal_required" ON realtime.messages;
+CREATE POLICY "mfa_aal_required"
+ON realtime.messages
+AS RESTRICTIVE
+FOR ALL
+TO authenticated
+USING ((SELECT public.mfa_aal_ok()))
+WITH CHECK ((SELECT public.mfa_aal_ok()));
+
+DROP POLICY IF EXISTS "auth_session_required" ON realtime.messages;
+CREATE POLICY "auth_session_required"
+ON realtime.messages
+AS RESTRICTIVE
+FOR ALL
+TO authenticated
+USING ((SELECT public.auth_session_is_current()))
+WITH CHECK ((SELECT public.auth_session_is_current()));
 
 INSERT INTO public.project_storage_owners (
   project_id,
@@ -881,6 +1494,131 @@ BEGIN
 END;
 $$;
 
+-- Parse the Storage service's physical size without ever accepting malformed
+-- or overflowing metadata. A missing value is reserved for its short-lived
+-- pre-upload permission probe; every finalized or referenced object requires
+-- a concrete non-negative bigint.
+CREATE OR REPLACE FUNCTION public.storage_object_size_bytes(p_metadata jsonb)
+RETURNS bigint
+LANGUAGE plpgsql
+IMMUTABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  raw_size text := p_metadata ->> 'size';
+  parsed_size bigint;
+BEGIN
+  IF raw_size IS NULL THEN
+    RETURN NULL;
+  END IF;
+  IF raw_size !~ '^[0-9]+$' THEN
+    RAISE EXCEPTION 'storage_object_size_invalid' USING ERRCODE = '22023';
+  END IF;
+  BEGIN
+    parsed_size := raw_size::bigint;
+  EXCEPTION WHEN numeric_value_out_of_range THEN
+    RAISE EXCEPTION 'storage_object_size_invalid' USING ERRCODE = '22023';
+  END;
+  RETURN parsed_size;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.storage_object_size_bytes(jsonb)
+  FROM PUBLIC, anon, authenticated, service_role;
+
+-- Refuse legacy objects that the new namespace and quota guards would reject.
+-- This scan covers unreferenced objects too: they still consume physical bytes.
+DO $$
+BEGIN
+  BEGIN
+    IF EXISTS (
+      SELECT 1
+      FROM storage.objects AS object
+      WHERE object.bucket_id = 'attachments'
+        AND public.storage_object_size_bytes(object.metadata) IS NULL
+    ) THEN
+      RAISE check_violation
+        USING MESSAGE = 'existing_storage_object_size_invalid';
+    END IF;
+  EXCEPTION WHEN SQLSTATE '22023' THEN
+    RAISE check_violation
+      USING MESSAGE = 'existing_storage_object_size_invalid';
+  END;
+
+  IF EXISTS (
+    SELECT 1
+    FROM storage.objects AS object
+    WHERE object.bucket_id = 'attachments'
+      AND CASE split_part(object.name, '/', 1)
+        WHEN 'projects' THEN CASE
+          WHEN split_part(object.name, '/', 2) ~*
+            '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          THEN (split_part(object.name, '/', 2)::uuid)::text IS DISTINCT FROM
+                 split_part(object.name, '/', 2)
+            OR NOT EXISTS (
+              SELECT 1
+              FROM public.project_storage_owners AS attribution
+              WHERE attribution.project_id =
+                    split_part(object.name, '/', 2)::uuid
+            )
+          ELSE true
+        END
+        WHEN 'chat' THEN CASE
+          WHEN split_part(object.name, '/', 2) ~*
+            '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          THEN (split_part(object.name, '/', 2)::uuid)::text IS DISTINCT FROM
+                 split_part(object.name, '/', 2)
+            OR NOT EXISTS (
+              SELECT 1
+              FROM auth.users AS account
+              WHERE account.id = split_part(object.name, '/', 2)::uuid
+            )
+          ELSE true
+        END
+        ELSE true
+      END
+  ) THEN
+    RAISE check_violation
+      USING MESSAGE = 'existing_storage_object_scope_invalid';
+  END IF;
+END;
+$$;
+
+-- Account deletion intentionally continues if best-effort Storage cleanup
+-- fails. An administrator can later request the same Auth UUID explicitly, so
+-- refuse that reuse while bytes from the former chat namespace still exist.
+CREATE OR REPLACE FUNCTION public.guard_auth_user_chat_storage_reuse()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('storage-quota:' || NEW.id::text, 467)
+  );
+  IF EXISTS (
+    SELECT 1
+    FROM storage.objects AS object
+    WHERE object.bucket_id = 'attachments'
+      AND split_part(object.name, '/', 1) = 'chat'
+      AND split_part(object.name, '/', 2) = NEW.id::text
+  ) THEN
+    RAISE unique_violation USING MESSAGE = 'storage_chat_user_id_reuse';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.guard_auth_user_chat_storage_reuse()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+DROP TRIGGER IF EXISTS auth_users_guard_chat_storage_reuse ON auth.users;
+CREATE TRIGGER auth_users_guard_chat_storage_reuse
+BEFORE INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.guard_auth_user_chat_storage_reuse();
+
 CREATE OR REPLACE FUNCTION public.account_storage_bytes(p_user uuid)
 RETURNS bigint
 LANGUAGE sql
@@ -889,11 +1627,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT COALESCE(SUM(
-    CASE
-      WHEN object.metadata ->> 'size' ~ '^[0-9]+$'
-      THEN (object.metadata ->> 'size')::bigint
-      ELSE 0
-    END
+    COALESCE(public.storage_object_size_bytes(object.metadata), 0)
   ), 0)::bigint
   FROM storage.objects AS object
   LEFT JOIN public.project_storage_owners AS attribution
@@ -1018,6 +1752,9 @@ BEGIN
      '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
     RAISE EXCEPTION 'storage_object_scope_mismatch' USING ERRCODE = '22023';
   END IF;
+  IF (second_segment::uuid)::text IS DISTINCT FROM second_segment THEN
+    RAISE EXCEPTION 'storage_object_scope_mismatch' USING ERRCODE = '22023';
+  END IF;
   IF first_segment = 'projects' THEN
     target_project_id := second_segment::uuid;
     SELECT attribution.owner_id
@@ -1040,13 +1777,18 @@ BEGIN
   END IF;
   -- Storage API performs a zero-metadata permission probe before writing the
   -- object. Its later metadata update carries the authoritative physical size.
+  IF TG_OP = 'UPDATE'
+     AND OLD.metadata ->> 'size' IS NOT NULL
+     AND NEW.metadata ->> 'size' IS NULL THEN
+    RAISE EXCEPTION 'storage_object_size_invalid' USING ERRCODE = '22023';
+  END IF;
   stored_bytes := 0;
   BEGIN
     IF NEW.metadata ->> 'size' IS NOT NULL THEN
-      stored_bytes := (NEW.metadata ->> 'size')::bigint;
+      stored_bytes := public.storage_object_size_bytes(NEW.metadata);
     END IF;
     IF TG_OP = 'UPDATE' AND OLD.metadata ->> 'size' IS NOT NULL THEN
-      previous_bytes := (OLD.metadata ->> 'size')::bigint;
+      previous_bytes := public.storage_object_size_bytes(OLD.metadata);
     END IF;
   EXCEPTION WHEN OTHERS THEN
     RAISE EXCEPTION 'storage_object_size_invalid' USING ERRCODE = '22023';
@@ -1315,6 +2057,15 @@ BEGIN
   IF owner_id IS NULL THEN
     RAISE EXCEPTION 'storage_quota_project_missing' USING ERRCODE = '23503';
   END IF;
+  IF TG_TABLE_NAME = 'page_files'
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.pages AS page
+       WHERE page.id = NEW.page_id
+         AND page.project_id = NEW.project_id
+     ) THEN
+    RAISE EXCEPTION 'storage_object_scope_mismatch' USING ERRCODE = '22023';
+  END IF;
 
   PERFORM pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended('storage-quota:' || owner_id::text, 467)
@@ -1331,7 +2082,7 @@ BEGIN
        ) THEN
       RAISE EXCEPTION 'storage_object_scope_mismatch' USING ERRCODE = '22023';
     END IF;
-    SELECT (object.metadata ->> 'size')::bigint
+    SELECT public.storage_object_size_bytes(object.metadata)
     INTO stored_bytes
     FROM storage.objects AS object
     WHERE object.bucket_id = 'attachments'
@@ -1353,13 +2104,63 @@ REVOKE ALL ON FUNCTION public.enforce_storage_insert_quota()
 
 DROP TRIGGER IF EXISTS attachments_enforce_storage_quota ON public.attachments;
 CREATE TRIGGER attachments_enforce_storage_quota
-BEFORE INSERT ON public.attachments
+BEFORE INSERT OR UPDATE OF project_id, storage_path, size_bytes
+ON public.attachments
 FOR EACH ROW EXECUTE FUNCTION public.enforce_storage_insert_quota();
 
 DROP TRIGGER IF EXISTS page_files_enforce_storage_quota ON public.page_files;
 CREATE TRIGGER page_files_enforce_storage_quota
-BEFORE INSERT ON public.page_files
+BEFORE INSERT OR UPDATE OF page_id, project_id, storage_path, size_bytes
+ON public.page_files
 FOR EACH ROW EXECUTE FUNCTION public.enforce_storage_insert_quota();
+
+-- Existing metadata must obey the same physical object, namespace, and size
+-- contract as new rows. Refuse promotion for explicit repair rather than
+-- grandfathering a row that could authorize a cross-project signed URL.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.attachments AS attachment
+    WHERE attachment.storage_path IS NOT NULL
+      AND (
+        attachment.storage_path NOT LIKE
+          'projects/' || attachment.project_id::text || '/%'
+        OR NOT EXISTS (
+          SELECT 1
+          FROM storage.objects AS object
+          WHERE object.bucket_id = 'attachments'
+            AND object.name = attachment.storage_path
+            AND public.storage_object_size_bytes(object.metadata) =
+                attachment.size_bytes
+        )
+      )
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.page_files AS page_file
+    WHERE page_file.storage_path IS NULL
+       OR NOT EXISTS (
+         SELECT 1
+         FROM public.pages AS page
+         WHERE page.id = page_file.page_id
+           AND page.project_id = page_file.project_id
+       )
+       OR page_file.storage_path NOT LIKE
+            'projects/' || page_file.project_id::text || '/pages/%'
+       OR NOT EXISTS (
+         SELECT 1
+         FROM storage.objects AS object
+         WHERE object.bucket_id = 'attachments'
+           AND object.name = page_file.storage_path
+           AND public.storage_object_size_bytes(object.metadata) =
+               page_file.size_bytes
+       )
+  ) THEN
+    RAISE check_violation
+      USING MESSAGE = 'existing_storage_metadata_scope_mismatch';
+  END IF;
+END;
+$$;
 
 -- Authenticated clients only need to acknowledge their own notifications. Keep
 -- every routing, attribution, and target field server-owned: the inbox hydrates
@@ -1587,3 +2388,5 @@ BEGIN
   END IF;
 END;
 $$;
+
+COMMIT;

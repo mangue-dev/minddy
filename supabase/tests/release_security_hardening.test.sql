@@ -335,6 +335,20 @@ SELECT ok(
 );
 
 SELECT ok(
+  NOT EXISTS (
+    SELECT 1
+    FROM unnest(ARRAY['anon', 'authenticated', 'service_role'])
+      AS caller(role_name)
+    WHERE has_function_privilege(
+      caller.role_name::name,
+      'public.storage_object_size_bytes(jsonb)',
+      'EXECUTE'
+    )
+  ),
+  'API roles cannot invoke the physical Storage metadata parser'
+);
+
+SELECT ok(
   (SELECT relrowsecurity AND relforcerowsecurity
    FROM pg_class
    WHERE oid = 'public.project_storage_owners'::regclass),
@@ -383,6 +397,13 @@ SELECT has_trigger(
   'projects',
   'projects_guard_identity',
   'a project cannot move away from its permanent Storage namespace'
+);
+
+SELECT has_trigger(
+  'auth',
+  'users',
+  'auth_users_guard_chat_storage_reuse',
+  'an Auth UUID cannot inherit a deleted account chat namespace'
 );
 
 SELECT has_trigger(
@@ -464,6 +485,9 @@ SELECT ok(
       'public.sync_project_storage_owner()',
       'public.retire_project_storage_owner()',
       'public.guard_project_identity()',
+      'public.lock_project_member_auth_insert()',
+      'public.lock_project_git_link_parent_insert()',
+      'public.guard_auth_user_chat_storage_reuse()',
       'public.guard_notification_client_update()'
     ]) AS helper(signature)
     CROSS JOIN unnest(ARRAY['anon', 'authenticated', 'service_role'])
@@ -490,7 +514,10 @@ SELECT ok(
       'public.track_storage_object_attribution()'::regprocedure,
       'public.sync_project_storage_owner()'::regprocedure,
       'public.retire_project_storage_owner()'::regprocedure,
-      'public.guard_project_identity()'::regprocedure
+      'public.guard_project_identity()'::regprocedure,
+      'public.lock_project_member_auth_insert()'::regprocedure,
+      'public.lock_project_git_link_parent_insert()'::regprocedure,
+      'public.guard_auth_user_chat_storage_reuse()'::regprocedure
     ]) AS helper(oid)
     JOIN pg_proc AS procedure ON procedure.oid = helper.oid
     WHERE NOT procedure.prosecdef
@@ -1341,6 +1368,26 @@ SELECT has_trigger(
   'page file metadata serializes exact quota enforcement'
 );
 
+SELECT ok(
+  (SELECT pg_catalog.pg_get_triggerdef(trigger.oid) LIKE
+      '%BEFORE INSERT OR UPDATE OF page_id, project_id, storage_path, size_bytes%'
+   FROM pg_trigger AS trigger
+   WHERE trigger.tgrelid = 'public.page_files'::regclass
+     AND trigger.tgname = 'page_files_enforce_storage_quota'
+     AND NOT trigger.tgisinternal),
+  'page file scope and physical metadata remain guarded after insertion'
+);
+
+SELECT ok(
+  (SELECT pg_catalog.pg_get_triggerdef(trigger.oid) LIKE
+      '%BEFORE INSERT OR UPDATE OF project_id, storage_path, size_bytes%'
+   FROM pg_trigger AS trigger
+   WHERE trigger.tgrelid = 'public.attachments'::regclass
+     AND trigger.tgname = 'attachments_enforce_storage_quota'
+     AND NOT trigger.tgisinternal),
+  'attachment scope and physical metadata remain guarded after insertion'
+);
+
 SELECT has_trigger(
   'storage',
   'objects',
@@ -1406,12 +1453,107 @@ SELECT throws_ok(
 
 SELECT throws_ok(
   $$ UPDATE storage.objects
+     SET metadata = '{}'::jsonb
+     WHERE bucket_id = 'attachments'
+       AND name = 'projects/72000000-0000-4000-8000-000000000001/pages/quota/first.bin' $$,
+  '22023',
+  'storage_object_size_invalid',
+  'an existing object cannot remove its authoritative physical size'
+);
+
+SELECT throws_ok(
+  $$ UPDATE storage.objects
      SET metadata = '{"size":11}'::jsonb
      WHERE bucket_id = 'attachments'
        AND name = 'projects/72000000-0000-4000-8000-000000000001/pages/quota/first.bin' $$,
   'P0001',
   'storage_quota_exceeded',
   'a metadata size increase cannot move an existing object beyond quota'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO storage.objects (bucket_id, name, metadata, owner_id)
+     VALUES (
+       'attachments',
+       'projects/72000000-0000-4000-8000-000000000001/pages/quota/invalid.bin',
+       '{"size":"invalid"}'::jsonb,
+       '71000000-0000-4000-8000-000000000001'
+     ) $$,
+  '22023',
+  'storage_object_size_invalid',
+  'a non-numeric physical Storage size fails closed'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO storage.objects (bucket_id, name, metadata, owner_id)
+     VALUES (
+       'attachments',
+       'projects/72000000-0000-4000-8000-000000000001/pages/quota/overflow.bin',
+       '{"size":"999999999999999999999999999999"}'::jsonb,
+       '71000000-0000-4000-8000-000000000001'
+     ) $$,
+  '22023',
+  'storage_object_size_invalid',
+  'an overflowing physical Storage size fails closed'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO storage.objects (bucket_id, name, metadata, owner_id)
+     VALUES (
+       'attachments',
+       'unscoped/72000000-0000-4000-8000-000000000001/invalid.bin',
+       '{"size":1}'::jsonb,
+       '71000000-0000-4000-8000-000000000001'
+     ) $$,
+  '22023',
+  'storage_object_scope_mismatch',
+  'an unrecognized physical Storage namespace fails closed'
+);
+
+INSERT INTO auth.users (id, email, raw_app_meta_data)
+VALUES (
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'release-chat-canonical@example.test',
+  '{}'::jsonb
+);
+SELECT throws_ok(
+  $$ INSERT INTO storage.objects (bucket_id, name, metadata, owner_id)
+     VALUES (
+       'attachments',
+       'chat/AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA/uppercase.bin',
+       '{"size":1}'::jsonb,
+       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+     ) $$,
+  '22023',
+  'storage_object_scope_mismatch',
+  'chat object UUID segments must use their canonical lowercase form'
+);
+
+INSERT INTO auth.users (id, email, raw_app_meta_data)
+VALUES (
+  '71000000-0000-4000-8000-000000000009',
+  'release-chat-reuse@example.test',
+  '{}'::jsonb
+);
+INSERT INTO storage.objects (bucket_id, name, metadata, owner_id)
+VALUES (
+  'attachments',
+  'chat/71000000-0000-4000-8000-000000000009/residual.bin',
+  '{"size":1}'::jsonb,
+  '71000000-0000-4000-8000-000000000009'
+);
+DELETE FROM auth.users
+WHERE id = '71000000-0000-4000-8000-000000000009';
+SELECT throws_ok(
+  $$ INSERT INTO auth.users (id, email, raw_app_meta_data)
+     VALUES (
+       '71000000-0000-4000-8000-000000000009',
+       'release-chat-reuse-replacement@example.test',
+       '{}'::jsonb
+     ) $$,
+  '23505',
+  'storage_chat_user_id_reuse',
+  'an Auth UUID cannot be reused while former chat objects remain'
 );
 
 INSERT INTO public.page_files (
@@ -1431,6 +1573,24 @@ SELECT is(
   public.account_storage_bytes('71000000-0000-4000-8000-000000000001'),
   6::bigint,
   'metadata registration does not count a physical object twice'
+);
+
+SELECT throws_ok(
+  $$ UPDATE public.page_files
+     SET size_bytes = 1
+     WHERE id = '72200000-0000-4000-8000-000000000001' $$,
+  '22023',
+  'storage_object_size_mismatch',
+  'page file updates cannot understate the physical object size'
+);
+
+SELECT throws_ok(
+  $$ UPDATE public.page_files
+     SET page_id = '72100000-0000-4000-8000-000000000002'
+     WHERE id = '72200000-0000-4000-8000-000000000001' $$,
+  '22023',
+  'storage_object_scope_mismatch',
+  'page file updates cannot attach metadata to a page in another project'
 );
 
 SELECT throws_ok(
@@ -1999,9 +2159,9 @@ SELECT throws_ok(
   $$ UPDATE public.comments
      SET issue_id = '72700000-0000-4000-8000-000000000002'
      WHERE id = '72800000-0000-4000-8000-000000000001' $$,
-  '23514',
-  'comment_child_scope_mismatch',
-  'a privileged scope move cannot strand direct comment children'
+  '42501',
+  'Numo comment scope is immutable',
+  'a privileged worker cannot move a live comment scope'
 );
 SELECT throws_ok(
   $$ UPDATE public.page_comments
@@ -2119,6 +2279,582 @@ VALUES
     '71000000-0000-4000-8000-000000000002'
   );
 
+INSERT INTO public.agent_conversations (id, project_id, owner_id, visibility)
+VALUES
+  (
+    '73000000-0000-4000-8000-000000000003',
+    '72000000-0000-4000-8000-000000000001',
+    '71000000-0000-4000-8000-000000000001',
+    'private'
+  ),
+  (
+    '73000000-0000-4000-8000-000000000004',
+    '72000000-0000-4000-8000-000000000001',
+    '71000000-0000-4000-8000-000000000001',
+    'private'
+  );
+INSERT INTO public.agent_runs (
+  id, run_id, project_id, conversation_id, created_by, status,
+  key_mode, checkpoint, created_at
+)
+VALUES
+  (
+    '74000000-0000-4000-8000-000000000003',
+    '74000000-0000-4000-8000-000000000103',
+    '72000000-0000-4000-8000-000000000001',
+    '73000000-0000-4000-8000-000000000003',
+    '71000000-0000-4000-8000-000000000001',
+    'completed',
+    'platform',
+    '{}'::jsonb,
+    now() - interval '2 minutes'
+  ),
+  (
+    '74000000-0000-4000-8000-000000000004',
+    '74000000-0000-4000-8000-000000000104',
+    '72000000-0000-4000-8000-000000000001',
+    '73000000-0000-4000-8000-000000000003',
+    '71000000-0000-4000-8000-000000000001',
+    'completed',
+    'platform',
+    '{}'::jsonb,
+    now() - interval '1 minute'
+  ),
+  (
+    '74000000-0000-4000-8000-000000000005',
+    '74000000-0000-4000-8000-000000000105',
+    '72000000-0000-4000-8000-000000000001',
+    '73000000-0000-4000-8000-000000000004',
+    '71000000-0000-4000-8000-000000000001',
+    'completed',
+    'byok',
+    '{}'::jsonb,
+    now()
+  );
+
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000003',
+    '71000000-0000-4000-8000-000000000001',
+    '71000000-0000-4000-8000-000000000001',
+    '76000000-0000-4000-8000-000000000003',
+    'Must remain rejected', NULL, now(), now() - interval '30 days', 100, 1
+  ),
+  'superseded',
+  'a historical platform run cannot resume after a newer anchored run exists'
+);
+SELECT ok(
+  (SELECT status = 'completed'
+     FROM public.agent_runs
+    WHERE id = '74000000-0000-4000-8000-000000000003')
+  AND NOT EXISTS (
+    SELECT 1 FROM public.agent_run_messages
+    WHERE id = '76000000-0000-4000-8000-000000000003'
+  ),
+  'a superseded resume leaves no queued run, budget, or message'
+);
+
+INSERT INTO public.project_members (project_id, user_id, added_by)
+VALUES (
+  '72000000-0000-4000-8000-000000000001',
+  '71000000-0000-4000-8000-000000000003',
+  '71000000-0000-4000-8000-000000000001'
+);
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000004',
+    '71000000-0000-4000-8000-000000000001',
+    '71000000-0000-4000-8000-000000000003',
+    '76000000-0000-4000-8000-000000000006',
+    'Must remain private', NULL, now(), now() - interval '30 days', 100, 1
+  ),
+  'forbidden',
+  'a project member cannot resume another account private conversation'
+);
+SELECT ok(
+  (SELECT status = 'completed'
+     FROM public.agent_runs
+    WHERE id = '74000000-0000-4000-8000-000000000004')
+  AND NOT EXISTS (
+    SELECT 1 FROM public.agent_run_messages
+    WHERE id = '76000000-0000-4000-8000-000000000006'
+  ),
+  'a rejected caller leaves the run, budget, and message unchanged'
+);
+
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000004',
+    '71000000-0000-4000-8000-000000000001',
+    '71000000-0000-4000-8000-000000000001',
+    '76000000-0000-4000-8000-000000000004',
+    'Resume platform atomically', NULL, now(),
+    now() - interval '30 days', 100, 1
+  ),
+  'queued',
+  'the latest platform run persists its message and budget with the resume'
+);
+SELECT ok(
+  (SELECT status = 'queued' AND managed_budget_usd = 1
+     FROM public.agent_runs
+    WHERE id = '74000000-0000-4000-8000-000000000004')
+  AND EXISTS (
+    SELECT 1 FROM public.agent_run_messages
+    WHERE id = '76000000-0000-4000-8000-000000000004'
+      AND run_id = '74000000-0000-4000-8000-000000000004'
+  ),
+  'a managed resume commits queue state, reservation, and message together'
+);
+
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000005',
+    '71000000-0000-4000-8000-000000000001',
+    '71000000-0000-4000-8000-000000000001',
+    '76000000-0000-4000-8000-000000000005',
+    'Resume BYOK atomically', NULL, now(), NULL, NULL, NULL
+  ),
+  'queued',
+  'the latest BYOK run persists its message with the resume'
+);
+SELECT ok(
+  (SELECT status = 'queued'
+     FROM public.agent_runs
+    WHERE id = '74000000-0000-4000-8000-000000000005')
+  AND EXISTS (
+    SELECT 1 FROM public.agent_run_messages
+    WHERE id = '76000000-0000-4000-8000-000000000005'
+  ),
+  'a BYOK resume commits queue state and message together'
+);
+
+SELECT ok(
+  has_function_privilege(
+    'service_role',
+    'public.resume_latest_agent_run_with_message(uuid,uuid,uuid,uuid,text,jsonb,timestamptz,timestamptz,numeric,numeric)',
+    'EXECUTE'
+  )
+  AND NOT has_function_privilege(
+    'authenticated',
+    'public.resume_latest_agent_run_with_message(uuid,uuid,uuid,uuid,text,jsonb,timestamptz,timestamptz,numeric,numeric)',
+    'EXECUTE'
+  ),
+  'only the service role can perform the atomic latest-run resume'
+);
+SELECT ok(
+  NOT has_function_privilege(
+    'service_role',
+    'public.resume_agent_run_with_budget(uuid,uuid,timestamptz,numeric,numeric,timestamptz)',
+    'EXECUTE'
+  ),
+  'the non-atomic budget-only resume RPC is retired'
+);
+
+INSERT INTO public.agent_conversations (
+  id, project_id, owner_id, visibility
+) VALUES (
+  '73000000-0000-4000-8000-000000000006',
+  '72000000-0000-4000-8000-000000000001',
+  '71000000-0000-4000-8000-000000000001',
+  'project'
+);
+INSERT INTO public.agent_runs (
+  id, run_id, project_id, conversation_id, created_by, status,
+  key_mode, checkpoint, created_at
+) VALUES (
+  '74000000-0000-4000-8000-000000000006',
+  '74000000-0000-4000-8000-000000000106',
+  '72000000-0000-4000-8000-000000000001',
+  '73000000-0000-4000-8000-000000000006',
+  '71000000-0000-4000-8000-000000000001',
+  'running',
+  'byok',
+  '{}'::jsonb,
+  now()
+);
+SELECT is(
+  public.insert_latest_agent_run_message(
+    '74000000-0000-4000-8000-000000000006',
+    '76000000-0000-4000-8000-000000000007',
+    '71000000-0000-4000-8000-000000000003',
+    'Authorized active steering',
+    NULL
+  ),
+  'inserted',
+  'a current project member can steer a project-visible active run'
+);
+DELETE FROM public.project_members
+WHERE project_id = '72000000-0000-4000-8000-000000000001'
+  AND user_id = '71000000-0000-4000-8000-000000000003';
+SELECT is(
+  public.insert_latest_agent_run_message(
+    '74000000-0000-4000-8000-000000000006',
+    '76000000-0000-4000-8000-000000000008',
+    '71000000-0000-4000-8000-000000000003',
+    'Revoked active steering',
+    NULL
+  ),
+  'forbidden',
+  'a revoked member cannot steer an active run'
+);
+SELECT is(
+  (SELECT count(*)::integer
+   FROM public.agent_run_messages
+   WHERE id = '76000000-0000-4000-8000-000000000008'),
+  0,
+  'a rejected active steer persists no message'
+);
+
+INSERT INTO public.project_members (project_id, user_id, added_by)
+VALUES (
+  '72000000-0000-4000-8000-000000000001',
+  '71000000-0000-4000-8000-000000000004',
+  '71000000-0000-4000-8000-000000000001'
+);
+INSERT INTO public.agent_conversations (
+  id, project_id, owner_id, visibility
+) VALUES (
+  '73000000-0000-4000-8000-000000000007',
+  '72000000-0000-4000-8000-000000000001',
+  '71000000-0000-4000-8000-000000000004',
+  'project'
+);
+INSERT INTO public.agent_runs (
+  id, run_id, project_id, conversation_id, created_by, status,
+  key_mode, checkpoint, created_at
+) VALUES (
+  '74000000-0000-4000-8000-000000000007',
+  '74000000-0000-4000-8000-000000000107',
+  '72000000-0000-4000-8000-000000000001',
+  '73000000-0000-4000-8000-000000000007',
+  '71000000-0000-4000-8000-000000000004',
+  'completed',
+  'byok',
+  '{}'::jsonb,
+  now()
+);
+DELETE FROM public.project_members
+WHERE project_id = '72000000-0000-4000-8000-000000000001'
+  AND user_id = '71000000-0000-4000-8000-000000000004';
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000007',
+    '71000000-0000-4000-8000-000000000004',
+    '71000000-0000-4000-8000-000000000001',
+    '76000000-0000-4000-8000-000000000009',
+    'Former owner resume', NULL, now(), NULL, NULL, NULL
+  ),
+  'conflict',
+  'a run creator must retain current project authority before resume'
+);
+SELECT ok(
+  (SELECT status = 'completed'
+   FROM public.agent_runs
+   WHERE id = '74000000-0000-4000-8000-000000000007')
+  AND NOT EXISTS (
+    SELECT 1 FROM public.agent_run_messages
+    WHERE id = '76000000-0000-4000-8000-000000000009'
+  ),
+  'revoked creator authority leaves the terminal run unchanged'
+);
+
+INSERT INTO auth.users (id, email)
+VALUES (
+  '71000000-0000-4000-8000-000000000010',
+  'release-deleted-run-owner@example.test'
+);
+INSERT INTO public.agent_conversations (
+  id, project_id, owner_id, visibility
+) VALUES (
+  '73000000-0000-4000-8000-000000000008',
+  '72000000-0000-4000-8000-000000000001',
+  '71000000-0000-4000-8000-000000000010',
+  'project'
+);
+INSERT INTO public.agent_runs (
+  id, run_id, project_id, conversation_id, created_by, status,
+  key_mode, checkpoint, created_at
+) VALUES (
+  '74000000-0000-4000-8000-000000000008',
+  '74000000-0000-4000-8000-000000000108',
+  '72000000-0000-4000-8000-000000000001',
+  '73000000-0000-4000-8000-000000000008',
+  '71000000-0000-4000-8000-000000000010',
+  'completed',
+  'byok',
+  '{}'::jsonb,
+  now()
+);
+DELETE FROM auth.users
+WHERE id = '71000000-0000-4000-8000-000000000010';
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000008',
+    '71000000-0000-4000-8000-000000000001',
+    '71000000-0000-4000-8000-000000000001',
+    '76000000-0000-4000-8000-000000000010',
+    'Deleted creator resume', NULL, now(), NULL, NULL, NULL
+  ),
+  'conflict',
+  'a run whose creator was deleted cannot be resumed under another identity'
+);
+
+INSERT INTO auth.users (id, email, raw_app_meta_data)
+VALUES (
+  '71000000-0000-4000-8000-000000000011',
+  'release-revoked-run-owner@example.test',
+  '{}'::jsonb
+);
+INSERT INTO public.projects (id, owner_id, name, key)
+VALUES (
+  '72000000-0000-4000-8000-000000000011',
+  '71000000-0000-4000-8000-000000000011',
+  'Revoked run owner project',
+  'RRO'
+);
+INSERT INTO public.project_members (project_id, user_id, added_by)
+VALUES (
+  '72000000-0000-4000-8000-000000000011',
+  '71000000-0000-4000-8000-000000000001',
+  '71000000-0000-4000-8000-000000000011'
+);
+INSERT INTO public.agent_conversations (
+  id, project_id, owner_id, visibility
+)
+VALUES
+  (
+    '73000000-0000-4000-8000-000000000011',
+    '72000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000011',
+    'project'
+  ),
+  (
+    '73000000-0000-4000-8000-000000000012',
+    '72000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000011',
+    'project'
+  ),
+  (
+    '73000000-0000-4000-8000-000000000013',
+    '72000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000011',
+    'project'
+  ),
+  (
+    '73000000-0000-4000-8000-000000000014',
+    '72000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000011',
+    'project'
+  );
+INSERT INTO public.agent_runs (
+  id, run_id, project_id, conversation_id, created_by, status,
+  key_mode, checkpoint, local_exec, created_at
+)
+VALUES
+  (
+    '74000000-0000-4000-8000-000000000011',
+    '74000000-0000-4000-8000-000000000111',
+    '72000000-0000-4000-8000-000000000011',
+    '73000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000011',
+    'running', 'byok', '{}'::jsonb, false, now()
+  ),
+  (
+    '74000000-0000-4000-8000-000000000012',
+    '74000000-0000-4000-8000-000000000112',
+    '72000000-0000-4000-8000-000000000011',
+    '73000000-0000-4000-8000-000000000012',
+    '71000000-0000-4000-8000-000000000011',
+    'completed', 'byok', '{}'::jsonb, false, now()
+  ),
+  (
+    '74000000-0000-4000-8000-000000000013',
+    '74000000-0000-4000-8000-000000000113',
+    '72000000-0000-4000-8000-000000000011',
+    '73000000-0000-4000-8000-000000000013',
+    '71000000-0000-4000-8000-000000000011',
+    'queued', 'byok', NULL, false, now()
+  ),
+  (
+    '74000000-0000-4000-8000-000000000014',
+    '74000000-0000-4000-8000-000000000114',
+    '72000000-0000-4000-8000-000000000011',
+    '73000000-0000-4000-8000-000000000014',
+    '71000000-0000-4000-8000-000000000011',
+    'queued', 'byok', NULL, true, now()
+  );
+
+UPDATE auth.users
+SET banned_until = now() + interval '1 day'
+WHERE id = '71000000-0000-4000-8000-000000000011';
+SELECT is(
+  public.insert_latest_agent_run_message(
+    '74000000-0000-4000-8000-000000000011',
+    '76000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000001',
+    'Banned owner steer', NULL
+  ),
+  'conflict',
+  'a member cannot steer a run whose owner is administratively banned'
+);
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000012',
+    '71000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000001',
+    '76000000-0000-4000-8000-000000000012',
+    'Banned owner resume', NULL, now(), NULL, NULL, NULL
+  ),
+  'conflict',
+  'a member cannot resume a run whose owner is administratively banned'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.claim_agent_run(
+    '74000000-0000-4000-8000-000000000013'
+  )),
+  0,
+  'a queued cloud run cannot start for a banned owner'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.claim_local_agent_run(
+    '74000000-0000-4000-8000-000000000014',
+    '71000000-0000-4000-8000-000000000011',
+    '0123456789abcdef0123456789abcdef'
+  )),
+  0,
+  'a queued local run cannot start for a banned owner'
+);
+UPDATE auth.users
+SET banned_until = NULL, deleted_at = now()
+WHERE id = '71000000-0000-4000-8000-000000000011';
+SELECT is(
+  public.insert_latest_agent_run_message(
+    '74000000-0000-4000-8000-000000000011',
+    '76000000-0000-4000-8000-000000000013',
+    '71000000-0000-4000-8000-000000000001',
+    'Soft-deleted owner steer', NULL
+  ),
+  'conflict',
+  'a member cannot steer a run whose owner is soft-deleted'
+);
+SELECT is(
+  public.resume_latest_agent_run_with_message(
+    '74000000-0000-4000-8000-000000000012',
+    '71000000-0000-4000-8000-000000000011',
+    '71000000-0000-4000-8000-000000000001',
+    '76000000-0000-4000-8000-000000000014',
+    'Soft-deleted owner resume', NULL, now(), NULL, NULL, NULL
+  ),
+  'conflict',
+  'a member cannot resume a run whose owner is soft-deleted'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.claim_agent_run(
+    '74000000-0000-4000-8000-000000000013'
+  )),
+  0,
+  'a queued cloud run cannot start for a soft-deleted owner'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.claim_local_agent_run(
+    '74000000-0000-4000-8000-000000000014',
+    '71000000-0000-4000-8000-000000000011',
+    '0123456789abcdef0123456789abcdef'
+  )),
+  0,
+  'a queued local run cannot start for a soft-deleted owner'
+);
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1
+    FROM public.agent_run_messages
+    WHERE id IN (
+      '76000000-0000-4000-8000-000000000011',
+      '76000000-0000-4000-8000-000000000012',
+      '76000000-0000-4000-8000-000000000013',
+      '76000000-0000-4000-8000-000000000014'
+    )
+  )
+  AND (
+    SELECT count(*) = 2
+    FROM public.agent_runs
+    WHERE id IN (
+      '74000000-0000-4000-8000-000000000013',
+      '74000000-0000-4000-8000-000000000014'
+    )
+      AND status = 'queued'
+  ),
+  'administrative revocation leaves messages and queued claims unchanged'
+);
+
+UPDATE auth.users
+SET deleted_at = NULL
+WHERE id = '71000000-0000-4000-8000-000000000011';
+SELECT is(
+  (SELECT count(*)::integer FROM public.claim_local_agent_run(
+    '74000000-0000-4000-8000-000000000014',
+    '71000000-0000-4000-8000-000000000011',
+    NULL
+  )),
+  0,
+  'a live local run cannot start without a bound device identifier'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.claim_agent_run(
+    '74000000-0000-4000-8000-000000000013'
+  )),
+  1,
+  'a live authorized cloud run still claims exactly once'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.claim_local_agent_run(
+    '74000000-0000-4000-8000-000000000014',
+    '71000000-0000-4000-8000-000000000011',
+    '0123456789abcdef0123456789abcdef'
+  )),
+  1,
+  'a live authorized local run still claims exactly once'
+);
+SELECT ok(
+  (SELECT status = 'running'
+     FROM public.agent_runs
+    WHERE id = '74000000-0000-4000-8000-000000000013')
+  AND (
+    SELECT status = 'running'
+       AND local_exec_device_id = '0123456789abcdef0123456789abcdef'
+    FROM public.agent_runs
+    WHERE id = '74000000-0000-4000-8000-000000000014'
+  ),
+  'successful claims preserve cloud state and bind the local device'
+);
+
+SELECT ok(
+  has_function_privilege(
+    'service_role',
+    'public.insert_latest_agent_run_message(uuid,uuid,uuid,text,jsonb)',
+    'EXECUTE'
+  )
+  AND NOT has_function_privilege(
+    'authenticated',
+    'public.insert_latest_agent_run_message(uuid,uuid,uuid,text,jsonb)',
+    'EXECUTE'
+  ),
+  'only the service role can use the current-authority steering RPC'
+);
+SELECT ok(
+  NOT has_function_privilege(
+    'service_role',
+    'public.lock_live_agent_run_project_access(uuid,uuid,uuid)',
+    'EXECUTE'
+  )
+  AND NOT has_function_privilege(
+    'service_role',
+    'public.agent_run_repository_binding_is_current(uuid,uuid,uuid,text,text)',
+    'EXECUTE'
+  ),
+  'agent authority helpers are not directly callable by API roles'
+);
+
 SET LOCAL ROLE authenticated;
 SELECT set_config(
   'request.jwt.claims',
@@ -2133,7 +2869,11 @@ SELECT results_eq(
 );
 SELECT results_eq(
   $$ SELECT id FROM public.agent_run_messages ORDER BY id $$,
-  $$ VALUES ('76000000-0000-4000-8000-000000000001'::uuid) $$,
+  $$ VALUES
+       ('76000000-0000-4000-8000-000000000001'::uuid),
+       ('76000000-0000-4000-8000-000000000004'::uuid),
+       ('76000000-0000-4000-8000-000000000005'::uuid),
+       ('76000000-0000-4000-8000-000000000007'::uuid) $$,
   'agent message RLS correlates each row with its own accessible run'
 );
 SELECT throws_ok(

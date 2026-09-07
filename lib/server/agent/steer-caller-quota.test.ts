@@ -13,7 +13,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const quotas = new Map<string, Record<string, unknown>>();
 const checkAgentQuota = vi.fn(async (userId: string) => {
   return (
-    quotas.get(userId) ?? { allowed: true, unlimited: false, mode: "platform" }
+    quotas.get(userId) ?? {
+      allowed: true,
+      unlimited: false,
+      mode: "platform",
+      cap: 25,
+      periodStart: "2026-08-01T00:00:00.000Z",
+    }
   );
 });
 
@@ -40,6 +46,10 @@ vi.mock("@/lib/server/agent/runs", () => ({
   insertLatestRunMessage: async (...args: unknown[]) => {
     messages.push(args);
     return "inserted";
+  },
+  resumeLatestRunWithMessage: async (input: unknown) => {
+    messages.push(input);
+    return "queued";
   },
   bumpRunActivity: async () => {},
   stampRun: async (...args: unknown[]) => {
