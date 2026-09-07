@@ -197,7 +197,7 @@ test("Windows packaging runs only in the public desktop release", async () => {
     "utf8",
   );
   assert.doesNotMatch(ci, /runs-on: windows-/);
-  assert.match(release, /runs-on: windows-2025/);
+  assert.match(release, /runs-on: windows-2022/);
   assert.match(release, /npm --prefix desktop run dist:win:store/);
   assert.match(release, /CSC_IDENTITY_AUTO_DISCOVERY: "false"/);
   assert.match(release, /name: Sign and install disposable MSIX copies/);

@@ -275,7 +275,7 @@ For a Windows-only publication or retry of an existing core release, run:
 npm run deploy -- windows
 ```
 
-This mode dispatches only the `windows-2025` Store packaging job. It skips the
+This mode dispatches only the `windows-2022` Store packaging job. It skips the
 macOS and Linux runners, does not redeploy the web or rebuild the public core,
 and does not rewrite the full cross-platform desktop release record. The x64
 and ARM64 MSIX packages and `SHA256SUMS-Windows` are attached to the existing

@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - desktop/native/store-update/**
+      - .github/workflows/desktop-release.yml
       - .github/workflows/windows-native-check.yml
   push:
     branches: [main]
     paths:
       - desktop/native/store-update/**
+      - .github/workflows/desktop-release.yml
       - .github/workflows/windows-native-check.yml
   workflow_dispatch:
 
@@ -22,7 +24,8 @@ concurrency:
 jobs:
   store-update:
     name: Compile Store update helper (${{ matrix.architecture }})
-    runs-on: windows-2025
+    # The native project requires the VS 2022 v143 toolset for both architectures.
+    runs-on: windows-2022
     timeout-minutes: 10
     strategy:
       fail-fast: false

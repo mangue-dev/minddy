@@ -231,7 +231,8 @@ jobs:
   windows:
     name: Build and attach Store MSIX v${{ inputs.version }}
     if: inputs.target == 'all' || inputs.target == 'windows'
-    runs-on: windows-2025
+    # Keep the v143 ARM64 tools used by the native helper projects available.
+    runs-on: windows-2022
     timeout-minutes: 45
     environment: public-release
     steps:
