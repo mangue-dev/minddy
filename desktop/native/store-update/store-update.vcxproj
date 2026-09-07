@@ -16,6 +16,9 @@
     <RootNamespace>MinddyStoreUpdate</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <WindowsPackageType>None</WindowsPackageType>
+    <!-- VS 2022's NuGet resolver needs an explicit target for native PackageReference assets. -->
+    <!-- https://github.com/dotnet/NuGet.BuildTasks/issues/154 -->
+    <_NuGetTargetFallbackMoniker>$(_NuGetTargetFallbackMoniker);native,Version=v0.0</_NuGetTargetFallbackMoniker>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
