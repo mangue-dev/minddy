@@ -82,23 +82,23 @@ jobs:
       - name: Preserve unsigned packages and source identity
         shell: pwsh
         run: |
-          New-Item -ItemType Directory .desktop-validation | Out-Null
-          Copy-Item candidate/desktop/release/windows-store/*.msix .desktop-validation/
-          Get-FileHash .desktop-validation/*.msix -Algorithm SHA256 |
+          New-Item -ItemType Directory windows-validation | Out-Null
+          Copy-Item candidate/desktop/release/windows-store/*.msix windows-validation/
+          Get-FileHash windows-validation/*.msix -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } |
-            Set-Content .desktop-validation/SHA256SUMS-Windows
-          $env:SOURCE_COMMIT | Set-Content .desktop-validation/source-commit.txt
+            Set-Content windows-validation/SHA256SUMS-Windows
+          $env:SOURCE_COMMIT | Set-Content windows-validation/source-commit.txt
 
       - name: Validate original unsigned packages
         shell: pwsh
-        run: ./validation/scripts/verify-windows-desktop.ps1 -StoreDirectory "$env:GITHUB_WORKSPACE/.desktop-validation"
+        run: ./validation/scripts/verify-windows-desktop.ps1 -StoreDirectory "$env:GITHUB_WORKSPACE/windows-validation"
 
       - name: Sign disposable copies for installation testing
         shell: pwsh
         run: |
           $testDirectory = "$env:RUNNER_TEMP/minddy-store-installation"
           New-Item -ItemType Directory $testDirectory | Out-Null
-          Copy-Item .desktop-validation/*.msix $testDirectory/
+          Copy-Item windows-validation/*.msix $testDirectory/
           $password = ConvertTo-SecureString "minddy-ci-only" -AsPlainText -Force
           $certificate = New-SelfSignedCertificate -Type Custom `
             -Subject $env:MINDDY_WINDOWS_STORE_PUBLISHER -KeyUsage DigitalSignature `
@@ -120,6 +120,6 @@ jobs:
         if: always()
         with:
           name: windows-validation-${{ env.RELEASE_VERSION }}
-          path: .desktop-validation/
-          if-no-files-found: ignore
+          path: windows-validation/
+          if-no-files-found: error
           retention-days: 7
