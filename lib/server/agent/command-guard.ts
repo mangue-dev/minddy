@@ -454,12 +454,12 @@ function gitInvocation(tokens: string[]): {
 }
 
 /**
- * CONFIG KEYS THAT EXECUTE CODE OR SURVIVE RUN (MIN-360).
+ * Git configuration keys that execute code or persist beyond the run (MIN-360).
  *
- * Indexed `section.feuille` in lowercase: the section and the final key of a name
- * git are case insensitive, only the middle subsection is not —
- * and it is precisely she who is free (`filter.<nom>.clean`,
- * `url.<base>.insteadOf`). We therefore compare the two ends, never the whole name.
+ * Git treats the section and final key in `section.key` as case-insensitive, but
+ * preserves the case of an optional subsection such as the names in
+ * `filter.<name>.clean` and `url.<base>.insteadOf`. Compare the two fixed parts
+ * rather than lowercasing and matching the complete key.
  */
 const GIT_CONFIG_EXECUTES = new Set([
   "core.hookspath",
@@ -483,7 +483,7 @@ const GIT_CONFIG_EXECUTES = new Set([
   "uploadpack.packobjectshook",
 ]);
 
-/** Sections of which ANY key executes (`alias.x = !sh -c …`) or loads a file. */
+/** Sections where every key executes a command or loads another file. */
 const GIT_CONFIG_SECTIONS = new Set(["alias", "includeif"]);
 
 function dangerousConfigKey(raw: string): boolean {
@@ -499,15 +499,14 @@ const GIT_CONFIG_READ_FLAGS = new Set([
   "--get", "--get-all", "--get-regexp", "--get-urlmatch", "--get-color", "--get-colorbool",
   "-l", "--list",
 ]);
-/** Flags that WRITE (or open an editor on the file). */
+/** `git config` flags that write values or open the configuration in an editor. */
 const GIT_CONFIG_WRITE_FLAGS = new Set([
   "--add", "--unset", "--unset-all", "--replace-all", "--edit", "-e",
   "--remove-section", "--rename-section",
 ]);
-/** Scopes that leave the tour repository: the user's `~/.gitconfig`, the
- * system file, a file named. A writing survives everything else. */
+/** Scopes outside the current repository whose writes persist beyond the run. */
 const GIT_CONFIG_ELSEWHERE = new Set(["--global", "--system", "--file", "-f", "--blob"]);
-/** Modern form verbs (`git config set core.pager x`, git ≥ 2.46). */
+/** Command-style `git config` modes, available in Git 2.46 and later. */
 const GIT_CONFIG_MODES = new Set([
   "get", "set", "unset", "list", "edit", "remove-section", "rename-section",
 ]);
@@ -517,9 +516,9 @@ const GIT_CONFIG_WRITE_MODES = new Set(["set", "unset", "edit", "remove-section"
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
 
 /**
- * The command carried by a `sh -c` / `bash -lc` — or null if the segment does not launch
- * not a shell with a command as an argument. Only the `-…c…` form counts:
- * `bash script.sh` executes a file, which is not read.
+ * Return the command passed to `sh -c` or `bash -lc`, or null when the segment
+ * does not launch a shell command. Only options containing `c` count;
+ * `bash script.sh` executes a script file instead.
  */
 function shellCommandArg(tokens: string[]): string | null {
   const i = skipPrefix(tokens);
@@ -539,10 +538,7 @@ function shellCommandArg(tokens: string[]): string | null {
   return null;
 }
 
-/**
- * WHAT DESTROYS WORK — the refusal which does not depend on any decision of
- * delivery, and the only one of the lot whose victim is never the agent himself.
- */
+/** Refuse commands that can discard uncommitted work in any execution scope. */
 function destructiveRefusal(what: string): CommandVerdict {
   return {
     allowed: false,
@@ -595,15 +591,9 @@ function shellExpansionRefusal(what: string): CommandVerdict {
 }
 
 /**
- * `git config` — or rather the only part that matters: what WRITES (MIN-360).
- *
- * Reading the config is free and useful (`git config --get remote.origin.url`). This
- * that we refuse is contained in two sentences: a writing that COMES OUT of the deposit of the turn
- * (`--global` rewrites the user's `~/.gitconfig`), and a write to a
- * key that makes something RUN later — on the next commit, on the next
- * `git fetch`, to the next `git diff` from a human who won't know where it comes from.
- *
- * `null` = nothing to complain about.
+ * Reject `git config` writes that either leave the current repository or make a
+ * later Git command execute code (MIN-360). Read-only operations remain allowed.
+ * Return null when the arguments are safe.
  */
 function checkGitConfig(args: string[]): CommandVerdict | null {
   const positionals: string[] = [];
@@ -621,7 +611,7 @@ function checkGitConfig(args: string[]): CommandVerdict | null {
       if (GIT_CONFIG_READ_FLAGS.has(name)) reads = true;
       if (GIT_CONFIG_WRITE_FLAGS.has(name)) writes = true;
       if (GIT_CONFIG_ELSEWHERE.has(name)) elsewhere = name;
-      // `--file <chemin>` carries its value in the following word: it is not a key.
+      // `--file <path>` carries its value in the following word, so skip that value.
       if (!arg.includes("=") && (name === "--file" || name === "-f" || name === "--blob")) i++;
       continue;
     }
@@ -631,7 +621,8 @@ function checkGitConfig(args: string[]): CommandVerdict | null {
   const mode = positionals[0] ?? "";
   const named = GIT_CONFIG_MODES.has(mode) ? positionals.slice(1) : positionals;
   if (GIT_CONFIG_WRITE_MODES.has(mode)) writes = true;
-  // The historical form has no verb: `git config <key>` READS, `git config
+  // The historical form has no verb: `git config <key>` reads, while
+  // `git config <key> <value>` writes. The argument count distinguishes them.
 
   if (!reads && !GIT_CONFIG_MODES.has(mode) && named.length >= 2) writes = true;
   if (!writes) return null;
@@ -776,29 +767,48 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
 
   if (DESTRUCTIVE.has(sub)) return destructiveRefusal(`git ${sub}`);
   if (sub === "push") return pushRefusal(scope);
-  // The commit remains at the harness in the microVM, and NOTHING BUT there (D6).
+  // The harness owns commits inside the microVM (D6).
   if (sub === "commit" && !scope.local) return harnessCommitRefusal();
-  // `--amend` rewrites the last commit — that of the harness in the microVM,
-  // that of the USER on his machine. Refused on both sides, therefore.
+  // `--amend` rewrites the last commit in both local and microVM execution.
   if (args.includes("--amend")) return destructiveRefusal(`git ${sub} --amend`);
-  // `checkout` is ambiguous (changing branch is harmless): we only refuse
-  // the forms which aim at FILES, that is to say which throw away the work.
+  // A positional `git checkout` argument is ambiguous without repository state:
+  // Git may treat it as either a branch or a path and overwrite the path from the
+  // index. Require an explicit branch-creation/detach mode, or use `git switch`.
   if (sub === "checkout") {
-    const discards = args.find((a) => a === "--" || a === "." || a === "-f" || a === "--force");
+    const explicitBranchMode = args.some((arg) =>
+      ["-b", "-B", "--orphan", "--detach"].includes(arg)
+    );
+    const discards = args.find((arg) =>
+      arg === "--" ||
+      arg === "-f" ||
+      arg === "--force" ||
+      arg === "-p" ||
+      arg === "--patch" ||
+      arg === "--ours" ||
+      arg === "--theirs" ||
+      arg === "-m" ||
+      arg === "--merge" ||
+      arg.startsWith("--conflict=") ||
+      arg === "--ignore-skip-worktree-bits" ||
+      arg === "--pathspec-from-file" ||
+      arg.startsWith("--pathspec-from-file=") ||
+      arg === "--pathspec-file-nul" ||
+      (!explicitBranchMode && !arg.startsWith("-"))
+    );
     if (discards) return destructiveRefusal(`git checkout ${discards}`);
   }
-  // `git stash` only is recoverable; `drop`/`clear` are not.
+  // A stash is recoverable, but `drop` and `clear` permanently remove stashes.
   if (sub === "stash" && (args[0] === "drop" || args[0] === "clear")) {
     return destructiveRefusal(`git stash ${args[0]}`);
   }
-  // `git clean` without `-f` does nothing; with it, it deletes untracked files
-  // — uncommitted work, exactly what this module protects. `-n` remains free.
+  // `git clean` without `-f` does nothing; with it, it deletes untracked files,
+  // including uncommitted work. Dry runs with `-n` remain allowed.
   if (sub === "clean") {
     const forces = args.find((a) => a === "--force" || shortFlagWith("f")(a));
     if (forces) return destructiveRefusal(`git clean ${forces}`);
   }
-  // `git switch` is the modern equivalent of `checkout`: changing branch is
-  // harmless, throwing away the changes to get there is not.
+  // `git switch` changes branches without the path ambiguity of `git checkout`.
+  // Its discard options can still overwrite uncommitted work.
   if (sub === "switch") {
     const discards = args.find((a) => a === "--discard-changes" || a === "--force" || a === "-f");
     if (discards) return destructiveRefusal(`git switch ${discards}`);
@@ -807,9 +817,8 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
 }
 
 /**
- * Harness verdict on an order for `run_command`. A refusal comes down to
- * model as a TOOL ERROR: the round continues, it reads why and
- * adapts — we never break the trick.
+ * Return the harness verdict for a `run_command` request. A refusal is reported
+ * to the model as a tool error so it can adapt and continue the turn.
  */
 export function checkCommand(command: string, scope: CommandScope = {}): CommandVerdict {
   return check(command, 0, scope);

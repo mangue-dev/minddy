@@ -296,6 +296,8 @@ REVOKE ALL ON FUNCTION public.lock_project_authority_mutation()
 
 -- The later authority trigger supersedes the older project-row mutex. Keeping
 -- both would upgrade NO KEY UPDATE after concurrent FK KEY SHARE locks.
+DROP TRIGGER IF EXISTS project_members_lock_project_scope
+  ON public.project_members;
 DROP TRIGGER IF EXISTS project_members_authority_scope_lock
   ON public.project_members;
 

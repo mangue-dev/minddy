@@ -18,6 +18,9 @@ describe("atomic tenant write guards", () => {
     );
     expect(guards).toContain("where id = v_project_id for no key update");
     expect(authority).toContain(
+      "drop trigger if exists project_members_lock_project_scope on public.project_members"
+    );
+    expect(authority).toContain(
       "drop trigger if exists project_members_authority_scope_lock on public.project_members"
     );
     expect(authority).toContain(
