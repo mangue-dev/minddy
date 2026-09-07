@@ -1,0 +1,56 @@
+name: Windows native build
+
+on:
+  pull_request:
+    paths:
+      - desktop/native/store-update/**
+      - .github/workflows/desktop-release.yml
+      - .github/workflows/windows-native-check.yml
+  push:
+    branches: [main]
+    paths:
+      - desktop/native/store-update/**
+      - .github/workflows/desktop-release.yml
+      - .github/workflows/windows-native-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  store-update:
+    name: Compile Store update helper (${{ matrix.architecture }})
+    # The native project requires the VS 2022 v143 toolset for both architectures.
+    runs-on: windows-2022
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [x64, ARM64]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Compile the native helper with release settings
+        shell: pwsh
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' |
+            Select-Object -First 1
+          if (-not $msbuild) { throw "MSBuild was not found in Visual Studio." }
+          $output = "$env:RUNNER_TEMP\store-update\$env:TARGET_ARCHITECTURE\"
+          $intermediate = "$env:RUNNER_TEMP\store-update-obj\$env:TARGET_ARCHITECTURE\"
+          & $msbuild desktop/native/store-update/store-update.vcxproj /restore /m `
+            /p:Configuration=Release "/p:Platform=$env:TARGET_ARCHITECTURE" `
+            "/p:OutDir=$output" "/p:IntDir=$intermediate"
+          if ($LASTEXITCODE -ne 0) { throw "Store update helper compilation failed." }
+          if (-not (Test-Path "${output}minddy-store-update.exe")) {
+            throw "The compiled Store update helper is missing."
+          }

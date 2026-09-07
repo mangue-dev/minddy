@@ -4,6 +4,7 @@
 #include <string>
 
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Services.Store.h>
 
 using namespace winrt;
