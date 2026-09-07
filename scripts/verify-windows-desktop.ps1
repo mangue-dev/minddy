@@ -83,6 +83,10 @@ foreach ($package in $msixPackages) {
 }
 
 if ($InstallStore) {
+  # Appx cmdlets require Windows PowerShell compatibility when invoked from pwsh.
+  if ($PSVersionTable.PSEdition -eq "Core") {
+    Import-Module Appx -UseWindowsPowerShell
+  }
   $x64Package = $msixPackages | Where-Object Name -Match "-windows-x64-store\.msix$" | Select-Object -First 1
   Add-AppxPackage $x64Package.FullName
   $installed = Get-AppxPackage -Name $identityName
