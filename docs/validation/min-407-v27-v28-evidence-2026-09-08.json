@@ -604,5 +604,17 @@
       "operations_discovery_latest_utc": "2026-09-08T15:50:42+00:00",
       "operations_discovery_max_seconds": 198
     }
+  },
+  "locale_followup": {
+    "initial_ci_run": 34254925297,
+    "failure": "Two verification keys missing from four additional catalogs",
+    "corrected_catalogs": [
+      "de",
+      "es",
+      "it",
+      "pt-BR"
+    ],
+    "existing_locale_tests_passed": 15,
+    "local_lifecycle_image_predates_catalog_only_followup": true
   }
 }
