@@ -136,7 +136,7 @@ export function AdminDashboard() {
   // flicker on first paint; the API itself re-checks every access anyway.
   const capabilities = useAdminCapabilities();
   const openRouterLinked = capabilities.configured("managedAi");
-  const billingAvailable = capabilities.configured("managedBilling") === true;
+  const billingAvailable = capabilities.configured("managedBilling") !== false;
 
   const requested = searchParams.get("tab");
   const visibleTabs = useMemo(() => visibleAdminTabs(openRouterLinked), [openRouterLinked]);

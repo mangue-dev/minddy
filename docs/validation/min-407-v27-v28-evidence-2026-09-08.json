@@ -616,5 +616,10 @@
     ],
     "existing_locale_tests_passed": 15,
     "local_lifecycle_image_predates_catalog_only_followup": true
+  },
+  "ui_review_followup": {
+    "change": "Preserve unknown billing capability state; hide only when explicitly disabled",
+    "configured_disabled_behavior_unchanged": true,
+    "local_lifecycle_image_predates_followup": true
   }
 }

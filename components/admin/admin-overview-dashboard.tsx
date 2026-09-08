@@ -193,7 +193,7 @@ function FunnelBand({
 }
 
 export function AdminOverviewDashboard() {
-  const billingAvailable = useAdminCapabilities().configured("managedBilling") === true;
+  const billingAvailable = useAdminCapabilities().configured("managedBilling") !== false;
   const t = useTranslations("Admin");
   const [data, setData] = useState<AdminOverview | null>(null);
   const [loading, setLoading] = useState(true);
