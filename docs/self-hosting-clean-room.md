@@ -5,11 +5,13 @@ starts from two consecutive immutable releases and uses no local minddy files,
 accounts, production secrets, or Minddy Cloud services. The procedure is
 destructive: run it only on a disposable host and disposable Supabase stacks.
 
-The public [MIN-407 validation report](validation/min-407-public-clean-room-2026-09-08.md)
-records open lifecycle (MIN-503) and full-profile startup (MIN-504) blockers.
-The [local candidate report](validation/min-407-local-candidate-2026-09-08.md)
-records the combined fix/test loop. Local runs are engineering checks. Final acceptance still requires
-publication and an unmodified replay of the corrected release pair.
+The [current public v0.10.29 → v0.10.30 report](validation/min-407-public-v29-v30-2026-09-08.md)
+records the corrected immutable artifacts, independent installation and lifecycle
+evidence, and the separate first-time human acceptance requirement (MIN-508).
+The [initial public attempt](validation/min-407-public-clean-room-2026-09-08.md)
+and [local candidate report](validation/min-407-local-candidate-2026-09-08.md)
+remain historical evidence. Local runs are engineering checks; they do not
+replace an unmodified public-release replay or the human acceptance session.
 
 The installation and operations runbooks remain the source of truth. This page
 adds an ordered acceptance record around them:
