@@ -263,6 +263,7 @@
     "unexpected": "Ocorreu um erro inesperado.",
     "mfaRequired": "A autenticação de dois fatores é necessária para esta conta.",
     "mfaReauthTooOld": "Faça login ou verifique com seu segundo fator novamente e tente novamente.",
+    "mfaActivationReauthRequired": "Para ativar a autenticação de dois fatores, você precisa ter feito login nos últimos {minutes} minutos. Saia da conta, faça login novamente e tente de novo.",
     "invalidRecoveryCode": "Esse código de recuperação não é válido ou já foi usado.",
     "gitAccountRequired": "Conecte sua conta Git para realizar ações neste pull request em seu próprio nome.",
     "gitAccountExpired": "Sua autorização Git expirou. Autorize novamente sua conta para realizar ações neste pull request em seu próprio nome.",
