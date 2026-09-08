@@ -25,6 +25,7 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
   const router = useRouter();
   const t = useTranslations("Inbox");
   const returnFocus = useRef<HTMLElement | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const anchor = useRef({
     getBoundingClientRect: () => visibleTrigger()?.getBoundingClientRect()
       ?? new DOMRect(window.innerWidth / 2, window.innerHeight - 72, 0, 0),
@@ -53,6 +54,7 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor virtualRef={anchor} />
       <PopoverContent
+        ref={contentRef}
         id="inbox-popover"
         aria-label={t("title")}
         side="bottom"
@@ -61,6 +63,10 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
         collisionPadding={12}
         updatePositionStrategy="always"
         className="h-[min(600px,calc(100dvh-96px))] max-h-[var(--radix-popover-content-available-height)] w-[480px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          contentRef.current?.focus({ preventScroll: true });
+        }}
         onInteractOutside={(event) => {
           if (event.target instanceof Element && event.target.closest("[data-inbox-trigger]")) {
             event.preventDefault();
