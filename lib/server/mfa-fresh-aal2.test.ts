@@ -160,6 +160,26 @@ describe("MFA mutations", () => {
     const response = await activateMfa(request("/api/account/mfa"));
 
     expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      error: "mfaActivationReauthRequired",
+      code: "reauth_required",
+    });
+    expect(enableMfa).not.toHaveBeenCalled();
+  });
+
+  it("keeps factor verification advice when the primary sign-in is fresh", async () => {
+    claims = {
+      aal: "aal1",
+      amr: [{ method: "password", timestamp: Math.floor(Date.now() / 1000) - 30 }],
+    };
+
+    const response = await activateMfa(request("/api/account/mfa"));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      error: "mfaReauthTooOld",
+      code: "reauth_required",
+    });
     expect(enableMfa).not.toHaveBeenCalled();
   });
 

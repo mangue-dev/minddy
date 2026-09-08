@@ -6,6 +6,7 @@ import { disableMfa, enableMfa, getMfaStatus, issueRecoveryCodes } from "@/lib/s
 import { captureServerEvent } from "@/lib/server/posthog";
 import {
   REAUTH_REQUIRED_CODE,
+  REAUTH_MAX_AGE_SECONDS,
   hasFreshAal2Verification,
   hasFreshPrimaryAuthentication,
 } from "@/lib/server/reauth";
@@ -49,7 +50,12 @@ export async function POST(request: NextRequest) {
   ) {
     const t = await getTranslations("ApiErrors");
     return NextResponse.json(
-      { error: t("mfaReauthTooOld"), code: REAUTH_REQUIRED_CODE },
+      {
+        error: !hasFreshPrimaryAuthentication(auth.claims)
+          ? t("mfaActivationReauthRequired", { minutes: REAUTH_MAX_AGE_SECONDS / 60 })
+          : t("mfaReauthTooOld"),
+        code: REAUTH_REQUIRED_CODE,
+      },
       { status: 403 }
     );
   }
