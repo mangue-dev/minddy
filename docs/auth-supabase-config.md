@@ -117,6 +117,14 @@ from a preview to production (GoTrue falls back on `site_url`).
 This was already true for the registration confirmation; it is also for
 reset.
 
+Desktop OAuth on the hosted `https://preview.minddy.app` channel uses the
+production `/auth/callback` as a relay. Its `desktop=1` and `turn` parameters
+preserve the return to `minddy://auth`; the callback neither reads the system
+browser's session nor exchanges the code. The preview desktop exchanges it
+using its own PKCE verifier. Local and self-hosted desktop instances keep their
+own callback origins. Browser OAuth keeps its original origin because its
+PKCE verifier belongs to that browser origin.
+
 ## Points looked at and left as is
 
 - `security_update_password_require_reauthentication` = `false`. Activate it

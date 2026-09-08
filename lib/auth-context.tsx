@@ -11,9 +11,9 @@ import {
   type ReactNode,
 } from "react";
 import { getSupabase } from "./supabase";
-import { sanitizeInternalRedirectPath } from "./auth-redirect";
 import { getDesktopBridge } from "./desktop/bridge";
-import { DESKTOP_CALLBACK_FLAG, DESKTOP_TURN_PARAM } from "./desktop/config";
+import { DESKTOP_CALLBACK_FLAG } from "./desktop/config";
+import { oauthCallbackUrl } from "./oauth-callback-url";
 import { beginDesktopAuthTurn } from "./desktop/auth-turn";
 import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
@@ -310,19 +310,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithOAuth = useCallback(
     async (provider: "google" | "github", redirectAfter?: string) => {
       const desktop = getDesktopBridge();
-      const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
-      const safeRedirect = sanitizeInternalRedirectPath(redirectAfter);
-      if (safeRedirect !== "/home") {
-        callbackUrl.searchParams.set("next", safeRedirect);
-      }
-      // This marker returns from the provider and tells the callback to hand
-      // the session to the desktop app instead of the invoking browser (MIN-291).
-      if (desktop) {
-        callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
-        // Bind the returning deep link to this desktop auth attempt (MIN-345).
-        // An unsolicited `minddy://auth` link will not carry this nonce.
-        callbackUrl.searchParams.set(DESKTOP_TURN_PARAM, beginDesktopAuthTurn());
-      }
+      const callbackUrl = oauthCallbackUrl(
+        window.location.origin,
+        redirectAfter,
+        desktop ? beginDesktopAuthTurn() : undefined,
+      );
 
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider,
