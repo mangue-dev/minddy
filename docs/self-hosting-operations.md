@@ -346,7 +346,7 @@ passwords, JWTs, cookies, Authorization headers, or user content.
 | Upload fails or object download is 404 | Run `pnpm verify:supabase`, then compare Storage policies and metadata against the raw backend snapshot. |
 | Realtime does not connect | Verify the Realtime publication, JWT configuration, WebSocket proxy, and Realtime logs. |
 | Cron job is idle or returns 401 | Check scheduler enablement, canonical app origin, and the current `CRON_SECRET` bearer without logging it. |
-| Browser has a stale public URL | Rebuild with the intended `NEXT_PUBLIC_*` values and redeploy the build. |
+| Browser has a stale public URL | Set the intended `MINDDY_PUBLIC_*` values in the protected runtime environment and recreate the application container with that environment. No image rebuild is required. |
 
 ## References
 

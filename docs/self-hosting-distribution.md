@@ -105,10 +105,11 @@ not expose PostgreSQL, Studio, or internal service ports to the Internet.
 `MINDDY_PUBLIC_APP_URL`, Supabase Auth URLs, OAuth callbacks, and any proxy
 headers must agree on that canonical origin.
 
-Scheduled work is opt-in. minddy guarantees the documented authenticated HTTP
-endpoints and their schedules in `vercel.json`; the operator chooses an HTTP
-scheduler, protects `CRON_SECRET`, observes executions, and disables jobs
-during maintenance and restore. No scheduler means those jobs remain disabled.
+The reference Compose profiles start their HTTP scheduler by default. Other
+deployments must provide an equivalent scheduler for the documented authenticated
+HTTP endpoints and their schedules in `vercel.json`. The operator protects
+`CRON_SECRET`, observes executions, and disables jobs during maintenance and
+restore. Without a running scheduler, those jobs do not execute.
 
 Persistent data consists of PostgreSQL, Supabase Storage object bytes, and the
 operator's encrypted configuration and secrets. A complete backup captures all

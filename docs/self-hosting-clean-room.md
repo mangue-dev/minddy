@@ -5,6 +5,11 @@ starts from two consecutive immutable releases and uses no local minddy files,
 accounts, production secrets, or Minddy Cloud services. The procedure is
 destructive: run it only on a disposable host and disposable Supabase stacks.
 
+The latest [MIN-407 validation report](validation/min-407-public-clean-room-2026-09-08.md)
+records open lifecycle (MIN-503) and full-profile startup (MIN-504) blockers.
+Until the fixes are published and replayed, the source-only steps below cannot
+establish acceptance of the installed OCI instance.
+
 The installation and operations runbooks remain the source of truth. This page
 adds an ordered acceptance record around them:
 
@@ -58,7 +63,7 @@ instruction by editing the release checkout.
 ## 1. Prepare the disposable host
 
 Install Node.js 24, pnpm 10.28.0, Docker, the Supabase CLI, PostgreSQL client
-tools, Git, and curl. Then open a shell that has no inherited minddy or provider
+tools, Git, curl, and Cosign. Then open a shell that has no inherited minddy or provider
 configuration:
 
 ```bash
@@ -68,6 +73,12 @@ env -i \
   TERM="${TERM:-xterm}" \
   SHELL="${SHELL:-/bin/sh}" \
   bash --noprofile --norc
+```
+
+In that shell, stop on failed commands or unset inputs:
+
+```bash
+set -euo pipefail
 ```
 
 Set only public test inputs. Never paste a production value into this shell or
@@ -84,7 +95,9 @@ export REPORT_DIR="$CLEAN_ROOT/report"
 install -d -m 0700 "$CLEAN_ROOT" "$BACKUP_ROOT" "$REPORT_DIR"
 git clone https://github.com/mangue-dev/minddy.git "$SOURCE_DIR"
 cd "$SOURCE_DIR"
-git fetch --tags --force
+git fetch --tags
+git switch --detach "$TO_REF"
+test -z "$(git status --porcelain)"
 ```
 
 In release mode, download the matching public GitHub Release assets into a separate directory
@@ -94,24 +107,49 @@ the digest from a mutable image tag.
 
 ```bash
 export RELEASE_ASSETS="$CLEAN_ROOT/release-assets"
-install -d -m 0700 "$RELEASE_ASSETS"
-# Download SHA256SUMS, release-manifest.json, and minddy-vX.Y.Z-container.txt
-# from the public GitHub Release for "$FROM_REF" into "$RELEASE_ASSETS".
-cd "$RELEASE_ASSETS"
-if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum --check SHA256SUMS
-else
-  shasum -a 256 --check SHA256SUMS
-fi
-export IMAGE="$(sed -n 's/^reference=//p' "minddy-${FROM_REF}-container.txt")"
-test -n "$IMAGE"
-test "$(node -p 'require("./release-manifest.json").release.tag')" = "$FROM_REF"
+for RELEASE_REF in "$FROM_REF" "$TO_REF"; do
+  ASSET_DIR="$RELEASE_ASSETS/$RELEASE_REF"
+  install -d -m 0700 "$ASSET_DIR"
+  ASSET_BASE="https://github.com/mangue-dev/minddy/releases/download/$RELEASE_REF"
+  # SHA256SUMS covers all six core assets, not only the manifest and identity.
+  for ASSET in SHA256SUMS RELEASE_NOTES.md UPDATE.md release-manifest.json \
+    "minddy-$RELEASE_REF-container.txt" \
+    "minddy-$RELEASE_REF-source.tar.gz" \
+    "minddy-$RELEASE_REF-migrations.tar.gz"; do
+    curl --fail --show-error --location "$ASSET_BASE/$ASSET" \
+      --output "$ASSET_DIR/$ASSET"
+  done
+  (
+    cd "$ASSET_DIR"
+    if command -v sha256sum >/dev/null 2>&1; then
+      sha256sum --check SHA256SUMS
+    else
+      shasum -a 256 --check SHA256SUMS
+    fi
+    test "$(node -p 'require("./release-manifest.json").release.tag')" = "$RELEASE_REF"
+    test "$(node -p 'require("./release-manifest.json").release.commit')" = \
+      "$(git -C "$SOURCE_DIR" rev-parse "$RELEASE_REF^{commit}")"
+    git -C "$SOURCE_DIR" rev-parse "$RELEASE_REF^{tag}"
+    RELEASE_IMAGE="$(node -p 'require("./release-manifest.json").container.reference')"
+    test "$RELEASE_IMAGE" = "$(sed -n 's/^reference=//p' "minddy-$RELEASE_REF-container.txt")"
+    printf '%s\n' "$RELEASE_IMAGE" | \
+      LC_ALL=C grep -Eq '^ghcr\.io/mangue-dev/minddy@sha256:[a-f0-9]{64}$'
+    cosign verify \
+      --certificate-identity 'https://github.com/mangue-dev/minddy/.github/workflows/release.yml@refs/heads/production' \
+      --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+      "$RELEASE_IMAGE"
+  )
+done
+export IMAGE="$(sed -n 's/^reference=//p' "$RELEASE_ASSETS/$FROM_REF/minddy-$FROM_REF-container.txt")"
+export TARGET_IMAGE="$(sed -n 's/^reference=//p' "$RELEASE_ASSETS/$TO_REF/minddy-$TO_REF-container.txt")"
 cd "$SOURCE_DIR"
 ```
 
-Run the image signature check from [container-image.md](container-image.md)
-with `$IMAGE` before proceeding. Record only its digest-bearing image reference,
-not release credentials or command output that contains a token.
+Record the command exit codes and both digest-bearing image references. See
+[container-image.md](container-image.md) for the additional provenance and SBOM
+checks. An asset download, checksum, tag/commit comparison, or signature failure
+blocks installation. `IMAGE` is the source-release pin; `TARGET_IMAGE` is the
+separately verified update pin. Neither is derived from a mutable image tag.
 
 For prepublication validation, receive only the candidate Git bundle and its
 `SHA256SUMS` file from the release preparer. Do not receive a working tree or a
@@ -183,7 +221,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
   --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
   --anon-key "$MINDDY_PUBLIC_SUPABASE_ANON_KEY" \
   --service-role-key "$SUPABASE_SERVICE_ROLE_KEY" --db-url "$SUPABASE_DB_URL" \
-  --image "$IMAGE" --env-file "$MINDDY_ENV_FILE"
+  --image "$IMAGE" --no-forge-relay --env-file "$MINDDY_ENV_FILE"
 pnpm self-host:doctor -- --mode managed --env-file "$MINDDY_ENV_FILE" --db-url "$SUPABASE_DB_URL" --json \
   > "$REPORT_DIR/first-doctor.json"
 export INSTALL_HEALTHY_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -331,7 +369,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
   --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
   --anon-key "$MINDDY_PUBLIC_SUPABASE_ANON_KEY" \
   --service-role-key "$SUPABASE_SERVICE_ROLE_KEY" --db-url "$SUPABASE_DB_URL" \
-  --image "$IMAGE" --env-file "$MINDDY_ENV_FILE"
+  --image "$IMAGE" --no-forge-relay --env-file "$MINDDY_ENV_FILE"
 sha256sum "$MINDDY_ENV_FILE" > "$REPORT_DIR/environment-after.sha256"
 diff -u "$REPORT_DIR/environment-before.sha256" "$REPORT_DIR/environment-after.sha256"
 pnpm self-host:doctor -- --mode managed --env-file "$MINDDY_ENV_FILE" \
@@ -444,13 +482,20 @@ if rg -n -i 'authorization:|bearer |service_role|postgres(ql)?://[^ ]+:[^@ ]+@' 
   echo "Potential secret in evidence; redact it before continuing." >&2
   exit 1
 fi
-if command -v sha256sum >/dev/null 2>&1; then
-  find "$REPORT_DIR" -type f -print0 | sort -z | xargs -0 sha256sum \
-    > "$REPORT_DIR/SHA256SUMS"
-else
-  find "$REPORT_DIR" -type f -print0 | sort -z | xargs -0 shasum -a 256 \
-    > "$REPORT_DIR/SHA256SUMS"
-fi
+(
+  cd "$REPORT_DIR"
+  # Relative paths keep the sealed evidence verifiable after copying it.
+  # Exclude the output itself, including when resealing an existing report.
+  if command -v sha256sum >/dev/null 2>&1; then
+    find . -type f ! -path './SHA256SUMS' -print0 | sort -z | xargs -0 sha256sum \
+      > SHA256SUMS
+    sha256sum --check SHA256SUMS
+  else
+    find . -type f ! -path './SHA256SUMS' -print0 | sort -z | xargs -0 shasum -a 256 \
+      > SHA256SUMS
+    shasum -a 256 --check SHA256SUMS
+  fi
+)
 ```
 
 Record every deviation as a blocking issue before accepting the release. A run
