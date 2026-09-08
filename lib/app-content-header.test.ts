@@ -72,11 +72,14 @@ describe("application content header", () => {
     );
   });
 
-  it("covers every application content pane with a 60 px action header", () => {
-    expect(inbox).toContain("<AppContentHeader");
+  it("keeps the trash content pane under a 60 px action header", () => {
     expect(trash).toContain("<AppContentHeader");
-    expect(inbox).not.toContain('<header className="flex h-[60px]');
     expect(trash).not.toContain('<header className="flex h-[60px]');
+  });
+
+  it("redirects the former inbox page to the popover without a page header", () => {
+    expect(inbox).toContain('redirect("/home?inbox=1")');
+    expect(inbox).not.toContain("<AppContentHeader");
   });
 
   it("uses fixed headers and faded scroll panes on account-level pages", () => {

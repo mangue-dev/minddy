@@ -35,9 +35,15 @@ describe("primary sidebar project context", () => {
     expect(shell.match(/projects=\{projects\}/g)).toHaveLength(1);
     expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(1);
     expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
-    expect(shell).toContain("pinned={sidebarLayerOpen}");
+    expect(shell).toContain("pinned={sidebarLayerOpen || inboxOpen}");
     expect(shell).toContain("onLayerOpenChange={setSidebarLayerOpen}");
     expect(shell).toContain("overlay={!sidebarHidden && secondaryNav}");
+  });
+
+  it("keeps the rail expanded while the inbox popover owns focus", () => {
+    expect(shell).toContain("inboxOpen={inboxOpen}");
+    expect(shell).toContain("<InboxPopover open={inboxOpen} onOpenChange={setInboxOpen}");
+    expect(sidebar).toContain("!(hovered || focusWithin || menuOpen || inboxOpen)");
   });
 
   it("keeps the current project tab when building switch destinations", () => {
