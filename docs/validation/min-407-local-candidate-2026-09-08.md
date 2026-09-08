@@ -159,7 +159,11 @@ repository's existing 9 files / 27 tests skipped. Node suites pass: 29 self-host
 tools tests, 9 bootstrap tests, 8 Compose contract tests, 15 clean-room tests and
 one smoke-harness test. TypeScript, targeted Oxlint, owned-English, local
 documentation links and `git diff --check` pass. The final Docker build also
-passes. No migrations, translations or production configuration were changed.
+passes. The CI publication scanner initially flagged the two documented private
+addresses. Exact address-and-file exceptions preserve these synthetic records;
+the branch-history scan then passes. A real-scanner fixture confirms other
+addresses and other files remain detected, and both policy tests pass.
+No migrations, translations or production configuration were changed.
 
 Remaining release gates are explicit: publish the corrected artifacts (MIN-503
 and MIN-504 publication tasks), verify their immutable identities and repeat the
