@@ -56,8 +56,8 @@
     "deploy": "bash deploy.sh"
   },
   "overrides": {
-    "@tiptap/extension-bubble-menu": "3.30.5",
-    "@tiptap/extension-floating-menu": "3.30.5",
+    "@tiptap/extension-bubble-menu": "3.31.3",
+    "@tiptap/extension-floating-menu": "3.31.3",
     "postcss": "^8.5.25",
     "sharp": "$sharp",
     "undici": "^7.29.0",
@@ -66,8 +66,8 @@
   },
   "pnpm": {
     "overrides": {
-      "@tiptap/extension-bubble-menu": "3.30.5",
-      "@tiptap/extension-floating-menu": "3.30.5",
+      "@tiptap/extension-bubble-menu": "3.31.3",
+      "@tiptap/extension-floating-menu": "3.31.3",
       "postcss": "^8.5.25",
       "sharp": "$sharp",
       "undici": "^7.29.0",
@@ -101,7 +101,7 @@
     "@pierre/diffs": "^1.4.1",
     "@streamdown/code": "^1.1.1",
     "@supabase/ssr": "^0.12.6",
-    "@supabase/supabase-js": "^2.112.3",
+    "@supabase/supabase-js": "^2.114.0",
     "@tanstack/query-sync-storage-persister": "^5.102.8",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-query-persist-client": "^5.102.8",
