@@ -1,6 +1,6 @@
 import { cn } from "mangue-ui/lib/utils";
 import { avatarDataUri } from "@/lib/avatar";
-import { uploadedAvatarUrl } from "@/lib/avatar-source";
+import { avatarImageUrl, uploadedAvatarUrl } from "@/lib/avatar-source";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
 /**
@@ -34,8 +34,9 @@ export function UserAvatar({
   title?: string;
   shape?: "circle" | "rounded";
 }) {
+  const imageUrl = avatarImageUrl(url);
   const importedUrl = uploadedAvatarUrl(seed);
-  if (!url && !importedUrl && !seed) {
+  if (!imageUrl && !importedUrl && !seed) {
     return (
       <span
         aria-hidden
@@ -46,7 +47,7 @@ export function UserAvatar({
   // eslint-disable-next-line @next/next/no-img-element
   const avatar = (
     <img
-      src={url || importedUrl || avatarDataUri(seed as string)}
+      src={imageUrl || importedUrl || avatarDataUri(seed as string)}
       alt=""
       className={cn(
         "shrink-0 object-cover",

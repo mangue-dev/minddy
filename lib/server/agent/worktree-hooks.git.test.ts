@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -41,6 +41,7 @@ import { localHost } from "./vm/local-host";
  */
 
 const exec = promisify(execFile);
+const git = (args: string[], cwd: string) => exec("git", args, { cwd });
 const IDENTITY = `git config user.email humain@example.com && git config user.name Humain`;
 const COMMITTER = { name: "minddy", email: "agent@minddy.app" };
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
@@ -65,7 +66,7 @@ function traceLines(): number {
 }
 
 beforeAll(async () => {
-  root = realpathSync(mkdtempSync(path.join(tmpdir(), "minddy-worktree-hooks-")));
+  root = realpathSync(mkdtempSync(path.join(tmpdir(), "minddy-worktree-hooks-quoted ' path-")));
   origin = path.join(root, "origin");
   main = path.join(root, "checkout");
   worktree = path.join(root, "worktree");
@@ -77,20 +78,20 @@ beforeAll(async () => {
       `git add -A && git commit -qm un`,
     origin,
   );
-  await sh(`git clone -q file://${origin} checkout`, root);
+  await git(["clone", "-q", `file://${origin}`, "checkout"], root);
   await sh(`${IDENTITY}`, main);
 
   // The user's setting: a `core.hooksPath` outside of `.git/hooks`, like
   // husky and lefthook post it, with a hook that REFUSES the commit.
   const hooks = path.join(root, "hooks");
-  await sh(`mkdir -p ${hooks}`, root);
-  writeFileSync(path.join(hooks, "pre-commit"), `#!/bin/sh\necho passé >> ${trace}\nexit 1\n`, {
+  mkdirSync(hooks, { recursive: true });
+  writeFileSync(path.join(hooks, "pre-commit"), '#!/bin/sh\necho hook >> "../hook-trace"\nexit 1\n', {
     mode: 0o755,
   });
-  await sh(`git config core.hooksPath ${hooks}`, main);
+  await git(["config", "core.hooksPath", hooks], main);
 
   // The run worktree, on a branch of ours.
-  await sh(`git worktree add -q ${worktree} -b travail-agent`, main);
+  await git(["worktree", "add", "-q", worktree, "-b", "travail-agent"], main);
   await sh(`${IDENTITY}`, worktree);
 });
 

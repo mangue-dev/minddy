@@ -435,7 +435,15 @@ const server = createServer(async (request, response) => {
     return json(response, 404, { error: "not found" });
   } catch (error) {
     console.error("[agent-runner]", error instanceof Error ? error.message : error);
-    return json(response, Number(error?.status) || 500, { error: error instanceof Error ? error.message : String(error) });
+    // Upstream errors can contain stack traces, paths, or credentials.
+    const status = Number(error?.status);
+    const publicStatus = Number.isInteger(status) && status >= 400 && status <= 599 ? status : 500;
+    const message = publicStatus === 400 ? "invalid request"
+      : publicStatus === 401 ? "unauthorized"
+        : publicStatus === 403 ? "forbidden"
+          : publicStatus === 404 ? "not found"
+            : publicStatus === 413 ? "request body too large" : "agent runner request failed";
+    return json(response, publicStatus, { error: message });
   }
 });
 

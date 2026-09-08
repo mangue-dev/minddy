@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -43,6 +43,7 @@ import { localHost } from "./vm/local-host";
 
 const run = promisify(execFile);
 const sh = (cmd: string, cwd: string) => run("sh", ["-c", cmd], { cwd });
+const git = (args: string[], cwd: string) => run("git", args, { cwd });
 
 let root: string;
 let origin: string;
@@ -59,7 +60,7 @@ const HUMAN_IDENTITY = `git config user.email humaine@example.com && git config 
 
 /** Branches that REALLY exist on the remote repository. */
 async function remoteHeads(): Promise<string[]> {
-  const { stdout } = await sh(`git ls-remote --heads ${origin}`, origin);
+  const { stdout } = await git(["ls-remote", "--heads", origin], origin);
   return stdout.trim().split("\n").filter(Boolean).map((line) => line.split("\t")[1] ?? "");
 }
 
@@ -107,7 +108,7 @@ async function deliveredFiles(): Promise<string[]> {
 }
 
 beforeAll(async () => {
-  root = realpathSync(mkdtempSync(path.join(tmpdir(), "minddy-current-repo-")));
+  root = realpathSync(mkdtempSync(path.join(tmpdir(), "minddy-current-repo-quoted ' path-")));
   origin = path.join(root, "origin");
   repo = path.join(root, "checkout");
 
@@ -118,7 +119,7 @@ beforeAll(async () => {
       `git add -A && git commit -qm un`,
     origin,
   );
-  await sh(`git clone -q file://${origin} checkout`, root);
+  await git(["clone", "-q", `file://${origin}`, "checkout"], root);
   await sh(`${HUMAN_IDENTITY}`, repo);
 
   // The setting of the human: its branch, its monitored WIP, its untracked file, its
@@ -220,13 +221,11 @@ describe("le tour qui a travaillé", () => {
     // The hook exits at 1: if it had run, the previous commit would have raised.
     // We say it again here by making it TALKING, so that the failure is readable during the day
     // where someone would replace the plumbing with a `git commit`.
-    await sh(
-      `printf '#!/bin/sh\necho HOOK >> ${path.join(root, "hook.log")}\nexit 1\n' > .git/hooks/pre-commit`,
-      repo,
-    );
+    writeFileSync(path.join(repo, ".git/hooks/pre-commit"),
+      '#!/bin/sh\necho HOOK >> "../hook.log"\nexit 1\n');
     await sh(`printf 'encore\n' >> agent.ts`, repo);
     await push("wip(MIN-358): encore", ["agent.ts"]);
-    await expect(sh(`test -e ${path.join(root, "hook.log")}`, root)).rejects.toThrow();
+    expect(existsSync(path.join(root, "hook.log"))).toBe(false);
   });
 
   it("commite sous l'identité passée, sans réécrire celle de l'utilisateur", async () => {

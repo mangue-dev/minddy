@@ -454,7 +454,7 @@ const server = createServer(async (req, res) => {
   } catch (err) {
     console.error(err);
     res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end(String(err?.stack ?? err));
+    res.end("Internal server error");
   }
 });
 

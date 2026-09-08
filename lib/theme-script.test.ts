@@ -164,3 +164,25 @@ describe("buildThemeScript — anonymous visitors (no account theme)", () => {
     expect(systemDefault.htmlHasDarkClass).toBe(true);
   });
 });
+
+describe("buildThemeScript — runtime input boundaries", () => {
+  it("ignores account values outside the theme allowlist", () => {
+    const input = '</script><script>throw new Error("untrusted")</script>';
+    const script = buildThemeScript({
+      defaultTheme: "dark",
+      accountTheme: input as "light",
+    });
+    expect(script).not.toContain(input);
+    expect(run(script, { storedTheme: "light", osPrefersDark: true })).toMatchObject({
+      htmlHasDarkClass: false,
+      storedAfter: "light",
+    });
+  });
+
+  it("uses a literal fallback for invalid default values", () => {
+    const input = '";throw new Error("untrusted");//';
+    const script = buildThemeScript({ defaultTheme: input as "dark" });
+    expect(script).not.toContain(input);
+    expect(run(script, { storedTheme: null, osPrefersDark: false }).htmlHasDarkClass).toBe(true);
+  });
+});

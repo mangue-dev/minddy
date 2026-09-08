@@ -24,7 +24,7 @@ import { localRepoVerdict } from "./local-repo";
  */
 
 const run = promisify(execFile);
-const sh = (cmd: string, cwd: string) => run("sh", ["-c", cmd], { cwd });
+const git = (args: string[], cwd: string) => run("git", args, { cwd });
 
 const REMOTE = "git@github.com:mangue-dev/minddy.git";
 const EXPECTED = { fullName: "mangue-dev/minddy" };
@@ -35,26 +35,22 @@ let worktree: string;
 let plain: string;
 
 beforeAll(async () => {
-  root = realpathSync(mkdtempSync(path.join(tmpdir(), "minddy-local-repo-")));
+  root = realpathSync(mkdtempSync(path.join(tmpdir(), "minddy-local-repo-quoted ' path-")));
   repo = path.join(root, "dépôt");
   worktree = path.join(root, "worktree");
   plain = path.join(root, "pas-un-dépôt");
 
   mkdirSync(repo, { recursive: true });
-  await sh(
-    [
-      "git init -q -b main",
-      `git remote add origin ${REMOTE}`,
-      "git config user.email a@b.c && git config user.name a",
-      "git config commit.gpgsign false",
-      "printf x > f.txt && git add -A && git commit -qm base",
-      // The worktree is created FROM the repository: this is how someone
-      // works on two branches at the same time, and it is this folder that it
-      // would attach to the project.
-      `git worktree add -q -b autre ${worktree}`,
-    ].join(" && "),
-    repo,
-  );
+  await git(["init", "-q", "-b", "main"], repo);
+  await git(["remote", "add", "origin", REMOTE], repo);
+  await git(["config", "user.email", "a@b.c"], repo);
+  await git(["config", "user.name", "a"], repo);
+  await git(["config", "commit.gpgsign", "false"], repo);
+  writeFileSync(path.join(repo, "f.txt"), "x");
+  await git(["add", "-A"], repo);
+  await git(["commit", "-qm", "base"], repo);
+  // Pass paths as arguments so spaces and shell metacharacters stay literal.
+  await git(["worktree", "add", "-q", "-b", "autre", worktree], repo);
 
   mkdirSync(plain, { recursive: true });
   writeFileSync(path.join(plain, "README.md"), "rien\n");
