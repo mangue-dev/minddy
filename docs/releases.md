@@ -22,10 +22,12 @@ Cloud deployment, but a marketing change alone does not deserve a new
 product version.
 
 Any Cloud promotion is preceded by the
-[`security release checklist`](security-release-checklist.md). The report
-completed, its residual risks and the pentest decision are reviewed before
-approval of the production environment; their reference is preserved
-in the GitHub run of the promoted SHA.
+[`security release checklist`](security-release-checklist.md). Use a short review of the changed surface and reuse applicable prior evidence;
+a full audit or pentest is not required for every release. A solo maintainer may
+approve with the absence of independent review recorded explicitly. The report,
+residual risks and justified pentest decision are recorded before protected
+production approval; their reference is preserved in the GitHub run of the
+promoted SHA. Confirmed serious security issues still block publication.
 
 ## The three cadences
 

@@ -161,7 +161,7 @@ fi
 echo ""
 echo "Publication selected: core=$CORE · web=$WEB · desktop=$DESKTOP · desktop target=$DESKTOP_TARGET"
 
-SECURITY_CHECKLIST_VERSION="1.0"
+SECURITY_CHECKLIST_VERSION="2.0"
 SECURITY_REVIEW_REF="${MINDDY_SECURITY_REVIEW_REF:-}"
 RESIDUAL_RISKS="${MINDDY_RESIDUAL_RISKS:-}"
 PENTEST_STATUS="${MINDDY_PENTEST_STATUS:-}"
@@ -300,10 +300,10 @@ if [ "$WEB" -eq 1 ]; then
     fi
     if [ -z "$PENTEST_STATUS" ]; then
       echo "Pentest decision:"
-      echo "1) not required according to checklist criteria"
+      echo "1) not required after the recorded risk-based review"
       echo "2) required, completed and blocking findings retested"
       echo "3) required but not completed (promotion will be refused)"
-      read -r -p "Choix [1-3] : " PENTEST_CHOICE
+      read -r -p "Choice [1-3]: " PENTEST_CHOICE
       case "$PENTEST_CHOICE" in
         1) PENTEST_STATUS="not-required" ;;
         2) PENTEST_STATUS="completed" ;;
