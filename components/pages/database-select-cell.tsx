@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem, CommandSeparator } from "mangue-ui";
@@ -155,7 +157,7 @@ export function DatabaseSelectCell({
             create={{
               labelFor: (name) => t("createOption", { name }),
               onCreate: async (name) => {
-                const option = { id: crypto.randomUUID(), name, color: CATEGORY_COLORS[0] };
+                const option = { id: createUuid(), name, color: CATEGORY_COLORS[0] };
                 void saveSchema(database, (database.database_schema ?? []).map((p) =>
                   p.id === property.id ? { ...p, options: [...options, option] } : p));
                 choose(option.id);

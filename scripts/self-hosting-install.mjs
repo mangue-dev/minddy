@@ -12,6 +12,7 @@ import { createInterface } from "node:readline/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
+import { prepareFunctionsBundle } from "./prepare-self-hosted-functions.mjs";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = resolve(SCRIPT_DIR, "..");
@@ -62,6 +63,7 @@ export function parseArgs(argv) {
     } else if (arg === "--no-forge-relay") {
       options.forgeRelay = false;
     } else if (arg === "--non-interactive") options.interactive = false;
+    else if (arg === "--skip-pull") options.pull = false;
     else if (arg === "--skip-start") options.start = false;
     else if (arg === "--skip-bootstrap") options.bootstrap = false;
     else if (arg === "--dry-run") options.dryRun = true;
@@ -79,6 +81,7 @@ export function help() {
 The installer explains each step and will never replace an existing environment file.
 
 Options:
+  --skip-pull               Use already loaded images; do not contact image registries.
   --mode managed|full       Supabase Cloud or the complete official stack.
   --app-url <origin>        minddy origin. Private HTTP IPs and public HTTPS are supported.
   --domain <hostname>       Backward-compatible shortcut for https://<hostname>.
@@ -351,12 +354,30 @@ export function composeFiles(options) {
   return [upstream, overlay];
 }
 
-export function assertPrerequisites(options) {
+export function ownedPublishedPorts(containers, project) {
+  return new Set(containers.flatMap((container) => {
+    if (container.Config?.Labels?.["com.docker.compose.project"] !== project || !container.State?.Running) return [];
+    return Object.values(container.NetworkSettings?.Ports ?? {}).flatMap((bindings) =>
+      (bindings ?? []).map((binding) => Number(binding.HostPort)));
+  }));
+}
+
+export function assertPrerequisites(options, values = {}) {
   command("docker", ["info"], { dryRun: options.dryRun });
   command("docker", ["compose", "version"], { dryRun: options.dryRun });
-  if (options.dryRun) return;
-  const ports = options.mode === "full" ? [80, 443, 8000] : [80, 443];
+  if (options.dryRun || !options.start) return;
+  const project = `minddy-${options.mode}`;
+  const ids = spawnSync("docker", ["ps", "--filter", `label=com.docker.compose.project=${project}`, "--format", "{{.ID}}"], { encoding: "utf8" });
+  if (ids.status !== 0) fail("could not inspect existing deployment containers.");
+  let owned = new Set();
+  if (ids.stdout.trim()) {
+    const inspected = spawnSync("docker", ["inspect", ...ids.stdout.trim().split(/\s+/)], { encoding: "utf8" });
+    if (inspected.status !== 0) fail("could not inspect existing deployment port bindings.");
+    owned = ownedPublishedPorts(JSON.parse(inspected.stdout), project);
+  }
+  const ports = options.mode === "full" ? [80, 443, Number(values.MINDDY_SUPABASE_HTTP_PORT || 8000), Number(values.MINDDY_POSTGRES_BIND_PORT || 54322), Number(values.MINDDY_SUPABASE_MAINTENANCE_PORT || 8001)] : [80, 443];
   for (const port of ports) {
+    if (owned.has(port)) continue;
     const result = spawnSync("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"], { encoding: "utf8" });
     if (result.status === 0 && result.stdout.trim()) fail(`port ${port} is already in use by process ${result.stdout.trim().split(/\s+/).join(", ")}.`);
     if (result.error?.code !== "ENOENT" && result.status !== 0 && result.status !== 1) {
@@ -451,6 +472,12 @@ export function fullBootstrapDatabaseUrl(values) {
   return `postgresql://postgres:${encodeURIComponent(password)}@127.0.0.1:${port}/postgres`;
 }
 
+export function fullMaintenanceApiUrl(values) {
+  const port = values.MINDDY_SUPABASE_MAINTENANCE_PORT || "8001";
+  if (!/^\d{2,5}$/.test(port) || Number(port) > 65535) fail("MINDDY_SUPABASE_MAINTENANCE_PORT must be a TCP port.");
+  return `http://127.0.0.1:${port}`;
+}
+
 function assertRequestedImage(options, values) {
   if (options.image && values.MINDDY_IMAGE !== options.image) {
     fail("--image does not match the existing environment file. Use the documented update procedure; the installer never changes a deployed image pin.");
@@ -495,7 +522,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (options.bootstrap && !options.dbUrl) fail("--db-url is required unless --skip-bootstrap is used.");
   console.log(`This will ${hasExistingEnvironment ? "reuse" : "create"} ${options.envFile} (mode 0600), start the ${options.mode} Compose profile, and ${options.bootstrap ? "run" : "not run"} Supabase bootstrap.`);
   console.log(`Optional integrations: ${options.capabilities.size ? [...options.capabilities].join(", ") : "none"}. Scheduled routines and server agent sandboxes are included.`);
-  assertPrerequisites(options);
+  assertPrerequisites(options, values);
   if (hasExistingEnvironment) console.log("→ existing environment file left unchanged; resuming safe Compose/bootstrap phases.");
   else if (options.dryRun) console.log("→ would create the protected environment file without replacing an existing file.");
   else {
@@ -505,15 +532,21 @@ export async function main(argv = process.argv.slice(2)) {
   if (!options.start) return console.log("✓ Configuration created. Start the stack later with pnpm self-host:doctor after it is running.");
   const files = composeFiles(options);
   const compose = ["compose", "--env-file", options.envFile, ...files.flatMap((file) => ["-f", file])];
-  command("docker", [...compose, "pull"], { dryRun: options.dryRun });
-  recordCheckpoint(options.envFile, "images-pulled", options);
-  command("docker", [...compose, "up", "-d", "--wait", "--wait-timeout", "60"], { dryRun: options.dryRun });
+  if (options.pull !== false) command("docker", [...compose, "pull"], { dryRun: options.dryRun });
+  recordCheckpoint(options.envFile, options.pull === false ? "images-local" : "images-pulled", options);
+  if (options.mode === "full") {
+    prepareFunctionsBundle(options);
+    // A previous process may still have the replaced bundle loaded. Recreate
+    // this stateless service before waiting for the rest of the stack.
+    command("docker", [...compose, "up", "-d", ...(options.pull === false ? ["--pull", "never"] : []), "--force-recreate", "--wait", "--wait-timeout", "120", "functions"], { dryRun: options.dryRun });
+  }
+  command("docker", [...compose, "up", "-d", ...(options.pull === false ? ["--pull", "never"] : []), "--wait", "--wait-timeout", "120"], { dryRun: options.dryRun });
   recordCheckpoint(options.envFile, options.mode === "full" ? "database-started" : "application-stack-started", options);
   if (options.bootstrap) {
     const bootstrap = resolve(SCRIPT_DIR, "bootstrap-supabase.mjs");
     // Forge secrets are generated unconditionally (relay-first default), so
     // the bootstrap only needs to know about the scheduler.
-    command(process.execPath, [bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile, "--enable", "scheduler"], {
+    command(process.execPath, [bootstrap, "--db-url", options.dbUrl, "--env-file", options.envFile, "--existing-env", "--enable", "scheduler", ...(options.mode === "full" ? ["--supabase-url", fullMaintenanceApiUrl(values)] : [])], {
       dryRun: options.dryRun,
       env: {
         MINDDY_PUBLIC_APP_URL: values.MINDDY_PUBLIC_APP_URL,

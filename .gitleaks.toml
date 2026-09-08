@@ -23,6 +23,20 @@ paths = [
   '''(?:^|/)lib/(?:desktop/(?:local-models|server-origin)|server/(?:agent/vm/opencode-permissions|forge-relay/webhook-secret-route|link-preview|safe-fetch|ssrf-surfaces)|session-cookies)\.test\.ts$''',
 ]
 
+[[rules.allowlists]]
+description = "Exact private-LAN example recorded by the published-documentation replay."
+condition = "AND"
+paths = ['''(?:^|/)docs/validation/min-407-documentation-replay-2026-09-08\.md$''']
+regexTarget = "secret"
+regexes = ['''^192\.168\.1\.50$''']
+
+[[rules.allowlists]]
+description = "Exact disposable Lima guest address in the local acceptance report."
+condition = "AND"
+paths = ['''(?:^|/)docs/validation/min-407-local-candidate-2026-09-08\.md$''']
+regexTarget = "secret"
+regexes = ['''^192\.168\.5\.15$''']
+
 [[rules]]
 id = "minddy-personal-email-marker"
 description = "Potential personal email address exposed in public content."

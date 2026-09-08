@@ -1,0 +1,263 @@
+{
+  "kind": "local_engineering_candidate_not_public_acceptance",
+  "counts": {
+    "users": 1,
+    "issues": 2,
+    "projects": 1,
+    "attachments": 1,
+    "storage_objects": 1
+  },
+  "identifiers": {
+    "users": [
+      "28dc1136-c267-4550-9b63-928a5ee91fd1"
+    ],
+    "issues": [
+      "63aab531-3cea-41c1-bbe3-bdd36a1d0cec",
+      "d18400ae-4d11-47e1-a1dd-4796faea9bea"
+    ],
+    "projects": [
+      "2a499b65-cd1f-4e0b-b88a-44576ecdff8c"
+    ],
+    "attachments": [
+      "cb973388-9317-43ed-9f3a-647b167f630e"
+    ],
+    "integrations": [
+      "8ec12f5b-e54a-443b-b300-5590b2fdf42b"
+    ],
+    "storage_objects": [
+      "c9eb82d6-b547-4ae2-872b-e886105575df"
+    ]
+  },
+  "application_image_id": "sha256:438a4310e6047ca7577b022a1a71c69b23e1885097407f2d61ee4267fd8be37c",
+  "postgres_image_id": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+  "attachment_sha256": "4f6b1311cb74fa4beee9f545660f4018a7b0ba887ed9f485c577a32043235d9f",
+  "final_restore_start": "2026-09-08T13:07:41Z",
+  "final_restore_healthy": "2026-09-08T13:09:09Z",
+  "network": {
+    "browser_hosts": {
+      "localhost:8000": 3,
+      "localhost": 63
+    },
+    "capture_seconds": 240,
+    "observed_service_destination_port_pairs": 1217,
+    "observed_services": [
+      "minddy-full-caddy-1",
+      "minddy-full-database-access-1",
+      "minddy-full-minddy-1",
+      "minddy-full-scheduler-1",
+      "realtime-dev.supabase-realtime",
+      "supabase-auth",
+      "supabase-db",
+      "supabase-kong",
+      "supabase-pooler",
+      "supabase-rest",
+      "supabase-storage"
+    ],
+    "external_destinations": [
+      {
+        "service": "supabase-auth",
+        "destination": "104.17.175.230",
+        "port": "443",
+        "packets": 2
+      }
+    ],
+    "dns_query_names": [
+      "accounts.google.com.",
+      "android.clients.google.com.",
+      "api.pwnedpasswords.com.",
+      "clients2.google.com.",
+      "mtalk.google.com.",
+      "registry.npmjs.org.",
+      "update.googleapis.com.",
+      "www.google.com."
+    ]
+  },
+  "doctor_findings": {
+    "retry": [
+      {
+        "name": "Configuration",
+        "state": "pass",
+        "detail": "required self-hosted configuration is present (values redacted)."
+      },
+      {
+        "name": "Version compatibility",
+        "state": "pass",
+        "detail": "release 0.10.25 uses an immutable image digest; verify its release-manifest.json before deployment."
+      },
+      {
+        "name": "Auth email",
+        "state": "warn",
+        "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+      },
+      {
+        "name": "Container health",
+        "state": "pass",
+        "detail": "16 services are running."
+      },
+      {
+        "name": "Database, Storage, and migrations",
+        "state": "pass",
+        "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+      },
+      {
+        "name": "Scheduler",
+        "state": "pass",
+        "detail": "routine scheduler container is running."
+      },
+      {
+        "name": "Agent runner",
+        "state": "pass",
+        "detail": "server sandbox runner container is running."
+      },
+      {
+        "name": "Disk space",
+        "state": "pass",
+        "detail": "22.5 GiB available on the deployment filesystem."
+      },
+      {
+        "name": "Forge access",
+        "state": "pass",
+        "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+      },
+      {
+        "name": "Optional capabilities",
+        "state": "pass",
+        "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+      },
+      {
+        "name": "Network address",
+        "state": "warn",
+        "detail": "public DNS/TLS check skipped for localhost."
+      },
+      {
+        "name": "Application health",
+        "state": "pass",
+        "detail": "Health endpoint returned 200."
+      }
+    ],
+    "update": [
+      {
+        "name": "Configuration",
+        "state": "pass",
+        "detail": "required self-hosted configuration is present (values redacted)."
+      },
+      {
+        "name": "Version compatibility",
+        "state": "pass",
+        "detail": "release 0.10.26 uses an immutable image digest; verify its release-manifest.json before deployment."
+      },
+      {
+        "name": "Auth email",
+        "state": "warn",
+        "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+      },
+      {
+        "name": "Container health",
+        "state": "pass",
+        "detail": "16 services are running."
+      },
+      {
+        "name": "Database, Storage, and migrations",
+        "state": "pass",
+        "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+      },
+      {
+        "name": "Scheduler",
+        "state": "pass",
+        "detail": "routine scheduler container is running."
+      },
+      {
+        "name": "Agent runner",
+        "state": "pass",
+        "detail": "server sandbox runner container is running."
+      },
+      {
+        "name": "Disk space",
+        "state": "pass",
+        "detail": "21.1 GiB available on the deployment filesystem."
+      },
+      {
+        "name": "Forge access",
+        "state": "pass",
+        "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+      },
+      {
+        "name": "Optional capabilities",
+        "state": "pass",
+        "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+      },
+      {
+        "name": "Network address",
+        "state": "warn",
+        "detail": "public DNS/TLS check skipped for localhost."
+      },
+      {
+        "name": "Application health",
+        "state": "pass",
+        "detail": "Health endpoint returned 200."
+      }
+    ],
+    "final_restore": [
+      {
+        "name": "Configuration",
+        "state": "pass",
+        "detail": "required self-hosted configuration is present (values redacted)."
+      },
+      {
+        "name": "Version compatibility",
+        "state": "pass",
+        "detail": "release 0.10.26 uses an immutable image digest; verify its release-manifest.json before deployment."
+      },
+      {
+        "name": "Auth email",
+        "state": "warn",
+        "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+      },
+      {
+        "name": "Container health",
+        "state": "pass",
+        "detail": "16 services are running."
+      },
+      {
+        "name": "Database, Storage, and migrations",
+        "state": "pass",
+        "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+      },
+      {
+        "name": "Scheduler",
+        "state": "pass",
+        "detail": "routine scheduler container is running."
+      },
+      {
+        "name": "Agent runner",
+        "state": "pass",
+        "detail": "server sandbox runner container is running."
+      },
+      {
+        "name": "Disk space",
+        "state": "pass",
+        "detail": "19.6 GiB available on the deployment filesystem."
+      },
+      {
+        "name": "Forge access",
+        "state": "pass",
+        "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+      },
+      {
+        "name": "Optional capabilities",
+        "state": "pass",
+        "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+      },
+      {
+        "name": "Network address",
+        "state": "warn",
+        "detail": "public DNS/TLS check skipped for localhost."
+      },
+      {
+        "name": "Application health",
+        "state": "pass",
+        "detail": "Health endpoint returned 200."
+      }
+    ]
+  }
+}

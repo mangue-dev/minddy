@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
@@ -115,7 +117,7 @@ export function useAttachmentUploads(
         }
         slots -= 1;
 
-        const localId = crypto.randomUUID();
+        const localId = createUuid();
         const entry: PendingResource = {
           localId,
           status: "uploading",
@@ -199,7 +201,7 @@ export function useAttachmentUploads(
       if (!projectId) throw new Error(t("linkFailed"));
       if (pendingRef.current.length >= max) throw new Error(t("tooMany", { max }));
 
-      const localId = crypto.randomUUID();
+      const localId = createUuid();
       setPending((prev) => [
         ...prev,
         {
@@ -276,7 +278,7 @@ export function useAttachmentUploads(
       // Twice the same page on a ticket would say nothing more.
       if (pendingRef.current.some((p) => p.page_id === page.id)) return;
 
-      const localId = crypto.randomUUID();
+      const localId = createUuid();
       const title = page.title.trim() || t("untitledPage");
       setPending((prev) => [
         ...prev,
@@ -319,7 +321,7 @@ export function useAttachmentUploads(
       restored.map((input) =>
         input.kind === "page"
           ? {
-              localId: crypto.randomUUID(),
+              localId: createUuid(),
               status: "done" as const,
               kind: "page" as const,
               storage_path: "",
@@ -334,7 +336,7 @@ export function useAttachmentUploads(
             }
           : input.kind === "link"
           ? {
-              localId: crypto.randomUUID(),
+              localId: createUuid(),
               status: "done" as const,
               kind: "link" as const,
               storage_path: "",
@@ -347,7 +349,7 @@ export function useAttachmentUploads(
           : {
               ...input,
               kind: "file" as const,
-              localId: crypto.randomUUID(),
+              localId: createUuid(),
               status: "done" as const,
             }
       )

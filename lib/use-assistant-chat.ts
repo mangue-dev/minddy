@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useCallback, useReducer, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { browserTimezone } from "./routine-schedule";
@@ -319,7 +321,7 @@ function reducer(
 
     case "ADD_USER_MESSAGE": {
       const userMsg: AssistantMessage = {
-        id: crypto.randomUUID(),
+        id: createUuid(),
         conversation_id: state.conversationId || "",
         role: "user",
         content: action.content,

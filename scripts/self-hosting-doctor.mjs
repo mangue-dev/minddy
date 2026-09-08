@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
-import { parseEnvironment } from "./self-hosting-install.mjs";
+import { fullMaintenanceApiUrl, fullBootstrapDatabaseUrl, parseEnvironment } from "./self-hosting-install.mjs";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = resolve(SCRIPT_DIR, "..");
@@ -278,7 +278,7 @@ function verificationFinding(options, values) {
   if (!options.dbUrl) return { name: "Database, Storage, and migrations", state: "warn", detail: "not checked; rerun with --db-url to verify PostgreSQL, migration state, and Storage." };
   const result = run(process.execPath, [resolve(SCRIPT_DIR, "verify-supabase-bootstrap.mjs"), "--from-bootstrap-env"], {
     MDY_BOOTSTRAP_DB_URL: options.dbUrl,
-    MDY_BOOTSTRAP_SUPABASE_URL: values.MINDDY_PUBLIC_SUPABASE_URL,
+    MDY_BOOTSTRAP_SUPABASE_URL: options.mode === "full" ? fullMaintenanceApiUrl(values) : values.MINDDY_PUBLIC_SUPABASE_URL,
     MDY_BOOTSTRAP_SERVICE_ROLE_KEY: values.SUPABASE_SERVICE_ROLE_KEY,
   });
   return { name: "Database, Storage, and migrations", state: result.ok ? "pass" : "fail", detail: result.ok ? "PostgreSQL, migration invariants, and Storage buckets verified." : result.detail || "verification failed." };
@@ -288,9 +288,15 @@ export async function diagnose(options) {
   const findings = [];
   if (!existsSync(options.envFile)) return [{ name: "Configuration", state: "fail", detail: "environment file is missing." }];
   const values = parseEnvironment(readFileSync(options.envFile, "utf8"));
+  if (options.mode === "full" && !options.dbUrl && values.POSTGRES_PASSWORD) {
+    options = { ...options, dbUrl: fullBootstrapDatabaseUrl(values) };
+  }
   const missing = configFindings(values);
   findings.push({ name: "Configuration", state: missing.length ? "fail" : "pass", detail: missing.length ? `missing or placeholder values: ${missing.join(", ")}.` : "required self-hosted configuration is present (values redacted)." });
   findings.push(compatibilityFinding(values));
+  if (options.mode === "full" && values.SMTP_HOST === "supabase-mail") {
+    findings.push({ name: "Auth email", state: "warn", detail: "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth." });
+  }
   const status = composeStatus(options);
   findings.push({ name: "Container health", state: status.ok ? "pass" : "fail", detail: status.detail });
   findings.push(verificationFinding(options, values));

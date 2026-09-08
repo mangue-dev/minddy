@@ -116,8 +116,12 @@ jobs:
       - name: Release tooling tests
         run: pnpm run test:release
 
-      - name: Self-hosted egress policy tests
-        run: pnpm run test:self-hosted
+      - name: Self-hosted tools and network policy tests
+        run: |
+          pnpm run test:self-hosted
+          pnpm run test:self-hosted-tools
+          pnpm run test:self-hosted-compose
+          node --test scripts/bootstrap-supabase.test.mjs
 
       - name: Self-hosted minimal egress contract
         env:

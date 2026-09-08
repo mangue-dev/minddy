@@ -1,3 +1,4 @@
+import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -18,6 +19,7 @@ export function getServiceClient(): SupabaseClient {
       );
     }
     _serviceClient = createClient(url, serviceKey, {
+      global: { fetch: supabaseServerFetch },
       auth: { persistSession: false, autoRefreshToken: false },
     });
   }

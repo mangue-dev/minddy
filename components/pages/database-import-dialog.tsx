@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -49,7 +51,7 @@ export function DatabaseImportDialog({
   const cache = useQueryClient();
   const { members } = useMembersQuery(projectId, true);
   const fileInput = useRef<HTMLInputElement>(null);
-  const requestId = useRef(crypto.randomUUID());
+  const requestId = useRef(createUuid());
   const [file, setFile] = useState<File | null>(null);
   const [prepared, setPrepared] = useState<PreparedDatabaseImport | null>(null);
   const [sourceId, setSourceId] = useState("");
@@ -151,7 +153,7 @@ export function DatabaseImportDialog({
       setSourceId(data.sources[0].id);
       setColumns(data.sources[0].columns);
       setPeople({});
-      requestId.current = crypto.randomUUID();
+      requestId.current = createUuid();
       setStep(1);
     } catch (error) {
       setError(errorMessage(error));

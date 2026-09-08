@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import {
   useCallback,
   useEffect,
@@ -750,7 +752,7 @@ export function AgentConversation({
     if (!liveRun) return;
     const text = message.trim();
     if (!text) return;
-    const messageId = crypto.randomUUID();
+    const messageId = createUuid();
     // OPTIMISTIC display: the bubble would only return from the server when the
     // loop (including sandbox wake-up, several seconds) — until then the user
     // would have the impression of having hit a void. The feed removes it as soon as its

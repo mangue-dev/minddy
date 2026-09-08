@@ -5,6 +5,12 @@ starts from two consecutive immutable releases and uses no local minddy files,
 accounts, production secrets, or Minddy Cloud services. The procedure is
 destructive: run it only on a disposable host and disposable Supabase stacks.
 
+The public [MIN-407 validation report](validation/min-407-public-clean-room-2026-09-08.md)
+records open lifecycle (MIN-503) and full-profile startup (MIN-504) blockers.
+The [local candidate report](validation/min-407-local-candidate-2026-09-08.md)
+records the combined fix/test loop. Local runs are engineering checks. Final acceptance still requires
+publication and an unmodified replay of the corrected release pair.
+
 The installation and operations runbooks remain the source of truth. This page
 adds an ordered acceptance record around them:
 
@@ -17,7 +23,8 @@ Use a newly provisioned VM or workstation with an empty home directory for the
 test account. Do not mount a maintainer checkout, password manager, SSH agent,
 cloud CLI configuration, Docker volume, or browser profile. Network access is
 needed only for the public Git repository, package registries, container images,
-the selected optional provider, and loopback services.
+Supabase Auth password-compromise checks (`api.pwnedpasswords.com`), the
+selected optional provider, and loopback services.
 
 The normal run is accepted only when both refs are annotated
 `vMAJOR.MINOR.PATCH` release tags. Before the repository's first public release,
@@ -58,7 +65,7 @@ instruction by editing the release checkout.
 ## 1. Prepare the disposable host
 
 Install Node.js 24, pnpm 10.28.0, Docker, the Supabase CLI, PostgreSQL client
-tools, Git, and curl. Then open a shell that has no inherited minddy or provider
+tools, Git, curl, and Cosign. Then open a shell that has no inherited minddy or provider
 configuration:
 
 ```bash
@@ -68,6 +75,12 @@ env -i \
   TERM="${TERM:-xterm}" \
   SHELL="${SHELL:-/bin/sh}" \
   bash --noprofile --norc
+```
+
+In that shell, stop on failed commands or unset inputs:
+
+```bash
+set -euo pipefail
 ```
 
 Set only public test inputs. Never paste a production value into this shell or
@@ -84,7 +97,9 @@ export REPORT_DIR="$CLEAN_ROOT/report"
 install -d -m 0700 "$CLEAN_ROOT" "$BACKUP_ROOT" "$REPORT_DIR"
 git clone https://github.com/mangue-dev/minddy.git "$SOURCE_DIR"
 cd "$SOURCE_DIR"
-git fetch --tags --force
+git fetch --tags
+git switch --detach "$TO_REF"
+test -z "$(git status --porcelain)"
 ```
 
 In release mode, download the matching public GitHub Release assets into a separate directory
@@ -94,24 +109,49 @@ the digest from a mutable image tag.
 
 ```bash
 export RELEASE_ASSETS="$CLEAN_ROOT/release-assets"
-install -d -m 0700 "$RELEASE_ASSETS"
-# Download SHA256SUMS, release-manifest.json, and minddy-vX.Y.Z-container.txt
-# from the public GitHub Release for "$FROM_REF" into "$RELEASE_ASSETS".
-cd "$RELEASE_ASSETS"
-if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum --check SHA256SUMS
-else
-  shasum -a 256 --check SHA256SUMS
-fi
-export IMAGE="$(sed -n 's/^reference=//p' "minddy-${FROM_REF}-container.txt")"
-test -n "$IMAGE"
-test "$(node -p 'require("./release-manifest.json").release.tag')" = "$FROM_REF"
+for RELEASE_REF in "$FROM_REF" "$TO_REF"; do
+  ASSET_DIR="$RELEASE_ASSETS/$RELEASE_REF"
+  install -d -m 0700 "$ASSET_DIR"
+  ASSET_BASE="https://github.com/mangue-dev/minddy/releases/download/$RELEASE_REF"
+  # SHA256SUMS covers all six core assets, not only the manifest and identity.
+  for ASSET in SHA256SUMS RELEASE_NOTES.md UPDATE.md release-manifest.json \
+    "minddy-$RELEASE_REF-container.txt" \
+    "minddy-$RELEASE_REF-source.tar.gz" \
+    "minddy-$RELEASE_REF-migrations.tar.gz"; do
+    curl --fail --show-error --location "$ASSET_BASE/$ASSET" \
+      --output "$ASSET_DIR/$ASSET"
+  done
+  (
+    cd "$ASSET_DIR"
+    if command -v sha256sum >/dev/null 2>&1; then
+      sha256sum --check SHA256SUMS
+    else
+      shasum -a 256 --check SHA256SUMS
+    fi
+    test "$(node -p 'require("./release-manifest.json").release.tag')" = "$RELEASE_REF"
+    test "$(node -p 'require("./release-manifest.json").release.commit')" = \
+      "$(git -C "$SOURCE_DIR" rev-parse "$RELEASE_REF^{commit}")"
+    git -C "$SOURCE_DIR" rev-parse "$RELEASE_REF^{tag}"
+    RELEASE_IMAGE="$(node -p 'require("./release-manifest.json").container.reference')"
+    test "$RELEASE_IMAGE" = "$(sed -n 's/^reference=//p' "minddy-$RELEASE_REF-container.txt")"
+    printf '%s\n' "$RELEASE_IMAGE" | \
+      LC_ALL=C grep -Eq '^ghcr\.io/mangue-dev/minddy@sha256:[a-f0-9]{64}$'
+    cosign verify \
+      --certificate-identity 'https://github.com/mangue-dev/minddy/.github/workflows/release.yml@refs/heads/production' \
+      --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+      "$RELEASE_IMAGE"
+  )
+done
+export IMAGE="$(sed -n 's/^reference=//p' "$RELEASE_ASSETS/$FROM_REF/minddy-$FROM_REF-container.txt")"
+export TARGET_IMAGE="$(sed -n 's/^reference=//p' "$RELEASE_ASSETS/$TO_REF/minddy-$TO_REF-container.txt")"
 cd "$SOURCE_DIR"
 ```
 
-Run the image signature check from [container-image.md](container-image.md)
-with `$IMAGE` before proceeding. Record only its digest-bearing image reference,
-not release credentials or command output that contains a token.
+Record the command exit codes and both digest-bearing image references. See
+[container-image.md](container-image.md) for the additional provenance and SBOM
+checks. An asset download, checksum, tag/commit comparison, or signature failure
+blocks installation. `IMAGE` is the source-release pin; `TARGET_IMAGE` is the
+separately verified update pin. Neither is derived from a mutable image tag.
 
 For prepublication validation, receive only the candidate Git bundle and its
 `SHA256SUMS` file from the release preparer. Do not receive a working tree or a
@@ -169,79 +209,92 @@ test -z "$(git status --porcelain)"
 pnpm install --frozen-lockfile
 ```
 
-Choose the guided installer mode without maintainer advice. `managed` uses an
-already-provisioned compatible Supabase service; `full` operates the pinned
-official Supabase stack. Record why the other mode is unsuitable. Start the
-measurement after the selected service or checkout is ready, and provide the
-verified immutable image reference from the release assets:
+Choose the guided installer mode without maintainer advice. `managed` requires
+an already-provisioned compatible Supabase project. `full` operates the pinned
+upstream stack and can be exercised free of charge in an isolated local Linux
+VM. Record why the other mode is unsuitable. The example below selects `full`
+and uses the VM's own browser at `http://localhost`; a browser on a different
+machine must use the documented private LAN address instead.
 
 ```bash
-export INSTALL_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+export MODE=full
+export CURRENT_RELEASE_DIR="$SOURCE_DIR"
+export SUPABASE_DIR="$CLEAN_ROOT/supabase"
 export MINDDY_ENV_FILE="$SOURCE_DIR/deploy/self-hosted/.env"
-pnpm self-host:install -- --non-interactive --mode managed \
-  --domain tickets.example.test --admin-email admin@example.test \
-  --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
-  --anon-key "$MINDDY_PUBLIC_SUPABASE_ANON_KEY" \
-  --service-role-key "$SUPABASE_SERVICE_ROLE_KEY" --db-url "$SUPABASE_DB_URL" \
-  --image "$IMAGE" --env-file "$MINDDY_ENV_FILE"
-pnpm self-host:doctor -- --mode managed --env-file "$MINDDY_ENV_FILE" --db-url "$SUPABASE_DB_URL" --json \
+node scripts/fetch-official-supabase.mjs --destination "$SUPABASE_DIR"
+export INSTALL_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+pnpm self-host:install -- --non-interactive --mode full \
+  --app-url http://localhost --admin-email admin@example.test \
+  --supabase-dir "$SUPABASE_DIR" --image "$IMAGE" --no-forge-relay \
+  --env-file "$MINDDY_ENV_FILE"
+pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
+  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --json \
   > "$REPORT_DIR/first-doctor.json"
 export INSTALL_HEALTHY_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+compose() {
+  docker compose --env-file "$MINDDY_ENV_FILE" \
+    -f "$SUPABASE_DIR/docker/docker-compose.yml" \
+    -f "$CURRENT_RELEASE_DIR/deploy/self-hosted/compose.full.yml" "$@"
+}
 ```
 
-The same `--image` value must be used for the `full` mode. It replaces only the
-release image from the versioned environment template; Caddy, scheduler, and
-the official Supabase files stay on their matrix pins. The installer must create
-the environment file with mode `0600`, reach health, and leave optional
-capabilities disabled. Keep the environment file and all credentials out of the
-report.
+The generated file must have mode `0600`. Keep it and all credentials out of
+the report. The installer prepares the unchanged pinned upstream main function
+with frozen dependencies and an offline compiler; it does not edit upstream
+source or open the database's internal network.
 
-After this reference-profile check, the local source-only lifecycle path below
-tests the versioned source migration sequence. The second bootstrap must succeed
-without replacing generated secrets or reapplying migrations. Keep `.env.local`
-out of the report. Add only these non-secret instance values:
+For `managed`, use the [managed installer example](self-hosting.md#guided-reference-profile-installation),
+pass the verified `IMAGE`, and keep that same environment, database and
+single-file Compose context through every lifecycle step. A local source build
+or `supabase start` is not a substitute for either installed reference profile.
 
-```dotenv
-MINDDY_PUBLIC_APP_URL=http://127.0.0.1:3000
-MINDDY_PUBLIC_SITE_NAME=minddy clean room
-MINDDY_PUBLIC_CONTACT_EMAIL=operator@example.test
-ADMIN_EMAILS=admin@example.test
-EMAIL_PROVIDER=console
-AGENT_EXECUTION_BACKEND=local
-MINDDY_MANAGED_AI=0
-MINDDY_MANAGED_BILLING=0
-MINDDY_PUBLIC_VERCEL_ANALYTICS=0
-```
+### Local confirmation mailbox (disposable full-profile test only)
 
-Leave all Stripe, PostHog, Resend, Vercel, push, GitHub, GitLab, and managed AI
-keys absent. Build and start the release:
+Auth confirmation email is separate from optional application notifications.
+The official upstream template names `supabase-mail:2500` but does not provide
+that service. For production, configure the `SMTP_*` values with your provider
+using the installation guide. For this isolated test, start a pinned
+[Mailpit inbox](https://mailpit.axllent.org/docs/install/docker/) after the stack
+networks exist. It captures test mail locally and sends no external email.
 
 ```bash
-pnpm build
-pnpm start > "$REPORT_DIR/source-app.log" 2>&1 &
-export SOURCE_APP_PID=$!
-for attempt in $(seq 1 60); do
-  curl --fail --silent http://127.0.0.1:3000/ >/dev/null && break
-  test "$attempt" -lt 60 || exit 1
-  sleep 1
-done
+docker run -d --name clean-room-mail \
+  --network name=minddy-full_default,alias=supabase-mail \
+  --network minddy-full_maintenance \
+  -p 127.0.0.1:8025:8025 \
+  -e MP_SMTP_BIND_ADDR=0.0.0.0:2500 \
+  -e MP_SMTP_AUTH_ACCEPT_ANY=true -e MP_SMTP_AUTH_ALLOW_INSECURE=true \
+  axllent/mailpit@sha256:df6c2541907e1be6fac21f509927cf6ed771617a1f4b361ef66d97bd05593d2d
 ```
+
+For this local inbox only, set `SMTP_USER=` and `SMTP_PASS=` to empty values
+in the protected deployment file, then run `compose up -d --wait auth`. Auth
+otherwise tries authenticated SMTP over an unencrypted connection and rejects
+the upstream test credentials. Production SMTP must use the provider's TLS and
+authentication settings.
+
+Open `http://localhost:8025` in the VM's browser. This inbox accepts test
+credentials and is bound only to loopback. Do not use it for real accounts or
+publish it on the Internet. Keep confirmation URLs and messages out of evidence.
 
 ## 3. Exercise the core as a new user
 
 Use a private browser profile containing no existing cookies.
 
-1. Run `supabase status`, open the local email inbox URL it reports, then open
-   `http://127.0.0.1:3000` and sign up as `admin@example.test`. Use the message
-   captured in that local inbox to confirm the account.
+1. Open `http://localhost` and sign up as `admin@example.test`. Open the
+   confirmation message at `http://localhost:8025`, follow its link, and complete
+   the confirmation gesture. In managed mode use the configured provider inbox.
 2. Enroll and verify TOTP MFA from account settings, then confirm that the
    account receives first-administrator access through `ADMIN_EMAILS`; no
    database console edit is allowed.
 3. Store the recovery codes outside the test browser, sign out, sign in again,
    and complete the MFA challenge.
-4. Create project `Clean Room` with key `ROOM`.
+4. Create project `Clean Room` with key `ROOM`. Choose a new project, keep a
+   default appearance, skip repository connections and AI description, and turn
+   off Smart Assign when no AI provider is configured.
 5. Create ticket `Survives update and restore`, set it to `In progress`, priority
    `Urgent`, effort `M`, and add the description `MIN-383 acceptance marker`.
+   Turn off Smart-fill to enter these fields manually without an AI provider.
 6. Upload a small text attachment containing only `clean-room-storage-marker`.
 7. Sign out, sign in again, and confirm that the project, ticket, and attachment
    are readable.
@@ -250,8 +303,7 @@ Record timestamps and generated row identifiers, but no cookie, JWT, key, email
 link, or attachment signed URL. Capture the following database counts:
 
 ```bash
-source <(supabase status --output env)
-psql "$DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
+compose exec -T --interactive=false db psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -Atc "
   select jsonb_build_object(
     'auth.users', (select count(*) from auth.users),
     'public.projects', (select count(*) from public.projects),
@@ -276,11 +328,11 @@ the disabled surfaces before continuing:
 - billing and managed quota UI stays absent;
 - AI actions report that a provider key or local model is required;
 - GitHub and GitLab connection actions stay unavailable until configured;
-- email uses the local console provider;
+- Auth email reaches the local inbox; optional application email stays disabled;
 - browser and server logs contain no request to `minddy.app`, Stripe, PostHog,
   Resend, Vercel, GitHub, GitLab, or OpenRouter;
 - OAuth discovery, MCP endpoint values, links, and callback URLs use
-  `http://127.0.0.1:3000`, never a Minddy Cloud origin.
+  `http://localhost` (or the selected private origin), never a Minddy Cloud origin.
 
 Any silent external request or `minddy.app` URL is a release blocker. Save only
 the request host, path, status, and timestamp; remove headers and bodies.
@@ -294,8 +346,12 @@ source cannot be mistaken for an unobserved one.
 
 For the minimal scenario, only the application, selected Supabase hostname,
 and internal scheduler target are allowed. The full Compose profile additionally
-makes its default network internal: Caddy is the only service on an external
-edge network. Stripe, PostHog, Vercel, OpenRouter, Resend, telemetry, feedback,
+makes its default network internal. Caddy alone joins `edge`; the loopback
+maintenance bridge joins its own network, Auth has SMTP/password-check egress,
+and the application and agent runner have operator-provider egress. The pinned
+Auth service calls `api.pwnedpasswords.com` for compromised-password checks;
+record this required platform traffic separately from application-provider
+traffic when capturing the full daemon. Stripe, PostHog, Vercel, OpenRouter, Resend, telemetry, feedback,
 and Minddy Cloud remain denied unless an operator explicitly declares the one
 selected provider; Minddy Cloud is never allowed.
 
@@ -324,79 +380,49 @@ Do not edit the environment file, its checkpoint, or any container image.
 
 ```bash
 sha256sum "$MINDDY_ENV_FILE" > "$REPORT_DIR/environment-before.sha256"
-docker compose --env-file "$MINDDY_ENV_FILE" \
-  -f "$SOURCE_DIR/deploy/self-hosted/compose.managed.yml" stop minddy
-pnpm self-host:install -- --non-interactive --mode managed \
-  --domain tickets.example.test --admin-email admin@example.test \
-  --supabase-url "$MINDDY_PUBLIC_SUPABASE_URL" \
-  --anon-key "$MINDDY_PUBLIC_SUPABASE_ANON_KEY" \
-  --service-role-key "$SUPABASE_SERVICE_ROLE_KEY" --db-url "$SUPABASE_DB_URL" \
-  --image "$IMAGE" --env-file "$MINDDY_ENV_FILE"
+compose stop minddy
+pnpm self-host:install -- --non-interactive --mode full \
+  --supabase-dir "$SUPABASE_DIR" --image "$IMAGE" --env-file "$MINDDY_ENV_FILE"
 sha256sum "$MINDDY_ENV_FILE" > "$REPORT_DIR/environment-after.sha256"
 diff -u "$REPORT_DIR/environment-before.sha256" "$REPORT_DIR/environment-after.sha256"
-pnpm self-host:doctor -- --mode managed --env-file "$MINDDY_ENV_FILE" \
-  --db-url "$SUPABASE_DB_URL" --json > "$REPORT_DIR/recovery-doctor.json"
+pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
+  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --json \
+  > "$REPORT_DIR/recovery-doctor.json"
 ```
 
-Confirm the exact image digest remains in the protected environment file and
-that the prior project, tickets, attachment, and revoked integration retain
-their recorded identifiers. For `full` mode, use the same command with both
-Compose files specified by the installer; record the equivalent stop command.
+Confirm the same Docker image digest, project, tickets, attachment and revoked
+integration identifiers. The installer must also work when `lsof` is installed
+and the other services already occupy their published ports.
 
 ## 6. Back up and update
 
-Follow **Before any maintenance** and **Complete and consistent backup** in
-[`self-hosting-operations.md`](self-hosting-operations.md) without shortening
-the database, configuration, or Storage steps. Use `BACKUP_ROOT` above, verify
-`SHA256SUMS`, and copy the sealed set to a second disposable volume. The source
-counts must be part of the set.
+Follow [Complete cold backup](self-hosting-operations.md#complete-cold-backup-for-the-full-reference-profile)
+and [Update the installed OCI instance](self-hosting-operations.md#update-the-installed-oci-instance)
+using the exact same Compose context. Use `BACKUP_ROOT`, include the source
+counts in the sealed backup, and verify a second copy. Do not start a source
+server or a Supabase CLI local stack. The target configuration must use the
+separately verified `TARGET_IMAGE`, preserve all generated secrets, and point
+to the target tagged checkout.
 
-Then follow **Update to the next version** exactly:
-
-```bash
-kill "$SOURCE_APP_PID"
-git switch --detach "$TO_REF"
-test "$(git describe --tags --exact-match)" = "$TO_REF"
-test -z "$(git status --porcelain)"
-pnpm install --frozen-lockfile
-pnpm bootstrap:supabase
-pnpm verify:supabase --local
-pnpm build
-pnpm start > "$REPORT_DIR/target-app.log" 2>&1 &
-export TARGET_APP_PID=$!
-```
-
-Repeat the sign-in, project, ticket, attachment, and integration-created ticket
-checks. Confirm that no existing identifier changed. Record the migration list
-before reopening writes:
-
-```bash
-psql "$DB_URL" -X -v ON_ERROR_STOP=1 -Atc \
-  "select version from supabase_migrations.schema_migrations order by version" \
-  > "$REPORT_DIR/target-migrations.txt"
-```
+After the update, sign in and compare the original IDs, issue fields,
+integration attribution/revocation, and attachment bytes. Record migration
+history with `compose exec -T --interactive=false db psql`, as above, and the actual Docker image ID
+and repo digest. Record the write outage and time of verification.
 
 ## 7. Restore onto a blank stack
 
-Stop the target application and follow **Restore to a pristine environment** in
-the operations runbook. The restore target must use a new Supabase directory,
-new Docker resources, a new application origin, and no users or Storage objects
-before loading the backup. Do not restore over the updated stack.
+Follow [Restore the full profile](self-hosting-operations.md#restore-the-full-profile-to-a-blank-target).
+Use a new upstream directory, empty data paths, a new database-key volume, and
+a different private application origin. Record these blank-target facts before
+loading the backup. Preserve the stopped source directories and sealed backup.
+A fresh VM is preferred; sequential full stacks on the same disposable daemon
+are allowed when their data paths and volumes are demonstrably separate.
 
-After the database, Storage bytes, configuration, and saved source commit are
-restored together:
-
-```bash
-pnpm verify:supabase --db-url "$RESTORE_DB_URL" \
-  --supabase-url "$RESTORE_SUPABASE_URL" \
-  --service-role-key "$RESTORE_SERVICE_ROLE_KEY"
-diff -u "$REPORT_DIR/source-counts.json" "$REPORT_DIR/restored-counts.json"
-```
-
-Sign in as the restored user. Confirm the original project, both tickets,
-integration attribution and revocation, attachment metadata, and downloaded
-attachment bytes. The restored application must still use the restore origin for
-links, OAuth, MCP, and callbacks.
+After restoring the coordinated database, Storage bytes, keys, environment and
+saved release, sign in with the restored account and MFA. Compare source and
+restored counts, row identifiers, attachment download SHA-256, and integration
+attribution/revocation. Confirm links, OAuth, MCP and callbacks use the restore
+origin. A changed public origin must not require rebuilding the OCI image.
 
 ## 8. Replay published documentation with an AI agent
 
@@ -444,13 +470,20 @@ if rg -n -i 'authorization:|bearer |service_role|postgres(ql)?://[^ ]+:[^@ ]+@' 
   echo "Potential secret in evidence; redact it before continuing." >&2
   exit 1
 fi
-if command -v sha256sum >/dev/null 2>&1; then
-  find "$REPORT_DIR" -type f -print0 | sort -z | xargs -0 sha256sum \
-    > "$REPORT_DIR/SHA256SUMS"
-else
-  find "$REPORT_DIR" -type f -print0 | sort -z | xargs -0 shasum -a 256 \
-    > "$REPORT_DIR/SHA256SUMS"
-fi
+(
+  cd "$REPORT_DIR"
+  # Relative paths keep the sealed evidence verifiable after copying it.
+  # Exclude the output itself, including when resealing an existing report.
+  if command -v sha256sum >/dev/null 2>&1; then
+    find . -type f ! -path './SHA256SUMS' -print0 | sort -z | xargs -0 sha256sum \
+      > SHA256SUMS
+    sha256sum --check SHA256SUMS
+  else
+    find . -type f ! -path './SHA256SUMS' -print0 | sort -z | xargs -0 shasum -a 256 \
+      > SHA256SUMS
+    shasum -a 256 --check SHA256SUMS
+  fi
+)
 ```
 
 Record every deviation as a blocking issue before accepting the release. A run

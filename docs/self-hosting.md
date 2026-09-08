@@ -247,6 +247,16 @@ trusted LAN, keep 443 closed unless it is otherwise needed, and never forward
 80, 443, or 8000 on the router. A domain and HTTPS can be added later using the
 operations runbook.
 
+Authentication email needs its own SMTP setup. The upstream template's
+`SMTP_HOST=supabase-mail` is a placeholder; the production profile does not
+provide an inbox. First add `--skip-start` to generate the protected environment,
+then edit its `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+`SMTP_ADMIN_EMAIL`, and `SMTP_SENDER_NAME` with your provider's settings. Keep
+`ENABLE_EMAIL_AUTOCONFIRM=false`. Rerun the same installer after configuration.
+Optional `application-email` notifications do not configure Auth email. An
+isolated, free confirmation inbox is documented only for the
+[disposable acceptance test](self-hosting-clean-room.md#local-confirmation-mailbox-disposable-full-profile-test-only).
+
 Before supplying `--image`, download the matching GitHub Release assets, verify
 `SHA256SUMS`, and copy the `reference` value from `release-manifest.json`. The
 option accepts only the immutable official GHCR digest, never a moving tag. The
