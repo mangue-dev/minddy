@@ -1590,6 +1590,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
   const [sidebarLayerOpen, setSidebarLayerOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
 
   // Account/global options (statistics, feedback, theme, sign out). On desktop
   // they live in the sidebar footer; on mobile they move into the menu sheet +
@@ -1656,7 +1657,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           hidden={sidebarHidden}
           width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
           dockedWidth={secondaryNav ? COLLAPSED_WIDTH + SECONDARY_WIDTH : EXPANDED_WIDTH}
-          pinned={sidebarLayerOpen}
+          pinned={sidebarLayerOpen || inboxOpen}
         >
           <AppSidebar
             sections={desktopSections}
@@ -1664,6 +1665,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             currentProject={currentProject}
             projects={projects}
             inbox={inboxItem}
+            inboxOpen={inboxOpen}
             onSearch={() => handlePaletteOpenChange(true)}
             onSearchWarm={warmPalette}
             onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
@@ -1706,7 +1708,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           searchIndex={searchIndex}
         />
       ) : null}
-      <InboxPopover />
+      <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />
       <GlobalIssuePanelHost />
       {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
  dialog as the settings button, mounted here to be reachable

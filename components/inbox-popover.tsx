@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,8 +16,10 @@ function visibleTrigger() {
     .find((element) => element.getBoundingClientRect().width > 0);
 }
 
-export function InboxPopover() {
-  const [open, setOpen] = useState(false);
+export function InboxPopover({ open, onOpenChange: setOpen }: {
+  open: boolean;
+  onOpenChange: Dispatch<SetStateAction<boolean>>;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -35,9 +37,9 @@ export function InboxPopover() {
     };
     window.addEventListener(OPEN_INBOX_EVENT, launch);
     return () => window.removeEventListener(OPEN_INBOX_EVENT, launch);
-  }, []);
+  }, [setOpen]);
 
-  useEffect(() => { setOpen(false); }, [pathname]);
+  useEffect(() => { setOpen(false); }, [pathname, setOpen]);
 
   useEffect(() => {
     if (searchParams.get("inbox") !== "1") return;
@@ -45,7 +47,7 @@ export function InboxPopover() {
     const next = new URLSearchParams(searchParams.toString());
     next.delete("inbox");
     router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
-  }, [pathname, router, searchParams]);
+  }, [pathname, router, searchParams, setOpen]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -57,6 +59,7 @@ export function InboxPopover() {
         align="start"
         sideOffset={8}
         collisionPadding={12}
+        updatePositionStrategy="always"
         className="h-[min(600px,calc(100dvh-96px))] max-h-[var(--radix-popover-content-available-height)] w-[480px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
         onInteractOutside={(event) => {
           if (event.target instanceof Element && event.target.closest("[data-inbox-trigger]")) {

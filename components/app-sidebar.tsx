@@ -1385,6 +1385,7 @@ export function AppSidebar({
   currentProject,
   projects,
   inbox,
+  inboxOpen = false,
   onSearch,
   onSearchWarm,
   onScratchpadWarm,
@@ -1396,6 +1397,7 @@ export function AppSidebar({
   currentProject: Project | null;
   projects: Project[];
   inbox: AppNavItem;
+  inboxOpen?: boolean;
   onSearch: () => void;
   onSearchWarm?: () => void;
   onScratchpadWarm?: () => void;
@@ -1622,7 +1624,7 @@ export function AppSidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay, hovered]);
 
-  const collapsed = overlay && !(hovered || focusWithin || menuOpen);
+  const collapsed = overlay && !(hovered || focusWithin || menuOpen || inboxOpen);
 
   /**
    * macOS buttons, in the desktop app (MIN-291). They land on the
