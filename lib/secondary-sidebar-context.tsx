@@ -91,7 +91,6 @@ export function SecondarySidebarProvider({
  * page whose bar disappears (empty list) corrects itself.
  */
 export function routeHasSecondaryNav(pathname: string): boolean {
-  if (pathname.startsWith("/inbox")) return true;
   if (pathname.startsWith("/trash")) return true;
   if (pathname.startsWith("/pull-requests")) return true;
   if (pathname.startsWith("/agents")) return true;

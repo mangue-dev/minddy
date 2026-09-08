@@ -222,6 +222,7 @@ function SidebarTopAction({
   onWarm,
   badge,
   shortcut,
+  inboxTrigger,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
@@ -230,6 +231,7 @@ function SidebarTopAction({
   onWarm?: () => void;
   badge?: ReactNode;
   shortcut?: ReactNode;
+  inboxTrigger?: boolean;
 }) {
   const className = cn(
     SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -255,6 +257,8 @@ function SidebarTopAction({
       aria-label={label}
       className={className}
       onClick={onClick}
+      data-inbox-trigger={inboxTrigger || undefined}
+      aria-haspopup={inboxTrigger ? "dialog" : undefined}
       onPointerEnter={onWarm}
       onFocus={onWarm}
     >
@@ -290,21 +294,22 @@ function SidebarTopActions({
   const t = useTranslations("Nav");
   const tk = useTranslations("Keyboard");
   const modKey = useModKey();
-  if (collapsed) return null;
-
   return (
-    <div className="ml-auto flex shrink-0 items-center gap-1">
-      <SidebarTopAction
-        icon={Search}
-        label={t("searchPlaceholder")}
-        onClick={onSearch}
-        onWarm={onSearchWarm}
-        shortcut={<KbdSequence keys={[[modKey, "K"]]} size="sm" />}
-      />
+    <div className={cn("flex shrink-0 items-center gap-1", !collapsed && "ml-auto")}>
+      {!collapsed && (
+        <SidebarTopAction
+          icon={Search}
+          label={t("searchPlaceholder")}
+          onClick={onSearch}
+          onWarm={onSearchWarm}
+          shortcut={<KbdSequence keys={[[modKey, "K"]]} size="sm" />}
+        />
+      )}
       <SidebarTopAction
         icon={inbox.icon!}
         label={inbox.label}
-        href={inbox.href as string}
+        onClick={inbox.onClick}
+        inboxTrigger
         badge={inbox.badgeCollapsed ?? inbox.badge}
         shortcut={
           inbox.shortcut ? (
@@ -1770,13 +1775,20 @@ export function AppSidebar({
         >
           {!collapsed && windowButtons.decoy && <WindowButtonDecoys />}
           <SidebarBrand />
-          <SidebarTopActions
-            collapsed={collapsed}
-            inbox={inbox}
-            onSearch={onSearch}
-            onSearchWarm={onSearchWarm}
-          />
+          {!collapsed && (
+            <SidebarTopActions
+              collapsed={false}
+              inbox={inbox}
+              onSearch={onSearch}
+              onSearchWarm={onSearchWarm}
+            />
+          )}
         </div>
+        {collapsed && (
+          <div className={cn("py-1", GUTTER)}>
+            <SidebarTopActions collapsed inbox={inbox} onSearch={onSearch} />
+          </div>
+        )}
 
         <SidebarQuickActions
           collapsed={collapsed}

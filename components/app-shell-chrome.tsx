@@ -44,6 +44,8 @@ import {
   FileText,
   Trash2,
 } from "lucide-react";
+import { InboxPopover } from "@/components/inbox-popover";
+import { openInbox } from "@/lib/inbox-launcher";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -501,7 +503,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     setExportOpen(true);
   }, []);
 
-  const isInbox = pathname.startsWith("/inbox");
   const isAgents = pathname.startsWith("/agents");
   const isRoutines = pathname.startsWith("/routines");
   const { counts: triageCounts } = useTriageCountsQuery();
@@ -832,7 +833,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       heading: t("goTo"),
       items: [
         { key: "go-home", label: t("home"), icon: Home, href: "/home", onSelect: () => router.push("/home") },
-        { key: "go-inbox", label: t("inbox"), icon: Inbox, href: "/inbox", onSelect: () => router.push("/inbox") },
+        { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: openInbox },
         {
           key: "open-notes",
           label: tScratch("open"),
@@ -1330,8 +1331,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     key: "inbox",
     label: t("inbox"),
     icon: Inbox,
-    href: "/inbox",
-    active: isInbox,
+    onClick: openInbox,
     shortcut: "I",
     ...countBadges(inboxCount, t("inboxBadge", { count: inboxCount })),
   };
@@ -1706,6 +1706,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           searchIndex={searchIndex}
         />
       ) : null}
+      <InboxPopover />
       <GlobalIssuePanelHost />
       {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
  dialog as the settings button, mounted here to be reachable
