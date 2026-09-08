@@ -294,17 +294,17 @@ function SidebarTopActions({
   const t = useTranslations("Nav");
   const tk = useTranslations("Keyboard");
   const modKey = useModKey();
+  if (collapsed) return null;
+
   return (
-    <div className={cn("flex shrink-0 items-center gap-1", !collapsed && "ml-auto")}>
-      {!collapsed && (
-        <SidebarTopAction
-          icon={Search}
-          label={t("searchPlaceholder")}
-          onClick={onSearch}
-          onWarm={onSearchWarm}
-          shortcut={<KbdSequence keys={[[modKey, "K"]]} size="sm" />}
-        />
-      )}
+    <div className="ml-auto flex shrink-0 items-center gap-1">
+      <SidebarTopAction
+        icon={Search}
+        label={t("searchPlaceholder")}
+        onClick={onSearch}
+        onWarm={onSearchWarm}
+        shortcut={<KbdSequence keys={[[modKey, "K"]]} size="sm" />}
+      />
       <SidebarTopAction
         icon={inbox.icon!}
         label={inbox.label}
@@ -1775,20 +1775,13 @@ export function AppSidebar({
         >
           {!collapsed && windowButtons.decoy && <WindowButtonDecoys />}
           <SidebarBrand />
-          {!collapsed && (
-            <SidebarTopActions
-              collapsed={false}
-              inbox={inbox}
-              onSearch={onSearch}
-              onSearchWarm={onSearchWarm}
-            />
-          )}
+          <SidebarTopActions
+            collapsed={collapsed}
+            inbox={inbox}
+            onSearch={onSearch}
+            onSearchWarm={onSearchWarm}
+          />
         </div>
-        {collapsed && (
-          <div className={cn("py-1", GUTTER)}>
-            <SidebarTopActions collapsed inbox={inbox} onSearch={onSearch} />
-          </div>
-        )}
 
         <SidebarQuickActions
           collapsed={collapsed}
