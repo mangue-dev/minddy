@@ -44,6 +44,8 @@ import {
   FileText,
   Trash2,
 } from "lucide-react";
+import { InboxPopover } from "@/components/inbox-popover";
+import { openInbox } from "@/lib/inbox-launcher";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -501,7 +503,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     setExportOpen(true);
   }, []);
 
-  const isInbox = pathname.startsWith("/inbox");
   const isAgents = pathname.startsWith("/agents");
   const isRoutines = pathname.startsWith("/routines");
   const { counts: triageCounts } = useTriageCountsQuery();
@@ -832,7 +833,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       heading: t("goTo"),
       items: [
         { key: "go-home", label: t("home"), icon: Home, href: "/home", onSelect: () => router.push("/home") },
-        { key: "go-inbox", label: t("inbox"), icon: Inbox, href: "/inbox", onSelect: () => router.push("/inbox") },
+        { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: openInbox },
         {
           key: "open-notes",
           label: tScratch("open"),
@@ -1330,8 +1331,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     key: "inbox",
     label: t("inbox"),
     icon: Inbox,
-    href: "/inbox",
-    active: isInbox,
+    onClick: openInbox,
     shortcut: "I",
     ...countBadges(inboxCount, t("inboxBadge", { count: inboxCount })),
   };
@@ -1590,6 +1590,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
   const [sidebarLayerOpen, setSidebarLayerOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
 
   // Account/global options (statistics, feedback, theme, sign out). On desktop
   // they live in the sidebar footer; on mobile they move into the menu sheet +
@@ -1656,7 +1657,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           hidden={sidebarHidden}
           width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
           dockedWidth={secondaryNav ? COLLAPSED_WIDTH + SECONDARY_WIDTH : EXPANDED_WIDTH}
-          pinned={sidebarLayerOpen}
+          pinned={sidebarLayerOpen || inboxOpen}
         >
           <AppSidebar
             sections={desktopSections}
@@ -1664,6 +1665,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             currentProject={currentProject}
             projects={projects}
             inbox={inboxItem}
+            inboxOpen={inboxOpen}
             onSearch={() => handlePaletteOpenChange(true)}
             onSearchWarm={warmPalette}
             onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
@@ -1706,6 +1708,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           searchIndex={searchIndex}
         />
       ) : null}
+      <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />
       <GlobalIssuePanelHost />
       {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
  dialog as the settings button, mounted here to be reachable

@@ -1,5 +1,7 @@
 "use client";
 
+import { openInbox } from "@/lib/inbox-launcher";
+
 // Global navigation keyboard chords, a la AutoKap. A leader key **G** (Go) arms
 // a chord; the next key picks the destination. While a chord is armed, the
 // sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar).
@@ -132,7 +134,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           go("/home");
           return true;
         case "i":
-          go("/inbox");
+          openInbox();
           return true;
         case "r":
           go("/pull-requests");
