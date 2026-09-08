@@ -133,7 +133,11 @@ export function AccountSecuritySection() {
       const response = await fetch("/api/account/mfa", { method: "POST" });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? t("genericError"));
+        // Activation can fail after a valid TOTP, for example when the primary
+        // sign-in is too old. Preserve the server's localized recovery advice
+        // instead of treating that refusal as a code-verification failure.
+        setCodeError(body.error ?? t("genericError"));
+        return;
       }
       const { recoveryCodes: codes } = (await response.json()) as { recoveryCodes: string[] };
 
