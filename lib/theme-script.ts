@@ -37,9 +37,9 @@ const THEME_COLOR = {
 function fallbackExpression(defaultTheme: "light" | "dark" | "system"): string {
   return defaultTheme === "system"
     ? `matchMedia("(prefers-color-scheme: dark)").matches`
-    : defaultTheme === "dark"
-      ? "true"
-      : "false";
+    : defaultTheme === "light"
+      ? "false"
+      : "true";
 }
 
 export interface ThemeScriptInput {
@@ -53,11 +53,15 @@ export function buildThemeScript({
   accountTheme = null,
 }: ThemeScriptInput): string {
   const storageKey = "mangue-ui-theme";
-  // Account theme wins; otherwise the device cache, then the server default.
-  const source = accountTheme
-    ? JSON.stringify(accountTheme)
-    : `localStorage.getItem("${storageKey}")||"${defaultTheme}"`;
-  const mirrorBack = accountTheme
+  // Runtime allowlists keep arbitrary values out of executable script text.
+  const defaultLiteral = defaultTheme === "light" ? '"light"'
+    : defaultTheme === "system" ? '"system"' : '"dark"';
+  const accountLiteral = accountTheme === "light" ? '"light"'
+    : accountTheme === "dark" ? '"dark"'
+      : accountTheme === "system" ? '"system"' : null;
+  const source = accountLiteral
+    ?? `localStorage.getItem("${storageKey}")||${defaultLiteral}`;
+  const mirrorBack = accountLiteral
     ? `try{localStorage.setItem("${storageKey}",t);}catch(e){}`
     : "";
   return `(function(){var r=document.documentElement;function p(d){var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.setAttribute("name","theme-color");document.head.appendChild(m);}m.setAttribute("content",d?"${THEME_COLOR.dark}":"${THEME_COLOR.light}");}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
