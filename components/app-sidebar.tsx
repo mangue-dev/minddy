@@ -684,6 +684,8 @@ function AccountButton({
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
   const { user, signOut } = useAuth();
+  const { capabilities } = useRuntimeConfig();
+  const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
   const isAdmin = useIsAdmin();
   const confirmationId = useId();
   const confirmationTitleId = `${confirmationId}-title`;
@@ -757,12 +759,14 @@ function AccountButton({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/billing">
-                  <CreditCard />
-                  {t("billing")}
-                </Link>
-              </DropdownMenuItem>
+              {hasManagedService && (
+                <DropdownMenuItem asChild>
+                  <Link href="/billing">
+                    <CreditCard />
+                    {t("billing")}
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <Settings />

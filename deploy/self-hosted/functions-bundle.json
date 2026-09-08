@@ -1,0 +1,5 @@
+{
+  "upstreamMainSha256": "5fb63babd5ebe7fda6f2e541fa9b4e3513a7514f8fa511ad7fdb37f46d2b9a95",
+  "importSpecifier": "jsr:@panva/jose@6",
+  "joseVersion": "6.2.3"
+}

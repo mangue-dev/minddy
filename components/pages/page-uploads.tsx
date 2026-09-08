@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 // One page UPLOADS (MIN-280): what an image or file block has
 // need to know about a sending in progress, and nothing more.
 //
@@ -310,7 +312,7 @@ export function usePageUploads(
           continue;
         }
 
-        const uploadId = crypto.randomUUID();
+        const uploadId = createUuid();
         const image = isImageMime(file.type);
 
         setUploads((prev) => {

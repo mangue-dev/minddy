@@ -1,3 +1,4 @@
+import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
@@ -30,7 +31,8 @@ import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
  * `POST` on `/home`, who doesn't want it.
  */
 export async function POST(request: NextRequest) {
-  const origin = new URL(request.url).origin;
+  // Standalone Next.js may report its bind address as the request origin.
+  const origin = new URL(process.env.MINDDY_PUBLIC_APP_URL || request.url).origin;
 
   if (!isSameOriginRequest(request)) {
     return NextResponse.redirect(`${origin}/login`, 303);
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest) {
     {
       // `Secure` on session cookies (MIN-351, lib/session-cookies.ts):
       // this is where the session opens after an e-mail link.
+      global: { fetch: supabaseServerFetch },
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {

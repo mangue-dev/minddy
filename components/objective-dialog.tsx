@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -294,7 +296,7 @@ export function ObjectiveDialog({
   const saveDraft = () => {
     if (!projectId) return;
     drafts.save({
-      id: activeDraftId ?? crypto.randomUUID(),
+      id: activeDraftId ?? createUuid(),
       projectId,
       updatedAt: Date.now(),
       name: form.name,

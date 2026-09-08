@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -106,11 +108,11 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
    * kept locally until final submission, then staged under a single-use token
    * that the first authenticated arrival claims from storage.
    *
-   * The initial seed is created in an effect because `crypto.randomUUID()`
+   * The initial seed is created in an effect because `createUuid()`
    * would otherwise produce different server and browser renders.
    */
   const [avatarSeed, setAvatarSeed] = useState<string | null>(null);
-  useEffect(() => setAvatarSeed(crypto.randomUUID()), []);
+  useEffect(() => setAvatarSeed(createUuid()), []);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [avatarUploadToken, setAvatarUploadToken] = useState<string | null>(null);
@@ -378,7 +380,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                         setAvatarFile(null);
                         setAvatarUploadToken(null);
                         setAvatarPreviewUrl(null);
-                        setAvatarSeed(crypto.randomUUID());
+                        setAvatarSeed(createUuid());
                       }}
                     />
                     <p className="text-xs leading-relaxed text-muted-foreground">

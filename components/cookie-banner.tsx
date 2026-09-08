@@ -16,7 +16,7 @@ export function CookieBanner() {
   const t = useTranslations("CookieBanner");
   const locale = useLocale() as Locale;
   const { track } = useAnalytics();
-  const { appUrl } = useRuntimeConfig();
+  const { appUrl, capabilities } = useRuntimeConfig();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function CookieBanner() {
     setVisible(false);
   };
 
-  if (!visible) return null;
+  if (!visible || !capabilities.analytics?.configured) return null;
 
   return (
     <div

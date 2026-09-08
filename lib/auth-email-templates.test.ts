@@ -120,3 +120,12 @@ describe("self-hosting email subjects", () => {
     }
   });
 });
+
+
+it("authentication email footers use the configured instance origin", () => {
+  for (const template of TEMPLATES) {
+    const html = readFileSync(path.join(process.cwd(), "supabase/email-templates", template), "utf8");
+    expect(html).toContain('href="{{ .SiteURL }}"');
+    expect(html).not.toMatch(/https:\/\/(?:www\.)?minddy\.app/);
+  }
+});

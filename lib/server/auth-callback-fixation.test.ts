@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_PENDING_COOKIE, decodePendingOtp } from "@/lib/auth-otp-pending";
 
@@ -161,4 +161,22 @@ describe("POST /auth/confirm/complete", () => {
     await post({ origin: ORIGIN });
     expect(store.get(AUTH_PENDING_COOKIE)).toBe("");
   });
+});
+
+
+afterEach(() => vi.unstubAllEnvs());
+
+it("keeps a container callback on the configured public origin", async () => {
+  vi.stubEnv("MINDDY_PUBLIC_APP_URL", "http://localhost");
+  const response = await GET(new NextRequest("http://0.0.0.0:3000/auth/callback?token_hash=fixture&type=signup"));
+  expect(response.headers.get("location")).toBe("http://localhost/auth/confirm");
+  expect(verifyOtp).not.toHaveBeenCalled();
+});
+
+it("keeps a container confirmation failure on the configured public origin", async () => {
+  vi.stubEnv("MINDDY_PUBLIC_APP_URL", "http://localhost");
+  const response = await POST(new NextRequest("http://0.0.0.0:3000/auth/confirm/complete", {
+    method: "POST", headers: { host: "localhost", origin: "http://localhost" },
+  }));
+  expect(response.headers.get("location")).toBe("http://localhost/auth/confirm");
 });

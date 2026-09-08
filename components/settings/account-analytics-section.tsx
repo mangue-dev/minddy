@@ -1,5 +1,7 @@
 "use client";
 
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
+
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Switch } from "mangue-ui";
@@ -43,6 +45,7 @@ import type { Locale } from "@/i18n/config";
  */
 export function AccountAnalyticsSection() {
   const t = useTranslations("Analytics");
+  const { capabilities } = useRuntimeConfig();
   const locale = useLocale() as Locale;
   const { user, updateUserMetadata } = useAuth();
   const [accepted, setAccepted] = useState(false);
@@ -65,6 +68,8 @@ export function AccountAnalyticsSection() {
       (e: unknown) => console.error("[analytics] consentement non enregistré:", e)
     );
   };
+
+  if (!capabilities.analytics?.configured) return null;
 
   return (
     <SettingsGroup

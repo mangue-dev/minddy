@@ -1,3 +1,4 @@
+import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import {
@@ -23,7 +24,6 @@ import {
 import { supportedLocaleForTag } from "@/i18n/config";
 import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 import {
-  backendFetchWithTimeout,
   isBackendUnavailableError,
   SERVER_UNAVAILABLE_PATH,
 } from "@/lib/backend-availability";
@@ -286,7 +286,7 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
 async function readSession(request: NextRequest, url: string, key: string) {
   const sink = createCookieSink();
   const supabase = createServerClient(url, key, {
-    global: { fetch: backendFetchWithTimeout },
+    global: { fetch: supabaseServerFetch },
     cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
@@ -397,7 +397,7 @@ function prefersMarkdown(accept: string | null): boolean {
 
 /** Sends the visitor to a dependency-free recovery page while preserving their target. */
 function serverUnavailableResponse(request: NextRequest): NextResponse {
-  const target = request.nextUrl.clone();
+  const target = new URL(process.env.MINDDY_PUBLIC_APP_URL || request.url);
   const retry = `${request.nextUrl.pathname}${request.nextUrl.search}`;
   const locale =
     localeForPublicPath(request.nextUrl.pathname) ??
@@ -475,7 +475,7 @@ async function routeRequest(request: NextRequest) {
       );
       applySession = applyCookies;
       if (session) {
-        return applySession(NextResponse.redirect(new URL("/home", request.url)));
+        return applySession(NextResponse.redirect(new URL("/home", process.env.MINDDY_PUBLIC_APP_URL || request.url)));
       }
 
       // Visitor with a supported preference on `/` → its localized landing.
@@ -526,7 +526,7 @@ async function routeRequest(request: NextRequest) {
       );
       applySession = applyCookies;
       if (session && !awaitsMfaChallenge(session)) {
-        return applySession(NextResponse.redirect(new URL("/home", request.url)));
+        return applySession(NextResponse.redirect(new URL("/home", process.env.MINDDY_PUBLIC_APP_URL || request.url)));
       }
     }
 
@@ -562,7 +562,7 @@ async function routeRequest(request: NextRequest) {
   }[] = [];
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    global: { fetch: backendFetchWithTimeout },
+    global: { fetch: supabaseServerFetch },
     cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
@@ -589,7 +589,7 @@ async function routeRequest(request: NextRequest) {
   // presented (MIN-132): in both cases the destination is /login, which renders
   // the form or the challenge screen depending on what it finds.
   if (!session || awaitsMfaChallenge(session)) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", process.env.MINDDY_PUBLIC_APP_URL || request.url);
     // pathname + search: /oauth/authorize must find its parameters
     // (client_id, code_challenge…) after passing through /login.
     loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);

@@ -1,3 +1,4 @@
+import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
@@ -14,7 +15,6 @@ import {
 } from "@/lib/session-cookies";
 import {
   BACKEND_REQUEST_TIMEOUT_MS,
-  backendFetchWithTimeout,
   isBackendUnavailableError,
 } from "@/lib/backend-availability";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -32,7 +32,7 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
     process.env.MINDDY_PUBLIC_SUPABASE_URL!,
     process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: backendFetchWithTimeout },
+      global: { fetch: supabaseServerFetch },
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
@@ -65,7 +65,7 @@ export function createSupabaseWithCookieSink(
     process.env.MINDDY_PUBLIC_SUPABASE_URL!,
     process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: backendFetchWithTimeout },
+      global: { fetch: supabaseServerFetch },
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {

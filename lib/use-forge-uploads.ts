@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
@@ -50,7 +52,7 @@ export function useForgeUploads(
         const name = file.name || "fichier";
         // The queue carries a unique token: two files of the same name
         // filed together should not replace each other.
-        const token = crypto.randomUUID().slice(0, 8);
+        const token = createUuid().slice(0, 8);
         const placeholder = `![${t("uploadingFile", { name })} ${token}]()`;
 
         setUploading((n) => n + 1);

@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -173,7 +175,7 @@ export function ProjectIconPicker({
   const handleReroll = async () => {
     if (busy) return;
     if (projectId === null) {
-      onSeedChanged?.(crypto.randomUUID());
+      onSeedChanged?.(createUuid());
       return;
     }
     setRerolling(true);

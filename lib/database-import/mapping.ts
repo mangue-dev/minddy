@@ -1,3 +1,4 @@
+import { createUuid } from "@/lib/create-uuid";
 import {
   isDatabaseSchema,
   isDatabaseValue,
@@ -82,7 +83,7 @@ export function mappedColumns(
   const schema = columns.flatMap((column, index) => {
     if (column.type === "title") return [];
     const property: DatabaseProperty = {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       name: column.name.trim(),
       type: column.type,
     };
@@ -101,7 +102,7 @@ export function mappedColumns(
       if (labels.length > 100 || labels.some((label) => label.length > 80))
         throw new Error("importInvalidMapping");
       property.options = labels.map((name, i) => ({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         name,
         color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
       }));

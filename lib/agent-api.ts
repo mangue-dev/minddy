@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
@@ -567,7 +569,7 @@ export async function steerAgentRunApi(
   message: string,
   mentions: AssistantMention[] = [],
   attachments: ResourceInput[] = [],
-  messageId = crypto.randomUUID(),
+  messageId = createUuid(),
 ): Promise<{ ok: true; status: AgentRunStatus; messageId: string }> {
   trackEvent("agent_steered", { length_bucket: lengthBucket(message) });
   return parseJson(

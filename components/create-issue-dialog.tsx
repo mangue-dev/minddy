@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -360,7 +362,7 @@ export function CreateIssueDialog({
   // recovered draft updates it in place instead of piling up copies.
   const saveDraft = () => {
     drafts.save({
-      id: activeDraftId ?? crypto.randomUUID(),
+      id: activeDraftId ?? createUuid(),
       projectId,
       updatedAt: Date.now(),
       title,

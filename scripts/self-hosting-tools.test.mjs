@@ -15,6 +15,7 @@ import {
   inferCapabilities,
   normalizeAppOrigin,
   normalizeImageReference,
+  ownedPublishedPorts,
   parseArgs as parseInstallArgs,
   parseEnvironment,
   recordCheckpoint,
@@ -251,4 +252,14 @@ test("the doctor names the forge access mode: relay, operator-owned app, or disa
   assert.equal(missingBoth.state, "fail");
   assert.match(missingBoth.detail, /GIT_STATE_SECRET, GIT_TOKEN_ENCRYPTION_SECRET/);
   assert.match(forgeAccessFinding({ GIT_STATE_SECRET: "state-secret" }).detail, /GIT_TOKEN_ENCRYPTION_SECRET/);
+});
+
+
+test("resume skips only published ports belonging to running containers of the selected deployment", () => {
+  const container = (project, running, bindings) => ({ Config: { Labels: { "com.docker.compose.project": project } }, State: { Running: running }, NetworkSettings: { Ports: bindings } });
+  assert.deepEqual([...ownedPublishedPorts([
+    container("minddy-full", true, { "80/tcp": [{ HostIp: "0.0.0.0", HostPort: "80" }], "443/tcp": null }),
+    container("minddy-managed", true, { "443/tcp": [{ HostPort: "443" }] }),
+    container("minddy-full", false, { "8000/tcp": [{ HostPort: "8000" }] }),
+  ], "minddy-full")], [80]);
 });

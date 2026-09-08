@@ -1,3 +1,4 @@
+import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -17,6 +18,7 @@ export async function createServerSupabase() {
     supabaseUrl,
     supabaseAnonKey,
     {
+      global: { fetch: supabaseServerFetch },
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {

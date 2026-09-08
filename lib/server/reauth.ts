@@ -1,3 +1,4 @@
+import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
@@ -167,7 +168,7 @@ export async function verifyAccountPassword(
   const supabase = createClient(
     process.env.MINDDY_PUBLIC_SUPABASE_URL!,
     process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
+    { global: { fetch: supabaseServerFetch }, auth: { persistSession: false, autoRefreshToken: false } }
   );
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return false;

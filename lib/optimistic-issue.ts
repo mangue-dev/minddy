@@ -1,3 +1,4 @@
+import { createUuid } from "@/lib/create-uuid";
 import type { CreateIssueInput, Issue } from "./types";
 
 /**
@@ -35,7 +36,7 @@ export function buildOptimisticIssue(
     ) + 1;
   const status = input.status ?? "backlog"; // same default as the DB column
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     project_id: projectId,
     number: nextNumber,
     title: input.title,

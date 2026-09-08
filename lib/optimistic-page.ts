@@ -1,3 +1,4 @@
+import { createUuid } from "@/lib/create-uuid";
 import type { CreatePageInput } from "./pages-api";
 import { isPosition, positionAtEnd, type Page } from "./pages";
 
@@ -11,7 +12,7 @@ export function buildOptimisticPage(
   const now = new Date().toISOString();
 
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     project_id: projectId,
     database_schema: input.database_schema ?? null,
     database_revision: 0,

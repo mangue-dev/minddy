@@ -15,6 +15,7 @@
  * not part of a PostgreSQL schema dump.
  */
 import { randomBytes } from "node:crypto";
+import { parseEnvironment } from "./self-hosting-install.mjs";
 import { chmodSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -77,6 +78,10 @@ export function parseArgs(argv) {
       options.minimal = true;
     } else if (arg === "--app-url") {
       options.appUrl = value();
+    } else if (arg === "--existing-env") {
+      options.existingEnv = true;
+    } else if (arg === "--supabase-url") {
+      options.supabaseUrl = value();
     } else if (arg === "--env-file") {
       options.envFile = resolve(ROOT_DIR, value());
     } else if (arg === "--enable") {
@@ -112,7 +117,8 @@ export function parseArgs(argv) {
     }
     options.appUrl = appUrl.origin;
   }
-  if (!options.envFile.startsWith(`${ROOT_DIR}/`)) {
+  if (options.existingEnv && options.local) fail("--existing-env requires remote database mode.");
+  if (!options.existingEnv && !options.envFile.startsWith(`${ROOT_DIR}/`)) {
     fail("--env-file must stay inside this clone to avoid writing an unexpected file.");
   }
   return options;
@@ -128,6 +134,8 @@ Options:
   --db-url <url>       Applies migrations to an already started remote stack.
   --skip-start         Does not run \`supabase start\` in local mode.
   --env-file <path>    Local file to complete (default: .env.local).
+  --existing-env       Read an existing deployment file without modifying it (remote mode).
+  --supabase-url <url> Override the maintenance API transport; public configuration stays unchanged.
   --enable <feature>   Generate secrets for scheduler. Repeat as needed.
   --dry-run            Checks prerequisites without writing or applying changes.
   -h, --help           Shows this help.
@@ -266,21 +274,21 @@ export function readLocalStatus({ dryRun = false } = {}) {
   return status;
 }
 
-function remoteAppValues() {
+function remoteAppValues(env = process.env) {
   const required = [
     "MINDDY_PUBLIC_SUPABASE_URL",
     "MINDDY_PUBLIC_SUPABASE_ANON_KEY",
     "MINDDY_PUBLIC_APP_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
   ];
-  const missing = required.filter((key) => !process.env[key]?.trim());
+  const missing = required.filter((key) => !env[key]?.trim());
   if (missing.length > 0) {
     fail(
-      `${missing.join(", ")} is missing from the shell. These values come from the ` +
+      `${missing.join(", ")} is missing from the selected environment. These values come from the ` +
         "self-hosted Supabase stack; they cannot be derived from the PostgreSQL URL."
     );
   }
-  return Object.fromEntries(required.map((key) => [key, process.env[key].trim()]));
+  return Object.fromEntries(required.map((key) => [key, env[key].trim()]));
 }
 
 async function reconcileAndVerify({ dbUrl, appValues, dryRun, local }) {
@@ -330,11 +338,13 @@ export async function main(argv = process.argv.slice(2)) {
     };
   } else {
     dbUrl = options.dbUrl;
-    appValues = remoteAppValues();
+    appValues = remoteAppValues(options.existingEnv ? parseEnvironment(readFileSync(options.envFile, "utf8")) : process.env);
   }
 
   const generated = { ...appValues, ...generatedSecrets(options.capabilities) };
-  if (options.dryRun) {
+  if (options.existingEnv) {
+    console.log("→ existing deployment environment read without modification.");
+  } else if (options.dryRun) {
     console.log(`→ would complete ${basename(options.envFile)} without replacing existing values.`);
   } else {
     const added = appendMissingEnv(options.envFile, generated);
@@ -345,7 +355,7 @@ export async function main(argv = process.argv.slice(2)) {
     ? ["db", "push", "--local", "--yes"]
     : ["db", "push", "--db-url", dbUrl, "--yes"];
   run("supabase", pushArgs, { dryRun: options.dryRun });
-  await reconcileAndVerify({ dbUrl, appValues, dryRun: options.dryRun, local: options.local });
+  await reconcileAndVerify({ dbUrl, appValues: { ...appValues, ...(options.supabaseUrl ? { MINDDY_PUBLIC_SUPABASE_URL: options.supabaseUrl } : {}) }, dryRun: options.dryRun, local: options.local });
   console.log("✓ Supabase instance ready: migrations, storage, initial values, and prerequisites verified.");
 }
 

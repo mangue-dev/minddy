@@ -1,3 +1,4 @@
+import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -60,7 +61,7 @@ async function broadcast(
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return;
   try {
-    await fetch(`${url}/rest/v1/rpc/broadcast_private_realtime`, {
+    await supabaseServerFetch(`${url}/rest/v1/rpc/broadcast_private_realtime`, {
       method: "POST",
       headers: {
         apikey: key,

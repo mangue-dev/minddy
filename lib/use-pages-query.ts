@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 // The PAGES cache of a project (MIN-270).
 //
 // A single query for the entire project — the flat list, without the body of the
@@ -251,7 +253,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
       const needsListRefresh = cached === undefined;
       const optimistic = buildOptimisticPage(
         pid,
-        { ...input, id: input.id ?? crypto.randomUUID() },
+        { ...input, id: input.id ?? createUuid() },
         current,
       );
       const { content: _content, ...summary } = optimistic;
@@ -414,7 +416,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
         return { ...page, settled: Promise.resolve(page) };
       }
       const family = [source.id, ...descendantIds(current, source.id)];
-      const ids = new Map(family.map((id) => [id, crypto.randomUUID()]));
+      const ids = new Map(family.map((id) => [id, createUuid()]));
       const now = new Date().toISOString();
       const copies = family.map((id): PageSummary => {
         const row = current.find((item) => item.id === id)!;

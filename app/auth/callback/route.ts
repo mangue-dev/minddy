@@ -1,3 +1,4 @@
+import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
@@ -39,7 +40,8 @@ import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const origin = new URL(request.url).origin;
+  // Standalone Next.js may report its bind address as the request origin.
+  const origin = new URL(process.env.MINDDY_PUBLIC_APP_URL || request.url).origin;
 
   /**
    * The turn comes from the desktop app (MIN-291): we do NOT set a session here.
@@ -119,6 +121,7 @@ export async function GET(request: NextRequest) {
       // `Secure` on session cookies: the package does not set it
       // (MIN-351, lib/session-cookies.ts). Here as in `cookieOptions` —
       // it is this adapter that writes, and it receives its options from the client.
+      global: { fetch: supabaseServerFetch },
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {

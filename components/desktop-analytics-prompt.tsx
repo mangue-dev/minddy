@@ -1,5 +1,7 @@
 "use client";
 
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
+
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -62,6 +64,7 @@ import { useAnalytics } from "@/lib/use-analytics";
  */
 export function DesktopAnalyticsPrompt() {
   const t = useTranslations("Analytics");
+  const { capabilities } = useRuntimeConfig();
   const { track } = useAnalytics();
   const { user, updateUserMetadata } = useAuth();
   const [open, setOpen] = useState(false);
@@ -69,7 +72,7 @@ export function DesktopAnalyticsPrompt() {
   useEffect(() => {
     // After editing: neither the bridge nor the local storage exists when rendered
     // server, and assuming them would cause the hydration to diverge.
-    if (!isDesktop() || readConsent() !== null) return;
+    if (!capabilities.analytics?.configured || !isDesktop() || readConsent() !== null) return;
     // The session arrives after the first rendering: as long as it is not there, we
     // does not yet know if the question is already answered, and asking it would be
     // Ask it to someone who may have already answered it.
@@ -79,7 +82,7 @@ export function DesktopAnalyticsPrompt() {
     // therefore the measurement leaves (or remains cut) without reloading or question.
     if (fromAccount) writeConsent(fromAccount);
     else setOpen(true);
-  }, [user]);
+  }, [user, capabilities.analytics?.configured]);
 
   const choose = (consent: CookieConsent) => {
     // Tracked BEFORE `writeConsent`, like the banner: on a refusal, this one
@@ -96,7 +99,7 @@ export function DesktopAnalyticsPrompt() {
     );
   };
 
-  if (!open) return null;
+  if (!open || !capabilities.analytics?.configured) return null;
 
   return (
     <Dialog open onOpenChange={() => {}}>

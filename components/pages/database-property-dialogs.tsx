@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, ChevronDown } from "lucide-react";
@@ -266,7 +268,7 @@ function DatabaseColumnDialog({
                     )
                   : [
                       ...schema,
-                      { id: crypto.randomUUID(), name: name.trim(), type },
+                      { id: createUuid(), name: name.trim(), type },
                     ];
                 void saveSchema(base, next);
                 onClose();

@@ -1,5 +1,7 @@
 "use client";
 
+import { createUuid } from "@/lib/create-uuid";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -176,7 +178,7 @@ export function CreateProjectWizard({
 
   // “Project” stage. `draftId` is the id of the future project: the seed of the orb
   // must be known before creation, otherwise the preview lies.
-  const [draftId, setDraftId] = useState<string>(() => crypto.randomUUID());
+  const [draftId, setDraftId] = useState<string>(() => createUuid());
   // The seed of the orb if we relaunched it here - otherwise the id acts, like
   // for a project that never relaunched its own.
   const [orbSeed, setOrbSeed] = useState<string | null>(null);
@@ -251,7 +253,7 @@ export function CreateProjectWizard({
     setDraftExists(false);
     setClosePromptOpen(false);
     setJoinOpen(false);
-    setDraftId(crypto.randomUUID());
+    setDraftId(createUuid());
     setOrbSeed(null);
     setOrigin(null);
     setName("");

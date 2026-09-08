@@ -156,3 +156,13 @@ test("local verification derives Storage credentials from Supabase status", () =
   assert.equal(options.supabaseUrl, "http://127.0.0.1:54321");
   assert.equal(options.serviceRoleKey, "local-service-role");
 });
+
+
+test("a reference bootstrap can read an explicit external environment without enabling external writes", () => {
+  const options = parseArgs(["--db-url", "postgresql://postgres:fixture@127.0.0.1:54322/postgres", "--existing-env", "--env-file", "/etc/minddy/instance.env", "--supabase-url", "http://127.0.0.1:8001"]);
+  assert.equal(options.existingEnv, true);
+  assert.equal(options.envFile, "/etc/minddy/instance.env");
+  assert.equal(options.supabaseUrl, "http://127.0.0.1:8001");
+  assert.throws(() => parseArgs(["--local", "--existing-env"]), /requires remote database mode/);
+  assert.throws(() => parseArgs(["--env-file", "/etc/minddy/instance.env"]), /must stay inside/);
+});
