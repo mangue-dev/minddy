@@ -42,6 +42,11 @@ import { SettingsGroup } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { MCP_PRESETS, mcpPresetForUrl, type McpPreset } from "@/lib/mcp-catalog";
 import { mcpConnectionNeedsAuth, type McpConnection } from "@/lib/mcp-client";
+import {
+  MCP_AUTHORIZATION_PARAM,
+  prepareMcpAuthorization,
+} from "@/lib/mcp-authorization";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { useAuth } from "@/lib/auth-context";
 import {
   MCP_CONNECTIONS_QUERY_KEY as queryKey,
@@ -117,8 +122,36 @@ export function AccountMcpClients() {
       current.searchParams.delete("mcp");
       window.history.replaceState(window.history.state, "", current);
     }
-    return () => channel?.close();
+    const refreshOnFocus = () => {
+      if (getDesktopBridge()) void queryClient.invalidateQueries({ queryKey });
+    };
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      channel?.close();
+      window.removeEventListener("focus", refreshOnFocus);
+    };
   }, [queryClient, t]);
+
+  useEffect(() => {
+    const current = new URL(window.location.href);
+    const connectionId = current.searchParams.get(MCP_AUTHORIZATION_PARAM);
+    if (!connectionId || !data || getDesktopBridge()) return;
+    current.searchParams.delete(MCP_AUTHORIZATION_PARAM);
+    window.history.replaceState(window.history.state, "", current);
+    // Only start for a connection owned by the signed-in browser account.
+    if (!data.connections.some((connection) => connection.id === connectionId)) {
+      toast.error(t("errorOAuth"));
+      return;
+    }
+    setBusy(true);
+    void request(`${endpoint}/${connectionId}/authorize`, "POST")
+      .then((result) => {
+        if (!result?.url) throw new Error("oauth");
+        window.location.replace(result.url);
+      })
+      .catch(() => toast.error(t("errorOAuth")))
+      .finally(() => setBusy(false));
+  }, [data, t]);
 
   const closeDialog = () => {
     setEditing(null);
@@ -179,10 +212,8 @@ export function AccountMcpClients() {
   };
 
   const openAuthorizationTab = () => {
-    // Reserve the tab during the click, before saving or requesting an OAuth URL.
-    const tab = window.open("about:blank", "_blank");
-    if (tab) tab.opener = null;
-    else toast.error(t("popupBlocked"));
+    const tab = prepareMcpAuthorization();
+    if (!tab) toast.error(t("popupBlocked"));
     return tab;
   };
 
@@ -194,12 +225,14 @@ export function AccountMcpClients() {
     setBusy(true);
     setError(null);
     try {
-      const result = await request(
-        `${endpoint}/${connectionId}/authorize`,
-        "POST",
-      );
-      if (!result?.url) throw new Error("oauth");
-      if (!tab.closed) tab.location.replace(result.url);
+      await tab.authorize(connectionId, async () => {
+        const result = await request(
+          `${endpoint}/${connectionId}/authorize`,
+          "POST",
+        );
+        if (!result?.url) throw new Error("oauth");
+        return result.url;
+      });
     } catch {
       tab.close();
       // The saved connection stays visible with its authentication tooltip.
