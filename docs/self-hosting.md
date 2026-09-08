@@ -147,8 +147,9 @@ and webhook callbacks. The supported single-user command sets it to
 
 ## Installation: local Supabase from a clean clone
 
-Use this topology for development, evaluation, and the clean-room acceptance
-scenario. It starts Docker services from the versioned
+Use this topology for development and evaluation. For release acceptance, use
+the [tagged reference-profile procedure](self-hosting-clean-room.md) instead.
+This local topology starts Docker services from the versioned
 [`supabase/config.toml`](../supabase/config.toml).
 
 ```bash
@@ -345,12 +346,13 @@ object-store backing data.
 
 Install the produced `.env.local` values into the application host's secrets
 manager, add `MINDDY_PUBLIC_APP_URL` and identity values, then start the
-official release image documented in [container-image.md](container-image.md):
+official release image. First follow [release verification](container-image.md#verify-a-published-image)
+to set `IMAGE` to the verified digest in this shell:
 
 ```bash
 docker run --env-file /etc/minddy/minddy.env \
   --publish 127.0.0.1:3000:3000 \
-  ghcr.io/mangue-dev/minddy:vX.Y.Z
+  "$IMAGE"
 ```
 
 Build the image without operator-specific public settings. Changing a
@@ -391,7 +393,7 @@ be recorded in your platform configuration:
 - Social sign-in providers: configure their client IDs and secrets in Supabase,
   not in the Next.js environment.
 - Auth password, session, MFA, and rate-limit policy: start from
-  [`auth-supabase-config.md`](auth-supabase-config.md) and adapt it to your own
+  [operator Auth configuration](self-hosting-auth.md) and adapt it to your own
   risk policy.
 
 ## Scheduled jobs

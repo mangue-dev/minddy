@@ -25,6 +25,7 @@ import {
 } from "@/lib/admin-tabs";
 import {
   ADMIN_SECTION_PARAM,
+  ADMIN_SECTIONS,
   adminSectionAnchor,
   useAdminSections,
   type AdminSection,
@@ -133,7 +134,9 @@ export function AdminDashboard() {
   // linked OpenRouter key has nothing to show there and the tab disappears.
   // While the capabilities have not arrived (`null`) the tab stays — no
   // flicker on first paint; the API itself re-checks every access anyway.
-  const openRouterLinked = useAdminCapabilities().configured("managedAi");
+  const capabilities = useAdminCapabilities();
+  const openRouterLinked = capabilities.configured("managedAi");
+  const billingAvailable = capabilities.configured("managedBilling") !== false;
 
   const requested = searchParams.get("tab");
   const visibleTabs = useMemo(() => visibleAdminTabs(openRouterLinked), [openRouterLinked]);
@@ -158,8 +161,9 @@ export function AdminDashboard() {
 
   const sections = useAdminSections();
   const searchableSections = useMemo(
-    () => sections.filter((section) => visibleTabs.includes(section.tab)),
-    [sections, visibleTabs],
+    () => sections.filter((section) => visibleTabs.includes(section.tab) &&
+      (section.id !== ADMIN_SECTIONS.overviewPlans || billingAvailable)),
+    [sections, visibleTabs, billingAvailable],
   );
   const matches = useMemo(() => {
     if (!query.trim()) return [];

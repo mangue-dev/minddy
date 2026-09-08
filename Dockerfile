@@ -2,7 +2,8 @@
 
 # The build stage contains the package manager and compiler. The final image
 # only contains the traced Next.js server and its production dependencies.
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS base
+# Install and trace native dependencies on the target platform as well.
+FROM node:24-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS base
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -56,6 +57,10 @@ COPY --from=build --chown=minddy:minddy /app/deploy/self-hosted/agent-runner-egr
 COPY --from=build --chown=minddy:minddy /app/deploy/self-hosted/agent-runner-git-relay.mjs ./agent-runner-git-relay.mjs
 
 USER minddy
+
+# Liveness alone cannot detect a native module copied from another architecture.
+# Execute an image operation in every target image before it can be published.
+RUN node -e "require('sharp')({ create: { width: 1, height: 1, channels: 4, background: '#000000' } }).png().toBuffer().then(() => console.log('Native image operation passed for ' + process.arch), (error) => { console.error(error); process.exit(1); })"
 
 EXPOSE 3000
 

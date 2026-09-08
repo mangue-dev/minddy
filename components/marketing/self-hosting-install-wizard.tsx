@@ -290,6 +290,8 @@ function smtpFieldsFor(mode: SupabaseMode, copy: SelfHostingInstallCopy) {
     : "SMTP_ADMIN_EMAIL=accounts@example.com\nSMTP_HOST=smtp.example.com\nSMTP_PORT=587\nSMTP_USER=replace-with-smtp-user\nSMTP_PASS=replace-with-smtp-password\nSMTP_SENDER_NAME=minddy";
 }
 
+const FULL_AUTH_RESTART = 'docker compose --env-file deploy/self-hosted/.env -f /srv/minddy/supabase/docker/docker-compose.yml -f deploy/self-hosted/compose.full.yml up -d --wait auth';
+
 function EmailConfiguration({
   serverOrigin,
   mode,
@@ -316,7 +318,7 @@ function EmailConfiguration({
           <h3 className="font-medium">{copy.emailSmtpTitle}</h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{mode === "managed" ? copy.emailSmtpCloudBody : copy.emailSmtpFullBody}</p>
           <CommandBlock command={smtpFields} copy={copy} />
-          {mode === "full" && <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{copy.emailRestartTitle}</p>}
+          {mode === "full" && <><p className="mt-3 text-xs leading-relaxed text-muted-foreground">{copy.emailRestartTitle}</p><CommandBlock command={FULL_AUTH_RESTART} copy={copy} /></>}
         </section>
       </div>
       <section className={PANEL}>
@@ -469,12 +471,14 @@ export function SelfHostingInstallWizard({
   const localOrigin = "http://localhost:6463";
 
   const localInstall = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile`;
-  const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy\ncorepack enable\ncorepack prepare pnpm@${pnpmVersion} --activate\npnpm install --frozen-lockfile`;
+  const serverClone = `git clone --branch ${releaseTag} --depth 1 ${repositoryUrl}.git minddy\ncd minddy`;
+  const verificationUrl = `${repositoryUrl}/blob/${releaseTag}/docs/container-image.md#verify-a-published-image`;
+  const serverDependencies = `test "$(pnpm --version)" = ${pnpmVersion}\npnpm install --frozen-lockfile`;
   const fetchSupabase = "node scripts/fetch-official-supabase.mjs --destination /srv/minddy/supabase";
   const featureFlags = optionalFeatures.map((feature) => ` \\\n  --enable ${feature}`).join("");
   const installServer = supabaseMode === "managed"
-    ? `pnpm self-host:install -- --mode managed \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail}${featureFlags}`
-    : `${serverAccess === "public" ? `pnpm self-host:install -- --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host supabase.${host} \\\n  --supabase-dir /srv/minddy/supabase` : `pnpm self-host:install -- --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-dir /srv/minddy/supabase`}${featureFlags}`;
+    ? `pnpm self-host:install -- --image "$IMAGE" --mode managed \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail}${featureFlags}`
+    : `${serverAccess === "public" ? `pnpm self-host:install -- --image "$IMAGE" --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-host supabase.${host} \\\n  --supabase-dir /srv/minddy/supabase` : `pnpm self-host:install -- --image "$IMAGE" --mode full \\\n  --app-url ${serverOrigin} \\\n  --admin-email ${adminEmail} \\\n  --supabase-dir /srv/minddy/supabase`}${featureFlags}`;
   const doctor = supabaseMode === "managed"
     ? "pnpm self-host:doctor -- --mode managed"
     : "pnpm self-host:doctor -- --mode full --supabase-compose /srv/minddy/supabase/docker/docker-compose.yml";
@@ -494,7 +498,7 @@ export function SelfHostingInstallWizard({
     ? `\n\n${copy.selectedServicesPrompt}\n${selectedFeatures.map(({ title, setup }) => `- ${title}: ${setup}`).join("\n")}`
     : "";
   const emailSetupPrompt = path === "team"
-    ? `\n\n${copy.emailAgentInstruction}\n\n${copy.emailUrlsTitle}\n${supabaseMode === "managed" ? copy.emailCloudLocation : copy.emailFullLocation}\n${copy.emailSiteUrlLabel}=${serverOrigin}\n${copy.emailRedirectUrlLabel}=${serverOrigin}/auth/callback\n\n${copy.emailSmtpTitle}\n${supabaseMode === "managed" ? copy.emailSmtpCloudBody : copy.emailSmtpFullBody}\n${smtpFieldsFor(supabaseMode, copy)}${supabaseMode === "full" ? `\n${copy.emailRestartTitle}` : ""}\n\n${copy.emailTemplatesTitle}\n${supabaseMode === "managed" ? copy.emailTemplatesManagedBody : copy.emailTemplatesFullBody}\n\n${copy.emailConfirmTitle}\n${copy.emailSubjectLabel}: ${emailTemplates.confirmSignup.subject}\n${copy.emailBodyLabel}:\n${emailTemplates.confirmSignup.body}\n\n${copy.emailResetTitle}\n${copy.emailSubjectLabel}: ${emailTemplates.resetPassword.subject}\n${copy.emailBodyLabel}:\n${emailTemplates.resetPassword.body}`
+    ? `\n\n${copy.emailAgentInstruction}\n\n${copy.emailUrlsTitle}\n${supabaseMode === "managed" ? copy.emailCloudLocation : copy.emailFullLocation}\n${copy.emailSiteUrlLabel}=${serverOrigin}\n${copy.emailRedirectUrlLabel}=${serverOrigin}/auth/callback\n\n${copy.emailSmtpTitle}\n${supabaseMode === "managed" ? copy.emailSmtpCloudBody : copy.emailSmtpFullBody}\n${smtpFieldsFor(supabaseMode, copy)}${supabaseMode === "full" ? `\n${copy.emailRestartTitle}\n${FULL_AUTH_RESTART}` : ""}\n\n${copy.emailTemplatesTitle}\n${supabaseMode === "managed" ? copy.emailTemplatesManagedBody : copy.emailTemplatesFullBody}\n\n${copy.emailConfirmTitle}\n${copy.emailSubjectLabel}: ${emailTemplates.confirmSignup.subject}\n${copy.emailBodyLabel}:\n${emailTemplates.confirmSignup.body}\n\n${copy.emailResetTitle}\n${copy.emailSubjectLabel}: ${emailTemplates.resetPassword.subject}\n${copy.emailBodyLabel}:\n${emailTemplates.resetPassword.body}`
     : "";
 
   const localPrompt = replaceTokens(copy.localPromptTemplate, {
@@ -518,6 +522,7 @@ export function SelfHostingInstallWizard({
     MINDDY_NETWORK_SETUP: networkSetup,
     MINDDY_DOWNLOAD_URL: links.download,
     MINDDY_SUPABASE_PREPARATION: supabaseMode === "managed" ? copy.teamPromptManagedPreparation.replaceAll("MINDDY_APP_ORIGIN", serverOrigin) : copy.teamPromptFullPreparation,
+    MINDDY_VERIFY_RELEASE: `${copy.releaseVerificationBody}\n${verificationUrl}\n${serverDependencies}`,
     MINDDY_INSTALL_COMMAND: installServer,
     MINDDY_DOCTOR_COMMAND: doctor,
   }) + emailSetupPrompt + selectedFeaturePrompt + `\n\n${copy.serverRoutinesPrompt}` + transferPrompt;
@@ -599,25 +604,6 @@ export function SelfHostingInstallWizard({
         </div>
       ),
     }] : []),
-    {
-      id: "capacity",
-      title: path === "local" ? copy.capacityLocalTitle : copy.capacityTeamTitle,
-      body: copy.capacityBody,
-      canContinue: true,
-      continueLabel: copy.confirmCapacity,
-      content: (
-        <div className={PANEL}>
-          <h3 className="font-medium">{copy.specsTitle}</h3>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.specsAvailable}</p>
-          <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-border bg-background p-4"><dt className="text-xs font-medium text-muted-foreground">{copy.specsMinimum}</dt><dd className="mt-1 text-sm font-medium">{capacity[0]}</dd></div>
-            <div className={cn("rounded-xl p-4", CARD_TONES.sky)}><dt className="text-xs font-medium text-primary">{copy.specsRecommended}</dt><dd className="mt-1 text-sm font-medium">{capacity[1]}</dd></div>
-          </dl>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{copy.specsStorageNote}</p>
-          <CompletionNote copy={copy} criterion={copy.capacityDone} />
-        </div>
-      ),
-    },
     ...(path === "team" ? [
       {
         id: "team-access",
@@ -680,6 +666,25 @@ export function SelfHostingInstallWizard({
         ),
       },
     ] : []),
+    {
+      id: "capacity",
+      title: path === "local" ? copy.capacityLocalTitle : copy.capacityTeamTitle,
+      body: copy.capacityBody,
+      canContinue: true,
+      continueLabel: copy.confirmCapacity,
+      content: (
+        <div className={PANEL}>
+          <h3 className="font-medium">{copy.specsTitle}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.specsAvailable}</p>
+          <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-border bg-background p-4"><dt className="text-xs font-medium text-muted-foreground">{copy.specsMinimum}</dt><dd className="mt-1 text-sm font-medium">{capacity[0]}</dd></div>
+            <div className={cn("rounded-xl p-4", CARD_TONES.sky)}><dt className="text-xs font-medium text-primary">{copy.specsRecommended}</dt><dd className="mt-1 text-sm font-medium">{capacity[1]}</dd></div>
+          </dl>
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{copy.specsStorageNote}</p>
+          <CompletionNote copy={copy} criterion={copy.capacityDone} />
+        </div>
+      ),
+    },
     {
       id: "method",
       title: copy.methodTitle,
@@ -763,7 +768,7 @@ export function SelfHostingInstallWizard({
         canContinue: true,
         continueLabel: copy.confirmRelease,
         content: (
-          <div className={PANEL}><CommandBlock command={serverClone} copy={copy} /><div className="mt-4"><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div><CompletionNote copy={copy} criterion={copy.releaseDone} /></div>
+          <div className={PANEL}><CommandBlock command={serverClone} copy={copy} /><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.releaseVerificationBody}</p><div className="mt-4 flex flex-wrap gap-2"><ResourceLink href={verificationUrl}>{copy.verifyRelease}</ResourceLink><ResourceLink href={links.release}>{copy.openRelease}</ResourceLink></div><CommandBlock command={serverDependencies} copy={copy} /><CompletionNote copy={copy} criterion={copy.releaseDone} /></div>
         ),
       },
       ...(supabaseMode === "full" ? [{
