@@ -27,3 +27,19 @@ export function uploadedAvatarUrl(source: string | null | undefined): string | n
     return null;
   }
 }
+
+/** External avatars and local upload previews must use image-fetching schemes. */
+export function avatarImageUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" || url.protocol === "http:") return url.href;
+    if (url.protocol === "blob:") {
+      const origin = new URL(url.pathname);
+      if (origin.protocol === "https:" || origin.protocol === "http:") return url.href;
+    }
+  } catch {
+    // Invalid or relative external sources fall back to the account portrait.
+  }
+  return null;
+}
