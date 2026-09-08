@@ -1,21 +1,51 @@
 # Security release checklist
 
-**Version 1.0 — owner: minddy technical maintainers**
+**Version 2.0 — owner: minddy technical maintainers**
 
-This checklist is a mandatory promotion barrier for Minddy Cloud and public
-core releases. It complements CI, review, and periodic audits. It never replaces
-a penetration test when the release risk requires one.
+Every Cloud promotion and public core release needs a recorded security decision.
+Review effort follows the change and its risk, not the number of releases. Reuse
+valid evidence; a new release does not automatically require a new full audit or
+pentest. A focused review provides less assurance than an independent pentest;
+record that limitation accurately.
+
+## Choose the review scope
+
+| Change | Review and evidence | Escalation |
+| --- | --- | --- |
+| Documentation, version metadata, or a small change outside security controls | Review the diff, use existing CI, and reference the applicable prior report. | Expand the review if the diff changes runtime behavior, permissions, dependencies, or exposure. |
+| Authentication paths, server transport, Storage, uploads, integrations, or deployment configuration | Review the affected controls and run the smallest relevant regression/configuration checks. Aim for a 15–30 minute focused review, reusing applicable evidence. | Record material uncertainty and escalate the affected area; a time budget is not a passing result. |
+| Major trust-boundary redesign, incident, or a serious finding | Perform a deeper assessment of the affected surface and resolve blocking findings. | Require a pentest when the decision criteria below apply. |
+
+The time budget is a planning target, not an assurance guarantee or permission to
+ignore findings. Do not silently expand into repeated full audits. Group broader
+reviews around major milestones and available resources, rather than every patch.
+Existing CI and public image scan/signature/provenance gates still apply.
 
 ## Evidence record
 
-1. Record the exact candidate SHA and the previous production SHA.
-2. Create a private report from the template below. Never include a credential,
-   personal data, or exploit-enabling detail.
-3. Give every control an `OK`, `N/A`, or `Exception <ID>` result with a
-   non-sensitive evidence reference.
-4. Require review by a maintainer who did not perform every control alone.
-5. Record the pentest decision and residual-risk status.
-6. Pass the stable report reference to the release workflow.
+A short addendum to an existing report is sufficient when it identifies:
+
+1. The exact candidate SHA, previous production SHA, and changed surface.
+2. The review scope, executor, checks performed, and their results. Keep reports
+   private and omit credentials, personal data, and exploit-enabling detail.
+3. Applicable control results: `OK` with current evidence, `OK — inherited` with
+   the baseline reference and why it still applies, `N/A` with a reason, or
+   `Exception <ID>` with an explicit risk decision. Do not present untested
+   controls as passed or use age alone to establish equivalent coverage.
+4. The pentest decision and rationale, residual risks, and any further work.
+5. The named maintainer's decision for this candidate.
+
+For a solo-maintained project, the maintainer may execute or use an assistant for
+the review and approve the release. Record `Independent review: none (solo
+maintainer)` when applicable; this is an allowed review mode, not a requirement to
+find a second person. An assistant's checks do not constitute an independent
+maintainer approval. Independent review is encouraged at significant milestones
+when feasible. Protected GitHub environment approvals remain in place.
+
+Recheck evidence when relevant code, dependencies, configuration, exposure, or
+known threats change. A same-tree squash merge only needs an identity addendum;
+do not repeat unchanged tests. Preserve historical reports and append a new
+versioned decision when reassessing a release under this policy.
 
 For non-interactive deployment, provide:
 
@@ -23,7 +53,7 @@ For non-interactive deployment, provide:
 - `MINDDY_RESIDUAL_RISKS` as `none` or `documented`;
 - `MINDDY_PENTEST_STATUS` as `not-required` or `completed`.
 
-## Mandatory controls
+## Controls to assess or carry forward
 
 | ID | Control | Required result |
 | --- | --- | --- |
@@ -58,24 +88,36 @@ npm run test:release
 npm audit --omit=dev --audit-level=high
 ```
 
-Live HTTP, session, tenant, database, and configuration controls must be tested
-against an authorized candidate environment. Record only redacted outcomes.
+Select checks for the affected controls; this list is not a requirement to rerun
+every command for every release. Dynamic checks use an authorized candidate
+environment. Record redacted outcomes and distinguish fresh results, inherited
+evidence, and unverified controls.
 
 ## Pentest decision
 
-Set the pentest status to `required-not-completed` and stop promotion when an
-equivalent recent pentest does not cover any of these changes:
+Touching an authentication or network file triggers a focused review, not an
+automatic full pentest. Record `not-required` when the review reasonably covers
+the changed surface with current or applicable prior evidence, no release blocker
+remains, and the maintainer accepts the documented limitations. This status means
+no pentest is required for this release; it never means one was performed.
 
-- authentication, authorization, MFA, sessions, or OAuth;
-- RLS, multi-tenancy, service-role access, public Storage, or personal-data
-  exposure;
-- payments, active uploads, webhooks, imports, agent execution, privileged
-  integrations, or administration;
-- a major infrastructure/network boundary or exposure increase;
-- a new threat, incident, or realistic high/critical finding.
+Set `required-not-completed` and stop promotion when a focused review leaves
+material high-impact uncertainty that needs a pentest, for example:
 
-`completed` means the report was received, blocking findings were corrected
-and retested, and remaining findings are documented as residual risks.
+- a new or substantially redesigned authentication/authorization or tenant boundary;
+- a material increase in public privileged-service exposure;
+- an incident or serious finding whose scope or remediation remains uncertain.
+
+A major change needs a deeper assessment even when no pentest is ultimately
+required. Explain that decision; filenames, release frequency, or a small budget
+alone cannot establish safety. Known exposed secrets, confirmed unauthorized
+access or broken tenant isolation, and unresolved realistically exploitable
+high/critical findings block publication regardless of review mode.
+
+`completed` means a pentest report was received, blocking findings were corrected
+and retested, and remaining findings are recorded. When one is still required,
+the existing public-promotion rejection remains enforced. Do not relabel an
+unfinished required assessment solely to pass the workflow.
 
 ## Exceptions and residual risks
 
@@ -95,11 +137,14 @@ Use `none` when this table is empty and `documented` otherwise.
 ```markdown
 # Release security review — <date> — <candidate SHA>
 
-- Checklist: 1.0
+- Checklist: 2.0
 - Diff: <previous production SHA>..<candidate SHA>
 - Candidate environment: <non-sensitive URL or identifier>
+- Review scope: metadata | focused | deeper; <changed surface and rationale>
+- Baseline: <reference and applicability, or none>
 - Executor: <name>
-- Reviewer/approver: <name>
+- Independent review: <name/reference, or none (solo maintainer)>
+- Maintainer/approver: <name>
 - Pentest: not-required | completed | required-not-completed
 - Pentest reference and rationale: <reference>
 - Residual risks: none | documented
@@ -115,8 +160,16 @@ None
 
 ## Verdict
 
-- [ ] Every control has a result and evidence.
+- [ ] Applicable controls have current/inherited evidence or a justified exception.
+- [ ] Uncertainty and assurance limitations are recorded; no release blocker remains.
 - [ ] Every exception has an owner, deadline, compensating control, and approval.
 - [ ] The pentest is not required or is complete with blocking findings retested.
 - [ ] Promotion of this exact SHA is explicitly approved.
 ```
+
+## References
+
+This policy uses the risk-based approach of the [NIST SSDF](https://csrc.nist.gov/projects/ssdf)
+and [OWASP SAMM Security Testing](https://owaspsamm.org/model/verification/security-testing/).
+The review tiers and time budget above are Minddy project choices, not a claim of
+certification or compliance with every control in those frameworks.

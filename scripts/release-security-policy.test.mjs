@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 import {
   assertSecurityRelease,
@@ -36,7 +39,9 @@ test("accepts documented risks and a completed pentest", () => {
 });
 
 test("rejects an old checklist or missing evidence", () => {
-  assert.throws(() => assertSecurityRelease({ ...valid, checklistVersion: "0.9" }), /version 1\.0/);
+  for (const checklistVersion of ["0.9", "1.0"]) {
+    assert.throws(() => assertSecurityRelease({ ...valid, checklistVersion }), /version 2\.0/);
+  }
   assert.throws(() => assertSecurityRelease({ ...valid, reviewRef: " " }), /required/);
   assert.throws(
     () => assertSecurityRelease({ ...valid, reviewRef: "review;echo-pwned" }),
@@ -132,6 +137,39 @@ test("the deployment and workflow require the current version and three attestat
   const push = deploy.indexOf("git push origin main");
   assert.ok(preparation !== -1 && preparation < securityGate, "the review covers the prepared commit");
   assert.ok(securityGate < push, "the review blocks before pushing the candidate");
+});
+
+test("the actual workflow gate accepts current reviews and rejects stale or incomplete public reviews", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/promote-production.yml", import.meta.url), "utf8",
+  );
+  const block = workflow.match(/        run: \|\n([\s\S]*?)\n  promote:/)?.[1];
+  assert.ok(block, "the protected promotion has a standalone review gate");
+  const script = block.replace(/^          /gm, "");
+  const directory = mkdtempSync(join(tmpdir(), "minddy-review-gate-"));
+  const run = (overrides = {}) => spawnSync("bash", ["-e", "-o", "pipefail", "-c", script], {
+    encoding: "utf8",
+    env: {
+      PATH: process.env.PATH,
+      CHECKLIST_VERSION: SECURITY_CHECKLIST_VERSION,
+      SECURITY_REVIEW_REF: "minddy-security:fixture:focused-review",
+      RESIDUAL_RISKS: "documented",
+      PENTEST_STATUS: "not-required",
+      PRIVATE_TEST_RELEASE: "false",
+      REPOSITORY_PRIVATE: "false",
+      GITHUB_STEP_SUMMARY: join(directory, "summary.md"),
+      ...overrides,
+    },
+  });
+  try {
+    assert.equal(run().status, 0);
+    assert.notEqual(run({ CHECKLIST_VERSION: "1.0" }).status, 0);
+    assert.notEqual(run({ PENTEST_STATUS: "required-not-completed" }).status, 0);
+    assert.notEqual(run({ PENTEST_STATUS: "required-not-completed", PRIVATE_TEST_RELEASE: "true" }).status, 0);
+    assert.notEqual(run({ SECURITY_REVIEW_REF: "" }).status, 0);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("daily CI reuses the checks runner for every edition", () => {

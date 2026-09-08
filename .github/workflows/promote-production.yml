@@ -10,7 +10,7 @@ on:
       checklist_version:
         description: "Docs/security-release-checklist.md version used"
         required: true
-        default: "1.0"
+        default: "2.0"
         type: string
       security_review_ref:
         description: "Stable reference of the review report (without sensitive data)"
@@ -24,7 +24,7 @@ on:
           - none
           - documented
       pentest_status:
-        description: "Pentest decision according to the checklist"
+        description: "Risk-based pentest decision recorded in the review"
         required: true
         type: choice
         options:
@@ -66,7 +66,7 @@ jobs:
           PRIVATE_TEST_RELEASE: ${{ inputs.private_test_release }}
           REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
         run: |
-          test "$CHECKLIST_VERSION" = "1.0"
+          test "$CHECKLIST_VERSION" = "2.0"
           test -n "$SECURITY_REVIEW_REF"
           test "${#SECURITY_REVIEW_REF}" -le 200
           review_ref_pattern='^[A-Za-z0-9._:/#?=&%+-]+$'

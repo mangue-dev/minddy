@@ -1,4 +1,4 @@
-export const SECURITY_CHECKLIST_VERSION = "1.0";
+export const SECURITY_CHECKLIST_VERSION = "2.0";
 
 const RISK_STATUSES = new Set(["none", "documented"]);
 const PENTEST_STATUSES = new Set(["not-required", "completed", "required-not-completed"]);
@@ -17,7 +17,7 @@ function requiredText(value, label) {
 }
 
 /**
- * Validates the certificate that accompanies any Cloud promotion.
+ * Validates the review record that accompanies any Cloud promotion.
  * The detailed proof remains in the reference: no secrets or exploitable details
  * must be copied into the workflow entries or logs.
  */
