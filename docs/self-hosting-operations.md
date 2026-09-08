@@ -158,13 +158,21 @@ export MINDDY_ENV_FILE="$TARGET_ENV_FILE"
 node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
 compose pull minddy agent-runner
-compose up -d --wait minddy agent-runner scheduler
+compose up -d --wait minddy agent-runner
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
-  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network
+  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network --maintenance
 compose up -d --wait
+pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
+  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml"
 ```
 
-Caddy stays stopped until the last command, so both public entry points stay
+The scheduler stays stopped through the maintenance doctor check. The agent
+runner accepts authenticated requests but has no scheduled work source while
+Caddy and the scheduler are stopped. The final `compose up` starts scheduling
+and public ingress only after those checks pass. Run the ordinary doctor again
+after reopening; `--maintenance` deliberately rejects a running scheduler.
+
+Caddy stays stopped until the final full-stack startup, so both public entry points stay
 closed during migrations. Then sign in, verify the recorded project and issue
 identifiers, download the attachment and compare its SHA-256, and check the
 revoked integration key still fails. Reopen external workers only after these
@@ -197,10 +205,11 @@ and sealed backup untouched.
    into the new environment's `.functions` directory. Start only the database,
    loopback proxy and Supabase dependencies, using the same Compose files plus
    that volume override. Compare the database image ID before starting it.
-5. Run the doctor against the restored database and migration history. Start
-   minddy, runner and scheduler with Caddy still stopped. Do not bootstrap a
+5. Start minddy and its runner with Caddy and the scheduler still stopped. Run
+   the maintenance doctor against the restored database and migration history. Do not bootstrap a
    different release over the restored snapshot.
-6. Start Caddy, sign in with the restored account and MFA, and verify project,
+6. Start Caddy and the scheduler after the maintenance checks pass. Run the
+   ordinary doctor, sign in with the restored account and MFA, and verify project,
    issue, integration and attachment identifiers plus the downloaded bytes.
    Confirm links, OAuth, MCP and callbacks use the new public origin. Record
    the target directories/volume name, counts and attachment SHA-256.
@@ -265,10 +274,12 @@ cd "$CURRENT_RELEASE_DIR"
 node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
 compose up -d --wait db database-access kong auth rest storage imgproxy
-compose up -d --wait minddy agent-runner scheduler
+compose up -d --wait minddy agent-runner
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
-  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network
+  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network --maintenance
 compose up -d --wait
+pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
+  --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml"
 ```
 
 Keep `RESTORE_OVERRIDE` in the restored instance's Compose context for every

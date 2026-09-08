@@ -1,0 +1,608 @@
+{
+  "kind": "public failure and local engineering follow-up; not public lifecycle acceptance",
+  "records": {
+    "public-install-outcome": {
+      "installStart": "2026-09-08T15:57:08+00:00",
+      "healthyAt": "2026-09-08T16:03:05+00:00",
+      "elapsedIncludingHarnessCorrectionSeconds": 357,
+      "doctor": "pass",
+      "signup": "confirmation email delivered to local Mailpit",
+      "confirmation": "HTTP 500: sharp native linux-arm64 module could not load",
+      "publicImage": "sha256:b5478b9b1effcb546f3cea31c8c5bf9ab8a5efd88c66decae843c5e698f2c1f1",
+      "blockingIssue": "MIN-506",
+      "lifecycleAccepted": false
+    },
+    "local-native-smoke": {
+      "arch": "arm64",
+      "pngBytes": 91,
+      "signature": "89504e470d0a1a0a"
+    },
+    "local-source-data": {
+      "counts": {
+        "users": 1,
+        "issues": 2,
+        "projects": 1,
+        "attachments": 1,
+        "storage_objects": 1
+      },
+      "issues": [
+        {
+          "id": "8dac0fa3-3d5d-4def-8f8f-37381d54b470",
+          "title": "Survives update and restore",
+          "effort": "m",
+          "status": "in_progress",
+          "priority": "urgent"
+        },
+        {
+          "id": "b30ce259-8dbb-4461-8a22-46ead6d914ff",
+          "title": "Integration survives update and restore",
+          "effort": null,
+          "status": "triage",
+          "priority": "none"
+        }
+      ],
+      "identifiers": {
+        "users": [
+          "ed441cf4-b04e-4a6a-97f3-a9bc313ee9a1"
+        ],
+        "issues": [
+          "8dac0fa3-3d5d-4def-8f8f-37381d54b470",
+          "b30ce259-8dbb-4461-8a22-46ead6d914ff"
+        ],
+        "projects": [
+          "efc725b3-36f7-494e-a906-b7a9812efa96"
+        ],
+        "attachments": [
+          "3beb91e1-f9ce-4131-9787-a93a31389130"
+        ],
+        "integrations": [
+          "863404ef-57ff-40b6-8220-5eaade567bc3"
+        ],
+        "storage_objects": [
+          "97f2b51b-5373-4f01-8985-9f67a8a0557d"
+        ]
+      }
+    },
+    "local-updated-data": {
+      "counts": {
+        "users": 1,
+        "issues": 2,
+        "projects": 1,
+        "attachments": 1,
+        "storage_objects": 1
+      },
+      "issues": [
+        {
+          "id": "8dac0fa3-3d5d-4def-8f8f-37381d54b470",
+          "title": "Survives update and restore",
+          "effort": "m",
+          "status": "in_progress",
+          "priority": "urgent"
+        },
+        {
+          "id": "b30ce259-8dbb-4461-8a22-46ead6d914ff",
+          "title": "Integration survives update and restore",
+          "effort": null,
+          "status": "triage",
+          "priority": "none"
+        }
+      ],
+      "identifiers": {
+        "users": [
+          "ed441cf4-b04e-4a6a-97f3-a9bc313ee9a1"
+        ],
+        "issues": [
+          "8dac0fa3-3d5d-4def-8f8f-37381d54b470",
+          "b30ce259-8dbb-4461-8a22-46ead6d914ff"
+        ],
+        "projects": [
+          "efc725b3-36f7-494e-a906-b7a9812efa96"
+        ],
+        "attachments": [
+          "3beb91e1-f9ce-4131-9787-a93a31389130"
+        ],
+        "integrations": [
+          "863404ef-57ff-40b6-8220-5eaade567bc3"
+        ],
+        "storage_objects": [
+          "97f2b51b-5373-4f01-8985-9f67a8a0557d"
+        ]
+      }
+    },
+    "local-restored-data": {
+      "counts": {
+        "users": 1,
+        "issues": 2,
+        "projects": 1,
+        "attachments": 1,
+        "storage_objects": 1
+      },
+      "issues": [
+        {
+          "id": "8dac0fa3-3d5d-4def-8f8f-37381d54b470",
+          "title": "Survives update and restore",
+          "effort": "m",
+          "status": "in_progress",
+          "priority": "urgent"
+        },
+        {
+          "id": "b30ce259-8dbb-4461-8a22-46ead6d914ff",
+          "title": "Integration survives update and restore",
+          "effort": null,
+          "status": "triage",
+          "priority": "none"
+        }
+      ],
+      "identifiers": {
+        "users": [
+          "ed441cf4-b04e-4a6a-97f3-a9bc313ee9a1"
+        ],
+        "issues": [
+          "8dac0fa3-3d5d-4def-8f8f-37381d54b470",
+          "b30ce259-8dbb-4461-8a22-46ead6d914ff"
+        ],
+        "projects": [
+          "efc725b3-36f7-494e-a906-b7a9812efa96"
+        ],
+        "attachments": [
+          "3beb91e1-f9ce-4131-9787-a93a31389130"
+        ],
+        "integrations": [
+          "863404ef-57ff-40b6-8220-5eaade567bc3"
+        ],
+        "storage_objects": [
+          "97f2b51b-5373-4f01-8985-9f67a8a0557d"
+        ]
+      }
+    },
+    "local-recovery-doctor": {
+      "findings": [
+        {
+          "name": "Configuration",
+          "state": "pass",
+          "detail": "required self-hosted configuration is present (values redacted)."
+        },
+        {
+          "name": "Version compatibility",
+          "state": "pass",
+          "detail": "release 0.10.28 matches its compatibility row."
+        },
+        {
+          "name": "Auth email",
+          "state": "warn",
+          "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+        },
+        {
+          "name": "Container health",
+          "state": "pass",
+          "detail": "16 services are running."
+        },
+        {
+          "name": "Database, Storage, and migrations",
+          "state": "pass",
+          "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+        },
+        {
+          "name": "Scheduler",
+          "state": "pass",
+          "detail": "routine scheduler container is running."
+        },
+        {
+          "name": "Agent runner",
+          "state": "pass",
+          "detail": "server sandbox runner container is running."
+        },
+        {
+          "name": "Disk space",
+          "state": "pass",
+          "detail": "29.9 GiB available on the deployment filesystem."
+        },
+        {
+          "name": "Forge access",
+          "state": "pass",
+          "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+        },
+        {
+          "name": "Optional capabilities",
+          "state": "pass",
+          "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+        },
+        {
+          "name": "Network address",
+          "state": "warn",
+          "detail": "public DNS/TLS check skipped for localhost."
+        },
+        {
+          "name": "Application health",
+          "state": "pass",
+          "detail": "Health endpoint returned 200."
+        }
+      ]
+    },
+    "local-update-maintenance-doctor": {
+      "findings": [
+        {
+          "name": "Configuration",
+          "state": "pass",
+          "detail": "required self-hosted configuration is present (values redacted)."
+        },
+        {
+          "name": "Version compatibility",
+          "state": "pass",
+          "detail": "release 0.10.28 matches its compatibility row."
+        },
+        {
+          "name": "Auth email",
+          "state": "warn",
+          "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+        },
+        {
+          "name": "Container health",
+          "state": "pass",
+          "detail": "10 services are running."
+        },
+        {
+          "name": "Database, Storage, and migrations",
+          "state": "pass",
+          "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+        },
+        {
+          "name": "Scheduler",
+          "state": "pass",
+          "detail": "routine scheduler is intentionally stopped for maintenance."
+        },
+        {
+          "name": "Agent runner",
+          "state": "pass",
+          "detail": "server sandbox runner container is running."
+        },
+        {
+          "name": "Disk space",
+          "state": "pass",
+          "detail": "28.2 GiB available on the deployment filesystem."
+        },
+        {
+          "name": "Forge access",
+          "state": "pass",
+          "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+        },
+        {
+          "name": "Optional capabilities",
+          "state": "pass",
+          "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+        }
+      ]
+    },
+    "local-update-doctor": {
+      "findings": [
+        {
+          "name": "Configuration",
+          "state": "pass",
+          "detail": "required self-hosted configuration is present (values redacted)."
+        },
+        {
+          "name": "Version compatibility",
+          "state": "pass",
+          "detail": "release 0.10.28 matches its compatibility row."
+        },
+        {
+          "name": "Auth email",
+          "state": "warn",
+          "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+        },
+        {
+          "name": "Container health",
+          "state": "pass",
+          "detail": "16 services are running."
+        },
+        {
+          "name": "Database, Storage, and migrations",
+          "state": "pass",
+          "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+        },
+        {
+          "name": "Scheduler",
+          "state": "pass",
+          "detail": "routine scheduler container is running."
+        },
+        {
+          "name": "Agent runner",
+          "state": "pass",
+          "detail": "server sandbox runner container is running."
+        },
+        {
+          "name": "Disk space",
+          "state": "pass",
+          "detail": "28.1 GiB available on the deployment filesystem."
+        },
+        {
+          "name": "Forge access",
+          "state": "pass",
+          "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+        },
+        {
+          "name": "Optional capabilities",
+          "state": "pass",
+          "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+        },
+        {
+          "name": "Network address",
+          "state": "warn",
+          "detail": "public DNS/TLS check skipped for localhost."
+        },
+        {
+          "name": "Application health",
+          "state": "pass",
+          "detail": "Health endpoint returned 200."
+        }
+      ]
+    },
+    "local-restore-maintenance-doctor": {
+      "findings": [
+        {
+          "name": "Configuration",
+          "state": "pass",
+          "detail": "required self-hosted configuration is present (values redacted)."
+        },
+        {
+          "name": "Version compatibility",
+          "state": "pass",
+          "detail": "release 0.10.28 matches its compatibility row."
+        },
+        {
+          "name": "Auth email",
+          "state": "warn",
+          "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+        },
+        {
+          "name": "Container health",
+          "state": "pass",
+          "detail": "10 services are running."
+        },
+        {
+          "name": "Database, Storage, and migrations",
+          "state": "pass",
+          "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+        },
+        {
+          "name": "Scheduler",
+          "state": "pass",
+          "detail": "routine scheduler is intentionally stopped for maintenance."
+        },
+        {
+          "name": "Agent runner",
+          "state": "pass",
+          "detail": "server sandbox runner container is running."
+        },
+        {
+          "name": "Disk space",
+          "state": "pass",
+          "detail": "34.9 GiB available on the deployment filesystem."
+        },
+        {
+          "name": "Forge access",
+          "state": "pass",
+          "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+        },
+        {
+          "name": "Optional capabilities",
+          "state": "pass",
+          "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+        }
+      ]
+    },
+    "local-restore-doctor": {
+      "findings": [
+        {
+          "name": "Configuration",
+          "state": "pass",
+          "detail": "required self-hosted configuration is present (values redacted)."
+        },
+        {
+          "name": "Version compatibility",
+          "state": "pass",
+          "detail": "release 0.10.28 matches its compatibility row."
+        },
+        {
+          "name": "Auth email",
+          "state": "warn",
+          "detail": "the upstream SMTP placeholder requires an explicitly configured local inbox; configure provider SMTP for real accounts. Application email settings do not configure Auth."
+        },
+        {
+          "name": "Container health",
+          "state": "pass",
+          "detail": "16 services are running."
+        },
+        {
+          "name": "Database, Storage, and migrations",
+          "state": "pass",
+          "detail": "PostgreSQL, migration invariants, and Storage buckets verified."
+        },
+        {
+          "name": "Scheduler",
+          "state": "pass",
+          "detail": "routine scheduler container is running."
+        },
+        {
+          "name": "Agent runner",
+          "state": "pass",
+          "detail": "server sandbox runner container is running."
+        },
+        {
+          "name": "Disk space",
+          "state": "pass",
+          "detail": "34.8 GiB available on the deployment filesystem."
+        },
+        {
+          "name": "Forge access",
+          "state": "pass",
+          "detail": "disabled: forge relay opt-out (--no-forge-relay) and no operator-owned app."
+        },
+        {
+          "name": "Optional capabilities",
+          "state": "pass",
+          "detail": "MINDDY_MANAGED_AI, MINDDY_MANAGED_BILLING, MINDDY_MANAGED_FORGE, MINDDY_FORGE_RELAY_URL, STRIPE_SECRET_KEY, POSTHOG_API_KEY, RESEND_API_KEY, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID disabled or unconfigured."
+        },
+        {
+          "name": "Network address",
+          "state": "warn",
+          "detail": "private HTTP mode is enabled; keep the server behind the LAN firewall and do not forward its ports."
+        },
+        {
+          "name": "Application health",
+          "state": "pass",
+          "detail": "Health endpoint returned 200."
+        }
+      ]
+    },
+    "local-restored-discovery": [
+      {
+        "path": "/.well-known/oauth-authorization-server",
+        "status": 200,
+        "uses_restored_origin": true,
+        "cloud_origin_absent": true
+      },
+      {
+        "path": "/.well-known/oauth-protected-resource",
+        "status": 200,
+        "uses_restored_origin": true,
+        "cloud_origin_absent": true
+      },
+      {
+        "path": "/.well-known/mcp/server-card.json",
+        "status": 200,
+        "uses_restored_origin": true,
+        "cloud_origin_absent": true
+      }
+    ],
+    "local-wizard-checks": {
+      "kind": "local rendered wizard, navigation only",
+      "capacity_follows_full_backend": true,
+      "minimum": "8 GB / 4 CPU / 60 GB",
+      "verification_before_dependencies": true,
+      "installer_uses_verified_image": true,
+      "auth_restart_has_both_compose_files": true,
+      "release_link_is_tagged": true
+    },
+    "final-network-summary": {
+      "minddy": {
+        "ipv4_records": 288,
+        "dns_query_names": [],
+        "external_ipv4_destinations": [],
+        "ipv6_record_count": 0,
+        "capture_summary": [
+          "listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes",
+          "288 packets captured",
+          "362 packets received by filter",
+          "0 packets dropped by kernel"
+        ]
+      },
+      "scheduler": {
+        "ipv4_records": 68,
+        "dns_query_names": [],
+        "external_ipv4_destinations": [],
+        "ipv6_record_count": 0,
+        "capture_summary": [
+          "listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes",
+          "68 packets captured",
+          "102 packets received by filter",
+          "0 packets dropped by kernel"
+        ]
+      },
+      "agent-runner": {
+        "ipv4_records": 42,
+        "dns_query_names": [],
+        "external_ipv4_destinations": [],
+        "ipv6_record_count": 0,
+        "capture_summary": [
+          "listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes",
+          "42 packets captured",
+          "84 packets received by filter",
+          "0 packets dropped by kernel"
+        ]
+      },
+      "start": "2026-09-08T16:54:50Z",
+      "end": "2026-09-08T17:00:07Z"
+    },
+    "local-network-summary": {
+      "observed_service_destination_port_pairs": 2704,
+      "observed_services": [
+        "auth",
+        "caddy",
+        "database-access",
+        "db",
+        "functions",
+        "kong",
+        "minddy",
+        "realtime",
+        "rest",
+        "scheduler",
+        "storage"
+      ],
+      "external_destinations": [],
+      "dns_query_names": [
+        "api.github.com.",
+        "content-autofill.googleapis.com.",
+        "eu.i.posthog.com.",
+        "mtalk.google.com.",
+        "registry.npmjs.org.",
+        "www.google.com."
+      ],
+      "capture_start": "2026-09-08T16:36:03Z",
+      "capture_end": "2026-09-08T16:44:47Z",
+      "capture_summary": [
+        "listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes",
+        "3439 packets captured",
+        "3733 packets received by filter",
+        "0 packets dropped by kernel"
+      ],
+      "limits": [
+        "IPv4 SYN/DNS metadata on the VM host; container addresses mapped before the window.",
+        "Host-origin DNS names are not attributed to an application container; they are retained without claiming a service owner.",
+        "No agent-runner traffic observed during this window; a quiet source is not a standalone positive check."
+      ]
+    },
+    "local-browser-hosts": {
+      "localhost": 166
+    },
+    "local-recovery-checkpoint": {
+      "phases": {
+        "configuration": "2026-09-08T16:13:32.598Z",
+        "images-local": "2026-09-08T16:13:32.599Z",
+        "database-started": "2026-09-08T16:14:32.186Z",
+        "migrations-and-storage-reconciled": "2026-09-08T16:14:33.187Z",
+        "application-healthy": "2026-09-08T16:14:33.187Z"
+      }
+    }
+  },
+  "local_image_id": "sha256:c98b8b80c86578c0d225f564858d68d722664f119835abd92412e1dabdc7084a",
+  "timings": {
+    "local-update-end": "2026-09-08T16:49:56Z",
+    "local-backup-start": "2026-09-08T16:44:46Z",
+    "local-update-start": "2026-09-08T16:48:46Z",
+    "local-recovery-end": "2026-09-08T16:43:46Z",
+    "local-network-end": "2026-09-08T16:44:47Z",
+    "local-recovery-start": "2026-09-08T16:43:29Z",
+    "local-final-backup-start": "2026-09-08T16:51:41Z",
+    "local-restore-start": "2026-09-08T16:53:25Z",
+    "local-restore-end": "2026-09-08T16:54:26Z",
+    "local-network-start": "2026-09-08T16:36:03Z",
+    "local-final-backup-end": "2026-09-08T16:52:03Z",
+    "local-backup-end": "2026-09-08T16:45:09Z"
+  },
+  "environment_preserved": true,
+  "attachment_sha256": "c314b7c37b0649174ba8834fb579baa63a60dff59cc32c82742e716c5a90564b",
+  "final_browser_hosts": {
+    "restored-private-origin": 38
+  },
+  "independent_replay": {
+    "prompt": "Perform an independent documentation-only novice replay using only these public entry points: https://www.minddy.app/self-hosting and https://github.com/mangue-dev/minddy/blob/v0.10.27/docs/self-hosting-clean-room.md . Do not inspect the local repository, other agents, issue history, chat history, credentials, or existing local validation reports. Work in a new temporary directory using only anonymous public downloads. Follow public links as needed. Record the exact prompt, UTC timing, URLs followed, deployment-mode choice and responsibilities, required inputs, immutable artifact verification, proposed installation/first-account/project/issue/MFA/integration/fault recovery/backup/update/blank restore/rollback commands and actions, and every genuine missing instruction or contradiction. Review v0.10.27 as the published baseline; the next corrected release is currently being published, so lack of that next tag during this run is an external prerequisite, not a documentation defect. Do not execute application stacks or send external messages. Clearly distinguish documentation replay from executed lifecycle tests and unavailable human novice validation. Produce an English redacted report with actionable findings and your proposed end-to-end path; do not invent successful installation or test evidence. Keep scope bounded to this public documentation replay; no security pentest or broad review.\n\nFollow-up scope update:\nThe next immutable public release is now published: https://github.com/mangue-dev/minddy/releases/tag/v0.10.28 and https://github.com/mangue-dev/minddy/blob/v0.10.28/docs/self-hosting-clean-room.md . Include the v0.10.27 \u2192 v0.10.28 pair in your documentation-only replay. No need to run stacks; continue your bounded report from public sources only.\n",
+    "timing": {
+      "start_utc": "2026-09-08T15:47:24+00:00",
+      "end_utc": "2026-09-08T16:00:37.938337+00:00",
+      "elapsed_seconds": 793.938337,
+      "operations_discovery_latest_utc": "2026-09-08T15:50:42+00:00",
+      "operations_discovery_max_seconds": 198
+    }
+  }
+}

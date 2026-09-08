@@ -39,11 +39,11 @@ test("records the actual Cosign identity without the retired repository name", (
   );
 });
 
-test("builds architecture-independent assets natively and strips runtime package managers", () => {
+test("builds target-native dependencies and strips runtime package managers", () => {
   const nodeDigest = "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df";
   assert.match(
     dockerfile,
-    new RegExp(`^FROM --platform=\\$BUILDPLATFORM node:24-bookworm-slim@${nodeDigest} AS base$`, "m"),
+    new RegExp(`^FROM node:24-bookworm-slim@${nodeDigest} AS base$`, "m"),
   );
   assert.match(dockerfile, new RegExp(`^FROM node:24-bookworm-slim@${nodeDigest} AS runtime$`, "m"));
   assert.match(dockerfile, /rm -rf \/usr\/local\/lib\/node_modules\/npm \/usr\/local\/lib\/node_modules\/corepack/);

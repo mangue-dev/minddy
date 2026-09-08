@@ -181,11 +181,12 @@ install -d -m 0700 "$BACKUP_ROOT" "$REPORT_DIR"
 cd "$SOURCE_DIR"
 ```
 
-Run the versioned preflight before installing dependencies or starting Docker:
+Run the versioned preflight before installing dependencies or starting Docker.
+Use the pnpm installed with the prerequisites; enabling global Corepack shims
+is not needed and may require administrator access on a system Node install:
 
 ```bash
-corepack enable
-corepack prepare pnpm@10.28.0 --activate
+test "$(pnpm --version)" = 10.28.0
 if [ "$VALIDATION_MODE" = prepublication ]; then
   pnpm validate:self-hosted -- --prepublication \
     --from-ref "$FROM_REF" --to-ref "$TO_REF" \
@@ -337,6 +338,96 @@ the disabled surfaces before continuing:
 Any silent external request or `minddy.app` URL is a release blocker. Save only
 the request host, path, status, and timestamp; remove headers and bodies.
 
+### Capture actual runtime destinations
+
+Run the observation on the disposable VM during account creation, the selected
+integration call, and at least one scheduler interval. Finish dependency downloads
+first, so package-manager traffic cannot be attributed to the application. Install
+`tcpdump` from the VM distribution's repository if it is missing.
+
+In the deployment shell, record the container-to-address mapping without exporting
+environment variables. Then start a metadata-only capture in a second terminal:
+
+```bash
+compose ps --all --quiet | xargs docker inspect --format \
+  '{{.Name}} {{index .Config.Labels "com.docker.compose.service"}} {{json .NetworkSettings.Networks}}' \
+  > "$REPORT_DIR/container-network-map.txt"
+date -u +%FT%TZ > "$REPORT_DIR/network-start.txt"
+sudo tcpdump -i any -n -tt -l \
+  'tcp[tcpflags] & tcp-syn != 0 or udp port 53' \
+  > "$REPORT_DIR/network-metadata.txt" 2> "$REPORT_DIR/network-capture.log"
+```
+
+Stop the capture with Ctrl+C after the actions complete and record the end time
+with `date -u +%FT%TZ`. Do not add `-A`, `-X`, or a packet-file output: request
+payloads are unnecessary. Retain the capture summary, including dropped-packet
+counts. Repeat the address mapping after recreating containers because addresses
+can change. Map each observed source address to minddy, scheduler, runner, Auth,
+or another named service; use DNS replies to resolve destination addresses. Record
+unresolved addresses as unresolved, never as an allowed provider by assumption.
+
+If host-origin DNS traffic cannot be assigned to a service, observe the application
+namespaces directly on Linux. Run this in another deployment shell, exercise the
+browser during the five-minute window, and retain all three capture summaries:
+
+```bash
+for SERVICE in minddy scheduler agent-runner; do
+  CONTAINER="$(compose ps -q "$SERVICE")"
+  test -n "$CONTAINER"
+  PID="$(docker inspect "$CONTAINER" --format '{{.State.Pid}}')"
+  test "$PID" -gt 0
+  sudo nsenter --target "$PID" --net timeout 300 tcpdump -i any -n -tt -l \
+    'tcp[tcpflags] & tcp-syn != 0 or udp port 53' \
+    > "$REPORT_DIR/network-$SERVICE.txt" \
+    2> "$REPORT_DIR/network-$SERVICE.log" &
+done
+wait
+```
+
+The filename identifies the observed service even when the request uses Docker's
+loopback DNS resolver. Keep private/internal destinations distinct from external
+ones and check IPv6 records too. Do not recreate these containers during this
+window; a replacement container has a different namespace.
+
+In the browser, open Developer Tools > Network before signing in, enable
+**Preserve log**, clear existing entries, and perform the same actions. Export
+**HAR (sanitized)** to a private file outside the repository. Even sanitized HAR
+files can contain sensitive URLs and response bodies: publish only the hostname,
+method, response status and time from each entry. Record the browser, capture
+start/end, actions, and any request-filter settings with the export. Delete the
+private HAR after extracting the evidence required for the report.
+
+
+For example, save the private export as `$HOME/acceptance-private.har`, then
+extract only these fields (the output contains no path, query, headers or body):
+
+```bash
+python3 - "$HOME/acceptance-private.har" "$REPORT_DIR/browser-destinations.json" <<'PYTHON'
+import json
+import sys
+from pathlib import Path
+from urllib.parse import urlsplit
+
+entries = json.loads(Path(sys.argv[1]).read_text())["log"]["entries"]
+records = [{
+    "source": "browser",
+    "host": urlsplit(entry["request"]["url"]).hostname,
+    "method": entry["request"]["method"],
+    "status": entry["response"]["status"],
+    "startedAt": entry["startedDateTime"],
+} for entry in entries]
+Path(sys.argv[2]).write_text(json.dumps(records, indent=2) + "\n")
+PYTHON
+```
+
+Compare browser destinations with the container capture. List every observed
+external host and its owning service, including Auth's required password-check
+service. Keep blocked attempts as findings even when no connection succeeds.
+A quiet source requires an active observation window and a source-address mapping;
+missing capture coverage is inconclusive. Seal these real observations with the
+report. The fixture command below only checks the CI report format and policy;
+it does not demonstrate that this installed instance made no external requests.
+
 ### CI egress contract
 
 The CI contract records only the capture source, destination host, and its
@@ -388,6 +479,17 @@ diff -u "$REPORT_DIR/environment-before.sha256" "$REPORT_DIR/environment-after.s
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --json \
   > "$REPORT_DIR/recovery-doctor.json"
+```
+
+The checkpoint is `${MINDDY_ENV_FILE}.install-state.json`. Collect only phase
+names and their timestamps; keep the protected original unchanged:
+
+```bash
+node --input-type=module -e '
+  import { readFileSync } from "node:fs";
+  const { phases } = JSON.parse(readFileSync(`${process.env.MINDDY_ENV_FILE}.install-state.json`, "utf8"));
+  console.log(JSON.stringify({ phases }, null, 2));
+' > "$REPORT_DIR/recovery-checkpoint.json"
 ```
 
 Confirm the same Docker image digest, project, tickets, attachment and revoked

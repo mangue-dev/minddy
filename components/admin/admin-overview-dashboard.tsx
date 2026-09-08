@@ -14,6 +14,7 @@ import {
   TotalItem,
 } from "@/components/stats/stats-chrome";
 import type { AdminOverview, AdminOverviewDay } from "@/lib/types";
+import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
 import {
   ADMIN_SECTIONS,
   adminSectionAnchor,
@@ -192,6 +193,7 @@ function FunnelBand({
 }
 
 export function AdminOverviewDashboard() {
+  const billingAvailable = useAdminCapabilities().configured("managedBilling") === true;
   const t = useTranslations("Admin");
   const [data, setData] = useState<AdminOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -360,7 +362,7 @@ export function AdminOverviewDashboard() {
       </StatsSection>
 
       {/* 4 — What accounts pay. */}
-      <StatsSection
+      {billingAvailable && <StatsSection
         id={adminSectionAnchor(ADMIN_SECTIONS.overviewPlans)}
         title={t("overview.plans")}
         info={t("overview.plansInfo")}
@@ -376,7 +378,7 @@ export function AdminOverviewDashboard() {
             />
           ))}
         </StatsCard>
-      </StatsSection>
+      </StatsSection>}
 
       {/* 5 — The base: what the app contains. */}
       <StatsSection

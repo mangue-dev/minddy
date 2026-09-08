@@ -39,7 +39,7 @@ Supabase availability, backup retention, or optional third-party service.
 
 ## Supported deployment paths
 
-Both paths require minddy's Node.js application, one canonical HTTPS app
+Both paths require minddy's Node.js application, one canonical app
 origin, and a Supabase service offering Postgres, Auth, Storage, and Realtime.
 PostgreSQL by itself is not a supported substitute.
 
@@ -57,6 +57,10 @@ The versioned reference Compose profiles live in
 operator-provided Supabase endpoint. The complete profile is an overlay applied
 to a checksum-verified, commit-pinned checkout of the official Supabase Docker
 directory; this repository never carries a maintained copy of that stack.
+
+Public deployments require HTTPS. The documented localhost and private IPv4
+HTTP modes are supported for isolated local or private-network use; they do not
+provide TLS or qualify as public Internet deployments.
 
 ## Compatibility matrix
 

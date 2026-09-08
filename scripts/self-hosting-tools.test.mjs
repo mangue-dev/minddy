@@ -21,8 +21,19 @@ import {
   recordCheckpoint,
   renderEnvironment,
 } from "./self-hosting-install.mjs";
-import { compatibilityFinding, configFindings, disabledCapabilities, forgeAccessFinding, parseArgs as parseDoctorArgs, redact } from "./self-hosting-doctor.mjs";
+import { compatibilityFinding, configFindings, disabledCapabilities, forgeAccessFinding, parseArgs as parseDoctorArgs, redact, schedulerFinding } from "./self-hosting-doctor.mjs";
 import { maintenanceMessage, parseArgs as parseMaintenanceArgs } from "./self-hosting-maintenance.mjs";
+
+test("maintenance checks reject a running scheduler without weakening normal diagnostics", () => {
+  const options = parseDoctorArgs(["--maintenance", "--skip-network"]);
+  assert.equal(options.maintenance, true);
+  const active = [{ Service: "scheduler" }];
+  assert.equal(schedulerFinding(active, options.maintenance).state, "fail");
+  assert.equal(schedulerFinding([], options.maintenance).state, "pass");
+  assert.equal(schedulerFinding(active).state, "pass");
+  assert.equal(schedulerFinding([]).state, "fail");
+  assert.equal(schedulerFinding([{ Name: "minddy-full-scheduler-1" }], true).state, "fail");
+});
 
 test("the installer creates a readable self-hosted configuration with integrations disabled", () => {
   const options = parseInstallArgs([

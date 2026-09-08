@@ -39,6 +39,7 @@ export function parseArgs(argv) {
     else if (arg === "--supabase-compose") options.supabaseCompose = resolve(value());
     else if (arg === "--db-url") options.dbUrl = value();
     else if (arg === "--skip-network") options.network = false;
+    else if (arg === "--maintenance") options.maintenance = true;
     else if (arg === "--json") options.json = true;
     else if (arg === "--help" || arg === "-h") options.help = true;
     else throw new Error(`unknown option: ${arg}. See --help.`);
@@ -58,6 +59,7 @@ Options:
   --supabase-compose <path>  Upstream Compose file required for full mode.
   --db-url <postgres-url>    Enables read-only migration and Storage checks.
   --skip-network             Skip DNS, TLS, and public health checks.
+  --maintenance              Require the scheduler to remain stopped during checks.
   --json                     Emit a machine-readable redacted report.
   -h, --help                 Show this help.`;
 }
@@ -284,6 +286,12 @@ function verificationFinding(options, values) {
   return { name: "Database, Storage, and migrations", state: result.ok ? "pass" : "fail", detail: result.ok ? "PostgreSQL, migration invariants, and Storage buckets verified." : result.detail || "verification failed." };
 }
 
+export function schedulerFinding(records = [], maintenance = false) {
+  const running = records.some((record) => /scheduler/.test(record.Service ?? record.Name ?? ""));
+  if (maintenance) return { name: "Scheduler", state: running ? "fail" : "pass", detail: running ? "stop the routine scheduler before maintenance checks." : "routine scheduler is intentionally stopped for maintenance." };
+  return { name: "Scheduler", state: running ? "pass" : "fail", detail: running ? "routine scheduler container is running." : "routine scheduler container is missing." };
+}
+
 export async function diagnose(options) {
   const findings = [];
   if (!existsSync(options.envFile)) return [{ name: "Configuration", state: "fail", detail: "environment file is missing." }];
@@ -300,8 +308,7 @@ export async function diagnose(options) {
   const status = composeStatus(options);
   findings.push({ name: "Container health", state: status.ok ? "pass" : "fail", detail: status.detail });
   findings.push(verificationFinding(options, values));
-  const schedulerEnabled = Boolean(status.records?.some((record) => /scheduler/.test(record.Service ?? record.Name ?? "")));
-  findings.push({ name: "Scheduler", state: schedulerEnabled ? "pass" : "fail", detail: schedulerEnabled ? "routine scheduler container is running." : "routine scheduler container is missing." });
+  findings.push(schedulerFinding(status.records, options.maintenance));
   const runnerEnabled = Boolean(status.records?.some((record) => /agent-runner/.test(record.Service ?? record.Name ?? "")));
   findings.push({ name: "Agent runner", state: runnerEnabled ? "pass" : "fail", detail: runnerEnabled ? "server sandbox runner container is running." : "server sandbox runner container is missing." });
   findings.push(diskFinding(options.deployDir));
