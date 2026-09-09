@@ -81,12 +81,13 @@ export async function GET(request: NextRequest) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const storedMimeType = normalizeMimeType(info?.contentType || file.type);
   const mimeType = sniffMimeType(bytes) ?? storedMimeType;
+  const fileName = fileNameFromPath(path);
   const inline = preview
-    ? attachmentPreviewKind(mimeType) !== null
+    ? attachmentPreviewKind(mimeType, fileName) !== null
     : !download && isInlineSafeMimeType(mimeType);
   const headers: Record<string, string> = {
     "Cache-Control": "private, no-store",
-    "Content-Disposition": contentDisposition(inline, fileNameFromPath(path)),
+    "Content-Disposition": contentDisposition(inline, fileName),
     "Content-Length": String(bytes.byteLength),
     "Content-Type": mimeType || "application/octet-stream",
     "Cross-Origin-Resource-Policy": "same-origin",

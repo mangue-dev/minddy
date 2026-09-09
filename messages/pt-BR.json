@@ -344,6 +344,8 @@
     "download": "Baixar",
     "remove": "Remover",
     "preview": "Visualização",
+    "previewLoading": "Carregando visualização…",
+    "previewFailed": "Não foi possível carregar a visualização deste arquivo.",
     "uploadFailed": "Não foi possível fazer upload de {name}.",
     "uploadingFile": "Fazendo upload de {name}…",
     "tooLarge": "{name} excede {max} MB.",

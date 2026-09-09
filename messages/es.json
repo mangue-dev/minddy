@@ -344,6 +344,8 @@
     "download": "Descargar",
     "remove": "Eliminar",
     "preview": "Vista previa",
+    "previewLoading": "Cargando vista previa…",
+    "previewFailed": "No se pudo cargar la vista previa de este archivo.",
     "uploadFailed": "No se pudo cargar {name}.",
     "uploadingFile": "Subiendo {name}…",
     "tooLarge": "{name} supera los {max} MB.",

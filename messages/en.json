@@ -344,6 +344,8 @@
     "download": "Download",
     "remove": "Remove",
     "preview": "Preview",
+    "previewLoading": "Loading preview…",
+    "previewFailed": "Couldn't load this file preview.",
     "uploadFailed": "Couldn't upload {name}.",
     "uploadingFile": "Uploading {name}…",
     "tooLarge": "{name} exceeds {max} MB.",

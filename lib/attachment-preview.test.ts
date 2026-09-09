@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { attachmentPreviewKind } from "@/lib/attachment-preview";
+import {
+  attachmentPreviewKind,
+  isMarkdownFileName,
+} from "@/lib/attachment-preview";
 
 describe("attachmentPreviewKind", () => {
   it.each([
@@ -29,4 +32,26 @@ describe("attachmentPreviewKind", () => {
   ])("keeps %s download-only", (mimeType) => {
     expect(attachmentPreviewKind(mimeType)).toBeNull();
   });
+
+  it("recognizes Markdown by filename when its MIME type is generic", () => {
+    expect(attachmentPreviewKind("application/octet-stream", "README.md")).toBe(
+      "document",
+    );
+  });
+});
+
+describe("isMarkdownFileName", () => {
+  it.each(["README.md", "readme.MD", "docs/guide.md"])(
+    "recognizes %s",
+    (fileName) => {
+      expect(isMarkdownFileName(fileName)).toBe(true);
+    },
+  );
+
+  it.each(["README", "README.markdown", "README.md.txt", "", null, undefined])(
+    "does not recognize %s",
+    (fileName) => {
+      expect(isMarkdownFileName(fileName)).toBe(false);
+    },
+  );
 });

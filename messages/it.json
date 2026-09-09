@@ -344,6 +344,8 @@
     "download": "Scarica",
     "remove": "Rimuovi",
     "preview": "Anteprima",
+    "previewLoading": "Caricamento dell’anteprima…",
+    "previewFailed": "Impossibile caricare l’anteprima di questo file.",
     "uploadFailed": "Impossibile caricare {name}.",
     "uploadingFile": "Caricamento {name}…",
     "tooLarge": "{name} supera {max} MB.",
