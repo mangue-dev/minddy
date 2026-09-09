@@ -171,11 +171,13 @@ export function annualMonthlyEquivalentEur(plan: BillingPlan): number {
 // ── Non-LLM costs ────────────────────────────── ──────────────────────────────
 
 /**
- * Approximation of the Vercel Sandbox cost per minute of wall-clock of an agent run
- * (Active CPU + provisioned memory, mostly waiting for LLM).
- * To be adjusted on the actual invoices.
+ * Estimated cost per wall-clock minute for the managed 4 vCPU / 8 GiB sandbox
+ * in iad1. Double the previous 2 vCPU / 4 GiB estimate, retaining its assumption
+ * that agents spend most of their time waiting for LLM responses.
+ * This is not metered CPU usage. Recalibrate against invoices when the resource
+ * profile, region, or workload changes; recorded ledger entries are unchanged.
  */
-export const SANDBOX_USD_PER_MINUTE = 0.002;
+export const SANDBOX_USD_PER_MINUTE = 0.004;
 
 // ── Segments d'affichage de l'usage ─────────────────────────────────────────
 

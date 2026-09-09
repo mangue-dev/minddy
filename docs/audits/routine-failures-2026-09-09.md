@@ -111,8 +111,14 @@ Existing persistent sandbox instances are not resized by this change; their
 future harness launches receive the runtime limits, while newly created routine
 runs receive the larger VM. Historical failure records and elapsed durations
 were not rewritten. Provisioned memory per new VM doubles, trading a higher
-per-minute infrastructure cost for headroom; user-facing billing rates were not
-changed.
+per-minute infrastructure cost for headroom. The managed compute usage estimate
+increases from $0.002 to $0.004 per wall-clock minute ($0.24/hour), scaling the
+previous estimate with the doubled resource profile. This retains the existing
+mostly-waiting workload assumption for iad1; it is not actual CPU metering.
+The rate applies to future usage entries, including resumed persistent sessions;
+historical ledger entries are unchanged. A region change requires recalibration.
+Four additional billing tests verify agent and routine ledger amounts, partial
+minutes, and empty durations.
 
 ## External references
 
