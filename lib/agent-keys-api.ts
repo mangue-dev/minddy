@@ -1,5 +1,6 @@
 "use client";
 
+import type { SandboxPreferences } from "./agent-sandbox-config";
 import type { ReasoningLevel } from "./agent-reasoning";
 import type { AiSurface, ByokFeatureModels } from "./ai-surfaces";
 import { trackEvent } from "./analytics";
@@ -86,7 +87,7 @@ export async function updateAiKeyPreferencesApi(patch: {
   );
 }
 
-export interface AgentPreferences {
+export interface AgentPreferences extends SandboxPreferences {
   default_model: string | null;
   /** null = `off` (MIN-122). */
   default_reasoning_level: ReasoningLevel | null;

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { SandboxBilling } from "@/lib/agent-sandbox-config";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 
@@ -208,7 +209,7 @@ export async function reapDeadVmRuns(
   const { data } = await service
     .from("agent_runs")
     .select(
-      "id, sandbox_id, loop_command_id, local_exec, created_by, project_id, issue_id, conversation_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
+      "id, sandbox_id, sandbox_billing, loop_command_id, local_exec, created_by, project_id, issue_id, conversation_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
     )
     .eq("status", "running")
     .lt("last_activity_at", cutoff)
@@ -216,6 +217,7 @@ export async function reapDeadVmRuns(
   const rows = (data ?? []) as Array<{
     id: string;
     sandbox_id: string | null;
+    sandbox_billing?: SandboxBilling | null;
     loop_command_id: string | null;
     local_exec: boolean | null;
     created_by: string | null;
@@ -321,10 +323,19 @@ export async function reapDeadVmRuns(
         },
       },
     );
-    if (!stamped) continue; // course : quelqu'un a conclu entre-temps.
+    if (!stamped) continue; // Another writer completed or refreshed this run.
 
+    const watchdog = {
+      commandAlive: alive,
+      sandboxId: row.sandbox_id,
+      commandId: row.loop_command_id,
+      lastHeartbeatAt: row.last_activity_at,
+      detectedAt: new Date().toISOString(),
+    };
+    console.warn("[agent-watchdog] turn lost", { runId: row.id, ...watchdog });
     await appendEvent(row.id, "error", {
       code: "turnLost",
+      watchdog,
       message:
         "This turn's process stopped before it could finish. The session was restored from its last save — send a message to carry on.",
     }).catch(() => {});
@@ -377,6 +388,7 @@ export async function reapDeadVmRuns(
         feature: row.routine_id ? "routine_compute" : "sandbox_compute",
         projectId: row.project_id,
         durationMs: Date.now() - startedMs,
+        usdPerMinute: row.sandbox_billing?.usdPerMinute,
       }).catch((err) =>
         console.error(
           "[agent-drain] vm compute metering failed:",
