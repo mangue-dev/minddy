@@ -286,7 +286,10 @@ export async function POST(request: NextRequest) {
                     toolChoice: "required",
                     parallelToolCalls: false,
                   }),
-              maxOutputTokens: 700,
+              // Gemini 3.1 may spend completion tokens on reasoning before it
+              // emits the tool call or the structured object.
+              reasoning: { effort: "minimal" },
+              maxOutputTokens: 1200,
             },
             "openrouter",
           ),
