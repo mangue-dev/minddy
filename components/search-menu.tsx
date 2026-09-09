@@ -113,6 +113,7 @@ export function SearchMenu({
   // 20 − 8 = 12, concentrique.
   const content = (
     <PopoverContent
+      data-floating-surface
       align={align}
       container={container}
       className={cn("w-60 overflow-hidden rounded-xl p-0", contentClassName)}
