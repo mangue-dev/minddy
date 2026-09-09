@@ -49,7 +49,12 @@ export const ScratchpadTaskItemBase = TaskItem.extend({
       markdown: {
         serialize(state: any, node: any) {
           const s = node.attrs.state as PlanTaskState;
-          state.write(`${TASK_MARKER_BY_STATE[s] ?? "[ ]"} `);
+          state.write(TASK_MARKER_BY_STATE[s] ?? "[ ]");
+          // An empty task must serialize as `- [ ]`, without a trailing
+          // separator. Markdown-it trims that separator while parsing, so
+          // keeping it here would make the next save needlessly rewrite the
+          // task even though its component is unchanged.
+          if (node.firstChild?.content.size > 0) state.write(" ");
           state.renderContent(node);
         },
         // Our markdown-it rule sets data-type/data-state directly, so the

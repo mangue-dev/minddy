@@ -82,6 +82,18 @@ describe("scratchpad serialization", () => {
     expect(md(makeEditor("- [ ] a\n- [~] b"))).toBe("- [ ] a\n- [~] b");
   });
 
+  it("preserves empty tasks as task components across a round trip", () => {
+    const source = "- [ ]\n- [~]\n- [x]\n- [-]";
+    const editor = makeEditor(source);
+
+    expect(md(editor)).toBe(source);
+    let taskCount = 0;
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === "taskItem") taskCount += 1;
+    });
+    expect(taskCount).toBe(4);
+  });
+
   it("garde l'imbrication et son pas de deux espaces", () => {
     expect(md(makeEditor(NESTED))).toBe(NESTED);
   });
