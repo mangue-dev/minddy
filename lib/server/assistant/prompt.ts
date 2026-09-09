@@ -899,7 +899,7 @@ export function buildClockBlock(
     }).format(now);
   } catch {
     // Illegible time zone: we don't invent it. The tool will refuse, and its message
-    // dira quoi passer.
+    // says what to pass instead.
     return "";
   }
   return `\n## Clock

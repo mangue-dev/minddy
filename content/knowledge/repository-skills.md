@@ -5,7 +5,7 @@ summary: Understand where Numo finds reusable Agent Skills and how they apply to
 category: automation
 audience: both
 tags: [skills, agent skills, repository, local, cloud, slash menu, instructions]
-lastReviewed: 2026-09-04
+lastReviewed: 2026-09-09
 ---
 
 Repository skills are reusable instructions owned by a project's code repository. Minddy discovers them from `SKILL.md` files below these conventional roots, in precedence order:
@@ -19,6 +19,6 @@ Repository skills are reusable instructions owned by a project's code repository
 
 Each skill lives in its own subdirectory. Its `SKILL.md` frontmatter supplies the name and description shown by Numo; the rest contains the workflow the agent loads. Supporting files such as references, scripts, or assets may remain beside that entrypoint and are available to the coding agent through the repository checkout.
 
-Numo synchronizes the available skill list when a conversation opens and whenever its project or execution environment changes. In Cloud, discovery reads the repository linked to the Minddy project on GitHub or GitLab. In Local, it reads the checkout attached to that project in the desktop app, so a skill that exists only on the machine can be used in a direct local run. An isolated local worktree starts from Git content, so an uncommitted skill must be committed before it can exist in that worktree.
+Numo synchronizes the available skill list when a conversation opens and whenever its project or execution environment changes. In Cloud, discovery reads the repository linked to the Minddy project on GitHub or GitLab, and a specific branch or ref can be selected. In Local, it reads the checkout attached to that project in the desktop app, so a skill that exists only on the machine can be used in a direct local run. An isolated local worktree starts from Git content, so an uncommitted skill must be committed before it can exist in that worktree.
 
-Users select up to five skills with the `/` menu, the Codex-style `$` shortcut, or the `+` menu. The `$` menu contains only repository skills, while `/` also keeps Numo's other commands. The selected skills appear as green badges and apply only to that user turn. Repository skills are never installed into Minddy, do not become global account skills, and cannot override Minddy's system or safety instructions. Minddy provides no dedicated create or install flow; if asked, the coding agent can add or edit a skill as ordinary repository files.
+Users select up to five skills with the `/` menu, the Codex-style `$` shortcut, or the `+` menu. The `$` menu contains only repository skills, while `/` also keeps Numo's other commands. A skill's instructions can be previewed before they are sent. The selected skills appear as green badges and apply only to that user turn, unless the skills were selected in a routine's instructions, where the agent receives that context each time the routine runs. Repository skills are never installed into Minddy, do not become global account skills, and cannot override Minddy's system or safety instructions. Minddy provides no dedicated create or install flow; if asked, the coding agent can add or edit a skill as ordinary repository files.
