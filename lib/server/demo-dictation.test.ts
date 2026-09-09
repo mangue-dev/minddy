@@ -7,6 +7,7 @@ import {
   resolveLocale,
   resolveTimeZone,
   sanitizeDemoTicket,
+  extractDemoFillTicketArguments,
   withinDailyBudget,
   type DemoCategory,
   type DemoMember,
@@ -153,5 +154,59 @@ describe("ce que le modèle renvoie, ramené au décor", () => {
     });
     expect(result.title).toHaveLength(120);
     expect(result.description).toHaveLength(500);
+  });
+});
+
+describe("demo tool response parsing", () => {
+  it("selects fill_ticket by name instead of assuming the first call", () => {
+    expect(
+      extractDemoFillTicketArguments({
+        choices: [
+          {
+            message: {
+              tool_calls: [
+                { function: { name: "other_tool", arguments: "{}" } },
+                {
+                  function: {
+                    name: "fill_ticket",
+                    arguments: '{"title":"Fix checkout"}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toEqual({ title: "Fix checkout" });
+  });
+
+  it("returns null when the required tool is absent", () => {
+    expect(
+      extractDemoFillTicketArguments({
+        choices: [{ message: { content: "No tool call" } }],
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when the tool arguments are not JSON", () => {
+    expect(
+      extractDemoFillTicketArguments({
+        choices: [
+          {
+            message: {
+              tool_calls: [{ function: { name: "fill_ticket", arguments: "not-json" } }],
+            },
+          },
+        ],
+      }),
+    ).toBeNull();
+  });
+
+  it("accepts a structured ticket returned in message content", () => {
+    expect(
+      extractDemoFillTicketArguments({
+        choices: [{ message: { content: '{"title":"Fix checkout"}' } }],
+      }),
+    ).toEqual({ title: "Fix checkout" });
   });
 });

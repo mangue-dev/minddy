@@ -145,10 +145,72 @@ export const FILL_TICKET_TOOL = {
           description: "Id of the category that fits best, or null when none does.",
         },
       },
+      additionalProperties: false,
       required: ["title", "description", "priority", "due_date", "assignee", "category"],
     },
   },
 };
+
+/** Structured-output fallback for providers that return text instead of a tool call. */
+export const FILL_TICKET_RESPONSE_FORMAT = {
+  type: "json_schema" as const,
+  json_schema: {
+    name: "fill_ticket",
+    strict: true,
+    schema: FILL_TICKET_TOOL.function.parameters,
+  },
+};
+
+/**
+ * Extracts the demo ticket from an OpenRouter response. Providers may return
+ * more than one choice or tool call, so the requested tool must be selected by
+ * name rather than by position. Structured-output fallbacks arrive as content.
+ */
+export function extractDemoFillTicketArguments(
+  value: unknown,
+): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") return null;
+  const choices = (value as { choices?: unknown }).choices;
+  if (!Array.isArray(choices)) return null;
+
+  for (const choice of choices) {
+    if (!choice || typeof choice !== "object") continue;
+    const message = (choice as { message?: unknown }).message;
+    if (!message || typeof message !== "object") continue;
+    const toolCalls = (message as { tool_calls?: unknown }).tool_calls;
+    if (Array.isArray(toolCalls)) {
+      for (const toolCall of toolCalls) {
+        if (!toolCall || typeof toolCall !== "object") continue;
+        const fn = (toolCall as { function?: unknown }).function;
+        if (!fn || typeof fn !== "object") continue;
+        if ((fn as { name?: unknown }).name !== "fill_ticket") continue;
+        const args = (fn as { arguments?: unknown }).arguments;
+        if (typeof args !== "string") return null;
+        try {
+          const parsed: unknown = JSON.parse(args || "{}");
+          return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? (parsed as Record<string, unknown>)
+            : null;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    const content = (message as { content?: unknown }).content;
+    if (typeof content !== "string") continue;
+    try {
+      const parsed: unknown = JSON.parse(content);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      // A non-JSON text response is handled by the route's structured-output retry.
+    }
+  }
+
+  return null;
+}
 
 export function buildDemoPrompt({
   locale,
@@ -161,7 +223,7 @@ export function buildDemoPrompt({
   members: DemoMember[];
   categories: DemoCategory[];
 }): string {
-  return `You are Numo, the minddy assistant. A visitor dictated ONE sentence to create an issue. Turn it into a filled issue form by calling fill_ticket exactly once.
+  return `You are Numo, the minddy assistant. A visitor dictated ONE sentence to create an issue. Turn it into a filled issue form by calling fill_ticket exactly once when that tool is available. If no tool is available, return exactly one JSON object with the same fields and no prose.
 
 ## Today
 ${today} — resolve "demain", "vendredi", "next week" against this date. Express due_date as YYYY-MM-DD.
@@ -178,7 +240,7 @@ ${categories.map((c) => `- ${c.id} = ${c.name}`).join("\n")}
 - The description restates what was said, faithfully. NEVER invent facts, steps, causes or numbers.
 - Always set priority: read it from the words when stated, estimate it from urgency and impact otherwise.
 - assignee only when a person was named, category only when one clearly fits, due_date only when a deadline was said. null otherwise — never guess.
-- Call the tool once, then stop. No message after it.`;
+- When a tool is available, call it once, then stop. No message after it.`;
 }
 
 /**
