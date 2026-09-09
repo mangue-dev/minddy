@@ -167,6 +167,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   return (
     <div
       data-floating-surface
+      data-floating-surface-radius="lg"
       className="min-w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg"
     >
       <div
