@@ -306,6 +306,26 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             </button>
           ))}
         </div>
+        <ActionTooltip label={t("clearRead")}>
+          <IconButton
+            size="sm"
+            aria-label={t("clearRead")}
+            disabled={readCount === 0}
+            onClick={() => setClearReadOpen(true)}
+          >
+            <Trash2 className="size-4" />
+          </IconButton>
+        </ActionTooltip>
+        <ActionTooltip label={t("markAllRead")}>
+          <IconButton
+            size="sm"
+            aria-label={t("markAllRead")}
+            disabled={unreadCount === 0}
+            onClick={() => act(markAllRead())}
+          >
+            <MailOpen className="size-4" />
+          </IconButton>
+        </ActionTooltip>
         <ActionTooltip label={t("settings")}>
           <IconButton size="sm" aria-label={t("settings")} asChild>
             <Link href="/settings?tab=inbox" onClick={onNavigate}>
@@ -542,15 +562,6 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             )}
           </div>
         </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 p-2">
-        <Button variant="ghost" size="sm" disabled={readCount === 0} onClick={() => setClearReadOpen(true)}>
-          {t("clearRead")}
-        </Button>
-        <Button variant="ghost" size="sm" disabled={unreadCount === 0} onClick={() => act(markAllRead())}>
-          {t("markAllRead")}
-        </Button>
-      </div>
-
       <AlertDialog open={clearReadOpen} onOpenChange={setClearReadOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
