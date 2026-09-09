@@ -85,6 +85,12 @@ function matchesStateFilter(state: PullRequestListItem["pr_state"], filter: unkn
   );
 }
 
+function shouldShowPullRequestReadiness(
+  state: PullRequestListItem["pr_state"],
+): boolean {
+  return state === "draft" || state === "open";
+}
+
 /**
  * Applies a state change to all cached variants in the list.
  * A line that leaves the current filter disappears immediately: the sidebar and
@@ -319,6 +325,7 @@ function PrRow({
   const identifier = prIdentifier(pr.provider, pr.pr_number);
   const linkedIssue =
     pr.issue && pr.project ? issueIdentifier(pr.project.key, pr.issue.number) : null;
+  const showReadiness = shouldShowPullRequestReadiness(pr.pr_state);
 
   return (
     <button
@@ -354,7 +361,12 @@ function PrRow({
         {pr.activeRunId ? <Spinner className="size-3 shrink-0" /> : null}
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[10px]" />
-          <span className="text-xs text-muted-foreground">{dateLabel}</span>
+          {showReadiness ? (
+            <PrReadinessIcon
+              readiness={readiness}
+              unavailable={readinessUnavailable}
+            />
+          ) : null}
         </span>
       </div>
       <span className="line-clamp-2 text-sm font-medium">
@@ -379,10 +391,7 @@ function PrRow({
             <GitLogin login={pr.author?.login} className="text-xs" />
           )}
         </span>
-        <PrReadinessIcon
-          readiness={readiness}
-          unavailable={readinessUnavailable}
-        />
+        <span className="ml-auto shrink-0 text-xs text-muted-foreground">{dateLabel}</span>
       </span>
     </button>
   );
@@ -683,7 +692,11 @@ export function PullRequestsPage() {
       const shown = showAll
         ? group.items
         : group.items.slice(0, Math.max(PROJECT_GROUP_LIMIT, selectedIndex + 1));
-      ids.push(...shown.map((pr) => pr.prId));
+      ids.push(
+        ...shown
+          .filter((pr) => shouldShowPullRequestReadiness(pr.pr_state))
+          .map((pr) => pr.prId),
+      );
     }
     return ids;
   }, [collapsedGroups, expandedGroups, filtering, groups, selectedId]);
