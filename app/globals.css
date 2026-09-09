@@ -329,14 +329,14 @@ a.markdown-link::before {
 /* Keep content slightly lighter than both sidebar levels, including floating
    navigation. The shared surface scale below also covers cards and popovers. */
 .dark:has(.app-shell) {
-  --background: #101011;
+  --background: #0f0f0f;
   --sidebar: oklch(0.165 0.004 264);
 }
 .dark {
   --background: oklch(0.165 0.004 264);
-  --sidebar: #101011;
-  --card: #101011;
-  --popover: #101011;
+  --sidebar: #0f0f0f;
+  --card: #0f0f0f;
+  --popover: #0f0f0f;
   --sidebar-border: oklch(0.27 0.006 264);
 
   /* Darken the neutral scale together, preserving the lightness differences

@@ -9,6 +9,7 @@ describe("desktop shell UI", () => {
     const css = desktopShellStyles();
     expect(css).toContain("--primary: oklch(0.21 0.012 265)");
     expect(css).toContain("--background: oklch(0.165 0.004 264)");
+    expect(css).toContain("--card: #0f0f0f");
     expect(css).toContain("border-radius: 999px");
     expect(css).toContain('font-family: "Inter"');
   });
