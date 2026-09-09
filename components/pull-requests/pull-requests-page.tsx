@@ -19,7 +19,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
-import { PrReadinessBadge } from "@/components/pull-requests/pr-readiness";
+import { PrReadinessText } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
@@ -357,26 +357,28 @@ function PrRow({
       <span className="line-clamp-2 text-sm font-medium">
         {pr.title ?? pr.issue?.title ?? identifier}
       </span>
-      <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
         {/* THE AUTHOR distinguishes a Numo PR from a human PR, now that they
             cohabit. The run decides: it does not lie, where the login of the forge
             depends on the installation. */}
-        {pr.runId ? (
-          <NumoIcon animated={false} className="size-3.5 shrink-0" />
-        ) : pr.author ? (
-          <ForgeUserAvatar
-            user={pr.author}
-            className="size-3.5 shrink-0"
-          />
-        ) : null}
-        {pr.runId ? (
-          <span className="truncate">{t("numoAuthor")}</span>
-        ) : (
-          <GitLogin login={pr.author?.login} className="text-xs" />
-        )}
-        <PrReadinessBadge
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
+          {pr.runId ? (
+            <NumoIcon animated={false} className="size-3.5 shrink-0" />
+          ) : pr.author ? (
+            <ForgeUserAvatar
+              user={pr.author}
+              className="size-3.5 shrink-0"
+            />
+          ) : null}
+          {pr.runId ? (
+            <span className="truncate">{t("numoAuthor")}</span>
+          ) : (
+            <GitLogin login={pr.author?.login} className="text-xs" />
+          )}
+        </span>
+        <PrReadinessText
           readiness={readiness}
-          className="h-5 px-2 text-[10px]"
+          className="flex-1"
         />
       </span>
     </button>
