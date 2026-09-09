@@ -85,6 +85,66 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   text-align: left;
 }
 
+/* ─── Floating surfaces ────────────────────────────────────────────────
+   Popovers, menus, selects and custom suggestion lists are portaled or
+   absolutely positioned, so their stacking context must be independent from
+   the content that opened them. Keep dialogs and modals out of this group:
+   their opaque card surfaces and their own z-index remain unchanged.
+
+   The opacity is intentionally high enough to hide text behind a menu while
+   still letting the surrounding surface show through. The stronger blur gives
+   the translucent surface its separation without turning every menu into a
+   heavy glass panel. The filter is limited to these short-lived surfaces and
+   does not use `will-change`, which would keep large compositor layers alive. */
+:is(
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-floating-surface],
+  [role="menu"]
+) {
+  background-color: color-mix(in oklab, var(--popover) 84%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  isolation: isolate;
+}
+
+/* Elevate floating surfaces above their surrounding content. Local panels can
+   opt out when they intentionally sit below a confirmation dialog. */
+:is(
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-floating-surface]:not([data-floating-surface-layer="local"]),
+  [role="menu"]
+) {
+  z-index: 1000 !important;
+}
+
+/* A searchable command list lives inside its popover. Let the parent surface
+   carry the glass treatment so the command root does not paint an opaque box
+   over it. CommandDialog remains opaque because it is not inside one of these
+   floating surfaces. */
+:is(
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-floating-surface],
+  [role="menu"]
+) [data-slot="command"] {
+  background-color: transparent;
+}
+
+/* Select's scroll controls are part of the same surface and should not paint
+   an opaque strip over the translucent list. */
+[data-slot="select-content"]
+  :is([data-slot="select-scroll-up-button"], [data-slot="select-scroll-down-button"]) {
+  background-color: transparent;
+}
+
 /* App-authored Markdown uses the shared enriched link treatment. Forge-authored
    pull request content opts out so linked badges and image buttons stay intact. */
 a.markdown-link {

@@ -175,6 +175,8 @@ export function PageCommentPopover({
   return (
     <div
       ref={panel}
+      data-floating-surface
+      data-floating-surface-layer="local"
       style={{ top: box.top, left: box.left, width: WIDTH }}
       className={cn(
         "fixed z-40 flex max-h-[min(70vh,32rem)] flex-col overflow-visible",

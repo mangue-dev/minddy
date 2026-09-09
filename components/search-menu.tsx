@@ -107,12 +107,9 @@ export function SearchMenu({
     ? (e: React.SyntheticEvent) => e.stopPropagation()
     : undefined;
 
-  // `rounded-xl` for the same reason as the comboboxes: it is `Command` which
-  // paints this surface and it is already 20px. Options are 8px from the edge
-  // (the `p-1` of `Command` + that of `CommandGroup`) and carry 12px —
-  // 20 − 8 = 12, concentrique.
   const content = (
     <PopoverContent
+      data-floating-surface
       align={align}
       container={container}
       className={cn("w-60 overflow-hidden rounded-xl p-0", contentClassName)}

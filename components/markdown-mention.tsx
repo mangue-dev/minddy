@@ -196,6 +196,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
     <div
       ref={listRef}
       role="listbox"
+      data-floating-surface
       className="scrollbar-quiet max-h-56 w-72 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-1 shadow-lg"
     >
       {props.items.map((option, index) => (

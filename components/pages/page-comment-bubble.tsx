@@ -148,6 +148,7 @@ export function PageCommentBubble({
         updateDelay={SELECTION_MENU_DELAY_MS}
         shouldShow={shouldShowSelectionMenu}
         options={{ placement: "top", offset: 8 }}
+        data-floating-surface
         className={cn(
           "flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 shadow-md",
         )}

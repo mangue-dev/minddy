@@ -69,7 +69,7 @@ export function EmojiPicker({
           // The language of the app controls that of the search: search
           // “fuze” must find 🚀 in French like “rocket” in English.
           locale={locale === "pt-BR" ? "pt" : locale}
-          className="isolate flex h-[340px] w-full flex-col bg-popover"
+          className="isolate flex h-[340px] w-full flex-col bg-transparent"
           onEmojiSelect={({ emoji }) => {
             onChange(emoji);
             setOpen(false);
