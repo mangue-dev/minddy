@@ -254,7 +254,10 @@ mac:
 # each one.
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  # Fail the build if the signed bundle or one of its nested helpers cannot be
+  # verified. Publication performs the same check again after packaging.
+  strictVerify: true
   # `gatekeeperAssess` passes `spctl` DURING the build, before notarization —
   # so it always fails at that point, and for nothing. The real check
   # is `spctl -a -vvv` on the stapled `.dmg` (see docs/desktop-release.md).

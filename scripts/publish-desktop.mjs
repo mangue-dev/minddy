@@ -1,11 +1,14 @@
 import { execFile } from "node:child_process";
-import { readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { put } from "@vercel/blob";
 
 import { computeDesktopFingerprint } from "./desktop-fingerprint.mjs";
+import { requireMacReleaseArtifacts } from "./macos-desktop-release.mjs";
 
 /**
  * PUBLISH DESKTOP APP FLOW (MIN-292).
@@ -45,6 +48,55 @@ function fail(message) {
   process.exit(1);
 }
 
+/** Verify the complete signed bundle, including nested helpers and its ticket. */
+async function verifyMacApp(app, label) {
+  try {
+    await exec("codesign", ["--verify", "--deep", "--strict", "--verbose=2", app]);
+  } catch {
+    throw new Error(`${label} failed strict codesign verification.`);
+  }
+  try {
+    await exec("spctl", ["-a", "-vvv", app]);
+  } catch {
+    throw new Error(`${label} was rejected by Gatekeeper assessment.`);
+  }
+  try {
+    await exec("xcrun", ["stapler", "validate", app]);
+  } catch {
+    throw new Error(`${label} has no valid stapled notarization ticket.`);
+  }
+}
+
+/** Verify that every archive contains the same valid app that was built. */
+async function verifyMacArchive(archive) {
+  const extraction = await mkdtemp(path.join(os.tmpdir(), "minddy-macos-release-"));
+  let mounted = false;
+  try {
+    let app;
+    if (archive.endsWith(".zip")) {
+      await exec("ditto", ["-x", "-k", archive, extraction]);
+      app = path.join(extraction, "minddy.app");
+    } else {
+      await exec("hdiutil", [
+        "attach",
+        "-readonly",
+        "-nobrowse",
+        "-noautoopen",
+        "-mountpoint",
+        extraction,
+        archive,
+      ]);
+      mounted = true;
+      app = path.join(extraction, "minddy.app");
+    }
+    await stat(app);
+    await verifyMacApp(app, `${path.basename(archive)}: minddy.app`);
+  } finally {
+    if (mounted) await exec("hdiutil", ["detach", extraction]).catch(() => undefined);
+    await rm(extraction, { recursive: true, force: true });
+  }
+}
+
 const verifyOnly = process.argv.includes("--verify-only");
 const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
 if (!verifyOnly && !token) fail("BLOB_READ_WRITE_TOKEN is missing — nothing to publish without a store.");
@@ -68,8 +120,9 @@ if (!entries.includes("latest-mac.yml")) {
   fail("latest-mac.yml is missing: without a manifest, there is no feed, only files.");
 }
 
-// Refusal 1 — the app must be signed. `codesign -dv` fails (code ≠ 0) on a
-// unsigned bundle, and this is exactly the case we want to catch.
+// Refusal 1 — the app must be valid on disk, not merely display a signature.
+// `codesign -dv` only prints metadata and can succeed for a bundle whose nested
+// helpers or sealed resources have been modified.
 const apps = [];
 for (const arch of ["mac-arm64", "mac"]) {
   const app = path.join(RELEASE_DIR, arch, "minddy.app");
@@ -85,38 +138,13 @@ if (apps.length === 0) fail("no `minddy.app` in desktop/release — the build di
 
 for (const app of apps) {
   try {
-    await exec("codesign", ["-dv", "--verbose=2", app]);
-  } catch {
-    fail(
-      `${path.relative(repo, app)} is NOT signed. Squirrel.Mac requires a signed app: ` +
-        "publishing it would produce an app that installs but never updates. " +
-        "See docs/desktop-release.md."
-    );
+    await verifyMacApp(app, path.relative(repo, app));
+  } catch (error) {
+    fail(`${error.message} See docs/desktop-release.md.`);
   }
 }
 
-// Refusal 2 — the app is NOTARIZED, and the ticket is stapled.
-//
-// Signed is not enough: Gatekeeper also wants Apple to have looked. And the lack
-// is not seen in the build — when the `notarytool` identifiers are missing,
-// electron-builder writes `skipped macOS notarization` to `warn` in the middle of hundred
-// lines and renders a signed, non-notarized, normal-looking app. She doesn't
-// would open in anyone's home. `stapler validate` is what decides: he reads the
-// ticket IN the bundle, without network, exactly like the Mac opposite will do.
-for (const app of apps) {
-  try {
-    await exec("xcrun", ["stapler", "validate", app]);
-  } catch {
-    fail(
-      `${path.relative(repo, app)} has no stapled notarization ticket. ` +
-        "macOS will refuse to open it. The build probably wrote " +
-        "`skipped macOS notarization` — check APPLE_KEYCHAIN_PROFILE, then " +
-        "docs/desktop-release.md."
-    );
-  }
-}
-
-// Refusal 3 — the `app-update.yml` of the bundle bears the URL of the flow. This is the
+// Refusal 2 — the `app-update.yml` of the bundle bears the URL of the flow. This is the
 // file that electron-updater reads, and it is written at packaging time:
 // an absent `MINDDY_DESKTOP_FEED_URL` THIS day is not seen anywhere else.
 for (const app of apps) {
@@ -127,6 +155,34 @@ for (const app of apps) {
       `${path.relative(repo, inside)} has no feed URL: the packaged app would look for ` +
         "no updates. Rebuild with MINDDY_DESKTOP_FEED_URL set."
     );
+  }
+}
+
+// Refusal 3 — verify the checksums and sizes generated by electron-builder before
+// publishing any archive. This catches truncation or replacement in the build
+// directory before the same bytes become the public download.
+const manifest = await readFile(path.join(RELEASE_DIR, "latest-mac.yml"), "utf8");
+let artifacts;
+try {
+  artifacts = requireMacReleaseArtifacts(manifest, entries);
+} catch (error) {
+  fail(error.message);
+}
+
+for (const artifact of artifacts) {
+  const archive = path.join(RELEASE_DIR, artifact.name);
+  const body = await readFile(archive);
+  const digest = createHash("sha512").update(body).digest("base64");
+  if (body.length !== artifact.size || digest !== artifact.sha512) {
+    fail(
+      `${artifact.name} does not match latest-mac.yml: expected ${artifact.size} bytes and ` +
+        `sha512 ${artifact.sha512}.`
+    );
+  }
+  try {
+    await verifyMacArchive(archive);
+  } catch (error) {
+    fail(error.message);
   }
 }
 
@@ -141,16 +197,7 @@ for (const app of apps) {
 // lib/desktop/update-feed.ts (the other reader of the same file, site side):
 // importing TypeScript from the repository into a `.mjs` script would cost more than
 // these three lines.
-const manifest = await readFile(path.join(RELEASE_DIR, "latest-mac.yml"), "utf8");
-const referenced = [...manifest.matchAll(/^\s*-\s*url:\s*(.+)$/gm)].map((m) =>
-  m[1].trim().replace(/^['"]|['"]$/g, "")
-);
-if (referenced.length === 0) fail("latest-mac.yml announces no files.");
-
-const missing = referenced.filter((name) => !entries.includes(name));
-if (missing.length > 0) {
-  fail(`manifest announces files missing from the directory: ${missing.join(", ")}`);
-}
+const referenced = artifacts.map(({ name }) => name);
 
 const files = entries
   .filter(
