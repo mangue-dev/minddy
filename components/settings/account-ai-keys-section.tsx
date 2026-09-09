@@ -11,6 +11,7 @@ import {
 } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ModelCombobox } from "@/components/agent/model-combobox";
+import { AccountSandboxSection } from "./account-sandbox-section";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import {
   saveAgentPreferencesApi,
@@ -75,9 +76,9 @@ export function AccountAiKeysSection() {
 
   return (
     <>
-      {/* ── Provider (quota minddy ou BYOK), EN PREMIER ─────────────────────── */}
+      {/* Provider credentials come first. */}
       {/* `ByokConnectPanel` is an assistant shared with onboarding: only its
-          cadre change, jamais son contenu. */}
+          surrounding card changes, not its contents. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountAiProvider}
         icon={KeyRound}
@@ -122,6 +123,7 @@ export function AccountAiKeysSection() {
           />
         </SettingsGroup>
       ) : null}
+      <AccountSandboxSection />
     </>
   );
 }

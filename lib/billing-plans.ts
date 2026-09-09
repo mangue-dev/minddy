@@ -170,12 +170,9 @@ export function annualMonthlyEquivalentEur(plan: BillingPlan): number {
 
 // ── Non-LLM costs ────────────────────────────── ──────────────────────────────
 
-/**
- * Approximation of the Vercel Sandbox cost per minute of wall-clock of an agent run
- * (Active CPU + provisioned memory, mostly waiting for LLM).
- * To be adjusted on the actual invoices.
- */
-export const SANDBOX_USD_PER_MINUTE = 0.002;
+/** Legacy rate for runs without a persisted sandbox allocation. New runs use
+ * region and resources from the provider; see agent-sandbox-config.ts. */
+export const SANDBOX_USD_PER_MINUTE = 0.004;
 
 // ── Segments d'affichage de l'usage ─────────────────────────────────────────
 

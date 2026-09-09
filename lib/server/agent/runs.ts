@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { SandboxBilling } from "@/lib/agent-sandbox-config";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -214,6 +215,7 @@ export interface AgentRun {
   /** Atomically reserved successful/in-flight inline PR comments for this run. */
   pr_inline_comments_used?: number;
   sandbox_id: string | null;
+  sandbox_billing?: SandboxBilling | null;
   checkpoint: AgentCheckpoint | null;
   continuations: number;
   attempts: number;
@@ -1388,6 +1390,7 @@ export interface StampFields {
   attempts?: number;
   not_before?: string;
   sandbox_id?: string | null;
+  sandbox_billing?: SandboxBilling | null;
   base_branch?: string | null;
   branch_name?: string | null;
   pr_number?: number | null;

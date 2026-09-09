@@ -1,5 +1,8 @@
 import "server-only";
 
+import { resolveAgentExecutionBackend } from "@/lib/capabilities";
+import { AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
+
 import { harnessBundleSource } from "./harness-bundle";
 import { assertUsableLayout } from "./harness-layout";
 import { vmBundlePath, vmJobPath, type VmJob } from "./vm/protocol";
@@ -124,6 +127,10 @@ export async function startVmLoop(
     // launch. The harness can then report the terminal failure immediately.
     args: [bundlePath, jobPath, ...routingHints],
     cwd: harnessDir,
+    // Apply the profile on every turn, including a resumed persistent sandbox.
+    ...(resolveAgentExecutionBackend(process.env) === "vercel"
+      ? { env: AGENT_SANDBOX_RUNTIME_ENV }
+      : {}),
     detached: true,
   });
   return command.cmdId;
