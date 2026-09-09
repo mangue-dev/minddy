@@ -1,5 +1,5 @@
 import type { AgentRunPrResponse, PullRequestCheck } from "./agent-api";
-import type { ReadinessBlocker } from "./pr-readiness";
+import type { PullRequestReadiness, ReadinessBlocker } from "./pr-readiness";
 
 export type PullRequestDetailTab = "activity" | "commits" | "files";
 type RerunnableCheck = PullRequestCheck & {
@@ -14,6 +14,20 @@ export function pullRequestRefetchInterval(
   if (response?.checks?.state === "pending") return PULL_REQUEST_POLL_MS;
   if (
     response?.readiness?.blockers.some(
+      (blocker) => blocker.id === "mergeability-unavailable",
+    )
+  ) {
+    return PULL_REQUEST_POLL_MS;
+  }
+  return false;
+}
+
+export function pullRequestReadinessRefetchInterval(
+  readiness: PullRequestReadiness | undefined,
+): number | false {
+  if (readiness?.state === "checks_running") return PULL_REQUEST_POLL_MS;
+  if (
+    readiness?.blockers.some(
       (blocker) => blocker.id === "mergeability-unavailable",
     )
   ) {

@@ -11,6 +11,7 @@ import {
   fetchIssueAutomationApi,
   fetchOpenPullRequestCountApi,
   fetchPullRequestApi,
+  fetchPullRequestReadinessApi,
   fetchPrCommitDiffApi,
   fetchPullRequestCommentsApi,
   fetchPullRequestCommitsApi,
@@ -26,7 +27,10 @@ import {
   type AgentLocalDiff,
 } from "./agent-local-diff";
 import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
-import { pullRequestRefetchInterval } from "./pr-readiness-actions";
+import {
+  pullRequestReadinessRefetchInterval,
+  pullRequestRefetchInterval,
+} from "./pr-readiness-actions";
 
 /** Cache key for agent runs of an issue. */
 export function issueAgentRunsQueryKey(issueId: string) {
@@ -180,6 +184,20 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     readinessThreads: data?.reviewThreads ?? null,
     loading: enabled && isPending,
     refetch,
+  };
+}
+
+export function usePullRequestReadinessQuery(prId: string, enabled = true) {
+  const { data, isPending } = useQuery({
+    queryKey: ["pull-request-readiness", prId],
+    queryFn: () => fetchPullRequestReadinessApi(prId),
+    enabled,
+    refetchInterval: (query) =>
+      pullRequestReadinessRefetchInterval(query.state.data?.readiness),
+  });
+  return {
+    readiness: data?.readiness ?? null,
+    loading: enabled && isPending,
   };
 }
 

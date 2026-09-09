@@ -123,15 +123,17 @@ function blockerMessageKey(
 
 export function PrReadinessBadge({
   readiness,
+  className,
 }: {
   readiness: PullRequestReadiness | null;
+  className?: string;
 }) {
   const t = useTranslations("PullRequests");
   if (!readiness) {
     return (
       <Badge
         variant="secondary"
-        className="shrink-0 gap-1.5 text-muted-foreground"
+        className={cn("shrink-0 gap-1.5 text-muted-foreground", className)}
       >
         <Clock className="size-3" />
         {t("readinessLoading")}
@@ -148,6 +150,7 @@ export function PrReadinessBadge({
       variant="secondary"
       className={cn(
         "shrink-0 gap-1.5",
+        className,
         ready &&
           "border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
         pending &&
