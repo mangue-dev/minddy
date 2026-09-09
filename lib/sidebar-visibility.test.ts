@@ -95,19 +95,35 @@ describe("sidebar visibility", () => {
     expect(button().getAttribute("aria-label")).toBe("Hide sidebar");
   });
 
-  it("lets an explicit show override the compact default across resizing", () => {
+  it("forces the sidebar hidden and disables the toggle below 1200 px", () => {
     viewport.compact = true;
     render();
     expect(panel()?.dataset.open).toBe("false");
+    expect(isHidden()).toBe(true);
+    expect(button().disabled).toBe(true);
+    expect(button().className).toContain("cursor-not-allowed");
     act(() => button().click());
-    expect(isHidden()).toBe(false);
+    expect(isHidden()).toBe(true);
     viewport.compact = false;
     render();
+    expect(isHidden()).toBe(false);
+    expect(button().disabled).toBe(false);
+  });
+
+  it("keeps the breakpoint authoritative after a wider-screen show choice", () => {
+    render();
+    act(() => button().click());
+    act(() => button().click());
+    expect(isHidden()).toBe(false);
+
     viewport.compact = true;
     render();
+    expect(isHidden()).toBe(true);
+    expect(button().disabled).toBe(true);
+
+    viewport.compact = false;
+    render();
     expect(isHidden()).toBe(false);
-    act(() => button().click());
-    expect(panel()?.dataset.open).toBe("false");
   });
 
   it("follows viewport defaults until a visibility preference is chosen", () => {
@@ -122,9 +138,10 @@ describe("sidebar visibility", () => {
   });
 
   it("recalls hidden navigation for keyboard focus and releases it on focus exit", () => {
-    viewport.compact = true;
     render();
     const control = button();
+    act(() => control.click());
+    act(() => control.blur());
     const matches = control.matches.bind(control);
     vi.spyOn(control, "matches").mockImplementation(selector =>
       selector === ":focus-visible" || matches(selector),
