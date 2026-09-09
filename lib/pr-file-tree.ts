@@ -102,7 +102,7 @@ function basename(path: string): string {
  * (`ancien → nouveau`); a simple move, no — the tree already shows it by
  * placing the file under its new folder, and repeating the original path
  * would double the line to learn nothing. The full path from before remains
- * on `file.previous_filename`, for the tooltip.
+ * on `file.previous_filename` for rename semantics.
  */
 function leafLabel(file: PullRequestFile): string {
   const name = basename(file.filename);

@@ -7,7 +7,6 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { PullRequestFile } from "@/lib/agent-api";
 import { buildFileTree, type FileTreeNode } from "@/lib/pr-file-tree";
 import { DiffCounters, FileStatusIcon } from "@/components/pull-requests/pr-file-marks";
-import { AppTooltip } from "@/components/ui/app-tooltip";
 import {
   Tooltip,
   TooltipContent,
@@ -141,13 +140,8 @@ function TreeRows({
           );
         }
 
-        const fullPath = node.file.previous_filename
-          ? `${node.file.previous_filename} → ${node.path}`
-          : node.path;
-
         return (
           <li key={node.path}>
-            <AppTooltip label={fullPath}>
             <button
               type="button"
               onClick={() => onSelect(node.path)}
@@ -164,7 +158,6 @@ function TreeRows({
                 className="ml-2 pt-px"
               />
             </button>
-            </AppTooltip>
           </li>
         );
       })}
