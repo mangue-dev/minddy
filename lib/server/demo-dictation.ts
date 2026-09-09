@@ -150,6 +150,46 @@ export const FILL_TICKET_TOOL = {
   },
 };
 
+/**
+ * Extracts the arguments for the required demo tool from an OpenRouter response.
+ * Providers may return more than one choice or tool call, so the requested tool
+ * must be selected by name rather than by position.
+ */
+export function extractDemoFillTicketArguments(
+  value: unknown,
+): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") return null;
+  const choices = (value as { choices?: unknown }).choices;
+  if (!Array.isArray(choices)) return null;
+
+  for (const choice of choices) {
+    if (!choice || typeof choice !== "object") continue;
+    const message = (choice as { message?: unknown }).message;
+    if (!message || typeof message !== "object") continue;
+    const toolCalls = (message as { tool_calls?: unknown }).tool_calls;
+    if (!Array.isArray(toolCalls)) continue;
+
+    for (const toolCall of toolCalls) {
+      if (!toolCall || typeof toolCall !== "object") continue;
+      const fn = (toolCall as { function?: unknown }).function;
+      if (!fn || typeof fn !== "object") continue;
+      if ((fn as { name?: unknown }).name !== "fill_ticket") continue;
+      const args = (fn as { arguments?: unknown }).arguments;
+      if (typeof args !== "string") return null;
+      try {
+        const parsed: unknown = JSON.parse(args || "{}");
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : null;
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function buildDemoPrompt({
   locale,
   today,

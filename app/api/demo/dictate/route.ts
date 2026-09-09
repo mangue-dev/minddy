@@ -29,6 +29,7 @@ import {
   sanitizeDemoTicket,
   todayIn,
   withinDailyBudget,
+  extractDemoFillTicketArguments,
 } from "@/lib/server/demo-dictation";
 import {
   DEMO_CATEGORY_IDS,
@@ -269,7 +270,10 @@ export async function POST(request: NextRequest) {
                 { role: "user", content: transcript },
               ],
               tools: [FILL_TICKET_TOOL],
-              toolChoice: { type: "function", function: { name: "fill_ticket" } },
+              // The request contains one tool, so `required` is enough and is
+              // supported more consistently by OpenAI-compatible Gemini routes.
+              toolChoice: "required",
+              parallelToolCalls: false,
               maxOutputTokens: 700,
             },
             "openrouter",
@@ -304,11 +308,11 @@ export async function POST(request: NextRequest) {
       billTo: BILL_TO,
     });
 
-    const call = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!call || call.function.name !== "fill_ticket") {
+    const arguments_ = extractDemoFillTicketArguments(data);
+    if (!arguments_) {
       throw new Error("no fill_ticket call");
     }
-    ticket = sanitizeDemoTicket(JSON.parse(call.function.arguments || "{}"), {
+    ticket = sanitizeDemoTicket(arguments_, {
       transcript,
       today,
       members,
