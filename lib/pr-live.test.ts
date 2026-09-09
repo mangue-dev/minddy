@@ -19,7 +19,7 @@ describe("prLiveQueryKeys", () => {
   it("mappe chaque partie sur le cache que l'écran lit", () => {
     expect(prLiveQueryKeys(PR, ["pr"])).toEqual([
       ["pull-request", PR],
-      ["pull-request-readiness", PR],
+      ["pull-request-readiness"],
     ]);
     expect(prLiveQueryKeys(PR, ["conversation"])).toEqual([["pr-comments", PR]]);
     expect(prLiveQueryKeys(PR, ["commits"])).toEqual([["pr-commits", PR]]);
@@ -36,7 +36,7 @@ describe("prLiveQueryKeys", () => {
     expect(prLiveQueryKeys(PR, ["conversation", "pr"])).toEqual([
       ["pr-comments", PR],
       ["pull-request", PR],
-      ["pull-request-readiness", PR],
+      ["pull-request-readiness"],
     ]);
   });
 
@@ -47,7 +47,7 @@ describe("prLiveQueryKeys", () => {
       prLiveQueryKeys(PR, ["pr", "conversation", "reviewComments", "pr", "reviewComments"]),
     ).toEqual([
       ["pull-request", PR],
-      ["pull-request-readiness", PR],
+      ["pull-request-readiness"],
       ["pr-comments", PR],
       ["pr-review-comments"],
     ]);

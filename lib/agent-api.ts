@@ -739,10 +739,23 @@ export interface PullRequestReadinessResponse {
   readiness: PullRequestReadiness;
 }
 
+export interface PullRequestReadinessBatchResponse {
+  readiness: Record<string, PullRequestReadiness>;
+  unavailablePrIds: string[];
+}
+
 export async function fetchPullRequestReadinessApi(
   prId: string,
 ): Promise<PullRequestReadinessResponse> {
   return parseJson(await fetch(`/api/pull-requests/${prId}/readiness`));
+}
+
+export async function fetchPullRequestReadinessBatchApi(
+  prIds: readonly string[],
+): Promise<PullRequestReadinessBatchResponse> {
+  const params = new URLSearchParams();
+  for (const prId of prIds) params.append("pr", prId);
+  return parseJson(await fetch(`/api/pull-requests/readiness?${params}`));
 }
 
 /**

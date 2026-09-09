@@ -452,6 +452,7 @@ export function keysForProjectEvent(
         active(AGENT_ACTIVITY_KEY),
         active(ALL_PULL_REQUESTS_KEY),
         active(OPEN_PULL_REQUEST_COUNT_KEY),
+        active(["pull-request-readiness"]),
         ...(prId ? [active(["pull-request", prId])] : []),
         ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
       ];
@@ -531,6 +532,7 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   // return to the foreground, and nothing else. Only MOUNTED queries
   // repartent au serveur (cf. `catchUp`), soit un panneau au plus.
   ["pull-request"],
+  ["pull-request-readiness"],
   ["pr-comments"],
   ["pr-commits"],
   ["pr-review-comments"],

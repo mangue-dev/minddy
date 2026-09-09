@@ -36,7 +36,7 @@ import {
 import {
   PULL_REQUESTS_PAGE,
   useAllPullRequestsQuery,
-  usePullRequestReadinessQuery,
+  usePullRequestReadinessBatchQuery,
 } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
@@ -300,17 +300,20 @@ function PrFilterMenu({
  */
 function PrRow({
   pr,
+  readiness,
+  readinessUnavailable,
   selected,
   dateLabel,
   onSelect,
 }: {
   pr: PullRequestListItem;
+  readiness: NonNullable<AgentRunPrResponse["readiness"]> | null;
+  readinessUnavailable: boolean;
   selected: boolean;
   dateLabel: string;
   onSelect: () => void;
 }) {
   const t = useTranslations("PullRequests");
-  const { readiness } = usePullRequestReadinessQuery(pr.prId);
   // The PR identifier first — it's THIS line we're looking at; the ticket
   // linked is read on the right, behind a link icon that names the association.
   const identifier = prIdentifier(pr.provider, pr.pr_number);
@@ -378,6 +381,7 @@ function PrRow({
         </span>
         <PrReadinessIcon
           readiness={readiness}
+          unavailable={readinessUnavailable}
         />
       </span>
     </button>
@@ -387,6 +391,9 @@ function PrRow({
 /** A project and its pull requests — the shared shell, filled with `PrRow`. */
 function PrGroupRows({
   group,
+  readinessByPrId,
+  unavailablePrIds,
+  readinessError,
   open,
   showAll,
   collapsible,
@@ -397,6 +404,9 @@ function PrGroupRows({
   onSelect,
 }: {
   group: ProjectGroup<PullRequestListItem>;
+  readinessByPrId: Record<string, NonNullable<AgentRunPrResponse["readiness"]>>;
+  unavailablePrIds: ReadonlySet<string>;
+  readinessError: boolean;
   open: boolean;
   showAll: boolean;
   collapsible: boolean;
@@ -436,6 +446,8 @@ function PrGroupRows({
         <PrRow
           key={pr.prId}
           pr={pr}
+          readiness={readinessByPrId[pr.prId] ?? null}
+          readinessUnavailable={readinessError || unavailablePrIds.has(pr.prId)}
           selected={pr.prId === selectedId}
           dateLabel={fmtDay(pr.updated_at)}
           onSelect={() => onSelect(pr.prId)}
@@ -661,6 +673,26 @@ export function PullRequestsPage() {
   // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
 
+  const readinessPrIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const group of groups) {
+      const open = filtering || !collapsedGroups.has(group.key);
+      if (!open) continue;
+      const selectedIndex = group.items.findIndex((p) => p.prId === selectedId);
+      const showAll = filtering || expandedGroups.has(group.key);
+      const shown = showAll
+        ? group.items
+        : group.items.slice(0, Math.max(PROJECT_GROUP_LIMIT, selectedIndex + 1));
+      ids.push(...shown.map((pr) => pr.prId));
+    }
+    return ids;
+  }, [collapsedGroups, expandedGroups, filtering, groups, selectedId]);
+  const {
+    readinessByPrId,
+    unavailablePrIds,
+    error: readinessError,
+  } = usePullRequestReadinessBatchQuery(readinessPrIds);
+
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
@@ -776,6 +808,9 @@ export function PullRequestsPage() {
               <PrGroupRows
                 key={g.key}
                 group={g}
+                readinessByPrId={readinessByPrId}
+                unavailablePrIds={unavailablePrIds}
+                readinessError={readinessError}
                 open={filtering || !collapsedGroups.has(g.key)}
                 showAll={filtering || expandedGroups.has(g.key)}
                 collapsible={!filtering}

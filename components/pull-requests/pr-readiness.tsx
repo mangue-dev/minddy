@@ -175,28 +175,34 @@ export function PrReadinessBadge({
 
 export function PrReadinessIcon({
   readiness,
+  unavailable = false,
   className,
 }: {
   readiness: PullRequestReadiness | null;
+  unavailable?: boolean;
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
-  const label = readiness
+  const label = unavailable
+    ? t("readinessUnavailable")
+    : readiness
     ? t(STATE_KEYS[readiness.state])
     : t("readinessLoading");
   const ready = readiness?.state === "ready";
   const pending =
-    !readiness ||
-    readiness.state === "review_requested" ||
-    readiness.state === "checks_running" ||
-    readiness.state === "status_unavailable";
-  const Icon = ready ? Check : pending ? Clock : AlertCircle;
+    !unavailable &&
+    (!readiness ||
+      readiness.state === "review_requested" ||
+      readiness.state === "checks_running" ||
+      readiness.state === "status_unavailable");
+  const Icon = unavailable ? AlertCircle : ready ? Check : pending ? Clock : AlertCircle;
   return (
     <AppTooltip label={label}>
       <span
         aria-label={label}
         className={cn(
           "flex size-4 shrink-0 items-center justify-center",
+          unavailable && "text-destructive",
           ready && "text-emerald-700 dark:text-emerald-400",
           pending && "text-amber-700 dark:text-amber-400",
           !ready && !pending && "text-destructive",

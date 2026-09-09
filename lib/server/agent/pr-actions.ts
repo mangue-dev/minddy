@@ -419,6 +419,8 @@ interface PullRequestReadinessResult {
   readiness: PullRequestReadiness;
 }
 
+const READINESS_BATCH_CONCURRENCY = 4;
+
 /** Read the merge-readiness data without loading a pull request diff. */
 async function readPullRequestReadiness(
   scope: PrScope,
@@ -567,6 +569,45 @@ export async function prReadinessResponse(scope: PrScope): Promise<NextResponse>
   } catch (err) {
     return forgeErrorResponse(err);
   }
+}
+
+/** GET compact readiness for several sidebar rows with bounded forge concurrency. */
+export async function prReadinessBatchResponse(
+  userId: string,
+  prIds: readonly string[],
+): Promise<NextResponse> {
+  const readiness: Record<string, PullRequestReadiness> = {};
+  const unavailablePrIds: string[] = [];
+  let nextIndex = 0;
+
+  const readNext = async () => {
+    while (nextIndex < prIds.length) {
+      const prId = prIds[nextIndex++];
+      try {
+        const pr = await findPullRequest(prId);
+        const scope = pr ? await resolvePrScope(userId, pr) : null;
+        if (!pr || !scope) {
+          unavailablePrIds.push(prId);
+          continue;
+        }
+        const forgePr = await scope.forge.getPullRequest(scope.call);
+        const result = await readPullRequestReadiness(scope, forgePr);
+        readiness[prId] = result.readiness;
+      } catch (error) {
+        console.error(`[pr-actions] readiness unavailable for ${prId}:`, (error as Error).message);
+        unavailablePrIds.push(prId);
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(READINESS_BATCH_CONCURRENCY, prIds.length) },
+      () => readNext(),
+    ),
+  );
+
+  return NextResponse.json({ readiness, unavailablePrIds });
 }
 
 // ── Commits ──────────────────────────────────────────────────────────────────

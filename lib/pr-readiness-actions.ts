@@ -1,5 +1,6 @@
 import type { AgentRunPrResponse, PullRequestCheck } from "./agent-api";
 import type { PullRequestReadiness, ReadinessBlocker } from "./pr-readiness";
+import type { PullRequestReadinessBatchResponse } from "./agent-api";
 
 export type PullRequestDetailTab = "activity" | "commits" | "files";
 type RerunnableCheck = PullRequestCheck & {
@@ -7,6 +8,7 @@ type RerunnableCheck = PullRequestCheck & {
 };
 
 export const PULL_REQUEST_POLL_MS = 15_000;
+export const PULL_REQUEST_READINESS_SETTLED_POLL_MS = 60_000;
 
 export function pullRequestRefetchInterval(
   response: AgentRunPrResponse | undefined,
@@ -34,6 +36,19 @@ export function pullRequestReadinessRefetchInterval(
     return PULL_REQUEST_POLL_MS;
   }
   return false;
+}
+
+export function pullRequestReadinessBatchRefetchInterval(
+  response: PullRequestReadinessBatchResponse | undefined,
+  queryErrored = false,
+): number | false {
+  if (queryErrored) return PULL_REQUEST_READINESS_SETTLED_POLL_MS;
+  if (!response) return false;
+  const states = Object.values(response.readiness).map((item) => item.state);
+  if (states.some((state) => state === "checks_running" || state === "status_unavailable")) {
+    return PULL_REQUEST_POLL_MS;
+  }
+  return PULL_REQUEST_READINESS_SETTLED_POLL_MS;
 }
 
 export function findRerunnableChecks(
