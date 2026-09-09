@@ -19,7 +19,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
-import { PrReadinessText } from "@/components/pull-requests/pr-readiness";
+import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
@@ -376,9 +376,8 @@ function PrRow({
             <GitLogin login={pr.author?.login} className="text-xs" />
           )}
         </span>
-        <PrReadinessText
+        <PrReadinessIcon
           readiness={readiness}
-          className="flex-1"
         />
       </span>
     </button>

@@ -22,6 +22,7 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 import type {
   MergeMethod,
@@ -172,7 +173,7 @@ export function PrReadinessBadge({
   );
 }
 
-export function PrReadinessText({
+export function PrReadinessIcon({
   readiness,
   className,
 }: {
@@ -180,30 +181,31 @@ export function PrReadinessText({
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
-  if (!readiness) {
-    return (
-      <span className={cn("min-w-0 truncate text-muted-foreground", className)}>
-        {t("readinessLoading")}
-      </span>
-    );
-  }
-  const ready = readiness.state === "ready";
+  const label = readiness
+    ? t(STATE_KEYS[readiness.state])
+    : t("readinessLoading");
+  const ready = readiness?.state === "ready";
   const pending =
+    !readiness ||
     readiness.state === "review_requested" ||
     readiness.state === "checks_running" ||
     readiness.state === "status_unavailable";
+  const Icon = ready ? Check : pending ? Clock : AlertCircle;
   return (
-    <span
-      className={cn(
-        "min-w-0 truncate",
-        ready && "text-emerald-700 dark:text-emerald-400",
-        pending && "text-amber-700 dark:text-amber-400",
-        !ready && !pending && "text-destructive",
-        className,
-      )}
-    >
-      {t(STATE_KEYS[readiness.state])}
-    </span>
+    <AppTooltip label={label}>
+      <span
+        aria-label={label}
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center",
+          ready && "text-emerald-700 dark:text-emerald-400",
+          pending && "text-amber-700 dark:text-amber-400",
+          !ready && !pending && "text-destructive",
+          className,
+        )}
+      >
+        <Icon className="size-3.5" aria-hidden />
+      </span>
+    </AppTooltip>
   );
 }
 
