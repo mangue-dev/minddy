@@ -19,6 +19,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
+import { PrReadinessBadge } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
@@ -32,7 +33,11 @@ import {
   toggledSet,
   type ProjectGroup,
 } from "@/components/sidebar-project-group";
-import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
+import {
+  PULL_REQUESTS_PAGE,
+  useAllPullRequestsQuery,
+  usePullRequestReadinessQuery,
+} from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useProjects } from "@/lib/projects-context";
@@ -305,6 +310,7 @@ function PrRow({
   onSelect: () => void;
 }) {
   const t = useTranslations("PullRequests");
+  const { readiness } = usePullRequestReadinessQuery(pr.prId);
   // The PR identifier first — it's THIS line we're looking at; the ticket
   // linked is read on the right, behind a link icon that names the association.
   const identifier = prIdentifier(pr.provider, pr.pr_number);
@@ -351,7 +357,7 @@ function PrRow({
       <span className="line-clamp-2 text-sm font-medium">
         {pr.title ?? pr.issue?.title ?? identifier}
       </span>
-      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {/* THE AUTHOR distinguishes a Numo PR from a human PR, now that they
             cohabit. The run decides: it does not lie, where the login of the forge
             depends on the installation. */}
@@ -368,6 +374,10 @@ function PrRow({
         ) : (
           <GitLogin login={pr.author?.login} className="text-xs" />
         )}
+        <PrReadinessBadge
+          readiness={readiness}
+          className="h-5 px-2 text-[10px]"
+        />
       </span>
     </button>
   );

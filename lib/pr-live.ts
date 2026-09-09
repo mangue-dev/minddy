@@ -67,6 +67,7 @@ export function prLiveQueryKeys(prId: string, parts: PrLivePart[]): QueryKey[] {
     switch (part) {
       case "pr":
         push(["pull-request", prId]);
+        push(["pull-request-readiness", prId]);
         break;
       case "conversation":
         push(["pr-comments", prId]);

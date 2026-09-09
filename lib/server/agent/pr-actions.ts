@@ -62,7 +62,13 @@ import {
 } from "./pull-requests";
 import { linkPullRequestToIssue, type PrLinkRefusal } from "./pr-link";
 import { getRun } from "./runs";
-import type { CommitExtras, PullRequestCommit, PullRequestFile, ReviewVerdict } from "./pr";
+import type {
+  CommitExtras,
+  PullRequestCommit,
+  PullRequestFile,
+  PullRequestRef,
+  ReviewVerdict,
+} from "./pr";
 import { commitAuthors } from "@/lib/commit-authors";
 import {
   isReviewReactionContent,
@@ -77,9 +83,12 @@ import {
   SIGNED_ASSET_HOST,
 } from "@/lib/forge-image-assets";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import type { ChecksSummary } from "./checks-core";
 import {
+  blockReadinessForRequestedReview,
   reducePullRequestReadiness,
   unavailableMergePolicy,
+  type PullRequestReadiness,
   type RepositoryMergePolicy,
 } from "@/lib/pr-readiness";
 
@@ -400,6 +409,97 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
   };
 }
 
+interface PullRequestReadinessResult {
+  checks: ChecksSummary | null;
+  checksError: "forbidden" | "unknown" | null;
+  reviews: Awaited<ReturnType<Forge["listReviews"]>> | null;
+  reviewThreads: Awaited<ReturnType<Forge["listReviewThreads"]>> | null;
+  viewer: PrViewer;
+  mergePolicy: RepositoryMergePolicy;
+  readiness: PullRequestReadiness;
+}
+
+/** Read the merge-readiness data without loading a pull request diff. */
+async function readPullRequestReadiness(
+  scope: PrScope,
+  pr: PullRequestRef,
+): Promise<PullRequestReadinessResult> {
+  const { forge, call } = scope;
+  const [reviews, reviewThreads, viewer] = await Promise.all([
+    forge.listReviews(call).catch(() => null),
+    forge.listReviewThreads(call).catch(() => null),
+    resolveViewer(scope),
+  ]);
+
+  let mergePolicy: RepositoryMergePolicy;
+  try {
+    mergePolicy = pr.base
+      ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
+      : unavailableMergePolicy(scope.target.provider, "unknown");
+  } catch (error) {
+    mergePolicy = unavailableMergePolicy(
+      scope.target.provider,
+      isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
+    );
+  }
+
+  let checks: ChecksSummary | null = null;
+  let checksError: "forbidden" | "unknown" | null = null;
+  if (pr.headSha) {
+    try {
+      checks = await forge.listChecks({
+        ...call,
+        sha: pr.headSha,
+        requiredCheckNames: mergePolicy.requiredCheckNames,
+        checksRequired: mergePolicy.checksMustPass,
+      });
+    } catch (error) {
+      checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
+    }
+  }
+
+  const baseReadiness = reducePullRequestReadiness({
+    state: pr.state === "closed" ? "closed" : "open",
+    merged: !!pr.merged,
+    draft: !!pr.draft,
+    mergeabilityReason: pr.mergeabilityReason,
+    policy:
+      reviews?.requiredApprovals != null
+        ? { ...mergePolicy, requiredApprovals: reviews.requiredApprovals }
+        : mergePolicy,
+    checks: checks?.checks ?? null,
+    checksStatus:
+      checksError === "forbidden"
+        ? "forbidden"
+        : checksError
+          ? "unavailable"
+          : "loaded",
+    approvals: reviews?.approvals ?? null,
+    changesRequested: reviews?.changesRequested ?? null,
+    reviewThreads,
+    canWrite: viewer.capability === "write",
+    mergeFlowActive: pr.mergeFlowActive,
+  });
+  const viewerLogin = viewer.login?.toLocaleLowerCase("en-US");
+  const reviewRequested =
+    pr.state === "open" &&
+    !pr.merged &&
+    !!viewerLogin &&
+    (pr.requestedReviewers ?? []).some(
+      (reviewer) => reviewer.login.toLocaleLowerCase("en-US") === viewerLogin,
+    );
+
+  return {
+    checks,
+    checksError,
+    reviews,
+    reviewThreads,
+    viewer,
+    mergePolicy,
+    readiness: blockReadinessForRequestedReview(baseReadiness, reviewRequested),
+  };
+}
+
 /**
  * GET details: PR metadata + files/patches + CI checks + approvals +
  * merge methods offered by the forge, and what the reader has the right to do there
@@ -412,105 +512,56 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
 export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
   const { forge, call } = scope;
   try {
-    // Approvals travel with the PR and files; the checks, them,
-    // need the head SHA, therefore a second step. A reading
-    // failed approvals (GitLab tier without API, permission removed)
-    // should not bring down the PR view: it is null, not zero.
-    const [pr, diff, reviews, reviewThreads, viewer] = await Promise.all([
-      forge.getPullRequest(call),
+    const pr = await forge.getPullRequest(call);
+    const [diff, readinessData] = await Promise.all([
       forge.listPullRequestFiles(call),
-      forge.listReviews(call).catch(() => null),
-      forge.listReviewThreads(call).catch(() => null),
-      resolveViewer(scope),
+      readPullRequestReadiness(scope, pr),
     ]);
     const files = diff.files;
-
-    let mergePolicy: RepositoryMergePolicy;
-    try {
-      mergePolicy = pr.base
-        ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
-        : unavailableMergePolicy(scope.target.provider, "unknown");
-    } catch (error) {
-      mergePolicy = unavailableMergePolicy(
-        scope.target.provider,
-        isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
-      );
-    }
-
-    // `checks: null` = UNKNOWN (permission denied, call failed), distinct from
-    // `checks.total === 0` = “this repository has no CI”. `checksError` says
-    // which of the two: a 403 is a permission that the installation does not have
-    // still accepted (measured — “Resource not accessible by integration”).
-    let checks = null;
-    let checksError: "forbidden" | "unknown" | null = null;
-    let deploymentUrl: string | null = null;
+    let deploymentUrl = readinessData.checks?.deploymentUrl ?? null;
     if (pr.headSha) {
-      const [checksResult, deploymentResult] = await Promise.allSettled([
-        forge.listChecks({
-          ...call,
-          sha: pr.headSha,
-          requiredCheckNames: mergePolicy.requiredCheckNames,
-          checksRequired: mergePolicy.checksMustPass,
-        }),
-        forge.getLatestSuccessfulDeploymentUrl({
+      try {
+        deploymentUrl ??= await forge.getLatestSuccessfulDeploymentUrl({
           token: call.token,
           repoFullName: call.repoFullName,
           number: call.number,
           branch: pr.headFromBaseRepository ? pr.head : undefined,
           sha: pr.headSha,
-        }),
-      ]);
-      if (checksResult.status === "fulfilled") {
-        checks = checksResult.value;
-        deploymentUrl = checksResult.value.deploymentUrl ?? null;
-      } else {
-        const error = checksResult.reason;
-        checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
-      }
-      if (deploymentResult.status === "fulfilled") {
-        deploymentUrl ??= deploymentResult.value;
-      } else {
+        });
+      } catch (error) {
         console.error(
           "[pr-actions] deployment unreadable:",
-          (deploymentResult.reason as Error).message,
+          (error as Error).message,
         );
       }
     }
-
-    const readiness = reducePullRequestReadiness({
-      state: pr.state === "closed" ? "closed" : "open",
-      merged: !!pr.merged,
-      draft: !!pr.draft,
-      mergeabilityReason: pr.mergeabilityReason,
-      policy:
-        reviews?.requiredApprovals != null
-          ? { ...mergePolicy, requiredApprovals: reviews.requiredApprovals }
-          : mergePolicy,
-      checks: checks?.checks ?? null,
-      checksStatus: checksError === "forbidden"
-        ? "forbidden"
-        : checksError
-          ? "unavailable"
-          : "loaded",
-      approvals: reviews?.approvals ?? null,
-      changesRequested: reviews?.changesRequested ?? null,
-      reviewThreads,
-      canWrite: viewer.capability === "write",
-      mergeFlowActive: pr.mergeFlowActive,
-    });
 
     return NextResponse.json({
       pr,
       files,
       provider: scope.target.provider,
-      checks,
-      checksError,
+      checks: readinessData.checks,
+      checksError: readinessData.checksError,
       deploymentUrl,
-      reviews,
-      reviewThreads,
-      viewer,
-      mergeMethods: mergePolicy.methods,
-      mergePolicy,
+      reviews: readinessData.reviews,
+      reviewThreads: readinessData.reviewThreads,
+      viewer: readinessData.viewer,
+      mergeMethods: readinessData.mergePolicy.methods,
+      mergePolicy: readinessData.mergePolicy,
+      readiness: readinessData.readiness,
+    });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/** GET the compact readiness payload used by pull request sidebar rows. */
+export async function prReadinessResponse(scope: PrScope): Promise<NextResponse> {
+  try {
+    const pr = await scope.forge.getPullRequest(scope.call);
+    const { readiness } = await readPullRequestReadiness(scope, pr);
+    return NextResponse.json({
+      provider: scope.target.provider,
       readiness,
     });
   } catch (err) {

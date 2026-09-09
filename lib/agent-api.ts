@@ -19,6 +19,7 @@ import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import type { AssistantMention } from "./assistant-types";
 import type { ResourceInput } from "./types";
+import type { PullRequestReadiness } from "./pr-readiness";
 
 /**
  * Code agent client fetchers (MIN-46): launch a run on an issue and
@@ -731,6 +732,17 @@ export async function fetchPullRequestApi(
   prId: string,
 ): Promise<AgentRunPrResponse> {
   return parseJson(await fetch(`/api/pull-requests/${prId}`));
+}
+
+export interface PullRequestReadinessResponse {
+  provider: RepoProviderId;
+  readiness: PullRequestReadiness;
+}
+
+export async function fetchPullRequestReadinessApi(
+  prId: string,
+): Promise<PullRequestReadinessResponse> {
+  return parseJson(await fetch(`/api/pull-requests/${prId}/readiness`));
 }
 
 /**

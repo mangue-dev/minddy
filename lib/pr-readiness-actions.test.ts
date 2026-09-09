@@ -5,6 +5,7 @@ import type { ReadinessBlocker } from "./pr-readiness";
 import {
   PULL_REQUEST_POLL_MS,
   findRerunnableChecks,
+  pullRequestReadinessRefetchInterval,
   pullRequestRefetchInterval,
 } from "./pr-readiness-actions";
 
@@ -39,6 +40,32 @@ const checksBlocker: ReadinessBlocker = {
 };
 
 describe("pull request readiness interactions", () => {
+  it("keeps sidebar readiness polling while checks are running", () => {
+    expect(
+      pullRequestReadinessRefetchInterval({
+        state: "checks_running",
+        blockers: [],
+        passed: [],
+        mergeAllowed: false,
+        methods: ["squash"],
+        preferredMethod: "squash",
+      }),
+    ).toBe(PULL_REQUEST_POLL_MS);
+  });
+
+  it("stops sidebar readiness polling once the status settles", () => {
+    expect(
+      pullRequestReadinessRefetchInterval({
+        state: "ready",
+        blockers: [],
+        passed: [],
+        mergeAllowed: true,
+        methods: ["squash"],
+        preferredMethod: "squash",
+      }),
+    ).toBe(false);
+  });
+
   it("keeps polling while provider mergeability is unavailable", () => {
     expect(
       pullRequestRefetchInterval({
