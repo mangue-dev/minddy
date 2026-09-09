@@ -5,7 +5,7 @@ summary: Connect external agents to minddy and give Numo access to personal MCP 
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-09-04
+lastReviewed: 2026-09-09
 ---
 
 minddy exposes an OAuth-based MCP server. Compatible coding agents can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages. The MCP setup page provides the endpoint and setup instructions for supported clients.
@@ -23,7 +23,7 @@ their configuration already filled in. Provider prerequisites and setup links
 appear when needed. Provider endpoints were checked
 against those documents on September 4, 2026.
 
-Choose **Connect** to add the service and open the provider's OAuth flow. An
+Choose **Connect** to add the service and open the provider's OAuth flow. In the desktop app, that flow opens in the system browser and returns to the app when it completes. An
 installed OAuth connection that is not authenticated shows an orange triangle;
 hover or focus it to see its status, then use **Connect** to try again. Minddy
 supports discovery, dynamic registration, PKCE, and refresh tokens. Providers that
