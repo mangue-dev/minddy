@@ -22,6 +22,7 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 
 import type {
   MergeMethod,
@@ -123,15 +124,17 @@ function blockerMessageKey(
 
 export function PrReadinessBadge({
   readiness,
+  className,
 }: {
   readiness: PullRequestReadiness | null;
+  className?: string;
 }) {
   const t = useTranslations("PullRequests");
   if (!readiness) {
     return (
       <Badge
         variant="secondary"
-        className="shrink-0 gap-1.5 text-muted-foreground"
+        className={cn("shrink-0 gap-1.5 text-muted-foreground", className)}
       >
         <Clock className="size-3" />
         {t("readinessLoading")}
@@ -148,6 +151,7 @@ export function PrReadinessBadge({
       variant="secondary"
       className={cn(
         "shrink-0 gap-1.5",
+        className,
         ready &&
           "border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
         pending &&
@@ -166,6 +170,48 @@ export function PrReadinessBadge({
       )}
       {t(STATE_KEYS[readiness.state])}
     </Badge>
+  );
+}
+
+export function PrReadinessIcon({
+  readiness,
+  unavailable = false,
+  className,
+}: {
+  readiness: PullRequestReadiness | null;
+  unavailable?: boolean;
+  className?: string;
+}) {
+  const t = useTranslations("PullRequests");
+  const label = unavailable
+    ? t("readinessUnavailable")
+    : readiness
+    ? t(STATE_KEYS[readiness.state])
+    : t("readinessLoading");
+  const ready = readiness?.state === "ready";
+  const pending =
+    !unavailable &&
+    (!readiness ||
+      readiness.state === "review_requested" ||
+      readiness.state === "checks_running" ||
+      readiness.state === "status_unavailable");
+  const Icon = unavailable ? AlertCircle : ready ? Check : pending ? Clock : AlertCircle;
+  return (
+    <AppTooltip label={label}>
+      <span
+        aria-label={label}
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center",
+          unavailable && "text-destructive",
+          ready && "text-emerald-700 dark:text-emerald-400",
+          pending && "text-amber-700 dark:text-amber-400",
+          !ready && !pending && "text-destructive",
+          className,
+        )}
+      >
+        <Icon className="size-3.5" aria-hidden />
+      </span>
+    </AppTooltip>
   );
 }
 

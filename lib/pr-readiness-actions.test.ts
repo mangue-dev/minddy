@@ -4,7 +4,10 @@ import type { PullRequestCheck } from "./agent-api";
 import type { ReadinessBlocker } from "./pr-readiness";
 import {
   PULL_REQUEST_POLL_MS,
+  PULL_REQUEST_READINESS_SETTLED_POLL_MS,
   findRerunnableChecks,
+  pullRequestReadinessBatchRefetchInterval,
+  pullRequestReadinessRefetchInterval,
   pullRequestRefetchInterval,
 } from "./pr-readiness-actions";
 
@@ -39,6 +42,56 @@ const checksBlocker: ReadinessBlocker = {
 };
 
 describe("pull request readiness interactions", () => {
+  it("keeps sidebar readiness polling while checks are running", () => {
+    expect(
+      pullRequestReadinessRefetchInterval({
+        state: "checks_running",
+        blockers: [],
+        passed: [],
+        mergeAllowed: false,
+        methods: ["squash"],
+        preferredMethod: "squash",
+      }),
+    ).toBe(PULL_REQUEST_POLL_MS);
+  });
+
+  it("stops sidebar readiness polling once the status settles", () => {
+    expect(
+      pullRequestReadinessRefetchInterval({
+        state: "ready",
+        blockers: [],
+        passed: [],
+        mergeAllowed: true,
+        methods: ["squash"],
+        preferredMethod: "squash",
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps batch readiness refreshing after a settled result", () => {
+    expect(
+      pullRequestReadinessBatchRefetchInterval({
+        readiness: {
+          pr1: {
+            state: "ready",
+            blockers: [],
+            passed: [],
+            mergeAllowed: true,
+            methods: ["squash"],
+            preferredMethod: "squash",
+          },
+        },
+        unavailablePrIds: [],
+      }),
+    ).toBe(PULL_REQUEST_READINESS_SETTLED_POLL_MS);
+  });
+
+  it("retries a failed batch instead of leaving rows in loading", () => {
+    expect(pullRequestReadinessBatchRefetchInterval(undefined, true)).toBe(
+      PULL_REQUEST_READINESS_SETTLED_POLL_MS,
+    );
+  });
+
   it("keeps polling while provider mergeability is unavailable", () => {
     expect(
       pullRequestRefetchInterval({

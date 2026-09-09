@@ -19,6 +19,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
+import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
@@ -32,7 +33,11 @@ import {
   toggledSet,
   type ProjectGroup,
 } from "@/components/sidebar-project-group";
-import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
+import {
+  PULL_REQUESTS_PAGE,
+  useAllPullRequestsQuery,
+  usePullRequestReadinessBatchQuery,
+} from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useProjects } from "@/lib/projects-context";
@@ -78,6 +83,12 @@ function matchesStateFilter(state: PullRequestListItem["pr_state"], filter: unkn
     (filter === "open" && (state === "open" || state === "draft")) ||
     filter === state
   );
+}
+
+function shouldShowPullRequestReadiness(
+  state: PullRequestListItem["pr_state"],
+): boolean {
+  return state === "draft" || state === "open";
 }
 
 /**
@@ -295,11 +306,15 @@ function PrFilterMenu({
  */
 function PrRow({
   pr,
+  readiness,
+  readinessUnavailable,
   selected,
   dateLabel,
   onSelect,
 }: {
   pr: PullRequestListItem;
+  readiness: NonNullable<AgentRunPrResponse["readiness"]> | null;
+  readinessUnavailable: boolean;
   selected: boolean;
   dateLabel: string;
   onSelect: () => void;
@@ -310,6 +325,7 @@ function PrRow({
   const identifier = prIdentifier(pr.provider, pr.pr_number);
   const linkedIssue =
     pr.issue && pr.project ? issueIdentifier(pr.project.key, pr.issue.number) : null;
+  const showReadiness = shouldShowPullRequestReadiness(pr.pr_state);
 
   return (
     <button
@@ -345,7 +361,12 @@ function PrRow({
         {pr.activeRunId ? <Spinner className="size-3 shrink-0" /> : null}
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[10px]" />
-          <span className="text-xs text-muted-foreground">{dateLabel}</span>
+          {showReadiness ? (
+            <PrReadinessIcon
+              readiness={readiness}
+              unavailable={readinessUnavailable}
+            />
+          ) : null}
         </span>
       </div>
       <span className="line-clamp-2 text-sm font-medium">
@@ -355,19 +376,22 @@ function PrRow({
         {/* THE AUTHOR distinguishes a Numo PR from a human PR, now that they
             cohabit. The run decides: it does not lie, where the login of the forge
             depends on the installation. */}
-        {pr.runId ? (
-          <NumoIcon animated={false} className="size-3.5 shrink-0" />
-        ) : pr.author ? (
-          <ForgeUserAvatar
-            user={pr.author}
-            className="size-3.5 shrink-0"
-          />
-        ) : null}
-        {pr.runId ? (
-          <span className="truncate">{t("numoAuthor")}</span>
-        ) : (
-          <GitLogin login={pr.author?.login} className="text-xs" />
-        )}
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
+          {pr.runId ? (
+            <NumoIcon animated={false} className="size-3.5 shrink-0" />
+          ) : pr.author ? (
+            <ForgeUserAvatar
+              user={pr.author}
+              className="size-3.5 shrink-0"
+            />
+          ) : null}
+          {pr.runId ? (
+            <span className="truncate">{t("numoAuthor")}</span>
+          ) : (
+            <GitLogin login={pr.author?.login} className="text-xs" />
+          )}
+        </span>
+        <span className="ml-auto shrink-0 text-xs text-muted-foreground">{dateLabel}</span>
       </span>
     </button>
   );
@@ -376,6 +400,9 @@ function PrRow({
 /** A project and its pull requests — the shared shell, filled with `PrRow`. */
 function PrGroupRows({
   group,
+  readinessByPrId,
+  unavailablePrIds,
+  readinessError,
   open,
   showAll,
   collapsible,
@@ -386,6 +413,9 @@ function PrGroupRows({
   onSelect,
 }: {
   group: ProjectGroup<PullRequestListItem>;
+  readinessByPrId: Record<string, NonNullable<AgentRunPrResponse["readiness"]>>;
+  unavailablePrIds: ReadonlySet<string>;
+  readinessError: boolean;
   open: boolean;
   showAll: boolean;
   collapsible: boolean;
@@ -425,6 +455,8 @@ function PrGroupRows({
         <PrRow
           key={pr.prId}
           pr={pr}
+          readiness={readinessByPrId[pr.prId] ?? null}
+          readinessUnavailable={readinessError || unavailablePrIds.has(pr.prId)}
           selected={pr.prId === selectedId}
           dateLabel={fmtDay(pr.updated_at)}
           onSelect={() => onSelect(pr.prId)}
@@ -650,6 +682,30 @@ export function PullRequestsPage() {
   // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
 
+  const readinessPrIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const group of groups) {
+      const open = filtering || !collapsedGroups.has(group.key);
+      if (!open) continue;
+      const selectedIndex = group.items.findIndex((p) => p.prId === selectedId);
+      const showAll = filtering || expandedGroups.has(group.key);
+      const shown = showAll
+        ? group.items
+        : group.items.slice(0, Math.max(PROJECT_GROUP_LIMIT, selectedIndex + 1));
+      ids.push(
+        ...shown
+          .filter((pr) => shouldShowPullRequestReadiness(pr.pr_state))
+          .map((pr) => pr.prId),
+      );
+    }
+    return ids;
+  }, [collapsedGroups, expandedGroups, filtering, groups, selectedId]);
+  const {
+    readinessByPrId,
+    unavailablePrIds,
+    error: readinessError,
+  } = usePullRequestReadinessBatchQuery(readinessPrIds);
+
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
@@ -765,6 +821,9 @@ export function PullRequestsPage() {
               <PrGroupRows
                 key={g.key}
                 group={g}
+                readinessByPrId={readinessByPrId}
+                unavailablePrIds={unavailablePrIds}
+                readinessError={readinessError}
                 open={filtering || !collapsedGroups.has(g.key)}
                 showAll={filtering || expandedGroups.has(g.key)}
                 collapsible={!filtering}

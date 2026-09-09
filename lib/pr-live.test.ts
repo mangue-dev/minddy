@@ -17,7 +17,10 @@ describe("pullRequestTopic", () => {
 
 describe("prLiveQueryKeys", () => {
   it("mappe chaque partie sur le cache que l'écran lit", () => {
-    expect(prLiveQueryKeys(PR, ["pr"])).toEqual([["pull-request", PR]]);
+    expect(prLiveQueryKeys(PR, ["pr"])).toEqual([
+      ["pull-request", PR],
+      ["pull-request-readiness"],
+    ]);
     expect(prLiveQueryKeys(PR, ["conversation"])).toEqual([["pr-comments", PR]]);
     expect(prLiveQueryKeys(PR, ["commits"])).toEqual([["pr-commits", PR]]);
   });
@@ -33,6 +36,7 @@ describe("prLiveQueryKeys", () => {
     expect(prLiveQueryKeys(PR, ["conversation", "pr"])).toEqual([
       ["pr-comments", PR],
       ["pull-request", PR],
+      ["pull-request-readiness"],
     ]);
   });
 
@@ -41,7 +45,12 @@ describe("prLiveQueryKeys", () => {
     // aiming at the same key, and invalidating twice would trigger two refetches.
     expect(
       prLiveQueryKeys(PR, ["pr", "conversation", "reviewComments", "pr", "reviewComments"]),
-    ).toEqual([["pull-request", PR], ["pr-comments", PR], ["pr-review-comments"]]);
+    ).toEqual([
+      ["pull-request", PR],
+      ["pull-request-readiness"],
+      ["pr-comments", PR],
+      ["pr-review-comments"],
+    ]);
   });
 
   it("ne rend rien pour un message sans partie", () => {
@@ -50,7 +59,7 @@ describe("prLiveQueryKeys", () => {
 
   it("couvre les quatre parties du type", () => {
     const all: PrLivePart[] = ["pr", "conversation", "commits", "reviewComments"];
-    expect(prLiveQueryKeys(PR, all)).toHaveLength(4);
+    expect(prLiveQueryKeys(PR, all)).toHaveLength(5);
   });
 });
 

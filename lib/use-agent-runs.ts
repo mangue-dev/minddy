@@ -11,6 +11,7 @@ import {
   fetchIssueAutomationApi,
   fetchOpenPullRequestCountApi,
   fetchPullRequestApi,
+  fetchPullRequestReadinessBatchApi,
   fetchPrCommitDiffApi,
   fetchPullRequestCommentsApi,
   fetchPullRequestCommitsApi,
@@ -26,7 +27,10 @@ import {
   type AgentLocalDiff,
 } from "./agent-local-diff";
 import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
-import { pullRequestRefetchInterval } from "./pr-readiness-actions";
+import {
+  pullRequestReadinessBatchRefetchInterval,
+  pullRequestRefetchInterval,
+} from "./pr-readiness-actions";
 
 /** Cache key for agent runs of an issue. */
 export function issueAgentRunsQueryKey(issueId: string) {
@@ -181,6 +185,28 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     readinessThreads: data?.reviewThreads ?? null,
     loading: enabled && isPending,
     refetch,
+  };
+}
+
+export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
+  const sortedPrIds = [...new Set(prIds)].sort();
+  const enabled = sortedPrIds.length > 0;
+  const { data, isPending, isError } = useQuery({
+    queryKey: ["pull-request-readiness", "batch", sortedPrIds],
+    queryFn: () => fetchPullRequestReadinessBatchApi(sortedPrIds),
+    enabled,
+    refetchOnMount: "always",
+    refetchInterval: (query) =>
+      pullRequestReadinessBatchRefetchInterval(
+        query.state.data,
+        query.state.status === "error",
+      ),
+  });
+  return {
+    readinessByPrId: data?.readiness ?? {},
+    unavailablePrIds: new Set(data?.unavailablePrIds ?? []),
+    loading: enabled && isPending,
+    error: enabled && isError,
   };
 }
 
