@@ -163,6 +163,13 @@ beforeEach(() => {
 const run = () => h.run as unknown as Parameters<typeof landVmTurn>[0];
 
 describe("le métrage de la microVM change de main", () => {
+  it("uses the server-persisted rate instead of agent-supplied pricing", async () => {
+    h.run = { ...RUN, sandbox_billing: { region: "dub1", vcpus: 8, memoryMb: 16384, usdPerMinute: 0.0104933333333333 } };
+    const maliciousPricing = { ...report(), usdPerMinute: 0, sandbox_billing: { usdPerMinute: 0 } };
+    await landVmTurn(run(), maliciousPricing);
+    expect(h.sandboxUsage[0]).toMatchObject({ usdPerMinute: 0.0104933333333333 });
+  });
+
   it("facture le wall-clock que la BOUCLE a mesuré, pas celui de la fonction", async () => {
     await landVmTurn(run(), report({ sandboxMs: 7 * 60_000 }));
     expect(h.sandboxUsage).toHaveLength(1);

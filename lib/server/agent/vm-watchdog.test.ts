@@ -225,6 +225,15 @@ describe("reapDeadVmRuns", () => {
     expect(h.compute[0].durationMs as number).toBeGreaterThanOrEqual(STARTED_MS_AGO);
   });
 
+  it("preserves the allocated rate when the watchdog bills a failed routine", async () => {
+    h.alive = false;
+    h.rows = [{ ...ROW, routine_id: "routine-1", sandbox_billing: {
+      region: "dub1", vcpus: 8, memoryMb: 16384, usdPerMinute: 0.0104933333333333,
+    } }];
+    await reapDeadVmRuns(fakeService());
+    expect(h.compute[0]).toMatchObject({ feature: "routine_compute", usdPerMinute: 0.0104933333333333 });
+  });
+
   it("range le compute d'une ROUTINE avec elle, pas sous « Agents »", async () => {
     h.alive = false;
     h.rows = [{ ...ROW, routine_id: "routine-1" }];

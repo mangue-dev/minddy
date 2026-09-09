@@ -425,7 +425,7 @@ describe("la préparation locale d'`execute.ts`", () => {
 
   it("does not wake a microVM for a local turn", () => {
     expect(source).toContain(
-      "const sandboxResult = localTurn\n      ? { sandbox: null, created: false }\n      : await getOrCreateAgentSandbox({",
+      "const sandboxResult = localTurn\n      ? { sandbox: null, created: false, billing: undefined }\n      : await getOrCreateAgentSandbox({",
     );
   });
 

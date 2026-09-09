@@ -244,9 +244,13 @@ export async function recordSandboxUsage(params: {
   feature?: Extract<AiFeature, "sandbox_compute" | "routine_compute">;
   projectId: string | null;
   durationMs: number;
+  /** Trusted rate persisted by the control plane; absent on legacy runs. */
+  usdPerMinute?: number | null;
 }): Promise<void> {
   const minutes = params.durationMs / 60_000;
-  const cost = roundUsd(minutes * SANDBOX_USD_PER_MINUTE);
+  const rate = params.usdPerMinute ?? SANDBOX_USD_PER_MINUTE;
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error("Invalid sandbox usage rate");
+  const cost = roundUsd(minutes * rate);
   if (cost <= 0) return;
   await recordAiUsage({
     runId: params.runId,

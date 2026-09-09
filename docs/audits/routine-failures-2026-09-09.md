@@ -111,14 +111,65 @@ Existing persistent sandbox instances are not resized by this change; their
 future harness launches receive the runtime limits, while newly created routine
 runs receive the larger VM. Historical failure records and elapsed durations
 were not rewritten. Provisioned memory per new VM doubles, trading a higher
-per-minute infrastructure cost for headroom. The managed compute usage estimate
-increases from $0.002 to $0.004 per wall-clock minute ($0.24/hour), scaling the
-previous estimate with the doubled resource profile. This retains the existing
-mostly-waiting workload assumption for iad1; it is not actual CPU metering.
-The rate applies to future usage entries, including resumed persistent sessions;
-historical ledger entries are unchanged. A region change requires recalibration.
-Four additional billing tests verify agent and routine ledger amounts, partial
-minutes, and empty durations.
+per-minute infrastructure cost for headroom. Historical ledger entries remain
+unchanged; the $0.004/minute rate is retained only for legacy runs without
+provider allocation metadata.
+
+## Account sandbox preferences
+
+Account settings → AI now offers Europe (Dublin, the default) or US (Washington),
+and standard (4 vCPU / 8 GiB) or performance (8 vCPU / 16 GiB) sandboxes. The
+controls are marked experimental and apply to new managed sandboxes, including
+scheduled routines, using the run creator's account preferences. Persistent
+instances keep their existing region and resources when resumed. Desktop-local
+and self-hosted execution do not read these managed preferences.
+
+Compute billing uses the provider session's actual region, CPU, and memory,
+recorded in `agent_runs.sandbox_billing` before the agent loop launches. Normal
+completion, bootstrap failure, and watchdog recovery use this server-recorded
+rate; VM reports cannot choose their own rate. Legacy rows with null metadata
+retain their previous estimate until a subsequent managed session records its
+allocation. Historical ledger entries are not recalculated.
+
+The estimate retains the previous mostly-waiting workload assumption: full
+provisioned memory plus 13.75% active CPU utilization, derived from the existing
+$0.24/hour rate for 4 vCPU / 8 GiB in Washington. Regional provider rates then
+scale both resource sizes automatically:
+
+| Region | Standard estimate / hour | Performance estimate / hour |
+| --- | --- | --- |
+| Europe (`dub1`) | $0.3148 | $0.6296 |
+| US (`iad1`) | $0.24 | $0.48 |
+
+The settings card converts the selected profile's hourly estimate into a
+percentage of the account's effective usage allowance from the billing API.
+It uses the full allowance, not the remaining balance, and excludes AI agent
+usage. It recalculates on region, size, and allowance changes, formats percentages
+for the user's locale, and reports unavailable estimates rather than zero when
+billing data or a positive allowance is missing. Percentages above 100% are not
+clamped (a small plan can consume its entire allowance in less than one hour).
+
+These are usage-budget estimates, not actual CPU metering. Recalibrate the
+utilization assumption against invoices as workloads change. Creation explicitly
+disables regional failover. Regional warm-image variables are documented in
+`.env.example`; the legacy snapshot variable is US-only, preventing European
+creation from selecting an incompatible US snapshot.
+
+Apply migration `20270106650000_account_sandbox_preferences.sql` before deploying
+the application. It adds account defaults and nullable run billing metadata.
+An isolated PostgreSQL 17 test verified existing-account defaults, valid and
+invalid preference values, and preservation of legacy run metadata. 169 focused
+tests cover preference API validation, allocation, all four rates, report and
+watchdog billing, local execution, and existing sandbox behavior. Typecheck,
+targeted lint, owned-English checks, and diff checks passed.
+
+Two disposable Vercel probes in Dublin confirmed the requested allocations:
+4 vCPU / 8192 MiB and 8 vCPU / 16384 MiB, each completing a command successfully.
+Both probes were stopped and deleted. A browser fixture using the real settings
+component and simulated APIs verified mobile and desktop layouts, region and
+size changes, percentage recalculation against different allowances, persistence
+after reload, and preservation of the saved selection after a failed write.
+No account preferences or production runs were changed during validation.
 
 ## External references
 
@@ -126,3 +177,6 @@ minutes, and empty durations.
 - [Vercel Sandbox SDK](https://github.com/vercel/sandbox)
 - [Vercel Sandbox resource observability](https://vercel.com/changelog/more-granular-observability-for-vercel-sandbox)
 - [Go runtime memory limit](https://pkg.go.dev/runtime#hdr-Environment_Variables)
+
+- [Vercel Sandbox regional pricing](https://vercel.com/docs/sandbox/pricing)
+- [Vercel Sandbox regions](https://vercel.com/docs/sandbox/concepts/regions)

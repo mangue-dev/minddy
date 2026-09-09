@@ -9,6 +9,7 @@ vi.mock("@/lib/server/ai-runtime", () => ({ usesByokForSurface: vi.fn() }));
 vi.mock("@/lib/server/ai-usage", () => ({ recordAiUsage: vi.fn() }));
 
 import { recordAiUsage } from "./ai-usage";
+import { sandboxBillingFor } from "@/lib/agent-sandbox-config";
 import { recordSandboxUsage } from "./usage";
 
 beforeEach(() => vi.clearAllMocks());
@@ -62,6 +63,28 @@ describe("managed sandbox usage billing", () => {
       durationMs: 0,
     });
 
+    expect(recordAiUsage).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("allocation-specific sandbox billing", () => {
+  it.each([
+    ["iad1", 4, 0.04], ["iad1", 8, 0.08],
+    ["dub1", 4, 0.052467], ["dub1", 8, 0.104933],
+  ] as const)("bills ten minutes in %s with %i vCPUs", async (region, vcpus, cost) => {
+    const billing = sandboxBillingFor({ region, vcpus, memoryMb: vcpus * 2048 });
+    await recordSandboxUsage({
+      runId: "run-1", seq: 0, billTo: { userId: "user-1" }, projectId: null,
+      feature: "routine_compute", durationMs: 600_000, usdPerMinute: billing.usdPerMinute,
+    });
+    expect(recordAiUsage).toHaveBeenCalledWith(expect.objectContaining({ cost, feature: "routine_compute" }));
+  });
+  it.each([NaN, Infinity, -1, 0])("rejects an invalid persisted rate: %s", async (usdPerMinute) => {
+    await expect(recordSandboxUsage({
+      runId: "run-1", seq: 0, billTo: { userId: "user-1" }, projectId: null,
+      durationMs: 600_000, usdPerMinute,
+    })).rejects.toThrow("Invalid sandbox usage rate");
     expect(recordAiUsage).not.toHaveBeenCalled();
   });
 });

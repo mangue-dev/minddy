@@ -140,6 +140,7 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
       feature: run.routine_id ? "routine_compute" : "sandbox_compute",
       projectId: run.project_id,
       durationMs: sandboxMs,
+      usdPerMinute: run.sandbox_billing?.usdPerMinute,
     }).catch(() => {});
   }
 

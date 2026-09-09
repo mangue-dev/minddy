@@ -1,6 +1,10 @@
 import "server-only";
 
 import { Sandbox as VercelSandbox, type NetworkPolicy } from "@vercel/sandbox";
+import {
+  resolveSandboxPreferences, SANDBOX_REGION_CODES, SANDBOX_RESOURCES,
+  sandboxBillingFor, type SandboxPreferences, type SandboxBilling,
+} from "@/lib/agent-sandbox-config";
 import { requireCapability } from "@/lib/server/capabilities";
 import { SelfHostedSandbox } from "./self-hosted-sandbox";
 
@@ -13,7 +17,7 @@ import {
 import type { HarnessLayout } from "./harness-layout";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { rotateAgentForgeCredential } from "./network-policy";
-import { AGENT_SANDBOX_RESOURCES, AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
+import { AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
 
 /**
  * Code Agent Vercel Sandbox Layer (MIN-46) — the microVM itself: its
@@ -167,11 +171,12 @@ function sandboxCredentials(): { token: string; teamId: string; projectId: strin
  */
 export async function getOrCreateAgentSandbox(opts: {
   name: string;
+  preferences?: SandboxPreferences;
   onCreate: (sandbox: AgentSandbox) => Promise<void>;
   /** Policy of MIN-223. Absent = previous behavior (open network, no
    * injection) — while the callers wire it. */
   networkPolicy?: NetworkPolicy;
-}): Promise<{ sandbox: AgentSandbox; created: boolean }> {
+}): Promise<{ sandbox: AgentSandbox; created: boolean; billing?: SandboxBilling }> {
   if (resolveAgentExecutionBackend(process.env) === "self-hosted") {
     requireCapability("agentExecution");
     const result = await SelfHostedSandbox.getOrCreate(opts.name);
@@ -182,13 +187,21 @@ export async function getOrCreateAgentSandbox(opts: {
   // explicit choice. Without a Vercel backend configured, we stop short of the SDK.
   requireCapability("vercelSandbox");
   const creds = sandboxCredentials();
-  const snapshotId = process.env.AGENT_SANDBOX_SNAPSHOT_ID?.trim();
+  const preferences = resolveSandboxPreferences(opts.preferences);
+  const region = SANDBOX_REGION_CODES[preferences.sandbox_region];
+  const resources = SANDBOX_RESOURCES[preferences.sandbox_size];
+  // Warm images are regional. The legacy image belongs to the US deployment.
+  const snapshotId = (preferences.sandbox_region === "eu"
+    ? process.env.AGENT_SANDBOX_SNAPSHOT_ID_EU
+    : process.env.AGENT_SANDBOX_SNAPSHOT_ID_US ?? process.env.AGENT_SANDBOX_SNAPSHOT_ID)?.trim();
   let created = false;
   const base = {
     ...creds,
     name: opts.name,
     timeout: SANDBOX_TIMEOUT_MS,
-    resources: AGENT_SANDBOX_RESOURCES,
+    region,
+    failoverRegions: [],
+    resources: { vcpus: resources.vcpus },
     env: AGENT_SANDBOX_RUNTIME_ENV,
     persistent: true,
     snapshotExpiration: SANDBOX_SNAPSHOT_EXPIRATION_MS,
@@ -212,7 +225,15 @@ export async function getOrCreateAgentSandbox(opts: {
   if (opts.networkPolicy && !created) {
     await sandbox.update({ networkPolicy: opts.networkPolicy });
   }
-  return { sandbox: sandbox as unknown as AgentSandbox, created };
+  const session = sandbox.currentSession();
+  // getOrCreate preserves existing allocations. Bill what actually resumed,
+  // never the account preference or a rate supplied by the VM report.
+  const billing = sandboxBillingFor({
+    region: session.region,
+    vcpus: session.vcpus,
+    memoryMb: session.memory,
+  });
+  return { sandbox: sandbox as unknown as AgentSandbox, created, billing };
 }
 
 /** Stable name of the microVM to persist in agent_runs.sandbox_id. */

@@ -108,6 +108,7 @@ export const SETTINGS_SECTIONS = {
   accountGitConnections: "account-git-connections",
   accountAiProvider: "account-ai-provider",
   accountAgent: "account-agent",
+  accountSandbox: "account-sandbox",
   accountAnalytics: "account-analytics",
   accountDataImport: "account-data-import",
   accountDataExport: "account-data-export",
@@ -452,6 +453,13 @@ export function useSettingsSections(): SettingsSection[] {
           "agent", "numo", "modèle", "modele", "model", "raisonnement",
           "reasoning", "défaut", "defaut", "default",
         ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountSandbox,
+        tab: "agent",
+        icon: Bot,
+        title: tAccount("sandboxTitle"),
+        keywords: ["sandbox", "region", "Europe", "US", "CPU", "RAM", "performance"],
       }),
       account({
         id: SETTINGS_SECTIONS.accountAnalytics,

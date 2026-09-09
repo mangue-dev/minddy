@@ -1,5 +1,7 @@
 import "server-only";
 
+import { resolveAgentExecutionBackend } from "@/lib/capabilities";
+import { getUserSandboxPreferences } from "./sandbox-preferences";
 import { getServiceClient } from "@/lib/supabase-service";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
@@ -646,6 +648,7 @@ export async function executeAgentRun(
       feature: sandboxUsageFeature,
       projectId: run.project_id,
       durationMs: Date.now() - callStart,
+      usdPerMinute: run.sandbox_billing?.usdPerMinute,
     }).catch(() => {});
   };
 
@@ -976,9 +979,12 @@ export async function executeAgentRun(
       return vmTarget.remoteUrl;
     };
     const sandboxResult = localTurn
-      ? { sandbox: null, created: false }
+      ? { sandbox: null, created: false, billing: undefined }
       : await getOrCreateAgentSandbox({
           name: agentSandboxName(run.id),
+          preferences: resolveAgentExecutionBackend(process.env) === "vercel"
+            ? await getUserSandboxPreferences(run.created_by)
+            : undefined,
           // Both LLM and forge credentials stay in the trusted network layer. The VM
           // receives placeholder/request data and a credential-free Git remote only.
           networkPolicy: buildAgentNetworkPolicy({
@@ -1053,6 +1059,12 @@ export async function executeAgentRun(
           })
         : null;
     sandbox = sb;
+    if (sandboxResult.billing) {
+      run.sandbox_billing = sandboxResult.billing;
+      // Persist before launching tools so completion and watchdog billing agree.
+      const recorded = await stampRun(run.id, { sandbox_billing: sandboxResult.billing });
+      if (!recorded) throw new Error("Could not record sandbox allocation");
+    }
     /**
      * Hands on the repository, through RPC (MIN-224). In the old form this was the
      * only path; in the new form, the function keeps only bootstrap (reading

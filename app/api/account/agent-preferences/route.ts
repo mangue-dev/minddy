@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { isSandboxRegion, isSandboxSize, resolveSandboxPreferences } from "@/lib/agent-sandbox-config";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { userHasByokKey } from "@/lib/server/agent/model";
@@ -35,17 +36,21 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const { data } = await auth.supabase
+  const { data, error } = await auth.supabase
     .from("user_agent_preferences")
-    .select("default_model, default_reasoning_level, branch_prefix")
+    .select("default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size")
     .eq("user_id", auth.user.id)
     .maybeSingle();
+  if (error) return NextResponse.json({ error: "Could not load agent preferences" }, { status: 500 });
   const row = data as {
     default_model: string | null;
     default_reasoning_level: string | null;
     branch_prefix: string | null;
+    sandbox_region: string | null;
+    sandbox_size: string | null;
   } | null;
   return NextResponse.json({
+    ...resolveSandboxPreferences(row),
     default_model: row?.default_model ?? null,
     default_reasoning_level: isReasoningLevel(row?.default_reasoning_level)
       ? row.default_reasoning_level
@@ -63,12 +68,14 @@ export async function PUT(request: NextRequest) {
     default_model?: string | null;
     default_reasoning_level?: string | null;
     branch_prefix?: string | null;
+    sandbox_region?: unknown;
+    sandbox_size?: unknown;
   };
   let body: PrefsBody;
   try {
     const parsed: unknown = await request.json();
     // Non-object body (null, string…): the lower `in` would raise instead of refusing.
-    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
     body = parsed as PrefsBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -122,18 +129,34 @@ export async function PUT(request: NextRequest) {
     patch.branch_prefix = prefix;
   }
 
+  if ("sandbox_region" in body) {
+    if (!isSandboxRegion(body.sandbox_region)) {
+      return NextResponse.json({ error: "Invalid sandbox region" }, { status: 400 });
+    }
+    patch.sandbox_region = body.sandbox_region;
+  }
+  if ("sandbox_size" in body) {
+    if (!isSandboxSize(body.sandbox_size)) {
+      return NextResponse.json({ error: "Invalid sandbox size" }, { status: 400 });
+    }
+    patch.sandbox_size = body.sandbox_size;
+  }
+
   const { data, error } = await auth.supabase
     .from("user_agent_preferences")
     .upsert(patch, { onConflict: "user_id" })
-    .select("default_model, default_reasoning_level, branch_prefix")
+    .select("default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const row = data as {
     default_model: string | null;
     default_reasoning_level: string | null;
     branch_prefix: string | null;
+    sandbox_region: string | null;
+    sandbox_size: string | null;
   };
   return NextResponse.json({
+    ...resolveSandboxPreferences(row),
     default_model: row.default_model ?? null,
     default_reasoning_level: isReasoningLevel(row.default_reasoning_level)
       ? row.default_reasoning_level
