@@ -15,10 +15,11 @@ const STATE_BY_MARKER: Record<string, PlanTaskState> = {
   "[-]": "cancelled",
 };
 
-/** State for a leading `[m] ` marker (marker + a single space), or null. */
+/** State for a leading `[m]` marker, with an optional following space. */
 function markerState(content: string): PlanTaskState | null {
-  if (content[3] !== " ") return null;
-  return STATE_BY_MARKER[content.slice(0, 3)] ?? null;
+  const marker = content.slice(0, 3);
+  if (content.length > 3 && content[3] !== " ") return null;
+  return STATE_BY_MARKER[marker] ?? null;
 }
 
 // Minimal shape of the markdown-it pieces we touch — avoids a hard dep on
