@@ -38,6 +38,22 @@ function clearHighlight(surface: HTMLElement) {
   }
 }
 
+function surfaceFromElement(element: Element | null): HTMLElement | null {
+  return element?.closest<HTMLElement>(FLOATING_SURFACE_SELECTOR) ?? null;
+}
+
+function surfaceAtPointer(event: PointerEvent): HTMLElement | null {
+  // A draggable card or another pointer-capturing control can remain the
+  // event target after a portaled menu opens. Hit-test the viewport position
+  // first so the visible popover wins in that situation.
+  for (const element of document.elementsFromPoint(event.clientX, event.clientY)) {
+    const surface = surfaceFromElement(element);
+    if (surface) return surface;
+  }
+
+  return event.target instanceof Element ? surfaceFromElement(event.target) : null;
+}
+
 function isVisibleItem(item: HTMLElement, surface: HTMLElement): boolean {
   if (
     item.matches("[data-disabled], [aria-disabled=\"true\"], [hidden]") ||
@@ -127,11 +143,7 @@ export function FloatingSurfaceMotion() {
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
 
-      const target = event.target;
-      const surface =
-        target instanceof Element
-          ? target.closest<HTMLElement>(FLOATING_SURFACE_SELECTOR)
-          : null;
+      const surface = surfaceAtPointer(event);
       setActiveSurface(surface);
       pointer = surface ? { y: event.clientY } : null;
       schedule();
