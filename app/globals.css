@@ -104,7 +104,6 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   [data-floating-surface],
   [role="menu"]
 ) {
-  position: relative;
   z-index: 1000 !important;
   background-color: color-mix(in oklab, var(--popover) 84%, transparent);
   -webkit-backdrop-filter: blur(16px);
@@ -127,130 +126,11 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   background-color: transparent;
 }
 
-/* The highlight is a single moving layer. Rows stay above it for readable
-   text and focus rings; while a pointer is inside, their built-in hover
-   backgrounds become transparent so the nearest-row highlight is the only
-   painted state. */
-:is(
-  [data-slot="popover-content"],
-  [data-slot="dropdown-menu-content"],
-  [data-slot="dropdown-menu-sub-content"],
-  [data-slot="select-content"],
-  [data-floating-surface],
-  [role="menu"]
-)::before {
-  content: "";
-  position: absolute;
-  top: var(--fluid-hover-top, 0px);
-  left: var(--fluid-hover-left, 0px);
-  width: var(--fluid-hover-width, 0px);
-  height: var(--fluid-hover-height, 0px);
-  border-radius: var(--fluid-hover-radius, var(--radius-md));
-  background-color: color-mix(in oklab, var(--accent) 82%, transparent);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    top 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    left 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    width 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    height 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 120ms ease-out;
-  z-index: 0;
-}
-
-/* Command rows use `rounded-sm` in the shared primitive, while regular menu
-   and select rows use `rounded-md`. Keep the moving layer concentric with the
-   row it is highlighting. */
-:is(
-  [data-slot="popover-content"],
-  [data-slot="dropdown-menu-content"],
-  [data-slot="dropdown-menu-sub-content"],
-  [data-slot="select-content"],
-  [data-floating-surface],
-  [role="menu"]
-):has([data-slot="command-item"]) {
-  --fluid-hover-radius: var(--radius-sm);
-}
-
-[data-floating-surface-radius="lg"] {
-  --fluid-hover-radius: var(--radius-lg);
-}
-
-:is(
-  [data-slot="popover-content"],
-  [data-slot="dropdown-menu-content"],
-  [data-slot="dropdown-menu-sub-content"],
-  [data-slot="select-content"],
-  [data-floating-surface],
-  [role="menu"]
-)[data-fluid-hover]::before {
-  opacity: 1;
-}
-
-:is(
-  [data-slot="popover-content"],
-  [data-slot="dropdown-menu-content"],
-  [data-slot="dropdown-menu-sub-content"],
-  [data-slot="select-content"],
-  [data-floating-surface],
-  [role="menu"]
-) :is(
-  [data-slot="dropdown-menu-item"],
-  [data-slot="dropdown-menu-checkbox-item"],
-  [data-slot="dropdown-menu-radio-item"],
-  [data-slot="dropdown-menu-sub-trigger"],
-  [data-slot="select-item"],
-  [data-slot="command-item"],
-  [data-floating-menu-item],
-  [role="menuitem"],
-  [role="option"]
-) {
-  position: relative;
-  z-index: 1;
-  transition:
-    color 120ms ease-out,
-    border-radius 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-:is(
-  [data-slot="popover-content"],
-  [data-slot="dropdown-menu-content"],
-  [data-slot="dropdown-menu-sub-content"],
-  [data-slot="select-content"],
-  [data-floating-surface],
-  [role="menu"]
-)[data-fluid-hover] :is(
-  [data-slot="dropdown-menu-item"],
-  [data-slot="dropdown-menu-checkbox-item"],
-  [data-slot="dropdown-menu-radio-item"],
-  [data-slot="dropdown-menu-sub-trigger"],
-  [data-slot="select-item"],
-  [data-slot="command-item"],
-  [data-floating-menu-item],
-  [role="menuitem"],
-  [role="option"]
-) {
-  background-color: transparent !important;
-}
-
-/* Select's scroll controls are part of the same surface and should not cover
-   the moving highlight with a second opaque strip. */
+/* Select's scroll controls are part of the same surface and should not paint
+   an opaque strip over the translucent list. */
 [data-slot="select-content"]
   :is([data-slot="select-scroll-up-button"], [data-slot="select-scroll-down-button"]) {
   background-color: transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :is(
-    [data-slot="popover-content"],
-    [data-slot="dropdown-menu-content"],
-    [data-slot="dropdown-menu-sub-content"],
-    [data-slot="select-content"],
-    [data-floating-surface],
-    [role="menu"]
-  )::before {
-    transition: none;
-  }
 }
 
 /* App-authored Markdown uses the shared enriched link treatment. Forge-authored

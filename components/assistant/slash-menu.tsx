@@ -107,7 +107,6 @@ export function SlashMenu({
         <button
           key={option.id}
           type="button"
-          data-floating-menu-item
           // mousedown, not click: the composer must not lose focus (the
           // blur would close the list before the click arrives).
           onMouseDown={(e) => {

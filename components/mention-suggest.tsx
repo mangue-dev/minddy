@@ -124,7 +124,6 @@ export function MentionOptionRow({
       type="button"
       role="option"
       aria-selected={active}
-      data-floating-menu-item
       onMouseDown={(e) => {
         e.preventDefault();
         onPick();

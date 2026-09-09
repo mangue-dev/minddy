@@ -105,7 +105,6 @@ export function PickerCreateRow({
       <CommandSeparator alwaysRender className="my-1" />
       <CommandGroup forceMount>
         <CommandItem
-          data-floating-menu-item
           forceMount
           value="__create__"
           disabled={busy}
@@ -211,7 +210,6 @@ export function SearchSelect({
       <CommandGroup>
         {noneOption && (
           <CommandItem
-            data-floating-menu-item
             value="__none__"
             keywords={[noneOption.label]}
             onSelect={() => select(null)}
@@ -223,7 +221,6 @@ export function SearchSelect({
         )}
         {options.map((opt) => (
           <CommandItem
-            data-floating-menu-item
             key={opt.value}
             value={opt.value}
             keywords={[opt.label, ...(opt.keywords ?? [])]}
@@ -281,7 +278,6 @@ export function SearchMultiSelect({
       <CommandGroup>
         {options.map((opt) => (
           <CommandItem
-            data-floating-menu-item
             key={opt.value}
             value={opt.value}
             keywords={[opt.label, ...(opt.keywords ?? [])]}

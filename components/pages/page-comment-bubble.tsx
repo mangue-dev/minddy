@@ -87,7 +87,6 @@ function ToolbarButton({
       <TooltipTrigger asChild>
         <button
           type="button"
-          data-floating-menu-item
           aria-label={label}
           aria-pressed={active}
           onMouseDown={(event) => event.preventDefault()}
