@@ -21,6 +21,7 @@ import {
 } from "@/lib/server/ai-usage";
 import {
   FILL_TICKET_TOOL,
+  FILL_TICKET_RESPONSE_FORMAT,
   buildDemoPrompt,
   isSameOrigin,
   resolveAudioFormat,
@@ -110,6 +111,13 @@ type OpenRouterMessage = {
   }[];
 };
 
+type DemoCompletionData = {
+  choices?: { message?: OpenRouterMessage }[];
+  id?: string;
+  model?: string;
+  usage?: OpenRouterUsage;
+};
+
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -195,10 +203,10 @@ export async function POST(request: NextRequest) {
         { logPrefix: "[api/demo/dictate]" },
       );
       transcript = result.text.trim();
-      // The two calls of a passage share `runId` and the feature
-      // `landing_demo`: the admin table makes ONE line (“the demo”), and
-      // its cost per run is the price of a passage. The `seq` and the model
-      // distinguish the transcription from the storage in the detail of the run.
+      // All calls of a passage share `runId` and the feature `landing_demo`: the
+      // admin table makes ONE line (“the demo”), and its cost per run is the price
+      // of a passage. The `seq` and the model distinguish the transcription from
+      // the one or two storage attempts in the detail of the run.
       usageRows.push({
         runId,
         seq: 0,
@@ -244,13 +252,13 @@ export async function POST(request: NextRequest) {
   }));
   const today = todayIn(timeZone);
 
-  // ── Tidying up: one call, one tool, forced ─────────────────
+  // ── Tidying up: one forced tool call, with a structured-output fallback ──
   const model = resolveFromValues("dictate_model", cfg).model;
-  let ticket: DemoTicket;
-  try {
-    const { response } = await fetchOpenRouterWithSuffixFallback(
+  const prompt = buildDemoPrompt({ locale, today, members, categories });
+  const fetchCompletion = async (requestedModel: string, useStructuredOutput: boolean) => {
+    const result = await fetchOpenRouterWithSuffixFallback(
       OPENROUTER_URL,
-      model,
+      requestedModel,
       (m) => ({
         method: "POST",
         headers: {
@@ -263,17 +271,21 @@ export async function POST(request: NextRequest) {
             {
               model: m,
               messages: [
-                {
-                  role: "system",
-                  content: buildDemoPrompt({ locale, today, members, categories }),
-                },
+                { role: "system", content: prompt },
                 { role: "user", content: transcript },
               ],
-              tools: [FILL_TICKET_TOOL],
-              // The request contains one tool, so `required` is enough and is
-              // supported more consistently by OpenAI-compatible Gemini routes.
-              toolChoice: "required",
-              parallelToolCalls: false,
+              ...(useStructuredOutput
+                ? {
+                    responseFormat: FILL_TICKET_RESPONSE_FORMAT,
+                    extensions: { plugins: [{ id: "response-healing" }] },
+                  }
+                : {
+                    tools: [FILL_TICKET_TOOL],
+                    // The request contains one tool, so `required` is enough and is
+                    // supported more consistently by OpenAI-compatible Gemini routes.
+                    toolChoice: "required",
+                    parallelToolCalls: false,
+                  }),
               maxOutputTokens: 700,
             },
             "openrouter",
@@ -283,23 +295,19 @@ export async function POST(request: NextRequest) {
       }),
       "[api/demo/dictate]",
     );
-    if (!response.ok) {
+    if (!result.response.ok) {
       throw new Error(
-        `LLM error (${response.status}): ${(await response.text()).slice(0, 200)}`,
+        `LLM error (${result.response.status}): ${(await result.response.text()).slice(0, 200)}`,
       );
     }
-    const data = (await response.json()) as {
-      choices?: { message?: OpenRouterMessage }[];
-      id?: string;
-      model?: string;
-      usage?: OpenRouterUsage;
-    };
+
+    const data = (await result.response.json()) as DemoCompletionData;
     const u = parseOpenRouterUsage(data.usage);
     usageRows.push({
       runId,
       seq: usageRows.length,
       feature: "landing_demo",
-      model: data.model ?? model,
+      model: data.model ?? result.model,
       generationId: data.id ?? null,
       promptTokens: u.promptTokens,
       completionTokens: u.completionTokens,
@@ -307,10 +315,21 @@ export async function POST(request: NextRequest) {
       cost: u.cost,
       billTo: BILL_TO,
     });
+    return { data, model: result.model };
+  };
 
-    const arguments_ = extractDemoFillTicketArguments(data);
+  let ticket: DemoTicket;
+  try {
+    const primary = await fetchCompletion(model, false);
+    let arguments_ = extractDemoFillTicketArguments(primary.data);
     if (!arguments_) {
-      throw new Error("no fill_ticket call");
+      // Some providers return a normal message despite a required tool call.
+      // Retry without tools and require the same contract as a JSON Schema response.
+      const fallback = await fetchCompletion(primary.model, true);
+      arguments_ = extractDemoFillTicketArguments(fallback.data);
+    }
+    if (!arguments_) {
+      throw new Error("no structured fill_ticket response");
     }
     ticket = sanitizeDemoTicket(arguments_, {
       transcript,

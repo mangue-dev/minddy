@@ -201,4 +201,12 @@ describe("demo tool response parsing", () => {
       }),
     ).toBeNull();
   });
+
+  it("accepts a structured ticket returned in message content", () => {
+    expect(
+      extractDemoFillTicketArguments({
+        choices: [{ message: { content: '{"title":"Fix checkout"}' } }],
+      }),
+    ).toEqual({ title: "Fix checkout" });
+  });
 });
