@@ -285,7 +285,11 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-1 px-3">
-        <div role="group" aria-label={t("title")} className="flex min-w-0 flex-1 gap-3">
+        <div
+          role="group"
+          aria-label={t("title")}
+          className="no-scrollbar flex min-w-0 flex-1 gap-3 overflow-x-auto overscroll-x-contain"
+        >
           {FILTERS.map(({ key, labelKey }) => (
             <button
               key={key}
@@ -293,7 +297,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
               aria-pressed={filter === key}
               onClick={() => setFilter(key)}
               className={cn(
-                "flex min-h-12 items-center gap-1.5 border-b-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "flex min-h-12 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 filter === key ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
@@ -306,6 +310,26 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             </button>
           ))}
         </div>
+        <ActionTooltip label={t("clearRead")}>
+          <IconButton
+            size="sm"
+            aria-label={t("clearRead")}
+            disabled={readCount === 0}
+            onClick={() => setClearReadOpen(true)}
+          >
+            <Trash2 className="size-4" />
+          </IconButton>
+        </ActionTooltip>
+        <ActionTooltip label={t("markAllRead")}>
+          <IconButton
+            size="sm"
+            aria-label={t("markAllRead")}
+            disabled={unreadCount === 0}
+            onClick={() => act(markAllRead())}
+          >
+            <MailOpen className="size-4" />
+          </IconButton>
+        </ActionTooltip>
         <ActionTooltip label={t("settings")}>
           <IconButton size="sm" aria-label={t("settings")} asChild>
             <Link href="/settings?tab=inbox" onClick={onNavigate}>
@@ -542,15 +566,6 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             )}
           </div>
         </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 p-2">
-        <Button variant="ghost" size="sm" disabled={readCount === 0} onClick={() => setClearReadOpen(true)}>
-          {t("clearRead")}
-        </Button>
-        <Button variant="ghost" size="sm" disabled={unreadCount === 0} onClick={() => act(markAllRead())}>
-          {t("markAllRead")}
-        </Button>
-      </div>
-
       <AlertDialog open={clearReadOpen} onOpenChange={setClearReadOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
