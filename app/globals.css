@@ -104,6 +104,7 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   [data-floating-surface],
   [role="menu"]
 ) {
+  position: relative;
   z-index: 1000 !important;
   background-color: color-mix(in oklab, var(--popover) 84%, transparent);
   -webkit-backdrop-filter: blur(16px);
