@@ -90,15 +90,16 @@ export function AccountSandboxSection() {
                 </SelectContent>
               </Select>
             }
-          />
-          <div className="mb-3 rounded-lg bg-muted/50 px-3 py-2.5" role="status">
-            <p className="text-sm font-medium">
-              {billing.loading ? tc("loading") : formattedPercent !== null
-                ? t("sandboxHourlyUsage", { percent: formattedPercent })
-                : t("sandboxEstimateUnavailable")}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">{t("sandboxHourlyUsageHint")}</p>
-          </div>
+          >
+            <div className="rounded-lg bg-muted/50 px-3 py-2.5" role="status">
+              <p className="text-sm font-medium">
+                {billing.loading ? tc("loading") : formattedPercent !== null
+                  ? t("sandboxHourlyUsage", { percent: formattedPercent })
+                  : t("sandboxEstimateUnavailable")}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("sandboxHourlyUsageHint")}</p>
+            </div>
+          </SettingsRow>
         </>
       )}
     </SettingsGroup>

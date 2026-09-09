@@ -51,6 +51,17 @@ For an uncached check, the command was equivalent to:
 tsc --noEmit --extendedDiagnostics --tsBuildInfoFile /tmp/unique-build-info
 ```
 
+The tested commit declares `typescript: ^7.0.2`; its lockfile resolves
+`typescript@7.0.2` and the platform-native package
+`@typescript/typescript-linux-x64@7.0.2`. Although the command is named `tsc`,
+this is the native Go compiler. The installed `typescript/bin/tsc` imports
+`lib/tsc.js`, which resolves that native executable via `lib/getExePath.js`
+and launches it with `process.execve` or `execFileSync`. Node is the launcher,
+not the compiler runtime. The separate `typescript-api` alias resolves to
+TypeScript 5.9.3 for API consumers; it is not the `tsc` used in this experiment.
+Go runtime settings therefore apply to the measured compiler, while a Node/V8
+heap limit would not constrain its native heap.
+
 The configuration remained incremental, matching `npm run typecheck`; the
 unique build-info path prevented reuse of a previous result. The same source,
 dependencies, and command were compared on an 8 GiB / 4 vCPU sandbox:
@@ -62,9 +73,18 @@ dependencies, and command were compared on an 8 GiB / 4 vCPU sandbox:
 
 The compiler alone can occupy almost all of the old 4 GiB VM, before OpenCode,
 the Node supervisor, a concurrent test command, and the OS are included.
-`GOMEMLIMIT` encourages earlier garbage collection but is a soft limit: the
-compiler's live data and native allocations can exceed it. A runtime limit
-alone is therefore insufficient; the VM also needs headroom.
+These are single observations per configuration, and the second configuration
+changes both `GOMEMLIMIT` and `GOMAXPROCS`. The comparison does not isolate either
+setting's effect, establish repeatability, or demonstrate that earlier garbage
+collection caused the lower RSS. Scheduling, allocation timing, and run-to-run
+variance may also contribute; the observed decrease is not a causal estimate
+of the benefit of `GOMEMLIMIT` alone.
+
+`GOMEMLIMIT` is a soft Go runtime memory target, not a hard process RSS cap.
+The configured run still exceeded that target in total RSS. The setting is a
+precaution for the native compiler; the measured near-4 GiB baseline is the
+independent justification for increasing VM headroom. An isolated, repeated
+comparison would be needed to quantify the setting's memory/time tradeoff.
 
 This strongly supports resource exhaustion as the trigger. It does not identify
 a specific kernel OOM victim: Vercel returned HTTP 410 `sandbox_failed` for the
