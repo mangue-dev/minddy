@@ -5,7 +5,7 @@ summary: Choose a supported topology, install minddy, configure its services, an
 category: deployment
 audience: both
 tags: [self-hosting, self host, deployment, docker, supabase, installation, local, server, numo]
-lastReviewed: 2026-08-27
+lastReviewed: 2026-09-09
 ---
 
 minddy is open source under the GNU AGPL v3.0 only. The only supported distribution is the public `mangue-dev/minddy` repository and its immutable tagged release assets. Do not use a moving branch, an unofficial deployment repository, or a third-party image. The exact release row in `deploy/self-hosted/compatibility.json` is the source of truth for the supported image digest, Supabase Compose revision, host architectures, and Docker minimums.
@@ -26,9 +26,9 @@ The application is a Node.js/Next.js production server. It requires a Supabase s
 - **Managed Supabase:** minddy runs on the operator's host and connects to a compatible Supabase Cloud or operator-managed Supabase project.
 - **Complete Supabase:** minddy runs with the exact official Supabase Docker release pinned by the compatibility matrix. The upstream checkout is fetched separately and is overlaid by `deploy/self-hosted/compose.full.yml`; minddy does not maintain a fork.
 
-The Supabase CLI local stack is for development, evaluation, and release acceptance only. It is not a production deployment. Production hosts are Linux `amd64` or `arm64` on the versions recorded by the selected release. A public installation needs an operator-controlled reverse proxy with HTTPS. A private installation may use an RFC1918 IPv4 address over HTTP only when it stays on a trusted LAN and no router port is forwarded.
+The Supabase CLI local stack is for development and evaluation only. It is not a production deployment, and release acceptance uses the tagged clean-room procedure (`docs/self-hosting-clean-room.md`), not a local build. Production hosts are Linux `amd64` or `arm64` on the versions recorded by the selected release. A public installation needs an operator-controlled reverse proxy with HTTPS. A private installation may use an RFC1918 IPv4 address over HTTP only when it stays on a trusted LAN and no router port is forwarded.
 
-Minddy Cloud is not a dependency or fallback. A self-hosted instance does not silently use Minddy Cloud URLs, keys, analytics, billing, email, VAPID, Apple, or managed AI infrastructure. Missing optional integrations stay disabled. The operator owns the host, OS, Docker, Supabase, DNS, TLS, firewall, access control, secrets, email, backups, restore drills, monitoring, incident response, and data-protection obligations.
+Minddy Cloud is not a dependency or fallback. A self-hosted instance does not silently use Minddy Cloud URLs, keys, analytics, billing, email, VAPID, Apple, or managed AI infrastructure. Missing optional integrations stay disabled. One deliberate exception: GitHub and GitLab integration works by default through minddy's managed forge relay; opt out with `MINDDY_FORGE_RELAY=0` (or install with `--no-forge-relay`) to rely only on operator-owned apps. The operator owns the host, OS, Docker, Supabase, DNS, TLS, firewall, access control, secrets, email, backups, restore drills, monitoring, incident response, and data-protection obligations.
 
 ## Prerequisites and secrets
 
@@ -40,7 +40,7 @@ The deployed application needs these values:
 - `MINDDY_PUBLIC_SUPABASE_URL` and `MINDDY_PUBLIC_SUPABASE_ANON_KEY`: the public API origin and anon key of the selected Supabase service.
 - `SUPABASE_SERVICE_ROLE_KEY`: server-only and required in production; never expose it to a browser.
 
-The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET`, and `AGENT_RUNNER_SECRET` when they are needed. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
+The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `CRON_SECRET`, and `AGENT_RUNNER_SECRET` on every installation; `MINDDY_PUBLIC_VAPID_PUBLIC_KEY` and its private counterpart are generated when the `web-push` capability is selected. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
 
 ## Numo, routines, and server execution
 
@@ -91,7 +91,7 @@ pnpm self-host:install -- --non-interactive --mode managed \
   --image 'ghcr.io/mangue-dev/minddy@sha256:<release-digest>'
 ```
 
-The four initial optional choices are `application-email`, `web-push`, `github`, and `gitlab`. Stripe, PostHog/Vercel analytics, Minddy-managed AI, Vercel domain management, and APNs/WNS release credentials are intentionally not initial self-host choices. GitHub and GitLab integrations currently target `github.com` and `gitlab.com`, not GitHub Enterprise Server or self-managed GitLab.
+The two initial optional choices are `application-email` and `web-push`. GitHub and GitLab integrations connect by default through the managed forge relay described above and target `github.com` and `gitlab.com`, not GitHub Enterprise Server or self-managed GitLab. Stripe, PostHog/Vercel analytics, Minddy-managed AI, Vercel domain management, and APNs/WNS release credentials are intentionally not initial self-host choices.
 
 For a public server, configure DNS, ports 80/443, Caddy or another reverse proxy, and matching Auth Site URL and redirect URLs. For a trusted private IPv4 installation, use private HTTP, restrict access to the LAN, and never forward ports 80, 443, 8000, database ports, or container ports on the router. The complete profile exposes only the proxy publicly and binds PostgreSQL to loopback. Do not expose Studio, PostgreSQL, Supavisor, or internal services.
 
