@@ -2,6 +2,13 @@ import { normalizeMimeType } from "@/lib/inline-safe";
 
 export type AttachmentPreviewKind = "image" | "document" | "audio" | "video";
 
+/** Identify Markdown attachments by their user-visible filename. */
+export function isMarkdownFileName(
+  fileName: string | null | undefined,
+): boolean {
+  return typeof fileName === "string" && /\.md$/i.test(fileName.trim());
+}
+
 const DOCUMENT_MIME_TYPES: ReadonlySet<string> = new Set([
   "application/javascript",
   "application/json",
@@ -19,9 +26,11 @@ const DOCUMENT_MIME_TYPES: ReadonlySet<string> = new Set([
  * sandboxed preview endpoint and iframe, never by the app document itself.
  */
 export function attachmentPreviewKind(
-  rawMimeType: string | null | undefined
+  rawMimeType: string | null | undefined,
+  fileName?: string | null,
 ): AttachmentPreviewKind | null {
   const mimeType = normalizeMimeType(rawMimeType);
+  if (isMarkdownFileName(fileName)) return "document";
   if (!mimeType) return null;
 
   if (mimeType.startsWith("audio/")) return "audio";

@@ -292,6 +292,7 @@ function MarkdownRenderer({
   resolvedMentions,
   skills,
   allowRawHtml = false,
+  breaks = true,
   linkVariant = "app",
 }: {
   children: string;
@@ -307,6 +308,8 @@ function MarkdownRenderer({
   skills?: RepositorySkillSummary[];
   /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
   allowRawHtml?: boolean;
+  /** Interpret single newlines as hard breaks on conversational surfaces. */
+  breaks?: boolean;
   /** Forge-authored PR content keeps conventional links and image buttons intact. */
   linkVariant?: "app" | "plain";
 }) {
@@ -330,12 +333,9 @@ function MarkdownRenderer({
       )}
     >
       <ReactMarkdown
-        // `remarkBreaks`: a single newline IS a newline.
-        // This is the rule for GitHub comments (not for .md files), and
-        // it's that of all the surfaces here — ticket comments, PR,
-        // plans. Without it, a message written in three lines would be delivered in just one
-        // paragraph: the most visible difference in “text rendering”.
-        remarkPlugins={[remarkGfm, remarkBreaks]}
+        // Conversational surfaces treat a single newline as a visible break.
+        // Markdown files opt out to preserve standard Markdown paragraph rules.
+        remarkPlugins={[remarkGfm, ...(breaks ? [remarkBreaks] : [])]}
         rehypePlugins={rehypeChain(
           scan,
           allowRawHtml,

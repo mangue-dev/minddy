@@ -28,8 +28,10 @@ import { EntityPill, type PillRadius } from "@/components/entity-pill";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
   attachmentPreviewKind,
+  isMarkdownFileName,
   type AttachmentPreviewKind,
 } from "@/lib/attachment-preview";
+import { Markdown } from "@/components/markdown";
 import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
 import { usePagesQuery } from "@/lib/use-pages-query";
@@ -563,6 +565,62 @@ function ResourceFigure({ children }: { children: React.ReactNode }) {
   );
 }
 
+function MarkdownAttachmentPreview({ src }: { src: string }) {
+  const t = useTranslations("Resources");
+  const [content, setContent] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setContent(null);
+    setFailed(false);
+
+    void fetch(src, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Markdown preview request failed");
+        return response.text();
+      })
+      .then((text) => {
+        if (!controller.signal.aborted) setContent(text);
+      })
+      .catch((error: unknown) => {
+        if (
+          controller.signal.aborted ||
+          (error instanceof Error && error.name === "AbortError")
+        ) {
+          return;
+        }
+        setFailed(true);
+      });
+
+    return () => controller.abort();
+  }, [src]);
+
+  if (failed) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+        {t("previewFailed")}
+      </div>
+    );
+  }
+
+  if (content === null) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+        {t("previewLoading")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto bg-background p-6 sm:p-8">
+      <Markdown breaks={false} className="mx-auto max-w-4xl">
+        {content}
+      </Markdown>
+    </div>
+  );
+}
+
 function AttachmentPreview({
   kind,
   src,
@@ -572,6 +630,10 @@ function AttachmentPreview({
   src: string;
   fileName: string;
 }) {
+  if (kind === "document" && isMarkdownFileName(fileName)) {
+    return <MarkdownAttachmentPreview src={src} />;
+  }
+
   if (kind === "image") {
     return (
       // Storage file behind an authenticated response; next/image cannot optimize it.
@@ -658,7 +720,10 @@ export function ResourcePills({
   const inFlight = pending ?? [];
   if (done.length === 0 && inFlight.length === 0) return null;
 
-  const activePreviewKind = attachmentPreviewKind(preview?.mime_type);
+  const activePreviewKind = attachmentPreviewKind(
+    preview?.mime_type,
+    preview?.file_name,
+  );
   const activePreviewPath = preview?.storage_path ?? null;
   const activePreviewSrc =
     preview && activePreviewPath
@@ -714,7 +779,8 @@ export function ResourcePills({
             : null;
         const path = a.storage_path ?? null;
         const mime = a.mime_type ?? "application/octet-stream";
-        const previewKind = !url && !pageId ? attachmentPreviewKind(mime) : null;
+        const previewKind =
+          !url && !pageId ? attachmentPreviewKind(mime, a.file_name) : null;
         const fullName = pageId
           ? (a.page?.title?.trim() || a.file_name)
           : a.file_name;

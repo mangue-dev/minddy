@@ -124,6 +124,22 @@ describe("GET /api/attachments/file proxy", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("keeps Markdown inline when storage reports a generic MIME type", async () => {
+    info.mockResolvedValue({ data: { contentType: "application/octet-stream" }, error: null });
+    download.mockResolvedValue({
+      data: new Blob(["# Markdown preview"], { type: "application/octet-stream" }),
+      error: null,
+    });
+
+    const response = await GET(
+      request(`projects/${PROJECT}/resource/README.md`),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("# Markdown preview");
+    expect(response.headers.get("content-disposition")).toBe("inline");
+  });
+
   it("uses sniffed markup instead of a misleading image content type", async () => {
     info.mockResolvedValue({ data: { contentType: "image/png" }, error: null });
 

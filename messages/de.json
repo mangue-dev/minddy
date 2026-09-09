@@ -344,6 +344,8 @@
     "download": "Herunterladen",
     "remove": "Entfernen",
     "preview": "Vorschau",
+    "previewLoading": "Vorschau wird geladen …",
+    "previewFailed": "Die Dateivorschau konnte nicht geladen werden.",
     "uploadFailed": "{name} konnte nicht hochgeladen werden.",
     "uploadingFile": "{name} wird hochgeladen…",
     "tooLarge": "{name} überschreitet {max} MB.",
