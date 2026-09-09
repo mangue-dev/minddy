@@ -54,7 +54,7 @@ export const ScratchpadTaskItemBase = TaskItem.extend({
           // separator. Markdown-it trims that separator while parsing, so
           // keeping it here would make the next save needlessly rewrite the
           // task even though its component is unchanged.
-          if (node.firstChild?.textContent) state.write(" ");
+          if (node.firstChild?.content.size > 0) state.write(" ");
           state.renderContent(node);
         },
         // Our markdown-it rule sets data-type/data-state directly, so the
