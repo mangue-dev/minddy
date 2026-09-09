@@ -124,6 +124,7 @@ export function MentionOptionRow({
       type="button"
       role="option"
       aria-selected={active}
+      data-floating-menu-item
       onMouseDown={(e) => {
         e.preventDefault();
         onPick();
@@ -174,6 +175,7 @@ export function MentionSuggestions({
     <div
       ref={listRef}
       role="listbox"
+      data-floating-surface
       className={cn(
         "scrollbar-quiet absolute bottom-full z-50 mb-1 max-h-56 w-64 overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 shadow-md",
         className,

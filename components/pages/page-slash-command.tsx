@@ -144,6 +144,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
         type="button"
         key={item.block.id}
         data-slash-index={index}
+        data-floating-menu-item
         onMouseDown={(e) => e.preventDefault()}
         onMouseEnter={() => {
           if (!keyboard) setSelected(index);
@@ -164,7 +165,10 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   });
 
   return (
-    <div className="min-w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg">
+    <div
+      data-floating-surface
+      className="min-w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg"
+    >
       <div
         ref={listRef}
         className="scrollbar-quiet max-h-80 overflow-y-auto overscroll-contain"

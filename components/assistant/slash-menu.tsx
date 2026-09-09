@@ -97,6 +97,7 @@ export function SlashMenu({
   return (
     <div
       style={style}
+      data-floating-surface
       className={cn(
         "absolute bottom-full z-50 mb-1 max-h-56 w-72 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-md",
         className,
@@ -106,6 +107,7 @@ export function SlashMenu({
         <button
           key={option.id}
           type="button"
+          data-floating-menu-item
           // mousedown, not click: the composer must not lose focus (the
           // blur would close the list before the click arrives).
           onMouseDown={(e) => {

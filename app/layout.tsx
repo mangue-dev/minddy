@@ -12,6 +12,7 @@ import { ThemeProvider } from "mangue-ui/components/theme-provider";
 import { BrowserIntlProvider } from "@/components/browser-intl-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DesktopChrome } from "@/components/desktop-chrome";
+import { FloatingSurfaceMotion } from "@/components/floating-surface-motion";
 import { LazyToaster } from "@/components/lazy-toaster";
 import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
@@ -194,6 +195,7 @@ export default async function RootLayout({
               now={now}
               initialTimeZone={initialTimeZone}
             >
+            <FloatingSurfaceMotion />
             {/* The strip by which you move the desktop app window
                 (MIN-292). Here, and not in a shell: this is the only position of
                 repository from where it covers ALL configurations. An audit in
