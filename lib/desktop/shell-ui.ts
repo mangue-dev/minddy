@@ -73,7 +73,7 @@ export function desktopShellStyles(interFontDataUrl?: string): string {
       :root {
         --background: oklch(0.165 0.004 264);
         --foreground: oklch(0.985 0 0);
-        --card: #101011;
+        --card: #0f0f0f;
         --primary: oklch(0.97 0.004 265);
         --primary-foreground: oklch(0.18 0.01 265);
         --muted: oklch(0.236 0.005 264);
