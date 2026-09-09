@@ -107,9 +107,24 @@ beforeEach(() => {
 
 afterEach(() => {
   nowSpy.mockRestore();
+  vi.unstubAllEnvs();
 });
 
 describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
+  it("applies managed runtime memory limits on every Vercel turn", async () => {
+    vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
+    await startVmLoop(sandbox(), jobInput(), Date.now());
+    expect(h.ranCommand).toMatchObject({
+      env: { GOMEMLIMIT: "2048MiB" },
+    });
+  });
+
+  it("leaves self-hosted runtime resource settings to the operator", async () => {
+    vi.stubEnv("AGENT_EXECUTION_BACKEND", "self-hosted");
+    await startVmLoop(sandbox(), jobInput(), Date.now());
+    expect(h.ranCommand).not.toHaveProperty("env");
+  });
+
   it("mesure depuis le début du travail de la FONCTION, pas depuis son propre appel", async () => {
     // 400 ms of boot time already elapsed when called: wake up the microVM,
     // network policy, clone. That's the bulk of the number, and it's behind us.

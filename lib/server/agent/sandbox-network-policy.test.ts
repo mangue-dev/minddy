@@ -47,6 +47,15 @@ afterEach(() => {
 });
 
 describe("persistent Sandbox network policy refresh", () => {
+  it("reserves memory for the supervisor alongside native compilers", async () => {
+    h.created = true;
+    await getOrCreateAgentSandbox({ name: "agent-resource-test", onCreate: async () => {} });
+    expect(h.getOrCreate).toHaveBeenCalledWith(expect.objectContaining({
+      resources: { vcpus: 4 },
+      env: { GOMEMLIMIT: "2048MiB" },
+    }));
+  });
+
   it("updates a resumed Sandbox before returning it", async () => {
     await expect(
       getOrCreateAgentSandbox({

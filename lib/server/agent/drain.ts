@@ -321,10 +321,19 @@ export async function reapDeadVmRuns(
         },
       },
     );
-    if (!stamped) continue; // course : quelqu'un a conclu entre-temps.
+    if (!stamped) continue; // Another writer completed or refreshed this run.
 
+    const watchdog = {
+      commandAlive: alive,
+      sandboxId: row.sandbox_id,
+      commandId: row.loop_command_id,
+      lastHeartbeatAt: row.last_activity_at,
+      detectedAt: new Date().toISOString(),
+    };
+    console.warn("[agent-watchdog] turn lost", { runId: row.id, ...watchdog });
     await appendEvent(row.id, "error", {
       code: "turnLost",
+      watchdog,
       message:
         "This turn's process stopped before it could finish. The session was restored from its last save — send a message to carry on.",
     }).catch(() => {});

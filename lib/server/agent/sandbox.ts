@@ -13,6 +13,7 @@ import {
 import type { HarnessLayout } from "./harness-layout";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { rotateAgentForgeCredential } from "./network-policy";
+import { AGENT_SANDBOX_RESOURCES, AGENT_SANDBOX_RUNTIME_ENV } from "./sandbox-resources";
 
 /**
  * Code Agent Vercel Sandbox Layer (MIN-46) — the microVM itself: its
@@ -187,6 +188,8 @@ export async function getOrCreateAgentSandbox(opts: {
     ...creds,
     name: opts.name,
     timeout: SANDBOX_TIMEOUT_MS,
+    resources: AGENT_SANDBOX_RESOURCES,
+    env: AGENT_SANDBOX_RUNTIME_ENV,
     persistent: true,
     snapshotExpiration: SANDBOX_SNAPSHOT_EXPIRATION_MS,
     // Each session shutdown creates an ADDITIONAL snapshot, all alive for 7 days, so
@@ -299,45 +302,14 @@ function requireSandboxCapability(): boolean {
   }
 }
 
-/**
- * How long do we let `wait()` answer before concluding “he lives”.
- *
- * MEASURED (2026-08-07, real microVM): on a process already dead, `wait()` renders
- * **270ms**. Five seconds are therefore well above the need — the margin is
- * for transatlantic latency, not for the verdict. On a living process,
- * `wait()` does not return at all: it is the delay itself which makes the response.
- */
+/** Each platform request is bounded, including metadata reads before wait(). */
 const LOOP_COMMAND_WAIT_MS = 5_000;
 
 /**
- * Is the loop process of a `loop_in_vm` (MIN-224) run still alive?
- *
- * `null` = unknown — microVM not found, session expired, API down.
- * The caller must then DO NOTHING: the watchdog only concludes with a
- * done, never on a silence. `false` = the process has rendered, and this is an observation
- * exact death.
- *
- * IT NEEDS `wait()`, AND THAT’S THE WHOLE FILE. An order issued in
- * `detached: true` **never** sees his `exitCode` reconciled as a person
- * does not expect it: measured on a real microVM, a process killed for eight minutes
- * — absent from `ps`, no longer an event in the thread — still returned `exitCode: null`.
- * Reading this field alone therefore caused this watchdog to respond “alive” on
- * ALL deaths, and one run whose loop dies remained `running` forever:
- * the idle sweeper only picks up
- * the runs at rest, and the microVM was running until 24 hours into the session.
- *
- * `wait()` limited gives the three answers without inventing any:
- *
- * - it RETURNS ⇒ the process has finished, whatever its code (137 for a SIGKILL);
- * - he did not return the deadline ⇒ the process is still working;
- * - he brings up something else ⇒ we don’t know, and we keep quiet.
- *
- * The `timedOut` flag rather than the exception name: it's OUR clock
- * who decides, not how the SDK dresses up an abandonment.
- *
- * `resume: false` DELIBERATELY: querying the status of an order should never
- * wake up a microVM that the reaper has just put to sleep — this would restart the
- * compute billing of a run at rest, each time the cron passes.
+ * Observe a command without resuming its sandbox. A timed-out wait is ambiguous:
+ * a running command and an unresponsive VM both leave the request unanswered.
+ * Confirm VM responsiveness with a bounded no-op on that exact session before
+ * returning true. Unknown results let the drain's heartbeat grace period apply.
  */
 export async function isLoopCommandAlive(
   sandboxId: string,
@@ -368,11 +340,22 @@ export async function isLoopCommandAlive(
   if (!requireSandboxCapability()) return null;
   try {
     const creds = sandboxCredentials();
-    const sandbox = await VercelSandbox.get({ ...creds, name: sandboxId, resume: false });
-    const command = await sandbox.getCommand(commandId);
+    const sandbox = await VercelSandbox.get({
+      ...creds,
+      name: sandboxId,
+      resume: false,
+      signal: AbortSignal.timeout(LOOP_COMMAND_WAIT_MS),
+    });
+    if (["stopped", "failed", "aborted"].includes(sandbox.status)) return false;
+    if (sandbox.status !== "running") return null;
+
+    // Sandbox.getCommand() can auto-resume even after get({ resume: false }).
+    // Session methods never resume, including if it stops during this probe.
+    const session = sandbox.currentSession();
+    const command = await session.getCommand(commandId, {
+      signal: AbortSignal.timeout(LOOP_COMMAND_WAIT_MS),
+    });
     if (!command) return null;
-    // Already reconciled (order not detached, or someone waited for it before
-    // us): nothing more to ask.
     if (command.exitCode != null) return false;
 
     const abort = new AbortController();
@@ -385,10 +368,19 @@ export async function isLoopCommandAlive(
       await command.wait({ signal: abort.signal });
       return false;
     } catch {
-      return timedOut ? true : null;
+      if (!timedOut) return null;
     } finally {
       clearTimeout(timer);
     }
+
+    const probe = await session.runCommand({
+      cmd: "/bin/true",
+      // No repository files, shell initialization or credentials are needed.
+      cwd: "/tmp",
+      timeoutMs: 1_000,
+      signal: AbortSignal.timeout(LOOP_COMMAND_WAIT_MS),
+    });
+    return probe.exitCode === 0 ? true : null;
   } catch {
     return null;
   }
