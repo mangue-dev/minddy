@@ -24,6 +24,7 @@ import {
   useIdleMarkdownEditorPreload,
 } from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useArrowField } from "@/lib/use-arrow-field";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -187,6 +188,8 @@ export function CreateIssueDialog({
   // typed but not yet committed (commit happens on blur) when the dialog closes.
   const editorNonEmptyRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  // “->” becomes “→” while typing, like in the body editor.
+  const arrowTitle = useArrowField(titleRef);
   // The content of the dialog, to know if the keyboard still belongs to him: a
   // second dialog on top (draft confirmation, objective creation
   // from the picker) must keep his touches to himself.
@@ -651,11 +654,11 @@ export function CreateIssueDialog({
               className="mb-3"
             />
             <AutoTextarea
-              ref={titleRef}
+              ref={arrowTitle.ref}
               autoFocus
               required
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => setTitle(arrowTitle.read(e))}
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
                 e.preventDefault();

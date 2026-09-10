@@ -8,6 +8,7 @@ import {
   parseDatabaseNumber,
   type DatabaseValue,
 } from "@/lib/page-databases";
+import { useArrowField } from "@/lib/use-arrow-field";
 
 /** A floating editor occupies the cell's visual position without resizing its row. */
 export function DatabaseCellEditor({
@@ -37,6 +38,10 @@ export function DatabaseCellEditor({
       node.select();
     }
   }, []);
+  // “->” becomes “→” while typing, in text cells only — a number draft is
+  // never retouched by the rule. The hook borrows `focusInput` so its caret
+  // restore aims at the same node this callback focuses.
+  const arrow = useArrowField(focusInput);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(false);
@@ -154,7 +159,7 @@ export function DatabaseCellEditor({
       {open &&
         createPortal(
           <textarea
-            ref={focusInput}
+            ref={arrow.ref}
             aria-label={label}
             aria-invalid={error}
             data-database-cell-editor
@@ -169,8 +174,10 @@ export function DatabaseCellEditor({
             maxLength={numeric ? 320 : 2000}
             value={draft}
             onChange={(event) => {
-              if (!numeric || isDatabaseNumberDraft(event.target.value)) {
-                setDraft(event.target.value);
+              // The arrow rule must not rewrite a number draft.
+              const next = numeric ? event.target.value : arrow.read(event);
+              if (!numeric || isDatabaseNumberDraft(next)) {
+                setDraft(next);
                 setError(false);
                 event.target.setCustomValidity("");
               }

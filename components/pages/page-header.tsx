@@ -19,7 +19,7 @@ import { Smile } from "lucide-react";
 
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
-import { applyArrowRule } from "@/lib/arrow-input";
+import { useArrowField } from "@/lib/use-arrow-field";
 
 /**
  * Is the cursor on the LAST visible line of the field?
@@ -97,16 +97,9 @@ export function PageHeader({
     }
   }, [title]);
 
-  // The field itself, plus the caret to restore after an arrow substitution:
-  // React resets the caret when it commits the new value, so the position is
-  // remembered here and re-applied once the value is in the DOM.
-  const field = useRef<HTMLTextAreaElement | null>(null);
-  const pendingCaret = useRef<number | null>(null);
-  useEffect(() => {
-    if (pendingCaret.current == null) return;
-    field.current?.setSelectionRange(pendingCaret.current, pendingCaret.current);
-    pendingCaret.current = null;
-  });
+  // The arrow substitution (“->” → “→”, like in the body) and the ref
+  // plumbing live in the shared hook; `fieldRef` is what focus returns to.
+  const arrow = useArrowField(fieldRef);
 
   return (
     // `group/header`: the “add an icon” button only exists when hovering over the
@@ -147,28 +140,14 @@ export function PageHeader({
       )}
       <AutoTextarea
         value={draft}
-        ref={(el) => {
-          field.current = el;
-          if (fieldRef) fieldRef.current = el;
-        }}
+        ref={arrow.ref}
         autoFocus={autoFocus}
         readOnly={readOnly}
         placeholder={t("titlePlaceholder")}
         aria-label={t("titleLabel")}
         spellCheck={false}
         onChange={(event) => {
-          const element = event.currentTarget;
-          let value = event.target.value;
-          // An IME composition in progress (Japanese, Chinese…) is still
-          // building its text: substituting inside it would corrupt it. The
-          // rule waits for the composition to commit.
-          if (!(event.nativeEvent instanceof InputEvent && event.nativeEvent.isComposing)) {
-            const rule = applyArrowRule(value, element.selectionStart ?? value.length);
-            if (rule) {
-              value = rule.text;
-              pendingCaret.current = rule.caret;
-            }
-          }
+          const value = arrow.read(event);
           typed.current = value;
           setDraft(value);
           onTitleChange(value);
