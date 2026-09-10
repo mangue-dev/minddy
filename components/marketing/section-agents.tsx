@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Check, GitPullRequest, Bot, Layers } from "lucide-react";
+import { CalendarClock, Check, GitPullRequest, Bot, Layers } from "lucide-react";
 import { MCP_PRESETS } from "@/lib/mcp-catalog";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
@@ -66,6 +66,17 @@ export async function SectionAgents() {
                 {PROVIDERS.map(provider => <li key={provider.id} className="flex min-w-0 items-center gap-2 text-xs font-medium"><McpServiceLogo service={provider.id} className="size-6" />{provider.name}</li>)}
                 <li className="flex items-center gap-2 text-xs opacity-75"><Layers className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />{t("agentsMore")}</li>
               </ul>
+            </div>
+          </FeatureDisclosure>
+          <FeatureDisclosure id="routines" title={t("routinesCardTitle")} className={`min-h-[440px] lg:col-span-3 ${CARD_TONES.peach}`}
+            details={<div className="space-y-5"><p>{t("routinesCardDetailsBody")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="routines" expandable sizes="(min-width: 1024px) 960px, 100vw" /></div>}>
+            <div className="grid h-full items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2">
+              <div className="flex h-full flex-col">
+                <CalendarClock className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <h3 className="text-2xl font-medium tracking-tight">{t("routinesCardTitle")}</h3>
+                <p className="mt-3 max-w-md text-sm leading-relaxed opacity-80">{t("routinesCardBody")}</p>
+              </div>
+              <ScreenshotSlot id="routines" expandable sizes="(min-width: 1024px) 460px, 100vw" className="w-full max-w-lg justify-self-center lg:justify-self-end" />
             </div>
           </FeatureDisclosure>
         </div>

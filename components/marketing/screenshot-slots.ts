@@ -102,6 +102,15 @@ const SLOTS = {
     ratio: "4/3",
     src: null,
   },
+  routines: {
+    id: "routines",
+    route: "/routines",
+    shot:
+      "The Routines tab: two or three routines in the list, one selected with its schedule line under the title and the list of its runs with their statuses (success, pull request opened, error).",
+    altKey: "shotAlt_routines",
+    ratio: "4/3",
+    src: null,
+  },
   scratchpad: {
     id: "scratchpad",
     route: "any app page, task notebook open (Command/Ctrl + Shift + K)",
