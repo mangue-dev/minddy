@@ -47,6 +47,11 @@ export interface PaletteItem {
   entityType?: string;
   /** Dimmed context text displayed next to the title (e.g. "Project › Module"). */
   contextLabel?: string;
+  /**
+   * Small icon rendered LEFT of the right-aligned context text — e.g. the
+   * project orb of the project a ticket belongs to.
+   */
+  contextIcon?: ReactNode;
   /** Small type label displayed at the right of the row (e.g. "Task"). */
   typeLabel?: string;
   /** Colored status dot displayed before the title. */

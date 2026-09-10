@@ -19,6 +19,13 @@ export interface PaletteItem {
   icon?: ComponentType<{ className?: string }>;
   /** Extra terms to match against when searching (identifier, project name…). */
   keywords?: string[];
+  /**
+   * Keyboard shortcut shown right-aligned on the desktop row (e.g. ["G", "H"]
+   * for the G→H chord, ["?"] for the cheat sheet). Each entry renders as a Kbd
+   * chip; the mobile search ignores this field. Named `keys` (not `shortcut`)
+   * because mangue-ui's CommandMenuItem already reserves `shortcut?: string`.
+   */
+  keys?: string[];
   /** Secondary text, SOUGHT-AFTER but less strong than a title — an extract from a
    * page found by its contents (MIN-276). The engine ranks a title match
    * above ; this is what puts “found by its title” in front of
@@ -29,6 +36,11 @@ export interface PaletteItem {
   /** Plain-text version of `meta` (identifier, project name) — the desktop
    *  command palette renders it as a dim context label next to the title. */
   metaText?: string;
+  /**
+   * Optional icon rendered LEFT of the right-aligned context text on the
+   * desktop palette (e.g. the project orb). Ignored by the mobile search.
+   */
+  contextIcon?: ReactNode;
   /** Entity type for the palette's contextual-action routing (e.g. "issue"). */
   entityType?: string;
   /** Project this row belongs to. The desktop palette boosts rows whose

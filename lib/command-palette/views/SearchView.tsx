@@ -14,7 +14,7 @@
 
 "use client";
 
-import React, { useMemo, useCallback, useState, useEffect, useRef } from "react";
+import React, { useMemo, useCallback, useState, useEffect, useRef, type ReactNode } from "react";
 import { usePaletteConfig } from "../config";
 import { ActionsPopover } from "../components/ActionsPopover";
 import { Footer } from "../components/Footer";
@@ -72,6 +72,12 @@ export interface SearchViewProps {
   onEnterTabView?: (query: string) => void;
   /** Hint label next to the Tab kbd. */
   tabHint?: string;
+  /**
+   * Quick-AI affordance at the right of the search input: the AI's icon and a
+   * Tab kbd. Empty query → opens the AI surface; filled query → hands the
+   * query to it.
+   */
+  quickAi?: { icon: ReactNode; onSelect: (query: string) => void };
   /** Compact mode: show only the search bar until the user types. */
   compactMode?: boolean;
   /** Favorite item ids (overrides localStorage persistence). */
@@ -97,6 +103,7 @@ export function SearchView({
   onSelectItem,
   onEnterTabView,
   tabHint,
+  quickAi,
   compactMode = false,
   favorites: favoritesProp,
   historyIndex = -1,
@@ -392,20 +399,21 @@ export function SearchView({
     [registry, viewActionContext]
   );
 
-  // Default action label for the highlighted item (footer hint)
-  const defaultActionLabel = useMemo(() => {
-    const activeItem = orderedItems[activeIndex];
-    if (!activeItem) return undefined;
-    const defaultAction = registry.getDefaultAction(activeItem, viewActionContext);
-    return defaultAction?.label;
-  }, [registry, orderedItems, activeIndex, viewActionContext]);
-
+  // Clicking the actions pill opens the popover on the highlighted item,
+  // exactly like the keyboard shortcut does
   const handleOpenActions = useCallback(
     (item: PaletteItem) => {
       openActionsForItem(item);
     },
     [openActionsForItem]
   );
+
+  const handleOpenActionsPill = useCallback(() => {
+    const item = orderedItems[activeIndex];
+    if (!item || !hasActions(item) || isActionsPopoverOpen) return;
+    selectItem(item);
+    openActionsForItem(item);
+  }, [orderedItems, activeIndex, hasActions, isActionsPopoverOpen, selectItem, openActionsForItem]);
 
   // ⌘/Ctrl + actionsKey opens the actions popover on the highlighted item
   useEffect(() => {
@@ -479,6 +487,7 @@ export function SearchView({
         onEscape={onClose}
         onTab={onEnterTabView}
         tabHint={tabHint}
+        quickAi={quickAi}
         onArrowDown={handleArrowDown}
         autoFocus
         inputRef={searchInputRef}
@@ -487,32 +496,43 @@ export function SearchView({
         disableHistoryOnArrowUp={hasNavigatedResults}
       />
 
-      {/* Results - hidden in compact mode when no query */}
-      {isExpanded && (
-        <div className={styles.resultsContainer}>
-          <ResultsList
-            groups={groups}
-            activeIndex={activeIndex}
-            onSelect={handleSelect}
-            onOpenActions={handleOpenActions}
-            hasActions={hasActions}
-            isMobile={isTouchDevice}
-            getTouchHandlers={isTouchDevice ? getTouchHandlers : undefined}
-          />
-        </div>
+      {/* With no results there is NOTHING below the input: the palette then
+      shrinks to the search bar's height. Strips and pill need rows to make
+      sense, so they follow the same condition. */}
+      {isExpanded && groups.length > 0 && (
+        <>
+          {/* Results */}
+          <div className={styles.resultsContainer}>
+            <ResultsList
+              groups={groups}
+              activeIndex={activeIndex}
+              onSelect={handleSelect}
+              onOpenActions={handleOpenActions}
+              hasActions={hasActions}
+              isMobile={isTouchDevice}
+              getTouchHandlers={isTouchDevice ? getTouchHandlers : undefined}
+            />
+          </div>
+
+          {/* Reserved bottom strip: a soft fade the actions pill sits in. Always
+          visible — with or without actions — so the rows behind stay readable
+          through its gradient while the highlighted row paints above it. */}
+          <div className={styles.bottomStrip} aria-hidden="true" />
+        </>
       )}
 
-      {/* Footer - always visible */}
-      <Footer
-        view="search"
-        isMobile={isTouchDevice}
-        hasActions={
-          orderedItems[activeIndex] ? hasActions(orderedItems[activeIndex]) : false
-        }
-        compactMode={compactMode}
-        isExpanded={isExpanded}
-        defaultActionLabel={defaultActionLabel}
-      />
+      {/* Floating actions shortcut pill — hidden while the popover is open,
+      since the popover takes its exact slot */}
+      {!isActionsPopoverOpen && (
+        <Footer
+          hasActions={
+            orderedItems[activeIndex] ? hasActions(orderedItems[activeIndex]) : false
+          }
+          isMobile={isTouchDevice}
+          isExpanded={isExpanded}
+          onOpen={handleOpenActionsPill}
+        />
+      )}
 
       {/* Actions popover - only when expanded */}
       {isExpanded && (

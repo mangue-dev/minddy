@@ -62,7 +62,18 @@ const ITEM_HEIGHT = 44;
 const HEADER_HEIGHT = 28;
 const MIN_LIST_HEIGHT = 100;
 const MAX_LIST_HEIGHT = 400;
-const SCROLL_PADDING = 8; // Padding at top/bottom for spacer rows + scroll alignment
+/* Equals the total horizontal inset of a row (8px list container margin +
+   5px item margin), so at the scroll extremes the highlight keeps the same
+   clearance vertically as horizontally — its radius-md arc then nests into
+   the palette container's inner corner arc (13 + 14 = 27px) instead of
+   getting clipped by it. */
+const SCROLL_PADDING = 13;
+/* Bottom clearance is LARGER: the palette's bottom strip (pseudo-footer with
+   the actions pill, 44px — see SearchView.module.css) overlays the list's
+   last rows, and the highlighted option must never sink into it. The extra
+   padding keeps the active row above the strip's fade at the scroll bottom. */
+const STRIP_HEIGHT = 44;
+const BOTTOM_SCROLL_PADDING = SCROLL_PADDING + STRIP_HEIGHT; // 57px
 
 /**
  * Calculate the optimal list height based on content,
@@ -78,7 +89,7 @@ export function calculateListHeight(groups: ItemGroup[]): number {
   }
 
   if (totalHeight > 0) {
-    totalHeight += SCROLL_PADDING * 2;
+    totalHeight += SCROLL_PADDING + BOTTOM_SCROLL_PADDING;
   }
 
   return Math.max(MIN_LIST_HEIGHT, Math.min(totalHeight, MAX_LIST_HEIGHT));
@@ -91,7 +102,7 @@ export function calculateListHeight(groups: ItemGroup[]): number {
 /** Flattened row types. */
 type FlatRow =
   | { type: "padding"; position: "top" | "bottom" }
-  | { type: "header"; category: string }
+  | { type: "header"; category: string; first?: boolean }
   | { type: "item"; item: PaletteItem; globalIndex: number };
 
 /**
@@ -116,7 +127,9 @@ function flattenGroupsWithPadding(groups: ItemGroup[]): FlatRow[] {
   for (const group of groups) {
     if (group.items.length === 0) continue;
 
-    rows[index++] = { type: "header", category: group.category };
+    // The FIRST eyebrow of the results keeps its default top padding; the
+    // others get extra air above to separate the sections (CSS-side).
+    rows[index++] = { type: "header", category: group.category, first: index === 1 };
 
     for (const item of group.items) {
       rows[index++] = { type: "item", item, globalIndex };
@@ -134,7 +147,7 @@ function getRowHeightForRow(row: FlatRow): number {
     case "header":
       return HEADER_HEIGHT;
     case "padding":
-      return SCROLL_PADDING;
+      return row.position === "top" ? SCROLL_PADDING : BOTTOM_SCROLL_PADDING;
     case "item":
     default:
       return ITEM_HEIGHT;
@@ -194,7 +207,10 @@ function Row({
 
   if (row.type === "header") {
     return (
-      <div style={style} className={styles.header}>
+      <div
+        style={style}
+        className={`${styles.header} ${row.first ? "" : styles.headerNotFirst}`}
+      >
         <span className={styles.headerText}>{row.category}</span>
       </div>
     );
@@ -203,7 +219,11 @@ function Row({
   const isActive = row.globalIndex === activeIndex;
 
   return (
-    <div style={style} data-result-index={row.globalIndex}>
+    <div
+      style={style}
+      className={isActive ? styles.activeRow : ""}
+      data-result-index={row.globalIndex}
+    >
       <ResultItem
         item={row.item}
         isActive={isActive}
@@ -226,7 +246,10 @@ interface ScrollTargetInput {
   itemBottom: number;
   scrollTop: number;
   viewportHeight: number;
-  scrollPadding: number;
+  /** Clearance at the TOP edge of the viewport. */
+  scrollPaddingTop: number;
+  /** Clearance at the BOTTOM edge (larger: it also covers the bottom strip). */
+  scrollPaddingBottom: number;
   scrollHeight: number;
 }
 
@@ -235,18 +258,19 @@ export function getScrollTarget({
   itemBottom,
   scrollTop,
   viewportHeight,
-  scrollPadding,
+  scrollPaddingTop,
+  scrollPaddingBottom,
   scrollHeight,
 }: ScrollTargetInput): number | null {
-  const visibleTop = scrollTop + scrollPadding;
-  const visibleBottom = scrollTop + viewportHeight - scrollPadding;
+  const visibleTop = scrollTop + scrollPaddingTop;
+  const visibleBottom = scrollTop + viewportHeight - scrollPaddingBottom;
 
   let targetScroll: number | null = null;
 
   if (itemTop < visibleTop) {
-    targetScroll = itemTop - scrollPadding;
+    targetScroll = itemTop - scrollPaddingTop;
   } else if (itemBottom > visibleBottom) {
-    targetScroll = itemBottom - viewportHeight + scrollPadding;
+    targetScroll = itemBottom - viewportHeight + scrollPaddingBottom;
   }
 
   if (targetScroll === null) {
@@ -321,15 +345,17 @@ export function ResultsList({
       itemBottom: itemOffset + itemHeight,
       scrollTop: currentScroll,
       viewportHeight: containerHeight,
-      scrollPadding: SCROLL_PADDING,
+      scrollPaddingTop: SCROLL_PADDING,
+      scrollPaddingBottom: BOTTOM_SCROLL_PADDING,
       scrollHeight: scrollContainer.scrollHeight,
     });
 
     if (targetScroll !== null) {
-      scrollContainer.scrollTo({
-        top: targetScroll,
-        behavior: "smooth",
-      });
+      // INSTANT scroll, no "smooth": an animated scroll lets the highlight
+      // visually run to the edge before the list catches up — each arrow key
+      // then produces a jolt instead of the highlight staying anchored while
+      // only the list moves. Rapid key presses also stack animations.
+      scrollContainer.scrollTo({ top: targetScroll });
     }
   }, [activeIndex, rows, rowOffsets, listHeight, listRef, getRowHeight]);
 

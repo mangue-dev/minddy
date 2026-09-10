@@ -138,12 +138,13 @@ export class ActionRegistry {
   }
 
   /**
-   * Check if an item has multiple actions available.
-   * Used to show/hide the actions indicator — a single action is just the
-   * default one (Enter), no need for a submenu.
+   * Check whether an item deserves the actions submenu.
+   * Generic "basic" actions (open, favorite, open in a new tab…) are not
+   * enough: a single one of them, or a handful, duplicates what Enter already
+   * does — the submenu is reserved for items with real contextual actions.
    */
   hasActionsForItem(item: PaletteItem, ctx: ActionExecutionContext): boolean {
-    return this.getActionsForItem(item, ctx).length > 1;
+    return this.getActionsForItem(item, ctx).some((action) => !action.basic);
   }
 
   /**

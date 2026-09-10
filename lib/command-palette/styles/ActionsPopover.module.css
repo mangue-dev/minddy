@@ -10,11 +10,18 @@
    ============================================================================= */
 
 .popoverWrapper {
-  /* Default: inline positioning (fallback for no anchor) */
+  /* Default: inline positioning (fallback for no anchor) — the pill's slot:
+     same concentric inset as the actions pill (Footer.module.css) */
   position: absolute;
-  bottom: 48px;
-  right: 12px;
+  bottom: 0.625rem;
+  right: 0.625rem;
   z-index: 9999;
+  /* Corner geometry shared by the popover and its rows: inset (0.625rem) +
+     this radius = the palette container's inner radius, so the corner arc
+     nests into the palette's exactly where the pill does. */
+  --popover-radius: calc(
+    var(--cp-radius-2xl, var(--cp-radius-xl)) - 1px - 0.625rem
+  );
   /* When using portal, position is set via inline styles (position: fixed, top, left) */
 }
 
@@ -22,11 +29,10 @@
   width: 320px;
   max-height: 400px;
   background: var(--cp-bg);
+  /* Same 1px border as the palette container itself */
   border: 1px solid var(--cp-border);
-  border-radius: var(--cp-radius-xl, 12px);
-  box-shadow:
-    0 10px 30px var(--cp-shadow),
-    0 0 0 1px color-mix(in srgb, var(--cp-border) 50%, transparent);
+  border-radius: var(--popover-radius);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--cp-shadow) 65%, transparent);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -47,7 +53,7 @@
 }
 
 /* =============================================================================
-   SEARCH BAR
+   SEARCH BAR — below the list, Raycast-style
    ============================================================================= */
 
 .searchContainer {
@@ -55,7 +61,6 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--cp-border);
 }
 
 .searchIcon {
@@ -81,36 +86,6 @@
   color: var(--cp-muted);
 }
 
-.closeButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--cp-muted);
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.closeButton:hover {
-  background: color-mix(in srgb, var(--cp-border) 50%, transparent);
-  color: var(--cp-fg);
-}
-
-.closeButton:focus-visible {
-  outline: 2px solid var(--cp-accent);
-  outline-offset: 2px;
-}
-
-.closeIcon {
-  width: 14px;
-  height: 14px;
-}
-
 /* =============================================================================
    ACTIONS LIST
    ============================================================================= */
@@ -121,6 +96,9 @@
   overscroll-behavior-y: var(--app-overscroll, auto);
   padding: 6px;
   scroll-behavior: smooth;
+  /* Same clearance vertically as horizontally: the active row's arc keeps
+     nesting into the popover's rounded corners at the scroll extremes. */
+  scroll-padding-block: 6px;
   max-height: 280px;
   /* Custom scrollbar */
   scrollbar-width: thin;
@@ -173,7 +151,9 @@
   width: 100%;
   padding: 8px 10px;
   border: none;
-  border-radius: calc(var(--cp-radius-xl) - 6px);
+  /* Concentric one level down: 6px list padding + this radius = the
+     popover's own radius */
+  border-radius: calc(var(--popover-radius) - 6px);
   background: transparent;
   cursor: pointer;
   text-align: left;
@@ -295,16 +275,6 @@
 
   .actionLabel {
     font-size: 14px;
-  }
-
-  .closeButton {
-    width: 32px;
-    height: 32px;
-  }
-
-  .closeIcon {
-    width: 16px;
-    height: 16px;
   }
 }
 

@@ -175,6 +175,14 @@ export interface ContextualAction {
 
   /** Priority within category (higher = shown first). Default 0. */
   priority?: number;
+
+  /**
+   * Marks a GENERIC action (open, toggle favorite, open in a new tab, copy
+   * link…) that does not justify the actions submenu on its own. An item
+   * only surfaces the submenu when it has at least one action that is not
+   * basic — see ActionRegistry.hasActionsForItem.
+   */
+  basic?: boolean;
 }
 
 // =============================================================================

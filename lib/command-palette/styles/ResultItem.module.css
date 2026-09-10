@@ -5,21 +5,21 @@
  * Follows Raycast-like styling.
  */
 
+/* Padding is symmetric (12px all around) and the horizontal margin is tuned
+   for the concentric chain: item radius (--cp-radius-md) + this 5px inset =
+   the list container's radius (see ResultsList.module.css), which itself
+   nests into the palette container's corner. */
 .item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  margin: 0 8px 4px;
+  padding: 12px;
+  margin: 0 5px;
   border-radius: var(--cp-radius-md);
   cursor: pointer;
   user-select: none;
   min-height: 40px;
   color: var(--cp-fg);
-}
-
-.item:last-child {
-  margin-bottom: 0;
 }
 
 .item.active {
@@ -88,14 +88,31 @@
   text-overflow: ellipsis;
 }
 
-/* Context info (project name) */
+/* Context info (project name, ticket identifier) — right-aligned, with an
+   optional project orb LEFT of the text */
 .context {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.75rem;
   color: var(--cp-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex-shrink: 1;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.contextIcon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.contextIcon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .item.active .context {
@@ -129,9 +146,20 @@
 /* Keyboard shortcut hint */
 .shortcut {
   display: flex;
+  align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  margin-left: auto;
+}
+
+/* The “then” of a chord (G then H) between the two keys */
+.shortcutThen {
+  font-size: var(--cp-fs-xs);
+  color: var(--cp-muted);
+  white-space: nowrap;
+}
+
+.item.active .shortcutThen {
+  color: color-mix(in srgb, var(--cp-accent-fg) 70%, transparent);
 }
 
 /* Type indicator - shows item type */
@@ -139,7 +167,6 @@
   font-size: var(--cp-fs-secondary);
   color: var(--cp-muted);
   flex-shrink: 0;
-  margin-left: 8px;
   white-space: nowrap;
 }
 

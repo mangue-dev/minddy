@@ -42,6 +42,10 @@
 
   /* === Radii (mangue-ui scale) === */
   --cp-radius-xl: var(--radius-xl, 1rem);
+  /* Palette container only: one notch rounder than the floating menus, and a
+   notch above mangue's --radius-2xl so the actions bubble pill nests into
+   the corner with breathing room. */
+  --cp-radius-2xl: calc(var(--radius-2xl, 1.5rem) + 0.25rem);
   --cp-radius-lg: var(--radius-lg, 0.75rem);
   --cp-radius-md: var(--radius-md, 0.5rem);
   /* Not var(--radius-sm) (12px at mango-ui): on kbd chips of 20px that

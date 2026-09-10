@@ -8,7 +8,6 @@
   gap: 12px;
   height: 56px; /* Fixed height to prevent expansion when tabHint appears */
   padding: 0 18px;
-  border-bottom: 1px solid var(--cp-border);
   background: var(--cp-bg);
 }
 
@@ -78,6 +77,33 @@
 }
 
 /* =============================================================================
+   QUICK AI - icon + Tab kbd at the right of the input
+   ============================================================================= */
+
+/* No badge chrome: just the AI's icon and the kbd. */
+.quickAiButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  border-radius: var(--cp-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: opacity 120ms ease-out;
+}
+
+.quickAiButton:hover {
+  opacity: 0.75;
+}
+
+.quickAiButton:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
    TAB HINT - "Tab to ask AI" indicator (no background, inline text)
    ============================================================================= */
 
@@ -99,13 +125,16 @@
    HISTORY BADGE - Shown when navigating query history
    ============================================================================= */
 
+/* Small pill, same recipe as the actions pill: quiet surface tinted with the
+   palette border, matching 1px outline, fully rounded. */
 .historyBadge {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 4px 8px;
-  border-radius: var(--cp-radius-sm);
-  background: color-mix(in srgb, var(--cp-muted) 15%, transparent);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--cp-border) 15%, var(--cp-bg));
+  border: 1px solid var(--cp-border);
   font-size: var(--cp-fs-secondary);
   font-weight: 500;
   color: var(--cp-muted);
