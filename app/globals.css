@@ -85,6 +85,17 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   text-align: left;
 }
 
+/* Keyboard keys need fonts that DRAW the shortcut glyphs (⌘ ⌥ ⇧ ⌃ ⏎ live in
+   the Miscellaneous Technical block, U+2300–23FF) — Inter, the app's sans,
+   has none of them, so every modifier fell back to an arbitrary font with
+   misaligned metrics. Route keys to the fonts that design these glyphs
+   natively: SF Pro on macOS (what system menus and Raycast draw), Segoe UI
+   Symbol on Windows, Noto Sans Symbols 2 elsewhere. */
+:root {
+  --font-kbd: -apple-system, BlinkMacSystemFont, "Segoe UI Symbol",
+    "Noto Sans Symbols 2", sans-serif;
+}
+
 /* ─── Floating surfaces ────────────────────────────────────────────────
    Popovers, menus, selects and custom suggestion lists are portaled or
    absolutely positioned, so their stacking context must be independent from

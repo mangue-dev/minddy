@@ -15,8 +15,10 @@ import { cn } from "mangue-ui";
  * typecheck under type identity errors).
  *
  * TO REMOVE as soon as minddy switches to mango-ui ≥ 0.4.0: replace imports
- * `@/components/ui/kbd` by `mangue-ui` and delete this file. This is not
- * a divergence — the content must remain IDENTICAL upstream.
+ * `@/components/ui/kbd` by `mangue-ui` and delete this file. NOTE: the
+ * styling now intentionally DIVERGES from upstream (transparent surface,
+ * tinted border, sans glyphs — see the `Kbd` docstring below); port the new
+ * look to mangue-ui before the switch or restore the old classes there.
  */
 
 export type KbdProps = React.ComponentProps<"kbd"> & {
@@ -45,9 +47,14 @@ function isSingleGlyph(children: React.ReactNode): boolean {
 }
 
 /**
- * Keyboard key indicator. Locks text color to `text-foreground` so the key
- * stays readable on its `bg-muted` background regardless of the parent's
- * text color (tooltips invert foreground/background, etc.).
+ * Keyboard key indicator. Transparent surface with a tinted border so keys
+ * read as outlines on any background; text and border share `currentColor`,
+ * the glyph slightly muted (75%) and the border more so (30%) — so a key
+ * inherits whatever color its surface is built for (foreground normally, the
+ * inverted tooltip text on tooltips) without shouting. The font is
+ * `--font-kbd` (see app/globals.css): Inter has none of the ⌘⇧⌥ glyphs. The
+ * radius is explicit because the mangue-ui token scale redefines
+ * `rounded-md` (0.375rem) to 14px.
  */
 export function Kbd({
   className,
@@ -61,14 +68,14 @@ export function Kbd({
       data-slot="kbd"
       data-square={square || undefined}
       className={cn(
-        "inline-flex items-center justify-center rounded border border-border bg-muted text-foreground font-mono",
+        "inline-flex items-center justify-center rounded-[0.375rem] border [border-color:color-mix(in_srgb,currentColor_30%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
         square
           ? size === "sm"
-            ? "size-4 text-[10px]"
-            : "size-5 text-xs"
+            ? "size-[15px] text-[10px]"
+            : "size-[18px] text-[11px]"
           : size === "sm"
-            ? "h-4 min-w-4 px-1.5 text-[10px]"
-            : "h-5 min-w-5 px-1.5 text-xs",
+            ? "h-[15px] min-w-[15px] px-1 text-[10px]"
+            : "h-[18px] min-w-[18px] px-1 text-[11px]",
         className
       )}
       {...props}

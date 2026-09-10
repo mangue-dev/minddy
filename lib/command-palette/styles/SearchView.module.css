@@ -34,6 +34,45 @@
 }
 
 /* =============================================================================
+   BOTTOM STRIP (pseudo-footer)
+   ============================================================================= */
+
+/* Reserved space at the bottom of the palette, OVERLAYING the list's last
+   rows: a soft fade (transparent at its top, palette background at its bottom)
+   on which the actions pill floats. Height = pill (34px) + its concentric
+   inset (10px), so the pill lands exactly inside. Options behind stay
+   readable through the translucent gradient; the highlighted row never sinks
+   into it — the list's bottom scroll padding (BOTTOM_SCROLL_PADDING in
+   ResultsList) keeps the active row above the strip. pointer-events: none —
+   clicks fall through to the rows, only the pill itself is interactive. */
+.bottomStrip {
+  position: relative;
+  z-index: 5;
+  height: 44px;
+  margin-top: -44px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--cp-bg) 82%, transparent) 55%,
+    color-mix(in srgb, var(--cp-bg) 95%, transparent)
+  );
+}
+.bottomStrip {
+  position: relative;
+  z-index: 5;
+  height: 44px;
+  margin-top: -44px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--cp-bg) 82%, transparent) 55%,
+    color-mix(in srgb, var(--cp-bg) 95%, transparent)
+  );
+}
+
+/* =============================================================================
    MOBILE STYLES
    ============================================================================= */
 

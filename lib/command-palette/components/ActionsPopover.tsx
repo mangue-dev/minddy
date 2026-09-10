@@ -2,10 +2,10 @@
  * ActionsPopover - Inline popover for contextual actions.
  *
  * Displays the available actions for the selected item in a floating popover
- * (triggered by → or ⌘M).
+ * (triggered by → or the actions shortcut).
  *
  * Features:
- * - Own search bar to filter actions
+ * - Own search bar BELOW the list (Raycast-style) to filter actions
  * - Keyboard navigation (↑↓, Enter, Escape, Backspace to close)
  * - Click outside to close
  * - Portal on desktop for overflow, inline on mobile
@@ -17,7 +17,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from "react-dom";
 import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
-import { CloseIcon, SearchIcon } from "../icons";
+import { SearchIcon } from "../icons";
 import { usePaletteStore } from "../store";
 import styles from "../styles/ActionsPopover.module.css";
 import type { ActionExecutionContext, ContextualAction } from "../registry/types";
@@ -84,10 +84,12 @@ function normalizeForSearch(text: string): string {
 // COMPONENT
 // =============================================================================
 
-// Popover dimensions and offsets
+// Popover dimensions and offsets. The bottom/right insets match the actions
+// pill's concentric inset (see Footer.module.css): the popover takes the
+// pill's place, its corner arc nesting into the palette's.
 const POPOVER_WIDTH = 320;
-const FOOTER_HEIGHT = 48;
-const RIGHT_OFFSET = 12;
+const BOTTOM_INSET = 10;
+const RIGHT_OFFSET = 10;
 
 export function ActionsPopover({
   item,
@@ -124,8 +126,8 @@ export function ActionsPopover({
       if (!anchor) return;
 
       const rect = anchor.getBoundingClientRect();
-      // Position at bottom-right of anchor, above the footer
-      const top = rect.bottom - FOOTER_HEIGHT;
+      // Position at bottom-right of anchor, in the pill's slot
+      const top = rect.bottom - BOTTOM_INSET;
       const left = rect.right - POPOVER_WIDTH - RIGHT_OFFSET;
 
       // Bail-out of identity: without it, each measurement rests on a new object,
@@ -331,28 +333,7 @@ export function ActionsPopover({
       style={usePortal ? { position: "fixed", top: position.top, left: position.left } : undefined}
     >
       <div className={styles.popover} ref={popoverRef} role="dialog" aria-modal="true">
-        {/* Search bar */}
-        <div className={styles.searchContainer}>
-          <SearchIcon className={styles.searchIcon} />
-          <input
-            ref={inputRef}
-            type="text"
-            className={styles.searchInput}
-            placeholder={t("actionsPopover.searchPlaceholder")}
-            value={actionsPopoverQuery}
-            onChange={(e) => setActionsPopoverQuery(e.target.value)}
-            aria-label={t("actionsPopover.searchLabel")}
-          />
-          <button
-            className={styles.closeButton}
-            onClick={onClose}
-            aria-label={t("actionsPopover.close")}
-          >
-            <CloseIcon className={styles.closeIcon} />
-          </button>
-        </div>
-
-        {/* Actions list */}
+        {/* Actions list — on top, Raycast-style */}
         <div className={styles.actionsList} role="menu">
           {actionGroups.map((group) => (
             <div key={group.category} className={styles.actionGroup}>
@@ -397,6 +378,20 @@ export function ActionsPopover({
               : t("actionsPopover.noActions")}
           </div>
         )}
+
+        {/* Search bar — below the list, Raycast-style */}
+        <div className={styles.searchContainer}>
+          <SearchIcon className={styles.searchIcon} />
+          <input
+            ref={inputRef}
+            type="text"
+            className={styles.searchInput}
+            placeholder={t("actionsPopover.searchPlaceholder")}
+            value={actionsPopoverQuery}
+            onChange={(e) => setActionsPopoverQuery(e.target.value)}
+            aria-label={t("actionsPopover.searchLabel")}
+          />
+        </div>
       </div>
     </div>
   );

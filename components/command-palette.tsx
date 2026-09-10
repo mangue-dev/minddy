@@ -70,6 +70,8 @@ import {
   type PaletteItem as CpPaletteItem,
 } from "@/lib/command-palette";
 import { NumoIcon } from "@/components/numo-icon";
+import { projectOrbIcon } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { StatusIndicator, PriorityIndicator } from "@/components/issue-indicators";
 import { useBulkActions } from "@/lib/bulk-actions-context";
 import { displayName } from "@/lib/display-name";
@@ -86,6 +88,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useCreate } from "@/lib/create-context";
 import { useCurrentView } from "@/lib/current-view-context";
 import { useSavedViewsQuery } from "@/lib/use-saved-views-query";
@@ -239,6 +242,7 @@ export function CommandPalette({
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();
   const { projects } = useProjects();
+  const assistant = useAssistantPanel();
   const { openCreateIssue, openCreateObjective } = useCreate();
   // The account theme: the choice is persisted to user_metadata so it
   // follows the account to every device (lib/use-account-theme.ts).
@@ -373,6 +377,12 @@ export function CommandPalette({
   const items = useMemo<CpPaletteItem[]>(() => {
     const HIDDEN_KEYS = new Set(["cmd-light", "cmd-dark", "cmd-system", "cmd-signout"]);
 
+    // Project orb per project id: any row referencing a project (ticket,
+    // page, create line…) shows it LEFT of its right-aligned context text.
+    const projectIconById = new Map(
+      projects.map((p) => [p.id, projectOrbIcon(projectOrbSeed(p), p.icon_url)])
+    );
+
     const mapped = groups.flatMap((g, gi) => {
       const cat = g.key ?? g.heading ?? `group-${gi}`;
       return g.items
@@ -385,12 +395,18 @@ export function CommandPalette({
             title: it.label,
             keywords: it.keywords,
             description: it.description,
+            shortcut: it.keys,
             icon: issue
               ? statusIcon(issue.status)
               : Icon
                 ? <Icon className="size-4" />
                 : undefined,
             contextLabel: it.metaText,
+            contextIcon: (() => {
+              if (!it.contextId) return undefined;
+              const ProjectIcon = projectIconById.get(it.contextId);
+              return ProjectIcon ? <ProjectIcon className="size-3.5" /> : undefined;
+            })(),
             filterCategory: cat,
             entityType: it.entityType ?? (it.href ? "navigation" : undefined),
             // Line project: the motor boosts those of the current project
@@ -468,7 +484,7 @@ export function CommandPalette({
     });
 
     return mapped;
-  }, [groups, themeLabel, track, savedViews, router, tNav]);
+  }, [groups, themeLabel, track, savedViews, router, tNav, projects]);
 
   // === Contextual issue actions (⌘; / →) ===
   // Each action opens an inline form with one field: the select opens
@@ -832,6 +848,8 @@ export function CommandPalette({
           label: themeLabel,
           icon: SunMoon,
           category: "primary",
+          // Enter already opens the select: not a reason for a submenu
+          basic: true,
           requiresForm: {
             fields: [
               {
@@ -1324,6 +1342,17 @@ export function CommandPalette({
         if (type === "error") toast.error(message);
         else if (type === "success") toast.success(message);
         else toast(message);
+      }}
+quickAi={{
+        icon: <NumoActionIcon className="size-4" />,
+        onSelect: (query) => {
+          // Filled query → auto-sent to Numo; empty query → the panel just
+          // opens, like a click on the FAB. Either way the palette closes.
+          const prompt = query.trim();
+          if (prompt) assistant.open({ prompt });
+          else assistant.open();
+          onOpenChange(false);
+        },
       }}
     />
   );

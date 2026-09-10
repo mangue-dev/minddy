@@ -38,8 +38,6 @@ export interface ResolvedPaletteConfig {
   registry: ActionRegistry;
   /** Keyboard shortcuts. */
   shortcuts: PaletteShortcuts;
-  /** Footer logo (left slot). */
-  footerLogo?: ReactNode;
 }
 
 // =============================================================================

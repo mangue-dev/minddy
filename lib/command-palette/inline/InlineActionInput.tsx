@@ -25,7 +25,6 @@ import {
 import { usePaletteConfig } from "../config";
 import { ChevronLeftIcon } from "../icons";
 import { matchesSearch } from "../search/engine";
-import { Kbd } from "../components/Kbd";
 import styles from "../styles/InlineActionInput.module.css";
 import { InlineSelect, type SelectOption } from "./InlineSelect";
 import { InlineTextInput } from "./InlineTextInput";
@@ -522,25 +521,6 @@ export function InlineActionInput({
           </div>
         </div>
       )}
-
-      {/* Footer hints */}
-      <div className={styles.inlineFooter}>
-        {fields.length > 1 && (
-          <div className={styles.inlineFooterHint}>
-            <Kbd keys={["shift", t("form.keys.tab")]} size="sm" />
-            <Kbd keys={t("form.keys.tab")} size="sm" />
-            <span>{t("form.navigateFields")}</span>
-          </div>
-        )}
-        <div className={styles.inlineFooterHint}>
-          <Kbd keys={t("form.keys.enter")} size="sm" />
-          <span>{isSelectActive ? t("form.select") : t("form.execute")}</span>
-        </div>
-        <div className={styles.inlineFooterHint}>
-          <Kbd keys={t("form.keys.escape")} size="sm" />
-          <span>{t("form.cancel")}</span>
-        </div>
-      </div>
     </div>
   );
 }

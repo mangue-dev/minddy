@@ -41,6 +41,8 @@ export const ItemActionsProvider: ActionProvider = {
         icon: ArrowRightIcon,
         shortcut: ["↵"],
         category: "primary",
+        // Enter already runs it: not a reason for a submenu
+        basic: true,
         execute: async (menuItem): Promise<ActionResult> => {
           const result = await menuItem.execute?.();
           // Returning false keeps the palette open
@@ -59,6 +61,7 @@ export const ItemActionsProvider: ActionProvider = {
         label: ctx.translate(isFav ? "itemActions.favorite.remove" : "itemActions.favorite.add"),
         icon: StarIcon,
         category: "secondary",
+        basic: true,
         execute: async (): Promise<ActionResult> => {
           ctx.toggleFavorite?.(realId);
           ctx.onFavoriteChange?.();

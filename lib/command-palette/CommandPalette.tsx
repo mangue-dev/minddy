@@ -79,8 +79,6 @@ export interface CommandPaletteProps {
   storagePrefix?: string;
   /** Actions popover shortcut key (with ⌘/Ctrl). Default "m". */
   actionsShortcutKey?: string;
-  /** Logo displayed at the left of the footer. */
-  footerLogo?: ReactNode;
   /** Compact mode: shows only the search bar until the user types. */
   compactMode?: boolean;
   /** Favorite item ids (overrides the built-in localStorage favorites). */
@@ -89,6 +87,12 @@ export interface CommandPaletteProps {
   onToggleFavorite?: (itemId: string) => void;
   /** Enable query history recall (ArrowUp). Default true. */
   history?: boolean;
+  /**
+   * Quick-AI affordance at the right of the search input (icon + Tab kbd).
+   * Empty query → onSelect opens the AI surface; filled query → it auto-sends
+   * the typed text.
+   */
+  quickAi?: { icon: ReactNode; onSelect: (query: string) => void };
 
   // === View extension ===
   /** Custom views, keyed by view id. */
@@ -128,11 +132,11 @@ export function CommandPalette({
   categories = [],
   storagePrefix = "command-palette",
   actionsShortcutKey = "m",
-  footerLogo,
   compactMode = false,
   favorites,
   onToggleFavorite,
   history = true,
+  quickAi,
   views,
   tabView,
   initialQuery = "",
@@ -176,9 +180,8 @@ export function CommandPalette({
       categoryOrder: buildCategoryOrder(categories),
       registry,
       shortcuts: { actionsKey: actionsShortcutKey.toLowerCase() },
-      footerLogo,
     }),
-    [t, locale, categories, registry, actionsShortcutKey, footerLogo]
+    [t, locale, categories, registry, actionsShortcutKey]
   );
 
   // === Query history ===
@@ -301,6 +304,7 @@ export function CommandPalette({
         onSelectItem={handleSelectWithUsage}
         onEnterTabView={tabView ? handleEnterTabView : undefined}
         tabHint={tabView?.hint}
+        quickAi={quickAi}
         compactMode={compactMode}
         favorites={favorites}
         historyIndex={history ? queryHistory.historyIndex : -1}
@@ -323,7 +327,7 @@ export function CommandPalette({
         onClick={handleOverlayClick}
       >
         <div
-          className={`${styles.palette} ${compactMode ? styles.paletteCompact : ""} ${isSuccess ? styles.paletteSuccess : ""}`}
+          className={`${styles.palette} ${isSuccess ? styles.paletteSuccess : ""}`}
           role="dialog"
           aria-modal="true"
           aria-label="Command palette"

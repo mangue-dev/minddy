@@ -163,19 +163,6 @@ function capForMobile<T extends { project_id: string }>(
   return capped.length === rows.length ? rows : capped;
 }
 
-/**
- * The extract, in the space that a line of palette leaves for it. He is already
- * bounded by `ts_headline` (around twenty words); this cut is the
- * display guardrail, so that the project name remains readable on its left.
- */
-const MAX_EXCERPT_CHARS = 90;
-
-function truncateExcerpt(excerpt: string): string {
-  return excerpt.length <= MAX_EXCERPT_CHARS
-    ? excerpt
-    : `${excerpt.slice(0, MAX_EXCERPT_CHARS).trimEnd()}…`;
-}
-
 // The CSV export is deferred like the creation dialogs: a dialog that we
 // opens from ⌘K a few times in the life of an account has nothing to do in the
 // bundle for each page.
@@ -744,6 +731,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         keywords: [...createKw, ti("entity"), currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
         metaText: currentProject.name,
+        contextId: currentProject.id,
+        // The global single-key shortcut (lib/create-context) targets the
+        // current project's dialog when one is open
+        keys: ["C"],
         onSelect: () => openCreateIssue({ projectId: currentProject.id }),
       });
       createItems.push({
@@ -753,6 +744,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         keywords: [...createKw, currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
         metaText: currentProject.name,
+        contextId: currentProject.id,
+        keys: ["O"],
         onSelect: () => openCreateObjective({ projectId: currentProject.id }),
       });
       // The page only follows the open project IN a project, unlike the
@@ -774,20 +767,21 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         ],
         meta: projectChip(currentProject),
         metaText: currentProject.name,
+        contextId: currentProject.id,
         onSelect: () => createPageFromPalette(currentProject.id),
       });
     } else {
-      for (const p of projects) {
-        createItems.push({
-          key: `create-issue-${p.id}`,
-          label: t("newIssue"),
-          icon: ListTodo,
-          keywords: [...createKw, ti("entity"), p.name, p.key],
-          meta: projectChip(p),
-          metaText: p.name,
-          onSelect: () => openCreateIssue({ projectId: p.id }),
-        });
-      }
+      // Outside a project, creation is GENERIC: one "New issue" line and one
+      // "New objective", not a line per project — the dialogs pick the
+      // project themselves. The global single-key shortcuts always apply.
+      createItems.push({
+        key: "create-issue",
+        label: t("newIssue"),
+        icon: ListTodo,
+        keywords: [...createKw, ti("entity")],
+        keys: ["C"],
+        onSelect: () => openCreateIssue(),
+      });
       // Objective creation from anywhere (MIN-33): one entry — the dialog's split
       // button picks the target project.
       if (projects.length > 0) {
@@ -796,6 +790,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("newObjective"),
           icon: Target,
           keywords: createKw,
+          keys: ["O"],
           onSelect: () => openCreateObjective(),
         });
       }
@@ -828,16 +823,19 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     groups.push({ key: "create", heading: t("create"), items: createItems });
 
     // ── Go to (global) ────────────────────────────────────────────────
+    // Every shortcut below mirrors keyboard-context's runChord (G then key);
+    // when a chord changes there, it changes here too.
     groups.push({
       key: "goto",
       heading: t("goTo"),
       items: [
-        { key: "go-home", label: t("home"), icon: Home, href: "/home", onSelect: () => router.push("/home") },
-        { key: "go-inbox", label: t("inbox"), icon: Inbox, onSelect: openInbox },
+        { key: "go-home", label: t("home"), icon: Home, href: "/home", keys: ["G", "H"], onSelect: () => router.push("/home") },
+        { key: "go-inbox", label: t("inbox"), icon: Inbox, keys: ["G", "I"], onSelect: openInbox },
         {
           key: "open-notes",
           label: tScratch("open"),
           icon: NotebookPen,
+          keys: ["mod", "⇧", "K"],
           keywords: ["notes", "scratchpad", "todo", "tâches", "problems"],
           onSelect: () => openScratchpad("palette"),
         },
@@ -848,6 +846,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 label: t("pullRequests"),
                 icon: GitPullRequest,
                 href: "/pull-requests",
+                keys: ["G", "R"],
                 onSelect: () => router.push("/pull-requests"),
               },
               {
@@ -855,6 +854,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 label: t("agents"),
                 icon: NumoNavIcon,
                 href: "/agents",
+                keys: ["G", "J"],
                 onSelect: () => router.push("/agents"),
               },
               {
@@ -864,6 +864,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 label: tRoutines("title"),
                 icon: CalendarClock,
                 href: "/routines",
+                keys: ["G", "U"],
                 keywords: [
                   "routine",
                   "routines",
@@ -883,6 +884,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("allIssues"),
           icon: LayoutGrid,
           href: "/all",
+          keys: ["G", "B"],
           onSelect: () => router.push("/all"),
         },
         {
@@ -939,6 +941,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           key: "keyboard-shortcuts",
           label: tk("shortcutsTitle"),
           icon: Keyboard,
+          keys: ["?"],
           keywords: ["keyboard", "shortcuts", "raccourcis", "clavier", "cheatsheet", "help", "aide"],
           onSelect: () => setCheatsheetOpen(true),
         },
@@ -1110,8 +1113,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         s.tabLabel,
         ...(project ? [project.name, project.key] : []),
       ],
-      meta: project ? projectChip(project) : undefined,
-      metaText: project ? project.name : s.tabLabel,
+      // No trailing text: the tab name is noise on the row (it is in the
+      // search keywords), and the project orb comes from `contextId`.
       contextId: project?.id,
       href: settingsSectionHref(s, project?.id),
       onSelect: () => router.push(settingsSectionHref(s, project?.id)),
@@ -1231,8 +1234,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // Postgres, with the snippet that says why the page exits. The extract is
       // placed in `description`: the palette engine classifies a match of
       // title above a description match, so "found by its
-      // title” passes before “cited in a body” without having to sort —
-      // and the searched word remains visible on the line (`metaText`).
+      // title” passes before “cited in a body” without having to sort.
+      // The row's right-aligned context stays the PROJECT NAME — the excerpt
+      // is for ranking, never for display.
       //
       // A page found by its content but missing from the index (ceiling
       // reached, snapshot expired) is added to the list: the server comes
@@ -1268,9 +1272,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 description: excerpt,
                 keywords: [project.name, project.key],
                 meta: projectChip(project),
-                metaText: excerpt
-                  ? `${project.name} · ${truncateExcerpt(excerpt)}`
-                  : project.name,
+                metaText: project.name,
                 entityType: "page",
                 contextId: page.project_id,
                 data: page,

@@ -43,11 +43,10 @@
   position: relative; /* Required for success overlay and popover positioning */
   width: 100%;
   max-width: 740px;
-  min-height: 120px; /* Minimum height for success indicator */
   max-height: 70vh;
   background: var(--cp-bg);
   color: var(--cp-fg);
-  border-radius: var(--cp-radius-xl);
+  border-radius: var(--cp-radius-2xl, var(--cp-radius-xl));
   border: 1px solid var(--cp-border);
   box-shadow:
     0 25px 50px -12px var(--cp-shadow);
@@ -57,11 +56,6 @@
   animation: paletteSlideIn 200ms ease-out;
   /* Animate height changes when content changes */
   transition: height 200ms ease-out;
-}
-
-/* Compact mode: reduced height when collapsed */
-.paletteCompact {
-  min-height: auto;
 }
 
 /* Success state: ensure minimum height for success indicator */
@@ -95,7 +89,7 @@
     max-height: 90vh;
     height: 90vh;
     height: 90svh;
-    border-radius: var(--cp-radius-xl) var(--cp-radius-xl) 0 0;
+    border-radius: var(--cp-radius-2xl, var(--cp-radius-xl)) var(--cp-radius-2xl, var(--cp-radius-xl)) 0 0;
     animation: paletteMobileSlideIn 300ms ease-out;
   }
 

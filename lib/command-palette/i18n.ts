@@ -13,6 +13,7 @@ export const STRINGS_EN: PaletteStrings = {
   "search.ariaLabel": "Command palette search",
   "search.historyMode": "History",
   "search.tabHint": "Ask {name}",
+  "search.quickAiAria": "Quick AI",
 
   // Groups / categories
   "categories.favorites": "Favorites",
@@ -22,31 +23,22 @@ export const STRINGS_EN: PaletteStrings = {
   "results.loading": "Loading…",
   "results.empty.title": "No results",
   "results.empty.hint": "Try a different search",
+  "shortcuts.then": "then",
 
   // Footer
   "footer.actions": "Actions",
-  "footer.expand": "Expand",
-  "footer.swipeForActions": "Swipe ← for actions",
 
   // Actions popover
   "actionsPopover.searchPlaceholder": "Filter actions…",
   "actionsPopover.searchLabel": "Filter actions",
-  "actionsPopover.close": "Close actions",
   "actionsPopover.noResults": "No matching action",
   "actionsPopover.noActions": "No action available",
 
   // Inline form
   "form.back": "Back",
   "form.noResults": "No results",
-  "form.navigateFields": "Navigate fields",
-  "form.select": "Select",
-  "form.execute": "Execute",
-  "form.cancel": "Cancel",
   "form.noActionPending": "No pending action",
   "form.actionFailed": "The action failed",
-  "form.keys.tab": "Tab",
-  "form.keys.enter": "↵",
-  "form.keys.escape": "Esc",
 
   // Default item actions
   "itemActions.open": "Open",
@@ -60,6 +52,7 @@ export const STRINGS_FR: PaletteStrings = {
   "search.ariaLabel": "Recherche de la palette de commandes",
   "search.historyMode": "Historique",
   "search.tabHint": "Demander à {name}",
+  "search.quickAiAria": "IA rapide",
 
   // Groups / categories
   "categories.favorites": "Favoris",
@@ -69,31 +62,22 @@ export const STRINGS_FR: PaletteStrings = {
   "results.loading": "Chargement…",
   "results.empty.title": "Aucun résultat",
   "results.empty.hint": "Essayez une autre recherche",
+  "shortcuts.then": "puis",
 
   // Footer
   "footer.actions": "Actions",
-  "footer.expand": "Déplier",
-  "footer.swipeForActions": "Glisser ← pour les actions",
 
   // Actions popover
   "actionsPopover.searchPlaceholder": "Filtrer les actions…",
   "actionsPopover.searchLabel": "Filtrer les actions",
-  "actionsPopover.close": "Fermer les actions",
   "actionsPopover.noResults": "Aucune action ne correspond",
   "actionsPopover.noActions": "Aucune action disponible",
 
   // Inline form
   "form.back": "Retour",
   "form.noResults": "Aucun résultat",
-  "form.navigateFields": "Naviguer entre les champs",
-  "form.select": "Sélectionner",
-  "form.execute": "Exécuter",
-  "form.cancel": "Annuler",
   "form.noActionPending": "Aucune action en attente",
   "form.actionFailed": "L'action a échoué",
-  "form.keys.tab": "Tab",
-  "form.keys.enter": "↵",
-  "form.keys.escape": "Échap",
 
   // Default item actions
   "itemActions.open": "Ouvrir",

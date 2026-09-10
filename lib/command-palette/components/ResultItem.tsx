@@ -3,15 +3,18 @@
  *
  * Features:
  * - Compact design (no descriptions)
- * - Status dot, context label and type label (all optional, data-driven)
+ * - Status dot, right-aligned context (project orb + name/identifier),
+ *   type label and keyboard shortcut (all optional, data-driven)
  * - Per-entity icon tinting via data-item-type + --cp-icon-* tokens
  * - Mobile gesture support (via props)
  */
 
 "use client";
 
-import { useCallback, memo, type ReactNode } from "react";
+import { Fragment, useCallback, memo, type ReactNode } from "react";
 import { Kbd } from "@/components/ui/kbd";
+import { usePaletteConfig } from "../config";
+import { isApplePlatform } from "../hooks/usePalette";
 import styles from "../styles/ResultItem.module.css";
 import type { PaletteItem } from "../types";
 
@@ -63,6 +66,15 @@ function getItemType(item: PaletteItem): string | undefined {
  * Wrapped with React.memo: ResultsList renders many rows and only
  * activeIndex changes during keyboard navigation.
  */
+/**
+ * Resolve a shortcut token for display: "mod" becomes ⌘ / Ctrl per platform,
+ * everything else renders as written.
+ */
+function resolveKey(key: string): string {
+  if (key !== "mod") return key;
+  return isApplePlatform() ? "⌘" : "Ctrl";
+}
+
 export const ResultItem = memo(function ResultItem({
   item,
   isActive,
@@ -72,6 +84,7 @@ export const ResultItem = memo(function ResultItem({
   isMobile = false,
   touchHandlers,
 }: ResultItemProps) {
+  const { t } = usePaletteConfig();
   const itemType = getItemType(item);
 
   const handleClick = useCallback(
@@ -123,21 +136,36 @@ export const ResultItem = memo(function ResultItem({
 
         {/* Title */}
         <span className={styles.title}>{item.title}</span>
-
-        {/* Context info (e.g. "Project › Module") */}
-        {item.contextLabel && (
-          <span className={styles.context}>{item.contextLabel}</span>
-        )}
       </span>
 
-      {/* Shortcut hint (desktop only) */}
+      {/* Trailing metadata (desktop only): the project it belongs to first,
+          then the keyboard shortcut, then the type label */}
+      {!isMobile && item.contextLabel && (
+        <span className={styles.context}>
+          {item.contextIcon && (
+            <span className={styles.contextIcon} aria-hidden="true">
+              {item.contextIcon}
+            </span>
+          )}
+          {item.contextLabel}
+        </span>
+      )}
+
+      {/* Shortcut hint (desktop only). A chord (["G", "H"]) reads as
+          “G then H”, not as two glued keys; a combo (⌘⇧K) stays glued. */}
       {item.shortcut && item.shortcut.length > 0 && !isMobile && (
         <span className={styles.shortcut}>
-          {item.shortcut.map((key, i) => (
-            <Kbd key={i}>
-              {key}
-            </Kbd>
-          ))}
+          {item.shortcut.map((key, i) => {
+            const isChordStep = i > 0 && item.shortcut?.[0] === "G";
+            return (
+              <Fragment key={i}>
+                {isChordStep && (
+                  <span className={styles.shortcutThen}>{t("shortcuts.then")}</span>
+                )}
+                <Kbd>{resolveKey(key)}</Kbd>
+              </Fragment>
+            );
+          })}
         </span>
       )}
 

@@ -1,44 +1,37 @@
 /**
- * Footer styles for Global Menu V2
+ * Footer styles — floating actions shortcut bubble.
  * Uses CSS variables from vars.css for automatic light/dark mode support.
  */
 
-.footer {
+/* Small clickable pill anchored in the bottom-right corner of the palette.
+   The inset is derived from the container radii so the pill's end cap stays
+   CONCENTRIC with the palette's corner: cap radius (half the bubble height —
+   an 18px Kbd plus 2 × 0.5rem padding = 34px, i.e. 1.0625rem) + inset =
+   container inner radius (outer radius minus its 1px border). The actions
+   popover takes this exact slot while open (see ActionsPopover.module.css).
+   No shadow: it would compete with the container's. */
+.bubble {
+  --concentric-inset: calc(
+    var(--cp-radius-2xl, var(--cp-radius-xl)) - 1px - 1.0625rem
+  );
+  position: absolute;
+  bottom: var(--concentric-inset);
+  right: var(--concentric-inset);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 10px 18px;
-  border-top: 1px solid var(--cp-border);
-  background: color-mix(in srgb, var(--cp-border) 15%, var(--cp-bg));
-  flex-shrink: 0;
+  gap: 8px;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  background: var(--cp-bg);
+  border: 1px solid var(--cp-border);
+  font: inherit;
+  cursor: pointer;
+  z-index: 5;
 }
 
-/* Minddy logo */
-.logo {
-  width: 24px;
-  height: 18px;
-  color: var(--cp-muted);
-  flex-shrink: 0;
-}
-
-/* Container for hints on the right */
-.hints {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.separator {
-  width: 1px;
-  height: 14px;
-  background: var(--cp-border);
+.bubble:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 2px;
 }
 
 .keys {
@@ -49,36 +42,5 @@
 .label {
   font-size: var(--cp-fs-text);
   color: var(--cp-muted);
-}
-
-/* Mobile hint */
-.mobileHint {
-  font-size: var(--cp-fs-text);
-  color: var(--cp-muted);
-  text-align: right;
-}
-
-/* Mobile adjustments */
-@media (max-width: 767px) {
-  .footer {
-    padding: 12px 16px;
-  }
-
-  /* Hide keyboard shortcuts on mobile */
-  .hints,
-  .hint {
-    display: none;
-  }
-
-  .logo {
-    width: 20px;
-    height: 15px;
-  }
-}
-
-/* Desktop: hide mobile hint */
-@media (min-width: 768px) {
-  .mobileHint {
-    display: none;
-  }
+  white-space: nowrap;
 }

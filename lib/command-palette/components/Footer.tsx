@@ -1,11 +1,11 @@
 /**
- * Footer - Keyboard shortcuts footer.
+ * Footer - Floating actions shortcut pill.
  *
- * Features:
- * - Optional logo slot on the left (config.footerLogo)
- * - Default-action hint (↵ + label) for the highlighted item
- * - Actions shortcut hint when the item has a submenu
- * - Simplified mobile version with swipe hint
+ * No full-width footer anymore: just a small clickable pill anchored in the
+ * bottom-right corner of the palette that surfaces the actions shortcut
+ * (⌘/Ctrl + key) of the highlighted item — clicking it opens the actions
+ * popover, which takes its place while open. Hidden on touch devices where
+ * no keyboard exists.
  */
 
 "use client";
@@ -14,25 +14,20 @@ import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
 import { isApplePlatform } from "../hooks/usePalette";
 import styles from "../styles/Footer.module.css";
-import type { PaletteView } from "../store";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export interface FooterProps {
-  /** Current view. */
-  view: PaletteView;
-  /** Whether we're on mobile. */
-  isMobile?: boolean;
   /** Whether actions are available for the highlighted item. */
   hasActions?: boolean;
-  /** Whether compact mode is enabled. */
-  compactMode?: boolean;
-  /** Whether the palette is expanded (for compact mode). */
+  /** Whether the palette is expanded (hidden while compact-collapsed). */
   isExpanded?: boolean;
-  /** Label of the default action (shown with the ↵ hint). */
-  defaultActionLabel?: string;
+  /** Whether we're on a touch device (no keyboard shortcuts). */
+  isMobile?: boolean;
+  /** Called when the pill is clicked (opens the actions popover). */
+  onOpen?: () => void;
 }
 
 // =============================================================================
@@ -40,75 +35,27 @@ export interface FooterProps {
 // =============================================================================
 
 export function Footer({
-  view,
-  isMobile = false,
   hasActions = false,
-  compactMode = false,
   isExpanded = true,
-  defaultActionLabel,
+  isMobile = false,
+  onOpen,
 }: FooterProps) {
-  const { t, shortcuts, footerLogo } = usePaletteConfig();
+  const { t, shortcuts } = usePaletteConfig();
   const actionsKbd = [isApplePlatform() ? "⌘" : "Ctrl", shortcuts.actionsKey.toUpperCase()];
 
-  // Compact mode collapsed: show expand hint instead of actions
-  const showExpandHint = compactMode && !isExpanded;
-
-  // Mobile footer with optional swipe hint
-  if (isMobile) {
-    return (
-      <div className={styles.footer}>
-        <span className={styles.logo}>{footerLogo}</span>
-        {showExpandHint ? (
-          <div className={styles.hint}>
-            <Kbd>↓</Kbd>
-            <span className={styles.label}>{t("footer.expand")}</span>
-          </div>
-        ) : view === "search" && hasActions ? (
-          <span className={styles.mobileHint}>{t("footer.swipeForActions")}</span>
-        ) : null}
-      </div>
-    );
-  }
-
-  const showActionsHint = view === "search" && hasActions && !showExpandHint;
-  const showDefaultActionHint = view === "search" && defaultActionLabel && !showExpandHint;
+  if (isMobile || !isExpanded || !hasActions) return null;
 
   return (
-    <div className={styles.footer}>
-      <span className={styles.logo}>{footerLogo}</span>
-      <div className={styles.hints}>
-        {showExpandHint ? (
-          <div className={styles.hint}>
-            <Kbd>↓</Kbd>
-            <span className={styles.label}>{t("footer.expand")}</span>
-          </div>
-        ) : (
-          <>
-            {showDefaultActionHint && (
-              <div className={styles.hint}>
-                <Kbd>↵</Kbd>
-                <span className={styles.label}>{defaultActionLabel}</span>
-              </div>
-            )}
-            {showDefaultActionHint && showActionsHint && (
-              <div className={styles.separator} />
-            )}
-            {showActionsHint && (
-              <div className={styles.hint}>
-                <span className={styles.keys}>
-                  {actionsKbd.map((key, i) => (
-                    <Kbd key={i}>
-                      {key}
-                    </Kbd>
-                  ))}
-                </span>
-                <span className={styles.label}>{t("footer.actions")}</span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+    <button type="button" className={styles.bubble} onClick={onOpen}>
+      <span className={styles.keys}>
+        {actionsKbd.map((key, i) => (
+          <Kbd key={i}>
+            {key}
+          </Kbd>
+        ))}
+      </span>
+      <span className={styles.label}>{t("footer.actions")}</span>
+    </button>
   );
 }
 

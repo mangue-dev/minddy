@@ -126,6 +126,7 @@ export function createMinddyEntityActionsProvider(
         icon: ExternalLink,
         category: "navigation",
         priority: -90,
+        basic: true,
         execute: async () => {
           dependencies.openInNewTab(item.href as string);
           return { success: true };
@@ -137,6 +138,7 @@ export function createMinddyEntityActionsProvider(
         icon: Link2,
         category: "secondary",
         priority: -90,
+        basic: true,
         execute: async () => {
           await dependencies.copyText(item.href as string, labels.linkCopied, true);
           return { success: true, closeMenu: false };

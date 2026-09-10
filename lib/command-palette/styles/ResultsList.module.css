@@ -5,6 +5,12 @@
 .container {
   min-height: 0;
   overflow: hidden;
+  /* Inset from the palette edges so the container's corners can nest into
+     the palette's: 8px inset + this radius = the palette's inner radius
+     (outer radius minus its 1px border). Each item highlight nests one level
+     down (see ResultItem.module.css). */
+  margin: 0 8px;
+  border-radius: calc(var(--cp-radius-2xl, var(--cp-radius-xl)) - 1px - 8px);
   /* Animate height changes smoothly */
   transition: height 200ms ease-out;
 }
@@ -18,16 +24,29 @@
   scrollbar-color: var(--cp-border) transparent;
 }
 
-/* Category header */
+/* Highlighted row: paints ABOVE the bottom strip's fade (SearchView), so the
+   active option's full context stays readable while the rows behind it dim
+   under the gradient. Positioning comes from react-window (absolute). */
+.activeRow {
+  z-index: 6;
+}
+
+/* Category header (eyebrow). Row height is fixed (HEADER_HEIGHT 28px), so the
+   extra top padding of non-first eyebrows eats into the bottom padding of
+   their slot rather than growing it. */
 .header {
   display: flex;
   align-items: center;
   padding: 6px 20px;
 }
 
+.headerNotFirst {
+  padding-top: 12px;
+}
+
 .headerText {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--cp-muted);
 }
 
@@ -104,6 +123,10 @@
 @media (max-width: 767px) {
   .header {
     padding: 8px 16px;
+  }
+
+  .headerNotFirst {
+    padding-top: 14px;
   }
 
   .headerText {

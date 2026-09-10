@@ -9,7 +9,7 @@
 
 "use client";
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { Kbd } from "@/components/ui/kbd";
 import { usePaletteConfig } from "../config";
 import { SearchIcon } from "../icons";
@@ -38,6 +38,13 @@ export interface SearchBarProps {
   onTab?: (query: string) => void;
   /** Hint label displayed next to the Tab kbd. */
   tabHint?: string;
+  /**
+   * Quick-AI affordance at the right of the input: the AI's icon and a Tab
+   * kbd, no badge chrome. Empty query → the callback opens the AI surface;
+   * filled query → it hands the typed text over (auto send). Also bound to
+   * the Tab key when no tab view is configured.
+   */
+  quickAi?: { icon: ReactNode; onSelect: (query: string) => void };
   /** Whether the input should be auto-focused. */
   autoFocus?: boolean;
   /** Aria label for accessibility. */
@@ -66,6 +73,7 @@ export function SearchBar({
   onArrowUp,
   onTab,
   tabHint,
+  quickAi,
   autoFocus = true,
   ariaLabel,
   inputRef: externalInputRef,
@@ -132,11 +140,15 @@ export function SearchBar({
           if (onTab) {
             e.preventDefault();
             onTab(value);
+          } else if (quickAi) {
+            // No tab view configured: Tab is the quick-AI gesture
+            e.preventDefault();
+            quickAi.onSelect(value);
           }
           break;
       }
     },
-    [onEscape, onEnter, onArrowDown, onArrowUp, onTab, value, historyIndex, onHistoryNavigate, disableHistoryOnArrowUp]
+    [onEscape, onEnter, onArrowDown, onArrowUp, onTab, quickAi, value, historyIndex, onHistoryNavigate, disableHistoryOnArrowUp]
   );
 
   const handleChange = useCallback(
@@ -169,6 +181,18 @@ export function SearchBar({
 
       {historyIndex >= 0 && (
         <div className={styles.historyBadge}>{t("search.historyMode")}</div>
+      )}
+
+      {quickAi && historyIndex < 0 && (
+        <button
+          type="button"
+          className={styles.quickAiButton}
+          onClick={() => quickAi.onSelect(value)}
+          aria-label={`${t("search.quickAiAria")} (Tab)`}
+        >
+          {quickAi.icon}
+          <Kbd>Tab</Kbd>
+        </button>
       )}
 
       {value.length > 0 && onTab && tabHint && historyIndex < 0 && (
