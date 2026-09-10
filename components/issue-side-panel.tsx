@@ -105,6 +105,7 @@ import {
   useIdleMarkdownEditorPreload,
 } from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useArrowField } from "@/lib/use-arrow-field";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeamOverlay } from "@/components/agent-beam";
@@ -224,6 +225,8 @@ export function IssueSidePanel({
    * field which has the focus, or retouched without being committed yet, keeps control.
    */
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  // “->” becomes “→” while typing, like in the body editor.
+  const arrowTitle = useArrowField(titleRef);
   const descriptionRef = useRef<HTMLDivElement>(null);
   /** Ticket whose local copies below carry the version. */
   const shownFor = useRef<string | null>(null);
@@ -932,11 +935,11 @@ export function IssueSidePanel({
 
           <SidePanelBody className="flex flex-col gap-4 pt-0" {...containerProps}>
             <AutoTextarea
-              ref={titleRef}
+              ref={arrowTitle.ref}
               value={title}
               onChange={(e) => {
                 titleEdited.current = true;
-                setTitle(e.target.value);
+                setTitle(arrowTitle.read(e));
               }}
               onBlur={commitTitle}
               onKeyDown={(e) => {

@@ -66,6 +66,22 @@ export function PageToc({
   const [entries, setEntries] = useState<TocEntry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  // Which entries the row actually clips. A tooltip on an entry whose text
+  // already fits would repeat what is on the screen, and — worse — stand
+  // between the mouse and the rows below it. Only a clipped label earns one.
+  const [clipped, setClipped] = useState<Record<string, boolean>>({});
+
+  // Ref callback per entry label. Its identity changes at each render, so
+  // React re-runs it after every paint — but it only writes state on a real
+  // flip, so typing in the document does not churn the panel.
+  const trackClipped = (id: string) => (el: HTMLSpanElement | null) => {
+    if (!el) return;
+    const isClipped = el.scrollWidth > el.clientWidth;
+    setClipped((current) =>
+      current[id] === isClipped ? current : { ...current, [id]: isClipped }
+    );
+  };
+
   useEffect(() => {
     if (!editor) return;
     const read = () => {
@@ -203,15 +219,20 @@ export function PageToc({
 neither of the two layers having to reorganize itself. */}
       <nav
         aria-label={t("tableOfContents")}
+        data-floating-surface
+        data-floating-surface-layer="local"
         className={cn(
           "absolute top-0 right-0 w-64",
           "scrollbar-quiet flex max-h-[70vh] flex-col overflow-y-auto",
           // 12 px radius, 6 px padding: the CONCENTRIC radius of a
           // line is therefore 6 px (`rounded-md` lower). A free value
           // would make two curves that don't fit together.
-          // `bg-popover/95` already hides everything: the blur was GPU work
-          // for an effect that we cannot see (MIN-323).
-          "rounded-xl border border-border bg-popover/95 p-1.5 shadow-lg",
+          // The background comes from the shared `[data-floating-surface]`
+          // rule in globals.css — the same translucent, blurred surface as
+          // popovers, menus and selects. `layer="local"` opts out of the
+          // global z-index elevation: the table lives inside the page
+          // panel, it is not a short-lived portaled overlay.
+          "rounded-xl border border-border bg-popover p-1.5 shadow-lg",
           "pointer-events-none translate-x-1 opacity-0",
           "transition-[opacity,transform] duration-200 ease-out",
           "group-hover/toc:pointer-events-auto group-hover/toc:translate-x-0 group-hover/toc:opacity-100",
@@ -221,18 +242,27 @@ neither of the two layers having to reorganize itself. */}
         {entries.map((entry) => {
           const current = entry.id === activeId;
           const level = Math.min(entry.level, 3);
-          return (
-            <AppTooltip key={entry.id} label={entry.text}>
-              <button
-                type="button"
-                onClick={() => goTo(entry.pos)}
-                className={cn(
+          const button = (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={(event) => {
+                // Clicking leaves focus on the button, and
+                // `group-focus-within` would then hold the panel open after
+                // the mouse has left it. Blurring hands the panel back to
+                // hover; keyboard navigation (Tab) still keeps it open,
+                // which is what `focus-within` exists for.
+                event.currentTarget.blur();
+                goTo(entry.pos);
+              }}
+              className={cn(
                 "flex h-7 w-full shrink-0 items-center rounded-md px-2 outline-none",
                 "transition-colors hover:bg-muted",
                 "focus-visible:ring-2 focus-visible:ring-ring"
               )}
             >
               <span
+                ref={trackClipped(entry.id)}
                 className={cn(
                   "min-w-0 flex-1 truncate text-left text-[13px] font-medium",
                   // The withdrawal says the hierarchy here, where at rest it is the
@@ -243,8 +273,17 @@ neither of the two layers having to reorganize itself. */}
               >
                 {entry.text}
               </span>
-              </button>
+            </button>
+          );
+          // Only a clipped label gets a tooltip, and on the LEFT: above, it
+          // would stand between the mouse and the rows underneath and break
+          // the very navigation the table exists for.
+          return clipped[entry.id] ? (
+            <AppTooltip key={entry.id} label={entry.text} side="left">
+              {button}
             </AppTooltip>
+          ) : (
+            button
           );
         })}
       </nav>

@@ -19,6 +19,7 @@ import { Smile } from "lucide-react";
 
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
+import { useArrowField } from "@/lib/use-arrow-field";
 
 /**
  * Is the cursor on the LAST visible line of the field?
@@ -96,6 +97,10 @@ export function PageHeader({
     }
   }, [title]);
 
+  // The arrow substitution (“->” → “→”, like in the body) and the ref
+  // plumbing live in the shared hook; `fieldRef` is what focus returns to.
+  const arrow = useArrowField(fieldRef);
+
   return (
     // `group/header`: the “add an icon” button only exists when hovering over the
     // Title BLOCK, not its single line — we aim for the title to illustrate it, and
@@ -135,16 +140,17 @@ export function PageHeader({
       )}
       <AutoTextarea
         value={draft}
-        ref={fieldRef}
+        ref={arrow.ref}
         autoFocus={autoFocus}
         readOnly={readOnly}
         placeholder={t("titlePlaceholder")}
         aria-label={t("titleLabel")}
         spellCheck={false}
         onChange={(event) => {
-          typed.current = event.target.value;
-          setDraft(event.target.value);
-          onTitleChange(event.target.value);
+          const value = arrow.read(event);
+          typed.current = value;
+          setDraft(value);
+          onTitleChange(value);
         }}
         onKeyDown={(event) => {
           // A title has no line break: Enter OPENS the next line,
