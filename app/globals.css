@@ -123,6 +123,14 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   z-index: 1000 !important;
 }
 
+/* Tooltips float above every elevated surface, not only the page content:
+   inside the inbox popover the icon-button tooltips (settings, delete, mark as
+   read) open over the popover's own surface, which the rule above lifts to
+   1000. The tooltip keeps its old role of sitting above dialogs too. */
+[data-slot="tooltip-content"] {
+  z-index: 1100 !important;
+}
+
 /* A searchable command list lives inside its popover. Let the parent surface
    carry the glass treatment so the command root does not paint an opaque box
    over it. CommandDialog remains opaque because it is not inside one of these
