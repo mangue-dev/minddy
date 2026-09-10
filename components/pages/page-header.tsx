@@ -19,6 +19,7 @@ import { Smile } from "lucide-react";
 
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
+import { applyArrowRule } from "@/lib/arrow-input";
 
 /**
  * Is the cursor on the LAST visible line of the field?
@@ -96,6 +97,17 @@ export function PageHeader({
     }
   }, [title]);
 
+  // The field itself, plus the caret to restore after an arrow substitution:
+  // React resets the caret when it commits the new value, so the position is
+  // remembered here and re-applied once the value is in the DOM.
+  const field = useRef<HTMLTextAreaElement | null>(null);
+  const pendingCaret = useRef<number | null>(null);
+  useEffect(() => {
+    if (pendingCaret.current == null) return;
+    field.current?.setSelectionRange(pendingCaret.current, pendingCaret.current);
+    pendingCaret.current = null;
+  });
+
   return (
     // `group/header`: the “add an icon” button only exists when hovering over the
     // Title BLOCK, not its single line — we aim for the title to illustrate it, and
@@ -135,16 +147,31 @@ export function PageHeader({
       )}
       <AutoTextarea
         value={draft}
-        ref={fieldRef}
+        ref={(el) => {
+          field.current = el;
+          if (fieldRef) fieldRef.current = el;
+        }}
         autoFocus={autoFocus}
         readOnly={readOnly}
         placeholder={t("titlePlaceholder")}
         aria-label={t("titleLabel")}
         spellCheck={false}
         onChange={(event) => {
-          typed.current = event.target.value;
-          setDraft(event.target.value);
-          onTitleChange(event.target.value);
+          const element = event.currentTarget;
+          let value = event.target.value;
+          // An IME composition in progress (Japanese, Chinese…) is still
+          // building its text: substituting inside it would corrupt it. The
+          // rule waits for the composition to commit.
+          if (!(event.nativeEvent instanceof InputEvent && event.nativeEvent.isComposing)) {
+            const rule = applyArrowRule(value, element.selectionStart ?? value.length);
+            if (rule) {
+              value = rule.text;
+              pendingCaret.current = rule.caret;
+            }
+          }
+          typed.current = value;
+          setDraft(value);
+          onTitleChange(value);
         }}
         onKeyDown={(event) => {
           // A title has no line break: Enter OPENS the next line,
