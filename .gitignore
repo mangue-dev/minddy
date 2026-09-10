@@ -70,3 +70,6 @@ supabase/.branches/
 # les binaires empaquetés (MIN-292). `desktop/build/`, lui, N'EST PAS ignoré :
 # l'icône `.icns` et les entitlements sont des sources, pas des artefacts.
 /desktop/release
+
+# local-only Claude skill, not meant for the repository
+/.claude/skills/minddy-full-release/
