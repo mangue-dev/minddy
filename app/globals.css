@@ -493,6 +493,22 @@ a.markdown-link::before {
   *::-webkit-scrollbar-thumb:hover {
     background-color: var(--scrollbar-thumb-hover);
   }
+
+  /* Chromium re-evaluates `:focus-visible` on every keydown — including bare
+     modifier presses like Shift and Space on a mouse-focused element. The
+     element then starts matching `:focus-visible` and the browser paints its
+     default (blue) UA focus ring on anything that has no author outline rule:
+     sidebar rows, plain links, and any other focusable surface. Every
+     interactive component here defines its own focus-visible treatment
+     (background tint, ring, or border), so the UA outline is only ever noise.
+     Replace it with a transparent one — same trick as Tailwind v4's
+     `outline-hidden`: invisible normally, still rendered in forced-colors
+     mode. Declared in @layer base so utilities (`focus-visible:outline-ring`,
+     `focus-visible:ring-*`) and hand-written rules keep winning. */
+  :focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
 }
 
 /* ─── Numo (assistant) ──────────────────────────────────────────────── */
