@@ -115,10 +115,24 @@ function applyAnchors(query, spec, world) {
     if (world.demoUserIds.size === 0) return null;
     query = query.in(spec.ownerColumn, [...world.demoUserIds]);
   }
-  for (const parent of spec.parents || []) {
+  const parents = spec.parents || [];
+  for (const parent of parents.filter((p) => !p.optional)) {
     const ids = world.demoIds[parent.table];
     if (!ids || ids.size === 0) return null;
     query = query.in(parent.column, [...ids]);
+  }
+  // Optional parents: a row may point to ANY ONE of them (or to none, when
+  // `requireSomeParent` accepts an alternative anchor). An `.in()` per parent
+  // would AND the filters together and drop every row that leaves the other
+  // column null, so the demo set is matched with a single OR clause instead.
+  const optional = parents.filter((p) => p.optional);
+  if (optional.length > 0) {
+    const clauses = [];
+    for (const parent of optional) {
+      const ids = world.demoIds[parent.table];
+      if (ids && ids.size > 0) clauses.push(`${parent.column}.in.(${[...ids].join(",")})`);
+    }
+    if (clauses.length > 0) query = query.or(clauses.join(","));
   }
   return query;
 }
@@ -227,7 +241,10 @@ function validateRow(world, table, row, index) {
 
   for (const parent of spec.parents || []) {
     const value = row[parent.column];
-    if (!value) {
+    if (value == null) {
+      // An optional parent is one possible anchor among several: null simply
+      // means the row hangs off another one, checked right below.
+      if (parent.optional) continue;
       throw new Error(`captures: ${where} — "${parent.column}" absent.`);
     }
     const known = world.demoIds[parent.table];
@@ -235,6 +252,24 @@ function validateRow(world, table, row, index) {
       throw new Error(
         `captures: ${where} — "${parent.column}" vise une ligne de ${parent.table} qui n'est pas ` +
           `du monde de démo (ou pas encore appliquée). REFUSÉ.`,
+      );
+    }
+  }
+
+  // When every parent is optional, at least ONE must still be proven demo —
+  // otherwise a row would pass anchored by its project alone while pointing
+  // nowhere. Routine runs (no issue) satisfy it through `routine_id`.
+  if ((spec.parents || []).every((p) => p.optional) && (spec.parents || []).length > 0) {
+    const anchored = (spec.parents || []).some((parent) => {
+      const value = row[parent.column];
+      if (value == null) return false;
+      return (world.demoIds[parent.table] ?? new Set()).has(value);
+    });
+    if (!anchored) {
+      throw new Error(
+        `captures: ${where} — aucun parent de démo (${
+          (spec.parents || []).map((p) => p.column).join(" ou ")
+        }). La ligne ne serait rattachée que par son projet. REFUSÉ.`,
       );
     }
   }

@@ -135,16 +135,34 @@ export const TABLE_SCOPES = {
     parents: [{ column: "conversation_id", table: "conversations" }],
   },
 
+  // ── Routines (MIN-185) ────────────────────────────────────────────────────
+  // Seeded DISABLED (`enabled: false`, `next_run_at: null`): the scheduler
+  // only claims rows where `enabled` is true and `next_run_at` is due
+  // (lib/server/routines.ts). A disabled routine never runs for real, which
+  // is exactly what demo data must guarantee — no billed agent passage.
+  agent_routines: {
+    writable: true,
+    projectColumn: "project_id",
+    userRefColumns: ["owner_id", "deleted_by"],
+  },
+
   // ── Agent de code ────────────────────────────────────────────────────────
   // No demo run should be `queued` nor `running`: the drain cron
   // claim the `queued`, and `requeueStuckRuns` re-queues any `running` of
   // more than 6 minutes — which WOULD actually RUN the agent (sandbox, calls
   // LLM invoiced, writing on a deposit). See lib/server/agent/runs.ts.
+  // A run is anchored by its project PLUS at least one demo lineage: the
+  // worked issue OR the routine that spawned it. Routine runs have no
+  // issue, so both parents are optional — but at least one must be proven
+  // demo (checked in `validateRow` via `requireSomeParent`).
   agent_runs: {
     writable: true,
     projectColumn: "project_id",
     userRefColumns: ["created_by"],
-    parents: [{ column: "issue_id", table: "issues" }],
+    parents: [
+      { column: "issue_id", table: "issues", optional: true },
+      { column: "routine_id", table: "agent_routines", optional: true },
+    ],
   },
   agent_run_events: {
     writable: true,
