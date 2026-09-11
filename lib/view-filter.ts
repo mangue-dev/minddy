@@ -1,5 +1,11 @@
-import { STATUSES, type StatusMeta } from "./issue-constants";
-import type { Issue, ViewConfig, ViewSort } from "./types";
+import {
+  STATUSES,
+  isClosedStatus,
+  type IssueStatus,
+  type StatusMeta,
+} from "./issue-constants";
+import { calendarDaysBetween, isDueDateOverdue, parseDueDate } from "./due-date";
+import type { Issue, IssueRelation, ViewConfig, ViewSort } from "./types";
 
 /** Dynamic assignee filter value: "assigned to me", resolved at filter time
     to the viewing user (on public shares: to the view owner). */
@@ -7,7 +13,7 @@ export const ME_ASSIGNEE = "@me";
 
 export const DEFAULT_CONFIG: ViewConfig = {
   filters: {},
-  sort: "manual",
+  sort: "smart",
   display: {},
 };
 
@@ -30,7 +36,7 @@ export function isDefaultConfig(config: ViewConfig): boolean {
     !f.effort?.length;
   return (
     empty &&
-    config.sort === "manual" &&
+    config.sort === "smart" &&
     !config.display.hideDone &&
     !config.display.hideRecurring
   );
@@ -44,7 +50,7 @@ export function viewConfigOf(view: {
 }): ViewConfig {
   return {
     filters: view.filters ?? {},
-    sort: view.sort ?? "manual",
+    sort: view.sort ?? "smart",
     display: view.display ?? {},
   };
 }
@@ -98,6 +104,120 @@ const PRIORITY_ORDER: Record<string, number> = {
   none: 4,
 };
 
+/** Context the "smart" sort needs on top of the issue rows themselves. */
+export type SmartSortContext = {
+  /** Stored relation rows — a "blocks" edge lifts the blocking ticket. */
+  relations?: IssueRelation[];
+  /** Issue id → status: a closed target is no longer blocked, a resolved
+      blocker no longer earns its boost. */
+  statusById?: Map<string, IssueStatus>;
+  /** Frozen "now", so a comparator stays stable across a drag gesture.
+      Defaults to Date.now() at comparator creation. */
+  now?: number;
+};
+
+/** How many priority tiers each smart criterion lifts an issue (in
+    PRIORITY_ORDER units: one tier = one step between two priorities). */
+const BLOCKS_BOOST = 1.5;
+const DUE_OVERDUE_BOOST = 2;
+const DUE_3_DAYS_BOOST = 1.5;
+const DUE_WEEK_BOOST = 1;
+const DUE_FORTNIGHT_BOOST = 0.5;
+
+/** Priority tiers an issue's due date buys back: overdue counts double,
+    then it fades over a fortnight. */
+function dueBoost(due: string | null | undefined, now: number): number {
+  const d = parseDueDate(due);
+  if (!d) return 0;
+  if (isDueDateOverdue(d, now)) return DUE_OVERDUE_BOOST;
+  const days = calendarDaysBetween(new Date(now), d);
+  if (days <= 3) return DUE_3_DAYS_BOOST;
+  if (days <= 7) return DUE_WEEK_BOOST;
+  if (days <= 14) return DUE_FORTNIGHT_BOOST;
+  return 0;
+}
+
+/** Ids of open issues that block at least one ticket still open — a resolved
+    blocker no longer actively blocks, so it keeps no boost. */
+function blockingIds(
+  relations: IssueRelation[] | undefined,
+  statusById: Map<string, IssueStatus> | undefined
+): Set<string> {
+  const ids = new Set<string>();
+  if (!relations?.length) return ids;
+  for (const r of relations) {
+    if (r.type !== "blocks") continue;
+    const target = statusById?.get(r.target_id);
+    if (target === undefined || isClosedStatus(target)) continue;
+    const source = statusById?.get(r.source_id);
+    if (source !== undefined && isClosedStatus(source)) continue;
+    ids.add(r.source_id);
+  }
+  return ids;
+}
+
+/** Sooner due date first, undated last — the tie-break between two issues
+    whose smart ranks landed equal. */
+function dueTiebreak(a: Issue, b: Issue): number {
+  if (!a.due_date && !b.due_date) return 0;
+  if (!a.due_date) return 1;
+  if (!b.due_date) return -1;
+  return a.due_date.localeCompare(b.due_date);
+}
+
+/**
+ * The "smart" order: priority first, but imminent due dates and open "blocks"
+ * relations buy back priority tiers — a medium ticket due tomorrow or blocking
+ * work passes an undated high. Ties read the due date, then the manual
+ * position. Without a context (no relations known), it degrades to the
+ * priority arrangement plus the due-date boosts.
+ */
+export function smartIssueComparator(
+  ctx: SmartSortContext = {}
+): (a: Issue, b: Issue) => number {
+  const now = ctx.now ?? Date.now();
+  const blockers = blockingIds(ctx.relations, ctx.statusById);
+  return (a, b) => {
+    const rankA =
+      PRIORITY_ORDER[a.priority] -
+      (dueBoost(a.due_date, now) + (blockers.has(a.id) ? BLOCKS_BOOST : 0));
+    const rankB =
+      PRIORITY_ORDER[b.priority] -
+      (dueBoost(b.due_date, now) + (blockers.has(b.id) ? BLOCKS_BOOST : 0));
+    return rankA - rankB || dueTiebreak(a, b) || a.position - b.position;
+  };
+}
+
+/** Comparator for ordering issues WITHIN a column. "manual" = the position field. */
+export function issueComparator(
+  sort: ViewSort,
+  smart?: SmartSortContext
+): (a: Issue, b: Issue) => number {
+  switch (sort) {
+    case "smart":
+      return smartIssueComparator(smart);
+    case "priority":
+      return (a, b) =>
+        PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] ||
+        a.position - b.position;
+    case "created":
+      return (a, b) => b.created_at.localeCompare(a.created_at); // newest first
+    case "updated":
+      return (a, b) => b.updated_at.localeCompare(a.updated_at);
+    case "due":
+      return (a, b) => {
+        // Soonest first, undated last.
+        if (!a.due_date && !b.due_date) return a.position - b.position;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return a.due_date.localeCompare(b.due_date);
+      };
+    case "manual":
+    default:
+      return (a, b) => a.position - b.position;
+  }
+}
+
 /** Apply a view's filters. "@me" in the assignee filter resolves to
     ctx.myUserId (null → stays unresolved and matches nothing — safe). */
 export function filterIssues(
@@ -141,29 +261,4 @@ export function visibleStatuses(config: ViewConfig): StatusMeta[] {
     list = list.filter((s) => s.value !== "done");
   }
   return list;
-}
-
-/** Comparator for ordering issues WITHIN a column. "manual" = the position field. */
-export function issueComparator(sort: ViewSort): (a: Issue, b: Issue) => number {
-  switch (sort) {
-    case "priority":
-      return (a, b) =>
-        PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] ||
-        a.position - b.position;
-    case "created":
-      return (a, b) => b.created_at.localeCompare(a.created_at); // newest first
-    case "updated":
-      return (a, b) => b.updated_at.localeCompare(a.updated_at);
-    case "due":
-      return (a, b) => {
-        // Soonest first, undated last.
-        if (!a.due_date && !b.due_date) return a.position - b.position;
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return a.due_date.localeCompare(b.due_date);
-      };
-    case "manual":
-    default:
-      return (a, b) => a.position - b.position;
-  }
 }

@@ -136,16 +136,17 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
   const config = viewConfigOf(view);
   // The sorting belongs to the server: the comparator reads `position`, `created_at`
   // and `updated_at`, three fields that no card displays and which therefore have no
-  // no reason to cross the border (MIN-342).
+  // no reason to cross the border (MIN-342). The smart sort also reads the
+  // relations (a blocker lifts itself) — all resolved server-side too.
+  const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
   const issues = filterIssues(allIssues, config, {
     myUserId: view.user_id ?? ctx.share.created_by,
-  }).sort(issueComparator(config.sort));
+  }).sort(issueComparator(config.sort, { relations, statusById }));
 
   // Parent identifiers and relation chips resolve against ALL issues (a filter
   // may hide the other end), mirroring KanbanBoard — resolved here so the full
   // issue list never reaches the client.
   const allIssueMap = new Map(allIssues.map((i) => [i.id, i]));
-  const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
   const cards: PublicCard[] = issues.map((issue) => {
     const parent = issue.parent_id ? allIssueMap.get(issue.parent_id) : undefined;
     const chips = resolveRelations(issue.id, relations, statusById)

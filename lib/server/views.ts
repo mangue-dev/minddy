@@ -50,7 +50,7 @@ export type ViewResult =
 
 /** Exported: Numo announces exactly these sorts in its tool schemas
  (lib/server/assistant/tools.ts), rather than maintaining a second copy. */
-export const VIEW_SORTS: readonly ViewSort[] = ["manual", "priority", "created", "updated", "due"];
+export const VIEW_SORTS: readonly ViewSort[] = ["smart", "manual", "priority", "created", "updated", "due"];
 
 // Terminals MIN-118: the name of a view remains short (truncated beyond), a filter does not
 // never reference more ids than that, and an id (uuid or sentinel "@me") either.
@@ -148,7 +148,7 @@ function keepIdValues(key: string, raw: unknown, invalid: string[]): string[] | 
 /**
  * Validate an untrusted filters/sort/display triple against the view schema:
  * unknown keys and invalid values are STRIPPED (never stored), an unknown sort
- * falls back to "manual", and display.hideDone is coerced to a boolean. Every
+ * falls back to "smart", and display.hideDone is coerced to a boolean. Every
  * drop/fallback is described in `invalid` so an AI caller can self-correct.
  * Valid payloads pass through unchanged.
  */
@@ -214,12 +214,12 @@ export function sanitizeViewConfig(input: {
     }
   }
 
-  let sort: ViewSort = "manual";
+  let sort: ViewSort = "smart";
   if (isViewSort(input.sort)) {
     sort = input.sort;
   } else if (input.sort !== undefined && input.sort !== null) {
     invalid.push(
-      `sort: ${JSON.stringify(input.sort)} is not one of ${VIEW_SORTS.join(", ")}; fell back to "manual"`
+      `sort: ${JSON.stringify(input.sort)} is not one of ${VIEW_SORTS.join(", ")}; fell back to "smart"`
     );
   }
 
@@ -255,7 +255,7 @@ export async function createView({
     return { ok: false, status: 400, errorKey: "nameRequired" };
   }
   // Same forgiving behavior as the route: an unknown sort falls back to
-  // "manual" (reported in `invalid`), bad filter/display parts are stripped.
+  // "smart" (reported in `invalid`), bad filter/display parts are stripped.
   const { filters, sort, display, invalid } = sanitizeViewConfig({
     filters: input.filters,
     sort: input.sort,
@@ -444,7 +444,7 @@ export async function ensureBaselineViews({
       kind: "my",
       name: systemViewName,
       filters: { assignee: [ME_ASSIGNEE] },
-      sort: "manual",
+      sort: "smart",
       display: {},
       position: -1, // API consumers list it first; the UI orders pills itself
     });
@@ -474,7 +474,7 @@ export async function ensureBaselineViews({
       kind: "custom",
       name: defaultViewName,
       filters: {},
-      sort: "manual",
+      sort: "smart",
       display: {},
     });
     if (error) {

@@ -3058,6 +3058,7 @@
     "createdReply": "{count, plural, one {Ho creato il # Il ticket che hai proposto.} other {Ho creato il # - Le cose che hai proposto.}}"
   },
   "Sort": {
+    "smart": "Smart",
     "manual": "Manuale",
     "priority": "Priorità",
     "created": "Creato",
