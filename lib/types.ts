@@ -1172,7 +1172,9 @@ export interface IssueUpdateInput {
   automation_override?: AutomationOverride | null;
 }
 
-export type ViewSort = "manual" | "priority" | "created" | "updated" | "due";
+/** "smart" (the default) orders by priority but lets imminent due dates and
+    open "blocks" relations jump the queue. */
+export type ViewSort = "smart" | "manual" | "priority" | "created" | "updated" | "due";
 /** 'custom' = regular saved view; 'my' = the per-user system view ("Mes
     tickets"): seeded server-side, undeletable, name + assignee locked. */
 export type ViewKind = "custom" | "my";

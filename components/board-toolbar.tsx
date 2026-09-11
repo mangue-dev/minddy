@@ -104,7 +104,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const SORTS: ViewSort[] = ["manual", "priority", "created", "updated", "due"];
+const SORTS: ViewSort[] = ["smart", "manual", "priority", "created", "updated", "due"];
 
 // Shared tab-pill styling — used by the sortable pills AND the drag overlay, so
 // the dragged copy is pixel-identical. `shrink-0` keeps a pill at its natural
@@ -938,7 +938,7 @@ export function BoardToolbar({
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon-sm" aria-label={tf("order")}>
                     <ArrowUpDown
-                      className={cn(config.sort !== "manual" && "text-primary")}
+                      className={cn(config.sort !== "smart" && "text-primary")}
                     />
                   </Button>
                 </DropdownMenuTrigger>

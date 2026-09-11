@@ -208,10 +208,16 @@ export function GlobalKanbanBoard({
     return map;
   }, [issues, relations, allIssueMap]);
 
-  const displayComparator = useMemo(
-    () => comparator ?? issueComparator(sort),
-    [comparator, sort],
-  );
+  // Cycle mode passes its own comparator; otherwise the view sort rules —
+  // and "smart" reads relations + statuses (a done blocker no longer lifts
+  // its target), resolved against ALL issues (the other end may be hidden).
+  const displayComparator = useMemo(() => {
+    if (comparator) return comparator;
+    const statusById = new Map(
+      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
+    );
+    return issueComparator(sort, { relations, statusById });
+  }, [comparator, sort, relations, allIssueMap]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
     () => buildColumns(statuses, issues, displayComparator),

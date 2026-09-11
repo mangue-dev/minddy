@@ -375,7 +375,11 @@ function ProjectBoard() {
     () => (activeObjective ? STATUSES : visibleStatuses(config)),
     [activeObjective, config],
   );
-  const sort = activeObjective ? "manual" : config.sort;
+  // Objective mode no longer forces a manual order (MIN-510): it follows the
+  // board's sort, with "smart" — the app-wide default — standing in for the
+  // old manual default, whose positions mean nothing in this filtered scope.
+  const sort =
+    activeObjective && config.sort === "manual" ? "smart" : config.sort;
 
   const handleAskNumoForIssues = useCallback(
     (selectedIssues: Issue[]) => {

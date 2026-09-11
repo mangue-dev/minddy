@@ -3058,6 +3058,7 @@
     "createdReply": "{count, plural, one {I created the # issue you proposed.} other {I created the # issues you proposed.}}"
   },
   "Sort": {
+    "smart": "Smart",
     "manual": "Manual",
     "priority": "Priority",
     "created": "Created",

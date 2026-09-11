@@ -179,7 +179,14 @@ export const KanbanBoard = memo(function KanbanBoard({
   }, [issues, relations, allIssueMap]);
 
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
-  const comparator = useMemo(() => issueComparator(sort), [sort]);
+  // Smart sort reads relations + statuses (a done blocker no longer lifts its
+  // target), resolved against ALL issues — a filter may hide the other end.
+  const comparator = useMemo(() => {
+    const statusById = new Map(
+      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
+    );
+    return issueComparator(sort, { relations, statusById });
+  }, [sort, relations, allIssueMap]);
   const columns = useMemo(
     () => buildColumns(statuses, issues, comparator),
     [buildColumns, issues, statuses, comparator],

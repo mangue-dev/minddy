@@ -849,7 +849,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           sort: {
             type: "string",
             enum: [...VIEW_SORTS],
-            description: "Sort order (default manual).",
+            description:
+              "Sort order (default smart: priority, lifted by imminent due dates and open blockers).",
           },
           display: {
             type: "object",
