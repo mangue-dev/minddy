@@ -296,7 +296,12 @@ async function buildExecutionInput(input: {
     .order("id", { ascending: false })
     .limit(30);
   if (error) throw new Error(error.message);
-  const history = [...((data ?? []) as StoredMessage[])].reverse();
+  const recentHistory = [...((data ?? []) as StoredMessage[])].reverse();
+  // The bounded window can begin inside an older parallel tool batch. OpenAI
+  // rejects a tool result without its preceding assistant call, so start at the
+  // first complete message boundary instead of sending a malformed history.
+  const firstCompleteMessage = recentHistory.findIndex((message) => message.role !== "tool");
+  const history = firstCompleteMessage < 0 ? [] : recentHistory.slice(firstCompleteMessage);
   const historySkillNotes = input.background
     ? history.map(() => "")
     : await authorizedSkillsNotes(
@@ -469,6 +474,17 @@ async function stopRequested(service: SupabaseClient, turnId: string, claimToken
   return (data as { status?: string } | null)?.status === "stopping";
 }
 
+async function interruptActiveWorker(service: SupabaseClient, runId: string | null) {
+  if (!runId) return;
+  const { error } = await service.from("agent_runs")
+    .update({ interrupt_requested: true })
+    .eq("id", runId)
+    .in("status", ["queued", "running"]);
+  if (error) {
+    console.error(`[numo-turn] worker ${runId} interrupt failed:`, error.message);
+  }
+}
+
 async function saveFinalMessage(input: {
   service: SupabaseClient;
   turnId: string;
@@ -509,6 +525,7 @@ export async function executeNumoTurn(input: {
   const claimed = compositeRow<NumoTurn>(claimedData);
   if (!claimed) return { status: "not_claimed" };
   let latestCheckpoint = claimed.checkpoint;
+  let latestActiveRunId = claimed.active_run_id;
 
   const emitter = createDurableNumoEmitter(service, claimed.id, input.liveEmitter);
   emitter.emit("conversation_id", { conversationId: claimed.conversation_id, turnId: claimed.id });
@@ -543,7 +560,7 @@ export async function executeNumoTurn(input: {
       checkpoint: checkpointRecord(claimed.checkpoint),
       errorMessage: "The turn was interrupted before it reached a durable boundary. Retry after reconnecting.",
     });
-    emitter.emit("error", { message: turn.error_message });
+    emitter.emit("error", { message: turn.error_message, status: turn.status });
     await emitter.flush();
     emitter.close();
     return { status: turn.status, turn };
@@ -589,9 +606,31 @@ export async function executeNumoTurn(input: {
           claimToken,
           status: "running",
           checkpoint: checkpoint as unknown as Record<string, unknown>,
-          activeRunId: claimed.active_run_id,
+          activeRunId: latestActiveRunId,
         });
         latestCheckpoint = persisted.checkpoint;
+      },
+      persistToolRound: async (toolRound) => {
+        const { data, error } = await service.rpc("checkpoint_numo_tool_round", {
+          p_turn_id: claimed.id,
+          p_claim_token: claimToken,
+          p_content: toolRound.assistantContent,
+          p_tool_calls: toolRound.pendingToolCalls,
+          p_reasoning: toolRound.assistantReasoning,
+          p_round_count: toolRound.roundCount,
+        });
+        if (error) throw new Error(error.message);
+        const persisted = compositeRow<NumoTurn>(data);
+        if (!persisted) throw new NumoClaimLostError();
+        latestCheckpoint = persisted.checkpoint;
+        const messageId = persisted.checkpoint?.phase === "tools"
+          ? persisted.checkpoint.assistantMessageId
+          : null;
+        if (!messageId) throw new Error("Assistant tool round checkpoint is incomplete");
+        return messageId;
+      },
+      registerActiveRun: (runId) => {
+        latestActiveRunId = runId;
       },
       toolLedger: createToolLedger(service, claimed.id, claimToken),
       shouldStop: () => stopRequested(service, claimed.id, claimToken),
@@ -617,12 +656,17 @@ export async function executeNumoTurn(input: {
     }
 
     if (await stopRequested(service, claimed.id, claimToken)) {
+      const activeRunId = result.suspension?.kind === "work"
+        ? result.suspension.runId
+        : claimed.active_run_id;
+      await interruptActiveWorker(service, activeRunId);
       const turn = await checkpointTurn({
         service,
         turnId: claimed.id,
         claimToken,
         status: "stopped",
         checkpoint: checkpointRecord(latestCheckpoint),
+        activeRunId,
       });
       emitter.emit("done", { status: "stopped" });
       await emitter.flush();
@@ -675,6 +719,7 @@ export async function executeNumoTurn(input: {
         message: "A tool may have completed before its result was recorded. Review the external state before retrying.",
         code: "tool_reconciliation_required",
         tool: error.toolName,
+        status: "reconciling",
       });
       await emitter.flush();
       emitter.close();
@@ -692,12 +737,14 @@ export async function executeNumoTurn(input: {
         return { status: "not_claimed" };
       }
       if (current?.status === "stopping" && current.claim_token === claimToken) {
+        await interruptActiveWorker(service, current.active_run_id);
         const stopped = await checkpointTurn({
           service,
           turnId: claimed.id,
           claimToken,
           status: "stopped",
           checkpoint: checkpointRecord(current.checkpoint),
+          activeRunId: current.active_run_id,
         });
         emitter.emit("done", { status: "stopped" });
         await emitter.flush();
@@ -710,6 +757,25 @@ export async function executeNumoTurn(input: {
 
     const message = error instanceof Error ? error.message : "Numo turn failed";
     const status: "retryable" | "failed" = claimed.attempts < 3 ? "retryable" : "failed";
+    const { data: currentClaim, error: currentClaimError } = await service
+      .from("numo_assistant_turns")
+      .select("checkpoint, active_run_id")
+      .eq("id", claimed.id)
+      .eq("claim_token", claimToken)
+      .maybeSingle();
+    if (currentClaimError) {
+      // Do not overwrite a possibly committed checkpoint when the database
+      // response itself was ambiguous. The stale-claim recovery will preserve
+      // the authoritative row once connectivity returns.
+      emitter.emit("error", { message, status: "running" });
+      await emitter.flush();
+      emitter.close();
+      throw error;
+    }
+    const failureCheckpoint = (currentClaim as { checkpoint?: NumoTurnCheckpoint } | null)
+      ?.checkpoint ?? latestCheckpoint;
+    const failureActiveRunId = (currentClaim as { active_run_id?: string | null } | null)
+      ?.active_run_id ?? claimed.active_run_id;
     let turn: NumoTurn;
     try {
       turn = await checkpointTurn({
@@ -717,8 +783,8 @@ export async function executeNumoTurn(input: {
         turnId: claimed.id,
         claimToken,
         status,
-        checkpoint: checkpointRecord(latestCheckpoint),
-        activeRunId: claimed.active_run_id,
+        checkpoint: checkpointRecord(failureCheckpoint),
+        activeRunId: failureActiveRunId,
         errorMessage: message,
       });
     } catch (checkpointError) {
@@ -730,8 +796,23 @@ export async function executeNumoTurn(input: {
         return { status: "not_claimed" };
       }
       turn = data as NumoTurn;
+      if (turn.status === "stopping" && turn.claim_token === claimToken) {
+        await interruptActiveWorker(service, turn.active_run_id);
+        turn = await checkpointTurn({
+          service,
+          turnId: claimed.id,
+          claimToken,
+          status: "stopped",
+          checkpoint: checkpointRecord(turn.checkpoint),
+          activeRunId: turn.active_run_id,
+        });
+        emitter.emit("done", { status: "stopped" });
+        await emitter.flush();
+        emitter.close();
+        return { status: turn.status, turn };
+      }
     }
-    emitter.emit("error", { message });
+    emitter.emit("error", { message, status: turn.status });
     await emitter.flush();
     emitter.close();
     return { status: turn.status, turn };

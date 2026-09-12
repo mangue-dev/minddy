@@ -486,7 +486,19 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : tApi("unexpected");
         await titleDone;
-        emitter.emit("error", { message: errorMessage });
+        const { data: currentTurn } = await service
+          .from("numo_assistant_turns")
+          .select("status")
+          .eq("id", turn.id)
+          .maybeSingle();
+        emitter.emit("error", {
+          message: errorMessage,
+          // Keep the browser reconciling from durable state even when the
+          // status lookup fails with the same transient database outage.
+          status: typeof currentTurn?.status === "string"
+            ? currentTurn.status
+            : turn.status,
+        });
         emitter.close();
       }
     },

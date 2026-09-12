@@ -13,7 +13,7 @@ vi.mock("@/lib/server/model-config", () => ({
   fetchOpenRouterWithSuffixFallback: (...args: unknown[]) => fetchOpenRouter(...args),
 }));
 
-const { processChat } = await import("./loop");
+const { processChat, toolReplayPolicy } = await import("./loop");
 
 function stream(delta: Record<string, unknown>): Response {
   const body = new ReadableStream<Uint8Array>({
@@ -127,6 +127,7 @@ describe("Numo chat loop resilience", () => {
     });
 
     const service = fakeService();
+    const registerActiveRun = vi.fn();
     const result = await processChat(
       [{ role: "user", content: "Implement the issue" }],
       [],
@@ -139,11 +140,13 @@ describe("Numo chat loop resilience", () => {
         supabase: service,
         service,
         locale: "en",
+        registerActiveRun,
       },
     );
 
     expect(fetchOpenRouter).toHaveBeenCalledOnce();
     expect(result.suspension).toEqual({ kind: "work", runId: "worker-run" });
+    expect(registerActiveRun).toHaveBeenCalledWith("worker-run");
   });
 
   it("surfaces an ambiguous mutation instead of executing it again", async () => {
@@ -219,5 +222,93 @@ describe("Numo chat loop resilience", () => {
     expect(fetchOpenRouter).toHaveBeenCalledOnce();
     expect(executeTool).not.toHaveBeenCalled();
     expect(complete).not.toHaveBeenCalled();
+  });
+
+  it("checkpoints an ask_user result before suspending for input", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: stream({
+        tool_calls: [{
+          index: 0,
+          id: "call-question",
+          function: {
+            name: "ask_user",
+            arguments: JSON.stringify({
+              questions: [{ header: "Scope", question: "Which scope should be used?" }],
+            }),
+          },
+        }],
+      }),
+    });
+    const persistCheckpoint = vi.fn();
+
+    const result = await processChat(
+      [{ role: "user", content: "Help me decide" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+        persistCheckpoint,
+      },
+    );
+
+    expect(result.suspension).toEqual({ kind: "input" });
+    expect(persistCheckpoint).toHaveBeenLastCalledWith(expect.objectContaining({
+      phase: "tools",
+      completedToolCallIds: ["call-question"],
+    }));
+  });
+
+  it("commits a durable tool round before executing its tools", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: stream({
+        tool_calls: [{
+          index: 0,
+          id: "call-create",
+          function: { name: "create_issue", arguments: '{"title":"Durable"}' },
+        }],
+      }),
+    });
+    executeTool.mockResolvedValue({ result: { id: "issue" }, success: true, pause: true });
+    const persistToolRound = vi.fn().mockResolvedValue("assistant-round");
+
+    await processChat(
+      [{ role: "user", content: "Create it" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+        turnId: "turn",
+        persistToolRound,
+        persistCheckpoint: vi.fn(),
+      },
+    );
+
+    expect(persistToolRound).toHaveBeenCalledWith(expect.objectContaining({
+      pendingToolCalls: [expect.objectContaining({ id: "call-create" })],
+      roundCount: 1,
+    }));
+    expect(persistToolRound.mock.invocationCallOrder[0])
+      .toBeLessThan(executeTool.mock.invocationCallOrder[0]);
+  });
+
+  it("retries read-only tools and reconciles mutations", () => {
+    expect(toolReplayPolicy("web_search")).toBe("retry");
+    expect(toolReplayPolicy("propose_backlog")).toBe("retry");
+    expect(toolReplayPolicy("get_issue")).toBe("retry");
+    expect(toolReplayPolicy("create_issue")).toBe("reconcile");
   });
 });

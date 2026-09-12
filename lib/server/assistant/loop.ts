@@ -183,6 +183,13 @@ export interface ProcessChatContext extends ToolContext {
   turnId?: string;
   resumeCheckpoint?: ProcessChatCheckpoint | null;
   persistCheckpoint?: (checkpoint: ProcessChatCheckpoint) => Promise<void>;
+  persistToolRound?: (input: {
+    assistantContent: string | null;
+    assistantReasoning: AssistantReasoning | null;
+    pendingToolCalls: AssistantToolCall[];
+    roundCount: number;
+  }) => Promise<string>;
+  registerActiveRun?: (runId: string) => void;
   toolLedger?: ToolExecutionLedger;
   shouldStop?: () => Promise<boolean>;
 }
@@ -213,10 +220,25 @@ const RETRYABLE_READ_TOOLS = new Set([
   "search_pages",
   "list_routines",
   "read_pull_request",
+  "propose_backlog",
+  "web_search",
 ]);
 
 export function toolReplayPolicy(toolName: string): "retry" | "reconcile" {
   return RETRYABLE_READ_TOOLS.has(toolName) ? "retry" : "reconcile";
+}
+
+async function saveToolResultMessage(
+  context: ProcessChatContext,
+  row: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await context.service.from("assistant_messages").insert(row);
+  if (!error) return;
+  // A completed ledger entry can be replayed after the message insert committed
+  // but before its checkpoint did. The per-turn partial unique index proves that
+  // this conflict is the same tool result, so it is safe to reuse.
+  if (context.turnId && error.code === "23505") return;
+  throw new Error(error.message);
 }
 
 /**
@@ -416,21 +438,37 @@ export async function processChat(
         });
       }
 
-      // Save intermediate assistant message with tool_calls to DB
-      const savedIntermediate = resumingTools
-        ? { id: resumeCheckpoint?.assistantMessageId ?? null }
-        : (await context.service
-            .from("assistant_messages")
-            .insert({
-              conversation_id: context.conversationId,
-              ...(context.turnId ? { turn_id: context.turnId } : {}),
-              role: "assistant",
-              content: fullContent || null,
-              tool_calls: assistantToolCalls,
-              ...(roundReasoning ? { metadata: { reasoning: roundReasoning } } : {}),
-            })
-            .select("id")
-            .single()).data;
+      // Durable turns commit this message and their tool checkpoint atomically.
+      // Legacy callers keep the historical direct insert path.
+      let savedIntermediate: { id: string | null };
+      if (resumingTools) {
+        savedIntermediate = { id: resumeCheckpoint?.assistantMessageId ?? null };
+      } else if (context.persistToolRound) {
+        savedIntermediate = {
+          id: await context.persistToolRound({
+            assistantContent: fullContent || null,
+            assistantReasoning: roundReasoning,
+            pendingToolCalls: assistantToolCalls,
+            roundCount,
+          }),
+        };
+      } else {
+        const { data, error } = await context.service
+          .from("assistant_messages")
+          .insert({
+            conversation_id: context.conversationId,
+            ...(context.turnId ? { turn_id: context.turnId } : {}),
+            role: "assistant",
+            content: fullContent || null,
+            tool_calls: assistantToolCalls,
+            ...(roundReasoning ? { metadata: { reasoning: roundReasoning } } : {}),
+          })
+          .select("id")
+          .single();
+        if (error) throw new Error(error.message);
+        savedIntermediate = { id: (data?.id as string | undefined) ?? null };
+      }
+      if (!savedIntermediate.id) throw new Error("Assistant tool round was not saved");
 
       if (savedIntermediate?.id) {
         emitter.emit("message_complete", {
@@ -441,15 +479,17 @@ export async function processChat(
       const completedToolCallIds = new Set(
         resumingTools ? resumeCheckpoint?.completedToolCallIds ?? [] : [],
       );
-      await context.persistCheckpoint?.({
-        phase: "tools",
-        assistantContent: fullContent || null,
-        assistantReasoning: roundReasoning,
-        assistantMessageId: savedIntermediate?.id ?? null,
-        pendingToolCalls: assistantToolCalls,
-        completedToolCallIds: [...completedToolCallIds],
-        roundCount,
-      });
+      if (resumingTools || !context.persistToolRound) {
+        await context.persistCheckpoint?.({
+          phase: "tools",
+          assistantContent: fullContent || null,
+          assistantReasoning: roundReasoning,
+          assistantMessageId: savedIntermediate.id,
+          pendingToolCalls: assistantToolCalls,
+          completedToolCallIds: [...completedToolCallIds],
+          roundCount,
+        });
+      }
       resumeCheckpoint = null;
 
       // Add to chat history for LLM context
@@ -493,7 +533,7 @@ export async function processChat(
           });
 
           if (!alreadyCompleted) {
-            await context.service.from("assistant_messages").insert({
+            await saveToolResultMessage(context, {
               conversation_id: context.conversationId,
               ...(context.turnId ? { turn_id: context.turnId } : {}),
               role: "tool",
@@ -511,6 +551,15 @@ export async function processChat(
           });
           completedToolCallIds.add(acc.id);
           suspension = { kind: "input" };
+          await context.persistCheckpoint?.({
+            phase: "tools",
+            assistantContent: fullContent || null,
+            assistantReasoning: roundReasoning,
+            assistantMessageId: savedIntermediate.id,
+            pendingToolCalls: assistantToolCalls,
+            completedToolCallIds: [...completedToolCallIds],
+            roundCount,
+          });
           continue;
         }
 
@@ -542,9 +591,9 @@ export async function processChat(
           execution = await executeTool(acc.name, args, context);
         }
         const { result, success, modelResult, pause, secrets } = execution;
-        // The COMPLETE result goes to the browser, secret included: this is the
-        // only place where a fresh key should appear, live, once
-        // (MIN-343). Nothing that follows will see him again.
+        // The complete result goes to the browser with any secret included.
+        // This is the only place where a fresh key appears live, once
+        // (MIN-343). Nothing later can see it again.
         emitter.emit("tool_result", {
           id: acc.id,
           name: acc.name,
@@ -553,17 +602,16 @@ export async function processChat(
         });
         if (pause) pausedByTool = true;
 
-        // The substitution, applied BEFORE the base and BEFORE the model. She is
-        // that of the agent (`redactDeep`), not a second written next to it: a
-        // living identifier can be nested anywhere in the result.
+        // Apply redaction before persistence and before sending data back to
+        // the model. Reuse the agent's recursive redactor because a live
+        // identifier can be nested anywhere in the result.
         for (const secret of secrets ?? []) redactor.add(secret);
 
-        // What the MODEL reads back is not always what the screen shows: a
-        // proposition d'amorce (MIN-173) fait quarante titres qu'il vient
-        // to write, and that history would serve him again at every turn. THE
-        // complete result then goes to the metadata, from where the thread reads it again
-        // (`buildToolCallResultsFromMessages`), and `content` only carries what
-        // the model needs to know.
+        // What the model reads back is not always what the screen shows. A seed
+        // proposal (MIN-173) can contain forty titles that would otherwise be
+        // resent on every turn. The complete result goes into metadata, where
+        // the thread can restore it (`buildToolCallResultsFromMessages`), while
+        // `content` carries only what the model needs.
         const forModel = redactDeep(modelResult ?? result, redactor.redact);
         const persistedResult = redactDeep(result, redactor.redact);
         if (ledgerClaim.action === "execute") {
@@ -576,7 +624,7 @@ export async function processChat(
           });
         }
         if (!alreadyCompleted) {
-          await context.service.from("assistant_messages").insert({
+          await saveToolResultMessage(context, {
             conversation_id: context.conversationId,
             ...(context.turnId ? { turn_id: context.turnId } : {}),
             role: "tool",
@@ -604,13 +652,14 @@ export async function processChat(
           if (typeof runId === "string" && runId) {
             suspension = { kind: "work", runId };
             pausedByTool = true;
+            context.registerActiveRun?.(runId);
           }
         }
         await context.persistCheckpoint?.({
           phase: "tools",
           assistantContent: fullContent || null,
           assistantReasoning: roundReasoning,
-          assistantMessageId: savedIntermediate?.id ?? null,
+          assistantMessageId: savedIntermediate.id,
           pendingToolCalls: assistantToolCalls,
           completedToolCallIds: [...completedToolCallIds],
           roundCount,

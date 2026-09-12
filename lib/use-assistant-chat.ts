@@ -94,6 +94,7 @@ export interface AssistantChatState {
   /** Legacy project metadata retained when loading older conversations. */
   conversationProjectId: string | null;
   error: string | null;
+  turnStatus: NumoTurnStatus | null;
 }
 
 const initialState: AssistantChatState = {
@@ -106,6 +107,7 @@ const initialState: AssistantChatState = {
   conversationId: null,
   conversationProjectId: null,
   error: null,
+  turnStatus: null,
 };
 
 // ── Actions ────────────────────────────────────────────────────────────
@@ -147,7 +149,7 @@ type Action =
     }
   | { type: "DONE" }
   | { type: "GENERATING_SERVER" }
-  | { type: "ERROR"; message: string }
+  | { type: "ERROR"; message: string; turnStatus?: NumoTurnStatus }
   | {
       type: "LOAD_HISTORY";
       messages: AssistantMessage[];
@@ -169,6 +171,7 @@ function reducer(
         streamingReasoning: null,
         activeToolCalls: [],
         error: null,
+        turnStatus: null,
       };
 
     case "SET_CONVERSATION_ID":
@@ -354,6 +357,7 @@ function reducer(
         streamingContent: "",
         streamingReasoning: null,
         activeToolCalls: [],
+        turnStatus: null,
       };
 
     case "GENERATING_SERVER":
@@ -363,6 +367,7 @@ function reducer(
         streamingContent: "",
         streamingReasoning: null,
         activeToolCalls: [],
+        error: null,
       };
 
     case "ERROR":
@@ -370,6 +375,7 @@ function reducer(
         ...state,
         status: "error",
         error: action.message,
+        turnStatus: action.turnStatus ?? state.turnStatus,
         streamingReasoning: state.streamingReasoning
           ? { ...state.streamingReasoning, active: false }
           : null,
@@ -378,6 +384,7 @@ function reducer(
     case "LOAD_HISTORY":
       return {
         ...state,
+        status: "idle",
         messages: action.messages,
         streamingContent: "",
         streamingReasoning: null,
@@ -385,6 +392,8 @@ function reducer(
         toolCallResults: buildToolCallResultsFromMessages(action.messages),
         conversationId: action.conversationId,
         conversationProjectId: action.projectId,
+        error: null,
+        turnStatus: null,
       };
 
     case "RESET":
@@ -518,6 +527,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               message: error_message || (status === "reconciling"
                 ? "A tool result needs reconciliation before this turn can continue."
                 : "Generation failed"),
+              turnStatus: status as NumoTurnStatus,
             });
             return;
           }
@@ -665,6 +675,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
                 if (eventType === "done" && typeof data.status === "string") {
                   finalServerStatus = data.status as ConversationStatus | NumoTurnStatus;
                 }
+                if (eventType === "error" && typeof data.status === "string") {
+                  finalServerStatus = data.status as ConversationStatus | NumoTurnStatus;
+                }
                 handleSSEEvent(eventType, data, dispatch, {
                   projectId: state.conversationProjectId,
                   onConversationId: (id) => {
@@ -683,7 +696,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           }
         }
 
-        if (finalServerStatus === "waiting_work") {
+        if (finalServerStatus === "waiting_work" || finalServerStatus === "queued"
+          || finalServerStatus === "running" || finalServerStatus === "stopping") {
           const conversationId = liveConvRef.current.id ?? state.conversationId;
           if (conversationId) {
             startPolling(conversationId, liveConvRef.current.projectId);
@@ -709,7 +723,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           : state.conversationProjectId;
         if (convId) {
           try {
-            const { status } = await fetchConversationStatus(
+            const { status, error_message } = await fetchConversationStatus(
               convId,
               tApi("statusFetchFailed")
             );
@@ -727,6 +741,21 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
                 projectId: convProjectId,
               });
               dispatch({ type: "DONE" });
+              return;
+            }
+            if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
+              const messages = await fetchConversationMessages(convId);
+              dispatch({
+                type: "LOAD_HISTORY",
+                messages,
+                conversationId: convId,
+                projectId: convProjectId,
+              });
+              dispatch({
+                type: "ERROR",
+                message: error_message || "Generation failed",
+                ...(status === "error" ? {} : { turnStatus: status }),
+              });
               return;
             }
           } catch {
@@ -773,6 +802,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           dispatch({
             type: "ERROR",
             message: error_message || "Generation failed",
+            turnStatus: status as NumoTurnStatus,
           });
         }
       } catch (err) {
@@ -794,26 +824,89 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     dispatch({ type: "RESET" });
   }, [stopPolling]);
 
+  const retry = useCallback(async () => {
+    const conversationId = liveConvRef.current.id ?? state.conversationId;
+    if (!conversationId) return;
+    const projectId = liveConvRef.current.id
+      ? liveConvRef.current.projectId
+      : state.conversationProjectId;
+    stopPolling();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    dispatch({ type: "GENERATING_SERVER" });
+    try {
+      const response = await fetch(`/api/assistant/conversations/${conversationId}/turn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "retry" }),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        if (response.status === 409) {
+          // Another retry or recovery may already have moved the turn. Read
+          // the authoritative status instead of leaving a stale retry action.
+          startPolling(conversationId, projectId);
+          return;
+        }
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+        dispatch({
+          type: "ERROR",
+          message: payload?.error || `HTTP ${response.status}`,
+        });
+        return;
+      }
+      startPolling(conversationId, projectId);
+    } catch (error) {
+      if ((error as Error).name === "AbortError") return;
+      // The request may have reached the durable retry boundary before the
+      // connection failed. Polling reconciles the authoritative server state.
+      startPolling(conversationId, projectId);
+    }
+  }, [state.conversationId, state.conversationProjectId, startPolling, stopPolling]);
+
   const abort = useCallback(() => {
     abortRef.current?.abort();
     stopPolling();
     const conversationId = liveConvRef.current.id ?? state.conversationId;
-    if (conversationId) {
-      void fetch(`/api/assistant/conversations/${conversationId}/turn`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "stop" }),
-      });
+    if (!conversationId) {
+      dispatch({ type: "DONE" });
+      return;
     }
+    const projectId = liveConvRef.current.id
+      ? liveConvRef.current.projectId
+      : state.conversationProjectId;
+    dispatch({ type: "GENERATING_SERVER" });
+    void (async () => {
+      try {
+        const response = await fetch(`/api/assistant/conversations/${conversationId}/turn`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "stop" }),
+        });
+        if (!response.ok && response.status !== 409) {
+          const payload = await response.json().catch(() => null) as { error?: string } | null;
+          dispatch({
+            type: "ERROR",
+            message: payload?.error || `HTTP ${response.status}`,
+          });
+          return;
+        }
+        startPolling(conversationId, projectId);
+      } catch {
+        // A connection failure does not establish whether the durable stop was
+        // recorded. Polling resolves that ambiguity from authoritative state.
+        startPolling(conversationId, projectId);
+      }
+    })();
     trackEvent("assistant_stopped", {});
-    dispatch({ type: "DONE" });
-  }, [state.conversationId, stopPolling]);
+  }, [state.conversationId, state.conversationProjectId, startPolling, stopPolling]);
 
   return {
     state,
     sendMessage,
     loadConversation,
     reset,
+    retry,
     abort,
   };
 }
@@ -912,7 +1005,13 @@ function handleSSEEvent(
       }
       break;
     case "error":
-      dispatch({ type: "ERROR", message: data.message as string });
+      dispatch({
+        type: "ERROR",
+        message: data.message as string,
+        ...(typeof data.status === "string"
+          ? { turnStatus: data.status as NumoTurnStatus }
+          : {}),
+      });
       break;
   }
 }

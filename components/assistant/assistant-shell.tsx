@@ -114,10 +114,10 @@ const STARTERS = [
 export type AssistantDisplayMode = "compact" | "expanded";
 
 export interface AssistantShellHandle {
-  /** Send a message. `projectId` null = global mode. Ce qui suit ne vaut que
-   * for THIS sending: the page context of the contextual openings, and the
-   * mentions, order and attachments of the composer who wrote the
-   * message elsewhere (home). `pageContext` absent = that of the shell. */
+  /** Send a message. `projectId` null = global mode. The remaining options
+   * apply only to this send: page context for contextual openings, plus the
+   * mentions, command, and attachments from a composer outside this shell
+   * (such as home). An absent `pageContext` uses the shell context. */
   sendMessage: (
     projectId: string | null,
     message: string,
@@ -180,7 +180,7 @@ export const AssistantShell = forwardRef<
   // The conversation lives ABOVE the panel (AssistantChatProvider): it
   // survives the closing of the Sheet, which dismantles this shell. Here, we don't do
   // than return it.
-  const { state, sendMessage, loadConversation, reset, abort, restoring, pinned, setPinned } =
+  const { state, sendMessage, loadConversation, reset, retry, abort, restoring, pinned, setPinned } =
     useAssistantChatContext();
   const chatInputRef = useRef<ChatInputHandle>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -394,10 +394,10 @@ export const AssistantShell = forwardRef<
     handleSend(tToolCall("skippedQuestions"));
   }, [handleSend, tToolCall]);
 
-  // ACTIVE leading proposition (MIN-173): same rule as the open question —
-  // the last visible message bears the `propose_backlog` and Numo is at rest
-  // (the tool made him give up). The card is displayed there, check and
-  // create ; as soon as a message follows it, the proposition belongs to the past.
+  // Active seed proposal (MIN-173): use the same rule as an open question.
+  // The last visible message contains `propose_backlog` while Numo is idle
+  // because the tool yielded. Once another message follows, the proposal is
+  // historical and the review card is no longer interactive.
   const activeSeedMessageId = useMemo((): string | null => {
     if (isBusy) return null;
     for (let i = state.messages.length - 1; i >= 0; i--) {
@@ -888,8 +888,22 @@ export const AssistantShell = forwardRef<
                   )}
 
                   {state.error && (
-                    <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                      {state.error}
+                    <div
+                      className="flex items-center justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                      role="alert"
+                    >
+                      <span>{state.error}</span>
+                      {(state.turnStatus === "retryable" || state.turnStatus === "failed") && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => void retry()}
+                        >
+                          {t("retry")}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </ConversationContent>

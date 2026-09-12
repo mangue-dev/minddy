@@ -4,6 +4,7 @@ const h = vi.hoisted(() => ({
   db: {} as unknown,
   process: vi.fn(),
   loadSkills: vi.fn(),
+  claimError: false,
 }));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: async () => ({ ok: true, user: { id: "user", user_metadata: {} }, supabase: h.db }) }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => h.db }));
@@ -88,6 +89,7 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
       return { data: turn, error: null };
     }
     if (name === "claim_numo_turn") {
+      if (h.claimError) return { data: null, error: { message: "database unavailable" } };
       turn = { ...turn, status: "running", claim_token: args.p_claim_token, attempts: 1 };
       return { data: [turn], error: null };
     }
@@ -108,6 +110,7 @@ async function send(body: Record<string, unknown>) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  h.claimError = false;
   h.process.mockResolvedValue({ generations: [], fullContent: "Done" });
   h.loadSkills.mockImplementation(async (_project: string, paths: string[]) => paths.map((path) => ({ path, name: "review", description: "Review", source: ".agents/skills", content: "Review this repository." })));
 });
@@ -133,6 +136,17 @@ describe("conversation identity across project contexts", () => {
     const db = database();
     expect(await send({ projectId: "a" })).toBe(200);
     expect(db.conversations).toEqual([expect.objectContaining({ project_id: null, user_id: "user" })]);
+  });
+  it("keeps polling possible when execution and its status lookup both fail", async () => {
+    database();
+    h.claimError = true;
+    const response = await POST(new Request("http://localhost/api/assistant/chat", {
+      method: "POST",
+      body: JSON.stringify({ message: "Continue durably", conversationId: "conversation" }),
+    }) as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('"status":"queued"');
   });
   it.each([{ owner: "other", expected: 404 }, { status: "generating", expected: 409 }])("retains ownership and concurrent generation checks: %s", async ({ expected, ...options }) => {
     database(options);

@@ -6,7 +6,6 @@ const h = vi.hoisted(() => ({
   requestStop: vi.fn(),
   retryTurn: vi.fn(),
   executeTurn: vi.fn(),
-  requestInterrupt: vi.fn(),
   afterSeq: -1,
   activity: [
     { id: "event-1", seq: 0, type: "content_delta", payload: { delta: "First" } },
@@ -60,10 +59,6 @@ vi.mock("@/lib/server/numo/turns", () => ({
   requestNumoTurnStop: (...args: unknown[]) => h.requestStop(...args),
   retryNumoTurn: (...args: unknown[]) => h.retryTurn(...args),
 }));
-vi.mock("@/lib/server/agent/runs", () => ({
-  requestInterrupt: (...args: unknown[]) => h.requestInterrupt(...args),
-}));
-
 const { GET } = await import("@/app/api/assistant/conversations/[id]/status/route");
 const { POST } = await import("@/app/api/assistant/conversations/[id]/turn/route");
 
@@ -93,9 +88,8 @@ describe("durable Numo turn routes", () => {
     });
   });
 
-  it("stops the parent turn and interrupts its active worker", async () => {
+  it("stops the parent through the atomic orchestration action", async () => {
     h.requestStop.mockResolvedValue({ id: TURN_ID, status: "stopped", active_run_id: RUN_ID });
-    h.requestInterrupt.mockResolvedValue(undefined);
 
     const response = await POST(
       new NextRequest(`http://localhost/api/assistant/conversations/${CONVERSATION_ID}/turn`, {
@@ -107,7 +101,6 @@ describe("durable Numo turn routes", () => {
 
     expect(response.status).toBe(200);
     expect(h.requestStop).toHaveBeenCalledWith(CONVERSATION_ID, "user-1");
-    expect(h.requestInterrupt).toHaveBeenCalledWith(RUN_ID);
   });
 
   it("reclaims an explicit retry with the caller's authorized client", async () => {

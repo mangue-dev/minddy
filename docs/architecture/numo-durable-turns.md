@@ -32,6 +32,12 @@ Before a mutating tool runs, `numo_tool_operations` records its tool-call ID,
 arguments, replay policy, and execution claim. A completed result is reused.
 An unfinished read may be retried; an unfinished mutation becomes
 `reconciling`. Tool result messages are unique per turn and tool-call ID.
+The assistant tool-call message and the checkpoint that authorizes tool
+execution commit atomically, so recovery cannot observe an orphaned call.
+If a stop races a known worker launch, recording the tool result also attaches
+the run to its parent so the execution-side stop can interrupt it. Stopping a
+waiting parent marks its active worker for interruption in the same transaction;
+stale-stop recovery covers a launch that completed after the stop request.
 
 The checkpoint records the safe round boundary and any worker event used to
 continue. It contains no credentials. Live-only tool secrets are not written to
@@ -46,7 +52,9 @@ parent in one transaction only when the run is still current.
 
 Duplicate event IDs return `duplicate`. Late or reordered events for an old run
 return `ignored`. Therefore they cannot replay a completed mutation or create a
-second task.
+second task. Recovery also joins waiting parents to durable terminal worker
+rows, covering both an interrupted post-commit callback and a worker that
+finished before its parent entered `waiting_work`.
 
 ## Recovery and projections
 

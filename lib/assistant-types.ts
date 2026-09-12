@@ -172,7 +172,7 @@ export type AssistantSSEEvent =
       };
     }
   | { type: "message_complete"; data: { message_id: string } }
-  | { type: "error"; data: { message: string } }
+  | { type: "error"; data: { message: string; status?: NumoTurnStatus } }
   | { type: "done"; data: { status?: ConversationStatus | NumoTurnStatus } };
 
 /**

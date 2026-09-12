@@ -7,7 +7,9 @@ import {
   requestNumoTurnStop,
   retryNumoTurn,
 } from "@/lib/server/numo/turns";
-import { requestInterrupt } from "@/lib/server/agent/runs";
+
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 export async function POST(
   request: NextRequest,
@@ -33,7 +35,6 @@ export async function POST(
   if (body?.action === "stop") {
     const turn = await requestNumoTurnStop(conversationId, user.id);
     if (!turn) return Response.json({ error: "No active turn" }, { status: 409 });
-    if (turn.active_run_id) await requestInterrupt(turn.active_run_id).catch(() => {});
     return Response.json({ turn_id: turn.id, status: turn.status });
   }
   if (body?.action === "retry") {

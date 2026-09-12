@@ -304,6 +304,59 @@ REVOKE ALL ON FUNCTION public.checkpoint_numo_turn(uuid, uuid, text, jsonb, uuid
 GRANT EXECUTE ON FUNCTION public.checkpoint_numo_turn(uuid, uuid, text, jsonb, uuid, text, text, numeric)
   TO service_role;
 
+-- Persist the assistant tool-call message and the checkpoint that makes it
+-- replayable in one transaction. A crash can therefore happen before both or
+-- after both, but can never leave an orphaned tool-call message in history.
+CREATE OR REPLACE FUNCTION public.checkpoint_numo_tool_round(
+  p_turn_id uuid,
+  p_claim_token uuid,
+  p_content text,
+  p_tool_calls jsonb,
+  p_reasoning jsonb,
+  p_round_count integer
+) RETURNS SETOF public.numo_assistant_turns
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_turn public.numo_assistant_turns%ROWTYPE;
+  v_message_id uuid;
+BEGIN
+  IF jsonb_typeof(p_tool_calls) IS DISTINCT FROM 'array'
+      OR jsonb_array_length(p_tool_calls) = 0
+      OR p_round_count IS NULL OR p_round_count < 1 THEN
+    RAISE EXCEPTION 'invalid_tool_round' USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO v_turn FROM public.numo_assistant_turns
+  WHERE id = p_turn_id AND claim_token = p_claim_token AND status = 'running'
+  FOR UPDATE;
+  IF v_turn.id IS NULL THEN RETURN; END IF;
+  INSERT INTO public.assistant_messages (
+    conversation_id, turn_id, role, content, tool_calls, metadata
+  ) VALUES (
+    v_turn.conversation_id, v_turn.id, 'assistant', p_content, p_tool_calls,
+    CASE WHEN p_reasoning IS NULL THEN '{}'::jsonb
+      ELSE jsonb_build_object('reasoning', p_reasoning) END
+  ) RETURNING id INTO v_message_id;
+  UPDATE public.numo_assistant_turns
+  SET checkpoint = jsonb_build_object(
+        'phase', 'tools',
+        'assistantContent', p_content,
+        'assistantReasoning', p_reasoning,
+        'assistantMessageId', v_message_id,
+        'pendingToolCalls', p_tool_calls,
+        'completedToolCallIds', '[]'::jsonb,
+        'roundCount', p_round_count
+      ),
+      claimed_at = now(), updated_at = now()
+  WHERE id = v_turn.id AND claim_token = p_claim_token AND status = 'running'
+  RETURNING * INTO v_turn;
+  IF v_turn.id IS NOT NULL THEN RETURN NEXT v_turn; END IF;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.checkpoint_numo_tool_round(uuid, uuid, text, jsonb, jsonb, integer)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.checkpoint_numo_tool_round(uuid, uuid, text, jsonb, jsonb, integer)
+  TO service_role;
+
 CREATE OR REPLACE FUNCTION public.request_numo_turn_stop(
   p_conversation_id uuid,
   p_user_id uuid
@@ -317,6 +370,11 @@ BEGIN
     AND status IN ('queued', 'running', 'waiting_work', 'waiting_input', 'retryable', 'reconciling')
   ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE;
   IF v_turn.id IS NULL THEN RETURN; END IF;
+  -- Stop the current worker in the same transaction as its parent. The route
+  -- must not report a stopped parent while silently losing this write.
+  UPDATE public.agent_runs
+  SET interrupt_requested = true
+  WHERE id = v_turn.active_run_id AND status IN ('queued', 'running');
   UPDATE public.numo_assistant_turns
   SET status = CASE WHEN v_turn.status = 'running' THEN 'stopping' ELSE 'stopped' END,
       claim_token = CASE WHEN v_turn.status = 'running' THEN claim_token END,
@@ -492,9 +550,25 @@ BEGIN
     AND status = 'started' AND claim_token = p_claim_token
     AND EXISTS (
       SELECT 1 FROM public.numo_assistant_turns
-      WHERE id = p_turn_id AND claim_token = p_claim_token AND status = 'running'
+      WHERE id = p_turn_id AND claim_token = p_claim_token
+        AND status IN ('running', 'stopping')
     );
   GET DIAGNOSTICS v_updated = ROW_COUNT;
+  IF v_updated = 1 AND p_success THEN
+    -- Register a launched worker with the same durable result that proves its
+    -- creation. A concurrent stop can then interrupt it even before the parent
+    -- reaches its waiting_work checkpoint.
+    UPDATE public.numo_assistant_turns t
+    SET active_run_id = r.id, updated_at = now()
+    FROM public.numo_tool_operations o, public.agent_runs r
+    WHERE t.id = p_turn_id
+      AND t.claim_token = p_claim_token
+      AND t.status IN ('running', 'stopping')
+      AND o.turn_id = p_turn_id
+      AND o.tool_call_id = p_tool_call_id
+      AND o.tool_name = 'launch_code_agent'
+      AND r.id::text = p_result ->> 'run_id';
+  END IF;
   RETURN v_updated = 1;
 END;
 $$;
@@ -511,7 +585,44 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_count integer := 0;
   v_turn public.numo_assistant_turns%ROWTYPE;
+  v_worker record;
+  v_disposition text;
 BEGIN
+  -- A worker may finish before its parent reaches waiting_work, or the
+  -- post-commit callback may be interrupted. Reconcile that durable terminal
+  -- state here so neither race can strand the parent indefinitely.
+  FOR v_worker IN
+    SELECT r.id AS run_id, r.status, r.awaiting_input, r.outcome,
+      r.error_message, r.pr_number, r.pr_url
+    FROM public.numo_assistant_turns t
+    JOIN public.agent_runs r ON r.id = t.active_run_id
+    WHERE t.status = 'waiting_work'
+      AND r.status IN ('completed', 'failed', 'canceled')
+    ORDER BY t.updated_at ASC, t.id ASC
+    FOR UPDATE OF t, r SKIP LOCKED
+  LOOP
+    SELECT public.resume_numo_turn_from_worker(
+      v_worker.run_id,
+      gen_random_uuid(),
+      CASE
+        WHEN v_worker.status = 'completed' AND v_worker.awaiting_input
+          THEN 'worker_input'
+        WHEN v_worker.status = 'completed' THEN 'worker_completed'
+        ELSE 'worker_failed'
+      END,
+      jsonb_build_object(
+        'run_id', v_worker.run_id,
+        'status', v_worker.status,
+        'awaiting_input', v_worker.awaiting_input,
+        'outcome', v_worker.outcome,
+        'error_message', v_worker.error_message,
+        'pr_number', v_worker.pr_number,
+        'pr_url', v_worker.pr_url
+      )
+    ) INTO v_disposition;
+    IF v_disposition = 'queued' THEN v_count := v_count + 1; END IF;
+  END LOOP;
+
   FOR v_turn IN
     SELECT * FROM public.numo_assistant_turns
     WHERE status IN ('running', 'stopping')
@@ -519,6 +630,13 @@ BEGIN
     ORDER BY claimed_at ASC
     FOR UPDATE SKIP LOCKED
   LOOP
+    -- A worker launch can finish after stop moved the parent to stopping. If
+    -- the execution process then dies, recovery still propagates the stop.
+    IF v_turn.status = 'stopping' AND v_turn.active_run_id IS NOT NULL THEN
+      UPDATE public.agent_runs
+      SET interrupt_requested = true
+      WHERE id = v_turn.active_run_id AND status IN ('queued', 'running');
+    END IF;
     UPDATE public.numo_assistant_turns
     SET status = CASE
           WHEN v_turn.status = 'stopping' THEN 'stopped'

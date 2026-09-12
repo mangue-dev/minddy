@@ -9,20 +9,34 @@ const h = vi.hoisted(() => ({
   checkpoints: [] as Array<Record<string, unknown>>,
   messages: [] as Array<Record<string, unknown>>,
   queuedTurns: [] as Array<Record<string, unknown>>,
+  interruptions: [] as string[],
   failActivity: false,
   processChat: vi.fn(),
 }));
 
 function queryFor(table: string) {
   let inserted: Record<string, unknown> | null = null;
+  let updated: Record<string, unknown> | null = null;
+  const filters: Record<string, unknown> = {};
   const query = {
     select: () => query,
+    update: (row: Record<string, unknown>) => {
+      updated = row;
+      return query;
+    },
     insert: (row: Record<string, unknown>) => {
       inserted = row;
       if (table === "assistant_messages") h.messages.push(row);
       return query;
     },
-    eq: () => query,
+    eq: (column: string, value: unknown) => {
+      filters[column] = value;
+      if (table === "agent_runs" && column === "id"
+          && updated?.interrupt_requested === true && typeof value === "string") {
+        h.interruptions.push(value);
+      }
+      return query;
+    },
     is: () => query,
     in: () => query,
     lte: () => query,
@@ -34,7 +48,10 @@ function queryFor(table: string) {
       data: inserted ? { ...inserted, id: "saved-message" } : h.turn,
       error: null,
     }),
-    maybeSingle: async () => ({ data: null, error: null }),
+    maybeSingle: async () => ({
+      data: table === "numo_assistant_turns" ? h.turn : null,
+      error: null,
+    }),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve({
       data: table === "assistant_messages"
         ? h.messages
@@ -68,6 +85,27 @@ const service = {
         active_run_id: args.p_active_run_id,
         error_message: args.p_error_message,
       };
+      return { data: [h.turn], error: null };
+    }
+    if (name === "checkpoint_numo_tool_round") {
+      const messageId = "assistant-tool-round";
+      const checkpoint = {
+        phase: "tools",
+        assistantContent: args.p_content,
+        assistantReasoning: args.p_reasoning,
+        assistantMessageId: messageId,
+        pendingToolCalls: args.p_tool_calls,
+        completedToolCallIds: [],
+        roundCount: args.p_round_count,
+      };
+      h.messages.push({
+        id: messageId,
+        turn_id: args.p_turn_id,
+        role: "assistant",
+        content: args.p_content,
+        tool_calls: args.p_tool_calls,
+      });
+      h.turn = { ...h.turn, checkpoint };
       return { data: [h.turn], error: null };
     }
     if (name === "append_numo_turn_event") {
@@ -156,6 +194,7 @@ beforeEach(() => {
   h.checkpoints.length = 0;
   h.messages.length = 0;
   h.queuedTurns.length = 0;
+  h.interruptions.length = 0;
   h.failActivity = false;
   h.messages.push({
     id: "user-message",
@@ -248,6 +287,78 @@ describe("durable Numo execution", () => {
     });
   });
 
+  it("persists the assistant tool round through the atomic checkpoint RPC", async () => {
+    h.processChat.mockImplementation(async (...args: unknown[]) => {
+      const context = args[3] as {
+        persistToolRound: (input: Record<string, unknown>) => Promise<string>;
+      };
+      const messageId = await context.persistToolRound({
+        assistantContent: "I will inspect it.",
+        assistantReasoning: null,
+        pendingToolCalls: [{
+          id: "call-1",
+          type: "function",
+          function: { name: "get_issue", arguments: "{}" },
+        }],
+        roundCount: 1,
+      });
+      expect(messageId).toBe("assistant-tool-round");
+      throw new Error("process interrupted after checkpoint");
+    });
+
+    const result = await executeNumoTurn({
+      turnId: h.turn!.id as string,
+      readClient: service,
+      aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("retryable");
+    expect(h.messages).toContainEqual(expect.objectContaining({
+      id: "assistant-tool-round",
+      tool_calls: [expect.objectContaining({ id: "call-1" })],
+    }));
+    expect(h.checkpoints.at(-1)).toMatchObject({
+      p_status: "retryable",
+      p_checkpoint: expect.objectContaining({
+        phase: "tools",
+        assistantMessageId: "assistant-tool-round",
+      }),
+    });
+  });
+
+  it("interrupts a worker launched concurrently with a stop request", async () => {
+    h.processChat.mockImplementation(async () => {
+      h.turn = {
+        ...h.turn,
+        status: "stopping",
+        active_run_id: "51600000-0000-4000-8000-000000000099",
+      };
+      return {
+        fullContent: "",
+        finalReasoning: null,
+        allToolCalls: [],
+        generations: [],
+        suspension: {
+          kind: "work" as const,
+          runId: "51600000-0000-4000-8000-000000000099",
+        },
+      };
+    });
+
+    const result = await executeNumoTurn({
+      turnId: h.turn!.id as string,
+      readClient: service,
+      aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("stopped");
+    expect(h.interruptions).toEqual(["51600000-0000-4000-8000-000000000099"]);
+    expect(h.checkpoints.at(-1)).toMatchObject({
+      p_status: "stopped",
+      p_active_run_id: "51600000-0000-4000-8000-000000000099",
+    });
+  });
+
   it("keeps prior tool rounds while reconstructing only the pending batch", async () => {
     h.turn = turn({
       phase: "tools",
@@ -264,7 +375,7 @@ describe("durable Numo execution", () => {
     h.messages.push(
       {
         id: "user-message",
-        turn_id: h.turn.id,
+        turn_id: h.turn!.id,
         role: "user",
         content: "Inspect both rounds",
         tool_calls: null,
@@ -275,7 +386,7 @@ describe("durable Numo execution", () => {
       },
       {
         id: "assistant-prior",
-        turn_id: h.turn.id,
+        turn_id: h.turn!.id,
         role: "assistant",
         content: "Prior narration",
         tool_calls: [{
@@ -317,7 +428,7 @@ describe("durable Numo execution", () => {
     );
 
     await executeNumoTurn({
-      turnId: h.turn.id as string,
+      turnId: h.turn!.id as string,
       readClient: service,
       aiRuntime: runtime,
     });
@@ -326,6 +437,43 @@ describe("durable Numo execution", () => {
     expect(executionMessages).toContain("Prior narration");
     expect(executionMessages).toContain("Prior result");
     expect(executionMessages).not.toContain("Pending narration");
+  });
+
+  it("drops leading tool results when the bounded history cuts through a batch", async () => {
+    h.messages.length = 0;
+    h.messages.push(
+      {
+        id: "user-message",
+        turn_id: h.turn!.id,
+        role: "user",
+        content: "Continue with valid history",
+        tool_calls: null,
+        tool_call_id: null,
+        tool_name: null,
+        metadata: {},
+        context: null,
+      },
+      {
+        id: "orphaned-window-tool",
+        turn_id: "older-turn",
+        role: "tool",
+        content: "Result whose assistant call fell outside the window",
+        tool_calls: null,
+        tool_call_id: "older-call",
+        tool_name: "get_issue",
+        metadata: {},
+        context: null,
+      },
+    );
+
+    await executeNumoTurn({
+      turnId: h.turn!.id as string,
+      readClient: service,
+      aiRuntime: runtime,
+    });
+
+    const executionMessages = h.processChat.mock.calls[0][0] as Array<{ role: string }>;
+    expect(executionMessages.map((message) => message.role)).toEqual(["system", "user"]);
   });
 
   it("journals replayable activity but never persists a live-only tool secret", async () => {
