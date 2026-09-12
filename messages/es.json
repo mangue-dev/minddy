@@ -5875,6 +5875,7 @@
     "lastError_noModelForProvider": "Última ejecución omitida: elige un modelo de agente de código para el proveedor activo en los ajustes de la cuenta.",
     "lastError_managedServiceUnavailable": "Última ejecución omitida: configura en esta instancia un proveedor BYOK accesible desde el servidor.",
     "lastError_executionBackendUnavailable": "Última ejecución omitida: no se ha configurado ningún backend de ejecución en esta instancia.",
+    "lastError_providerEndpointUnavailableFromSandbox": "Última ejecución omitida: el endpoint de modelo configurado solo es accesible desde la aplicación de escritorio. Elige en los ajustes de la cuenta un proveedor accesible desde el entorno aislado del servidor.",
     "lastError_launchFailed": "No se ha podido iniciar la última ejecución.",
     "error_ownerOnly": "Sólo el dueño del proyecto puede programar una rutina; se ejecuta con su presupuesto de IA.",
     "error_noRepo": "Este proyecto no tiene repositorio vinculado, así que una rutina no tendría nada que clonar.",

@@ -135,6 +135,24 @@ describe("conversation action targets", () => {
     expect(h.access).toHaveBeenCalledWith("actor", "a");
     expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({ projectId: "a", userId: "actor" }));
   });
+  it("explains how to replace a retired desktop-only worker provider", async () => {
+    h.launch.mockResolvedValue({
+      ok: false,
+      error: "providerEndpointUnavailableFromSandbox",
+    });
+    expect(
+      await executeTool(
+        "launch_code_agent",
+        { project_id: "a", prompt: "Update the documentation" },
+        conversation,
+      ),
+    ).toMatchObject({
+      success: false,
+      result: {
+        error: expect.stringMatching(/server sandbox.*cannot switch providers or billing accounts/i),
+      },
+    });
+  });
   it("rechecks access before the next message's action", async () => {
     const args = { project_id: "a", page_id: "entry", operation: "value" };
     await executeTool("update_page_database", args, conversation);

@@ -5875,6 +5875,7 @@
     "lastError_noModelForProvider": "Última execução ignorada: escolha um modelo de agente de código para o provedor ativo nas configurações da conta.",
     "lastError_managedServiceUnavailable": "Última execução ignorada: configure nesta instância um provedor BYOK acessível pelo servidor.",
     "lastError_executionBackendUnavailable": "Última execução ignorada: nenhum back-end de execução está configurado nesta instância.",
+    "lastError_providerEndpointUnavailableFromSandbox": "Última execução ignorada: o endpoint de modelo configurado só pode ser acessado pelo aplicativo para desktop. Escolha nas configurações da conta um provedor acessível pela sandbox do servidor.",
     "lastError_launchFailed": "A última execução não pôde ser iniciada.",
     "error_ownerOnly": "Somente o proprietário do projeto pode agendar uma rotina; ela usa o orçamento de IA dessa pessoa.",
     "error_noRepo": "Este projeto não tem repositório vinculado, portanto, uma rotina não teria nada para clonar.",

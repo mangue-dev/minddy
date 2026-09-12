@@ -1007,6 +1007,8 @@ function routineErrorLabel(
       return t("lastError_managedServiceUnavailable" as "lastError_quota");
     case "executionBackendUnavailable":
       return t("lastError_executionBackendUnavailable" as "lastError_quota");
+    case "providerEndpointUnavailableFromSandbox":
+      return t("lastError_providerEndpointUnavailableFromSandbox" as "lastError_quota");
     default:
       return t("lastError_launchFailed" as "lastError_quota");
   }

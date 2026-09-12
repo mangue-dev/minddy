@@ -5875,6 +5875,7 @@
     "lastError_noModelForProvider": "Last run skipped: choose a code-worker model for the active provider in Account settings.",
     "lastError_managedServiceUnavailable": "Last run skipped: configure a server-reachable BYOK provider on this instance.",
     "lastError_executionBackendUnavailable": "Last run skipped: no execution backend is configured on this instance.",
+    "lastError_providerEndpointUnavailableFromSandbox": "Last run skipped: the configured model endpoint is desktop-only. Choose a provider reachable from the server sandbox in Account settings.",
     "lastError_launchFailed": "The last run could not be started.",
     "error_ownerOnly": "Only the project's owner can schedule a routine; it runs on their AI budget.",
     "error_noRepo": "This project has no linked repository, so a routine would have nothing to clone.",

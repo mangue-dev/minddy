@@ -59,6 +59,8 @@ function launchErrorCode(error: string): RoutineErrorCode {
       return "managedServiceUnavailable";
     case "executionBackendUnavailable":
       return "executionBackendUnavailable";
+    case "providerEndpointUnavailableFromSandbox":
+      return "providerEndpointUnavailableFromSandbox";
     case "noRepo":
     case "unsupportedProvider":
       return "noRepo";

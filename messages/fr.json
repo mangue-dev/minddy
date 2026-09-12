@@ -5875,6 +5875,7 @@
     "lastError_noModelForProvider": "Dernière exécution sautée : choisissez un modèle d’agent de code pour le provider actif dans les paramètres du compte.",
     "lastError_managedServiceUnavailable": "Dernière exécution sautée : configurez un fournisseur BYOK accessible depuis le serveur sur cette instance.",
     "lastError_executionBackendUnavailable": "Dernière exécution sautée : aucun moteur d'exécution n'est configuré sur cette instance.",
+    "lastError_providerEndpointUnavailableFromSandbox": "Dernière exécution sautée : l’endpoint de modèle configuré n’est accessible que depuis le desktop. Choisissez dans les paramètres du compte un provider accessible depuis la sandbox serveur.",
     "lastError_launchFailed": "La dernière exécution n'a pas pu démarrer.",
     "error_ownerOnly": "Seul le propriétaire du projet peut poser une routine; c'est son budget IA qui part.",
     "error_noRepo": "Ce projet n'a pas de dépôt lié : une routine n'aurait rien à cloner.",

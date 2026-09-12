@@ -43,6 +43,19 @@ describe("server-only Numo launch surfaces", () => {
     expect(source).toContain("allowLocal: false");
   });
 
+  it("explains retired desktop-only providers in every background launch surface", () => {
+    for (const file of [
+      "lib/server/assistant/execute-tool.ts",
+      "app/api/cron/routines/route.ts",
+      "lib/server/automations/report.ts",
+    ]) {
+      expect(read(file), file).toContain("providerEndpointUnavailableFromSandbox");
+    }
+    expect(read("components/routines/routine-detail.tsx")).toContain(
+      "lastError_providerEndpointUnavailableFromSandbox",
+    );
+  });
+
   it("cancels active local rows without erasing their historical identity", () => {
     const migration = read(
       "supabase/migrations/20270106710000_retire_desktop_local_execution.sql",

@@ -52,7 +52,7 @@ AGENT_RUNNER_URL=http://agent-runner:6464
 AGENT_CONTROL_ORIGIN=http://minddy:3000
 ```
 
-The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`. No Vercel account or desktop computer needs to remain online. Each server-side run gets its own restricted Docker sandbox. Sandboxes do not receive the Docker socket, the private Supabase network, or instance secrets. The trusted runner does have Docker socket authority, so protect the host and never publish port 6464 or the runner secret. `AGENT_EXECUTION_BACKEND=local` is for an explicitly desktop-local run; `vercel` is an operator-owned alternative, not an implicit self-host dependency.
+The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`. No Vercel account or desktop computer needs to remain online. Each server-side run gets its own restricted Docker sandbox. Sandboxes do not receive the Docker socket, the private Supabase network, or instance secrets. The trusted runner does have Docker socket authority, so protect the host and never publish port 6464 or the runner secret. Desktop-local code execution is retired: use `AGENT_EXECUTION_BACKEND=self-hosted` for the built-in runner or `vercel` for an operator-owned Vercel Sandbox project.
 
 ## Local installation
 

@@ -5875,6 +5875,7 @@
     "lastError_noModelForProvider": "Ultima esecuzione saltata: scegli un modello di agente di codice per il provider attivo nelle impostazioni dell’account.",
     "lastError_managedServiceUnavailable": "Ultima esecuzione saltata: configura su questa istanza un provider BYOK raggiungibile dal server.",
     "lastError_executionBackendUnavailable": "Ultima esecuzione saltata: nessun backend di esecuzione è configurato su questa istanza.",
+    "lastError_providerEndpointUnavailableFromSandbox": "Ultima esecuzione saltata: l’endpoint del modello configurato è raggiungibile solo dall’app desktop. Scegli nelle impostazioni dell’account un provider raggiungibile dalla sandbox server.",
     "lastError_launchFailed": "L'ultima corsa non è stata avviata.",
     "error_ownerOnly": "Solo il proprietario del progetto può programmare una routine; si esegue sul loro budget di AI.",
     "error_noRepo": "Questo progetto non ha un repository collegato, quindi la routine non avrebbe nulla da clonare.",

@@ -5875,6 +5875,7 @@
     "lastError_noModelForProvider": "Letzter Lauf übersprungen: Wählen Sie in den Kontoeinstellungen ein Code-Agent-Modell für den aktiven Anbieter.",
     "lastError_managedServiceUnavailable": "Letzte Ausführung übersprungen: Konfigurieren Sie auf dieser Instanz einen vom Server erreichbaren BYOK-Anbieter.",
     "lastError_executionBackendUnavailable": "Letzte Ausführung übersprungen: Auf dieser Instanz ist kein Ausführungs-Backend konfiguriert.",
+    "lastError_providerEndpointUnavailableFromSandbox": "Letzte Ausführung übersprungen: Der konfigurierte Modellendpunkt ist nur über die Desktop-App erreichbar. Wählen Sie in den Kontoeinstellungen einen Anbieter, den die Server-Sandbox erreichen kann.",
     "lastError_launchFailed": "Die letzte Ausführung konnte nicht gestartet werden.",
     "error_ownerOnly": "Nur der Eigentümer des Projekts kann eine Routine planen; sie wird seinem KI-Budget angerechnet.",
     "error_noRepo": "Dieses Projekt hat kein verknüpftes Repository, daher hätte eine Routine nichts zu klonen.",
