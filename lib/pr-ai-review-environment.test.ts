@@ -12,25 +12,23 @@ const dialog = source.slice(
   source.indexOf("{/* Review dialogue"),
 );
 
-describe("Numo pull-request review environment", () => {
-  it("only exposes the execution environment when launching a review", () => {
-    const environment = dialog.indexOf("<EnvironmentCombobox");
-
-    expect(environment).toBeGreaterThan(-1);
+describe("Numo pull-request review execution", () => {
+  it("does not expose an execution-environment choice", () => {
+    expect(dialog).not.toContain("<EnvironmentCombobox");
     expect(dialog).not.toContain("<ModelCombobox");
     expect(dialog).not.toContain("<ReasoningCombobox");
   });
 
-  it("offers local review only through the native bridge and isolates it", () => {
-    expect(dialog).toContain("localAvailable={localRepo.available}");
-    expect(dialog).toContain("worktreeAvailable={false}");
-    expect(source).toContain("localWorktree: aiReviewUsesLocal");
-    expect(source).toContain("localIssueContextConfirmed: localContextConfirmed");
+  it("never sends retired desktop-local launch fields", () => {
+    expect(source).not.toContain("localExec:");
+    expect(source).not.toContain("localWorktree:");
+    expect(source).not.toContain("localIssueContextConfirmed:");
+    expect(source).not.toContain("LocalIssueRunConfirmation");
   });
 
-  it("keeps review and correction actions available for local-only execution", () => {
+  it("gates review and correction actions on server execution", () => {
     expect(source).toContain(
-      "cloudExecutionConfigured || localRepo.available",
+      "const reviewExecutionAvailable = cloudExecutionConfigured;",
     );
     expect(source.match(/reviewUpToDate \|\| !reviewExecutionAvailable/g)).toHaveLength(3);
 

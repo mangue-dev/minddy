@@ -10,7 +10,6 @@ import {
   type ExpectedRepo,
   type LocalRepoState,
 } from "@/lib/desktop/local-repo";
-import type { LocalProject, LocalTurnProject } from "@/lib/desktop/local-turn";
 import {
   listLocalRepositorySkills,
   loadLocalRepositorySkill,
@@ -63,30 +62,6 @@ export function describeLocalRepo(
   const stored = readLocalRepos()[projectId];
   if (!stored) return { status: "none" };
   return stateFor(stored, expected);
-}
-
-/**
- * Ready folders among the projects known to the launcher. This revalidation is
- * important: an old attachment must not make the model believe that it
- * can open a folder that has been moved, unmounted or linked to another repository.
- *
- * A project WITHOUT a linked repository is validated too — as a plain git
- * checkout, remote optional: a local-only project (no forge attached) is exactly
- * the case the folder attachment exists for.
- */
-export function localProjectsFor(projects: readonly LocalTurnProject[]): LocalProject[] {
-  return projects.map((project) => {
-    const state = describeLocalRepo(
-      project.id,
-      project.repoFullName
-        ? { fullName: project.repoFullName, aliases: project.repoPreviousNames ?? [] }
-        : null,
-    );
-    return {
-      ...project,
-      localPath: state.status === "ready" ? state.path : null,
-    };
-  });
 }
 
 /**

@@ -44,6 +44,7 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     noModelForProvider: "aucun modèle d’agent de code n’est configuré pour ce fournisseur dans les paramètres du compte",
     modelAbovePlan: "le modèle d’agent de code du compte dépasse le plafond du plan",
     executionBackendUnavailable: "aucun moteur d'exécution n'est configuré sur l'instance",
+    providerEndpointUnavailableFromSandbox: "le fournisseur de modèle configuré n'est accessible que depuis l'ancien pont desktop ; il faut en choisir un accessible depuis la sandbox serveur dans les paramètres du compte",
     promptRequired: "l'étape n'avait pas de consigne à envoyer",
     issueNotFound: "le ticket n'existe plus",
     entitlement: "les automatisations ne sont pas incluses dans le plan du projet",
@@ -65,6 +66,7 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     noModelForProvider: "no code-worker model is configured for this provider in Account settings",
     modelAbovePlan: "the account code-worker model is above the plan's ceiling",
     executionBackendUnavailable: "no execution backend is configured on the instance",
+    providerEndpointUnavailableFromSandbox: "the configured model provider is reachable only through the retired desktop bridge and must be replaced in Account settings with one reachable from the server sandbox",
     promptRequired: "the step had no instruction to send",
     issueNotFound: "the issue no longer exists",
     entitlement: "automations are not included in the project's plan",
@@ -90,6 +92,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     modelAbovePlan: "das Code-Agent-Modell des Kontos über dem Tariflimit liegt",
     executionBackendUnavailable:
       "auf dieser Instanz keine Ausführungsumgebung konfiguriert ist",
+    providerEndpointUnavailableFromSandbox:
+      "der konfigurierte Modellanbieter nur über die eingestellte Desktop-Bridge erreichbar ist und in den Kontoeinstellungen durch einen aus der Server-Sandbox erreichbaren Anbieter ersetzt werden muss",
     promptRequired: "für den Schritt keine Anweisung vorlag",
     issueNotFound: "das Ticket nicht mehr existiert",
     entitlement: "Automatisierungen nicht im Projekttarif enthalten sind",
@@ -113,6 +117,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     modelAbovePlan: "o modelo de agente de código da conta ultrapassa o limite do plano",
     executionBackendUnavailable:
       "nenhum ambiente de execução está configurado na instância",
+    providerEndpointUnavailableFromSandbox:
+      "o provedor de modelo configurado só pode ser acessado pela ponte de desktop desativada e deve ser substituído nas configurações da conta por um provedor acessível pela sandbox do servidor",
     promptRequired: "a etapa não tinha uma instrução para enviar",
     issueNotFound: "a tarefa não existe mais",
     entitlement: "as automações não estão incluídas no plano do projeto",
@@ -137,6 +143,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     modelAbovePlan: "il modello di agente di codice dell’account supera il limite del piano",
     executionBackendUnavailable:
       "nell'istanza non è configurato alcun ambiente di esecuzione",
+    providerEndpointUnavailableFromSandbox:
+      "il provider di modelli configurato è raggiungibile solo tramite il bridge desktop dismesso e deve essere sostituito nelle impostazioni dell'account con uno raggiungibile dalla sandbox server",
     promptRequired: "il passaggio non conteneva istruzioni da inviare",
     issueNotFound: "il ticket non esiste più",
     entitlement: "le automazioni non sono incluse nel piano del progetto",
@@ -160,6 +168,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     modelAbovePlan: "el modelo de agente de código de la cuenta supera el límite del plan",
     executionBackendUnavailable:
       "no hay ningún entorno de ejecución configurado en la instancia",
+    providerEndpointUnavailableFromSandbox:
+      "el proveedor de modelos configurado solo es accesible mediante el puente de escritorio retirado y debe sustituirse en los ajustes de la cuenta por uno accesible desde el entorno aislado del servidor",
     promptRequired: "el paso no tenía ninguna instrucción que enviar",
     issueNotFound: "la incidencia ya no existe",
     entitlement:

@@ -111,6 +111,21 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
+  if (run.local_exec) {
+    return NextResponse.json(
+      {
+        error: "localExecutionRetired",
+        code: "localExecutionRetired",
+        transition: {
+          action: "start_server_conversation",
+          localFilesPreserved: true,
+          checkpointPortable: false,
+        },
+      },
+      { status: 409 },
+    );
+  }
+
   if (!agentRunCanResume(run)) {
     return NextResponse.json(
       { error: "Run is not resumable" },

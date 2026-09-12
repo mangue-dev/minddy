@@ -116,6 +116,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       resumable: agentRunCanResume({
         status: String(rest.status),
         checkpoint: failedWithCheckpoint.has(String(rest.id)) ? true : null,
+        local_exec: rest.local_exec === true,
       }),
     }),
   );
@@ -137,7 +138,8 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   executionBackendUnavailable: 503,
   workerConfigurationManagedInSettings: 400,
   noModelForProvider: 400,
-  localEndpointRequiresLocalRun: 409,
+  providerEndpointUnavailableFromSandbox: 409,
+  localExecutionRetired: 410,
   modelAbovePlan: 403,
 };
 
@@ -169,8 +171,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     intent?: AgentLaunchIntent;
     mentions?: unknown;
     attachments?: unknown;
-    /** The conversation starts on the user's MACHINE (MIN-359). A
-     * request, which `localExecRequested` validates on the server side. */
+    /** Legacy desktop-local fields are parsed only so stale clients receive
+     * the explicit retirement response instead of silently running elsewhere. */
     localExec?: unknown;
     localWorktree?: unknown;
     /** Explicit acknowledgement shown only by the trusted local UI. */

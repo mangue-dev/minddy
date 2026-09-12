@@ -41,8 +41,8 @@ Storage, and Realtime.
 | Scheduled work | Built-in scheduler in the reference Compose profiles, or an equivalent HTTP scheduler | Yes in the reference server installation |
 | Auth email | SMTP configured in Supabase/GoTrue | Recommended for a public service |
 | Application email | Resend, explicitly configured, or no provider; `console` is development-only | No |
-| AI | Per-user BYOK or local provider | No |
-| Code agent | Desktop-local runtime, built-in self-hosted Docker sandboxes, or Vercel Sandbox | Yes in the reference server installation |
+| AI | Per-user provider reachable from the server, or managed AI in the cloud edition | No |
+| Code agent | Built-in self-hosted Docker sandboxes or Vercel Sandbox | Yes in the reference server installation |
 | GitHub, GitLab, application email, Web Push, scheduled routines | Operator-owned accounts and explicit configuration | No |
 
 GitHub integration targets `github.com` and GitLab integration targets
@@ -126,9 +126,8 @@ AGENT_CONTROL_ORIGIN=http://minddy:3000
 
 The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`; the operator
 does not configure a separate execution service or keep a desktop app online.
-Starting Numo from the app therefore opens a server sandbox just like a routine.
-An explicit desktop-local run remains a separate opt-in for working directly in
-a folder attached to the desktop app.
+Starting Numo from either the web or desktop app therefore opens a server
+sandbox just like a routine.
 The runner has access to the Docker socket so it can create sandboxes. The
 sandbox containers do not receive that socket, the Supabase network, or instance
 secrets. They receive CPU, memory, process, capability, and filesystem limits.
@@ -136,8 +135,9 @@ Only the trusted runner container has host-level Docker authority, so protect
 the server and never expose port 6464.
 
 `AGENT_EXECUTION_BACKEND=vercel` remains available for deployments that
-deliberately use an operator-owned Vercel Sandbox project. The `local` backend
-continues to mean desktop-initiated runs only.
+deliberately use an operator-owned Vercel Sandbox project. Desktop-local code
+execution is retired; `AGENT_EXECUTION_BACKEND` accepts only `self-hosted` or
+`vercel`.
 
 For a public service, set `MINDDY_PUBLIC_APP_URL` to one absolute HTTPS origin with
 no path or trailing slash. It is used for invitation links, OAuth/MCP metadata,

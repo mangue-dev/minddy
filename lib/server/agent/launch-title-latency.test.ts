@@ -8,13 +8,13 @@ import { describe, expect, it } from "vitest";
  * This structure guard covers the orchestration order: tests of
  * launch mock `after()` for not starting a drain, and therefore cannot observe this temporal contract directly.
  */
-describe("lancement sans attendre le titre de session", () => {
+describe("launch without waiting for the session title", () => {
   const source = readFileSync(
     path.join(process.cwd(), "lib/server/agent/launch.ts"),
     "utf8",
   );
 
-  it("insère le run avec un titre provisoire puis persiste le titre en arrière-plan", () => {
+  it("inserts the run with a provisional title and persists the generated title later", () => {
     expect(source).toContain("const generatedTitle =");
     expect(source).toContain(
       "title: reviewPr ? prSessionTitle(reviewPr) : input.title?.trim() || null,",
@@ -24,12 +24,10 @@ describe("lancement sans attendre le titre de session", () => {
     expect(source).toContain('.is("title", null)');
   });
 
-  it("sort les écritures secondaires du chemin critique local", () => {
-    const localBookkeeping = source.slice(
-      source.indexOf("if (run.local_exec) {"),
-    );
-    expect(localBookkeeping).toContain("after(() => {");
-    expect(localBookkeeping).toContain("void recordLaunch().catch");
-    expect(source).toContain("if (!run.local_exec) kickAgentDrain(service)");
+  it("has no desktop-local bookkeeping or drain bypass", () => {
+    expect(source).not.toContain("if (run.local_exec) {");
+    expect(source).not.toContain("if (!run.local_exec)");
+    expect(source).toContain("await recordLaunch();");
+    expect(source).toContain("kickAgentDrain(service);");
   });
 });

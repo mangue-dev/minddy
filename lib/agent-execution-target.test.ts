@@ -10,18 +10,14 @@ const selfHosted = {
 
 describe("agent execution target", () => {
   it("routes interactive Numo and routine runs to the same self-hosted sandbox backend", () => {
-    const interactiveRun = { localExec: false, routineId: null };
-    const routineRun = { localExec: false, routineId: "routine-1" };
-
-    expect(resolveAgentExecutionTarget(interactiveRun, selfHosted)).toBe("self-hosted");
-    expect(resolveAgentExecutionTarget(routineRun, selfHosted)).toBe("self-hosted");
+    expect(resolveAgentExecutionTarget(selfHosted)).toBe("self-hosted");
   });
 
-  it("keeps an explicit desktop-local run on the desktop", () => {
-    expect(resolveAgentExecutionTarget({ localExec: true }, selfHosted)).toBe("desktop");
+  it("routes desktop-initiated workers through the configured server backend", () => {
+    expect(resolveAgentExecutionTarget(selfHosted)).not.toBe("desktop");
   });
 
   it("does not invent a server backend when none is configured", () => {
-    expect(resolveAgentExecutionTarget({ localExec: false }, {})).toBeNull();
+    expect(resolveAgentExecutionTarget({})).toBeNull();
   });
 });

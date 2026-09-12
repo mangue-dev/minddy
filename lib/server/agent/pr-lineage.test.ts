@@ -316,7 +316,7 @@ describe("an explicit PR keeps priority", () => {
 });
 
 describe("a pull-request review session", () => {
-  it("uses the account worker model and disables local execution", async () => {
+  it("rejects stale desktop-local review requests explicitly", async () => {
     const result = await launchAgentRun({
       pullRequestId: PR_ID,
       userId: USER_ID,
@@ -326,15 +326,23 @@ describe("a pull-request review session", () => {
       localIssueContextConfirmed: true,
     });
 
+    expect(result).toEqual({ ok: false, error: "localExecutionRetired" });
+    expect(h.created).toHaveLength(0);
+    expect(h.agentModelCalls).toHaveLength(0);
+  });
+
+  it("uses the account worker model in a server sandbox", async () => {
+    const result = await launchAgentRun({
+      pullRequestId: PR_ID,
+      userId: USER_ID,
+      triggeredBy: "button",
+    });
+
     expect(result.ok).toBe(true);
-    expect(h.created).toHaveLength(1);
     expect(h.created[0]).toMatchObject({
       pullRequestId: PR_ID,
       intent: "review",
       model: "model/agent",
-      localExec: false,
-      localWorktree: false,
-      localIssueContextConfirmed: true,
     });
     expect(h.agentModelCalls).toEqual([USER_ID]);
   });
@@ -354,8 +362,6 @@ describe("a pull-request review session", () => {
       pullRequestId: PR_ID,
       userId: USER_ID,
       triggeredBy: "button",
-      localExec: true,
-      localIssueContextConfirmed: true,
     });
 
     expect(result.ok).toBe(true);
@@ -364,5 +370,28 @@ describe("a pull-request review session", () => {
       model: "gpt-5.6-sol",
       keyMode: "byok",
     });
+  });
+
+  it("reports a desktop-only provider without changing provider or payer", async () => {
+    h.quotaMode = "byok";
+    h.byok = {
+      provider: "local_openai",
+      baseUrl: "http://127.0.0.1:1234/v1",
+      enabledSurfaces: ["agent"],
+      featureModels: {},
+    };
+
+    const result = await launchAgentRun({
+      pullRequestId: PR_ID,
+      userId: USER_ID,
+      triggeredBy: "button",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "providerEndpointUnavailableFromSandbox",
+    });
+    expect(h.created).toHaveLength(0);
+    expect(h.agentModelCalls).toHaveLength(0);
   });
 });

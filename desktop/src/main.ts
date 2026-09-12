@@ -33,7 +33,6 @@ import {
   desktopProtocolArguments,
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
-import { deviceIdForUserData } from "@/lib/desktop/device-id";
 import { windowCloseAction } from "@/lib/desktop/hide-window";
 import {
   linuxDesktopPaths,
@@ -61,7 +60,6 @@ import {
   nativeNotificationSettingsUrl,
   nativePushContent,
 } from "@/lib/desktop/native-push";
-import { quitDecision, quitPrompt } from "@/lib/desktop/quit-guard";
 import {
   desktopServerUnavailableHtml,
   isDesktopServerUnavailable,
@@ -84,13 +82,6 @@ import {
   setNativePushAllowed,
 } from "./push-installation-store";
 import { hideWindow } from "./hide-window";
-import {
-  prewarmLocalAgent,
-  runningTurns,
-  startLocalClaimLoop,
-  stopAllLocalTurns,
-  sweepOrphanTurns,
-} from "./launcher";
 import {
   attachLocalRepo,
   describeLocalRepo,
@@ -140,7 +131,6 @@ let pendingAuthLink: DesktopAuthLink | null = null;
 let pendingOpenPath: string | null = null;
 let mainWindow: BrowserWindow | null = null;
 const localNotifications = new DesktopLocalNotificationRegistry();
-let stopClaimingLocalRuns: (() => void) | null = null;
 /** Electron closes windows before `before-quit` during an updater relaunch. */
 let quittingForUpdate = false;
 /** Only one APNs registration at a time, shared between site mounts. */
@@ -341,7 +331,6 @@ function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH):
   customServerOrigin = next;
   origin = next ?? desktopOriginForChannel(channel);
   trace("server", { origin, custom: next !== null });
-  void prewarmLocalAgent(origin);
   applyAboutPanel();
   rebuildAppMenu();
   if (mainWindow) {
@@ -393,10 +382,6 @@ async function setChannel(next: DesktopChannel): Promise<void> {
   channel = next;
   origin = to;
   trace("setChannel", { channel: next, origin });
-  // The origin decides the harness: we preheat it from the rocker, far from the
-  // first local message. The promise is deliberately detached: a channel
-  // remains navigable even if its server is temporarily unavailable.
-  void prewarmLocalAgent(origin);
   // The two native surfaces which NAME the channel are redone: without that, the check mark
   // of the menu would remain on the one we just left and “About”
   // would announce the old origin until the next launch.
@@ -1461,33 +1446,12 @@ if (!app.requestSingleInstanceLock()) {
       });
     }
     rebuildAppMenu();
-    // Possible installation of opencode and harness cache begins
-    // while the window is open. No secrets or deposits are affected.
-    void prewarmLocalAgent(origin);
-    // The clone claims its towers itself. The page can thus be located on a
-    // phone or in another browser; it does not trigger any process.
-    stopClaimingLocalRuns = startLocalClaimLoop({
-      getOrigin: () => origin,
-      deviceId: deviceIdForUserData(app.getPath("userData")),
-    });
     // The window is passed to the updater so that its installation proposal
     // attaches to it, rather than floating alone in the middle of the screen.
     startAutoUpdates(() => mainWindow);
     startWindowsStoreUpdateChecks();
     flushOpenLink();
     flushAuthLink();
-
-    /**
- * ORPHANS FROM A PREVIOUS PLANT (MIN-293).
- *
- * `before-quit` covers the ⌘Q; it does not cover a clean kill of an app, nor a
- * restart of the Mac in the middle of a round. The opencode server survives
- * the death of the harness — 143 MB in memory, the port held, **and the following round
- * which fails on a refused `listen`**, in a place which in no way resembles
- * its cause. The child register is on the disk: we reread it here, once
- *, at startup.
- */
-    sweepOrphanTurns();
 
     // macOS: clicking the dock icon of an app without a visible window brings it back.
     app.on("activate", () => {
@@ -1504,45 +1468,8 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform !== "darwin") app.quit();
   });
 
-  /**
- * ⌘Q: here we close for good. Without that, the window's `close` handler
- * would hide the window instead of letting the app exit.
- *
- * ⚠ **AND SINCE MIN-293, IT ASKED A QUESTION.** This gesture only destroyed one
- * window — the shell is a view of an origin, leaving did not lose anything
- * that a reload would not return. As soon as a turn plays HERE, the same gesture becomes
- * **the main cause of loss of a turn**, and a loss which costs:
- * hours of work behind, a pull request in front.
- *
- * What we are NOT offering, and this is the heart of the decision: "leave in letting
- * spin”. A detached harness would keep a forge token
- * `contents: write` and a template key alive **without any interface for the
- * shutdown**, and a process repaired to `launchd` would lose its process
- * responsible TCC — the macOS authorization window would not open even more.
- * The turn dies with the app, and the box says where the session starts again.
- */
-  app.on("before-quit", (event) => {
-    const prompt = quittingForUpdate ? null : quitPrompt(runningTurns());
-    if (prompt) {
-      // ⚠ `showMessageBoxSync`, and this is the only synchronous call to this file.
-      // `before-quit` can only be canceled DURING its handler: a box
-      // asynchronous would return before the response, the app would have already exited,
-      // and the question would only have served to make a window blink.
-      const response = mainWindow
-        ? dialog.showMessageBoxSync(mainWindow, { type: "warning", ...prompt, buttons: [...prompt.buttons] })
-        : dialog.showMessageBoxSync({ type: "warning", ...prompt, buttons: [...prompt.buttons] });
-      if (quitDecision(response) === "stay") {
-        event.preventDefault();
-        trace("before-quit:stay", { running: runningTurns().length });
-        return;
-      }
-    }
-    // No more claims, then the towers, then the window: `stopLocalTurn` written
-    // the final word in everyone's diary, the only line that distinguishes
-    // “someone left” from “the harness crashed” in a report.
-    stopClaimingLocalRuns?.();
-    stopClaimingLocalRuns = null;
-    stopAllLocalTurns();
+  /** Close the shell and any desktop-managed self-hosted web process. */
+  app.on("before-quit", () => {
     stopLocalRuntime();
     const window = mainWindow;
     mainWindow = null;

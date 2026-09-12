@@ -1689,6 +1689,8 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   managedServiceUnavailable: 503,
   executionBackendUnavailable: 503,
   workerConfigurationManagedInSettings: 400,
+  providerEndpointUnavailableFromSandbox: 409,
+  localExecutionRetired: 410,
   modelAbovePlan: 403,
 };
 
@@ -1812,11 +1814,11 @@ export interface PrActionBody {
   reasoningLevel?: string;
   verdict?: string;
   relaunch?: boolean;
-  /** Requests a patch relaunch to play in the attached local repository. */
+  /** Legacy desktop-local flag retained so stale clients are rejected explicitly. */
   localExec?: boolean;
-  /** Request the Git checkout isolated from this local restart. */
+  /** Legacy desktop worktree flag; it cannot enable local execution. */
   localWorktree?: boolean;
-  /** Explicit acknowledgement of untrusted issue and PR context for local execution. */
+  /** Legacy local-context acknowledgement; it cannot enable local execution. */
   localIssueContextConfirmed?: boolean;
   /**
    * Post the VERDICT on the forge? Default `true` (the historic gesture).
@@ -2435,6 +2437,8 @@ export async function prAiReviewResponse(
     userId,
     triggeredBy: "button",
     intent: "review",
+    // Preserve legacy inputs through the shared admission boundary so old
+    // clients receive `localExecutionRetired` rather than a server fallback.
     localExec,
     localWorktree,
     localIssueContextConfirmed,
@@ -2459,6 +2463,8 @@ const PR_LAUNCH_ERROR_STATUS: Record<string, number> = {
   executionBackendUnavailable: 503,
   workerConfigurationManagedInSettings: 400,
   noModelForProvider: 400,
+  providerEndpointUnavailableFromSandbox: 409,
+  localExecutionRetired: 410,
   modelAbovePlan: 403,
 };
 

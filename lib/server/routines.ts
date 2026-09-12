@@ -77,6 +77,7 @@ export type RoutineErrorCode =
   | "modelAbovePlan"
   | "managedServiceUnavailable"
   | "executionBackendUnavailable"
+  | "providerEndpointUnavailableFromSandbox"
   | "launchFailed";
 
 export type RoutineErrorKey =

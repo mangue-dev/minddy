@@ -43,7 +43,6 @@ import {
 } from "./runs";
 import { requestedRunReservationUsd } from "./run-key";
 import { drainAgentRuns } from "./drain";
-import { localExecRequested } from "./local-exec";
 import { capability } from "@/lib/server/capabilities";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
@@ -79,8 +78,8 @@ export type LaunchError =
   | "executionBackendUnavailable"
   | "workerConfigurationManagedInSettings"
   | "noModelForProvider"
-  | "localEndpointRequiresLocalRun"
-  | "localIssueConfirmationRequired"
+  | "providerEndpointUnavailableFromSandbox"
+  | "localExecutionRetired"
   | "modelAbovePlan"
   | "promptRequired";
 
@@ -180,18 +179,11 @@ export interface LaunchAgentInput {
    * this case: a title written once is better than a title repaid every morning.
    */
   title?: string | null;
-  /**
-   * The conversation asks to run on the user's MACHINE (MIN-359).
-   *
-   * A REQUEST, coming from the body of a POST: `localExecRequested`
-   * ([local-exec.ts](local-exec.ts)) decides whether it survives, and `createRun`
-   * freezes on the line. There is no other input, and nothing toggles it
-   * then — same doctrine as the engine and the microVM (see `createRun`).
-   */
+  /** Retired desktop-local preference accepted only to reject stale clients explicitly. */
   localExec?: boolean;
-  /** Request an isolated local worktree, if the run is allowed locally. */
+  /** Retired desktop-local preference accepted only to reject stale clients explicitly. */
   localWorktree?: boolean;
-  /** Explicit acknowledgement of untrusted issue content for a local launch. */
+  /** Retired desktop-local acknowledgement accepted only for compatibility. */
   localIssueContextConfirmed?: boolean;
 }
 
@@ -323,6 +315,13 @@ export async function launchAgentRun(
   ) {
     return { ok: false, error: "workerConfigurationManagedInSettings" };
   }
+  if (
+    input.localExec === true ||
+    input.localWorktree === true ||
+    input.localIssueContextConfirmed === true
+  ) {
+    return { ok: false, error: "localExecutionRetired" };
+  }
   const service = getServiceClient();
   const reviewPr = input.pullRequestId
     ? await loadPrRunContext(input.pullRequestId)
@@ -426,16 +425,10 @@ export async function launchAgentRun(
   // which product surface initiated it.
   const byokPromise = getUserByok(input.userId, "agent");
 
-  // Read BEFORE the link gate: a local run is the only one allowed to launch
-  // without a linked repository (see below), so its authenticated destination
-  // request must be resolved first.
-  const localExec = localExecRequested(input);
   const link = await linkPromise;
-  // A LOCAL run can do without a linked repository: it plays on the folder
-  // attached to the machine, which carries no remote identity to honor. The
-  // cloud and the sandbox keep the hard requirement — without a forge there is
-  // nothing to clone, nothing to push, and no pull request to open.
-  if (!link && !localExec) return { ok: false, error: "noRepo" };
+  // Every worker runs in a server sandbox, which needs a linked repository to
+  // clone, push, and open a pull request.
+  if (!link) return { ok: false, error: "noRepo" };
   // The authoritative provider register (MIN-69): a known provider with the
   // write capacity (PR/MR) can carry the agent — github AND gitlab.
   if (
@@ -473,15 +466,15 @@ export async function launchAgentRun(
       quota,
     };
   }
-  if (!localExec && !capability("agentExecution").configured) {
+  if (!capability("agentExecution").configured) {
     return { ok: false, error: "executionBackendUnavailable" };
   }
   const byok = await byokPromise;
-  // Never create a cloud run that ends up choosing OpenRouter: the
-  // local provider is a valid configuration, but it has only existed since
-  // the desktop app proxy.
-  if (isLocalAgentProvider(byok?.provider) && !localExec) {
-    return { ok: false, error: "localEndpointRequiresLocalRun" };
+  // A desktop-only endpoint cannot be reached from the server sandbox. Keep
+  // the configured provider and payer intact and ask the user to replace the
+  // endpoint instead of silently switching to managed AI or another BYOK key.
+  if (isLocalAgentProvider(byok?.provider)) {
+    return { ok: false, error: "providerEndpointUnavailableFromSandbox" };
   }
 
   const titleSource = agentRunTitleSource({ issueTitle, prompt: input.prompt });
@@ -544,12 +537,10 @@ export async function launchAgentRun(
       issueId,
       pullRequestId: reviewPr?.id ?? null,
       prHeadSha: reviewPr?.headSha ?? null,
-      // `null` for a local run on a project with no linked repository: the
-      // lineage columns stay empty and the run plays on the machine's folder.
-      repoLinkId: link?.id ?? null,
-      connectionId: link?.connection_id ?? null,
-      repoProvider: link?.provider ?? null,
-      repoExternalId: link?.external_repo_id ?? null,
+      repoLinkId: link.id,
+      connectionId: link.connection_id,
+      repoProvider: link.provider,
+      repoExternalId: link.external_repo_id,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
       promptMentions: input.promptMentions ?? null,
@@ -576,16 +567,6 @@ export async function launchAgentRun(
       prNumber: inherited?.prNumber ?? null,
       prUrl: inherited?.prUrl ?? null,
       prState: inherited?.prState ?? null,
-      // The destination is frozen on the canonical run, independently of its anchor.
-      localExec,
-      localIssueContextConfirmed: input.localIssueContextConfirmed === true,
-      // PR reviews must start from their forge head without moving or editing the
-      // user's attached checkout. Other local runs keep the explicitly selected
-      // isolation mode. A repository link is required in both cases.
-      localWorktree:
-        localExec &&
-        !!link &&
-        (reviewPr !== null || input.localWorktree === true),
       managedBudget: managedBudgetReservation(quota, input.budgetUsd),
     });
   } catch (err) {
@@ -702,21 +683,7 @@ export async function launchAgentRun(
       }
     };
 
-    if (run.local_exec) {
-      // The renderer must receive the id as quickly as possible to claim the turn
-      // Electron. These two writings do not construct either the job or its lease: we
-      // keeps them in the duration of the route, but out of the way of the response.
-      after(() => {
-        void recordLaunch().catch((err) =>
-          console.error(
-            "[agent-launch] local launch bookkeeping failed:",
-            (err as Error).message,
-          ),
-        );
-      });
-    } else {
-      await recordLaunch();
-    }
+    await recordLaunch();
 
     // A MANUAL launch, regardless of its mode, means that someone takes the
     // ticket in hand: the chain that was waiting for him on reprieve is canceled (MIN-147).
@@ -728,9 +695,7 @@ export async function launchAgentRun(
     if (input.triggeredBy !== "automation") handOffToHuman(issueId);
   }
 
-  // The drain already excludes `local_exec`, but waking it up still launched a
-  // serverless invocation that could not take this run.
-  if (!run.local_exec) kickAgentDrain(service);
+  kickAgentDrain(service);
   return { ok: true, run };
 }
 

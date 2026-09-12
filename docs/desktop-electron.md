@@ -452,7 +452,23 @@ under a *seatbelt* macOS profile (`sandbox-exec`) restricting writing to
 worktree. This is what Chrome and serious code brokers do; the API is
 formally depreciated but very much alive.
 
-### 4.5 How a run arrives on your machine
+### 4.5 Retirement of desktop-local execution
+
+MIN-519 retired this execution path. New Numo workers now use the configured
+server sandbox on both web and desktop, and the composer no longer asks where
+to run them. The self-hosted server runner remains supported because it runs
+the same server worker contract; it is not a desktop-local launcher.
+
+The old `POST /api/desktop/local-turn` endpoint is now a compatibility
+tombstone. It returns an explicit transition response and cannot claim or
+start work. The desktop launcher and harness-download endpoints were removed,
+so stored local preferences cannot reactivate execution. Existing run folders
+are not deleted: the desktop bridge keeps a read-only, run-scoped diff reader
+for historical artifacts. A historical checkpoint is not presented as
+portable; continuing work means starting a new server-backed conversation.
+
+The remainder of this section documents the retired design for historical
+context only. None of its launch behavior remains active.
 
 > **The launcher has existed since MIN-293, and its form is not as described above
 > bottom.** This paragraph remains for its reasoning; what was built holds

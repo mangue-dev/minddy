@@ -292,13 +292,6 @@ export async function launchAgentRunApi(
     intent?: "implement" | "plan" | "verify" | "custom";
     mentions?: AssistantMention[];
     attachments?: ResourceInput[];
-    /** The conversation starts on the MACHINE (MIN-359): chosen first
-     * message, then frozen. The server revalidates (`localExecRequested`). */
-    localExec?: boolean;
-    /** Creates an isolated worktree on the local machine. */
-    localWorktree?: boolean;
-    /** The signed-in user accepted the untrusted issue context for this local run. */
-    localIssueContextConfirmed?: boolean;
   },
 ): Promise<{ run: AgentRunSummary }> {
   // The prompt is NEVER sent — only its presence and length.
@@ -308,9 +301,6 @@ export async function launchAgentRunApi(
     scope: "issue_context",
     has_prompt: !!body.prompt,
     prompt_length_bucket: lengthBucket(body.prompt),
-    // Where the tour leaves (MIN-359). The path NEVER leaves the post: it is
-    // a Boolean, like the rest of what we measure here.
-    local_exec: !!body.localExec,
   });
   return parseJson(
     await fetch(`/api/issues/${issueId}/agent`, {
@@ -348,11 +338,6 @@ export async function launchNotebookAgentApi(body: {
   mentions?: AssistantMention[];
   attachments?: ResourceInput[];
   baseBranch?: string;
-  /** The conversation starts on the MACHINE (MIN-359): chosen first
-   * message, then frozen. The server revalidates (`localExecRequested`). */
-  localExec?: boolean;
-  /** Creates an isolated worktree on the local machine. */
-  localWorktree?: boolean;
 }): Promise<{ run: AgentRunSummary }> {
   trackEvent("agent_launched", {
     has_branch: !!body.baseBranch,
@@ -360,7 +345,6 @@ export async function launchNotebookAgentApi(body: {
     scope: "general",
     has_prompt: !!body.prompt,
     prompt_length_bucket: lengthBucket(body.prompt),
-    local_exec: !!body.localExec,
   });
   return parseJson(
     await fetch(`/api/agent-runs`, {
@@ -903,12 +887,6 @@ export async function submitPullRequestReviewApi(
      * instruction for Numo, not a verdict (“correct comments” mode).
      * Default `true` — the historic gesture. */
     postVerdict?: boolean;
-    /** Request a launch on the local repository attached to this project. */
-    localExec?: boolean;
-    /** Isolate this local launch in its worktree. */
-    localWorktree?: boolean;
-    /** The signed-in user accepted untrusted issue and PR context for this local run. */
-    localIssueContextConfirmed?: boolean;
   },
 ): Promise<{
   ok: true;
@@ -942,11 +920,6 @@ export async function submitPullRequestReviewApi(
  */
 export async function requestPullRequestAiReviewApi(
   prId: string,
-  local: {
-    localExec?: boolean;
-    localWorktree?: boolean;
-    localIssueContextConfirmed?: boolean;
-  } = {},
 ): Promise<{ ok: true; review: PrReviewRunSummary }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
@@ -955,7 +928,6 @@ export async function requestPullRequestAiReviewApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "ai_review",
-        ...local,
       }),
     }),
   );

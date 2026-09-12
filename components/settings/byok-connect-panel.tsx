@@ -26,7 +26,6 @@ import {
   isLocalAgentProvider,
   MINDDY_QUOTA_PROVIDER_ID,
 } from "@/lib/agent-providers";
-import { isDesktop } from "@/lib/desktop/bridge";
 import { addAiKeyApi, deleteAiKeyApi } from "@/lib/agent-keys-api";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
@@ -64,7 +63,6 @@ export function ByokConnectPanel({
   const { keys, loading: keysLoading } = useAiKeysQuery();
   const activeKey = keys[0] ?? null;
   const activeProvider = activeKey?.provider ?? MINDDY_QUOTA_PROVIDER_ID;
-  const desktop = isDesktop();
 
   // Current selection = override in progress (before recording) otherwise the
   // persisted provider. Draft key/base URL for BYOK form.
@@ -89,11 +87,11 @@ export function ByokConnectPanel({
     if (provider.id === "local_openai") return t("aiProviderLocalOpenAi");
     return provider.label;
   };
-  // A local endpoint only makes sense in the app that can reach it. We leave
-  // nevertheless the active configuration visible in the browser to be able to
-  // remove without having to return to the Mac that created it.
+  // Desktop-only endpoints can no longer power code workers. Keep an existing
+  // configuration visible only so the user can remove or replace it; never
+  // offer one as a new provider choice.
   const providers = AGENT_PROVIDERS.filter(
-    (provider) => desktop || !isLocalAgentProvider(provider.id) || provider.id === activeKey?.provider,
+    (provider) => !isLocalAgentProvider(provider.id) || provider.id === activeKey?.provider,
   );
   const cloudProviders = providers.filter((provider) => !isLocalAgentProvider(provider.id));
   const localProviders = providers.filter((provider) => isLocalAgentProvider(provider.id));
@@ -212,10 +210,6 @@ export function ByokConnectPanel({
         </SelectContent>
       </Select>
 
-      {!desktop && !isLocalAgentProvider(activeProvider) ? (
-        <p className="text-xs text-muted-foreground">{t("aiProviderLocalDesktopHint")}</p>
-      ) : null}
-
       {selected === MINDDY_QUOTA_PROVIDER_ID ? (
         // ── Minddy quota: platform mode, no key ──────────────────────
         <p className="text-xs text-muted-foreground">{t("aiProviderMinddyHint")}</p>
@@ -249,7 +243,11 @@ export function ByokConnectPanel({
           )}
           {/* MIN-223: said here because it cannot be corrected elsewhere — minddy's key
  is capped by run on the supplier side, this one cannot be capped: it is not on our account. */}
-          <p className="text-xs text-muted-foreground">{t("aiKeyVmNote")}</p>
+          <p className="text-xs text-muted-foreground">
+            {isLocalAgentProvider(activeKey.provider)
+              ? t("aiLocalEndpointRetiredHint")
+              : t("aiKeyVmNote")}
+          </p>
         </div>
       ) : selectedDef ? (
         // ── BYOK to configure: key (+ URL base for the generic) ──────────

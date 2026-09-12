@@ -37,7 +37,8 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   executionBackendUnavailable: 503,
   workerConfigurationManagedInSettings: 400,
   noModelForProvider: 400,
-  localEndpointRequiresLocalRun: 409,
+  providerEndpointUnavailableFromSandbox: 409,
+  localExecutionRetired: 410,
   modelAbovePlan: 403,
   promptRequired: 400,
 };

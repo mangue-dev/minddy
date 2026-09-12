@@ -12,6 +12,16 @@ describe("agent run resumability", () => {
     expect(agentRunCanResume({ status: "failed", checkpoint: null })).toBe(false);
   });
 
+  it("never treats a historical desktop-local run as portable", () => {
+    expect(
+      agentRunCanResume({
+        status: "completed",
+        checkpoint: { messages: [] },
+        local_exec: true,
+      }),
+    ).toBe(false);
+  });
+
   it("uses the private server verdict for failed run summaries", () => {
     expect(isAgentRunResumable("failed", true)).toBe(true);
     expect(isAgentRunResumable("failed", false)).toBe(false);

@@ -4,7 +4,6 @@ import {
   CONTROL_PLANE_MAX_BODY_BYTES,
   handleControlPlaneRequest,
 } from "@/lib/server/agent/control-plane";
-import { admitLocalCaller, resolveLocalExecSecret } from "@/lib/server/agent/local-exec-token";
 import { admitServerExecCaller, resolveServerExecSecret } from "@/lib/server/agent/server-exec-token";
 import {
   AGENT_VM_PATH_PREFIX,
@@ -17,7 +16,7 @@ import {
  * which a loop which executes a turn touches the base, the ledger, the tickets
  * and the notebook.
  *
- * TWO INTAKE LANES, AND SINGLE DOOR (MIN-355). They do not prove the
+ * TWO INTAKE LANES, AND SINGLE DOOR. They do not prove the
  * same thing in the same way, and everything else — the 413, the body scan, the
  * derivation of the surface, the call to the module — is common to them and is not written
  * only once (`serveControlPlane`).
@@ -54,30 +53,12 @@ import {
  * replay therefore supposes having intercepted it on this path, and would only be worth
  * the time that remains — to act on the run that it already designates, and no other.
  *
- * ── PATH 2: THE USER'S MACHINE, WHICH CARRYING A TOKEN ────────────────
+ * ── PATH 2: THE SELF-HOSTED SERVER RUNNER ────────────────────────────
  *
- * On a Mac, there is no firewall for signing. `defineSandboxProxy` accepts
- * a SECOND ARGUMENT, called when the `vercel-forwarded-*` headers are missing —
- * with the ORIGINAL query, unconsumed body (checked in
- * `@vercel/sandbox/dist/proxy.js`). The local channel is therefore a `catch` on the
- * existing gate: neither twin route, nor fork, nor second copy of 413.
- *
- * It is guarded by `admitLocalCaller` — an HS256 token `{rid, gen, exp}` that
- * WE signed ([local-exec-token.ts](../../../../lib/server/agent/local-exec-token.ts)).
- * What this token opens is deliberately narrower than what the OIDC opens: it
- * lives on a disk that the model can read, and `control-plane.ts` reduces the
- * power rather than pretending to protect it.
- *
- * WHAT LANDS HERE WITHOUT BEING LOCAL, and why it doesn't make a hole: a
- * well forwarded request whose OIDC is DEFUSED also goes through this second
- * argument. She doesn't have a token of ours — so she goes back to 403, as before.
- * The opposite (a valid local token accompanied by bogus forwarded headers) does not win
- * nothing: the token holder already chooses the surface he is calling.
- *
- * A request without a valid OIDC AND without a token → 403. A sandbox from another
- * tenant, or which is not that of a run → 403 also: it is not a
- * Caller's mistake, he's someone who has no business here. And one
- * deployment which neither knows who it serves nor signs → 503, never a privilege.
+ * `defineSandboxProxy` invokes its second handler when Vercel forwarding
+ * headers are absent. Only the deployment's self-hosted runner token is
+ * accepted there. Desktop-local tokens were retired by MIN-519 and can no
+ * longer enter the control plane.
  */
 
 export const runtime = "nodejs";
@@ -96,7 +77,7 @@ export const maxDuration = 60;
  */
 async function serveControlPlane(
   request: Request,
-  caller: { runId: string; sandboxName?: string; local?: { gen: number }; server?: true },
+  caller: { runId: string; sandboxName?: string; server?: true },
 ): Promise<Response> {
   // The path is the one the caller requested — on channel 1, the proxy
   // rebuilt from `vercel-forwarded-*` headers; on track 2, it is
@@ -132,7 +113,6 @@ async function serveControlPlane(
     surface,
     body,
     ...(caller.sandboxName ? { sandboxName: caller.sandboxName } : {}),
-    ...(caller.local ? { local: caller.local } : {}),
     ...(caller.server ? { server: true as const } : {}),
   });
   return Response.json(result.body, { status: result.status });
@@ -157,11 +137,7 @@ const handler = defineSandboxProxy(
       sandboxName: meta.sandboxName,
     });
   },
-  /**
-   * THE LOCAL WAY (MIN-355) — called with the ORIGINAL request and its body
-   * intact when nothing has forwarded it. It is the only place from which a tour which does not
-   * He doesn't go to Vercel's house to speak, and he only enters with a token of ours.
-   */
+  /** Self-hosted server runner admission; desktop-local tokens are rejected. */
   async (request) => {
     const serverAdmission = admitServerExecCaller(
       request.headers.get("authorization"),
@@ -173,20 +149,10 @@ const handler = defineSandboxProxy(
         server: true,
       });
     }
-    const admission = admitLocalCaller(
-      request.headers.get("authorization"),
-      resolveLocalExecSecret(),
+    return Response.json(
+      { error: serverAdmission.error },
+      { status: serverAdmission.status },
     );
-    if (!admission.ok) {
-      if (admission.status === 503) {
-        console.error("[agent-vm] SUPABASE_SERVICE_ROLE_KEY manquante — voie locale fermée");
-      }
-      return Response.json({ error: admission.error }, { status: admission.status });
-    }
-    return await serveControlPlane(request, {
-      runId: admission.runId,
-      local: { gen: admission.gen },
-    });
   },
 );
 

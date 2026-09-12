@@ -301,9 +301,11 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
     case "quotaExceeded":
       return "Monthly code-agent usage limit reached. Add your own OpenRouter key (BYOK) in Account settings for unlimited usage.";
     case "managedServiceUnavailable":
-      return "Managed AI is disabled on this instance. Configure BYOK or a local endpoint before launching the code agent.";
+      return "Managed AI is disabled on this instance. Configure a server-reachable BYOK provider before launching the code agent.";
     case "executionBackendUnavailable":
-      return "No execution backend is configured on this instance. Use local execution or explicitly enable Vercel Sandbox.";
+      return "No execution backend is configured on this instance. Ask the administrator to configure a server sandbox.";
+    case "providerEndpointUnavailableFromSandbox":
+      return "The configured model endpoint is reachable only through the retired desktop bridge. Ask the user to choose a provider reachable from the server sandbox in Account settings; Numo cannot switch providers or billing accounts.";
     case "noModelForProvider":
       return "No code-worker model is configured for the active provider. Ask the user to choose one in Account settings; Numo cannot substitute or change it.";
     case "workerConfigurationManagedInSettings":

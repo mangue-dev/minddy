@@ -38,14 +38,17 @@ describe("Numo product knowledge", () => {
     expect(article?.content).toContain("pnpm self-host:restore");
   });
 
-  it("explains where repository skills come from in cloud and local environments", () => {
+  it("explains where server-sandbox repository skills come from", () => {
     const article = getKnowledgeArticle("D'où viennent les skills de Numo ?");
 
     expect(article?.id).toBe("repository-skills");
     expect(getKnowledgeTopicList()).toContain("topic: `repository-skills`");
     expect(article?.content).toContain(".agents/skills");
     expect(article?.content).toContain("GitHub or GitLab");
-    expect(article?.content).toContain("checkout attached to that project");
+    expect(article?.content).toContain("server sandbox");
+    expect(article?.content).toContain(
+      "Files that exist only in a desktop checkout are not available",
+    );
     expect(article?.content).toContain("apply only to that user turn");
   });
 });

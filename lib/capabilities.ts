@@ -39,9 +39,9 @@ export type CapabilityEnvironment = Record<string, string | undefined>;
 export type AgentExecutionBackend = "self-hosted" | "vercel" | null;
 
 /**
- * The server sandbox selected for every non-desktop agent run. Interactive
- * Numo sessions, routines, automations, and reviews deliberately share this
- * decision instead of selecting execution infrastructure per feature.
+ * The server sandbox selected for every agent run. Interactive Numo sessions,
+ * routines, automations, reviews, web clients, and desktop clients deliberately
+ * share this deployment-level decision.
  */
 export function resolveAgentExecutionBackend(
   env: CapabilityEnvironment,
@@ -186,7 +186,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
           requirement: "replaceable",
           state: "disabled",
           diagnostic:
-            "Vercel Sandbox is disabled. Set AGENT_EXECUTION_BACKEND=vercel or use the local agent runtime.",
+            "Vercel Sandbox is disabled. Set AGENT_EXECUTION_BACKEND=vercel or configure the self-hosted server runner.",
         })
       : sandboxKeys.length === 0
         ? status({
@@ -230,7 +230,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
           id: "agentExecution",
           requirement: "replaceable",
           state: "disabled",
-          diagnostic: "Server-side agent execution is disabled; desktop-local runs remain available.",
+          diagnostic: "Server-side agent execution is disabled; configure AGENT_EXECUTION_BACKEND and its server sandbox.",
         });
 
   const domainMissing = missing(env, ["VERCEL_TOKEN", "VERCEL_PROJECT_ID"]);
