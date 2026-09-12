@@ -28,8 +28,9 @@ const AGENT_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
   executionBackendUnavailable: "errorExecutionBackendUnavailable",
   noModelForProvider: "errorNoModelForProvider",
   workerConfigurationManagedInSettings: "errorWorkerConfigurationManagedInSettings",
-  localEndpointRequiresLocalRun: "errorLocalEndpointRequiresLocalRun",
-  localIssueConfirmationRequired: "errorLocalIssueConfirmationRequired",
+  providerEndpointUnavailableFromSandbox:
+    "errorProviderEndpointUnavailableFromSandbox",
+  localExecutionRetired: "errorLocalExecutionRetired",
   supersededRun: "errorSupersededRun",
   prMerged: "errorPrMerged",
   promptRequired: "errorPromptRequired",

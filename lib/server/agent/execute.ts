@@ -122,15 +122,6 @@ function repoTargetMatchesRun(run: AgentRun, target: RepoCloneTarget): boolean {
   );
 }
 
-function runWasLaunchedWithoutRepository(run: AgentRun): boolean {
-  return (
-    run.repo_link_id === null &&
-    run.connection_id === null &&
-    run.repo_provider === null &&
-    run.repo_external_id === null
-  );
-}
-
 /** The tightest of the provided ceilings (omitted values impose no limit). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
   const defined = values.filter(
@@ -506,25 +497,7 @@ export function commitMessageFromReply(
 
 export async function executeAgentRun(
   run: AgentRun,
-  opts: {
-    deadlineMs: number;
-    /**
-     * THE TURN IS PREPARED, NOT STARTED (MIN-293) — called when `run.local_exec`,
-     * just before the function returns `"detached"`.
-     *
-     * A callback rather than an expansion of `ExecuteOutcome`: the drain is the
-     * other caller, it does not pass it, and it has nothing to reread. It never
-     * drains a local run either (see `claimableRuns`, drain.ts) — so this callback
-     * has only one caller, the trigger route.
-     *
-     * `layout` and `bootstrapMs` are omitted: they belong to the machine
-     * (see [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
-     */
-    onLocalAssignment?: (
-      job: Omit<VmJob, "layout" | "bootstrapMs">,
-      meta: { repoFullName: string | null },
-    ) => void;
-  },
+  _opts: { deadlineMs: number },
 ): Promise<ExecuteOutcome> {
   // A claim is only a scheduling lock. Membership and repository attachment
   // may have changed since it won, so reject the run before emitting an event,
@@ -533,7 +506,6 @@ export async function executeAgentRun(
     await stampRun(run.id, {
       status: "canceled",
       error_message: "Run authority was revoked before execution",
-      ...(run.local_exec ? { local_exec_gen: run.local_exec_gen + 1 } : {}),
     });
     return "failed";
   }
@@ -608,13 +580,7 @@ export async function executeAgentRun(
    * nothing. See `finally`.
    */
   let vmLoopLaunched = false;
-  /** A local turn never starts a microVM. Computed before the first event so its
-   *  write can overlap all job preparation. */
-  const localTurn = run.local_exec === true;
-  const executionTarget = resolveAgentExecutionTarget(
-    { localExec: localTurn },
-    process.env,
-  );
+  const executionTarget = resolveAgentExecutionTarget(process.env);
   const selfHostedSandbox = executionTarget === "self-hosted";
 
   /**
@@ -658,10 +624,8 @@ export async function executeAgentRun(
       status: "running",
       continuation: run.continuations,
     });
-    // Cloud must show the sandbox opening before waking it. Locally, the UI already
-    // knows the status from the claim: let this write happen during context reads,
-    // then await it before returning.
-    if (!localTurn) await runningEvent;
+    // Show the sandbox opening before waking it.
+    await runningEvent;
 
     if (!run.created_by) throw new Error("Run has no owner");
     if (!run.model) throw new Error("Run has no model");
@@ -688,15 +652,8 @@ export async function executeAgentRun(
       return "interrupted";
     }
 
-    // These reads are independent. Serializing them delayed the local job before
-    // the Mac could even start opencode, although the first token depends only on
-    // their final result. Keep target resolution first so its error and security
-    // boundary remain unchanged.
-    //
-    // A run with NO repo link (local only, MIN-local-norepo) resolves to `null`
-    // instead of throwing: the turn plays on the machine's attached folder and
-    // needs no forge identity. A CLOUD run without a link still dies below —
-    // there is nothing to clone.
+    // These reads are independent. Keep target resolution first so its error and
+    // security boundary remain unchanged.
     const targetPromise = run.repo_link_id
       ? resolveRepoCloneTarget(run.project_id)
       : Promise.resolve(null);
@@ -718,41 +675,29 @@ export async function executeAgentRun(
       spentFromLedger(run.run_id ?? run.id),
     ]);
     // A BYOK run is fixed to its own payer. If the configuration disappeared, or a
-    // local endpoint was requested from the cloud, preparation fails explicitly:
+    // desktop-only endpoint was requested from the server, preparation fails explicitly:
     // it must never fall back to the platform key.
     const endpointPromise = resolveAgentApiKeyForRun(run.created_by, workerSurface, {
-      allowLocal: localTurn,
+      allowLocal: false,
       keyMode: run.key_mode,
       provider: run.worker_model_provider,
     });
 
     // Clone target (fresh token for this chunk) + the provider's PR/MR client.
-    // `null` target = no linked repository: only a local turn can be here, and
-    // everything forge-shaped below degrades to a no-repo session.
     const target = await targetPromise;
-    if (
-      target
-        ? !repoTargetMatchesRun(run, target)
-        : !runWasLaunchedWithoutRepository(run)
-    ) {
+    if (!target || !repoTargetMatchesRun(run, target)) {
       throw new Error(
         "Run repository binding changed during execution preparation",
       );
     }
-    if (!target && !localTurn)
-      throw new Error("No repository linked to this project");
-    if (target) {
-      secrets.addAuthUrl(target.authUrl);
-      secrets.add(target.token);
-    }
-    const forge = target ? forgeFor(target.provider) : null;
+    secrets.addAuthUrl(target.authUrl);
+    secrets.add(target.token);
+    const forge = forgeFor(target.provider);
     // This identity may need the forge on the process's first turn. It depends on
     // no other context, so starting it here overlaps quota, preferences, issue,
     // and prompt construction. Without a repository there is nothing to resolve:
     // the default identity travels, and current-checkout mode commits nothing.
-    const committerPromise = target
-      ? resolveCommitterIdentity(target)
-      : Promise.resolve(defaultCommitterIdentity());
+    const committerPromise = resolveCommitterIdentity(target);
 
     // Run anchor, with THREE values: minddy issue, NOTEBOOK (MIN-84, the launcher's
     // note is the instruction), or PULL REQUEST (MIN-168 — review context on
@@ -816,11 +761,9 @@ export async function executeAgentRun(
     const { locale: commentLocale, numoDefaultStatus, branchPrefix } = prefs;
     // Review session: the branches are those of the PR — its base is the diff
     // comparison point, and its head is what we review. Otherwise, use the base
-    // selected at launch and the run's working branch. Without a linked
-    // repository there is no default branch to fall back to: `""` means "no
-    // base" for the only consumer that reads it on a local turn.
+    // selected at launch and the run's working branch.
     const baseBranch =
-      (prRun?.baseBranch || run.base_branch) ?? target?.defaultBranch ?? "";
+      (prRun?.baseBranch || run.base_branch) ?? target.defaultBranch;
     const workBranch =
       run.branch_name ??
       generatedAgentBranchName({
@@ -903,10 +846,7 @@ export async function executeAgentRun(
      */
     let vmKeyHash: string | null = null;
     let vmKey = selfHostedSandbox ? AGENT_LLM_PLACEHOLDER_KEY : apiKey;
-    // Locally, the key must never enter the job: the proxy requests it once from
-    // `/llm-key`, which mints it and persists its hash. Minting it here as well
-    // would create and revoke a key before the first token.
-    if (keyMode === "platform" && !localTurn) {
+    if (keyMode === "platform") {
       if (!selfHostedSandbox) {
         const minted = await mintRunKey({
           runId: run.id,
@@ -935,40 +875,10 @@ export async function executeAgentRun(
       }
     }
 
-    /**
-     * ─────────────────────────────────────────────────────────────────────────
-     * DOES THE TURN RUN ON A MACHINE? (MIN-293)
-     *
-     * From here until launch, the function does exactly the same work in both cases
-     * — it is the same turn, with the same context, model, and cap. **Only three
-     * things disappear, each because it requires a DISK the server does not have:**
-     *
-     * 1. **the microVM** — none is woken, so nothing is cloned, no network policy
-     *    is applied, and `billSandboxCompute` bills nothing (its existing
-     *    `!sandbox` guard is sufficient);
-     * 2. **the diff baseline** (`revParseHead`) — this is the HEAD of a machine the
-     *    function has never seen. The job starts with `""`, and **the harness
-     *    resolves it itself**: `job.filesFromSha || current?.parent`
-     *    ([supervisor.ts](vm/supervisor.ts)), written for this exact case in MIN-358;
-     * 3. **reading `AGENTS.md`** — the dedicated message injected into the model
-     *    cannot be built here. This is NOT a loss of context:
-     *    `instructions.paths` is a constant (`REPO_INSTRUCTION_FILES`), is passed
-     *    as-is, and opencode loads these files **from disk** through its own
-     *    `instructions` key ([opencode-config.ts](vm/opencode-config.ts)).
-     *    The model still reads them; only the minddy wrapper is missing, and the
-     *    byte count remains zero.
-     *
-     * Background jobs are created by the local supervisor. This function does not
-     * start a second registry for a local assignment.
-     *
-     * ⚠ **The function STARTS nothing in this case**: it prepares and returns the
-     * assignment through `onLocalAssignment`. Presence, claiming, and routing
-     * belong to MIN-294; here, the only caller is the development trigger route.
-     */
-    // Sandbox: wake the microVM (filesystem restored from the persistent snapshot
-    // → fast continuation); otherwise `onCreate` clones the working branch.
+    // Wake the server sandbox (filesystem restored from the persistent snapshot
+    // for a fast continuation); otherwise `onCreate` clones the working branch.
     // Deterministic name → the same microVM/snapshot from one turn to the next.
-    let sandboxRepoUrl = localTurn ? vmTarget?.authUrl : vmTarget?.remoteUrl;
+    let sandboxRepoUrl = vmTarget?.remoteUrl;
     const configureSandboxRepo = async (fresh: Sandbox): Promise<string> => {
       if (!vmTarget) throw new Error("No repository linked to this project");
       if (fresh instanceof SelfHostedSandbox) {
@@ -980,9 +890,7 @@ export async function executeAgentRun(
       }
       return vmTarget.remoteUrl;
     };
-    const sandboxResult = localTurn
-      ? { sandbox: null, created: false, billing: undefined }
-      : await getOrCreateAgentSandbox({
+    const sandboxResult = await getOrCreateAgentSandbox({
           name: agentSandboxName(run.id),
           preferences: resolveAgentExecutionBackend(process.env) === "vercel"
             ? await getUserSandboxPreferences(run.created_by)
@@ -1041,12 +949,12 @@ export async function executeAgentRun(
               workBranch,
             });
           },
-        });
+      });
     const { sandbox: sb, created: sandboxCreated } = sandboxResult;
-    if (!localTurn && !sandboxCreated && sb) {
+    if (!sandboxCreated && sb) {
       sandboxRepoUrl = await configureSandboxRepo(sb);
     }
-    if (!localTurn && sb && prRun && sandboxRepoUrl) {
+    if (sb && prRun && sandboxRepoUrl) {
       await anchorPullRequestBase(sandboxHost(sb, cloudLayout()), {
         authUrl: sandboxRepoUrl,
         baseSha: await prBaseShaPromise,
@@ -1067,17 +975,7 @@ export async function executeAgentRun(
       const recorded = await stampRun(run.id, { sandbox_billing: sandboxResult.billing });
       if (!recorded) throw new Error("Could not record sandbox allocation");
     }
-    /**
-     * Hands on the repository, through RPC (MIN-224). In the old form this was the
-     * only path; in the new form, the function keeps only bootstrap (reading
-     * `AGENTS.md`, writing the bundle), and the loop in the microVM performs the
-     * same operations on the local disk.
-     *
-     * `null` ON A LOCAL TURN (MIN-293): the repository is on a disk the function
-     * cannot reach. Keep the three callers separate rather than using a fake host
-     * — a host returning empty responses would turn “I cannot read” into “there is
-     * nothing to read”, which is exactly the distinction that matters for `AGENTS.md`.
-     */
+    /** Repository access through the allocated server sandbox. */
     const host = sb ? sandboxHost(sb, cloudLayout()) : null;
 
     // Persist the Sandbox identity and base BEFORE the loop (resume after a crash).
@@ -1090,10 +988,7 @@ export async function executeAgentRun(
     // is deterministic, so a later chunk can recover it without rereading it from
     // the database.
     await stampRun(run.id, {
-      // A local turn has no microVM to name, and writing one would be worse than
-      // useless: `handleControlPlaneRequest` compares `sandbox_id` with the
-      // caller's signed name, and the watchdog queries the platform by that name.
-      // An invented value would make both of them lie.
+      // Record an allocated sandbox only; a failed allocation has no identity.
       ...(sandbox
         ? { sandbox_id: sandboxName(sandbox), sandbox_stopped_at: null }
         : {}),
@@ -1127,10 +1022,7 @@ export async function executeAgentRun(
     // diff — the last emitted SHA (persisted in the checkpoint and surviving WIP
     // chunks), or this baseline on the run's first chunk (“nothing changed yet”).
     //
-    // ⚠ ON A LOCAL TURN (MIN-293), this is the HEAD of a machine the function has
-    // never seen: the job starts with `""`, and the harness resolves it itself
-    // (`job.filesFromSha || current?.parent`, supervisor.ts, written for this exact
-    // case in MIN-358).
+    // If sandbox allocation failed, the empty baseline is used only by the error path.
     const baselineHead = host ? await revParseHead(host) : "";
     const filesFromSha = run.checkpoint?.lastFilesSha ?? baselineHead;
 
@@ -1202,9 +1094,7 @@ export async function executeAgentRun(
 
     const journalPointer = run.checkpoint?.opencode;
     const restoredJournal = journalPointer?.sessionId
-      ? localTurn
-        ? []
-        : await loadRunJournal(run.id, journalPointer.sessionId)
+      ? await loadRunJournal(run.id, journalPointer.sessionId)
       : null;
     const canResumeOpencode = restoredJournal !== null;
     const priorMemoryUnavailable =
@@ -1366,10 +1256,7 @@ export async function executeAgentRun(
       // `prRun`, not `anchor`: the CLONE decides, and `prRun` makes us clone the
       // head (see `onCreate`).
       //
-      // `null` ON A LOCAL TURN: the disk is elsewhere. The model still reads these
-      // files — opencode loads them through its own `instructions` key, which
-      // receives `instructions.paths` just below — so only the minddy wrapper is
-      // missing, not the content.
+      // A missing sandbox leaves repository instructions unavailable on the error path.
       const repoInstructions = host
         ? await readRepoInstructions(host, prRun ? "pr" : anchor)
         : null;
@@ -1420,42 +1307,9 @@ export async function executeAgentRun(
      * On a continued turn, bootstrap wrote nothing — history lives in the opencode
      * journal — and the prompt comes from steering.
      */
-    /**
-     * WHICH REPOSITORY THIS TURN WRITES TO (MIN-358). A constant here, and a fact:
-     * this function created the microVM and cloned into it, so it can produce only
-     * a clone. The `current` mode belongs to the desktop launcher (MIN-293), which
-     * works in a repository that existed before it.
-     *
-     * Name it rather than writing it twice: the job carries it, and the anchor served
-     * to the model depends on it — stating one without the other would produce a
-     * turn that writes one way while believing it is in the other.
-     */
+    /** The executor always writes to the clone owned by the server sandbox. */
     const repoMode: VmJob["repoMode"] = "clone";
-    /**
-     * ⚠ YET THE ANCHOR IS NOT READ FROM `repoMode` (MIN-364).
-     *
-     * `repoMode` is a field the MACHINE replaces — `assignmentToJob` sets it to
-     * `"current"` ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)). The
-     * `"clone"` above is therefore only a placeholder on a local turn; nobody uses
-     * it. The anchor is composed HERE and passed through unchanged: reading it from
-     * this placeholder gave the local turn **the cloud's git block** — “the harness
-     * commits and pushes whatever you changed at the end of each turn”, even though
-     * the local harness commits nothing (D2bis-B) and the guard refused to let the
-     * model commit. This is the third version of the three texts in §1 of the
-     * 2026-08-15 audit, and the most inaccurate of the three.
-     *
-     * The fact to tell the model is “this checkout existed before you”, and
-     * `run.local_exec` is what knows that on the server.
-     */
-    // The local worktree is on the user's machine, but not in their checkout: it
-    // therefore follows clone rules (the harness delivers the commit), while the
-    // historical mode retains current-repository protection.
-    // Local PR reviews are always isolated, including runs created before this
-    // invariant was persisted at launch. Their checkout must consume checkoutRef
-    // and start from the reviewed head rather than the user's current branch.
-    const currentRepo =
-      (localTurn && !run.local_worktree && !prRun) ||
-      isCurrentRepoJob({ repoMode });
+    const currentRepo = isCurrentRepoJob({ repoMode });
     const opencodeInput = {
       anchorInstructions: buildOpencodeAnchor({
         locale: commentLocale,
@@ -1496,7 +1350,7 @@ export async function executeAgentRun(
     /**
      * Landing the turn on the pull request and issue — open, reopen, record, comment,
      * trace — happens through the CONTROL PLANE since MIN-224: the loop lives in
-     * the microVM (or on the machine), and `pr-landing.ts` is driven from
+     * the server sandbox, and `pr-landing.ts` is driven from
      * `control-plane.ts`. The old in-process `PrLandingContext` died with it;
      * a run with no linked repository simply never lands a PR.
      */
@@ -1549,9 +1403,7 @@ export async function executeAgentRun(
     // reaper and still be there on the next turn without the model knowing. The
     // registry does not survive the chunk — this is intentional, and the tool says so.
     //
-    // NONE ON A LOCAL TURN (MIN-293): `run_background` is not provided on a
-    // machine (see `agentToolsFor`), and this registry has only ever been used for
-    // the `finally` safety-net `stopAll` since the loop moved into the microVM.
+    // The registry is absent only if sandbox allocation failed before a host existed.
     backgroundJobs = host
       ? new BackgroundJobs(repoBackgroundRunner(host), run.continuations * 1000)
       : null;
@@ -1752,81 +1604,17 @@ export async function executeAgentRun(
       // repository there is no remote at all: the answer is always no.
       remoteWorkMayExist:
         target != null && (run.branch_name != null || run.continuations > 0),
-      /**
-       * THE FUNCTION CAN PRODUCE ONLY A CLONE (MIN-358). It created the microVM and
-       * cloned into it; the `current` mode belongs to a launcher that works in a
-       * repository that existed before it.
-       */
+      /** The server sandbox always owns a cloned checkout. */
       repoMode,
       committer: await committerPromise,
       // This URL is credential-free in Vercel sandboxes and points at the
-      // run-scoped trusted relay in self-hosted sandboxes. Only desktop-local
-      // execution retains the legacy authenticated URL on the user's machine.
+      // run-scoped trusted relay in self-hosted sandboxes.
       ...(sandboxRepoUrl ? { authUrl: sandboxRepoUrl } : {}),
       commitRef,
       filesFromSha,
       locale: commentLocale,
       feature: usageFeature,
     };
-    /**
-     * THE TURN STARTS ON A MACHINE (MIN-293) — and the function stops here.
-     *
-     * It has done all its work: context, model, cap, spending lease, branch,
-     * committer identity, and push URL. What it cannot do is write to a disk it
-     * cannot see — so it RETURNS the job instead of placing it.
-     *
-     * **`layout` is absent, and this is the batch invariant**: the server owns
-     * everything related to the run, while the machine owns everything related to
-     * the disk (see [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
-     * `bootstrapMs` is absent too: there is no microVM whose wake-up must be billed.
-     *
-     * NO `loop_command_id`: there is no platform command to query. The watchdog
-     * knows this since MIN-355 and gives a local run the two-hour limit rather than
-     * the fifteen-minute one (`reapDeadVmRuns`, drain.ts) — this is the first of the
-     * audit's seven failures, and it is fixed there, not here.
-     *
-     * The run remains `running`: it is running. Its turn-completion report or the
-     * watchdog will take it out of that state, exactly as in the cloud.
-     */
-    if (localTurn) {
-      /**
-       * ⚠ **`layout` IS REMOVED HERE, BY HAND, AND THAT IS THE HEART OF THE MATTER.**
-       *
-       * The `onLocalAssignment` type says `Omit<VmJob, "layout" | "bootstrapMs">`,
-       * and it is **a compiler fiction**: the object above does carry
-       * `layout: cloudLayout()` at runtime, because one was needed to satisfy
-       * `VmJob`. Sent as-is, it would give the machine the `/vercel/sandbox` paths
-       * — a directory that does not exist there, and, more importantly, a layout
-       * the server has NO way to know.
-       *
-       * The shell parser rejected it, correctly: `"layout" in job` is a hard
-       * rejection there ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)),
-       * precisely because `repoDir` is the security root for all model writes and
-       * must not be received from elsewhere.
-       *
-       * The lesson is worth recording: **an `Omit<>` across a network boundary
-       * removes nothing.** What caught the mistake was the guard on the other side,
-       * not the type.
-       */
-      const { layout: _cloudLayout, ...assignment } = job;
-      opts.onLocalAssignment?.(assignment, {
-        // `null` = the project has no linked repository: the machine validates
-        // the attached folder as a plain git checkout, without remote comparison.
-        repoFullName: target?.repoFullName ?? null,
-      });
-      // The initial claim (or steering of a continuation) already refreshed activity.
-      // We only await the event started at the beginning: in practice it finished
-      // long ago, without adding another SQL write.
-      await runningEvent;
-      // The loop-started flag is NOT set here: it means “a microVM is running, and
-      // the loop will bill it”. There is none, and the existing `!sandbox` guard in
-      // `billSandboxCompute` is sufficient. Setting both would give two reasons not
-      // to bill the same thing, and eventually two reasons that diverge.
-      return "detached";
-    }
-
-    // `sandbox`, not `sb`: the compiler knows it is non-null here because the local
-    // branch returned just above.
     if (!sandbox) throw new Error("no sandbox to start the loop in");
     const cmdId = await startVmLoop(sandbox, job, callStart);
     await stampRun(run.id, {

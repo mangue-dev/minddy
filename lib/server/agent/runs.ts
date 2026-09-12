@@ -15,7 +15,6 @@ import { AGENT_ENGINE, type AgentEngine } from "@/lib/agent-engines";
 import type { AgentLaunchIntent } from "./launch";
 import type { AgentChatMessage, AgentEventType } from "./agent-contract";
 import { broadcastRunEvent } from "./live";
-import { localRunScope } from "./local-exec-scope";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
@@ -399,17 +398,6 @@ export interface CreateRunInput {
   prNumber?: number | null;
   prUrl?: string | null;
   prState?: AgentRun["pr_state"];
-  /**
-   * This run starts on the USER'S MACHINE (MIN-355) — cf.
-   * `AgentRun.local_exec`. This is the ONLY entry: the mode is fixed here, at
-   * creation, and nothing switches it afterward. Absent = a microVM run, which
-   * are all runs up to MIN-293.
-   */
-  localExec?: boolean;
-  /** Isolates the local run in a worktree from the machine running it. */
-  localWorktree?: boolean;
-  /** Explicit acknowledgement required for issue-anchored local execution. */
-  localIssueContextConfirmed?: boolean;
   /** Required for platform-funded runs; omitted for BYOK. */
   managedBudget?: {
     periodStart: string;
@@ -515,36 +503,11 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     deployment_url: currentDeploymentScope(),
     loop_in_vm: loopInVm,
     agent_engine: engine,
-    /**
-     * THE EXECUTION ENVIRONMENT (MIN-355, MIN-492), written once at launch.
-     * The authenticated user chooses the destination; trigger and anchor data
-     * remain context and do not silently move the run back to the cloud.
-     */
-    local_exec:
-      input.localExec === true &&
-      localRunScope({
-        triggeredBy: input.triggeredBy,
-        routineId: input.routineId,
-        chainId: input.chainId,
-        pullRequestId: input.pullRequestId,
-        issueId: input.issueId,
-        localIssueContextConfirmed: input.localIssueContextConfirmed,
-      }).ok,
-    local_issue_context_confirmed:
-      (input.issueId != null || input.pullRequestId != null) &&
-      input.localIssueContextConfirmed === true,
-    // This option only makes sense for a truly local run.
-    local_worktree:
-      input.localWorktree === true &&
-      input.localExec === true &&
-      localRunScope({
-        triggeredBy: input.triggeredBy,
-        routineId: input.routineId,
-        chainId: input.chainId,
-        pullRequestId: input.pullRequestId,
-        issueId: input.issueId,
-        localIssueContextConfirmed: input.localIssueContextConfirmed,
-      }).ok,
+    // Historical columns remain readable, but all newly admitted workers use
+    // the deployment-selected server sandbox.
+    local_exec: false,
+    local_issue_context_confirmed: false,
+    local_worktree: false,
   };
   const result = input.managedBudget
     ? await service.rpc("create_agent_run_with_budget", {

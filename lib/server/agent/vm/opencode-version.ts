@@ -2,19 +2,14 @@
  * WHAT VERSION OPENCODE RUNS IN, WHERE ITS BINARY IS FOUND, AND HOW TO WORK
  * L'INSTALLE (MIN-286, lot 3 ; MIN-293).
  *
- * Module WITHOUT ANY import, and this is its reason for being: these values ​​have
- * **trois** lecteurs qui ne se ressemblent pas —
+ * This import-free module has two consumers with different runtime graphs:
  *
  * - [opencode-host.ts](opencode-host.ts), in the harness, which installs the
  * binary if missing and throws it;
  *  - [scripts/create-agent-snapshot.ts](../../../../scripts/create-agent-snapshot.ts),
  * on the station, which **cooks** this same binary in the pre-heated image
  *    (`AGENT_SANDBOX_SNAPSHOT_ID`) ;
- * - PRE-FLIGHT desktop app (MIN-293,
- *    [desktop/src/opencode-install.ts](../../../../desktop/src/opencode-install.ts)),
- * which installs it before the fork so that the failure has a log.
- *
- * Everyone must pose **exactly the same path, exactly the same version and
+ * Both must use **exactly the same path, exactly the same version and
  * exactly the same command**, without which the snapshot is useless: the
  * cooked binary would be next to the one the harness is looking for, or a version
  * that the pin refuses, and each new microVM would pay the 10.6 s
@@ -28,10 +23,9 @@
 export const OPENCODE_VERSION = "1.18.16";
 
 /**
- * The local fallback path to npm travels in the harness environment.
- * In a microVM these variables are absent and the harness uses the `npm`
- * of the image. In the desktop app, they refer to the signed and packaged npm
- * with minddy, executed by the Node that Electron already has on board.
+ * The self-hosted fallback path to npm travels in the harness environment.
+ * In a managed microVM this variable is absent and the harness uses the `npm`
+ * provided by the image.
  */
 export const MINDDY_NPM_CLI_ENV = "MINDDY_NPM_CLI";
 export const MINDDY_NODE_EXEC_ENV = "MINDDY_NODE_EXEC";

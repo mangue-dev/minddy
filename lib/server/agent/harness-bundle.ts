@@ -8,44 +8,12 @@ import { OPENCODE_VERSION } from "./vm/opencode-version";
 import { VM_PROTOCOL_VERSION } from "./vm/protocol";
 
 /**
- * THE HARNESS BUNDLE, AND ITS IMPRINT (MIN-293).
+ * The bundled worker harness used by managed and self-hosted server sandboxes.
  *
- * `.agent-vm/main.js` is produced by `prebuild`/`predev`
- * ([scripts/build-agent-vm.mjs](../../../scripts/build-agent-vm.mjs)) and embedded
- * in functions by `outputFileTracingIncludes` (next.config.mjs). It had
- * so far **one** drive, [vm-launch.ts](vm-launch.ts), which writes it to the
- * microVM. It now has a second one: the user's machine, which DOWNLOADS it.
- *
- * ─────────────────────── ──────────────────────── ──────────────────────────────
- * WHY DOES IT DOWNLOAD RATHER THAN EMBARK IN THE APP
- *
- * Two reasons, and the second is the hardest to repair if you make a mistake.
- *
- * 1. **The contract is typed and it moves** ([vm/protocol.ts](vm/protocol.ts)) as a resolved issue.
- * 2. **Embarking it would make it enter the repost imprint**
- * ([scripts/desktop-fingerprint.mjs](../../../scripts/desktop-fingerprint.mjs)) :
- * a move of `protocol.ts` would cost a notarization and 120 MB
- * downloaded by everyone, for a 280 KB file.
- *
- * ─────────────────────── ──────────────────────── ──────────────────────────────
- * FINGERPRINT IS NOT A TRANSPORT PRECAUTION
- *
- * TLS already guarantees that what we download is what we served. What
- * the fingerprint keeps is the file **once placed on the disk**: it is the
- * only code not signed by Apple that the app executes, it lives under `userData`, and it
- * is **writable by the model under the same UID** — a trick that rewritten
- * would capture in the next round the local execution lease, the key of the “en
- * memory” model and the `authUrl` of the repository.
- *
- * Hence the form: a MANIFEST separated from the bytes. The launcher asks for the
- * manifest every round (2 lines of JSON), rehashes the file it has on the
- * disk, and only forks if the two match — cf.
- * [lib/desktop/harness-bundle.ts](../../desktop/harness-bundle.ts).
- *
- * `protocolVersion` and `opencodeVersion` travel in the same manifest because
- * they decide in the same place and read each other at the same time: a shell
- * which discovered the protocol disagreement after the fork would only have the
- * log to say it.
+ * `.agent-vm/main.js` is produced by `prebuild` and `predev`, then included in
+ * server functions through `outputFileTracingIncludes`. `vm-launch.ts` writes
+ * these bytes into the allocated sandbox. Desktop clients do not download or
+ * execute this bundle.
  */
 
 /**
@@ -55,7 +23,7 @@ import { VM_PROTOCOL_VERSION } from "./vm/protocol";
  */
 const LOCAL_BUNDLE_PATH = path.join(process.cwd(), ".agent-vm", "main.js");
 
-/** What the machine receives BEFORE the bytes, and who decides whether it requests them. */
+/** Metadata retained for build verification and diagnostics. */
 export interface HarnessManifest {
   /** `VM_PROTOCOL_VERSION` — harness and job must speak the same. */
   protocolVersion: number;
@@ -68,11 +36,8 @@ export interface HarnessManifest {
 }
 
 /**
- * The bundle is the same for all runs of a deployment: we read it ONE time
- * per function instance, and we hash once too. An invocation that serves
- * five launches does not reread 280 KB five times — this was already the rule in
- * `vm-launch.ts`, it is even more valuable now that a public route can
- * be called on each turn of each machine.
+ * The bundle is the same for all runs of a deployment: read and hash it once
+ * per server process.
  */
 let cached: Promise<{ source: string; manifest: HarnessManifest }> | null = null;
 

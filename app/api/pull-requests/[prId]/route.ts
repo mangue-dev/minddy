@@ -20,8 +20,8 @@ import {
  * | { action: 'reopen' } → closed → reopened (MIN-164)
  * | { action: 'ready_for_review' } → draft → ready
  * | { action: 'convert_to_draft' } → open → draft
- *       | { action: 'review', verdict, message, relaunch?, localExec?, localWorktree? }
- *       | { action: 'ai_review', localExec?, localWorktree? } → Numo relit (MIN-141)
+ *       | { action: 'review', verdict, message, relaunch?, legacy local flags? }
+ *       | { action: 'ai_review', legacy local flags? } → Numo rereads (MIN-141)
  *       | { action: 'link_issue', issueId }                  → attaches a ticket (MIN-163)
  *
  * `ai_review` returns a 202 with the agent SESSION anchored to this PR (MIN-168):

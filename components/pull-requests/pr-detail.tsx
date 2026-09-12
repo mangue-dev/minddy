@@ -84,12 +84,6 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
-import {
-  EnvironmentCombobox,
-  LOCAL_REPO_ERROR_KEYS,
-  type AgentEnvironment,
-} from "@/components/agent/environment-combobox";
-import { useLocalRepo } from "@/lib/use-local-repo";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import {
@@ -140,7 +134,6 @@ import {
   shouldSubmitCustomMergeMessage,
   type MergeCommitMessageDraft,
 } from "@/lib/pr-merge-message";
-import { LocalIssueRunConfirmation } from "@/components/agent/local-issue-run-confirmation";
 import {
   groupTimelineReviews,
   resolveCommitActors,
@@ -574,7 +567,7 @@ export function PrDetail({
   const agentErrorMessage = useAgentErrorMessage();
   const isSend = useIsSendShortcut();
   const format = useFormatter();
-  const { cloudExecutionConfigured, executionBackend } = useAgentModelsQuery();
+  const { cloudExecutionConfigured } = useAgentModelsQuery();
 
   const {
     pr,
@@ -651,7 +644,6 @@ export function PrDetail({
    * of the person: the text is an instruction, not a review.
    */
   const [reviewMode, setReviewMode] = useState<"write" | "findings">("write");
-  const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
   const reviewUploads = useForgeUploads(prEndpoint(item.prId), (transform) =>
@@ -663,8 +655,6 @@ export function PrDetail({
   // rechargement.
   const reviewSession = usePrReviewSession(item.prId);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
-  const [aiReviewEnvironment, setAiReviewEnvironment] =
-    useState<AgentEnvironment>("cloud");
   const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<PullRequestDetailTab>("activity");
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
@@ -679,16 +669,8 @@ export function PrDetail({
   // it is she who certifies, when sent, that we always respond to this message.
 
   const isWorking = !!item.activeRunId;
-  const localRepo = useLocalRepo(item.project?.id ?? null);
-  useEffect(() => {
-    const next = localRepo.ready ? "local" : "cloud";
-    setEnvironment(next);
-    setAiReviewEnvironment(next);
-  }, [localRepo.ready]);
-
-  const aiReviewUsesLocal = aiReviewEnvironment === "local" && localRepo.ready;
-  const aiReviewBackendUnavailable = !aiReviewUsesLocal && !cloudExecutionConfigured;
-  const reviewExecutionAvailable = cloudExecutionConfigured || localRepo.available;
+  const aiReviewBackendUnavailable = !cloudExecutionConfigured;
+  const reviewExecutionAvailable = cloudExecutionConfigured;
   // What THIS git account can do on this repository (MIN-144). A human gesture leaves
   // of the person's account: without account, or without right, the affordance
   // DISAPPEARS — it’s the banner that explains, once, at the top.
@@ -1023,9 +1005,7 @@ export function PrDetail({
   // serveur refusera en `noEffect`.
   const reviewHasNoEffect =
     reviewVerdict === "request_changes" && !postVerdict && !relaunching;
-  const relaunchUsesLocal = environment !== "cloud" && localRepo.ready;
-  const relaunchBackendUnavailable =
-    relaunching && !relaunchUsesLocal && !cloudExecutionConfigured;
+  const relaunchBackendUnavailable = relaunching && !cloudExecutionConfigured;
   // What prevents the review from leaving, and its wording: the button on the foot of
   // dialog and the shortcut ⌘/Ctrl+Enter of the field read both — otherwise the
   // button would send what the button refuses.
@@ -1045,17 +1025,10 @@ export function PrDetail({
           ? t("sendToNumo")
           : t("reviewSubmit");
 
-  const [confirmLocalRelaunch, setConfirmLocalRelaunch] = useState(false);
-  const [confirmLocalAiReview, setConfirmLocalAiReview] = useState(false);
-
-  const submitReview = async (localIssueContextConfirmed = false) => {
+  const submitReview = async () => {
     if (!reviewVerdict || submitting || reviewUploads.uploading || reviewHasNoEffect) return;
     if (relaunchBackendUnavailable) {
       toast.error(tAgent("errorExecutionBackendUnavailable"));
-      return;
-    }
-    if (relaunching && relaunchUsesLocal && !localIssueContextConfirmed) {
-      setConfirmLocalRelaunch(true);
       return;
     }
     const message = reviewMessage.trim();
@@ -1069,9 +1042,6 @@ export function PrDetail({
         message,
         relaunch: relaunching && reviewVerdict === "request_changes",
         postVerdict,
-        localExec: relaunching && relaunchUsesLocal,
-        localWorktree: relaunching && environment === "worktree" && localRepo.ready,
-        localIssueContextConfirmed,
       });
       // Three outcomes, three messages: the verdict has passed, the forge has folded it
       // in comments (an App cannot approve its own PR — say so,
@@ -1106,12 +1076,11 @@ export function PrDetail({
    * those that Numo has not opened: re-reading only requires a diff, where
    * "relaunch Numo" needs a branch to inherit from.
    *
-   * The gesture passes through a dialog to choose the execution environment.
    * The account worker model and reasoning are resolved by the server when the
-   * review starts and are then frozen with the session.
+   * review starts and are then frozen with the server-sandbox session.
    */
   const openAiReviewDialog = () => {
-    if (!cloudExecutionConfigured && !localRepo.available) {
+    if (!cloudExecutionConfigured) {
       toast.error(tAgent("errorExecutionBackendUnavailable"));
       return;
     }
@@ -1122,24 +1091,15 @@ export function PrDetail({
    * Throws the pass and opens the backboard. The answer does not wait for him: it makes
    * the session, and this is the panel that shows the rest live.
    */
-  const startAiReview = async (localContextConfirmed = false) => {
+  const startAiReview = async () => {
     if (startingAiReview) return;
     if (aiReviewBackendUnavailable) {
       toast.error(tAgent("errorExecutionBackendUnavailable"));
       return;
     }
-    if (aiReviewUsesLocal && !localContextConfirmed) {
-      setConfirmLocalAiReview(true);
-      return;
-    }
     setStartingAiReview(true);
     try {
-      await requestPullRequestAiReviewApi(item.prId, {
-          localExec: aiReviewUsesLocal,
-          // PR review always gets an isolated checkout at the provider's PR ref.
-          localWorktree: aiReviewUsesLocal,
-          localIssueContextConfirmed: localContextConfirmed,
-        });
+      await requestPullRequestAiReviewApi(item.prId);
       setAiReviewDialog(false);
       // The pass is seen in the line: bring it back, otherwise it is played under a
       // tab that nobody looks at.
@@ -2248,8 +2208,7 @@ export function PrDetail({
         </DialogContent>
       </Dialog>
 
-      {/* “Have it checked by Numo” uses the same compact launch controls and
-          ordering as “Request changes”: the execution environment. */}
+      {/* “Have it checked by Numo” starts in the configured server sandbox. */}
       <FormDialog
         open={aiReviewDialog}
         onOpenChange={(next) => {
@@ -2267,27 +2226,6 @@ export function PrDetail({
         onSubmit={() => void startAiReview()}
       >
           <div className="flex flex-wrap items-center gap-1.5">
-            {localRepo.linked ? (
-              <EnvironmentCombobox
-                value={aiReviewEnvironment}
-                onChange={setAiReviewEnvironment}
-                localAvailable={localRepo.available}
-                worktreeAvailable={false}
-                cloudAvailable={cloudExecutionConfigured}
-                executionBackend={executionBackend}
-                folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
-                needsAttach={localRepo.state?.status !== "ready"}
-                onAttach={() => {
-                  void localRepo.attach().then((next) => {
-                    if (next?.status === "ready") setAiReviewEnvironment("local");
-                    else if (next && next.status === "invalid") {
-                      toast.error(tAgent(LOCAL_REPO_ERROR_KEYS[next.reason]));
-                    }
-                  });
-                }}
-                disabled={startingAiReview || localRepo.busy}
-              />
-            ) : null}
             {aiReviewBackendUnavailable ? (
               <p className="w-full text-xs text-amber-600 dark:text-amber-400">
                 {tAgent("errorExecutionBackendUnavailable")}
@@ -2523,31 +2461,9 @@ export function PrDetail({
             )
           ) : null}
 
-          {/* Execution settings are only visible for the path that actually
-              launches a run. The worker model and reasoning remain controlled
-              by Account settings. */}
+          {/* Worker model and reasoning remain controlled by Account settings. */}
           {reviewVerdict === "request_changes" && relaunching ? (
             <div className="flex flex-wrap items-center gap-1.5">
-              {localRepo.linked ? (
-                <EnvironmentCombobox
-                  value={environment}
-                  onChange={setEnvironment}
-                  localAvailable={localRepo.available}
-                  cloudAvailable={cloudExecutionConfigured}
-                  executionBackend={executionBackend}
-                  folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
-                  needsAttach={localRepo.state?.status !== "ready"}
-                  onAttach={() => {
-                    void localRepo.attach().then((next) => {
-                      if (next?.status === "ready") setEnvironment("local");
-                      else if (next && next.status === "invalid") {
-                        toast.error(tAgent(LOCAL_REPO_ERROR_KEYS[next.reason]));
-                      }
-                    });
-                  }}
-                  disabled={submitting || localRepo.busy}
-                />
-              ) : null}
               {relaunchBackendUnavailable ? (
                 <p className="w-full text-xs text-amber-600 dark:text-amber-400">
                   {tAgent("errorExecutionBackendUnavailable")}
@@ -2557,24 +2473,6 @@ export function PrDetail({
           ) : null}
 
       </FormDialog>
-      <LocalIssueRunConfirmation
-        open={confirmLocalRelaunch}
-        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : ""}
-        onOpenChange={setConfirmLocalRelaunch}
-        onConfirm={() => {
-          setConfirmLocalRelaunch(false);
-          void submitReview(true);
-        }}
-      />
-      <LocalIssueRunConfirmation
-        open={confirmLocalAiReview}
-        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : ""}
-        onOpenChange={setConfirmLocalAiReview}
-        onConfirm={() => {
-          setConfirmLocalAiReview(false);
-          void startAiReview(true);
-        }}
-      />
     </div>
     </PrEndpointProvider>
   );

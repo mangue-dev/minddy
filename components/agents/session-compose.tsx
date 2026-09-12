@@ -21,13 +21,6 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
-import {
-  EnvironmentCombobox,
-  LOCAL_REPO_ERROR_KEYS,
-  type AgentEnvironment,
-} from "@/components/agent/environment-combobox";
-import { useLocalRepo } from "@/lib/use-local-repo";
-import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { launchGeneralAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
@@ -41,7 +34,6 @@ import {
   rememberAgentProject,
 } from "@/lib/last-agent-project";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
-import { isLocalAgentProvider } from "@/lib/agent-providers";
 import type { Project } from "@/lib/types";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
@@ -188,26 +180,14 @@ export function SessionCompose({
     tNav("accountFallback"),
   );
 
-  /**
-   * Projects where the agent can work: those that have a DEPOSIT linked — or,
-   * in the desktop app, ANY project: a local run plays on the folder attached
-   * to the machine and does not need a forge. THE others are not proposed —
-   * the agent would fail in its first second (`noRepo`), once the instruction
-   * has been written and sent. Better not to offer than refuse after the fact.
-   */
+  /** Projects where the server sandbox has a linked repository to clone. */
   const { projectIds: gitLinked, loading: gitLinkedLoading } =
     useGitLinkedProjectsQuery();
-  // Read once: the bridge exists only in the desktop app, and a render-time
-  // read would diverge between server and client render.
-  const desktopAvailable = useMemo(() => !!getDesktopBridge(), []);
   const launchable = useMemo(
-    () =>
-      desktopAvailable
-        ? projects
-        : projects.filter((p) => gitLinked.has(p.id)),
-    [projects, gitLinked, desktopAvailable],
+    () => projects.filter((p) => gitLinked.has(p.id)),
+    [projects, gitLinked],
   );
-  /** No way to launch anywhere: no linked repository, and no desktop app to run locally. */
+  /** No server-sandbox launch is possible without a linked repository. */
   const noRepoAnywhere = !gitLinkedLoading && launchable.length === 0;
 
   // The project leaves PRE-CHOSEN: the one that the draft designates, otherwise the last
@@ -228,11 +208,7 @@ export function SessionCompose({
     if (projectId && launchable.some((p) => p.id === projectId)) return;
     setProjectId(defaultAgentProjectId(launchable, lastAgentProjectId()) ?? "");
   }, [launchable, projectId, gitLinkedLoading]);
-  const {
-    provider,
-    cloudExecutionConfigured,
-    executionBackend,
-  } = useAgentModelsQuery();
+  const { cloudExecutionConfigured } = useAgentModelsQuery();
   const aiAvailability = useAiSurfaceAvailability("agent");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
   const [baseBranch, setBaseBranch] = useState("");
@@ -241,28 +217,12 @@ export function SessionCompose({
   // of AgentConversation: server pre-checks take a few seconds).
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
-  // Same information as the rendered run, but available from the first rendering
-  // optimistic: without it, the Agents page named a sandbox for a round that
-  // was actually waiting for the local harness.
-  const [launchLocalExec, setLaunchLocalExec] = useState(false);
-  const localEndpoint = isLocalAgentProvider(provider);
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId || null);
 
-  // WHERE THE CONVERSATION TURNS (MIN-359) — same rule as in a conversation
-  // ticket: the chip only exists if a folder is attached to THIS project on
-  // this machine. The changing project here (the composer offers several),
-  // the hook follows `projectId` and the environment falls back to the cloud as soon as the
-  // selected project folder is not ready.
-  const localRepo = useLocalRepo(projectId || null);
-
-  const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
-  useEffect(() => {
-    setEnvironment(localEndpoint || localRepo.ready ? "local" : "cloud");
-  }, [localEndpoint, localRepo.ready]);
   const repositorySkills = useRepositorySkills(
     projectId || null,
-    environment,
+    "cloud",
     "new-session",
   );
 
@@ -279,31 +239,18 @@ export function SessionCompose({
       toast.error(t("composeProjectRequired"));
       return;
     }
-    const localExec = environment !== "cloud" && localRepo.ready;
-    if (!localExec && !cloudExecutionConfigured) {
+    if (!cloudExecutionConfigured) {
       toast.error(t("errorExecutionBackendUnavailable"));
       return;
     }
-    // No linked repository and no local folder: the launch would be refused
-    // (`noRepo`). Say it with the repair gesture, not after the fact. While
-    // the git-link query is pending, `linked` is `false` by default — skip the
-    // guard and let the server, which has the answer, decide.
-    if (!localExec && !localRepo.linked && !localRepo.linkLoading) {
+    if (!gitLinkedLoading && !gitLinked.has(projectId)) {
       toast.error(t("errorNoRepo"));
       router.push(`/projects/${projectId}/settings?tab=git`);
       return;
     }
-    const localWorktree = localExec && environment === "worktree";
-    // A worktree branches from the forge and pushes to it: on a project
-    // WITHOUT a linked repository the server downgrades the run to the
-    // current checkout — say so rather than let the shape change silently.
-    if (localWorktree && !localRepo.linked && !localRepo.linkLoading) {
-      toast.info(t("localWorktreeDowngraded"));
-    }
     setLaunching(true);
     setLaunchText(prompt);
     setLaunchMentions(mentions);
-    setLaunchLocalExec(localExec);
     try {
       const { run } = await launchGeneralAgentApi({
         projectId,
@@ -311,10 +258,6 @@ export function SessionCompose({
         baseBranch: baseBranch || undefined,
         mentions,
         attachments,
-        // `ready` and not just the state of the chip: between choice and sending,
-        // the folder may have disappeared (or the project may have changed).
-        localExec,
-        localWorktree,
       });
       /**
        * Primes the session cache BEFORE returning control.
@@ -338,7 +281,6 @@ export function SessionCompose({
       // bubble rather than suggesting the launch.
       setLaunchText(null);
       setLaunchMentions([]);
-      setLaunchLocalExec(false);
       toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
@@ -409,7 +351,6 @@ export function SessionCompose({
               runId={null}
               status="queued"
               pendingUserMessages={[{ text: launchText, mentions: launchMentions }]}
-              localExec={launchLocalExec}
               className="h-full py-4"
             />
           </MentionLinksProvider>
@@ -454,12 +395,12 @@ export function SessionCompose({
             // choose a project, or connect one to a repository if there is one
             // no where to launch the agent.
             sendDisabled={
-              aiUnavailable || !projectId || (environment === "cloud" && !cloudExecutionConfigured)
+              aiUnavailable || !projectId || !cloudExecutionConfigured
             }
             sendDisabledTooltip={
               aiUnavailable
                 ? tAssistant("providerUnavailableDescription")
-                : environment === "cloud" && !cloudExecutionConfigured
+                : !cloudExecutionConfigured
                 ? t("errorExecutionBackendUnavailable")
                 : noRepoAnywhere
                   ? t("composeNoRepo")
@@ -484,35 +425,6 @@ export function SessionCompose({
                 />
                 {projectId ? (
                   <>
-                    {/* Desktop: the chip always exists (local choice). Browser:
-                        only for a linked project, where it offers the cloud. */}
-                    {localRepo.available || localRepo.linked ? (
-                      <EnvironmentCombobox
-                        value={environment}
-                        onChange={setEnvironment}
-                        localAvailable={localRepo.available}
-                        cloudAvailable={!localEndpoint && cloudExecutionConfigured}
-                        // No linked repository → the sandbox has nothing to clone:
-                        // the cloud entry is greyed and reopens the link panel.
-                        cloudNeedsRepo={!localRepo.linked}
-                        onLinkRepo={() => {
-                          router.push(`/projects/${projectId}/settings?tab=git`);
-                        }}
-                        executionBackend={executionBackend}
-                        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
-                        needsAttach={localRepo.state?.status !== "ready"}
-                        onAttach={() => {
-                          void localRepo.attach().then((next) => {
-                            if (next?.status === "ready") setEnvironment("local");
-                            else if (next && next.status === "invalid") {
-                              toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
-                            }
-                          });
-                        }}
-                        disabled={launching || localRepo.busy}
-                        bare
-                      />
-                    ) : null}
                     <BranchCombobox
                       projectId={projectId}
                       value={baseBranch}
@@ -523,9 +435,6 @@ export function SessionCompose({
                       emptyLabel={t("branchSearchEmpty")}
                       loadingLabel={t("branchSearchLoading")}
                       disabled={launching}
-                      localBranches={environment !== "cloud" ? localRepo.branches : undefined}
-                      localLabel={t("branchLocalGroup")}
-                      cloudLabel={t("branchCloudGroup")}
                       bare
                     />
                   </>

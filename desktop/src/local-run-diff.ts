@@ -7,7 +7,9 @@ import {
   parseDesktopLocalRunDiff,
   type DesktopLocalRunDiff,
 } from "@/lib/desktop/local-run-diff";
-import { localLayout, localRunRoot } from "@/lib/desktop/local-turn";
+import {
+  retainedLocalRunLayout,
+} from "@/lib/desktop/local-run-history";
 import { vmLocalDiffPath } from "@/lib/server/agent/harness-layout";
 
 // Tracked and untracked Git streams are capped independently before they are
@@ -23,13 +25,9 @@ export async function readLocalRunDiff(input: unknown): Promise<DesktopLocalRunD
   if (!runId) return null;
 
   const userDataPath = app.getPath("userData");
-  const root = localRunRoot(userDataPath, runId);
-  const snapshotPath = vmLocalDiffPath(localLayout({
-    userDataPath,
-    runId,
-    // Only the harness directory is used to derive the artifact path.
-    repoPath: root,
-  }));
+  const snapshotPath = vmLocalDiffPath(
+    retainedLocalRunLayout(userDataPath, runId),
+  );
   try {
     const facts = await stat(snapshotPath);
     if (!facts.isFile() || facts.size > SNAPSHOT_ENVELOPE_BYTES) return null;

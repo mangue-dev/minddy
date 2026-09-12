@@ -11,7 +11,6 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, cn, Spinner, toast } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
@@ -46,17 +45,10 @@ import {
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
-import { isLocalAgentProvider } from "@/lib/agent-providers";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
 import { ReasoningCombobox } from "./reasoning-combobox";
-import {
-  EnvironmentCombobox,
-  LOCAL_REPO_ERROR_KEYS,
-  type AgentEnvironment,
-} from "./environment-combobox";
-import { useLocalRepo } from "@/lib/use-local-repo";
 import { useAgentRunLocalDiff } from "@/lib/use-agent-run-live";
 import {
   mergeAgentLocalDiff,
@@ -74,13 +66,6 @@ import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
-import { LocalIssueRunConfirmation } from "./local-issue-run-confirmation";
-
-interface PendingLocalIssueLaunch {
-  message: string;
-  attachments: ResourceInput[];
-  mentions: AssistantMention[];
-}
 
 /**
  * Code Agent Conversation Reusable Core (MIN-46 + MIN-68), extract
@@ -178,7 +163,6 @@ export function AgentConversation({
   const t = useTranslations("Agent");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
-  const router = useRouter();
   const { mentionables, links, onMentionQuery } =
     useNumoMentionables(projectId);
 
@@ -236,14 +220,6 @@ export function AgentConversation({
   // nowhere yet. We hold it here to show it right away.
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
-  // POST has not yet rendered the run: its `local_exec` is therefore not
-  // available during the optimistic bubble. We keep the choice validated by the
-  // local folder to never show “Opening sandbox” during
-  // that a local tour is being prepared.
-  const [launchLocalExec, setLaunchLocalExec] = useState(false);
-  const [pendingLocalIssueLaunch, setPendingLocalIssueLaunch] =
-    useState<PendingLocalIssueLaunch | null>(null);
-  const [composeInputRevision, setComposeInputRevision] = useState(0);
   // “Create PR” request sent: deactivates the button while the agent
   // starts again (working) or RA appears. Reset by lower effect.
   const [requestingPr, setRequestingPr] = useState(false);
@@ -328,6 +304,7 @@ export function AgentConversation({
       isLatest &&
       !delivered
     : false;
+  const localRunRetired = liveRun?.local_exec === true;
 
   // Question ask_user ACTIVE (MIN-86): the last significant event of the thread is
   // a `question` (no user message or summary after) and the agent is at rest,
@@ -354,8 +331,9 @@ export function AgentConversation({
     () => mergeAgentLocalDiff(settledLocalDiff, streamedLocalDiff),
     [settledLocalDiff, streamedLocalDiff],
   );
-  const useLocalDiff =
-    liveRun?.local_exec === true && (!liveRun.local_worktree || serverWorking);
+  // Historical local runs keep their desktop-owned artifact source regardless
+  // of whether they used the attached checkout or an isolated local worktree.
+  const useLocalDiff = liveRun?.local_exec === true;
 
   /**
    * What THIS session changed in the deposit, cumulative over all its turns (union
@@ -518,7 +496,6 @@ export function AgentConversation({
   useEffect(() => {
     setPendingMessages([]);
     setLaunchText(null);
-    setLaunchLocalExec(false);
     setRequestingPr(false);
     // The requested shutdown applies to the session you are leaving, not the one you are opening.
     setStopping(false);
@@ -576,73 +553,30 @@ export function AgentConversation({
   }, [active, liveRun?.id]);
 
   // Execution capabilities for the compose phase.
-  const {
-    provider,
-    cloudExecutionConfigured,
-    executionBackend,
-  } = useAgentModelsQuery();
+  const { cloudExecutionConfigured } = useAgentModelsQuery();
   // BASE branch (compose phase, new line): "" = the defect of the deposit.
   // The choice is only made at launch and frozen afterwards.
   const [baseBranch, setBaseBranch] = useState("");
   const [launching, setLaunching] = useState(false);
-  const localEndpoint = isLocalAgentProvider(provider);
-
-  // WHERE THE CONVERSATION TURNS (MIN-359), frozen at launch like its three
-  // neighbors. The chip only exists in the desktop app AND when a folder is
-  // attached to this project on THIS machine: elsewhere, there is no choice
-  // offer, and a grayed chip would promise a toggle that does not exist.
-  const localRepo = useLocalRepo(projectId);
-
-  const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
-  // The folder has disappeared under the attachment (moved, unmounted disk, deposit
-  // re-linked): we fall back on the cloud rather than launching towards a dead path.
-  useEffect(() => {
-    setEnvironment(localEndpoint || localRepo.ready ? "local" : "cloud");
-  }, [localEndpoint, localRepo.ready]);
-  const skillEnvironment: AgentEnvironment = liveRun
-    ? liveRun.local_exec
-      ? liveRun.local_worktree
-        ? "worktree"
-        : "local"
-      : "cloud"
-    : environment;
   const repositorySkills = useRepositorySkills(
     projectId,
-    skillEnvironment,
-    liveRun?.id ?? `compose-${composeInputRevision}`,
+    "cloud",
+    liveRun?.id ?? "compose-server",
   );
 
   const launch = async (
     message: string,
     attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
-    localIssueContextConfirmed = false,
   ) => {
     // The compose phase only exists for an ISSUE anchor (that of sessions
     // without a ticket lives in SessionCompose, before any run): no exit, nothing
     // to launch here.
     if (launching || !issueId) return;
     const prompt = message.trim();
-    const localExec = environment !== "cloud" && localRepo.ready;
-    if (!localExec && !cloudExecutionConfigured) {
+    if (!cloudExecutionConfigured) {
       toast.error(t("errorExecutionBackendUnavailable"));
       return;
-    }
-    // No linked repository and no local folder: the launch would be refused
-    // (`noRepo`). Say it with the repair gesture, not after the fact. While
-    // the git-link query is pending, `linked` is `false` by default — skip the
-    // guard and let the server, which has the answer, decide.
-    if (!localExec && !localRepo.linked && !localRepo.linkLoading) {
-      toast.error(t("errorNoRepo"));
-      router.push(`/projects/${projectId}/settings?tab=git`);
-      return;
-    }
-    const localWorktree = localExec && environment === "worktree";
-    // A worktree branches from the forge and pushes to it: on a project
-    // WITHOUT a linked repository the server downgrades the run to the
-    // current checkout — say so rather than let the shape change silently.
-    if (localWorktree && !localRepo.linked && !localRepo.linkLoading) {
-      toast.info(t("localWorktreeDowngraded"));
     }
     setLaunching(true);
     // OPTIMISTIC display of the 1st message, as for a follow-up: the POST continues
@@ -651,7 +585,6 @@ export function AgentConversation({
     // compose (emptied on sending), nor in the thread (no session to display).
     if (prompt) setLaunchText(prompt);
     setLaunchMentions(mentions);
-    setLaunchLocalExec(localExec);
     try {
       const { run: started } = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
@@ -661,11 +594,6 @@ export function AgentConversation({
         intent: composeIntent,
         mentions,
         attachments,
-        // `ready` and not just the state of the chip: between choice and sending,
-        // the file may have disappeared.
-        localExec,
-        localWorktree,
-        localIssueContextConfirmed,
       });
       // The new session becomes the open session → immediate live switch. Her
       // `prompt` carries the same text: the thread displays the SAME bubble, without interruption.
@@ -679,7 +607,6 @@ export function AgentConversation({
       // not → we remove the bubble rather than suggesting the launch.
       setLaunchText(null);
       setLaunchMentions([]);
-      setLaunchLocalExec(false);
       toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
@@ -691,21 +618,8 @@ export function AgentConversation({
     attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
   ): boolean => {
-    const localExec = environment !== "cloud" && localRepo.ready;
-    if (issueId && localExec) {
-      setPendingLocalIssueLaunch({ message, attachments, mentions });
-      return false;
-    }
     void launch(message, attachments, mentions);
     return true;
-  };
-
-  const confirmLocalIssueLaunch = () => {
-    const pending = pendingLocalIssueLaunch;
-    if (!pending) return;
-    setPendingLocalIssueLaunch(null);
-    setComposeInputRevision((revision) => revision + 1);
-    void launch(pending.message, pending.attachments, pending.mentions, true);
   };
 
   // Message at rest: continues the conversation (new turn in the same context).
@@ -911,7 +825,6 @@ export function AgentConversation({
               pendingUserMessages={[
                 { text: launchText, mentions: launchMentions },
               ]}
-              localExec={launchLocalExec}
               className="h-full py-4"
             />
           ) : phase === "loading" ? (
@@ -975,6 +888,11 @@ export function AgentConversation({
               ) : null}
               {liveRun ? (
                 <div className={cn(activeQuestion && "hidden")}>
+                  {localRunRetired ? (
+                    <p className="px-4 pb-2 text-sm text-amber-700 dark:text-amber-400">
+                      {t("localExecutionRetiredTransition")}
+                    </p>
+                  ) : null}
                   <ChatInput
                     key={liveRun.id}
                     onSend={(message, attachments, mentions) =>
@@ -985,12 +903,19 @@ export function AgentConversation({
                     sendWhileStreaming
                     beam={working}
                     disabled={!steerable}
+                    sendDisabledTooltip={
+                      localRunRetired
+                        ? t("localExecutionRetiredTransition")
+                        : undefined
+                    }
                     mentionables={mentionables}
                     onMentionQuery={onMentionQuery}
                     skills={repositorySkills.skills}
                     loadSkill={repositorySkills.load}
                     placeholder={
-                      steerable
+                      localRunRetired
+                        ? t("localExecutionRetiredPlaceholder")
+                        : steerable
                         ? working
                           ? t("livePlaceholder")
                           : t("restPlaceholder")
@@ -1034,7 +959,7 @@ export function AgentConversation({
                 </div>
               ) : (
                 <ChatInput
-                  key={`compose-${composeInputRevision}`}
+                  key="compose-server"
                   onSend={(message, attachments, mentions) =>
                     submitLaunch(message, attachments, mentions)
                   }
@@ -1043,13 +968,9 @@ export function AgentConversation({
                   skills={repositorySkills.skills}
                   loadSkill={repositorySkills.load}
                   disabled={launching}
-                  sendDisabled={
-                    environment === "cloud" && !cloudExecutionConfigured
-                  }
+                  sendDisabled={!cloudExecutionConfigured}
                   sendDisabledTooltip={t("errorExecutionBackendUnavailable")}
-                  initialValue={
-                    composeInputRevision === 0 ? initialComposeText : undefined
-                  }
+                  initialValue={initialComposeText}
                   placeholder={t("composePlaceholder")}
                   contextSlot={
                     <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
@@ -1063,55 +984,8 @@ export function AgentConversation({
                         emptyLabel={t("branchSearchEmpty")}
                         loadingLabel={t("branchSearchLoading")}
                         disabled={launching}
-                        localBranches={
-                          environment !== "cloud"
-                            ? localRepo.branches
-                            : undefined
-                        }
-                        localLabel={t("branchLocalGroup")}
-                        cloudLabel={t("branchCloudGroup")}
                         bare
                       />
-                      {/* Desktop: the chip always exists (local choice). Browser:
-                      only for a linked project, where it offers the cloud. */}
-                      {localRepo.available || localRepo.linked ? (
-                        <EnvironmentCombobox
-                          value={environment}
-                          onChange={setEnvironment}
-                          localAvailable={localRepo.available}
-                          cloudAvailable={
-                            !localEndpoint && cloudExecutionConfigured
-                          }
-                          // No linked repository → the sandbox has nothing to clone:
-                          // the cloud entry is greyed and reopens the link panel.
-                          cloudNeedsRepo={!localRepo.linked}
-                          onLinkRepo={() =>
-                            router.push(
-                              `/projects/${projectId}/settings?tab=git`,
-                            )
-                          }
-                          executionBackend={executionBackend}
-                          folder={
-                            localRepo.state?.status === "ready"
-                              ? localRepo.state.folder
-                              : null
-                          }
-                          needsAttach={localRepo.state?.status !== "ready"}
-                          onAttach={() => {
-                            void localRepo.attach().then((next) => {
-                              if (next?.status === "ready")
-                                setEnvironment("local");
-                              else if (next && next.status === "invalid") {
-                                toast.error(
-                                  t(LOCAL_REPO_ERROR_KEYS[next.reason]),
-                                );
-                              }
-                            });
-                          }}
-                          disabled={launching || localRepo.busy}
-                          bare
-                        />
-                      ) : null}
                     </div>
                   }
                   contextPlacement="above"
@@ -1140,16 +1014,6 @@ export function AgentConversation({
             localTruncated={localDiff.truncated}
           />
         ) : null}
-        <LocalIssueRunConfirmation
-          open={pendingLocalIssueLaunch !== null}
-          folder={
-            localRepo.state?.status === "ready" ? localRepo.state.folder : ""
-          }
-          onOpenChange={(open) => {
-            if (!open) setPendingLocalIssueLaunch(null);
-          }}
-          onConfirm={confirmLocalIssueLaunch}
-        />
       </div>
     </MentionLinksProvider>
   );

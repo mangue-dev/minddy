@@ -26,7 +26,6 @@ import { ProjectIntegrations } from "@/components/project-integrations";
 import { ProjectFeedbackSettings } from "@/components/project-feedback-settings";
 import { ProjectGeneralSection } from "@/components/settings/project-general-section";
 import { ProjectGitSection } from "@/components/settings/project-git-section";
-import { ProjectLocalRepoSection } from "@/components/settings/project-local-repo-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
@@ -172,13 +171,7 @@ export default function ProjectSettingsPage() {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
-      content: (
-        <>
-          <ProjectGitSection projectId={project.id} />
-          {/* The file for THIS machine (MIN-359): under the linked repository, because it only makes sense once the repository is chosen — and invisible outside the desktop app, where there would be nothing to attach. */}
-          <ProjectLocalRepoSection projectId={project.id} />
-        </>
-      ),
+      content: <ProjectGitSection projectId={project.id} />,
     },
     {
       value: "import",

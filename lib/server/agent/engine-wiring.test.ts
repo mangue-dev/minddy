@@ -154,7 +154,7 @@ describe("commit identity is capability-independent", () => {
 
   it("resolves the forge-backed identity for every repository run", () => {
     expect(source).toContain(
-      "const committerPromise = target\n      ? resolveCommitterIdentity(target)",
+      "const committerPromise = resolveCommitterIdentity(target)",
     );
     expect(source).toContain("committer: await committerPromise");
     expect(source).not.toContain(
