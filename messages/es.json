@@ -465,6 +465,7 @@
     "providerUnavailableCta": "Configurar el proveedor de IA",
     "send": "Enviar",
     "stop": "Detener",
+    "retry": "Reintentar",
     "newConversation": "Nueva conversación",
     "conversations": "Conversaciones",
     "noConversations": "Todavía no hay conversaciones",

@@ -465,6 +465,7 @@
     "providerUnavailableCta": "KI-Anbieter konfigurieren",
     "send": "Senden",
     "stop": "Stopp",
+    "retry": "Erneut versuchen",
     "newConversation": "Neue Konversation",
     "conversations": "Konversationen",
     "noConversations": "Noch keine Konversationen",

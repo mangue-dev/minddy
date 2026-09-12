@@ -99,6 +99,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     sendMessage: sendMessageRaw,
     loadConversation: loadConversationRaw,
     reset: resetRaw,
+    retry,
     abort,
   } = useAssistantChat({ onToolResult: handleToolResult });
 
@@ -280,6 +281,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       sendMessage,
       loadConversation,
       reset,
+      retry,
       abort,
       scopeProjectId: scope,
       restoring: restoring || !restored,
@@ -292,6 +294,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       sendMessage,
       loadConversation,
       reset,
+      retry,
       abort,
       scope,
       restored,

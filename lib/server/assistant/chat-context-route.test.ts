@@ -4,6 +4,7 @@ const h = vi.hoisted(() => ({
   db: {} as unknown,
   process: vi.fn(),
   loadSkills: vi.fn(),
+  claimError: false,
 }));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: async () => ({ ok: true, user: { id: "user", user_metadata: {} }, supabase: h.db }) }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => h.db }));
@@ -24,6 +25,7 @@ import { POST } from "@/app/api/assistant/chat/route";
 function database({ owner = "user", status = "idle", visible = new Set(["a", "b"]) } = {}) {
   const rows: Array<Record<string, unknown>> = [];
   const conversations: Array<Record<string, unknown>> = [];
+  let turn: Record<string, unknown> | null = null;
   const from = (table: string) => {
     const filters: Record<string, unknown> = {};
     let inserted: Record<string, unknown> | undefined;
@@ -59,7 +61,46 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
     };
     return query;
   };
-  h.db = { from };
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name === "begin_numo_turn") {
+      if (status === "generating") return { data: null, error: { message: "conversation_busy" } };
+      turn = {
+        id: "turn",
+        conversation_id: args.p_conversation_id,
+        user_id: args.p_user_id,
+        request_id: args.p_request_id,
+        run_id: args.p_run_id,
+        status: "queued",
+        intent: args.p_intent,
+        checkpoint: {},
+        model: args.p_model,
+        reasoning_level: args.p_reasoning_level,
+        active_run_id: null,
+        attempts: 0,
+      };
+      rows.push({
+        conversation_id: args.p_conversation_id,
+        turn_id: "turn",
+        role: "user",
+        content: args.p_content,
+        context: args.p_context,
+        metadata: args.p_metadata,
+      });
+      return { data: turn, error: null };
+    }
+    if (name === "claim_numo_turn") {
+      if (h.claimError) return { data: null, error: { message: "database unavailable" } };
+      turn = { ...turn, status: "running", claim_token: args.p_claim_token, attempts: 1 };
+      return { data: [turn], error: null };
+    }
+    if (name === "checkpoint_numo_turn") {
+      turn = { ...turn, status: args.p_status, checkpoint: args.p_checkpoint };
+      return { data: [turn], error: null };
+    }
+    if (name === "append_numo_turn_event") return { data: {}, error: null };
+    return { data: true, error: null };
+  };
+  h.db = { from, rpc };
   return { rows, conversations, visible };
 }
 async function send(body: Record<string, unknown>) {
@@ -69,6 +110,7 @@ async function send(body: Record<string, unknown>) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  h.claimError = false;
   h.process.mockResolvedValue({ generations: [], fullContent: "Done" });
   h.loadSkills.mockImplementation(async (_project: string, paths: string[]) => paths.map((path) => ({ path, name: "review", description: "Review", source: ".agents/skills", content: "Review this repository." })));
 });
@@ -94,6 +136,17 @@ describe("conversation identity across project contexts", () => {
     const db = database();
     expect(await send({ projectId: "a" })).toBe(200);
     expect(db.conversations).toEqual([expect.objectContaining({ project_id: null, user_id: "user" })]);
+  });
+  it("keeps polling possible when execution and its status lookup both fail", async () => {
+    database();
+    h.claimError = true;
+    const response = await POST(new Request("http://localhost/api/assistant/chat", {
+      method: "POST",
+      body: JSON.stringify({ message: "Continue durably", conversationId: "conversation" }),
+    }) as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('"status":"queued"');
   });
   it.each([{ owner: "other", expected: 404 }, { status: "generating", expected: 409 }])("retains ownership and concurrent generation checks: %s", async ({ expected, ...options }) => {
     database(options);

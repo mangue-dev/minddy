@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -15,34 +16,12 @@ import type {
   AssistantPinnedContext,
 } from "@/lib/assistant-types";
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
-import { commandNote, parseCommand } from "@/lib/server/assistant/commands";
-import {
-  parseSelectedSkills,
-  authorizedSkillsNotes,
-} from "@/lib/server/assistant/skills";
+import { parseCommand } from "@/lib/server/assistant/commands";
+import { parseSelectedSkills } from "@/lib/server/assistant/skills";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
-import {
-  CONVERSATION_ASSISTANT_TOOLS,
-  type AssistantToolDef,
-} from "@/lib/server/assistant/tools";
-import {
-  buildClockBlock,
-  buildGlobalSystemPrompt,
-  buildPageContextBlock,
-  buildSystemPrompt,
-} from "@/lib/server/assistant/prompt";
-import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
-import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
-import { isWebSearchEnabled, withoutWebSearch } from "@/lib/server/web-search";
-import {
-  getModelInputModalities,
-  modelSupportsCaching,
-  processChat,
-  type ChatContentPart,
-  type ChatMessage,
-} from "@/lib/server/assistant/loop";
-import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
+import { newRunId } from "@/lib/server/ai-usage";
+import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
@@ -55,11 +34,15 @@ import { loadProjectRepositorySkills } from "@/lib/server/repository-skills";
 import { validateMessageContext } from "@/lib/server/assistant/message-context";
 import { MAX_SELECTED_SKILL_BYTES } from "@/lib/repository-skills";
 import type { RepositorySkill } from "@/lib/repository-skills";
+import { NUMO_UUID } from "@/lib/server/numo/conversations";
+import {
+  beginNumoTurn,
+  executeNumoTurn,
+} from "@/lib/server/numo/turns";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const ASSISTANT_CHAT_RATE_LIMIT = { limit: 20 };
 
 /** What a pinned pill can refer to, and what an “@” can quote. THE
@@ -209,26 +192,6 @@ function parseMentions(raw: unknown): AssistantMention[] {
     }));
 }
 
-/** Resolution “@Nom → id” attached to the message which bears the mentions: Numo
- * can assign or target without re-searching the name, and the line survives in
- * the history since it is recalculated from the persisted metadata. */
-function mentionsNote(metadata: unknown): string {
-  const list = parseMentions(
-    (metadata as { mentions?: unknown } | null)?.mentions
-  );
-  if (list.length === 0) return "";
-  const parts = list.map((m) => {
-    if (m.type === "member") return `@${m.label} = team member (user id: ${m.id})`;
-    if (m.type === "project") return `@${m.label} = project (id: ${m.id})`;
-    if (m.type === "issue") return `@${m.label} = issue (id: ${m.id})`;
-    if (m.type === "page") {
-      return `@${m.label} = wiki page (page id: ${m.id}) — read it with get_page`;
-    }
-    return `@${m.label} = objective (id: ${m.id})`;
-  });
-  return `\n\n[Mentions in this message: ${parts.map((part, index) => `${part}${list[index].projectId ? ` (project id: ${list[index].projectId})` : ""}`).join("; ")}]`;
-}
-
 export async function POST(request: NextRequest) {
   // getAuthedUser rather than a direct getUser(): it is he who carries the gate
   // Global MFA (aal2) and 503 “instance unreachable” — a protected account
@@ -348,8 +311,6 @@ export async function POST(request: NextRequest) {
 
   // Fetch project (only when projectId is provided — project-scoped mode).
   // RLS does the access check: an invisible project reads as not found.
-  let project: { id: string; name: string; key: string; owner_id: string } | null =
-    null;
   if (projectId) {
     const { data } = await supabase
       .from("projects")
@@ -361,7 +322,6 @@ export async function POST(request: NextRequest) {
     if (!data) {
       return Response.json({ error: "Project not found" }, { status: 404 });
     }
-    project = data;
   }
 
   const validated = await validateMessageContext(supabase, pageContext, mentions);
@@ -440,10 +400,11 @@ export async function POST(request: NextRequest) {
         console.error("[numo-title] failed:", (err as Error).message);
       });
   } else {
-    // Check for concurrent generation
+    // Ownership only. The durable begin RPC serializes concurrent turns and
+    // does not trust the legacy three-state projection for admission.
     const convQuery = supabase
       .from("conversations")
-      .select("id, status")
+      .select("id")
       .eq("id", convId)
       .eq("user_id", user.id);
     const { data: existingConversation, error: existingConversationError } =
@@ -453,296 +414,91 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Conversation not found" }, { status: 404 });
     }
 
-    if (existingConversation.status === "generating") {
-      return Response.json(
-        { error: "Conversation is still processing", code: "already_generating" },
-        { status: 409 }
-      );
-    }
-
-    // Update conversation timestamp after ownership validation.
-    const { error: updateError } = await service
-      .from("conversations")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", convId)
-      .eq("user_id", user.id);
-
-    if (updateError) {
-      console.error("Failed to update conversation timestamp:", updateError);
-    }
   }
-
-  // Set conversation status to generating
-  await service
-    .from("conversations")
-    .update({ status: "generating", error_message: null })
-    .eq("id", convId)
-    .eq("user_id", user.id);
-
-  // Save user message. Persist the page context (open issue, board tab…) so
-  // the chat can render a context badge above this bubble — null for plain sends.
-  const { error: userMsgError } = await supabase.from("assistant_messages").insert({
-    conversation_id: convId,
-    role: "user",
-    content: sanitizedUserMessage,
-    context: pageContext,
-    metadata: {
-      ...(attachments.length > 0 ? { attachments } : {}),
-      ...(mentions.length > 0 ? { mentions } : {}),
-      ...(command ? { command } : {}),
-      ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
-    },
-  });
-
-  if (userMsgError) {
-    console.error("Failed to save user message:", userMsgError);
-    await service
-      .from("conversations")
-      .update({ status: "idle" })
-      .eq("id", convId);
-    return Response.json({ error: tApi("messageSaveFailed") }, { status: 500 });
-  }
-
-  // Enrich this turn with project context without defining a conversation type.
-  let systemPrompt: string;
-  let activeTools: AssistantToolDef[] = CONVERSATION_ASSISTANT_TOOLS;
-
-  if (project) {
-    // The attached project supplies a compact context snapshot for this turn.
-    const promptProject = await gatherProjectPromptContext({
-      supabase,
-      service,
-      project,
-    });
-    systemPrompt = buildSystemPrompt(promptProject, locale, numoDefaultStatus);
-  } else {
-    systemPrompt = buildGlobalSystemPrompt(locale, numoDefaultStatus);
-  }
-
-  // Web search: guilty of an admin flag. Cut off, the tool is not even
-  // proposed (otherwise the model burns a round to be refused).
   const webSearchEnabled = await isWebSearchEnabled();
-  if (!webSearchEnabled) activeTools = withoutWebSearch(activeTools);
   const reasoningLevel = await getAssistantReasoningLevel();
-
-  // What the user is currently viewing. In project mode that's the open issue/
-  // objective/view; in global mode it's the cross-project view or cycle. The
-  // block renders only the lines that apply, so it's safe in both modes.
-  if (pageContext) {
-    systemPrompt += `\n${buildPageContextBlock(pageContext)}`;
-  }
-
-  // User time (MIN-185): the time zone comes from the browser, with the
-  // query, because it doesn't exist anywhere else. Without him, a routine
-  // requested “at 1 p.m.” leaves in UTC and runs nearby, every Monday.
   const timezone =
     typeof body.timezone === "string" && body.timezone.length <= 64
       ? body.timezone
       : "";
-  if (timezone) systemPrompt += buildClockBlock(timezone);
-
-  // Load conversation history
-  const { data: history } = await supabase
-    .from("assistant_messages")
-    .select("role, content, tool_calls, tool_call_id, tool_name, metadata, context")
-    .eq("conversation_id", convId)
-    // Fetch the latest window, then restore chronological order below. Asking
-    // for the oldest 30 made long conversations lose the current user turn.
-    .order("created_at", { ascending: false })
-    .limit(30);
-
-  // Detect caching support via OpenRouter pricing metadata — memoised per process.
-  const apiKey = aiRuntime.apiKey;
-  const supportsCache =
-    aiRuntime.provider === "openrouter" && (await modelSupportsCaching(model, apiKey));
-  const systemMessage: ChatMessage = supportsCache
-    ? {
-        role: "system",
-        content: [
-          {
-            type: "text",
-            text: systemPrompt,
-            cache_control: { type: "ephemeral" },
-          },
-        ],
-      }
-    : { role: "system", content: systemPrompt };
-
-  const chatMessages: ChatMessage[] = [systemMessage];
-
-  // Attachments persisted on a user row's metadata (validated at write time).
-  const rowAttachments = (msg: { role: string; metadata: unknown }): AttachmentInput[] => {
-    if (msg.role !== "user") return [];
-    const meta = msg.metadata as { attachments?: unknown } | null;
-    return Array.isArray(meta?.attachments)
-      ? (meta.attachments as AttachmentInput[])
-      : [];
-  };
-
-  if (history) {
-    const chronologicalHistory = [...history].reverse();
-    const historySkillsNotes = await authorizedSkillsNotes(
-      supabase,
-      chronologicalHistory.map((msg) => msg.role === "user" ? msg.metadata : null),
-    );
-    // Heavy parts (PDF base64, CSV excerpts) go only with the LATEST user
-    // message; older images stay (cheap signed URLs), the rest degrade to
-    // text notes inside buildAttachmentParts.
-    const lastUserIdx = chronologicalHistory.reduce(
-      (acc, m, i) => (m.role === "user" ? i : acc),
-      -1
-    );
-    const modalities = chronologicalHistory.some((m) => rowAttachments(m).length > 0)
-      ? aiRuntime.provider === "openrouter"
-        ? await getModelInputModalities(model, apiKey)
-        : new Set(["text"])
-      : null;
-
-    for (const [i, msg] of chronologicalHistory.entries()) {
-      const sanitized =
-        sanitizeAssistantMessageContent(msg.content) +
-        (msg.role === "user"
-          ? mentionsNote(msg.metadata) + commandNote(msg.metadata) + historySkillsNotes[i] +
-            (msg.context ? `\n\n[Context captured for this message only; it does not authorize later actions]\n${buildPageContextBlock(msg.context)}` : "")
-          : "");
-      const atts = rowAttachments(msg);
-      let content: string | ChatContentPart[] = sanitized;
-      if (atts.length > 0 && modalities) {
-        content = [
-          { type: "text", text: sanitized },
-          ...(await buildAttachmentParts(service, atts, {
-            modalities,
-            includeHeavy: i === lastUserIdx,
-          })),
-        ];
-      }
-      chatMessages.push({
-        role: msg.role as ChatMessage["role"],
-        content,
-        tool_calls: msg.tool_calls || undefined,
-        tool_call_id: msg.tool_call_id || undefined,
-        name: msg.tool_name || undefined,
-      });
+  const finalConvId = convId!;
+  const runId = newRunId();
+  const rawRequestId = (body as AssistantChatRequest & { requestId?: unknown }).requestId;
+  const requestId = typeof rawRequestId === "string" && NUMO_UUID.test(rawRequestId)
+    ? rawRequestId
+    : randomUUID();
+  let turn;
+  try {
+    turn = await beginNumoTurn({
+      conversationId: finalConvId,
+      userId: user.id,
+      requestId,
+      runId,
+      intent: {
+        projectId: projectId ?? null,
+        locale,
+        timezone,
+        numoDefaultStatus,
+        webSearchEnabled,
+      },
+      model,
+      reasoningLevel,
+      content: sanitizedUserMessage,
+      context: pageContext,
+      metadata: {
+        ...(attachments.length > 0 ? { attachments } : {}),
+        ...(mentions.length > 0 ? { mentions } : {}),
+        ...(command ? { command } : {}),
+        ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("conversation_busy")) {
+      return Response.json(
+        { error: "Conversation is still processing", code: "already_generating" },
+        { status: 409 },
+      );
     }
+    console.error("Failed to begin Numo turn:", message);
+    return Response.json({ error: tApi("messageSaveFailed") }, { status: 500 });
   }
 
-  // Capture convId in a const for the closure (always defined at this point)
-  const finalConvId = convId!;
-
-  // A ledger run for THIS answer: loop calls and possible
-  // web searches (written during the tour, not at the end) share it.
-  const runId = newRunId();
-
-  // Stream response with server-side resilience
+  // The stream is a live projection. The execution service owns the durable
+  // claim, checkpoints, tool ledger, and terminal state.
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       const emitter = createSafeEmitter(controller, encoder);
-
-      // Timeout protection
-      const timeout = setTimeout(async () => {
-        await service
-          .from("conversations")
-          .update({
-            status: "error",
-            error_message: "Processing timed out",
-          })
-          .eq("id", finalConvId)
-          .eq("status", "generating");
-      }, PROCESSING_TIMEOUT_MS);
-
       try {
-        emitter.emit("conversation_id", { conversationId: finalConvId });
-
-        const result = await processChat(chatMessages, activeTools, emitter, {
-          projectId: projectId ?? null,
-          requireExplicitProjectTarget: true,
-          userId: user.id,
-          supabase,
-          service,
-          locale,
-          numoDefaultStatus,
-          model,
+        const result = await executeNumoTurn({
+          turnId: turn.id,
+          readClient: supabase,
+          liveEmitter: emitter,
           aiRuntime,
-          conversationId: finalConvId,
-          reasoningLevel,
-          webSearch: webSearchEnabled ? { runId, used: 0 } : undefined,
         });
-
-        clearTimeout(timeout);
-
-        // Cost tracking: each round of the loop is an LLM call; they share
-        // the same runId (this Numo response = one run). Best effort, doesn't block anything.
-        if (result.generations.length > 0) {
-          await recordAiUsage(
-            result.generations.map((g, i) => ({
-              runId,
-              seq: i,
-              feature: "numo_chat" as const,
-              provider: aiRuntime.provider,
-              keyMode: aiRuntime.mode,
-              model: g.model,
-              generationId: g.generationId,
-              promptTokens: g.promptTokens,
-              completionTokens: g.completionTokens,
-              totalTokens: g.totalTokens,
-              cost: g.cost,
-              // The budget spoiled in pre-flight is that of `user`: it is therefore him
-              // who pays, including on someone else's project.
-              billTo: { userId: user.id },
-              projectId: projectId ?? null,
-              conversationId: finalConvId,
-            }))
-          );
-        }
-
-        // Save final assistant message (text-only response after tools)
-        if (result.fullContent) {
-          const { data: savedMsg } = await service
-            .from("assistant_messages")
-            .insert({
-              conversation_id: finalConvId,
-              role: "assistant",
-              content: result.fullContent,
-              ...(result.finalReasoning
-                ? { metadata: { reasoning: result.finalReasoning } }
-                : {}),
-            })
-            .select("id")
-            .single();
-
-          if (savedMsg) {
-            emitter.emit("message_complete", { message_id: savedMsg.id });
-          }
-        }
-
-        // Set conversation status back to idle
-        await service
-          .from("conversations")
-          .update({ status: "idle", error_message: null })
-          .eq("id", finalConvId);
-
-        // The title is gone at the time of creation: we don't leave it
-        // hang beyond the answer (the function dies with the flow).
         await titleDone;
-
-        emitter.emit("done", {});
-        emitter.close();
+        if (result.status === "not_claimed") {
+          emitter.emit("conversation_id", { conversationId: finalConvId, turnId: turn.id });
+          emitter.emit("done", { status: turn.status });
+          emitter.close();
+        }
       } catch (err) {
-        clearTimeout(timeout);
         const errorMessage = err instanceof Error ? err.message : tApi("unexpected");
-
-        // Set conversation status to error
-        await service
-          .from("conversations")
-          .update({ status: "error", error_message: errorMessage })
-          .eq("id", finalConvId);
-
-        // Same on the error path: a conversation that failed keeps its
-        // title, this is even what allows you to find it to try again.
         await titleDone;
-
-        emitter.emit("error", { message: errorMessage });
+        const { data: currentTurn } = await service
+          .from("numo_assistant_turns")
+          .select("status")
+          .eq("id", turn.id)
+          .maybeSingle();
+        emitter.emit("error", {
+          message: errorMessage,
+          // Keep the browser reconciling from durable state even when the
+          // status lookup fails with the same transient database outage.
+          status: typeof currentTurn?.status === "string"
+            ? currentTurn.status
+            : turn.status,
+        });
         emitter.close();
       }
     },
@@ -753,6 +509,8 @@ export async function POST(request: NextRequest) {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      "X-Numo-Conversation-Id": finalConvId,
+      "X-Numo-Turn-Id": turn.id,
     },
   });
 }

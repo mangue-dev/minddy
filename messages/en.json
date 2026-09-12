@@ -465,6 +465,7 @@
     "providerUnavailableCta": "Configure AI provider",
     "send": "Send",
     "stop": "Stop",
+    "retry": "Try again",
     "newConversation": "New conversation",
     "conversations": "Conversations",
     "noConversations": "No conversations yet",
