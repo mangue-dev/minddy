@@ -9,12 +9,16 @@ const h = vi.hoisted(() => ({
   routineStamps: [] as string[],
   notifications: [] as Array<Record<string, unknown>>,
   background: [] as Array<Promise<void>>,
+  resumeNumo: vi.fn(),
+  executeNumo: vi.fn(),
 }));
 
 const query = {
   update: () => query,
   eq: () => query,
   in: () => query,
+  order: () => query,
+  limit: () => query,
   select: () => query,
   maybeSingle: async () => ({ data: h.returnedRun, error: null }),
 };
@@ -46,6 +50,10 @@ vi.mock("@/lib/server/after-safe", () => ({
   }),
 }));
 vi.mock("./live", () => ({ broadcastRunEvent: vi.fn() }));
+vi.mock("@/lib/server/numo/turns", () => ({
+  resumeNumoTurnFromWorker: (...args: unknown[]) => h.resumeNumo(...args),
+  executeNumoTurn: (...args: unknown[]) => h.executeNumo(...args),
+}));
 
 const { notifyAgentRun, stampRunResult } = await import("./runs");
 
@@ -73,6 +81,8 @@ beforeEach(() => {
   h.routineStamps.length = 0;
   h.notifications.length = 0;
   h.background.length = 0;
+  h.resumeNumo.mockReset().mockResolvedValue("queued");
+  h.executeNumo.mockReset().mockResolvedValue({ status: "completed" });
 });
 
 describe("agent run notifications", () => {
@@ -112,5 +122,34 @@ describe("agent run notifications", () => {
         agent_conversation_id: "conversation-1",
       }),
     ]);
+  });
+
+  it("queues one durable parent continuation from the guarded chat-run ending", async () => {
+    h.returnedRun = {
+      ...terminalRun,
+      triggered_by: "chat",
+      routine_id: null,
+      awaiting_input: false,
+      outcome: "Implemented",
+      error_message: null,
+      pr_url: null,
+      rest_claimed_at: "2026-08-25T12:01:00.000Z",
+    };
+    await stampRunResult("run-1", { status: "completed" });
+    await Promise.all(h.background);
+
+    expect(h.resumeNumo).toHaveBeenCalledOnce();
+    expect(h.resumeNumo).toHaveBeenCalledWith(expect.objectContaining({
+      runId: "run-1",
+      type: "worker_completed",
+      eventId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    }));
+    expect(h.executeNumo).toHaveBeenCalledOnce();
+
+    h.returnedRun = null;
+    h.background.length = 0;
+    await stampRunResult("run-1", { status: "completed" });
+    await Promise.all(h.background);
+    expect(h.resumeNumo).toHaveBeenCalledOnce();
   });
 });

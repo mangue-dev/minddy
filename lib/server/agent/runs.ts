@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SandboxBilling } from "@/lib/agent-sandbox-config";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -54,6 +54,18 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<AgentRunStatus> = new Set([
   "failed",
   "canceled",
 ]);
+
+/** Stable UUID for one terminal worker delivery, including resumed run turns. */
+function numoWorkerEventId(run: AgentRun): string {
+  const bytes = createHash("sha256")
+    .update(`${run.id}:${run.started_at ?? ""}:${run.rest_claimed_at ?? ""}:${run.status}`)
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 /**
  * Who started the run. `automation` (MIN-147) is the fourth: a rule of
@@ -1543,6 +1555,45 @@ export async function stampRunResult(
         await stampRoutineRunEnd(run);
       });
     }
+    // A code worker is one suspension point in a parent Numo turn. Queue the
+    // parent from the same guarded terminal transition that already drives
+    // chains and routines. The event ID is stable, so a repeated delivery is
+    // harmless; the turn RPC also ignores late events from superseded runs.
+    if (run.triggered_by === "chat") afterOrNow(async () => {
+      const { executeNumoTurn, resumeNumoTurnFromWorker } = await import(
+        "@/lib/server/numo/turns"
+      );
+      const type = run.status === "completed"
+        ? run.awaiting_input
+          ? "worker_input" as const
+          : "worker_completed" as const
+        : "worker_failed" as const;
+      const disposition = await resumeNumoTurnFromWorker({
+        runId: run.id,
+        eventId: numoWorkerEventId(run),
+        type,
+        payload: {
+          run_id: run.id,
+          status: run.status,
+          awaiting_input: run.awaiting_input,
+          outcome: run.outcome,
+          error_message: run.error_message,
+          pr_number: run.pr_number,
+          pr_url: run.pr_url,
+        },
+      });
+      if (disposition === "queued") {
+        const { data: parent } = await getServiceClient()
+          .from("numo_assistant_turns")
+          .select("id")
+          .eq("active_run_id", run.id)
+          .eq("status", "queued")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (parent?.id) await executeNumoTurn({ turnId: parent.id as string });
+      }
+    });
   }
   return { run, failed: !!error };
 }

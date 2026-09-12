@@ -14,6 +14,8 @@ import type {
   AssistantPageContext,
   AssistantSkillSelection,
   ConversationStatus,
+  NumoTurnActivity,
+  NumoTurnStatus,
 } from "./assistant-types";
 import type { FileResourceInput, ResourceInput } from "./types";
 import { trackEvent } from "./analytics";
@@ -277,6 +279,14 @@ function reducer(
       };
 
     case "MESSAGE_COMPLETE": {
+      if (state.messages.some((message) => message.id === action.messageId)) {
+        return {
+          ...state,
+          streamingContent: "",
+          streamingReasoning: null,
+          activeToolCalls: [],
+        };
+      }
       // Finalize streaming content + tool calls into a message
       const assistantMsg: AssistantMessage = {
         id: action.messageId,
@@ -393,10 +403,17 @@ const POLL_INTERVAL_MS = 2000;
     fails — this helper lives outside the hook, so the caller translates it. */
 async function fetchConversationStatus(
   conversationId: string,
-  errorMessage: string
-): Promise<{ status: ConversationStatus; error_message: string | null }> {
+  errorMessage: string,
+  after = -1,
+): Promise<{
+  status: ConversationStatus | NumoTurnStatus;
+  error_message: string | null;
+  turn_id?: string | null;
+  last_event_seq?: number;
+  activity?: NumoTurnActivity[];
+}> {
   const res = await fetch(
-    `/api/assistant/conversations/${conversationId}/status`
+    `/api/assistant/conversations/${conversationId}/status?after=${after}`
   );
   if (!res.ok) throw new Error(errorMessage);
   return res.json();
@@ -454,15 +471,25 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     (conversationId: string, projectId: string | null) => {
       stopPolling();
       dispatch({ type: "GENERATING_SERVER" });
+      let after = -1;
 
       const poll = async () => {
         try {
-          const { status, error_message } = await fetchConversationStatus(
+          const response = await fetchConversationStatus(
             conversationId,
-            tApi("statusFetchFailed")
+            tApi("statusFetchFailed"),
+            after,
           );
+          const { status, error_message } = response;
+          for (const event of response.activity ?? []) {
+            handleSSEEvent(event.type, event.payload, dispatch, {
+              projectId,
+              onToolResult: onToolResultRef.current,
+            });
+            after = Math.max(after, event.seq);
+          }
 
-          if (status === "idle") {
+          if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {
             // Generation complete - reload messages
             const messages =
               await fetchConversationMessages(conversationId);
@@ -476,7 +503,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             return;
           }
 
-          if (status === "error") {
+          if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
             // Reload messages to show any partial results
             const messages =
               await fetchConversationMessages(conversationId);
@@ -488,7 +515,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             });
             dispatch({
               type: "ERROR",
-              message: error_message || "Generation failed",
+              message: error_message || (status === "reconciling"
+                ? "A tool result needs reconciliation before this turn can continue."
+                : "Generation failed"),
             });
             return;
           }
@@ -563,6 +592,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
       try {
         const body: AssistantChatRequest = {
+          requestId: createUuid(),
           ...(projectId ? { projectId } : {}),
           message,
           conversationId: state.conversationId || undefined,
@@ -596,6 +626,16 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           return;
         }
 
+        const responseConversationId = response.headers.get("X-Numo-Conversation-Id");
+        if (responseConversationId) {
+          liveConvRef.current = { id: responseConversationId, projectId };
+          dispatch({
+            type: "SET_CONVERSATION_ID",
+            conversationId: responseConversationId,
+            projectId,
+          });
+        }
+
         const reader = response.body?.getReader();
         if (!reader) {
           dispatch({ type: "ERROR", message: "No response body" });
@@ -604,6 +644,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
         const decoder = new TextDecoder();
         let buffer = "";
+        let finalServerStatus: ConversationStatus | NumoTurnStatus | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -621,6 +662,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               try {
                 const data = JSON.parse(line.slice(6));
                 if (eventType === "tool_call_start") toolCalls += 1;
+                if (eventType === "done" && typeof data.status === "string") {
+                  finalServerStatus = data.status as ConversationStatus | NumoTurnStatus;
+                }
                 handleSSEEvent(eventType, data, dispatch, {
                   projectId: state.conversationProjectId,
                   onConversationId: (id) => {
@@ -636,6 +680,13 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               }
               eventType = "";
             }
+          }
+        }
+
+        if (finalServerStatus === "waiting_work") {
+          const conversationId = liveConvRef.current.id ?? state.conversationId;
+          if (conversationId) {
+            startPolling(conversationId, liveConvRef.current.projectId);
           }
         }
 
@@ -662,11 +713,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               convId,
               tApi("statusFetchFailed")
             );
-            if (status === "generating") {
+            if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping") {
               startPolling(convId, convProjectId);
               return;
             }
-            if (status === "idle") {
+            if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {
               // Server already finished - reload messages
               const messages = await fetchConversationMessages(convId);
               dispatch({
@@ -716,9 +767,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           conversationId,
           tApi("statusFetchFailed")
         );
-        if (status === "generating") {
+        if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping") {
           startPolling(conversationId, projectId);
-        } else if (status === "error") {
+        } else if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
           dispatch({
             type: "ERROR",
             message: error_message || "Generation failed",
@@ -746,9 +797,17 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   const abort = useCallback(() => {
     abortRef.current?.abort();
     stopPolling();
+    const conversationId = liveConvRef.current.id ?? state.conversationId;
+    if (conversationId) {
+      void fetch(`/api/assistant/conversations/${conversationId}/turn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "stop" }),
+      });
+    }
     trackEvent("assistant_stopped", {});
     dispatch({ type: "DONE" });
-  }, [stopPolling]);
+  }, [state.conversationId, stopPolling]);
 
   return {
     state,
@@ -846,7 +905,11 @@ function handleSSEEvent(
       });
       break;
     case "done":
-      dispatch({ type: "DONE" });
+      if (data.status === "waiting_work" || data.status === "queued" || data.status === "running") {
+        dispatch({ type: "GENERATING_SERVER" });
+      } else {
+        dispatch({ type: "DONE" });
+      }
       break;
     case "error":
       dispatch({ type: "ERROR", message: data.message as string });

@@ -1,6 +1,25 @@
 // ── Numo (AI assistant) shared types ─────────────────────────────────
 
 export type ConversationStatus = "idle" | "generating" | "error";
+export type NumoTurnStatus =
+  | "queued"
+  | "running"
+  | "waiting_work"
+  | "waiting_input"
+  | "stopping"
+  | "stopped"
+  | "retryable"
+  | "reconciling"
+  | "completed"
+  | "failed";
+
+export interface NumoTurnActivity {
+  id: string;
+  seq: number;
+  type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
 
 export interface Conversation {
   id: string;
@@ -84,7 +103,7 @@ export interface NumoConversationDetail {
   }>;
   turns: Array<{
     id: string; conversation_id: string; run_id: string;
-    status: NumoWorkReference["status"]; model: string | null;
+    status: NumoWorkReference["status"] | NumoTurnStatus; model: string | null;
     reasoning_level: string | null; initiated_by: string | null;
     cost_usd: number; outcome: string | null; error_message: string | null;
     started_at: string | null; completed_at: string | null;
@@ -154,7 +173,7 @@ export type AssistantSSEEvent =
     }
   | { type: "message_complete"; data: { message_id: string } }
   | { type: "error"; data: { message: string } }
-  | { type: "done"; data: Record<string, never> };
+  | { type: "done"; data: { status?: ConversationStatus | NumoTurnStatus } };
 
 /**
  * A hand-chosen context element (@ button on the composer): a ticket,
@@ -288,6 +307,8 @@ export interface AssistantPageContext {
 
 // Request body for chat endpoint
 export interface AssistantChatRequest {
+  /** Idempotency key for one user intent. Reuse it when the same POST is retried. */
+  requestId?: string;
   conversationId?: string;
   projectId?: string;
   message: string;

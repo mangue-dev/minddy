@@ -109,4 +109,115 @@ describe("Numo chat loop resilience", () => {
       reasoning: { effort: "medium", exclude: false },
     });
   });
+
+  it("suspends durably when a code worker is launched", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: stream({
+        tool_calls: [{
+          index: 0,
+          id: "call-worker",
+          function: { name: "launch_code_agent", arguments: "{}" },
+        }],
+      }),
+    });
+    executeTool.mockResolvedValue({
+      result: { launched: true, run_id: "worker-run" },
+      success: true,
+    });
+
+    const service = fakeService();
+    const result = await processChat(
+      [{ role: "user", content: "Implement the issue" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: service,
+        service,
+        locale: "en",
+      },
+    );
+
+    expect(fetchOpenRouter).toHaveBeenCalledOnce();
+    expect(result.suspension).toEqual({ kind: "work", runId: "worker-run" });
+  });
+
+  it("surfaces an ambiguous mutation instead of executing it again", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: stream({
+        tool_calls: [{
+          index: 0,
+          id: "call-create",
+          function: { name: "create_issue", arguments: '{"title":"Only once"}' },
+        }],
+      }),
+    });
+    const service = fakeService();
+
+    await expect(processChat(
+      [{ role: "user", content: "Create it" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: service,
+        service,
+        locale: "en",
+        toolLedger: {
+          claim: async () => ({ action: "reconcile" }),
+          complete: async () => {},
+        },
+      },
+    )).rejects.toThrow("may have completed");
+    expect(executeTool).not.toHaveBeenCalled();
+  });
+
+  it("preserves a completed tool's suspension when its durable result is reused", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: stream({
+        tool_calls: [{
+          index: 0,
+          id: "call-proposal",
+          function: { name: "propose_backlog", arguments: "{}" },
+        }],
+      }),
+    });
+    const service = fakeService();
+    const complete = vi.fn();
+
+    await processChat(
+      [{ role: "user", content: "Propose a backlog" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: service,
+        service,
+        locale: "en",
+        toolLedger: {
+          claim: async () => ({
+            action: "reuse",
+            execution: { result: { proposed: true }, success: true, pause: true },
+          }),
+          complete,
+        },
+      },
+    );
+
+    expect(fetchOpenRouter).toHaveBeenCalledOnce();
+    expect(executeTool).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+  });
 });

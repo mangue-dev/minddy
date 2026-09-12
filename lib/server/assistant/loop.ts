@@ -57,6 +57,50 @@ export interface ProcessChatResult {
   finalReasoning: AssistantReasoning | null;
   allToolCalls: AssistantToolCall[];
   generations: GenerationInfo[];
+  suspension: ProcessChatSuspension | null;
+}
+
+export type ProcessChatSuspension =
+  | { kind: "input" }
+  | { kind: "work"; runId: string };
+
+export interface ProcessChatCheckpoint {
+  phase: "model" | "tools";
+  assistantContent?: string | null;
+  assistantReasoning?: AssistantReasoning | null;
+  assistantMessageId?: string | null;
+  pendingToolCalls?: AssistantToolCall[];
+  completedToolCallIds?: string[];
+  roundCount?: number;
+}
+
+export interface ToolLedgerClaim {
+  action: "execute" | "reuse" | "reconcile" | "lost_claim";
+  execution?: ToolExecution;
+}
+
+/** Durable exactly-once boundary supplied by the Numo turn service. */
+export interface ToolExecutionLedger {
+  claim(input: {
+    toolCallId: string;
+    toolName: string;
+    args: Record<string, unknown>;
+    replayPolicy: "retry" | "reconcile";
+  }): Promise<ToolLedgerClaim>;
+  complete(input: {
+    toolCallId: string;
+    success: boolean;
+    result: unknown;
+    modelResult: unknown;
+    pause: boolean;
+  }): Promise<void>;
+}
+
+export class AmbiguousToolExecutionError extends Error {
+  constructor(readonly toolName: string, readonly toolCallId: string) {
+    super(`Tool ${toolName} may have completed before its result was recorded`);
+    this.name = "AmbiguousToolExecutionError";
+  }
 }
 
 /** Module-level cache — OpenRouter model list is fetched at most once per
@@ -135,6 +179,44 @@ export interface ProcessChatContext extends ToolContext {
   reasoningLevel?: ReasoningLevel;
   /** Solved by the way. Optional for internal calls/historical tests. */
   aiRuntime?: ResolvedAiRuntime;
+  /** Durable assistant turn. Absent for legacy entry points such as comments. */
+  turnId?: string;
+  resumeCheckpoint?: ProcessChatCheckpoint | null;
+  persistCheckpoint?: (checkpoint: ProcessChatCheckpoint) => Promise<void>;
+  toolLedger?: ToolExecutionLedger;
+  shouldStop?: () => Promise<boolean>;
+}
+
+const RETRYABLE_READ_TOOLS = new Set([
+  "get_help",
+  "list_projects",
+  "list_global_filter_options",
+  "list_views",
+  "get_account_settings",
+  "list_inbox",
+  "list_trash",
+  "list_agent_models",
+  "get_cycle",
+  "get_scratchpad",
+  "list_issues",
+  "search_issues",
+  "get_issue",
+  "list_members",
+  "list_objectives",
+  "list_categories",
+  "list_integrations",
+  "list_feedback",
+  "get_feedback",
+  "get_feedback_board",
+  "list_pages",
+  "get_page",
+  "search_pages",
+  "list_routines",
+  "read_pull_request",
+]);
+
+export function toolReplayPolicy(toolName: string): "retry" | "reconcile" {
+  return RETRYABLE_READ_TOOLS.has(toolName) ? "retry" : "reconcile";
 }
 
 /**
@@ -172,7 +254,7 @@ export async function processChat(
   let finalReasoning: AssistantReasoning | null = null;
   const allToolCalls: AssistantToolCall[] = [];
   let continueLoop = true;
-  let roundCount = 0;
+  let roundCount = context.resumeCheckpoint?.roundCount ?? 0;
   // The template sent, including routing suffix (MIN-263) — it may lose its
   // suffix being looped if OpenRouter refuses it.
   let requestModel = context.model;
@@ -182,48 +264,23 @@ export async function processChat(
   // CUMULATIVE on purpose: a key returned in round 1 must remain substituted in
   // what a round 3 `list_integrations` would rewrite.
   const redactor = new SecretRedactor();
+  let suspension: ProcessChatSuspension | null = null;
+  let resumeCheckpoint = context.resumeCheckpoint ?? null;
 
   while (continueLoop) {
     continueLoop = false;
-    roundCount++;
+    if (await context.shouldStop?.()) break;
+    const resumingTools = resumeCheckpoint?.phase === "tools";
+    roundCount = resumingTools
+      ? Math.max(roundCount, resumeCheckpoint?.roundCount ?? 1)
+      : roundCount + 1;
     // Always reserve one text-only round after the tool budget. Previously the
     // sixth tool round ended the stream silently, with no final assistant reply.
     const forceConclusion = roundCount > MAX_TOOL_EXECUTION_ROUNDS;
 
-    const call = await fetchAiChat(
-      aiRuntime,
-      requestModel,
-      (m) => ({
-        model: m,
-        messages,
-        stream: true,
-        maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
-        reasoning: { effort: reasoningLevel },
-        ...(tools.length > 0 && !forceConclusion ? { tools } : {}),
-      }),
-      "Numo (minddy)",
-      "[assistant]",
-    );
-    const response = call.response;
-    // The fallback of the routing shortcut sticks to the model that worked: without that,
-    // each round of the loop would repay a refused request.
-    requestModel = call.model;
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `LLM error (${response.status}): ${errorText.slice(0, 200)}`
-      );
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("No response body from LLM");
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let fullContent = "";
+    let fullContent = resumingTools
+      ? resumeCheckpoint?.assistantContent ?? ""
+      : "";
     let generationId: string | null = null;
     let usageInfo: {
       prompt_tokens?: number;
@@ -236,97 +293,112 @@ export async function processChat(
       number,
       { id: string; name: string; arguments: string }
     > = new Map();
-    const reasoningStream = new AssistantReasoningStream(emitter);
-    let roundReasoning: AssistantReasoning | null = null;
+    let roundReasoning: AssistantReasoning | null = resumingTools
+      ? resumeCheckpoint?.assistantReasoning ?? null
+      : null;
 
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+    if (resumingTools) {
+      for (const [index, call] of (resumeCheckpoint?.pendingToolCalls ?? []).entries()) {
+        toolCallAccumulators.set(index, {
+          id: call.id,
+          name: call.function.name,
+          arguments: call.function.arguments,
+        });
+      }
+    } else {
+      const call = await fetchAiChat(
+        aiRuntime,
+        requestModel,
+        (m) => ({
+          model: m,
+          messages,
+          stream: true,
+          maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
+          reasoning: { effort: reasoningLevel },
+          ...(tools.length > 0 && !forceConclusion ? { tools } : {}),
+        }),
+        "Numo (minddy)",
+        "[assistant]",
+      );
+      const response = call.response;
+      requestModel = call.model;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
+      }
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body from LLM");
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
-
-          let parsed;
-          try {
-            parsed = JSON.parse(data);
-          } catch {
-            continue;
-          }
-
-          if (parsed.id && !generationId) {
-            generationId = parsed.id;
-          }
-          if (parsed.model) {
-            modelUsed = parsed.model;
-          }
-          if (parsed.usage) {
-            usageInfo = parsed.usage;
-          }
-
-          const delta = parsed.choices?.[0]?.delta;
-          if (!delta) continue;
-
-          if (typeof delta.reasoning === "string" && delta.reasoning) {
-            reasoningStream.push(delta.reasoning);
-          }
-
-          if (delta.content) {
-            roundReasoning = reasoningStream.finish();
-            fullContent += delta.content;
-            emitter.emit("content_delta", { delta: delta.content });
-          }
-
-          if (delta.tool_calls) {
-            roundReasoning = reasoningStream.finish();
-            for (const tc of delta.tool_calls) {
-              const idx = tc.index ?? 0;
-              if (!toolCallAccumulators.has(idx)) {
-                toolCallAccumulators.set(idx, {
-                  id: tc.id || "",
-                  name: tc.function?.name || "",
-                  arguments: "",
-                });
-                if (tc.id && tc.function?.name) {
-                  emitter.emit("tool_call_start", {
-                    id: tc.id,
-                    name: tc.function.name,
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const reasoningStream = new AssistantReasoningStream(emitter);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") continue;
+            let parsed;
+            try {
+              parsed = JSON.parse(data);
+            } catch {
+              continue;
+            }
+            if (parsed.id && !generationId) generationId = parsed.id;
+            if (parsed.model) modelUsed = parsed.model;
+            if (parsed.usage) usageInfo = parsed.usage;
+            const delta = parsed.choices?.[0]?.delta;
+            if (!delta) continue;
+            if (typeof delta.reasoning === "string" && delta.reasoning) {
+              reasoningStream.push(delta.reasoning);
+            }
+            if (delta.content) {
+              roundReasoning = reasoningStream.finish();
+              fullContent += delta.content;
+              emitter.emit("content_delta", { delta: delta.content });
+            }
+            if (delta.tool_calls) {
+              roundReasoning = reasoningStream.finish();
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0;
+                if (!toolCallAccumulators.has(idx)) {
+                  toolCallAccumulators.set(idx, {
+                    id: tc.id || "",
+                    name: tc.function?.name || "",
+                    arguments: "",
                   });
+                  if (tc.id && tc.function?.name) {
+                    emitter.emit("tool_call_start", { id: tc.id, name: tc.function.name });
+                  }
                 }
-              }
-
-              const acc = toolCallAccumulators.get(idx)!;
-              if (tc.id) acc.id = tc.id;
-              if (tc.function?.name) acc.name = tc.function.name;
-              if (tc.function?.arguments) {
-                acc.arguments += tc.function.arguments;
-                emitter.emit("tool_call_args_delta", {
-                  id: acc.id,
-                  delta: tc.function.arguments,
-                });
+                const acc = toolCallAccumulators.get(idx)!;
+                if (tc.id) acc.id = tc.id;
+                if (tc.function?.name) acc.name = tc.function.name;
+                if (tc.function?.arguments) {
+                  acc.arguments += tc.function.arguments;
+                  emitter.emit("tool_call_args_delta", { id: acc.id, delta: tc.function.arguments });
+                }
               }
             }
           }
         }
+      } finally {
+        roundReasoning = reasoningStream.finish();
       }
-    } finally {
-      roundReasoning = reasoningStream.finish();
+      generations.push({
+        generationId,
+        model: modelUsed,
+        promptTokens: usageInfo?.prompt_tokens ?? null,
+        completionTokens: usageInfo?.completion_tokens ?? null,
+        totalTokens: usageInfo?.total_tokens ?? null,
+        cost: usageInfo?.cost ?? null,
+      });
     }
-
-    generations.push({
-      generationId,
-      model: modelUsed,
-      promptTokens: usageInfo?.prompt_tokens ?? null,
-      completionTokens: usageInfo?.completion_tokens ?? null,
-      totalTokens: usageInfo?.total_tokens ?? null,
-      cost: usageInfo?.cost ?? null,
-    });
 
     // Process completed tool calls
     if (toolCallAccumulators.size > 0) {
@@ -345,25 +417,40 @@ export async function processChat(
       }
 
       // Save intermediate assistant message with tool_calls to DB
-      const { data: savedIntermediate } = await context.service
-        .from("assistant_messages")
-        .insert({
-          conversation_id: context.conversationId,
-          role: "assistant",
-          content: fullContent || null,
-          tool_calls: assistantToolCalls,
-          ...(roundReasoning
-            ? { metadata: { reasoning: roundReasoning } }
-            : {}),
-        })
-        .select("id")
-        .single();
+      const savedIntermediate = resumingTools
+        ? { id: resumeCheckpoint?.assistantMessageId ?? null }
+        : (await context.service
+            .from("assistant_messages")
+            .insert({
+              conversation_id: context.conversationId,
+              ...(context.turnId ? { turn_id: context.turnId } : {}),
+              role: "assistant",
+              content: fullContent || null,
+              tool_calls: assistantToolCalls,
+              ...(roundReasoning ? { metadata: { reasoning: roundReasoning } } : {}),
+            })
+            .select("id")
+            .single()).data;
 
-      if (savedIntermediate) {
+      if (savedIntermediate?.id) {
         emitter.emit("message_complete", {
           message_id: savedIntermediate.id,
         });
       }
+
+      const completedToolCallIds = new Set(
+        resumingTools ? resumeCheckpoint?.completedToolCallIds ?? [] : [],
+      );
+      await context.persistCheckpoint?.({
+        phase: "tools",
+        assistantContent: fullContent || null,
+        assistantReasoning: roundReasoning,
+        assistantMessageId: savedIntermediate?.id ?? null,
+        pendingToolCalls: assistantToolCalls,
+        completedToolCallIds: [...completedToolCallIds],
+        roundCount,
+      });
+      resumeCheckpoint = null;
 
       // Add to chat history for LLM context
       messages.push({
@@ -384,6 +471,7 @@ export async function processChat(
 
       // Execute each tool and save results to DB
       for (const [, acc] of toolCallAccumulators) {
+        const alreadyCompleted = completedToolCallIds.has(acc.id);
         if (acc.name === "ask_user") {
           // ask_user: emit a synthetic result and do NOT continue the loop
           let parsed: Record<string, unknown> = {};
@@ -404,20 +492,25 @@ export async function processChat(
             success: true,
           });
 
-          await context.service.from("assistant_messages").insert({
-            conversation_id: context.conversationId,
-            role: "tool",
-            content: JSON.stringify(askResult),
-            tool_call_id: acc.id,
-            tool_name: "ask_user",
-            metadata: { success: true },
-          });
+          if (!alreadyCompleted) {
+            await context.service.from("assistant_messages").insert({
+              conversation_id: context.conversationId,
+              ...(context.turnId ? { turn_id: context.turnId } : {}),
+              role: "tool",
+              content: JSON.stringify(askResult),
+              tool_call_id: acc.id,
+              tool_name: "ask_user",
+              metadata: { success: true },
+            });
+          }
 
           messages.push({
             role: "tool",
             tool_call_id: acc.id,
             content: serializeToolResult(askResult),
           });
+          completedToolCallIds.add(acc.id);
+          suspension = { kind: "input" };
           continue;
         }
 
@@ -428,8 +521,27 @@ export async function processChat(
           // Invalid JSON from LLM
         }
 
-        const { result, success, modelResult, pause, secrets }: ToolExecution =
-          await executeTool(acc.name, args, context);
+        let execution: ToolExecution;
+        const ledgerClaim = context.toolLedger
+          ? await context.toolLedger.claim({
+              toolCallId: acc.id,
+              toolName: acc.name,
+              args,
+              replayPolicy: toolReplayPolicy(acc.name),
+            })
+          : { action: "execute" as const };
+        if (ledgerClaim.action === "reconcile") {
+          throw new AmbiguousToolExecutionError(acc.name, acc.id);
+        }
+        if (ledgerClaim.action === "lost_claim") {
+          throw new Error("Numo turn execution claim was lost");
+        }
+        if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
+          execution = ledgerClaim.execution;
+        } else {
+          execution = await executeTool(acc.name, args, context);
+        }
+        const { result, success, modelResult, pause, secrets } = execution;
         // The COMPLETE result goes to the browser, secret included: this is the
         // only place where a fresh key should appear, live, once
         // (MIN-343). Nothing that follows will see him again.
@@ -453,17 +565,30 @@ export async function processChat(
         // (`buildToolCallResultsFromMessages`), and `content` only carries what
         // the model needs to know.
         const forModel = redactDeep(modelResult ?? result, redactor.redact);
-        await context.service.from("assistant_messages").insert({
-          conversation_id: context.conversationId,
-          role: "tool",
-          content: JSON.stringify(forModel),
-          tool_call_id: acc.id,
-          tool_name: acc.name,
-          metadata:
-            modelResult === undefined
-              ? { success }
-              : { success, result: redactDeep(result, redactor.redact) },
-        });
+        const persistedResult = redactDeep(result, redactor.redact);
+        if (ledgerClaim.action === "execute") {
+          await context.toolLedger?.complete({
+            toolCallId: acc.id,
+            success,
+            result: persistedResult,
+            modelResult: forModel,
+            pause: pause === true,
+          });
+        }
+        if (!alreadyCompleted) {
+          await context.service.from("assistant_messages").insert({
+            conversation_id: context.conversationId,
+            ...(context.turnId ? { turn_id: context.turnId } : {}),
+            role: "tool",
+            content: JSON.stringify(forModel),
+            tool_call_id: acc.id,
+            tool_name: acc.name,
+            metadata:
+              modelResult === undefined
+                ? { success }
+                : { success, result: persistedResult },
+          });
+        }
 
         messages.push({
           role: "tool",
@@ -473,6 +598,23 @@ export async function processChat(
             getToolResultCharLimit(acc.name, args)
           ),
         });
+        completedToolCallIds.add(acc.id);
+        if (acc.name === "launch_code_agent" && success) {
+          const runId = (result as { run_id?: unknown } | null)?.run_id;
+          if (typeof runId === "string" && runId) {
+            suspension = { kind: "work", runId };
+            pausedByTool = true;
+          }
+        }
+        await context.persistCheckpoint?.({
+          phase: "tools",
+          assistantContent: fullContent || null,
+          assistantReasoning: roundReasoning,
+          assistantMessageId: savedIntermediate?.id ?? null,
+          pendingToolCalls: assistantToolCalls,
+          completedToolCallIds: [...completedToolCallIds],
+          roundCount,
+        });
       }
 
       // Continue rules:
@@ -480,6 +622,7 @@ export async function processChat(
       // - other tools: continue normally with tools enabled (round cap only —
       //   minddy tools chain legitimately: create issue → set categories → comment)
       if (!hasAskUser && !pausedByTool && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
+        await context.persistCheckpoint?.({ phase: "model", roundCount });
         continueLoop = true;
       }
       fullContent = "";
@@ -495,5 +638,6 @@ export async function processChat(
     finalReasoning,
     allToolCalls,
     generations,
+    suspension,
   };
 }
