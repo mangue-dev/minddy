@@ -1,3 +1,5 @@
+import type { ReasoningLevel } from "./agent-reasoning";
+
 // ── Numo (AI assistant) shared types ─────────────────────────────────
 
 export type ConversationStatus = "idle" | "generating" | "error";
@@ -49,6 +51,10 @@ export interface NumoConversation extends Omit<Conversation, "user_id"> {
   last_read_at: string | null;
   detail_href: string | null;
   latest_work_id: string | null;
+  /** Explicit conversation choice; null preserves the account default. */
+  model?: string | null;
+  /** Explicit conversation choice; null preserves the compatible legacy default. */
+  reasoning_level?: ReasoningLevel | null;
 }
 
 export interface NumoMessage extends AssistantMessage {
@@ -116,6 +122,10 @@ export interface NumoConversationPatch {
   pinned?: boolean;
   archived?: boolean;
   read?: boolean;
+  /** Empty or null follows the active assistant provider default. */
+  model?: string | null;
+  /** Null follows the instance assistant reasoning default. */
+  reasoningLevel?: ReasoningLevel | null;
 }
 
 export interface AssistantToolCall {
@@ -312,6 +322,10 @@ export interface AssistantChatRequest {
   conversationId?: string;
   projectId?: string;
   message: string;
+  /** Model selected for this conversation; omitted/null follows its default. */
+  model?: string | null;
+  /** Reasoning selected for this conversation; omitted/null follows its default. */
+  reasoningLevel?: ReasoningLevel | null;
   /**
    * What the user is currently viewing (open issue, board onglet, objective).
    * Injected into the system prompt so Numo can resolve "ce ticket" precisely.

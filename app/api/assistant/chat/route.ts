@@ -24,11 +24,14 @@ import { newRunId } from "@/lib/server/ai-usage";
 import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
-import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import {
   ManagedAiUnavailableError,
-  resolveAiRuntime,
 } from "@/lib/server/ai-runtime";
+import {
+  isNumoConversationConfigError,
+  resolveNumoTurnConfiguration,
+} from "@/lib/server/assistant/conversation-config";
+import { isReasoningLevel } from "@/lib/agent-reasoning";
 import type { AttachmentInput } from "@/lib/types";
 import { loadProjectRepositorySkills } from "@/lib/server/repository-skills";
 import { validateMessageContext } from "@/lib/server/assistant/message-context";
@@ -245,6 +248,14 @@ export async function POST(request: NextRequest) {
   if ((projectId?.length ?? 0) > 100 || (conversationId?.length ?? 0) > 100) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
+  if (body.model !== undefined && body.model !== null &&
+    (typeof body.model !== "string" || body.model.length > 300)) {
+    return Response.json({ error: "Invalid model" }, { status: 400 });
+  }
+  if (body.reasoningLevel !== undefined && body.reasoningLevel !== null &&
+    !isReasoningLevel(body.reasoningLevel)) {
+    return Response.json({ error: "Invalid reasoning level" }, { status: 400 });
+  }
   const message = typeof body.message === "string" ? body.message : "";
   let pageContext = parsePageContext(body.pageContext);
   if (projectId && !pageContext?.projectId) pageContext = { ...pageContext, projectId };
@@ -275,28 +286,7 @@ export async function POST(request: NextRequest) {
     (a): a is AttachmentInput => a.kind !== "link"
   );
 
-  // Resolve this before persisting a turn. On self-hosted instances without a
-  // managed quota or a usable BYOK key, a failed request must not leave a
-  // conversation stuck in the generating state.
-  let aiRuntime;
-  try {
-    aiRuntime = await resolveAiRuntime({
-      userId: user.id,
-      modelKey: "assistant_model",
-      surface: "assistant",
-    });
-  } catch (error) {
-    if (!(error instanceof ManagedAiUnavailableError)) throw error;
-    const tApi = await getTranslations("ApiErrors");
-    return Response.json(
-      { error: tApi("aiProviderUnavailable"), code: "ai_provider_unavailable" },
-      { status: 503 },
-    );
-  }
-
   const service = getServiceClient();
-
-  const model = aiRuntime.model;
 
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
   // Resolved BEFORE the stream starts — next-intl needs the request context.
@@ -351,6 +341,50 @@ export async function POST(request: NextRequest) {
 
   // Create or fetch conversation
   let convId = conversationId;
+  let existingConversation: { id: string; model?: string | null; reasoning_level?: string | null } | null = null;
+  if (convId) {
+    // Ownership only. The durable begin RPC serializes concurrent turns and
+    // does not trust the legacy three-state projection for admission.
+    const convQuery = supabase
+      .from("conversations")
+      .select("id, model, reasoning_level")
+      .eq("id", convId)
+      .eq("user_id", user.id);
+    const { data, error: existingConversationError } = await convQuery.single();
+
+    if (existingConversationError || !data) {
+      return Response.json({ error: "Conversation not found" }, { status: 404 });
+    }
+    existingConversation = data as { id: string; model?: string | null; reasoning_level?: string | null };
+  }
+
+  // Resolve this before persisting a turn. On self-hosted instances without a
+  // managed quota or a usable BYOK key, a failed request must not leave a
+  // conversation stuck in the generating state. The selected values are
+  // resolved before admission and then passed unchanged to the durable turn.
+  let configuration;
+  try {
+    configuration = await resolveNumoTurnConfiguration({
+      userId: user.id,
+      model: body.model !== undefined ? body.model : existingConversation?.model,
+      reasoningLevel: body.reasoningLevel !== undefined
+        ? body.reasoningLevel
+        : existingConversation?.reasoning_level,
+    });
+  } catch (error) {
+    if (isPlanLimitError(error)) return planLimitResponse(error);
+    if (error instanceof ManagedAiUnavailableError) {
+      return Response.json(
+        { error: tApi("aiProviderUnavailable"), code: "ai_provider_unavailable" },
+        { status: 503 },
+      );
+    }
+    if (isNumoConversationConfigError(error)) {
+      return Response.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    throw error;
+  }
+
   // Summary of the title by a small model: launched without being expected (the sidebar has
   // already the truncated fallback), then waited before closing the flow — that's what
   // guarantees that it succeeds without delaying the first token of the response.
@@ -363,6 +397,10 @@ export async function POST(request: NextRequest) {
         project_id: null,
         user_id: user.id,
         title,
+        ...(configuration.persistedModel !== null ? { model: configuration.persistedModel } : {}),
+        ...(configuration.persistedReasoningLevel !== null
+          ? { reasoning_level: configuration.persistedReasoningLevel }
+          : {}),
       })
       .select("id")
       .single();
@@ -399,24 +437,8 @@ export async function POST(request: NextRequest) {
       .catch((err) => {
         console.error("[numo-title] failed:", (err as Error).message);
       });
-  } else {
-    // Ownership only. The durable begin RPC serializes concurrent turns and
-    // does not trust the legacy three-state projection for admission.
-    const convQuery = supabase
-      .from("conversations")
-      .select("id")
-      .eq("id", convId)
-      .eq("user_id", user.id);
-    const { data: existingConversation, error: existingConversationError } =
-      await convQuery.single();
-
-    if (existingConversationError || !existingConversation) {
-      return Response.json({ error: "Conversation not found" }, { status: 404 });
-    }
-
   }
   const webSearchEnabled = await isWebSearchEnabled();
-  const reasoningLevel = await getAssistantReasoningLevel();
   const timezone =
     typeof body.timezone === "string" && body.timezone.length <= 64
       ? body.timezone
@@ -441,8 +463,8 @@ export async function POST(request: NextRequest) {
         numoDefaultStatus,
         webSearchEnabled,
       },
-      model,
-      reasoningLevel,
+      model: configuration.model,
+      reasoningLevel: configuration.reasoningLevel,
       content: sanitizedUserMessage,
       context: pageContext,
       metadata: {
@@ -475,7 +497,7 @@ export async function POST(request: NextRequest) {
           turnId: turn.id,
           readClient: supabase,
           liveEmitter: emitter,
-          aiRuntime,
+          aiRuntime: configuration.runtime,
         });
         await titleDone;
         if (result.status === "not_claimed") {

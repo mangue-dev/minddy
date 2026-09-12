@@ -573,7 +573,7 @@ export interface ResolvedAgentEndpoint {
  */
 export async function resolveAgentApiKey(
   userId: string,
-  surface: Extract<AiSurface, "agent" | "automations"> = "agent",
+  surface: Extract<AiSurface, "agent" | "assistant" | "automations"> = "agent",
   options: { allowLocal?: boolean; requireByok?: boolean } = {},
 ): Promise<ResolvedAgentEndpoint> {
   const byok = await getUserByok(userId, surface);

@@ -94,6 +94,8 @@ SELECT pg_temp.assert_numo((SELECT count(*) = 0 FROM public.numo_contexts), 'oth
 SELECT pg_temp.assert_numo((SELECT project_id IS NULL AND access_project_id IS NULL FROM public.numo_conversation_history WHERE id = '51400000-0000-4000-8000-000000000027'), 'projectless chat has no access scope');
 SELECT pg_temp.update_numo_as_actor('51400000-0000-4000-8000-000000000027', '{"title":"Renamed","pinned":true,"archived":true,"read":true}');
 SELECT pg_temp.assert_numo((SELECT title = 'Renamed' AND pinned_at IS NOT NULL AND archived_at IS NOT NULL AND last_read_at IS NOT NULL FROM public.numo_conversation_history WHERE id = '51400000-0000-4000-8000-000000000027'), 'common state writes persist');
+SELECT pg_temp.update_numo_as_actor('51400000-0000-4000-8000-000000000027', '{"model":"openai/gpt-5.6","reasoningLevel":"high"}');
+SELECT pg_temp.assert_numo((SELECT model = 'openai/gpt-5.6' AND reasoning_level = 'high' FROM public.conversations WHERE id = '51400000-0000-4000-8000-000000000027'), 'conversation model and reasoning choices persist');
 INSERT INTO public.assistant_active_conversation (user_id, conversation_id)
  SELECT auth.uid(), id FROM public.numo_conversation_history WHERE source = 'agent' AND legacy_id = '51400000-0000-4000-8000-000000000020';
 SELECT pg_temp.assert_numo((SELECT count(*) = 1 FROM public.assistant_active_conversation WHERE user_id = auth.uid()), 'active pointer accepts a common worker identity');

@@ -97,6 +97,8 @@ describe("Numo conversation adapter", () => {
       expect(validNumoPatch(value)).toBe(false);
     }
     expect(validNumoPatch({ title: null, pinned: false, archived: true, read: true })).toBe(true);
+    expect(validNumoPatch({ model: "openai/gpt-5.6", reasoningLevel: "high" })).toBe(true);
+    expect(validNumoPatch({ reasoningLevel: "unsupported" })).toBe(false);
   });
 });
 

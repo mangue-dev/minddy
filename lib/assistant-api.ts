@@ -25,6 +25,28 @@ export async function updateConversation(id: string, patch: NumoConversationPatc
   return res.ok;
 }
 
+/** Update a conversation and retain the server's explicit validation message. */
+export async function updateConversationWithResult(
+  id: string,
+  patch: NumoConversationPatch,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(`/api/numo/conversations/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => null) as { error?: unknown } | null;
+    return {
+      ok: false,
+      error: typeof data?.error === "string" ? data.error : `HTTP ${res.status}`,
+    };
+  } catch {
+    return { ok: false, error: "Unable to save conversation settings" };
+  }
+}
+
 export async function deleteConversation(
   conversationId: string
 ): Promise<boolean> {

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { ChatInput } from "@/components/assistant/chat-input";
+import { ConversationSettings } from "@/components/assistant/conversation-settings";
 import { useSlashCommands } from "@/components/assistant/slash-menu";
 import {
   useAssistantPanel,
@@ -64,6 +65,7 @@ export function HomeNumoComposer() {
       mentionables={mentionables}
       onMentionQuery={onMentionQuery}
       commands={commands}
+      leadingControls={<ConversationSettings />}
       onSend={(message, attachments, mentions, command) =>
         open({
           projectId: null,

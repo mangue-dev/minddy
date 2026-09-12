@@ -17,6 +17,9 @@ import type {
   NumoTurnActivity,
   NumoTurnStatus,
 } from "./assistant-types";
+import { fetchNumoConversation, updateConversationWithResult } from "./assistant-api";
+import { createSerialQueue } from "./serial-queue";
+import { isReasoningLevel, type ReasoningLevel } from "./agent-reasoning";
 import type { FileResourceInput, ResourceInput } from "./types";
 import { trackEvent } from "./analytics";
 import { durationBucket, errorReason, lengthBucket } from "./analytics-sanitize";
@@ -93,6 +96,12 @@ export interface AssistantChatState {
   conversationId: string | null;
   /** Legacy project metadata retained when loading older conversations. */
   conversationProjectId: string | null;
+  /** Explicit model override; null follows the active assistant default. */
+  conversationModel: string | null;
+  /** Explicit reasoning override; null follows the compatible legacy default. */
+  conversationReasoningLevel: ReasoningLevel | null;
+  /** Last validation or persistence failure for the conversation settings. */
+  conversationConfigError: string | null;
   error: string | null;
   turnStatus: NumoTurnStatus | null;
 }
@@ -106,6 +115,9 @@ const initialState: AssistantChatState = {
   toolCallResults: new Map(),
   conversationId: null,
   conversationProjectId: null,
+  conversationModel: null,
+  conversationReasoningLevel: null,
+  conversationConfigError: null,
   error: null,
   turnStatus: null,
 };
@@ -118,6 +130,12 @@ type Action =
       type: "SET_CONVERSATION_ID";
       conversationId: string;
       projectId: string | null;
+    }
+  | {
+      type: "SET_CONVERSATION_CONFIG";
+      model: string | null;
+      reasoningLevel: ReasoningLevel | null;
+      error?: string | null;
     }
   | { type: "CONTENT_DELTA"; delta: string }
   | { type: "REASONING_START" }
@@ -155,6 +173,8 @@ type Action =
       messages: AssistantMessage[];
       conversationId: string;
       projectId: string | null;
+      model?: string | null;
+      reasoningLevel?: ReasoningLevel | null;
     }
   | { type: "RESET" };
 
@@ -179,6 +199,14 @@ function reducer(
         ...state,
         conversationId: action.conversationId,
         conversationProjectId: action.projectId,
+      };
+
+    case "SET_CONVERSATION_CONFIG":
+      return {
+        ...state,
+        conversationModel: action.model,
+        conversationReasoningLevel: action.reasoningLevel,
+        conversationConfigError: action.error ?? null,
       };
 
     case "CONTENT_DELTA":
@@ -392,6 +420,11 @@ function reducer(
         toolCallResults: buildToolCallResultsFromMessages(action.messages),
         conversationId: action.conversationId,
         conversationProjectId: action.projectId,
+        ...(action.model !== undefined ? { conversationModel: action.model } : {}),
+        ...(action.reasoningLevel !== undefined
+          ? { conversationReasoningLevel: action.reasoningLevel }
+          : {}),
+        conversationConfigError: null,
         error: null,
         turnStatus: null,
       };
@@ -468,6 +501,17 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     id: null,
     projectId: null,
   });
+  const configRef = useRef<{
+    model: string | null;
+    reasoningLevel: ReasoningLevel | null;
+  }>({ model: null, reasoningLevel: null });
+  const configWritesRef = useRef(createSerialQueue());
+  const confirmedConfigsRef = useRef(new Map<string, {
+    model: string | null;
+    reasoningLevel: ReasoningLevel | null;
+  }>());
+  const loadGenerationRef = useRef(0);
+  const configRevisionRef = useRef(0);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -601,11 +645,14 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       dispatch({ type: "START_STREAMING" });
 
       try {
+        const requestConversationId = liveConvRef.current.id ?? state.conversationId;
         const body: AssistantChatRequest = {
           requestId: createUuid(),
           ...(projectId ? { projectId } : {}),
           message,
-          conversationId: state.conversationId || undefined,
+          conversationId: requestConversationId || undefined,
+          model: configRef.current.model,
+          reasoningLevel: configRef.current.reasoningLevel,
           ...(options?.pageContext ? { pageContext: options.pageContext } : {}),
           ...(files.length ? { attachments: files } : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
@@ -639,6 +686,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         const responseConversationId = response.headers.get("X-Numo-Conversation-Id");
         if (responseConversationId) {
           liveConvRef.current = { id: responseConversationId, projectId };
+          if (!requestConversationId) {
+            confirmedConfigsRef.current.set(responseConversationId, {
+              ...configRef.current,
+            });
+          }
           dispatch({
             type: "SET_CONVERSATION_ID",
             conversationId: responseConversationId,
@@ -776,6 +828,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   /** Load a conversation by identity; project metadata never chooses the next target. */
   const loadConversation = useCallback(
     async (conversationId: string, projectId: string | null) => {
+      const loadGeneration = ++loadGenerationRef.current;
+      const configRevision = configRevisionRef.current;
       stopPolling();
       // Cancel any in-flight send so its later SSE chunks don't dispatch on
       // top of the conversation we are about to load.
@@ -783,19 +837,39 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       liveConvRef.current = { id: conversationId, projectId };
       trackEvent("assistant_conversation_loaded", {});
       try {
-        const messages = await fetchConversationMessages(conversationId);
-        dispatch({
-          type: "LOAD_HISTORY",
-          messages,
-          conversationId,
-          projectId,
-        });
+        const detail = await fetchNumoConversation(conversationId);
+        if (loadGeneration !== loadGenerationRef.current) return;
+        const messages = [...detail.messages, ...detail.actions]
+          .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+        const model = detail.conversation.model ?? null;
+        const reasoningLevel = isReasoningLevel(detail.conversation.reasoning_level)
+          ? detail.conversation.reasoning_level
+          : null;
+        const serverConfig = { model, reasoningLevel };
+        const configChangedWhileLoading = configRevision !== configRevisionRef.current;
+        if (!configChangedWhileLoading || !confirmedConfigsRef.current.has(conversationId)) {
+          confirmedConfigsRef.current.set(conversationId, serverConfig);
+        }
+        if (!configChangedWhileLoading) {
+          configRef.current = serverConfig;
+          dispatch({
+            type: "LOAD_HISTORY",
+            messages,
+            conversationId,
+            projectId,
+            model,
+            reasoningLevel,
+          });
+        } else {
+          dispatch({ type: "LOAD_HISTORY", messages, conversationId, projectId });
+        }
 
         // Check if server is still generating for this conversation
         const { status, error_message } = await fetchConversationStatus(
           conversationId,
           tApi("statusFetchFailed")
         );
+        if (loadGeneration !== loadGenerationRef.current) return;
         if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping") {
           startPolling(conversationId, projectId);
         } else if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
@@ -816,10 +890,78 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     [startPolling, stopPolling, tApi]
   );
 
+  const updateConversationConfig = useCallback(
+    async (patch: {
+      model?: string | null;
+      reasoningLevel?: ReasoningLevel | null;
+    }): Promise<boolean> => {
+      const previous = configRef.current;
+      const next = {
+        model: patch.model === undefined ? previous.model : patch.model,
+        reasoningLevel:
+          patch.reasoningLevel === undefined
+            ? previous.reasoningLevel
+            : patch.reasoningLevel,
+      };
+      configRef.current = next;
+      const configRevision = ++configRevisionRef.current;
+      dispatch({ type: "SET_CONVERSATION_CONFIG", ...next });
+
+      const conversationId = liveConvRef.current.id ?? state.conversationId;
+      if (!conversationId) return true;
+
+      const resultRef: {
+        current: Awaited<ReturnType<typeof updateConversationWithResult>> | undefined;
+      } = { current: undefined };
+      await configWritesRef.current(async () => {
+        resultRef.current = await updateConversationWithResult(conversationId, {
+          model: next.model,
+          reasoningLevel: next.reasoningLevel,
+        });
+      });
+      const result = resultRef.current;
+      if (result?.ok) {
+        confirmedConfigsRef.current.set(conversationId, next);
+        if (
+          configRevision === configRevisionRef.current &&
+          liveConvRef.current.id === conversationId &&
+          configRef.current.model === next.model &&
+          configRef.current.reasoningLevel === next.reasoningLevel
+        ) {
+          dispatch({ type: "SET_CONVERSATION_CONFIG", ...next });
+        }
+        return true;
+      }
+
+      // A later change may already have superseded this failed write. Only
+      // roll back when the visible state still represents the failed request.
+      if (
+        configRevision === configRevisionRef.current &&
+        liveConvRef.current.id === conversationId &&
+        configRef.current.model === next.model &&
+        configRef.current.reasoningLevel === next.reasoningLevel
+      ) {
+        const confirmed = confirmedConfigsRef.current.get(conversationId) ?? previous;
+        configRef.current = confirmed;
+        dispatch({
+          type: "SET_CONVERSATION_CONFIG",
+          ...confirmed,
+          error: result?.error ?? "Unable to save conversation settings",
+        });
+      }
+      return false;
+    },
+    [state.conversationId]
+  );
+
   const reset = useCallback(() => {
     abortRef.current?.abort();
     stopPolling();
+    loadGenerationRef.current += 1;
     liveConvRef.current = { id: null, projectId: null };
+    configRevisionRef.current += 1;
+    configRef.current = { model: null, reasoningLevel: null };
+    confirmedConfigsRef.current.clear();
     trackEvent("assistant_conversation_new", {});
     dispatch({ type: "RESET" });
   }, [stopPolling]);
@@ -905,6 +1047,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     state,
     sendMessage,
     loadConversation,
+    updateConversationConfig,
     reset,
     retry,
     abort,
