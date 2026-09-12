@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NumoConversation, NumoConversationDetail, NumoLegacySource } from "@/lib/assistant-types";
+import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,6 +28,25 @@ export async function getNumoConversation(supabase: SupabaseClient, id: string) 
     .select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
   return data as NumoConversation | null;
+}
+
+/** Read the assistant-only persisted choices through the caller's RLS client. */
+export async function getNumoConversationConfig(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<{ model: string | null; reasoningLevel: string | null } | null> {
+  const conversation = await getNumoConversation(supabase, id);
+  if (!conversation || conversation.source !== "assistant") return null;
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("model, reasoning_level")
+    .eq("id", conversation.legacy_id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return {
+    model: typeof data?.model === "string" ? data.model : null,
+    reasoningLevel: isReasoningLevel(data?.reasoning_level) ? data.reasoning_level : null,
+  };
 }
 
 export async function resolveNumoConversation(
@@ -66,14 +86,18 @@ async function collection(supabase: SupabaseClient, table: string, id: string) {
 export async function getNumoConversationDetail(supabase: SupabaseClient, id: string): Promise<NumoConversationDetail | null> {
   const conversation = await getNumoConversation(supabase, id);
   if (!conversation) return null;
-  const [messages, work, contexts, artifacts, turns] = await Promise.all([
+  const [config, messages, work, contexts, artifacts, turns] = await Promise.all([
+    getNumoConversationConfig(supabase, id),
     collection(supabase, "numo_messages", id), collection(supabase, "numo_work", id),
     collection(supabase, "numo_contexts", id), collection(supabase, "numo_artifacts", id),
     collection(supabase, "numo_turns", id),
   ]);
   const safeMessages: Record<string, unknown>[] = messages.map((m) => ({ ...m, metadata: publicSkillsMetadata(m.metadata) }));
   return {
-    conversation,
+    conversation: {
+      ...conversation,
+      ...(config ? { model: config.model, reasoning_level: config.reasoningLevel } : {}),
+    },
     messages: safeMessages.filter((m) => m.kind !== "action"),
     actions: safeMessages.filter((m) => m.kind === "action"),
     work,
@@ -84,7 +108,10 @@ export async function getNumoConversationDetail(supabase: SupabaseClient, id: st
 export function validNumoPatch(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const entries = Object.entries(value);
-  return entries.length > 0 && entries.every(([key, v]) => key === "title"
-    ? v === null || (typeof v === "string" && v.length <= 200)
-    : ["archived", "pinned", "read"].includes(key) && typeof v === "boolean");
+  return entries.length > 0 && entries.every(([key, v]) => {
+    if (key === "title") return v === null || (typeof v === "string" && v.length <= 200);
+    if (key === "model") return v === null || (typeof v === "string" && v.length <= 300);
+    if (key === "reasoningLevel") return v === null || isReasoningLevel(v);
+    return ["archived", "pinned", "read"].includes(key) && typeof v === "boolean";
+  });
 }

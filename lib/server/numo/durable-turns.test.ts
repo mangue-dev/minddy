@@ -218,6 +218,20 @@ beforeEach(() => {
 });
 
 describe("durable Numo execution", () => {
+  it("uses the model frozen on the admitted turn after a runtime change", async () => {
+    h.turn = { ...h.turn!, model: "selected-model" };
+    await executeNumoTurn({
+      turnId: h.turn.id as string,
+      readClient: service,
+      aiRuntime: { ...runtime, model: "account-default" },
+    });
+
+    expect(h.processChat.mock.calls[0][3]).toMatchObject({
+      model: "selected-model",
+      aiRuntime: { model: "selected-model" },
+    });
+  });
+
   it("finishes a dialogue turn without allocating a code worker", async () => {
     const result = await executeNumoTurn({
       turnId: h.turn!.id as string,

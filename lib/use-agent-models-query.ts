@@ -19,6 +19,8 @@ import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
  * Three scopes:
  * - `user` (default) → `/api/agent/models`, the ACTIVE provider of the account (its
  * BYOK or the platform key): what ITS agent can launch;
+ * - `assistant` → `/api/assistant/models`, the assistant BYOK surface and its
+ * Numo reasoning default;
  * - `platform` → `/api/admin/models-catalog`, the OpenRouter platform key
  * filtered by the requested runtime capability for the config admin (MIN-90).
  * The admin's BYOK has nothing to do there: `app_config` runs on the platform;
@@ -26,10 +28,11 @@ import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
  * the PR review run. Native BYOK accounts receive native model IDs.
  */
 
-export type AgentModelsScope = "user" | "platform" | "review";
+export type AgentModelsScope = "user" | "assistant" | "platform" | "review";
 
 const SCOPE_ENDPOINTS: Record<AgentModelsScope, string> = {
   user: "/api/agent/models",
+  assistant: "/api/assistant/models",
   platform: "/api/admin/models-catalog",
   review: "/api/agent/review-models",
 };
@@ -74,6 +77,8 @@ interface AgentModelsResult {
   executionBackend: AgentExecutionBackend;
   /** Scheduled task routes are protected and can be scheduled. */
   routineSchedulingConfigured: boolean;
+  /** Instance default used by Numo when a conversation has no override. */
+  defaultReasoning?: ReasoningLevel;
   /** Non-secret local config: its catalog is read by the Electron shell. */
   localEndpoint?: {
     provider: "local_openai" | "ollama";
@@ -95,6 +100,7 @@ async function fetchAgentModels(
     cloudExecutionConfigured: false,
     executionBackend: null,
     routineSchedulingConfigured: false,
+    defaultReasoning: undefined,
   };
   const endpoint =
     scope === "platform"
@@ -112,6 +118,7 @@ async function fetchAgentModels(
     cloudExecutionConfigured?: boolean;
     executionBackend?: AgentExecutionBackend;
     routineSchedulingConfigured?: boolean;
+    defaultReasoning?: ReasoningLevel;
     localEndpoint?: {
       provider?: AgentProviderId;
       baseUrl?: string;
@@ -136,6 +143,7 @@ async function fetchAgentModels(
     cloudExecutionConfigured: data.cloudExecutionConfigured ?? false,
     executionBackend: data.executionBackend ?? null,
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
+    defaultReasoning: data.defaultReasoning,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
   // The web server never contacts a local address. The desktop app discovers
@@ -173,6 +181,7 @@ export function useAgentModelsQuery(
     cloudExecutionConfigured: data?.cloudExecutionConfigured ?? false,
     executionBackend: data?.executionBackend ?? null,
     routineSchedulingConfigured: data?.routineSchedulingConfigured ?? false,
+    defaultReasoning: data?.defaultReasoning,
     loading: isPending,
   };
 }

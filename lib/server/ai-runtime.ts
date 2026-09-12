@@ -103,8 +103,11 @@ export async function resolveAiRuntime(params: {
   modelKey: ByokModelKey;
   /** To be specified only if a call belongs to a surface other than its model (feedback voice). */
   surface?: AiSurface;
+  /** A conversation choice, frozen by the caller before the turn is admitted. */
+  modelOverride?: string | null;
 }): Promise<ResolvedAiRuntime> {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
+  const modelOverride = params.modelOverride?.trim() || null;
   const [byok, rootModel] = await Promise.all([
     getUserByok(params.userId, surface),
     platformModel(params.modelKey),
@@ -128,7 +131,7 @@ export async function resolveAiRuntime(params: {
         mode: "byok",
         provider: byok.provider,
         baseUrl: byok.baseUrl,
-        model,
+        model: modelOverride || model,
         requestProfile:
           getAgentProvider(byok.provider)?.requestProfile ?? { outputTokenField: "max_tokens" },
       };
@@ -145,7 +148,7 @@ export async function resolveAiRuntime(params: {
     mode: "platform",
     provider: DEFAULT_AGENT_PROVIDER,
     baseUrl,
-    model: rootModel || aiModelFallback(params.modelKey),
+    model: modelOverride || rootModel || aiModelFallback(params.modelKey),
     requestProfile:
       getAgentProvider(DEFAULT_AGENT_PROVIDER)?.requestProfile ?? {
         outputTokenField: "max_completion_tokens",

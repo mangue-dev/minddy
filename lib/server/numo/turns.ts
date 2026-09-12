@@ -567,11 +567,18 @@ export async function executeNumoTurn(input: {
   }
 
   try {
-    const runtime = input.aiRuntime ?? await resolveAiRuntime({
+    const resolvedRuntime = input.aiRuntime ?? await resolveAiRuntime({
       userId: claimed.user_id,
       modelKey: "assistant_model",
       surface: "assistant",
+      modelOverride: claimed.model,
     });
+    // The turn row is the admission-time authority. A queued or recovered
+    // turn must not pick up a later conversation setting, and an immediate
+    // request must use the same frozen model as its durable record.
+    const runtime = claimed.model && claimed.model !== resolvedRuntime.model
+      ? { ...resolvedRuntime, model: claimed.model }
+      : resolvedRuntime;
     const readClient = input.readClient ?? service;
     const execution = await buildExecutionInput({
       turn: claimed,

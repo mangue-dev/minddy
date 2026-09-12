@@ -3,6 +3,7 @@ import "server-only";
 import {
   getPrReviewDefaultModelForUser,
   getRootDefaultModel,
+  getUserByok,
   resolveAgentApiKey,
   resolveProviderDefaultModel,
 } from "./model";
@@ -26,6 +27,7 @@ import {
   DEFAULT_AGENT_PROVIDER,
   type AgentProviderId,
 } from "@/lib/agent-providers";
+import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
@@ -333,7 +335,11 @@ async function resolveRecommended(
  * The multipliers and the cap only apply in platform mode. BYOK users pay for
  * their own tokens, so the picker does not restrict their model choices.
  */
-export async function getAgentModelsForUser(userId: string): Promise<AgentModelsCatalog> {
+export async function getAgentModelsForUser(
+  userId: string,
+  surface: Extract<AiSurface, "agent" | "assistant"> = "agent",
+): Promise<AgentModelsCatalog> {
+  const modelKey: ByokModelKey = surface === "assistant" ? "assistant_model" : "agent_model";
   // Active Provider: BYOK of the account, or OpenRouter platform key.
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
@@ -344,7 +350,7 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
     // This read never probes a local endpoint (`listStrategy: none`); it only
     // returns the correct provider and keeps the picker in the local run's
     // namespace.
-    const endpoint = await resolveAgentApiKey(userId, "agent", { allowLocal: true });
+    const endpoint = await resolveAgentApiKey(userId, surface, { allowLocal: true });
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
@@ -355,7 +361,13 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
 
   // Actual fault of the active provider: BYOK provider border, otherwise fault
   // root (quota minddy / OpenRouter BYOK); null for a generic.
-  const providerDefault = await resolveProviderDefaultModel(provider);
+  const byok = surface === "assistant" ? await getUserByok(userId, surface) : null;
+  const featureDefault = byok?.featureModels[modelKey]?.trim();
+  const providerDefault = featureDefault || (
+    surface === "assistant" && provider === "openrouter"
+      ? await getRootDefaultModel()
+      : await resolveProviderDefaultModel(provider)
+  );
   const defaultModel =
     providerDefault ?? (provider === "generic" || isLocalAgentProvider(provider) ? null : await getRootDefaultModel());
 
@@ -397,6 +409,11 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
       ...(await withMultipliers(hit?.models ?? [], limit, provider === "openrouter")),
     };
   }
+}
+
+/** Catalog for Numo conversations, using the assistant BYOK surface. */
+export function getAssistantModelsForUser(userId: string): Promise<AgentModelsCatalog> {
+  return getAgentModelsForUser(userId, "assistant");
 }
 
 /** Catalog of models the account can actually use for a PR review. */
